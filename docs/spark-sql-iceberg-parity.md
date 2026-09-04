@@ -1558,6 +1558,7 @@ the pin rather than obeying it.
   (and `test_elt_index_zero_raises_invalid_array_index`).
 - **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
   out-of-range; Spark raises under ANSI.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): ANSI-off out-of-range (3, 0, −1) and NULL `n` answer NULL on both engines; ANSI-on error unchanged.
 
 ### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1573,6 +1574,20 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
+
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+
+- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
+  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
+  sqltorel: RLike`. The function spelling
+  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
+- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
+  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
+  Spark-equal per FN-REGEX-POSIX-1.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1588,6 +1603,7 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
 - **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
   non-match.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): the escape-at-end refusal holds under ANSI off too, on both engines, for the API, SQL, and explicit-`ESCAPE` spellings.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -3404,6 +3420,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
 - **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
   word break.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `'ünï_9 ab'` → `'Ünï_9 Ab'`, `''` → `''`, NULL → NULL on both engines.
 
 ### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256` — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3416,6 +3433,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
 - **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
   on negatives.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `chr(0/256/65536/1114112)` → `'\x00'`, negatives → `''`, NULL → NULL on both engines.
 
 ### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3426,6 +3444,7 @@ the pin rather than obeying it.
   `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
@@ -3975,182 +3994,34 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark does.
 
 
-## 8. Drop-in disclosure rationale
+### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
 
-The narrow surface where the facade accepts a PySpark call **for source compatibility** without
-reproducing Spark's effect — so a migrated script runs, and the difference is disclosed rather
-than silent. Every row is pinned in
-[`python/repark/tests/test_dropin_disclosure.py`](../python/repark/tests/test_dropin_disclosure.py);
-the `Pin` column names the test.
+- **repark** — `df.select(F.col("v").cast("double"))` names the output column
+  `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the
+  native field name instead of the tracked projection name. The same cast on a frame-bound
+  receiver (`df.v.cast("double")` / `df["v"].cast(...)`) answers `v` (Spark-equal, pinned in
+  `test_select_naming.py`), an aliased cast answers the alias, and `withColumn` is unaffected.
+- **Apache Spark** — `df.select(F.col("v").cast("double"))` names the output column `v`:
+  a cast of a NamedExpression keeps the child name in a plain select, exactly as repark's own
+  df-bound arm answers. Values are equal on both engines; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, frames
+  `[("a",1,10.0),("b",2,None)]` over `g/k/v` and `[(10.0,)]` over `v`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  df-bound and aliased arms, where the engines agree; the bare `F.col` arm stays on the
+  backlog and is not re-taught until repark names it `v`.
 
-**Oracle basis for this whole table: *documented*** — PySpark's documented API contract for each
-named call (what `master(url)`, `setLogLevel`, `spark.version`, `clearCache`, `show(vertical=True)`
-are specified to do). It is stated once here rather than per row because every row shares it, and
-it is admissible for the same reason §1 gives: what each row claims about Spark is the documented
-*effect of an API call*, and the divergence being recorded is repark's side — accepting the call
-without reproducing that effect. No row in this table claims a Spark *value* nobody here has
-observed; where a value appears (`4.1.2`) it is illustrative of the shape, marked "e.g.".
+### EX-COL-2 — an unaliased `getField` select projects `r['a']`; Spark projects `r.a`
 
-| Surface | repark | Apache Spark | Pin | Rationale |
-|---|---|---|---|---|
-| `SparkSession.builder.master(url)` | records the URL, ignores it; **warns once** per process | connects to the named master | `test_master_warns_once` | Single-node by design. A cluster URL must not be *silently* downgraded, so the first call warns; a second is silent, because a script that sets it in a loop should not drown its own logs. |
-| `spark.sparkContext.setLogLevel(level)` | accepted, ignored, **no warning** | sets the JVM log4j level | `test_set_log_level_is_documented_silent_noop` | Engine logging is `tracing`-based; there is no JVM level to set. Silent because jobs call it every run — a warn-once here is noise on a call that cannot go wrong. |
-| `spark.version` | returns `repark-<version>` | returns the Spark release, e.g. `4.1.2` | `test_spark_version_discloses_repark_not_spark_release` | Honesty over mimicry: returning a Spark release number would make this engine unidentifiable in a log. Scripts log the value; they must not *parse* it as a Spark release. |
-| `spark.catalog.clearCache()` | a **real** drop of session cache tables; no warning | drops cached tables | `test_clear_cache_is_real_drop_without_warning` | No longer a disclosure — kept in this table because it *was* one, and the pin asserts the docstring no longer says "no-op". Behavior pins live with the cache tests. |
-| `DataFrame.show(vertical=True)` | renders the real `-RECORD` vertical layout; no warning | same | `test_show_vertical_true_no_longer_warns` | No longer a disclosure — implemented. The pin holds the *absence* of the old warning, so a regression that reintroduces the no-op path reds here. |
-| `DataFrame.show()` logging | prints to stdout like PySpark; logs only a row-count breadcrumb at INFO, full render at DEBUG | prints to stdout | `test_show_does_not_log_row_data_at_info` | A deliberate divergence in the *logging* dimension: `show()` is a display call, and row data reaching INFO logs is a data-exposure path a drop-in user would not expect. Opt in at DEBUG. |
-
-Two of these rows describe surfaces that have **converged** (`clearCache`, `show(vertical=True)`).
-They stay in the table with their pins because the pins now hold the convergence in place: each
-asserts the absence of the old disclosure, so a regression to the no-op behavior reds here rather
-than quietly restoring a divergence this table once documented.
-
-## 9. Declared-absent Spark functions (FNP-15 / FNP-16)
-
-These names are exported and refuse. FNP-15 names are **unreachable** in a no-JVM engine.
-FNP-16 families are **reachable without a JVM and deferred by cost**. The two claims are not
-the same. Each row is DECLARED. All four FNP-16 family sections (sketches, CSV/XML/XPath,
-VARIANT, geospatial) have landed.
-
-Oracle basis for this section: *documented* — Spark 4.1.2 `pyspark.sql.functions` exports
-the name; the divergence is that repark refuses the call Spark would evaluate. No value
-oracle is involved.
-
-### FNP-15-java_method — JVM class-load reflection is unreachable
-
-- **repark** — `F.java_method`, Spark SQL `java_method(...)`, and ANSI SQL `java_method(...)`
-  raise `UnsupportedOperationException` / `NotImplemented` stating the name is **unreachable**:
-  it loads a Java class by name and invokes a static method by reflection, which needs a live
-  JVM. repark has no JVM.
-- **Apache Spark** — loads the named class and invokes the static method.
-  *(oracle: documented — Spark `CallMethodViaReflection` / `java_method`.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[java_method]`,
-  `…::test_spark_sql_door_refuses[java_method]`,
-  `…::test_ansi_sql_door_refuses[java_method]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::java_method_refuses`.
-- **Rationale** — DECLARED unreachable. Register, do not build.
-
-### FNP-15-reflect — CallMethodViaReflection is unreachable
-
-- **repark** — `reflect` is the other spelling of `java_method` and refuses as **unreachable**
-  (`CallMethodViaReflection`).
-- **Apache Spark** — same JVM reflection as `java_method`.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[reflect]`,
-  `…::test_spark_sql_door_refuses[reflect]`,
-  `…::test_ansi_sql_door_refuses[reflect]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::reflect_refuses`.
-- **Rationale** — DECLARED unreachable. Register, do not build.
-
-### FNP-15-try_reflect — exception-to-NULL reflection is unreachable
-
-- **repark** — `try_reflect` is `reflect` with exception-to-NULL and still **unreachable**;
-  it needs a live JVM.
-- **Apache Spark** — JVM reflection; exceptions become NULL.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[try_reflect]`,
-  `…::test_spark_sql_door_refuses[try_reflect]`,
-  `…::test_ansi_sql_door_refuses[try_reflect]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::try_reflect_refuses`.
-- **Rationale** — DECLARED unreachable. Register, do not build.
-
-### FNP-15-unwrap_udt — Spark UDT unwrap is unreachable
-
-- **repark** — `unwrap_udt` is **unreachable**: Spark `UserDefinedType` unwrap walks the JVM
-  UDT registry; with no JVM there is no UDT system to unwrap from.
-- **Apache Spark** — unwraps a `UserDefinedType` to its SQL type.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[unwrap_udt]`,
-  `…::test_spark_sql_door_refuses[unwrap_udt]`,
-  `…::test_ansi_sql_door_refuses[unwrap_udt]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::unwrap_udt_refuses`.
-- **Rationale** — DECLARED unreachable. Register, do not build.
-
-### FNP-15-input_file_block_start — InputFileBlockHolder start is unreachable
-
-- **repark** — `input_file_block_start` is **unreachable**: it reads Spark's
-  `InputFileBlockHolder` thread-local, populated by `HadoopRDD`/`FileScanRDD` as a split is
-  handed to a task. DataFusion has no equivalent surface, and repark's `input_file_name` is
-  itself still a stub.
-- **Apache Spark** — returns the start offset of the current file split.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_start]`,
-  `…::test_spark_sql_door_refuses[input_file_block_start]`,
-  `…::test_ansi_sql_door_refuses[input_file_block_start]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_start_refuses`.
-- **Rationale** — DECLARED unreachable until `input_file_name` is destubbed. Register, do not
-  invent a different mechanism here.
-
-### FNP-15-input_file_block_length — InputFileBlockHolder length is unreachable
-
-- **repark** — `input_file_block_length` is **unreachable** by the same `InputFileBlockHolder`
-  thread-local mechanism as `input_file_block_start`. DataFusion has no equivalent surface, and
-  repark's `input_file_name` is itself still a stub.
-- **Apache Spark** — returns the length of the current file split.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_facade_attribute_refuses_with_registry_reason[input_file_block_length]`,
-  `…::test_spark_sql_door_refuses[input_file_block_length]`,
-  `…::test_ansi_sql_door_refuses[input_file_block_length]`;
-  `crates/repark-spark/src/tests/declared_refuse.rs::input_file_block_length_refuses`.
-- **Rationale** — DECLARED unreachable until `input_file_name` is destubbed. Register, do not
-  invent a different mechanism here.
-
-### FNP-16-sketches — HLL / theta / KLL are reachable, deferred by cost
-
-- **repark** — the 32 sketch names (`hll_*` 4, `theta_*` 7, `kll_*` 21) are exported and refuse
-  as **reachable without a JVM and deferred by cost**. Spark sketch columns are Apache
-  DataSketches binary blobs. DataFusion's internal `hyperloglog.rs` is a different format and
-  cannot serve the blob even for the HLL subset.
-- **Apache Spark** — evaluates the DataSketches-backed aggregates and scalars.
-  *(oracle: documented — Spark 4.1.2 `pyspark.sql.functions` sketch family.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_sketch_facade_refuses_deferred_by_cost`,
-  `…::test_sketch_spark_sql_door_refuses`,
-  `…::test_sketch_ansi_sql_door_refuses`;
-  `crates/repark-functions/src/declared_refuse.rs::sketches_are_deferred_by_cost_and_sorted`.
-- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
-  JVM-only gap. A DataSketches port is a sub-project; do not silently alias DataFusion HLL.
-
-### FNP-16-csv-xml-xpath — CSV / XML / XPath are reachable, deferred by cost
-
-- **repark** — `to_csv`, `to_xml`, and the nine `xpath_*` names are exported and refuse as
-  **reachable without a JVM and deferred by cost**. The nine `xpath_*` functions need an XPath
-  1.0 engine matching `javax.xml.xpath`. `datafusion-spark`'s `csv` and `xml` modules are
-  empty. (`from_csv` / `from_xml` / `schema_of_*` already refuse as E1 stubs.)
-- **Apache Spark** — parses CSV/XML and evaluates XPath 1.0 over XML strings.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_csv_xml_xpath_facade_refuses_deferred_by_cost`,
-  `…::test_csv_xml_xpath_spark_sql_door_refuses`,
-  `…::test_csv_xml_xpath_ansi_sql_door_refuses`;
-  `crates/repark-functions/src/declared_refuse.rs::csv_xml_xpath_are_deferred_by_cost_and_sorted`.
-- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
-  JVM-only gap. An XPath 1.0 dependency is a sub-project.
-
-### FNP-16-variant — Spark VARIANT is reachable, deferred by cost
-
-- **repark** — the eight VARIANT names (`parse_json`, `try_parse_json`, `is_variant_null`,
-  `variant_get`, `try_variant_get`, `schema_of_variant`, `schema_of_variant_agg`,
-  `to_variant_object`) are exported and refuse as **reachable without a JVM and deferred by
-  cost**. Spark VARIANT is a specific value/metadata binary encoding. RePark's `VariantType` is
-  a shell with nothing behind it.
-- **Apache Spark** — parses and extracts Spark VARIANT values.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_variant_facade_refuses_deferred_by_cost`,
-  `…::test_variant_spark_sql_door_refuses`,
-  `…::test_variant_ansi_sql_door_refuses`;
-  `crates/repark-functions/src/declared_refuse.rs::variant_is_deferred_by_cost_and_sorted`.
-- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
-  JVM-only gap. Implementing the binary encoding is a sub-project.
-
-### FNP-16-geospatial — GEOGRAPHY/GEOMETRY are reachable, deferred by cost
-
-- **repark** — `st_asbinary`, `st_geogfromwkb`, `st_geomfromwkb`, `st_setsrid`, and `st_srid`
-  are exported and refuse as **reachable without a JVM and deferred by cost**. Spark
-  GEOGRAPHY/GEOMETRY have no Arrow representation and no vendored WKB codec.
-- **Apache Spark** — constructs and inspects GEOGRAPHY/GEOMETRY values.
-  *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_fnp15_16_declared_refuse.py::test_geospatial_facade_refuses_deferred_by_cost`,
-  `…::test_geospatial_spark_sql_door_refuses`,
-  `…::test_geospatial_ansi_sql_door_refuses`;
-  `crates/repark-functions/src/declared_refuse.rs::geospatial_is_deferred_by_cost_and_sorted`.
-- **Rationale** — DECLARED deferred-by-cost (design D-7 / §8). This is a cost deferral, not a
-  JVM-only gap. A WKB codec plus Arrow representation is a sub-project.
+- **repark** — `df.select(df.r.getField("a"))` names the output column `r['a']` (the
+  bracketed display form tracked as the projection name). An aliased read
+  (`getField("a").alias("a")`) answers the alias and is Spark-equal; values are equal on both
+  engines, and the sibling `getItem` select answers `arr[1]` on both, matching Spark.
+- **Apache Spark** — `df.select(df.r.getField("a"))` names the output column `r.a` (the
+  dotted field form). Values are equal; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, struct
+  `r<a string, b double>` over rows `("x",2.0)` / `("y",3.0)`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_get_field_bare_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
+  projects `r.a`.
