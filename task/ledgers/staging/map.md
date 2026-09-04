@@ -137,6 +137,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   rebuilt pre-extractor module, `DYNFLATTEN-QUALNAME-1` FIXED as a side effect and re-pinned as
   an answer pin. `risk_tier: standard`. Branch `perf/dynflatten-2-null-mask`.
   pins: perf-dynflatten-2-null-mask/C-001, C-002, C-003, C-004, C-005
+- [ex-22-types-writerv2-ledger.md](ex-22-types-writerv2-ledger.md) —
+  **EX-22 (2026-09-04), in flight:** the v1.1 example backfill's `types` + `DataFrameWriterV2`
+  batch — all 43 roster names at base `b5827be6`; 42 covered by eleven files under
+  `docs/examples/types/` (new) and `docs/examples/io/` (backlog 340 → 298 shipped; 374 → 332
+  at the dispatch base), the flagged
+  `VariantType`/`TimeType`/`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and
+  four snake_case spellings covered as repark extensions; `DataFrameWriterV2.overwrite` stays
+  with §7 `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the
+  `option`/`options` branch-tag arm is §7 `EX-W2-3`, and the round-2 unpartitioned-table
+  `overwritePartitions` parser leak is §7 `EX-W2-4` (OPEN, fix unit
+  `WRITERV2-OVERWRITE-UNPART-1`), pins in
+  `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
+  `docs/ex-22-types-writerv2`. pins: ex-22-types-writerv2/C-001, C-002, C-003, C-004, C-005
 - [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.

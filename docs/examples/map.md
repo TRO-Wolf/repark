@@ -61,7 +61,8 @@ file is empty.
   register, and list_tables remainder; `list_databases` stays on the backlog with §7
   `EX-CAT-2`, whose function object it shares).
 - [ta/](ta/map.md) — TA kernel examples.
-- [io/](io/map.md) — reader / writer examples.
+- [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22: the first 14
+  `DataFrameWriterV2` names; `overwrite` stays a §7 divergence, EX-W2-1).
 - [session/](session/map.md) — `repark.sql`, `ReparkSession` construction, and the
   session-level surface (EX-21: builder snake spellings, active-session trio, conf,
   catalog, frame builders, file readers, memory catalog, temp-view listing, name
@@ -71,9 +72,12 @@ file is empty.
 - [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
   snake_case spellings are repark extensions covered beside their camelCase twins; the
   tied-key ordered default frame stays a §7 divergence, EX-WIN-1).
-- `types/`, `ml/` — the remaining EX-1 families. They
-  are inventory families with no example yet; the backfill creates each
-  directory (and its `map.md`) with the first example it lands there.
+- [types/](types/map.md) — `types.*` examples (EX-22: all 28 names; construction and display
+  arms measured Spark-equal on live PySpark 4.1.2; `repark_type_to_arrow` /
+  `struct_type_from_arrow` are repark extensions taught beside the mapped types).
+- `ml/` — the remaining EX-1 family. It is an
+  inventory family with no example yet; the backfill creates the directory (and its
+  `map.md`) with the first example it lands there.
 
 ## I want to...
 
