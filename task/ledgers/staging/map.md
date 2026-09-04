@@ -61,3 +61,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
+- [ex-18-dataframe-c-ledger.md](ex-18-dataframe-c-ledger.md) —
+  **EX-18 (2026-09-04), in flight:** the v1.1 example backfill's third `DataFrame.*` batch —
+  36 roster names at base `e3600a1`; 35 covered by eleven `docs/examples/dataframe/` files
+  (backlog 550 → 515), `toJSON` refuses (R-DF-BATCH2) and stays, plus seven divergent arms
+  filed as §7 `EX-DF-10`…`EX-DF-16` with pins in
+  `python/repark/tests/test_examples_dataframe_c.py`. `risk_tier: standard`. Branch
+  `docs/ex-18-dataframe-c`. pins: ex-18-dataframe-c/C-001
