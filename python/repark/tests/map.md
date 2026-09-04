@@ -70,6 +70,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
+  FN-REGEXP-EXTRACT-1 (2026-09-04): the regexp_extract cells co-collect with the printSchema and FN-FIX-2 legs after the merge of main.
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
 - [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**

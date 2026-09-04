@@ -458,6 +458,8 @@ def test_live_df_printschema_trailing_newline_matches_spark(spark_engine: lp.Eng
     with contextlib.redirect_stdout(spark_level):
         spark_nested.printSchema(1)
     assert repark_level.getvalue() == spark_level.getvalue()
+
+
 def test_live_fn_regexp_extract(spark_engine: lp.Engine) -> None:
     """pins: fn-regexp-extract-1/C-002"""
     from repark.spark import functions as repark_fn
