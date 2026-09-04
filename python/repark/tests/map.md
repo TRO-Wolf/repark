@@ -38,17 +38,36 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
+- [test_dynflatten_null_mask.py](test_dynflatten_null_mask.py) — **PERF-DYNFLATTEN-2
+  (2026-09-04):** the before/after correctness pin, one row per bed shape. `DIGESTS`
+  holds the SHA-256 of the Arrow **IPC file bytes** of the gate-scale flattened table,
+  captured on `main` `b5b17f0` before the extractor existed, so schema, field order,
+  Arrow types, nullability, buffers and row order are all inside one comparison — a
+  row-set assertion could not see a type or a null-buffer change. `table_digest` is the
+  bed's own helper, so the pin and the measurement agree on what "identical" means.
+  Determinism was measured (two full captures, byte-equal) before the numbers were
+  written down. `test_every_bed_shape_is_covered` refuses a shape the bed grows later
+  without a digest. pins: perf-dynflatten-2-null-mask/C-001, C-003
 - [test_dynamic_flatten_divergences.py](test_dynamic_flatten_divergences.py) —
   **PERF-DYNFLATTEN-1:** `DYNFLATTEN-QUALNAME-1`, measured over keep ∈ {none, `id`, `k`} ×
   depth 1–4. Split out of `test_dynamic_flatten.py` to hold that file at its 1618-line ceiling.
+  **PERF-DYNFLATTEN-2 (2026-09-04) turned it into an answer pin.** The extractor closed the
+  divergence as a side effect — the leaf-projection rule was choking on the `get_field` inside
+  the per-leaf CASE, and there is no longer a `get_field` to hoist — so the two refusal pins
+  and their control became one pin over the same 12 cells, asserting the columns and the row
+  values live PySpark 4.1.2 returns for each. The file keeps its name and its module docstring:
+  the row it cites is the same row, now FIXED, and renaming would break the registry citation.
 
   | pin | holds |
   |---|---|
-  | `test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified` | the depth-2 message; regex `\bqualified field name\b` cannot match `unqualified` |
-  | `test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name` | the distinct depth-≥3 `duplicate unqualified field name` |
-  | `test_depth_one_with_keep_and_any_depth_without_keep_still_collect` | control: the clash needs a keep column AND depth ≥ 2 |
+  | `test_keep_column_beside_any_struct_depth_collects_the_spark_row` | all 12 cells collect; `[keep, Payload_L…_Val]` and `{keep: 1, leaf: 9}` |
 
+  Mutation: `null_mask_extractable` → `false` restores the pre-extractor CASE, and that build
+  was measured byte-identical to `main` on all eleven bed shapes; the 6 cells with a keep column
+  at depth ≥ 2 are exactly the ones `main` raised on (the two refusal pins were green there), so
+  the mutation reds **6 of 12** and the other 6 stay green.
   pins: perf-dynflatten-1-measure/C-003
+  pins: perf-dynflatten-2-null-mask/C-002
 - [test_parity_live_dynflatten.py](test_parity_live_dynflatten.py) — **PERF-DYNFLATTEN-1:**
   the live dynamicFlatten legs, split out of `test_parity_live.py` when main's growth pushed
   that module past its 1000-line ceiling (ceilings only move down).
@@ -56,7 +75,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   that symmetry surfaced `DYNFLATTEN-READNULL-1` (repark keeps a parquet `required` column
   non-nullable, Spark widens it). Co-collects with the disclosure legs on the shared
   session-scoped `spark_engine`, which moved to `conftest.py` so one JVM serves both modules.
+  **PERF-DYNFLATTEN-2** keeps this leg as its live gate: both engines `read.parquet`, so the
+  null-mask extractor is exercised on the path where leaf projection pushdown lives, not only on
+  the `createDataFrame` path the bench measures. 17 passed / 105 deselected, unchanged.
   pins: perf-dynflatten-1-measure/C-002, C-003
+  pins: perf-dynflatten-2-null-mask/C-004
   pins: perf-dynflatten-1-measure/C-002, C-003
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
