@@ -10,12 +10,15 @@ use datafusion::physical_plan::streaming::PartitionStream;
 use futures::{StreamExt, TryStreamExt};
 use iceberg::arrow::ArrowReaderBuilder;
 use iceberg::expr::Predicate;
+use iceberg::scan::FileScanTask;
 use iceberg::spec::Struct;
 use iceberg::table::Table;
 use tracing::Instrument;
 
 use super::{conform_scan_batch, iceberg_err};
 use crate::write::file_scoped_rewrite::filter_tasks_to_allowlist_nonempty;
+
+type PlannedFileTasks = Arc<futures::lock::Mutex<Option<Arc<Vec<FileScanTask>>>>>;
 
 pub(crate) type KnownPartitions = HashMap<String, (i32, Struct)>;
 
@@ -34,7 +37,7 @@ pub(crate) fn drain_partition_sink(sink: &PartitionSink) -> KnownPartitions {
     }
 }
 
-fn record_scanned_partitions(sink: &PartitionSink, tasks: &[iceberg::scan::FileScanTask]) {
+fn record_scanned_partitions(sink: &PartitionSink, tasks: &[FileScanTask]) {
     let Ok(mut guard) = sink.lock() else {
         return;
     };
@@ -53,6 +56,82 @@ fn record_scanned_partitions(sink: &PartitionSink, tasks: &[iceberg::scan::FileS
     }
 }
 
+async fn planned_or_plan(
+    cell: &PlannedFileTasks,
+    table: &Table,
+    snapshot_id: i64,
+    select_columns: Vec<String>,
+    filter: Option<Predicate>,
+    concurrency_limit: Option<usize>,
+    file_path_allowlist: Option<&std::collections::HashSet<String>>,
+) -> Result<Arc<Vec<FileScanTask>>, DataFusionError> {
+    let mut guard = cell.lock().await;
+    if let Some(tasks) = guard.as_ref() {
+        return Ok(Arc::clone(tasks));
+    }
+    note_plan_files_invocation();
+    let planned = plan_file_scan_tasks(
+        table,
+        snapshot_id,
+        select_columns,
+        filter,
+        concurrency_limit,
+        file_path_allowlist,
+    )
+    .await?;
+    let tasks = Arc::new(planned);
+    *guard = Some(Arc::clone(&tasks));
+    Ok(tasks)
+}
+
+async fn plan_file_scan_tasks(
+    table: &Table,
+    snapshot_id: i64,
+    select_columns: Vec<String>,
+    filter: Option<Predicate>,
+    concurrency_limit: Option<usize>,
+    file_path_allowlist: Option<&std::collections::HashSet<String>>,
+) -> Result<Vec<FileScanTask>, DataFusionError> {
+    let mut builder = table.scan().snapshot_id(snapshot_id).select(select_columns);
+    if let Some(predicate) = filter {
+        builder = builder.with_filter(predicate);
+    }
+    if let Some(limit) = concurrency_limit {
+        builder = builder.with_concurrency_limit(limit);
+    }
+    let scan = builder.build().map_err(iceberg_err)?;
+    let planned: Vec<_> = scan
+        .plan_files()
+        .await
+        .map_err(iceberg_err)?
+        .try_collect()
+        .await
+        .map_err(iceberg_err)?;
+    match file_path_allowlist {
+        Some(allowlist) => filter_tasks_to_allowlist_nonempty(planned, allowlist),
+        None => Ok(planned),
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    pub(crate) static PLAN_FILES_INVOCATIONS: std::cell::RefCell<
+        Option<Arc<std::sync::atomic::AtomicUsize>>,
+    > = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn note_plan_files_invocation() {
+    PLAN_FILES_INVOCATIONS.with(|slot| {
+        if let Some(counter) = slot.borrow().as_ref() {
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    });
+}
+
+#[cfg(not(test))]
+fn note_plan_files_invocation() {}
+
 /// Re-scannable partition stream over the pinned snapshot, replacing the full-target `MemTable`.
 #[derive(Debug)]
 pub(crate) struct TargetScanStream {
@@ -67,6 +146,7 @@ pub(crate) struct TargetScanStream {
     /// R-MERGE-FILE-SCAN: when set, only open data files whose path is in this set.
     file_path_allowlist: Option<std::sync::Arc<std::collections::HashSet<String>>>,
     partition_sink: Option<PartitionSink>,
+    planned_file_tasks: PlannedFileTasks,
     /// Span current at CONSTRUCTION (inside the merge's instrumented body).
     trace_parent: tracing::Span,
 }
@@ -96,6 +176,7 @@ impl TargetScanStream {
             concurrency_limit,
             file_path_allowlist,
             partition_sink: None,
+            planned_file_tasks: Arc::new(futures::lock::Mutex::new(None)),
             trace_parent: tracing::Span::current(),
         }
     }
@@ -128,44 +209,47 @@ impl PartitionStream for TargetScanStream {
         let concurrency_limit = self.concurrency_limit;
         let file_path_allowlist = self.file_path_allowlist.clone();
         let partition_sink = self.partition_sink.clone();
+        let planned_file_tasks = Arc::clone(&self.planned_file_tasks);
         let trace_parent = self.trace_parent.clone();
         // Open the pinned scan lazily and conform each arriving batch onto the scratch schema.
         let opened =
             async move {
-                let mut builder = table.scan().snapshot_id(pin).select(select_columns);
-                if let Some(predicate) = filter {
-                    builder = builder.with_filter(predicate);
-                }
-                if let Some(limit) = concurrency_limit {
-                    builder = builder.with_concurrency_limit(limit);
-                }
-                let scan = builder.build().map_err(iceberg_err)?;
                 let arrow = if file_path_allowlist.is_some() || partition_sink.is_some() {
-                    let planned: Vec<_> = scan
-                        .plan_files()
-                        .await
-                        .map_err(iceberg_err)?
-                        .try_collect()
-                        .await
-                        .map_err(iceberg_err)?;
-                    let tasks = match file_path_allowlist {
-                        Some(allowlist) => {
-                            filter_tasks_to_allowlist_nonempty(planned, allowlist.as_ref())?
-                        }
-                        None => planned,
-                    };
+                    let tasks = planned_or_plan(
+                        &planned_file_tasks,
+                        &table,
+                        pin,
+                        select_columns,
+                        filter,
+                        concurrency_limit,
+                        file_path_allowlist.as_deref(),
+                    )
+                    .await?;
                     if let Some(sink) = partition_sink.as_ref() {
-                        record_scanned_partitions(sink, &tasks);
+                        record_scanned_partitions(sink, tasks.as_ref());
                     }
-                    let task_stream: iceberg::scan::FileScanTaskStream =
-                        Box::pin(futures::stream::iter(tasks.into_iter().map(Ok)));
+                    let task_stream: iceberg::scan::FileScanTaskStream = Box::pin(
+                        futures::stream::iter(tasks.as_ref().clone().into_iter().map(Ok)),
+                    );
                     let mut reader = ArrowReaderBuilder::new(table.file_io().clone());
                     if let Some(limit) = concurrency_limit {
                         reader = reader.with_data_file_concurrency_limit(limit);
                     }
                     reader.build().read(task_stream).map_err(iceberg_err)?
                 } else {
-                    scan.to_arrow().await.map_err(iceberg_err)?
+                    let mut builder = table.scan().snapshot_id(pin).select(select_columns);
+                    if let Some(predicate) = filter {
+                        builder = builder.with_filter(predicate);
+                    }
+                    if let Some(limit) = concurrency_limit {
+                        builder = builder.with_concurrency_limit(limit);
+                    }
+                    builder
+                        .build()
+                        .map_err(iceberg_err)?
+                        .to_arrow()
+                        .await
+                        .map_err(iceberg_err)?
                 };
                 Ok::<_, DataFusionError>(arrow.map(move |batch| {
                     conform_scan_batch(&map_schema, &batch.map_err(iceberg_err)?)
