@@ -10,6 +10,10 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 ## Contents
 
+- [sql-harden-cutover-matrix.md](sql-harden-cutover-matrix.md) — **SQL-HARDEN-1 (2026-09-04):**
+  the cutover pipeline cutover shapes S1–S7 measured on memory Spark vs repark — 9 programs, 0 EQUAL,
+  9 DIVERGES, four registry rows filed, `V3-COV-7` cited. Harness:
+  `python/repark/tests/test_sql_harden_cutover.py`. pins: sql-harden-1-cutover-shapes/C-004
 - [v3-statement-coverage.md](v3-statement-coverage.md) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix that discharges the north star's §2 pillar 4 — 81 statement programs
   over 12 statement classes and all seven `CALL system.*` procedures, 267 comparison cells,

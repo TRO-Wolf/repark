@@ -203,14 +203,13 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
-- **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at
-  [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) —
-  optimization across the native door, the Spark facade and the write path with the verification
-  that proves each improvement. Design (goal, phases H-0…H-5, dated decisions):
+- **V2 Engine Hardening** (active; H-1 archived 2026-08-11 at
+  [docs/history/hardening-h1/](docs/history/hardening-h1/README.md)). Design:
   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
-  preserve-null Unnest removes redundant projections; adjacent candidates stay
-  measurement-gated. #30 (the dead doc-pointer sweep) merged.
+  preserve-null Unnest. **SQL-HARDEN-1 (2026-09-04):** S1–S7 cutover shapes vs Spark — 9
+  DIVERGES, 0 EQUAL; matrix
+  [docs/design/sql-harden-cutover-matrix.md](docs/design/sql-harden-cutover-matrix.md).
 <!-- /ws -->
 
 <!-- ws id=dml ledgers=dml-,maint- state=open -->
