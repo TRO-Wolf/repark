@@ -3894,7 +3894,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   condition both raise `AnalysisException: Schema error: No field named …`, and update/insert
   values must spell `col("source.<name>")`.
 - **Apache Spark** — the equivalent program answers the same rows on the same locally created
-  Iceberg target, but only through a parsed condition over the table name and the source alias:
+  Iceberg target, with the target's short name and the source alias as the qualifiers:
   `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id")).whenMatched().updateAll()
   .whenNotMatched().insertAll().merge()` answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. The bare key
   raises `AnalysisException: [AMBIGUOUS_REFERENCE]` (`local.ns.t2.id` vs `s.id`), and the

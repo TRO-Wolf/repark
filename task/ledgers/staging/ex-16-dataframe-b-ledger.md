@@ -96,7 +96,7 @@ oracle (`_live_parity.build_spark_iceberg_engine`, the cached
 target) re-measured the merge program: Spark answers `[(1, 'A'), (2, 'b'), (3, 'c')]` for
 `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` — the bare key raises
 `AMBIGUOUS_REFERENCE` and the `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN` as expr
-or Column objects; with the target's short name as the qualifier both forms merge),
+or Column objects; with the target's short name as the qualifier both forms merge,
 while repark answers the same rows for the bare-key sugar and for
 `F.col("target.id") == F.col("source.id")`. The same JVM measured both engines' `printSchema`
 captures (Spark's `splitlines()` holds the four tree lines plus a trailing `''`, five elements;
