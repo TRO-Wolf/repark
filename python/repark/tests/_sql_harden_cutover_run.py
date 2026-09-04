@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 import pyarrow as pa
-from _sql_harden_cutover_programs import _NAMESPACE, _Program, mor_properties
+from _sql_harden_cutover_programs import (
+    _NAMESPACE,
+    _WRITE_COPY_ON_WRITE,
+    _Program,
+    table_properties,
+)
 
 _STAGING = "staging_view"
 _EXCERPT = 76
@@ -69,6 +74,7 @@ class _Ctx(NamedTuple):
     stem: str
     format_version: int
     props: str
+    write_mode: str
 
 
 def sql_arrow(session: Any, text: str) -> pa.Table:
@@ -264,6 +270,20 @@ def delete_file_kinds(outcome: dict[str, Any]) -> list[str]:
     raise ValueError("outcome has no DEL probe")
 
 
+def _files_count_probe(ctx: _Ctx) -> list[Any]:
+    cell = _try_probe(ctx, f"SELECT file_path FROM {ctx.names['t']}.files")
+    if cell[0] == "ERROR":
+        return cell
+    return ["FILES", len(cell[1])]
+
+
+def data_file_count(outcome: dict[str, Any]) -> int:
+    for cell in outcome["probes"]:
+        if cell[0] == "FILES":
+            return int(cell[1])
+    raise ValueError("outcome has no FILES probe")
+
+
 def _table_probes(ctx: _Ctx) -> list[list[Any]]:
     """Row set, schema, snapshots, delete-file kinds, files, metadata facts."""
     target = ctx.names["t"]
@@ -296,6 +316,8 @@ def run_merge(ctx: _Ctx) -> dict[str, Any]:
     after_second = _try_probe(ctx, _ROW_PROBE.format(t=ctx.names["t"]))
     probes = _table_probes(ctx)
     probes.append(["IDEM", [after_first, after_second, after_first == after_second]])
+    if ctx.write_mode == _WRITE_COPY_ON_WRITE:
+        probes.append(_files_count_probe(ctx))
     return {"statements": statements, "probes": probes}
 
 
@@ -340,8 +362,10 @@ def run_overwrite(ctx: _Ctx) -> dict[str, Any]:
         _try_probe(ctx, row_sql),
         _schema_probe(ctx, target, "id, note, part"),
         _try_probe(ctx, _SNAP_PROBE.format(t=target)),
-        ["META", _metadata_facts(ctx.warehouse, ctx.stem)],
     ]
+    if ctx.write_mode == _WRITE_COPY_ON_WRITE:
+        probes.append(_delete_probe(ctx))
+    probes.append(["META", _metadata_facts(ctx.warehouse, ctx.stem)])
     return {"statements": statements, "probes": probes}
 
 
@@ -605,7 +629,8 @@ def run_program(
         parquet=parquet,
         stem=stem,
         format_version=program.format_version,
-        props=mor_properties(program.format_version),
+        props=table_properties(program),
+        write_mode=program.write_mode,
     )
     return _RUNNERS[program.runner](ctx)
 

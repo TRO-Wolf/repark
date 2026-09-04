@@ -184,16 +184,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
   pins: date-fn-1-spark-date-spelling/C-001, C-003, C-004
 - [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):** (DATE-FN-1 flipped the date/unix_timestamp refusal pin to an answer pin)
-  the cutover pipeline cutover shapes S1–S7 (9 programs). Always-run repark half against
-  `_sql_harden_cutover_repark.py`; live Spark half against `_sql_harden_cutover_spark.py`
-  behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
-  `_sql_harden_cutover_programs.py`, runners `_sql_harden_cutover_run.py`, verdicts
-  `_sql_harden_cutover_golden.py`. AWS legs in `test_aws_acceptance.py`.
-  Namespace pin: rendered SQL uses only the passed namespace. CUTOVER-DATE-1 controls:
-  `to_date` / `CAST AS DATE` work; `date` / `unix_timestamp` refuse.
-  MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
+  the cutover pipeline cutover shapes S1–S7 (9 programs). **SQL-HARDEN-2 (2026-09-04):**
+  S8/S9 = S1/S2/S4 at v2 and v3 copy-on-write (6 programs; 15 total). Always-run repark
+  half against `_sql_harden_cutover_repark.py`; live Spark half against
+  `_sql_harden_cutover_spark.py` behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
+  `_sql_harden_cutover_programs.py` (`cow_properties` beside `mor_properties`), runners
+  `_sql_harden_cutover_run.py`, verdicts `_sql_harden_cutover_golden.py`. AWS legs in
+  `test_aws_acceptance.py`: Glue and S3 Tables replay all 15 rows into
+  `testing_repark_acceptance` and assert the CoW MERGE cells (`delete_files` 0, data-file
+  count equal to the memory half) plus the S6 gold namespace, which `date()` now answers into.
+  Namespace pin: rendered SQL uses only the passed namespace.
+  CUTOVER-DATE-1 controls: `to_date` / `CAST AS DATE` / `date` / `unix_timestamp` answer.
+  MoR MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
+  CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
+  second pass is 1 on both engines.
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
+  pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
@@ -2739,7 +2746,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
-| Measure a the cutover pipeline cutover Iceberg SQL shape | `test_sql_harden_cutover.py` + `_sql_harden_cutover_programs.py` (memory Spark oracle); AWS legs `test_sql_harden_cutover_against_glue` / `_s3tables` |
+| Measure a the cutover pipeline cutover Iceberg SQL shape | `test_sql_harden_cutover.py` + `_sql_harden_cutover_programs.py` (memory Spark oracle; S8/S9 CoW); AWS legs `test_sql_harden_cutover_against_glue` / `_s3tables` |
 | Run the suite | `uv run maturin develop` then `uv run pytest python/repark/tests` |
 
 ## Pointers

@@ -31,6 +31,22 @@ _MOR_V3 = (
     "'write.merge.mode' = 'merge-on-read', "
     f"'write.target-file-size-bytes' = '{_TARGET_FILE_SIZE}'"
 )
+_COW_V2 = (
+    "'format-version' = 2, "
+    "'write.delete.mode' = 'copy-on-write', "
+    "'write.update.mode' = 'copy-on-write', "
+    "'write.merge.mode' = 'copy-on-write', "
+    f"'write.target-file-size-bytes' = '{_TARGET_FILE_SIZE}'"
+)
+_COW_V3 = (
+    "'format-version' = 3, "
+    "'write.delete.mode' = 'copy-on-write', "
+    "'write.update.mode' = 'copy-on-write', "
+    "'write.merge.mode' = 'copy-on-write', "
+    f"'write.target-file-size-bytes' = '{_TARGET_FILE_SIZE}'"
+)
+_WRITE_MERGE_ON_READ = "merge-on-read"
+_WRITE_COPY_ON_WRITE = "copy-on-write"
 
 _BRONZE_SCHEMA = pa.schema(
     [
@@ -57,24 +73,41 @@ class _Program(NamedTuple):
     shape: str
     format_version: int
     runner: str
+    write_mode: str
 
 
 _PROGRAMS: tuple[_Program, ...] = (
-    _Program("s1-ctas-if-fresh", "S1", 2, "ctas"),
-    _Program("s2-merge-idempotent", "S2", 2, "merge"),
-    _Program("s3-dedup-coalesce-cast", "S3", 2, "dedup"),
-    _Program("s4-overwrite-partitions", "S4", 2, "overwrite"),
-    _Program("s5-maintenance-calls", "S5", 2, "maint"),
-    _Program("s6-gold-incremental", "S6", 2, "gold"),
-    _Program("s7-ctas-if-fresh", "S7", 3, "ctas"),
-    _Program("s7-merge-idempotent", "S7", 3, "merge"),
-    _Program("s7-overwrite-partitions", "S7", 3, "overwrite"),
+    _Program("s1-ctas-if-fresh", "S1", 2, "ctas", _WRITE_MERGE_ON_READ),
+    _Program("s2-merge-idempotent", "S2", 2, "merge", _WRITE_MERGE_ON_READ),
+    _Program("s3-dedup-coalesce-cast", "S3", 2, "dedup", _WRITE_MERGE_ON_READ),
+    _Program("s4-overwrite-partitions", "S4", 2, "overwrite", _WRITE_MERGE_ON_READ),
+    _Program("s5-maintenance-calls", "S5", 2, "maint", _WRITE_MERGE_ON_READ),
+    _Program("s6-gold-incremental", "S6", 2, "gold", _WRITE_MERGE_ON_READ),
+    _Program("s7-ctas-if-fresh", "S7", 3, "ctas", _WRITE_MERGE_ON_READ),
+    _Program("s7-merge-idempotent", "S7", 3, "merge", _WRITE_MERGE_ON_READ),
+    _Program("s7-overwrite-partitions", "S7", 3, "overwrite", _WRITE_MERGE_ON_READ),
+    _Program("s8-ctas-cow", "S8", 2, "ctas", _WRITE_COPY_ON_WRITE),
+    _Program("s8-merge-idempotent-cow", "S8", 2, "merge", _WRITE_COPY_ON_WRITE),
+    _Program("s8-overwrite-partitions-cow", "S8", 2, "overwrite", _WRITE_COPY_ON_WRITE),
+    _Program("s9-ctas-cow", "S9", 3, "ctas", _WRITE_COPY_ON_WRITE),
+    _Program("s9-merge-idempotent-cow", "S9", 3, "merge", _WRITE_COPY_ON_WRITE),
+    _Program("s9-overwrite-partitions-cow", "S9", 3, "overwrite", _WRITE_COPY_ON_WRITE),
 )
 
 
 def mor_properties(format_version: int) -> str:
     """The pipeline TBLPROPERTIES block at ``format_version``."""
     return _MOR_V3 if format_version == 3 else _MOR_V2
+
+
+def cow_properties(format_version: int) -> str:
+    return _COW_V3 if format_version == 3 else _COW_V2
+
+
+def table_properties(program: _Program) -> str:
+    if program.write_mode == _WRITE_COPY_ON_WRITE:
+        return cow_properties(program.format_version)
+    return mor_properties(program.format_version)
 
 
 def write_bronze_parquet(path: object) -> None:
