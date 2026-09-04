@@ -1,4 +1,7 @@
-"""Divergence pins for the EX-20 window/catalog and EX-22 types/WriterV2 batches (§7 EX-WIN-1, EX-CAT-1..3, EX-W2-1..3)."""
+"""Divergence pins for the EX-20 window/catalog and EX-22 types/WriterV2 batches.
+
+pins: ex-20-window-catalog/C-001, ex-22-types-writerv2/C-003
+"""
 
 from __future__ import annotations
 

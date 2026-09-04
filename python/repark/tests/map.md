@@ -149,7 +149,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusing where Spark performs the conditional overwrite (EX-W2-1), empty-source
   `overwritePartitions` refusing where Spark no-ops (EX-W2-2), and `option`/`options` with a
   branch/tag key refusing where Spark silently writes the default branch (EX-W2-3) — via a
-  `spark_v2` memory-catalog fixture. The module docstring names the row span.
+  `spark_v2` memory-catalog fixture. The module docstring carries the batch pins line.
   pins: ex-20-window-catalog/C-001
   pins: ex-22-types-writerv2/C-003
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
