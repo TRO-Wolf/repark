@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-22 types-writerv2 (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 332 —
+42 roster names (all 28 `types.*`, 14 of 15 `DataFrameWriterV2.*`) covered by eleven new examples
+under `docs/examples/types/` and `docs/examples/io/`; the flagged `VariantType`/`TimeType`/
+`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and the snake_case spellings are
+covered as repark extensions (`hasattr` False on live PySpark 4.1.2); `DataFrameWriterV2.overwrite`
+stays on the backlog (§7 `EX-W2-1`), the empty-source `overwritePartitions` arm is §7 `EX-W2-2`,
+and the `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
+`python/repark/tests/test_examples_window_catalog.py`.
+pins: ex-22-types-writerv2/C-001, C-002
+
 EX-20 window-catalog (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 374
 shipped (449 → 412 at the dispatch base, before the EX-19 merge) —
 37 roster names (all 22 `Window`/`WindowSpec`, 15 of the first 18 `Catalog.*`) covered by eight
