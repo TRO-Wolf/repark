@@ -3640,7 +3640,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
-  **not FIXED** (BACKLOG). `strace -f -e openat` on the production Spark
+  **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
   `seed_done` → puffin write → `delete_done`: scan-to-puffin **1 × N** data-manifest
   opens, close **0**, commit **1 × N** plus one new delete-manifest write. Same 1+0+1
@@ -3657,8 +3657,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   as concurrent-`execute` hardening
   (`three_concurrent_target_scan_executes_plan_data_manifests_once`, mutation 1 red of 1).
   Production-path `plan_files==1` pins were deleted (a pin that cannot go red proves
-  nothing). Queued **PERF-SCAN-2** with those call sites: this fixture is already 1 × N
-  at scan; do not chase a 3 × N drop here. Remaining commit 1 × N stays
+  nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
+  are the record. Remaining commit 1 × N stays
   `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third

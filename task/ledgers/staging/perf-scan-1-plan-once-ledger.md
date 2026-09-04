@@ -223,10 +223,10 @@ The concurrent cache pin stays.
 
 ### Corrected registry wording
 
-`PERF-SCAN-3PASS-1` BACKLOG. Production Spark identity DELETE is 1 + 0 + 1 data-manifest
+`PERF-SCAN-3PASS-1` REFUTED (no scan-phase defect). Production Spark identity DELETE is 1 + 0 + 1 data-manifest
 opens (scan / close / commit) at base and tip, N=8 and N=192. The plan-once cache is
-concurrent-`execute` hardening. Queued **PERF-SCAN-2** with the call-site table: this
-fixture is already 1 × N at scan; do not chase a 3 × N drop here. Remaining commit 1 × N
+concurrent-`execute` hardening. No follow-up unit: the scan is already 1 × N; the call-site
+table is the record. Remaining commit 1 × N
 stays `PERF-DVCLOSE-STMT-1` / F-25.
 
 ### Round-2 gates
