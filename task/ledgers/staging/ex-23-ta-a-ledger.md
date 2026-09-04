@@ -136,6 +136,7 @@ re-ran every assert green. No Spark JVM was started; `python3` on this box canno
 | Command | Exit |
 |---|---|
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_window_catalog.py -q` | **0** (9 passed; the file is untouched by this unit) |
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
 | `make check-ledgers` | **0** |
@@ -146,8 +147,8 @@ re-ran every assert green. No Spark JVM was started; `python3` on this box canno
 | `.venv/bin/ruff format --check docs/examples python/repark/tests` | **0** |
 
 `python3 scripts/check_example_coverage.py --skip-execute` (system `python3`, no native module)
-also exits 0 on the static half. No pin file was created, so the `test_examples_window_catalog.py`
-pytest leg of the gate list is vacuous for this unit; the file is untouched.
+also exits 0 on the static half. No pin file was created — the pytest leg re-ran the existing
+EX-20/EX-21/EX-22 pins beside this unit's tree.
 
 Counts line (execute leg):
 
