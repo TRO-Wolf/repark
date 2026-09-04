@@ -2,7 +2,7 @@
 
 import pytest
 
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import UnsupportedOperationException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 
@@ -87,16 +87,18 @@ def test_sql_rlike_keyword_refuses(value: str) -> None:
         repark.stop()
 
 
-@pytest.mark.parametrize("value", ["alpha", "fox"])
-def test_regexp_extract_refuses_on_both_doors(value: str) -> None:
-    """FN-REGEX-POSIX-1: regexp_extract refusal both doors. pins: fn-fix-2-ctrl-1-controls/C-002"""
+@pytest.mark.parametrize(("value", "want"), [("alpha", "alpha"), ("fox", "")])
+def test_regexp_extract_answers_on_both_doors(value: str, want: str) -> None:
+    """regexp_extract answers Spark's group on both doors. pins: fn-regexp-extract-1/C-002"""
     repark = ReparkSession.builder.appName("fn-regex-extract").master("local[1]").getOrCreate()
     try:
-        with pytest.raises(
-            UnsupportedOperationException, match="regexp_extract is not supported yet"
-        ):
-            F.regexp_extract(F.lit(value), "([[:alpha:]]+)", 1)
-        with pytest.raises(AnalysisException, match="Invalid function 'regexp_extract'"):
-            repark.sql(f"SELECT regexp_extract('{value}', '([[:alpha:]]+)', 1)").collect()
+        facade = (
+            repark.createDataFrame([(value,)], ["s"])
+            .select(F.regexp_extract("s", F.lit("([[:alpha:]]+)"), 1).alias("r"))
+            .collect()
+        )
+        assert [row["r"] for row in facade] == [want]
+        sql = repark.sql(f"SELECT regexp_extract('{value}', '([[:alpha:]]+)', 1) AS r").collect()
+        assert [row["r"] for row in sql] == [want]
     finally:
         repark.stop()

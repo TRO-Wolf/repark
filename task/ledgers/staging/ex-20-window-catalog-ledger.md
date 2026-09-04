@@ -62,7 +62,7 @@ the default session and temp views only (no cloud, no registered catalog).
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Eight files under `docs/examples/window/` and `docs/examples/catalog/` land runnable local examples for the 37 Spark-equal roster names, every asserted value measured against live PySpark 4.1.2 before it was written; those 37 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 37, 449 → 412, with no other `scripts/` change; `Catalog.getDatabase`/`get_database` and `Catalog.listDatabases` stay on the backlog with §7 rows `EX-CAT-1`/`EX-CAT-2`, the `functionExists(name, dbName)` arm is §7 `EX-CAT-3`, and the DataFrame-door tied-key default frame is §7 `EX-WIN-1`, all pinned in `python/repark/tests/test_examples_window_catalog.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (37 findings before, 0 after), the oracle table (40 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Eight files under `docs/examples/window/` and `docs/examples/catalog/` land runnable local examples for the 37 Spark-equal roster names, every asserted value measured against live PySpark 4.1.2 before it was written; those 37 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 37, 449 → 412 at the dispatch base and 411 → 374 on the shipped tree after the EX-19 merge, with no other `scripts/` change; `Catalog.getDatabase`/`get_database` and `Catalog.listDatabases` stay on the backlog with §7 rows `EX-CAT-1`/`EX-CAT-2`, the `functionExists(name, dbName)` arm is §7 `EX-CAT-3`, and the DataFrame-door tied-key default frame is §7 `EX-WIN-1`, all pinned in `python/repark/tests/test_examples_window_catalog.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (37 findings before, 0 after), the oracle table (40 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -165,10 +165,12 @@ with `--skip-execute`.
 
 Counts line (execute leg):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 499 covered; 412 backlog; 2 exceptions; 128 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 537 covered; 374 backlog; 2 exceptions; 138 examples`
 
-Before this unit: `462 covered; 449 backlog; 120 examples` (at `3484f8d7`). After: `499 covered;
-412 backlog; 128 examples` — exactly the 37 kept names (`BACKLOG_BASELINE` 449 → 412).
+Before this unit: `462 covered; 449 backlog; 120 examples` (at `3484f8d7`). On this unit's own
+tree before the merge: `499 covered; 412 backlog; 128 examples` (`BACKLOG_BASELINE` 449 → 412).
+On the shipped tree, after the EX-19 merge: `537 covered; 374 backlog; 138 examples`
+(`BACKLOG_BASELINE` 411 → 374) — exactly the 37 kept names.
 
 ## Review-gap table (round-1 findings, resolved in-lane)
 
@@ -184,7 +186,8 @@ The GLM (glm-5.3-flash) leg started 2026-09-04: read the contract, the corpus, a
 EX-19 ledger; ran four oracle legs (leg 1 `hasattr` JVM-free, leg 2 the round-1 value table, and
 the round-2/round-3 unique-`k` re-measurement, one Spark JVM at a time); wrote the eight example
 files, the divergence pins, the registry rows, the backlog ratchet and the maps, then committed
-in slices. Base `3484f8d7`.
+in slices; merged `origin/main` (EX-19 + fn-regexp-extract-1) before hand-back with the backlog
+as the intersection of both sides and the baseline at main's 411 minus 37. Base `3484f8d7`.
 
 ## Disk
 

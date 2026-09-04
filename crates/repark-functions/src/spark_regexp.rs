@@ -40,6 +40,11 @@ pub fn regexp_substr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpSubstr::new()))
 }
 
+#[must_use]
+pub fn regexp_extract_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkRegexpExtract::new()))
+}
+
 #[derive(Clone, Copy)]
 enum RegexpKind {
     Count,
@@ -226,6 +231,57 @@ impl Hash for SparkRegexpSubstr {
     }
 }
 
+#[derive(Debug)]
+struct SparkRegexpExtract {
+    signature: Signature,
+}
+
+impl SparkRegexpExtract {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkRegexpExtract {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkRegexpExtract {}
+
+impl Hash for SparkRegexpExtract {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkRegexpExtract {
+    crate::shim_udf_boilerplate!("regexp_extract");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            "regexp_extract",
+            DataType::Utf8,
+            any_arg_nullable(args.arg_fields),
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        coerce_regexp_args(arg_types, "regexp_extract", true)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_extract(&args)
+    }
+}
+
 impl ScalarUDFImpl for SparkRegexpSubstr {
     crate::shim_udf_boilerplate!("regexp_substr");
 
@@ -386,13 +442,39 @@ fn extract_rows<T>(
     Ok(out)
 }
 
+fn invoke_extract(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let values = extract_rows(args, "regexp_extract", |row| {
+        Ok(match row {
+            None => None,
+            Some((text, regex, raw_group)) => {
+                let captured = regex
+                    .find(text)
+                    .map(|found| {
+                        let group = validate_group_index(raw_group, regex, "regexp_extract")?;
+                        Ok::<_, DataFusionError>(
+                            regex
+                                .captures_at(text, found.start())
+                                .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()))
+                                .unwrap_or_default(),
+                        )
+                    })
+                    .transpose()?
+                    .unwrap_or_default();
+                Some(captured)
+            }
+        })
+    })?;
+    let array: ArrayRef = Arc::new(StringArray::from(values));
+    Ok(ColumnarValue::Array(array))
+}
+
 fn invoke_extract_all(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let mut builder = ListBuilder::new(StringBuilder::new());
     extract_rows(args, "regexp_extract_all", |row| {
         match row {
             None => builder.append(false),
             Some((text, regex, raw_group)) => {
-                let group = validate_group_index(raw_group, regex)?;
+                let group = validate_group_index(raw_group, regex, "regexp_extract_all")?;
                 for found in collect_matches(text, regex)? {
                     let captured = regex
                         .captures_at(text, found.start())
@@ -427,7 +509,7 @@ fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
 }
 
 /// Negative or over-large groups use Spark's single `REGEX_GROUP_INDEX` error contract.
-fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
+fn validate_group_index(raw_group: i32, regex: &Regex, name: &str) -> Result<usize> {
     let bound = regex.captures_len().saturating_sub(1);
     let group = usize::try_from(raw_group)
         .ok()
@@ -435,7 +517,7 @@ fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
     group.ok_or_else(|| {
         DataFusionError::Execution(format!(
             "[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX] The value of parameter(s) `idx` in \
-             `regexp_extract_all` is invalid: Expects group index between 0 and {bound}, but got \
+             `{name}` is invalid: Expects group index between 0 and {bound}, but got \
              {raw_group}. SQLSTATE: 22023"
         ))
     })
@@ -601,6 +683,22 @@ mod tests {
             None
         } else {
             Some(array.value(0))
+        }
+    }
+
+    async fn one_str(ctx: &SessionContext, sql: &str) -> Option<String> {
+        let batches = ctx
+            .sql(sql)
+            .await
+            .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("exec {sql}: {error}"));
+        let array = batches[0].column(0).as_string::<i32>();
+        if array.is_null(0) {
+            None
+        } else {
+            Some(array.value(0).to_owned())
         }
     }
 
@@ -776,6 +874,113 @@ mod tests {
         assert_eq!(array.value(0), 3);
         assert_eq!(array.value(1), 0);
         assert_eq!(array.value(2), 3);
+    }
+
+    #[tokio::test]
+    async fn regexp_extract_group_default_and_whole_match() {
+        let ctx = ctx_register_all();
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 1)"
+            )
+            .await,
+            Some("100".to_owned())
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 2)"
+            )
+            .await,
+            Some("200".to_owned())
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)', 0)"
+            )
+            .await,
+            Some("100-200".to_owned())
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('100-200', '([0-9]+)-([0-9]+)')"
+            )
+            .await,
+            Some("100".to_owned())
+        );
+        assert_eq!(
+            one_str(&ctx, "SELECT regexp_extract('ac', '(a)(b)?', 2)").await,
+            Some(String::new())
+        );
+    }
+
+    #[tokio::test]
+    async fn regexp_extract_no_match_is_empty_null_in_null_out() {
+        let ctx = ctx_register_all();
+        assert_eq!(
+            one_str(&ctx, "SELECT regexp_extract('abc', '([0-9]+)', 1)").await,
+            Some(String::new())
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract(CAST(NULL AS VARCHAR), '([0-9]+)', 1)"
+            )
+            .await,
+            None
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('abc', CAST(NULL AS VARCHAR), 1)"
+            )
+            .await,
+            None
+        );
+        assert_eq!(
+            one_str(
+                &ctx,
+                "SELECT regexp_extract('abc', '([0-9]+)', CAST(NULL AS INT))"
+            )
+            .await,
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn regexp_extract_bad_group_names_extract() {
+        let ctx = ctx_register_all();
+        for idx in [3, -1] {
+            let query = format!("SELECT regexp_extract('a-b', '(a)-(b)', {idx})");
+            let result = ctx.sql(&query).await.expect("plan").collect().await;
+            let message = format!("{result:?}");
+            assert!(result.is_err(), "idx {idx} must raise; got {message}");
+            assert!(
+                message.contains("`regexp_extract` is invalid")
+                    && message.contains("between 0 and 2"),
+                "Spark REGEX_GROUP_INDEX shape; got {message}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn regexp_extract_java_union_and_unicode_class() {
+        let ctx = ctx_register_all();
+        assert_eq!(
+            one_str(&ctx, "SELECT regexp_extract('alpha', '([[:alpha:]]+)', 1)").await,
+            Some("alpha".to_owned())
+        );
+        assert_eq!(
+            one_str(&ctx, "SELECT regexp_extract('fox', '([[:alpha:]]+)', 1)").await,
+            Some(String::new())
+        );
+        assert_eq!(
+            one_str(&ctx, "SELECT regexp_extract('alpha', '(\\p{L}+)', 1)").await,
+            Some("alpha".to_owned())
+        );
     }
 
     #[tokio::test]

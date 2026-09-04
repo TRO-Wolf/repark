@@ -1573,8 +1573,15 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` answers through the same
+  union path — `regexp_extract('alpha', '([[:alpha:]]+)', 1)` is `'alpha'`,
+  `regexp_extract('fox', '([[:alpha:]]+)', 1)` is `''` — pinned in
+  `python/repark/tests/test_fn_regexp_extract.py::test_extract_posix_alpha_is_java_union`.
+  Widening: the facade accepts a 2-arg call (`idx` defaults to 1) where PySpark
+  4.1.2 requires `idx` (`TypeError` measured 2026-09-04); the SQL door matches
+  Spark exactly. Source-compatible; recorded in the API freeze.
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
-- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` answers since FN-REGEXP-EXTRACT-1 (2026-09-04) — the former refusal pin is now `test_fn_regex_posix_class.py::test_regexp_extract_answers_on_both_doors` (FINDING F-FN-FIX-2-CTRL-1-1's flag superseded; Spark `'alpha'`/`''` control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
 
 ### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
 
@@ -1588,6 +1595,19 @@ the pin rather than obeying it.
 - **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
   the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
   Spark-equal per FN-REGEX-POSIX-1.
+
+### FN-REGEX-LOOKAROUND-1 — Java look-around refuses on every regexp kernel
+
+- **repark** — `regexp_extract('foobar', '(?<=foo)bar', 0)` (and the sibling
+  kernels on the same pattern) raises `invalid regular expression`: the `regex`
+  crate has no look-around support and the Java→Rust translator refuses the
+  construct loudly instead of answering.
+- **Apache Spark** — the same cell answers `'bar'` (lookbehind consumed, group 0
+  is the match). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
+  FN-REGEXP-EXTRACT-1 round 2.)*
+- **Pin** — `python/repark/tests/test_fn_regexp_extract.py::test_extract_java_lookbehind_is_loud`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-REGEXP-EXTRACT-1 round-2
+  measurement. Refusal is the shared translator behaviour, not an extract gap.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -4062,6 +4082,53 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-18 measurement. The refusal is disclosed
   (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured Spark answers
   and keeps the name on the example backlog until the engine grows a row-JSON exporter.
+### EX-DF-18 — `withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame
+
+- **repark** — a rename map whose final names collide raises
+  `AnalysisException: withColumnsRenamed produced duplicate column names ['k', 'k', 'v']; repark
+  requires unique column names (Spark allows duplicates — Group F disclosure)`. Non-colliding
+  maps — including a chain applied sequentially in dict order (`{"g": "gg", "k": "g"}` on
+  `[g, k, v]` answers `[gg, g, v]`) — match Spark bit-for-bit on names and values.
+- **Apache Spark** — `withColumnsRenamed({"g": "k", "k": "k"})` on `[g, k, v]` answers the frame
+  with duplicate column names `['k', 'k', 'v']`; renames apply sequentially in dict insertion
+  order. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d batch; one-row
+  `g`/`k`/`v` frame.)*
+- **Pin** —
+  `python/repark/tests/test_examples_dataframe_d.py::test_with_columns_renamed_duplicate_names_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. The name stays covered by
+  the non-colliding arms, where the engines agree; this row records the colliding-map arm until
+  repark can materialize duplicate column names the way Spark does.
+
+### EX-DF-19 — `stat.freqItems` refuses; Spark answers the frequent-item table
+
+- **repark** — `DataFrame.stat.freqItems(cols, support)` raises
+  `UnsupportedOperationException: DataFrame.stat.freqItems is not supported yet (disclosed
+  R-DF-BATCH2)`.
+- **Apache Spark** — `stat.freqItems(["k", "v"])` on a five-row `k`/`v` frame answers columns
+  `['k_freqItems', 'v_freqItems']` and the row `([1, 2, 3], [50.0, 20.0, 40.0, 10.0, 30.0])` at
+  the default 1% support. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19 DataFrame-d
+  batch; null-free five-row `k`/`v` frame.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_d.py::test_stat_freq_items_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. A refusal is documented
+  as a refusal, never as an example that swallows it; the name stays on the example backlog until
+  frequent-item discovery lands.
+
+### EX-ROW-1 — a struct-valued Row field is a dict in repark; Spark keeps the nested Row
+
+- **repark** — `select(struct("g", "k").alias("s")).first().asDict()` answers
+  `{'s': {'g': 'a', 'k': 1}}`: the struct field collect returns is a plain dict, so
+  `asDict(recursive=False)` and `asDict(recursive=True)` answer the same nested dict.
+- **Apache Spark** — the same program answers `{'s': Row(g='a', k=1)}` for
+  `asDict(recursive=False)`: the field stays a `Row` until `recursive=True` converts it to
+  `{'s': {'g': 'a', 'k': 1}}`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-19
+  DataFrame-d batch; one-row `g`/`k` frame.)*
+- **Pin** —
+  `python/repark/tests/test_examples_dataframe_d.py::test_row_asdict_recursive_false_struct_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-19 measurement. `Row.asDict` /
+  `Row.as_dict` stay covered by the flat-row arm and the recursive arm, where the engines agree;
+  this row records the struct-field representation until collect returns nested Rows the way
+  Spark does.
+
 ### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column
