@@ -174,8 +174,8 @@ Counts line (execute leg):
 
 Before this unit: `500 covered; 411 backlog; 130 examples` (at `b5b17f0`). On this unit's own
 tree before the merge: `534 covered; 377 backlog; 146 examples` (`BACKLOG_BASELINE` 411 → 377).
-On the shipped tree, after the EX-20 merge: `534 covered; 340 backlog; 154 examples`
-(`BACKLOG_BASELINE` 374 → 340) — exactly the 34 kept names.
+On the shipped tree, after the EX-20 merge: `571 covered; 340 backlog; 154 examples`
+(`BACKLOG_BASELINE` 374 → 340) — exactly the 34 kept names on top of EX-20's 37.
 
 ## Review-gap table (round-1 findings, resolved in-lane)
 
