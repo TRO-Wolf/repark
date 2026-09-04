@@ -3828,6 +3828,64 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
   closed here or Spark's own is restated.
 
+### EX-DF-6 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+
+- **repark** — both spellings raise
+  `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
+  on this engine yet; use intersect() for distinct bags (octo C1-L-005)`.
+- **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
+  the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_intersect_all_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
+  the example backlog until the multiset intersect is Spark-correct; the distinct-bag
+  `intersect` is covered and Spark-equal.
+
+### EX-DF-7 — `groupingSets` takes one column each in repark; Spark takes a list of sets
+
+- **repark** — `groupingSets(*cols)` lowers to `GROUPING SETS ((c1), (c2), ())`: on
+  `[("a", 1), ("a", 2), ("b", 3)]` over `g`/`k`, `.groupingSets("g", "k").count()` answers
+  columns `['g', 'k', 'count']` with rows `('a', None, 2)`, `('b', None, 1)`, `(None, 1, 1)`,
+  `(None, 2, 1)`, `(None, 3, 1)`, `(None, None, 3)`. Spark's documented call shape —
+  `groupingSets([("g", "k"), ("g",), ()], "g", "k")` — raises
+  `AttributeError: 'list' object has no attribute 'sql_expr_part'`: the repark signature cannot
+  express it.
+- **Apache Spark** — `DataFrame.groupingSets(groupingSets, *cols)` (4.0+) takes the grouping
+  sets as a sequence of sequences, plus the output columns. The documented shape on the same
+  frame answers columns `['g', 'k', 'count']` with rows `('a', 1, 1)`, `('a', 2, 1)`,
+  `('a', None, 2)`, `('b', 3, 1)`, `('b', None, 1)`, `(None, None, 3)`; repark's own shape
+  `groupingSets("g", "k")` on the same input answers `['k', 'count']` with rows
+  `[(None, 1), (None, 2)]` — a different aggregation with different output columns.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_grouping_sets_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. The signatures disagree
+  on the first parameter and the measured answers differ either way, so no input answers
+  Spark-equal on both; both spellings stay on the example backlog until repark implements
+  Spark's multi-set signature.
+
+### EX-DF-8 — `mergeInto` runs through the string-sugar arm; live Spark refuses every locally reachable shape
+
+- **repark** — `source.mergeInto(table, "id")` works end to end through the equi-join sugar:
+  on target `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]`, the
+  `whenMatched().update` / `whenNotMatched().insert` arm and the `updateAll` / `insertAll` arm
+  both answer `[(1, 'A'), (2, 'b'), (3, 'c')]`. Update/insert values must spell
+  `col("source.<name>")`; bound source Columns (`source.name`) raise
+  `AnalysisException: Ambiguous reference to unqualified field name`, and Column conditions
+  rendered as display text raise (`Schema error: No field named target.id`).
+- **Apache Spark** — `DataFrame.mergeInto` exists (4.0+) but this oracle's only locally
+  creatable target — a managed v2 parquet table — refuses the statement with
+  `UNSUPPORTED_FEATURE.TABLE_OPERATION` (does not support MERGE INTO TABLE). Every condition
+  spelling raises before that check: the documented `mergeInto("target", "id")` string raises
+  `AMBIGUOUS_REFERENCE` on the shared key, `expr("target.id = source.id")` and
+  catalog-qualified `expr("spark_catalog.default.<t>.id = id")` raise `AMBIGUOUS_REFERENCE` /
+  `UNRESOLVED_COLUMN`. No Spark answer was obtainable for any input repark answers.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch, four probe
+  rounds over v2 parquet targets.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
+  the example backlog until Spark-equal MERGE can be demonstrated on a locally creatable
+  target; the pin records repark's current working arm.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

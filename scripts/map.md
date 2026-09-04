@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 520 —
+30 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
+(`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
+`bridges.py`, `print_schema.py`, `random_split.py`); the 6 names the live oracle measured
+divergent stay on the backlog (`intersectAll`/`intersect_all` refused, `groupingSets`/
+`grouping_sets` signature and semantics, `mergeInto`/`merge_into` refused by live Spark on
+every locally reachable shape), registry §7 `EX-DF-6`…`EX-DF-8`, pins in
+`python/repark/tests/test_examples_dataframe_b.py`.
+pins: ex-16-dataframe-b/C-001
+
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
 28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,

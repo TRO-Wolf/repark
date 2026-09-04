@@ -73,6 +73,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-FIX-2 (2026-09-04):**
   FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
   pins: fn-fix-2-string-rows/C-003
+- [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
+  the three divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
+  refusal with Spark's multiset answer recorded (EX-DF-6), `groupingSets`'s one-set-per-column
+  answer plus the refused Spark documented shape (EX-DF-7), and `mergeInto`'s working
+  string-sugar arm (EX-DF-8).
+  pins: ex-16-dataframe-b/C-001
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the five divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
