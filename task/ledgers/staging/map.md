@@ -132,7 +132,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-22-types-writerv2-ledger.md](ex-22-types-writerv2-ledger.md) —
   **EX-22 (2026-09-04), in flight:** the v1.1 example backfill's `types` + `DataFrameWriterV2`
   batch — all 43 roster names at base `b5827be6`; 42 covered by eleven files under
-  `docs/examples/types/` (new) and `docs/examples/io/` (backlog 374 → 332), the flagged
+  `docs/examples/types/` (new) and `docs/examples/io/` (backlog 340 → 298 shipped; 374 → 332
+  at the dispatch base), the flagged
   `VariantType`/`TimeType`/`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and
   four snake_case spellings covered as repark extensions; `DataFrameWriterV2.overwrite` stays
   with §7 `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the

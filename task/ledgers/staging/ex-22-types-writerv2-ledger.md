@@ -70,7 +70,7 @@ stays on the backlog for that reason. The four flagged names (`VariantType`, `Ti
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Eleven runnable files under `docs/examples/types/` (new directory with its `map.md`) and `docs/examples/io/` land local examples for the 42 Spark-equal roster names — construction, `typeName`/`simpleString`/`jsonValue`/repr, StructType field access, the Arrow helpers, and an explicit-schema `createDataFrame` — every asserted value measured against live PySpark 4.1.2 before it was written (WriterV2 arms on the harness's Iceberg engine); each script exits 0 under `python <path>` with no network and no JVM; no product file is touched. | The oracle table (43 rows, one per roster name), the eleven scripts each exiting 0 locally, and the recorded gate exit codes. | **PROVEN** |
-| C-002 | The 42 covered names leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 42, 374 → 332, with no other `scripts/` change; `DataFrameWriterV2.overwrite` stays listed; the gate's static half and its `--require-execute` leg both exit 0 (579 covered; 332 backlog; 149 examples). | The gate's own counts line at the base (537/374/138) and on the unit tree (579/332/149), plus the red-first provocation below. | **PROVEN** |
+| C-002 | The 42 covered names leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 42 — 374 → 332 at the dispatch base `b5827be6`, 340 → 298 as shipped after the EX-21 merge — with no other `scripts/` change; `DataFrameWriterV2.overwrite` stays listed; the gate's static half and its `--require-execute` leg both exit 0 (613 covered; 298 backlog; 165 examples). | The gate's own counts line at the dispatch base (537/374/138), at the merged base (571/340/154), and on the shipped tree (613/298/165), plus the red-first provocation below. | **PROVEN** |
 | C-003 | A name whose repark answer differs from Spark's is not papered over: `DataFrameWriterV2.overwrite` stays on the backlog with §7 row `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the `option`/`options` branch-tag arm is §7 `EX-W2-3`, and repark's current answer for each is pinned in `python/repark/tests/test_examples_window_catalog.py` (one-line forced docstrings, 7 tests passing); no `types.*` name measured divergent. | The three registry rows, the three new pin tests (7 passed), and the oracle table's dropped/arm rows. | **PROVEN** |
 | C-004 | This ledger records the roster, the grouping, the red-first provocation, the name-by-name oracle table, and the gates; `staging/map.md` gains the EX-22 row; `docs/examples/map.md`, `docs/examples/io/map.md`, and the new `docs/examples/types/map.md` move in lockstep with the files. | The ledger itself and the lockstep map diffs in the same commits. | **PROVEN** |
 
@@ -79,13 +79,15 @@ stays on the backlog for that reason. The four flagged names (`VariantType`, `Ti
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
 Captured on this tree with the eleven example files held outside `docs/examples/` and
-`docs/examples/backlog.txt` + `scripts/check_example_coverage.py` restored to the base state
-(the 43 roster rows still listed, `BACKLOG_BASELINE=374`): the static gate exits **0**
-(`537 covered; 374 backlog; 138 examples`). **Provocation:** delete all 43 roster rows and set
-`BACKLOG_BASELINE` to 331 (`374 − 43`, as if the whole roster were covered) with no example
+`docs/examples/backlog.txt` + `scripts/check_example_coverage.py` restored to main's state at
+the merge (the 43 roster rows still listed, `BACKLOG_BASELINE=340`): the static gate exits **0**
+(`571 covered; 340 backlog; 154 examples`). **Provocation:** delete all 43 roster rows and set
+`BACKLOG_BASELINE` to 297 (`340 − 43`, as if the whole roster were covered) with no example
 files present; the gate exits **1** with exactly **43 findings**, one per roster name and no
-others. Restoring the rows, the baseline 332, and the eleven files returns the gate to **0**
-(`579 covered; 332 backlog; 149 examples`). `pins: ex-22-types-writerv2/C-001, C-002`
+others. Restoring the unit state — the 43 rows deleted, `BACKLOG_BASELINE` 298, the eleven
+files back — returns the gate to **0** (`613 covered; 298 backlog; 165 examples`). Re-run
+2026-09-04 on the shipped tree after the EX-21 merge, in the round-2 review.
+`pins: ex-22-types-writerv2/C-001, C-002`
 
 ## Oracle (live PySpark 4.1.2, ANSI on, UTC, local[2], JDK zulu-17, TZ=UTC)
 
@@ -186,11 +188,12 @@ SHA `b5827be6` (expected for this lane).
 
 Counts line (execute leg):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 579 covered; 332 backlog; 2 exceptions; 149 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 613 covered; 298 backlog; 2 exceptions; 165 examples`
 
-Before this unit: `537 covered; 374 backlog; 138 examples` (at `b5827be6`). On this unit's tree:
-`579 covered; 332 backlog; 149 examples` (`BACKLOG_BASELINE` 374 → 332) — exactly the 42 kept
-names; `DataFrameWriterV2.overwrite` stays listed.
+Before this unit: `537 covered; 374 backlog; 138 examples` (at the dispatch base `b5827be6`);
+main's tree at the merge: `571 covered; 340 backlog; 154 examples`. On this unit's shipped
+tree: `613 covered; 298 backlog; 165 examples` (`BACKLOG_BASELINE` 340 → 298 shipped; 374 → 332
+at the dispatch base) — exactly the 42 kept names; `DataFrameWriterV2.overwrite` stays listed.
 
 ## Review-gap table (round-1 findings, resolved in-lane)
 
@@ -235,7 +238,7 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/types/atomic_numeric.py, docs/examples/types/string_and_bool.py, docs/examples/types/temporal_types.py, docs/examples/types/interval_types.py, docs/examples/types/decimal_null_variant.py, docs/examples/types/complex_types.py, docs/examples/types/datatype_from_ddl.py, docs/examples/types/arrow_schema_roundtrip.py, docs/examples/io/writerv2_create.py, docs/examples/io/writerv2_replace.py, docs/examples/io/writerv2_append_overwrite.py]
     - id: AT-2
       status: ATTACKED
-      evidence: The red-first provocation deleted all 43 roster rows and set the baseline to 331 with no example files; the gate exited 1 with exactly 43 findings, and the backlog is an exact baseline 332 with DataFrameWriterV2.overwrite still listed.
+      evidence: The red-first provocation deleted all 43 roster rows and set the baseline to 297 with no example files; the gate exited 1 with exactly 43 findings, and the backlog is an exact baseline 298 with DataFrameWriterV2.overwrite still listed.
       artifacts: [scripts/check_example_coverage.py, docs/examples/backlog.txt]
     - id: AT-3
       status: ATTACKED
