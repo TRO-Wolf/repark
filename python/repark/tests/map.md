@@ -81,7 +81,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
-- [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):**
+- [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):** imports
+  `repark.spark.functions` (importing the `repark.functions` shim rebinds the package attribute
+  and hides the private SSOT names `test_qi1_idents.py` pins);
   the two divergence pins for the Column-a example batch —
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
   select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
@@ -664,6 +666,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `enable_leaf_expression_pushdown` flag (which stays at DataFusion's default);
   ledger `task/c25-bugfix-ledger.md`.
 - `test_qi1_idents.py` — **r23 QI1 / CQ-006/007:** `_idents` SSOT pins (always-quote vs
+  `functions_mod` is `repark.spark.functions` itself (EX-17, 2026-09-04): the shim re-exports only `__all__`.
   quote-if-needed classes; injection-probe battery with independent oracle equality / under-escape
   mutation pin; path-escape + probe-table freeze lockstep with Rust probes;
   re-export identity for session/dataframe/catalog/column/functions/merge).
