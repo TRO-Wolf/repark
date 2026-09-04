@@ -5,13 +5,30 @@ CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 
 ## Purpose
 
-File-backed tests for the `dynamic_flatten` plan-rewrite kernel
-(`../dynamic_flatten.rs`): structs first, then lists one-at-a-time, matching
-the Python `dynamicFlatten` state machine. Schema-only walks; no physical
-operator.
+The `dynamic_flatten` plan-rewrite kernel's one non-test module plus its
+file-backed tests (`../dynamic_flatten.rs`): structs first, then lists
+one-at-a-time, matching the Python `dynamicFlatten` state machine. Schema-only
+walks; the null-mask extractor is the only physical work this directory owns.
 
 ## Contents
 
+- `null_mask.rs` — **PERF-DYNFLATTEN-2 (2026-09-04):** the struct-field
+  extractor that replaced the per-leaf `CASE WHEN parent IS NULL` on plain
+  `Struct` parents. One scalar UDF, `repark_null_mask_field(parent, 'field')`:
+  it takes the child array as `get_field` would and unions the parent's
+  validity into it with `arrow::compute::nullif`, so the null-parent slots
+  cost one bit-and over the validity buffer instead of two full
+  `filter_record_batch` copies and a `zip` per leaf per level. Contract:
+
+  | rule | why |
+  |---|---|
+  | plain `Struct` parents only (`null_mask_extractable`) | a `Dictionary(_, Struct)` parent keeps `null_safe_field`: `get_field` there returns `Dictionary(K, child)` while the typed null is `child`, and the CASE's coercion between them is the shipped output type. The extractor would have to reproduce that coercion to stay byte-identical, and the path is unmeasured. |
+  | `placement` stays at the trait default (`KeepInPlace`) | **Measured, not chosen.** Two variants were built and both red `nested_struct_in_struct` — a shape that collects on `main` — with `Optimizer rule 'push_down_leaf_projections' failed … AmbiguousReference { name: "id" }`, which is `DYNFLATTEN-QUALNAME-1` reaching a case it did not reach before: (1) declaring `MoveTowardsLeafNodes` the way `GetFieldFunc` does, and (2) re-expressing the leaf as `mask(get_field(parent, 'x'), parent)` so `get_field` survives in the plan. A `get_field` sitting at the top of a projection expression takes a different route through that rule than the same call buried in a CASE branch, which the rule will not hoist out of a conditional. The CASE was hiding `get_field` from the rule, and the extractor has to hide it too. |
+  | the extractor replaces `get_field`, it does not wrap it | consequence of the row above, and the one cost this unit pays: a struct leaf is no longer visible to `push_down_leaf_projections`, so `read.parquet(…).dynamicFlatten().select(one_leaf)` reads the whole parent struct where it could have read one leaf. `dynamicFlatten` expands **every** leaf, so nothing is pruned in the un-projected case, which is what the bed measures; the projected case is unmeasured. Pin `multi_pass_flatten_then_project_survives_leaf_pushdown` (in `../tests.rs`) still passes. |
+  | output field is the child field `with_nullable(true)` | a null parent yields a null child, which is what the CASE's null literal branch typed. |
+  | the parent's `null_count() == 0` short-circuits to the child | no buffer is allocated when nothing is masked (`struct_*_nonull`). |
+
+  pins: perf-dynflatten-2-null-mask/C-002
 - `tests.rs` — Arrow value **and** type pins. The first four are the design
   mutation pins (null-parent CASE with dirty children, in-place column order,
   list-of-struct then unnest, prefixed-name collision) plus Pin-1 list-child
@@ -39,8 +56,8 @@ operator.
 
 | Symptom | First check |
 |---|---|
-| Null parent struct yields 0/""/false | The CASE `parent IS NULL THEN <typed null>` was dropped — pin `null_parent_struct_fields_are_null_not_zero` (dirty children at the parent-null slot). |
-| Null parent list explodes 99/100 | CASE skipped for List children — pin `null_parent_dirty_list_child_is_null_not_exploded` (dirty valid `[99, 100]` under a null parent). |
+| Null parent struct yields 0/""/false | The parent's validity is not reaching the leaf — `null_mask.rs` on a plain struct, the CASE `parent IS NULL THEN <typed null>` on a dictionary struct. Pin `null_parent_struct_fields_are_null_not_zero` (dirty children at the parent-null slot). |
+| Null parent list explodes 99/100 | The mask was skipped for List children — pin `null_parent_dirty_list_child_is_null_not_exploded` (dirty valid `[99, 100]` under a null parent). |
 | Null mid-struct yields 0 | Dirty children at the mid-null and outer-null slots — pin `null_mid_struct_fields_are_null_not_zero`. |
 | Column order is survivors-first | Expansion is not in schema field order — pin `unnest_preserves_interleaved_column_order`. |
 | `From<&str>` / `col(name)` on a `s.f` / `wrap.nums` column | Every schema field must bind through `Column::new_unqualified` — pin `dotted_list_column_unnest_uses_unqualified_bind`. |

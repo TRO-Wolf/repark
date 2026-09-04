@@ -10,6 +10,10 @@ use datafusion::prelude::{DataFrame, array_length, get_field, lit, make_array};
 
 use crate::{Error, Result, engine_err};
 
+mod null_mask;
+
+use null_mask::{null_mask_extractable, null_mask_field};
+
 /// Options for [`dynamic_flatten`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DynamicFlattenOptions {
@@ -56,6 +60,7 @@ enum ProjectionSlot {
     Expand {
         parent: String,
         fields: Vec<ExpandedField>,
+        masked: bool,
     },
 }
 
@@ -234,6 +239,7 @@ fn expand_structs<S: StatsSink>(
                 slots.push(ProjectionSlot::Expand {
                     parent: name.clone(),
                     fields: expanded,
+                    masked: null_mask_extractable(data_type),
                 });
             }
         }
@@ -254,15 +260,24 @@ fn expand_structs<S: StatsSink>(
     for slot in slots {
         match slot {
             ProjectionSlot::Keep(name) => projection.push(project_as(&name)),
-            ProjectionSlot::Expand { parent, fields } => {
+            ProjectionSlot::Expand {
+                parent,
+                fields,
+                masked,
+            } => {
                 let parent_expr = unqualified_expr(&parent);
                 for expanded in fields {
-                    projection.push(null_safe_field(
-                        parent_expr.clone(),
-                        &expanded.nested_name,
-                        &expanded.prefixed,
-                        &expanded.data_type,
-                    )?);
+                    projection.push(if masked {
+                        null_mask_field(parent_expr.clone(), &expanded.nested_name)
+                            .alias(expanded.prefixed.as_str())
+                    } else {
+                        null_safe_field(
+                            parent_expr.clone(),
+                            &expanded.nested_name,
+                            &expanded.prefixed,
+                            &expanded.data_type,
+                        )?
+                    });
                 }
             }
         }
