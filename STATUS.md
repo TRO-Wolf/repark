@@ -192,9 +192,9 @@ in published history by explicit decision:
   **F-Y10-1 (2026-08-30):** integer
   `+` / `-` / `*` raise `ARITHMETIC_OVERFLOW` where Spark raises; FNP-7b is unblocked.
   **FNP-4c (2026-08-31):** ten higher-order names on the FNP-4a seam. **FNP-7a/7b (2026-08-31):**
-  twelve `try_*` inversions (NULL instead of raise). **FN-FIX-1 (2026-09-03):** ten
-  function rows Spark-equal; accuracy knob and group-hold BACKLOG
-  (`FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`).
+  twelve `try_*` inversions (NULL instead of raise). Remaining work ships as one coherent
+  PR per unit or tightly coupled pair. **FN-FIX-1 (2026-09-03):** ten rows Spark-equal;
+  residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
   **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
