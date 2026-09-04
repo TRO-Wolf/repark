@@ -170,7 +170,7 @@ committed. Base `f3968aa`.
 
 ## Disk
 
-`df -h` 664 GB free of 1.8 TB at pickup. The oracle scratch lives under the gitignored
+`df -h` 556 GB free of 1.8 TB at close. The oracle scratch lives under the gitignored
 `scratch/ex16-oracle/` and stays (gitignored, never committed). `.venv` and the
 sibling-checkout native module reused; no cargo build, `make develop` not run.
 
