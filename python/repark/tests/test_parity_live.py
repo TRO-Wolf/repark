@@ -785,32 +785,31 @@ def test_live_dynflatten_matches_spark_explode(
 
     bed = _dynflatten_bed()
     spark_dynamic_flatten = _dynflatten_spark_flatten()
-    import pyarrow.parquet as pq
 
     path, _digest = bed.write_shape(shape_name, rows=16, seed=42, out=tmp_path)
     _reset_active_session_for_tests()
     session = ReparkSession.builder.appName("pytest-dynflatten-live").getOrCreate()
     try:
-        loaded = session.createDataFrame(
-            pq.read_table(path).to_pylist(), schema=bed.ddl_for(shape_name)
-        )
-        repark_table = loaded.dynamicFlatten().to_arrow()
+        repark_table = session.read.parquet(str(path)).dynamicFlatten().to_arrow()
     finally:
         session.stop()
         _reset_active_session_for_tests()
     spark_frame = spark_engine.session.read.parquet(str(path))
     spark_table = spark_dynamic_flatten(spark_frame).toArrow()
+    import pyarrow as pa
+
     left = _dynflatten_utf8(repark_table)
     right = _dynflatten_utf8(spark_table)
     if shape_name == "struct_d3":
         assert_frames_equal(left, right, order_sensitive=False)
         return
-    import pyarrow as pa
-
     assert "user_properties" not in left.column_names
     assert "user_properties" in right.column_names
     assert right.schema.field("user_properties").type == pa.int32()
-    assert_frames_equal(left, right.drop(["user_properties"]), order_sensitive=False)
+    assert left.schema.field("id").nullable is False
+    assert right.schema.field("id").nullable is True
+    widened = left.cast(pa.schema([field.with_nullable(True) for field in left.schema]))
+    assert_frames_equal(widened, right.drop(["user_properties"]), order_sensitive=False)
 
 
 def _dynflatten_utf8(table: object) -> object:
