@@ -442,4 +442,424 @@ SPARK: dict[str, Any] = {
             ],
         ],
     },
+    "s8-ctas-cow": {
+        "statements": [
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["A", "1.2500", 1, "first", 10],
+                    ["A", None, None, None, 10],
+                    ["B", "2.5000", 2, "keep", 20],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 2],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", None],
+                ],
+            ],
+        ],
+    },
+    "s8-merge-idempotent-cow": {
+        "statements": [
+            ["OK", None],
+            ["OK", None],
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["A", "0.0000", 0, "unknown", 10],
+                    ["B", "2.5000", 2, "keep", 20],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                    ["overwrite"],
+                    ["overwrite"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 2],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", None],
+                ],
+            ],
+            [
+                "IDEM",
+                [
+                    [
+                        "OK",
+                        [
+                            ["A", "0.0000", 0, "unknown", 10],
+                            ["B", "2.5000", 2, "keep", 20],
+                        ],
+                    ],
+                    [
+                        "OK",
+                        [
+                            ["A", "0.0000", 0, "unknown", 10],
+                            ["B", "2.5000", 2, "keep", 20],
+                        ],
+                    ],
+                    True,
+                ],
+            ],
+            ["FILES", 1],
+        ],
+    },
+    "s8-overwrite-partitions-cow": {
+        "statements": [
+            ["OK", None],
+            ["OK", None],
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["B", "y", 20],
+                    ["C", "z", 10],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                    ["overwrite"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 2],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", None],
+                ],
+            ],
+        ],
+    },
+    "s9-ctas-cow": {
+        "statements": [
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["A", "1.2500", 1, "first", 10],
+                    ["A", None, None, None, 10],
+                    ["B", "2.5000", 2, "keep", 20],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", 3],
+                ],
+            ],
+        ],
+    },
+    "s9-merge-idempotent-cow": {
+        "statements": [
+            ["OK", None],
+            ["OK", None],
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["A", "0.0000", 0, "unknown", 10],
+                    ["B", "2.5000", 2, "keep", 20],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                    ["overwrite"],
+                    ["overwrite"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", 6],
+                ],
+            ],
+            [
+                "IDEM",
+                [
+                    [
+                        "OK",
+                        [
+                            ["A", "0.0000", 0, "unknown", 10],
+                            ["B", "2.5000", 2, "keep", 20],
+                        ],
+                    ],
+                    [
+                        "OK",
+                        [
+                            ["A", "0.0000", 0, "unknown", 10],
+                            ["B", "2.5000", 2, "keep", 20],
+                        ],
+                    ],
+                    True,
+                ],
+            ],
+            ["FILES", 1],
+        ],
+    },
+    "s9-overwrite-partitions-cow": {
+        "statements": [
+            ["OK", None],
+            ["OK", None],
+            ["OK", None],
+        ],
+        "probes": [
+            [
+                "OK",
+                [
+                    ["B", "y", 20],
+                    ["C", "z", 10],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["id", "string", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
+                ],
+            ],
+            [
+                "OK",
+                [
+                    ["append"],
+                    ["overwrite"],
+                ],
+            ],
+            [
+                "DEL",
+                [],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 3],
+                    [
+                        "schema",
+                        [
+                            ["id", "string", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "copy-on-write"],
+                            ["write.merge.mode", "copy-on-write"],
+                            ["write.parquet.compression-codec", "zstd"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "copy-on-write"],
+                        ],
+                    ],
+                    ["next-row-id", 4],
+                ],
+            ],
+        ],
+    },
 }
