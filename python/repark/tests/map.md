@@ -109,6 +109,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
+- [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-20 (2026-09-04):**
+  the four divergence pins for the window/catalog example batch — the DataFrame-door tied-key
+  ordered default frame running per-row where Spark shares peer sums (EX-WIN-1, the G5
+  default-frame class), `getDatabase('default')` answering None description/locationUri where
+  Spark fills both (EX-CAT-1), `listDatabases` re-measuring the FA-2 field shape on 4.1.2
+  (EX-CAT-2), and `functionExists(name, dbName)` answering True where Spark scopes the check
+  (EX-CAT-3). The module docstring names the row span.
+  pins: ex-20-window-catalog/C-001
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
