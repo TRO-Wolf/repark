@@ -25,7 +25,7 @@ Restated for a mixed queue:
    [../.agents/skills/compact-context-docs/SKILL.md](../.agents/skills/compact-context-docs/SKILL.md):
    fetch, confirm the prior PR merged, `make ledger-archive`, drift checks, compact against the
    merged delta only. Last commit: STATUS trued up for this unit alone, the ledger `move`d to
-   `completed/` (which removes it from this file), `map.md` in lockstep.
+   `completed/` (which removes it from this file), `map.md` in lockstep. No departure line for the unit, here or anywhere.
 
 ---
 
