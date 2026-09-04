@@ -193,6 +193,23 @@ an active session; repark's are JVM-free with identical answers.
 | `.venv/bin/ruff check docs/examples python/repark/tests` | **0** |
 | `.venv/bin/ruff format --check docs/examples python/repark/tests` | **0** |
 
+Round-2 re-run (2026-09-04, on the shipped tree, after findings F1–F5 landed):
+
+| Command | Exit |
+|---|---|
+| `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** (`613 covered; 298 backlog; 2 exceptions; 165 examples`) |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_window_catalog.py python/repark/tests/test_qi1_idents.py -q` | **0** (42 passed; the pin module carries all four WriterV2 pins) |
+| `make check-map-sync` | **0** |
+| `make check-ledger-grammar` | **0** |
+| `make check-ledgers` | **0** |
+| `make check-docs-compaction` | **0** |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | **0** |
+| `typos .` | **0** |
+| `.venv/bin/ruff check docs/examples python/repark/tests scripts` | **0** |
+| `.venv/bin/ruff format --check docs/examples python/repark/tests scripts` | **0** |
+
+Two structural checks on the branch diff: `git diff origin/main --numstat -- docs/spark-sql-iceberg-parity.md docs/examples/map.md` reads `62 0` on the registry (additions only) and `6 3` on the map (small); added `#` lines in `*.py` beyond `# noqa`: none.
+
 The system `python3` in this clone cannot import `repark._native`; the `--require-execute` leg
 runs under `.venv/bin/python`, which resolves `repark` to the sibling checkout of the same base
 SHA `b5827be6` (expected for this lane).
@@ -214,6 +231,16 @@ at the dispatch base) — exactly the 42 kept names; `DataFrameWriterV2.overwrit
 | the leg-3 `overwrite` probe passed a string condition; Spark parsed it as a column name and raised `UNRESOLVED_COLUMN`, which would have misrecorded Spark's answer | re-measured in leg 3b with `overwrite(F.col("id") == 1)`; Spark answers the conditional overwrite `[(1,'aa'), (2,'b')]` |
 | the leg-3 branch arm read only the branch table, leaving Spark's answer ambiguous (row unseen) | leg 3b read main and branch: the row lands on the default branch, `b1` keeps its seed rows; EX-W2-3's Spark bullet states that measured shape |
 | leg-4 probe used `arrow_schema.simpleString()`, which `pyarrow.Schema` does not have | the nullability arms (the finding that mattered) printed before the probe error; the example asserts only repark-measured direct arms |
+
+## Review-gap table (round-2 findings, resolved in-lane)
+
+| Finding | Disposition |
+|---|---|
+| F1 (S1) — eleven `expect()` helpers carried a docstring off the house form | deleted all eleven (eight `types/` examples, three `io/writerv2_*` examples); the house form is one module docstring plus the `main()` one-liner, helpers bare |
+| F2 (S2) — the merge unioned `docs/examples/map.md` Contents: io/, session/, window/, catalog/ rows twice, plus the stale combined `types/, ml/` row | resolved to exactly one row per family in main's order with main's text; the branch's `types/` row and the `ml/`-only remaining-EX-1-family row kept; the stale row and every duplicate deleted |
+| F3 (S2) — ledger and map counts recorded the pre-merge tree (579/332/149, baseline 374 → 332) | re-recorded against the shipped tree (613/298/165; `BACKLOG_BASELINE` 340 → 298 shipped, 374 → 332 at the dispatch base) in C-002, the counts section, `scripts/map.md`, and `staging/map.md`; the red-first provocation re-run on the shipped tree and its measured numbers recorded (base 571/340/154 at main's merge state; provocation exits 1 with exactly 43 findings; restore 613/298/165 at exit 0) |
+| F4 (S2) — the `overwritePartitions`-on-an-unpartitioned-table control was missing and hid an unfiled divergence | filed §7 `EX-W2-4` (OPEN, follow-up `WRITERV2-OVERWRITE-UNPART-1` as the fix unit) directly after EX-W2-3; pinned `test_writerv2_overwrite_partitions_unpartitioned_leak` (asserts the raise on the stable message prefix and the table still answering `[(1,'a')]`); the pin's red-first provocation recorded with new clause C-005 (5/5 PROVEN); the runnable example does not teach the leak. This lane's verbatim re-measure reproduces the leak and its message prefix; the parser column offset follows the fixture's table-name length (57 with the pin's `t_pin_unpart`, 53 with `t_unpart`; the filed row quotes the reviewer's oracle run) |
+| F5 (S2) — three measured-equal controls were absent from the examples | the nested array-of-struct `simpleString` arm in `complex_types.py`; the `decimal(39,0)`/`decimal(5,7)` arms in `decimal_null_variant.py`; a second `append()` arm in `writerv2_append_overwrite.py` whose table answers `[(1,'a'),(2,'b'),(3,'c')]` ordered by id; the `--require-execute` gate re-ran green |
 
 ## Cost
 
