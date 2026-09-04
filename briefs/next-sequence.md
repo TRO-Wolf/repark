@@ -37,7 +37,7 @@ Restated for a mixed queue:
 | 3 | **PERF-SCAN-1** — collapse the 3× `plan_files` identity-DELETE scan (`PERF-SCAN-3PASS-1`) | Performance | none | STANDARD <!-- unit id=perf-scan-1 --> |
 | 4 | **SQL-HARDEN-1** — cutover SQL shapes vs Spark on Glue + S3 Tables | Hardening / H-2 | none | STANDARD <!-- unit id=sql-harden-1 --> |
 | 5 | **FN-FIX-2** — `FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1` | Function parity | none | STANDARD <!-- unit id=fn-fix-2 --> |
-| 6 | **PERF-DYNFLATTEN-2** — null-mask struct extract (the one candidate that cleared the floor) | Performance | PERF-DYNFLATTEN-1 (measured) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
+| 6 | **PERF-DYNFLATTEN-2 residue** — `DYNFLATTEN-LISTNULL-1` / `DYNFLATTEN-READNULL-1`, the two null rows left | Performance | PERF-DYNFLATTEN-2 (built) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
 | 7 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
 | 8 | **Cutover inventory** — which workloads move, in what order, under single-writer-per-table | Cutover | SQL-HARDEN-1 | STANDARD <!-- unit id=cutover-inventory --> |
 | 9 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |

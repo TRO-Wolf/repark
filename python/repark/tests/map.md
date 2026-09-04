@@ -39,15 +39,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
 - [test_dynflatten_null_mask.py](test_dynflatten_null_mask.py) — **PERF-DYNFLATTEN-2
-  (2026-09-04):** the before/after correctness pin, one row per bed shape. `DIGESTS`
-  holds the SHA-256 of the Arrow **IPC file bytes** of the gate-scale flattened table,
-  captured on `main` `b5b17f0` before the extractor existed, so schema, field order,
-  Arrow types, nullability, buffers and row order are all inside one comparison — a
-  row-set assertion could not see a type or a null-buffer change. `table_digest` is the
-  bed's own helper, so the pin and the measurement agree on what "identical" means.
-  Determinism was measured (two full captures, byte-equal) before the numbers were
-  written down. `test_every_bed_shape_is_covered` refuses a shape the bed grows later
-  without a digest. pins: perf-dynflatten-2-null-mask/C-001, C-003
+  (2026-09-04):** the before/after correctness pin, one row per bed shape. `ROWS` holds,
+  per shape, the row count, the Arrow schema string (names, types, nullability) and the
+  SHA-256 over the ordered `to_pylist()` rows of the gate-scale flattened table, captured
+  from a module rebuilt without the extractor. The raw IPC bytes were rejected as the pin
+  because they differ under cleared validity bits on five shapes (ledger §8): the payload
+  under a null is don't-care, the rows and schema are not. `test_every_bed_shape_is_covered`
+  refuses a shape the bed grows later without a row. pins: perf-dynflatten-2-null-mask/C-001, C-003
 - [test_dynamic_flatten_divergences.py](test_dynamic_flatten_divergences.py) —
   **PERF-DYNFLATTEN-1:** `DYNFLATTEN-QUALNAME-1`, measured over keep ∈ {none, `id`, `k`} ×
   depth 1–4. Split out of `test_dynamic_flatten.py` to hold that file at its 1618-line ceiling.

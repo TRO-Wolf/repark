@@ -108,8 +108,12 @@ Shipped: `placement` at the trait default (`KeepInPlace`), no `get_field` in the
 is that a struct leaf is no longer visible to `push_down_leaf_projections`, so
 `read.parquet(…).dynamicFlatten().select(one_leaf)` reads the whole parent struct where it could
 have read one leaf. `dynamicFlatten` expands **every** leaf, so nothing is pruned in the
-un-projected case, which is what the bed measures; the projected case is unmeasured and is
-recorded here rather than claimed either way.
+un-projected case, which is what the bed measures. The projected case was then measured by
+the critic on both builds (`read.parquet(struct_d6 @1e5).dynamicFlatten().select(one leaf)
+.to_arrow()`, 11 interleaved repeats, load matched within 0.5): projected median 28.59 ms →
+8.66 ms, un-projected 26.80 ms → 8.27 ms. Projecting one leaf was already slightly slower
+than not projecting before the change, so the pruning the cost describes bought nothing on
+this shape; the cost is real in the plan and absent in the measurement.
 
 ## 8. Measurement (C-001, C-003)
 
@@ -220,6 +224,20 @@ DELIVERY_SIGNOFF:
 | `cargo fmt --check` | 0 (inside `make ci`) |
 | `make rust-panic-ban` | 0 |
 | `maturin develop --release` | 0 (`__debug_assertions__ False`; the runner refuses a debug module) |
+
+## 11. Review (critic round 1, Opus, on a clone with a release module of its own)
+
+Verdict FAIL on four documentation findings; every measurement re-run and confirmed (22
+before/after cells byte-equal at gate scale, four extra shapes the bed lacks identical on both
+builds and Spark-equal, the twelve QUALNAME cells re-derived on PySpark, the mutation run:
+1 red of 2 Rust pins and 6 red of 12 divergence cells, the projected case above).
+
+| # | Finding | Resolution |
+|---|---|---|
+| R1-1 (S2) | `python/repark/tests/map.md` described the rejected IPC-digest design (`DIGESTS`, `table_digest`) as the shipped pin. | Row rewritten to the shipped `ROWS` pin and why the IPC bytes were rejected. |
+| R1-2 (S3) | Slate row 6 still advertised this unit as queued while its block spoke in the past tense. | Row 6 now names the residue this unit leaves (`DYNFLATTEN-LISTNULL-1` / `READNULL-1`). |
+| R1-3 (S3) | Header promises a move to `../completed/` in the last commit; the ledger stays in `staging/`. | Accepted as the tree's standing habit (PERF-DYNFLATTEN-1, DATE-FN-1, FN-FIX-2 sit the same way); the lifecycle gate files them at archive time. |
+| R1-4 (S3) | The `origin/main` merge commit carried the author name `John`. | Merge redone under the unit identity. |
 
 Duplicate-row guard (R5): `grep -oE '^- \[[^]]+\]' task/ledgers/staging/map.md | sort | uniq -d`
 must be empty.
