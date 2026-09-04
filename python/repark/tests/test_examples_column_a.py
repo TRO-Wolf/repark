@@ -31,9 +31,7 @@ def test_get_field_bare_projection_name(spark: ReparkSession) -> None:
         [
             StructField(
                 "r",
-                StructType(
-                    [StructField("a", StringType()), StructField("b", DoubleType())]
-                ),
+                StructType([StructField("a", StringType()), StructField("b", DoubleType())]),
             )
         ]
     )

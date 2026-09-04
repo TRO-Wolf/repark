@@ -23,20 +23,20 @@ def main() -> None:
     """Run the measured substring, prefix, suffix, LIKE, regex, and slice answers."""
     repark = ReparkSession.builder.appName("ex-col-strings").master("local[1]").getOrCreate()
     try:
-        words = repark.createDataFrame(
-            [("apple",), ("mango",), ("cherry",), ("apple pie",)], ["s"]
-        )
+        words = repark.createDataFrame([("apple",), ("mango",), ("cherry",), ("apple pie",)], ["s"])
         found = words.filter(words.s.contains("an"))
         if set(found.collect()) != {("mango",)}:
             raise SystemExit(f"Column.contains rows {set(found.collect())!r} != {('mango',)}")
 
         prefix = words.filter(words.s.startswith("app"))
         prefix_expected = {("apple",), ("apple pie",)}
-        if set(prefix.collect()) != prefix_expected:
-            raise SystemExit(f"Column.startswith rows {set(prefix.collect())!r} != {prefix_expected!r}")
+        prefix_rows = set(prefix.collect())
+        if prefix_rows != prefix_expected:
+            raise SystemExit(f"Column.startswith rows {prefix_rows!r} != {prefix_expected!r}")
         suffix = words.filter(words.s.endswith("e"))
-        if set(suffix.collect()) != prefix_expected:
-            raise SystemExit(f"Column.endswith rows {set(suffix.collect())!r} != {prefix_expected!r}")
+        suffix_rows = set(suffix.collect())
+        if suffix_rows != prefix_expected:
+            raise SystemExit(f"Column.endswith rows {suffix_rows!r} != {prefix_expected!r}")
         wildcard = words.filter(words.s.like("app%"))
         if set(wildcard.collect()) != prefix_expected:
             raise SystemExit(f"Column.like rows {set(wildcard.collect())!r} != {prefix_expected!r}")
@@ -60,9 +60,7 @@ def main() -> None:
         zero_expected = [("ap",), ("ap",), ("ch",), ("ma",)]
         if zero_start != zero_expected:
             raise SystemExit(f"Column.substr rows {zero_start!r} != {zero_expected!r}")
-        column_args = sorted(
-            words.select(words.s.substr(F.lit(2), F.lit(2))).collect(), key=tuple
-        )
+        column_args = sorted(words.select(words.s.substr(F.lit(2), F.lit(2))).collect(), key=tuple)
         column_expected = [("an",), ("he",), ("pp",), ("pp",)]
         if column_args != column_expected:
             raise SystemExit(f"Column.substr rows {column_args!r} != {column_expected!r}")

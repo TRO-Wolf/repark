@@ -38,9 +38,7 @@ def main() -> None:
         if band_rows != band_expected:
             raise SystemExit(f"Column.between rows {band_rows!r} != {band_expected!r}")
 
-        nulls = repark.createDataFrame(
-            [(None, 20), (20, 20), (30, None), (None, None)], ["n", "m"]
-        )
+        nulls = repark.createDataFrame([(None, 20), (20, 20), (30, None), (None, None)], ["n", "m"])
         safe = nulls.select(nulls.n.eqNullSafe(nulls.m))
         if safe.columns != ["(n <=> m)"]:
             raise SystemExit(f"Column.eqNullSafe columns {safe.columns!r} != ['(n <=> m)']")

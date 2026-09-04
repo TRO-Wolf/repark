@@ -34,9 +34,7 @@ def main() -> None:
         if alias_rows != alias_expected:
             raise SystemExit(f"Column.alias rows {alias_rows!r} != {alias_expected!r}")
 
-        words = repark.createDataFrame(
-            [("apple",), ("mango",), ("cherry",), ("apple pie",)], ["s"]
-        )
+        words = repark.createDataFrame([("apple",), ("mango",), ("cherry",), ("apple pie",)], ["s"])
         shouts = words.select(words.s.transform(F.upper))
         if shouts.columns != ["upper(s)"]:
             raise SystemExit(f"Column.transform columns {shouts.columns!r} != ['upper(s)']")

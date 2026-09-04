@@ -29,7 +29,8 @@ see [../map.md](../map.md).
   `F.round`). No Spark analog: PySpark's `Column` has no `round`.
 
 Two bare-name arms the live oracle measured divergent are filed as §7 registry rows
-([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins in
+([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins
+(`test_col_cast_qualified_projection_name`, `test_get_field_bare_projection_name`) in
 `python/repark/tests/test_examples_column_a.py`, while the examples keep the arms where the
 engines agree: an unaliased `select(F.col("v").cast("double"))` names its column with the
 engine qualifier where Spark answers `v` (the df-bound and aliased `cast` arms are

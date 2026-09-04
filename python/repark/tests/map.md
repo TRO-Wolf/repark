@@ -82,10 +82,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
 - [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):**
-  the two divergence pins for the Column-a example batch — a bare
-  `F.col("v").cast("double")` select names the CDF-qualified column where Spark
-  answers `v` (EX-COL-1), and an unaliased `getField` projects `r['a']` where
-  Spark answers `r.a` (EX-COL-2).
+  the two divergence pins for the Column-a example batch —
+  `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
+  select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
+  `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
+  where Spark answers `r.a` (EX-COL-2).
   pins: ex-17-column-a/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
