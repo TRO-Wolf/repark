@@ -47,14 +47,25 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FN-ELT-1. Out-of-range `elt` (index 3, 0, −1) raises `INVALID_ARRAY_INDEX`; NULL
   `n` is NULL; in-range 1/2 agree.
   pins: fn-fix-2-string-rows/C-001, C-003, C-004
+  **FN-FIX-2-CTRL-1 (2026-09-04):** ANSI-off out-of-range and NULL `n` answer NULL.
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **FN-FIX-2 (2026-09-04):**
   FN-REGEX-POSIX-1. `regexp_count` / `rlike` / `regexp_replace` of `[[:alpha:]]` match
   Spark's Java union bracket (`[1, 0, 4]` / `[True, False, True]` / `'##bb##'`).
   pins: fn-fix-2-string-rows/C-003
+  **FN-FIX-2-CTRL-1 (2026-09-04):** `[[:alpha:]x]` matches `'x'` and `'fox'` via
+  `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` refusal pinned on
+  both doors (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED; Spark: `'alpha'`/`''`).
+  Round 3: SQL `RLIKE` keyword refusal pinned (`test_sql_rlike_keyword_refuses`;
+  §7 FN-RLIKE-KEYWORD-1).
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
   FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises
   `INVALID_FORMAT.ESC_AT_THE_END` SQLSTATE 42601. Control `like('a\\b', 'a\\\\b')`
   is True. pins: fn-fix-2-string-rows/C-003
+  **FN-FIX-2-CTRL-1 (2026-09-04):** the refusal holds ANSI-off and for the
+  explicit-`ESCAPE` spelling.
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
@@ -67,12 +78,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-FIX-2 (2026-09-04):**
   FN-INITCAP-1. `initcap` starts a word only after SPACE (`'a-b'` → `'A-b'`).
   pins: fn-fix-2-string-rows/C-003
+  **FN-FIX-2-CTRL-1 (2026-09-04):** `'ünï_9 ab'` → `'Ünï_9 Ab'`; `''` and NULL keep.
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-FIX-2 (2026-09-04):**
   FN-CHR-1. `chr`/`char` are `n % 256`; negatives are `''`.
   pins: fn-fix-2-string-rows/C-003
+  **FN-FIX-2-CTRL-1 (2026-09-04):** `chr(0/256/65536/1114112)` wrap; negatives `''`; NULL keeps.
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-FIX-2 (2026-09-04):**
   FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
   pins: fn-fix-2-string-rows/C-003
+  **FN-FIX-2-CTRL-1 (2026-09-04):** empty trim set is a no-op; NULL trim set is NULL.
+  Round 3: NULL `ltrim` / `rtrim` pinned on both doors
+  (`test_fn_trim_null_charset_is_null`).
+  pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
   refusal with Spark's multiset answer recorded (EX-DF-7), `groupingSets`'s one-set-per-column
@@ -2326,6 +2345,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FN-FIX-2:** `test_live_fn_fix_2_strings` and `test_live_fn_fix_2_regex_like` on the
   same `spark_engine`; `test_live_disclosure_still_diverges` still collected.
   pins: fn-fix-2-string-rows/C-001, C-003, C-004
+  **FN-FIX-2-CTRL-1:** the same two legs co-collect the control cells (initcap/chr/trim
+  controls, ANSI-off elt, ANSI-off LIKE, `[[:alpha:]x]` bracket, `regexp_extract` Spark
+  oracle); ANSI conf applied via reversible `lp.spark_session_conf`. Round 3: NULL
+  `ltrim` / `rtrim` cells and the `RLIKE`-keyword Spark oracle cells.
+  pins: fn-fix-2-ctrl-1-controls/C-002
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

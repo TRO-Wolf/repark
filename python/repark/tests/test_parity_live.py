@@ -275,7 +275,7 @@ def test_live_fn_fix_1_nan_ingest(spark_engine: lp.Engine) -> None:
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
-    """pins: fn-fix-2-string-rows/C-003"""
+    """pins: fn-fix-2-string-rows/C-003, fn-fix-2-ctrl-1-controls/C-002"""
     from pyspark.sql import functions as spark_fn
 
     initcap_table = spark_engine.arrow_of(
@@ -284,6 +284,12 @@ def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
         ).select(spark_fn.initcap("s").alias("v"))
     )
     assert initcap_table.column("v").to_pylist() == ["A-b", "Foo.bar", "O'neil", "X\ty"]
+    initcap_ctrl = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([("ünï_9 ab",), ("",), (None,)], ["s"]).select(
+            spark_fn.initcap("s").alias("v")
+        )
+    )
+    assert initcap_ctrl.column("v").to_pylist() == ["Ünï_9 Ab", "", None]
     chr_table = spark_engine.arrow_of(
         spark_engine.session.createDataFrame([(256,), (300,), (65601,), (-1,)], ["n"]).select(
             spark_fn.chr("n").alias("c"), spark_fn.char("n").alias("h")
@@ -291,6 +297,12 @@ def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
     )
     assert chr_table.column("c").to_pylist() == ["\x00", ",", "A", ""]
     assert chr_table.column("h").to_pylist() == ["\x00", ",", "A", ""]
+    chr_ctrl = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame(
+            [(0,), (65536,), (1114112,), (-1,), (None,)], ["n"]
+        ).select(spark_fn.chr("n").alias("c"))
+    )
+    assert chr_ctrl.column("c").to_pylist() == ["\x00", "\x00", "\x00", "", None]
     trim_table = spark_engine.arrow_of(
         spark_engine.session.range(1).select(
             spark_fn.trim(spark_fn.lit("xxSparkxx"), spark_fn.lit("x")).alias("t"),
@@ -301,11 +313,49 @@ def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
     assert trim_table.column("t").to_pylist() == ["Spark"]
     assert trim_table.column("l").to_pylist() == ["Sparkxx"]
     assert trim_table.column("r").to_pylist() == ["xxSpark"]
+    trim_ctrl = spark_engine.arrow_of(
+        spark_engine.session.range(1).select(
+            spark_fn.trim(spark_fn.lit("abc"), spark_fn.lit("")).alias("t"),
+            spark_fn.ltrim(spark_fn.lit("abc"), spark_fn.lit("")).alias("l"),
+            spark_fn.rtrim(spark_fn.lit("abc"), spark_fn.lit("")).alias("r"),
+        )
+    )
+    assert trim_ctrl.column("t").to_pylist() == ["abc"]
+    assert trim_ctrl.column("l").to_pylist() == ["abc"]
+    assert trim_ctrl.column("r").to_pylist() == ["abc"]
+    trim_null = spark_engine.arrow_of(
+        spark_engine.session.sql("SELECT TRIM(BOTH NULL FROM 'abc') AS t")
+    )
+    assert trim_null.column("t").to_pylist() == [None]
+    trim_side_null = spark_engine.arrow_of(
+        spark_engine.session.range(1).select(
+            spark_fn.ltrim(spark_fn.lit("abc"), spark_fn.lit(None).cast("string")).alias("l"),
+            spark_fn.rtrim(spark_fn.lit("abc"), spark_fn.lit(None).cast("string")).alias("r"),
+        )
+    )
+    assert trim_side_null.column("l").to_pylist() == [None]
+    assert trim_side_null.column("r").to_pylist() == [None]
+    trim_side_sql = spark_engine.arrow_of(
+        spark_engine.session.sql(
+            "SELECT TRIM(LEADING NULL FROM 'abc') AS l, TRIM(TRAILING NULL FROM 'abc') AS r"
+        )
+    )
+    assert trim_side_sql.column("l").to_pylist() == [None]
+    assert trim_side_sql.column("r").to_pylist() == [None]
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", "false"),)):
+        elt_off = spark_engine.arrow_of(
+            spark_engine.session.range(1).select(
+                spark_fn.elt(spark_fn.lit(3), spark_fn.lit("a"), spark_fn.lit("b")).alias("a"),
+                spark_fn.elt(spark_fn.lit(0), spark_fn.lit("a"), spark_fn.lit("b")).alias("b"),
+            )
+        )
+        assert elt_off.column("a").to_pylist() == [None]
+        assert elt_off.column("b").to_pylist() == [None]
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
-    """pins: fn-fix-2-string-rows/C-003"""
+    """pins: fn-fix-2-string-rows/C-003, fn-fix-2-ctrl-1-controls/C-002"""
     from pyspark.errors import AnalysisException as SparkAnalysisException
     from pyspark.errors.exceptions.captured import ArrayIndexOutOfBoundsException
     from pyspark.sql import functions as spark_fn
@@ -325,6 +375,30 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
         )
     )
     assert replace_table.column("r").to_pylist() == ["#1b2 Ünï_9", "foo", "##bb##"]
+    bracket = spark_engine.session.createDataFrame([("x",), ("fox",)], ["s"])
+    bracket_rlike = spark_engine.arrow_of(
+        bracket.select(spark_fn.rlike("s", spark_fn.lit("[[:alpha:]x]")).alias("m"))
+    )
+    assert bracket_rlike.column("m").to_pylist() == [True, True]
+    bracket_like = spark_engine.arrow_of(
+        bracket.select(spark_fn.regexp_like("s", spark_fn.lit("[[:alpha:]x]")).alias("m"))
+    )
+    assert bracket_like.column("m").to_pylist() == [True, True]
+    extract_match = spark_engine.arrow_of(
+        spark_engine.session.sql("SELECT regexp_extract('alpha', '([[:alpha:]]+)', 1) AS e")
+    )
+    assert extract_match.column("e").to_pylist() == ["alpha"]
+    extract_nomatch = spark_engine.arrow_of(
+        spark_engine.session.sql("SELECT regexp_extract('fox', '([[:alpha:]]+)', 1) AS e")
+    )
+    assert extract_nomatch.column("e").to_pylist() == [""]
+    rlike_keyword = spark_engine.arrow_of(
+        spark_engine.session.sql(
+            "SELECT 'x' RLIKE '[[:alpha:]x]' AS a, 'fox' RLIKE '[[:alpha:]x]' AS b"
+        )
+    )
+    assert rlike_keyword.column("a").to_pylist() == [True]
+    assert rlike_keyword.column("b").to_pylist() == [True]
     try:
         spark_engine.session.range(1).select(
             spark_fn.elt(spark_fn.lit(3), spark_fn.lit("a"), spark_fn.lit("b"))
@@ -339,6 +413,21 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
         raise AssertionError("like escape-at-end must raise")
     except SparkAnalysisException as exc:
         assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
+    try:
+        spark_engine.arrow_of(
+            spark_engine.session.sql("SELECT 'a%' LIKE 'a\\\\' ESCAPE '\\\\' AS m")
+        )
+        raise AssertionError("like explicit escape-at-end must raise")
+    except SparkAnalysisException as exc:
+        assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", "false"),)):
+        try:
+            spark_engine.session.range(1).select(
+                spark_fn.like(spark_fn.lit("ab"), spark_fn.lit("ab\\"))
+            ).toArrow()
+            raise AssertionError("like escape-at-end must raise with ANSI off")
+        except SparkAnalysisException as exc:
+            assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
