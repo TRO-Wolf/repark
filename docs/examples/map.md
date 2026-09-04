@@ -61,7 +61,8 @@ file is empty.
   register, and list_tables remainder; `list_databases` stays on the backlog with §7
   `EX-CAT-2`, whose function object it shares).
 - [ta/](ta/map.md) — TA kernel examples.
-- [io/](io/map.md) — reader / writer examples.
+- [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22: the first 14
+  `DataFrameWriterV2` names; `overwrite` stays a §7 divergence, EX-W2-1).
 - [session/](session/map.md) — `repark.sql`, `ReparkSession` construction, and the
   session-level surface (EX-21: builder snake spellings, active-session trio, conf,
   catalog, frame builders, file readers, memory catalog, temp-view listing, name
