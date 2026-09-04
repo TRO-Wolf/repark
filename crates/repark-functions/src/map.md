@@ -34,6 +34,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
   Native ANSI `repark.sql()` does not load this kernel.
+- `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
+  pins: fn-fix-1-registry-rows/C-002
+- `percentile_approx.rs` — **FN-FIX-1 (2026-09-03):** discrete `percentile_approx` /
+  `approx_percentile` in the column's type; array-of-percentages arm;
+  `select_nth_unstable` per requested percentile. Accuracy knob ignored
+  (`FN-APPROXPCT-ACC-1`). Group held in memory (`PERF-APPROXPCT-1`).
+  Flatten offset-buffer rewrite lives in `collection/flatten.rs`.
+  pins: fn-fix-1-registry-rows/C-002
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
   Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`
@@ -112,9 +120,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 
 - **R-FN-BATCH4** aggregate expansion.
 
-- **Q1 R-ML-QUANTILE:** `register_all` re-registers `approx_percentile_cont` with Spark SQL
-  aliases `percentile_approx` / `approx_percentile` (`AggregateUDF::with_aliases`); unit pin
-  `percentile_approx_sql_aliases_resolve` in `aggregate.rs`.
+- **FN-FIX-1:** `percentile_approx` / `approx_percentile` are the discrete UDAF
+  (`src/percentile_approx.rs`); `approx_percentile_cont` stays t-digest for ML.
+  Unit pin `percentile_approx_sql_aliases_resolve` in `aggregate.rs`.
 
 - **R-FN-BATCH3:** expr_fn next_day/hour/minute/second; **X1-octo C3:** hour/minute/second are
   repark DatePartUdf (Time+Timestamp), overwriting datafusion-spark Timestamp-only.

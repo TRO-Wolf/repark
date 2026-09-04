@@ -155,7 +155,7 @@ def test_arrays_overlap(spark: ReparkSession) -> None:
     )
     assert yes.column("o").to_pylist() == [True]
     assert no.column("o").to_pylist() == [False]
-    assert nulls_only.column("o").to_pylist() == [False]
+    assert nulls_only.column("o").to_pylist() == [None]
     assert null_array.column("o").to_pylist() == [None]
     assert pa.types.is_boolean(yes.schema.field("o").type)
 

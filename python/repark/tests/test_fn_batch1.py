@@ -162,10 +162,22 @@ def test_null_arg_propagation_lower(spark: ReparkSession) -> None:
     assert val is None
 
 
-def test_isnan_null_divergence_is_pinned(spark: ReparkSession) -> None:
-    """Pin repark's current isnan(NULL) divergence — Spark is False, repark is NULL."""
+def test_isnan_null_is_false_non_nullable(spark: ReparkSession) -> None:
+    """FN-ISNAN-1: isnan(NULL) is false, non-nullable bool. pins: fn-fix-1-registry-rows/C-003"""
     frame = spark.createDataFrame([(1.0,), (None,)], ["x"])
     values = [row["v"] for row in frame.select(isnan("x").alias("v")).collect()]
-    assert values == [False, None]
+    assert values == [False, False]
     tbl = frame.select(isnan("x").alias("v")).to_arrow()
-    assert tbl.schema.field("v").nullable is True
+    assert tbl.schema.field("v").nullable is False
+    nan_frame = spark.createDataFrame([(float("nan"),)], ["x"])
+    nan_tbl = nan_frame.select(isnan("x").alias("v"), isnull("x").alias("n")).to_arrow()
+    assert nan_tbl.column("v").to_pylist() == [True]
+    assert nan_tbl.column("n").to_pylist() == [False]
+
+
+def test_create_dataframe_stores_nan_not_null(spark: ReparkSession) -> None:
+    """createDataFrame([(nan,)]) stores NaN. pins: fn-fix-1-registry-rows/C-003"""
+    frame = spark.createDataFrame([(float("nan"),)])
+    table = frame.select(isnan("_1").alias("ina"), isnull("_1").alias("n")).to_arrow()
+    assert table.column("ina").to_pylist() == [True]
+    assert table.column("n").to_pylist() == [False]

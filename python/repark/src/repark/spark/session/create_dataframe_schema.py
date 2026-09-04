@@ -389,7 +389,7 @@ def _infer_null_sql_from_raw_cells(cells: list[Any]) -> str:
 
 
 
-    Normalize erases ``float('nan')`` / ``NaT`` / ``numpy.datetime64('NaT')`` to ``None``. On
+    Normalize keeps ``float('nan')`` and erases ``NaT`` to ``None``. On
 
     list/dict/Row/tuple paths there is no frame dtype, so without this witness scan the VALUES
 

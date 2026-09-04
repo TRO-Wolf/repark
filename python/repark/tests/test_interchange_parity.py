@@ -23,6 +23,10 @@ def spark() -> ReparkSession:
     return ReparkSession.builder.appName("pytest-interchange").getOrCreate()
 
 
+def _cells_are_nan(rows: list[dict[str, object]], name: str) -> bool:
+    return all(isinstance(row[name], float) and math.isnan(row[name]) for row in rows)
+
+
 # Shared typed fixture (SQL CAST) — produces the INT-001 type matrix on both engines
 
 
@@ -555,23 +559,17 @@ def test_create_dataframe_pandas_polars_date_decimal_datetime_all_null(
 def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     spark: ReparkSession,
 ) -> None:
-    """All-NaN / all-NaT on list/dict/Row paths must not erase to VARCHAR (C4-L-001).
-
-    Normalize turns NaN/NaT into None; without a pre-normalize witness scan the VALUES path
-    would emit CAST(NULL AS VARCHAR). Pure None stays string (C2-L-003).
-    """
+    """All-NaN stays DOUBLE NaN; all-NaT stays TIMESTAMP null. pins: fn-fix-1-registry-rows/C-003"""
     np = pytest.importorskip("numpy")
     from repark.spark.row import Row
 
-    # Tuple path — float NaN → DOUBLE, value AND type.
     nan_table = spark.createDataFrame(
         [(float("nan"),), (float("nan"),)],
         ["x"],
     ).to_arrow()
     assert nan_table.schema.field("x").type == pa.float64()
-    assert nan_table.to_pylist() == [{"x": None}, {"x": None}]
+    assert _cells_are_nan(nan_table.to_pylist(), "x")
 
-    # numpy NaT / datetime64 NaT → TIMESTAMP (type pin).
     nat_table = spark.createDataFrame(
         [(np.datetime64("NaT", "ns"),), (np.datetime64("NaT", "ns"),)],
         ["ts"],
@@ -584,11 +582,12 @@ def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     ).to_arrow()
     assert dict_table.schema.field("x").type == pa.float64()
     assert pa.types.is_timestamp(dict_table.schema.field("ts").type)
-    assert dict_table.to_pylist() == [{"x": None, "ts": None}, {"x": None, "ts": None}]
+    assert _cells_are_nan(dict_table.to_pylist(), "x")
+    assert all(row["ts"] is None for row in dict_table.to_pylist())
 
     row_table = spark.createDataFrame([Row(x=float("nan")), Row(x=float("nan"))]).to_arrow()
     assert row_table.schema.field("x").type == pa.float64()
-    assert row_table.to_pylist() == [{"x": None}, {"x": None}]
+    assert _cells_are_nan(row_table.to_pylist(), "x")
 
     # Pure None remains VARCHAR (C2-L-003) — control that we did not over-type.
     none_table = spark.createDataFrame([(None,), (None,)], ["x"]).to_arrow()
@@ -1340,8 +1339,9 @@ def test_create_dataframe_pandas_sparse_null_occupancy_stable(
     assert pa.types.is_floating(o_null.schema.field("x").type)
     assert pa.types.is_floating(o_value.schema.field("x").type)
     assert o_null.schema.field("x").type == o_value.schema.field("x").type
-    assert o_null.to_pylist() == [{"x": None}, {"x": None}]
-    assert o_value.to_pylist() == [{"x": 1.5}, {"x": None}]
+    assert _cells_are_nan(o_null.to_pylist(), "x")
+    o_value_rows = o_value.to_pylist()
+    assert o_value_rows[0]["x"] == 1.5 and math.isnan(o_value_rows[1]["x"])
 
 
 def test_create_dataframe_pandas_object_nan_nat_witnesses(
@@ -1359,7 +1359,7 @@ def test_create_dataframe_pandas_object_nan_nat_witnesses(
     pandas_nan = spark.createDataFrame(obj_nan).to_arrow()
     assert pa.types.is_floating(pandas_nan.schema.field("x").type)
     assert pandas_nan.schema.field("x").type == list_nan.schema.field("x").type
-    assert pandas_nan.to_pylist() == [{"x": None}, {"x": None}]
+    assert _cells_are_nan(pandas_nan.to_pylist(), "x")
 
     obj_nat = pd.DataFrame({"x": pd.Series([pd.NaT, pd.NaT], dtype=object)})
     list_nat = spark.createDataFrame([(pd.NaT,), (pd.NaT,)], ["x"]).to_arrow()

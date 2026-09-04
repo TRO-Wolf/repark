@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
+  **FN-FIX-1 (2026-09-03), in flight:** ten filed function-parity divergences plus
+  NaN ingest become Spark-equal. `risk_tier: standard`. Branch
+  `feat/fn-fix-1-registry-rows`. pins: fn-fix-1-registry-rows/C-001
 - [ctas-view-1-conform-stream-ledger.md](ctas-view-1-conform-stream-ledger.md) —
   **CTAS-VIEW-1 (2026-09-03), in flight:** unpartitioned CTAS stream writer conforms
   Utf8View/BinaryView batches to the Iceberg table schema. Branch

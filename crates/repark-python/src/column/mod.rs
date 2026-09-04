@@ -3,7 +3,6 @@
 //! expressions against their input schema.
 
 use datafusion::arrow::datatypes::DataType;
-use datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf;
 use datafusion::functions_aggregate::count::count_udaf;
 use datafusion::functions_window::cume_dist::cume_dist_udwf;
 use datafusion::functions_window::lead_lag::{lag_udwf, lead_udwf};
@@ -20,6 +19,7 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
+use repark_functions::percentile_approx::percentile_approx_udaf;
 
 use crate::AnalysisException;
 use crate::fence::fenced;
@@ -31,8 +31,9 @@ mod function_dispatch;
 mod window;
 
 use expr_build::{
-    TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
-    refuse_nested_higher_order, strip_outer_alias,
+    TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, inner_null_treatment,
+    parse_data_type, percentile_approx_list_expr, refuse_nested_higher_order, strip_outer_alias,
+    window_from_aggregate,
 };
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
@@ -635,20 +636,13 @@ impl PyColumn {
                     "over expects order_by, order_ascending, and order_nulls_first of equal length",
                 ));
             }
-            // Window UDF / aggregate → WindowFunction, under an optional CAST that is peeled
-            // here and re-applied to the window result. The facade casts count-like aggregates
-            // to Int64 (Spark has no unsigned type), so `over` must look through a CAST to find
-            // the aggregate or the windowed form refuses a call the grouped form accepts.
             let (inner, cast_type) = match &self.expr {
                 Expr::Cast(cast) => (&*cast.expr, Some(cast.field.data_type().clone())),
                 other => (other, None),
             };
             let window_expr = match inner {
                 Expr::WindowFunction(_) => inner.clone(),
-                Expr::AggregateFunction(agg) => Expr::from(WindowFunction::new(
-                    WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
-                    agg.params.args.clone(),
-                )),
+                Expr::AggregateFunction(agg) => window_from_aggregate(agg),
                 _ => {
                     return Err(PyValueError::new_err(
                         "over() applies only to a window or aggregate function column \
@@ -665,13 +659,15 @@ impl PyColumn {
                     column.expr().sort(is_ascending, nulls_first)
                 })
                 .collect();
-            // The frame decision reads the built function, so take it before the builder moves it.
             let unordered_frame = order_by
                 .is_empty()
                 .then(|| unordered_window_frame(&window_expr))
                 .transpose()
                 .map_err(crate::AnalysisException::new_err)?;
-            let mut builder = window_expr.partition_by(partitions).order_by(orderings);
+            let mut builder = window_expr
+                .partition_by(partitions)
+                .order_by(orderings)
+                .null_treatment(inner_null_treatment(inner));
             if let Some(units_text) = frame_units.as_deref() {
                 let start = frame_start.ok_or_else(|| {
                     PyValueError::new_err("over frame_units requires frame_start")
@@ -911,14 +907,6 @@ impl PyColumn {
         })
     }
 
-    /// Approximate continuous percentile.
-    ///
-    /// Lowers to DataFusion's t-digest `approx_percentile_cont(col, percentile)`. Facade names
-    /// `percentile_approx` / `approx_percentile` (Spark) alias the same UDAF after
-    /// `repark_functions::register_all`. `percentile` must be in `[0, 1]`.
-    ///
-    /// # Errors
-    /// Returns `ValueError` when `percentile` is outside `[0, 1]`.
     pub fn approx_percentile_cont(&self, percentile: f64) -> PyResult<Self> {
         fenced!("Column.approx_percentile_cont", {
             if !(0.0..=1.0).contains(&percentile) {
@@ -926,19 +914,28 @@ impl PyColumn {
                     "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
                 )));
             }
-            let expr = approx_percentile_cont_udaf().call(vec![self.expr.clone(), lit(percentile)]);
+            let expr = percentile_approx_udaf().call(vec![self.expr.clone(), lit(percentile)]);
             Ok(Self::from_expr(expr))
+        })
+    }
+    pub fn approx_percentile_list(&self, percentages: Vec<f64>) -> PyResult<Self> {
+        fenced!("Column.approx_percentile_list", {
+            if percentages
+                .iter()
+                .any(|percentage| !(0.0..=1.0).contains(percentage))
+            {
+                return Err(PyValueError::new_err(
+                    "approx_percentile percentages must be in [0, 1]",
+                ));
+            }
+            Ok(Self::from_expr(percentile_approx_list_expr(
+                self.expr.clone(),
+                percentages,
+            )))
         })
     }
 
     /// Build a Spark `count` aggregate over `columns` (PySpark `F.count` / `F.countDistinct`).
-    ///
-    /// One column is `count(col)` (skips NULLs); a literal-`1` column is `count(*)` (counts every
-    /// Several columns with `distinct = true` count distinct tuples.
-    /// DataFusion rejects multi-argument `COUNT DISTINCT` natively, so the multi-column form packs
-    /// the arguments into a `struct` and nulls out any row where *any* field is NULL (Spark
-    /// excludes a row when any of the distinct columns is NULL — verified against live PySpark
-    /// 4.1.2). The facade sets the Spark output name via `alias`.
     ///
     /// # Errors
     /// Returns `ValueError` if `columns` is empty, or if the aggregate builder fails.

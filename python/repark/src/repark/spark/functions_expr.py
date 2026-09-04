@@ -11,6 +11,7 @@ import re
 from repark import _native
 from repark.errors import (
     AnalysisException,
+    IllegalArgumentException,
     PySparkTypeError,
     PySparkValueError,
     UnsupportedOperationException,
@@ -902,15 +903,17 @@ def array_repeat(element: Column | str | int | float, count: Column | int) -> Co
 
 
 def array_sort(col: Column | str, asc: bool | None = None) -> Column:
-    """Sort array ascending by default (PySpark ``functions.array_sort``)."""
+    """Sort array with NULLs last (PySpark ``functions.array_sort``)."""
     if asc is None or asc is True:
         return _scalar("array_sort", col)
     return _scalar("array_sort", col, lit("DESC"))
 
 
 def sort_array(col: Column | str, asc: bool = True) -> Column:
-    """Alias of :func:`array_sort` (PySpark ``functions.sort_array``)."""
-    return array_sort(col, asc=asc)
+    """Sort array; NULLs first when ascending (PySpark ``functions.sort_array``)."""
+    if asc:
+        return _scalar("sort_array", col)
+    return _scalar("sort_array", col, lit(False))
 
 
 def slice(x: Column | str, start: Column | int, length: Column | int) -> Column:
@@ -1456,15 +1459,18 @@ def bit_xor(col: Column | str) -> Column:
 
 
 def sha2(col: Column | str, numBits: int) -> Column:  # noqa: N803
-    """Compute a SHA-2 hash; only 256-bit output is supported by the engine."""
-    if numBits != 256:
-        from repark.errors import UnsupportedOperationException
-
-        raise UnsupportedOperationException(
-            f"functions.sha2(numBits={numBits}) only 256 is supported "
-            "(engine sha256; disclosed R-FN-BATCH4)"
+    """SHA-2 lowercase hex string (PySpark ``functions.sha2``)."""
+    if numBits not in {0, 224, 256, 384, 512}:
+        raise PySparkValueError(
+            "[VALUE_NOT_ALLOWED] Value for `numBits` has to be amongst the following values: "
+            "[0, 224, 256, 384, 512].",
+            errorClass="VALUE_NOT_ALLOWED",
+            messageParameters={
+                "arg_name": "numBits",
+                "allowed_values": "[0, 224, 256, 384, 512]",
+            },
         )
-    return _scalar("sha256", col)
+    return _scalar("sha2", col, lit(numBits))
 
 
 def sha1(col: Column | str) -> Column:
@@ -1569,48 +1575,38 @@ def percentile_approx(
     percentage: float | list[float] | tuple[float, ...],
     accuracy: int | None = None,
 ) -> Column:
-    """Approximate percentile (PySpark ``functions.percentile_approx``).
-
-    Lowers to engine ``approx_percentile_cont`` (DataFusion t-digest). Spark uses
-    Greenwald-Khanna QuantileSummaries — values may differ within approximation bounds;
-    oracles pin bounds-windows, never cross-engine exact equality.
-
-    ``accuracy`` is **accepted and ignored** (t-digest has no Greenwald-Khanna accuracy
-    knob). Array/list/tuple percentages are unsupported because the engine returns one scalar
-    per call.
-    """
+    """Discrete percentile of the column's type (PySpark ``functions.percentile_approx``)."""
+    del accuracy
+    column, part = _aggregate_argument(col)
     if isinstance(percentage, (list, tuple)):
-        from repark.errors import UnsupportedOperationException
-
-        raise UnsupportedOperationException(
-            "functions.percentile_approx(array_of_percentages) is not supported yet "
-            "(engine approx_percentile_cont is scalar-only; named seed: "
-            "percentile_approx_array_percentages)"
+        pcts = [float(item) for item in percentage]
+        if any(item < 0.0 or item > 1.0 for item in pcts):
+            raise IllegalArgumentException("percentile_approx percentages must be in [0, 1]")
+        agg_name = f"percentile_approx({part}, {list(pcts)})"
+        return Column(
+            column._inner.approx_percentile_list(pcts),
+            agg_name=agg_name,
+            sql_expr=(
+                f"percentile_approx({column.sql_expr_part()}, "
+                f"array({', '.join(str(item) for item in pcts)}))"
+            ),
+            spark_display=agg_name,
+            projection_name=agg_name,
+            partition_transform=column._partition_transform,
         )
     if isinstance(percentage, bool) or not isinstance(percentage, (int, float)):
-        from repark.errors import PySparkTypeError
-
         raise PySparkTypeError(
             f"percentile_approx percentage must be float or sequence of float, "
             f"got {type(percentage).__name__}"
         )
     pct = float(percentage)
     if not 0.0 <= pct <= 1.0:
-        from repark.errors import IllegalArgumentException
-
         raise IllegalArgumentException(f"percentile_approx percentage must be in [0, 1], got {pct}")
-    # accuracy: facade accepts-and-ignores (Spark GK relative-error knob has no t-digest
-    # equivalent). Free-SQL `percentile_approx(col, p, n)` is a *different* path: DataFusion
-    # treats the optional third arg as t-digest **centroids**, not Spark accuracy
-    del accuracy
-    column, part = _aggregate_argument(col)
-    # Spark display name keeps the user-facing Spark name; SQL path uses the engine name
-    # (aliases percentile_approx / approx_percentile are registered for free-SQL too).
     agg_name = f"percentile_approx({part}, {pct})"
     return Column(
         column._inner.approx_percentile_cont(pct),
         agg_name=agg_name,
-        sql_expr=f"approx_percentile_cont({column.sql_expr_part()}, {pct})",
+        sql_expr=f"percentile_approx({column.sql_expr_part()}, {pct})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,

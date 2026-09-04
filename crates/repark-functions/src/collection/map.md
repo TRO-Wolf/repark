@@ -20,6 +20,18 @@ needed.
 - `shuffle.rs` — **X1:** NULL-guarded `shuffle`; the upstream kernel panics on an all-NULL list.
 - `map_from_entries.rs` — **X7:** `map_from_entries` under Spark's `EXCEPTION` map-key dedup
   policy (duplicate keys raise rather than last-wins).
+- `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.
+  pins: fn-fix-1-registry-rows/C-002
+- `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
+  (asc NULLS FIRST, desc NULLS LAST).
+  pins: fn-fix-1-registry-rows/C-002
+- `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap. HashSet of owned
+  `ScalarValue` per row; a borrowed-key set is not a one-line change.
+  pins: fn-fix-1-registry-rows/C-002
+- `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
+  Output `ListArray` from inner values + mapped offsets (no per-row concat).
+  `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
+  pins: fn-fix-1-registry-rows/C-002
 
 ## I want to...
 

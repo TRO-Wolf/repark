@@ -87,19 +87,36 @@ def test_sha2_256(spark: ReparkSession) -> None:
     assert table.num_rows == 1
 
 
-def test_sha2_facade_bytes_divergence_is_pinned(spark: ReparkSession) -> None:
-    """pins: ex-11-functions-hash-url-random/C-001"""
-    facade = spark.sql("SELECT 'hello' AS s").select(sha2("s", 256).alias("h")).to_arrow()
-    assert facade.column("h").to_pylist()[0] == bytes.fromhex(
-        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+def test_sha2_facade_hex_string_matches_spark(spark: ReparkSession) -> None:
+    """FN-SHA2-1: facade sha2 is lowercase hex STRING. pins: fn-fix-1-registry-rows/C-003"""
+    hello = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    sha512 = (
+        "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca7"
+        "2323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
     )
-    assert pa.types.is_binary(facade.schema.field("h").type)
-    door = spark.sql("SELECT sha2('hello', 256) AS h").to_arrow()
-    assert (
-        door.column("h").to_pylist()[0]
-        == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    sha224 = "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+    sha384 = (
+        "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90"
+        "125a3c79f90397bdf5f6a13de828684f"
     )
-    assert pa.types.is_string(door.schema.field("h").type)
+    frame = spark.sql("SELECT 'hello' AS s")
+    for bits, want in (
+        (0, hello),
+        (224, sha224),
+        (256, hello),
+        (384, sha384),
+        (512, sha512),
+    ):
+        table = frame.select(sha2("s", bits).alias("h")).to_arrow()
+        assert table.column("h").to_pylist()[0] == want, bits
+        assert pa.types.is_string(table.schema.field("h").type)
+    door = spark.sql("SELECT sha2('hello', 256) AS h, sha2('hello', 0) AS z").to_arrow()
+    assert door.column("h").to_pylist()[0] == hello
+    assert door.column("z").to_pylist()[0] == hello
+    from repark.errors import PySparkValueError
+
+    with pytest.raises(PySparkValueError, match="VALUE_NOT_ALLOWED"):
+        sha2("s", 128)
 
 
 def test_rand_returns_float(spark: ReparkSession) -> None:
@@ -110,11 +127,7 @@ def test_rand_returns_float(spark: ReparkSession) -> None:
 
 
 def test_percentile_approx_scalar_bounds(spark: ReparkSession) -> None:
-    """percentile_approx / approx_percentile lower to t-digest; bounds-window oracle.
-
-    Fixture sorted exact p50 neighbor window on {1,2,3} is [1,3] (exact median 2.0).
-    Never pin exact cross-engine equality vs Spark GK.
-    """
+    """Discrete p50 of {1,2,3} is 2. pins: fn-fix-1-registry-rows/C-003"""
     frame = spark.sql("SELECT * FROM (VALUES (1.0), (2.0), (3.0)) t(x)")
     row = (
         frame.agg(
@@ -126,26 +139,31 @@ def test_percentile_approx_scalar_bounds(spark: ReparkSession) -> None:
         .to_pylist()[0]
     )
     for key in ("p50", "ap50", "p50_acc"):
-        value = float(row[key])
-        assert 1.0 <= value <= 3.0, f"{key}={value} outside exact-quantile neighbor window"
-    # accuracy accepted-and-ignored: still returns a finite percentile (divergence pin).
-    assert row["p50_acc"] is not None
+        assert float(row[key]) == 2.0, f"{key}={row[key]}"
 
 
 def test_percentile_approx_sql_aliases(spark: ReparkSession) -> None:
-    """SQL Spark names percentile_approx / approx_percentile resolve via UDAF aliases."""
-    for name in ("percentile_approx", "approx_percentile", "approx_percentile_cont"):
+    """SQL Spark names resolve; discrete names answer 2. pins: fn-fix-1-registry-rows/C-003"""
+    for name in ("percentile_approx", "approx_percentile"):
         row = spark.sql(
             f"SELECT {name}(x, 0.5) AS m FROM (VALUES (1.0), (2.0), (3.0)) t(x)"
         ).collect()[0]
-        value = float(row.asDict()["m"])
-        assert 1.0 <= value <= 3.0
+        assert float(row.asDict()["m"]) == 2.0
+    row = spark.sql(
+        "SELECT approx_percentile_cont(x, 0.5) AS m FROM (VALUES (1.0), (2.0), (3.0)) t(x)"
+    ).collect()[0]
+    value = float(row.asDict()["m"])
+    assert 1.0 <= value <= 3.0
 
 
-def test_percentile_approx_array_stop(spark: ReparkSession) -> None:
-    """Array-of-percentages form is loud STOP (scalar engine only)."""
-    with pytest.raises(UnsupportedOperationException, match="array_of_percentages"):
-        percentile_approx("x", [0.25, 0.5, 0.75])
+def test_percentile_approx_array_of_percentages(spark: ReparkSession) -> None:
+    """Array-of-percentages discrete values. pins: fn-fix-1-registry-rows/C-003"""
+    frame = spark.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("b", 4), ("b", 6)],
+        ["k", "v"],
+    )
+    grouped = frame.groupBy("k").agg(percentile_approx("v", [0.25, 0.5, 0.75]).alias("p")).collect()
+    assert sorted((row["k"], row["p"]) for row in grouped) == [("a", [1, 2, 3]), ("b", [4, 4, 6])]
 
 
 def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> None:
@@ -156,12 +174,10 @@ def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> Non
         percentile_approx("x", True)  # type: ignore[arg-type]
 
 
-def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> None:
-    """SQL 3rd arg is t-digest centroids (not facade-ignored GK accuracy).
-
-    On a fixed 1..200 fixture, centroids=2 must be allowed to diverge from the
-    default/high-centroid path within the global bounds window [1, 200].
-    """
+def test_percentile_approx_sql_third_arg_does_not_change_discrete_p50(
+    spark: ReparkSession,
+) -> None:
+    """FN-APPROXPCT-ACC-1: accuracy 2 is 100.0; Spark 1.0. pins: fn-fix-1-registry-rows/C-003"""
     values_sql = " UNION ALL ".join(f"SELECT {index}.0 AS x" for index in range(1, 201))
     row = (
         spark.sql(
@@ -173,30 +189,29 @@ def test_percentile_approx_sql_third_arg_is_centroids(spark: ReparkSession) -> N
         .collect()[0]
         .asDict()
     )
-    for key in ("p_default", "p_c2", "p_c10k"):
-        value = float(row[key])
-        assert 1.0 <= value <= 200.0, f"{key}={value} outside fixture bounds"
-    # centroids=2 is a coarser t-digest; it may equal by chance, so only finite + in-window
-    # is required.
-    assert row["p_c2"] is not None
+    assert float(row["p_default"]) == 100.0
+    assert float(row["p_c10k"]) == 100.0
+    assert (float(row["p_c2"]), 1.0) == (100.0, 1.0)
 
 
-def test_approx_percentile_double_interpolation_divergence_is_pinned(spark: ReparkSession) -> None:
-    """FN-APPROXPCT-1: repark interpolates to DOUBLE where Spark is exact and BIGINT."""
+def test_approx_percentile_discrete_bigint_matches_spark(spark: ReparkSession) -> None:
+    """FN-APPROXPCT-1: discrete data value, BIGINT. pins: fn-fix-1-registry-rows/C-003"""
     frame = spark.createDataFrame(
         [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
         ["k", "v"],
     )
     table = frame.select(approx_percentile("v", 0.5).alias("p")).to_arrow()
-    assert table.to_pylist()[0]["p"] == 3.0
-    assert pa.types.is_float64(table.schema.field("p").type)
+    assert table.to_pylist()[0]["p"] == 3
+    assert pa.types.is_int64(table.schema.field("p").type)
     grouped = frame.groupBy("k").agg(approx_percentile("v", 0.5).alias("p")).collect()
-    assert sorted((row["k"], row["p"]) for row in grouped) == [("a", 2.0), ("b", 5.0)]
+    assert sorted((row["k"], row["p"]) for row in grouped) == [("a", 2), ("b", 4)]
     percentile_table = frame.select(percentile_approx("v", 0.5).alias("p")).to_arrow()
-    assert percentile_table.to_pylist()[0]["p"] == 3.0
-    assert pa.types.is_float64(percentile_table.schema.field("p").type)
+    assert percentile_table.to_pylist()[0]["p"] == 3
+    assert pa.types.is_int64(percentile_table.schema.field("p").type)
     percentile_grouped = frame.groupBy("k").agg(percentile_approx("v", 0.5).alias("p")).collect()
-    assert sorted((row["k"], row["p"]) for row in percentile_grouped) == [("a", 2.0), ("b", 5.0)]
+    assert sorted((row["k"], row["p"]) for row in percentile_grouped) == [("a", 2), ("b", 4)]
+    array_table = frame.select(approx_percentile("v", [0.0, 0.5, 1.0]).alias("p")).to_arrow()
+    assert array_table.to_pylist()[0]["p"] == [1, 3, 6]
 
 
 def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
@@ -217,5 +232,3 @@ def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
         spark_partition_id()
     with pytest.raises(UnsupportedOperationException, match="input_file_name"):
         input_file_name()
-    with pytest.raises(UnsupportedOperationException, match="256"):
-        sha2("s", 512)

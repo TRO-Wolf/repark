@@ -20,6 +20,10 @@ pub(crate) use str_to_map::bind_ascii_perl_classes;
 /// NULL-guarded `shuffle` (X1 — the upstream kernel panics on an all-NULL list).
 mod shuffle;
 
+mod array_position;
+mod array_sort;
+mod arrays_overlap;
+mod flatten;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
 mod map_from_entries;
 
@@ -31,6 +35,11 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         str_to_map_udf(),
         shuffle_udf(),
         map_from_entries_udf(),
+        array_position::array_position_udf(),
+        array_sort::array_sort_udf(),
+        array_sort::sort_array_udf(),
+        arrays_overlap::arrays_overlap_udf(),
+        flatten::flatten_udf(),
     ]
 }
 
@@ -50,6 +59,31 @@ pub fn map_from_entries_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn str_to_map_udf() -> Arc<ScalarUDF> {
     str_to_map::str_to_map_udf()
+}
+
+#[must_use]
+pub fn array_position_udf() -> Arc<ScalarUDF> {
+    array_position::array_position_udf()
+}
+
+#[must_use]
+pub fn array_sort_udf() -> Arc<ScalarUDF> {
+    array_sort::array_sort_udf()
+}
+
+#[must_use]
+pub fn sort_array_udf() -> Arc<ScalarUDF> {
+    array_sort::sort_array_udf()
+}
+
+#[must_use]
+pub fn arrays_overlap_udf() -> Arc<ScalarUDF> {
+    arrays_overlap::arrays_overlap_udf()
+}
+
+#[must_use]
+pub fn flatten_udf() -> Arc<ScalarUDF> {
+    flatten::flatten_udf()
 }
 
 /// Spark `element_at` UDF instance (1-based array / map-by-key).
