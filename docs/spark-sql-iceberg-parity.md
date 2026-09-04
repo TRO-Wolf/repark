@@ -3950,21 +3950,21 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the engines answer the same rows; this row records the bare-key sugar and the qualifier names
   until repark's condition spellings match Spark's.
 
-### EX-DF-10 — `printSchema`'s stdout ends one newline short of Spark's capture
+### EX-DF-10 — FIXED 2026-09-04 (DF-PRINTSCHEMA-1): `printSchema`'s stdout ended one newline short of Spark's capture
 
-- **repark** — `printSchema()` prints the tree with one trailing newline: the captured stdout is
-  the four tree lines joined by `\n` plus one final `\n`, and its `splitlines()` holds the four
-  tree lines and nothing more.
+- **repark** — before the fix `printSchema()` stripped `treeString`'s trailing newline, so the
+  captured stdout ended with a single `\n` and `splitlines()` held the four tree lines only.
+  Since DF-PRINTSCHEMA-1 it prints `treeString` unchanged and `print` adds the second newline:
+  the capture is byte-identical to Spark's.
 - **Apache Spark** — `printSchema()` adds a second newline to `treeString`'s own trailing one:
   the captured stdout ends `\n\n`, and its `splitlines()` holds the four tree lines plus a
-  trailing `''` (five elements). The line content is equal; only the stdout tail differs.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; capture via `redirect_stdout`
-  on both engines over the same `g`/`k`/`v` fixture.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_divergence`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 round-3 promotion of the round-1
-  review-gap entry. `printSchema` / `print_schema` stay covered by the tree-line arm, where the
-  line content agrees; this row records the stdout tail until repark prints Spark's second
-  newline.
+  trailing `''` (five elements).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; re-measured by
+  DF-PRINTSCHEMA-1 on four shapes; capture via `redirect_stdout` on both engines.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_matches_spark`
+  and the four shapes in `python/repark/tests/test_df_printschema.py`.
+- **Rationale** — filed 2026-09-04 by EX-16 round 3 from the round-1 review-gap entry; FIXED the
+  same day by DF-PRINTSCHEMA-1. The example's `rstrip` arm holds on both engines either way.
 
 ### EX-DF-11 — `sameSemantics` answers handle identity on an aliased twin; Spark answers plan equality
 

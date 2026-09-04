@@ -95,3 +95,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
   `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
   `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
+- [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) —
+  **DF-PRINTSCHEMA-1 (2026-09-04), in flight:** `printSchema` stdout byte-identical to
+  Spark's (flat, nested, array, `level=1` exact captures); `EX-DF-10` flipped to FIXED in
+  the merge commit `68e408d`. `risk_tier: standard`. Branch
+  `fix/df-printschema-1-trailing-newline`.
+  pins: df-printschema-1-trailing-newline/C-004
