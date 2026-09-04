@@ -62,14 +62,14 @@ Every RePark write is one Iceberg snapshot. Rollback = `CALL rollback_to_snapsho
 | C3 | seven consecutive days in shadow | checks 1–4 daily, zero divergences |
 | C4 | flip silver writer to RePark; Spark task paused, not deleted | checks 1–5; rollback rehearsed once |
 | C5 | maintenance on RePark | check 6 |
-| C6 | gold on RePark — only after a dbt path exists | separate decision |
+| C6 | gold on RePark — **the dbt path exists (DBT-1, PR #370, 2026-09-04) and the Glue leg is measured green** (`python/dbt-repark/tests/test_aws_acceptance_gold.py`, namespace `testing_repark_acceptance`, 2026-09-05: `dbt run` built both gold models on RePark over Glue Iceberg, `dbt test` passed all ten blocks). Flip gold after C4 holds. | checks 5 + the ten dbt tests |
 
 ## 7. The four decisions — RULED by the owner, 2026-09-04
 
 | # | Question | Ruling | Follow-through |
 |---|---|---|---|
 | 1 | Are `CUTOVER-CTAS-REQ-1` / `CUTOVER-DEDUP-SCHEMA-1` (metadata-only: column requiredness, nullability after `coalesce`/`cast`) blockers? | **Match Spark.** RePark derives nullability the way Spark does; neither row is accepted as a difference. | Unit `CUTOVER-SCHEMA-1` (Muse Spark 1.3 actor, Opus critic), launched 2026-09-04: readers nullable-by-default, CTAS `required: false`, Spark's `coalesce`/`cast` nullability rules; both rows flip FIXED. |
-| 2 | Gold stays on Spark/Glue, or a dbt path? | **Queue the dbt unit.** Gold stays on Spark/Glue only until it lands. | Unit `DBT-1` queued on the slate: design ledger first (adapter vs Thrift; expected winner an in-process `dbt-repark` adapter), then the thinnest adapter that runs the two gold models and their ten tests; acceptance = cutover step C6. |
+| 2 | Gold stays on Spark/Glue, or a dbt path? | **Queue the dbt unit.** Gold stays on Spark/Glue only until it lands — **landed 2026-09-04 (DBT-1, #370)**; C6 measured green on Glue 2026-09-05. | Unit `DBT-1` queued on the slate: design ledger first (adapter vs Thrift; expected winner an in-process `dbt-repark` adapter), then the thinnest adapter that runs the two gold models and their ten tests; acceptance = cutover step C6. |
 | 3 | Shadow namespace and retention | **Recommended:** `<ns>_silver_repark` in the same Glue catalog and warehouse bucket; shadow tables kept 14 days past the canary, then dropped. | The shadow writer writes only to that namespace; retention is a DAG param. |
 | 4 | Who runs the daily shadow diff | **Recommended:** an Airflow task beside the Spark silver task, asset-triggered on the silver facts asset, failing the run on any row-set divergence. | Pipeline-side unit `SHADOW-1` (Muse Spark 1.3), launched 2026-09-04: the silver job on RePark into the shadow namespace, the diff script (counts, `EXCEPT ALL` both ways, schema with nullability reported separately until `CUTOVER-SCHEMA-1` lands, snapshot summaries), and the DAG with a retention task. |
 
