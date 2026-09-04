@@ -7,7 +7,7 @@
 ([../../docs/cutover/inventory.md](../../docs/cutover/inventory.md) ruling 2). The unit that
 built it is DBT-1; the design, the measured refusals and the acceptance result live in
 [../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../task/ledgers/staging/dbt-1-adapter-ledger.md).
-pins: dbt-1-adapter/C-001
+pins: dbt-1-adapter/C-001, C-002, C-003, C-004, C-005
 
 **Not published in this unit.** There is no wheel, no PyPI name reserved, no entry in the root
 `pyproject.toml` uv workspace, and no row in `uv.lock`. Adding a workspace member would pull
@@ -44,11 +44,11 @@ cutover must not edit. What `dbt-spark` gets wrong for RePark is overridden and 
   `repark`). `dbt-spark`'s heavy transports (`pyhive`, `thrift`, `pyodbc`, `pyspark`) are all
   behind *extras*, so the dependency adds no driver.
 - `src/dbt/adapters/repark/` — the adapter: credentials, connection manager, session cursor,
-  relation, adapter class. Arrives with the build commit.
-- `src/dbt/include/repark/` — the macro package: the overrides and the two refusals. Arrives with
-  the build commit.
-- `tests/` — the statement-surface pins; the gold acceptance and the deferred Glue leg arrive
-  with their own commits. See [tests/map.md](tests/map.md).
+  relation, adapter class. See [src/dbt/adapters/repark/map.md](src/dbt/adapters/repark/map.md).
+- `src/dbt/include/repark/` — the macro package: the overrides and the two refusals. See
+  [src/dbt/include/repark/map.md](src/dbt/include/repark/map.md).
+- `tests/` — the statement-surface pins, the local gold acceptance, and the deferred Glue leg.
+  See [tests/map.md](tests/map.md).
 
 ## I want to...
 
@@ -56,7 +56,10 @@ cutover must not edit. What `dbt-spark` gets wrong for RePark is overridden and 
 |---|---|
 | See what dbt emits and what RePark answers | [tests/test_statement_surface.py](tests/test_statement_surface.py) |
 | Run the two gold models end to end | `.venv/bin/python -m pytest python/dbt-repark/tests -q` |
-| Read the divergence registry this unit files rows into | [../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) |
+| Change how a statement reaches the engine | [src/dbt/adapters/repark/connections.py](src/dbt/adapters/repark/connections.py) |
+| Change a macro dbt dispatches | [src/dbt/include/repark/macros/](src/dbt/include/repark/macros/map.md) |
+| Read the divergence rows this unit filed | [../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §2.5 |
+| Write a profile | [../../docs/guide/dbt-on-repark.md](../../docs/guide/dbt-on-repark.md) |
 
 ## Pointers
 
@@ -73,3 +76,4 @@ cutover must not edit. What `dbt-spark` gets wrong for RePark is overridden and 
 | `table 'datafusion.<ns>.<t>' not found` | a two-part name reached the SQL door; every relation must render `catalog.namespace.table` |
 | `incremental` / `snapshot` model refuses | deliberate — RePark has no temporary views, so dbt's merge staging cannot run |
 | a `view` model refuses | deliberate — `DBT-VIEW-1` in the registry |
+| `persist_docs` or `location_root` refuses | deliberate — `DBT-RELCOMMENT-1` / `DBT-COLCOMMENT-1` / `DBT-CTASCLAUSE-1` |

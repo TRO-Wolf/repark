@@ -9,6 +9,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _ADAPTER_SOURCE = _REPO_ROOT / "python" / "dbt-repark" / "src"
 _FACADE_TESTS = _REPO_ROOT / "python" / "repark" / "tests"
 
-for _path in (_ADAPTER_SOURCE, _FACADE_TESTS):
+for _path in (_FACADE_TESTS, _ADAPTER_SOURCE):
     if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+        sys.path.append(str(_path))

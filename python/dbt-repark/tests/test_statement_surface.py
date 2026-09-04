@@ -105,6 +105,13 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-CTAS-PARTITIONED-BY",
+            "spark__partition_cols",
+            f"create or replace table {CATALOG}.{NAMESPACE}.parted using iceberg "
+            f"tblproperties ({PROPERTIES}) partitioned by (b) as select 1 as a, 2 as b",
+            None,
+        ),
+        Shape(
             "S-RENAME",
             "spark__rename_relation",
             f"alter table {fact} rename to {CATALOG}.{NAMESPACE}.gold_fct_renamed",
@@ -182,6 +189,41 @@ def _refused() -> tuple[Shape, ...]:
             "spark__rename_relation",
             f"alter table {NAMESPACE}.{STEM}_survey rename to {NAMESPACE}.renamed",
             "ALTER TABLE expects a three-part `catalog.namespace.table` name",
+        ),
+        Shape(
+            "R-CTAS-LOCATION",
+            "spark__location_clause",
+            f"create or replace table {CATALOG}.{NAMESPACE}.located using iceberg "
+            "location '/tmp/elsewhere' as select 1 as a",
+            "CREATE TABLE … LOCATION is not supported for Iceberg CTAS yet",
+        ),
+        Shape(
+            "R-CTAS-OPTIONS",
+            "spark__options_clause",
+            f"create or replace table {CATALOG}.{NAMESPACE}.optioned using iceberg "
+            'options (compression "zstd") as select 1 as a',
+            "Expected: end of statement, found: using",
+        ),
+        Shape(
+            "R-CTAS-CLUSTERED-BY",
+            "spark__clustered_cols",
+            f"create or replace table {CATALOG}.{NAMESPACE}.clustered using iceberg "
+            "clustered by (a) into 4 buckets as select 1 as a",
+            "Expected: end of statement, found: using",
+        ),
+        Shape(
+            "R-TABLE-COMMENT",
+            "spark__comment_clause",
+            f"create or replace table {CATALOG}.{NAMESPACE}.commented using iceberg "
+            "comment 'a description' as select 1 as a",
+            "CREATE TABLE … COMMENT is not supported for Iceberg CTAS yet",
+        ),
+        Shape(
+            "R-TABLE-COMMENT-AFTER-TBLPROPERTIES",
+            "spark__comment_clause",
+            f"create or replace table {CATALOG}.{NAMESPACE}.commented2 using iceberg "
+            f"tblproperties ({PROPERTIES}) comment 'a description' as select 1 as a",
+            "Expected: end of statement, found: using",
         ),
         Shape(
             "R-COLUMN-COMMENT",
