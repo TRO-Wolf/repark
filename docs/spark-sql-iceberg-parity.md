@@ -3581,11 +3581,11 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
   | `id` | collects | **ambiguous** | **duplicate** | **duplicate** |
   | `k` | collects | **ambiguous** | **duplicate** | **duplicate** |
 
-  Onset is depth 2, and the keep column's name is irrelevant — `k` fails exactly as `id`
-  does, so this is not an `id` collision. Two distinct messages: depth 2 gives `Schema
-  contains qualified field name datafusion.public.__repark_cdf_<uuid>.<keep> and unqualified
-  field name <keep> which would be ambiguous`; depth ≥ 3 gives `Schema contains duplicate
-  unqualified field name <keep>`.
+  Onset is depth 2; the keep column's name is irrelevant (`k` fails as `id` does), so this is
+  not an `id` collision. The two failures differ: depth 2 gives `Schema contains qualified
+  field name datafusion.public.__repark_cdf_<uuid>.<keep> and unqualified field name <keep>
+  which would be ambiguous`, depth ≥ 3 gives `Schema contains duplicate unqualified field
+  name <keep>`.
 - **Apache Spark** — the same frame expands and returns the prefixed leaf beside the keep
   column: columns `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
   *(oracle: measured — PySpark 4.1.2, 2026-09-04.)*

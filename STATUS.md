@@ -126,13 +126,10 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
-- **Performance campaign (measure-first).** dynamicFlatten release baseline
-  [docs/perf/dynamic-flatten-baseline.md](docs/perf/dynamic-flatten-baseline.md), candidates
-  timed in isolation against a measured 10.81 ms noise floor: null-mask struct extract
-  82.99 ms (7.7x) queued as PERF-DYNFLATTEN-2; the Cartesian operator (26.91 ms, 2.5x, not
-  reproducible across runs) and the optimizer walks (0.85 ms) are not. Implementation slates
-  are GATED on those numbers; the perf note's do-not list is binding. `unsafe` remains
-  workspace-forbidden.
+- **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
+  Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not
+  list binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md):
+  null-mask queued on `struct_d6` alone (59.98 ms, 5.5x a 10.81 ms floor); Cartesian and walks not.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->

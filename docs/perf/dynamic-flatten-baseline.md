@@ -56,8 +56,9 @@ because the medians move under load.
 | cartesian_tags_only | y | 26.6 | 20.2 | 0.43 | 159.0 | 145.4 | 0.17 | — | 310150 |
 
 `iso` marks the isolation fixtures that exist only to subtract one cost from another; they are
-not part of any headline. On this fair footing repark is faster than Spark on every fixture
-(ratios 0.09–0.41), but see the caveat below before quoting that.
+not part of any headline. repark's number is lower on every fixture (ratios 0.09–0.41), but
+that is **not** a clean engine comparison: Spark's timed region includes a JVM→Python Arrow
+transfer of the full result that repark's in-process `to_arrow()` never pays (do-not #4).
 
 ## Noise floor
 
@@ -73,26 +74,38 @@ cost as "queued" at 7.7×. A single difference is not a dispersion statistic.
 
 Each candidate is timed as **itself**, not as the wall of the fixture family that contains it:
 
-| candidate | how it is isolated | cost | ×noise | verdict |
-|---|---|---:|---:|---|
-| null_mask_struct_extractor | struct fixtures at 30 % null parents **minus** the same fixtures at 0 % nulls | 82.99 ms | 7.7 | **queued** |
-| cartesian_multi_list_operator | two-list fixture **minus** (legs-only + tags-only) | 26.91 ms | 2.5 | **not worth it** |
-| optimizer_wrapper_walks | rewrite wall over struct_d3, struct_d6, cartesian | 0.85 ms | 0.1 | **not worth it** |
+Each cost below is **one fixture's** number. Costs are never summed across fixtures: a sum
+against a single-fixture floor is the same aggregation error as a share of family wall.
 
-A candidate is **queued only when its isolated cost exceeds the noise floor by 3×**. There is
-no share-of-wall cliff; a percentage of a fixture's wall is not that candidate's cost.
+| candidate | fixture | how it is isolated | cost | ×noise | verdict |
+|---|---|---|---:|---:|---|
+| null_mask_struct_extractor | **struct_d6** | 30 % null parents minus 0 % nulls | **59.98 ms** | **5.5** | **queued** |
+| null_mask_struct_extractor | struct_d3 | same, shallower | 23.01 ms | 2.1 | below bar alone |
+| cartesian_multi_list_operator | cartesian_two_lists | minus (legs-only + tags-only) | 26.91 ms | 2.5 | **not worth it** |
+| optimizer_wrapper_walks | cartesian_two_lists | rewrite wall | 0.41 ms | 0.04 | **not worth it** |
+| optimizer_wrapper_walks | struct_d6 | rewrite wall | 0.24 ms | 0.02 | **not worth it** |
+| optimizer_wrapper_walks | struct_d3 | rewrite wall | 0.20 ms | 0.02 | **not worth it** |
+
+A candidate is **queued only when a single fixture's isolated cost exceeds the noise floor by
+3×**. `null_mask_struct_extractor` qualifies on `struct_d6` alone (5.5×); `struct_d3` at 2.1×
+would not have carried it. No other candidate clears the bar on any fixture.
 
 Reproducibility across three independent runs of the whole battery:
 
-| candidate | run A | run B | run C | stable? |
+| candidate (fixture) | run A | run B | run C | stable? |
 |---|---:|---:|---:|---|
-| null_mask_struct_extractor | 77.38 | 75.66 | 82.99 | yes (±5 %) |
-| cartesian_multi_list_operator | 6.09 | 16.64 | 26.91 | **no** (4× spread) |
-| optimizer_wrapper_walks | 0.98 | 0.95 | 0.85 | yes |
+| null_mask (struct_d6) | 62.76 | 62.93 | 59.98 | yes (±3 %) |
+| null_mask (struct_d3) | 14.63 | 12.73 | 23.01 | no (1.8× spread) |
+| cartesian (cartesian_two_lists) | 6.09 | 16.64 | 26.91 | **no** (4.4× spread) |
+| walks (cartesian_two_lists) | 0.47 | 0.48 | 0.41 | yes |
+
+`struct_d6` is the fixture the verdict rests on and it is the steadiest number in the table.
+`struct_d3` is not steady and does not clear the bar in any run, which is why the queued
+verdict is stated on `struct_d6` alone rather than on the two added together.
 
 Only `null_mask_struct_extractor` is both large and reproducible, and it is the one unit this
-measurement queues. Null-parent handling dominates the struct path: `struct_d3` costs 25.4 ms
-at 30 % nulls and 2.3 ms at 0 %, an 11× difference on the same rows and schema.
+measurement queues. Null-parent handling dominates the struct path: `struct_d6` costs 66.7 ms
+at 30 % nulls and 6.7 ms at 0 %, a 10× difference on the same rows and schema.
 
 `cartesian_multi_list_operator` is **not** queued, reversing an earlier reading that ranked it
 second on 21.5 % of fixture wall. Isolated, the second Unnest adds 6–27 ms — the same order as
@@ -127,16 +140,17 @@ sibling Unnest pin stays green, so the counter is walk-specific.
 
 ## Row-set equality vs Spark explode+struct expand
 
+Computed at **gate scale, 64 rows** — full Arrow row-set equality only runs when a fixture's
+output is at or under `EQUALITY_ROW_CAP` (20,000 rows), which the 1e5 fixtures exceed.
+
 | shape | equal | why |
 |---|---|---|
 | struct_d3, struct_d6 | True | |
 | the other five | False | `DYNFLATTEN-LISTNULL-1`, one cause |
 
-The five False shapes are exactly the five carrying `user_properties ARRAY<VOID>`; the two
-True shapes are the two without it. Live co-collect is
-`test_live_dynflatten_matches_spark_explode`, which now hands **both** engines `read.parquet`
-of the same file — and that symmetry surfaced `DYNFLATTEN-READNULL-1`, which the earlier
-asymmetric pin had hidden.
+The five False shapes are exactly the five carrying `user_properties ARRAY<VOID>`. Live
+co-collect is `test_live_dynflatten_matches_spark_explode`, now symmetric (**both** engines
+`read.parquet` of one file), which surfaced `DYNFLATTEN-READNULL-1`.
 
 ## Do not (binding)
 
@@ -147,8 +161,11 @@ asymmetric pin had hidden.
 3. Do not quote a ratio against Spark without stating the thread count and that both engines
    were handed a materialized frame. A `local[1]` Spark against a 64-thread repark is not a
    comparison.
-4. Do not treat these numbers as an H-3b baseline or use them to gate a release.
-5. Do not close `DYNFLATTEN-QUALNAME-1` by changing the bed.
+4. Do not read the ratios as a clean engine comparison at all. Spark's timed region includes a
+   JVM→Python Arrow transfer of the whole result (`toArrow()`); repark's `to_arrow()` is
+   in-process. Spark pays a cost repark does not, and it is not subtracted here.
+5. Do not treat these numbers as an H-3b baseline or use them to gate a release.
+6. Do not close `DYNFLATTEN-QUALNAME-1` by changing the bed.
 
 ## What this baseline is not
 
