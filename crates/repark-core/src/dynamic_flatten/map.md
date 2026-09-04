@@ -30,6 +30,10 @@ operator.
 - Ledger: [../../../../task/df1-rust-flatten-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-20-df1-rust-flatten-ledger.md)
 - DFP-1: [../../../../task/ledgers/completed/dfp-1-preserve-null-unnest-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-31-dfp-1-preserve-null-unnest-ledger.md)
   pins: dfp-1-preserve-null-unnest/C-007, C-008, C-009, C-010, C-011, C-012
+- PERF-DYNFLATTEN-1: `dynamic_flatten_with_stats` counts rewrite passes, schema
+  walks, struct expansions, list explodes, and plan-node kinds. Pins in
+  [tests/map.md](tests/map.md).
+  pins: perf-dynflatten-1-measure/C-002
 
 ## Debug
 

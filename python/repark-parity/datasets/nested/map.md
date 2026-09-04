@@ -16,6 +16,11 @@ values) from `small()` and from files re-read under `SCHEMA` — not raw file by
 
 - `datagen.py` — schema, `generate` / `small` / `write_files` / `read_parquet` /
   `read_jsonl`, CLI (`--rows` default 1_000_000, `--seed` default 42, `--out`).
+- `bed.py` — **PERF-DYNFLATTEN-1** measurement bed: named shapes (struct depth 3/6,
+  list-of-struct 1/8/64, cartesian sibling lists, null-typed list), 30 % null
+  parents, dictionary-encoded `Name`, capitalized fields. CLI `--scale
+  gate|quick|full --out DIR`. Real-dataset flags/env refused.
+  pins: perf-dynflatten-1-measure/C-001
 - `__init__.py` — re-exports the public door.
 - `map.md` — this file.
 
@@ -38,11 +43,13 @@ values) from `small()` and from files re-read under `SCHEMA` — not raw file by
 | Build 64 deterministic rows | `small()` |
 | Write parquet + JSON-lines | `write_files(rows=…, seed=…, out=…)` or the CLI |
 | Re-read for the identity pin | `read_parquet` / `read_jsonl` (both cast to `SCHEMA`) |
+| Build a measurement-bed shape | `bed.small("struct_d3")` / `bed.write_bed(scale="gate", out=…)` |
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Tests: [../../tests/map.md](../../tests/map.md) `test_datasets_nested.py`
+- Tests: [../../tests/map.md](../../tests/map.md) `test_datasets_nested.py`,
+  `test_dynflatten_bed.py`
 
 ## Debug
 

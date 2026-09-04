@@ -17,6 +17,11 @@ Rust file-size default ceiling. Dirty-list-under-null-parent CASE pin
   nested `max_depth=1` and top-level `max_depth=0`), max-depth remaining-schema
   truncation (`max_depth_remaining_schema_is_truncated` kills unbounded output
   — token / "truncated" / len — not the join-then-truncate allocation path).
+  **PERF-DYNFLATTEN-1:** `flatten_stats_depth_three_struct_counts_repeated_schema_walks`
+  (3 expansions, 10 schema walks, 4 passes, 20 fields visited) and
+  `flatten_stats_two_sibling_lists_are_sequential_unnests` (2 Unnests, 4-row
+  Cartesian). Mutation: drop a `has_struct` walk → the 9-walk pin reds.
+  pins: perf-dynflatten-1-measure/C-002
 - `preserve_nulls.rs` — DFP-1 plan-shape and value/type matrix for preserve-null Unnest across
   List, LargeList, FixedSizeList, and Dictionary<List>; keeps sequential Cartesian expansion.
   pins: dfp-1-preserve-null-unnest/C-001, C-002, C-003, C-004, C-005, C-006

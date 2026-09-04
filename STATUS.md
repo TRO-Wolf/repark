@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-03._
+_Last updated: 2026-09-04._
 
 ## Release state
 
@@ -126,12 +126,10 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
-- **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
-  Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline.
-  Implementation slates are GATED on those numbers; the perf note's §7 do-not list is binding;
-  `unsafe` remains workspace-forbidden.
-  **Next:** the dynamicFlatten measurement (the three H-3 candidates in
-  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) "2026-08-31 dynamic-flatten intake").
+- **Performance campaign (measure-first).** dynamicFlatten 1e5 baseline
+  [docs/perf/dynamic-flatten-baseline.md](docs/perf/dynamic-flatten-baseline.md):
+  walks 0.2% not worth it; cartesian 23% and null-mask struct 23% queued as
+  PERF-DYNFLATTEN-2. `unsafe` remains workspace-forbidden.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->

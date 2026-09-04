@@ -29,6 +29,9 @@ NOT in that file is a defect, not a decision.
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
+  (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
+  cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -2283,6 +2286,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fn_fix_1_last_and_approx_percentile`, `test_live_fn_fix_1_arrays`,
   `test_live_fn_fix_1_nan_ingest`.
   pins: fn-fix-1-registry-rows/C-001, C-002, C-003, C-004
+  **PERF-DYNFLATTEN-1:** `test_live_dynflatten_matches_spark_explode` co-collects
+  beside `test_live_disclosure_still_diverges` on the shared `spark_engine`
+  (struct_d3 / list_struct_1 / cartesian_two_lists at 16 rows).
+  pins: perf-dynflatten-1-measure/C-002, C-003
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

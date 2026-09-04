@@ -69,7 +69,9 @@ pub use sorted_view::{
 pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
-pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
+pub use dynamic_flatten::{
+    DynamicFlattenOptions, DynamicFlattenStats, dynamic_flatten, dynamic_flatten_with_stats,
+};
 
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};

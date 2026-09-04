@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use arrow::datatypes::{DataType, Fields};
 use datafusion::common::{Column, ScalarValue, UnnestOptions};
-use datafusion::logical_expr::{Expr, LogicalPlanBuilder, cast, when};
+use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, cast, when};
 use datafusion::prelude::{DataFrame, array_length, get_field, lit, make_array};
 
 use crate::{Error, Result, engine_err};
@@ -23,6 +23,27 @@ pub struct DynamicFlattenOptions {
     pub empty_as_null: bool,
     /// Rewrite-pass bound, not a row-cartesian or schema-width memory limiter.
     pub max_depth: usize,
+}
+
+/// Schema-walk and plan-node counters for [`dynamic_flatten_with_stats`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DynamicFlattenStats {
+    /// Loop iterations of the structs-then-lists rewrite.
+    pub rewrite_passes: u64,
+    /// Top-level schema scans (`has_struct` / `has_list` / expand / explode collect).
+    pub schema_walks: u64,
+    /// Fields inspected across those scans.
+    pub fields_visited: u64,
+    /// Calls to [`expand_structs`].
+    pub struct_expansions: u64,
+    /// Per-column list unnests (not counting dropped null-typed lists).
+    pub list_explodes: u64,
+    /// Logical-plan nodes after the rewrite.
+    pub plan_nodes: u64,
+    /// `LogicalPlan::Unnest` nodes after the rewrite.
+    pub unnest_nodes: u64,
+    /// `LogicalPlan::Projection` nodes after the rewrite.
+    pub projection_nodes: u64,
 }
 
 impl Default for DynamicFlattenOptions {
@@ -57,6 +78,16 @@ struct ExpandedField {
 /// # Errors
 /// Returns [`Error::Analysis`] with a `DYNAMIC_FLATTEN_*` token.
 pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Result<DataFrame> {
+    dynamic_flatten_with_stats(frame, options).map(|(frame, _stats)| frame)
+}
+
+/// [`dynamic_flatten`] plus schema-walk / plan-node counters (measurement only).
+/// # Errors
+/// Returns [`Error::Analysis`] with a `DYNAMIC_FLATTEN_*` token.
+pub fn dynamic_flatten_with_stats(
+    frame: DataFrame,
+    options: DynamicFlattenOptions,
+) -> Result<(DataFrame, DynamicFlattenStats)> {
     let DynamicFlattenOptions {
         separator,
         explode_lists,
@@ -67,30 +98,33 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
 
     let mut current = frame;
     let mut completed_cleanly = false;
+    let mut stats = DynamicFlattenStats::default();
 
     for _pass in 0..max_depth {
-        if has_struct_columns(current.schema().fields()) {
-            current = expand_structs(current, &separator)?;
+        stats.rewrite_passes = stats.rewrite_passes.saturating_add(1);
+        if has_struct_columns(current.schema().fields(), &mut stats) {
+            current = expand_structs(current, &separator, &mut stats)?;
             continue;
         }
         if !explode_lists {
             completed_cleanly = true;
             break;
         }
-        if let Some(name) = first_list_view_column(current.schema().fields()) {
+        if let Some(name) = first_list_view_column(current.schema().fields(), &mut stats) {
             return Err(list_view_refused(&name));
         }
-        if !has_list_columns(current.schema().fields()) {
+        if !has_list_columns(current.schema().fields(), &mut stats) {
             completed_cleanly = true;
             break;
         }
-        current = explode_lists_in_schema_order(current, drop_null_lists, empty_as_null)?;
+        current =
+            explode_lists_in_schema_order(current, drop_null_lists, empty_as_null, &mut stats)?;
     }
 
     if !completed_cleanly {
         let fields = current.schema().fields();
-        let still_structs = has_struct_columns(fields);
-        let still_lists = explode_lists && has_list_columns(fields);
+        let still_structs = has_struct_columns(fields, &mut stats);
+        let still_lists = explode_lists && has_list_columns(fields, &mut stats);
         if still_structs || still_lists {
             return Err(Error::Analysis(format!(
                 "[DYNAMIC_FLATTEN_MAX_DEPTH] dynamicFlatten exceeded max_depth={max_depth} \
@@ -100,14 +134,26 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
             )));
         }
     }
-    if explode_lists && let Some(name) = first_list_view_column(current.schema().fields()) {
+    if explode_lists
+        && let Some(name) = first_list_view_column(current.schema().fields(), &mut stats)
+    {
         return Err(list_view_refused(&name));
     }
-    Ok(current)
+    let (plan_nodes, unnest_nodes, projection_nodes) = count_plan_kinds(current.logical_plan());
+    stats.plan_nodes = plan_nodes;
+    stats.unnest_nodes = unnest_nodes;
+    stats.projection_nodes = projection_nodes;
+    Ok((current, stats))
 }
 
 /// Expand every top-level struct in place with parent-path prefixes (null-safe Project).
-fn expand_structs(frame: DataFrame, separator: &str) -> Result<DataFrame> {
+fn expand_structs(
+    frame: DataFrame,
+    separator: &str,
+    stats: &mut DynamicFlattenStats,
+) -> Result<DataFrame> {
+    stats.struct_expansions = stats.struct_expansions.saturating_add(1);
+    record_schema_walk(stats, frame.schema().fields().len());
     let schema_fields: Vec<(String, DataType)> = frame
         .schema()
         .fields()
@@ -204,7 +250,9 @@ fn explode_lists_in_schema_order(
     mut frame: DataFrame,
     drop_null_lists: bool,
     empty_as_null: bool,
+    stats: &mut DynamicFlattenStats,
 ) -> Result<DataFrame> {
+    record_schema_walk(stats, frame.schema().fields().len());
     let list_columns: Vec<(String, DataType, DataType)> = frame
         .schema()
         .fields()
@@ -228,6 +276,7 @@ fn explode_lists_in_schema_order(
         if is_map_type(&element_type) {
             return Err(map_element_refused(&name));
         }
+        stats.list_explodes = stats.list_explodes.saturating_add(1);
         frame = explode_one_list(frame, &name, empty_as_null, &column_type, &element_type)?;
     }
     Ok(frame)
@@ -368,16 +417,41 @@ fn list_element_type(data_type: &DataType) -> Option<&DataType> {
     }
 }
 
-fn has_struct_columns(fields: &Fields) -> bool {
+fn record_schema_walk(stats: &mut DynamicFlattenStats, field_count: usize) {
+    stats.schema_walks = stats.schema_walks.saturating_add(1);
+    let visited = u64::try_from(field_count).unwrap_or(u64::MAX);
+    stats.fields_visited = stats.fields_visited.saturating_add(visited);
+}
+
+fn has_struct_columns(fields: &Fields, stats: &mut DynamicFlattenStats) -> bool {
+    record_schema_walk(stats, fields.len());
     fields
         .iter()
         .any(|field| struct_fields(field.data_type()).is_some())
 }
 
-fn has_list_columns(fields: &Fields) -> bool {
+fn has_list_columns(fields: &Fields, stats: &mut DynamicFlattenStats) -> bool {
+    record_schema_walk(stats, fields.len());
     fields
         .iter()
         .any(|field| list_element_type(field.data_type()).is_some())
+}
+
+fn count_plan_kinds(plan: &LogicalPlan) -> (u64, u64, u64) {
+    let mut plan_nodes = 0_u64;
+    let mut unnest_nodes = 0_u64;
+    let mut projection_nodes = 0_u64;
+    let mut stack = vec![plan];
+    while let Some(node) = stack.pop() {
+        plan_nodes = plan_nodes.saturating_add(1);
+        match node {
+            LogicalPlan::Unnest(_) => unnest_nodes = unnest_nodes.saturating_add(1),
+            LogicalPlan::Projection(_) => projection_nodes = projection_nodes.saturating_add(1),
+            _ => {}
+        }
+        stack.extend(node.inputs());
+    }
+    (plan_nodes, unnest_nodes, projection_nodes)
 }
 
 fn is_map_type(data_type: &DataType) -> bool {
@@ -436,7 +510,8 @@ fn format_fields(fields: &Fields) -> String {
     }
 }
 
-fn first_list_view_column(fields: &Fields) -> Option<String> {
+fn first_list_view_column(fields: &Fields, stats: &mut DynamicFlattenStats) -> Option<String> {
+    record_schema_walk(stats, fields.len());
     fields.iter().find_map(|field| {
         if is_list_view_type(field.data_type()) {
             Some(field.name().clone())

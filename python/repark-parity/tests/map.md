@@ -355,6 +355,12 @@ JVM, no repark required). See [../map.md](../map.md).
   types, null-typed lists, empty/null list rows), cache symlink + in-repo refuse, CLI
   `--out`. Loads `repark_datasets` via the bench sys.modules loader. Ledger:
   `task/c18-datasets-ledger.md`.
+- `test_dynflatten_bed.py` — **PERF-DYNFLATTEN-1** measurement-bed pins: charter
+  shapes, dict-encoded capitalized `Name`, 30 % null parents, cartesian sibling
+  lists, list widths 1/8/64, parquet round-trip, gate manifest, full-scale skip of
+  `list_struct_64`, real-dataset flag/env refuse, in-repo write refuse, ranking
+  orders by wall share.
+  pins: perf-dynflatten-1-measure/C-001, C-002
 - `test_compare.py` — equal/unequal frames, order-insensitivity, null handling, schema/row-count
   mismatches, and a **field-nullability difference** (part of the schema signature — a differing
   `nullable` flag with identical name/type/values is a parity failure). **G18 nested invariants:**

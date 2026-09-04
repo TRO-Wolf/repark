@@ -13,8 +13,10 @@ use repark_common::Error;
 
 use super::{
     DynamicFlattenOptions, analysis_token, assert_int64, collect_one, column_names,
-    dynamic_flatten, flatten, i64_array, i64_cells, options, read_batch,
+    dynamic_flatten, flatten, i64_array, i64_cells, list_of, options, read_batch, struct_array,
+    utf8_array,
 };
+use crate::dynamic_flatten_with_stats;
 
 fn large_list_of(
     element: DataType,
@@ -240,4 +242,70 @@ fn max_depth_remaining_schema_is_truncated() {
         }
         other => panic!("expected Analysis(MAX_DEPTH), got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn flatten_stats_depth_three_struct_counts_repeated_schema_walks() {
+    let inner = struct_array(
+        vec![("Val", DataType::Int64, i64_array(vec![Some(1)]))],
+        None,
+    );
+    let mid = struct_array(
+        vec![("L2", inner.data_type().clone(), Arc::new(inner) as ArrayRef)],
+        None,
+    );
+    let outer = struct_array(
+        vec![("L1", mid.data_type().clone(), Arc::new(mid) as ArrayRef)],
+        None,
+    );
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("Payload", outer.data_type().clone(), true),
+        ])),
+        vec![i64_array(vec![Some(1)]), Arc::new(outer)],
+    )
+    .expect("batch");
+    let (_frame, stats) =
+        dynamic_flatten_with_stats(read_batch(batch), options()).expect("flatten stats");
+    assert_eq!(stats.struct_expansions, 3);
+    assert_eq!(stats.list_explodes, 0);
+    assert_eq!(stats.unnest_nodes, 0);
+    assert_eq!(stats.rewrite_passes, 4);
+    assert_eq!(stats.schema_walks, 10);
+    assert!(stats.plan_nodes >= 4);
+    assert!(stats.projection_nodes >= 3);
+    assert_eq!(stats.fields_visited, 20);
+}
+
+#[tokio::test]
+async fn flatten_stats_two_sibling_lists_are_sequential_unnests() {
+    let left = list_of(
+        DataType::Int64,
+        [0, 2],
+        i64_array(vec![Some(1), Some(2)]),
+        None,
+    );
+    let right = list_of(
+        DataType::Utf8,
+        [0, 2],
+        utf8_array(vec![Some("a"), Some("b")]),
+        None,
+    );
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("Legs", left.data_type().clone(), true),
+            Field::new("Tags", right.data_type().clone(), true),
+        ])),
+        vec![i64_array(vec![Some(1)]), left, right],
+    )
+    .expect("batch");
+    let (frame, stats) =
+        dynamic_flatten_with_stats(read_batch(batch), options()).expect("flatten stats");
+    assert_eq!(stats.list_explodes, 2);
+    assert_eq!(stats.unnest_nodes, 2);
+    assert_eq!(column_names(&frame), ["id", "Legs", "Tags"]);
+    let table = collect_one(frame).await;
+    assert_eq!(table.num_rows(), 4);
 }

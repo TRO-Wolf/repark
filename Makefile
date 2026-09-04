@@ -404,6 +404,14 @@ workflows-parse: ## Every workflow must be parseable YAML (zizmor SKIPS files it
 	# materialize a stray uv.lock at the root and warn about a missing requires-python.
 	@uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
 
+.PHONY: dynflatten-bench
+dynflatten-bench: ## Measure dynamicFlatten vs Spark explode (PERF-DYNFLATTEN-1; writes /tmp/oc-dynflatten-bed)
+	python python/repark-parity/bench/dynflatten/run_dynflatten.py \
+		--scale $${SCALE:-gate} \
+		--out /tmp/oc-dynflatten-bed \
+		--json /tmp/oc-dynflatten-bed/run.json \
+		--report docs/perf/dynamic-flatten-baseline.md
+
 # ------------------------------------------------------------------------------------------------
 # Autofix + hooks
 # ------------------------------------------------------------------------------------------------

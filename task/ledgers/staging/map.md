@@ -40,3 +40,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
+  **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
+  nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
+  Branch `perf/dynflatten-1-measure`.
+  pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
