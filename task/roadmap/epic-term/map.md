@@ -22,7 +22,7 @@ is now the epic list from v0.6 through 3.0 — PROJECT.md points here rather tha
   pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-001
   **V1-GATE (2026-09-03): the gate is audited.** §3.1 is the audit — one row per §3 row with
   its glyph, claim, residual, that residual's registry class and date, and its pin — plus the
-  five 🟡 fork rows the gate leans on, read at the consumed pin `ff4764d3`. Three matrix glyphs
+  five 🟡 fork rows the gate leans on, read at the consumed pin `594bdbe5`. Three matrix glyphs
   moved to the gate's own wording (types ⚠→✅ on `V3-GEO-1` / `V3-VARIANT-SHRED-1`, encryption
   ❌→✅ on `ENC-1`, DV maintenance ⚠→✅ on `B-MOR-3` under owner decision OD-2) and the
   `rewrite_manifests` row records its v3 exercise from SCALE-v3. The gate paragraph carries one

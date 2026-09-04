@@ -9,6 +9,10 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
 ## Contents
 
 - `mod.rs` — thin index.
+- `plain.rs` — **RP-9 r2:** `try_allowed_plain_identity` accepts `DELETE … WHERE id = 0` on a
+  three-part name and refuses a subquery `WHERE`, a literal `IN` list, an `UPDATE`, and a
+  four-part branch selector (those stay on the IN/EXISTS allow-list or the fork delete exec).
+  pins: rp-9-repin-f23/C-005
 - `predicate_dml.rs` — DELETE: `IN` / `NOT IN (SELECT …)` including the NULL 3VL trap,
   `[NOT] EXISTS` with and without correlation, correlated `IN`, isolation-level pins
   (M19 / A10).

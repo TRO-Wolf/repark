@@ -141,14 +141,14 @@ surface §3 names; none is inside that row's v1.0 requires cell, so none is audi
 | 9 · Write: MoR DML via deletion vectors | `V3-COV-4` — a `DELETE` whose predicate covers every row of a data file writes a full-coverage Puffin DV where Spark drops the file | BACKLOG, measured 2026-09-03 by V3-COV | the cell reads "full DML including UPDATE/MERGE, round-tripped" — this `DELETE` does round-trip: both engines return `[]` rows and identical time travel, and only the storage shape differs, which the cell does not ask about |
 | no §3 row · sort-order evolution | `V3-COV-5` — `ALTER TABLE … WRITE ORDERED BY` refuses where Spark sets the write order | BACKLOG, measured 2026-09-03 by V3-COV | §3 carries no row for sort-order evolution: I7 delivered partition-spec DDL only, and the sibling on the maintenance side is `RDF-SORT-1`, itself outside row 12's requires cell |
 
-**Fork side, at the consumed pin `c1d6c9de`.** Every 🟡 `GAP_MATRIX.md` row this gate leans on
+**Fork side, at the consumed pin `594bdbe5`.** Every 🟡 `GAP_MATRIX.md` row this gate leans on
 carries a dated cell and a pin at that rev, so none is a blocker.
 
 | Fork row | Glyph | What this gate leans on it for | Dated at the pin rev |
 |---|---|---|---|
 | R88 · V3 types: variant | 🟡 | binary `variant` refuses end to end; shredded Parquet is out of the fork's parity envelope | scope correction 2026-08-24, caveat 2026-08-25 (`V3-VARIANT-SHRED-1`) |
 | R91 · V3 types: unknown | 🟡 | `unknown` CREATE and parquet write refuse loud | parquet-write refusal 2026-09-01, with its three fork pins named |
-| R114 · Writer: deletion-vector (v3 Puffin DV) | 🟡 | the DV writer behind rows 9, 11 and 13 | F-18 container close 2026-09-02; F-21 legacy-delete merge and F-22 one-pass legacy scan 2026-09-03, consumed by RP-8; PR-7 re-audit 2026-09-02 keeps residue U4 named |
+| R114 · Writer: deletion-vector (v3 Puffin DV) | 🟡 | the DV writer behind rows 9, 11 and 13 | F-18 container close 2026-09-02; F-21 legacy-delete merge and F-22 one-pass legacy scan 2026-09-03, consumed by RP-8; F-23 skip-walk 2026-09-03, consumed by RP-9; PR-7 re-audit 2026-09-02 keeps residue U4 named |
 | R126 · Catalogs (clause (c)) | 🟡 | S3 Tables `register_table` is a service gap, not a defect | F-9, 2026-08-27, "not a *yet*" |
 | R167 · Hadoop `vN.metadata.json` names | 🟡 | Hadoop pointer adopt + write behind row 17 | 2026-08-28, engine pin named in the cell |
 

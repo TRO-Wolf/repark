@@ -107,6 +107,11 @@ v1 crate-root re-export lists.
     `Option<&ManifestList>`. `make verify` on the bare repin is exit 2 with exactly those five
     errors, all in `write/merge/dv_close.rs` — the measured blast radius of the break.
     pins: rp-8-repin-f21-f22/C-001
+    **RP-9 (2026-09-03):** the family is frozen at `594bdbe5` (fork F-23). No public break:
+    the close signature is unchanged. Bare-repin compiles; one pin reds
+    (`a_supplied_partition_map_still_walks_the_data_manifests_for_sequence_numbers`) because a
+    complete map now skips the data-manifest walk.
+    pins: rp-9-repin-f23/C-001
   - **The metadata-projection shim retired at RP-5 (fork R169/R170, F-8 `#247`).** The
     fork's metadata-table `scan` honors `projection` (empty projection included) and
     `table_names` lists catalog entries only (`$`-twins are not enumerated). Engine

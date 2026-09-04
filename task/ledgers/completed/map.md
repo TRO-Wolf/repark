@@ -15,14 +15,6 @@ else. The next pickup's `make ledger-archive` files everything here under
   to one PUFFIN per data file. Floor residue `B-MOR-3-FLOOR-1` / F-24. Branch
   `feat/b-mor-3-rewrite-position-deletes-v3`. `risk_tier: standard`. Model:
   grok-4.6 → glm-5.3-flash (continuation).
-- [rp-8-repin-f21-f22-ledger.md](rp-8-repin-f21-f22-ledger.md) — **RP-8 (2026-09-03),
-  delivered:** the fork repin `ff4764d3` → `c1d6c9de`, consuming F-19/F-20 (`#261`), F-21
-  (`#262`) and F-22 (`#263`). The deletion-vector container close takes over the legacy-delete
-  collect, merge and file-scoped removal in one delete-manifest pass, so RePark's own
-  `write/merge/dv_close/legacy_deletes.rs` (493 lines) is deleted; `V3-UPGRADE-DV-PLAIN-1`,
-  `V3-UPGRADE-DV-PART-1`, `F-v3-10-partition-file-order` and `V3-COV-3` all FIXED at Spark's
-  measured values; `V3-FILEORDER-1` stays DECLARED and widens to the fork's `INSERT INTO` path.
-  `risk_tier: standard`. Branch `feat/rp-8-repin-f21-f22`.
 - [v1-gate-audit-ledger.md](v1-gate-audit-ledger.md) — **V1-GATE (2026-09-03), in flight:**
   the v1.0 north-star gate statement. Audits all twenty §3 rows into §3.1 (glyph, claim,
   residual → registry row, class and date, pin), reads the fork rows the gate leans on at the
@@ -41,6 +33,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   Matrix: [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   Carries one RULING (`V3-COV-3`, the delegated partitioned INSERT's unstable `_row_id`) —
   closed by RP-8 the same day.
+- [rp-8-repin-f21-f22-ledger.md](rp-8-repin-f21-f22-ledger.md) — **RP-8 (2026-09-03),
+  delivered:** the fork repin `ff4764d3` → `c1d6c9de`, consuming F-19/F-20 (`#261`), F-21
+  (`#262`) and F-22 (`#263`). The deletion-vector container close takes over the legacy-delete
+  collect, merge and file-scoped removal in one delete-manifest pass, so RePark's own
+  `write/merge/dv_close/legacy_deletes.rs` (493 lines) is deleted; `V3-UPGRADE-DV-PLAIN-1`,
+  `V3-UPGRADE-DV-PART-1`, `F-v3-10-partition-file-order` and `V3-COV-3` all FIXED at Spark's
+  measured values; `V3-FILEORDER-1` stays DECLARED and widens to the fork's `INSERT INTO` path.
+  E-4 closed by RP-9 2026-09-03 at pin `594bdbe5`.
+  `risk_tier: standard`. Branch `feat/rp-8-repin-f21-f22`.
 
 ## Pointers
 - Up: [../map.md](../map.md)

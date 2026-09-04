@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md) — **RP-9 (2026-09-03), in flight:**
+  the fork repin `c1d6c9de` → `594bdbe5` (F-23). The DV close skips the data-manifest walk
+  when there are no legacy deletes and `known_partitions` covers every touched path;
+  `PERF-DVCLOSE-WALK-1` FIXED. `risk_tier: standard`. Branch `feat/rp-9-repin-f23`.
 - [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
   **FN-FIX-1 (2026-09-03), in flight:** ten filed function-parity divergences plus
   NaN ingest become Spark-equal. `risk_tier: standard`. Branch

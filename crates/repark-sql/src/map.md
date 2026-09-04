@@ -44,8 +44,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
   `TableProvider` (ADR-0003). `DELETE`/`UPDATE` share a NAMED arm on the way to delegation:
   allow-listed uncorrelated `DELETE … IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
-  correlation, correlated IN, and identity `UPDATE … IN` call `execute_predicate_dml`; every other
-  subquery `WHERE` still hits G3-E8 then BUG-001 (cheap-first). Tests: [router/map.md](router/map.md).
+  correlation, correlated IN, identity `UPDATE … IN`, and a three-part
+  `DELETE … WHERE <scalar comparison>` call `execute_predicate_dml`; every other subquery
+  `WHERE` still hits G3-E8 then BUG-001
+  (cheap-first). Tests: [router/map.md](router/map.md).
+  pins: rp-9-repin-f23/C-005
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this

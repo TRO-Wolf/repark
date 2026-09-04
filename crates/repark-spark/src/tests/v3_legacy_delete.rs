@@ -681,6 +681,59 @@ async fn measure_legacy_walk_cost() {
     }
 }
 
+#[tokio::test]
+#[ignore = "measurement: prints the pure-DV close wall at 8, 48 and 192 data manifests"]
+async fn measure_pure_dv_close_cost() {
+    for manifests in [8usize, 48, 192] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+        run(
+            &ctx,
+            &catalogs,
+            "CREATE TABLE ice.sales.puredv (id INT, name STRING, part INT) USING iceberg \
+             PARTITIONED BY (part) TBLPROPERTIES ('format-version' = '3', \
+             'write.delete.mode' = 'merge-on-read', 'write.merge.mode' = 'merge-on-read', \
+             'commit.manifest-merge.enabled' = 'false')",
+        )
+        .await;
+        for part in 0..manifests {
+            run(
+                &ctx,
+                &catalogs,
+                &format!("INSERT INTO ice.sales.puredv VALUES ({part}, 'a', {part})"),
+            )
+            .await;
+        }
+        let data_manifests = data_manifest_count(&catalogs, "puredv").await;
+        let started = std::time::Instant::now();
+        run(&ctx, &catalogs, "DELETE FROM ice.sales.puredv WHERE id = 0").await;
+        let elapsed = started.elapsed();
+        println!(
+            "MEASURE pure-dv-close: {manifests} commits -> {data_manifests} data manifests, \
+             one MoR DELETE took {elapsed:?}"
+        );
+    }
+}
+
+async fn data_manifest_count(catalogs: &CatalogRegistry, table: &str) -> usize {
+    use iceberg::spec::ManifestContentType;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    let loaded = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = loaded.metadata();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return 0;
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(loaded.file_io(), metadata)
+        .await
+        .unwrap();
+    manifest_list
+        .entries()
+        .iter()
+        .filter(|entry| entry.content == ManifestContentType::Data)
+        .count()
+}
+
 async fn delete_manifest_count(catalogs: &CatalogRegistry, table: &str) -> usize {
     use iceberg::spec::ManifestContentType;
     let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());

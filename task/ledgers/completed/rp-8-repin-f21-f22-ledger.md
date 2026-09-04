@@ -1,3 +1,7 @@
+# ERRATA (2026-09-03, RP-9)
+
+E-4's registry queue entry PERF-DVCLOSE-WALK-1 is **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (F-23).
+
 # Charter ledger — RP-8 · fork repin ff4764d3 → c1d6c9de (consume F-19/F-20/F-21/F-22; delete RePark's legacy-delete walk)
 
 **Date:** 2026-09-03 · **Branch:** `feat/rp-8-repin-f21-f22` · **Base:** `origin/main`

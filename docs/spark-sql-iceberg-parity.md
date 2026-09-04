@@ -2802,10 +2802,11 @@ the pin rather than obeying it.
   `crates/repark-iceberg/src/write/merge/dv_close.rs::shared_puffin_row_delta_keeps_the_untouched_sibling`
   keeps the semantic assertion and gains the layout one;
   `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
-  holds the manifest-read budget for a fresh PARTITIONED delete, and
+  holds the manifest-read budget for a fresh PARTITIONED delete (RP-9 restored the F-18 skip at
+  pin `594bdbe5`), and
   `merge/tests/partition_sink.rs::the_target_scan_records_every_planned_file_partition` holds the
-  scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_no_data_manifest` records the
-  fork's own laziness for an already-covered path. Live cell
+  scan side of it; `dv_close.rs::closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers`
+  records that an empty map still walks. Live cell
   `python/repark/tests/test_v3_dv_container_close.py::test_v3_shared_puffin_container_close_live`.
 - **Rationale** — FIXED. The packing lived in the fork and was fixed there (F-18); RePark
   consumed it in repin **RP-7**, re-aimed the narrowed V3-9 pin at Spark's exact layout, and
@@ -3619,18 +3620,33 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
-- **PERF-DVCLOSE-WALK-1** — surfaced 2026-09-03, RP-8 Rust perf review. At pin `c1d6c9de` the
-  fork's DV container close walks every data manifest of the scanned snapshot on every MoR
-  DELETE/UPDATE/MERGE, including the pure-DV path with no legacy delete and a complete partition
-  map (F-22 reversed F-18's conditional walk to fill `data_sequence_numbers`, which this engine
-  never reads). Measured on a pure-DV v3 MoR table, debug profile, local ext4, medians of five:
-  statement wall at 192 data manifests 1.646 s → 2.286 s (+39 %, ~3.3 ms per data manifest);
-  48 manifests +9.9 %; 8 manifests within noise; `strace` shows each data manifest opened three
-  times per statement where two sufficed before. Partitioned INSERT at 1e6 rows / 8 partitions
-  and 1e5 rows / 5k partitions is unchanged by the F-20 drain. No pin yet (the walk-cost cell is
-  an `#[ignore]`d measurement); fork TRIGGER F-23: skip `collect_live_data_files` when no legacy
-  delete is pending and `known_partitions` covers every touched path, and stop the stream once
-  every wanted path is found; RP-9 repins. Full record: the RP-8 ledger, ERRATA E-4.
+- **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
+  contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
+  there are no legacy deletes and `known_partitions` covers every touched path;
+  `data_sequence_numbers` is empty then. RePark's duty is to hand a complete map on the
+  production identity DELETE; a map miss is a RePark defect, not a fork skip miss. Pin:
+  `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
+  (hide succeeds, map empty);
+  `dv_close.rs::a_plain_identity_delete_closes_with_no_data_manifest` (production identity-SQL
+  sink, hide succeeds — close-phase data-manifest opens are zero);
+  `dv_close.rs::a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map`
+  (legacy still walks, map total). Statement-wall numbers live in the RP-9 ledger; the
+  8-manifest "before" set is noisy and is not a claimed improvement. Full record: the RP-9
+  ledger; RP-8 E-4 closed.
+- **PERF-DVCLOSE-STMT-1** — surfaced 2026-09-03, RP-9 r2. After the F-23 skip engages, a
+  192-manifest pure-DV `DELETE` still opens every data manifest once at commit in the fork's
+  `validate_fresh_dvs_only` (unconditional full pass on every DV-adding commit,
+  `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
+  `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
+  round-2 table (commit = 1× per data manifest).
+- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
+  `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
+  stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
+  scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
+  MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
+  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
+  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
+  so a third `plan_files` goes red.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

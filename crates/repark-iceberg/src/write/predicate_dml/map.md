@@ -35,6 +35,16 @@ works, so the attribute is gone rather than documented.
   gave MERGE. Extracted so `predicate_dml.rs` stays under its exact size baseline, which
   ratcheted 1164 → 1142 in the same change.
   pins: rp-7-f18-repin/C-005
+- `plain.rs` — **RP-9 r2 (2026-09-03):** `try_allowed_plain_identity` takes a three-part
+  Iceberg `DELETE` whose `WHERE` is a scalar comparison (not an `IN` list, not a
+  subquery, not a branch selector `catalog.ns.table.branch_*`), so the Spark and ANSI
+  doors run it through `execute_predicate_dml` and the target-scan partition map. The
+  fork's DataFusion delete exec was passing `HashMap::new()` into the DV close, so
+  F-23's skip never engaged on `DELETE … WHERE id = 0`. UPDATE, literal `IN` lists,
+  four-part `table.branch_*` names, and names whose catalog is not in the session
+  registry (Spark rewrites a branch DELETE onto `datafusion.public.<temp>`) stay on
+  the fork `TableProvider`.
+  pins: rp-9-repin-f23/C-005 (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers

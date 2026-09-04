@@ -80,10 +80,15 @@ repark-core's error map.
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —
   **never** `write.merge.mode`. Product hole is the valve allow-list (uncorrelated
   `DELETE … IN` / `NOT IN (SELECT …)`, including the NULL 3VL trap, `[NOT] EXISTS` ±
-  correlation, correlated IN, and identity `UPDATE … SET <scalar> WHERE col IN`). ANY/ALL
+  correlation, correlated IN, identity `UPDATE … SET <scalar> WHERE col IN`, and
+  **RP-9 r2:** a three-part `DELETE … WHERE <scalar comparison>` via
+  `predicate_dml/plain.rs` so the production partition map reaches F-23; UPDATE,
+  literal `IN`, and branch selectors stay on the fork). ANY/ALL
   stay refused (Spark 4.1.2 parse-fails quantified comparisons). Pins:
   [predicate_dml/tests/predicate_dml.rs](predicate_dml/tests/predicate_dml.rs) +
-  [predicate_dml/tests/update.rs](predicate_dml/tests/update.rs)
+  [predicate_dml/tests/update.rs](predicate_dml/tests/update.rs) +
+  [predicate_dml/tests/plain.rs](predicate_dml/tests/plain.rs)
+  pins: rp-9-repin-f23/C-005
   — **LRS-5 (2026-08-20):** moved into the canonical module tree, `#[path]` gone. Isolation
   property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
   garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test
@@ -302,7 +307,7 @@ repark-core's error map.
 | Parquet compression codec (table property) | `writer_props.rs` |
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
-| Identity DELETE/UPDATE (subquery `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
+| Identity DELETE/UPDATE (subquery `WHERE` and RP-9 r2 plain `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | Ask whether a `(source, target)` type pair may be written | `store_assign.rs` (`ansi_store_assignable`) |
 | CREATE/DROP BRANCH or TAG | `snapshot_refs.rs` |
