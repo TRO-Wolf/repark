@@ -74,6 +74,7 @@ from _sql_harden_cutover_run import (
 )
 
 from repark import ReparkSession, Window, functions
+from repark.errors import PySparkException
 from repark.spark import types
 
 pytestmark = pytest.mark.skipif(
@@ -412,12 +413,21 @@ def _run_sql_harden_on_catalog(
     return results, stems
 
 
+def _leaked_table_is_reachable(spark: ReparkSession, leaked: str) -> bool:
+    try:
+        return spark.catalog.tableExists(leaked)
+    except PySparkException as error:
+        denied = "AccessDenied" in str(error) and f"database/{_NAMESPACE}" in str(error)
+        assert denied, (leaked, str(error)[:300])
+        return False
+
+
 def _assert_s6_aws_namespace(spark: ReparkSession, catalog: str, stem: str) -> None:
     for suffix in GOLD_CREATED_BEFORE_FCT + GOLD_CREATED_AT_FCT:
         present = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
         leaked = f"{catalog}.{_NAMESPACE}.{stem}_{suffix}"
         assert spark.catalog.tableExists(present), present
-        assert not spark.catalog.tableExists(leaked), leaked
+        assert not _leaked_table_is_reachable(spark, leaked), leaked
 
 
 def _assert_aws_cutover_core(
