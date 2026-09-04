@@ -410,7 +410,7 @@ dynflatten-bench: ## Measure dynamicFlatten vs Spark explode (PERF-DYNFLATTEN-1;
 		--scale $${SCALE:-gate} \
 		--out /tmp/oc-dynflatten-bed \
 		--json /tmp/oc-dynflatten-bed/run.json \
-		--report docs/perf/dynamic-flatten-baseline.md
+		--report /tmp/oc-dynflatten-bed/report.md
 
 # ------------------------------------------------------------------------------------------------
 # Autofix + hooks

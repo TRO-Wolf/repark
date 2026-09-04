@@ -126,9 +126,9 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
-- **Performance campaign (measure-first).** dynamicFlatten 1e5 baseline
+- **Performance campaign (measure-first).** dynamicFlatten 1e5 **release** baseline
   [docs/perf/dynamic-flatten-baseline.md](docs/perf/dynamic-flatten-baseline.md):
-  walks 0.2% not worth it; cartesian 23% and null-mask struct 23% queued as
+  walks 0.6% not worth it; null-mask struct 25% and cartesian 22% queued as
   PERF-DYNFLATTEN-2. `unsafe` remains workspace-forbidden.
 <!-- /ws -->
 
