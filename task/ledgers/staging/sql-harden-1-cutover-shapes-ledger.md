@@ -22,6 +22,15 @@ cited `V3-COV-7`.
 
 `LOGIC_SCORE` = **4/4 `PROVEN`**.
 
+## ERRATA (2026-09-04, critic round 2)
+
+| # | Sev | Finding | Fix |
+|---|---|---|---|
+| R2-1 | S1 | S6 gold table names interpolated `_NAMESPACE` (`cut`) so AWS legs addressed `<catalog>.cut.<stem>_…` | `make_names` uses the `namespace` argument for all seven stems; `test_rendered_sql_uses_only_the_passed_namespace` greps rendered SQL |
+| R2-2 | S2 | AWS S6 assertion was `assert actual['statements']` | `_assert_s6_aws_date_refusal`: `Invalid function 'date'`, pre-fct tables exist only in the acceptance namespace, fct/agg absent |
+| R2-3 | S2 | five-line prose under the matrix | a three-row table |
+| R2-4 | S2 | CUTOVER-DATE-1 lacked `to_date` / `CAST AS DATE` / `unix_timestamp` controls | always-run pins; row text records both refusals (DATE-FN-1) |
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: sql-harden-1-cutover-shapes
@@ -121,7 +130,9 @@ Skip without the flag. No `DROP TABLE` in `test_aws_acceptance.py` (structural p
 | `VERDICTS['s1-ctas-if-fresh'] = 'EQUAL'` | `test_sql_harden_verdicts_match_the_committed_halves` red | **1 red of 1** |
 | `CUTOVER-DATE-1 —` heading renamed | `test_every_diverging_row_names_a_registry_row_that_exists` red | **1 red of 1** |
 
-Mutation battery: **2 red of 2**.
+| `make_names` survey stem uses `_NAMESPACE` | `test_rendered_sql_uses_only_the_passed_namespace` red | **1 red of 1** (round 2) |
+
+Mutation battery: **3 red of 3**.
 
 ## 7. Docs (C-004)
 
@@ -141,7 +152,7 @@ Mutation battery: **2 red of 2**.
 | facade pytest (deselect smoke) | 0 on the matrix; host `test_cross_validator_live_pyspark_shape` SemLock PermissionError (known) |
 | parity pytest | 0 (555 passed) |
 | live matrix + disclosure co-collect | 0 (22 passed) |
-| AWS Glue + S3 Tables legs | 0 (2 passed, 123 s) |
+| AWS Glue + S3 Tables legs | 0 (2 passed, 142 s after namespace fix) |
 | `make check-map-sync` | 0 |
 | `make check-ledger-grammar` | 0 |
 | `make check-ledgers` | 0 |

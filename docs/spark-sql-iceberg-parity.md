@@ -2378,16 +2378,20 @@ the pin rather than obeying it.
 - **repark** — the gold `fct_survey_visit` shape
   `DATE(Appointment.appointment_datetime)` plus
   `CAST((unix_timestamp(provider_seen_time) - unix_timestamp(checkin_time)) / 60 AS INT)`
-  fails at planning: `Invalid function 'date'`. The fact and agg Iceberg tables are not
-  created. `to_date` / `CAST(ts AS DATE)` exist; the Spark `date(ts)` spelling does not.
+  fails at planning: `Invalid function 'date'`. `unix_timestamp(ts)` also refuses
+  (`Invalid function 'unix_timestamp'`). The incidental controls `to_date(ts)` and
+  `CAST(ts AS DATE)` both answer `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'`.
+  The fact and agg Iceberg tables are not created.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
-  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`.
-- **Rationale** — BACKLOG. Adding `date` as a `to_date` alias is a Spark-dialect spelling;
-  `unix_timestamp` is the already-loud engine gap `R-FN-BATCH1` and was not reached on repark.
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
+  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `…::test_to_date_and_cast_as_date_answer_on_repark`,
+  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
+- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
+  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

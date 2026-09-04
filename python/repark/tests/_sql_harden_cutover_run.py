@@ -353,10 +353,12 @@ def run_maint(ctx: _Ctx) -> dict[str, Any]:
     return {"statements": statements, "probes": _table_probes(ctx)}
 
 
-def _seed_gold_sql(ctx: _Ctx) -> list[str]:
+GOLD_CREATED_BEFORE_FCT = ("survey", "visit", "provider", "appointment", "dates")
+GOLD_CREATED_AT_FCT = ("fct", "agg")
+
+
+def _seed_gold_sql(names: dict[str, str], props: str) -> list[str]:
     """DDL + VALUES for the five silver-shaped tables the gold models join."""
-    names = ctx.names
-    props = ctx.props
     survey = names["survey"]
     visit = names["visit"]
     provider = names["provider"]
@@ -409,7 +411,7 @@ def _seed_gold_sql(ctx: _Ctx) -> list[str]:
 
 def run_gold(ctx: _Ctx) -> dict[str, Any]:
     """S6: gold join + aggregate Iceberg tables, then a second full-refresh overwrite."""
-    statements = [_try_sql(ctx, text) for text in _seed_gold_sql(ctx)]
+    statements = [_try_sql(ctx, text) for text in _seed_gold_sql(ctx.names, ctx.props)]
     fct_select = _FCT_SQL.format(
         survey=ctx.names["survey"],
         visit=ctx.names["visit"],
@@ -471,14 +473,77 @@ def make_names(
         "t": target,
         "c": catalog,
         "q": ident,
-        "survey": f"{catalog}.{_NAMESPACE}.{stem}_survey",
-        "visit": f"{catalog}.{_NAMESPACE}.{stem}_visit",
-        "provider": f"{catalog}.{_NAMESPACE}.{stem}_provider",
-        "appointment": f"{catalog}.{_NAMESPACE}.{stem}_appointment",
-        "dates": f"{catalog}.{_NAMESPACE}.{stem}_dates",
-        "fct": f"{catalog}.{_NAMESPACE}.{stem}_fct",
-        "agg": f"{catalog}.{_NAMESPACE}.{stem}_agg",
+        "survey": f"{catalog}.{namespace}.{stem}_survey",
+        "visit": f"{catalog}.{namespace}.{stem}_visit",
+        "provider": f"{catalog}.{namespace}.{stem}_provider",
+        "appointment": f"{catalog}.{namespace}.{stem}_appointment",
+        "dates": f"{catalog}.{namespace}.{stem}_dates",
+        "fct": f"{catalog}.{namespace}.{stem}_fct",
+        "agg": f"{catalog}.{namespace}.{stem}_agg",
     }
+
+
+def program_sql_texts(program: _Program, names: dict[str, str], props: str) -> list[str]:
+    """Every SQL statement one program interpolates, for the namespace pin."""
+    target = names["t"]
+    catalog = names["c"]
+    ident = names["q"]
+    texts: list[str] = []
+    if program.runner in {"ctas", "merge", "maint"}:
+        texts.append(
+            f"CREATE TABLE IF NOT EXISTS {target} USING iceberg "
+            f"TBLPROPERTIES ({props}) AS SELECT * FROM {_STAGING}"
+        )
+    if program.runner == "merge":
+        texts.append(
+            f"MERGE INTO {target} AS Target USING {_STAGING} AS Source "
+            f"ON Target.id = Source.id "
+            "WHEN MATCHED THEN UPDATE SET * "
+            "WHEN NOT MATCHED THEN INSERT *"
+        )
+    if program.runner == "overwrite":
+        texts.append(
+            f"CREATE TABLE {target} (id STRING, note STRING, part INT) USING iceberg "
+            f"PARTITIONED BY (part) TBLPROPERTIES ({props})"
+        )
+        texts.append(f"INSERT INTO {target} VALUES ('A', 'x', 10), ('B', 'y', 20)")
+    if program.runner == "maint":
+        texts.append(
+            f"INSERT INTO {target} SELECT 'C' AS id, ingestion_timestamp, amount, "
+            f"units, note, 30 AS part FROM {_STAGING} WHERE id = 'B'"
+        )
+        texts.append(
+            f"CALL {catalog}.system.expire_snapshots("
+            f"table => '{ident}', older_than => TIMESTAMP '2999-01-01 00:00:00', "
+            "retain_last => 3)"
+        )
+        texts.append(
+            f"CALL {catalog}.system.rewrite_data_files(table => '{ident}', strategy => 'binpack')"
+        )
+        texts.append(
+            f"CALL {catalog}.system.remove_orphan_files("
+            f"table => '{ident}', older_than => TIMESTAMP '2020-01-01 00:00:00')"
+        )
+        texts.append(f"CALL {catalog}.system.rewrite_position_delete_files(table => '{ident}')")
+    if program.runner == "gold":
+        texts.extend(_seed_gold_sql(names, props))
+        fct_select = _FCT_SQL.format(
+            survey=names["survey"],
+            visit=names["visit"],
+            provider=names["provider"],
+            appointment=names["appointment"],
+            dates=names["dates"],
+        )
+        texts.append(
+            f"CREATE TABLE {names['fct']} USING iceberg TBLPROPERTIES ({props}) AS {fct_select}"
+        )
+        agg_select = _AGG_SQL.format(fct=names["fct"], dates=names["dates"])
+        texts.append(
+            f"CREATE TABLE {names['agg']} USING iceberg TBLPROPERTIES ({props}) AS {agg_select}"
+        )
+        texts.append(f"INSERT INTO {names['survey']} VALUES ('s3', 'v1', 10, 10)")
+        texts.append(f"INSERT OVERWRITE {names['fct']} {fct_select}")
+    return texts
 
 
 def run_program(

@@ -50,11 +50,11 @@ stamped `zstd` codec do not.
 | `s7-merge-idempotent` | S7 = S2 at format-version 3 | Spark SQL | DIVERGES | PASS | PASS | **DIVERGES** | `CUTOVER-MERGE-FILES-1` |
 | `s7-overwrite-partitions` | S7 = S4 at format-version 3 | facade DF | DIVERGES | PASS | PASS | **DIVERGES** | `V3-COV-7` |
 
-S4 / S7-overwrite **rows, snapshot operations, and v3 `next-row-id` are Spark-equal**; the
-only META cell is Spark's extra `write.parquet.compression-codec = zstd` (`V3-COV-7`).
-S2 / S7-merge **row set and second-MERGE idempotence are Spark-equal**; delete-file counts
-are not. S5 CALL result tuples match Spark (`expire` six zeros, `rewrite_data_files` five
-zeros, `remove_orphan_files` empty, `rewrite_position_delete_files` four zeros).
+| Shape | Spark-equal cells | Divergence |
+|---|---|---|
+| S4 / S7-overwrite | rows, snapshot operations, v3 `next-row-id` | META codec (`V3-COV-7`) |
+| S2 / S7-merge | row set, second-MERGE idempotence | delete-file counts |
+| S5 | CALL tuples: expire six zeros, `rewrite_data_files` five zeros, `remove_orphan_files` empty, `rewrite_position_delete_files` four zeros | schema / codec as S1 |
 
 ## 4. What was not a cell
 

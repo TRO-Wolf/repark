@@ -62,8 +62,14 @@ from _acceptance_v3 import (
     run_v3_acceptance,
 )
 from _sql_harden_cutover_golden import REPARK
-from _sql_harden_cutover_programs import _PROGRAMS
-from _sql_harden_cutover_run import as_golden, run_program, without_meta
+from _sql_harden_cutover_programs import _NAMESPACE, _PROGRAMS
+from _sql_harden_cutover_run import (
+    GOLD_CREATED_AT_FCT,
+    GOLD_CREATED_BEFORE_FCT,
+    as_golden,
+    run_program,
+    without_meta,
+)
 
 from repark import ReparkSession, Window, functions
 from repark.spark import types
@@ -368,11 +374,14 @@ def test_v3_dv_dml_maintenance_against_s3tables() -> None:
     assert_v3_acceptance_outcome(outcome, exact_commit_counts=False)
 
 
-def _run_sql_harden_on_catalog(spark: ReparkSession, catalog: str) -> dict[str, object]:
-    """Run every S1-S7 program into the scratch namespace and return comparable outcomes."""
+def _run_sql_harden_on_catalog(
+    spark: ReparkSession, catalog: str
+) -> tuple[dict[str, object], dict[str, str]]:
+    """Run every S1-S7 program into the scratch namespace and return outcomes plus stems."""
     from _sql_harden_cutover_programs import write_bronze_parquet
 
     results: dict[str, object] = {}
+    stems: dict[str, str] = {}
     with tempfile.TemporaryDirectory(prefix="sqlh1-aws-") as raw:
         warehouse = Path(raw)
         parquet = warehouse / "bronze.parquet"
@@ -380,6 +389,7 @@ def _run_sql_harden_on_catalog(spark: ReparkSession, catalog: str) -> dict[str, 
         for program in _PROGRAMS:
             short = program.name.replace("-", "")[:12]
             stem = f"{ACCEPTANCE_TABLE_PREFIX}h1{short}{uuid.uuid4().hex[:6]}"
+            stems[program.name] = stem
             results[program.name] = without_meta(
                 as_golden(
                     run_program(
@@ -397,18 +407,39 @@ def _run_sql_harden_on_catalog(spark: ReparkSession, catalog: str) -> dict[str, 
                     )
                 )
             )
-    return results
+    return results, stems
 
 
-def _assert_aws_cutover_core(got: dict[str, object]) -> None:
-    """Row probes that memory measured OK must match; S6 is catalog-path only."""
+def _assert_s6_aws_date_refusal(
+    spark: ReparkSession, catalog: str, actual: dict[str, object], stem: str
+) -> None:
+    """S6 on AWS refuses DATE() like memory and leaves only the pre-fct silver tables."""
+    errors = [cell[1] for cell in actual["statements"] if cell[0] == "ERROR"]
+    assert any("Invalid function 'date'" in str(error) for error in errors), errors
+    for suffix in GOLD_CREATED_BEFORE_FCT:
+        present = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
+        leaked = f"{catalog}.{_NAMESPACE}.{stem}_{suffix}"
+        assert spark.catalog.tableExists(present), present
+        assert not spark.catalog.tableExists(leaked), leaked
+    for suffix in GOLD_CREATED_AT_FCT:
+        missing = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
+        assert not spark.catalog.tableExists(missing), missing
+
+
+def _assert_aws_cutover_core(
+    spark: ReparkSession,
+    catalog: str,
+    got: dict[str, object],
+    stems: dict[str, str],
+) -> None:
+    """Row probes that memory measured OK must match; S6 pins the DATE() refusal."""
     for program in _PROGRAMS:
         name = program.name
         actual = got[name]
         memory = without_meta(REPARK[name])
         assert isinstance(actual, dict)
         if name == "s6-gold-incremental":
-            assert actual["statements"], name
+            _assert_s6_aws_date_refusal(spark, catalog, actual, stems[name])
             continue
         assert actual["statements"][0][0] == "OK", (name, actual["statements"][0])
         if memory["probes"][0][0] == "OK":
@@ -435,8 +466,8 @@ def test_sql_harden_cutover_against_glue() -> None:
         if "exist" not in str(error).lower():
             raise
     assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
-    got = _run_sql_harden_on_catalog(spark, SILVER_CATALOG)
-    _assert_aws_cutover_core(got)
+    got, stems = _run_sql_harden_on_catalog(spark, SILVER_CATALOG)
+    _assert_aws_cutover_core(spark, SILVER_CATALOG, got, stems)
 
 
 def test_sql_harden_cutover_against_s3tables() -> None:
@@ -462,5 +493,5 @@ def test_sql_harden_cutover_against_s3tables() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
-    got = _run_sql_harden_on_catalog(spark, S3TABLES_CATALOG)
-    _assert_aws_cutover_core(got)
+    got, stems = _run_sql_harden_on_catalog(spark, S3TABLES_CATALOG)
+    _assert_aws_cutover_core(spark, S3TABLES_CATALOG, got, stems)

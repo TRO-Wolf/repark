@@ -172,7 +172,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
   `_sql_harden_cutover_programs.py`, runners `_sql_harden_cutover_run.py`, verdicts
   `_sql_harden_cutover_golden.py`. AWS legs in `test_aws_acceptance.py`.
-  pins: sql-harden-1-cutover-shapes/C-001, C-003, C-004
+  Namespace pin: rendered SQL uses only the passed namespace. CUTOVER-DATE-1 controls:
+  `to_date` / `CAST AS DATE` work; `date` / `unix_timestamp` refuse.
+  pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
