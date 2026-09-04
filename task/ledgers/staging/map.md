@@ -9,6 +9,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   six silent string rows become Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
   `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
   pins: fn-fix-2-string-rows/C-001, C-002, C-003, C-004
+- [fn-fix-2-ctrl-1-controls-ledger.md](fn-fix-2-ctrl-1-controls-ledger.md) — **FN-FIX-2-CTRL-1
+  (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
+  missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
+  Spark-equal, control 1 (`regexp_extract`) refusal pinned on both doors
+  (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED round-3; Spark `'alpha'`/`''`);
+  round-3 adds NULL `ltrim`/`rtrim` pins, the SQL `RLIKE`-keyword refusal pin
+  (§7 FN-RLIKE-KEYWORD-1), and reversible ANSI legs.
+  `risk_tier: standard`. Branch
+  `fix/fn-fix-2-ctrl-1-controls`. pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -61,6 +70,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
+- [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) —
+  **EX-16 (2026-09-04), in flight:** the v1.1 example backfill's second `DataFrame.*` batch —
+  36 roster names at base `f3968aa`; 32 covered by eight `docs/examples/dataframe/` files
+  (backlog 550 → 518); `intersectAll`/`intersect_all` and `groupingSets`/`grouping_sets` stay
+  with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto`/`printSchema` arms are recorded as
+  §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/test_examples_dataframe_b.py`.
+  `risk_tier: standard`. Branch `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001
+- [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) —
+  **EX-17 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
+  40 roster names at base `e3600a1`; 34 covered by ten `docs/examples/column/` files
+  (backlog 550 → 516 at base; 484 after the EX-16 merge), 6 engine-plumbing rows stay (no PySpark analog), the two
+  measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
+  `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
+  `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
 - [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) —
   **DF-PRINTSCHEMA-1 (2026-09-04), in flight:** `printSchema` stdout byte-identical to
   Spark's (flat, nested, array, `level=1` exact captures); `EX-DF-10` flip owed on the

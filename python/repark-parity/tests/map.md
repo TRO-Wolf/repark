@@ -44,6 +44,8 @@ JVM, no repark required). See [../map.md](../map.md).
   `repark = ReparkSession.builder…` (owner ruling, 2026-09-01).
   pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008
+  **EX-17 (2026-09-04):** `test_ex_1_every_new_name_is_in_the_backlog` accepts a widened name that an
+  example now covers (backlog OR covered); the first `Column.*` batch was the first to cover one.
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8

@@ -1558,6 +1558,7 @@ the pin rather than obeying it.
   (and `test_elt_index_zero_raises_invalid_array_index`).
 - **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
   out-of-range; Spark raises under ANSI.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): ANSI-off out-of-range (3, 0, −1) and NULL `n` answer NULL on both engines; ANSI-on error unchanged.
 
 ### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1573,6 +1574,20 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
+
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+
+- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
+  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
+  sqltorel: RLike`. The function spelling
+  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
+- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
+  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
+  Spark-equal per FN-REGEX-POSIX-1.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1588,6 +1603,7 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
 - **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
   non-match.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): the escape-at-end refusal holds under ANSI off too, on both engines, for the API, SQL, and explicit-`ESCAPE` spellings.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -3404,6 +3420,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
 - **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
   word break.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `'ünï_9 ab'` → `'Ünï_9 Ab'`, `''` → `''`, NULL → NULL on both engines.
 
 ### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256` — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3416,6 +3433,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
 - **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
   on negatives.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `chr(0/256/65536/1114112)` → `'\x00'`, negatives → `''`, NULL → NULL on both engines.
 
 ### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3426,6 +3444,7 @@ the pin rather than obeying it.
   `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
@@ -3847,6 +3866,117 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   review-gap entry. `createTempView` / `create_temp_view` stay covered by the fresh-name arm,
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
   existing name the way Spark does.
+
+### EX-DF-7 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+
+- **repark** — both spellings raise
+  `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
+  on this engine yet; use intersect() for distinct bags (octo C1-L-005)`.
+- **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
+  the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_intersect_all_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
+  the example backlog until the multiset intersect is Spark-correct; the distinct-bag
+  `intersect` is covered and Spark-equal.
+
+### EX-DF-8 — `groupingSets` takes one column each in repark; Spark takes a list of sets
+
+- **repark** — `groupingSets(*cols)` lowers to `GROUPING SETS ((c1), (c2), ())`: on
+  `[("a", 1), ("a", 2), ("b", 3)]` over `g`/`k`, `.groupingSets("g", "k").count()` answers
+  columns `['g', 'k', 'count']` with rows `('a', None, 2)`, `('b', None, 1)`, `(None, 1, 1)`,
+  `(None, 2, 1)`, `(None, 3, 1)`, `(None, None, 3)`. Spark's documented call shape —
+  `groupingSets([("g", "k"), ("g",), ()], "g", "k")` — raises
+  `AttributeError: 'list' object has no attribute 'sql_expr_part'`: the repark signature cannot
+  express it.
+- **Apache Spark** — `DataFrame.groupingSets(groupingSets, *cols)` (4.0+) takes the grouping
+  sets as a sequence of sequences, plus the output columns. The documented shape on the same
+  frame answers columns `['g', 'k', 'count']` with rows `('a', 1, 1)`, `('a', 2, 1)`,
+  `('a', None, 2)`, `('b', 3, 1)`, `('b', None, 1)`, `(None, None, 3)`; repark's own shape
+  `groupingSets("g", "k")` on the same input answers `['k', 'count']` with rows
+  `[(None, 1), (None, 2)]` — a different aggregation with different output columns.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_grouping_sets_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. The signatures disagree
+  on the first parameter and the measured answers differ either way, so no input answers
+  Spark-equal on both; both spellings stay on the example backlog until repark implements
+  Spark's multi-set signature.
+
+### EX-DF-9 — `mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers; Spark wants the target's short name or alias as the qualifier
+
+- **repark** — the bare string key is sugar for the shared column: on the local Iceberg target
+  `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]` over `id`/`name`,
+  `source.mergeInto("people", "id").whenMatched().updateAll().whenNotMatched().insertAll().merge()`
+  answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. A Column condition must spell the sides
+  `target.` / `source.`: `F.col("target.id") == F.col("source.id")` answers the same rows, while
+  the SQL-string spellings raise — `F.expr("target.id = source.id")` and a table-name-qualified
+  condition both raise `AnalysisException: Schema error: No field named …`, and update/insert
+  values must spell `col("source.<name>")`.
+- **Apache Spark** — the equivalent program answers the same rows on the same locally created
+  Iceberg target, with the target's short name and the source alias as the qualifiers:
+  `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id")).whenMatched().updateAll()
+  .whenNotMatched().insertAll().merge()` answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. The bare key
+  raises `AnalysisException: [AMBIGUOUS_REFERENCE]` (`local.ns.t2.id` vs `s.id`), and the
+  `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN.WITH_SUGGESTION` — as a parsed expr or
+  as Column objects. With the target's short name as the qualifier both forms merge on Spark
+  (`F.expr("t.id = s.id")` and `F.col("t.id") == F.col("s.id")` each answer the three rows).
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on, 2026-09-04,
+  EX-16 round 3; local Hadoop catalog, COW `format-version` 2 target — the round-1
+  "refuses every locally reachable shape" reading was an artefact of probing the default
+  `spark_catalog` parquet target.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement, rewritten after the
+  round-3 re-measure on the pinned Iceberg oracle. The example covers the row-set program, where
+  the engines answer the same rows; this row records the bare-key sugar and the qualifier names
+  until repark's condition spellings match Spark's.
+
+### EX-DF-10 — `printSchema`'s stdout ends one newline short of Spark's capture
+
+- **repark** — `printSchema()` prints the tree with one trailing newline: the captured stdout is
+  the four tree lines joined by `\n` plus one final `\n`, and its `splitlines()` holds the four
+  tree lines and nothing more.
+- **Apache Spark** — `printSchema()` adds a second newline to `treeString`'s own trailing one:
+  the captured stdout ends `\n\n`, and its `splitlines()` holds the four tree lines plus a
+  trailing `''` (five elements). The line content is equal; only the stdout tail differs.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; capture via `redirect_stdout`
+  on both engines over the same `g`/`k`/`v` fixture.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_divergence`
+- **Rationale** — **FIXED 2026-09-04 (DF-PRINTSCHEMA-1):** `printSchema` now prints Spark's trailing blank line; the pin above asserts the byte-identical capture. Filed 2026-09-04 by EX-16 round 3.
+  review-gap entry. `printSchema` / `print_schema` stay covered by the tree-line arm, where the
+  line content agrees; this row records the stdout tail until repark prints Spark's second
+  newline.
+
+### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+
+- **repark** — `df.select(F.col("v").cast("double"))` names the output column
+  `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the
+  native field name instead of the tracked projection name. The same cast on a frame-bound
+  receiver (`df.v.cast("double")` / `df["v"].cast(...)`) answers `v` (Spark-equal, pinned in
+  `test_select_naming.py`), an aliased cast answers the alias, and `withColumn` is unaffected.
+- **Apache Spark** — `df.select(F.col("v").cast("double"))` names the output column `v`:
+  a cast of a NamedExpression keeps the child name in a plain select, exactly as repark's own
+  df-bound arm answers. Values are equal on both engines; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, frames
+  `[("a",1,10.0),("b",2,None)]` over `g/k/v` and `[(10.0,)]` over `v`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  df-bound and aliased arms, where the engines agree; the bare `F.col` arm stays on the
+  backlog and is not re-taught until repark names it `v`.
+
+### EX-COL-2 — an unaliased `getField` select projects `r['a']`; Spark projects `r.a`
+
+- **repark** — `df.select(df.r.getField("a"))` names the output column `r['a']` (the
+  bracketed display form tracked as the projection name). An aliased read
+  (`getField("a").alias("a")`) answers the alias and is Spark-equal; values are equal on both
+  engines, and the sibling `getItem` select answers `arr[1]` on both, matching Spark.
+- **Apache Spark** — `df.select(df.r.getField("a"))` names the output column `r.a` (the
+  dotted field form). Values are equal; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, struct
+  `r<a string, b double>` over rows `("x",2.0)` / `("y",3.0)`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_get_field_bare_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
+  projects `r.a`.
 
 ## 8. Drop-in disclosure rationale
 

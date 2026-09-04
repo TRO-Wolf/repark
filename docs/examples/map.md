@@ -50,10 +50,15 @@ file is empty.
   needs a cloud service, each with a one-line reason.
 - [functions/](functions/map.md) — `F.*` examples.
 - [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples.
+- [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the engine-plumbing
+  rows `for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`,
+  `sql_expr_part`, `sql_expr_without_alias` stay on the backlog as non-Spark surface;
+  the repark-extension namespaces `str`/`dt` are documented with their PySpark-spelled
+  twins).
 - [ta/](ta/map.md) — TA kernel examples.
 - [io/](io/map.md) — reader / writer examples.
 - [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.
-- `column/`, `window/`, `catalog/`, `types/`, `ml/` — the EX-1 families. They
+- `window/`, `catalog/`, `types/`, `ml/` — the remaining EX-1 families. They
   are inventory families with no example yet; the backfill creates each
   directory (and its `map.md`) with the first example it lands there.
 
