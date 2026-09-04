@@ -162,8 +162,9 @@ in published history by explicit decision:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
   preserve-null Unnest removes redundant projections; adjacent candidates stay
   measurement-gated. #30 merged.
-  **Next:** H-2 scoped to the cutover SQL (SQL-HARDEN-1) then the H-3 spill matrix.
-  **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal
+  **Next:** H-3 spill matrix.
+  **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
+  **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
