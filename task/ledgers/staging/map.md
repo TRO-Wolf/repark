@@ -137,9 +137,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `VariantType`/`TimeType`/`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and
   four snake_case spellings covered as repark extensions; `DataFrameWriterV2.overwrite` stays
   with §7 `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the
-  `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
+  `option`/`options` branch-tag arm is §7 `EX-W2-3`, and the round-2 unpartitioned-table
+  `overwritePartitions` parser leak is §7 `EX-W2-4` (OPEN, fix unit
+  `WRITERV2-OVERWRITE-UNPART-1`), pins in
   `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
-  `docs/ex-22-types-writerv2`. pins: ex-22-types-writerv2/C-001, C-002, C-003, C-004
+  `docs/ex-22-types-writerv2`. pins: ex-22-types-writerv2/C-001, C-002, C-003, C-004, C-005
 - [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.

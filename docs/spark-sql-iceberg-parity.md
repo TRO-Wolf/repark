@@ -4409,6 +4409,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (rows land identically on both engines) is the arm the example teaches; the branch/tag
   refusal is pinned, not taught.
 
+### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table
+
+- **repark** — `overwritePartitions()` on a table with no partition columns raises
+  `ParseException('SQL error: ParserError("Expected: an expression, found: ) at Line: 1,
+  Column: 50")')` — the empty `PARTITION ()` clause the writer generates for an unpartitioned
+  table reaches the SQL parser — and the table is left untouched.
+- **Apache Spark** — dynamic overwrite on an unpartitioned Iceberg table replaces the whole
+  table with no error: after seeding `(1,'a')` and overwriting from `(5,'z')`, the table
+  answers `[(5, 'z')]`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog `local` over a local
+  warehouse, ANSI on, 2026-09-04, EX-22 round-2 review; repark on the memory catalog with the
+  same fixture.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak`
+- **Rationale** — OPEN, filed 2026-09-04 from the EX-22 round-2 review. Not a disclosed
+  refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
+  is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
+  than obeys it.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

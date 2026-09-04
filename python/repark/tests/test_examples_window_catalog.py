@@ -1,6 +1,6 @@
 """Divergence pins for the EX-20 window/catalog, EX-21 session and EX-22 types/WriterV2 batches.
 
-Registry §7 rows EX-WIN-1, EX-CAT-1..3 (EX-20), EX-SES-1..5 (EX-21) and EX-W2-1..3 (EX-22).
+Registry §7 rows EX-WIN-1, EX-CAT-1..3 (EX-20), EX-SES-1..5 (EX-21) and EX-W2-1..4 (EX-22).
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
 from repark.spark import Window
 from repark.spark import functions as F  # noqa: N812
 from repark.spark.catalog import Database
@@ -148,6 +148,22 @@ def test_writerv2_overwrite_partitions_empty_refuses(spark_v2: ReparkSession) ->
         ).overwritePartitions()
     still = session.sql("SELECT id, cat FROM local.ns.t_pin_owp ORDER BY id").to_arrow().to_pylist()
     assert still == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
+
+
+def test_writerv2_overwrite_partitions_unpartitioned_leak(spark_v2: ReparkSession) -> None:
+    """Unpartitioned overwritePartitions leaks ParseException; Spark replaces it (EX-W2-4)."""
+    session = spark_v2
+    session.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, v)").writeTo(
+        "local.ns.t_pin_unpart"
+    ).create()
+    with pytest.raises(ParseException, match="Expected: an expression"):
+        session.sql("SELECT * FROM (VALUES (5,'z')) AS t(id, v)").writeTo(
+            "local.ns.t_pin_unpart"
+        ).overwritePartitions()
+    still = (
+        session.sql("SELECT id, v FROM local.ns.t_pin_unpart ORDER BY id").to_arrow().to_pylist()
+    )
+    assert still == [{"id": 1, "v": "a"}]
 
 
 def test_writerv2_option_branch_refuses(spark_v2: ReparkSession) -> None:

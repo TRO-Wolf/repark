@@ -73,8 +73,9 @@ stays on the backlog for that reason. The four flagged names (`VariantType`, `Ti
 | C-002 | The 42 covered names leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 42 — 374 → 332 at the dispatch base `b5827be6`, 340 → 298 as shipped after the EX-21 merge — with no other `scripts/` change; `DataFrameWriterV2.overwrite` stays listed; the gate's static half and its `--require-execute` leg both exit 0 (613 covered; 298 backlog; 165 examples). | The gate's own counts line at the dispatch base (537/374/138), at the merged base (571/340/154), and on the shipped tree (613/298/165), plus the red-first provocation below. | **PROVEN** |
 | C-003 | A name whose repark answer differs from Spark's is not papered over: `DataFrameWriterV2.overwrite` stays on the backlog with §7 row `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the `option`/`options` branch-tag arm is §7 `EX-W2-3`, and repark's current answer for each is pinned in `python/repark/tests/test_examples_window_catalog.py` (one-line forced docstrings, 7 tests passing); no `types.*` name measured divergent. | The three registry rows, the three new pin tests (7 passed), and the oracle table's dropped/arm rows. | **PROVEN** |
 | C-004 | This ledger records the roster, the grouping, the red-first provocation, the name-by-name oracle table, and the gates; `staging/map.md` gains the EX-22 row; `docs/examples/map.md`, `docs/examples/io/map.md`, and the new `docs/examples/types/map.md` move in lockstep with the files. | The ledger itself and the lockstep map diffs in the same commits. | **PROVEN** |
+| C-005 | The `overwritePartitions`-on-an-unpartitioned-table divergence measured in the round-2 review is filed, not papered over: §7 row `EX-W2-4` records repark's parser leak (`ParseException` where Spark replaces the whole table with no error) with status OPEN and follow-up `WRITERV2-OVERWRITE-UNPART-1` as the fix unit; repark's current answer — the raise and the table still answering `[(1,'a')]` — is pinned in `python/repark/tests/test_examples_window_catalog.py`; the runnable example does not teach the leak (`overwritePartitions` stays covered through its partitioned arm). | The registry row, the new pin test, and the pin's red-first provocation below. | **PROVEN** |
 
-`LOGIC_SCORE` = **4/4 `PROVEN`**.
+`LOGIC_SCORE` = **5/5 `PROVEN`**.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
@@ -88,6 +89,16 @@ others. Restoring the unit state — the 43 rows deleted, `BACKLOG_BASELINE` 298
 files back — returns the gate to **0** (`613 covered; 298 backlog; 165 examples`). Re-run
 2026-09-04 on the shipped tree after the EX-21 merge, in the round-2 review.
 `pins: ex-22-types-writerv2/C-001, C-002`
+
+Pin provocation, same protocol, for the round-2 `EX-W2-4` pin
+(`test_writerv2_overwrite_partitions_unpartitioned_leak`): with the test's `pytest.raises`
+guard replaced by a direct `overwritePartitions()` call asserting Spark's `[(5,'z')]` answer,
+`.venv/bin/python -m pytest
+python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_unpartitioned_leak -q`
+exits **1** — the raised `ParseException('SQL error: ParserError("Expected: an expression,
+found: ) at Line: 1, Column: 57")')` fails the test. Restoring the guard returns the run to
+**0** (1 passed). The column offset varies with the fixture's table-name length; the pin
+matches the stable prefix.
 
 ## Oracle (live PySpark 4.1.2, ANSI on, UTC, local[2], JDK zulu-17, TZ=UTC)
 
@@ -290,7 +301,7 @@ SHIPPED_FLAG_REGISTER:
 DELIVERY_SIGNOFF:
   pr_unit: ex-22-types-writerv2
   artifacts_verified:
-    ledger: PASS (C-001..C-004 PROVEN)
+    ledger: PASS (C-001..C-005 PROVEN)
     coverage_attestation: PASS (AT-1..AT-10, complete true)
     findings_ledger: PASS (review-gap table carries the four in-lane round-1 resolutions)
     shipped_flag_register: PASS (count 0)
