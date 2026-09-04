@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from repark.errors import AnalysisException
 from repark.spark import ReparkSession
 
 COVERS: list[str] = [
@@ -44,6 +45,19 @@ def main() -> None:
         parquet_rows_expected = [(1, "a"), (2, "b")]
         if parquet_rows != parquet_rows_expected:
             raise SystemExit(f"read_parquet rows {parquet_rows!r} != {parquet_rows_expected!r}")
+
+        for reader, name in (
+            ("read_csv", "ex21_missing.csv"),
+            ("read_json", "ex21_missing.json"),
+            ("read_parquet", "ex21_missing.parquet"),
+        ):
+            raised: str | None = None
+            try:
+                getattr(repark, reader)(name).collect()
+            except AnalysisException as error:
+                raised = str(error)
+            if raised is None:
+                raise SystemExit(f"{reader} on a missing path did not raise AnalysisException")
     finally:
         repark.stop()
 

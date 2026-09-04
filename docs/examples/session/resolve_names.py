@@ -1,4 +1,4 @@
-"""Resolve bare and temp-view table names under the current catalog and database.
+"""Resolve bare, two-part, and temp-view table names under the current catalog and database.
 
 pins: ex-21-catalog-session/C-001
 """
@@ -13,13 +13,18 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured resolution answers: qualified three-part names and the temp-view home."""
+    """Run the measured resolution answers: bare, two-part, three-part, and the temp-view home."""
     repark = ReparkSession.builder.appName("ex21-ses-resolve").master("local[1]").getOrCreate()
     try:
         resolved = repark.resolve_table_name("ex21_report")
         resolved_expected = "spark_catalog.default.ex21_report"
         if resolved != resolved_expected:
             raise SystemExit(f"resolve_table_name {resolved!r} != {resolved_expected!r}")
+
+        two_part = repark.resolve_table_name("default.ex21_report")
+        two_part_expected = "spark_catalog.default.ex21_report"
+        if two_part != two_part_expected:
+            raise SystemExit(f"resolve_table_name two-part {two_part!r} != {two_part_expected!r}")
 
         repark.createDataFrame([(1, "x")], ["k", "s"]).createOrReplaceTempView("ex21_tv")
         home = repark.resolve_table_name("ex21_tv", prefer_temp_view=True)

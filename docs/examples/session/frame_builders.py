@@ -14,7 +14,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured frame-builder answers: row-list frames and the exclusive range."""
+    """Run the measured frame-builder answers: row-list frames, the empty schema, and ranges."""
     repark = ReparkSession.builder.appName("ex21-ses-frames").master("local[1]").getOrCreate()
     try:
         rows = [
@@ -25,6 +25,21 @@ def main() -> None:
         if rows != rows_expected:
             raise SystemExit(f"create_dataframe rows {rows!r} != {rows_expected!r}")
 
+        empty = repark.create_dataframe([], schema="a int")
+        empty_rows = [tuple(row) for row in empty.collect()]
+        empty_rows_expected: list[tuple] = []
+        if empty_rows != empty_rows_expected:
+            raise SystemExit(
+                f"create_dataframe empty rows {empty_rows!r} != {empty_rows_expected!r}"
+            )
+
+        empty_dtypes = empty.dtypes
+        empty_dtypes_expected = [("a", "int")]
+        if empty_dtypes != empty_dtypes_expected:
+            raise SystemExit(
+                f"create_dataframe empty dtypes {empty_dtypes!r} != {empty_dtypes_expected!r}"
+            )
+
         ids = [row["id"] for row in repark.range(1, 4).collect()]
         ids_expected = [1, 2, 3]
         if ids != ids_expected:
@@ -34,6 +49,11 @@ def main() -> None:
         stepped_expected = [0, 2, 4]
         if stepped != stepped_expected:
             raise SystemExit(f"range(0, 6, 2) ids {stepped!r} != {stepped_expected!r}")
+
+        descending = [row["id"] for row in repark.range(5, 0, -1).collect()]
+        descending_expected = [5, 4, 3, 2, 1]
+        if descending != descending_expected:
+            raise SystemExit(f"range(5, 0, -1) ids {descending!r} != {descending_expected!r}")
     finally:
         repark.stop()
 

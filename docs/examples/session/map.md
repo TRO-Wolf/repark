@@ -24,15 +24,19 @@ network.
   not steal the active slot before any action (the promotion arm is §7
   `EX-SES-2`).
 - [session_conf.py](session_conf.py) — `SparkSession.conf`: string and bool
-  round-trips.
+  round-trips, plus the two-arg default for an unset key (the unset-key error
+  contract is §7 `EX-SES-4`).
 - [session_catalog.py](session_catalog.py) — `SparkSession.catalog`: the
   `Catalog` type and the untouched default names.
 - [frame_builders.py](frame_builders.py) — `SparkSession.create_dataframe` and
-  `SparkSession.range`: row-list frames and the exclusive `range(start, end[,
-  step])`.
+  `SparkSession.range`: row-list frames, the explicit-schema empty frame (the
+  name-list empty arm is §7 `EX-SES-3`), and the exclusive
+  `range(start, end[, step])` including the negative step.
 - [read_files.py](read_files.py) — `SparkSession.read_csv` /
   `SparkSession.read_json` / `SparkSession.read_parquet` over files the example
-  writes (CSV with an explicit `header` option, NDJSON, a Parquet directory).
+  writes (CSV with an explicit `header` option, NDJSON, a Parquet directory);
+  a missing path with the format's extension raises `AnalysisException`
+  (§7 `EX-SES-5`).
 - [register_catalog.py](register_catalog.py) —
   `SparkSession.register_memory_catalog` / `SparkSession.create_namespace`:
   the registered catalog lists and becomes current, the namespace exists after

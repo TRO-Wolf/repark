@@ -1,4 +1,4 @@
-"""The catalog and conf property surfaces on a fresh default session.
+"""The catalog property surface on a fresh default session.
 
 pins: ex-21-catalog-session/C-001
 """

@@ -36,7 +36,8 @@ catalog, and the local filesystem only — no cloud catalog, no JVM.
   view answers True, a missing name answers False, both spellings.
 - [register_function.py](register_function.py) — `registerFunction` /
   `register_function`: register a scalar UDF through the catalog, probe it
-  with `functionExists`, answer with it inside SQL. An omitted return type
+  with `functionExists`, and answer with it inside SQL, each spelling holding
+  its own arm-named variables. An omitted return type
   declares string, so the example's UDFs return strings. The return-value arm
   diverges — §7 `EX-SES-1`.
 - [list_tables.py](list_tables.py) — `list_tables`: the exact `MANAGED` row

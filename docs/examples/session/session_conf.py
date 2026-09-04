@@ -13,7 +13,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured conf answers: a string value and a bool both read back as strings."""
+    """Run the measured conf answers: string and bool round-trips plus the unset-key default."""
     repark = ReparkSession.builder.appName("ex21-ses-conf").master("local[1]").getOrCreate()
     try:
         conf = repark.conf
@@ -28,6 +28,11 @@ def main() -> None:
         debug_expected = "true"
         if debug != debug_expected:
             raise SystemExit(f"conf.get debug {debug!r} != {debug_expected!r}")
+
+        fallback = conf.get("ex21.unset.key", "fallback")
+        fallback_expected = "fallback"
+        if fallback != fallback_expected:
+            raise SystemExit(f"conf.get default {fallback!r} != {fallback_expected!r}")
     finally:
         repark.stop()
 
