@@ -1,4 +1,7 @@
-"""Divergence pins for the EX-20 window/catalog and EX-21 catalog/session batches (§7 EX-WIN-1, EX-CAT-1..3, EX-SES-1..2)."""
+"""Divergence pins for the EX-20 window/catalog and EX-21 catalog/session batches.
+
+Registry §7 rows EX-WIN-1, EX-CAT-1..3 (EX-20) and EX-SES-1..2 (EX-21).
+"""
 
 from __future__ import annotations
 
