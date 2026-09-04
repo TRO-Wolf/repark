@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import pytest
 
-from repark.errors import PySparkException
+from repark.errors import AnalysisException, PySparkException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 TRY_NAMES: tuple[str, ...] = (
@@ -168,15 +168,13 @@ def test_try_to_number_bad_format_raises() -> None:
         _sql_arrow("SELECT try_to_number('123', 'not-a-format') AS v")
 
 
-def test_try_to_number_non_foldable_divergence_is_pinned() -> None:
-    """pins: ex-11-functions-hash-url-random/C-001"""
+def test_try_to_number_non_foldable_format_raises() -> None:
+    """FN-TRYTONUMBER-1: non-foldable format raises. pins: fn-fix-1-registry-rows/C-003"""
     spark = _spark()
-    col_input = _arrow(
+    with pytest.raises(AnalysisException, match="NON_FOLDABLE_INPUT"):
         spark.createDataFrame([("123.45", "999.99")], ["s", "f"]).select(
             F.try_to_number(F.col("s"), F.col("f")).alias("v")
-        )
-    )
-    assert col_input.column("v").to_pylist() == [Decimal("12345")]
+        ).toArrow()
     lit = _arrow(
         spark.range(1).select(F.try_to_number(F.lit("123.45"), F.lit("999.99")).alias("v"))
     )

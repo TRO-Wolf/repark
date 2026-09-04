@@ -130,7 +130,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_arrow_null_sql_to_type": ("fd98afc017a68f70a198f4bd8b0fc67f84c8fdaee406e019865cd2a43b7fe35f"),
     "_arrow_table_from_pandas": (
-        "550fba35e2e302c1f39cdc3cc92a135768baf4ceb9145ffcc6290bd3adf4be7a"
+        "b5d414309e2a623f1e260ba8a28b8a379cb215aab7b0dbfbcdd8946befe9e5d5"
     ),
     "_arrow_table_from_polars": (
         "2277a1cce4c5229beaa00ba669197a45a4ec1ef551bd50fabee387bb2aa61df8"
@@ -188,7 +188,7 @@ EXPECTED_SYMBOL_HASHES = {
         "03a76e73c5c2a06d49feb91028fd9ee2bf68b22cf12716700fbaaa741a38f157"
     ),
     "_infer_null_sql_from_raw_cells": (
-        "e98674b3edd7ed28849daa407244f04584acb8ba903519630a3d87e646f3701c"
+        "3d27ce840db78865ebe6220fb834587cc8d0c08c0374978f0ec6d3a7c7fc5c02"
     ),
     "_infer_struct_arrow_from_dict_samples": (
         "78a3a73cac2f7f922df0125171e4f9847f6862c52087c9984fb0df7485ff007b"
@@ -227,7 +227,7 @@ EXPECTED_SYMBOL_HASHES = {
         "c108b14b3b9578f14060e1bbd3ef6390202ed0f463a8b9f682293843fd41b93a"
     ),
     "_normalize_create_dataframe_cell": (
-        "cf89d2044b6d8add530d870c8f86a87670f0b845cdb970c9866a4ea90b122dbf"
+        "8e31e7a9fbde9c3a49ae7ee75a850a3970ba6f293c6c79b75229a6d2dc08d4b6"
     ),
     "_normalize_frame_arrow_column": (
         "a3cccd45734740561e2f181b4b5bf8ac2439e0a68bd2330a8b3f87b2422a6ff0"
@@ -292,7 +292,7 @@ EXPECTED_SYMBOL_HASHES = {
         "2cf60e5958dd8ae526edceb5e99de10a6de447a278b141a6198978c474ee3ac6"
     ),
     "_rows_from_mapping_list": ("f0e6d804ec160f2d41f524f947d07676fa2f291fcfd0e46fef5b29896639a94d"),
-    "_rows_from_pandas": ("5c2342dbe3cf7dee038f9ec4a69d5a8b7a1f2117ab12b1ae6c2cc2b9c5caa540"),
+    "_rows_from_pandas": ("793ee7519856503c01bf3afcd30b0aff09503a39a2e3c14c9b72e0c1ed665b69"),
     "_rows_from_polars": ("9b85f5efbe8418db0295ccd5e6e4c6f3350c6871c9146dd0bce26eef320f757c"),
     "_scan_sql_table_identifier_end": (
         "e87f6e939c24152fb4903a92a1910065936eaed955fad13eacb1186f32f46c7e"
@@ -323,7 +323,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_find_registry_udf_calls": (
         "332d5d9c491c9eafd0577da79e5d0299fb878205908cb5646c77d3e08b6bd6d1"
     ),
-    "_sql_literal": ("ae3fb5dc6ee78eab83df4f9d6b01153a9dbb0184484230f35324a062244ce70c"),
+    "_sql_literal": ("714e8b7794873796e8808c8990e40825926ed8410e280609ec251587d663164b"),
     "_sql_mask_strings_and_comments": (
         "4b7f0e357d15f9ef25369f7221b95fb7c05a4db373acc03fcc00c860d360d8ed"
     ),

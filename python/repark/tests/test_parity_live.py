@@ -166,6 +166,114 @@ _LOG1P_LIVE_WANT = (
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_1_isnan_sha2_try_to_number_add_months(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-1-registry-rows/C-003"""
+    from pyspark.sql import functions as spark_fn
+
+    hello = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    isnan_table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([(1.0,), (None,)], ["x"]).select(
+            spark_fn.isnan("x").alias("v")
+        )
+    )
+    assert isnan_table.column("v").to_pylist() == [False, False]
+    assert isnan_table.schema.field("v").nullable is False
+    sha_table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([("hello",)], ["s"]).select(
+            spark_fn.sha2("s", 256).alias("h"),
+            spark_fn.sha2("s", 0).alias("z"),
+        )
+    )
+    assert sha_table.column("h").to_pylist() == [hello]
+    assert sha_table.column("z").to_pylist() == [hello]
+    from pyspark.errors import AnalysisException as SparkAnalysisException
+
+    try:
+        spark_engine.session.createDataFrame([("123.45", "999.99")], ["s", "f"]).select(
+            spark_fn.try_to_number(spark_fn.col("s"), spark_fn.col("f"))
+        ).toArrow()
+        raise AssertionError("try_to_number non-foldable format must raise")
+    except SparkAnalysisException as exc:
+        assert "NON_FOLDABLE_INPUT" in str(exc)
+    months = spark_engine.arrow_of(
+        spark_engine.session.sql("SELECT add_months(DATE '2015-02-28', 1) AS r")
+    )
+    assert str(months.column("r").to_pylist()[0]) == "2015-03-28"
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_1_last_and_approx_percentile(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-1-registry-rows/C-003"""
+    from pyspark.sql import Window as SparkWindow
+    from pyspark.sql import functions as spark_fn
+
+    frame = spark_engine.session.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
+        ["k", "v"],
+    )
+    window = (
+        SparkWindow.partitionBy("k")
+        .orderBy(spark_fn.col("v").asc_nulls_last())
+        .rowsBetween(SparkWindow.unboundedPreceding, SparkWindow.unboundedFollowing)
+    )
+    last_table = spark_engine.arrow_of(
+        frame.select("k", spark_fn.last("v", True).over(window).alias("l")).distinct()
+    )
+    answers = sorted((row["k"], row["l"]) for row in last_table.to_pylist())
+    assert answers == [("a", 3), ("b", 6)]
+    pct = spark_engine.arrow_of(frame.select(spark_fn.approx_percentile("v", 0.5).alias("p")))
+    assert pct.column("p").to_pylist() == [3]
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_1_arrays(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-1-registry-rows/C-003"""
+    from pyspark.sql import functions as spark_fn
+
+    pos = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame(
+            [([1, 2, 3], 2), ([1, 2, 3], 9), (None, 1)], ["a", "x"]
+        ).select(spark_fn.array_position("a", spark_fn.col("x")).alias("p"))
+    )
+    assert pos.column("p").to_pylist() == [2, 0, None]
+    sort_table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([([2, None, 1],)], ["a"]).select(
+            spark_fn.array_sort("a").alias("s"),
+            spark_fn.sort_array("a").alias("sa"),
+        )
+    )
+    assert sort_table.column("s").to_pylist() == [[1, 2, None]]
+    assert sort_table.column("sa").to_pylist() == [[None, 1, 2]]
+    overlap = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([([1, None], [2, None])], ["a", "b"]).select(
+            spark_fn.arrays_overlap("a", "b").alias("o")
+        )
+    )
+    assert overlap.column("o").to_pylist() == [None]
+    flat = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([([[1], None],)], ["a"]).select(
+            spark_fn.flatten("a").alias("f")
+        )
+    )
+    assert flat.column("f").to_pylist() == [None]
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_1_nan_ingest(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-1-registry-rows/C-003"""
+    from pyspark.sql import functions as spark_fn
+
+    table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([(float("nan"),)]).select(
+            spark_fn.isnan("_1").alias("ina"),
+            spark_fn.isnull("_1").alias("n"),
+        )
+    )
+    assert table.column("ina").to_pylist() == [True]
+    assert table.column("n").to_pylist() == [False]
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
     """pins: log1p-1-precise-kernels/C-001, C-004"""
     table = spark_engine.arrow_of(spark_engine.session.sql(_LOG1P_LIVE_SQL))

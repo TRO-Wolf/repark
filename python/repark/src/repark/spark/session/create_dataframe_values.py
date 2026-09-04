@@ -44,11 +44,10 @@ def _sql_literal(value: Any) -> str:
         return str(value)
 
     if isinstance(value, float):
-        # NaN already normalized to None; reject inf so we never emit a bare `inf` token.
-
         if value == float("inf") or value == float("-inf"):
             raise PySparkTypeError("createDataFrame does not support infinite float values")
-
+        if value != value:
+            return "CAST('NaN' AS DOUBLE)"
         return repr(value)
 
     if isinstance(value, str):
@@ -168,7 +167,8 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
 
 
 
-    Missing markers (``None``, ``NaN``, pandas ``NA`` / ``NaT``) become ``None``. Numpy scalar
+    Missing markers (``None``, pandas ``NA`` / ``NaT``) become ``None``.
+    ``float('nan')`` is kept. Numpy scalar
 
     wrappers unwrap via ``.item()`` — except ``numpy.datetime64[ns]`` (and finer), where
 
@@ -292,10 +292,6 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
 
         if type_name == "float64" or type_name == "float32":
             as_float = float(value)
-
-            if as_float != as_float:
-                return None
-
             return as_float
 
         if type_name in {"complex64", "complex128", "complexfloating"}:
@@ -341,9 +337,6 @@ def _normalize_create_dataframe_cell(value: Any, *, field_name: str | None = Non
         # Python complex (incl. unwrapped numpy complex) — not a SQL scalar.
 
         raise PySparkTypeError("createDataFrame does not support values of type complex yet")
-
-    if isinstance(value, float) and value != value:
-        return None
 
     return value
 

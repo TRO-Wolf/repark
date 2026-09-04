@@ -173,6 +173,8 @@ Was `69 covered; 842 backlog; 15 examples` before this batch (after LOG1P-1);
 now `102 covered; 809 backlog; 22 examples` — 33 covered is the landed names,
 842 → 809 backlog is the same 33; 15 → 22 examples is the seven new files.
 
+**Closed 2026-09-03 (FN-FIX-1):** `F.isnan(NULL)` is `[False, False]` non-nullable bool; `createDataFrame([(float('nan'),)])` stores NaN (`isnan` true, `isnull` false). Names for the next EX batch: `F.isnan`.
+
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
 Captured on the base `84c1801` with the seven batch files removed and the

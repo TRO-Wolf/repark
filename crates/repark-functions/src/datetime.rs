@@ -506,7 +506,6 @@ fn days_in_month(year: i32, month: u32) -> Option<u32> {
     Some(first_of_next.pred_opt()?.day())
 }
 
-/// Spark `add_months` clamps end-of-month and missing target days; invalid years return NULL.
 fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
     let source_month_index = date
         .year()
@@ -515,10 +514,8 @@ fn spark_add_months(date: NaiveDate, months: i32) -> Option<NaiveDate> {
     let target_month_index = source_month_index.checked_add(months)?;
     let target_year = target_month_index.div_euclid(12);
     let target_month = u32::try_from(target_month_index.rem_euclid(12)).ok()? + 1;
-
-    let last_day_of_source = days_in_month(date.year(), date.month())?;
     let last_day_of_target = days_in_month(target_year, target_month)?;
-    let day = if date.day() == last_day_of_source || date.day() > last_day_of_target {
+    let day = if date.day() > last_day_of_target {
         last_day_of_target
     } else {
         date.day()
@@ -1498,10 +1495,8 @@ mod tests {
         assert!(col.is_null(3), "year(NULL) stays NULL");
     }
 
-    /// Spark `add_months` clamps to the last day when the start is month-end or the day overflows.
     #[tokio::test]
     async fn add_months_matches_spark_end_of_month_semantics() {
-        // Jan-31 is month-end → clamp to Feb-28 (2015 is not a leap year).
         assert_eq!(
             eval_date_iso("SELECT add_months(DATE '2015-01-31', 1)").await,
             Some("2015-02-28".to_string())

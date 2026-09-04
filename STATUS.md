@@ -188,12 +188,13 @@ in published history by explicit decision:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); gate (12/12 `PROVEN`):
   [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md);
   evidence: [task/fnp-0-census/](task/fnp-0-census/map.md).
-  **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c);
-  thirty-six needed no new kernel — that seam is exhausted. **F-Y10-1 (2026-08-30):** integer
+  **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c).
+  **F-Y10-1 (2026-08-30):** integer
   `+` / `-` / `*` raise `ARITHMETIC_OVERFLOW` where Spark raises; FNP-7b is unblocked.
   **FNP-4c (2026-08-31):** ten higher-order names on the FNP-4a seam. **FNP-7a/7b (2026-08-31):**
   twelve `try_*` inversions (NULL instead of raise). Remaining work ships as one coherent
-  PR per unit or tightly coupled pair.
+  PR per unit or tightly coupled pair. **FN-FIX-1 (2026-09-03):** ten rows Spark-equal;
+  residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
   **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.

@@ -38,13 +38,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
   (LOG1P-1, 2026-09-02):** `F.expm1` is the precise kernel (`math.expm1`); BL-16 hypot
   still overflows to `inf` at extreme magnitude. pins: log1p-1-precise-kernels/C-005
-- [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **EX-8 remediation
-  (2026-09-03):** pins for the four silent array divergences filed in the parity registry
-  §7 — FN-ARRAYPOS-1 (`array_position` not-found is NULL; Spark answers `0`),
-  FN-ARRAYSORT-1 (`array_sort` orders NULLs first; Spark orders them last),
-  FN-ARRAYSOVERLAP-1 (a NULL element answers `False`; Spark answers `NULL`), FN-FLATTEN-1
-  (a NULL sub-array is dropped; Spark answers `NULL`). Each asserts repark's current value,
-  so the fix reds it on purpose.
+- [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — **FN-FIX-1 (2026-09-03):** (module docstring is the forced one-liner; the EX-8 and FN-FIX-1 pins are cited on this row, not in the file)
+  Spark-equal array pins — FN-ARRAYPOS-1 not-found `0`, FN-ARRAYSORT-1 NULLs last,
+  FN-ARRAYSOVERLAP-1 three-valued, FN-FLATTEN-1 NULL sub-array → NULL row.
+  pins: fn-fix-1-registry-rows/C-003
   pins: ex-8-functions-arrays/C-001
 - [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **EX-5 remediation
   (2026-09-03):** FN-ELT-1 pin. Out-of-range `elt` (index 3 and 0) answers NULL;
@@ -471,11 +468,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source
   row; `nth_value` 1-based; `percent_rank`/`cume_dist` Float64. `ignoreNulls`
-  is an honest cut (TypeError). **FN-LAST-1 (2026-09-03):**
-  `test_last_ignorenulls_window_divergence_is_pinned` codifies
-  `last(ignorenulls)` over the ordered unbounded window answering NULL where
-  Spark answers the last non-null (registry row FN-LAST-1).
-  pins: ex-12-functions-aggregates-a/C-001
+  is an honest cut (TypeError). **FN-LAST-1 FIXED 2026-09-03 (FN-FIX-1):**
+  `test_last_ignorenulls_window_skips_trailing_null`.
+  Live co-collect `test_live_fn_fix_1_last_and_approx_percentile`.
+  pins: fn-fix-1-registry-rows/C-003
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
   names resolve + one behavior case. `cbrt` pins the negative-root hazard.
@@ -493,6 +489,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_functions_e.py](test_functions_e.py) — FN-E (2026-08-15): collection
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). `get`
   pins 0-based vs SQL `element_at` 1-based (index 0 raises).
+  **FN-FIX-1:** `arrays_overlap` nulls-only is NULL. pins: fn-fix-1-registry-rows/C-003
 - [test_functions_f.py](test_functions_f.py) — FN-F (2026-08-15): try / session /
   bitwise wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `uuid` pins type + uniqueness; `version` is the repark string. FN-GT1 later
@@ -1139,22 +1136,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
 
-- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud). pins: ex-10-functions-null-cond-misc/C-001
+- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
+  **FN-FIX-1:** `test_isnan_null_is_false_non_nullable`, `test_create_dataframe_stores_nan_not_null`.
+  pins: fn-fix-1-registry-rows/C-003
+  pins: ex-10-functions-null-cond-misc/C-001
 - `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **U2 (2026-08-13):**
   `test_stats_aggregates` VALUES `(1.0),(2.0),(3.0)` are DECIMAL(2,1) — compares go through
-  `float()`; **Q1** flips
-  `percentile_approx`/`approx_percentile` LOUD → bounds-window + SQL alias pins;
+  `float()`; **FN-FIX-1** discrete `percentile_approx`/`approx_percentile` (column type, not
+  t-digest interpolation) + SQL alias pins;
   octo c1 adds bool reject, SQL centroids 3-arg pin, Imputer NaN/missingValue,
   RegexTokenizer order, CV fractional minTF, fit temp-view cleanup;
   octo c2 UNION ALL token/id association pin + Imputer same-col in-place;
   octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
   octo c7 StringIndexer fit temp-view cleanup pin
   (+ array-percentage STOP seed).
-  `test_sha2_facade_bytes_divergence_is_pinned` holds FN-SHA2-1 at the 100-column rule.
-  pins: ex-11-functions-hash-url-random/C-001
-  **FN-APPROXPCT-1 (2026-09-03):** `test_approx_percentile_double_interpolation_divergence_is_pinned`
-  codifies the interpolated DOUBLE answer where Spark is exact BIGINT (registry row
-  FN-APPROXPCT-1). pins: ex-12-functions-aggregates-a/C-001
+  `test_sha2_facade_hex_string_matches_spark` holds FN-SHA2-1.
+  pins: fn-fix-1-registry-rows/C-003
+  **FN-APPROXPCT-1 FIXED 2026-09-03 (FN-FIX-1):**
+  `test_approx_percentile_discrete_bigint_matches_spark`.
+  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
+  (repark `100.0` at accuracy 2; Spark `1.0`).
+  pins: fn-fix-1-registry-rows/C-003
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
@@ -1538,6 +1540,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `AnalysisException` naming both paths, no-location idempotent.
 - (combine 2026-07-29: match= patterns raw-stringed, RUF043)
 - `test_interchange_parity.py` — **G-INT** interchange battery (oracle = live PySpark 4.1.2 /
+  **FN-FIX-1:** list/tuple/object `float('nan')` stays DOUBLE NaN. pins: fn-fix-1-registry-rows/C-003
   zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **TZ-4 PR-1:** pandas
   timestamp cells compare wall-clock (same helper as Arrow) so UTC annotation is not a
   naive-`Timestamp` equality red. **INT-001** `to_pandas` /
@@ -2264,6 +2267,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **LOG1P-1:** `test_live_log1p_expm1_tiny_args_and_domain` uses the shared `spark_engine`
   (one `SELECT` of nine aliases, no `stop`, no per-cell Ivy).
   pins: log1p-1-precise-kernels/C-001, C-004
+  **FN-FIX-1:** four live legs on the same `spark_engine` —
+  `test_live_fn_fix_1_isnan_sha2_try_to_number_add_months`,
+  `test_live_fn_fix_1_last_and_approx_percentile`, `test_live_fn_fix_1_arrays`,
+  `test_live_fn_fix_1_nan_ingest`.
+  pins: fn-fix-1-registry-rows/C-001, C-002, C-003, C-004
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

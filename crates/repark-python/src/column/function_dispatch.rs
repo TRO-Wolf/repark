@@ -281,7 +281,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "isnan" => {
             need(1)?;
-            expr_fn::isnan(exprs[0].clone())
+            repark_functions::expr_fn::isnan(exprs[0].clone())
         }
         "nanvl" => {
             need(2)?;
@@ -407,6 +407,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             nested_fn::array_union(exprs[0].clone(), exprs[1].clone())
         }
+        "arrays_overlap" => {
+            need(2)?;
+            repark_functions::expr_fn::arrays_overlap(exprs[0].clone(), exprs[1].clone())
+        }
         "array_join" | "array_to_string" => {
             need_at_least(2)?;
             nested_fn::array_to_string(exprs[0].clone(), exprs[1].clone())
@@ -420,13 +424,8 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             nested_fn::array_min(exprs[0].clone())
         }
         "array_position" => {
-            need_at_least(2)?;
-            let index = if exprs.len() >= 3 {
-                exprs[2].clone()
-            } else {
-                lit(1i64)
-            };
-            nested_fn::array_position(exprs[0].clone(), exprs[1].clone(), index)
+            need(2)?;
+            repark_functions::expr_fn::array_position(exprs[0].clone(), exprs[1].clone())
         }
         "array_contains" | "array_has" => {
             need(2)?;
@@ -442,15 +441,13 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 .map_err(crate::datafusion_to_py_err)?;
             nested_fn::array_repeat(exprs[0].clone(), exprs[1].clone())
         }
-        "array_sort" | "sort_array" => {
+        "array_sort" => {
             need_at_least(1)?;
-            if exprs.len() == 1 {
-                nested_fn::array_sort(exprs[0].clone(), lit("ASC"), lit("NULLS FIRST"))
-            } else if exprs.len() == 2 {
-                nested_fn::array_sort(exprs[0].clone(), exprs[1].clone(), lit("NULLS FIRST"))
-            } else {
-                nested_fn::array_sort(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
-            }
+            repark_functions::expr_fn::array_sort(exprs.clone())
+        }
+        "sort_array" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::sort_array(exprs.clone())
         }
         "array_slice" => {
             need_at_least(3)?;
@@ -463,7 +460,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "flatten" => {
             need(1)?;
-            nested_fn::flatten(exprs[0].clone())
+            repark_functions::expr_fn::flatten(exprs[0].clone())
         }
         "map_keys" => {
             need(1)?;
@@ -553,6 +550,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "sha256" => {
             need(1)?;
             expr_fn::sha256(exprs[0].clone())
+        }
+        "sha2" => {
+            need(2)?;
+            repark_functions::expr_fn::sha2(exprs[0].clone(), exprs[1].clone())
         }
         "random" | "rand" => {
             if exprs.len() > 1 {

@@ -19,11 +19,11 @@ is the compatibility router that re-exports every prior name.
 | `catalog_resolution.py` | Catalog selection, aliasing, namespace defaults, table-name resolution; relation-parser edge bound by the router to avoid a cycle. |
 | `session_state.py` | Active-session context state and the drop-in warning lifecycle. |
 | `reader_support.py` | Reader option sets and integer bounds, JDBC integer options, reader paths, JSON empty-input checks, CSV promotion, schema-field normalization. |
-| `create_dataframe_values.py` | Scalar normalization, SQL literals, schema parsing, Spark-type mapping. String cells use the shared literal helper; non-binary collated strings refuse; `NullType` maps to VOID. |
+| `create_dataframe_values.py` | Scalar normalization, SQL literals, schema parsing, Spark-type mapping. String cells use the shared literal helper; non-binary collated strings refuse; `NullType` maps to VOID. **FN-FIX-1:** `float('nan')` is kept and emitted as `CAST('NaN' AS DOUBLE)`. pins: fn-fix-1-registry-rows/C-002 |
 | `create_dataframe_schema.py` | DDL parsing, pandas/Polars null witnesses, schema-name permutation. |
-| `create_dataframe_rows.py` | Named-row binding, pandas/Polars extraction, VALUES and Arrow-memtable materialization, scratch-view cleanup. Materialized frames keep the `_source_view_name` tag for `declareSorted`. |
+| `create_dataframe_rows.py` | Named-row binding, pandas/Polars extraction, VALUES and Arrow-memtable materialization, scratch-view cleanup. Materialized frames keep the `_source_view_name` tag for `declareSorted`. **FN-FIX-1:** Sparse integer/bool nan-fill stays SQL null; Sparse[object] NaN is DOUBLE. pins: fn-fix-1-registry-rows/C-002 |
 | `create_dataframe_inference.py` | Nested Arrow inference, struct merging, decimal-envelope checks, SQL-to-Arrow types. VOID/NULL map to `pa.null()`. |
-| `create_dataframe_arrow.py` | pandas/Polars Arrow-column normalization, timestamp localization, decimal validation. |
+| `create_dataframe_arrow.py` | pandas/Polars Arrow-column normalization, timestamp localization, decimal validation. **FN-FIX-1:** object-dtype all-NaN keeps DOUBLE NaN. pins: fn-fix-1-registry-rows/C-002 |
 | `create_dataframe_tuples.py` | Tuple-to-Arrow conversion, scalar/list merge refusals, dense FixedSizeList and sparse ML-vector reshape. |
 | `sql_udf_parsing.py` | SQL lexical scanning, comment-safe select-list splitting, simple UDF-call parsing. |
 | `sql_udf_discovery.py` | Registry-UDF discovery, trailing-clause peeling. |

@@ -137,7 +137,6 @@ def test_last_day(spark: ReparkSession) -> None:
 
 
 def test_add_months_clamps_to_month_end(spark: ReparkSession) -> None:
-    # Spark add_months clamps to the last day when the start is month-end OR the day overflows.
     df = _date_spine(spark, ["2016-02-29"])
     assert _single(
         df.withColumn("r", F.add_months("calendar_date", 12)).select("r"), "r"
@@ -150,18 +149,16 @@ def test_add_months_clamps_to_month_end(spark: ReparkSession) -> None:
     assert _single(mid.select("r"), "r") == dt.date(2025, 2, 15)
 
 
-def test_add_months_month_end_divergence_is_pinned(spark: ReparkSession) -> None:
-    """pins: ex-6-functions-datetime-a/C-001"""
-    # Registry FN-ADDMONTHS-1: repark clamps a month-end source in a SHORT month to the target
-    # month's last day, where Spark (LocalDate.plusMonths) keeps the day — 2015-02-28 + 1 month
-    # is 2015-03-28 in Spark, 2015-03-31 here, and 2025-04-30 - 1 month is 2025-03-30 in Spark,
-    # 2025-03-31 here. The pin holds repark's CURRENT values so the parity fix reds on purpose.
+def test_add_months_keeps_day_when_target_month_has_it(spark: ReparkSession) -> None:
+    """FN-ADDMONTHS-1: LocalDate.plusMonths. pins: fn-fix-1-registry-rows/C-003"""
     df = _date_spine(spark, ["2015-02-28"])
     assert _single(
         df.withColumn("r", F.add_months("calendar_date", 1)).select("r"), "r"
-    ) == dt.date(2015, 3, 31)
+    ) == dt.date(2015, 3, 28)
     back = _date_spine(spark, ["2025-04-30"]).withColumn("r", F.add_months("calendar_date", -1))
-    assert _single(back.select("r"), "r") == dt.date(2025, 3, 31)
+    assert _single(back.select("r"), "r") == dt.date(2025, 3, 30)
+    leap = _date_spine(spark, ["2024-02-29"]).withColumn("r", F.add_months("calendar_date", -7))
+    assert _single(leap.select("r"), "r") == dt.date(2023, 7, 29)
 
 
 def test_add_months_accepts_a_column_count(spark: ReparkSession) -> None:

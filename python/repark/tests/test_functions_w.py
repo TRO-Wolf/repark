@@ -197,8 +197,8 @@ def test_ignore_nulls_is_not_a_parameter() -> None:
         F.nth_value("v", 1, ignoreNulls=True)  # type: ignore[call-arg]
 
 
-def test_last_ignorenulls_window_divergence_is_pinned(spark: ReparkSession) -> None:
-    """FN-LAST-1: last(ignorenulls) over the ordered unbounded window answers NULL; Spark 3."""
+def test_last_ignorenulls_window_skips_trailing_null(spark: ReparkSession) -> None:
+    """FN-LAST-1: last(ignorenulls) window. pins: fn-fix-1-registry-rows/C-003"""
     frame = spark.createDataFrame(
         [("a", 1), ("a", 2), ("a", 3), ("a", None), ("b", 4), ("b", 6)],
         ["k", "v"],
@@ -221,4 +221,4 @@ def test_last_ignorenulls_window_divergence_is_pinned(spark: ReparkSession) -> N
         ("a", 1, None),
         ("b", 4, 6),
     ]
-    assert [row["last_ign_w"] for row in answers] == [None, 6]
+    assert [row["last_ign_w"] for row in answers] == [3, 6]

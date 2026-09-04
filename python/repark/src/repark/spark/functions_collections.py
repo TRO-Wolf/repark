@@ -20,8 +20,6 @@ from repark.spark.functions import (
 from repark.spark.functions_expr import (
     array,
     array_contains,
-    array_except,
-    array_intersect,
     flatten,
     isnull,
     map_keys,
@@ -143,13 +141,8 @@ def array_prepend(
 
 
 def arrays_overlap(a1: Column | str, a2: Column | str) -> Column:
-    """True when the arrays share a non-NULL element (PySpark ``functions.arrays_overlap``).
-
-    SHIM: ``size(array_except(array_intersect(a, b), array(NULL))) > 0``.
-    Null-only intersection is not overlap (Spark). A NULL array yields NULL.
-    """
-    intersection = array_except(array_intersect(a1, a2), array(lit(None)))
-    return size(intersection) > 0
+    """True when the arrays share a non-NULL element (PySpark ``functions.arrays_overlap``)."""
+    return _scalar("arrays_overlap", a1, a2)
 
 
 def get(
