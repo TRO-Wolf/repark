@@ -2322,6 +2322,82 @@ the pin rather than obeying it.
   decision is create-path policy, not a defect in this statement. Both causes are recorded here
   with the measured cell so the next unit starts from the reading rather than the surprise.
 
+### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
+
+- **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
+  write.*.mode = merge-on-read, write.target-file-size-bytes = 268435456) AS SELECT * FROM
+  staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4) / INT /
+  nullable STRING copies the parquet nullability into Iceberg: `id` / `ingestion_timestamp` /
+  `part` required, `amount` / `units` / `note` optional. The Arrow read-back matches
+  (`id`/`part` non-null). Row values match Spark.
+- **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
+  every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
+  and `…[s7-ctas-if-fresh]`; live
+  `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
+- **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
+  on requiredness only: types here match the parquet schema. Create-path policy, not a local
+  one-line flip (same SE-1 tighten-derived refusal V3-COV-8 names).
+
+### CUTOVER-MERGE-FILES-1 — MoR `MERGE` `UPDATE SET *` / `INSERT *` writes extra delete files; the row set is Spark-equal and the second pass is row-idempotent
+
+- **repark** — after a deduped CTAS, two identical `MERGE INTO t AS Target USING staging_view AS
+  Source ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *`
+  leave the row set unchanged on the second pass. Snapshot operations are `append, overwrite,
+  overwrite` (Spark-equal). File *kind* is not Spark-equal packing: v2 writes PARQUET
+  position-delete files; v3 writes PUFFIN DVs. The delete-file *count* is host-dependent
+  (3 on a 64-core box; `repark.write.max-concurrent-files=1` or
+  `spark.sql.shuffle.partitions=1` yields 2). The golden pins kinds, not count. The always-run
+  pin is `count >= Spark's 2`. `next-row-id` on v3 is 6 on both engines.
+- **Apache Spark** — same SQL, same rows, same snapshot operations, two delete files.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s2-merge-idempotent]`
+  and `…[s7-merge-idempotent]`; live
+  `…::test_sql_harden_row_matches_the_live_spark_oracle[s2-merge-idempotent]`;
+  `…::test_merge_delete_file_count_meets_spark_floor`;
+  `…::test_merge_delete_file_count_moves_with_write_concurrency`.
+- **Rationale** — BACKLOG. The production idempotence claim (row set) holds. Extra delete
+  files are write-path packing, not a row defect. The count follows write concurrency /
+  shuffle partitions, so a golden must not pin it.
+
+### CUTOVER-DEDUP-SCHEMA-1 — silver dedup values match Spark; Arrow type and nullability do not
+
+- **repark** — `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then
+  `= 1`, then `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)`
+  answers rows `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is
+  `id string_view not null`, `amount decimal128(10,4) not null`, `units int32 not null`,
+  `note string not null`, `part int32 not null`.
+- **Apache Spark** — the same rows. Arrow schema is `id string nullable`, `amount
+  decimal128(10,4) nullable`, `units int32 not null`, `note string not null`, `part int32
+  nullable`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`.
+- **Rationale** — BACKLOG. Values are Spark-equal. `string_view` is the parquet-read Utf8View
+  path (CTAS-VIEW-1 writes it; this row is the transform before a write). Nullability after
+  `coalesce` is analyzer-level.
+
+### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
+
+- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
+  | spelling | repark |
+  |---|---|
+  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
+  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
+  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
+- **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
+  `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
+  the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
+  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `…::test_to_date_and_cast_as_date_answer_on_repark`,
+  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
+- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
+  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
+
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
 - **repark** — `CALL … rewrite_data_files(strategy => 'sort')` and a named `sort_order` refuse

@@ -38,7 +38,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/merge/tests/dv_commit_opens.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Newest-file early-exit (1 open) and oldest-file full walk (F-25 documented). Close-phase 0 is the RP-9 hide pin. Scan 3×N recorded, not collapsed.
+      evidence: Newest-file early-exit (1 open) and oldest-file full walk (F-25 documented). Close-phase 0 is the RP-9 hide pin. Scan phase: the orchestrator measured 20,239 manifest opens for the whole 8/48/192 run on both the pre-cache and the plan-once trees — identical, so PERF-SCAN-3PASS-1 stays REFUTED; recorded, not collapsed.
       artifacts: [crates/repark-iceberg/src/write/merge/tests/dv_commit_opens.rs]
     - id: AT-3
       status: ATTACKED
@@ -65,7 +65,7 @@ COVERAGE_ATTESTATION:
       artifacts: [Cargo.toml, Cargo.lock, docs/fork-sync.md]
     - id: AT-9
       status: ATTACKED
-      evidence: Registry PERF-DVCLOSE-STMT-1 FIXED with the table; PERF-SCAN-3PASS-1 still 3×N; V1-GATE meta-pin moved with the pin.
+      evidence: Registry PERF-DVCLOSE-STMT-1 FIXED with the table; PERF-SCAN-3PASS-1 REFUTED (identical manifest opens with and without the plan-once cache); V1-GATE meta-pin moved with the pin.
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/test_v1_gate_docs.py]
     - id: AT-10
       status: ATTACKED

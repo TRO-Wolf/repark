@@ -25,8 +25,10 @@ still accumulate.
 from __future__ import annotations
 
 import os
+import tempfile
 import uuid
 import warnings
+from pathlib import Path
 
 import pytest
 from _acceptance import (
@@ -59,8 +61,18 @@ from _acceptance_v3 import (
     format_v3_refusal_record,
     run_v3_acceptance,
 )
+from _sql_harden_cutover_golden import REPARK
+from _sql_harden_cutover_programs import _NAMESPACE, _PROGRAMS
+from _sql_harden_cutover_run import (
+    GOLD_CREATED_AT_FCT,
+    GOLD_CREATED_BEFORE_FCT,
+    as_golden,
+    run_program,
+    without_meta,
+)
 
-from repark import ReparkSession
+from repark import ReparkSession, Window, functions
+from repark.spark import types
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("REPARK_AWS_ACCEPTANCE") != "1",
@@ -360,3 +372,126 @@ def test_v3_dv_dml_maintenance_against_s3tables() -> None:
         warnings.warn(format_v3_refusal_record(error), RuntimeWarning, stacklevel=2)
         return
     assert_v3_acceptance_outcome(outcome, exact_commit_counts=False)
+
+
+def _run_sql_harden_on_catalog(
+    spark: ReparkSession, catalog: str
+) -> tuple[dict[str, object], dict[str, str]]:
+    """Run every S1-S7 program into the scratch namespace and return outcomes plus stems."""
+    from _sql_harden_cutover_programs import write_bronze_parquet
+
+    results: dict[str, object] = {}
+    stems: dict[str, str] = {}
+    with tempfile.TemporaryDirectory(prefix="sqlh1-aws-") as raw:
+        warehouse = Path(raw)
+        parquet = warehouse / "bronze.parquet"
+        write_bronze_parquet(parquet)
+        for program in _PROGRAMS:
+            short = program.name.replace("-", "")[:12]
+            stem = f"{ACCEPTANCE_TABLE_PREFIX}h1{short}{uuid.uuid4().hex[:6]}"
+            stems[program.name] = stem
+            results[program.name] = without_meta(
+                as_golden(
+                    run_program(
+                        program,
+                        spark,
+                        warehouse,
+                        catalog=catalog,
+                        functions=functions,
+                        types=types,
+                        window=Window,
+                        qualified_call=True,
+                        parquet=parquet,
+                        stem=stem,
+                        namespace=ACCEPTANCE_NAMESPACE,
+                    )
+                )
+            )
+    return results, stems
+
+
+def _assert_s6_aws_date_refusal(
+    spark: ReparkSession, catalog: str, actual: dict[str, object], stem: str
+) -> None:
+    """S6 on AWS refuses DATE() like memory and leaves only the pre-fct silver tables."""
+    errors = [cell[1] for cell in actual["statements"] if cell[0] == "ERROR"]
+    assert any("Invalid function 'date'" in str(error) for error in errors), errors
+    for suffix in GOLD_CREATED_BEFORE_FCT:
+        present = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
+        leaked = f"{catalog}.{_NAMESPACE}.{stem}_{suffix}"
+        assert spark.catalog.tableExists(present), present
+        assert not spark.catalog.tableExists(leaked), leaked
+    for suffix in GOLD_CREATED_AT_FCT:
+        missing = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
+        assert not spark.catalog.tableExists(missing), missing
+
+
+def _assert_aws_cutover_core(
+    spark: ReparkSession,
+    catalog: str,
+    got: dict[str, object],
+    stems: dict[str, str],
+) -> None:
+    """Row probes that memory measured OK must match; S6 pins the DATE() refusal."""
+    for program in _PROGRAMS:
+        name = program.name
+        actual = got[name]
+        memory = without_meta(REPARK[name])
+        assert isinstance(actual, dict)
+        if name == "s6-gold-incremental":
+            _assert_s6_aws_date_refusal(spark, catalog, actual, stems[name])
+            continue
+        assert actual["statements"][0][0] == "OK", (name, actual["statements"][0])
+        if memory["probes"][0][0] == "OK":
+            assert actual["probes"][0] == memory["probes"][0], name
+
+
+def test_sql_harden_cutover_against_glue() -> None:
+    """S1-S7 cutover shapes on Glue into testing_repark_acceptance.
+
+    pins: sql-harden-1-cutover-shapes/C-002
+    """
+    assert_real_buckets_configured()
+    builder = ReparkSession.builder.appName("sql-harden-1-glue").config(V3_ALLOW_CREATE_KEY, "true")
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
+    got, stems = _run_sql_harden_on_catalog(spark, SILVER_CATALOG)
+    _assert_aws_cutover_core(spark, SILVER_CATALOG, got, stems)
+
+
+def test_sql_harden_cutover_against_s3tables() -> None:
+    """S1-S7 cutover shapes on S3 Tables into testing_repark_acceptance.
+
+    pins: sql-harden-1-cutover-shapes/C-002
+    """
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    assert_real_buckets_configured()
+    builder = ReparkSession.builder.appName("sql-harden-1-s3tables").config(
+        V3_ALLOW_CREATE_KEY, "true"
+    )
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    got, stems = _run_sql_harden_on_catalog(spark, S3TABLES_CATALOG)
+    _assert_aws_cutover_core(spark, S3TABLES_CATALOG, got, stems)
