@@ -185,7 +185,7 @@ corrected here rather than edited away.
 | threads | one shared session answers 16 concurrent reads from 8 workers; a second profile with a different catalog is refused, not reused |
 
 **Red first, re-measured.** With `python/dbt-repark/src` moved aside and the bytecode cache
-cleared: **28 red of 60** — all 18 `test_gold_models.py` cases (17 fixture errors + 1 failure)
+cleared: **29 red of 60** — all 19 `test_gold_models.py` cases (18 fixture errors + 1 failure)
 and all 10 `test_cursor.py` cases, every one `ModuleNotFoundError: No module named
 'dbt.adapters.repark'`. The 30 `test_statement_surface.py` cases stay **green**, correctly: they
 measure `repark.sql()` directly and need no adapter, which is why they are the design evidence
@@ -224,7 +224,7 @@ the whole suite run, and the tree restored.
 | M4 | `get_columns_in_relation` returns `[]` | `impl.py` | 1 — `test_docs_generate_reads_relations_and_columns` |
 | M5 | `ReparkIncludePolicy.database = False` (two-part relations) | `relation.py` | 1 — `test_relations_are_three_part` |
 | N2 | `repark__create_schema` emits the one-part form | `adapters.sql` | 1 — `test_a_missing_namespace_is_created` |
-| N3 | `repark__list_schemas` emits `show databases` | `adapters.sql` | 16 — the whole `dbt run` path |
+| N3 | `repark__list_schemas` emits `show databases` | `adapters.sql` | 17 — the whole `dbt run` path |
 | N4 | `ReparkCursor.fetchall` returns `rows[:1]` | `session.py` | 4 — the multi-row cursor cases |
 | N5 | `repark__drop_schema` loses the catalog part | `adapters.sql` | **0** — the macro was deleted; see below |
 
@@ -303,7 +303,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/dbt-repark/src/dbt/include/repark/macros/materializations.sql, docs/spark-sql-iceberg-parity.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Eleven mutations including a zero-red control, each with its red set named, in the table above; the red-first removal of the whole source tree (28 red of 60); and findings F-DBT-1-1, F-DBT-1-5, F-DBT-1-7 and F-DBT-1-8, which are the record of mutations that reddened nothing until the suite was strengthened and of pins no gate ran. M2's and M5's weaknesses are stated rather than hidden.
+      evidence: Eleven mutations including a zero-red control, each with its red set named, in the table above; the red-first removal of the whole source tree (29 red of 60); and findings F-DBT-1-1, F-DBT-1-5, F-DBT-1-7 and F-DBT-1-8, which are the record of mutations that reddened nothing until the suite was strengthened and of pins no gate ran. M2's and M5's weaknesses are stated rather than hidden.
       artifacts: [task/ledgers/staging/dbt-1-adapter-ledger.md, python/dbt-repark/tests/test_cursor.py]
   complete: true
 ```
@@ -355,7 +355,7 @@ are resolved here; none of the confirmed behaviour changed.
 | S2-1 | `ReparkCursor`'s multi-row path had zero coverage; `fetchall` → `rows[:1]` survived the suite | `tests/test_cursor.py`, 10 cases. Mutation N4 now reds 4. Filed as F-DBT-1-5. |
 | S2-2 | Registry rows pinned to files no gate runs | `make py-test-dbt`, wired into `preflight`. **Not** into `ci` — §9 gives the three measured reasons and the CI change is in the hand-back. Filed as F-DBT-1-8. |
 | S2-3 | §2.5 preamble said "nine served and ten refused" | Corrected to twelve served and sixteen refused, which is what the file collects. |
-| S2-4 | Three false counts: red-first "7 of 7", C-004 "six" refusals then seven listed, M1 "1 red" | Re-measured. Red-first is 28 red of 60; C-004 lists eight refusals; M1 reds 2. §5 and §6 rewritten from measurement. |
+| S2-4 | Three false counts: red-first "7 of 7", C-004 "six" refusals then seven listed, M1 "1 red" | Re-measured. Red-first is 29 red of 60; C-004 lists eight refusals; M1 reds 2. §5 and §6 rewritten from measurement. |
 | S2-5 | R2 and R3 had no registry row | `DBT-CREATENS-1` filed for the one-part namespace DDL. R3 folded into `DBT-TBLPROPS-1`, whose message it shares **verbatim** — one mechanism, one description (§6's rule); the row is retitled and carries both pins. |
 | S2-6 | §6 claimed the mutations hit the delivered tree, but named a macro the package does not ship | Provenance stated: the CTAS mutations append a `repark__create_table_as` override to the package's own macro file, shadowing the inherited macro; nothing in `site-packages` was touched. A control (M0) and five mutations of macros the package **does** ship (N1–N5) were added. |
 | S2-7 | The route argument overstated what the gold project configures | Rewritten in the ledger and three maps to the one key the inventory records and the materialization turns on. Filed as F-DBT-1-6. |
