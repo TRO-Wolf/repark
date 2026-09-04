@@ -48,7 +48,7 @@ def main() -> None:
         snake_printed = io.StringIO()
         with contextlib.redirect_stdout(snake_printed):
             frame.print_schema()
-        snake_lines = snake_printed.getvalue().splitlines()
+        snake_lines = snake_printed.getvalue().rstrip("\n").splitlines()
         if snake_lines != TREE_LINES:
             raise SystemExit(f"DataFrame.print_schema lines {snake_lines!r} != {TREE_LINES!r}")
     finally:

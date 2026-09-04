@@ -9,21 +9,17 @@ slate row.
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
-**Writable paths:** `docs/examples/dataframe/`, `docs/examples/backlog.txt`, the `BACKLOG_BASELINE`
-constant in `scripts/check_example_coverage.py`, `docs/spark-sql-iceberg-parity.md` §7,
-`python/repark/tests/test_examples_dataframe_b.py`, lockstep `map.md` files, and this ledger with
-its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other `scripts/` line,
-`.github/`, `STATUS.md`, every other ledger, `briefs/next-sequence.md`.
+**Writable paths:** `docs/examples/dataframe/`, `docs/examples/backlog.txt`, `BACKLOG_BASELINE`,
+`docs/spark-sql-iceberg-parity.md` §7, `python/repark/tests/test_examples_dataframe_b.py`, lockstep
+`map.md` files, this ledger + its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`,
+every other `scripts/` line, `.github/`, `STATUS.md`, every other ledger, `briefs/next-sequence.md`.
 
 ## Scope
 
-The roster is the next 36 `DataFrame.*` rows of the backlog at the base `f3968aa` (camelCase and
-snake_case aliases are one example each, both names in `COVERS`); `DataFrame.dynamicFlatten` /
-`DataFrame.dynamic_flatten` are deliberately excluded — another unit owns them. Eight files cover
-the 32 names the live oracle measured Spark-equal; `intersectAll` / `intersect_all` and
-`groupingSets` / `grouping_sets` stay on the backlog with §7 rows `EX-DF-7`/`EX-DF-8`, and the
-narrow `mergeInto` and `printSchema` arms are recorded as §7 rows `EX-DF-9`/`EX-DF-10`, all
-pinned in `python/repark/tests/test_examples_dataframe_b.py`.
+The roster is the next 36 `DataFrame.*` backlog rows at base `f3968aa` (aliases one example each;
+`dynamicFlatten` excluded — another unit owns it). Eight files cover the 32 Spark-equal names;
+`intersectAll` and `groupingSets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`); the narrow
+`mergeInto` and `printSchema` arms are §7 `EX-DF-9`/`EX-DF-10`; all pinned in the b-pin file.
 
 **Roster (36):** `DataFrame.first`, `DataFrame.groupBy`, `DataFrame.group_by`, `DataFrame.groupby`,
 `DataFrame.groupingSets`, `DataFrame.grouping_sets`, `DataFrame.head`, `DataFrame.hint`,
@@ -100,8 +96,8 @@ oracle (`_live_parity.build_spark_iceberg_engine`, the cached
 target) re-measured the merge program: Spark answers `[(1, 'A'), (2, 'b'), (3, 'c')]` for
 `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` — the bare key raises
 `AMBIGUOUS_REFERENCE` and the `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN` as expr
-or Column objects (even `F.col("t.id") == F.col("s.id")` raises; the short-name alias exists
-only to the SQL parser), while repark answers the same rows for the bare-key sugar and for
+or Column objects; with the target's short name as the qualifier both forms merge),
+while repark answers the same rows for the bare-key sugar and for
 `F.col("target.id") == F.col("source.id")`. The same JVM measured both engines' `printSchema`
 captures (Spark's `splitlines()` holds the four tree lines plus a trailing `''`, five elements;
 repark's holds the four lines, four elements) and the bridge NULL arms
@@ -138,7 +134,7 @@ Iceberg oracle.
 | `DataFrame.mapInPandas` | `[(1, 20.0), (2, 40.0)]` | same | kept | `bridges.py` | |
 | `DataFrame.map_in_pandas` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | same | kept | `bridges.py` | same callable |
 | `DataFrame.melt` | cols `['g','var','val']`, dtypes `string/string/double`, 12 rows with `k` widened to double | same | kept | `rows_nulls.py` | union widening equal |
-| `DataFrame.mergeInto` | Iceberg target: `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` answers `[(1,'A'),(2,'b'),(3,'c')]`; bare key `"id"` RAISED `AMBIGUOUS_REFERENCE`; `target.`/`source.` qualifiers RAISED `UNRESOLVED_COLUMN` (parsed expr and Column objects, even `F.col("t.id") == F.col("s.id")`) | bare-key sugar answers `[(1,'A'),(2,'b'),(3,'c')]`; `F.col("target.id") == F.col("source.id")` answers the same rows; SQL-string conditions raise | kept | `joins_hints.py` | rows Spark-equal; the bare-key sugar and the qualifier names are §7 `EX-DF-9` |
+| `DataFrame.mergeInto` | Iceberg target: `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id"))…merge()` answers `[(1,'A'),(2,'b'),(3,'c')]`; bare key `"id"` RAISED `AMBIGUOUS_REFERENCE`; `target.`/`source.` qualifiers RAISED `UNRESOLVED_COLUMN` (parsed expr and Column objects; `t.id`/`s.id` merge in both forms) | bare-key sugar answers `[(1,'A'),(2,'b'),(3,'c')]`; `F.col("target.id") == F.col("source.id")` answers the same rows; SQL-string conditions raise | kept | `joins_hints.py` | rows Spark-equal; the bare-key sugar and the qualifier names are §7 `EX-DF-9` |
 | `DataFrame.merge_into` | same | same | kept | `joins_hints.py` | same callable |
 | `DataFrame.na` | fill scalar/dict, drop any/subset/all/thresh — all five arms equal to EX-15's fillna/dropna cells | same | kept | `rows_nulls.py` | the `na` property surface |
 | `DataFrame.offset` | `offset(2)` → `[(3,'c')]`; `offset(0)` → full frame | same | kept | `rows_nulls.py` | Spark 4.1.2 answers `offset` |
@@ -193,24 +189,15 @@ throwaway oracle scripts (one Spark JVM start per round, five Spark legs total),
 example files, the divergence pins, the registry rows, the backlog ratchet and the maps, then
 committed. Base `f3968aa`.
 
-**Round 2 (2026-09-04):** main merged EX-15 at `6c6b177` after its round 3 (which filed registry
-row `EX-DF-6` for `createTempView`, converted the EX-15 examples to the corpus `SystemExit`
-form, and grew the a-pin file to six tests). This branch merged `origin/main` (merge commit
-`8ceb8c8`: EX-15 files take main's state wholesale; the backlog carries main's list minus this
-batch's 30 names; `BACKLOG_BASELINE` stays 520; §7 keeps main's `EX-DF-6` and renumbers this
-batch's rows to `EX-DF-7`…`EX-DF-9`; every map resolved in lockstep), then a conventions commit
-converted the batch's eight examples to the corpus form, renumbered the pin module and this
-ledger, and re-ran every example and gate green. No new Spark JVM leg — no measured value moved.
+**Round 2 (2026-09-04):** merged `origin/main` (EX-15 at `6c6b177`, merge commit `8ceb8c8`: EX-15
+files wholesale, backlog = main minus this batch's 30, `BACKLOG_BASELINE` 520, rows renumbered
+`EX-DF-7`…`EX-DF-9` past main's `EX-DF-6`); the eight examples converted to the corpus form. No
+new JVM leg — no measured value moved.
 
-**Round 3 (2026-09-04):** the critic round re-measured two cells and the ledger follows. The
-`mergeInto` "Spark refuses every locally reachable shape" reading was an artefact of probing the
-default `spark_catalog`; on the pinned Iceberg oracle Spark answers the same rows repark answers,
-so `mergeInto` / `merge_into` joined `joins_hints.py` (kept, rows Spark-equal) and §7 `EX-DF-9`
-was rewritten to the narrow measured divergence (bare-key sugar, qualifier names). The
-`printSchema` stdout-tail review-gap entry was promoted to §7 `EX-DF-10` with a pin. The bridge
-NULL arms, the melt 12-row multiset, the corpus expected-variable `SystemExit` form, the pin
-fixture annotation, and the origin/main merge (sql-harden-2, `e3600a1`) landed in the same round.
-Two Spark JVM legs (rounds 6–7 of the throwaway script); no example file was added.
+**Round 3 (2026-09-04):** the critic's two cells re-measured: `mergeInto` answers on the pinned
+Iceberg oracle (the refusal was a `spark_catalog` probe artefact) → covered in `joins_hints.py`,
+`EX-DF-9` narrowed; `printSchema`'s stdout tail → `EX-DF-10` with a pin; bridge NULL arms, the
+12-row melt list, fixture annotation and the `e3600a1` merge landed. Two JVM legs; no file added.
 
 ## Disk
 
@@ -220,11 +207,10 @@ sibling-checkout native module reused; no cargo build, `make develop` not run.
 
 ## Dual-wire
 
-Unchanged by this unit. Static half: `make check-example-coverage` and ci.yml python job
-(`./scripts/check_example_coverage.sh`). Execute half: wheels.yml smoke
-`python -I scripts/check_example_coverage.py --require-execute` after the packaged wheel is
-installed. EX-16 moves only the inventory/backlog ratchet and example files; it moves no wire,
-and `.github/` is closed to this unit.
+Unchanged by this unit. Static half: `make check-example-coverage` (ci.yml python job). Execute
+half: wheels.yml smoke `python -I scripts/check_example_coverage.py --require-execute` on the
+packaged wheel. EX-16 moves only the inventory/backlog ratchet and example files; it moves no
+wire, and `.github/` is closed to this unit.
 
 ```yaml
 COVERAGE_ATTESTATION:

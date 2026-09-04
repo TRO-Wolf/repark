@@ -3883,7 +3883,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark-equal on both; both spellings stay on the example backlog until repark implements
   Spark's multi-set signature.
 
-### EX-DF-9 — `mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers; Spark wants a table-name/alias SQL condition
+### EX-DF-9 — `mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers; Spark wants the target's short name or alias as the qualifier
 
 - **repark** — the bare string key is sugar for the shared column: on the local Iceberg target
   `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]` over `id`/`name`,
@@ -3899,9 +3899,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   .whenNotMatched().insertAll().merge()` answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. The bare key
   raises `AnalysisException: [AMBIGUOUS_REFERENCE]` (`local.ns.t2.id` vs `s.id`), and the
   `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN.WITH_SUGGESTION` — as a parsed expr or
-  as Column objects; even the Column-object form of the working condition
-  (`F.col("t.id") == F.col("s.id")`) raises `UNRESOLVED_COLUMN`, because the target's
-  short-name alias exists only to the SQL parser.
+  as Column objects. With the target's short name as the qualifier both forms merge on Spark
+  (`F.expr("t.id = s.id")` and `F.col("t.id") == F.col("s.id")` each answer the three rows).
   *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on, 2026-09-04,
   EX-16 round 3; local Hadoop catalog, COW `format-version` 2 target — the round-1
   "refuses every locally reachable shape" reading was an artefact of probing the default
