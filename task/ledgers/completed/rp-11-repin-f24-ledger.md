@@ -4,7 +4,7 @@
 `434cbac` · **Model:** grok-4.6 · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[../completed/rp-9-repin-f23-ledger.md](../completed/rp-9-repin-f23-ledger.md).
+[../completed/rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -142,20 +142,20 @@ DELIVERY_SIGNOFF:
 
 | Gate | Exit |
 |---|---|
-| `make develop` | 0 (pre-repin; `repark.__file__` under `/tmp/oc-rp11`) |
+| `make develop` | 0 (`repark.__file__` = `/tmp/oc-rp11/python/repark/src/repark/__init__.py`) |
 | bare-repin floor pins | 101 (3 red of 3) |
 | floor pins after flip | 0 (3 passed) |
 | B5 conversion pin | 0 |
 | options-refuse pin | 0 |
 | mutation B2 rewritten==2 | 101 (1 red of 1) |
-| `make verify` | (pending) |
-| `.venv/bin/python -m pytest python/repark/tests -q --deselect python/repark/tests/test_pyspark_compat_smoke.py -k "not test_cross_validator_live_pyspark_shape"` | (pending) |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | (pending) |
-| `REPARK_PARITY_LIVE=1` below-floor + disclosure | (pending) |
-| `make check-map-sync` | (pending) |
-| `make check-ledger-grammar` | (pending) |
-| `make check-ledgers` | (pending) |
-| `make check-docs-compaction` | (pending) |
-| `python3 scripts/ledger_lifecycle.py check --base origin/main` | (pending) |
-| `typos .` | (pending) |
-| `cargo deny check` | (pending) |
+| `make verify` | 0 |
+| `.venv/bin/python -m pytest python/repark/tests -q --deselect python/repark/tests/test_pyspark_compat_smoke.py -k "not test_cross_validator_live_pyspark_shape"` | 0 (4450 passed, 177 skipped, 1 deselected) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (555 passed) |
+| `REPARK_PARITY_LIVE=1 … -k "rewrite_position or disclosure"` | 0 (16 passed, 98 deselected; B2 + B5 + disclosure co-collected) |
+| `make check-map-sync` | 0 |
+| `make check-ledger-grammar` | 0 |
+| `make check-ledgers` | 0 |
+| `make check-docs-compaction` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
+| `typos .` | 0 |
+| `cargo deny check` | 0 |

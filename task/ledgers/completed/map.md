@@ -38,6 +38,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
   **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
   pins: fn-fix-1-registry-rows/C-001
+- [rp-11-repin-f24-ledger.md](rp-11-repin-f24-ledger.md) — Charter ledger — RP-11 · fork repin 594bdbe5 → 189a73ed (consume F-24; close B-MOR-3-FLOOR-1)
 - [rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md) —
   **RP-9 (2026-09-03), complete:** fork repin `c1d6c9de` → `594bdbe5` (F-23);
   `PERF-DVCLOSE-WALK-1` FIXED.

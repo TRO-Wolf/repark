@@ -281,13 +281,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`pins: rp-3-fork-repin/C-005; rp-4-fork-repin/C-003`).
   RP-6: `rewrite_after_same_arity_spec_evolution_stamps_current_spec`
   (pins: rp-6-fork-repin/C-005).
-  `call_v3_dv` (**V3-5 / B-MOR-3**): six-file v3 MOR with live Puffin DVs;
+  `call_v3_dv` (**V3-5 / B-MOR-3 / RP-11**): six-file v3 MOR with live Puffin DVs;
   `rewrite_data_files` drops all six (`removed_delete_files_count = 6`,
   count columns Arrow Int32); `rewrite_position_delete_files` returns zeros
   on DV-only and converts five upgraded parquet deletes to PUFFIN
-  (`B-MOR-3` FIXED 2026-09-03; floor pins for groups below Spark min-input-files).
+  (`B-MOR-3` FIXED 2026-09-03); below-floor groups (2-file, mixed, partition-2)
+  return Spark's four zeros and leave parquet (`B-MOR-3-FLOOR-1` FIXED 2026-09-04).
   pins: v3-5-dv-compaction/C-001, C-002, C-003, C-004, C-007
   pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003
+  pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,

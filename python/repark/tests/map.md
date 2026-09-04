@@ -2275,6 +2275,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **B-MOR-3:** `test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark` (takes the shared `spark_iceberg_engine` fixture; the three catalog keys are set for the leg and unset in `finally`) is the
   cell-B live co-collected leg (five upgraded parquet deletes → five PUFFIN, catalog `bmor3live`).
   pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003
+  **RP-11:** `test_live_rewrite_position_delete_files_below_floor_matches_spark` is the
+  cell-B2 live co-collected leg (two upgraded parquet deletes stay parquet, four zeros,
+  catalog `bmor3floor`).
+  pins: rp-11-repin-f24/C-002
   **LOG1P-1:** `test_live_log1p_expm1_tiny_args_and_domain` uses the shared `spark_engine`
   (one `SELECT` of nine aliases, no `stop`, no per-cell Ivy).
   pins: log1p-1-precise-kernels/C-001, C-004

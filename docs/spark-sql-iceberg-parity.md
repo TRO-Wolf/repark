@@ -2527,7 +2527,7 @@ the pin rather than obeying it.
 > **FIXED 2026-08-31 (RP-4 / fork #243 F-7 slice 1).** `CALL system.rewrite_data_files` on a
 > twelve-file v3 table rewrites 12→1 and PySpark 4.1.2 + Iceberg 1.11.0 reads the same
 > `(id, _row_id, _last_updated_sequence_number)` and Arrow types (`int64`) before and after.
-> Residue: `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). Floor residue `B-MOR-3-FLOOR-1`. `V3-DANGLE-1` FIXED by V3-5.
+> Residue: `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11). `V3-DANGLE-1` FIXED by V3-5.
 
 - **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` compacts a format-v3
   table and carries `_row_id` / `_last_updated_sequence_number` through unchanged. The 2026-08-21
@@ -2592,7 +2592,7 @@ the pin rather than obeying it.
 > group of parquet position deletes on an upgraded v3 table rewrites to one PUFFIN DV per
 > data file. OD-2 of record stays the orphan-files posture and is untouched. History of the
 > refusal (OD-2 by analogy, V3-11 zeros, RP-3 C-007 conversion no-op) is the bullets below.
-> Floor residue: [B-MOR-3-FLOOR-1](#b-mor-3-floor-1--v3-parquet-to-dv-rewrite-runs-below-sparks-min-input-files).
+> Floor residue [B-MOR-3-FLOOR-1](#b-mor-3-floor-1--v3-parquet-to-dv-rewrite-runs-below-sparks-min-input-files) **FIXED 2026-09-04 (RP-11)**.
 
 - **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` on a DV-only
   v3 table returns four zeros and leaves the live Puffin vectors in place. A Spark-written
@@ -2624,21 +2624,25 @@ the pin rather than obeying it.
 
 ### B-MOR-3-FLOOR-1 — v3 parquet-to-DV rewrite runs below Spark's min-input-files
 
-- **repark** — the fork v3 arm converts every live parquet position delete, including a
-  2-file group (`rewritten=2 added=2`, two PUFFIN), a mixed leftover parquet beside a DV
-  (`rewritten=1 added=1`), and one partition-scoped parquet covering two data files
-  (`rewritten=1 added=2`, two PUFFIN).
-- **Apache Spark** — the same three shapes return four zeros and leave the parquet files
-  (groups of 1 or 2 are below `MIN_INPUT_FILES_DEFAULT = 5`). Measured 2026-09-03 cells B,
-  C, D.
+> **FIXED 2026-09-04 (RP-11).** Fork F-24 (`189a73ed`, `#266`) honours Spark's
+> `min-input-files=5` on the v3 parquet-to-DV arm. Groups of 1 or 2 return four zeros
+> and leave the parquet files. The five-file cell is unchanged (5 → 5 PUFFIN). CALL
+> still refuses `options`, so the `rewrite-all=true` bypass is not wired here.
+
+- **repark** — a 2-file upgraded group, a mixed leftover parquet beside a DV, and one
+  partition-scoped parquet covering two data files all return `0, 0, 0, 0` and leave
+  the parquet files. Five file-scoped deletes still rewrite to five PUFFIN.
+- **Apache Spark** — the same three below-floor shapes return four zeros and leave the
+  parquet files (`MIN_INPUT_FILES_DEFAULT = 5`). Measured 2026-09-03 cells B, C, D.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_converts_two_upgraded_parquet_deletes_below_spark_floor`,
-  `call_rewrite_position_delete_files_converts_mixed_remaining_parquet_below_spark_floor`,
-  `call_rewrite_position_delete_files_splits_partition_parquet_below_spark_floor`.
-  Pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003.
-- **Rationale** — BACKLOG, fork TRIGGER F-24. Do not patch the planner in RePark. Spark
-  converts the same shapes once the group reaches five files (cells B5, D5).
+  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_zeros_two_upgraded_parquet_deletes_below_spark_floor`,
+  `call_rewrite_position_delete_files_zeros_mixed_remaining_parquet_below_spark_floor`,
+  `call_rewrite_position_delete_files_zeros_partition_parquet_below_spark_floor`;
+  live `python/repark/tests/test_parity_live.py::test_live_rewrite_position_delete_files_below_floor_matches_spark`.
+  Pins: rp-11-repin-f24/C-002.
+- **Rationale** — FIXED. The fork planner admits the group; RePark does not patch it.
+  Spark converts the same shapes once the group reaches five files (cells B5, D5).
 
 ### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
 

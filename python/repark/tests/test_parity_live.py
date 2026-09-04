@@ -498,6 +498,7 @@ def test_disclosures_mirror_the_registry() -> None:
 
 
 _BMOR3_CATALOG = "bmor3live"
+_BMOR3_FLOOR_CATALOG = "bmor3floor"
 _BMOR3_ALLOW = "repark.sql.allowCreateFormatVersion3"
 
 
@@ -520,7 +521,7 @@ def _bmor3_ids(arrow) -> list[int]:
     return values
 
 
-def _bmor3_cell_b_repark(warehouse: Path) -> dict:
+def _bmor3_upgraded_parquet_repark(warehouse: Path, table: str, files: int) -> dict:
     from repark import ReparkSession
 
     spark = (
@@ -528,7 +529,7 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
         .config(_BMOR3_ALLOW, "true")
         .getOrCreate()
     )
-    target = "ice.sales.cellb"
+    target = f"ice.sales.{table}"
     try:
         spark.register_memory_catalog("ice", warehouse)
         spark.sql("CREATE NAMESPACE ice.sales")
@@ -540,23 +541,23 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
             "'write.update.mode' = 'merge-on-read', "
             "'write.delete.granularity' = 'file')"
         )
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             spark.sql(f"INSERT INTO {target} VALUES ({ident}, 'a'), ({ident + 100}, 'b')").collect()
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             spark.sql(f"DELETE FROM {target} WHERE id = {ident}").collect()
         spark.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version' = '3')").collect()
         before = _bmor3_delete_pairs(
             spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
         )
         first = spark.sql(
-            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL ice.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).to_arrow()
         after = _bmor3_delete_pairs(
             spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
         )
         ids = _bmor3_ids(spark.sql(f"SELECT id FROM {target} ORDER BY id").to_arrow())
         second = spark.sql(
-            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL ice.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).to_arrow()
         return {
             "before": before,
@@ -571,23 +572,23 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
         spark.stop()
 
 
-def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
+def _bmor3_upgraded_parquet_spark(engine: lp.Engine, catalog: str, table: str, files: int) -> dict:
     import shutil
 
     warehouse = Path(tempfile.mkdtemp(prefix="bmor3-live-spark-"))
     session = engine.session
     keys = (
-        f"spark.sql.catalog.{_BMOR3_CATALOG}",
-        f"spark.sql.catalog.{_BMOR3_CATALOG}.type",
-        f"spark.sql.catalog.{_BMOR3_CATALOG}.warehouse",
+        f"spark.sql.catalog.{catalog}",
+        f"spark.sql.catalog.{catalog}.type",
+        f"spark.sql.catalog.{catalog}.warehouse",
     )
     for key, value in zip(
         keys, ("org.apache.iceberg.spark.SparkCatalog", "hadoop", str(warehouse)), strict=True
     ):
         session.conf.set(key, value)
-    target = f"{_BMOR3_CATALOG}.sales.cellb"
+    target = f"{catalog}.sales.{table}"
     try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_BMOR3_CATALOG}.sales")
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
         session.sql(
             f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
             "TBLPROPERTIES ('format-version'='2', "
@@ -596,26 +597,26 @@ def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
             "'write.update.mode'='merge-on-read', "
             "'write.delete.granularity'='file')"
         )
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             session.createDataFrame(
                 [(ident, "a"), (ident + 100, "b")],
                 "id INT, name STRING",
             ).coalesce(1).writeTo(target).append()
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             session.sql(f"DELETE FROM {target} WHERE id = {ident}")
         session.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version'='3')")
         before = _bmor3_delete_pairs(
             session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
         )
         first = session.sql(
-            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL {catalog}.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).toArrow()
         after = _bmor3_delete_pairs(
             session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
         )
         ids = _bmor3_ids(session.sql(f"SELECT id FROM {target} ORDER BY id").toArrow())
         second = session.sql(
-            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL {catalog}.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).toArrow()
         return {
             "before": before,
@@ -638,4 +639,16 @@ def test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark(
     tmp_path: Path, spark_iceberg_engine: lp.Engine
 ) -> None:
     """pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003"""
-    assert _bmor3_cell_b_repark(tmp_path) == _bmor3_cell_b_spark(spark_iceberg_engine)
+    assert _bmor3_upgraded_parquet_repark(tmp_path, "cellb", 5) == _bmor3_upgraded_parquet_spark(
+        spark_iceberg_engine, _BMOR3_CATALOG, "cellb", 5
+    )
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_rewrite_position_delete_files_below_floor_matches_spark(
+    tmp_path: Path, spark_iceberg_engine: lp.Engine
+) -> None:
+    """pins: rp-11-repin-f24/C-002"""
+    assert _bmor3_upgraded_parquet_repark(tmp_path, "cellb2", 2) == _bmor3_upgraded_parquet_spark(
+        spark_iceberg_engine, _BMOR3_FLOOR_CATALOG, "cellb2", 2
+    )

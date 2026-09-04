@@ -274,8 +274,7 @@ async fn call_rewrite_position_delete_files_converts_five_upgraded_parquet_delet
 }
 
 #[tokio::test]
-async fn call_rewrite_position_delete_files_converts_two_upgraded_parquet_deletes_below_spark_floor()
- {
+async fn call_rewrite_position_delete_files_zeros_two_upgraded_parquet_deletes_below_spark_floor() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     seed_upgraded_file_scoped_parquet_deletes(&ctx, &catalogs, "cellb2", 2).await;
@@ -287,15 +286,13 @@ async fn call_rewrite_position_delete_files_converts_two_upgraded_parquet_delete
         "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb2')",
     )
     .await
-    .expect("fork v3 arm converts below Spark min-input-files")
+    .expect("below-floor rewrite returns zeros")
     .collect()
     .await
     .expect("collect");
-    let batch = &batches[0];
-    assert_eq!(call_count(batch, "rewritten_delete_files_count"), 2);
-    assert_eq!(call_count(batch, "added_delete_files_count"), 2);
+    assert_four_zeros(&batches[0]);
     let after = delete_file_formats(&ctx, &catalogs, "ice.sales.cellb2").await;
-    assert_eq!(after, vec![("PUFFIN".into(), 1), ("PUFFIN".into(), 1)]);
+    assert_eq!(after, vec![("PARQUET".into(), 1), ("PARQUET".into(), 1)]);
     assert_eq!(
         live_ids(&ctx, &catalogs, "ice.sales.cellb2").await,
         vec![101, 102]
@@ -303,7 +300,7 @@ async fn call_rewrite_position_delete_files_converts_two_upgraded_parquet_delete
 }
 
 #[tokio::test]
-async fn call_rewrite_position_delete_files_converts_mixed_remaining_parquet_below_spark_floor() {
+async fn call_rewrite_position_delete_files_zeros_mixed_remaining_parquet_below_spark_floor() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     seed_upgraded_file_scoped_parquet_deletes(&ctx, &catalogs, "cellc", 2).await;
@@ -325,15 +322,13 @@ async fn call_rewrite_position_delete_files_converts_mixed_remaining_parquet_bel
         "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellc')",
     )
     .await
-    .expect("fork converts remaining parquet")
+    .expect("below-floor mixed rewrite returns zeros")
     .collect()
     .await
     .expect("collect");
-    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 1);
-    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 1);
+    assert_four_zeros(&batches[0]);
     let after = delete_file_formats(&ctx, &catalogs, "ice.sales.cellc").await;
-    assert!(after.iter().all(|row| row.0 == "PUFFIN"), "{after:?}");
-    assert_eq!(after.len(), 2);
+    assert_eq!(after, mixed);
     assert_eq!(
         live_ids(&ctx, &catalogs, "ice.sales.cellc").await,
         before_ids
@@ -341,7 +336,7 @@ async fn call_rewrite_position_delete_files_converts_mixed_remaining_parquet_bel
 }
 
 #[tokio::test]
-async fn call_rewrite_position_delete_files_splits_partition_parquet_below_spark_floor() {
+async fn call_rewrite_position_delete_files_zeros_partition_parquet_below_spark_floor() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     run(
@@ -385,14 +380,13 @@ async fn call_rewrite_position_delete_files_splits_partition_parquet_below_spark
         "CALL ice.system.rewrite_position_delete_files(table => 'sales.celld')",
     )
     .await
-    .expect("fork splits partition parquet into one DV per data file")
+    .expect("below-floor partition rewrite returns zeros")
     .collect()
     .await
     .expect("collect");
-    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 1);
-    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
+    assert_four_zeros(&batches[0]);
     let after = delete_file_formats(&ctx, &catalogs, "ice.sales.celld").await;
-    assert_eq!(after, vec![("PUFFIN".into(), 1), ("PUFFIN".into(), 1)]);
+    assert_eq!(after, vec![("PARQUET".into(), 2)]);
     assert_eq!(
         live_ids(&ctx, &catalogs, "ice.sales.celld").await,
         vec![2, 4]
