@@ -99,7 +99,7 @@ appears at their path while they are still declared planned.
 | PyO3 bindings: thin adapter over the internal engine API | `crates/repark-python` | delivered |
 | Native lazy API + `repark.sql()` (Python) | `python/repark` | delivered |
 | The PySpark facade | `python/repark/spark` | delivered |
-| The dbt adapter | `dbt-repark` (separate package) | deferred (parked lane) |
+| The dbt adapter | `python/dbt-repark` | delivered (DBT-1) |
 
 DataFusion remains the engine under everything. `repark-exec` / `repark-io` are extracted when
 their code arrives ([docs/design/session-api.md](docs/design/session-api.md) §1).
@@ -412,7 +412,7 @@ never relax them.
   slate-failing violation.
 - **Gates:** every unit gates (`make verify`), including STOP / report-only units; check REAL
   exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets. Before a
-  PR: `make preflight` (verify + `py-test-facade` + audit + workflow lint).
+  PR: `make preflight` (verify + `py-test-facade` + `py-test-dbt` + audit + workflow lint).
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
   directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
