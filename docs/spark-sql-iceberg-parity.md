@@ -2345,16 +2345,22 @@ the pin rather than obeying it.
 - **repark** — after a deduped CTAS, two identical `MERGE INTO t AS Target USING staging_view AS
   Source ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *`
   leave the row set unchanged on the second pass. Snapshot operations are `append, overwrite,
-  overwrite` (Spark-equal). File shape is not: v2 writes three PARQUET position-delete files
-  (Spark two); v3 writes three PUFFIN DVs (Spark two). `next-row-id` on v3 is 6 on both engines.
+  overwrite` (Spark-equal). File *kind* is not Spark-equal packing: v2 writes PARQUET
+  position-delete files; v3 writes PUFFIN DVs. The delete-file *count* is host-dependent
+  (3 on a 64-core box; `repark.write.max-concurrent-files=1` or
+  `spark.sql.shuffle.partitions=1` yields 2). The golden pins kinds, not count. The always-run
+  pin is `count >= Spark's 2`. `next-row-id` on v3 is 6 on both engines.
 - **Apache Spark** — same SQL, same rows, same snapshot operations, two delete files.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
   `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s2-merge-idempotent]`
   and `…[s7-merge-idempotent]`; live
-  `…::test_sql_harden_row_matches_the_live_spark_oracle[s2-merge-idempotent]`.
-- **Rationale** — BACKLOG. The production idempotence claim (row set) holds. The extra delete
-  file is write-path packing, not a row defect.
+  `…::test_sql_harden_row_matches_the_live_spark_oracle[s2-merge-idempotent]`;
+  `…::test_merge_delete_file_count_meets_spark_floor`;
+  `…::test_merge_delete_file_count_moves_with_write_concurrency`.
+- **Rationale** — BACKLOG. The production idempotence claim (row set) holds. Extra delete
+  files are write-path packing, not a row defect. The count follows write concurrency /
+  shuffle partitions, so a golden must not pin it.
 
 ### CUTOVER-DEDUP-SCHEMA-1 — silver dedup values match Spark; Arrow type and nullability do not
 

@@ -30,7 +30,7 @@ SPARK: dict[str, Any] = {
                 ],
             ],
             ["OK", [["append"]]],
-            ["OK", []],
+            ["DEL", []],
             [
                 "META",
                 [
@@ -76,7 +76,7 @@ SPARK: dict[str, Any] = {
                 ],
             ],
             ["OK", [["append"], ["overwrite"], ["overwrite"]]],
-            ["OK", [[1, "PARQUET"], [1, "PARQUET"]]],
+            ["DEL", [[1, "PARQUET"]]],
             [
                 "META",
                 [
@@ -195,7 +195,7 @@ SPARK: dict[str, Any] = {
                 ],
             ],
             ["OK", [["append"], ["append"], ["append"]]],
-            ["OK", []],
+            ["DEL", []],
             [
                 "META",
                 [
@@ -324,7 +324,7 @@ SPARK: dict[str, Any] = {
                 ],
             ],
             ["OK", [["append"]]],
-            ["OK", []],
+            ["DEL", []],
             [
                 "META",
                 [
@@ -370,7 +370,7 @@ SPARK: dict[str, Any] = {
                 ],
             ],
             ["OK", [["append"], ["overwrite"], ["overwrite"]]],
-            ["OK", [[1, "PUFFIN"], [1, "PUFFIN"]]],
+            ["DEL", [[1, "PUFFIN"]]],
             [
                 "META",
                 [

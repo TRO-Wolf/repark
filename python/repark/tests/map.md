@@ -174,6 +174,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_sql_harden_cutover_golden.py`. AWS legs in `test_aws_acceptance.py`.
   Namespace pin: rendered SQL uses only the passed namespace. CUTOVER-DATE-1 controls:
   `to_date` / `CAST AS DATE` work; `date` / `unix_timestamp` refuse.
+  MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
+  host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the

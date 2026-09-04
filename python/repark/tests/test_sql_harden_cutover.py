@@ -21,8 +21,20 @@ from _sql_harden_cutover_programs import (
     mor_properties,
     write_bronze_parquet,
 )
-from _sql_harden_cutover_run import as_golden, make_names, program_sql_texts, run_program, sql_arrow
+from _sql_harden_cutover_run import (
+    as_golden,
+    delete_file_count,
+    delete_file_kinds,
+    make_names,
+    program_sql_texts,
+    run_program,
+    sql_arrow,
+)
 from test_v3_live_oracle import _ALLOW_CREATE_V3_KEY, _LIVE, _LIVE_SKIP, _v37_iceberg_runtime_jar
+
+_MERGE_PROGRAMS = tuple(program for program in _PROGRAMS if program.runner == "merge")
+_SPARK_DELETE_FILE_FLOOR = 2
+_WRITE_CONCURRENCY_KEY = "repark.write.max-concurrent-files"
 
 
 def _agrees(left: Any, right: Any) -> bool:
@@ -44,18 +56,24 @@ def _verdict(repark: dict[str, Any], spark: dict[str, Any]) -> str:
     return "REFUSED" if refused else "EQUAL"
 
 
-def repark_outcome(program: _Program, warehouse: Path) -> dict[str, Any]:
+def repark_outcome(
+    program: _Program,
+    warehouse: Path,
+    *,
+    extra_config: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Run one inventory program end to end on the repark facade."""
     from repark import ReparkSession, Window, functions
     from repark.spark import types
 
+    warehouse.mkdir(parents=True, exist_ok=True)
     parquet = warehouse / "bronze.parquet"
     write_bronze_parquet(parquet)
-    repark = (
-        ReparkSession.builder.appName("sql-harden-1")
-        .config(_ALLOW_CREATE_V3_KEY, "true")
-        .getOrCreate()
-    )
+    builder = ReparkSession.builder.appName("sql-harden-1").config(_ALLOW_CREATE_V3_KEY, "true")
+    if extra_config is not None:
+        for key, value in extra_config.items():
+            builder = builder.config(key, value)
+    repark = builder.getOrCreate()
     try:
         repark.register_memory_catalog("ice", warehouse)
         sql_arrow(repark, f"CREATE NAMESPACE ice.{_NAMESPACE} LOCATION '{warehouse / _NAMESPACE}'")
@@ -232,3 +250,45 @@ def test_date_and_unix_timestamp_functions_refuse_on_repark() -> None:
             spark.sql("SELECT unix_timestamp(TIMESTAMP '2026-01-01 10:15:00')").to_arrow()
     finally:
         spark.stop()
+
+
+@pytest.mark.parametrize(
+    "program", _MERGE_PROGRAMS, ids=[program.name for program in _MERGE_PROGRAMS]
+)
+def test_merge_delete_file_count_meets_spark_floor(program: _Program, tmp_path: Path) -> None:
+    """CUTOVER-MERGE-FILES-1: kinds stay in the golden; the count is at least Spark's 2."""
+    outcome = repark_outcome(program, tmp_path)
+    expected_kind = "PUFFIN" if program.format_version == 3 else "PARQUET"
+    assert as_golden(outcome) == REPARK[program.name]
+    assert delete_file_kinds(outcome) == [expected_kind]
+    assert delete_file_count(outcome) >= _SPARK_DELETE_FILE_FLOOR
+
+
+@pytest.mark.parametrize(
+    "program", _MERGE_PROGRAMS, ids=[program.name for program in _MERGE_PROGRAMS]
+)
+def test_merge_delete_file_count_moves_with_write_concurrency(
+    program: _Program, tmp_path: Path
+) -> None:
+    """Write-concurrency / shuffle cap moves the delete-file count; kinds golden stays green."""
+    default_outcome = repark_outcome(program, tmp_path / "default")
+    capped_outcome = repark_outcome(
+        program,
+        tmp_path / "capped",
+        extra_config={
+            _WRITE_CONCURRENCY_KEY: "1",
+            "spark.sql.shuffle.partitions": "1",
+        },
+    )
+    expected_kind = "PUFFIN" if program.format_version == 3 else "PARQUET"
+    assert as_golden(default_outcome) == REPARK[program.name]
+    assert as_golden(capped_outcome) == REPARK[program.name]
+    assert delete_file_kinds(default_outcome) == [expected_kind]
+    assert delete_file_kinds(capped_outcome) == [expected_kind]
+    default_count = delete_file_count(default_outcome)
+    capped_count = delete_file_count(capped_outcome)
+    assert default_count >= _SPARK_DELETE_FILE_FLOOR
+    assert capped_count >= _SPARK_DELETE_FILE_FLOOR
+    assert capped_count <= default_count
+    if default_count > _SPARK_DELETE_FILE_FLOOR:
+        assert capped_count < default_count

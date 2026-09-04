@@ -231,6 +231,39 @@ def _merge_sql(ctx: _Ctx) -> str:
     )
 
 
+def _delete_kinds(rows: list[Any]) -> list[Any]:
+    """Unique (content, file_format) pairs in first-seen order."""
+    seen: list[Any] = []
+    for row in rows:
+        if row not in seen:
+            seen.append(row)
+    return seen
+
+
+def _delete_probe(ctx: _Ctx) -> list[Any]:
+    """Delete-file rows tagged DEL so as_golden can drop the host-dependent count."""
+    cell = _try_probe(ctx, _DEL_PROBE.format(t=ctx.names["t"]))
+    if cell[0] == "ERROR":
+        return cell
+    return ["DEL", cell[1]]
+
+
+def delete_file_count(outcome: dict[str, Any]) -> int:
+    """How many delete files the DEL probe listed (host-dependent packing)."""
+    for cell in outcome["probes"]:
+        if cell[0] == "DEL":
+            return len(cell[1])
+    raise ValueError("outcome has no DEL probe")
+
+
+def delete_file_kinds(outcome: dict[str, Any]) -> list[str]:
+    """Unique file_format values from the DEL probe."""
+    for cell in outcome["probes"]:
+        if cell[0] == "DEL":
+            return sorted({row[1] for row in cell[1]})
+    raise ValueError("outcome has no DEL probe")
+
+
 def _table_probes(ctx: _Ctx) -> list[list[Any]]:
     """Row set, schema, snapshots, delete-file kinds, files, metadata facts."""
     target = ctx.names["t"]
@@ -238,7 +271,7 @@ def _table_probes(ctx: _Ctx) -> list[list[Any]]:
         _try_probe(ctx, _ROW_PROBE.format(t=target)),
         _schema_probe(ctx, target, "id, amount, units, note, part"),
         _try_probe(ctx, _SNAP_PROBE.format(t=target)),
-        _try_probe(ctx, _DEL_PROBE.format(t=target)),
+        _delete_probe(ctx),
         ["META", _metadata_facts(ctx.warehouse, ctx.stem)],
     ]
     return probes
@@ -578,8 +611,16 @@ def run_program(
 
 
 def as_golden(outcome: dict[str, Any]) -> dict[str, Any]:
-    """One outcome in the golden's shape: tuples flattened to lists."""
-    return json.loads(json.dumps(outcome))
+    """One outcome in the golden's shape: tuples flattened; DEL counts collapsed to kinds."""
+    dumped = json.loads(json.dumps(outcome))
+    probes = []
+    for cell in dumped["probes"]:
+        if cell[0] == "DEL" and isinstance(cell[1], list):
+            probes.append(["DEL", _delete_kinds(cell[1])])
+        else:
+            probes.append(cell)
+    dumped["probes"] = probes
+    return dumped
 
 
 def without_meta(outcome: dict[str, Any]) -> dict[str, Any]:

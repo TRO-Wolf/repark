@@ -53,7 +53,7 @@ stamped `zstd` codec do not.
 | Shape | Spark-equal cells | Divergence |
 |---|---|---|
 | S4 / S7-overwrite | rows, snapshot operations, v3 `next-row-id` | META codec (`V3-COV-7`) |
-| S2 / S7-merge | row set, second-MERGE idempotence | delete-file counts |
+| S2 / S7-merge | row set, second-MERGE idempotence, delete-file kinds | packing count (host-dependent; ≥ Spark's 2) |
 | S5 | CALL tuples: expire six zeros, `rewrite_data_files` five zeros, `remove_orphan_files` empty, `rewrite_position_delete_files` four zeros | schema / codec as S1 |
 
 ## 4. What was not a cell
