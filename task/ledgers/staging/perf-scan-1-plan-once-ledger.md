@@ -158,3 +158,90 @@ Duplicate-row guard (R5): `grep -oE '^- \[[^]]+\]' task/ledgers/completed/map.md
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `typos .` | 0 |
 | `cargo deny check` | 0 |
+
+## 11. Round 2 — critic PASSED the code and FAILED the claim (2026-09-04)
+
+**Model:** grok-4.6. HEAD `dd5b0b7` on `perf/scan-1-plan-once`. Base `e6ebd40`.
+
+The critic kept the plan-once cache and the concurrent pin (skip-cache 1 red of 1). It
+rejected `PERF-SCAN-3PASS-1` FIXED: the production identity DELETE and matched-delete
+MERGE call `TargetScanStream::execute` once, so the cache never fires on that statement,
+and a `plan_files==1` pin on that path cannot go red.
+
+### Strace (`strace -f -e trace=openat`)
+
+Method: compile `measure_pure_dv_close_cost` without strace (`cargo test --no-run`),
+then strace the `repark_spark` test binary. Split on `seed_done` / `base-seed_done`
+(after N identity-partition appends), the puffin write (DV close), and `delete_done`.
+Count `*-m0.avro` excluding `snap-*.avro`. Fixture: N appends,
+`commit.manifest-merge.enabled=false`, `write.delete.mode=merge-on-read`, Spark
+`DELETE WHERE id=0`.
+
+| SHA | N | scan (`seed_done` → puffin) | close | commit (scan-era manifests after puffin) | wall of that DELETE |
+|---|---|---|---|---|---|
+| base `e6ebd40` | 8 | **1 × 8** | 0 | **1 × 8** (+1 new delete manifest) | 127 ms |
+| tip `dd5b0b7` | 8 | **1 × 8** | 0 | **1 × 8** (+1 new delete manifest) | 365 ms |
+| base `e6ebd40` | 192 | **1 × 192** | 0 | **1 × 192** (+1 new delete manifest) | 1.704 s |
+| tip `dd5b0b7` | 192 | **1 × 192** | 0 | **1 × 192** (+1 new delete manifest) | 2.717 s |
+
+Scan sequence at every cell: `metadata.json` × 3, snap list, **N data manifests**, N
+parquet, snap, puffin write. After puffin: json, snap, **same N data manifests**, snap,
+new delete manifest, snap, json. Tip and base are the same 1+0+1 shape. The RP-9 r2
+claim of 3 × N scan-phase opens is not reproduced.
+
+A puffin-only split (no `seed_done`) mixes the seed appends (triangular `sum(1..N)`
+opens) into "scan" and must not be used.
+
+### Call sites (scan-phase data-manifest `openat` each contributes)
+
+| Site | Opens | Why |
+|---|---|---|
+| `TargetScanStream::execute` → `planned_or_plan` → iceberg `TableScan::plan_files` (`scan/mod.rs:669`) → `ObjectCache::get_manifest` (`object_cache.rs:136`) → `ManifestFile::load_manifest` (`manifest_list.rs:845`) → `FileIO::read` | **1 × N** | one cache fill per data manifest; one `openat` |
+| `plan_files` prune vs tasks | 0 extra | same `ObjectCache` entry |
+| `record_scanned_partitions` (`target_scan.rs`) | 0 | in-memory `FileScanTask` walk |
+| partition-sink drain | 0 | in-memory map take |
+| DataFusion `ListingTable` / statistics | 0 extra manifests | N parquet data-file opens, not `*-m0.avro` |
+| DV close / `plan_deletion_vectors` (fork F-23) | **0** | complete `known_partitions`; loads the manifest **list** only |
+| `validate_fresh_dvs_only` (`row_delta_fresh_dv.rs:56`, `load_manifest` not through the scan `ObjectCache`) | 0 in scan; **1 × N in commit** | `PERF-DVCLOSE-STMT-1` / F-25; not this unit |
+
+No contained < ~150-line fix removes one or two of three real-path scan reads: there is
+only one. An exact `== N` opens pin on the real DELETE is not landed (no drop to pin).
+The concurrent cache pin stays.
+
+### C-001 / C-004 errata
+
+- **C-001:** the production-path pins
+  `an_identity_delete_scan_reads_each_data_manifest_once` and
+  `a_merge_scan_reads_each_data_manifest_once` are **deleted**. `execute` runs once, so
+  those counts cannot go red. The load-bearing pin is
+  `three_concurrent_target_scan_executes_plan_data_manifests_once` (hardening).
+  `a_multi_manifest_identity_scan_records_the_touched_path` and
+  `execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table` stay (map equality
+  and row outcome).
+- **C-004:** registry `PERF-SCAN-3PASS-1` is **not FIXED**. Reverted to BACKLOG with the
+  strace and call-site tables. `STATUS.md` still does not name the row.
+
+### Corrected registry wording
+
+`PERF-SCAN-3PASS-1` BACKLOG. Production Spark identity DELETE is 1 + 0 + 1 data-manifest
+opens (scan / close / commit) at base and tip, N=8 and N=192. The plan-once cache is
+concurrent-`execute` hardening. Queued **PERF-SCAN-2** with the call-site table: this
+fixture is already 1 × N at scan; do not chase a 3 × N drop here. Remaining commit 1 × N
+stays `PERF-DVCLOSE-STMT-1` / F-25.
+
+### Round-2 gates
+
+| Gate | Exit |
+|---|---|
+| `write::merge::tests::` after pin deletion | 0 (129 passed; two dead count pins removed) |
+| `cargo clippy -p repark-iceberg --lib -- -D warnings` | 0 |
+| `make verify` | 0 |
+| `make check-map-sync` | 0 |
+| `make check-ledger-grammar` | 0 |
+| `make check-ledgers` | 0 |
+| `make check-docs-compaction` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
+| `uvx typos@1.47.2` (touched paths) | 0 |
+| `cargo deny check` | 0 |
+
+`make develop` / facade pytest not re-run: no Python or binding change. Round-1 already recorded them.

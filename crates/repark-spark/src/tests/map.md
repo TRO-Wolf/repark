@@ -75,8 +75,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   48 / 192. Statement-wall medians in the RP-9 ledger; no wall-clock CI pin. The skip itself is
   the hide-and-succeed pin in `dv_close.rs`. Round 2: after `try_allowed_plain_identity` the
   same cell is the real Spark `DELETE WHERE id = 0` path; close-phase opens are zero (hide
-  pin); remaining scan 3× collapsed by PERF-SCAN-1 (plan once); commit 1× lives in
-  `PERF-DVCLOSE-STMT-1`.
+  pin). PERF-SCAN-1 r2 strace of this cell: scan-to-puffin 1 × N data-manifest opens,
+  close 0, commit 1 × N (`PERF-DVCLOSE-STMT-1`). The RP-9 3 × N scan-phase claim is not
+  reproduced on this path. `PERF-SCAN-3PASS-1` stays BACKLOG.
   pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: rp-8-repin-f21-f22/C-002, C-003
   pins: rp-9-repin-f23/C-003, C-005
