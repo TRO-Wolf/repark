@@ -1112,8 +1112,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_df_easy.py` — **R-DF-EASY**: selectExpr/toDF/dtypes/printSchema/set-ops/crossJoin/offset/alias/describe/summary/replace/sample/randomSplit/colRegex/no-ops.
 - `test_df_printschema.py` — **DF-PRINTSCHEMA-1**: `printSchema` stdout byte-identical to
-  Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg.
-  pins: df-printschema-1-trailing-newline/C-002, C-004
+  Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg;
+  red-first 4 red of 4.
+  pins: df-printschema-1-trailing-newline/C-002, C-003, C-004
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + orphan GC path + leaves `__repark_ckpt_*`); StorageLevel cosmetic
