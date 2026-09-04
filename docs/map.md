@@ -110,6 +110,7 @@ repo.
   to a frozen row needs a major version and a one-minor deprecation shim; an unfrozen row may
   change at any minor with a changelog line) naming
   [design/v1-0-api-freeze.json](design/v1-0-api-freeze.json) as the frozen-surface register.
+  1.0.1 was the first patch (2026-09-04).
   pins: api-freeze/C-002
 
 ## I want to...
