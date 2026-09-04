@@ -49,9 +49,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   | `test_depth_one_with_keep_and_any_depth_without_keep_still_collect` | control: the clash needs a keep column AND depth ≥ 2 |
 
   pins: perf-dynflatten-1-measure/C-003
-- `test_parity_live.py::test_live_dynflatten_matches_spark_explode` — hands BOTH engines
-  `read.parquet` of one file; that symmetry surfaced `DYNFLATTEN-READNULL-1` (repark keeps a
-  parquet `required` column non-nullable, Spark widens it).
+- [test_parity_live_dynflatten.py](test_parity_live_dynflatten.py) — **PERF-DYNFLATTEN-1:**
+  the live dynamicFlatten legs, split out of `test_parity_live.py` when main's growth pushed
+  that module past its 1000-line ceiling (ceilings only move down).
+  `test_live_dynflatten_matches_spark_explode` hands BOTH engines `read.parquet` of one file;
+  that symmetry surfaced `DYNFLATTEN-READNULL-1` (repark keeps a parquet `required` column
+  non-nullable, Spark widens it). Co-collects with the disclosure legs on the shared
+  session-scoped `spark_engine`, which moved to `conftest.py` so one JVM serves both modules.
+  pins: perf-dynflatten-1-measure/C-002, C-003
   pins: perf-dynflatten-1-measure/C-002, C-003
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
@@ -78,10 +83,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark's Java union bracket (`[1, 0, 4]` / `[True, False, True]` / `'##bb##'`).
   pins: fn-fix-2-string-rows/C-003
   **FN-FIX-2-CTRL-1 (2026-09-04):** `[[:alpha:]x]` matches `'x'` and `'fox'` via
-  `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` refusal pinned on
+  `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` answer pinned (after FN-REGEXP-EXTRACT-1) on
   both doors (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED; Spark: `'alpha'`/`''`).
   Round 3: SQL `RLIKE` keyword refusal pinned (`test_sql_rlike_keyword_refuses`;
-  §7 FN-RLIKE-KEYWORD-1).
+  §7 FN-RLIKE-KEYWORD-1). Round 4 (FN-REGEXP-EXTRACT-1): the extract answer pin
+  cites `pins: fn-regexp-extract-1/C-002`.
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
   FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises
@@ -153,6 +159,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
   where Spark answers `r.a` (EX-COL-2).
   pins: ex-17-column-a/C-001
+- [test_examples_dataframe_d.py](test_examples_dataframe_d.py) — **EX-19 (2026-09-04):**
+  the three divergence pins for the DataFrame-d example batch — `withColumnsRenamed`
+  refusing duplicate final names where Spark answers the duplicate-named frame
+  (EX-DF-18), `stat.freqItems` refusing loudly where Spark answers the frequent-item
+  table (EX-DF-19), and the struct-valued `Row` field answering a dict where Spark
+  keeps the nested `Row` (EX-ROW-1). The module docstring names the row span.
+  pins: ex-19-dataframe-d-window/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1281,7 +1294,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **U2:** `1.0`/`3.0`/`6.0` CAST to DOUBLE so the column stays Float64 (bare literals
   mixed with `CAST(NULL AS DOUBLE)` became decimal avg).
 - `conftest.py` — autouse fixture clearing the process-wide `getOrCreate` active-session
-  registry around every test (WU-4 isolation).
+  registry around every test (WU-4 isolation), and the session-scoped `spark_engine` live
+  oracle. That fixture lives here rather than in a test module so every live module shares ONE
+  JVM: a fixture imported into a second module would register a second definition and build a
+  second session. `spark_iceberg_engine` stays in `test_parity_live.py` (single consumer).
+  pins: perf-dynflatten-1-measure/C-002
 - `test_create_dataframe_materialize.py` — R-PERF-VALUES / R-PERF-ARROW-CDF / **P1a** /
   **P2a**: createDataFrame materializes once (list/Row/pandas/polars/schema=int32; second
   action cheap; count correct); structural pins prefer `register_arrow_stream_as_temp_view`
@@ -2390,6 +2407,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   oracle); ANSI conf applied via reversible `lp.spark_session_conf`. Round 3: NULL
   `ltrim` / `rtrim` cells and the `RLIKE`-keyword Spark oracle cells.
   pins: fn-fix-2-ctrl-1-controls/C-002
+  **FN-REGEXP-EXTRACT-1:** `test_live_fn_regexp_extract` on the same `spark_engine`
+  (oracle row plus repark co-collect on both doors; round 2: ANSI-off cells via
+  `lp.spark_session_conf` — non-match `''` triple plus matching-input error cells).
+  pins: fn-regexp-extract-1/C-002, C-004
   **PERF-DYNFLATTEN-1:** `test_live_dynflatten_matches_spark_explode` co-collects
   beside `test_live_disclosure_still_diverges` on the shared `spark_engine`
   (struct_d3 / list_struct_1 / cartesian_two_lists at 16 rows).
@@ -2407,6 +2428,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   does not match the exact spelling reds loud naming the line, rather than reading as zero matches
   — otherwise a row could advertise a drift detector nobody checks. Registry §6 documents that
   spelling for row authors; the regex and the doc move together.
+  FN-REGEXP-EXTRACT-1 (2026-09-04): `test_live_fn_regexp_extract` co-collects with the printSchema and
+  FN-FIX-2 legs after the merge of main; it keeps the `skipif(not lp.LIVE)` guard like every live leg.
 - `test_ta_volume.py` — **TA-4 (2026-08-15):** volume-family facade (`ad`/`adosc`/`obv`/`mfi`)
   through the DataFrame door. The 5000-row OHLC + `fixture_volume` golden is written to Parquet
   and `read_parquet`-ed; each indicator `.over(orderBy(ts))` is `to_bits`-identical to the
@@ -2649,6 +2672,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
   empty-matching pattern so the shared `Matcher.find()` walk cannot drift between them.
+
+- `test_fn_regexp_extract.py` — **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract`
+  on both doors against the live PySpark 4.1.2 oracle table (groups, default/whole-match idx,
+  `''` on no match, NULL-in NULL-out, `REGEX_GROUP_INDEX` naming `regexp_extract`, POSIX union,
+  `\p{L}`, non-ASCII/empty edges, lookbehind refusal; round 2: non-matching input answers
+  `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
 
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,

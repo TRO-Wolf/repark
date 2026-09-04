@@ -24,6 +24,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::spark_regexp::regexp_count_udf(),
         crate::spark_regexp::regexp_instr_udf(),
         crate::spark_regexp::regexp_extract_all_udf(),
+        crate::spark_regexp::regexp_extract_udf(),
         crate::spark_regexp::regexp_substr_udf(),
         crate::spark_regexp_match::regexp_like_udf(),
         crate::spark_regexp_match::rlike_udf(),

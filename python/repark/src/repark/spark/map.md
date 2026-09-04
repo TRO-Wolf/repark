@@ -46,6 +46,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-014, C-016
 - `functions_expr.py` — shared expression builders and scalar lowering.
+  FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
+  docstring is one line.
   SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`).
   LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not
   `log(1+col)` / `exp(col)-1`.
@@ -58,6 +60,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fn-fix-1-registry-rows/C-002
   **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
   `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the
+  kernel (bare pattern forced-lit, optional idx defaulting to 1).
+  pins: fn-regexp-extract-1/C-001
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).

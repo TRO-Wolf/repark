@@ -51,6 +51,10 @@ repo.
   ten runs) and deterministic at 11 in Spark 4.1.2 + Iceberg 1.11.0 (10 of 10) — BACKLOG,
   follow-up unit V3-11, pinned by the invariant rather than a flapping value.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001
+  **FN-REGEXP-EXTRACT-1 round 2 (2026-09-04):** §7 `FN-REGEX-LOOKAROUND-1` BACKLOG
+  (Spark `'bar'` vs repark refusal on every regexp kernel); `FN-REGEX-POSIX-1`
+  Controls rewritten (extract answers, former refusal pin superseded); facade
+  2-arg widening disclosed. pins: fn-regexp-extract-1/C-004
   Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin

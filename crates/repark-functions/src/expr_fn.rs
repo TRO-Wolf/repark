@@ -431,6 +431,11 @@ pub fn regexp_substr(str: Expr, regexp: Expr) -> Expr {
     call(crate::spark_regexp::regexp_substr_udf(), vec![str, regexp])
 }
 
+#[must_use]
+pub fn regexp_extract(args: Vec<Expr>) -> Expr {
+    call(crate::spark_regexp::regexp_extract_udf(), args)
+}
+
 /// Spark `bit_length(expr)` — byte-length × 8; stringifies non-binary (G5).
 #[must_use]
 pub fn bit_length(arg: Expr) -> Expr {

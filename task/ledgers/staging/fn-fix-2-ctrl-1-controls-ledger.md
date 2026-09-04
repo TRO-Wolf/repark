@@ -53,7 +53,7 @@ and the `F.like` API. `regexp_extract` group index past the last group raises
 | initcap `"Ünï_9 Ab"` → `"Ünï_9 AB"` | 1 red of 1 (`test_fn_initcap_non_ascii_underscore_digit_boundaries`) |
 | chr `65536 → \x00` → `\x01` | 1 red of 1 (`test_fn_chr_zero_large_negative_null`) |
 | posix bracket `True` → `False` | 1 red of 1 (`test_bracket_posix_class_with_extra_literal_matches`) |
-| regexp_extract refusal `Invalid function` → `Valid function` | 2 red of 2 (`test_regexp_extract_refuses_on_both_doors`) |
+| regexp_extract refusal `Invalid function` → `Valid function` | 2 red of 2 (`test_regexp_extract_answers_on_both_doors`, renamed from `test_regexp_extract_refuses_on_both_doors` by FN-REGEXP-EXTRACT-1 merge `60ad77b0`) |
 | round-3: side-trim NULL `[None]` → `["abc"]` | 2 red of 2 (`test_fn_trim_null_charset_is_null[ltrim]`, `[rtrim]`) |
 | round-3: RLIKE refusal `sqltorel: RLike` → `sqltorel: Like` | 2 red of 2 (`test_sql_rlike_keyword_refuses[x]`, `[fox]`) |
 
@@ -67,7 +67,7 @@ FINDING:
   clause: [C-002]
   claim: Control 1 cannot pin equality because repark implements regexp_extract on neither door, while Spark answers 'alpha' and ''.
   evidence: scratch/oracle_repark.py repark/on/extract_alpha_from_alpha (UnsupportedOperationException, disclosed R-FN-BATCH1); scratch/oracle_spark2.py spark/on/extract_alpha_from_alpha ('alpha')
-  disposition: ACCEPTED_FLAGGED (round-3: the regexp_extract gap is untouched and queued as FN-REGEXP-EXTRACT-1; the both-doors refusal pin in test_fn_regex_posix_class.py::test_regexp_extract_refuses_on_both_doors is the flag; the SQL RLIKE keyword gap is filed as FN-RLIKE-KEYWORD-1 with its own refusal pin)
+  disposition: ACCEPTED_FLAGGED (round-3: the regexp_extract gap is untouched and queued as FN-REGEXP-EXTRACT-1; the both-doors refusal pin in test_fn_regex_posix_class.py::test_regexp_extract_refuses_on_both_doors is the flag; the SQL RLIKE keyword gap is filed as FN-RLIKE-KEYWORD-1 with its own refusal pin; round-4 note 2026-09-04: FN-REGEXP-EXTRACT-1 answered the gap, the flag pin is now test_fn_regex_posix_class.py::test_regexp_extract_answers_on_both_doors, disposition history otherwise unchanged)
 ```
 
 Queue: FN-REGEXP-EXTRACT-1 — build `regexp_extract` (Spark 4.1.2: group extraction, POSIX classes per FN-REGEX-POSIX-1, non-match → `''`).
@@ -77,7 +77,8 @@ Queue: FN-REGEXP-EXTRACT-1 — build `regexp_extract` (Spark 4.1.2: group extrac
 | Item | Path |
 |---|---|
 | Registry | `docs/spark-sql-iceberg-parity.md` §7 control notes on the six FN-FIX-2 rows + `FN-RLIKE-KEYWORD-1` |
-| Pins | six `python/repark/tests/test_fn_*.py` files (controls 2–7 equality; control 1 refusal both doors in `test_fn_regex_posix_class.py::test_regexp_extract_refuses_on_both_doors`); round-3 `test_fn_trim_null_charset_is_null` (`ltrim`/`rtrim` NULL both doors) and `test_sql_rlike_keyword_refuses`; control 1 + RLIKE Spark oracle cells in `test_parity_live.py` |
+| Pins | six `python/repark/tests/test_fn_*.py` files (controls 2–7 equality; control 1 answer pin both doors in `test_fn_regex_posix_class.py::test_regexp_extract_answers_on_both_doors`, flipped from the refusal pin by FN-REGEXP-EXTRACT-1 merge `60ad77b0`); round-3 `test_fn_trim_null_charset_is_null` (`ltrim`/`rtrim` NULL both doors) and `test_sql_rlike_keyword_refuses`; control 1 + RLIKE Spark oracle cells in `test_parity_live.py` |
+| Finding flag | F-FN-FIX-2-CTRL-1-1's refusal flag superseded by FN-REGEXP-EXTRACT-1 (2026-09-04): FN-FIX-2-CTRL-1 merged as `9e1a057`, `regexp_extract` answers on both doors, registry `FN-REGEX-POSIX-1` Controls rewritten; finding disposition stays ACCEPTED_FLAGGED |
 | Live legs | `test_parity_live.py::test_live_fn_fix_2_strings`, `::test_live_fn_fix_2_regex_like` on `spark_engine` (ANSI-off legs via `lp.spark_session_conf`) |
 | Maps | `task/ledgers/staging/map.md`, `python/repark/tests/map.md` lockstep |
 
