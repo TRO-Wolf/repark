@@ -1,7 +1,7 @@
 # dynamicFlatten baseline (PERF-DYNFLATTEN-1)
 
-Measured 2026-09-04 on this clone. Not an H-3b hard-gated baseline (reference-host
-choice still blocks that). Native module is **release**.
+Measured 2026-09-04 on this clone. Not an H-3b hard-gated baseline: the reference-host choice
+is still open, and this host was **not idle** (see "What this baseline is not").
 
 pins: perf-dynflatten-1-measure/C-003, C-004
 
@@ -12,106 +12,158 @@ pins: perf-dynflatten-1-measure/C-003, C-004
 | cpu | AMD Ryzen Threadripper 3970X 32-Core (64 threads) |
 | governor | schedutil |
 | ram | 125.7 GiB |
-| native | `release_or_stripped size_bytes=162505344` |
-| build line | `maturin develop --release` → `Finished \`release\` profile [optimized]` |
+| native | `release_or_stripped size_bytes=163093528` |
+| release proof | `repark._native.__debug_assertions__ is False` — the runner refuses to write a report otherwise |
 | repark | 1.0.1 |
 | pyspark | 4.1.2 |
 | JAVA_HOME | `zulu-17-amd64` |
 | TZ | UTC |
 | seed | 42 |
-| load path | Arrow parquet → `createDataFrame` (see `DYNFLATTEN-QUALNAME-1`) |
 
-Every number below is a release number. A debug (`make develop`) module is 637 MB
-against this module's 162 MB and inflates the rewrite so far that the ranking
-inverts: `struct_d6` measured 5.88× Spark in debug and 0.33× in release. Debug
-numbers are not evidence for this unit and are not carried here.
+## How the two engines are compared
 
-## 1e5 fixtures (quick; 3 iterations, 1 warmup; repark cell = one subprocess)
+Both engines are given the **same materialized input** and the timed region is
+**flatten + collect only**, so neither pays for a parquet scan the other avoids:
 
-| shape | rows_in | repark_ms | rewrite_ms | execute_ms | rss_MiB | spark_ms | ratio | rows_out |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| struct_d3 | 100000 | 19.1 | 0.23 | 18.9 | 359 | 198.8 | 0.10 | 100000 |
-| struct_d6 | 100000 | 69.5 | 0.38 | 69.2 | 388 | 209.4 | 0.33 | 100000 |
-| list_struct_1 | 100000 | 30.7 | 0.21 | 30.5 | 370 | 208.7 | 0.15 | 100000 |
-| list_struct_8 | 100000 | 38.3 | 0.35 | 38.0 | 858 | 364.1 | 0.11 | 589888 |
-| list_struct_64 | 100000 | 109.8 | 0.34 | 109.4 | 3483 | 1968.5 | 0.06 | 4505338 |
-| cartesian_two_lists | 100000 | 76.0 | 0.36 | 75.6 | 646 | 653.9 | 0.12 | 961708 |
-| null_typed_list | 100000 | 8.2 | 0.18 | 8.0 | 336 | 171.7 | 0.05 | 100000 |
+| | repark | Apache Spark |
+|---|---|---|
+| input | `createDataFrame` of the parquet (in memory) | `read.parquet(...).cache()` then `.count()` |
+| timed | `dynamicFlatten()` + `to_arrow()` | `explode`/struct expand + `toArrow()` |
+| threads | `spark.sql.shuffle.partitions = 8` | `local[8]` |
 
-`ratio` is repark ÷ Spark: repark is faster than Spark on every 1e5 fixture in
-release. `rss_MiB` is the repark cell's process peak; the Spark column has no RSS
-because one JVM serves every fixture.
+Thread parity is the point of the second row. repark's DataFusion default is
+`target_partitions = 64` on this box, which is not a fair comparison against `local[1]`; both
+engines are pinned to 8. The `allcores` column reports repark at its 64-thread default **for
+information only** — it is not the comparison, and it is frequently *slower* than 8 threads.
 
-Walk counts are schema-only (Rust pins; independent of row count):
+5 iterations, 1 warmup, one subprocess per repark cell. Median and min are both reported
+because the medians move under load.
+
+## 1e5 fixtures
+
+| shape | iso | repark_med | repark_min | rewrite | spark_med | spark_min | ratio | allcores | rows_out |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| struct_d3 | | 25.4 | 24.5 | 0.20 | 154.7 | 136.1 | 0.16 | 24.0 | 100000 |
+| struct_d6 | | 66.7 | 65.1 | 0.24 | 161.1 | 143.9 | 0.41 | 70.4 | 100000 |
+| list_struct_1 | | 30.6 | 28.9 | 0.23 | 182.2 | 158.8 | 0.17 | 35.1 | 100000 |
+| list_struct_8 | | 43.3 | 41.5 | 0.35 | 274.5 | 271.6 | 0.16 | 40.7 | 589888 |
+| list_struct_64 | | 141.5 | 104.6 | 0.33 | 531.6 | 506.6 | 0.27 | 113.8 | 4505338 |
+| cartesian_two_lists | | 90.2 | 71.2 | 0.41 | 550.7 | 503.8 | 0.16 | 74.2 | 961708 |
+| null_typed_list | | 11.7 | 9.0 | 0.13 | 130.0 | 120.7 | 0.09 | 9.3 | 100000 |
+| struct_d3_nonull | y | 2.3 | 2.3 | 0.13 | 77.6 | 73.2 | 0.03 | — | 100000 |
+| struct_d6_nonull | y | 6.7 | 6.5 | 0.22 | 100.4 | 90.8 | 0.07 | — | 100000 |
+| cartesian_legs_only | y | 37.1 | 33.5 | 0.33 | 199.5 | 189.2 | 0.19 | — | 310150 |
+| cartesian_tags_only | y | 26.6 | 20.2 | 0.43 | 159.0 | 145.4 | 0.17 | — | 310150 |
+
+`iso` marks the isolation fixtures that exist only to subtract one cost from another; they are
+not part of any headline. On this fair footing repark is faster than Spark on every fixture
+(ratios 0.09–0.41), but see the caveat below before quoting that.
+
+## Noise floor
+
+The `struct_d3` cell was run 6 times back to back: 25.4, 26.6, 25.1, 26.3, 15.8, 26.5 ms.
+**Noise floor = 10.81 ms**, the spread of those medians. It is that wide because sibling lanes
+were loading the box (1-minute load average 25–45 during these runs).
+
+An earlier estimator used a single |A − B| of two medians. It is discarded: across two runs it
+produced 8.65 ms and 0.12 ms, and dividing by it flipped every verdict, once ranking a 0.95 ms
+cost as "queued" at 7.7×. A single difference is not a dispersion statistic.
+
+## Candidates, measured in isolation
+
+Each candidate is timed as **itself**, not as the wall of the fixture family that contains it:
+
+| candidate | how it is isolated | cost | ×noise | verdict |
+|---|---|---:|---:|---|
+| null_mask_struct_extractor | struct fixtures at 30 % null parents **minus** the same fixtures at 0 % nulls | 82.99 ms | 7.7 | **queued** |
+| cartesian_multi_list_operator | two-list fixture **minus** (legs-only + tags-only) | 26.91 ms | 2.5 | **not worth it** |
+| optimizer_wrapper_walks | rewrite wall over struct_d3, struct_d6, cartesian | 0.85 ms | 0.1 | **not worth it** |
+
+A candidate is **queued only when its isolated cost exceeds the noise floor by 3×**. There is
+no share-of-wall cliff; a percentage of a fixture's wall is not that candidate's cost.
+
+Reproducibility across three independent runs of the whole battery:
+
+| candidate | run A | run B | run C | stable? |
+|---|---:|---:|---:|---|
+| null_mask_struct_extractor | 77.38 | 75.66 | 82.99 | yes (±5 %) |
+| cartesian_multi_list_operator | 6.09 | 16.64 | 26.91 | **no** (4× spread) |
+| optimizer_wrapper_walks | 0.98 | 0.95 | 0.85 | yes |
+
+Only `null_mask_struct_extractor` is both large and reproducible, and it is the one unit this
+measurement queues. Null-parent handling dominates the struct path: `struct_d3` costs 25.4 ms
+at 30 % nulls and 2.3 ms at 0 %, an 11× difference on the same rows and schema.
+
+`cartesian_multi_list_operator` is **not** queued, reversing an earlier reading that ranked it
+second on 21.5 % of fixture wall. Isolated, the second Unnest adds 6–27 ms — the same order as
+the 10.81 ms floor. Not shown to be worth a unit, not shown to be free: re-measure on a quiet
+host before closing it for good.
+
+## 1e6 repark cells (5 iterations, 1 warmup, 8 threads)
+
+| shape | repark_med | repark_min | rewrite | rows_out | peak_rss_GiB |
+|---|---:|---:|---:|---:|---:|
+| struct_d3 | 51.9 | 32.4 | 0.28 | 1000000 | 1.4 |
+| struct_d6 | 149.5 | 139.1 | 0.43 | 1000000 | 1.5 |
+| list_struct_1 | 172.5 | 129.1 | 0.33 | 1000000 | 1.4 |
+| list_struct_8 | 194.4 | 179.8 | 0.38 | 5899069 | 5.1 |
+| list_struct_64 | — | — | — | — | skipped: 1e5 already yields 4505338 rows / 3.5 GiB, so 1e6 is ≈ 45e6 rows / ≈ 35 GiB |
+| cartesian_two_lists | 276.0 | 257.4 | 0.46 | 9604966 | 3.3 |
+| null_typed_list | 27.0 | 24.6 | 0.32 | 1000000 | 1.3 |
+
+The rewrite stays 0.28–0.46 ms across a 10× row count: it is schema-bound, the wall is
+execution-bound. That, not its share of any total, is why the walk candidate is closed.
+
+## Walk counts (schema-only Rust pins)
 
 | shape | rewrite_passes | schema_walks | struct_expansions | list_explodes | unnest_nodes |
 |---|---:|---:|---:|---:|---:|
 | struct_d3 | 4 | 10 | 3 | 0 | 0 |
 | cartesian_two_lists | — | — | 0 | 2 | 2 |
 
-Mutation (run 2026-09-04): delete the `has_struct_columns` walk → `schema_walks`
-falls 10 → 6 and `flatten_stats_depth_three_struct_counts_repeated_schema_walks`
-reds, **1 red of 2** under `cargo test -p repark-core flatten_stats`. The sibling
-Unnest pin stays green, so the counter is walk-specific, not a blanket assertion.
+Mutation (run 2026-09-04): delete the `has_struct_columns` walk → `schema_walks` 10 → 6 and
+`flatten_stats_depth_three_struct_counts_repeated_schema_walks` reds, **1 red of 2**. The
+sibling Unnest pin stays green, so the counter is walk-specific.
 
-## 1e6 repark cells (one shot, warmup 0, iterations 1)
+## Row-set equality vs Spark explode+struct expand
 
-| shape | repark_ms | rewrite_ms | rows_out | peak_rss_GiB | note |
-|---|---:|---:|---:|---:|---|
-| struct_d3 | 60.9 | 0.45 | 1000000 | 1.4 | |
-| struct_d6 | 148.0 | 0.48 | 1000000 | 1.5 | |
-| list_struct_1 | 114.0 | 0.51 | 1000000 | 1.4 | |
-| list_struct_8 | 229.8 | 0.56 | 5899069 | 5.0 | |
-| list_struct_64 | — | — | — | — | skipped: 1e5 already yields 4505338 rows / 3.5 GiB, so 1e6 is ≈ 45e6 rows / ≈ 35 GiB |
-| cartesian_two_lists | 303.0 | 0.57 | 9604966 | 3.3 | |
-| null_typed_list | 35.9 | 0.43 | 1000000 | 1.3 | |
-
-One shot with no warmup, so these carry more variance than the 1e5 medians; they
-are here to show the shape of the curve, not to rank. The rewrite stays flat
-(0.43–0.57 ms) across a 10× row count, which is the point: the rewrite is
-schema-bound, the wall is execution-bound.
-
-## Gate (64 rows) row-set equality vs Spark explode+struct expand
-
-| shape | row_set_equal | why |
+| shape | equal | why |
 |---|---|---|
-| struct_d3 | True | |
-| struct_d6 | True | |
-| list_struct_1 | False | `DYNFLATTEN-LISTNULL-1` |
-| list_struct_8 | False | `DYNFLATTEN-LISTNULL-1` |
-| list_struct_64 | False | `DYNFLATTEN-LISTNULL-1` |
-| cartesian_two_lists | False | `DYNFLATTEN-LISTNULL-1` |
-| null_typed_list | False | `DYNFLATTEN-LISTNULL-1` |
+| struct_d3, struct_d6 | True | |
+| the other five | False | `DYNFLATTEN-LISTNULL-1`, one cause |
 
-Every False is the same single cause and nothing else: the five False shapes are
-exactly the five that carry a `user_properties ARRAY<VOID>` column, and the two
-True shapes are the two that do not. Measured at 16 rows: parquet holds
-`list<element: null>`; repark drops the column, Spark reads it as
-`ArrayType(IntegerType())` and `explode_outer` keeps it as an all-null `int32`.
-On the shared columns the two agree. Live co-collect is
-`test_live_dynflatten_matches_spark_explode` (`REPARK_PARITY_LIVE=1`, 3 shapes).
+The five False shapes are exactly the five carrying `user_properties ARRAY<VOID>`; the two
+True shapes are the two without it. Live co-collect is
+`test_live_dynflatten_matches_spark_explode`, which now hands **both** engines `read.parquet`
+of the same file — and that symmetry surfaced `DYNFLATTEN-READNULL-1`, which the earlier
+asymmetric pin had hidden.
 
-## Candidate ranking (share of repark 1e5 wall, total 351.6 ms)
+## Do not (binding)
 
-| rank | candidate | wall_share | verdict | evidence |
-|---:|---|---:|---|---|
-| 1 | null_mask_struct_extractor | 0.250 | **queued** PERF-DYNFLATTEN-2 | struct-shape execute 88.1 ms of 351.6 ms. `CASE WHEN parent IS NULL` per field. Projected: validity-bitmap extract. Not a <150-line contained fix. |
-| 2 | cartesian_multi_list_operator | 0.215 | **queued** PERF-DYNFLATTEN-2 | cartesian execute 75.6 ms of 351.6 ms; two sequential Unnests. Zip/pad is not a substitute. Projected: one Cartesian operator. Not a <150-line contained fix. |
-| 3 | optimizer_wrapper_walks | 0.006 | **not worth it** | rewrite 2.1 ms of 351.6 ms, and flat at 1e6. Depth-3 pin: 10 walks, 4 passes, 3 expansions. |
+1. Do not open an implementation unit for `optimizer_wrapper_walks`. Measured at 0.85 ms and
+   flat at 1e6.
+2. Do not substitute DataFusion multi-column Unnest zip/pad for sequential Cartesian
+   expansion. It changes the row set.
+3. Do not quote a ratio against Spark without stating the thread count and that both engines
+   were handed a materialized frame. A `local[1]` Spark against a 64-thread repark is not a
+   comparison.
+4. Do not treat these numbers as an H-3b baseline or use them to gate a release.
+5. Do not close `DYNFLATTEN-QUALNAME-1` by changing the bed.
 
-The release ranking is not the debug ranking: on debug the top two tied at 0.233
-each, and release separates them (0.250 / 0.215) while dropping the walk share
-from 0.002 to 0.006. Ranks 1 and 2 swap. No product optimization lands in this
-unit; both are queued as PERF-DYNFLATTEN-2.
+## What this baseline is not
+
+The host ran 3–4 sibling lanes throughout (load average 25–45, other JVMs and cargo builds
+live). The floor is measured and reported rather than assumed away; the one queued candidate
+clears it by 7.7× and survives the contention. Anything within one order of the floor — the
+Cartesian candidate especially — needs a quiet host before it is called either way.
 
 ## How to reproduce
 
 ```bash
 cd python/repark && maturin develop --release
 cd ../.. && python python/repark-parity/bench/dynflatten/run_dynflatten.py \
-  --scale quick --out /tmp/oc-dynflatten-bed \
-  --json /tmp/oc-dynflatten-bed/run.json
+  --scale quick --out /tmp/oc-dynflatten-bed --json /tmp/oc-dynflatten-bed/run.json
 ```
 
-`make dynflatten-bench` runs `--scale gate` (`SCALE=quick` for this table) and
-writes its rendered report under the bed, not over this note.
+The runner raises rather than writing a report if the native module is a debug build.
+`make dynflatten-bench` runs `--scale gate` and writes its rendered report under the bed.

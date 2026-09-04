@@ -21,14 +21,11 @@ Restated for a mixed queue:
 4. **Gate alone.** `make preflight` runs by itself and its own exit code is read immediately.
 5. **`map.md` in lockstep, in the same commit.** Not a follow-up.
 6. **One group at a time**, manual PR, owner merges.
-7. **Pickup ritual first, departure edit last.** First act of a unit: fetch, confirm the prior
-   unit's PR merged and that the local base carries its departure edit, `make ledger-archive`
-   (zero tokens), run the drift checks (`make check-map-sync`, `make check-ledgers`), and
-   compact the context docs **against the just-merged delta only**, as a docs-only first commit.
-   Last commit of the unit: STATUS trued up for what this unit changed and nothing else (a
-   campaign the owner ruled closed gets `state=closed` on its marker, no prose), the unit's
-   ledger `move`d from `task/ledgers/staging/` to `completed/` — which removes it from this
-   file — `map.md` in lockstep. No departure line for the unit, here or anywhere.
+7. **Pickup ritual first, departure edit last.** See
+   [../.agents/skills/compact-context-docs/SKILL.md](../.agents/skills/compact-context-docs/SKILL.md):
+   fetch, confirm the prior PR merged, `make ledger-archive`, drift checks, compact against the
+   merged delta only. Last commit: STATUS trued up for this unit alone, the ledger `move`d to
+   `completed/` (which removes it from this file), `map.md` in lockstep.
 
 ---
 
@@ -41,7 +38,7 @@ Restated for a mixed queue:
 | 3 | **PERF-SCAN-1** — collapse the 3× `plan_files` identity-DELETE scan (`PERF-SCAN-3PASS-1`) | Performance | none | STANDARD <!-- unit id=perf-scan-1 --> |
 | 4 | **SQL-HARDEN-1** — cutover SQL shapes vs Spark on Glue + S3 Tables | Hardening / H-2 | none | STANDARD <!-- unit id=sql-harden-1 --> |
 | 5 | **FN-FIX-2** — `FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1` | Function parity | none | STANDARD <!-- unit id=fn-fix-2 --> |
-| 6 | **dynamicFlatten measure** — the three H-3 candidates in the 2026-08-31 intake | Performance | none (measure-only) | STANDARD <!-- unit id=dynamic-flatten-measure --> |
+| 6 | **PERF-DYNFLATTEN-2** — null-mask struct extract and the Cartesian multi-list operator | Performance | PERF-DYNFLATTEN-1 (measured) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
 | 7 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
 | 8 | **Cutover inventory** — which workloads move, in what order, under single-writer-per-table | Cutover | SQL-HARDEN-1 | STANDARD <!-- unit id=cutover-inventory --> |
 | 9 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |
@@ -72,9 +69,12 @@ cutover inventory.
 **Why FN-FIX-2 before FNP-9/10.** Six filed rows the example campaign left on the backlog.
 <!-- /unit -->
 
-<!-- unit id=dynamic-flatten-measure -->
-**Why measure dynamicFlatten now.** Three H-3 candidates in the 2026-08-31 intake; measure
-before any implementation unit.
+<!-- unit id=perf-dynflatten-2 -->
+**Why PERF-DYNFLATTEN-2.** PERF-DYNFLATTEN-1 isolated each H-3 candidate against a measured
+noise floor: null-mask struct extract and the Cartesian operator clear it, the optimizer-walk
+candidate does not and is closed. Sequential Cartesian expansion must survive; zip/pad is not a
+substitute. Numbers and the binding do-not list:
+[../docs/perf/dynamic-flatten-baseline.md](../docs/perf/dynamic-flatten-baseline.md).
 <!-- /unit -->
 
 <!-- unit id=ex-batches -->

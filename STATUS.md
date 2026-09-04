@@ -126,10 +126,13 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
-- **Performance campaign (measure-first).** dynamicFlatten 1e5 **release** baseline
-  [docs/perf/dynamic-flatten-baseline.md](docs/perf/dynamic-flatten-baseline.md):
-  walks 0.6% not worth it; null-mask struct 25% and cartesian 22% queued as
-  PERF-DYNFLATTEN-2. `unsafe` remains workspace-forbidden.
+- **Performance campaign (measure-first).** dynamicFlatten release baseline
+  [docs/perf/dynamic-flatten-baseline.md](docs/perf/dynamic-flatten-baseline.md), candidates
+  timed in isolation against a measured 10.81 ms noise floor: null-mask struct extract
+  82.99 ms (7.7x) queued as PERF-DYNFLATTEN-2; the Cartesian operator (26.91 ms, 2.5x, not
+  reproducible across runs) and the optimizer walks (0.85 ms) are not. Implementation slates
+  are GATED on those numbers; the perf note's do-not list is binding. `unsafe` remains
+  workspace-forbidden.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
