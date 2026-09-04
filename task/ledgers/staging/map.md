@@ -9,6 +9,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   six silent string rows become Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
   `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
   pins: fn-fix-2-string-rows/C-001, C-002, C-003, C-004
+- [fn-fix-2-ctrl-1-controls-ledger.md](fn-fix-2-ctrl-1-controls-ledger.md) — **FN-FIX-2-CTRL-1
+  (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
+  missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
+  Spark-equal, control 1 (`regexp_extract`) HALTs on repark's missing function
+  (FINDING F-FN-FIX-2-CTRL-1-1, ruling pending). `risk_tier: standard`. Branch
+  `fix/fn-fix-2-ctrl-1-controls`. pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

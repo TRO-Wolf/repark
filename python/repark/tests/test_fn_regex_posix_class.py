@@ -1,5 +1,7 @@
 """FN-REGEX-POSIX-1: POSIX ``[[:alpha:]]`` is a Java union bracket."""
 
+import pytest
+
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 
@@ -41,5 +43,31 @@ def test_rlike_posix_alpha_is_java_union() -> None:
             ).collect()
         ]
         assert replaced == ["#1b2 Ünï_9", "foo", "##bb##", "", None]
+    finally:
+        repark.stop()
+
+
+@pytest.mark.parametrize("value", ["x", "fox"])
+def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
+    """FN-REGEX-POSIX-1: '[[:alpha:]x]' matches 'x', 'fox'. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-regex-bracket").master("local[1]").getOrCreate()
+    try:
+        frame = repark.createDataFrame([(value,)], ["s"])
+        rlike_values = [
+            row["m"]
+            for row in frame.select(F.rlike(F.col("s"), F.lit("[[:alpha:]x]")).alias("m")).collect()
+        ]
+        assert rlike_values == [True]
+        like_values = [
+            row["m"]
+            for row in frame.select(
+                F.regexp_like(F.col("s"), F.lit("[[:alpha:]x]")).alias("m")
+            ).collect()
+        ]
+        assert like_values == [True]
+        sql_values = [
+            row[0] for row in repark.sql(f"SELECT regexp_like('{value}', '[[:alpha:]x]')").collect()
+        ]
+        assert sql_values == [True]
     finally:
         repark.stop()
