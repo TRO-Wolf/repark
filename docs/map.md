@@ -34,7 +34,7 @@ repo.
   Spark's behavior with its oracle basis, the `path::test_name` that pins it, the rationale) and
   two classes — DECLARED (§2 statement-surface gaps by surface, §3 identifier resolution, §4 type
   and value semantics, §5 facade drop-in semantics) and BACKLOG (§7 "Known Spark-parity
-  divergences"; `MOR-1` retired 2026-08-23 / RP-1). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
+  divergences"; `MOR-1` retired 2026-08-23 / RP-1; `CTAS-VIEW-1` FIXED 2026-09-03). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
   neither restates the other. §8 is the drop-in disclosure rationale table. §9 is FNP-15/16
   declared-absent Spark functions (unreachable vs deferred-by-cost). pins: fnp-15-16/C-014

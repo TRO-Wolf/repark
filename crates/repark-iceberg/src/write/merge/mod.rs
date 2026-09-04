@@ -28,7 +28,6 @@ use iceberg::expr::Predicate;
 use iceberg::spec::{
     DataFile, DataFileFormat, FormatVersion, ManifestContentType, PartitionKey, Struct,
 };
-// scan pruning residual filters use `iceberg::expr::Predicate` via `scan_prune`
 use iceberg::table::Table;
 
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
@@ -61,6 +60,7 @@ pub(crate) use target_scan::{
 };
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
+use crate::write::conform::{conform_batch_retaining_unmapped_columns, write_default_column_names};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
@@ -1551,8 +1551,12 @@ where
             "repark.write.max-concurrent-files must be >= 1 (got {max_concurrent})"
         )));
     }
-
-    // Validate format once before opening any writer.
+    let current_schema = table.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed = stream.map(move |item| {
+        conform_batch_retaining_unmapped_columns(&write_schema, &write_default_columns, &item?)
+    });
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
@@ -1561,16 +1565,12 @@ where
             "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
         )));
     }
-
-    // Build one unpartitioned writer (shared construction path for serial + each parallel worker).
     let build_writer = || async { build_unpartitioned_data_file_writer(table).await };
-
     if max_concurrent == 1 {
         let writer = build_writer().await?;
-        return write_stream_into(ForkBatchWriter { inner: writer }, stream).await;
+        return write_stream_into(ForkBatchWriter { inner: writer }, conformed).await;
     }
-
-    write_stream_into_parallel(max_concurrent, stream, build_writer).await
+    write_stream_into_parallel(max_concurrent, conformed, build_writer).await
 }
 
 /// Open one unpartitioned Parquet `DataFileWriter` for `table` (unique file-name UUID per call).

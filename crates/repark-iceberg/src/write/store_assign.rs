@@ -20,7 +20,8 @@ pub(crate) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
 /// Spark `Cast.canANSIStoreAssign`, translated to Arrow types.
 pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
-        Binary, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8, Utf8View,
+        Binary, BinaryView, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8,
+        Utf8View,
     };
     if src == dst {
         return true;
@@ -39,7 +40,15 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
         t.is_numeric()
             || matches!(
                 t,
-                Boolean | Utf8 | LargeUtf8 | Utf8View | Binary | LargeBinary | Date32 | Date64
+                Boolean
+                    | Utf8
+                    | LargeUtf8
+                    | Utf8View
+                    | Binary
+                    | BinaryView
+                    | LargeBinary
+                    | Date32
+                    | Date64
             )
             || matches!(t, Timestamp(_, _))
     };
@@ -58,8 +67,9 @@ pub(crate) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     {
         return true;
     }
-    // Binary width variants.
-    if matches!(src, Binary | LargeBinary) && matches!(dst, Binary | LargeBinary) {
+    if matches!(src, Binary | BinaryView | LargeBinary)
+        && matches!(dst, Binary | BinaryView | LargeBinary)
+    {
         return true;
     }
     false
@@ -144,12 +154,16 @@ mod tests {
     /// The positive controls the non-MERGE gate must NOT break.
     #[test]
     fn widening_null_fill_and_atomic_to_string_stay_assignable() {
-        use DataType::{Date32, Float64, Int32, Int64, Null, Utf8, Utf8View};
-        assert!(ansi_store_assignable(&Int32, &Int64)); // widening
+        use DataType::{
+            Binary, BinaryView, Date32, Float64, Int32, Int64, LargeBinary, Null, Utf8, Utf8View,
+        };
+        assert!(ansi_store_assignable(&Int32, &Int64));
         assert!(ansi_store_assignable(&Int64, &Float64));
-        assert!(ansi_store_assignable(&Null, &Int32)); // NULL-fill
-        assert!(ansi_store_assignable(&Date32, &Utf8)); // atomic → string
-        assert!(ansi_store_assignable(&Utf8View, &Utf8)); // string width variant
+        assert!(ansi_store_assignable(&Null, &Int32));
+        assert!(ansi_store_assignable(&Date32, &Utf8));
+        assert!(ansi_store_assignable(&Utf8View, &Utf8));
+        assert!(ansi_store_assignable(&BinaryView, &Binary));
+        assert!(ansi_store_assignable(&BinaryView, &LargeBinary));
         assert!(ansi_store_assignable(
             &Date32,
             &DataType::Timestamp(TimeUnit::Microsecond, None)
