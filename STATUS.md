@@ -85,95 +85,53 @@ in published history by explicit decision:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
-<!-- ws id=dl ledgers=dl- state=open -->
-- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-5 delivered). Unit ledgers live in
-  [task/ledgers/](task/ledgers/map.md) by state; `scripts/ledger_lifecycle.py` is the only mover.
-  Three gates in `make ci` hold the class: `check-ledgers`, `check-ledger-grammar`,
-  `check-docs-compaction`. Policy: [AGENTS.md](AGENTS.md) "Markdown document lifecycle".
-  Records: [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
-<!-- /ws -->
-
-<!-- ws id=sem ledgers=sem- state=open -->
-- **The Spark semantics fixes (SEM)** (chartered 2026-08-21). #192/#193 delivered SEM-1/3/4/5/6
-  (`RE-1`/`RE-3` retired, `REGEX_GROUP_INDEX`, string-`idx`). Owner ruling 2026-08-31: both
-  silently-wrong answers fix to Spark. This unit closes `LOG-1` (Spark-door natural `log`,
-  dual-arity null-guard, `F.log` two-arg) and re-measures RE-1. `F.log` is an accept-more
-  superset of PySpark's (a column base accepted, keyword names differ) — ledger C-006,
-  oracle note under C-010.
-  Ledger: [task/ledgers/archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md](task/ledgers/archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md).
-<!-- /ws -->
-
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
 - **Format-v3 track** — **the v1.0 north star (owner ruling 2026-08-23): full production-grade
   format-v3.** Definition and gate:
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  - **Measured true (V3-0, [#199](https://github.com/TRO-Wolf/repark/pull/199)):** v3 DV reads
-    and lineage appends round-trip through Spark. **V3-5:** `V3-DANGLE-1` FIXED.
-  - **Delivered** — the north-star §3 matrix is the per-row home; this is the merge record.
-    V3-1 `register_table` + the v3 fixture ([#203](https://github.com/TRO-Wolf/repark/pull/203));
-    V3-2 opt-in CREATE/CTAS `format-version = 3`
-    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 adopted-v3 COW DML,
-    `ENC-1` DECLARED ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 partitioned-DV
-    and equality-delete fixtures ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1
-    recorded the 2026-08-25 owner rulings, every one now discharged; V3E-4 measured refs,
-    `VERSION AS OF` over DVs, expire dual-probe, orphan floor.
-    V3E-5 added the nightly v3 live-oracle leg
-    ([#253](https://github.com/TRO-Wolf/repark/pull/253)); first green nightly 2026-09-02.
-    RP-2 / RP-3 / RP-4 took the fork repins (`V3-ADOPT-1`, `V3-LINEAGE-1` FIXED); RP-6
-    (2026-09-01) lifts UPDATE. V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW
-    `_row_id` and delete the refusal seat — `V3-COW-1` **FIXED**.
-    **V3-4 (2026-08-31):** `_row_id` / `_last_updated_sequence_number` Spark-equal on
-    single-table v3 reads (`V3-ROWID-1` FIXED, `V3-ROWID-2` refuses the rest).
-    **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, append fills
-    from a schema-carried `write_default`, and DEFAULT DDL / `unknown` / binary `variant`
-    refuse Spark-equal (`V3-VARIANT-SHRED-1`).
-    **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
-    WHERE` on v3 write file-scoped Puffin DVs on three doors, created and adopted, Spark-equal
-    (`V3-MOR-1` FIXED). **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors
-    (`V3-UPGRADE-1` FIXED). **RP-7 (2026-09-02):** the fork repin to `ff4764d3` (F-18) makes the shared-Puffin
-    container close Spark-equal — `V3-DV-1` **FIXED**.
-    **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
-    (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
-    assertion. **V3-11 (2026-09-02):** one commit's data files reach the manifest in ascending
-    partition order, so the MoR MERGE insert's `_row_id` is deterministic and Spark-equal
-    (`V3-ROWID-3` FIXED); Spark's order is a Java `HashMap` bucket artefact, so wider
-    partition sets differ (`V3-FILEORDER-1` DECLARED).
-    **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
-    its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`). **RP-8 (2026-09-03):** repin to
-    `c1d6c9de` (F-19..F-22) — the close owns that merge in one manifest pass and `FanoutWriter`
-    drains ascending, so RePark's 493-line walk goes and `V3-UPGRADE-DV-PLAIN-1`,
-    `V3-UPGRADE-DV-PART-1`, `V3-COV-3`, `F-v3-10-partition-file-order` are **FIXED**.
-    **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 at the same knobs
-    — **96 delete files against v2's 400** and 496 data files against 1,696, because a v3 delete
-    is one Puffin vector per data file rewritten in place; the maintenance sequence ends at
-    **zero delete files and zero delete records** where v2 kept 8 files and 10,000,000 records,
-    and `rewrite_data_files` reclaims all 96 alone. The point probe reads at 0.64x v2 on a cell
-    whose copy-on-write control moved 1.00x; every write-side ratio is cross-run and
-    uncontrolled. Numbers:
-    [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
-  - **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
-    2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
-    pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
-    filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
-    FIXED 2026-09-03 (owner ruling: build); floor residue `B-MOR-3-FLOOR-1`.
+  **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg
+  ([#253](https://github.com/TRO-Wolf/repark/pull/253)); first green nightly 2026-09-02.
+  V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW `_row_id` — `V3-COW-1` **FIXED**.
+  **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, append fills
+  from a schema-carried `write_default`, and DEFAULT DDL / `unknown` / binary `variant`
+  refuse Spark-equal (`V3-VARIANT-SHRED-1`).
+  **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
+  WHERE` on v3 write file-scoped Puffin DVs, Spark-equal (`V3-MOR-1` FIXED).
+  **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors (`V3-UPGRADE-1` FIXED).
+  RP-7: shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**.
+  **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
+  (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
+  assertion. **V3-11 (2026-09-02):** same-commit data files ascend in the manifest, so the
+  MoR MERGE insert's `_row_id` is Spark-equal (`V3-ROWID-3` FIXED).
+  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` lower/upper
+  bounds, so `rewrite_data_files` selects the delete-laden file (residue `F-RDF1-1`).
+  **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 —
+  **96 delete files against v2's 400**; maintenance ends at
+  **zero delete files and zero delete records**. Numbers:
+  [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
+  **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
+  2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
+  pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
+  filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
+  FIXED 2026-09-03; floor residue `B-MOR-3-FLOOR-1`.
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
     `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`.
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. Then F-24
+    (min-input-files floor on the fork), F-25 → RP-10 (`PERF-DVCLOSE-STMT-1`), PERF-SCAN-1
+    (`PERF-SCAN-3PASS-1`), SQL-HARDEN-1 (cutover SQL shapes vs Spark on Glue + S3 Tables).
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
-  Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
-  perf note's §8 battery: kernel race, many-symbols scaling, wide serving SELECT, batch-size
-  sweep, null_lookback cost, last-row collect; plus flamegraph/heaptrack and a bench-only
-  safe-vs-unchecked ceiling microbench). Implementation slates (multi-slot cache, null-free
-  borrow, single Arrow write, short-partition early-out) are GATED on those numbers; the perf
-  note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
-  workspace-forbidden.
+  Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline.
+  Implementation slates are GATED on those numbers; the perf note's §7 do-not list is binding;
+  `unsafe` remains workspace-forbidden.
+  **Next:** the dynamicFlatten measurement (the three H-3 candidates in
+  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) "2026-08-31 dynamic-flatten intake").
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
@@ -183,46 +141,36 @@ in published history by explicit decision:
   [#192](https://github.com/TRO-Wolf/repark/pull/192), and
   [#193](https://github.com/TRO-Wolf/repark/pull/193)). Close the `pyspark.sql.functions` gap and
   move the semantics behind every name out of Python into Rust. Design:
-  [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md) (§7 carries the
-  unit table and the recommended order); slate:
+  [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); gate (12/12 `PROVEN`):
-  [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md);
-  evidence: [task/fnp-0-census/](task/fnp-0-census/map.md).
-  **Delivered:** `__all__` 333 → 360, 41 names from refusing-or-absent to working (FNP-1..6c).
-  **F-Y10-1 (2026-08-30):** integer
-  `+` / `-` / `*` raise `ARITHMETIC_OVERFLOW` where Spark raises; FNP-7b is unblocked.
-  **FNP-4c (2026-08-31):** ten higher-order names on the FNP-4a seam. **FNP-7a/7b (2026-08-31):**
-  twelve `try_*` inversions (NULL instead of raise). Remaining work ships as one coherent
-  PR per unit or tightly coupled pair. **FN-FIX-1 (2026-09-03):** ten rows Spark-equal;
-  residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
+  [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md).
+  **Delivered:** `__all__` 333 → 360, 41 names working (FNP-1..6c); F-Y10-1, FNP-4c, FNP-7a/7b.
+  Remaining work ships as one coherent PR per unit or tightly coupled pair.
+  **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
-  **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z.
-  Deferred with reasons in the design: FNP-4b, FNP-6d, FNP-13, FNP-14. This campaign and TA
-  performance consume no F-17 surface and may use fork-wait windows; neither gates v1.0.
+  **Next:** FN-FIX-2 (`FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`,
+  `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`), then **Next, in order (revised 2026-08-31):**
+  FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z. Deferred: FNP-4b, FNP-6d, FNP-13, FNP-14.
 <!-- /ws -->
 
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
 - **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at
   [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) —
-  optimization across the native door, the Spark facade and the write path with the verification
-  that proves each improvement. Design (goal, phases H-0…H-5, dated decisions):
-  [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
+  design: [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
   preserve-null Unnest removes redundant projections; adjacent candidates stay
-  measurement-gated. #30 (the dead doc-pointer sweep) merged.
+  measurement-gated. #30 merged.
+  **Next:** H-2 scoped to the cutover SQL (SQL-HARDEN-1) then the H-3 spill matrix.
 <!-- /ws -->
 
-<!-- ws id=dml ledgers=dml-,maint- state=open -->
-- **Iceberg DML remainder (v0.6)** — DML-B / DML-C / DML-A / MAINT delivered 2026-08-30/31; the
-  four units are described in [Release state](#release-state) above and in
-  [the registry](docs/spark-sql-iceberg-parity.md).
-  **REF (2026-09-01, RP-5):** writes to `t.branch_<name>` land (`REF-1` FIXED). WAP publish
-  procedures and `spark.wap.*` stay BACKLOG (`REF-3`). Reads were already Spark-equal (`REF-4`).
-  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` lower/upper
-  bounds, so the fork's delete-ratio clause sees a partition-granularity delete and
-  `rewrite_data_files` selects the delete-laden file (registry `RDF-1`; residue `F-RDF1-1`).
-  Ledger: [rp-5-fork-repin-ledger.md](task/ledgers/archive/2026-09/2026-09-01-rp-5-fork-repin-ledger.md).
+<!-- ws id=ex ledgers=ex- state=open -->
+- **Example campaign** (chartered 2026-08-31, v0.7 slate). Batches EX-2 and EX-4..EX-14 merged
+  2026-09-01..03. Static coverage 333 / 913 public names, 578 backlog, 2 exceptions, 83
+  examples. The packaged-wheel execution gate (`scripts/check_example_coverage.py
+  --require-execute` on the published wheel) is authoritative — it ran green on the 1.0.1
+  wheel 2026-09-04. Slate: [briefs/example-backfill.md](briefs/example-backfill.md).
+  **Next:** batches from the 578.
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
@@ -232,6 +180,7 @@ Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
 - **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
   insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
   done until those gates run.
+  **Next:** the dbt AWS gates (validate on the 1.0.1 wheel).
 <!-- /ws -->
 
 **Closed campaigns** — each record is in [docs/history/](docs/history/map.md); the rows below are
@@ -244,6 +193,9 @@ written by `scripts/ledger_lifecycle.py compact` when a workstream's marker says
 - **Python convention conformance (PYC)** — closed 2026-08-22 by #216; record: [docs/history/pyc/status-record.md](docs/history/pyc/status-record.md)
 - **Low-risk sweep (LRS)** — closed 2026-08-21 by #191; record: [docs/history/lrs/status-record.md](docs/history/lrs/status-record.md)
 - **Iceberg maintenance wave (MW)** — closed 2026-08-23 by #224; record: [docs/history/iceberg-maintenance-wave/status-record.md](docs/history/iceberg-maintenance-wave/status-record.md)
+- **Document lifecycle (DL)** — closed 2026-09-04 by #343; record: [docs/history/dl/status-record.md](docs/history/dl/status-record.md)
+- **The Spark semantics fixes (SEM)** — closed 2026-09-04 by #343; record: [docs/history/sem/status-record.md](docs/history/sem/status-record.md)
+- **Iceberg DML remainder (v0.6)** — closed 2026-09-04 by #343, shipped in v0.6.0; record: [docs/history/dml/status-record.md](docs/history/dml/status-record.md)
 
 ## Known correctness issues
 

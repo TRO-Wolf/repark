@@ -12,17 +12,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
-  its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
-  sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
-  Spark to 1) and `LOG-1` (the Spark door's `log` is base 10, Spark's is natural). Carries the
-  measured implementation scope for both: RE-1's single default site and its three collateral test
-  failures (two of which fail as runtime errors and appear in no other RE-1 document), LOG-1's need
-  for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
-  comes with it, and the two adjacent defects that should ride along. Both units change a computed
-  answer, so the gate wants a dated owner ruling before either writes code.
-  **Owner ruling 2026-08-31:** both rows fix to Spark. Delivery:
-  [sem-1-spark-answer-parity-ledger.md](../archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md).
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

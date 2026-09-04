@@ -1,7 +1,7 @@
 # Unit ledger — SEM-3 · `regexp_extract_all` accepts a string `idx`
 
 **Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `a07c4ec` (SEM-1) ·
-**Charter:** [sem-0-charter-ledger.md](../../staging/sem-0-charter-ledger.md)
+**Charter:** [sem-0-charter-ledger.md](../../completed/sem-0-charter-ledger.md)
 
 A regression, not a gap. `F.regexp_extract_all(s, pattern, "1")` raised where Spark, repark's own
 SQL door, and repark's own sibling `F.regexp_instr` all accept the string — so this repository
