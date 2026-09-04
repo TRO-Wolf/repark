@@ -71,18 +71,6 @@ file is empty.
 - [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
   snake_case spellings are repark extensions covered beside their camelCase twins; the
   tied-key ordered default frame stays a §7 divergence, EX-WIN-1).
-- `types/`, `ml/` — the remaining EX-1 families. They
-  are inventory families with no example yet; the backfill creates each
-  directory (and its `map.md`) with the first example it lands there.
-- [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22 lands the first 14
-  `DataFrameWriterV2` names; `overwrite` stays a backlog divergence, EX-W2-1).
-- [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.
-- [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
-  snake_case spellings are repark extensions covered beside their camelCase twins; the
-  tied-key ordered default frame stays a §7 divergence, EX-WIN-1).
-- [catalog/](catalog/map.md) — `Catalog.*` examples (EX-20: the first 18 roster names minus the
-  three measured divergences `getDatabase`/`get_database`, `listDatabases`, and the
-  `functionExists(name, dbName)` arm — EX-CAT-1..3); temp views only.
 - [types/](types/map.md) — `types.*` examples (EX-22: all 28 names; construction and display
   arms measured Spark-equal on live PySpark 4.1.2; `repark_type_to_arrow` /
   `struct_type_from_arrow` are repark extensions taught beside the mapped types).
