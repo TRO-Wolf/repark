@@ -98,4 +98,11 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: spark_regexp.rs held at 996 lines; functions_expr.py held at exact baseline 2261.
       artifacts: [scripts/check_rust_file_size.py, scripts/check_lib_py.py]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins cited in tests and maps; registry FN-REGEX-POSIX-1 controls line updated.
+      artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/map.md]
 ```
