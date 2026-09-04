@@ -55,7 +55,7 @@ measured on covered names are filed as §7 `EX-DF-11`…`EX-DF-17` with pins in
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Eleven files under `docs/examples/dataframe/` land runnable local examples for the 35 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 35 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 35, 550 → 515, with no other `scripts/` change; `toJSON` stays on the backlog with §7 rows `EX-DF-11`…`EX-DF-17` and pins in `python/repark/tests/test_examples_dataframe_c.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (35 findings before, 0 after), the oracle table (36 rows, one per roster name), the eleven scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Eleven files under `docs/examples/dataframe/` land runnable local examples for the 35 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 35 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 35 — 518 → 483 on the shipped tree (550 → 515 at the dispatch base, resolved through the EX-16 merge) — with no other `scripts/` change; `toJSON` stays on the backlog with §7 rows `EX-DF-11`…`EX-DF-17` and pins in `python/repark/tests/test_examples_dataframe_c.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (35 findings before, 0 after), the oracle table (36 rows, one per roster name), the eleven scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -88,7 +88,14 @@ JVM, throwaway `scratch/ex18-oracle/oracle_r2.py`. Unordered results compared as
 engines. **Round 3 (2026-09-04):** the example-coverage execute leg caught repark's
 `summary("count","mean","stddev")` collecting `[stddev, count, mean]` in a fresh process after
 three in-process collects had agreed — the multi-stat order is engine-arbitrary, so the example
-keeps only the single-stat arm and the divergence is filed as §7 `EX-DF-15`.
+keeps only the single-stat arm and the divergence is filed as §7 `EX-DF-15`. **Round 5
+(2026-09-04, critic round 2):** the three `sample` arms re-measured on both engines (five
+re-collect builds, ten fresh keyword builds, ten fresh positional builds, plus five
+keyword-fraction builds), a `hasattr` sweep over the roster's snake and camel spellings on
+PySpark 4.1.2 (all eleven snake spellings and `toArrowBatches` absent, `ATTRIBUTE_NOT_SUPPORTED`
+on access), the `subtract` NULL arm on an explicit bigint schema (Spark's inference refuses an
+all-`None` frame), and `summary("count","min","max")` on the NULL-column frame — one JVM,
+throwaway `scratch/ex18-oracle/oracle_r5.py` + `oracle_r5b.py`.
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
 |---|---|---|---|---|---|
@@ -98,19 +105,19 @@ keeps only the single-stat arm and the divergence is filed as §7 `EX-DF-15`.
 | `DataFrame.replace` | subset scalar/dict arms equal; no-subset arms: string values answered `[(1,'xx'),…]` / `[…,(9,'x'),…]`, numeric no-subset keeps `k` bigint | subset arms equal; no-subset: RAISED `PySparkException` cast error (string arm), recast `k` to double `[(1.0, 10.0), …]` | kept | `replace_sample.py` | example covers the subset arms; the no-subset and string arms are §7 `EX-DF-12` |
 | `DataFrame.rollup` | cols `['g', 'k', 'sum(v)']`; 8 grouping-set rows incl. `(None, None, 150.0)` | same | kept | `rollup_stat.py` | set compared; NULL marks rolled-up keys |
 | `DataFrame.sameSemantics` | self `True`; aliased twin `True`; identical recreate `False`; filtered twin `False` | self `True`; aliased twin `False`; recreate `False`; filter `False` | kept | `same_semantics.py` | example covers the agreeing arms; the alias arm is §7 `EX-DF-11` |
-| `DataFrame.same_semantics` | same as `sameSemantics` | same | kept | `same_semantics.py` | same callable |
-| `DataFrame.sample` | fraction 1.0 seed 1 answers all 6 rows | same | kept | `replace_sample.py` | fraction 0.5 seed 1: repark answers a stable 3-row set, Spark a different 4-row set — §7 `EX-DF-13` |
+| `DataFrame.same_semantics` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `sameSemantics` | kept | `same_semantics.py` | snake spelling, repark-only alias |
+| `DataFrame.sample` | fraction 1.0 seed 1 answers all 6 rows; seeded spellings (`fraction=0.5, seed=1`, `(False, 0.5, 1)`) answer the stable set `[(a, 2, 30.0), (b, 1, 50.0), (b, 2, None)]`; `sample(0.5, seed=1)` discards the keyword seed — 9 distinct sets over 10 fresh builds | same 6 rows at fraction 1.0; seeded spellings answer repark's stable `[('a', 1, 10.0), ('a', 2, 30.0), ('b', 1, 50.0)]` on every build | kept | `replace_sample.py` | fraction 1.0 covered; the seeded row SET differs (repark RNG) and repark honors the keyword seed Spark's shim discards — §7 `EX-DF-13` |
 | `DataFrame.sampleBy` | `{"a": 1.0}` and `{"a": 0.0, "b": 1.0}` strata arms equal; `{"a": 0.5, "b": 0.5}` seed 0 answers `[(a, 2, 30.0), (b, 2, None)]` | strata arms equal; seeded arm answers `[(a, 2, 30.0), (a, 3, 40.0), (b, 2, None)]` | kept | `replace_sample.py` | example covers the strata arms; the seeded-fraction arm is §7 `EX-DF-14` |
 | `DataFrame.schema` | `'struct<g:string,k:bigint,v:double>'`; jsonValue fields `long`/`double` | identical | kept | `schema_select.py` | simpleString, jsonValue, and repr all agree |
 | `DataFrame.selectExpr` | `[(1, 20.0), (2, 40.0), (2, 60.0), (3, 80.0), (1, 100.0), (2, None)]` | same | kept | `schema_select.py` | ordered rows |
-| `DataFrame.select_expr` | same as `selectExpr` | same | kept | `schema_select.py` | same callable |
+| `DataFrame.select_expr` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `selectExpr` | kept | `schema_select.py` | snake spelling, repark-only alias |
 | `DataFrame.show` | 3-row arm: right-aligned grid + `only showing top 3 rows` footer; cells and truncated count agree; full table 6 rows + `NULL` cell | 3-row arm: space-padded grid, no footer; cells and row count agree; full table same rows + `NULL` | kept | `show_sort.py` | example asserts cells and row counts, never the rendering; the alignment and footer are §7 `EX-DF-16` |
 | `DataFrame.sort` | asc / desc / column-desc ordered rows identical | same | kept | `show_sort.py` | all three arms measured byte-equal |
 | `DataFrame.sortWithinPartitions` | on `coalesce(1)` input: asc and desc ordered rows identical; on Spark's default 2-partition input the order is per-partition | on `coalesce(1)` input: identical | kept | `show_sort.py` | no divergent answer to the same input — repark frames are single-partition, so the example demonstrates the one-partition contract |
-| `DataFrame.sort_within_partitions` | same as `sortWithinPartitions` | same | kept | `show_sort.py` | same callable |
+| `DataFrame.sort_within_partitions` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `sortWithinPartitions` | kept | `show_sort.py` | snake spelling, repark-only alias |
 | `DataFrame.stat` | `stat.crosstab("g","k")` cols `['g_k', '1', '2', '3']`, rows `[('a', 1, 2, 1), ('b', 1, 1, 0)]` | same | kept | `rollup_stat.py` | accessor demonstrated through the crosstab call; `stat.freqItems` refuses (R-DF-BATCH2) and is not this batch's name |
 | `DataFrame.storageLevel` | before `== NONE` `True`; after cache `== MEMORY_AND_DISK_DESER` `True`; after unpersist `== NONE` `True`; reprs `StorageLevel(False, False, False, False, 1)` / `StorageLevel(True, True, False, True, 1)` | constant-equality matrix identical over nine levels; reprs `Serialized 1x Replicated` / `Disk Memory Deserialized 1x Replicated` | kept | `storage_level.py` | example asserts the equality contract, which is Spark-equal; the repr strings diverge — review-gap row below |
-| `DataFrame.storage_level` | same as `storageLevel` | same | kept | `storage_level.py` | same callable |
+| `DataFrame.storage_level` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `storageLevel` | kept | `storage_level.py` | snake spelling, repark-only alias |
 | `DataFrame.subtract` | int arm `[(2,)]`; string arm `{(2, 'y')}` | same | kept | `subtract_summary.py` | both arms set compared |
 | `DataFrame.summary` | `summary("count")` → `[('count', '5', '5')]`; `("count","min","max")` stable order `count, min, max`; string-column mean answers `None` cells; bare call answers the 8-row percentile table | count arm equal; multi-stat order arbitrary (reordered across processes); string-column mean RAISED `AnalysisException`; bare call RAISED `UnsupportedOperationException` | kept | `subtract_summary.py` | example covers the single-stat arm; the multi-stat order, string raise, and bare refusal are §7 `EX-DF-15` |
 | `DataFrame.tail` | `[('a', 2, 30.0), ('a', 3, 40.0)]`; `tail(0)` → `[]` | same | kept | `take_tail.py` | |
@@ -123,10 +130,10 @@ keeps only the single-stat arm and the divergence is filed as §7 `EX-DF-15`.
 | `DataFrame.toPandas` | cols `['g', 'k', 'v']`; dtypes `str`/`int64`/`float64`; values with `nan` for the null `v` | identical, incl. the pandas 3 `str` dtype | kept | `export_local.py` | both arms measured (null frame and null-free frame) |
 | `DataFrame.to_arrow` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | names + pylist identical to `toArrow` | kept | `export_arrow.py` | snake spelling, repark-side convenience |
 | `DataFrame.to_arrow_batches` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | 6 rows across the batches | kept | `export_arrow.py` | repark extension, no PySpark analog (documented as extension) |
-| `DataFrame.to_df` | same as `toDF` | same | kept | `export_arrow.py` | same callable |
-| `DataFrame.to_local_iterator` | same as `toLocalIterator` | same | kept | `export_local.py` | same callable |
+| `DataFrame.to_df` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `toDF` | kept | `export_arrow.py` | snake spelling, repark-only alias |
+| `DataFrame.to_local_iterator` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `toLocalIterator` | kept | `export_local.py` | snake spelling, repark-only alias |
 | `DataFrame.to_numpy` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | shape `(5, 2)`; `[[1.0, 10.0], …]` float matrix | kept | `export_local.py` | repark extension, no PySpark analog (documented as extension) |
-| `DataFrame.to_pandas` | same as `toPandas` | same | kept | `export_local.py` | same callable |
+| `DataFrame.to_pandas` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | same callable as `toPandas` | kept | `export_local.py` | snake spelling, repark-only alias |
 | `DataFrame.to_polars` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | cols `['k', 'v']`; rows `[(1, 10.0), …]` | kept | `export_local.py` | repark extension, no PySpark analog (documented as extension) |
 
 ## Gates (2026-09-04, on this tree)
@@ -148,13 +155,13 @@ The system `python3` in this clone cannot import `repark._native`; the `--requir
 runs under `.venv/bin/python`, which resolves `repark` to the main checkout of the same base SHA
 `e3600a1` (expected for this lane).
 
-Counts line (execute leg, at dispatch):
+Counts line (execute leg, on the shipped tree after the EX-16 merge):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 396 covered; 515 backlog; 2 exceptions; 102 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 428 covered; 483 backlog; 2 exceptions; 110 examples`
 
-Before this unit: `361 covered; 550 backlog; 91 examples` (at `e3600a1`). After: `396 covered;
-515 backlog; 102 examples` — exactly the 35 kept names. After the EX-16 merge (round 4):
-`428 covered; 483 backlog; 110 examples` — main's 518 minus this unit's 35.
+At the dispatch base `e3600a1`: `361 covered; 550 backlog; 91 examples` before this unit,
+`396 covered; 515 backlog; 102 examples` after its edits there. On the shipped tree (main's
+post-EX-16 content minus this unit's 35): `428 covered; 483 backlog; 110 examples`.
 
 ## Review-gap table (parameter-level gaps found in review, agreeing arm covered)
 
@@ -186,6 +193,13 @@ content, this unit's registry rows renumbered `EX-DF-11`…`EX-DF-17` after EX-1
 (printSchema), with the pins docstrings, `scripts/map.md`, both `map.md` rows, and this ledger
 renumbered to match. Every gate re-run green on the merge commit.
 
+**Critic round 2 (2026-09-04):** the round-2 review failed the filed `sample` divergence (S1 —
+the "unstable re-collects" claim and row set did not survive re-measurement) and five S2 rows.
+The sample arms, the snake-alias `hasattr` sweep, the `subtract` NULL arm, and the NULL-column
+summary arm re-measured on one Spark JVM; the registry row, the pin, the seven alias oracle
+rows, the tests-map numbering, and the counts re-stated; the NULL controls added to
+`subtract_summary.py`.
+
 ## Disk
 
 Pickup: `df -h` 537 GB free of 1.8 TB. The oracle scratch lives under the gitignored
@@ -210,7 +224,7 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/dataframe/repartition.py, docs/examples/dataframe/rollup_stat.py, docs/examples/dataframe/replace_sample.py, docs/examples/dataframe/same_semantics.py, docs/examples/dataframe/schema_select.py, docs/examples/dataframe/show_sort.py, docs/examples/dataframe/storage_level.py, docs/examples/dataframe/subtract_summary.py, docs/examples/dataframe/take_tail.py, docs/examples/dataframe/export_arrow.py, docs/examples/dataframe/export_local.py]
     - id: AT-2
       status: ATTACKED
-      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline 515 with `toJSON` still listed.
+      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline with `toJSON` still listed (515 at dispatch, 483 on the shipped tree).
       artifacts: [scripts/check_example_coverage.py, docs/examples/backlog.txt]
     - id: AT-3
       status: ATTACKED

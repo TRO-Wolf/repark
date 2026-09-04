@@ -60,8 +60,8 @@ got and expected reprs (the corpus form).
   single-partition).
 - [storage_level.py](storage_level.py) — `storageLevel` / `storage_level`: NONE,
   MEMORY_AND_DISK_DESER under `cache`, NONE again after `unpersist`.
-- [subtract_summary.py](subtract_summary.py) — `subtract` (int and string arms), and
-  `summary("count")` (single-stat arm).
+- [subtract_summary.py](subtract_summary.py) — `subtract` (int, string, and NULL arms), and
+  `summary("count")` plus the NULL-column `count`/`min`/`max` cells.
 - [take_tail.py](take_tail.py) — `take` and `tail` from both ends of one ordered frame.
 - [export_arrow.py](export_arrow.py) — `toArrow` / `to_arrow`, the repark extension
   `toArrowBatches` / `to_arrow_batches` (no PySpark analog), and `toDF` / `to_df`.
@@ -70,23 +70,8 @@ got and expected reprs (the corpus form).
   (no PySpark analog).
 
 Divergent names and arms stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)).
-EX-15's rows and pins live in `python/repark/tests/test_examples_dataframe_a.py`:
-`colRegex` / `col_regex` raw-string compilation (EX-DF-1), the three global-temp-view
-refusals (EX-DF-2), `exceptAll` / `except_all` refusal (EX-DF-3), `describe`'s unordered
-rows with Spark's cells pinned order-independently (EX-DF-4), the `corr` / `cov` NULL-pair
-arm (EX-DF-5), and the silent `createTempView` / `create_temp_view` replace of an existing
-name (EX-DF-6). EX-16's rows and pins live in
-`python/repark/tests/test_examples_dataframe_b.py`: `intersectAll` / `intersect_all` refuse
-(EX-DF-7), `groupingSets` takes one column each where Spark wants a list of sets (EX-DF-8),
-`mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers (EX-DF-9), and
-`printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10). EX-18's rows
-and pins live in `python/repark/tests/test_examples_dataframe_c.py`: the `sameSemantics`
-alias arm (EX-DF-11), `replace` outside the subset arms (EX-DF-12), `sample` below
-fraction 1.0 (EX-DF-13), seeded `sampleBy` fractions (EX-DF-14), `summary` multi-stat
-order, string-column raise, and bare refusal (EX-DF-15), the `show` rendering and missing
-truncation trailer (EX-DF-16), and the `toJSON` refusal (EX-DF-17 — the one whole name
-that stays on the backlog). The examples keep the arms where the engines agree.
+([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in
+`python/repark/tests/test_examples_dataframe_{a,b,c}.py`. The snake spellings `same_semantics`, `select_expr`, `sort_within_partitions`, `storage_level`, `to_arrow`, `to_arrow_batches`, `to_df`, `to_local_iterator`, `to_numpy`, `to_pandas`, `to_polars` are repark-only — PySpark 4.1.2 raises `ATTRIBUTE_NOT_SUPPORTED` for each — and the examples keep the arms where the engines agree.
 
 ## Pointers
 

@@ -47,12 +47,12 @@ def test_replace_unsubset_arms(spark: ReparkSession) -> None:
 
 
 def test_sample_plan_seed_stable(spark: ReparkSession) -> None:
-    """sample(0.5, seed=1) bakes a plan seed: two collects answer one stable multiset (EX-DF-13)."""
+    """sample(0.5, seed=1) is repark-stable; Spark's shim drops the keyword seed (EX-DF-13)."""
     frame = spark.createDataFrame(SIX_ROWS, ["g", "k", "v"])
-    sampled = frame.sample(0.5, seed=1)
-    first = set(sampled.collect())
+    first = set(frame.sample(0.5, seed=1).collect())
     assert first == {("a", 1, 10.0), ("a", 2, 30.0), ("b", 1, 50.0)}
-    assert set(sampled.collect()) == first
+    assert set(frame.sample(0.5, seed=1).collect()) == first
+    assert set(frame.sample(False, 0.5, 1).collect()) == first
     assert frame.sample(fraction=1.0, seed=1).count() == 6
 
 

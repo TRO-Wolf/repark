@@ -3959,21 +3959,25 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the subset arms; this row records the no-subset and string-value arms until
   `replace` is typed per column the way Spark does it.
 
-### EX-DF-13 — `sample` below fraction 1.0 answers an engine-local RNG; Spark's differs
+### EX-DF-13 — `sample` below fraction 1.0 keeps a different seeded set; Spark's `sample(0.5, seed=…)` spelling silently drops the keyword seed
 
-- **repark** — the sampled row set for `sample(0.5, seed=1)` is plan-baked and action-stable
-  (two collects answer the same multiset, measured), but the set is repark's own
-  `[(a, 1, 10.0), (a, 2, 30.0), ('b', 1, 50.0)]` on the six-row `g/k/v` frame — the engine RNG
-  is not Spark's (disclosed in-source). `sample(fraction=1.0)` keeps every row on both engines
-  and is the covered example.
-- **Apache Spark** — `sample(0.5, seed=1)` on the same frame answers
-  `[(a, 1, 10.0), (a, 2, 20.0), (a, 2, 30.0), (b, 1, 50.0)]`; two identical re-collects measured
-  different multisets in the oracle run, so Spark does not answer a stable set here either.
-  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch.)*
+- **repark** — the seed reaches the plan in every spelling: `sample(0.5, seed=1)`,
+  `sample(fraction=0.5, seed=1)`, and `sample(False, 0.5, 1)` all answer the same stable
+  `[(a, 1, 10.0), (a, 2, 30.0), (b, 1, 50.0)]` on the six-row `g/k/v` frame (re-collects and ten
+  fresh builds agree). The set is repark's own RNG — Spark's seeded set differs (disclosed
+  in-source). `sample(fraction=1.0)` keeps every row on both engines and is the covered example.
+- **Apache Spark** — the seed-honoring spellings answer a different stable set,
+  `[(a, 2, 30.0), (b, 1, 50.0), (b, 2, None)]` (five fresh builds identical, re-collects
+  stable). The `sample(0.5, seed=1)` spelling binds the positional fraction to
+  `withReplacement`, and `_preapare_args_for_sample` then re-draws `random.randint` — the
+  keyword `seed` is discarded, so ten fresh builds answered nine distinct sets.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch; re-measured
+  2026-09-04 after the round-2 review — the earlier "unstable re-collects" claim and row set
+  did not survive re-measurement.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_sample_plan_seed_stable`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the fraction-1.0 arm; this row records the sub-1.0-fraction arm until the engine
-  samples with Spark's RNG.
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, re-measured
+  2026-09-04. The name stays covered by the fraction-1.0 arm; this row records the seeded-set
+  difference and the keyword-seed shim until the engine samples with Spark's RNG.
 
 ### EX-DF-14 — `sampleBy` seeded fractions below 1.0 keep different rows; the 0.0/1.0 strata arms agree
 
