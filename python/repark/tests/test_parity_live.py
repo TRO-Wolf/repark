@@ -342,6 +342,62 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_regexp_extract(spark_engine: lp.Engine) -> None:
+    """pins: fn-regexp-extract-1/C-002"""
+    from repark.spark import functions as repark_fn
+
+    oracle = spark_engine.session.sql(
+        "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 1) AS g1, "
+        "regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 2) AS g2, "
+        "regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 0) AS g0, "
+        "regexp_extract('100-200', '(\\\\d+)-(\\\\d+)') AS dflt, "
+        "regexp_extract('abc', '(\\\\d+)', 1) AS nomatch, "
+        "regexp_extract('alpha', '([[:alpha:]]+)', 1) AS posix, "
+        "regexp_extract('fox', '([[:alpha:]]+)', 1) AS posixmiss, "
+        "regexp_extract('foobar', '(?<=foo)bar', 0) AS lookbehind, "
+        "regexp_extract('ünï', '(\\\\w+)', 0) AS nonascii"
+    ).toArrow()
+    assert oracle.column("g1").to_pylist() == ["100"]
+    assert oracle.column("g2").to_pylist() == ["200"]
+    assert oracle.column("g0").to_pylist() == ["100-200"]
+    assert oracle.column("dflt").to_pylist() == ["100"]
+    assert oracle.column("nomatch").to_pylist() == [""]
+    assert oracle.column("posix").to_pylist() == ["alpha"]
+    assert oracle.column("posixmiss").to_pylist() == [""]
+    assert oracle.column("lookbehind").to_pylist() == ["bar"]
+    assert oracle.column("nonascii").to_pylist() == ["n"]
+    try:
+        spark_engine.session.sql(
+            "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 3)"
+        ).toArrow()
+        raise AssertionError("group index 3 must raise")
+    except Exception as exc:
+        assert "REGEX_GROUP_INDEX" in str(exc)
+        assert "`regexp_extract` is invalid" in str(exc)
+    repark_out = (
+        lp.build_repark_engine()
+        .session.sql(
+            "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 1) AS g1, "
+            "regexp_extract('abc', '(\\\\d+)', 1) AS nomatch, "
+            "regexp_extract('alpha', '([[:alpha:]]+)', 1) AS posix"
+        )
+        .toArrow()
+    )
+    assert repark_out.column("g1").to_pylist() == ["100"]
+    assert repark_out.column("nomatch").to_pylist() == [""]
+    assert repark_out.column("posix").to_pylist() == ["alpha"]
+    repark_facade = (
+        lp.build_repark_engine()
+        .session.range(1)
+        .select(
+            repark_fn.regexp_extract(repark_fn.lit("100-200"), "(\\d+)-(\\d+)", 1).alias("g1"),
+        )
+        .toArrow()
+    )
+    assert repark_facade.column("g1").to_pylist() == ["100"]
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
     """pins: log1p-1-precise-kernels/C-001, C-004"""
     table = spark_engine.arrow_of(spark_engine.session.sql(_LOG1P_LIVE_SQL))

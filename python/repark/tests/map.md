@@ -2308,6 +2308,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FN-FIX-2:** `test_live_fn_fix_2_strings` and `test_live_fn_fix_2_regex_like` on the
   same `spark_engine`; `test_live_disclosure_still_diverges` still collected.
   pins: fn-fix-2-string-rows/C-001, C-003, C-004
+  **FN-REGEXP-EXTRACT-1:** `test_live_fn_regexp_extract` on the same `spark_engine`
+  (oracle row plus repark co-collect on both doors).
+  pins: fn-regexp-extract-1/C-002
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.
@@ -2563,6 +2566,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
   empty-matching pattern so the shared `Matcher.find()` walk cannot drift between them.
+
+- `test_fn_regexp_extract.py` — **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract`
+  on both doors against the live PySpark 4.1.2 oracle table (groups, default/whole-match idx,
+  `''` on no match, NULL-in NULL-out, `REGEX_GROUP_INDEX` naming `regexp_extract`, POSIX union,
+  `\p{L}`, non-ASCII/empty edges, lookbehind refusal). pins: fn-regexp-extract-1/C-002
 
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,
