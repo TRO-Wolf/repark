@@ -9,7 +9,8 @@ every example runs JVM-free. `types.repark_type_to_arrow` and
 `types.struct_type_from_arrow` are repark extensions (`hasattr` False on live
 PySpark 4.1.2, EX-22 leg 1) and are taught in
 [arrow_schema_roundtrip.py](arrow_schema_roundtrip.py). All 28 roster names are
-covered; no `types` name measured divergent.
+covered; no `types` name measured divergent. Examples keep the house form: one
+module docstring, the `main()` one-liner, and bare helpers.
 
 ## Contents
 

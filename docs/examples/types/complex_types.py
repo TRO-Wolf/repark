@@ -29,7 +29,6 @@ ROWS = [(1, decimal.Decimal("1.50"), ["a"]), (2, decimal.Decimal("2.25"), ["b", 
 
 
 def expect(label: str, got: object, wanted: object) -> None:
-    """Raise SystemExit when the measured answer differs."""
     if got != wanted:
         raise SystemExit(f"{label} {got!r} != {wanted!r}")
 

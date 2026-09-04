@@ -9,7 +9,8 @@ Iceberg table (`register_memory_catalog("local", …)` plus
 `CREATE NAMESPACE local.ns`, then `writeTo("local.ns.…")`) and read it back.
 `DataFrameWriterV2.overwrite` stays on the backlog as a measured divergence
 (EX-W2-1; EX-W2-2 and EX-W2-3 pin the empty-source and branch arms of names
-that are covered).
+that are covered). Examples keep the house form: one module docstring, the
+`main()` one-liner, and bare helpers.
 
 ## Contents
 

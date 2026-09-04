@@ -19,7 +19,6 @@ COVERS: list[str] = [
 
 
 def expect(label: str, got: object, wanted: object) -> None:
-    """Raise SystemExit when the measured answer differs."""
     if got != wanted:
         raise SystemExit(f"{label} {got!r} != {wanted!r}")
 
