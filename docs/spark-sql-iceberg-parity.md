@@ -3809,6 +3809,25 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
   example would teach a weaker contract than Spark answers.
 
+### EX-DF-5 — `corr` / `cov` skip NULL pairs; Spark's stat arms answer the NULL as 0.0
+
+- **repark** — on the six-row frame below, `corr("u", "v")` = `0.18898223650461363` and
+  `cov("u", "v")` = `2.5`: the NULL pair is skipped, the SQL `corr` / `covar_samp` semantics
+  the engine lowers to.
+- **Apache Spark** — the same frame answers `corr` = `0.07100716024967264` and `cov` = `1.0`,
+  exactly the values the five real pairs produce when the NULL `v` enters the moment arms as
+  `0.0` (the five-pair-plus-`(2.0, 0.0)` moments reproduce both numbers to the last digit). The
+  divergence persists under an explicit all-nullable
+  `StructType([StructField("u", DoubleType(), True), StructField("v", DoubleType(), True)])`, so
+  it is not a `createDataFrame` inference artefact. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-15 round 2; rows `[(1.0, 10.0), (2.0, 20.0), (2.0, 30.0), (3.0, 40.0),
+  (1.0, 50.0), (2.0, None)]` over `u`/`v` doubles.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_corr_cov_null_pair_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-2 re-measure (the inferred-schema
+  reading survived the explicit-schema probe). The example covers the null-free arm, where the
+  engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
+  closed here or Spark's own is restated.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

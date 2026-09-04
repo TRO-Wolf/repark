@@ -74,10 +74,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
   pins: fn-fix-2-string-rows/C-003
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
-  the four divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
+  the five divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
-  `exceptAll`/`except_all` refusal (EX-DF-3), and `describe`'s unordered rows with
-  Spark's cells pinned order-independently (EX-DF-4).
+  `exceptAll`/`except_all` refusal (EX-DF-3), `describe`'s unordered rows with
+  Spark's cells pinned order-independently (EX-DF-4), and the `corr`/`cov` NULL-pair
+  arm under an explicit all-nullable DoubleType schema (EX-DF-5).
   pins: ex-15-dataframe-a/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL

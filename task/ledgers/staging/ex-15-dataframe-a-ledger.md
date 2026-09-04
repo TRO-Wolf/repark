@@ -79,6 +79,12 @@ per name both engines' values. Fixtures: base six-row `g/k/v` frame
 `[("a",1,10.0),("a",None,20.0),("a",2,None),("b",3,30.0)]`; multiset frames `[(1,),(1,),(2,)]`
 and `[(1,)]`; cross frames; crosstab strata `[("a",1),("a",10),("a",2),("b",1),("b",10),("b",2)]`;
 declare frames sorted and unsorted. Unordered results compared as sets, both engines.
+**Round 2 (2026-09-04):** the corr/cov NULL-pair arm re-measured on both engines with an explicit
+all-nullable `StructType([StructField("u", DoubleType(), True), StructField("v", DoubleType(), True)])`
+(one JVM, throwaway `scratch/ex15-oracle/oracle_round2.py`): the four numbers are unchanged —
+repark `corr` `0.18898223650461363` / `cov` `2.5`, Spark `corr` `0.07100716024967264` / `cov`
+`1.0` — so the divergence is real, not a schema-inference coercion artefact, and it is filed as
+§7 `EX-DF-5`.
 `pins: ex-15-dataframe-a/C-001`
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
@@ -91,9 +97,9 @@ declare frames sorted and unsorted. Unordered results compared as sets, both eng
 | `DataFrame.colRegex` | plain `"^(k)$"` RAISED `UNRESOLVED_COLUMN.WITH_SUGGESTION`; backtick ``"`^(k)$`"`` → `['k']` | plain → `['k']`; backtick RAISED `AnalysisException: No column matched regex` | dropped | §7 `EX-DF-1` | opposite spellings; no input answers Spark-equal on both |
 | `DataFrame.col_regex` | same as `colRegex` | same | dropped | §7 `EX-DF-1` | same callable |
 | `DataFrame.columns` | `['g', 'k', 'v']` | same | kept | `inspect_cache.py` | metadata only |
-| `DataFrame.corr` | null-free `0.18898223650461363`; with the NULL-v row `0.07100716024967264` | null-free same; with the NULL-v row `0.18898223650461363` | kept | `agg_stats.py` | example uses the null-free arm; the NULL-pair arm differs (see review-gap table) |
+| `DataFrame.corr` | null-free `0.18898223650461363`; with the NULL-v row `0.07100716024967264` | null-free same; with the NULL-v row `0.18898223650461363` | kept | `agg_stats.py` | example uses the null-free arm; the NULL-pair arm is §7 `EX-DF-5` (round-2 explicit-schema re-measure confirmed the divergence) |
 | `DataFrame.count` | `6` | same | kept | `inspect_cache.py` | |
-| `DataFrame.cov` | null-free `2.5`; with the NULL-v row `1.0` | null-free same; with the NULL-v row `2.5` | kept | `agg_stats.py` | example uses the null-free arm (see review-gap table) |
+| `DataFrame.cov` | null-free `2.5`; with the NULL-v row `1.0` | null-free same; with the NULL-v row `2.5` | kept | `agg_stats.py` | example uses the null-free arm; the NULL-pair arm is §7 `EX-DF-5` (round-2 explicit-schema re-measure confirmed the divergence) |
 | `DataFrame.createGlobalTempView` | view registered; `SELECT k FROM global_temp.gt` → `[(1,), (1,), (2,), (2,), (2,), (3,)]` | RAISED `UnsupportedOperationException` (no global_temp catalog) | dropped | §7 `EX-DF-2` | loud refusal, disclosed R-DF-BATCH2 |
 | `DataFrame.createOrReplaceGlobalTempView` | same measured rows | RAISED `UnsupportedOperationException` | dropped | §7 `EX-DF-2` | same callable |
 | `DataFrame.create_global_temp_view` | same as `createGlobalTempView` | same | dropped | §7 `EX-DF-2` | same callable |
@@ -146,12 +152,14 @@ Counts line (execute leg):
 Before this unit: `333 covered; 578 backlog; 83 examples` (at `c70a306`). After: `361 covered;
 550 backlog; 91 examples` — exactly the 28 kept names.
 
+Round 2 re-ran every gate above on the round-2 commit (`EX-DF-5` + its pin; no example or backlog
+change) with identical exits.
+
 ## Review-gap table (parameter-level gaps found in review, agreeing arm covered)
 
 | Name | repark | Spark 4.1.2 | Disposition |
 |---|---|---|---|
-| `DataFrame.corr(col1, col2)` with NULL pairs | skips NULL pairs (SQL `corr` semantics): NULL-v row ignored, `0.18898223650461363` | the NULL-v row answered as `0.0`: `corr` = `0.07100716024967264` on the same six-row frame | the example covers the null-free arm only; no §7 row filed (the demonstrated name agrees on its demonstrated input). If a user hits the NULL arm the answers differ — queue entry for a future parity unit |
-| `DataFrame.cov(col1, col2)` with NULL pairs | skips NULL pairs: `2.5` | the NULL-v row answered as `0.0`: `cov` = `1.0` on the same frame | same disposition as `corr` |
+| `DataFrame.corr` / `DataFrame.cov` NULL-pair arm | skips the NULL pair: `0.18898223650461363` / `2.5` | answers the NULL as `0.0`: `0.07100716024967264` / `1.0`; divergence confirmed under an explicit all-nullable DoubleType schema (round-2 re-measure) | promoted to §7 `EX-DF-5` with pin `test_corr_cov_null_pair_divergence`; the null-free example arm stays |
 | `DataFrame.createTempView(name)` on an existing view | replaces silently (disclosed in-source: "v1: same as createOrReplaceTempView") | raises `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` | the example covers the fresh-name arm only; replace-arm divergence noted here, no §7 row filed |
 
 ## Cost
@@ -160,6 +168,10 @@ The GLM (glm-5.3-flash) leg started 2026-09-04: read the contract and precedent,
 throwaway oracle script (both engines in one process, one JVM start per leg, two Spark legs total),
 wrote the eight example files, the divergence pins, the registry rows, the backlog ratchet and the
 maps, then committed in slices. Base `c70a306`.
+
+**Round 2 (owner ruling on Q2, 2026-09-04):** the corr/cov NULL-pair arm re-measured with an
+explicit schema; the divergence persisted, so `EX-DF-5` and its pin replaced the round-1
+review-gap queue entry. One further Spark JVM leg.
 
 ## Disk
 

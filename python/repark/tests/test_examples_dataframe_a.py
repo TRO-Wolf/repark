@@ -6,6 +6,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.spark.types import DoubleType, StructField, StructType
 
 
 @pytest.fixture
@@ -63,3 +64,19 @@ def test_describe_row_order_divergence(spark: ReparkSession) -> None:
         "min": ("1", "10.0"),
         "max": ("3", "50.0"),
     }
+
+
+def test_corr_cov_null_pair_divergence(spark: ReparkSession) -> None:
+    """corr/cov skip the NULL pair; Spark 4.1.2 answers the NULL as 0.0 (EX-DF-5)."""
+    schema = StructType(
+        [
+            StructField("u", DoubleType(), True),
+            StructField("v", DoubleType(), True),
+        ]
+    )
+    frame = spark.createDataFrame(
+        [(1.0, 10.0), (2.0, 20.0), (2.0, 30.0), (3.0, 40.0), (1.0, 50.0), (2.0, None)],
+        schema,
+    )
+    assert frame.corr("u", "v") == 0.18898223650461363
+    assert frame.cov("u", "v") == 2.5
