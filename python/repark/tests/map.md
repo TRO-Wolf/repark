@@ -2342,8 +2342,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
-  FN-REGEXP-EXTRACT-1 (2026-09-04): `test_live_fn_regexp_extract` co-collects with the printSchema and
-  FN-FIX-2 legs after the merge of main; it keeps the `skipif(not lp.LIVE)` guard like every live leg.
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
   `repark == golden`. Live (`REPARK_PARITY_LIVE=1`, `parity-live.yml` / `make parity-live`): one
@@ -2393,6 +2391,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   does not match the exact spelling reds loud naming the line, rather than reading as zero matches
   — otherwise a row could advertise a drift detector nobody checks. Registry §6 documents that
   spelling for row authors; the regex and the doc move together.
+  FN-REGEXP-EXTRACT-1 (2026-09-04): `test_live_fn_regexp_extract` co-collects with the printSchema and
+  FN-FIX-2 legs after the merge of main; it keeps the `skipif(not lp.LIVE)` guard like every live leg.
 - `test_ta_volume.py` — **TA-4 (2026-08-15):** volume-family facade (`ad`/`adosc`/`obv`/`mfi`)
   through the DataFrame door. The 5000-row OHLC + `fixture_volume` golden is written to Parquet
   and `read_parquet`-ed; each indicator `.over(orderBy(ts))` is `to_bits`-identical to the
