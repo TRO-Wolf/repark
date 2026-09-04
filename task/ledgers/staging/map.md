@@ -53,6 +53,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
 
+- [dbt-1-adapter-ledger.md](dbt-1-adapter-ledger.md) — **DBT-1 (2026-09-04), in flight:** a dbt
+  path for RePark, so cutover step C6 can move gold off Spark/Glue
+  ([../../../docs/cutover/inventory.md](../../../docs/cutover/inventory.md) ruling 2). Design
+  first: every statement shape dbt emits for the two gold models and their ten test blocks was
+  run through `repark.sql()` on a memory catalog, and the twelve refusals are §3.2. The refusals
+  are all in the **statement surface**, not the transport, so a Spark-Thrift endpoint was
+  rejected on measurement — an in-process `dbt-repark` adapter subclassing `dbt-spark`'s
+  `SparkAdapter` is the route. `risk_tier: standard`. Branch `feat/dbt-1`.
+  pins: dbt-1-adapter/C-001
+
 ## Pointers
 - Up: [../map.md](../map.md)
 - [perf-scan-1-plan-once-ledger.md](perf-scan-1-plan-once-ledger.md) —
