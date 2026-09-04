@@ -142,7 +142,7 @@ Duplicate-row guard (R5): `grep -oE '^- \[[^]]+\]' task/ledgers/completed/map.md
 | `make verify` | 0 |
 | M3 `known.clear()` before hide | 101 (1 red of 1) |
 | `make develop` | 0 |
-| `.venv/bin/python -m pytest python/repark/tests -q --deselect python/repark/tests/test_pyspark_compat_smoke.py -k "not test_cross_validator_live_pyspark_shape"` | 1 (4421 passed; 5 failed + 3 errors are `CALL rewrite_position_delete_files` B-MOR-3 loud refuse from merged `dd3317a`, not this pin; `test_cross_validator_live_pyspark_shape` SemLock deselect) |
+| `.venv/bin/python -m pytest python/repark/tests -q --deselect python/repark/tests/test_pyspark_compat_smoke.py` | 0 at `6121be6` re-measured by the round-2 critic (4395 passed, 194 skipped; the only failure is `test_compat_smoke_suite_in_subprocess` on a snapshot without the native module) — the round-1 note "5 failed + 3 errors from the B-MOR-3 refuse" was a stale lane build, not the tip |
 | `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (555 passed) |
 | `make check-map-sync` | 0 |
 | `make check-ledger-grammar` | 0 |
@@ -197,7 +197,7 @@ pin). The map-miss fix is still required; it is the routing change, not a sink/r
 ### Fix (C-005)
 
 `try_allowed_plain_identity` (`predicate_dml/plain.rs`) on both SQL doors
-(`spark_ast.rs`, `repark-sql/src/router.rs`) routes a three-part Iceberg `DELETE`/`UPDATE`
+(`spark_ast.rs`, `repark-sql/src/router.rs`) routes a three-part Iceberg `DELETE` (only; `UPDATE`, literal `IN` lists, subquery `WHERE` and four-part branch targets stay on the fork `TableProvider`, pinned in `predicate_dml/tests/plain.rs`)
 with a subquery-free `WHERE` through `execute_predicate_dml`.
 
 R8: that routing does **not** collapse the 3× `plan_files`. Not contained; filed
