@@ -1,0 +1,141 @@
+<title>Copy-on-Write Day</title>
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5; --bar:#CFE6EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.55;margin:0;padding:0 16px 64px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;line-height:1.15;}
+  h1{font-size:34px;margin:40px 0 4px;}
+  h2{font-size:22px;margin:36px 0 12px;color:var(--teal-2);}
+  .kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:32px 0 0;}
+  .sub{color:var(--ink-2);max-width:68ch;margin:6px 0 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0;}
+  .card ul,.card ol{margin:0;padding-left:20px;}
+  .card li{margin:6px 0;}
+  .tablewrap{overflow-x:auto;padding:0;}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line);}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);}
+  tr:last-child td{border-bottom:none;}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;}
+  .mono,code{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--mono-bg);padding:1px 5px;border-radius:4px;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:12px;letter-spacing:.03em;padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .chip.green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .chip.amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .chip.hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .chip.guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0 0;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+  .stat .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;color:var(--teal);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);margin-top:6px;}
+  .gate{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:14px 0 4px;}
+  .gate .ok{background:var(--teal);}
+  .gate .decl{background:var(--bar);}
+  .legend{font-size:13px;color:var(--ink-2);}
+  .foot{color:var(--ink-2);font-size:13px;margin-top:40px;border-top:1px solid var(--line);padding-top:12px;}
+  a{color:var(--teal);}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<div class="wrap">
+  <p class="kicker">RePark · evening board · 2026-09-04, 18:10</p>
+  <h1>Copy-on-Write Day</h1>
+  <p class="sub">Seventeen merges on <code>main</code> since the morning board, one fork merge, and the two questions the owner asked: is the production silver path safe at copy-on-write, and is dynamicFlatten worth optimizing. Both answered by measurement.</p>
+
+  <div class="strip">
+    <div class="stat"><div class="n">17</div><div class="l">merges on main</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">fork merge (F-26)</div></div>
+    <div class="stat"><div class="n">537 / 913</div><div class="l">example names covered</div></div>
+    <div class="stat"><div class="n">31</div><div class="l">divergence rows filed</div></div>
+    <div class="stat"><div class="n">11</div><div class="l">registry rows FIXED</div></div>
+  </div>
+  <div class="gate"><div class="ok" style="width:58.8%"></div><div class="decl" style="width:41.2%"></div></div>
+  <p class="legend">Example campaign: 537 of 913 public names carry a runnable, Spark-measured example once EX-20 merges; 374 remain (127 functions long-tail, 85 TA kernels, 33 session, 28 types, 28 ml, 13 catalog).</p>
+
+  <h2>The two answers</h2>
+  <div class="card">
+    <p><strong>Copy-on-write is safe for the silver cutover.</strong> The production silver tables are format-version 2 with <code>write.merge.mode = copy-on-write</code>; the first hardening pass had only measured merge-on-read. SQL-HARDEN-2 added six rows (CTAS, MERGE twice, overwritePartitions at v2 and v3) and ran them on repark and live Spark 4.1.2, then through the Glue and S3 Tables acceptance legs.</p>
+    <ul>
+      <li>No delete file appears under copy-on-write on either engine, on any catalog.</li>
+      <li>Row sets, snapshot operations, second-MERGE idempotence and v3 <code>next-row-id</code> are Spark-equal everywhere.</li>
+      <li>The only divergences are the two metadata classes already on file: column requiredness (<code>CUTOVER-CTAS-REQ-1</code>) and Spark's stamped compression codec (<code>V3-COV-7</code>).</li>
+    </ul>
+    <p><strong>Only one dynamicFlatten optimization is worth building.</strong> Measured on a release build with a fair design (eight threads on both engines, materialized inputs, five iterations, a measured 10.8 ms noise floor), each candidate timed in isolation:</p>
+    <div class="tablewrap"><table>
+      <tr><th>Candidate</th><th>Isolated cost</th><th>× noise floor</th><th>Verdict</th></tr>
+      <tr><td>Null-mask struct extractor (struct depth 6, 30 % null parents minus 0 %)</td><td class="num">59.98 ms</td><td class="num">5.5</td><td><span class="chip green">queued · PERF-DYNFLATTEN-2</span></td></tr>
+      <tr><td>Cartesian multi-list operator (two lists minus each list alone)</td><td class="num">26.91 ms</td><td class="num">2.5</td><td><span class="chip hold">closed · at the floor</span></td></tr>
+      <tr><td>Optimizer wrapper walks (strongest single fixture)</td><td class="num">0.45 ms</td><td class="num">0.04</td><td><span class="chip hold">closed</span></td></tr>
+    </table></div>
+    <p class="legend">The first debug-build ranking put the Cartesian operator second; release numbers and per-fixture isolation reversed it. Three registry rows came out of the bed: a qualified-name clash at any struct depth ≥ 2 with a sibling keep column, a dropped <code>list&lt;null&gt;</code> column, and parquet-required nullability kept where Spark widens.</p>
+  </div>
+
+  <h2>What shipped</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Unit</th><th>PR</th><th>What it proves</th><th>Actor</th></tr>
+    <tr><td>Truth-up, PERF-SCAN-1, SQL-HARDEN-1</td><td>#343 #345 #344</td><td>overnight: ledgers filed, the identity DELETE/MERGE scan plans once, the pipeline's nine SQL shapes measured on three catalogs</td><td>Grok</td></tr>
+    <tr><td>RP-10, RP-11</td><td>#347 #349</td><td>fork F-25 and F-24 consumed: the fresh-DV validation walk exits early; the parquet-to-DV rewrite honours Spark's five-file floor</td><td>Grok</td></tr>
+    <tr><td>DATE-FN-1, FN-FIX-2</td><td>#346 #348</td><td><code>date()</code> and <code>unix_timestamp</code> register (the gold-layer blocker); six silent string rows Spark-equal</td><td>Grok</td></tr>
+    <tr><td>SQL-HARDEN-2</td><td>#351</td><td>the copy-on-write cells above</td><td>Opus</td></tr>
+    <tr><td>FN-FIX-2-CTRL-1</td><td>#355</td><td>seven incidental controls measured under both ANSI modes; the SQL <code>RLIKE</code> keyword gap filed</td><td>Muse</td></tr>
+    <tr><td>DF-PRINTSCHEMA-1</td><td>#357</td><td><code>printSchema</code> stdout byte-identical to Spark's</td><td>Muse</td></tr>
+    <tr><td>FN-REGEXP-EXTRACT-1</td><td>#358</td><td>the last regexp kernel, with Spark's exact rule that the group index is checked only after a match</td><td>Muse</td></tr>
+    <tr><td>PERF-DYNFLATTEN-1</td><td>#352</td><td>the dynamicFlatten answer above; the product path pays nothing for the instrument; the runner refuses debug builds</td><td>Grok → Opus</td></tr>
+    <tr><td>EX-15 … EX-19</td><td>#350 #353 #354 #356 #359</td><td>163 DataFrame, Column, GroupedData and Row names with runnable examples; 27 divergence rows filed on the way</td><td>GLM</td></tr>
+    <tr><td>F-26 (fork)</td><td>iceberg-rust #267</td><td>the in-tree DataFusion merge-on-read DELETE/UPDATE now hands partitions to the DV close: 192 manifest reads → 0, 685 ms → 10 ms</td><td>Muse</td></tr>
+  </table></div>
+
+  <h2>Cutover inventory, first draft</h2>
+  <div class="card">
+    <p>Read from the pipeline's DAGs, Spark scripts, dbt project and Glue config. Six stages; the silver facts stage is the one that moves first (MERGE on six v2 copy-on-write tables, single writer per table per run). Gold stays on dbt over Spark or Glue until a dbt path for repark exists. Rollback is one <code>rollback_to_snapshot</code> per table. Canary steps C0 and C1 are done; C2 is a shadow namespace beside Spark for one day, C3 a week.</p>
+    <p><strong>Four decisions are yours:</strong></p>
+    <ol>
+      <li>Are the two metadata-only rows (<code>CUTOVER-CTAS-REQ-1</code>, <code>CUTOVER-DEDUP-SCHEMA-1</code>) cutover blockers, or accepted?</li>
+      <li>Gold stays on Spark/Glue for now, or queue a dbt adapter unit.</li>
+      <li>The shadow namespace name and retention for the canary week.</li>
+      <li>Who runs the daily shadow diff (an Airflow task beside the Spark one is the cheapest).</li>
+    </ol>
+  </div>
+
+  <h2>Tiers today</h2>
+  <div class="card">
+    <ul>
+      <li><span class="chip guard">Grok parked</span> at 92 % of quota by your ruling; four units finished on it before the switch.</li>
+      <li><span class="chip green">Opus</span> ran the judgement units (SQL-HARDEN-2, dynflatten rounds 2–6) and every critic. Nine critic rounds today found real defects: a wrong perf profile, an unfair comparison, a validation-before-match bug in <code>regexp_extract</code>, a registry merge that silently dropped two sections.</li>
+      <li><span class="chip green">GLM 5.3 Flash</span> ran six example batches and their remediation rounds.</li>
+      <li><span class="chip green">Muse Spark 1.3</span> came online under your subscription: F-26 on the fork, three RePark units.</li>
+    </ul>
+    <p class="legend">Process rules added to memory: kill a worker by its binary, not its wrapper; perf briefs demand a release build, thread parity and identical timed regions; a registry merge must never shrink the file.</p>
+  </div>
+
+  <h2>Open tonight</h2>
+  <div class="card tablewrap"><table>
+    <tr><th>Item</th><th>State</th></tr>
+    <tr><td>EX-20 Window/WindowSpec + Catalog (37 covered) · #360</td><td><span class="chip amber">critic running</span></td></tr>
+    <tr><td>EX-21 Catalog remainder + SparkSession</td><td><span class="chip hold">lane building, GLM</span></td></tr>
+    <tr><td>PERF-DYNFLATTEN-2 null-mask extractor</td><td><span class="chip hold">queued, Opus</span></td></tr>
+    <tr><td>COL-PLUMBING-1 (six Column internals made private)</td><td><span class="chip hold">queued, Muse</span></td></tr>
+    <tr><td><code>spark_regexp.rs</code> at 999 of 1000 lines</td><td><span class="chip amber">split with the next kernel</span></td></tr>
+    <tr><td>Cutover canary C2 (shadow namespace)</td><td><span class="chip amber">needs decisions 1–4</span></td></tr>
+  </table></div>
+
+  <p class="foot">Main at <code>b5b17f0</code>; fork at <code>81f9fbe98</code>. Every number above is from a merged ledger or a critic's re-measurement on this box; the cutover inventory is a draft outside the repo until the decisions land.</p>
+</div>
