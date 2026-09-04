@@ -130,6 +130,10 @@ V3-10 (2026-09-02): `check_rust_file_size.py` `repark-spark/src/alter.rs` 1831�
 folded into `write/format_version.rs`.
 pins: v3-10-upgrade-v2-to-v3/C-003
 
+DF-PRINTSCHEMA-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6371→6368 — the
+`printSchema` strip arm is gone.
+pins: df-printschema-1-trailing-newline/C-004
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

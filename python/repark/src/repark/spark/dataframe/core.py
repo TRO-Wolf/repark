@@ -3651,11 +3651,8 @@ class DataFrame:
         """
         self._ensure_alive()
         max_depth = -1 if level is None else int(level)
-        # treeString already ends with a trailing newline; print without adding another blank.
-        text = self.schema.treeString(max_depth)
-        if text.endswith("\n"):
-            text = text[:-1]
-        print(text)
+        # treeString ends with a newline and print adds Spark's second one.
+        print(self.schema.treeString(max_depth))
 
     print_schema = printSchema
 

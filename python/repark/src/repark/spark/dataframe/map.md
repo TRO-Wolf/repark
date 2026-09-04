@@ -48,6 +48,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   re-marking behavior; RePark rejects a short list instead of truncating it.
 - Optional pandas, Polars, and DuckDB surfaces fail clearly when their dependencies are absent.
   Streaming UDF bridges preserve plan stability and close Arrow resources on failure.
+- `printSchema` stdout is Spark's tree plus the blank line (`treeString`'s newline and
+  `print`'s). pins: df-printschema-1-trailing-newline/C-001, C-004
 
 ## Navigation
 
