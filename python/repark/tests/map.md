@@ -122,6 +122,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 3: NULL `ltrim` / `rtrim` pinned on both doors
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
+- [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
+  the five divergence pins for the catalog/session example batch — `registerFunction` answers
+  the UDF object where Spark's deprecated alias returns the original callable (EX-SES-1), an
+  action on a `newSession()` result promotes it process-active where Spark keeps the caller
+  (EX-SES-2, Spark column re-measured in round 2), `create_dataframe([], ['a'])` answers an
+  empty string-typed frame where Spark raises `CANNOT_INFER_EMPTY_SCHEMA` (EX-SES-3), `conf.get`
+  on an unset key raises a bare `Exception` where Spark raises `SparkNoSuchElementException`
+  (EX-SES-4), and a missing file raises `AnalysisException` 'No files found' through the readers
+  where Spark raises `PATH_NOT_FOUND` (EX-SES-5). EX-20's window/catalog pins share this file
+  since the EX-20 merge.
+  pins: ex-21-catalog-session/C-001
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
   DF-PRINTSCHEMA-1 (2026-09-04): the printSchema pin is `test_print_schema_stdout_matches_spark` and asserts Spark's tail.
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`

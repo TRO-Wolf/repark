@@ -1,5 +1,12 @@
 # map — scripts/
 
+EX-21 catalog-session (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 340
+shipped (411 → 377 at the dispatch base, before the EX-20 merge) — 34 roster names (9
+`Catalog.*`, all 25 `SparkSession`) covered by sixteen new examples under
+`docs/examples/catalog/` and `docs/examples/session/`; `list_databases` stays on the backlog
+(the same function object as the divergent `listDatabases`, §7 `EX-CAT-2`), the
+`registerFunction` return and `newSession` promotion arms are §7 `EX-SES-1`/`EX-SES-2`, pins in
+`python/repark/tests/test_examples_window_catalog.py`. pins: ex-21-catalog-session/C-001
 EX-22 types-writerv2 (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 332 —
 42 roster names (all 28 `types.*`, 14 of 15 `DataFrameWriterV2.*`) covered by eleven new examples
 under `docs/examples/types/` and `docs/examples/io/`; the flagged `VariantType`/`TimeType`/
