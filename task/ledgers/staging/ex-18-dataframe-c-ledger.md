@@ -55,7 +55,7 @@ measured on covered names are filed as §7 `EX-DF-11`…`EX-DF-17` with pins in
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Eleven files under `docs/examples/dataframe/` land runnable local examples for the 35 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 35 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 35 — 518 → 483 on the shipped tree (550 → 515 at the dispatch base, resolved through the EX-16 merge) — with no other `scripts/` change; `toJSON` stays on the backlog with §7 rows `EX-DF-11`…`EX-DF-17` and pins in `python/repark/tests/test_examples_dataframe_c.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (35 findings before, 0 after), the oracle table (36 rows, one per roster name), the eleven scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Eleven files under `docs/examples/dataframe/` land runnable local examples for the 35 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 35 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 35 — 484 → 449 on the shipped tree (550 → 515 at the dispatch base, 518 → 483 through the EX-16 merge) — with no other `scripts/` change; `toJSON` stays on the backlog with §7 rows `EX-DF-11`…`EX-DF-17` and pins in `python/repark/tests/test_examples_dataframe_c.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (35 findings before, 0 after), the oracle table (36 rows, one per roster name), the eleven scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -152,16 +152,17 @@ throwaway `scratch/ex18-oracle/oracle_r5.py` + `oracle_r5b.py`.
 | `.venv/bin/ruff format --check docs/examples python/repark/tests` | **0** |
 
 The system `python3` in this clone cannot import `repark._native`; the `--require-execute` leg
-runs under `.venv/bin/python`, which resolves `repark` to the main checkout of the same base SHA
-`e3600a1` (expected for this lane).
+runs under `.venv/bin/python`, which resolves `repark` to the main checkout (the engine surface
+this unit documents; this branch carries docs-only changes, so the sources agree).
 
-Counts line (execute leg, on the shipped tree after the EX-16 merge):
+Counts line (execute leg, on the shipped tree after the EX-16/EX-17 merges):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 428 covered; 483 backlog; 2 exceptions; 110 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 462 covered; 449 backlog; 2 exceptions; 120 examples`
 
 At the dispatch base `e3600a1`: `361 covered; 550 backlog; 91 examples` before this unit,
-`396 covered; 515 backlog; 102 examples` after its edits there. On the shipped tree (main's
-post-EX-16 content minus this unit's 35): `428 covered; 483 backlog; 110 examples`.
+`396 covered; 515 backlog; 102 examples` after its edits there. After the EX-16 merge:
+`428 covered; 483 backlog; 110 examples`. On the shipped tree (main's post-EX-17 content
+minus this unit's 35): `462 covered; 449 backlog; 120 examples`.
 
 ## Review-gap table (parameter-level gaps found in review, agreeing arm covered)
 
@@ -200,6 +201,13 @@ summary arm re-measured on one Spark JVM; the registry row, the pin, the seven a
 rows, the tests-map numbering, and the counts re-stated; the NULL controls added to
 `subtract_summary.py`.
 
+**Round 5 (merge, 2026-09-04):** EX-17 merged to `origin/main` (`e2407f0`, baseline 484, its
+registry rows `EX-COL-1`/`EX-COL-2`). `git merge origin/main` resolved as main's content minus
+this unit's 35 covered names: `BACKLOG_BASELINE` 484 → 449, the tests map and the registry
+unioned (both pin rows kept; `EX-DF-11`…`EX-DF-17` do not collide with `EX-COL-1`/`EX-COL-2`),
+and the three over-long added paragraphs (`docs/examples/dataframe/map.md`, `scripts/map.md`,
+`staging/map.md`) trimmed to four lines each. Every gate re-run green on the merge commit.
+
 ## Disk
 
 Pickup: `df -h` 537 GB free of 1.8 TB. The oracle scratch lives under the gitignored
@@ -224,7 +232,7 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/dataframe/repartition.py, docs/examples/dataframe/rollup_stat.py, docs/examples/dataframe/replace_sample.py, docs/examples/dataframe/same_semantics.py, docs/examples/dataframe/schema_select.py, docs/examples/dataframe/show_sort.py, docs/examples/dataframe/storage_level.py, docs/examples/dataframe/subtract_summary.py, docs/examples/dataframe/take_tail.py, docs/examples/dataframe/export_arrow.py, docs/examples/dataframe/export_local.py]
     - id: AT-2
       status: ATTACKED
-      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline with `toJSON` still listed (515 at dispatch, 483 on the shipped tree).
+      evidence: A COVERS name on a wrong receiver is unused and red; the backlog is an exact baseline with `toJSON` still listed (515 at dispatch, 449 on the shipped tree after the EX-16/EX-17 merges).
       artifacts: [scripts/check_example_coverage.py, docs/examples/backlog.txt]
     - id: AT-3
       status: ATTACKED
