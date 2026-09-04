@@ -1,7 +1,7 @@
 # BRIEF — the v0.7 example backfill campaign (execution slate)
 
 **Roadmap ruling:** [task/roadmap/epic-term/release-roadmap-2026-08-29.md](../task/roadmap/epic-term/release-roadmap-2026-08-29.md)
-§"v0.7 — Full example documentation".
+§"v1.1 — Full example documentation (was v0.7)".
 **Gate:** `make check-example-coverage`, delivered by EX-0
 (`task/ledgers/completed/ex-0-example-drift-gate-ledger.md`, archived at the next pickup). No batch opens before that gate is
 in `make ci` on main.
