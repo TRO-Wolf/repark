@@ -460,6 +460,7 @@ def test_live_df_printschema_trailing_newline_matches_spark(spark_engine: lp.Eng
     assert repark_level.getvalue() == spark_level.getvalue()
 
 
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_fn_regexp_extract(spark_engine: lp.Engine) -> None:
     """pins: fn-regexp-extract-1/C-002"""
     from repark.spark import functions as repark_fn

@@ -49,7 +49,7 @@ No Spark cell contradicts the sibling kernels' pinned behaviour; no HALT.
 
 | Knob | Red of M |
 |---|---|
-| disable `invoke_extract` (`exec_err!` first line) | 16 red of 16 (`test_fn_regexp_extract.py`, all items) |
+| disable `invoke_extract` (`exec_err!` first line) | 19 red of 19 (`test_fn_regexp_extract.py`, all items after round 2) |
 | revert the round-2 move (`validate_group_index` before `regex.find`) | 3 red of 3 (`test_extract_nomatch_bad_index_returns_empty`, all params) |
 
 ## Next EX batch names

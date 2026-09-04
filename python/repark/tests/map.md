@@ -70,7 +70,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
-  FN-REGEXP-EXTRACT-1 (2026-09-04): the regexp_extract cells co-collect with the printSchema and FN-FIX-2 legs after the merge of main.
   session-scoped `spark_engine`. Oracle live PySpark 4.1.2.
   pins: log1p-1-precise-kernels/C-001, C-002, C-004
 - [test_bl17_base64_padding.py](test_bl17_base64_padding.py) — **BL-17 (2026-09-03):**
@@ -2336,6 +2335,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
+  FN-REGEXP-EXTRACT-1 (2026-09-04): `test_live_fn_regexp_extract` co-collects with the printSchema and
+  FN-FIX-2 legs after the merge of main; it keeps the `skipif(not lp.LIVE)` guard like every live leg.
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
   `repark == golden`. Live (`REPARK_PARITY_LIVE=1`, `parity-live.yml` / `make parity-live`): one
