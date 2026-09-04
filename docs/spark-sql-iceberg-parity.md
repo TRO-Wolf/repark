@@ -3683,7 +3683,7 @@ Shared roster pin for every heading:
 
 - **repark** — `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
   CURRENT ROW` on `x = 1..200` answers the same column as the two-argument discrete p50
-  (`1.0, 50.0, 100.0, 150.0, 200.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
+  (`1.0, 25.0, 50.0, 100.0, 150.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
   accepted and ignored, per frame exactly as per group.
 - **Apache Spark** — the Greenwald-Khanna sketch collapses at accuracy 2: the same column is
   `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.

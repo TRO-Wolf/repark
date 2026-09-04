@@ -232,13 +232,18 @@ Four mutations, each built and run. "Rust" is
 | M3 | an empty frame answers `AggregateUDF::default_value` (what DataFusion's own sliding path does) instead of a fresh accumulator's `evaluate()` | **1 of 6 red** | not run | `an_empty_frame_answers_a_fresh_accumulator_not_the_aggregate_default`. The throwaway UDAF's `default_value` is the sentinel `-1.0` precisely so the two are distinguishable. The facade half of the same contract is the `collect_list` / `collect_set` `[]` and `approx_count_distinct` `0` cells. |
 | M4 | drop the `FILTER (WHERE ...)` mask (evaluate the unmasked frame) | **1 of 6 red** | not run | `a_filtered_non_retractable_aggregate_answers_the_masked_frame`. |
 
-Two more mutations were measured as **states of the tree** rather than injected, because each is
-the code the unit replaced and both were run before the fix existed:
+One more mutation was measured as a **state of the tree** rather than injected, because it is the
+code the unit replaced and the state existed on the way:
 
 | # | state | facade | which pins |
 |---|---|---|---|
-| M5 | `Column.over` emits the RANGE offset as `Int64` (pre-`WIN-RANGE-DF-1`) | **11 of 137 red** | every `test_dataframe_door_matches_the_spark_pin[range_frame-*]` except `bool_and` / `bool_or`, which are `min` / `max` and answered the widened frame identically by luck of the fixture. |
-| M6 | `Column.over` refuses a wrapped aggregate (pre-`WIN-COLLECT-DOOR-1`) | **10 of 137 red** | every `[*-collect_list]` and `[*-collect_set]` DataFrame-door cell. |
+| M5 | `Column.over` emits the RANGE offset as `Int64` (the re-scan and the `over()` push-down present, `WIN-RANGE-DF-1` not yet fixed) | **11 of 137 red** | every `test_dataframe_door_matches_the_spark_pin[range_frame-*]` except `bool_and` / `bool_or`, which are `min` / `max` shims and answered the widened frame identically — a cumulative `min` over this fixture happens to agree with the 2-preceding one once the single `False` appears, and a cumulative `max` is `True` throughout. That is luck of the fixture, not coverage, and it is why the RANGE contract is pinned on the other eleven. (The same run also reded one pin for a defect in the pin module itself — a helper that projected `id` against a view that has no `id` — fixed in the same session; it is not an M5 red.) |
+
+`WIN-COLLECT-DOOR-1` has **no isolated mutation number**: the `over()` push-down and the re-scan
+rule landed in the same build, so the state "re-scan present, `over()` still refusing" never
+existed to be measured. What is measured is the base-of-branch control below, where those ten
+cells fail with `ValueError: over() applies only to a window or aggregate function column` — a
+different message from the other 117, which is the evidence that they are a distinct defect.
 
 Base-of-branch control, the red-first record: on `origin/main` `55652ca` with the pin module and
 nothing else, **127 of 137 red, 10 green** — the 10 being the DataFrame-door `bool_and` /
