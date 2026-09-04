@@ -30,7 +30,7 @@ needed.
   pins: fn-fix-1-registry-rows/C-002
 - `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
-  `#[ignore]` bench `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
+  `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
   pins: fn-fix-1-registry-rows/C-002
 
 ## I want to...

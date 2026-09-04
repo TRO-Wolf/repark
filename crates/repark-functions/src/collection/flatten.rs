@@ -226,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "1e6-row release bench; cargo test --release -- --ignored"]
     fn one_million_rows_within_three_times_datafusion() {
         let rows = 1_000_000_usize;
         let fixture = packed_rows(rows);
@@ -244,9 +244,7 @@ mod tests {
         assert_eq!(ours_out.len(), baseline_out.len());
         assert!(
             ours_elapsed <= baseline_elapsed.saturating_mul(3),
-            "repark {:?} datafusion {:?}",
-            ours_elapsed,
-            baseline_elapsed
+            "repark {ours_elapsed:?} datafusion {baseline_elapsed:?}"
         );
         eprintln!("flatten bench repark={ours_elapsed:?} datafusion={baseline_elapsed:?}");
     }
