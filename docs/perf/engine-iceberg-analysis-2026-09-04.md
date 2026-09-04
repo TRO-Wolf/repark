@@ -94,7 +94,7 @@ but either sit in DataFusion (9) or need a measure-first charter (9, 11).
 | Iceberg per-statement plan fixed cost | `LIMIT 1`: Iceberg 5.2 ms vs parquet 1.85 (t_plain), 8.9 ms with 193 files | 3.4 ms fixed + ~30 µs per file; below the DML floor, only the count evidence (candidate 11) matters | closed as a wall, open as a call count |
 | `repark.scan.concurrency-limit` 1 vs 8 | Iceberg `sum_all` 87 vs 80; `count_id` 27 vs 25 | no effect at 4–32 files | closed |
 | `write.target-file-size-bytes` 16 MiB vs default on CTAS | 403 vs 412 ms | no effect (confirms candidate 8's cause is not file count) | closed |
-| Deletion-vector / position-delete application on read at 1e6 | after 20 MoR DELETEs: v3 (32 DVs) `sum_v` 29.7 / `count_id` 29.6 ms; v2 (160 parquet pos-deletes) 32.8 / 30.5; COW control 29.3 / 33.4; CTAS baseline 30.3 / 33.6 | within the 11 ms floor | closed at this scale (MW-7 / SCALE-v3 *recorded* the 4.2× / 0.64× regime at 1e7 × 50 merges with 40 % delete records — that regime is delete-record ratio, already answered) |
+| Deletion-vector / position-delete application on read at 1e6 | after 20 MoR DELETE statements: v3 (32 DVs) `sum_v` 29.7 / `count_id` 29.6 ms; v2 (160 parquet pos-deletes) 32.8 / 30.5; COW control 29.3 / 33.4; CTAS baseline 30.3 / 33.6 | within the 11 ms floor | closed at this scale (MW-7 / SCALE-v3 *recorded* the 4.2× / 0.64× regime at 1e7 × 50 merges with 40 % delete records — that regime is delete-record ratio, already answered) |
 | MoR vs COW DML cost | DELETE 1 %: COW 598 / MoR v2 255 / MoR v3 228 ms; UPDATE 620 / 203 / 212; MERGE upsert 651 / 612 / 520 | MoR is 2.5–3× cheaper on DELETE/UPDATE as designed; MERGE parity because the insert anti-join and commit dominate | closed |
 | Maintenance procedures at 1e6 × 20 MERGEs | `rewrite_position_delete_files` 426 ms (v2) / 28 ms (v3, DV no-op); `rewrite_data_files` 1,551 ms (v2, 192→8) / 3,056 ms (v3, 72→8, removed 58 DVs); `rewrite_manifests` 16–80 ms; `expire_snapshots` 84–93 ms; `remove_orphan_files` refuses `older_than` inside 24 h (ORPHAN-2, expected) | proportional to bytes rewritten; MW-7 *recorded* 92 s / 0.4 s / 5.2 s / 0.1 s at 1e7 × 50 | closed (no isolated defect) |
 | Scan 3-pass / DV close walks | *recorded*: PERF-SCAN-3PASS-1 REFUTED (1 + 0 + 1 opens), PERF-DVCLOSE-WALK-1 / -STMT-1 FIXED (F-23 / F-25) | — | closed (by record) |
@@ -142,7 +142,7 @@ scratch/run_battery2.sh            # CTAS, DML cow/mor v2/v3, maintenance legs, 
 scratch/run_battery3.sh            # chain count cells, CTAS 16 MiB pair, scan concurrency / tp1 pairs, window knobs, cProfile + py-spy
 scratch/run_battery4.sh            # py-spy --native over MERGE / DELETE (cow v2, mor v3)
 scratch/run_battery5.sh            # noise floors (6 repeats per family)
-scratch/run_battery6.sh            # delete-application pair (mor3 / mor2 / cow2 after 20 DELETEs), INSERT fixed cost
+scratch/run_battery6.sh            # delete-application pair (mor3 / mor2 / cow2 after 20 DELETE statements), INSERT fixed cost
 scratch/run_battery7.sh            # MERGE phase decomposition by equivalent SQL
 scratch/run_battery8.sh            # Spark oracle battery (local[8]; checks no JVM is running; ivy at /tmp/oc-perfa/.ivy2)
 scratch/run_battery9.sh            # TPC-H Q17 EXPLAIN ANALYZE + Q1/Q5/Q6/Q7 cells
