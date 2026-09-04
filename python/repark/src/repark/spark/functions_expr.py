@@ -66,19 +66,19 @@ def upper(col: Column | str) -> Column:
     return _scalar("upper", col)
 
 
-def trim(col: Column | str) -> Column:
+def trim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim both sides (PySpark ``functions.trim``)."""
-    return _scalar("trim", col)
+    return _scalar("trim", col) if trim is None else _scalar("trim", col, trim)
 
 
-def ltrim(col: Column | str) -> Column:
+def ltrim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim leading whitespace (PySpark ``functions.ltrim``)."""
-    return _scalar("ltrim", col)
+    return _scalar("ltrim", col) if trim is None else _scalar("ltrim", col, trim)
 
 
-def rtrim(col: Column | str) -> Column:
+def rtrim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim trailing whitespace (PySpark ``functions.rtrim``)."""
-    return _scalar("rtrim", col)
+    return _scalar("rtrim", col) if trim is None else _scalar("rtrim", col, trim)
 
 
 def length(col: Column | str) -> Column:

@@ -1,36 +1,23 @@
-"""FN-CHR-1 today: chr/char take a Unicode scalar, not n % 256 (registry §7).
+"""FN-CHR-1: chr/char take n % 256 and empty string for negatives (registry §7)."""
 
-pins: ex-4-functions-strings-a/C-001
-"""
-
-import pytest
-
-from repark.errors import PySparkException
 from repark.spark import ReparkSession
-from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark import functions as F  # noqa: N812
 
 
-def test_fn_chr_300_is_unicode_letter_today() -> None:
-    """Today: chr(300) and char(300) are 'Ĭ'; Spark 4.1.2 answers ',' (300 % 256)."""
+def test_fn_chr_modulo_256_and_negative_empty() -> None:
+    """FN-CHR-1: chr(300) is ',' and chr(-1) is ''. pins: fn-fix-2-string-rows/C-003"""
     repark = ReparkSession.builder.appName("fn-chr").master("local[1]").getOrCreate()
     try:
-        frame = repark.createDataFrame([(300,)], ["n"])
+        frame = repark.createDataFrame(
+            [(0,), (65,), (255,), (256,), (300,), (321,), (65601,), (-1,), (-256,), (None,)],
+            ["n"],
+        )
         chr_values = [row[0] for row in frame.select(F.chr(F.col("n"))).collect()]
         char_values = [row[0] for row in frame.select(F.char(F.col("n"))).collect()]
-        assert chr_values == ["Ĭ"]
-        assert char_values == ["Ĭ"]
-    finally:
-        repark.stop()
-
-
-def test_fn_chr_negative_raises_today() -> None:
-    """Today: chr(-1) raises; Spark 4.1.2 answers an empty string."""
-    repark = ReparkSession.builder.appName("fn-chr-neg").master("local[1]").getOrCreate()
-    try:
-        frame = repark.createDataFrame([(-1,)], ["n"])
-        with pytest.raises(PySparkException, match="invalid Unicode scalar value: -1"):
-            frame.select(F.chr(F.col("n"))).collect()
-        with pytest.raises(PySparkException, match="invalid Unicode scalar value: -1"):
-            frame.select(F.char(F.col("n"))).collect()
+        expected = ["\x00", "A", "ÿ", "\x00", ",", "A", "A", "", "", None]
+        assert chr_values == expected
+        assert char_values == expected
+        sql_row = repark.sql("SELECT chr(300) AS a, chr(65601) AS b, chr(-1) AS c").collect()[0]
+        assert [sql_row["a"], sql_row["b"], sql_row["c"]] == [",", "A", ""]
     finally:
         repark.stop()

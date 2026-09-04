@@ -78,7 +78,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "initcap" => {
             need(1)?;
-            expr_fn::initcap(exprs[0].clone())
+            repark_functions::expr_fn::initcap(exprs[0].clone())
         }
         "lpad" => {
             need_at_least(2)?;
@@ -100,13 +100,11 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "regexp_replace" => {
             need_at_least(3)?;
-            // Spark replacement is global; DataFusion needs the explicit `g` flag.
-            let flags = if exprs.len() >= 4 {
-                Some(exprs[3].clone())
-            } else {
-                Some(lit("g"))
-            };
-            expr_fn::regexp_replace(exprs[0].clone(), exprs[1].clone(), exprs[2].clone(), flags)
+            repark_functions::expr_fn::regexp_replace(
+                exprs[0].clone(),
+                exprs[1].clone(),
+                exprs[2].clone(),
+            )
         }
         "sqrt" => {
             need(1)?;
@@ -247,9 +245,13 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             exprs[0].clone().ilike(exprs[1].clone())
         }
-        "rlike" | "regexp_like" => {
+        "regexp_like" => {
             need(2)?;
-            expr_fn::regexp_like(exprs[0].clone(), exprs[1].clone(), None)
+            repark_functions::expr_fn::regexp_like(exprs[0].clone(), exprs[1].clone())
+        }
+        "rlike" => {
+            need(2)?;
+            repark_functions::expr_fn::rlike(exprs[0].clone(), exprs[1].clone())
         }
         "round" => {
             need_at_least(1)?;
@@ -340,7 +342,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "chr" => {
             need(1)?;
-            expr_fn::chr(exprs[0].clone())
+            repark_functions::expr_fn::chr(exprs[0].clone())
         }
         "overlay" => {
             // Spark's `len=-1` means replacement length; DataFusion's means string end.
@@ -488,9 +490,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "elt" => {
             need_at_least(2)?;
-            let index = exprs[0].clone() - lit(1i64);
-            let elements = nested_fn::make_array(exprs[1..].to_vec());
-            nested_fn::array_element(elements, index)
+            repark_functions::expr_fn::elt(exprs.clone())
         }
         "array_element" => {
             need(2)?;

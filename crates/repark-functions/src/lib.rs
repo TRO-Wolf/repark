@@ -18,14 +18,19 @@ pub mod format_version;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
+mod java_regex;
 pub mod percentile_approx;
 pub mod random;
 pub mod session_time_zone;
+pub mod spark_chr;
+pub mod spark_elt;
+pub mod spark_initcap;
 pub mod spark_isnan;
 pub mod spark_length;
 pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_regexp;
+pub mod spark_regexp_match;
 pub mod spark_split_part;
 pub mod string;
 pub mod timestamp_cast;
@@ -93,6 +98,15 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in spark_isnan::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_initcap::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_chr::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in spark_elt::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     validate::register(ctx);

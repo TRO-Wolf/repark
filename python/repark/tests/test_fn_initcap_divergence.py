@@ -1,14 +1,11 @@
-"""FN-INITCAP-1 today: initcap starts a word at any non-alphanumeric (registry §7).
-
-pins: ex-4-functions-strings-a/C-001
-"""
+"""FN-INITCAP-1: initcap starts a word only after a space (registry §7)."""
 
 from repark.spark import ReparkSession
-from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark import functions as F  # noqa: N812
 
 
-def test_fn_initcap_starts_word_at_any_non_alnum_today() -> None:
-    """Today: 'a-b' is 'A-B' and 'foo.bar' is 'Foo.Bar'; Spark 4.1.2 is 'A-b' / 'Foo.bar'."""
+def test_fn_initcap_starts_word_only_after_space() -> None:
+    """FN-INITCAP-1: 'a-b' is 'A-b' and 'foo.bar' is 'Foo.bar'. pins: fn-fix-2-string-rows/C-003"""
     repark = ReparkSession.builder.appName("fn-initcap").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame(
@@ -21,19 +18,35 @@ def test_fn_initcap_starts_word_at_any_non_alnum_today() -> None:
                 ("ab_cd",),
                 ("x\ty",),
                 ("a-b c.d",),
+                ("  leading",),
+                ("",),
+                ("Ünï",),
+                ("SPARK",),
+                ("a  b",),
+                ("a\nb",),
+                (None,),
             ],
             ["s"],
         )
         values = [row[0] for row in frame.select(F.initcap(F.col("s"))).collect()]
         assert values == [
             "Hello World",
-            "A-B",
-            "Foo.Bar",
+            "A-b",
+            "Foo.bar",
             "1abc",
-            "O'Neil",
-            "Ab_Cd",
-            "X\tY",
-            "A-B C.D",
+            "O'neil",
+            "Ab_cd",
+            "X\ty",
+            "A-b C.d",
+            "  Leading",
+            "",
+            "Ünï",
+            "Spark",
+            "A  B",
+            "A\nb",
+            None,
         ]
+        sql_values = [row[0] for row in repark.sql("SELECT initcap('a-b') AS r").collect()]
+        assert sql_values == ["A-b"]
     finally:
         repark.stop()

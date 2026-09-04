@@ -441,8 +441,9 @@ fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
     })
 }
 
-fn compile_spark_regex(pattern: &str) -> Result<Regex> {
-    let bound = crate::collection::bind_ascii_perl_classes(pattern);
+pub(crate) fn compile_spark_regex(pattern: &str) -> Result<Regex> {
+    let translated = crate::java_regex::translate_java_char_classes(pattern);
+    let bound = crate::collection::bind_ascii_perl_classes(&translated);
     Regex::new(&bound).map_err(|error| {
         DataFusionError::Execution(format!("invalid regular expression '{pattern}': {error}"))
     })
