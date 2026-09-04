@@ -1,12 +1,22 @@
 # map — scripts/
 
-EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 —
+EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 at
+dispatch (the EX-16 merge resolves it to main's 518 → 483) —
 35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`
 (`repartition.py`, `rollup_stat.py`, `replace_sample.py`, `same_semantics.py`,
 `schema_select.py`, `show_sort.py`, `storage_level.py`, `subtract_summary.py`, `take_tail.py`,
 `export_arrow.py`, `export_local.py`); `toJSON` refuses (R-DF-BATCH2) and stays a backlog row,
-registry §7 `EX-DF-10`…`EX-DF-16`, pins in `python/repark/tests/test_examples_dataframe_c.py`.
+registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`.
 pins: ex-18-dataframe-c/C-001
+EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
+32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
+(`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
+`bridges.py`, `print_schema.py`, `random_split.py`; round 3 moved `mergeInto`/`merge_into`
+into `joins_hints.py` after the Iceberg-oracle re-measure); `intersectAll`/`intersect_all` and
+`groupingSets`/`grouping_sets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`), and the narrow
+`mergeInto` bare-key/qualifier arm (§7 `EX-DF-9`) and `printSchema` stdout tail (§7 `EX-DF-10`)
+are recorded with pins in `python/repark/tests/test_examples_dataframe_b.py`.
+pins: ex-16-dataframe-b/C-001
 
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
 28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
