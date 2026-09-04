@@ -71,6 +71,8 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     ctx.register_udf(timestamp_cast::to_date_udf().as_ref().clone());
+    ctx.register_udf(timestamp_cast::date_udf().as_ref().clone());
+    ctx.register_udf(timestamp_cast::unix_timestamp_udf().as_ref().clone());
     for udf in instant_ts::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }

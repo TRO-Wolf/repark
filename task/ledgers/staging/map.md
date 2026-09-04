@@ -36,3 +36,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured against live Spark on the memory catalog; Glue + S3 Tables legs. Four registry
   rows filed, `V3-COV-7` cited, 0 FIXED. `risk_tier: standard`. Branch
   `feat/sql-harden-1-cutover-shapes`. pins: sql-harden-1-cutover-shapes/C-001
+- [date-fn-1-spark-date-spelling-ledger.md](date-fn-1-spark-date-spelling-ledger.md) —
+  **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
+  `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.
+  `risk_tier: standard`. Branch `fix/date-fn-1-spark-date-spelling`.
+  pins: date-fn-1-spark-date-spelling/C-004

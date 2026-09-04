@@ -2381,22 +2381,25 @@ the pin rather than obeying it.
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
-- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
-  | spelling | repark |
-  |---|---|
-  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
-  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
-  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
+- **repark** — **FIXED 2026-09-04 (DATE-FN-1).** Spark SQL `date(expr)` is registered as
+  `CAST(expr AS DATE)` (session-zone timestamp truncation; invalid string `CAST_INVALID_INPUT`
+  under ANSI on, NULL under ANSI off). `unix_timestamp` on TIMESTAMP is epoch seconds; on a
+  string it parses `yyyy-MM-dd HH:mm:ss` in the session zone. The S6 gold join builds `fct`
+  and `agg`; after the second-day insert and `INSERT OVERWRITE` the fact rows are
+  `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and the clinic-day agg is two rows. S6 as a
+  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`)
+  and `COUNT(*)` Arrow nullability. PySpark has no `F.date`.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
-  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
-  `…::test_to_date_and_cast_as_date_answer_on_repark`,
-  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
-- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
-  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
+  `python/repark/tests/test_date_fn_1.py`,
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `python/repark/tests/test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+- **Rationale** — FIXED. The Spark-door spelling was missing; `to_date` / `CAST(ts AS DATE)`
+  already existed. `unix_timestamp` was `R-FN-BATCH1` / `B-TZ-1` and is registered on the
+  SQL door and the facade (zero-arg and one-arg; the format argument stays unsupported).
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 

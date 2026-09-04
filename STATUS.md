@@ -162,6 +162,7 @@ in published history by explicit decision:
   preserve-null Unnest removes redundant projections; adjacent candidates stay
   measurement-gated. #30 merged.
   **Next:** H-2 scoped to the cutover SQL (SQL-HARDEN-1) then the H-3 spill matrix.
+  **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->

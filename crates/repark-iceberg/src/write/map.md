@@ -150,7 +150,11 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
-- `conform.rs` — **V3-COV (2026-09-03):** the `SourceMatch::Unique` arm returns the source array
+- `conform.rs` — **DATE-FN-1 (2026-09-04):** the identity arm of
+  `conform_batch_retaining_unmapped_columns` rebuilds the batch against the write schema so
+  leaked Iceberg `PARQUET:field_id` metadata from a multi-table join cannot scramble CTAS
+  columns. pins: date-fn-1-spark-date-spelling/C-002
+  **V3-COV (2026-09-03):** the `SourceMatch::Unique` arm returns the source array
   unchanged when its Arrow type already equals the target field's, before the store-assignment
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
