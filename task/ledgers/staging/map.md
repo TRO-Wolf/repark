@@ -36,7 +36,3 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured against live Spark on the memory catalog; Glue + S3 Tables legs. Four registry
   rows filed, `V3-COV-7` cited, 0 FIXED. `risk_tier: standard`. Branch
   `feat/sql-harden-1-cutover-shapes`. pins: sql-harden-1-cutover-shapes/C-001
-- [rp-11-repin-f24-ledger.md](../completed/rp-11-repin-f24-ledger.md) —
-  **RP-11 (2026-09-04), in flight:** fork repin `594bdbe5` → `189a73ed` (F-24 `#266`);
-  `B-MOR-3-FLOOR-1` closes. `risk_tier: standard`. Branch `feat/rp-11-repin-f24`.
-  pins: rp-11-repin-f24/C-001, C-002, C-003
