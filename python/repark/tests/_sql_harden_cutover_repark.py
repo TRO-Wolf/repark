@@ -23,11 +23,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
+                    ["id", "string", True],
                     ["amount", "decimal128(10, 4)", True],
                     ["units", "int32", True],
                     ["note", "string", True],
-                    ["part", "int32", False],
+                    ["part", "int32", True],
                 ],
             ],
             ["OK", [["append"]]],
@@ -39,12 +39,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
                             ["amount", "decimal(10,4)", False],
                             ["units", "int", False],
                             ["note", "string", False],
-                            ["part", "int", True],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -68,11 +68,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
-                    ["amount", "decimal128(10, 4)", False],
-                    ["units", "int32", False],
-                    ["note", "string", False],
-                    ["part", "int32", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
                 ],
             ],
             ["OK", [["append"], ["overwrite"], ["overwrite"]]],
@@ -84,12 +84,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
-                            ["amount", "decimal(10,4)", True],
-                            ["units", "int", True],
-                            ["note", "string", True],
-                            ["part", "int", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -121,11 +121,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string_view", False],
-                    ["amount", "decimal128(10, 4)", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
                     ["units", "int32", False],
                     ["note", "string", False],
-                    ["part", "int32", False],
+                    ["part", "int32", True],
                 ],
             ],
         ],
@@ -185,11 +185,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
-                    ["amount", "decimal128(10, 4)", False],
-                    ["units", "int32", False],
-                    ["note", "string", False],
-                    ["part", "int32", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
                 ],
             ],
             ["OK", [["append"], ["append"], ["append"]]],
@@ -201,12 +201,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
-                            ["amount", "decimal(10,4)", True],
-                            ["units", "int", True],
-                            ["note", "string", True],
-                            ["part", "int", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -258,7 +258,7 @@ REPARK: dict[str, Any] = {
                     ["clinic_id", "int32", True],
                     ["calendar_date", "date32[day]", True],
                     ["day_of_week", "string", True],
-                    ["num_surveys", "int64", False],
+                    ["num_surveys", "int64", True],
                 ],
             ],
             [
@@ -312,11 +312,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
+                    ["id", "string", True],
                     ["amount", "decimal128(10, 4)", True],
                     ["units", "int32", True],
                     ["note", "string", True],
-                    ["part", "int32", False],
+                    ["part", "int32", True],
                 ],
             ],
             ["OK", [["append"]]],
@@ -328,12 +328,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
                             ["amount", "decimal(10,4)", False],
                             ["units", "int", False],
                             ["note", "string", False],
-                            ["part", "int", True],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -357,11 +357,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
-                    ["amount", "decimal128(10, 4)", False],
-                    ["units", "int32", False],
-                    ["note", "string", False],
-                    ["part", "int32", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
                 ],
             ],
             ["OK", [["append"], ["overwrite"], ["overwrite"]]],
@@ -373,12 +373,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
-                            ["amount", "decimal(10,4)", True],
-                            ["units", "int", True],
-                            ["note", "string", True],
-                            ["part", "int", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -451,11 +451,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
+                    ["id", "string", True],
                     ["amount", "decimal128(10, 4)", True],
                     ["units", "int32", True],
                     ["note", "string", True],
-                    ["part", "int32", False],
+                    ["part", "int32", True],
                 ],
             ],
             [
@@ -475,12 +475,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
                             ["amount", "decimal(10,4)", False],
                             ["units", "int", False],
                             ["note", "string", False],
-                            ["part", "int", True],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -514,11 +514,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
-                    ["amount", "decimal128(10, 4)", False],
-                    ["units", "int32", False],
-                    ["note", "string", False],
-                    ["part", "int32", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
                 ],
             ],
             [
@@ -540,12 +540,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
-                            ["amount", "decimal(10,4)", True],
-                            ["units", "int", True],
-                            ["note", "string", True],
-                            ["part", "int", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -658,11 +658,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
+                    ["id", "string", True],
                     ["amount", "decimal128(10, 4)", True],
                     ["units", "int32", True],
                     ["note", "string", True],
-                    ["part", "int32", False],
+                    ["part", "int32", True],
                 ],
             ],
             [
@@ -682,12 +682,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
                             ["amount", "decimal(10,4)", False],
                             ["units", "int", False],
                             ["note", "string", False],
-                            ["part", "int", True],
+                            ["part", "int", False],
                         ],
                     ],
                     [
@@ -721,11 +721,11 @@ REPARK: dict[str, Any] = {
             [
                 "OK",
                 [
-                    ["id", "string", False],
-                    ["amount", "decimal128(10, 4)", False],
-                    ["units", "int32", False],
-                    ["note", "string", False],
-                    ["part", "int32", False],
+                    ["id", "string", True],
+                    ["amount", "decimal128(10, 4)", True],
+                    ["units", "int32", True],
+                    ["note", "string", True],
+                    ["part", "int32", True],
                 ],
             ],
             [
@@ -747,12 +747,12 @@ REPARK: dict[str, Any] = {
                     [
                         "schema",
                         [
-                            ["id", "string", True],
-                            ["ingestion_timestamp", "timestamp", True],
-                            ["amount", "decimal(10,4)", True],
-                            ["units", "int", True],
-                            ["note", "string", True],
-                            ["part", "int", True],
+                            ["id", "string", False],
+                            ["ingestion_timestamp", "timestamp", False],
+                            ["amount", "decimal(10,4)", False],
+                            ["units", "int", False],
+                            ["note", "string", False],
+                            ["part", "int", False],
                         ],
                     ],
                     [

@@ -11,7 +11,7 @@ from _sql_harden_cutover_spark import SPARK
 VERDICTS: dict[str, str] = {
     "s1-ctas-if-fresh": "DIVERGES",
     "s2-merge-idempotent": "DIVERGES",
-    "s3-dedup-coalesce-cast": "DIVERGES",
+    "s3-dedup-coalesce-cast": "EQUAL",
     "s4-overwrite-partitions": "DIVERGES",
     "s5-maintenance-calls": "DIVERGES",
     "s6-gold-incremental": "DIVERGES",

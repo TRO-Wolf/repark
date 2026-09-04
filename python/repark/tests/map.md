@@ -326,6 +326,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
   second pass is 1 on both engines.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** REPARK halves re-measured to the Spark-equal
+  nullability derivation (79 schema-triple cells); s3 verdict EQUAL
+  (`CUTOVER-DEDUP-SCHEMA-1` FIXED), CTAS-REQ programs still DIVERGE only on `V3-COV-7`
+  (`CUTOVER-CTAS-REQ-1` FIXED).
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
   pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
 - [test_cutover_schema_1.py](test_cutover_schema_1.py) — **CUTOVER-SCHEMA-1 (2026-09-04):**

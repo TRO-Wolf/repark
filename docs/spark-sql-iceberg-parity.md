@@ -2354,14 +2354,11 @@ the pin rather than obeying it.
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
-- **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
-  write.*.mode = merge-on-read or copy-on-write, write.target-file-size-bytes = 268435456) AS
-  SELECT * FROM staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4)
-  / INT / nullable STRING copies the parquet nullability into Iceberg: `id` /
-  `ingestion_timestamp` / `part` required, `amount` / `units` / `note` optional. The Arrow
-  read-back matches (`id`/`part` non-null). Row values match Spark. Copy-on-write MERGE
-  (S8/S9) keeps the same requiredness after `UPDATE SET *` / `INSERT *`; `delete_files` is
-  empty on both engines (not this row).
+- **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field
+  optional (`required: false`) and reads every Arrow field nullable. Row values match Spark.
+  Copy-on-write MERGE (S8/S9) keeps every field optional after `UPDATE SET *` / `INSERT *`;
+  `delete_files` is empty on both engines (not this row). The CTAS-REQ programs still DIVERGE
+  on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`).
 - **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
   every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
@@ -2369,9 +2366,11 @@ the pin rather than obeying it.
   and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
   `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
-- **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
-  on requiredness only: types here match the parquet schema. Create-path policy, not a local
-  one-line flip (same SE-1 tighten-derived refusal V3-COV-8 names).
+- **Rationale** — FIXED. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
+  on requiredness only: types here match the parquet schema. The parquet reader now relaxes
+  non-null file nullability to nullable, and CTAS derives Iceberg requiredness from the
+  relaxed query schema, so the committed schema is optional throughout. SE-1's
+  tighten-derived refusal still guards the genuinely non-nullable case.
 
 ### CUTOVER-MERGE-FILES-1 — MoR `MERGE` `UPDATE SET *` / `INSERT *` writes extra delete files; the row set is Spark-equal and the second pass is row-idempotent
 
@@ -2397,20 +2396,22 @@ the pin rather than obeying it.
 
 ### CUTOVER-DEDUP-SCHEMA-1 — silver dedup values match Spark; Arrow type and nullability do not
 
-- **repark** — `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then
-  `= 1`, then `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)`
-  answers rows `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is
-  `id string_view not null`, `amount decimal128(10,4) not null`, `units int32 not null`,
-  `note string not null`, `part int32 not null`.
+- **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).**
+  `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then `= 1`, then
+  `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)` answers rows
+  `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is `id string
+  nullable`, `amount decimal128(10,4) nullable`, `units int32 not null`, `note string not
+  null`, `part int32 nullable` — Spark-equal cell for cell, so s3 as a program is EQUAL.
 - **Apache Spark** — the same rows. Arrow schema is `id string nullable`, `amount
   decimal128(10,4) nullable`, `units int32 not null`, `note string not null`, `part int32
   nullable`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
   `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
   and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`.
-- **Rationale** — BACKLOG. Values are Spark-equal. `string_view` is the parquet-read Utf8View
-  path (CTAS-VIEW-1 writes it; this row is the transform before a write). Nullability after
-  `coalesce` is analyzer-level.
+- **Rationale** — FIXED. The Arrow export boundary coerces Utf8View to Utf8, and
+  decimal-cast nullability derives from the cast's overflow exposure the way Spark derives
+  it, so the analyzer-level `coalesce`/`cast` nullability lands on Spark's answer
+  (`units`/`note` stay non-null, the rest nullable).
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
@@ -2420,8 +2421,9 @@ the pin rather than obeying it.
   string it parses `yyyy-MM-dd HH:mm:ss` in the session zone. The S6 gold join builds `fct`
   and `agg`; after the second-day insert and `INSERT OVERWRITE` the fact rows are
   `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and the clinic-day agg is two rows. S6 as a
-  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`)
-  and `COUNT(*)` Arrow nullability. PySpark has no `F.date`.
+  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`).
+  `COUNT(*)` Arrow nullability matches Spark since 2026-09-04 (CUTOVER-SCHEMA-1). PySpark has
+  no `F.date`.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
