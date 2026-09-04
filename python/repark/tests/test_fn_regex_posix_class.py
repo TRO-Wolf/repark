@@ -2,6 +2,7 @@
 
 import pytest
 
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 
@@ -69,5 +70,20 @@ def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
             row[0] for row in repark.sql(f"SELECT regexp_like('{value}', '[[:alpha:]x]')").collect()
         ]
         assert sql_values == [True]
+    finally:
+        repark.stop()
+
+
+@pytest.mark.parametrize("value", ["alpha", "fox"])
+def test_regexp_extract_refuses_on_both_doors(value: str) -> None:
+    """FN-REGEX-POSIX-1: regexp_extract refusal both doors. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-regex-extract").master("local[1]").getOrCreate()
+    try:
+        with pytest.raises(
+            UnsupportedOperationException, match="regexp_extract is not supported yet"
+        ):
+            F.regexp_extract(F.lit(value), "([[:alpha:]]+)", 1)
+        with pytest.raises(AnalysisException, match="Invalid function 'regexp_extract'"):
+            repark.sql(f"SELECT regexp_extract('{value}', '([[:alpha:]]+)', 1)").collect()
     finally:
         repark.stop()

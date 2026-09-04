@@ -12,8 +12,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [fn-fix-2-ctrl-1-controls-ledger.md](fn-fix-2-ctrl-1-controls-ledger.md) — **FN-FIX-2-CTRL-1
   (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
   missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
-  Spark-equal, control 1 (`regexp_extract`) HALTs on repark's missing function
-  (FINDING F-FN-FIX-2-CTRL-1-1, ruling pending). `risk_tier: standard`. Branch
+  Spark-equal, control 1 (`regexp_extract`) refusal pinned on both doors
+  (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED by round-2 ruling; Spark `'alpha'`/`''`).
+  `risk_tier: standard`. Branch
   `fix/fn-fix-2-ctrl-1-controls`. pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike

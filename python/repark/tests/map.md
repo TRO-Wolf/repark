@@ -54,8 +54,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark's Java union bracket (`[1, 0, 4]` / `[True, False, True]` / `'##bb##'`).
   pins: fn-fix-2-string-rows/C-003
   **FN-FIX-2-CTRL-1 (2026-09-04):** `[[:alpha:]x]` matches `'x'` and `'fox'` via
-  `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` stays unimplemented
-  (FINDING F-FN-FIX-2-CTRL-1-1).
+  `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` refusal pinned on
+  both doors (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED; Spark: `'alpha'`/`''`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
   FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises

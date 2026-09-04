@@ -16,7 +16,7 @@ Control 1 diverges (repark has no `regexp_extract`): HALT with the measured pair
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | One throwaway oracle script under gitignored `scratch/` measures every control on live Spark (one JVM; ANSI on AND off where the table says so) and on repark; every pair recorded in the oracle table below. | Oracle table (§Oracle), `scratch/oracle_spark.py`, `scratch/oracle_spark2.py`, `scratch/oracle_repark.py`, `scratch/oracle_repark2.py`. | **PROVEN** |
-| C-002 | The controls land in the six pin files as parametrized cases (repark answers == Spark's measured answers); the same cells co-collect on the shared `spark_engine` in the two FN-FIX-2 live tests. | Six pin files + `test_parity_live.py` legs below; control 1 unpinned (FINDING F-FN-FIX-2-CTRL-1-1). | **OPEN** (control 1 needs a ruling: repark has no `regexp_extract` on either door) |
+| C-002 | The controls land in the six pin files as parametrized cases (repark answers == Spark's measured answers); the same cells co-collect on the shared `spark_engine` in the two FN-FIX-2 live tests. | Six pin files + `test_parity_live.py` legs below; control 1 pinned as a refusal (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED by round-2 ruling: document-only close). | **PROVEN** (9 pin functions, 23 parametrized cases) |
 | C-003 | Every new pin reds under one mutation (one flipped expected value in a scratch copy). | Mutation table (§Mutation): 8 red of 8. | **PROVEN** |
 | C-004 | Registry §7 rows for the six FN-FIX-2 fixes gain a one-line controls note; `staging/map.md` and `python/repark/tests/map.md` lockstep; STATUS untouched. | Registry notes + maps (§9). | **PROVEN** |
 
@@ -51,8 +51,9 @@ and the `F.like` API. `regexp_extract` group index past the last group raises
 | initcap `"Ünï_9 Ab"` → `"Ünï_9 AB"` | 1 red of 1 (`test_fn_initcap_non_ascii_underscore_digit_boundaries`) |
 | chr `65536 → \x00` → `\x01` | 1 red of 1 (`test_fn_chr_zero_large_negative_null`) |
 | posix bracket `True` → `False` | 1 red of 1 (`test_bracket_posix_class_with_extra_literal_matches`) |
+| regexp_extract refusal `Invalid function` → `Valid function` | 2 red of 2 (`test_regexp_extract_refuses_on_both_doors`) |
 
-8 red of 8 new pin functions (21 parametrized cases).
+9 red of 9 new pin functions (23 parametrized cases).
 
 ```yaml
 FINDING:
@@ -62,15 +63,17 @@ FINDING:
   clause: [C-002]
   claim: Control 1 cannot pin equality because repark implements regexp_extract on neither door, while Spark answers 'alpha' and ''.
   evidence: scratch/oracle_repark.py repark/on/extract_alpha_from_alpha (UnsupportedOperationException, disclosed R-FN-BATCH1); scratch/oracle_spark2.py spark/on/extract_alpha_from_alpha ('alpha')
-  disposition: OPEN
+  disposition: REMEDIATED (round-2 ruling: document-only close, finding CLOSED as a pinned refusal; refusal pinned both doors in test_fn_regex_posix_class.py::test_regexp_extract_refuses_on_both_doors; Spark 'alpha'/'' recorded in oracle table and registry FN-REGEX-POSIX-1 controls note)
 ```
+
+Queue: FN-REGEXP-EXTRACT-1 — build `regexp_extract` (Spark 4.1.2: group extraction, POSIX classes per FN-REGEX-POSIX-1, non-match → `''`).
 
 ## 9. Delivery
 
 | Item | Path |
 |---|---|
 | Registry | `docs/spark-sql-iceberg-parity.md` §7 control notes on the six FN-FIX-2 rows |
-| Pins | six `python/repark/tests/test_fn_*.py` files (controls 2–7); control 1 Spark oracle cells in `test_parity_live.py` only |
+| Pins | six `python/repark/tests/test_fn_*.py` files (controls 2–7 equality; control 1 refusal both doors in `test_fn_regex_posix_class.py::test_regexp_extract_refuses_on_both_doors`); control 1 Spark oracle cells in `test_parity_live.py` |
 | Live legs | `test_parity_live.py::test_live_fn_fix_2_strings`, `::test_live_fn_fix_2_regex_like` on `spark_engine` |
 | Maps | `task/ledgers/staging/map.md`, `python/repark/tests/map.md` lockstep |
 
@@ -81,7 +84,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every brief clause walked against the oracle table and the pins; control 1 filed as OPEN finding F-FN-FIX-2-CTRL-1-1 instead of absorbed.
+      evidence: Every brief clause walked against the oracle table and the pins; control 1 closed as a pinned refusal (F-FN-FIX-2-CTRL-1-1, round-2 ruling) instead of absorbed.
       artifacts: [task/ledgers/staging/fn-fix-2-ctrl-1-controls-ledger.md]
     - id: AT-2
       status: ATTACKED
@@ -113,6 +116,6 @@ COVERAGE_ATTESTATION:
       justification: No new log or metric surface.
     - id: AT-10
       status: ATTACKED
-      evidence: 8 new pin functions (21 cases) each red under one flipped expectation; live legs co-collect with disclosure.
+      evidence: 9 new pin functions (23 cases) each red under one flipped expectation; live legs co-collect with disclosure.
       artifacts: [scratch/run_mutations.py, python/repark/tests/test_parity_live.py]
 ```
