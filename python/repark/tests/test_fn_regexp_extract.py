@@ -104,6 +104,32 @@ def test_extract_group_one_of_groupless_pattern_raises() -> None:
         _session().sql("SELECT regexp_extract('abc', '[a-z]+', 1) AS r").collect()
 
 
+@pytest.mark.parametrize(
+    ("value", "pattern", "idx"),
+    [("abc", PAIRS, 3), ("abc", PAIRS, -1), ("ABC", "[a-z]+", 1)],
+)
+def test_extract_nomatch_bad_index_returns_empty(value: str, pattern: str, idx: int) -> None:
+    """Non-matching input answers '' for any idx. pins: fn-regexp-extract-1/C-002"""
+    facade = (
+        _session()
+        .createDataFrame([(value,)], "s string")
+        .select(F.regexp_extract("s", F.lit(pattern), idx).alias("r"))
+        .toArrow()
+        .column("r")
+        .to_pylist()
+    )
+    assert facade == [""]
+    sql_pattern = pattern.replace("\\", "\\\\")
+    door = (
+        _session()
+        .sql(f"SELECT regexp_extract('{value}', '{sql_pattern}', {idx}) AS r")
+        .toArrow()
+        .column("r")
+        .to_pylist()
+    )
+    assert door == [""]
+
+
 @pytest.mark.parametrize(("value", "want"), [("alpha", "alpha"), ("fox", "")])
 def test_extract_posix_alpha_is_java_union(value: str, want: str) -> None:
     """POSIX class follows the Java union on both doors. pins: fn-regexp-extract-1/C-002"""

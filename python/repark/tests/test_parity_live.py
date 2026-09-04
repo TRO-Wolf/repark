@@ -463,17 +463,44 @@ def test_live_fn_regexp_extract(spark_engine: lp.Engine) -> None:
     except Exception as exc:
         assert "REGEX_GROUP_INDEX" in str(exc)
         assert "`regexp_extract` is invalid" in str(exc)
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", "false"),)):
+        off = spark_engine.session.sql(
+            "SELECT regexp_extract('abc', '(\\\\d+)-(\\\\d+)', 3) AS a, "
+            "regexp_extract('abc', '(\\\\d+)-(\\\\d+)', -1) AS b, "
+            "regexp_extract('ABC', '[a-z]+', 1) AS c"
+        ).toArrow()
+        assert off.column("a").to_pylist() == [""]
+        assert off.column("b").to_pylist() == [""]
+        assert off.column("c").to_pylist() == [""]
+        try:
+            spark_engine.session.sql(
+                "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 3)"
+            ).toArrow()
+            raise AssertionError("group index 3 must raise with ANSI off")
+        except Exception as exc:
+            assert "REGEX_GROUP_INDEX" in str(exc)
+            assert "`regexp_extract` is invalid" in str(exc)
+        try:
+            spark_engine.session.sql(
+                "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', -1)"
+            ).toArrow()
+            raise AssertionError("group index -1 must raise with ANSI off")
+        except Exception as exc:
+            assert "REGEX_GROUP_INDEX" in str(exc)
+            assert "`regexp_extract` is invalid" in str(exc)
     repark_out = (
         lp.build_repark_engine()
         .session.sql(
             "SELECT regexp_extract('100-200', '(\\\\d+)-(\\\\d+)', 1) AS g1, "
             "regexp_extract('abc', '(\\\\d+)', 1) AS nomatch, "
+            "regexp_extract('abc', '(\\\\d+)-(\\\\d+)', 3) AS badnomatch, "
             "regexp_extract('alpha', '([[:alpha:]]+)', 1) AS posix"
         )
         .toArrow()
     )
     assert repark_out.column("g1").to_pylist() == ["100"]
     assert repark_out.column("nomatch").to_pylist() == [""]
+    assert repark_out.column("badnomatch").to_pylist() == [""]
     assert repark_out.column("posix").to_pylist() == ["alpha"]
     repark_facade = (
         lp.build_repark_engine()

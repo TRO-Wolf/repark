@@ -2362,7 +2362,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ltrim` / `rtrim` cells and the `RLIKE`-keyword Spark oracle cells.
   pins: fn-fix-2-ctrl-1-controls/C-002
   **FN-REGEXP-EXTRACT-1:** `test_live_fn_regexp_extract` on the same `spark_engine`
-  (oracle row plus repark co-collect on both doors).
+  (oracle row plus repark co-collect on both doors; round 2: ANSI-off cells via
+  `lp.spark_session_conf` — non-match `''` triple plus matching-input error cells).
   pins: fn-regexp-extract-1/C-002, C-004
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
@@ -2623,7 +2624,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_fn_regexp_extract.py` — **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract`
   on both doors against the live PySpark 4.1.2 oracle table (groups, default/whole-match idx,
   `''` on no match, NULL-in NULL-out, `REGEX_GROUP_INDEX` naming `regexp_extract`, POSIX union,
-  `\p{L}`, non-ASCII/empty edges, lookbehind refusal). pins: fn-regexp-extract-1/C-002, C-003
+  `\p{L}`, non-ASCII/empty edges, lookbehind refusal; round 2: non-matching input answers
+  `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
 
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,

@@ -447,15 +447,18 @@ fn invoke_extract(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
         Ok(match row {
             None => None,
             Some((text, regex, raw_group)) => {
-                let group = validate_group_index(raw_group, regex, "regexp_extract")?;
                 let captured = regex
                     .find(text)
                     .map(|found| {
-                        regex
-                            .captures_at(text, found.start())
-                            .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()))
-                            .unwrap_or_default()
+                        let group = validate_group_index(raw_group, regex, "regexp_extract")?;
+                        Ok::<_, DataFusionError>(
+                            regex
+                                .captures_at(text, found.start())
+                                .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()))
+                                .unwrap_or_default(),
+                        )
                     })
+                    .transpose()?
                     .unwrap_or_default();
                 Some(captured)
             }
