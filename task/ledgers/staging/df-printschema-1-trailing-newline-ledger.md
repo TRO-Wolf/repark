@@ -6,8 +6,8 @@ This file closes when DF-PRINTSCHEMA-1 merges, or when the owner closes the slat
 **Unit:** DF-PRINTSCHEMA-1 · **Date:** 2026-09-04 · **Executor:** Muse Spark (muse-spark-1.3), Actor ·
 **Branch:** `fix/df-printschema-1-trailing-newline` · **Base:** `e3600a1`
 **Model:** muse-spark-1.3
-**Registry:** `docs/spark-sql-iceberg-parity.md` row `EX-DF-10` (not on main; on
-`origin/docs/ex-16-dataframe-b`, filed 2026-09-04 by EX-16, PR #353).
+**Registry:** `docs/spark-sql-iceberg-parity.md` row `EX-DF-10` (filed 2026-09-04 by EX-16, PR #353,
+landed on `main` at `7496049`; flipped to FIXED in this unit's merge commit `68e408d`).
 **risk_tier:** standard.
 
 Spark is the oracle. Live PySpark 4.1.2, zulu-17, `TZ=UTC`, ANSI on, 2026-09-04.
@@ -18,9 +18,9 @@ Registry cells matched; no HALT.
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | repark's `printSchema` stdout is byte-identical to Spark's for a flat schema, a nested struct, an array column, and `level=1`; the falsified comment is corrected to one true line, never deleted. | Oracle table below + `core.py`. | **PROVEN** |
-| C-002 | New `test_df_printschema.py` pins the exact captured stdout (four shapes); a live cell in `test_parity_live.py` is co-collected on the shared `spark_engine`; the pin asserting the old tail lives on the unmerged EX-16 branch, so its flip is owed to the orchestrator, not done here. | Pins + live test. | **PROVEN** |
+| C-002 | New `test_df_printschema.py` pins the exact captured stdout (four shapes); a live cell in `test_parity_live.py` is co-collected on the shared `spark_engine`; the EX-16 pin asserting the old tail was flipped to `test_print_schema_stdout_matches_spark` in the merge commit `68e408d`. | Pins + live test. | **PROVEN** |
 | C-003 | Red-first: the four pins go RED before the fix; the strip-arm knob restores RED after it. | Mutation table below. | **PROVEN** |
-| C-004 | Registry `EX-DF-10` is not on main, so no row flips here (note for the orchestrator); `docs/examples/dataframe/print_schema.py` is not on main, so no example arm moves; this ledger plus `staging/map.md`; maps lockstep. | Ledger + maps. | **PROVEN** |
+| C-004 | Registry `EX-DF-10` → FIXED, the EX-16 pin flipped to assert Spark's tail, `docs/examples/dataframe/map.md` updated — all in the merge commit `68e408d` that brought EX-16 (`7496049`) into this branch; this ledger plus `staging/map.md`; `map.md` lockstep. | Diff of `68e408d`. | **PROVEN** |
 
 ## Oracle (live PySpark 4.1.2, 2026-09-04, JDK 17, ANSI on, `TZ=UTC`)
 
@@ -59,7 +59,7 @@ Registry cells matched; no HALT.
 | Fix | `python/repark/src/repark/spark/dataframe/core.py` |
 | Pins | `python/repark/tests/test_df_printschema.py` (four shapes) |
 | Live leg | `test_parity_live.py::test_live_df_printschema_trailing_newline_matches_spark` on `spark_engine` |
-| Registry | no row on main; orchestrator flips `EX-DF-10` at PR #353 merge |
+| Registry | `EX-DF-10` FIXED in this unit (merge commit `68e408d`); the EX-16 pin `test_print_schema_stdout_matches_spark` asserts Spark's tail |
 | Size gate | `scripts/check_lib_py.py` `core.py` 6371→6368 + `scripts/map.md` |
 | Maps | lockstep on every touched directory |
 

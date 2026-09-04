@@ -42,7 +42,7 @@ got and expected reprs (the corpus form).
   (each with a NULL `v` riding the bridge back to NULL), and the `pl` polars door
   (no Spark analog).
 - [print_schema.py](print_schema.py) — `printSchema` / `print_schema`: the captured tree lines;
-  Spark's own stdout carries one more trailing blank line (§7 `EX-DF-10`, FIXED by DF-PRINTSCHEMA-1); both arms compare after `rstrip`.
+  the stdout tail matched Spark's since DF-PRINTSCHEMA-1 (§7 `EX-DF-10` FIXED); both arms compare after `rstrip`.
 - [random_split.py](random_split.py) — `randomSplit` / `random_split`: two weighted parts,
   every row placed exactly once.
 
@@ -57,7 +57,7 @@ engines agree). The EX-16 batch adds EX-DF-7 (`intersectAll` /
 `grouping_sets` take one column each; Spark's documented shape takes a list of sets and the
 measured answers differ), EX-DF-9 (`mergeInto`'s bare-key sugar and `target.`/`source.`
 qualifiers; Spark wants a table-name/alias SQL condition — the covered merge program answers
-Spark's rows), and EX-DF-10 (`printSchema`'s stdout ended one newline short of Spark's — FIXED by DF-PRINTSCHEMA-1 capture),
+Spark's rows), and EX-DF-10 (`printSchema`'s stdout tail, FIXED by DF-PRINTSCHEMA-1),
 with pins in `python/repark/tests/test_examples_dataframe_b.py`.
 
 ## Pointers
