@@ -20,26 +20,29 @@ GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests"
 
 
 def golden(name: str) -> np.ndarray:
-    """Load a recorded golden or fixture ``.bin`` (little-endian ``f64``)."""
     return np.frombuffer((GOLDENS / f"{name}.bin").read_bytes(), dtype="<f8")
 
 
 def column(rows: list[Row], name: str) -> np.ndarray:
-    """Materialize one collected column as an ``f64`` array in ``ts`` order."""
     return np.ascontiguousarray([row[name] for row in rows], dtype=np.float64)
 
 
-def expect_tail(label: str, output: np.ndarray, expected: np.ndarray) -> None:
-    """Raise SystemExit unless the last five non-NaN values match the golden within 1e-9."""
-    tail = np.flatnonzero(~np.isnan(expected))[-5:]
-    got = output[tail]
-    want = expected[tail]
-    if not np.allclose(got, want, rtol=0.0, atol=1e-9):
-        raise SystemExit(f"{label} tail {got.tolist()!r} != golden tail {want.tolist()!r}")
+def expect_bit_exact(name: str, got: np.ndarray, golden: np.ndarray) -> None:
+    if got.size != golden.size:
+        raise SystemExit(f"{name}: length {got.size} != golden length {golden.size}")
+    both_nan = np.isnan(got) & np.isnan(golden)
+    mismatching = np.flatnonzero((got.view("uint64") != golden.view("uint64")) & ~both_nan)
+    if mismatching.size == 0:
+        return
+    row = int(mismatching[0])
+    raise SystemExit(
+        f"{name}: bit mismatch at row {row}: got {float(got[row])!r} vs golden"
+        f" {float(golden[row])!r}"
+    )
 
 
 def main() -> None:
-    """Run ``ta.MAX`` / ``ta.MIN`` / ``ta.SUM`` over the fixture window and check the tails."""
+    """Run ``ta.MAX`` / ``ta.MIN`` / ``ta.SUM`` over the fixture window and check bit-for-bit."""
     repark = ReparkSession.builder.appName("ex-ta-extremes").master("local[1]").getOrCreate()
     try:
         close = golden("fixture_close")
@@ -59,11 +62,11 @@ def main() -> None:
         )
         window = Window.orderBy("ts")
         rows = frame.select(ta.MAX("close", timeperiod=21).over(window).alias("max21")).collect()
-        expect_tail("ta.MAX", column(rows, "max21"), golden("max_21"))
+        expect_bit_exact("ta.MAX", column(rows, "max21"), golden("max_21"))
         rows = frame.select(ta.MIN("close", timeperiod=21).over(window).alias("min21")).collect()
-        expect_tail("ta.MIN", column(rows, "min21"), golden("min_21"))
+        expect_bit_exact("ta.MIN", column(rows, "min21"), golden("min_21"))
         rows = frame.select(ta.SUM("close", timeperiod=21).over(window).alias("sum21")).collect()
-        expect_tail("ta.SUM", column(rows, "sum21"), golden("sum_21"))
+        expect_bit_exact("ta.SUM", column(rows, "sum21"), golden("sum_21"))
     finally:
         repark.stop()
 

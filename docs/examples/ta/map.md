@@ -11,11 +11,13 @@ goldens under `crates/repark-ta/tests/goldens/` — the same little-endian `f64`
 bit-identically, recorded over the 5000-row OHLCV fixture
 (`fixture_{open,high,low,close,volume}.bin`). Each example rebuilds that fixture
 as a `createDataFrame`, runs the kernel over `Window.orderBy("ts")`, and asserts
-the last five non-NaN values of the output against the golden slice read from
-the `.bin` at run time (within 1e-9); no hand-computed number appears in any
-example. No JVM and no network. EX-23 (2026-09-04) landed the first 40 backlog
-names; all 40 measured bit-identical to their goldens, so none stayed on the
-backlog and no registry §7 row was filed.
+the full 5000-row output bit-for-bit against the golden read from the `.bin` at
+run time (`expect_bit_exact`: equal length, NaN rows matched positionally, every
+other row by `f64` bit pattern — the same property `assert_bit_exact` holds in
+[crates/repark-ta/tests/goldens.rs](../../../crates/repark-ta/tests/goldens.rs));
+no hand-computed number appears in any example. No JVM and no network. EX-23
+(2026-09-04) landed the first 40 backlog names; all 40 measured bit-identical to
+their goldens, so none stayed on the backlog and no registry §7 row was filed.
 
 ## Contents
 

@@ -30,26 +30,29 @@ GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests"
 
 
 def golden(name: str) -> np.ndarray:
-    """Load a recorded golden or fixture ``.bin`` (little-endian ``f64``)."""
     return np.frombuffer((GOLDENS / f"{name}.bin").read_bytes(), dtype="<f8")
 
 
 def column(rows: list[Row], name: str) -> np.ndarray:
-    """Materialize one collected column as an ``f64`` array in ``ts`` order."""
     return np.ascontiguousarray([row[name] for row in rows], dtype=np.float64)
 
 
-def expect_tail(label: str, output: np.ndarray, expected: np.ndarray) -> None:
-    """Raise SystemExit unless the last five non-NaN values match the golden within 1e-9."""
-    tail = np.flatnonzero(~np.isnan(expected))[-5:]
-    got = output[tail]
-    want = expected[tail]
-    if not np.allclose(got, want, rtol=0.0, atol=1e-9):
-        raise SystemExit(f"{label} tail {got.tolist()!r} != golden tail {want.tolist()!r}")
+def expect_bit_exact(name: str, got: np.ndarray, golden: np.ndarray) -> None:
+    if got.size != golden.size:
+        raise SystemExit(f"{name}: length {got.size} != golden length {golden.size}")
+    both_nan = np.isnan(got) & np.isnan(golden)
+    mismatching = np.flatnonzero((got.view("uint64") != golden.view("uint64")) & ~both_nan)
+    if mismatching.size == 0:
+        return
+    row = int(mismatching[0])
+    raise SystemExit(
+        f"{name}: bit mismatch at row {row}: got {float(got[row])!r} vs golden"
+        f" {float(golden[row])!r}"
+    )
 
 
 def main() -> None:
-    """Run each MACD variant over the ordered fixture window and check the golden tails."""
+    """Run each MACD variant over the ordered fixture window and check the goldens bit-for-bit."""
     repark = ReparkSession.builder.appName("ex-ta-macd").master("local[1]").getOrCreate()
     try:
         close = golden("fixture_close")
@@ -73,25 +76,27 @@ def main() -> None:
             ta.macd_signal("close").over(window).alias("signal"),
             ta.macd_hist("close").over(window).alias("hist"),
         ).collect()
-        expect_tail("ta.macd", column(rows, "macd"), golden("macd_12_26_9_macd"))
-        expect_tail("ta.macd_signal", column(rows, "signal"), golden("macd_12_26_9_signal"))
-        expect_tail("ta.macd_hist", column(rows, "hist"), golden("macd_12_26_9_hist"))
+        expect_bit_exact("ta.macd", column(rows, "macd"), golden("macd_12_26_9_macd"))
+        expect_bit_exact("ta.macd_signal", column(rows, "signal"), golden("macd_12_26_9_signal"))
+        expect_bit_exact("ta.macd_hist", column(rows, "hist"), golden("macd_12_26_9_hist"))
         rows = frame.select(
             ta.macdext("close").over(window).alias("macd"),
             ta.macdext_signal("close").over(window).alias("signal"),
             ta.macdext_hist("close").over(window).alias("hist"),
         ).collect()
-        expect_tail("ta.macdext", column(rows, "macd"), golden("macdext_12_26_9_macd"))
-        expect_tail("ta.macdext_signal", column(rows, "signal"), golden("macdext_12_26_9_signal"))
-        expect_tail("ta.macdext_hist", column(rows, "hist"), golden("macdext_12_26_9_hist"))
+        expect_bit_exact("ta.macdext", column(rows, "macd"), golden("macdext_12_26_9_macd"))
+        expect_bit_exact(
+            "ta.macdext_signal", column(rows, "signal"), golden("macdext_12_26_9_signal")
+        )
+        expect_bit_exact("ta.macdext_hist", column(rows, "hist"), golden("macdext_12_26_9_hist"))
         rows = frame.select(
             ta.macdfix("close").over(window).alias("macd"),
             ta.macdfix_signal("close").over(window).alias("signal"),
             ta.macdfix_hist("close").over(window).alias("hist"),
         ).collect()
-        expect_tail("ta.macdfix", column(rows, "macd"), golden("macdfix_9_macd"))
-        expect_tail("ta.macdfix_signal", column(rows, "signal"), golden("macdfix_9_signal"))
-        expect_tail("ta.macdfix_hist", column(rows, "hist"), golden("macdfix_9_hist"))
+        expect_bit_exact("ta.macdfix", column(rows, "macd"), golden("macdfix_9_macd"))
+        expect_bit_exact("ta.macdfix_signal", column(rows, "signal"), golden("macdfix_9_signal"))
+        expect_bit_exact("ta.macdfix_hist", column(rows, "hist"), golden("macdfix_9_hist"))
     finally:
         repark.stop()
 

@@ -20,26 +20,29 @@ GOLDENS = Path(__file__).resolve().parents[3] / "crates" / "repark-ta" / "tests"
 
 
 def golden(name: str) -> np.ndarray:
-    """Load a recorded golden or fixture ``.bin`` (little-endian ``f64``)."""
     return np.frombuffer((GOLDENS / f"{name}.bin").read_bytes(), dtype="<f8")
 
 
 def column(rows: list[Row], name: str) -> np.ndarray:
-    """Materialize one collected column as an ``f64`` array in ``ts`` order."""
     return np.ascontiguousarray([row[name] for row in rows], dtype=np.float64)
 
 
-def expect_tail(label: str, output: np.ndarray, expected: np.ndarray) -> None:
-    """Raise SystemExit unless the last five non-NaN values match the golden within 1e-9."""
-    tail = np.flatnonzero(~np.isnan(expected))[-5:]
-    got = output[tail]
-    want = expected[tail]
-    if not np.allclose(got, want, rtol=0.0, atol=1e-9):
-        raise SystemExit(f"{label} tail {got.tolist()!r} != golden tail {want.tolist()!r}")
+def expect_bit_exact(name: str, got: np.ndarray, golden: np.ndarray) -> None:
+    if got.size != golden.size:
+        raise SystemExit(f"{name}: length {got.size} != golden length {golden.size}")
+    both_nan = np.isnan(got) & np.isnan(golden)
+    mismatching = np.flatnonzero((got.view("uint64") != golden.view("uint64")) & ~both_nan)
+    if mismatching.size == 0:
+        return
+    row = int(mismatching[0])
+    raise SystemExit(
+        f"{name}: bit mismatch at row {row}: got {float(got[row])!r} vs golden"
+        f" {float(golden[row])!r}"
+    )
 
 
 def main() -> None:
-    """Run ``ta.ad`` and ``ta.adosc`` over the ordered fixture window and check the tails."""
+    """Run ``ta.ad`` and ``ta.adosc`` over the ordered fixture window and check bit-for-bit."""
     repark = ReparkSession.builder.appName("ex-ta-volume").master("local[1]").getOrCreate()
     try:
         close = golden("fixture_close")
@@ -61,13 +64,13 @@ def main() -> None:
         rows = frame.select(
             ta.ad("high", "low", "close", "volume").over(window).alias("ad")
         ).collect()
-        expect_tail("ta.ad", column(rows, "ad"), golden("ad"))
+        expect_bit_exact("ta.ad", column(rows, "ad"), golden("ad"))
         rows = frame.select(
             ta.adosc("high", "low", "close", "volume", fastperiod=3, slowperiod=10)
             .over(window)
             .alias("adosc")
         ).collect()
-        expect_tail("ta.adosc", column(rows, "adosc"), golden("adosc_3_10"))
+        expect_bit_exact("ta.adosc", column(rows, "adosc"), golden("adosc_3_10"))
     finally:
         repark.stop()
 
