@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
 from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import Window
 from repark.spark import functions as F  # noqa: N812

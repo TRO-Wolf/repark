@@ -123,6 +123,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
+  EX-22 (2026-09-04): the module docstring names all three batches after the merge of main; imports sorted.
   the five divergence pins for the catalog/session example batch — `registerFunction` answers
   the UDF object where Spark's deprecated alias returns the original callable (EX-SES-1), an
   action on a `newSession()` result promotes it process-active where Spark keeps the caller
