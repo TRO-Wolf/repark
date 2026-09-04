@@ -3477,7 +3477,7 @@ W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan a
 
 **WIN-SLIDE-1 (2026-09-04) closed all thirteen with one mechanism**, not thirteen: every core
 session carries the `sliding_frame_rescan` analyzer rule
-([crates/repark-core/src/session/window_rescan.rs](../crates/repark-core/src/session/window_rescan.rs)).
+([crates/repark-core/src/session/df_guards/window_rescan.rs](../crates/repark-core/src/session/df_guards/window_rescan.rs)).
 For an aggregate window function over a frame DataFusion would evaluate with retraction, the rule
 probes `create_sliding_accumulator`; when that accumulator cannot retract, the aggregate is wrapped
 as a `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a **fresh**
@@ -3486,8 +3486,10 @@ Retractable aggregates (`sum`, `avg`, `min`, `max`, `count`, the `stddev` / `var
 DataFusion's sliding accumulator untouched. The fallback is by capability, not by name: a newly
 registered aggregate with no `retract_batch` gets it automatically
 (`crates/repark-core/src/session/tests/window_rescan.rs`).
-`FILTER (WHERE ...)`, `DISTINCT` and `IGNORE NULLS` ride through the re-scan. An empty frame
-answers a fresh accumulator's `evaluate()` (so `collect_list` answers `[]` and
+`FILTER (WHERE ...)` and `DISTINCT` ride through the re-scan and are pinned; the `IGNORE NULLS`
+flag DataFusion's SQL dialect accepts on an aggregate (Spark does not, outside
+`first` / `last` / `nth_value`) is carried into the accumulator's arguments unchanged. An empty
+frame answers a fresh accumulator's `evaluate()` (so `collect_list` answers `[]` and
 `approx_count_distinct` answers `0`), never the aggregate's `default_value`.
 *(oracle: live PySpark 4.1.2, 2026-09-04; the refusal half is the W-0 live RePark probe,
 2026-08-31.)*

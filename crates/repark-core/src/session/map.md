@@ -83,9 +83,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding
   window frame through `Accumulator::retract_batch` and refuses at execution when the accumulator
   has none — the thirteen `WIN-SLIDE-*` registry rows. The rule probes
-  `AggregateUDF::create_sliding_accumulator` (NOT `accumulator`: `sum` and the `stddev` / `var`
-  family only grow a retract in the *sliding* one, and probing the wrong constructor rewrites them
-  too) and, when that accumulator cannot retract, swaps the `AggregateUDF` window function for a
+  `AggregateUDF::create_sliding_accumulator` (NOT `accumulator`: `sum`'s plain accumulator has no
+  retract and only its *sliding* one does, so probing the wrong constructor moves `sum` onto the
+  re-scan — measured, and it reds `a_retractable_aggregate_keeps_datafusions_sliding_accumulator`) and, when that accumulator cannot retract, swaps the `AggregateUDF` window function for a
   `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a fresh
   accumulator. That is Spark's `AggregateWindowFunction` strategy at Spark's O(frame x rows) cost,
   and it is by capability, not by name: a newly registered aggregate never refuses.
@@ -109,8 +109,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   * **An empty frame answers a fresh accumulator's `evaluate()`**, never
     `AggregateFunctionExpr::default_value` (what DataFusion's sliding path uses): that is how
     `collect_list` answers `[]` and `approx_count_distinct` answers `0`, both Spark-measured.
-  * `FILTER (WHERE ...)` is carried as a trailing boolean argument and applied as a per-frame mask;
-    `DISTINCT` rides in `AccumulatorArgs::is_distinct`; `IGNORE NULLS` in `ignore_nulls`. The
+  * `FILTER (WHERE ...)` is carried as a trailing boolean argument and applied as a per-frame mask
+    (the `WindowUDF` branch of DataFusion's `create_window_expr` drops a filter, so leaving it
+    there would have been silent); `DISTINCT` rides in `AccumulatorArgs::is_distinct`, and the
+    `IGNORE NULLS` flag DataFusion's SQL dialect accepts on an aggregate rides in `ignore_nulls`. The
     original column name is restored with `NamePreserver`, because DataFusion spells an
     `AggregateUDF` window function's schema name with `", "` between arguments and a `WindowUDF`'s
     with `","`.

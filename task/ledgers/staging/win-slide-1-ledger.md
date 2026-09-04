@@ -22,12 +22,12 @@ DataFusion fork change.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Every one of the thirteen answers Spark-equal over a sliding frame on the **SQL door**, on at least a ROWS frame with both bounds, a RANGE frame, a frame with NULLs in the column, an empty frame, and a partition boundary. | `test_win_slide_1.py::test_sql_door_matches_the_spark_pin`, 65 cells, red on the base. | **PROVEN** | 13 aggregates x 5 shapes. All 65 raised the sliding-accumulator refusal on the base build; all 65 green after. Goldens recorded from live PySpark 4.1.2 on 2026-09-04. pins: win-slide-1/C-001 |
+| C-001 | Every one of the thirteen answers Spark-equal over a sliding frame on the **SQL door**, on at least a ROWS frame with both bounds, a RANGE frame, a frame with NULLs in the column, an empty frame, and a partition boundary. | `test_win_slide_1.py::test_sql_door_matches_the_spark_pin`, 65 cells, red on the base. | **PROVEN** | 13 aggregates x 5 shapes. All 65 red on the base build, and the refusal message itself was read directly for all thirteen (`This feature is not implemented: Aggregate can not be used as a sliding accumulator because \`retract_batch\` is not implemented: <name>(...)`); every shape in the matrix is non-ever-expanding, which is the exact predicate DataFusion refuses on. All 65 green after. Goldens recorded from live PySpark 4.1.2 on 2026-09-04. pins: win-slide-1/C-001 |
 | C-002 | The same thirteen answer the same columns on the **DataFrame door** through `over(Window.…rowsBetween/rangeBetween)`. | `test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`, 65 cells. | **PROVEN** | 55 of the 65 red on the base (the 10 `bool_and`/`bool_or` cells were already green — that door is a `min`/`max` shim, not the UDAF), all 65 green after. Two door bugs had to be fixed to get there: `WIN-COLLECT-DOOR-1` and `WIN-RANGE-DF-1` (C-003). pins: win-slide-1/C-002 |
 | C-003 | The RANGE-frame cells are a real value range on both doors, not a silently widened frame. | The `[range_frame-*]` cells; the `WIN-RANGE-DF-1` measurement. | **PROVEN** | `Column.over` emitted the RANGE offset as `Int64`; DataFusion's coercion passes a non-`Utf8`, non-null scalar through untouched and a bound whose type does not match the ORDER BY key degrades to UNBOUNDED PRECEDING, so `rangeBetween(-2, 0)` over an `IntegerType` or `DoubleType` key was **cumulative**. Measured on `sum(v)` over 1..6: `df 1, 3, 6, 10, 15, 21` vs `sql 1, 3, 6, 9, 12, 15`; BIGINT keys were already correct. Fixed by emitting `Utf8`, the shape DataFusion's own SQL planner produces. pins: win-slide-1/C-003 |
 | C-004 | The named per-aggregate contracts hold, Spark-measured: `collect_list` preserves frame order, `collect_set` is the frame multiset, `try_sum` answers NULL for a row whose frame overflows, an empty frame answers Spark's empty-frame value, and `CURRENT ROW … UNBOUNDED FOLLOWING` (also a sliding frame) answers. | The five dedicated pins. | **PROVEN** | `collect_list` frame order pinned on the `2 PRECEDING` and the `UNBOUNDED FOLLOWING` frames; `collect_set` compared as a sorted multiset (Spark leaves the order unspecified); `try_sum(ov)` over BIGINT at `Long.MaxValue` answers `[…, None, None, …]` exactly where Spark does; empty frame answers `[]` for `collect_list`/`collect_set` and `0` for `approx_count_distinct`, both Spark-measured. pins: win-slide-1/C-004 |
 | C-005 | The fallback is **reusable by capability, not by name**: an aggregate the rule has never heard of, with no `retract_batch`, gets it automatically. | `crates/repark-core/src/session/tests/window_rescan.rs`. | **PROVEN** | A throwaway `winslide_probe_sum` UDAF registered inside the test answers `1, 3, 2, 4` over `ROWS BETWEEN 1 PRECEDING AND CURRENT ROW` and plans as `rescan:winslide_probe_sum`. Its empty frame answers NULL (the fresh accumulator), not its `default_value` sentinel `-1.0`. `FILTER (WHERE v > 1.5)` answers the masked frame. pins: win-slide-1/C-005 |
-| C-006 | **No regression on the retractable path.** Aggregates that can retract keep DataFusion's sliding accumulator, and the whole window suite plus the whole facade suite stay green. | The plan pins; the suites. | **PROVEN** | `sum` over the same frame plans as `aggregate:sum`, and an ever-expanding frame is never rewritten. A mid-build mutation proved the pin is live: probing `accumulator` instead of `create_sliding_accumulator` rewrote `sum` too and the pin reded. Window suites 102 passed; full facade suite **4738 passed, 193 skipped**, exit 0. pins: win-slide-1/C-006 |
+| C-006 | **No regression on the retractable path.** Aggregates that can retract keep DataFusion's sliding accumulator, and the whole window suite plus the whole facade suite stay green. | The plan pins; the suites. | **PROVEN** | `sum` over the same frame plans as `aggregate:sum`, and an ever-expanding frame is never rewritten. A mid-build mutation proved the pin is live: probing `accumulator` instead of `create_sliding_accumulator` rewrote `sum` too and the pin reded. The five window suites (`test_w0_window_bench_smoke`, `test_window_parity`, `test_g2_window_rand_sampleby`, `test_lrs7_unordered_window`, `test_examples_window_catalog`) **103 passed**; the full facade suite **4738 passed, 193 skipped**; `python/repark-parity/tests` **574 passed**; `make verify` (the whole Rust workspace) exit 0. All on the RELEASE native module of the final tree. pins: win-slide-1/C-006 |
 | C-007 | The design is **measured, not guessed**: the per-aggregate retract decision is read off DataFusion 54.1, the closed alternative is named with the exact API gap, the re-scan's cost is measured against the non-window aggregate and against Spark on the same shape, and the mutation score is run. | §7, §8, §9. | **PROVEN** | Per-aggregate probe table in §7 (all thirteen `supports_retract_batch = false`; the eight controls `true`). The physical `WindowExpr` route is **closed** in DF 54.1 and the gap is named exactly (§7). Perf and mutation numbers in §8 / §9. pins: win-slide-1/C-007 |
 | C-008 | Docs: thirteen registry rows flipped with date and unit id, the frozen-roster pin flipped to the empty set with its guard kept, the two door bugs and the accuracy divergence filed, `map.md` lockstep, `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | **PROVEN** | Thirteen `FIXED 2026-09-04 (WIN-SLIDE-1)` rows; `REFUSING_SLIDING_NAMES = ()` with the thirteen moved to `RESCANNED_SLIDING_NAMES` and a new registry guard reading it; `WIN-RANGE-DF-1`, `WIN-COLLECT-DOOR-1`, `WIN-SLIDE-PCT-ACC-1` filed. Seven maps in lockstep. `git diff` on `STATUS.md` and `briefs/next-sequence.md` is empty. pins: win-slide-1/C-008 |
 
@@ -48,7 +48,7 @@ COVERAGE_ATTESTATION:
     - id: AT-3
       status: ATTACKED
       evidence: No unwrap, expect or panic in the new module; the two internal invariants (a lost FILTER column, a non-boolean predicate) return DataFusionError::Internal rather than indexing. make rust-panic-ban exit 0. Slicing is bounded by the range DataFusion computed against the same value arrays.
-      artifacts: [crates/repark-core/src/session/window_rescan.rs]
+      artifacts: [crates/repark-core/src/session/df_guards/window_rescan.rs]
     - id: AT-4
       status: N/A
       justification: The rule is pure plan rewriting and the evaluator holds no shared or mutable state across partitions - it builds a fresh accumulator inside each evaluate call and keeps no index state, which is precisely why it is safe under BoundedWindowAggExec's front-pruning of the retained batch. No async, no locks, no spawn.
@@ -82,18 +82,18 @@ COVERAGE_ATTESTATION:
 
 | File | Change |
 |---|---|
-| `crates/repark-core/src/session/window_rescan.rs` | New, 290 lines. The `sliding_frame_rescan` analyzer rule and the `WindowUDF` / `PartitionEvaluator` pair it swaps in. |
-| `crates/repark-core/src/session/df_guards.rs` | `.with_analyzer_rules(analyzer_rules_with_sliding_rescan())` — DataFusion's own list plus the new rule, on every core session. |
-| `crates/repark-core/src/session.rs` | `mod window_rescan;`. |
+| `crates/repark-core/src/session/df_guards/window_rescan.rs` | New, 352 lines. The `sliding_frame_rescan` analyzer rule and the `WindowUDF` / `PartitionEvaluator` pair it swaps in. It sits under `df_guards/` because it is the third DataFusion 54.1 guard **and** because `session.rs` is at its file-size baseline and may not gain a `mod` line; `session.rs` is byte-identical to `main`. |
+| `crates/repark-core/src/session/df_guards.rs` | `mod window_rescan;` and `.with_analyzer_rules(analyzer_rules_with_sliding_rescan())` — DataFusion's own list plus the new rule, on every core session. |
 | `crates/repark-core/src/session/tests/window_rescan.rs` | New. Six capability pins built on a throwaway non-retractable UDAF. |
-| `crates/repark-python/src/column/window.rs` | RANGE frame offsets emit `ScalarValue::Utf8`, not `Int64` (`WIN-RANGE-DF-1`). |
+| `crates/repark-python/src/column/window.rs` | RANGE frame offsets emit `ScalarValue::Utf8`, not `Int64` (`WIN-RANGE-DF-1`); and `Column.over`'s body moves here as `build_over_expression` / `OverSpec` — the file-size gate's own recorded split seam for `column/mod.rs` — carrying the push-down of the window into the one aggregate inside a scalar wrapper (`WIN-COLLECT-DOOR-1`). |
 | `crates/repark-python/src/column/expr_build.rs` | `single_wrapped_aggregate` / `replace_wrapped_aggregate`. |
-| `crates/repark-python/src/column/mod.rs` | `Column.over` pushes the window into the one aggregate inside a scalar wrapper (`WIN-COLLECT-DOOR-1`). |
+| `crates/repark-python/src/column/mod.rs` | `over` becomes the thin PyO3 surface over `build_over_expression`; 1102 → 1053 lines. |
+| `scripts/check_rust_file_size.py`, `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` | The `column/mod.rs` baseline ratchets DOWN, 1102 → 1053, in both the gate and its duplicate pin table. |
 | `python/repark/tests/test_win_slide_1.py` | New. The 130-cell two-door matrix, the five contract pins, two live legs. |
 | `python/repark-parity/bench/windows/roster.py` | `REFUSING_SLIDING_NAMES = ()`; the thirteen move to `RESCANNED_SLIDING_NAMES`. |
 | `python/repark-parity/tests/test_w0_window_bench.py` | The frozen-set pin reads the new tuple; two pins added (a FIXED registry row per name; the refuse set is empty). |
 | `docs/spark-sql-iceberg-parity.md` | Thirteen rows FIXED; `WIN-RANGE-DF-1`, `WIN-COLLECT-DOOR-1` FIXED; `WIN-SLIDE-PCT-ACC-1` BACKLOG. |
-| `map.md` x 7 | Lockstep. |
+| `map.md` x 9 | Lockstep, including the new `session/df_guards/map.md`. |
 | `STATUS.md`, `briefs/next-sequence.md` | Untouched. |
 
 No public API change: no new crate dependency, no `Cargo.lock` edit, no `lib.rs` edit, no
@@ -128,13 +128,14 @@ after the reading):
 | `sum` / `avg` / `min` / `max` / `count` | built | true |
 | `stddev_samp` / `var_pop` / `regr_slope` | built | true |
 | `array_agg` / `bit_xor` / `median` | built | true |
-| `first_value` / `last_value` | built | false (never reached — the SQL planner resolves these to the **window** UDF, which is why W-0 classed them `ok`) |
+| `first_value` / `last_value` | built | false — and yet **not** on W-0's refuse list, because the Spark door (the one W-0 probed) resolves these names to DataFusion's **window** UDF, not the aggregate. A bare core session resolves them to the aggregate, and the rule does rewrite them there (measured: `rescan:first_value`). Either resolution answers correctly; `test_window_parity.py` pins both against Spark and is green. |
 
 Thirteen `false`, and the roster is exactly the thirteen W-0 named. The interesting controls are
 `bit_xor` (retracts — XOR is self-inverse, so DataFusion wrote the inverse and `bit_and` / `bit_or`
 have none to write) and `array_agg` (retracts via a front offset, which is why the DataFrame door's
 `collect_list` — built as `coalesce(array_agg(x) IGNORE NULLS, make_array())` — never needed the
-fallback once `over()` would accept it at all).
+fallback once `over()` would accept it at all). Both were re-read after the rule landed and still
+plan as `aggregate:array_agg` / `aggregate:median`, not as re-scans.
 
 **Decision: (b), the frame re-scan, for all thirteen — one mechanism, not thirteen.** Per aggregate:
 
