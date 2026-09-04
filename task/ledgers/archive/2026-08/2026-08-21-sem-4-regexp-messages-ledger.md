@@ -1,7 +1,7 @@
 # Unit ledger — SEM-4 · the regexp refusals say Spark's words
 
 **Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `8c660f6` (`main`, post-#191) ·
-**Charter:** [sem-0-charter-ledger.md](../../staging/sem-0-charter-ledger.md)
+**Charter:** [sem-0-charter-ledger.md](../../completed/sem-0-charter-ledger.md)
 
 Message-only. **No computed value changes in this unit** — every assertion here is about what a
 refusal *says*, and the two tests that exercise a legal index prove the accepting path is

@@ -1,7 +1,7 @@
 # Unit ledger — SEM-1 · `regexp_extract_all` defaults to capture group 1
 
 **Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `44df821` (SEM-4) ·
-**Charter:** [sem-0-charter-ledger.md](../../staging/sem-0-charter-ledger.md) · **Closes:** registry row `RE-1`
+**Charter:** [sem-0-charter-ledger.md](../../completed/sem-0-charter-ledger.md) · **Closes:** registry row `RE-1`
 
 **This unit changes what a working query returns**, on the owner's dated ruling. It is the first
 such change since the port. `regexp_extract_all('a1b2', '([a-z])([0-9])')` returned `['a1','b2']`

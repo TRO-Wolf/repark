@@ -8,40 +8,41 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
-- [b-mor-3-rewrite-position-deletes-v3-ledger.md](b-mor-3-rewrite-position-deletes-v3-ledger.md) —
-  **B-MOR-3 (2026-09-03), delivered:** owner ruling BUILD — `rewrite_position_delete_files`
-  returns Spark's four zeros on a DV-only v3 table and converts an admitted parquet group
-  to one PUFFIN per data file. Floor residue `B-MOR-3-FLOOR-1` / F-24. Branch
-  `feat/b-mor-3-rewrite-position-deletes-v3`. `risk_tier: standard`. Model:
-  grok-4.6 → glm-5.3-flash (continuation).
-- [v1-gate-audit-ledger.md](v1-gate-audit-ledger.md) — **V1-GATE (2026-09-03), in flight:**
-  the v1.0 north-star gate statement. Audits all twenty §3 rows into §3.1 (glyph, claim,
-  residual → registry row, class and date, pin), reads the fork rows the gate leans on at the
-  consumed pin `ff4764d3`, writes the one dated gate line, re-dates `S3T-V3-1` with the live
-  re-dispatch, and files the published gate board. Result: every row ✅ or dated DECLARED, no
-  BACKLOG blocker inside a v1.0-requires cell. Carries a dated ERRATA block: the audit is scoped
-  to each row's requires cell with the surface residuals (`RDF-1`, `ORPHAN-1/2`, `MANIFEST-1/3`)
-  listed beside it, `B-MOR-3`'s class is stated as DELIBERATE by analogy to OD-2 with the owner
-  line still pending (ERRATA-A), and §2 pillar 4's full v3 statement coverage is recorded as
-  **not discharged** with the evidence for that reading (ERRATA-B) and queued as V3-COV.
-  `risk_tier: standard`. Branch `docs/v1-gate-audit`.
-- [v3-cov-statement-coverage-ledger.md](v3-cov-statement-coverage-ledger.md) —
-  **V3-COV (2026-09-03), delivered:** the full v3 statement-coverage comparison against PySpark
-  that discharges the north star's §2 pillar 4 — 81 programs, 267 cells, 71 EQUAL, 9 rows filed,
-  2 defects FIXED red-first. `risk_tier: standard`. Branch `feat/v3-cov-statement-coverage`.
-  Matrix: [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
-  Carries one RULING (`V3-COV-3`, the delegated partitioned INSERT's unstable `_row_id`) —
-  closed by RP-8 the same day.
-- [rp-8-repin-f21-f22-ledger.md](rp-8-repin-f21-f22-ledger.md) — **RP-8 (2026-09-03),
-  delivered:** the fork repin `ff4764d3` → `c1d6c9de`, consuming F-19/F-20 (`#261`), F-21
-  (`#262`) and F-22 (`#263`). The deletion-vector container close takes over the legacy-delete
-  collect, merge and file-scoped removal in one delete-manifest pass, so RePark's own
-  `write/merge/dv_close/legacy_deletes.rs` (493 lines) is deleted; `V3-UPGRADE-DV-PLAIN-1`,
-  `V3-UPGRADE-DV-PART-1`, `F-v3-10-partition-file-order` and `V3-COV-3` all FIXED at Spark's
-  measured values; `V3-FILEORDER-1` stays DECLARED and widens to the fork's `INSERT INTO` path.
-  E-4 closed by RP-9 2026-09-03 at pin `594bdbe5`.
-  `risk_tier: standard`. Branch `feat/rp-8-repin-f21-f22`.
+- [ctas-view-1-conform-stream-ledger.md](ctas-view-1-conform-stream-ledger.md) —
+  **CTAS-VIEW-1 (2026-09-03), complete:** unpartitioned CTAS stream writer conforms Utf8View
+  batches. Merged #341.
+- [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md) —
+  **EX-10 (2026-09-03), complete:** `F.*` null / conditional / misc.
+- [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md) —
+  **EX-11 (2026-09-03), complete:** `F.*` hash / URL / random.
+- [ex-12-functions-aggregates-a-ledger.md](ex-12-functions-aggregates-a-ledger.md) —
+  **EX-12 (2026-09-03), complete:** `F.*` aggregates (a).
+- [ex-13-functions-aggregates-b-stats-ledger.md](ex-13-functions-aggregates-b-stats-ledger.md) —
+  **EX-13 (2026-09-03), complete:** `F.*` aggregates (b) / stats.
+- [ex-14-functions-window-ledger.md](ex-14-functions-window-ledger.md) —
+  **EX-14 (2026-09-03), complete:** `F.*` window.
+- [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md) —
+  **EX-2 (2026-09-01), complete:** `F.*` math + bitwise pilot.
+- [ex-4-functions-strings-a-ledger.md](ex-4-functions-strings-a-ledger.md) —
+  **EX-4 (2026-09-03), complete:** `F.*` string basics.
+- [ex-5-functions-strings-b-regex-ledger.md](ex-5-functions-strings-b-regex-ledger.md) —
+  **EX-5 (2026-09-03), complete:** `F.*` string search / regex.
+- [ex-6-functions-datetime-a-ledger.md](ex-6-functions-datetime-a-ledger.md) —
+  **EX-6 (2026-09-03), complete:** `F.*` datetime arithmetic.
+- [ex-7-functions-datetime-b-ledger.md](ex-7-functions-datetime-b-ledger.md) —
+  **EX-7 (2026-09-03), complete:** `F.*` datetime remainder.
+- [ex-8-functions-arrays-ledger.md](ex-8-functions-arrays-ledger.md) —
+  **EX-8 (2026-09-03), complete:** `F.*` arrays.
+- [ex-9-functions-maps-structs-json-ledger.md](ex-9-functions-maps-structs-json-ledger.md) —
+  **EX-9 (2026-09-03), complete:** `F.*` map / struct / JSON.
+- [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
+  **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
+  pins: fn-fix-1-registry-rows/C-001
+- [rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md) —
+  **RP-9 (2026-09-03), complete:** fork repin `c1d6c9de` → `594bdbe5` (F-23);
+  `PERF-DVCLOSE-WALK-1` FIXED.
+- [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), complete:** the
+  scope audit for `RE-1` and `LOG-1`; both closed to Spark by SEM-1. Campaign closed 2026-09-04.
 
 ## Pointers
 - Up: [../map.md](../map.md)

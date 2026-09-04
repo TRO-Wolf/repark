@@ -1,5 +1,7 @@
 # RePark roadmap — design plan by crate (work cards)
 
+> Numbering superseded 2026-09-03: the owner cut v1.0.0 at the north-star gate, so the v0.7–v0.10 slots below ship as 1.1–1.4 and the former 1.x rows shift by four — [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) "Renumber" is the numbering of record; this plan keeps its original labels as a dated design record.
+
 Companion to [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) (the *what* and *when*). This file is the *where* and
 *how*: for every roadmap item, which crate is **NEW** or **UPDATED**, which files it touches,
 which reference implementation to read, and the steps in order — written so a delegated

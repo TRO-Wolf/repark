@@ -1,7 +1,7 @@
 # Unit ledger — SEM-5 · `regexp_substr`'s zero-width match, registered honestly
 
 **Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `219957f` (SEM-3) ·
-**Charter:** [sem-0-charter-ledger.md](../../staging/sem-0-charter-ledger.md)
+**Charter:** [sem-0-charter-ledger.md](../../completed/sem-0-charter-ledger.md)
 
 Registration only. **No code changes and no value changes** — this unit adds a registry row, splits
 it out of a row where it was misfiled, and corrects a claim in a test docstring that measurement
