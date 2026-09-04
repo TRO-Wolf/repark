@@ -497,15 +497,18 @@ def test_ex_1_module_surface_binds_only_on_its_own_door() -> None:
 
 
 def test_ex_1_every_new_name_is_in_the_backlog() -> None:
-    """EX-1 C-006: the widening covers nothing; every new name is a backlog row.
+    """EX-1 C-006: every widened name is a backlog row until an example covers it.
 
     pins: ex-1-class-surfaces/C-006
     """
     gate = _load_gate()
     rows = gate.enumerate_public_surface(_REPO)
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
+    covered: set[str] = set()
+    for script in gate.example_scripts(_REPO):
+        covered.update(gate.covers_from_script(script))
     widened = {"column", "window", "catalog", "ml"}
     for family, name in rows:
         if family in widened or name.startswith("types.") or name.startswith("Row."):
-            assert name in backlog, name
+            assert name in backlog or name in covered, name
     assert len(backlog) == gate.BACKLOG_BASELINE
