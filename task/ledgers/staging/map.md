@@ -119,6 +119,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `Row` field arm is §7 `EX-ROW-1`, pins in
   `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
   `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
+- [ex-22-types-writerv2-ledger.md](ex-22-types-writerv2-ledger.md) —
+  **EX-22 (2026-09-04), in flight:** the v1.1 example backfill's `types` + `DataFrameWriterV2`
+  batch — all 43 roster names at base `b5827be6`; 42 covered by eleven files under
+  `docs/examples/types/` (new) and `docs/examples/io/` (backlog 374 → 332), the flagged
+  `VariantType`/`TimeType`/`CharType`/`VarcharType` measured Spark-equal, the Arrow helpers and
+  four snake_case spellings covered as repark extensions; `DataFrameWriterV2.overwrite` stays
+  with §7 `EX-W2-1`, the empty-source `overwritePartitions` arm is §7 `EX-W2-2`, the
+  `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
+  `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
+  `docs/ex-22-types-writerv2`. pins: ex-22-types-writerv2/C-001, C-002, C-003, C-004
 - [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
