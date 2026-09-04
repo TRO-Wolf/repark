@@ -3227,8 +3227,7 @@
      "name": "F.regexp_extract",
      "required_params": [
       "str",
-      "pattern",
-      "idx"
+      "pattern"
      ]
     },
     {
