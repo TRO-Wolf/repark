@@ -14,7 +14,8 @@ named only as "the cutover pipeline" here.
   DATE-FN-1), the six acceptance checks, rollback by snapshot, the canary steps C0–C6, and the
   four owner rulings of 2026-09-04 (match Spark on nullability → `CUTOVER-SCHEMA-1`; queue
   `DBT-1`; shadow namespace `<ns>_silver_repark`, 14-day retention; the daily diff as an
-  Airflow task → pipeline-side `SHADOW-1`).
+  Airflow task → pipeline-side `SHADOW-1`). C6 (gold on RePark) measured green on Glue on
+  2026-09-05 through DBT-1's acceptance leg.
 
 ## Pointers
 
