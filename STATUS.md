@@ -14,7 +14,7 @@ _Last updated: 2026-09-03._
 **v1.0.1 shipped (2026-09-04)** — the first patch on v1.0.0 (2026-09-03, the first stable tag; v0.1.0–v0.6.0
 2026-08-15 → 08-31): tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel,
 wheel-only (crates.io publishing structurally deferred, see docs/release.md), version SSOT at the
-Cargo workspace (`1.0.0`). v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
+Cargo workspace (`1.0.1`). v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321), the legacy-delete chain closed end to end (V3-12 → fork F-21 /
 F-22 → RP-8). From this tag the API freeze binds:
