@@ -1,15 +1,17 @@
 """Divergence pins for the EX-20 window/catalog and EX-21 catalog/session batches.
 
-Registry §7 rows EX-WIN-1, EX-CAT-1..3 (EX-20) and EX-SES-1..2 (EX-21).
+Registry §7 rows EX-WIN-1, EX-CAT-1..3 (EX-20) and EX-SES-1..5 (EX-21).
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark import Window
 from repark.spark import functions as F  # noqa: N812
 from repark.spark.catalog import Database
@@ -83,3 +85,28 @@ def test_new_session_action_promotes_active(spark: ReparkSession) -> None:
     assert ReparkSession.getActiveSession() is spare
     spare.stop()
     assert ReparkSession.getActiveSession() is None
+
+
+def test_create_dataframe_empty_name_list_answers_empty(spark: ReparkSession) -> None:
+    """create_dataframe([], ['a']) answers [] vs Spark CANNOT_INFER_EMPTY_SCHEMA (EX-SES-3)."""
+    frame = spark.create_dataframe([], ["a"])
+    assert frame.collect() == []
+    assert frame.dtypes == [("a", "string")]
+
+
+def test_conf_get_unset_key_raises_bare_exception(spark: ReparkSession) -> None:
+    """conf.get on an unset key raises bare Exception vs Spark SQL_CONF_NOT_FOUND (EX-SES-4)."""
+    with pytest.raises(Exception, match=r"Configuration property .* is not set\.") as info:
+        spark.conf.get("ex21.unset.key")
+    assert type(info.value) is Exception
+
+
+def test_missing_file_readers_analysis_exception(spark: ReparkSession, tmp_path: Path) -> None:
+    """A missing file raises AnalysisException vs Spark PATH_NOT_FOUND (EX-SES-5)."""
+    for reader, name in (
+        ("read_csv", "ex21_nope.csv"),
+        ("read_json", "ex21_nope.json"),
+        ("read_parquet", "ex21_nope.parquet"),
+    ):
+        with pytest.raises(AnalysisException, match="No files found"):
+            getattr(spark, reader)(str(tmp_path / name)).collect()
