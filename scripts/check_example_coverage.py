@@ -92,7 +92,7 @@ FAMILIES: tuple[str, ...] = (
     "types",
     "window",
 )
-BACKLOG_BASELINE = 411
+BACKLOG_BASELINE = 377
 EXCEPTIONS_BASELINE = 2
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"
