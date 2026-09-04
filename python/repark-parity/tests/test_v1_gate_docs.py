@@ -235,14 +235,14 @@ def test_step_6_and_the_slate_carry_the_same_disposition() -> None:
 
 
 def test_the_fork_side_rows_are_listed_and_dated_at_the_pin() -> None:
-    """C-004: every 🟡 fork row the gate leans on is named with a dated cell at `594bdbe5`."""
+    """C-004: every 🟡 fork row the gate leans on is named with a dated cell at `85a4aaf0`."""
     section = _normalized(_audit_section())
-    assert "at the consumed pin `594bdbe5`" in section
+    assert "at the consumed pin `85a4aaf0`" in section
     for row in _FORK_ROWS:
         assert f"| {row} ·" in section or f"{row} ·" in section, row
     assert "R89" in section and "R130" in section and "R136" in section
     cargo = _read("Cargo.toml")
-    assert "594bdbe5f257455d77ac49f1a2d50794a1aea6fd" in cargo
+    assert "85a4aaf0cda9ea643bfe34c1666228178e363e94" in cargo
 
 
 def test_status_carries_the_scale_line_the_gate_line_and_its_ceiling() -> None:

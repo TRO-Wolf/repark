@@ -3712,6 +3712,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (legacy still walks, map total). Statement-wall numbers live in the RP-9 ledger; the
   8-manifest "before" set is noisy and is not a claimed improvement. Full record: the RP-9
   ledger; RP-8 E-4 closed.
+- **PERF-DVCLOSE-STMT-1** — **FIXED 2026-09-04 (RP-10)** at pin `85a4aaf0` (fork F-25 `#265`).
+  `validate_fresh_dvs_only` walks data manifests newest-first and stops once every `added_dvs`
+  key is found (buffer 1 until the first manifest is consumed). On the RP-9 192-manifest
+  identity DELETE of the newest row, commit-phase data-manifest opens are **1** (hide pin:
+  191 of 192 hidden, commit succeeds). Close-phase opens stay **0**. Oldest-manifest and
+  never-found keys still take the full walk (F-25's own pins). Statement-wall numbers live
+  in the RP-10 ledger; the RP-9 `DELETE WHERE id = 0` cell is the oldest file and is not a
+  claimed wall-clock win. Pin:
+  `merge/tests/dv_commit_opens.rs::a_newest_file_identity_delete_commits_with_one_data_manifest`.
 - **PERF-DVCLOSE-STMT-1** — surfaced 2026-09-03, RP-9 r2. After the F-23 skip engages, a
   192-manifest pure-DV `DELETE` still opens every data manifest once at commit in the fork's
   `validate_fresh_dvs_only` (unconditional full pass on every DV-adding commit,
