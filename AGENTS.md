@@ -412,7 +412,7 @@ never relax them.
   slate-failing violation.
 - **Gates:** every unit gates (`make verify`), including STOP / report-only units; check REAL
   exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets. Before a
-  PR: `make preflight` (verify + `py-test-facade` + audit + workflow lint).
+  PR: `make preflight` (verify + `py-test-facade` + `py-test-dbt` + audit + workflow lint).
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
   directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
