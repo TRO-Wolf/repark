@@ -1,6 +1,6 @@
 # map — scripts/
 
-EX-23 ta-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 340 → 300 — the first
+EX-23 ta-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 298 → 258 shipped (340 → 300 at the dispatch base `671a7144`) — the first
 40 `ta.*` roster names covered by eight new examples under `docs/examples/ta/`, measured
 against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (Spark has no TA
 kernels; the goldens are the family's oracle, the same `.bin` files `test_ta.py` /

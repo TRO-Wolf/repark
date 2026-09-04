@@ -7,8 +7,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 ## Contents
 - [ex-23-ta-a-ledger.md](ex-23-ta-a-ledger.md) —
   **EX-23 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (a) batch — the
-  first 40 `ta.*` backlog names at base `671a7144`; all 40 covered by eight
-  `docs/examples/ta/` files (backlog 340 → 300) measured against the recorded C TA-Lib 0.4.0
+  first 40 `ta.*` backlog names at the dispatch base `671a7144` (shipped on `bfef4a62`); all 40 covered by eight
+  `docs/examples/ta/` files (backlog 298 → 258 shipped; 340 → 300 at dispatch) measured against the recorded C TA-Lib 0.4.0
   goldens on the 5000-row OHLCV fixture (Spark has no TA kernels — the goldens are the family's
   oracle, the same `.bin` files `test_ta.py`/`test_ta_volume.py` pin bit-identically); all 40
   bit-identical, zero divergences, no §7 row, no new pin file. Round 2 (critic): the examples'

@@ -4,7 +4,7 @@
 orchestrator's departure move). This file closes when EX-23 merges, or when the owner closes the
 slate row.
 
-**Unit:** EX-23 · **Date:** 2026-09-04 · **Model:** glm-5.3-flash · **Branch:** `docs/ex-23-ta-a` · **Base:** `671a7144`
+**Unit:** EX-23 · **Date:** 2026-09-04 · **Model:** glm-5.3-flash · **Branch:** `docs/ex-23-ta-a` · **Base:** `bfef4a62` (dispatched at `671a7144`; main re-merged twice, last after EX-22)
 **Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), EX-23 lane brief (40 roster names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v1.1 — Full example documentation (was v0.7)".
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
@@ -18,7 +18,7 @@ lockstep `map.md` files, and this ledger with its `staging/map.md` row. Closed: 
 
 ## Scope
 
-The roster is the first 40 `ta.*` backlog names at base `671a7144` (backlog lines 229–268). The
+The roster is the first 40 `ta.*` backlog names at the dispatch base `671a7144` (backlog lines 229–268). The
 oracle for this family is **not** Spark — Spark has no TA kernels — it is the recorded C TA-Lib
 0.4.0 goldens under `crates/repark-ta/tests/goldens/` (`<kernel>_<params>.bin`, little-endian
 `f64`, 5000 rows, the same files `python/repark/tests/test_ta.py` and `test_ta_volume.py` pin
@@ -60,7 +60,7 @@ TA-Lib-name aliases themselves.
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Eight runnable files under `docs/examples/ta/` land local examples for all 40 roster names, each script rebuilding the 5000-row OHLCV fixture as a `createDataFrame`, running the kernel over `Window.orderBy("ts")`, and asserting the full 5000-row output bit-for-bit against the recorded golden read from `crates/repark-ta/tests/goldens` at run time (`expect_bit_exact`: equal length, NaN rows matched positionally, every other row by `f64` bit pattern) — no hand-computed number in any example; each script exits 0 under `python <path>` with no network and no JVM; no product file is touched. | The shipped examples themselves: the `--require-execute` gate executes every `expect_bit_exact` assert over all 5000 rows on this tree (exit 0, round-2 gates table); the oracle table (40 rows, one per roster name) remains the round-1 per-name measurement record. | **PROVEN** |
-| C-002 | All 40 covered names leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 40, 340 → 300, with no other `scripts/` change; the gate's static half and its `--require-execute` leg both exit 0 (611 covered; 300 backlog; 162 examples). | The gate's own counts line at the base (571/340/154) and on the unit tree (611/300/162), plus the red-first provocation below. | **PROVEN** |
+| C-002 | All 40 covered names leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 40, 298 → 258 shipped (340 → 300 at the dispatch base `671a7144`), with no other `scripts/` change; the gate's static half and its `--require-execute` leg both exit 0 (611 covered; 300 backlog; 162 examples). | The gate's own counts line at the base (571/340/154) and on the unit tree (611/300/162), plus the red-first provocation below. | **PROVEN** |
 | C-003 | A name whose repark answer differs from its golden is not papered over: the 40-name probe measured zero divergences (`maxdev = 0.0`, NaN pattern aligned, bit-equal dense suffix on every row), so no §7 row is filed, no name stays on the backlog, and `python/repark/tests/test_examples_window_catalog.py` is unchanged; a future divergence would follow the EX-TA-`<n>` row + pin route. | The shipped examples' bit-exact control over the full 5000-row golden — executed by the gate on every run — plus the round-2 red-first re-run (four mutations, all exit 1; table in "Red-first") and the unchanged pin file (`git diff --exit-code python/repark/tests/test_examples_window_catalog.py` on this tree). | **PROVEN** |
 | C-004 | This ledger records the roster, the grouping, the red-first provocation, and the name-by-name oracle table; `staging/map.md` gains the EX-23 row; `docs/examples/map.md` and `docs/examples/ta/map.md` move in lockstep with the files; `scripts/map.md` carries the baseline-ratchet entry with the pin citations. | The ledger itself and the lockstep map diffs in the same commits. | **PROVEN** |
 
@@ -70,12 +70,12 @@ TA-Lib-name aliases themselves.
 
 Captured on this tree with the eight example files held outside `docs/examples/` and
 `docs/examples/backlog.txt` + `scripts/check_example_coverage.py` restored to the base state
-(the 40 roster rows still listed, `BACKLOG_BASELINE=340`): the static gate exits **0**
+(round 1, at the dispatch base `671a7144`, the 40 roster rows still listed, `BACKLOG_BASELINE=340`): the static gate exits **0**
 (`571 covered; 340 backlog; 154 examples`). **Provocation:** delete all 40 roster rows and set
 `BACKLOG_BASELINE` to 300 (`340 − 40`, as if the whole roster were covered) with no example
 files present; the gate exits **1** with exactly **40 findings**, one per roster name and no
 others. Restoring the rows, the baseline 300, and the eight files returns the gate to **0**
-(`611 covered; 300 backlog; 162 examples`). `pins: ex-23-ta-a/C-001, C-002`
+(`611 covered; 300 backlog; 162 examples` at that base). Re-run on the shipped tip `83d682d3` after the EX-22 merge: base `bfef4a62` prints `613 covered; 298 backlog; 165 examples`; the tip prints `653 covered; 258 backlog; 173 examples` with `BACKLOG_BASELINE` 298 → 258 — the same +40 / −40 / +8. `pins: ex-23-ta-a/C-001, C-002`
 
 ### Round-2 red-first re-run — the bit-exact control (2026-09-04)
 
@@ -177,7 +177,7 @@ EX-20/EX-21/EX-22 pins beside this unit's tree.
 
 | Command | Exit |
 |---|---|
-| `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** (`611 covered; 300 backlog; 162 examples`; all eight examples re-executed over the bit-exact control) |
+| `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** (`653 covered; 258 backlog; 173 examples` on the shipped tip after the EX-22 merge; `611 / 300 / 162` at the dispatch base; all eight examples re-executed over the bit-exact control) |
 | `.venv/bin/python -m pytest python/repark/tests/test_examples_window_catalog.py python/repark/tests/test_qi1_idents.py -q` | **0** |
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
@@ -193,8 +193,8 @@ Counts line (execute leg):
 
 `example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 611 covered; 300 backlog; 2 exceptions; 162 examples`
 
-Before this unit: `571 covered; 340 backlog; 154 examples` (at `671a7144`). On this unit's tree:
-`611 covered; 300 backlog; 162 examples` (`BACKLOG_BASELINE` 340 → 300) — exactly the 40 roster
+Before this unit: `613 covered; 298 backlog; 165 examples` (at `bfef4a62`; `571 / 340 / 154` at the dispatch base `671a7144`). On this unit's tree:
+`653 covered; 258 backlog; 173 examples` (`BACKLOG_BASELINE` 298 → 258 shipped; 340 → 300 at dispatch) — exactly the 40 roster
 names.
 
 ## Review-gap table (round-1 findings, resolved in-lane)
