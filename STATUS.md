@@ -165,7 +165,7 @@ in published history by explicit decision:
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
-- **Example campaign** (chartered 2026-08-31, v0.7 slate). Batches EX-2 and EX-4..EX-14 merged
+- **Example campaign** (chartered 2026-08-31, the 1.1 slate (was v0.7)). Batches EX-2 and EX-4..EX-14 merged
   2026-09-01..03. Static coverage 333 / 913 public names, 578 backlog, 2 exceptions, 83
   examples. The packaged-wheel execution gate (`scripts/check_example_coverage.py
   --require-execute` on the published wheel) is authoritative — it ran green on the 1.0.1

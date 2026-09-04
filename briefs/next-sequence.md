@@ -12,7 +12,7 @@ is written here about a unit that has left. The file closes when the queue empti
 
 ## Standing rules for every unit below
 
-Restated because a mixed queue makes it easy to assume the previous campaign's contract carried:
+Restated for a mixed queue:
 
 1. **Reproduce first.** The behaviour is demonstrated on this tree before anything is edited.
 2. **Write the pin and watch it go red.** A pin that was never red proves nothing.
@@ -23,13 +23,12 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 6. **One group at a time**, manual PR, owner merges.
 7. **Pickup ritual first, departure edit last.** First act of a unit: fetch, confirm the prior
    unit's PR merged and that the local base carries its departure edit, `make ledger-archive`
-   (files the prior unit's ledger, takes it off this file, files any closed campaign, runs the
-   gate; zero tokens), run the drift checks (`make check-map-sync`, `make check-ledgers`), and
+   (zero tokens), run the drift checks (`make check-map-sync`, `make check-ledgers`), and
    compact the context docs **against the just-merged delta only**, as a docs-only first commit.
    Last commit of the unit: STATUS trued up for what this unit changed and nothing else (a
    campaign the owner ruled closed gets `state=closed` on its marker, no prose), the unit's
    ledger `move`d from `task/ledgers/staging/` to `completed/` — which removes it from this
-   file — `map.md` in lockstep. No departure line for the unit, here or anywhere.
+   file — `map.md` in lockstep. No departure line anywhere.
 
 ---
 
@@ -47,6 +46,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 | 8 | **Cutover inventory** — which workloads move, in what order, under single-writer-per-table | Cutover | SQL-HARDEN-1 | STANDARD <!-- unit id=cutover-inventory --> |
 | 9 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |
 | 10 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
+| 11 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
 
 <!-- unit id=f-24 -->
 **Why F-24 is first.** Spark's `MIN_INPUT_FILES_DEFAULT = 5` is a fork floor, not a RePark
