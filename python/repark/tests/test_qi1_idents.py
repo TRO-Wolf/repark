@@ -124,7 +124,7 @@ def test_injection_probe_battery_at_reexport_sites() -> None:
 
 
 def test_functions_column_sql_expr_uses_ssot() -> None:
-    from repark import functions as functions_mod
+    from repark.spark import functions as functions_mod
 
     assert functions_mod._quote_column_sql_expr is quote_column_sql_expr
     assert functions_mod._quote_column_sql_expr("s.x") == '"s"."x"'

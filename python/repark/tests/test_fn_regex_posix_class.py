@@ -1,5 +1,8 @@
 """FN-REGEX-POSIX-1: POSIX ``[[:alpha:]]`` is a Java union bracket."""
 
+import pytest
+
+from repark.errors import UnsupportedOperationException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 
@@ -41,5 +44,61 @@ def test_rlike_posix_alpha_is_java_union() -> None:
             ).collect()
         ]
         assert replaced == ["#1b2 Ünï_9", "foo", "##bb##", "", None]
+    finally:
+        repark.stop()
+
+
+@pytest.mark.parametrize("value", ["x", "fox"])
+def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
+    """FN-REGEX-POSIX-1: '[[:alpha:]x]' matches 'x', 'fox'. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-regex-bracket").master("local[1]").getOrCreate()
+    try:
+        frame = repark.createDataFrame([(value,)], ["s"])
+        rlike_values = [
+            row["m"]
+            for row in frame.select(F.rlike(F.col("s"), F.lit("[[:alpha:]x]")).alias("m")).collect()
+        ]
+        assert rlike_values == [True]
+        like_values = [
+            row["m"]
+            for row in frame.select(
+                F.regexp_like(F.col("s"), F.lit("[[:alpha:]x]")).alias("m")
+            ).collect()
+        ]
+        assert like_values == [True]
+        sql_values = [
+            row[0] for row in repark.sql(f"SELECT regexp_like('{value}', '[[:alpha:]x]')").collect()
+        ]
+        assert sql_values == [True]
+    finally:
+        repark.stop()
+
+
+@pytest.mark.parametrize("value", ["x", "fox"])
+def test_sql_rlike_keyword_refuses(value: str) -> None:
+    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword refuses. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-rlike-keyword").master("local[1]").getOrCreate()
+    try:
+        with pytest.raises(
+            UnsupportedOperationException, match="Unsupported ast node in sqltorel: RLike"
+        ):
+            repark.sql(f"SELECT '{value}' RLIKE '[[:alpha:]x]'").collect()
+    finally:
+        repark.stop()
+
+
+@pytest.mark.parametrize(("value", "want"), [("alpha", "alpha"), ("fox", "")])
+def test_regexp_extract_answers_on_both_doors(value: str, want: str) -> None:
+    """FN-REGEX-POSIX-1 control: regexp_extract answers Spark's group on both doors."""
+    repark = ReparkSession.builder.appName("fn-regex-extract").master("local[1]").getOrCreate()
+    try:
+        facade = (
+            repark.createDataFrame([(value,)], ["s"])
+            .select(F.regexp_extract("s", F.lit("([[:alpha:]]+)"), 1).alias("r"))
+            .collect()
+        )
+        assert [row["r"] for row in facade] == [want]
+        sql = repark.sql(f"SELECT regexp_extract('{value}', '([[:alpha:]]+)', 1) AS r").collect()
+        assert [row["r"] for row in sql] == [want]
     finally:
         repark.stop()

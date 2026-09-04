@@ -44,6 +44,8 @@ JVM, no repark required). See [../map.md](../map.md).
   `repark = ReparkSession.builder…` (owner ruling, 2026-09-01).
   pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008
+  **EX-17 (2026-09-04):** `test_ex_1_every_new_name_is_in_the_backlog` accepts a widened name that an
+  example now covers (backlog OR covered); the first `Column.*` batch was the first to cover one.
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
@@ -102,6 +104,7 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142.
+  FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
   pins: fn-fix-2-string-rows/C-002
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002
   RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142 (pins: rp-7-f18-repin/C-005). V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and

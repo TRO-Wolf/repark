@@ -584,9 +584,7 @@ def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
 
 
 def regexp_extract(str: Column | str, pattern: Column | str, idx: int | Column = 1) -> Column:
-    """First match's ``idx``-th group, or ``''`` (PySpark ``functions.regexp_extract``).
-    ``pattern`` may be Column or str; ``idx`` defaults to 1.
-    """
+    """First match's ``idx``-th group, or ``''`` (PySpark ``functions.regexp_extract``)."""
     lit = frozenset() if isinstance(pattern, Column) else frozenset({1})
     return _scalar("regexp_extract", str, pattern, idx, lit_indices=lit)
 

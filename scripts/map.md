@@ -1,5 +1,28 @@
 # map — scripts/
 
+EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
+32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
+(`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
+`bridges.py`, `print_schema.py`, `random_split.py`; round 3 moved `mergeInto`/`merge_into`
+into `joins_hints.py` after the Iceberg-oracle re-measure); `intersectAll`/`intersect_all` and
+`groupingSets`/`grouping_sets` stay on the backlog (§7 `EX-DF-7`/`EX-DF-8`), and the narrow
+`mergeInto` bare-key/qualifier arm (§7 `EX-DF-9`) and `printSchema` stdout tail (§7 `EX-DF-10`)
+are recorded with pins in `python/repark/tests/test_examples_dataframe_b.py`.
+pins: ex-16-dataframe-b/C-001
+EX-17 Column-a (2026-09-04, r2): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 516 at base `e3600a1` (484 after the EX-16 merge) —
+34 `Column.*` names covered by ten new examples under `docs/examples/column/`
+(`naming.py`, `predicates.py`, `strings.py`, `bitwise_cast.py`, `when_chains.py`,
+`order_markers.py`, `window_over.py`, `accessors.py`, `round_ext.py`,
+`accessor_namespaces.py`); the 6 engine-plumbing rows stay on the backlog
+(`for_select`/`join_sql_part`/`spark_display_part`/`spark_wrap_display_part`/
+`sql_expr_part`/`sql_expr_without_alias` select-boundary plumbing — no PySpark
+analog; the `dt`/`str` Polars-style accessor namespaces landed in round 2 as
+repark extensions documented beside their PySpark-spelled twins); the two measured
+divergent bare-name arms are registry §7 `EX-COL-1`/`EX-COL-2` (`F.col`-receiver
+`cast` select name, unaliased `getField` select name), pins in
+`python/repark/tests/test_examples_column_a.py`.
+pins: ex-17-column-a/C-001
+
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
 28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,
@@ -138,6 +161,7 @@ file-backed module.
 
 DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
 `check_lib_py.py` `writer_readwriter.py` 1117→1113.
+  FN-REGEXP-EXTRACT-1 (2026-09-04): `functions_expr.py` ceiling 2261 → 2259 (ratchet down).
 
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;

@@ -44,3 +44,32 @@ def test_elt_index_zero_raises_invalid_array_index() -> None:
             frame.select(F.elt(F.lit(-1), F.lit("a"), F.lit("b")).alias("r")).collect()
     finally:
         repark.stop()
+
+
+@pytest.mark.parametrize("index", [3, 0, -1])
+def test_elt_out_of_range_returns_null_with_ansi_off(index: int) -> None:
+    """FN-ELT-1: ANSI-off elt of index 3, 0, or -1 is NULL. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = (
+        ReparkSession.builder.appName("fn-elt-ansi-off")
+        .master("local[1]")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
+    try:
+        frame = repark.createDataFrame([(1,)], ["n"])
+        values = [
+            row["r"]
+            for row in frame.select(
+                F.elt(F.lit(index), F.lit("a"), F.lit("b")).alias("r")
+            ).collect()
+        ]
+        assert values == [None]
+        null_index = [
+            row["r"]
+            for row in frame.select(
+                F.elt(F.lit(None).cast("int"), F.lit("a"), F.lit("b")).alias("r")
+            ).collect()
+        ]
+        assert null_index == [None]
+    finally:
+        repark.stop()
