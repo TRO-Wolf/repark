@@ -69,9 +69,11 @@ cutover inventory.
 <!-- /unit -->
 
 <!-- unit id=perf-dynflatten-2 -->
-**Why PERF-DYNFLATTEN-2 is one candidate.** Measured per fixture against a 10.81 ms floor,
-only null-mask struct extract clears 3x, on `struct_d6` alone (59.98 ms, 5.5x). The Cartesian
-operator (2.5x, unstable) and the optimizer walks (0.04x) are closed. Numbers and do-not list:
+**Why PERF-DYNFLATTEN-2 was one candidate, and what it returned.** Only null-mask struct
+extract ever cleared 3x, on `struct_d6` alone; Cartesian and the optimizer walks stay closed.
+Built and re-measured: `struct_d6`'s isolated null cost is 64.83 ms → 0.01 ms, 0.1x its run's
+floor, every bed row set byte-identical, and `DYNFLATTEN-QUALNAME-1` closed as a side effect.
+Numbers, controls and do-not list:
 [../docs/perf/dynamic-flatten-baseline.md](../docs/perf/dynamic-flatten-baseline.md).
 <!-- /unit -->
 

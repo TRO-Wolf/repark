@@ -110,6 +110,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `Row` field arm is §7 `EX-ROW-1`, pins in
   `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
   `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
+- [perf-dynflatten-2-null-mask-ledger.md](perf-dynflatten-2-null-mask-ledger.md) —
+  **PERF-DYNFLATTEN-2 (2026-09-04), in flight:** the one candidate PERF-DYNFLATTEN-1 queued,
+  built. A scalar UDF unions the parent struct's validity into the child array instead of a
+  per-leaf `CASE WHEN parent IS NULL`; `struct_d6`'s isolated null cost 64.83 ms → 0.01 ms
+  (0.1x its run's floor), every bed row set, schema and ordered-row digest identical against a
+  rebuilt pre-extractor module, `DYNFLATTEN-QUALNAME-1` FIXED as a side effect and re-pinned as
+  an answer pin. `risk_tier: standard`. Branch `perf/dynflatten-2-null-mask`.
+  pins: perf-dynflatten-2-null-mask/C-001, C-002, C-003, C-004, C-005
 - [perf-dynflatten-1-measure-ledger.md](perf-dynflatten-1-measure-ledger.md) —
   **PERF-DYNFLATTEN-1 (2026-09-04), in flight:** measure `dynamicFlatten` on the
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.

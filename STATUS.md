@@ -129,7 +129,9 @@ in published history by explicit decision:
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not
   list binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md):
-  null-mask queued on `struct_d6` alone (59.98 ms, 5.5x a 10.81 ms floor); Cartesian and walks not.
+  the one queued candidate is delivered — the null-mask struct extractor takes `struct_d6`'s
+  isolated null cost 64.83 ms → 0.01 ms (0.1x its run's floor) and closes `DYNFLATTEN-QUALNAME-1`;
+  Cartesian and walks stay closed.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
