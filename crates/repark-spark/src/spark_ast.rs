@@ -39,54 +39,8 @@ pub(crate) async fn execute_passthrough(
             // G15 — collation at the EXECUTING parse (G3-E8 altitude).
             crate::refuse_collation_in_statement(inner)?;
             crate::refuse_declared_function_in_statement(inner)?;
-            // G3-E8 identity path.
-            if let Some(allowed) =
-                repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
-            {
-                let object_name = match inner.as_ref() {
-                    Statement::Delete(delete) => crate::delete_target_object_name(delete),
-                    _ => None,
-                };
-                crate::refuse_mor_unpartitioned_multi_spec_dml(
-                    ctx,
-                    catalogs,
-                    object_name,
-                    crate::MorDmlKind::Delete,
-                )
-                .await?;
-                let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
-                repark_iceberg::write::predicate_dml::execute_predicate_dml(
-                    ctx,
-                    handle,
-                    &allowed.spec,
-                )
-                .await?;
-                return ctx.read_empty();
-            }
-            if let Some(allowed) =
-                repark_iceberg::write::predicate_dml::try_allowed_update_in(inner)?
-            {
-                let object_name = match inner.as_ref() {
-                    Statement::Update(update) => {
-                        crate::object_name_from_table_with_joins(&update.table)
-                    }
-                    _ => None,
-                };
-                crate::refuse_mor_unpartitioned_multi_spec_dml(
-                    ctx,
-                    catalogs,
-                    object_name,
-                    crate::MorDmlKind::Update,
-                )
-                .await?;
-                let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
-                repark_iceberg::write::predicate_dml::execute_predicate_dml(
-                    ctx,
-                    handle,
-                    &allowed.spec,
-                )
-                .await?;
-                return ctx.read_empty();
+            if let Some(done) = try_execute_identity_dml(ctx, catalogs, inner).await? {
+                return Ok(done);
             }
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
@@ -126,6 +80,53 @@ pub(crate) async fn execute_passthrough(
     // Return materialized command results so later collection cannot re-run the write.
     let batches = dataframe.collect().await?;
     ctx.read_batches(batches)
+}
+
+async fn try_execute_identity_dml(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    inner: &Statement,
+) -> Result<Option<DataFrame>> {
+    let (allowed, kind, object_name) = if let Some(allowed) =
+        repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
+    {
+        let object_name = match inner {
+            Statement::Delete(delete) => crate::delete_target_object_name(delete),
+            _ => None,
+        };
+        (allowed, crate::MorDmlKind::Delete, object_name)
+    } else if let Some(allowed) =
+        repark_iceberg::write::predicate_dml::try_allowed_update_in(inner)?
+    {
+        let object_name = match inner {
+            Statement::Update(update) => crate::object_name_from_table_with_joins(&update.table),
+            _ => None,
+        };
+        (allowed, crate::MorDmlKind::Update, object_name)
+    } else if let Some(allowed) =
+        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(inner)?
+    {
+        if catalogs.get(&allowed.catalog_name).is_none() {
+            return Ok(None);
+        }
+        let object_name = match inner {
+            Statement::Delete(delete) => crate::delete_target_object_name(delete),
+            Statement::Update(update) => crate::object_name_from_table_with_joins(&update.table),
+            _ => None,
+        };
+        let kind = if allowed.spec.assignments.is_some() {
+            crate::MorDmlKind::Update
+        } else {
+            crate::MorDmlKind::Delete
+        };
+        (allowed, kind, object_name)
+    } else {
+        return Ok(None);
+    };
+    crate::refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, kind).await?;
+    let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+    repark_iceberg::write::predicate_dml::execute_predicate_dml(ctx, handle, &allowed.spec).await?;
+    Ok(Some(ctx.read_empty()?))
 }
 
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).

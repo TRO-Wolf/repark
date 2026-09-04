@@ -3624,23 +3624,33 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
-- **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). The close
-  skips the data-manifest walk when there are no legacy deletes and `known_partitions` covers
-  every touched path; `data_sequence_numbers` is empty then. Pin:
+- **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
+  contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
+  there are no legacy deletes and `known_partitions` covers every touched path;
+  `data_sequence_numbers` is empty then. RePark's duty is to hand a complete map on the
+  production identity DELETE; a map miss is a RePark defect, not a fork skip miss. Pin:
   `dv_close.rs::a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest`
   (hide succeeds, map empty);
+  `dv_close.rs::a_plain_identity_delete_closes_with_no_data_manifest` (production identity-SQL
+  sink, hide succeeds — close-phase data-manifest opens are zero);
   `dv_close.rs::a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map`
-  (legacy still walks, map total). Statement wall, this clone, debug, three runs, medians:
-
-  | data manifests | before `c1d6c9de` (RP-8) | after `594bdbe5` (RP-9) |
-  |---|---|---|
-  | 8 | 491 / 142 / 1587 ms (med 491) | 145 / 144 / 143 ms (med 144) |
-  | 48 | 709 / 703 / 924 ms (med 709) | 751 / 697 / 711 ms (med 711) |
-  | 192 | 2.729 / 4.609 / 2.750 s (med 2.750) | 2.710 / 2.666 / 2.712 s (med 2.710) |
-
-  The statement wall at 48 and 192 stays inside run-to-run noise (E-4: do not CI-pin a wall-clock).
-  The load-bearing close is the zero-manifest pin. Fork close-only (debug): 29.7 / 185 / 713 ms →
-  1.2 / 1.7 / 3.9 ms. Full record: the RP-9 ledger; RP-8 E-4 closed.
+  (legacy still walks, map total). Statement-wall numbers live in the RP-9 ledger; the
+  8-manifest "before" set is noisy and is not a claimed improvement. Full record: the RP-9
+  ledger; RP-8 E-4 closed.
+- **PERF-DVCLOSE-STMT-1** — surfaced 2026-09-03, RP-9 r2. After the F-23 skip engages, a
+  192-manifest pure-DV `DELETE` still opens every data manifest once at commit in the fork's
+  `validate_fresh_dvs_only` (unconditional full pass on every DV-adding commit,
+  `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
+  `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
+  round-2 table (commit = 1× per data manifest).
+- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
+  `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
+  stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
+  scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
+  MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
+  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
+  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
+  so a third `plan_files` goes red.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

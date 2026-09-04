@@ -73,10 +73,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **RP-9 (2026-09-03):** `measure_pure_dv_close_cost` is the `#[ignore]`d pure-DV cell (N data
   manifests, 0 legacy deletes, production `DELETE` so the scan supplies a complete map) at 8 /
   48 / 192. Statement-wall medians in the RP-9 ledger; no wall-clock CI pin. The skip itself is
-  the hide-and-succeed pin in `dv_close.rs`.
+  the hide-and-succeed pin in `dv_close.rs`. Round 2: after `try_allowed_plain_identity` the
+  same cell is the real Spark `DELETE WHERE id = 0` path; close-phase opens are zero (hide
+  pin); remaining scan 3× and commit 1× live in `PERF-SCAN-3PASS-1` / `PERF-DVCLOSE-STMT-1`.
   pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: rp-8-repin-f21-f22/C-002, C-003
-  pins: rp-9-repin-f23/C-003
+  pins: rp-9-repin-f23/C-003, C-005
 - `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
   `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence
   ten times and requires Spark's exact `_row_id = 11` each time (it read 10 or 11 at random
@@ -144,7 +146,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `write.delete.granularity = 'partition'` is inert on v3; a v2 MoR table still writes one
   Parquet position-delete file with no `referenced_data_file`; a subquery DELETE matching
   nothing writes no delete file and leaves the seed.
+  **RP-9 r2:** `created_v3_mor_plain_where_dml_matches_the_subquery_cell` is the Spark-door
+  pin that a three-part `DELETE … WHERE id = 2` now takes the identity path
+  (`try_allowed_plain_identity`) rather than the fork delete exec's empty partition map;
+  the UPDATE twin stays on the fork.
   pins: v3-9-mor-predicate-dml-dv/C-003, C-004
+  pins: rp-9-repin-f23/C-005
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`); **V3-9:** the `format-version = 3` opt-in refusal names the conf and no
   longer claims merge-on-read is unserved. pins: v3-9-mor-predicate-dml-dv/C-006

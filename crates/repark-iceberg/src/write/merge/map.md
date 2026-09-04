@@ -58,9 +58,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data_manifest` (hide
   succeeds, map empty), `closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_numbers`
   (empty map still walks), `a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partition_map`.
+  **RP-9 r2:** `a_plain_identity_delete_closes_with_no_data_manifest` drains the production
+  identity-SQL sink, hides the data manifests, and requires an empty sequence map — Spark/ANSI
+  plain `DELETE WHERE` now uses that path instead of the fork delete exec's empty map.
   `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
   close as `Option<&ManifestList>` so the list is not read twice.
-  pins: rp-9-repin-f23/C-002
+  pins: rp-9-repin-f23/C-002, C-005
   **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
   `commit_target::snapshot_id_for_commit` already resolved for the target scan and
   `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork

@@ -137,38 +137,44 @@ async fn execute_time_travelled(
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
         Statement::Delete(_) | Statement::Update(_) => {
-            if let Some(allowed) =
-                repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement.as_ref())?
-            {
-                guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
-                let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
-                repark_iceberg::write::predicate_dml::execute_predicate_dml(
-                    cx.ctx,
-                    handle,
-                    &allowed.spec,
-                )
-                .await?;
-                return cx.ctx.read_empty();
-            }
-            if let Some(allowed) =
-                repark_iceberg::write::predicate_dml::try_allowed_update_in(statement.as_ref())?
-            {
-                guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
-                let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
-                repark_iceberg::write::predicate_dml::execute_predicate_dml(
-                    cx.ctx,
-                    handle,
-                    &allowed.spec,
-                )
-                .await?;
-                return cx.ctx.read_empty();
-            }
-            guards::refuse_dml_subquery_predicate(statement.as_ref())?;
-            guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
-            delegate(cx, sql).await
+            execute_identity_or_delegate(cx, sql, statement.as_ref()).await
         }
         _ => delegate(cx, sql).await,
     }
+}
+
+async fn execute_identity_or_delegate(
+    cx: &EngineContext<'_>,
+    sql: &str,
+    statement: &Statement,
+) -> Result<DataFrame> {
+    if let Some(allowed) = repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)? {
+        return commit_identity_dml(cx, statement, allowed).await;
+    }
+    if let Some(allowed) = repark_iceberg::write::predicate_dml::try_allowed_update_in(statement)? {
+        return commit_identity_dml(cx, statement, allowed).await;
+    }
+    if let Some(allowed) =
+        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(statement)?
+        && cx.catalogs.get(&allowed.catalog_name).is_some()
+    {
+        return commit_identity_dml(cx, statement, allowed).await;
+    }
+    guards::refuse_dml_subquery_predicate(statement)?;
+    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
+    delegate(cx, sql).await
+}
+
+async fn commit_identity_dml(
+    cx: &EngineContext<'_>,
+    statement: &Statement,
+    allowed: repark_iceberg::write::predicate_dml::AllowedDeleteIn,
+) -> Result<DataFrame> {
+    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
+    let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
+    repark_iceberg::write::predicate_dml::execute_predicate_dml(cx.ctx, handle, &allowed.spec)
+        .await?;
+    cx.ctx.read_empty()
 }
 
 /// Plan with DataFusion, run the SEC-02 guard on the resulting plan, then execute.

@@ -1134,8 +1134,8 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
         .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
         .collect()
 }
-
 mod lineage;
+pub mod plain;
 mod residual;
 
 #[cfg(test)]

@@ -174,14 +174,18 @@ pins: rp-4-fork-repin/C-005, C-006
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
   `refuse_collation_in_statement` on the EXECUTING parse, plus `RESET` of a collation
   key — Q-001 pins this attach directly so the router cannot green-wash it), the **G3-E8 valve +
-  identity-DELETE/UPDATE attach** (`try_allowed_delete_in` / `try_allowed_update_in` →
+  identity-DELETE/UPDATE attach** (`try_allowed_delete_in` / `try_allowed_update_in` /
+  `plain::try_allowed_plain_identity` →
   `execute_predicate_dml` for uncorrelated `DELETE … IN` / `NOT IN`, `[NOT] EXISTS` ±
-  correlation, correlated IN, and identity `UPDATE … IN`, else
+  correlation, correlated IN, identity `UPDATE … IN`, and a three-part `DELETE … WHERE <comparison>`
+  on a catalog in the session registry (branch-commit temp views live in `datafusion.public`
+  and stay on the fork), else
   `refuse_dml_subquery_predicate_in_statement` on the EXECUTING
   parse — the only parse every DML route agrees on; the router's own parse is a different dialect), and the **G5b
   temporal-`RANGE` conformance call** (`conform_temporal_range_frames`, between planning and
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
+  pins: rp-9-repin-f23/C-005
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

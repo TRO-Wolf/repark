@@ -28,7 +28,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   planned `FileScanTask`'s `(spec_id, partition)`, so the v3 DV close never re-walks the data
   manifests it just read. The pin compares the drained sink to the manifest truth on a
   three-partition table; mutation (make `record_scanned_partitions` a no-op) 1 red of 1.
+  **RP-9 r2:** `a_multi_manifest_identity_scan_records_the_touched_path` drains the production
+  identity-SQL sink on an 8-manifest v3 table and requires the touched `_file` in the map
+  (`record_scanned_partitions` and the close `retain` keep it). `execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table`
+  runs the production identity DELETE on that fixture.
   pins: rp-7-f18-repin/C-002
+  pins: rp-9-repin-f23/C-005
 - `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
   `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
   map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the

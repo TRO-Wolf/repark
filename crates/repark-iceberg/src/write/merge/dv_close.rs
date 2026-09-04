@@ -173,7 +173,7 @@ mod tests {
     use datafusion::arrow::array::{Array, Int32Array, Int64Array, StringArray};
     use datafusion::arrow::compute::cast;
     use datafusion::arrow::datatypes::DataType;
-    use futures::TryStreamExt;
+    use futures::{StreamExt, TryStreamExt};
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
     use iceberg::spec::{
@@ -183,7 +183,14 @@ mod tests {
     use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
     use tempfile::TempDir;
 
-    use super::super::{IsolationLevel, RowDeltaKind, RowDeltaPolicy, commit_row_delta_kind};
+    use datafusion::physical_plan::streaming::PartitionStream;
+    use datafusion::prelude::SessionContext;
+
+    use super::super::{
+        IsolationLevel, KnownPartitions, RowDeltaKind, RowDeltaPolicy, TargetScanStream,
+        commit_row_delta_kind, drain_partition_sink, new_partition_sink, register_streaming_target,
+        scratch_schema,
+    };
     use super::*;
     use crate::write::concurrency::WriteConcurrency;
 
@@ -820,5 +827,173 @@ mod tests {
             }
             PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
         }
+    }
+
+    async fn eight_manifest_puredv_table(catalog: &std::sync::Arc<dyn Catalog>) -> Table {
+        let namespace = NamespaceIdent::new("ns".to_string());
+        catalog
+            .create_namespace(&namespace, HashMap::new())
+            .await
+            .expect("namespace");
+        let schema = Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+                NestedField::required(2, "part", Type::Primitive(PrimitiveType::Int)).into(),
+            ])
+            .build()
+            .expect("schema");
+        let spec = UnboundPartitionSpec::builder()
+            .add_partition_field(2, "part", Transform::Identity)
+            .expect("identity partition field")
+            .build();
+        let creation = TableCreation::builder()
+            .name("puredv".to_string())
+            .schema(schema)
+            .partition_spec(spec)
+            .properties(HashMap::from([(
+                "commit.manifest-merge.enabled".to_string(),
+                "false".to_string(),
+            )]))
+            .build();
+        catalog
+            .create_table(&namespace, creation)
+            .await
+            .expect("create");
+        let ident = TableIdent::new(namespace, "puredv".to_string());
+        crate::write::format_version::set_properties_and_format_version(
+            catalog.as_ref(),
+            &ident,
+            None,
+            HashMap::new(),
+            &[],
+            Some(FormatVersion::V3),
+        )
+        .await
+        .expect("upgrade to v3");
+        let arrow_schema = std::sync::Arc::new(datafusion::arrow::datatypes::Schema::new(vec![
+            datafusion::arrow::datatypes::Field::new("id", DataType::Int32, false),
+            datafusion::arrow::datatypes::Field::new("part", DataType::Int32, false),
+        ]));
+        for part in 0..8_i32 {
+            let table = catalog.load_table(&ident).await.expect("load");
+            let batch = datafusion::arrow::array::RecordBatch::try_new(
+                std::sync::Arc::clone(&arrow_schema),
+                vec![
+                    std::sync::Arc::new(Int32Array::from(vec![part])),
+                    std::sync::Arc::new(Int32Array::from(vec![part])),
+                ],
+            )
+            .expect("seed batch");
+            let files = crate::write::append::write_partitioned_data_files(&table, vec![batch])
+                .await
+                .expect("write");
+            super::super::commit(catalog, &table, None, Vec::new(), files)
+                .await
+                .expect("append");
+        }
+        catalog.load_table(&ident).await.expect("reload")
+    }
+
+    async fn identity_pairs_for_id_zero(
+        table: &Table,
+    ) -> (Vec<PositionDeletePair>, KnownPartitions, Option<i64>) {
+        let write_schema = std::sync::Arc::new(
+            iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+                .expect("write schema"),
+        );
+        let scratch = scratch_schema(&write_schema);
+        let snapshot_id = table
+            .metadata()
+            .current_snapshot()
+            .map(|snapshot| snapshot.snapshot_id());
+        let partitions = new_partition_sink();
+        let source: std::sync::Arc<dyn PartitionStream> = std::sync::Arc::new(
+            TargetScanStream::new(
+                table.clone(),
+                snapshot_id,
+                std::sync::Arc::clone(&scratch),
+                &write_schema,
+                None,
+                Some(1),
+                None,
+            )
+            .with_partition_sink(std::sync::Arc::clone(&partitions)),
+        );
+        let ctx = SessionContext::new();
+        let target_name = register_streaming_target(&ctx, std::sync::Arc::clone(&scratch), source)
+            .expect("register streaming target");
+        let sql = format!("SELECT \"_file\", \"_pos\" FROM {target_name} AS t WHERE id = 0");
+        let mut stream = ctx
+            .sql(&sql)
+            .await
+            .expect("plan identity sql")
+            .execute_stream()
+            .await
+            .expect("execute identity sql");
+        let mut pairs: Vec<PositionDeletePair> = Vec::new();
+        while let Some(batch) = stream.next().await {
+            let batch = batch.expect("identity batch");
+            let files_col = cast(
+                batch.column_by_name("_file").expect("_file"),
+                &DataType::Utf8,
+            )
+            .expect("cast _file");
+            let files = files_col
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("utf8");
+            let positions_col = cast(
+                batch.column_by_name("_pos").expect("_pos"),
+                &DataType::Int64,
+            )
+            .expect("cast _pos");
+            let positions = positions_col
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("i64");
+            for index in 0..batch.num_rows() {
+                pairs.push((
+                    std::sync::Arc::from(files.value(index)),
+                    positions.value(index),
+                ));
+            }
+        }
+        (pairs, drain_partition_sink(&partitions), snapshot_id)
+    }
+
+    #[tokio::test]
+    async fn a_plain_identity_delete_closes_with_no_data_manifest() {
+        let warehouse = TempDir::new().expect("catalog warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = eight_manifest_puredv_table(&catalog).await;
+        let (pairs, mut known, snapshot_id) = identity_pairs_for_id_zero(&table).await;
+        assert_eq!(pairs.len(), 1);
+        let touched = pairs[0].0.as_ref().to_string();
+        known.retain(|path, _| path == &touched);
+        assert!(
+            known.contains_key(&touched),
+            "the production identity scan must record the touched path"
+        );
+        let hidden = HiddenManifests::hide(&data_manifest_paths(&table).await);
+        let prepared = prepare_row_delta_deletes(
+            &table,
+            &pairs,
+            WriteConcurrency::new(1).expect("K=1"),
+            known,
+            snapshot_id,
+        )
+        .await
+        .expect("plain identity close skips the data-manifest walk");
+        match prepared.kind {
+            PreparedKind::DeletionVectors(close) => {
+                assert!(
+                    close.data_sequence_numbers.is_empty(),
+                    "complete production map leaves data_sequence_numbers empty"
+                );
+            }
+            PreparedKind::PositionDeletes(_) => panic!("v3 must plan deletion vectors"),
+        }
+        drop(hidden);
     }
 }
