@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-17 Column-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
+32 `Column.*` names covered by nine new examples under `docs/examples/column/`
+(`naming.py`, `predicates.py`, `strings.py`, `bitwise_cast.py`, `when_chains.py`,
+`order_markers.py`, `window_over.py`, `accessors.py`, `round_ext.py`); the 8
+engine-plumbing/namespace rows stay on the backlog (`dt`/`str` Polars-style
+accessors, `for_select`/`join_sql_part`/`spark_display_part`/
+`spark_wrap_display_part`/`sql_expr_part`/`sql_expr_without_alias` select-boundary
+plumbing — no PySpark analog); the two measured divergent bare-name arms are
+registry §7 `EX-COL-1`/`EX-COL-2` (`F.col`-receiver `cast` select name, unaliased
+`getField` select name), pins in `python/repark/tests/test_examples_column_a.py`.
+pins: ex-17-column-a/C-001
+
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
 28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,
