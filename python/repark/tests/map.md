@@ -145,6 +145,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 3: NULL `ltrim` / `rtrim` pinned on both doors
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
+- [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
+  the five divergence pins for the catalog/session example batch — `registerFunction` answers
+  the UDF object where Spark's deprecated alias returns the original callable (EX-SES-1), an
+  action on a `newSession()` result promotes it process-active where Spark keeps the caller
+  (EX-SES-2, Spark column re-measured in round 2), `create_dataframe([], ['a'])` answers an
+  empty string-typed frame where Spark raises `CANNOT_INFER_EMPTY_SCHEMA` (EX-SES-3), `conf.get`
+  on an unset key raises a bare `Exception` where Spark raises `SparkNoSuchElementException`
+  (EX-SES-4), and a missing file raises `AnalysisException` 'No files found' through the readers
+  where Spark raises `PATH_NOT_FOUND` (EX-SES-5). EX-20's window/catalog pins share this file
+  since the EX-20 merge.
+  pins: ex-21-catalog-session/C-001
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
   DF-PRINTSCHEMA-1 (2026-09-04): the printSchema pin is `test_print_schema_stdout_matches_spark` and asserts Spark's tail.
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
@@ -162,6 +173,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
+- [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-20 (2026-09-04):**
+  the four divergence pins for the window/catalog example batch — the DataFrame-door tied-key
+  ordered default frame running per-row where Spark shares peer sums (EX-WIN-1, the G5
+  default-frame class), `getDatabase('default')` answering None description/locationUri where
+  Spark fills both (EX-CAT-1), `listDatabases` re-measuring the FA-2 field shape on 4.1.2
+  (EX-CAT-2), and `functionExists(name, dbName)` answering True where Spark scopes the check
+  (EX-CAT-3). The module docstring names the row span.
+  pins: ex-20-window-catalog/C-001
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),

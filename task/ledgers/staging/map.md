@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
+  **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
+  `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen
+  `docs/examples/catalog/` and `docs/examples/session/` files (backlog 411 → 377; 374 → 340
+  after the EX-20 merge), `list_databases` stays (same function object as the divergent
+  `listDatabases`, §7 `EX-CAT-2`), the `registerFunction` return, `newSession` promotion,
+  empty `create_dataframe`, unset-key `conf.get`, and missing-path reader arms are §7
+  `EX-SES-1`..`EX-SES-5`, pins in
+  `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
+  `docs/ex-21-catalog-session`. pins: ex-21-catalog-session/C-001
 - [fn-regexp-extract-1-ledger.md](fn-regexp-extract-1-ledger.md) — **FN-REGEXP-EXTRACT-1
   (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (the last
   regexp kernel; closes the R-FN-BATCH1 gap the FN-FIX-2-CTRL-1 control exposed).
@@ -101,6 +111,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the merge commit `68e408d`. `risk_tier: standard`. Branch
   `fix/df-printschema-1-trailing-newline`.
   pins: df-printschema-1-trailing-newline/C-004
+- [ex-20-window-catalog-ledger.md](ex-20-window-catalog-ledger.md) —
+  **EX-20 (2026-09-04), in flight:** the v1.1 example backfill's `Window`/`WindowSpec` +
+  first `Catalog.*` batch — 40 roster names at base `3484f8d7`; 37 covered by eight files
+  under `docs/examples/window/` and `docs/examples/catalog/` (backlog 411 → 374 shipped;
+  449 → 412 at the dispatch base), 3 stay
+  (`getDatabase`/`get_database`, `listDatabases`) with §7 rows `EX-CAT-1`/`EX-CAT-2`, the
+  `functionExists` dbName arm is `EX-CAT-3`, and the DataFrame-door tied-key default frame
+  is `EX-WIN-1`, pins in `python/repark/tests/test_examples_window_catalog.py`.
+  `risk_tier: standard`. Branch `docs/ex-20-window-catalog`. pins: ex-20-window-catalog/C-001
 - [ex-19-dataframe-d-window-ledger.md](ex-19-dataframe-d-window-ledger.md) —
   **EX-19 (2026-09-04, r3), in flight:** the v1.1 example backfill's fourth `DataFrame.*` batch —
   the 39-name DataFrame remainder plus GroupedData, Row, na, and stat surfaces at base `7496049`;
