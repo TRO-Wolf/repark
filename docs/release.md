@@ -98,6 +98,7 @@ every row decided at its recommendation. The **frozen-surface register** is
   x86_64 floor that ships today (macOS arm64, Windows, musllinux TBD).
 - **Cadence** — feature work cuts a minor, fixes cut a patch. The versioning rule that
   governs what may change in either is "Versioning policy" above, written 2026-09-02.
+  1.0.1 was the first patch (2026-09-04).
 - **Signing / attestation** — PyPI attestations already come free with trusted publishing and
   are present on the shipped wheels; whether to add Sigstore signing for the crates and GitHub
   release artifacts is still open.

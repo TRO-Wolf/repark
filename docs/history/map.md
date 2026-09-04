@@ -31,6 +31,9 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
   [hardening-h1/README.md](hardening-h1/README.md).
 - [pyc/](pyc/map.md) — **Python convention conformance (PYC)**: the workstream's STATUS record, cut 2026-08-22 (closed by #216).
 - [lrs/](lrs/map.md) — **Low-risk sweep (LRS)**: the workstream's STATUS record, cut 2026-08-21 (closed by #191).
+- [dl/](dl/map.md) — **Document lifecycle (DL)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
+- [sem/](sem/map.md) — **The Spark semantics fixes (SEM)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
+- [dml/](dml/map.md) — **Iceberg DML remainder (v0.6)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 
 ## I want to...
 

@@ -1,13 +1,13 @@
 # Unit ledger — V3-COV · full v3 statement coverage against PySpark
 
 **Date:** 2026-09-03 · **Branch:** `feat/v3-cov-statement-coverage` · **Base:** `origin/main` `a0cd39e` ·
-**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) ·
-**Registry:** [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
+**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) ·
+**Registry:** [../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
 `V3-COV-1`…`V3-COV-6` · **Path:** STANDARD (`risk_tier: standard`; two small Rust repairs, one new
 live harness, docs).
-**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
+**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §2 pillar 4 — discharged here.
-**Matrix:** [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
+**Matrix:** [../../../docs/design/v3-statement-coverage.md](../../../../docs/design/v3-statement-coverage.md).
 
 **Retired:** filed here by `ledger_lifecycle move` in commit `a6901c0`.
 
@@ -98,7 +98,7 @@ repark half in an always-run test.
 | Runtime | repark 13 s; live Spark 70 s; co-collected with the nightly live legs 1 min 57 s |
 
 Every row, its fixture, its probes and both engines' answers are the matrix in
-[../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md) §3;
+[../../../docs/design/v3-statement-coverage.md](../../../../docs/design/v3-statement-coverage.md) §3;
 the measured halves are the committed golden. The seven divergences:
 
 | Row | Statement | repark | Apache Spark | Registry | Class |

@@ -33,7 +33,8 @@ the dialect layers are thin translators.
   deletion vectors, row lineage, the v3 types — defined, with the acceptance gate that decides
   the v1.0 tag, in
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md).
-  The release-by-release path from v0.6 through 3.0 (owner-set 2026-08-29) lives in
+  The release-by-release path from v0.6 through 3.0 (owner-set 2026-08-29; v0.7–v0.10
+  shifted to 1.1–1.4 when v1.0.0 cut at the north-star gate on 2026-09-03) lives in
   [task/roadmap/epic-term/release-roadmap-2026-08-29.md](task/roadmap/epic-term/release-roadmap-2026-08-29.md).
 - Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
 - Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM" claim
