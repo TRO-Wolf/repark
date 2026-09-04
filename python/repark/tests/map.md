@@ -144,6 +144,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
+  EX-22 (2026-09-04): the module docstring names all three batches after the merge of main; imports sorted.
   the five divergence pins for the catalog/session example batch — `registerFunction` answers
   the UDF object where Spark's deprecated alias returns the original callable (EX-SES-1), an
   action on a `newSession()` result promotes it process-active where Spark keeps the caller
@@ -177,8 +178,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   default-frame class), `getDatabase('default')` answering None description/locationUri where
   Spark fills both (EX-CAT-1), `listDatabases` re-measuring the FA-2 field shape on 4.1.2
   (EX-CAT-2), and `functionExists(name, dbName)` answering True where Spark scopes the check
-  (EX-CAT-3). The module docstring names the row span.
+  (EX-CAT-3). **EX-22 (2026-09-04)** adds the four WriterV2 pins — `overwrite(condition)`
+  refusing where Spark performs the conditional overwrite (EX-W2-1), empty-source
+  `overwritePartitions` refusing where Spark no-ops (EX-W2-2), `option`/`options` with a
+  branch/tag key refusing where Spark silently writes the default branch (EX-W2-3), and
+  `overwritePartitions` on an unpartitioned table leaking a `ParseException` where Spark
+  replaces the whole table (EX-W2-4) — via a
+  `spark_v2` memory-catalog fixture. The module docstring carries the batch pins line.
   pins: ex-20-window-catalog/C-001
+  pins: ex-22-types-writerv2/C-003, C-005
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
