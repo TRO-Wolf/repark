@@ -28,7 +28,7 @@ jobs:
   live-aws:
     name: tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     environment: aws-acceptance
     permissions:
       id-token: write   # OIDC exchange — scoped to this job only
