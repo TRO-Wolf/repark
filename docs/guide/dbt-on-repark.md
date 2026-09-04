@@ -22,6 +22,7 @@ adapter was built to run.
 | `source()`, `ref()`, `--select`, `--full-refresh` | yes |
 | `threads` | yes — one shared session, one cursor per statement |
 | `dbt docs generate` | yes — columns come from the frame schema, not `DESCRIBE` |
+| a namespace that does not exist yet | created before the model builds |
 | `persist_docs: {relation: true}` | **refused** — [DBT-RELCOMMENT-1](../spark-sql-iceberg-parity.md) |
 | `materialized='view'` | **refused** — [DBT-VIEW-1](../spark-sql-iceberg-parity.md) |
 | `materialized='incremental'` | **refused** — [DBT-TEMPVIEW-1](../spark-sql-iceberg-parity.md) |
@@ -40,6 +41,9 @@ restate them.
 pip install dbt-core==1.9.*
 pip install -e python/dbt-repark
 ```
+
+From a checkout of this repository, `make py-test-dbt` provisions the same pins and runs the
+package's own suite against the built native module.
 
 `dbt-spark` arrives as a dependency. It brings no driver: its `pyhive`, `thrift`, `pyodbc` and
 `pyspark` transports are all optional extras, and `dbt-repark` uses none of them. What it does

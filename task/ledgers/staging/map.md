@@ -71,12 +71,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   run through `repark.sql()` on a memory catalog, and the seventeen refusals are §3.2. They are
   all in the **statement surface**, not the transport, so a Spark-Thrift endpoint was rejected on
   measurement — the route is an in-process `dbt-repark` adapter subclassing `dbt-spark`'s
-  `SparkAdapter`, which keeps the production gold project's config keys working unedited.
-  `dbt run` + `dbt test` build both models and pass all ten blocks on the S6 answers (44 passed,
-  1 skipped); the Glue leg is written and skipped for the orchestrator. Eight registry rows
-  (§2.5 `DBT-VIEW-1`, `DBT-TEMPVIEW-1`, `DBT-DESC-1`, `DBT-TBLPROPS-1`; §7 `DBT-CTASCLAUSE-1`,
-  `DBT-RELCOMMENT-1`, `DBT-COLCOMMENT-1`, `DBT-QUALIFY-1`). Read §6 for the two mutations that
-  reddened nothing until the suite was strengthened. `risk_tier: standard`. Branch `feat/dbt-1`.
+  `SparkAdapter`, so `file_format='iceberg'` keeps one reading rather than two.
+  `dbt run` + `dbt test` build both models and pass all ten blocks on the S6 answers (59 passed,
+  1 skipped, via `make py-test-dbt` in `preflight`); the Glue leg is written and skipped for the
+  orchestrator. Ten registry rows: §2.5 `DBT-VIEW-1`, `DBT-TEMPVIEW-1`, `DBT-DESC-1`,
+  `DBT-TBLPROPS-1` (extended in round 2 to cover `SHOW TABLE EXTENDED`, whose message it shares
+  verbatim), `DBT-CREATENS-1`; §7 `B-TZ-5` (promoted from the awaiting-pins queue when this unit
+  pinned it), `DBT-CTASCLAUSE-1`, `DBT-RELCOMMENT-1`, `DBT-COLCOMMENT-1`, `DBT-QUALIFY-1`.
+  **Round 2 (Opus critic, FAIL on 7 S2 + 3 S3) is §10**; read §6 for the mutation table, which
+  now carries a zero-red control and states which mutations are true no-ops rather than gaps.
+  `risk_tier: standard`. Branch `feat/dbt-1`.
   pins: dbt-1-adapter/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers

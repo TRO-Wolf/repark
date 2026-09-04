@@ -496,8 +496,8 @@ perfectly good read.
 Filed by DBT-1 (2026-09-04), which measured every statement `dbt run` and `dbt test` emit for a
 `materialized='table'`, `file_format='iceberg'` model against the SQL door. The `dbt-repark`
 adapter overrides the macro behind each row, so the refusal is a design constraint on the adapter,
-not a runtime failure of the gold stage. The whole measured table — nine served shapes and ten
-refused — is `python/dbt-repark/tests/test_statement_surface.py`.
+not a runtime failure of the gold stage. The whole measured table — twelve served shapes and
+sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 #### DBT-VIEW-1 — `CREATE OR REPLACE VIEW` is refused, so dbt cannot build views
 
@@ -548,18 +548,46 @@ refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   surfaces (same reading as `ST-1`); widening `DESCRIBE` into a Spark-shaped text report would
   make a formatting contract out of a diagnostic.
 
-#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` is refused
+#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse through the same path
 
-- **repark** — `SHOW TBLPROPERTIES cat.ns.t` refuses with `AnalysisException: Error during
-  planning: SHOW [VARIABLE] is not supported unless information_schema is enabled`. dbt's
-  `fetch_tbl_properties` therefore has no source. Table properties are readable from the table
-  metadata, and `ALTER TABLE … SET TBLPROPERTIES` is accepted.
-- **Apache Spark** — lists the table's properties. *(oracle: documented — the claim here is the
-  refusal form, not a value.)*
+- **repark** — both `SHOW TBLPROPERTIES cat.ns.t` and `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
+  with the **identical** message, `AnalysisException: Error during planning: SHOW [VARIABLE] is
+  not supported unless information_schema is enabled`. They are one row rather than two because
+  the mechanism and the message are the same: neither reaches a `SHOW`-family implementation, and
+  both land on the `information_schema` guard. dbt's `fetch_tbl_properties` therefore has no
+  source, and `list_relations_without_caching` has no first attempt — `dbt-spark` tries
+  `SHOW TABLE EXTENDED` first and falls back to `SHOW TABLES IN`, which is refused separately by
+  `ST-1`, so **both** of its listing paths are closed and the adapter overrides the Python method
+  instead. Table properties remain readable from the table metadata, and
+  `ALTER TABLE … SET TBLPROPERTIES` is accepted.
+- **Apache Spark** — `SHOW TBLPROPERTIES` lists the table's properties; `SHOW TABLE EXTENDED`
+  returns schema, provider and detail text per relation (on a v2 Iceberg table Spark itself
+  refuses this one — SPARK-33393 — which is why dbt-spark carries the fallback).
+  *(oracle: documented — the claim here is the refusal form, not a value.)*
 - **Pin** —
   `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
+  and `[R-SHOW-TABLE-EXTENDED]`
 - **Rationale** — DECLARED, same family as `NS-1` / `ST-1`: RePark has no `SHOW`-family
-  information surface. No dbt path the gold stage uses calls it.
+  information surface. The facade `Catalog` is the supported listing surface, and the adapter
+  uses it.
+
+#### DBT-CREATENS-1 — namespace DDL refuses a one-part name
+
+- **repark** — `CREATE SCHEMA IF NOT EXISTS ns` refuses with `AnalysisException: Error during
+  planning: expected a two-part `catalog.namespace` name, got `ns``. Namespace DDL needs the
+  catalog part, which `dbt-spark`'s `spark__create_schema` cannot render
+  (`SparkIncludePolicy.database = False`). `dbt-repark` overrides the macro to emit
+  `create namespace if not exists <catalog>.<namespace>`, which is served.
+- **Apache Spark** — creates the schema in the current catalog. *(oracle: documented — the claim
+  here is the refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CREATE-SCHEMA-ONE-PART]`,
+  with the served form at `::test_served_shapes_run[S-CREATE-NS]` and the adapter's side at
+  `python/dbt-repark/tests/test_gold_models.py::test_a_missing_namespace_is_created`
+- **Rationale** — DECLARED, and it is the same root as `NS-1`: there is no engine-side current
+  catalog for free SQL, so a one-part name has nothing to resolve against. Unlike `DBT-QUALIFY-1`
+  this form has no inconsistent sibling — no namespace DDL accepts a one-part name — so the
+  refusal is uniform and a caller cannot be misled by a neighbouring statement.
 
 ---
 
@@ -1056,12 +1084,30 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### B-TZ-5 — the SQL `SET` door does not reach the `spark.*` conf namespace
+
+- **repark** — `SET spark.sql.shuffle.partitions = 2` refuses with `PySparkException: datafusion
+  engine error: Invalid or Unsupported Configuration: Could not find config namespace "spark"`.
+  This holds for **every** `spark.*` key, not only the session zone, so there is no SQL path to
+  session configuration at all. Configuration is a builder concern: `ReparkSession.builder
+  .config(...)` before `getOrCreate`. `dbt-repark` therefore has no equivalent of dbt-spark's
+  `server_side_parameters`; its profile carries `session_properties`, applied on the builder.
+- **Apache Spark** — `SET spark.sql.<key> = <value>` sets the runtime conf and returns the pair.
+  *(oracle: documented — the claim here is the refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SET-CONF]`
+- **Rationale** — BACKLOG, surfaced by H-1a as queue candidate `B-TZ-5` and admitted as a row on
+  2026-09-04 when DBT-1 landed its pin (§6: a queued candidate becomes a row in the change that
+  pins it). It wants its own decision — which `spark.*` keys a live `SET` should reach, and what
+  a `SET` of a build-time knob means on a session that is already built — rather than a fold into
+  any one unit. The pin codifies today's refusal so that decision reds it on purpose.
+
 ### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
 
 - **repark** — of the placement clauses `dbt-spark` can put on a `create table … as`, only
   `PARTITIONED BY` is served. `LOCATION '…'` refuses with `UnsupportedOperationException: CREATE
   TABLE … LOCATION is not supported for Iceberg CTAS yet — table location is derived from the
-  namespace warehouse`. `OPTIONS (…)` and `CLUSTERED BY (…) INTO n BUCKETS` refuse with
+  namespace warehouse (or service-managed catalog)`. `OPTIONS (…)` and `CLUSTERED BY (…) INTO n BUCKETS` refuse with
   `SQL error: ParserError("Expected: end of statement, found: using …")` — the same misleading
   position as `DBT-RELCOMMENT-1`, naming `using` rather than the clause that failed.
   `dbt-repark` refuses `location_root`, `options` and `clustered_by` / `buckets` at compile time,
@@ -3815,17 +3861,13 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
 here so the surfacing is on the record, and each becomes a
 row in the change that lands its pin (the unit ledger `docs/history/hardening-h1/h1a-ledger.md` §6 carries the full
-observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90).**
+observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90); B-TZ-5 left it on 2026-09-04 (DBT-1) when its pin landed; its description moved to the §7 row of the same name.**
 
 - **B-TZ-1** — `unix_timestamp` is not a Spark-door SQL function (the facade `F.unix_timestamp`
   exists; the SQL spelling does not plan).
 - **B-TZ-2** — `timestamp_seconds` is not a Spark-door SQL function (same shape as B-TZ-1).
 - **B-TZ-3** — `date_add(DATE, <integer literal>)` fails to coerce in the SQL door
   (`date_add(Date32, Int64)` refuses; the DataFrame spelling works).
-- **B-TZ-5** — the SQL `SET` door does not reach the `spark.*` conf namespace at all
-  (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
-  than the session zone; it wants its own decision rather than a fold into the extraction unit.
-
 - **V3-DANGLE-1** — **FIXED (V3-5, 2026-08-31).** See the row above. RP-2 took the v2
   F-3 `'remove-dangling-deletes'` half; v3 file-scoped DV drop is this row.
 
