@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fn-regexp-extract-1-ledger.md](fn-regexp-extract-1-ledger.md) — **FN-REGEXP-EXTRACT-1
+  (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (the last
+  regexp kernel; closes the R-FN-BATCH1 gap the FN-FIX-2-CTRL-1 control exposed).
+  Round 2: idx validated only inside the match arm; §7 `FN-REGEX-LOOKAROUND-1` filed;
+  facade 2-arg widening disclosed.
+  pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
 - [fn-fix-2-string-rows-ledger.md](fn-fix-2-string-rows-ledger.md) — **FN-FIX-2 (2026-09-04):**
   six silent string rows become Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
   `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
@@ -13,7 +19,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
   missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
   Spark-equal, control 1 (`regexp_extract`) refusal pinned on both doors
-  (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED round-3; Spark `'alpha'`/`''`);
+  (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED round-3; Spark `'alpha'`/`''`;
+  flag superseded by FN-REGEXP-EXTRACT-1 — answer pin since merge `60ad77b0`);
   round-3 adds NULL `ltrim`/`rtrim` pins, the SQL `RLIKE`-keyword refusal pin
   (§7 FN-RLIKE-KEYWORD-1), and reversible ANSI legs.
   `risk_tier: standard`. Branch

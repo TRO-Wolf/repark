@@ -802,6 +802,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need_at_least(2)?;
             repark_functions::expr_fn::regexp_extract_all(exprs.clone())
         }
+        "regexp_extract" => {
+            need_at_least(2)?;
+            repark_functions::expr_fn::regexp_extract(exprs.clone())
+        }
         "regexp_substr" => {
             need(2)?;
             repark_functions::expr_fn::regexp_substr(exprs[0].clone(), exprs[1].clone())

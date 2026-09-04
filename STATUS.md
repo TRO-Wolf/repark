@@ -149,6 +149,8 @@ in published history by explicit decision:
   **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
   **FN-FIX-2 (2026-09-04):** six silent string rows Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
   `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both
+  doors (first match's group, `''` on no match); the R-FN-BATCH1 stub list shrinks by one.
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
   **Next, in order (revised 2026-08-31):**
