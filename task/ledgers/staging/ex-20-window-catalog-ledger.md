@@ -97,7 +97,13 @@ frame-only `rangeBetween` refusal (`DATATYPE_MISMATCH.RANGE_FRAME_WITHOUT_ORDER`
 `COMMENT`/`LOCATION` (`getDatabase` field shapes → EX-CAT-1). Fixtures: unique-`k` `g/k/v` frame
 `[("a",1,10.0),("a",2,20.0),("a",3,30.0),("b",4,50.0),("b",5,60.0),("b",6,70.0)]` (window
 examples), tied-`k` six-row `g/k/v` frame (EX-WIN-1 pin), `[(1,"x")]` temp-view fixture, six-row
-corpus `g/k/v` frame (clearCache).
+corpus `g/k/v` frame (clearCache). Round 4 (the round-2 controls, 2026-09-04): the null
+`g/k/v` frame `[("a",1,10.0),(None,2,20.0),("a",3,None),(None,4,50.0)]` — NULL keys form their
+own partition, `sum` skips NULL values, running `rowsBetween(unboundedPreceding, currentRow)`
+`[10.0, 20.0 / 10.0, 70.0]`, `row_number` `1,2` per partition — and the peer-only
+`rangeBetween(0, 0)` arm on the unique-`k` fixture (own value per row; tied-key control shares
+peer sums); every cell byte-identical across engines. Bare-session `listTables()` measured `[]`
+on Spark and repark before any temp view exists, and `[]` again after the drop.
 `pins: ex-20-window-catalog/C-001`
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
@@ -106,7 +112,7 @@ corpus `g/k/v` frame (clearCache).
 | `Window.current_row` | `hasattr` False (extension) | `0` | kept | `window/bounds.py` | snake constant |
 | `Window.orderBy` | cumulative `[10.0, 30.0, 60.0, 110.0, 170.0, 240.0]` on unique `k` | same | kept | `window/spec_builders.py` | tied-`k` arm is §7 `EX-WIN-1` |
 | `Window.order_by` | `hasattr` False (extension) | same callable, same rows | kept | `window/spec_builders.py` | snake spelling |
-| `Window.partitionBy` | `row_number` `1,2,3` per partition | same | kept | `window/spec_builders.py` | chained with `orderBy` |
+| `Window.partitionBy` | `row_number` `1,2,3` per partition; null-key fixture `row_number` `1,2` per partition, NULL key its own partition | same | kept | `window/spec_builders.py`, `window/frames.py` | chained with `orderBy`; null-key arm round 4 |
 | `Window.partition_by` | `hasattr` False (extension) | same callable | kept | `window/spec_builders.py` | snake spelling |
 | `Window.rangeBetween` | `rangeBetween(unboundedPreceding, currentRow).orderBy("k")` cumulative `[10.0, 30.0, 60.0, 110.0, 170.0, 240.0]`; frame-only unordered RAISED `AnalysisException` `[DATATYPE_MISMATCH.RANGE_FRAME_WITHOUT_ORDER]` | same rows; same refusal class + SQLSTATE | kept | `window/frames.py` | unordered arm refused on both engines, never asserted |
 | `Window.range_between` | `hasattr` False (extension) | same callable | kept | `window/frames.py` | snake spelling |
@@ -120,9 +126,9 @@ corpus `g/k/v` frame (clearCache).
 | `WindowSpec.order_by` | `hasattr` False (extension) | same callable | kept | `window/spec_builders.py` | snake spelling |
 | `WindowSpec.partitionBy` | `row_number` over the re-partitioned spec | same | kept | `window/spec_builders.py` | reverse chain `Window.orderBy("k").partitionBy("g")` |
 | `WindowSpec.partition_by` | `hasattr` False (extension) | same callable | kept | `window/spec_builders.py` | snake spelling |
-| `WindowSpec.rangeBetween` | running `[10.0, 30.0, 60.0 / 50.0, 110.0, 180.0]`; wide `±5` `[60.0 ×3 / 180.0 ×3]`; peer-only own value | same | kept | `window/frames.py` | three arms on one ordered spec |
+| `WindowSpec.rangeBetween` | running `[10.0, 30.0, 60.0 / 50.0, 110.0, 180.0]`; wide `±5` `[60.0 ×3 / 180.0 ×3]`; peer-only `rangeBetween(0, 0)` own value `[10.0, 20.0, 30.0 / 50.0, 60.0, 70.0]` | same | kept | `window/frames.py` | three arms on one ordered spec; peer-only arm landed round 2 |
 | `WindowSpec.range_between` | `hasattr` False (extension) | same callable | kept | `window/frames.py` | snake spelling |
-| `WindowSpec.rowsBetween` | sliding `avg` `15.0/20.0/25.0 / 55.0/60.0/65.0`; running `[10.0, 30.0, 60.0 / 50.0, 110.0, 180.0]`; trailing `[60.0, 50.0, 30.0 / 180.0, 130.0, 70.0]` | same | kept | `window/frames.py`, `window/bounds.py` | three arms |
+| `WindowSpec.rowsBetween` | sliding `avg` `15.0/20.0/25.0 / 55.0/60.0/65.0`; running `[10.0, 30.0, 60.0 / 50.0, 110.0, 180.0]`; trailing `[60.0, 50.0, 30.0 / 180.0, 130.0, 70.0]`; null-key running `[10.0, 10.0 / 20.0, 70.0]` (`sum` skips NULL values) | same | kept | `window/frames.py`, `window/bounds.py` | three arms; null-key arm round 2 |
 | `WindowSpec.rows_between` | `hasattr` False (extension) | same callable | kept | `window/frames.py`, `window/bounds.py` | snake spelling |
 | `Catalog.clearCache` | `None`; rows after `filter("k = 1")` `[('a', 1, 10.0), ('b', 1, 50.0)]` | same | kept | `catalog/clear_cache.py` | cached frame re-read |
 | `Catalog.clear_cache` | `hasattr` False (extension) | same callable | kept | `catalog/clear_cache.py` | snake spelling |
@@ -141,7 +147,7 @@ corpus `g/k/v` frame (clearCache).
 | `Catalog.listCatalogs` | `[('spark_catalog', None)]` | same | kept | `catalog/list_names.py` | bare session |
 | `Catalog.list_catalogs` | `hasattr` False (extension) | same callable | kept | `catalog/list_names.py` | snake spelling |
 | `Catalog.listDatabases` | `[('default', 'spark_catalog', 'default database', 'file:<warehouse>')]` | `[('default', 'spark_catalog', None, None)]` | dropped | §7 `EX-CAT-2` | FA-2 fields, re-measured 4.1.2 |
-| `Catalog.listTables` | `[('ex20_tv', None, [], None, 'TEMPORARY', True)]`; pattern `'ex20*'` arm same | same | kept | `catalog/list_names.py` | exact `Table` tuple match |
+| `Catalog.listTables` | bare session `[]` before any temp view; `[('ex20_tv', None, [], None, 'TEMPORARY', True)]`; pattern `'ex20*'` arm same | same | kept | `catalog/list_names.py` | exact `Table` tuple match; bare arm round 2 |
 
 ## Gates (2026-09-04, on this tree)
 
@@ -180,6 +186,14 @@ On the shipped tree, after the EX-19 merge: `537 covered; 374 backlog; 138 examp
 | the round-3 probe ran snake spellings unguarded and crashed on Spark (no snake names) | snake arms gated on `hasattr` in the throwaway probe; the committed examples are repark-only for snake spellings and measured on repark |
 | `python3 scripts/check_example_coverage.py --require-execute` exits 1 in this clone (native module absent from system python3) | same environment note as EX-19; the execute leg is recorded under `.venv/bin/python`, which resolves the native build |
 
+Round-2 critic findings, resolved in-lane:
+
+| Finding | Disposition |
+|---|---|
+| the `WindowSpec.rangeBetween` oracle row and `window/map.md` claimed a peer-only `rangeBetween(0, 0)` arm `frames.py` did not contain (S3) | the arm landed in `frames.py`, measured on both engines (own value per row on unique `k`, tied-key control shares peer sums); the map and the oracle row now match the file |
+| no NULL partition-key / NULL-value control on the window surface (S2) | the null fixture and its running `rowsBetween(unboundedPreceding, currentRow)` sum and `row_number` arms landed in `frames.py`, measured byte-identical on both engines |
+| `list_names.py` never asserted the bare-session empty listing (S2) | the bare `listTables() == []` arm landed before the temp view is created, measured `[]` on Spark and repark |
+
 ## Cost
 
 The GLM (glm-5.3-flash) leg started 2026-09-04: read the contract, the corpus, and the merged
@@ -187,7 +201,10 @@ EX-19 ledger; ran four oracle legs (leg 1 `hasattr` JVM-free, leg 2 the round-1 
 the round-2/round-3 unique-`k` re-measurement, one Spark JVM at a time); wrote the eight example
 files, the divergence pins, the registry rows, the backlog ratchet and the maps, then committed
 in slices; merged `origin/main` (EX-19 + fn-regexp-extract-1) before hand-back with the backlog
-as the intersection of both sides and the baseline at main's 411 minus 37. Base `3484f8d7`.
+as the intersection of both sides and the baseline at main's 411 minus 37. Round 2 (same day):
+measured the three round-2 controls (oracle round 4, one Spark JVM), landed the null-key and
+peer-only arms in `frames.py` and the bare empty listing in `list_names.py`, and merged
+`origin/main` again (perf-dynflatten-1, no backlog or registry overlap). Base `3484f8d7`.
 
 ## Disk
 

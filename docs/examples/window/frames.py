@@ -73,9 +73,39 @@ SLIDING_EXPECTED = [
     ("b", 6, 70.0, 65.0),
 ]
 
+PEER_ONLY_EXPECTED = [
+    ("a", 1, 10.0, 10.0),
+    ("a", 2, 20.0, 20.0),
+    ("a", 3, 30.0, 30.0),
+    ("b", 4, 50.0, 50.0),
+    ("b", 5, 60.0, 60.0),
+    ("b", 6, 70.0, 70.0),
+]
+
+NULL_ROWS = [
+    ("a", 1, 10.0),
+    (None, 2, 20.0),
+    ("a", 3, None),
+    (None, 4, 50.0),
+]
+
+NULL_RUNNING_EXPECTED = [
+    ("a", 1, 10.0, 10.0),
+    (None, 2, 20.0, 20.0),
+    ("a", 3, None, 10.0),
+    (None, 4, 50.0, 70.0),
+]
+
+NULL_ROW_NUMBER_EXPECTED = [
+    ("a", 1, 10.0, 1),
+    (None, 2, 20.0, 1),
+    ("a", 3, None, 2),
+    (None, 4, 50.0, 2),
+]
+
 
 def main() -> None:
-    """Run the measured frame answers: whole-frame, running, wide-range, and sliding windows."""
+    """Run the measured frame answers: whole, running, wide-range, sliding, peer-only, null-key."""
     repark = ReparkSession.builder.appName("ex-win-frames").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame(WIN_ROWS, ["g", "k", "v"])
@@ -167,6 +197,51 @@ def main() -> None:
         if snake_sliding != sliding_expected:
             raise SystemExit(
                 f"WindowSpec.rows_between sliding {snake_sliding!r} != {sliding_expected!r}"
+            )
+
+        peer_only = sorted(
+            tuple(row)
+            for row in frame.withColumn("pp", F.sum("v").over(spec.rangeBetween(0, 0))).collect()
+        )
+        peer_only_expected = PEER_ONLY_EXPECTED
+        if peer_only != peer_only_expected:
+            raise SystemExit(
+                f"WindowSpec.rangeBetween peer-only {peer_only!r} != {peer_only_expected!r}"
+            )
+
+        null_frame = repark.createDataFrame(NULL_ROWS, ["g", "k", "v"])
+        null_spec = Window.partitionBy("g").orderBy("k")
+        null_running = sorted(
+            (
+                tuple(row)
+                for row in null_frame.withColumn(
+                    "rt",
+                    F.sum("v").over(
+                        null_spec.rowsBetween(Window.unboundedPreceding, Window.currentRow)
+                    ),
+                ).collect()
+            ),
+            key=lambda row: row[1],
+        )
+        null_running_expected = NULL_RUNNING_EXPECTED
+        if null_running != null_running_expected:
+            raise SystemExit(
+                f"WindowSpec.rowsBetween null-key running {null_running!r} "
+                f"!= {null_running_expected!r}"
+            )
+
+        null_row_number = sorted(
+            (
+                tuple(row)
+                for row in null_frame.withColumn("rn", F.row_number().over(null_spec)).collect()
+            ),
+            key=lambda row: row[1],
+        )
+        null_row_number_expected = NULL_ROW_NUMBER_EXPECTED
+        if null_row_number != null_row_number_expected:
+            raise SystemExit(
+                f"WindowSpec.partitionBy null-key row_number {null_row_number!r} "
+                f"!= {null_row_number_expected!r}"
             )
     finally:
         repark.stop()

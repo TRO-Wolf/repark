@@ -1,4 +1,4 @@
-"""Catalog listings: the temp-view ``listTables`` row and the ``listCatalogs`` row.
+"""Catalog listings: bare empty ``listTables`` row, temp-view row, ``listCatalogs`` row.
 
 pins: ex-20-window-catalog/C-001
 """
@@ -15,10 +15,14 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured listing answers: one temp-view row, one pattern row, one catalog row."""
+    """Run the measured listing answers: bare empty row, temp-view row, pattern row, catalog row."""
     repark = ReparkSession.builder.appName("ex-cat-list").master("local[1]").getOrCreate()
     try:
         catalog = repark.catalog
+        empty_tables = [tuple(row) for row in catalog.listTables()]
+        if empty_tables != []:
+            raise SystemExit(f"Catalog.listTables bare {empty_tables!r} != []")
+
         repark.createDataFrame([(1, "x")], ["k", "s"]).createTempView("ex20_tv")
         tables = [tuple(row) for row in catalog.listTables()]
         tables_expected = [("ex20_tv", None, [], None, "TEMPORARY", True)]

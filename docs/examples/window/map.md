@@ -20,7 +20,9 @@ EX-WIN-1), and the examples keep the arms where the engines agree.
 - [frames.py](frames.py) — `Window.rowsBetween` / `rows_between` and
   `Window.rangeBetween` / `range_between` statics (whole-frame, cumulative)
   plus the chained `WindowSpec` frame setters: running sums, a `±5` range,
-  a sliding three-row `avg`, and peer-only bounds.
+  a sliding three-row `avg`, peer-only `rangeBetween(0, 0)` bounds, and a
+  NULL partition-key / NULL-value control (NULL keys form their own
+  partition, `sum` skips NULL values).
 - [bounds.py](bounds.py) — the frame-bound constants `currentRow` /
   `current_row`, `unboundedPreceding` / `unbounded_preceding`,
   `unboundedFollowing` / `unbounded_following` (values and use as running /

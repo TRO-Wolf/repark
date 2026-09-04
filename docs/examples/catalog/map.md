@@ -17,9 +17,10 @@ catalog, no JVM.
 - [views_and_exists.py](views_and_exists.py) — `databaseExists` /
   `database_exists` (default namespace True, missing name False) and
   `dropTempView` / `drop_temp_view` (True on the first drop, False after).
-- [list_names.py](list_names.py) — `listTables` (the exact `Table` row for one
-  temp view, plus a pattern arm) and `listCatalogs` / `list_catalogs` (the
-  `spark_catalog` `CatalogMetadata` row).
+- [list_names.py](list_names.py) — `listTables` (the bare-session empty row,
+  the exact `Table` row for one temp view, plus a pattern arm) and
+  `listCatalogs` / `list_catalogs` (the `spark_catalog` `CatalogMetadata`
+  row).
 - [udf_probe.py](udf_probe.py) — `functionExists` / `function_exists` against
   a session-registered temp UDF (True) and an unknown name (False).
 - [clear_cache.py](clear_cache.py) — `clearCache` / `clear_cache` return None
