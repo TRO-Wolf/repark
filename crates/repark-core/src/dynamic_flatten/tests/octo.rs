@@ -16,7 +16,7 @@ use super::{
     dynamic_flatten, flatten, i64_array, i64_cells, list_of, options, read_batch, struct_array,
     utf8_array,
 };
-use crate::dynamic_flatten_with_stats;
+use crate::dynamic_flatten::dynamic_flatten_with_stats;
 
 fn large_list_of(
     element: DataType,

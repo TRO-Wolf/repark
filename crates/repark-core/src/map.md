@@ -93,8 +93,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten/tests/octo.rs`, and `dynamic_flatten/tests/preserve_nulls.rs`. Kernel harness uses
   `ReparkSession` (Unnest-safe leaf-pushdown wrapper), not a blanket
   `enable_leaf_expression_pushdown=false`.
-  **PERF-DYNFLATTEN-1:** `dynamic_flatten_with_stats` returns schema-walk and
-  plan-node counters; product `dynamic_flatten` is the same rewrite.
+  **PERF-DYNFLATTEN-1:** `dynamic_flatten_with_stats` returns `DynamicFlattenStats`
+  (`rewrite_passes`, `schema_walks`, `fields_visited`, `struct_expansions`,
+  `list_explodes`, `plan_nodes`, `unnest_nodes`, `projection_nodes`); product
+  `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
+  expansions, 20 fields visited.
   pins: perf-dynflatten-1-measure/C-002
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →

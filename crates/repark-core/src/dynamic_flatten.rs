@@ -25,24 +25,15 @@ pub struct DynamicFlattenOptions {
     pub max_depth: usize,
 }
 
-/// Schema-walk and plan-node counters for [`dynamic_flatten_with_stats`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct DynamicFlattenStats {
-    /// Loop iterations of the structs-then-lists rewrite.
+pub(crate) struct DynamicFlattenStats {
     pub rewrite_passes: u64,
-    /// Top-level schema scans (`has_struct` / `has_list` / expand / explode collect).
     pub schema_walks: u64,
-    /// Fields inspected across those scans.
     pub fields_visited: u64,
-    /// Calls to [`expand_structs`].
     pub struct_expansions: u64,
-    /// Per-column list unnests (not counting dropped null-typed lists).
     pub list_explodes: u64,
-    /// Logical-plan nodes after the rewrite.
     pub plan_nodes: u64,
-    /// `LogicalPlan::Unnest` nodes after the rewrite.
     pub unnest_nodes: u64,
-    /// `LogicalPlan::Projection` nodes after the rewrite.
     pub projection_nodes: u64,
 }
 
@@ -81,10 +72,7 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
     dynamic_flatten_with_stats(frame, options).map(|(frame, _stats)| frame)
 }
 
-/// [`dynamic_flatten`] plus schema-walk / plan-node counters (measurement only).
-/// # Errors
-/// Returns [`Error::Analysis`] with a `DYNAMIC_FLATTEN_*` token.
-pub fn dynamic_flatten_with_stats(
+pub(crate) fn dynamic_flatten_with_stats(
     frame: DataFrame,
     options: DynamicFlattenOptions,
 ) -> Result<(DataFrame, DynamicFlattenStats)> {

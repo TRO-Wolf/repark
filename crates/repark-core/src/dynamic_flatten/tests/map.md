@@ -20,7 +20,10 @@ Rust file-size default ceiling. Dirty-list-under-null-parent CASE pin
   **PERF-DYNFLATTEN-1:** `flatten_stats_depth_three_struct_counts_repeated_schema_walks`
   (3 expansions, 10 schema walks, 4 passes, 20 fields visited) and
   `flatten_stats_two_sibling_lists_are_sequential_unnests` (2 Unnests, 4-row
-  Cartesian). Mutation: drop a `has_struct` walk → the 9-walk pin reds.
+  Cartesian). The stats type and entry point are `pub(crate)`, reached here as
+  `crate::dynamic_flatten::dynamic_flatten_with_stats`; they are not public API.
+  Mutation (measured 2026-09-04): drop the `has_struct_columns` walk → `schema_walks`
+  10 → 6 and the depth-three pin reds, 1 red of 2.
   pins: perf-dynflatten-1-measure/C-002
 - `preserve_nulls.rs` — DFP-1 plan-shape and value/type matrix for preserve-null Unnest across
   List, LargeList, FixedSizeList, and Dictionary<List>; keeps sequential Cartesian expansion.
