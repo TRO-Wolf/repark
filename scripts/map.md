@@ -6,7 +6,7 @@ EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 5
 `declare_sorted.py`, `inspect_cache.py`, `describe_ingest.py`); the 8 names the live oracle
 measured divergent stay on the backlog (`colRegex`/`col_regex` opposite-spelling regex,
 the three global-temp-view spellings refused, `exceptAll`/`except_all` refused,
-`describe` row order), registry §7 `EX-DF-1`…`EX-DF-4`, pins in
+`describe` row order), registry §7 `EX-DF-1`…`EX-DF-6`, pins in
 `python/repark/tests/test_examples_dataframe_a.py`.
 pins: ex-15-dataframe-a/C-001
 

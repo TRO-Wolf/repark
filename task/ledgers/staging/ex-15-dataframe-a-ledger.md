@@ -20,7 +20,7 @@ its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other `
 The roster is the first 36 `DataFrame.*` rows of the backlog at the base `c70a306` (camelCase and
 snake_case aliases are one example each, both names in `COVERS`). Eight files cover the 28 names
 the live oracle measured Spark-equal; 8 names stay on the backlog as measured divergences with §7
-rows `EX-DF-1`…`EX-DF-4` and pins in `python/repark/tests/test_examples_dataframe_a.py`.
+rows `EX-DF-1`…`EX-DF-6` and pins in `python/repark/tests/test_examples_dataframe_a.py`.
 
 **Roster (36):** `DataFrame.agg`, `DataFrame.alias`, `DataFrame.approxQuantile`, `DataFrame.cache`,
 `DataFrame.coalesce`, `DataFrame.colRegex`, `DataFrame.col_regex`, `DataFrame.columns`,
@@ -51,7 +51,7 @@ rows `EX-DF-1`…`EX-DF-4` and pins in `python/repark/tests/test_examples_datafr
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Eight files under `docs/examples/dataframe/` land runnable local examples for the 28 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 28 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 28, 578 → 550, with no other `scripts/` change; the 8 measured divergent names stay on the backlog with §7 rows `EX-DF-1`…`EX-DF-4` and pins in `python/repark/tests/test_examples_dataframe_a.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (28 findings before, 0 after), the oracle table (36 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Eight files under `docs/examples/dataframe/` land runnable local examples for the 28 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 28 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 28, 578 → 550, with no other `scripts/` change; the 8 measured divergent names stay on the backlog with §7 rows `EX-DF-1`…`EX-DF-6` and pins in `python/repark/tests/test_examples_dataframe_a.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (28 findings before, 0 after), the oracle table (36 rows, one per roster name), the eight scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -77,7 +77,7 @@ per name both engines' values. Fixtures: base six-row `g/k/v` frame
 `k/v` stats frame `[(1,10.0),(2,20.0),(2,30.0),(3,40.0),(1,50.0)]`; dup frame
 `[(1,"x"),(1,"x"),(2,"y"),(3,"z"),(2,"y")]`; null frame
 `[("a",1,10.0),("a",None,20.0),("a",2,None),("b",3,30.0)]`; multiset frames `[(1,),(1,),(2,)]`
-and `[(1,)]`; cross frames; crosstab strata `[("a",1),("a",10),("a",2),("b",1),("b",10),("b",2)]`;
+and `[(1,)]`; cross frames; crosstab strata `[("a",1),("a",10),("a",2),("b",1),("b",2)]`;
 declare frames sorted and unsorted. Unordered results compared as sets, both engines.
 **Round 2 (2026-09-04):** the corr/cov NULL-pair arm re-measured on both engines with an explicit
 all-nullable `StructType([StructField("u", DoubleType(), True), StructField("v", DoubleType(), True)])`
@@ -85,6 +85,10 @@ all-nullable `StructType([StructField("u", DoubleType(), True), StructField("v",
 repark `corr` `0.18898223650461363` / `cov` `2.5`, Spark `corr` `0.07100716024967264` / `cov`
 `1.0` — so the divergence is real, not a schema-inference coercion artefact, and it is filed as
 §7 `EX-DF-5`.
+**Round 3 (2026-09-04):** the crosstab strata re-measured on both engines with `("b", 10)` removed
+so the absent `(b, 10)` pair yields one 0 cell (one JVM, throwaway
+`scratch/ex15-oracle/oracle_round3.py`): columns `['g_k', '1', '10', '2']`, rows
+`('a', 1, 1, 1)` / `('b', 1, 0, 1)` on both engines — Spark-equal including the 0 cell.
 `pins: ex-15-dataframe-a/C-001`
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
@@ -105,11 +109,11 @@ repark `corr` `0.18898223650461363` / `cov` `2.5`, Spark `corr` `0.0710071602496
 | `DataFrame.create_global_temp_view` | same as `createGlobalTempView` | same | dropped | §7 `EX-DF-2` | same callable |
 | `DataFrame.createOrReplaceTempView` | `[(1,), (1,), (2,), (2,), (2,), (3,)]`; replaced `[(99,)]` | same | kept | `views.py` | replace arm measured both engines |
 | `DataFrame.create_or_replace_temp_view` | same | same | kept | `views.py` | same callable |
-| `DataFrame.createTempView` | fresh `[(7,)]`; existing RAISED `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` | fresh `[(7,)]`; existing NO RAISE (replaced) | kept | `views.py` | example covers the fresh arm only (see review-gap table) |
+| `DataFrame.createTempView` | fresh `[(7,)]`; existing RAISED `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` | fresh `[(7,)]`; existing NO RAISE (replaced) | kept | `views.py` | example covers the fresh arm only; the replace-on-existing arm is §7 `EX-DF-6` (round-3 promotion) |
 | `DataFrame.create_temp_view` | same | same | kept | `views.py` | same callable |
 | `DataFrame.crossJoin` | count `18`; sorted product matches | same | kept | `cross_join.py` | set compared, count pinned |
 | `DataFrame.cross_join` | count `18` | same | kept | `cross_join.py` | same callable |
-| `DataFrame.crosstab` | cols `['g_k', '1', '10', '2']`; rows `[('a', 1, 1, 1), ('b', 1, 1, 1)]` | same | kept | `agg_stats.py` | string-ordered pivot columns, absent pairs → 0 |
+| `DataFrame.crosstab` | cols `['g_k', '1', '10', '2']`; rows `[('a', 1, 1, 1), ('b', 1, 0, 1)]` (round-3 fixture, absent `(b, 10)` pair) | same | kept | `agg_stats.py` | string-ordered pivot columns, absent pairs → 0 (the 0 cell asserted since round 3) |
 | `DataFrame.cube` | cols `['g', 'k', 'sum(v)']`; 11 grouping-set rows | same | kept | `cube.py` | set compared; NULL marks rolled-up keys |
 | `DataFrame.declareSorted` | RAISED `PySparkAttributeError: ATTRIBUTE_NOT_SUPPORTED` (no such attribute) | sorted input passes; unsorted RAISED `AnalysisException` naming rows 0,1 | kept | `declare_sorted.py` | repark extension, no Spark analog |
 | `DataFrame.declare_sorted` | same | same | kept | `declare_sorted.py` | same callable |
@@ -131,7 +135,7 @@ repark `corr` `0.18898223650461363` / `cov` `2.5`, Spark `corr` `0.0710071602496
 | Command | Exit |
 |---|---|
 | `.venv/bin/python scripts/check_example_coverage.py --require-execute` | **0** |
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_a.py -q` | **0** (4 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_a.py -q` | **0** (6 passed) |
 | `make check-map-sync` | **0** |
 | `make check-ledger-grammar` | **0** |
 | `make check-ledgers` | **0** |
@@ -160,7 +164,7 @@ change) with identical exits.
 | Name | repark | Spark 4.1.2 | Disposition |
 |---|---|---|---|
 | `DataFrame.corr` / `DataFrame.cov` NULL-pair arm | skips the NULL pair: `0.18898223650461363` / `2.5` | answers the NULL as `0.0`: `0.07100716024967264` / `1.0`; divergence confirmed under an explicit all-nullable DoubleType schema (round-2 re-measure) | promoted to §7 `EX-DF-5` with pin `test_corr_cov_null_pair_divergence`; the null-free example arm stays |
-| `DataFrame.createTempView(name)` on an existing view | replaces silently (disclosed in-source: "v1: same as createOrReplaceTempView") | raises `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` | the example covers the fresh-name arm only; replace-arm divergence noted here, no §7 row filed |
+| `DataFrame.createTempView(name)` on an existing view | replaces silently (disclosed in-source: "v1: same as createOrReplaceTempView") | raises `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` | promoted to §7 `EX-DF-6` with pin `test_create_temp_view_replaces_silently` (round 3); the fresh-name example arm stays |
 
 ## Cost
 
@@ -172,6 +176,12 @@ maps, then committed in slices. Base `c70a306`.
 **Round 2 (owner ruling on Q2, 2026-09-04):** the corr/cov NULL-pair arm re-measured with an
 explicit schema; the divergence persisted, so `EX-DF-5` and its pin replaced the round-1
 review-gap queue entry. One further Spark JVM leg.
+
+**Round 3 (critic findings, 2026-09-04):** the round-1 `createTempView` review-gap entry promoted
+to §7 `EX-DF-6` with its pin; the eight examples' bare asserts rewritten to the corpus
+`SystemExit` form (each file re-run green); the crosstab fixture re-measured with an absent
+`(b, 10)` pair so the 0 cell is asserted (one further Spark JVM leg); the `EX-DF-1`…`EX-DF-4`
+pointer ranges corrected to `EX-DF-1`…`EX-DF-6`.
 
 ## Disk
 
@@ -238,7 +248,7 @@ COVERAGE_ATTESTATION:
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py)
-- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-DF-1`…`EX-DF-4`
+- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7 `EX-DF-1`…`EX-DF-6`
 - Sibling: [../completed/ex-14-functions-window-ledger.md](../completed/ex-14-functions-window-ledger.md)
 
 ```yaml

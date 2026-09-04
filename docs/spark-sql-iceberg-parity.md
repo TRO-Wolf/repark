@@ -3828,6 +3828,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
   closed here or Spark's own is restated.
 
+### EX-DF-6 — `createTempView` / `create_temp_view` replace silently; Spark refuses an existing name
+
+- **repark** — `createTempView(name)` (and its `create_temp_view` alias) behaves as
+  `createOrReplaceTempView`: when `name` already exists the definition is swapped without any
+  signal (disclosed in-source as "v1: same as createOrReplaceTempView"). A fresh name registers
+  normally, which is the arm the example teaches.
+- **Apache Spark** — `createTempView("tv")` on a fresh name registers and `SELECT` answers the
+  frame's rows (`[(7,)]`); registering the same name again raises
+  `AnalysisException: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS]` naming `tv`, so a pre-existing
+  definition is never silently replaced. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
+  EX-15 round 3; second `createTempView` of one name.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_create_temp_view_replaces_silently`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-3 promotion of the round-1
+  review-gap entry. `createTempView` / `create_temp_view` stay covered by the fresh-name arm,
+  where the engines agree; this row records the replace-on-existing arm until repark refuses an
+  existing name the way Spark does.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

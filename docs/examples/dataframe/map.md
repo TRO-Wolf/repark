@@ -26,11 +26,12 @@ construct the session as `repark = ReparkSession.builder…`; see
   smartCsv ingest decisions, and the empty report on a non-ingest frame. No Spark analog.
 
 Divergent names stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5) and pins in
-`python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
+([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5, EX-DF-6) and
+pins in `python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
 the three global-temp-view spellings, `exceptAll` / `except_all`, the
-`describe` row order, and the `corr` / `cov` NULL-pair arm (the examples keep
-the arms where the engines agree).
+`describe` row order, the `corr` / `cov` NULL-pair arm, and the `createTempView` /
+`create_temp_view` replace-on-existing arm (the examples keep the arms where the
+engines agree).
 
 ## Pointers
 

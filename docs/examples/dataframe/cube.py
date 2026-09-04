@@ -27,8 +27,10 @@ def main() -> None:
             ["g", "k", "v"],
         )
         rolled = frame.cube("g", "k").agg(F.sum("v"))
-        assert rolled.columns == ["g", "k", "sum(v)"]
-        assert set(rolled.collect()) == {
+        if rolled.columns != ["g", "k", "sum(v)"]:
+            raise SystemExit(f"DataFrame.cube columns {rolled.columns!r} != ['g', 'k', 'sum(v)']")
+        rows = set(rolled.collect())
+        expected = {
             ("a", 1, 10.0),
             ("a", 2, 50.0),
             ("a", 3, 40.0),
@@ -41,6 +43,8 @@ def main() -> None:
             (None, 3, 40.0),
             (None, None, 150.0),
         }
+        if rows != expected:
+            raise SystemExit(f"DataFrame.cube rows {rows!r} != {expected!r}")
     finally:
         repark.stop()
 

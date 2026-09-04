@@ -33,30 +33,53 @@ def main() -> None:
             ["g", "k", "v"],
         )
         totals = frame.agg(F.max("v"), F.count(F.lit(1)))
-        assert totals.columns == ["max(v)", "count(1)"]
-        assert totals.collect() == [(50.0, 6)]
+        if totals.columns != ["max(v)", "count(1)"]:
+            raise SystemExit(f"DataFrame.agg columns {totals.columns!r} != ['max(v)', 'count(1)']")
+        total_rows = totals.collect()
+        if total_rows != [(50.0, 6)]:
+            raise SystemExit(f"DataFrame.agg rows {total_rows!r} != [(50.0, 6)]")
         via_dict = frame.agg({"v": "max"})
-        assert via_dict.columns == ["max(v)"]
-        assert via_dict.collect() == [(50.0,)]
+        if via_dict.columns != ["max(v)"]:
+            raise SystemExit(f"DataFrame.agg columns {via_dict.columns!r} != ['max(v)']")
+        dict_rows = via_dict.collect()
+        if dict_rows != [(50.0,)]:
+            raise SystemExit(f"DataFrame.agg rows {dict_rows!r} != [(50.0,)]")
 
         stats = repark.createDataFrame(
             [(1, 10.0), (2, 20.0), (2, 30.0), (3, 40.0), (1, 50.0)],
             ["k", "v"],
         )
-        assert stats.corr("k", "v") == 0.18898223650461363
-        assert stats.corr("k", "v", "pearson") == 0.18898223650461363
-        assert stats.cov("k", "v") == 2.5
+        pearson = stats.corr("k", "v")
+        if pearson != 0.18898223650461363:
+            raise SystemExit(f"DataFrame.corr {pearson!r} != 0.18898223650461363")
+        pearson_named = stats.corr("k", "v", "pearson")
+        if pearson_named != 0.18898223650461363:
+            raise SystemExit(f"DataFrame.corr {pearson_named!r} != 0.18898223650461363")
+        sample_cov = stats.cov("k", "v")
+        if sample_cov != 2.5:
+            raise SystemExit(f"DataFrame.cov {sample_cov!r} != 2.5")
 
-        assert frame.approxQuantile("v", [0.5], 0.0) == [30.0]
-        assert frame.approxQuantile(["k", "v"], [0.25, 0.5], 0.0) == [[1.0, 2.0], [20.0, 30.0]]
+        median = frame.approxQuantile("v", [0.5], 0.0)
+        if median != [30.0]:
+            raise SystemExit(f"DataFrame.approxQuantile {median!r} != [30.0]")
+        quartiles = frame.approxQuantile(["k", "v"], [0.25, 0.5], 0.0)
+        quartiles_expected = [[1.0, 2.0], [20.0, 30.0]]
+        if quartiles != quartiles_expected:
+            raise SystemExit(f"DataFrame.approxQuantile {quartiles!r} != {quartiles_expected!r}")
 
         strata = repark.createDataFrame(
-            [("a", 1), ("a", 10), ("a", 2), ("b", 1), ("b", 10), ("b", 2)],
+            [("a", 1), ("a", 10), ("a", 2), ("b", 1), ("b", 2)],
             ["g", "k"],
         )
         table = strata.crosstab("g", "k")
-        assert table.columns == ["g_k", "1", "10", "2"]
-        assert set(table.collect()) == {("a", 1, 1, 1), ("b", 1, 1, 1)}
+        if table.columns != ["g_k", "1", "10", "2"]:
+            raise SystemExit(
+                f"DataFrame.crosstab columns {table.columns!r} != ['g_k', '1', '10', '2']"
+            )
+        strata_rows = set(table.collect())
+        strata_expected = {("a", 1, 1, 1), ("b", 1, 0, 1)}
+        if strata_rows != strata_expected:
+            raise SystemExit(f"DataFrame.crosstab rows {strata_rows!r} != {strata_expected!r}")
     finally:
         repark.stop()
 

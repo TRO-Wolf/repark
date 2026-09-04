@@ -27,9 +27,14 @@ def main() -> None:
         )
         right = repark.createDataFrame([(1, "x"), (2, "y"), (3, "z")], ["n", "label"])
         product = frame.select("k").crossJoin(right)
-        assert product.count() == 18
-        assert product.columns == ["k", "n", "label"]
-        assert sorted(product.collect(), key=tuple) == [
+        product_count = product.count()
+        if product_count != 18:
+            raise SystemExit(f"DataFrame.crossJoin count {product_count!r} != 18")
+        product_cols = product.columns
+        if product_cols != ["k", "n", "label"]:
+            raise SystemExit(f"DataFrame.crossJoin columns {product_cols!r} != ['k', 'n', 'label']")
+        rows = sorted(product.collect(), key=tuple)
+        expected = [
             (1, 1, "x"),
             (1, 1, "x"),
             (1, 2, "y"),
@@ -49,8 +54,12 @@ def main() -> None:
             (3, 2, "y"),
             (3, 3, "z"),
         ]
+        if rows != expected:
+            raise SystemExit(f"DataFrame.crossJoin rows {rows!r} != {expected!r}")
         same = frame.select("k").cross_join(right)
-        assert same.count() == 18
+        same_count = same.count()
+        if same_count != 18:
+            raise SystemExit(f"DataFrame.cross_join count {same_count!r} != 18")
     finally:
         repark.stop()
 

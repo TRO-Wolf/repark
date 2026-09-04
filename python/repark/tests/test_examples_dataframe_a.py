@@ -1,6 +1,8 @@
-"""Divergence pins for the EX-15 DataFrame-a example batch (registry §7 EX-DF-1..4)."""
+"""Divergence pins for the EX-15 DataFrame-a example batch (registry §7 EX-DF-1..6)."""
 
 from __future__ import annotations
+
+from collections.abc import Iterator
 
 import pytest
 
@@ -10,7 +12,7 @@ from repark.spark.types import DoubleType, StructField, StructType
 
 
 @pytest.fixture
-def spark() -> ReparkSession:
+def spark() -> Iterator[ReparkSession]:
     session = ReparkSession.builder.appName("pytest-ex15-dataframe-a").getOrCreate()
     yield session
     session.stop()
@@ -80,3 +82,13 @@ def test_corr_cov_null_pair_divergence(spark: ReparkSession) -> None:
     )
     assert frame.corr("u", "v") == 0.18898223650461363
     assert frame.cov("u", "v") == 2.5
+
+
+def test_create_temp_view_replaces_silently(spark: ReparkSession) -> None:
+    """createTempView replaces an existing name silently; Spark refuses the duplicate (EX-DF-6)."""
+    first = spark.createDataFrame([(7,)], ["k"])
+    first.createTempView("tv_dup_ex15")
+    assert spark.sql("SELECT k FROM tv_dup_ex15").collect() == [(7,)]
+    second = spark.createDataFrame([(8,)], ["k"])
+    second.createTempView("tv_dup_ex15")
+    assert spark.sql("SELECT k FROM tv_dup_ex15").collect() == [(8,)]
