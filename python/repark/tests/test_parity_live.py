@@ -327,8 +327,22 @@ def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
         spark_engine.session.sql("SELECT TRIM(BOTH NULL FROM 'abc') AS t")
     )
     assert trim_null.column("t").to_pylist() == [None]
-    spark_engine.session.conf.set("spark.sql.ansi.enabled", "false")
-    try:
+    trim_side_null = spark_engine.arrow_of(
+        spark_engine.session.range(1).select(
+            spark_fn.ltrim(spark_fn.lit("abc"), spark_fn.lit(None).cast("string")).alias("l"),
+            spark_fn.rtrim(spark_fn.lit("abc"), spark_fn.lit(None).cast("string")).alias("r"),
+        )
+    )
+    assert trim_side_null.column("l").to_pylist() == [None]
+    assert trim_side_null.column("r").to_pylist() == [None]
+    trim_side_sql = spark_engine.arrow_of(
+        spark_engine.session.sql(
+            "SELECT TRIM(LEADING NULL FROM 'abc') AS l, TRIM(TRAILING NULL FROM 'abc') AS r"
+        )
+    )
+    assert trim_side_sql.column("l").to_pylist() == [None]
+    assert trim_side_sql.column("r").to_pylist() == [None]
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", "false"),)):
         elt_off = spark_engine.arrow_of(
             spark_engine.session.range(1).select(
                 spark_fn.elt(spark_fn.lit(3), spark_fn.lit("a"), spark_fn.lit("b")).alias("a"),
@@ -337,8 +351,6 @@ def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
         )
         assert elt_off.column("a").to_pylist() == [None]
         assert elt_off.column("b").to_pylist() == [None]
-    finally:
-        spark_engine.session.conf.set("spark.sql.ansi.enabled", "true")
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -380,6 +392,13 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
         spark_engine.session.sql("SELECT regexp_extract('fox', '([[:alpha:]]+)', 1) AS e")
     )
     assert extract_nomatch.column("e").to_pylist() == [""]
+    rlike_keyword = spark_engine.arrow_of(
+        spark_engine.session.sql(
+            "SELECT 'x' RLIKE '[[:alpha:]x]' AS a, 'fox' RLIKE '[[:alpha:]x]' AS b"
+        )
+    )
+    assert rlike_keyword.column("a").to_pylist() == [True]
+    assert rlike_keyword.column("b").to_pylist() == [True]
     try:
         spark_engine.session.range(1).select(
             spark_fn.elt(spark_fn.lit(3), spark_fn.lit("a"), spark_fn.lit("b"))
@@ -401,8 +420,7 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
         raise AssertionError("like explicit escape-at-end must raise")
     except SparkAnalysisException as exc:
         assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
-    spark_engine.session.conf.set("spark.sql.ansi.enabled", "false")
-    try:
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", "false"),)):
         try:
             spark_engine.session.range(1).select(
                 spark_fn.like(spark_fn.lit("ab"), spark_fn.lit("ab\\"))
@@ -410,8 +428,6 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
             raise AssertionError("like escape-at-end must raise with ANSI off")
         except SparkAnalysisException as exc:
             assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
-    finally:
-        spark_engine.session.conf.set("spark.sql.ansi.enabled", "true")
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)

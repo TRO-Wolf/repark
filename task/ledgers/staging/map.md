@@ -13,7 +13,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
   missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
   Spark-equal, control 1 (`regexp_extract`) refusal pinned on both doors
-  (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED by round-2 ruling; Spark `'alpha'`/`''`).
+  (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED round-3; Spark `'alpha'`/`''`);
+  round-3 adds NULL `ltrim`/`rtrim` pins, the SQL `RLIKE`-keyword refusal pin
+  (§7 FN-RLIKE-KEYWORD-1), and reversible ANSI legs.
   `risk_tier: standard`. Branch
   `fix/fn-fix-2-ctrl-1-controls`. pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's

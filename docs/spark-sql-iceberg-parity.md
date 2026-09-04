@@ -1574,7 +1574,20 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
-- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04).
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
+
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+
+- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
+  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
+  sqltorel: RLike`. The function spelling
+  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
+- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
+  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
+  Spark-equal per FN-REGEX-POSIX-1.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 

@@ -74,6 +74,19 @@ def test_bracket_posix_class_with_extra_literal_matches(value: str) -> None:
         repark.stop()
 
 
+@pytest.mark.parametrize("value", ["x", "fox"])
+def test_sql_rlike_keyword_refuses(value: str) -> None:
+    """FN-RLIKE-KEYWORD-1: SQL RLIKE keyword refuses. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-rlike-keyword").master("local[1]").getOrCreate()
+    try:
+        with pytest.raises(
+            UnsupportedOperationException, match="Unsupported ast node in sqltorel: RLike"
+        ):
+            repark.sql(f"SELECT '{value}' RLIKE '[[:alpha:]x]'").collect()
+    finally:
+        repark.stop()
+
+
 @pytest.mark.parametrize("value", ["alpha", "fox"])
 def test_regexp_extract_refuses_on_both_doors(value: str) -> None:
     """FN-REGEX-POSIX-1: regexp_extract refusal both doors. pins: fn-fix-2-ctrl-1-controls/C-002"""

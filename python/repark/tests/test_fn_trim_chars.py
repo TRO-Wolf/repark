@@ -77,6 +77,28 @@ def test_fn_trim_empty_charset_is_noop(op: str) -> None:
         repark.stop()
 
 
+@pytest.mark.parametrize("op", ["ltrim", "rtrim"])
+def test_fn_trim_null_charset_is_null(op: str) -> None:
+    """FN-TRIM-CHARS-1: NULL trim set gives NULL. pins: fn-fix-2-ctrl-1-controls/C-002"""
+    repark = ReparkSession.builder.appName("fn-trim-null-side").master("local[1]").getOrCreate()
+    try:
+        func = {"ltrim": F.ltrim, "rtrim": F.rtrim}[op]
+        values = [
+            row[0]
+            for row in repark.range(1)
+            .select(func(F.lit("abc"), F.lit(None).cast("string")).alias("t"))
+            .collect()
+        ]
+        assert values == [None]
+        keyword = {"ltrim": "LEADING", "rtrim": "TRAILING"}[op]
+        sql_values = [
+            row[0] for row in repark.sql(f"SELECT TRIM({keyword} NULL FROM 'abc')").collect()
+        ]
+        assert sql_values == [None]
+    finally:
+        repark.stop()
+
+
 def test_fn_trim_empty_and_null_charset_sql() -> None:
     """FN-TRIM-CHARS-1: BOTH '' keeps; NULL gives NULL. pins: fn-fix-2-ctrl-1-controls/C-002"""
     repark = ReparkSession.builder.appName("fn-trim-empty-sql").master("local[1]").getOrCreate()

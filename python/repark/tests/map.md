@@ -55,7 +55,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-2-string-rows/C-003
   **FN-FIX-2-CTRL-1 (2026-09-04):** `[[:alpha:]x]` matches `'x'` and `'fox'` via
   `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` refusal pinned on
-  both doors (FINDING F-FN-FIX-2-CTRL-1-1, CLOSED; Spark: `'alpha'`/`''`).
+  both doors (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED; Spark: `'alpha'`/`''`).
+  Round 3: SQL `RLIKE` keyword refusal pinned (`test_sql_rlike_keyword_refuses`;
+  §7 FN-RLIKE-KEYWORD-1).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
   FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises
@@ -87,6 +89,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
   pins: fn-fix-2-string-rows/C-003
   **FN-FIX-2-CTRL-1 (2026-09-04):** empty trim set is a no-op; NULL trim set is NULL.
+  Round 3: NULL `ltrim` / `rtrim` pinned on both doors
+  (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
@@ -2333,7 +2337,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-2-string-rows/C-001, C-003, C-004
   **FN-FIX-2-CTRL-1:** the same two legs co-collect the control cells (initcap/chr/trim
   controls, ANSI-off elt, ANSI-off LIKE, `[[:alpha:]x]` bracket, `regexp_extract` Spark
-  oracle); ANSI conf restored in `finally`.
+  oracle); ANSI conf applied via reversible `lp.spark_session_conf`. Round 3: NULL
+  `ltrim` / `rtrim` cells and the `RLIKE`-keyword Spark oracle cells.
   pins: fn-fix-2-ctrl-1-controls/C-002
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
