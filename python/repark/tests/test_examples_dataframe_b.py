@@ -77,8 +77,8 @@ def test_merge_into_divergence(spark: ReparkSession) -> None:
     assert snake_rows == {(1, "A"), (2, "b"), (3, "c")}
 
 
-def test_print_schema_stdout_divergence(spark: ReparkSession) -> None:
-    """printSchema's stdout ends one newline short of Spark's capture (EX-DF-10)."""
+def test_print_schema_stdout_matches_spark(spark: ReparkSession) -> None:
+    """printSchema's stdout is byte-identical to Spark's capture (EX-DF-10 FIXED)."""
     frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
     printed = io.StringIO()
     with contextlib.redirect_stdout(printed):
@@ -88,4 +88,5 @@ def test_print_schema_stdout_divergence(spark: ReparkSession) -> None:
         " |-- g: string (nullable = true)\n"
         " |-- k: long (nullable = true)\n"
         " |-- v: double (nullable = true)\n"
+        "\n"
     )

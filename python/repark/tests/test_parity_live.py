@@ -431,6 +431,36 @@ def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_df_printschema_trailing_newline_matches_spark(spark_engine: lp.Engine) -> None:
+    """pins: df-printschema-1-trailing-newline/C-002, C-003"""
+    import contextlib
+    import io
+
+    repark_engine = lp.build_repark_engine()
+    seeds = [[("a", 1, 10.0)], [(1, (2, "x"))], [([1, 2],)]]
+    names = [["g", "k", "v"], ["a", "b"], ["a"]]
+    for rows, cols in zip(seeds, names, strict=True):
+        repark_frame = repark_engine.session.createDataFrame(rows, cols)
+        spark_frame = spark_engine.session.createDataFrame(rows, cols)
+        repark_buf = io.StringIO()
+        with contextlib.redirect_stdout(repark_buf):
+            repark_frame.printSchema()
+        spark_buf = io.StringIO()
+        with contextlib.redirect_stdout(spark_buf):
+            spark_frame.printSchema()
+        assert repark_buf.getvalue() == spark_buf.getvalue()
+    repark_nested = repark_engine.session.createDataFrame([(1, (2, "x"))], ["a", "b"])
+    spark_nested = spark_engine.session.createDataFrame([(1, (2, "x"))], ["a", "b"])
+    repark_level = io.StringIO()
+    with contextlib.redirect_stdout(repark_level):
+        repark_nested.printSchema(1)
+    spark_level = io.StringIO()
+    with contextlib.redirect_stdout(spark_level):
+        spark_nested.printSchema(1)
+    assert repark_level.getvalue() == spark_level.getvalue()
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
     """pins: log1p-1-precise-kernels/C-001, C-004"""
     table = spark_engine.arrow_of(spark_engine.session.sql(_LOG1P_LIVE_SQL))
