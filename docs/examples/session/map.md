@@ -43,7 +43,8 @@ network.
   `SparkSession.refresh_catalog_provider` over one CTAS table in the memory
   catalog.
 - [temp_views.py](temp_views.py) — `SparkSession.list_temp_view_names`: a bare
-  session lists none; two created views both list.
+  session lists none; two created views both list. The assertion holds the sorted
+  names — the listing order is not creation-ordered.
 - [resolve_names.py](resolve_names.py) — `SparkSession.resolve_table_name`:
   bare and two-part qualification, the temp-view home under
   `prefer_temp_view=True`, and the plain form.

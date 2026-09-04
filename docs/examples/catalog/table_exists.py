@@ -27,7 +27,9 @@ def main() -> None:
 
         snake_exists = catalog.table_exists("ex21_tv")
         if snake_exists != exists_expected:
-            raise SystemExit(f"Catalog.table_exists temp view {snake_exists!r} != {exists_expected!r}")
+            raise SystemExit(
+                f"Catalog.table_exists temp view {snake_exists!r} != {exists_expected!r}"
+            )
 
         missing = catalog.tableExists("nope_ex21")
         missing_expected = False

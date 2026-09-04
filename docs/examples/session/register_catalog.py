@@ -16,7 +16,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured registration answers: the catalog lists, becomes current, hosts a namespace."""
+    """Run the measured registration answers: lists, becomes current, hosts a namespace."""
     warehouse = Path.cwd() / "ex21_wh_reg"
     warehouse.mkdir(parents=True, exist_ok=True)
     repark = ReparkSession.builder.appName("ex21-ses-register").master("local[1]").getOrCreate()
@@ -38,7 +38,9 @@ def main() -> None:
         exists = catalog.databaseExists("ex21_db")
         exists_expected = True
         if exists != exists_expected:
-            raise SystemExit(f"databaseExists after create_namespace {exists!r} != {exists_expected!r}")
+            raise SystemExit(
+                f"databaseExists after create_namespace {exists!r} != {exists_expected!r}"
+            )
     finally:
         repark.stop()
 

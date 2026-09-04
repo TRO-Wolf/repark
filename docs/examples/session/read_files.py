@@ -40,9 +40,7 @@ def main() -> None:
         parquet_dir = Path("ex21_read_pq")
         source = repark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"])
         source.write.mode("overwrite").parquet(str(parquet_dir))
-        parquet_rows = sorted(
-            tuple(row) for row in repark.read_parquet(str(parquet_dir)).collect()
-        )
+        parquet_rows = sorted(tuple(row) for row in repark.read_parquet(str(parquet_dir)).collect())
         parquet_rows_expected = [(1, "a"), (2, "b")]
         if parquet_rows != parquet_rows_expected:
             raise SystemExit(f"read_parquet rows {parquet_rows!r} != {parquet_rows_expected!r}")

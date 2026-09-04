@@ -32,7 +32,9 @@ def main() -> None:
         catalog.registerFunction("ex21_fn_c", lambda value: f"w{value}")
         snake_exists = catalog.functionExists("ex21_fn_c")
         if snake_exists != exists_expected:
-            raise SystemExit(f"Catalog.functionExists camel {snake_exists!r} != {exists_expected!r}")
+            raise SystemExit(
+                f"Catalog.functionExists camel {snake_exists!r} != {exists_expected!r}"
+            )
 
         camel_rows = [tuple(row) for row in repark.sql("SELECT ex21_fn_c(4) AS out").collect()]
         camel_rows_expected = [("w4",)]

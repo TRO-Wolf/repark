@@ -15,7 +15,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
-    """Run the measured refusals: each name raises UnsupportedOperationException naming the route."""
+    """Run the measured refusals: each raises UnsupportedOperationException naming the route."""
     repark = ReparkSession.builder.appName("ex21-ses-refuse").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame([(1, "a")], ["id", "s"])

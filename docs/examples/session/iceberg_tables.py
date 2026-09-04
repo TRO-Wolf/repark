@@ -43,9 +43,7 @@ def main() -> None:
 
         provider_names = repark.list_df_schema_table_names("ex21_cat", "ex21_db")
         if provider_names != names_expected:
-            raise SystemExit(
-                f"list_df_schema_table_names {provider_names!r} != {names_expected!r}"
-            )
+            raise SystemExit(f"list_df_schema_table_names {provider_names!r} != {names_expected!r}")
 
         refreshed = repark.refresh_catalog_provider("ex21_cat")
         refreshed_expected = None

@@ -17,7 +17,10 @@ def main() -> None:
     """Run the measured frame-builder answers: row-list frames and the exclusive range."""
     repark = ReparkSession.builder.appName("ex21-ses-frames").master("local[1]").getOrCreate()
     try:
-        rows = [tuple(row) for row in repark.create_dataframe([(3, "c"), (4, "d")], ["id", "s"]).collect()]
+        rows = [
+            tuple(row)
+            for row in repark.create_dataframe([(3, "c"), (4, "d")], ["id", "s"]).collect()
+        ]
         rows_expected = [(3, "c"), (4, "d")]
         if rows != rows_expected:
             raise SystemExit(f"create_dataframe rows {rows!r} != {rows_expected!r}")
