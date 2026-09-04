@@ -366,3 +366,29 @@ are resolved here; none of the confirmed behaviour changed.
 Two things the round-2 work found on its own, beyond the ten: `repark__create_schema` /
 `repark__list_schemas` were unpinned (F-DBT-1-7), and `repark__drop_schema` was a dead override
 that the inherited macro already covers — measured and deleted (§6 N5).
+
+## 11. Gates
+
+Round 2, 2026-09-04, real exit codes (never a pipe's), on `feat/dbt-1` at the merge of
+`origin/main` `4f9ca88d`.
+
+| Gate | Result |
+|---|---|
+| `make py-test-dbt` | rc=0 — 59 passed, 1 skipped |
+| `.venv/bin/ruff check python/dbt-repark` | rc=0 |
+| `.venv/bin/ruff format --check python/dbt-repark` | rc=0 |
+| `make check-python-conventions` | rc=0 |
+| `make check-map-sync` | rc=0 |
+| `make check-ledger-grammar` | rc=0 |
+| `make check-ledgers` | rc=0 |
+| `make check-docs-compaction` | rc=0 |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | rc=0 |
+| `python3 scripts/check_lib_py.py` | rc=0 |
+| `typos .` | rc=0 |
+| `make ci` (repo-wide fast gate) | rc=0 |
+
+Not run here, and why: `make preflight` needs `py-test-facade`, which runs `maturin develop` —
+this unit changes no Rust and the brief forbids a cargo build. `make py-test-dbt` is the half of
+`preflight` this unit adds, and it is green. The native module in the lane was verified against
+the recorded S6 matrix instead: `python/repark/tests/test_sql_harden_cutover.py` → 35 passed,
+15 skipped (the skips are the live-Spark legs).
