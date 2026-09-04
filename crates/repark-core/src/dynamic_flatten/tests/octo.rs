@@ -16,7 +16,7 @@ use super::{
     dynamic_flatten, flatten, i64_array, i64_cells, list_of, options, read_batch, struct_array,
     utf8_array,
 };
-use crate::dynamic_flatten::dynamic_flatten_with_stats;
+use crate::dynamic_flatten::{PLAN_WALKS, dynamic_flatten_with_stats};
 
 fn large_list_of(
     element: DataType,
@@ -242,6 +242,47 @@ fn max_depth_remaining_schema_is_truncated() {
         }
         other => panic!("expected Analysis(MAX_DEPTH), got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn product_dynamic_flatten_does_no_plan_walk() {
+    let inner = struct_array(
+        vec![("Val", DataType::Int64, i64_array(vec![Some(1)]))],
+        None,
+    );
+    let mid = struct_array(
+        vec![("L2", inner.data_type().clone(), Arc::new(inner) as ArrayRef)],
+        None,
+    );
+    let outer = struct_array(
+        vec![("L1", mid.data_type().clone(), Arc::new(mid) as ArrayRef)],
+        None,
+    );
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("Payload", outer.data_type().clone(), true),
+    ]));
+    let outer: ArrayRef = Arc::new(outer);
+    let product_batch = RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![i64_array(vec![Some(1)]), Arc::clone(&outer)],
+    )
+    .expect("batch");
+    let stats_batch =
+        RecordBatch::try_new(schema, vec![i64_array(vec![Some(1)]), outer]).expect("batch");
+
+    PLAN_WALKS.with(|cell| cell.set(0));
+    let _frame = dynamic_flatten(read_batch(product_batch), options()).expect("product flatten");
+    assert_eq!(
+        PLAN_WALKS.with(std::cell::Cell::get),
+        0,
+        "product dynamic_flatten must not walk the logical plan"
+    );
+
+    let (_frame, stats) =
+        dynamic_flatten_with_stats(read_batch(stats_batch), options()).expect("flatten stats");
+    assert_eq!(PLAN_WALKS.with(std::cell::Cell::get), 1);
+    assert!(stats.plan_nodes >= 4);
 }
 
 #[tokio::test]
