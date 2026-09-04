@@ -30,6 +30,7 @@ Registry cells matched; no HALT.
 | FN-ADDMONTHS-1 | `2015-02-28+1` → `2015-03-28`; `2025-04-30-1` → `2025-03-30`; `2024-02-29-7` → `2023-07-29` | `2015-03-31` / `2025-03-31` / `2023-07-31` |
 | FN-LAST-1 | last(ignorenulls) window group a → `3` | `NULL` |
 | FN-APPROXPCT-1 | global `3` int64; grouped a=2 b=4; array `[1,3,6]` | interpolated double `3.0` / `2.0`,`5.0` |
+| FN-APPROXPCT-ACC-1 | accuracy 2 on 1..200 is `1.0`; default/`10000` are `100.0` | `100.0` at accuracy 2 (knob ignored) |
 | FN-ARRAYPOS-1 | `[2, 0, None]`; empty → `0`; null needle → NULL | `[2, None, None]` |
 | FN-ARRAYSORT-1 | array_sort `[1,2,None]`; sort_array asc `[None,1,2]`; desc `[2,1,None]` | array_sort `[None,1,2]` |
 | FN-ARRAYSOVERLAP-1 | `[None, False, None, True, True, None]` | `[False, False, False, True, True, False]` |
@@ -45,7 +46,7 @@ Registry cells matched; no HALT.
 | `try_to_number` | analysis refuse non-foldable format |
 | `add_months` | clamp only when target month is shorter |
 | `last(ignorenulls)` | `window_from_aggregate` copies `IGNORE NULLS` |
-| `percentile_approx` | discrete rank `ceil(p*n)-1`; column type; array arm |
+| `percentile_approx` | discrete rank `ceil(p*n)-1`; `select_nth_unstable`; accuracy ignored |
 | `array_position` | not-found `0` |
 | `array_sort` / `sort_array` | NULLS LAST vs Spark sort_array order |
 | `arrays_overlap` | three-valued kernel |
@@ -62,8 +63,22 @@ Registry cells matched; no HALT.
 | restore month-end clamp | 1 red of 3 (`test_add_months_keeps_day_when_target_month_has_it`) |
 | drop `IGNORE NULLS` in `over` | 1 red of 1 (`test_last_ignorenulls_window_skips_trailing_null`) |
 | restore t-digest interpolation | 2 red of 3 (`test_approx_percentile_discrete_bigint_matches_spark`, array pin) |
+| assert Spark `1.0` at accuracy 2 | 1 red of 1 (`test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`) |
 | restore DF array_position NULL not-found | 1 red of 4 (`test_array_position_not_found_returns_zero`) |
 | restore NaN → None normalize | 1 red of 2 (`test_create_dataframe_stores_nan_not_null`) |
+
+## Round 3 (2026-09-03)
+
+| Item | Note |
+|---|---|
+| Flatten before | 1.935 s / 1e6 rows (row-wise `concat`) |
+| Flatten after | 8.010 ms repark / 3.012 ms DataFusion (release, 1e6 packed `[[1,2],[3]]`) |
+| Flatten ratio | 2.66× DataFusion; pin `≤ 3×`, `#[ignore]` `one_million_rows_within_three_times_datafusion` |
+| Accuracy cell | Spark `percentile_approx(x, 0.5, 2)` on 1..200 is `1.0`; repark `100.0` |
+| `FN-APPROXPCT-ACC-1` | BACKLOG; accuracy knob accepted and ignored; pin records Spark `1.0` beside repark `100.0` |
+| `PERF-APPROXPCT-1` | BACKLOG; group held in memory; `select_nth_unstable` per percentile |
+| `arrays_overlap` | 1.04 s / 1e6 acceptable; HashSet of owned `ScalarValue`; borrowed-key set is not a one-line change |
+| Blast radius | sparse AUC `element_at(..., array_position(...))` skips index `0` (`python/repark/src/repark/spark/ml/map.md`) |
 
 ## Next EX batch names
 

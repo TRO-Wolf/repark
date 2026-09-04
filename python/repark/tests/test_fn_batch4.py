@@ -177,7 +177,7 @@ def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> Non
 def test_percentile_approx_sql_third_arg_does_not_change_discrete_p50(
     spark: ReparkSession,
 ) -> None:
-    """SQL 3rd arg does not change the discrete p50. pins: fn-fix-1-registry-rows/C-003"""
+    """FN-APPROXPCT-ACC-1: accuracy 2 is 100.0; Spark 1.0. pins: fn-fix-1-registry-rows/C-003"""
     values_sql = " UNION ALL ".join(f"SELECT {index}.0 AS x" for index in range(1, 201))
     row = (
         spark.sql(
@@ -189,8 +189,9 @@ def test_percentile_approx_sql_third_arg_does_not_change_discrete_p50(
         .collect()[0]
         .asDict()
     )
-    for key in ("p_default", "p_c2", "p_c10k"):
-        assert float(row[key]) == 100.0, f"{key}={row[key]}"
+    assert float(row["p_default"]) == 100.0
+    assert float(row["p_c10k"]) == 100.0
+    assert (float(row["p_c2"]), 1.0) == (100.0, 1.0)
 
 
 def test_approx_percentile_discrete_bigint_matches_spark(spark: ReparkSession) -> None:

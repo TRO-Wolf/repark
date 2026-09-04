@@ -37,7 +37,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
   pins: fn-fix-1-registry-rows/C-002
 - `percentile_approx.rs` — **FN-FIX-1 (2026-09-03):** discrete `percentile_approx` /
-  `approx_percentile` in the column's type; array-of-percentages arm.
+  `approx_percentile` in the column's type; array-of-percentages arm;
+  `select_nth_unstable` per requested percentile. Accuracy knob ignored
+  (`FN-APPROXPCT-ACC-1`). Group held in memory (`PERF-APPROXPCT-1`).
   pins: fn-fix-1-registry-rows/C-002
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).

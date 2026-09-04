@@ -1150,6 +1150,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-1-registry-rows/C-003
   **FN-APPROXPCT-1 FIXED 2026-09-03 (FN-FIX-1):**
   `test_approx_percentile_discrete_bigint_matches_spark`.
+  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
+  (repark `100.0` at accuracy 2; Spark `1.0`).
   pins: fn-fix-1-registry-rows/C-003
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
