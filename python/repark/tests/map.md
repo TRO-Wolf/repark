@@ -176,14 +176,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_sql_harden_cutover_spark.py` behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
   `_sql_harden_cutover_programs.py` (`cow_properties` beside `mor_properties`), runners
   `_sql_harden_cutover_run.py`, verdicts `_sql_harden_cutover_golden.py`. AWS legs in
-  `test_aws_acceptance.py`. Namespace pin: rendered SQL uses only the passed namespace.
+  `test_aws_acceptance.py`: Glue and S3 Tables replay all 15 rows into
+  `testing_repark_acceptance` and assert the CoW MERGE cells (`delete_files` 0, data-file
+  count equal to the memory half) plus the S6 gold namespace, which `date()` now answers into.
+  Namespace pin: rendered SQL uses only the passed namespace.
   CUTOVER-DATE-1 controls: `to_date` / `CAST AS DATE` / `date` / `unix_timestamp` answer.
   MoR MERGE delete-file golden pins kinds (PARQUET vs PUFFIN), not count; count is
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
   second pass is 1 on both engines.
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
-  pins: sql-harden-2-cow-shapes/C-001, C-003, C-004
+  pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
