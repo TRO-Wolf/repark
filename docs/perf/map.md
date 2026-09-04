@@ -20,7 +20,7 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   unmeasured hypotheses, a nine-unit slate in build order, and every command. Raw per-iteration
   timings with start/end load:
   [engine-iceberg-analysis-2026-09-04-numbers.json](engine-iceberg-analysis-2026-09-04-numbers.json).
-  Units cite a cell of this report and re-run its §6 command before and after.
+  Filed with two plural spellings normalised for the typos gate. Units cite a cell of this report and re-run its §6 command before and after.
 - [dynamic-flatten-baseline.md](dynamic-flatten-baseline.md) — **PERF-DYNFLATTEN-1
   (2026-09-04):** 1e5 and 1e6 per-fixture wall / RSS / walks, Spark explode wall,
   ratio, row-set equality, and the three H-3 candidate rankings. Release profile
