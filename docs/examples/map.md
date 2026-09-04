@@ -64,9 +64,12 @@ file is empty.
 - [catalog/](catalog/map.md) — `Catalog.*` examples (EX-20: the first 18 roster names minus the
   three measured divergences `getDatabase`/`get_database`, `listDatabases`, and the
   `functionExists(name, dbName)` arm — EX-CAT-1..3); temp views only.
-- `types/`, `ml/` — the remaining EX-1 families. They
-  are inventory families with no example yet; the backfill creates each
-  directory (and its `map.md`) with the first example it lands there.
+- [types/](types/map.md) — `types.*` examples (EX-22: all 28 names; construction and display
+  arms measured Spark-equal on live PySpark 4.1.2; `repark_type_to_arrow` /
+  `struct_type_from_arrow` are repark extensions taught beside the mapped types).
+- `ml/` — the remaining EX-1 family. It is an
+  inventory family with no example yet; the backfill creates the directory (and its
+  `map.md`) with the first example it lands there.
 
 ## I want to...
 
