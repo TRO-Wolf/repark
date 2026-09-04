@@ -117,6 +117,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
+- `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
+  and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
+  `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
+  flip to nullable (overflow-exposed operand casts, Spark-equal); names kept.
+  pins: cutover-schema-1/C-003
 - `v3_cow.rs` — v3 UPDATE, sequential COW DELETE, and MERGE matched-update keep `_row_id`
   (V3-7 Spark-equal MERGE lift; RP-6 UPDATE/DELETE). V3-8 replaced the subquery keep-refusal
   with the outside-the-hole control (`UPDATE … NOT IN` refuses without `V3-COW-1` and leaves

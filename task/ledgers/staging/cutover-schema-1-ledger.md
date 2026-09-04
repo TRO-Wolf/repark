@@ -80,6 +80,7 @@ Every red pin is class (a); there are no class (b) regressions.
 | `test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]` | (a) | repark half re-measured required → optional; verdict stays DIVERGES on width (`long` vs `int`). Cite the `V3-COV-8` nullability half. |
 | G2 `int_times_decimal_promotes_wider_in_repark` + the three G13 nullability cells (the uncommitted flip found at pickup) | (a) | Kept: Spark-answer flips caused by the analyzer rule. repark halves move non-null → equality with the already-nullable recorded Spark halves (overflow-exposed operand casts propagate through the op). Cite `DEC-9`, narrowed; DEC-9 proper stays BACKLOG. |
 | `test_live_dynflatten_matches_spark_explode` (live; skipped in the facade run, repark half measured standalone on all three bed shapes) | (a) | repark `id` `False` → `True`, equal to the recorded Spark `True`. Pin flipped; `DYNFLATTEN-READNULL-1` FIXED. |
+| `repark-spark/src/tests/decimal.rs::pin_int_times_decimal_is_12_2_i128` + `::pin_mul_single_digit_nullability_non_null_i128` (found by `make verify`, not the facade run) | (a) | Rust-door twins of the G2/G13 flips: assert nullable now, Spark-equal. Names kept per the row-name precedent. |
 
 Held green without flips: every `printSchema` / `DESCRIBE` / `dtypes` / `StructType` pin,
 the SE-1 tighten pins (the refusal still fires on its case), all other `V3-COV-*` rows,
