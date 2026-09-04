@@ -94,3 +94,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the merge commit `68e408d`. `risk_tier: standard`. Branch
   `fix/df-printschema-1-trailing-newline`.
   pins: df-printschema-1-trailing-newline/C-004
+- [ex-20-window-catalog-ledger.md](ex-20-window-catalog-ledger.md) —
+  **EX-20 (2026-09-04), in flight:** the v1.1 example backfill's `Window`/`WindowSpec` +
+  first `Catalog.*` batch — 40 roster names at base `3484f8d7`; 37 covered by eight files
+  under `docs/examples/window/` and `docs/examples/catalog/` (backlog 449 → 412), 3 stay
+  (`getDatabase`/`get_database`, `listDatabases`) with §7 rows `EX-CAT-1`/`EX-CAT-2`, the
+  `functionExists` dbName arm is `EX-CAT-3`, and the DataFrame-door tied-key default frame
+  is `EX-WIN-1`, pins in `python/repark/tests/test_examples_window_catalog.py`.
+  `risk_tier: standard`. Branch `docs/ex-20-window-catalog`. pins: ex-20-window-catalog/C-001
