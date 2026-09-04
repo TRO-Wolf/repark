@@ -22,6 +22,12 @@ pins: comment-condensation-2/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-
   / fuzz / W-0 window-shape measurement scripts), and `datasets/` (torture-dataset generators; cache-root
   outputs). Landed in phase-3 PR-4; datasets arrive with conductor-18.
 
+- [dbt-repark/](dbt-repark/map.md) — the dbt adapter (DBT-1, 2026-09-04): dbt's compiled SQL runs
+  in process through `repark.sql()`. Its own `pyproject.toml`; **not** a uv workspace member and
+  not in `uv.lock`, because nothing in `make ci` imports it and a member would pull `dbt-core`
+  into the repo lock. Route, refusals and acceptance:
+  [dbt-repark/map.md](dbt-repark/map.md).
+
 ## I want to...
 
 | ...do this | go to |
