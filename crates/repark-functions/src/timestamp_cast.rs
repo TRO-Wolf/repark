@@ -12,7 +12,7 @@ use datafusion::arrow::array::{
 };
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
-use datafusion::common::{DataFusionError, Result};
+use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
@@ -57,7 +57,6 @@ pub fn date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkDate::new()))
 }
 
-/// Spark SQL `unix_timestamp` — epoch seconds; string args use `yyyy-MM-dd HH:mm:ss`.
 #[must_use]
 pub fn unix_timestamp_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkUnixTimestamp::new()))
@@ -633,9 +632,7 @@ fn unix_seconds_from_string(array: &dyn Array, session_zone: Tz, ansi: bool) -> 
 fn invoke_unix_timestamp(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     if args.args.is_empty() {
         let seconds = current_unix_seconds()?;
-        return Ok(ColumnarValue::Array(Arc::new(Int64Array::from(vec![
-            seconds,
-        ]))));
+        return Ok(ColumnarValue::Scalar(ScalarValue::Int64(Some(seconds))));
     }
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
     let input = &arrays[0];

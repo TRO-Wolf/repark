@@ -57,6 +57,7 @@ Registry cell `CUTOVER-DATE-1` matched; no HALT.
 | Knob | Red of M |
 |---|---|
 | skip `ctx.register_udf(timestamp_cast::date_udf())` | 13 red of 25 (`test_date_fn_1.py` DATE cells + S6 CTAS; unix_timestamp pins stayed green) |
+| restore 1-row array for zero-arg `unix_timestamp()` | 1 red of 25 (`test_unix_timestamp_zero_arg_repeats_once_per_input_row`) |
 
 ## S6 after the fix
 

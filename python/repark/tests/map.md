@@ -168,7 +168,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rdf-1-position-delete-bounds/C-004
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()`
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
-  and off). Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+  and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
+  Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
   pins: date-fn-1-spark-date-spelling/C-001, C-003, C-004
 - [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):**
   the cutover pipeline cutover shapes S1–S7 (9 programs). Always-run repark half against

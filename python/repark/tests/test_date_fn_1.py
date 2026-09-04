@@ -131,6 +131,22 @@ def test_unix_timestamp_zero_arg_is_current_epoch() -> None:
     assert got > 1_700_000_000
 
 
+def test_unix_timestamp_zero_arg_repeats_once_per_input_row() -> None:
+    """pins: date-fn-1-spark-date-spelling/C-003"""
+    session = _spark()
+    sql = session.sql("SELECT unix_timestamp() AS u FROM range(3)").toArrow()
+    facade = session.range(3).select(F.unix_timestamp().alias("u")).toArrow()
+    sql_rows = sql.column("u").to_pylist()
+    facade_rows = facade.column("u").to_pylist()
+    assert len(sql_rows) == 3
+    assert len(facade_rows) == 3
+    assert _field(sql, "u") == ("int64", False)
+    assert _field(facade, "u") == ("int64", False)
+    assert all(isinstance(value, int) and value > 1_700_000_000 for value in sql_rows)
+    assert len(set(sql_rows)) == 1
+    assert sql_rows == facade_rows
+
+
 def test_facade_unix_timestamp_matches_sql() -> None:
     """pins: date-fn-1-spark-date-spelling/C-003"""
     session = _spark()
