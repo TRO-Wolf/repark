@@ -39,8 +39,15 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   identity-SQL sink on an 8-manifest v3 table and requires the touched `_file` in the map
   (`record_scanned_partitions` and the close `retain` keep it). `execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table`
   runs the production identity DELETE on that fixture.
+  **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04):** that same 8-manifest drain also requires the
+  drained `known_partitions` map to equal the manifest walk.
+  `three_concurrent_target_scan_executes_plan_data_manifests_once` starts three
+  `StreamingTable` executes together and requires one `plan_files` (hardening; mutation
+  skip-cache 1 red of 1, got 3). Production-path `plan_files==1` pins were deleted: the
+  identity DELETE / matched-delete MERGE call `execute` once, so those pins cannot go red.
   pins: rp-7-f18-repin/C-002
   pins: rp-9-repin-f23/C-005
+  pins: perf-scan-1-plan-once/C-001, C-002
 - `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
   `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
   map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the

@@ -25,6 +25,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Pointers
 - Up: [../map.md](../map.md)
+- [perf-scan-1-plan-once-ledger.md](perf-scan-1-plan-once-ledger.md) —
+  **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04), in flight:** `TargetScanStream` caches
+  `FileScanTask`s across concurrent `StreamingTable` re-executes (hardening). Registry
+  `PERF-SCAN-3PASS-1` stays BACKLOG: production identity DELETE is 1 + 0 + 1 opens, not
+  3 × N at scan. `risk_tier: standard`. Branch `perf/scan-1-plan-once`.
+  pins: perf-scan-1-plan-once/C-001, C-002, C-003, C-004
 - [rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md) — **RP-10 (2026-09-04), in flight:**
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
