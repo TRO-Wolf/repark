@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-19 DataFrame-d (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 518 → 480 —
+38 roster names covered by ten new examples under `docs/examples/dataframe/`
+(`set_ops.py`, `frame_shape.py`, `rename_columns.py`, `unpivot_rows.py`,
+`cache_write.py`, `na_surface.py`, `stat_helpers.py`, `grouped_agg.py`,
+`grouped_pivot.py`, `row_dicts.py`); `stat.freqItems` stays on the backlog
+(§7 `EX-DF-19`), the `withColumnsRenamed` duplicate-final-name arm is §7 `EX-DF-18`
+and the struct-`Row` field arm is §7 `EX-ROW-1`, with pins in
+`python/repark/tests/test_examples_dataframe_d.py`. `Row.as_dict`, `Row.from_mapping`,
+and `Row.from_ordered_fields` are documented as repark extensions (`hasattr` False on
+live PySpark 4.1.2).
+pins: ex-19-dataframe-d-window/C-001
+
 EX-16 DataFrame-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 518 —
 32 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`first_head.py`, `group_by.py`, `joins_hints.py`, `rows_nulls.py`, `state_cache.py`,
