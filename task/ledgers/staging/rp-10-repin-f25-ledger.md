@@ -4,7 +4,7 @@
 `e6ebd40` · **Model:** grok-4.6 · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md).
+[rp-9-repin-f23-ledger.md](../completed/rp-9-repin-f23-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
