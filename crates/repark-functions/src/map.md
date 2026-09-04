@@ -67,6 +67,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `is_match("")`; Dictionary(_, Utf8) coerce). **FN-FIX-2:** `compile_spark_regex`
   translates Java nested classes before `bind_ascii_perl_classes`.
   pins: fn-fix-2-string-rows/C-002
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract` (first match's
+  group, `''` on no match, any-arg-nullable; `validate_group_index` names the
+  caller). pins: fn-regexp-extract-1/C-001
   **SEM-4 (2026-08-21):**
   `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
   message for negative and over-large alike); `extract_rows` passes the index

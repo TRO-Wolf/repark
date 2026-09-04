@@ -58,6 +58,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fn-fix-1-registry-rows/C-002
   **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
   `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the
+  kernel (bare pattern forced-lit, optional idx defaulting to 1).
+  pins: fn-regexp-extract-1/C-001
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).

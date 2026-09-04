@@ -583,12 +583,12 @@ def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
     )
 
 
-def regexp_extract(str: Column | str, pattern: str, idx: int) -> Column:
-    """Unsupported: engine has no ``regexp_extract``."""
-
-    raise UnsupportedOperationException(
-        "functions.regexp_extract is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+def regexp_extract(str: Column | str, pattern: Column | str, idx: int | Column = 1) -> Column:
+    """First match's ``idx``-th group, or ``''`` (PySpark ``functions.regexp_extract``).
+    ``pattern`` may be Column or str; ``idx`` defaults to 1.
+    """
+    lit = frozenset() if isinstance(pattern, Column) else frozenset({1})
+    return _scalar("regexp_extract", str, pattern, idx, lit_indices=lit)
 
 
 def datediff(end: Column | str, start: Column | str) -> Column:
