@@ -69,12 +69,25 @@ The brief's `--timeout 600` flag is not installed in this lane venv; the repo-ca
 
 ## 5. Blast-radius classification
 
-Filled after the fix lands; every pin that turns red is classed here as (a) old-answer
-pin flipped to Spark's answer with its row citation, or (b) real regression with its fix.
-Known candidates: `printSchema` / `DESCRIBE` / `dtypes` / `StructType` pins, the `V3-COV-*`
-rows, `test_live_dynflatten_matches_spark_explode` (disclosure converges: repark `id`
-becomes nullable), the `int_times_decimal` corpus cell (operand cast converges; DEC-9
-proper stays BACKLOG — the rule respects the U4a CAST-after stop).
+Full facade suite after the fix (`python/repark/tests -q`, `/tmp/cutsch1_facade.log`):
+3 failed, 4607 passed, 194 skipped (553 s). Baseline was 4601 passed, 191 skipped; the
+delta is exactly +9 new cutover pins passing, +3 live legs skipping, −3 old pins failing.
+Every red pin is class (a); there are no class (b) regressions.
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_ctas_decimal_type_preserved[ctas_add_money_preserves_decimal128]` + `[ctas_mul_money_qty_preserves_decimal128]`, write-back half (line 821) | (a) | The SELECT half still reads non-null `(11,2)`/`(21,2)`, equal to the recorded Spark SELECT oracle — the analyzer rule correctly leaves null-safe decimal→decimal widenings alone. Only the post-CTAS read moved (nullable), which is Spark's CTAS-optional derivation. The rows split the post-write shape into `expected_written`; cite `CUTOVER-CTAS-REQ-1`. |
+| `test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]` | (a) | repark half re-measured required → optional; verdict stays DIVERGES on width (`long` vs `int`). Cite the `V3-COV-8` nullability half. |
+| G2 `int_times_decimal_promotes_wider_in_repark` + the three G13 nullability cells (the uncommitted flip found at pickup) | (a) | Kept: Spark-answer flips caused by the analyzer rule. repark halves move non-null → equality with the already-nullable recorded Spark halves (overflow-exposed operand casts propagate through the op). Cite `DEC-9`, narrowed; DEC-9 proper stays BACKLOG. |
+| `test_live_dynflatten_matches_spark_explode` (live; skipped in the facade run, repark half measured standalone on all three bed shapes) | (a) | repark `id` `False` → `True`, equal to the recorded Spark `True`. Pin flipped; `DYNFLATTEN-READNULL-1` FIXED. |
+
+Held green without flips: every `printSchema` / `DESCRIBE` / `dtypes` / `StructType` pin,
+the SE-1 tighten pins (the refusal still fires on its case), all other `V3-COV-*` rows,
+the `COUNT(*)` nullability cell (`CUTOVER-DATE-1` notes the convergence). `G6-4` /
+`G12-1` / `G12-2` pins pass unchanged — this unit's rules do not touch those cells
+(decimal targets and null-safe equal are out of scope); each row carries a dated
+re-measured note. The `V3-COV-8` width half stays BACKLOG. The parity suite
+(`python/repark-parity/tests`) is not in this unit's gate list and was not re-run.
 
 ## 6. Mutation table
 
