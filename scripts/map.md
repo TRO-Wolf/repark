@@ -115,11 +115,6 @@ extracted to `snapshot_commit.rs`) then 1896→1894 (scratch register helper);
 1415→1414. The comment re-home ratchets `session/tests/session.rs` 1414 → 1412.
 pins: rp-5-fork-repin/C-004
 
-PERF-DYNFLATTEN-1 (2026-09-04): `check_lib_py.py` `test_dynamic_flatten.py` 1618→1659.
-The only UPWARD move in this log: +41 lines, exactly the `DYNFLATTEN-QUALNAME-1` pin the
-round-2 review required. Size-gate rows otherwise ratchet down only, so this row is owner
-business at review, not a precedent; the split seam and debt reason are unchanged.
-
 V3-6 (2026-09-01): `check_rust_file_size.py` `write/append.rs` 1950→1886 — the conform
 step moved to a file-backed `write/conform.rs` (V3-6 C-005); one import shed in the same
 pass.

@@ -130,7 +130,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split text, HTML, and truncation style families.",
     ),
     "python/repark/tests/test_dynamic_flatten.py": (
-        1659,
+        1618,
         "Dynamic-flatten parity and refusal cases share one module.",
         "Split structural flattening from list and refusal scenarios.",
     ),

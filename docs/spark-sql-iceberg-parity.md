@@ -3561,7 +3561,7 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
   column: columns `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
   *(oracle: measured — PySpark 4.1.2, 2026-09-04, the reproducer above.)*
 - **Pin** —
-  `python/repark/tests/test_dynamic_flatten.py::test_three_level_struct_with_keep_column_hits_qualified_name_clash`
+  `python/repark/tests/test_dynamic_flatten_divergences.py::test_three_level_struct_with_keep_column_hits_qualified_name_clash`
 - **Rationale** — BACKLOG, intent to FIX. Filed from PERF-DYNFLATTEN-1; the measurement bed
   nested `id` inside the leaf so flatten could run. Do not close by switching the bed.
 
