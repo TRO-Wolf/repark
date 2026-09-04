@@ -3633,20 +3633,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (legacy still walks, map total). Statement-wall numbers live in the RP-9 ledger; the
   8-manifest "before" set is noisy and is not a claimed improvement. Full record: the RP-9
   ledger; RP-8 E-4 closed.
-- **PERF-DVCLOSE-STMT-1** — surfaced 2026-09-03, RP-9 r2. After the F-23 skip engages, a
-  192-manifest pure-DV `DELETE` still opens every data manifest once at commit in the fork's
-  `validate_fresh_dvs_only` (unconditional full pass on every DV-adding commit,
-  `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
-  `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
-  round-2 table (commit = 1× per data manifest).
+- **PERF-DVCLOSE-STMT-1** — **FIXED 2026-09-04 (RP-10)** at pin `85a4aaf0` (fork F-25 `#265`).
+  `validate_fresh_dvs_only` walks data manifests newest-first and stops once every `added_dvs`
+  key is found (buffer 1 until the first manifest is consumed). On the RP-9 192-manifest
+  identity DELETE of the newest row, commit-phase data-manifest opens are **1** (hide pin:
+  191 of 192 hidden, commit succeeds). Close-phase opens stay **0**. Oldest-manifest and
+  never-found keys still take the full walk (F-25's own pins). Statement-wall numbers live
+  in the RP-10 ledger; the RP-9 `DELETE WHERE id = 0` cell is the oldest file and is not a
+  claimed wall-clock win. Pin:
+  `merge/tests/dv_commit_opens.rs::a_newest_file_identity_delete_commits_with_one_data_manifest`.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
   `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
   stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
   scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
   MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
-  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
-  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
-  so a third `plan_files` goes red.
+  **PERF-SCAN-1**. RP-10 re-measured the 192-fixture: scan stays **3×N** (the F-25 commit
+  early-exit does not collapse `plan_files`). Pin to land with that unit: kernel/manifest
+  opens on the 192-fixture DELETE so a third `plan_files` goes red.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

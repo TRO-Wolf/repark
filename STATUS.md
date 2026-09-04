@@ -142,9 +142,10 @@ in published history by explicit decision:
     partition sets differ (`V3-FILEORDER-1` DECLARED).
     **V3-12 (2026-09-02):** a legacy position delete merges into the new DV; the close reads
     its branch (`V3-UPGRADE-DV-1` FIXED, `V3-DV-BRANCH-1`). **RP-8 (2026-09-03):** repin to
-    `c1d6c9de` (F-19..F-22) — the close owns that merge in one manifest pass and `FanoutWriter`
-    drains ascending, so RePark's 493-line walk goes and `V3-UPGRADE-DV-PLAIN-1`,
+    `c1d6c9de` (F-19..F-22) — the close owns that merge in one pass, so the 493-line walk
+    goes and `V3-UPGRADE-DV-PLAIN-1`,
     `V3-UPGRADE-DV-PART-1`, `V3-COV-3`, `F-v3-10-partition-file-order` are **FIXED**.
+    **RP-10 (2026-09-04):** pin `85a4aaf0` (F-25); `PERF-DVCLOSE-STMT-1` FIXED.
     **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 at the same knobs
     — **96 delete files against v2's 400** and 496 data files against 1,696, because a v3 delete
     is one Puffin vector per data file rewritten in place; the maintenance sequence ends at
