@@ -21,6 +21,7 @@ extend-exclude = [
 [default.extend-identifiers]
 # Identifiers (code symbols) that are not typos.
 repark = "repark"
+_preapare_args_for_sample = "_preapare_args_for_sample" # verbatim PySpark name: the sample overload shim is misspelled upstream
 
 [default.extend-words]
 # Words that look like typos but are intentional in this domain.
