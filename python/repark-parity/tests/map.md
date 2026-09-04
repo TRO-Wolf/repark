@@ -16,6 +16,10 @@ CC-2 slice complete: comments and docstrings condensed; oracle discriminators, p
 Unit tests for the parity comparison core **and the dataset generators** (no Spark, no
 JVM, no repark required). See [../map.md](../map.md).
 
+
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
 ## Contents
 
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift

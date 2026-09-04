@@ -1,7 +1,4 @@
-"""Engine-free pins for the dynamicFlatten measurement bed.
-
-pins: perf-dynflatten-1-measure/C-001, C-002
-"""
+"""Engine-free bed pins. pins: perf-dynflatten-1-measure/C-001, C-002"""
 
 from __future__ import annotations
 

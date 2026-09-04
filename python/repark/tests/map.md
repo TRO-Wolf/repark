@@ -24,6 +24,10 @@ node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_c
 `test_pg_jdbc_options.py`). Each entry is annotated in place below. A test that is missing and
 NOT in that file is a defect, not a decision.
 
+
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
 ## Contents
 
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,

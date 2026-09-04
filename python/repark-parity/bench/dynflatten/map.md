@@ -10,6 +10,9 @@ DataFusion multi-column Unnest zip/pad is not a substitute.
 
 pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
 
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
 ## Contents
 
 - `datagen` lives in [../../datasets/nested/bed.py](../../datasets/nested/bed.py)

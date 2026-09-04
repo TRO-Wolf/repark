@@ -12,6 +12,10 @@ Two doors: `small(rows=64, seed=42)` (in-memory) and a CLI that writes `data.par
 + `data.jsonl` to the cache root. Determinism = identical pyarrow tables (schema +
 values) from `small()` and from files re-read under `SCHEMA` — not raw file bytes.
 
+
+Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
+requires one, and nothing may say more. Reasons live in this map, not in the source.
+
 ## Contents
 
 - `datagen.py` — schema, `generate` / `small` / `write_files` / `read_parquet` /

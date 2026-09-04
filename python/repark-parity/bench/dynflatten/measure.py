@@ -139,11 +139,7 @@ def run_spark_cells(
     iterations: int,
     collect_equality: bool,
 ) -> tuple[dict[str, EngineTiming], dict[str, bool | None], str | None]:
-    """Time the Spark explode program on every fixture with one JVM.
-
-    Returns:
-        timings keyed by shape, equality keyed by shape, skip reason or None.
-    """
+    """Time the Spark explode program on every fixture with one JVM."""
     version, skip = pyspark_version()
     if skip is not None:
         empty = {

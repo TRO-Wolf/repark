@@ -1,9 +1,4 @@
-"""Measurement-bed generator for dynamicFlatten (PERF-DYNFLATTEN-1).
-
-Synthetic nested parquet only. Same (shape, rows, seed) yields the same Arrow
-table (schema + values). Data files are never committed; ``--out`` must sit
-outside the repository. Real-dataset flags and environment variables are refused.
-"""
+"""Measurement-bed generator for dynamicFlatten (PERF-DYNFLATTEN-1)."""
 
 from __future__ import annotations
 
@@ -107,15 +102,7 @@ def refuse_real_dataset_inputs(
     argv: list[str] | None = None,
     environ: dict[str, str] | None = None,
 ) -> None:
-    """Refuse every plausible real-dataset flag or environment variable.
-
-    Args:
-        argv: CLI tokens to scan; ``None`` reads ``sys.argv[1:]``.
-        environ: environment mapping; ``None`` reads ``os.environ``.
-
-    Raises:
-        ValueError: a forbidden flag or environment key is present.
-    """
+    """Refuse every plausible real-dataset flag or environment variable."""
     tokens = sys.argv[1:] if argv is None else argv
     env = os.environ if environ is None else environ
     for flag in FORBIDDEN_CLI_FLAGS:
@@ -359,11 +346,7 @@ def _iter_batches(shape: ShapeSpec, rows: int, seed: int) -> Iterator[pa.RecordB
 
 
 def resolve_shape(shape: ShapeSpec | str) -> ShapeSpec:
-    """Return the named shape spec.
-
-    Raises:
-        ValueError: ``shape`` is an unknown name.
-    """
+    """Return the named shape spec."""
     if isinstance(shape, ShapeSpec):
         return shape
     resolved = SHAPE_BY_NAME.get(shape)
@@ -430,11 +413,7 @@ def write_shape(
 
 
 def scale_rows(scale: str) -> int:
-    """Row count for ``gate`` / ``quick`` / ``full``.
-
-    Raises:
-        ValueError: unknown scale.
-    """
+    """Row count for ``gate`` / ``quick`` / ``full``."""
     if scale == "gate":
         return GATE_ROWS
     if scale == "quick":

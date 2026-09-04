@@ -1,7 +1,4 @@
-"""Gate-scale smoke: generate the measurement bed and flatten on repark.
-
-pins: perf-dynflatten-1-measure/C-001, C-002
-"""
+"""Gate-scale bed flatten on repark. pins: perf-dynflatten-1-measure/C-001, C-002"""
 
 from __future__ import annotations
 

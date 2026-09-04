@@ -1,8 +1,4 @@
-"""PySpark 4.1.2 explode + struct expansion matching repark ``dynamicFlatten``.
-
-Sequential Cartesian expansion: lists explode one column at a time in schema
-order. Multi-column Unnest zip/pad is not used.
-"""
+"""PySpark 4.1.2 explode + struct expansion matching repark ``dynamicFlatten``."""
 
 from __future__ import annotations
 
@@ -35,22 +31,7 @@ def spark_dynamic_flatten(
     empty_as_null: bool = True,
     max_depth: int = MAX_DEPTH_DEFAULT,
 ) -> Any:
-    """Flatten ``frame`` the way repark ``dynamicFlatten`` rewrites a plan.
-
-    Args:
-        frame: a PySpark DataFrame.
-        separator: parent-path prefix separator.
-        explode_lists: explode arrays after structs are gone.
-        drop_null_lists: drop ``array<void>`` columns.
-        empty_as_null: rewrite empty arrays to a singleton-null array first.
-        max_depth: rewrite-pass bound.
-
-    Returns:
-        The flattened PySpark DataFrame.
-
-    Raises:
-        ValueError: nesting remains after ``max_depth`` passes.
-    """
+    """Flatten ``frame`` the way repark ``dynamicFlatten`` rewrites a plan."""
     from pyspark.sql import functions as spark_functions
     from pyspark.sql.types import NullType
 

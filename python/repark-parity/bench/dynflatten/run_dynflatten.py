@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""dynamicFlatten measurement CLI (local filesystem only; never AWS).
-
-Usage::
-
-    python python/repark-parity/bench/dynflatten/run_dynflatten.py \\
-        --scale gate --out /tmp/oc-dynflatten-bed \\
-        --json /tmp/oc-dynflatten-bed/run.json \\
-        --report docs/perf/dynamic-flatten-baseline.md
-"""
+"""dynamicFlatten measurement CLI (local filesystem only; never AWS)."""
 
 from __future__ import annotations
 
@@ -40,14 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the battery and write JSON / markdown.
-
-    Args:
-        argv: optional CLI arguments.
-
-    Returns:
-        Process exit code (0 on a completed record, including recorded skips).
-    """
+    """Run the battery and write JSON / markdown."""
     parser = build_parser()
     args = parser.parse_args(argv)
     result = run_measurement(

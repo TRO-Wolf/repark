@@ -51,11 +51,7 @@ def _count_plan_nodes(session: Any, frame: Any) -> int | None:
 
 
 def _load_source(session: Any, parquet_path: Path, ddl: str) -> Any:
-    """Load parquet via Arrow then ``createDataFrame``.
-
-    Facade ``read.parquet`` + ``dynamicFlatten`` hits a qualified-name clash
-    (``?table?.id`` vs ``id``). Queued; this load path measures the rewrite.
-    """
+    """Load parquet via Arrow then ``createDataFrame`` (see DYNFLATTEN-QUALNAME-1)."""
     import pyarrow.parquet as pq
 
     table = pq.read_table(parquet_path)
