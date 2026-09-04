@@ -3639,14 +3639,16 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
-- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
-  `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
-  stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
-  scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
-  MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
-  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
-  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
-  so a third `plan_files` goes red.
+- **PERF-SCAN-3PASS-1** — FIXED 2026-09-03, PERF-SCAN-1. `TargetScanStream` plans `FileScanTask`s
+  once and reuses them across `StreamingTable` re-executes (`futures::lock::Mutex` so concurrent
+  first executes share one `plan_files`). Pins:
+  `partition_sink.rs::three_concurrent_target_scan_executes_plan_data_manifests_once` (3 executes
+  → 1 plan; skip-cache mutation 1 red of 1, got 3);
+  `an_identity_delete_scan_reads_each_data_manifest_once` and
+  `a_merge_scan_reads_each_data_manifest_once` (production identity DELETE / MoR MERGE stay at 1
+  plan); drained `known_partitions` equals the manifest walk. Statement-wall 8/48/192 on this
+  clone is noisy (PERF-SCAN-1 ledger); not a wall-clock CI pin. Commit-phase 1× remains
+  `PERF-DVCLOSE-STMT-1`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

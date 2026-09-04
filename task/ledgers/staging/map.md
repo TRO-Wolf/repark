@@ -5,6 +5,11 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-scan-1-plan-once-ledger.md](perf-scan-1-plan-once-ledger.md) —
+  **PERF-SCAN-1 (2026-09-03), in flight:** identity DELETE / MERGE `TargetScanStream` plans
+  `FileScanTask`s once across `StreamingTable` re-executes; registry `PERF-SCAN-3PASS-1`
+  FIXED. `risk_tier: standard`. Branch `perf/scan-1-plan-once`.
+  pins: perf-scan-1-plan-once/C-001, C-002, C-003, C-004
 - [rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md) — **RP-9 (2026-09-03), in flight:**
   the fork repin `c1d6c9de` → `594bdbe5` (F-23). The DV close skips the data-manifest walk
   when there are no legacy deletes and `known_partitions` covers every touched path;

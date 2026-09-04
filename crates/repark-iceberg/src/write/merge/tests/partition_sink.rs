@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use datafusion::arrow::array::{Array, Int32Array, StringArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::datasource::MemTable;
 use datafusion::execution::TaskContext;
 use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
@@ -21,8 +23,8 @@ use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent
 use tempfile::TempDir;
 
 use crate::write::merge::{
-    KnownPartitions, TargetScanStream, commit, drain_partition_sink, new_partition_sink,
-    scratch_schema,
+    KnownPartitions, MatchedAction, MatchedClause, MergeSpec, TargetScanStream, commit,
+    drain_partition_sink, execute_merge, new_partition_sink, scratch_schema,
 };
 
 async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
@@ -339,6 +341,43 @@ async fn drain_identity_sql_sink(table: &Table, touched: &str) -> KnownPartition
     drain_partition_sink(&partitions)
 }
 
+fn puredv_ident() -> TableIdent {
+    TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "puredv".to_string(),
+    )
+}
+
+fn merge_delete_id_zero_spec(ident: TableIdent) -> MergeSpec {
+    MergeSpec {
+        target: ident,
+        target_alias: "t".to_string(),
+        source_from_sql: "src".to_string(),
+        source_alias: "s".to_string(),
+        on_sql: "t.id = s.id".to_string(),
+        matched: vec![MatchedClause {
+            predicate_sql: None,
+            action: MatchedAction::Delete,
+        }],
+        not_matched: vec![],
+        not_matched_by_source: vec![],
+        commit_branch: None,
+    }
+}
+
+fn register_id_source(ctx: &SessionContext, id: i32) {
+    let schema = Arc::new(ArrowSchema::new(vec![Field::new(
+        "id",
+        DataType::Int32,
+        false,
+    )]));
+    let batch = RecordBatch::try_new(schema, vec![Arc::new(Int32Array::from(vec![id]))])
+        .expect("source batch");
+    let source = MemTable::try_new(batch.schema(), vec![vec![batch]]).expect("source memtable");
+    ctx.register_table("src", Arc::new(source))
+        .expect("register src");
+}
+
 #[tokio::test]
 async fn a_multi_manifest_identity_scan_records_the_touched_path() {
     let warehouse = TempDir::new().expect("warehouse");
@@ -366,6 +405,11 @@ async fn a_multi_manifest_identity_scan_records_the_touched_path() {
         "production identity SQL must leave the touched path in the sink; \
          drained={} touched={touched:?}",
         drained.len(),
+    );
+    assert_eq!(
+        drained,
+        manifest_partitions(&table).await,
+        "plan-once must record the same known_partitions map as a full manifest walk"
     );
 }
 
@@ -400,10 +444,7 @@ async fn execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table() {
     let warehouse = TempDir::new().expect("warehouse");
     let catalog = memory_catalog(&warehouse).await;
     let _table = eight_manifest_v3_table(&catalog).await;
-    let ident = TableIdent::new(
-        NamespaceIdent::new("sales".to_string()),
-        "puredv".to_string(),
-    );
+    let ident = puredv_ident();
     let ctx = SessionContext::new();
     crate::write::predicate_dml::execute_predicate_dml(
         &ctx,
@@ -419,4 +460,157 @@ async fn execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table() {
     .expect("plain identity delete");
     let table = catalog.load_table(&ident).await.expect("reload");
     assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4, 5, 6, 7]);
+}
+
+#[tokio::test]
+async fn an_identity_delete_scan_reads_each_data_manifest_once() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let table = eight_manifest_v3_table(&catalog).await;
+    let ident = puredv_ident();
+    crate::write::format_version::set_properties_and_format_version(
+        catalog.as_ref(),
+        &ident,
+        Some(table),
+        HashMap::from([("write.delete.mode".to_string(), "merge-on-read".to_string())]),
+        &[],
+        None,
+    )
+    .await
+    .expect("set merge-on-read delete");
+    let table = catalog.load_table(&ident).await.expect("reload");
+    let manifest_count = planned_file_tasks(&table).await.len();
+    assert_eq!(manifest_count, 8);
+    let ctx = SessionContext::new();
+    let counter = Arc::new(AtomicUsize::new(0));
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = Some(Arc::clone(&counter));
+    });
+    crate::write::predicate_dml::execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &crate::write::predicate_dml::PredicateDmlSpec {
+            target: ident.clone(),
+            target_alias: "t".to_string(),
+            selection_sql: "id = 0".to_string(),
+            assignments: None,
+        },
+    )
+    .await
+    .expect("plain identity delete");
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = None;
+    });
+    let calls = counter.load(Ordering::SeqCst);
+    assert_eq!(
+        calls, 1,
+        "scan-phase plan_files must run once (N={manifest_count} data manifests), not {calls}"
+    );
+    let table = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4, 5, 6, 7]);
+}
+
+#[tokio::test]
+async fn a_merge_scan_reads_each_data_manifest_once() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let table = eight_manifest_v3_table(&catalog).await;
+    let ident = puredv_ident();
+    crate::write::format_version::set_properties_and_format_version(
+        catalog.as_ref(),
+        &ident,
+        Some(table),
+        HashMap::from([("write.merge.mode".to_string(), "merge-on-read".to_string())]),
+        &[],
+        None,
+    )
+    .await
+    .expect("set merge-on-read");
+    let table = catalog.load_table(&ident).await.expect("reload");
+    let manifest_count = planned_file_tasks(&table).await.len();
+    assert_eq!(manifest_count, 8);
+    let ctx = SessionContext::new();
+    register_id_source(&ctx, 0);
+    let counter = Arc::new(AtomicUsize::new(0));
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = Some(Arc::clone(&counter));
+    });
+    execute_merge(&ctx, &catalog, &merge_delete_id_zero_spec(ident.clone()))
+        .await
+        .expect("merge delete");
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = None;
+    });
+    let calls = counter.load(Ordering::SeqCst);
+    assert_eq!(
+        calls, 1,
+        "MERGE scan-phase plan_files must run once (N={manifest_count} data manifests), not {calls}"
+    );
+    let table = catalog.load_table(&ident).await.expect("reload");
+    assert_eq!(live_ids(&table).await, vec![1, 2, 3, 4, 5, 6, 7]);
+}
+
+async fn drain_scan_rows(
+    stream: &mut datafusion::physical_plan::SendableRecordBatchStream,
+) -> usize {
+    let mut rows = 0;
+    while let Some(batch) = stream.next().await {
+        rows += batch.expect("scan batch").num_rows();
+    }
+    rows
+}
+
+#[tokio::test]
+async fn three_concurrent_target_scan_executes_plan_data_manifests_once() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let table = eight_manifest_v3_table(&catalog).await;
+    let write_schema = Arc::new(
+        iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+            .expect("write schema"),
+    );
+    let scratch = scratch_schema(&write_schema);
+    let snapshot_id = table
+        .metadata()
+        .current_snapshot()
+        .map(|snapshot| snapshot.snapshot_id());
+    let sink = new_partition_sink();
+    let stream = TargetScanStream::new(
+        table.clone(),
+        snapshot_id,
+        Arc::clone(&scratch),
+        &write_schema,
+        None,
+        Some(1),
+        None,
+    )
+    .with_partition_sink(Arc::clone(&sink));
+    let counter = Arc::new(AtomicUsize::new(0));
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = Some(Arc::clone(&counter));
+    });
+    let task_ctx = Arc::new(TaskContext::default());
+    let mut first = stream.execute(Arc::clone(&task_ctx));
+    let mut second = stream.execute(Arc::clone(&task_ctx));
+    let mut third = stream.execute(Arc::clone(&task_ctx));
+    let (first_rows, second_rows, third_rows) = tokio::join!(
+        drain_scan_rows(&mut first),
+        drain_scan_rows(&mut second),
+        drain_scan_rows(&mut third),
+    );
+    super::super::target_scan::PLAN_FILES_INVOCATIONS.with(|slot| {
+        *slot.borrow_mut() = None;
+    });
+    assert_eq!(first_rows, 8);
+    assert_eq!(second_rows, 8);
+    assert_eq!(third_rows, 8);
+    let calls = counter.load(Ordering::SeqCst);
+    assert_eq!(
+        calls, 1,
+        "three concurrent StreamingTable executes must plan once, not {calls}"
+    );
+    assert_eq!(
+        drain_partition_sink(&sink),
+        manifest_partitions(&table).await
+    );
 }
