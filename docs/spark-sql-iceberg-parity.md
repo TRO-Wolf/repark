@@ -3848,6 +3848,85 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
   existing name the way Spark does.
 
+### EX-DF-7 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+
+- **repark** — both spellings raise
+  `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
+  on this engine yet; use intersect() for distinct bags (octo C1-L-005)`.
+- **Apache Spark** — `[(1,), (1,), (2,)].intersectAll([(1,), (1,), (3,)])` answers `[(1,), (1,)]`:
+  the multiset intersect keeps each row at the minimum of the two sides' multiplicities.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_intersect_all_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
+  the example backlog until the multiset intersect is Spark-correct; the distinct-bag
+  `intersect` is covered and Spark-equal.
+
+### EX-DF-8 — `groupingSets` takes one column each in repark; Spark takes a list of sets
+
+- **repark** — `groupingSets(*cols)` lowers to `GROUPING SETS ((c1), (c2), ())`: on
+  `[("a", 1), ("a", 2), ("b", 3)]` over `g`/`k`, `.groupingSets("g", "k").count()` answers
+  columns `['g', 'k', 'count']` with rows `('a', None, 2)`, `('b', None, 1)`, `(None, 1, 1)`,
+  `(None, 2, 1)`, `(None, 3, 1)`, `(None, None, 3)`. Spark's documented call shape —
+  `groupingSets([("g", "k"), ("g",), ()], "g", "k")` — raises
+  `AttributeError: 'list' object has no attribute 'sql_expr_part'`: the repark signature cannot
+  express it.
+- **Apache Spark** — `DataFrame.groupingSets(groupingSets, *cols)` (4.0+) takes the grouping
+  sets as a sequence of sequences, plus the output columns. The documented shape on the same
+  frame answers columns `['g', 'k', 'count']` with rows `('a', 1, 1)`, `('a', 2, 1)`,
+  `('a', None, 2)`, `('b', 3, 1)`, `('b', None, 1)`, `(None, None, 3)`; repark's own shape
+  `groupingSets("g", "k")` on the same input answers `['k', 'count']` with rows
+  `[(None, 1), (None, 2)]` — a different aggregation with different output columns.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 DataFrame-b batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_grouping_sets_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. The signatures disagree
+  on the first parameter and the measured answers differ either way, so no input answers
+  Spark-equal on both; both spellings stay on the example backlog until repark implements
+  Spark's multi-set signature.
+
+### EX-DF-9 — `mergeInto`'s bare-key sugar and `target.`/`source.` qualifiers; Spark wants the target's short name or alias as the qualifier
+
+- **repark** — the bare string key is sugar for the shared column: on the local Iceberg target
+  `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]` over `id`/`name`,
+  `source.mergeInto("people", "id").whenMatched().updateAll().whenNotMatched().insertAll().merge()`
+  answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. A Column condition must spell the sides
+  `target.` / `source.`: `F.col("target.id") == F.col("source.id")` answers the same rows, while
+  the SQL-string spellings raise — `F.expr("target.id = source.id")` and a table-name-qualified
+  condition both raise `AnalysisException: Schema error: No field named …`, and update/insert
+  values must spell `col("source.<name>")`.
+- **Apache Spark** — the equivalent program answers the same rows on the same locally created
+  Iceberg target, with the target's short name and the source alias as the qualifiers:
+  `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id")).whenMatched().updateAll()
+  .whenNotMatched().insertAll().merge()` answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. The bare key
+  raises `AnalysisException: [AMBIGUOUS_REFERENCE]` (`local.ns.t2.id` vs `s.id`), and the
+  `target.`/`source.` qualifiers raise `UNRESOLVED_COLUMN.WITH_SUGGESTION` — as a parsed expr or
+  as Column objects. With the target's short name as the qualifier both forms merge on Spark
+  (`F.expr("t.id = s.id")` and `F.col("t.id") == F.col("s.id")` each answer the three rows).
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, ANSI on, 2026-09-04,
+  EX-16 round 3; local Hadoop catalog, COW `format-version` 2 target — the round-1
+  "refuses every locally reachable shape" reading was an artefact of probing the default
+  `spark_catalog` parquet target.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement, rewritten after the
+  round-3 re-measure on the pinned Iceberg oracle. The example covers the row-set program, where
+  the engines answer the same rows; this row records the bare-key sugar and the qualifier names
+  until repark's condition spellings match Spark's.
+
+### EX-DF-10 — `printSchema`'s stdout ends one newline short of Spark's capture
+
+- **repark** — `printSchema()` prints the tree with one trailing newline: the captured stdout is
+  the four tree lines joined by `\n` plus one final `\n`, and its `splitlines()` holds the four
+  tree lines and nothing more.
+- **Apache Spark** — `printSchema()` adds a second newline to `treeString`'s own trailing one:
+  the captured stdout ends `\n\n`, and its `splitlines()` holds the four tree lines plus a
+  trailing `''` (five elements). The line content is equal; only the stdout tail differs.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-16 round 3; capture via `redirect_stdout`
+  on both engines over the same `g`/`k`/`v` fixture.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_print_schema_stdout_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 round-3 promotion of the round-1
+  review-gap entry. `printSchema` / `print_schema` stay covered by the tree-line arm, where the
+  line content agrees; this row records the stdout tail until repark prints Spark's second
+  newline.
+
 ### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
 
 - **repark** — `df.select(F.col("v").cast("double"))` names the output column

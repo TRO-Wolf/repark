@@ -61,10 +61,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
+- [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) —
+  **EX-16 (2026-09-04), in flight:** the v1.1 example backfill's second `DataFrame.*` batch —
+  36 roster names at base `f3968aa`; 32 covered by eight `docs/examples/dataframe/` files
+  (backlog 550 → 518); `intersectAll`/`intersect_all` and `groupingSets`/`grouping_sets` stay
+  with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto`/`printSchema` arms are recorded as
+  §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/test_examples_dataframe_b.py`.
+  `risk_tier: standard`. Branch `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) —
   **EX-17 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
   40 roster names at base `e3600a1`; 34 covered by ten `docs/examples/column/` files
-  (backlog 550 → 516), 6 engine-plumbing rows stay (no PySpark analog), the two
+  (backlog 550 → 516 at base; 484 after the EX-16 merge), 6 engine-plumbing rows stay (no PySpark analog), the two
   measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
   `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
   `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
