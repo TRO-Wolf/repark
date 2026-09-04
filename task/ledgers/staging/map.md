@@ -101,3 +101,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the merge commit `68e408d`. `risk_tier: standard`. Branch
   `fix/df-printschema-1-trailing-newline`.
   pins: df-printschema-1-trailing-newline/C-004
+- [ex-19-dataframe-d-window-ledger.md](ex-19-dataframe-d-window-ledger.md) —
+  **EX-19 (2026-09-04, r3), in flight:** the v1.1 example backfill's fourth `DataFrame.*` batch —
+  the 39-name DataFrame remainder plus GroupedData, Row, na, and stat surfaces at base `7496049`;
+  38 covered by ten `docs/examples/dataframe/` files (backlog 449 → 411 shipped after the EX-18
+  merge; 518 → 480 at the dispatch base), `stat.freqItems` stays
+  with §7 `EX-DF-19`, the `withColumnsRenamed` duplicate-name arm is §7 `EX-DF-18`, the struct
+  `Row` field arm is §7 `EX-ROW-1`, pins in
+  `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
+  `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
