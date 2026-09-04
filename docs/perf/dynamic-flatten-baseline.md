@@ -154,7 +154,7 @@ co-collect is `test_live_dynflatten_matches_spark_explode`, now symmetric (**bot
 
 ## Do not (binding)
 
-1. Do not open an implementation unit for `optimizer_wrapper_walks`. Measured at 0.85 ms and
+1. Do not open an implementation unit for `optimizer_wrapper_walks`. Measured at 0.45 ms on its strongest single fixture (0.04× the floor) and
    flat at 1e6.
 2. Do not substitute DataFusion multi-column Unnest zip/pad for sequential Cartesian
    expansion. It changes the row set.
@@ -171,7 +171,7 @@ co-collect is `test_live_dynflatten_matches_spark_explode`, now symmetric (**bot
 
 The host ran 3–4 sibling lanes throughout (load average 25–45, other JVMs and cargo builds
 live). The floor is measured and reported rather than assumed away; the one queued candidate
-clears it by 7.7× and survives the contention. Anything within one order of the floor — the
+clears it by 5.5× on `struct_d6` alone and survives the contention. Anything within one order of the floor — the
 Cartesian candidate especially — needs a quiet host before it is called either way.
 
 ## How to reproduce

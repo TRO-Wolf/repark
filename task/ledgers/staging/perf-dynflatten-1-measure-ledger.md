@@ -1,7 +1,7 @@
 # Charter ledger — PERF-DYNFLATTEN-1 · measure `dynamicFlatten`
 
 **Date:** 2026-09-04 · **Branch:** `perf/dynflatten-1-measure` · **Base:** `origin/main`
-`467ce26` · **Model:** grok-4.6 (round 1); opus-5 (rounds 2-4) · **Policy:**
+`467ce26` · **Model:** grok-4.6 (round 1); opus-5 (rounds 2-5) · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Registry:** H-3 intake (no named row until a candidate ships).
 
@@ -137,7 +137,7 @@ Filed, not fixed: `DYNFLATTEN-QUALNAME-1`, `DYNFLATTEN-LISTNULL-1`, `DYNFLATTEN-
 | Round 5 — per-fixture costs | The 82.99 ms headline was `struct_d3` + `struct_d6` summed against a single-cell floor — the same aggregation error as a share of family wall, one level down. Costs are now reported per fixture and the verdict is stated on the strongest SINGLE fixture: null-mask clears 3x on `struct_d6` alone (59.98 ms, 5.5x); `struct_d3` (23.01 ms, 2.1x) would not have carried it. Pinned by `test_rank_candidates_never_sums_two_fixtures_into_one_cost`. |
 | Round 5 — JVM transfer | The remaining asymmetry is NOT removed, by choice: Spark's `toArrow()` moves the whole result across the JVM→Python boundary, repark's `to_arrow()` is in-process. The alternative (time an in-JVM `.count()` after flatten on both sides) was rejected because a count over a flatten is exactly the shape DataFusion and Spark can satisfy without materializing the expansion, which would measure nothing. It is disclosed as do-not #4 and the "lower on every fixture" sentence is qualified in the note. No re-measurement was needed. |
 | Round 5 — naming | `CandidateShare` → `CandidateCost`; the unreported `wall_share` field is deleted. |
-| Round 4 — host | The box ran 3-4 sibling lanes throughout (load 25-45). Stated in the note rather than hidden; the one queued candidate clears the floor by 7.7x and survives it. |
+| Round 4 — host | The box ran 3-4 sibling lanes throughout (load 25-45). Stated in the note rather than hidden; the one queued candidate clears the floor by 5.5x on `struct_d6` alone and survives it. |
 | Round 4 — live pin | `test_live_dynflatten_matches_spark_explode` now hands BOTH engines `read.parquet` of the same file. Feasible for all three pinned shapes despite the `ARRAY<VOID>` column. Making it symmetric SURFACED a new divergence the asymmetric pin had hidden: `DYNFLATTEN-READNULL-1`. |
 | Pre-existing, NOT fixed | `read.parquet(...).schema` misreports nested columns as `StringType`: measured `Payload` STRUCT and `Legs`/`Tags` ARRAY all report `StringType` while `user_properties` reports `ArrayType`. Flatten itself is correct. Out of scope for a measurement unit; no registry row filed because the pin would be a facade-schema contract, not a flatten contract. |
 | Size gate | No ceiling moved. Size rows in this repo ratchet DOWN only, so the `DYNFLATTEN-QUALNAME-1` pin went into a new `python/repark/tests/test_dynamic_flatten_divergences.py` at the split seam `check_lib_py.py` already names for that file. `test_dynamic_flatten.py` ends at 1618, its unchanged ceiling; `scripts/check_lib_py.py` is byte-identical to `origin/main`. |

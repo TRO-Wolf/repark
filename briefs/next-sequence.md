@@ -21,11 +21,10 @@ Restated for a mixed queue:
 4. **Gate alone.** `make preflight` runs by itself and its own exit code is read immediately.
 5. **`map.md` in lockstep, in the same commit.** Not a follow-up.
 6. **One group at a time**, manual PR, owner merges.
-7. **Pickup ritual first, departure edit last.** See
-   [../.agents/skills/compact-context-docs/SKILL.md](../.agents/skills/compact-context-docs/SKILL.md):
-   fetch, confirm the prior PR merged, `make ledger-archive`, drift checks, compact against the
-   merged delta only. Last commit: STATUS trued up for this unit alone, the ledger `move`d to
-   `completed/` (which removes it from this file), `map.md` in lockstep. No departure line for the unit, here or anywhere.
+7. **Pickup ritual first, departure edit last.** Per
+   [../.agents/skills/compact-context-docs/SKILL.md](../.agents/skills/compact-context-docs/SKILL.md).
+   Last commit: STATUS trued up for this unit alone, the ledger `move`d to `completed/` (which
+   removes it from this file), `map.md` in lockstep. No departure line for the unit, here or anywhere.
 
 ---
 
