@@ -68,3 +68,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   with §7 rows `EX-DF-7`/`EX-DF-8`, and the narrow `mergeInto`/`printSchema` arms are recorded as
   §7 rows `EX-DF-9`/`EX-DF-10`, pins in `python/repark/tests/test_examples_dataframe_b.py`.
   `risk_tier: standard`. Branch `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001
+- [ex-19-dataframe-d-window-ledger.md](ex-19-dataframe-d-window-ledger.md) —
+  **EX-19 (2026-09-04), in flight:** the v1.1 example backfill's fourth `DataFrame.*` batch —
+  the 39-name DataFrame remainder plus GroupedData, Row, na, and stat surfaces at base `7496049`;
+  38 covered by ten `docs/examples/dataframe/` files (backlog 518 → 480), `stat.freqItems` stays
+  with §7 `EX-DF-19`, the `withColumnsRenamed` duplicate-name arm is §7 `EX-DF-18`, the struct
+  `Row` field arm is §7 `EX-ROW-1`, pins in
+  `python/repark/tests/test_examples_dataframe_d.py`. `risk_tier: standard`. Branch
+  `docs/ex-19-dataframe-d-window`. pins: ex-19-dataframe-d-window/C-001
