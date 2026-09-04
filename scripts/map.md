@@ -1,5 +1,13 @@
 # map — scripts/
 
+EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 —
+35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`
+(`repartition.py`, `rollup_stat.py`, `replace_sample.py`, `same_semantics.py`,
+`schema_select.py`, `show_sort.py`, `storage_level.py`, `subtract_summary.py`, `take_tail.py`,
+`export_arrow.py`, `export_local.py`); `toJSON` refuses (R-DF-BATCH2) and stays a backlog row,
+registry §7 `EX-DF-10`…`EX-DF-16`, pins in `python/repark/tests/test_examples_dataframe_c.py`.
+pins: ex-18-dataframe-c/C-001
+
 EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
 28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
 (`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,

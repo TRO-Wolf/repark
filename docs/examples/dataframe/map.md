@@ -24,16 +24,42 @@ construct the session as `repark = ReparkSession.builder…`; see
   `coalesce`, and `explain` (plan print asserted non-empty, never text-pinned).
 - [describe_ingest.py](describe_ingest.py) — repark extension `describe_ingest`:
   smartCsv ingest decisions, and the empty report on a non-ingest frame. No Spark analog.
+- [repartition.py](repartition.py) — `repartition`, `repartitionByRange`, and
+  `repartitionById`: every partitioning call keeps the row multiset and count.
+- [rollup_stat.py](rollup_stat.py) — `rollup` grouping sets with the grand total, and the
+  `stat` accessor's `crosstab` cells.
+- [replace_sample.py](replace_sample.py) — `replace` (scalar and dict, subset-scoped),
+  `sample` (fraction 1.0), and `sampleBy` (the 1.0 and 0.0 strata arms).
+- [same_semantics.py](same_semantics.py) — `sameSemantics` / `same_semantics`: one object
+  True, distinct plans False.
+- [schema_select.py](schema_select.py) — `schema` (`simpleString`, `jsonValue`), and
+  `selectExpr` / `select_expr` SQL projections.
+- [show_sort.py](show_sort.py) — `show` (cells and row counts, never the rendering), and
+  `sort` plus `sortWithinPartitions` / `sort_within_partitions` (ascending, descending,
+  single-partition).
+- [storage_level.py](storage_level.py) — `storageLevel` / `storage_level`: NONE,
+  MEMORY_AND_DISK_DESER under `cache`, NONE again after `unpersist`.
+- [subtract_summary.py](subtract_summary.py) — `subtract` (int and string arms), and
+  `summary("count")` (single-stat arm).
+- [take_tail.py](take_tail.py) — `take` and `tail` from both ends of one ordered frame.
+- [export_arrow.py](export_arrow.py) — `toArrow` / `to_arrow`, the repark extension
+  `toArrowBatches` / `to_arrow_batches` (no PySpark analog), and `toDF` / `to_df`.
+- [export_local.py](export_local.py) — `toLocalIterator` / `to_local_iterator`,
+  `toPandas` / `to_pandas`, and the repark extensions `to_numpy` and `to_polars`
+  (no PySpark analog).
 
-Divergent names stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5, EX-DF-6) and
-pins in `python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
-the three global-temp-view spellings, `exceptAll` / `except_all`, the
-`describe` row order, the `corr` / `cov` NULL-pair arm, and the `createTempView` /
-`create_temp_view` replace-on-existing arm (the examples keep the arms where the
-engines agree).
+Divergent names and arms stay on the backlog with §7 registry rows
+([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-16](../../spark-sql-iceberg-parity.md)).
+EX-18's rows and pins live in `python/repark/tests/test_examples_dataframe_c.py`:
+the `sameSemantics` alias arm (EX-DF-10), `replace` outside the subset arms (EX-DF-11),
+`sample` below fraction 1.0 (EX-DF-12), seeded `sampleBy` fractions (EX-DF-13),
+`summary` multi-stat order, string-column raise, and bare refusal (EX-DF-14), the `show`
+rendering and missing truncation trailer (EX-DF-15), and the `toJSON` refusal (EX-DF-16 —
+the one whole name that stays on the backlog). The examples keep the arms where the
+engines agree.
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_c.py](../../../python/repark/tests/test_examples_dataframe_c.py)

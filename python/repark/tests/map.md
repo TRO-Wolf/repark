@@ -81,6 +81,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
+- [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
+  the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
+  alias arm answers handle identity where Spark answers plan equality (EX-DF-10),
+  `replace` without subset casts or raises where Spark replaces typed cells (EX-DF-11),
+  `sample`'s plan-baked stable sub-1.0-fraction set (EX-DF-12), `sampleBy`'s seeded
+  0.5/0.5 fractions keeping three rows where Spark keeps two (EX-DF-13), `summary`'s
+  unordered multi-stat rows, string-column raise, and bare-call refusal with the
+  count row pinned (EX-DF-14), `show`'s rendering without Spark's truncation
+  trailer (EX-DF-15), and the `toJSON` refusal (EX-DF-16).
+  pins: ex-18-dataframe-c/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
