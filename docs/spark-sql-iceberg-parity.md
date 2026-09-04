@@ -3715,14 +3715,27 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
-- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
-  `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
-  stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
-  scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
-  MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
-  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
-  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
-  so a third `plan_files` goes red.
+- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
+  **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
+  `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
+  `seed_done` → puffin write → `delete_done`: scan-to-puffin **1 × N** data-manifest
+  opens, close **0**, commit **1 × N** plus one new delete-manifest write. Same 1+0+1
+  at both SHAs. Scan call site (1 × N): `TargetScanStream::execute` (once) →
+  `planned_or_plan` → iceberg `TableScan::plan_files` → `ObjectCache::get_manifest` →
+  `ManifestFile::load_manifest` → one `FileIO::read` / one `openat` per data manifest.
+  `plan_files` prune-vs-tasks share that cache (0 extra opens).
+  `record_scanned_partitions` and the partition-sink drain walk in-memory `FileScanTask`s
+  (0). DataFusion opens N parquet data files, not data manifests. Close 0 is fork F-23.
+  Commit 1 × N is `validate_fresh_dvs_only` (`row_delta_fresh_dv.rs:56`,
+  `PERF-DVCLOSE-STMT-1` / F-25) on a separate FileIO. The production identity DELETE /
+  matched-delete MERGE call `execute` once, so the plan-once cache cannot drop 3 × N to
+  1 × N on that path — the RP-9 3 × N scan-phase claim is not reproduced. The cache stays
+  as concurrent-`execute` hardening
+  (`three_concurrent_target_scan_executes_plan_data_manifests_once`, mutation 1 red of 1).
+  Production-path `plan_files==1` pins were deleted (a pin that cannot go red proves
+  nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
+  are the record. Remaining commit 1 × N stays
+  `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
