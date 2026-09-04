@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-23-ta-a-ledger.md](ex-23-ta-a-ledger.md) —
+  **EX-23 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (a) batch — the
+  first 40 `ta.*` backlog names at the dispatch base `671a7144` (shipped on `bfef4a62`); all 40 covered by eight
+  `docs/examples/ta/` files (backlog 298 → 258 shipped; 340 → 300 at dispatch) measured against the recorded C TA-Lib 0.4.0
+  goldens on the 5000-row OHLCV fixture (Spark has no TA kernels — the goldens are the family's
+  oracle, the same `.bin` files `test_ta.py`/`test_ta_volume.py` pin bit-identically); all 40
+  bit-identical, zero divergences, no §7 row, no new pin file. Round 2 (critic): the examples'
+  durable control is now full-array bit-exact (`expect_bit_exact` over all 5000 rows — the
+  tail-only 1e-9 control was blind to the NaN prefix), the 24 helper docstrings are stripped to
+  house form, and the red-first re-run (four mutations) all exit 1. `risk_tier: standard`. Branch
+  `docs/ex-23-ta-a`. pins: ex-23-ta-a/C-001, C-002, C-003, C-004
 - [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
   **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
   `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen

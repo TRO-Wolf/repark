@@ -1,5 +1,12 @@
 # map — scripts/
 
+EX-23 ta-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 298 → 258 shipped (340 → 300 at the dispatch base `671a7144`) — the first
+40 `ta.*` roster names covered by eight new examples under `docs/examples/ta/`, measured
+against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (Spark has no TA
+kernels; the goldens are the family's oracle, the same `.bin` files `test_ta.py` /
+`test_ta_volume.py` pin bit-identically). All 40 measured bit-identical to their goldens, so
+none stayed on the backlog and no §7 row was filed; no pin file was created.
+pins: ex-23-ta-a/C-001, C-002, C-003, C-004
 EX-21 catalog-session (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 340
 shipped (411 → 377 at the dispatch base, before the EX-20 merge) — 34 roster names (9
 `Catalog.*`, all 25 `SparkSession`) covered by sixteen new examples under
