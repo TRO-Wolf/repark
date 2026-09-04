@@ -17,6 +17,7 @@ mod runtime;
 mod session;
 mod session_time_zone;
 mod sorted_view;
+mod spark_nullable;
 mod temp_view;
 mod time_travel;
 
@@ -64,6 +65,7 @@ pub use sorted_view::{
     refuse_iceberg_create_of_tightened_schema, schema_is_tighten_derived,
     strip_tighten_export_metadata, tightened_field_names,
 };
+pub use spark_nullable::relax_schema_to_nullable;
 
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6).
 pub use datafusion::prelude::DataFrame;

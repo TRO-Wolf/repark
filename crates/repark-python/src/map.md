@@ -19,6 +19,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
 |---|---|
 | [`lib.rs`](lib.rs) | Module registration, error conversion, and tracing setup. |
 | [`allocator.rs`](allocator.rs) | Optional mimalloc allocator for wheel builds. |
+| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). |
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.

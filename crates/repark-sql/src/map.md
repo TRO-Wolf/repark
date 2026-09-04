@@ -109,7 +109,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   cannot persist a required column. Both paths use the shared belt: `router.rs::delegate` is
   `PreExecute::plan` → SEC-02 → `PreExecute::guard` → `PreExecute::execute`; CTAS derivation
   plans and guards before target creation or publication, then returns the lazy SELECT frame.
-  Later execution performs the SELECT. Tests:
+  Later execution performs the SELECT. **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS derives Iceberg
+  requiredness from the relaxed query schema (optional throughout on parquet reads), so the
+  R-D refusal above sees the Spark-equal derivation. Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
   (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in),

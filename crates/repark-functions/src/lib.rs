@@ -10,6 +10,7 @@ pub mod ansi;
 pub mod cardinality;
 pub mod collection;
 pub mod datetime;
+pub mod decimal_cast;
 pub mod decimal_precision;
 pub mod decimal_spark;
 pub mod declared_refuse;

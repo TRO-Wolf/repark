@@ -161,6 +161,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
   from `lib.rs` (`analyzer_rules` + `register_all`). Ledger: `task/r2-dec-close-ledger.md`.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the rule also carries Spark's decimal-cast
+  nullability — `CAST(x AS DECIMAL)` with a non-null child wraps the child in the
+  `__repark_decimal_cast_nullable__` identity UDF, whose `return_field_from_args`
+  declares nullable. The UDF survives the optimizer (physical and analyzed schemas
+  agree), the wrap is idempotent (a wrapped child reads nullable, so re-analysis
+  skips it), and inner decimal arithmetic still rewrites on the way down. The branch
+  sits after the U4a CAST-after stop, so `CAST(arith AS DECIMAL)` keeps its wrap and
+  DEC-9 stays BACKLOG; INT/STRING targets are untouched. A `coalesce(x, NULL)` wrap
+  was measured and rejected: it stays non-null when `x` is non-null.
+  pins: cutover-schema-1/C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.
