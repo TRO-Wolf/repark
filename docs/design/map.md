@@ -12,10 +12,14 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 - [sql-harden-cutover-matrix.md](sql-harden-cutover-matrix.md) — **SQL-HARDEN-1 (2026-09-04):**
   the cutover pipeline cutover shapes S1–S7 measured on memory Spark vs repark — 9 programs, 0 EQUAL,
-  9 DIVERGES, four registry rows filed, `V3-COV-7` cited. Harness:
+  9 DIVERGES, four registry rows filed, `V3-COV-7` cited. **SQL-HARDEN-2 (2026-09-04):** S8/S9
+  v2/v3 copy-on-write of S1/S2/S4 (6 programs; 15 total, 0 EQUAL, 15 DIVERGES). CoW MERGE
+  `delete_files` empty and data-file count 1 on both engines; remaining DIVERGES are
+  `CUTOVER-CTAS-REQ-1` / `V3-COV-7`. Harness:
   `python/repark/tests/test_sql_harden_cutover.py`. Critic round 2: S6 names follow the
   passed namespace; DATE-FN-1 incidental pins. CI round 3: MERGE delete-file count is
   host-dependent; golden pins kinds. pins: sql-harden-1-cutover-shapes/C-004
+  pins: sql-harden-2-cow-shapes/C-004
 - [v3-statement-coverage.md](v3-statement-coverage.md) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix that discharges the north star's §2 pillar 4 — 81 statement programs
   over 12 statement classes and all seven `CALL system.*` procedures, 267 comparison cells,

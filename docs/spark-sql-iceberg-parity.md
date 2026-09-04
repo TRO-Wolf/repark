@@ -2319,16 +2319,19 @@ the pin rather than obeying it.
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
-  write.*.mode = merge-on-read, write.target-file-size-bytes = 268435456) AS SELECT * FROM
-  staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4) / INT /
-  nullable STRING copies the parquet nullability into Iceberg: `id` / `ingestion_timestamp` /
-  `part` required, `amount` / `units` / `note` optional. The Arrow read-back matches
-  (`id`/`part` non-null). Row values match Spark.
+  write.*.mode = merge-on-read or copy-on-write, write.target-file-size-bytes = 268435456) AS
+  SELECT * FROM staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4)
+  / INT / nullable STRING copies the parquet nullability into Iceberg: `id` /
+  `ingestion_timestamp` / `part` required, `amount` / `units` / `note` optional. The Arrow
+  read-back matches (`id`/`part` non-null). Row values match Spark. Copy-on-write MERGE
+  (S8/S9) keeps the same requiredness after `UPDATE SET *` / `INSERT *`; `delete_files` is
+  empty on both engines (not this row).
 - **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
   every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
   `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
-  and `…[s7-ctas-if-fresh]`; live
+  and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
+  `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
 - **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
   on requiredness only: types here match the parquet schema. Create-path policy, not a local
