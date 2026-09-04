@@ -48,9 +48,9 @@ Registry cells matched; no HALT.
 
 | Item | Note |
 |---|---|
-| `EX-DF-10` registry row | Not on main (only on `origin/docs/ex-16-dataframe-b`); flip to FIXED 2026-09-04 (DF-PRINTSCHEMA-1) at PR #353 merge time |
-| `test_examples_dataframe_b.py::test_print_schema_stdout_divergence` | Pins the old single-newline stdout on the unmerged branch; must flip to the double-newline text when that PR rebases past this fix |
-| `docs/examples/dataframe/print_schema.py` | Not on main; its `rstrip` arm holds on both engines per the brief, no move owed |
+| `EX-DF-10` registry row | Landed on `main` with EX-16 (`7496049`); flipped to FIXED 2026-09-04 (DF-PRINTSCHEMA-1) in the merge commit `68e408d` |
+| `test_examples_dataframe_b.py::test_print_schema_stdout_matches_spark` | The EX-16 pin, flipped in `68e408d` to assert the double-newline text |
+| `docs/examples/dataframe/print_schema.py` | On `main`; its `rstrip` arm holds on both engines, no move owed |
 
 ## 9. Delivery
 
@@ -104,6 +104,6 @@ COVERAGE_ATTESTATION:
       justification: No new log or metric surface.
     - id: AT-10
       status: ATTACKED
-      evidence: Pins cited in tests and maps; EX-DF-10 flip owed on the unmerged branch.
+      evidence: Pins cited in tests and maps; EX-DF-10 flipped to FIXED in `68e408d`.
       artifacts: [task/ledgers/staging/df-printschema-1-trailing-newline-ledger.md, python/repark/tests/map.md]
 ```
