@@ -88,6 +88,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-2-string-rows/C-003
   **FN-FIX-2-CTRL-1 (2026-09-04):** empty trim set is a no-op; NULL trim set is NULL.
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
+- [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
+  the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
+  refusal with Spark's multiset answer recorded (EX-DF-7), `groupingSets`'s one-set-per-column
+  answer plus the refused Spark documented shape (EX-DF-8), `mergeInto`'s bare-key sugar and
+  `target.`/`source.` qualifier arms that answer Spark's merged rows (EX-DF-9), and
+  `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10). The module
+  docstring names the row span `EX-DF-7`…`EX-DF-10`.
+  pins: ex-16-dataframe-b/C-001
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
