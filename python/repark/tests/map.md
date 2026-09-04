@@ -2631,7 +2631,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   inside MERGE and the runner; `create_namespace` has no `location` keyword; denial
   path is `pytest.fail(format_denial_failure(...))` (pins: mw-10-s3tables-mor/C-001,
   C-002, C-003, C-004).
-- `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
+- `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level** **S6 leak guard (2026-09-04):** the "not leaked into `cut`" half reads the leak namespace through `_leaked_table_is_reachable`, which treats the CI role's Glue `AccessDenied` on `database/cut` as the stronger proof (the role cannot reach that database at all, so nothing could have been created there); run 33916856419 failed on the raw `tableExists` call.
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
   the source publish job: a Glue-`catalog-impl` session via `.config(...)`, bronze `s3a://` read
