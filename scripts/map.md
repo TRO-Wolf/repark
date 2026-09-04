@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-24 ta-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 258 → 213 — the remaining 45
+`ta.*` roster names covered by twelve new examples under `docs/examples/ta/`, measured against the
+recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (the family's oracle; the same `.bin`
+files `test_ta.py` / `test_ta_volume.py` pin bit-identically). All 45 measured bit-identical to
+their goldens (the composition helpers through the fused `over_columns` / `with_indicators`
+examples whose every produced column is asserted bit-exact), so none stayed on the backlog, no §7
+row was filed, and no pin file was created. Red-first: 45 has-no-example findings with the files
+held out (exit 1), and the bit-exact control named the kernel, row and both values on a bulk
+overwrite (exit 1).
+pins: ex-24-ta-b/C-001, C-002, C-003, C-004
 EX-23 ta-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 298 → 258 shipped (340 → 300 at the dispatch base `671a7144`) — the first
 40 `ta.*` roster names covered by eight new examples under `docs/examples/ta/`, measured
 against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (Spark has no TA
