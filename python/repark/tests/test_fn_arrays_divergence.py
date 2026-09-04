@@ -1,8 +1,4 @@
-"""Pins Spark-equal array answers closed by FN-FIX-1 (registry §7).
-
-pins: ex-8-functions-arrays/C-001
-pins: fn-fix-1-registry-rows/C-003
-"""
+"""Pins the Spark-equal array answers FN-FIX-1 closed for the four EX-8 rows (registry §7)."""
 
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
