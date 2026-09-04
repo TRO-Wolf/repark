@@ -17,12 +17,15 @@ from _sql_harden_cutover_programs import (
     _CATALOG,
     _NAMESPACE,
     _PROGRAMS,
+    _WRITE_COPY_ON_WRITE,
+    _WRITE_MERGE_ON_READ,
     _Program,
-    mor_properties,
+    table_properties,
     write_bronze_parquet,
 )
 from _sql_harden_cutover_run import (
     as_golden,
+    data_file_count,
     delete_file_count,
     delete_file_kinds,
     make_names,
@@ -32,7 +35,15 @@ from _sql_harden_cutover_run import (
 )
 from test_v3_live_oracle import _ALLOW_CREATE_V3_KEY, _LIVE, _LIVE_SKIP, _v37_iceberg_runtime_jar
 
-_MERGE_PROGRAMS = tuple(program for program in _PROGRAMS if program.runner == "merge")
+_MERGE_PROGRAMS = tuple(
+    program
+    for program in _PROGRAMS
+    if program.runner == "merge" and program.write_mode == _WRITE_MERGE_ON_READ
+)
+_COW_PROGRAMS = tuple(
+    program for program in _PROGRAMS if program.write_mode == _WRITE_COPY_ON_WRITE
+)
+_COW_MERGE_PROGRAMS = tuple(program for program in _COW_PROGRAMS if program.runner == "merge")
 _SPARK_DELETE_FILE_FLOOR = 2
 _WRITE_CONCURRENCY_KEY = "repark.write.max-concurrent-files"
 
@@ -218,7 +229,7 @@ def test_rendered_sql_uses_only_the_passed_namespace() -> None:
     token = f".{_NAMESPACE}."
     passed = f".{namespace}."
     for program in _PROGRAMS:
-        blob = "\n".join(program_sql_texts(program, names, mor_properties(program.format_version)))
+        blob = "\n".join(program_sql_texts(program, names, table_properties(program)))
         assert token not in blob, (program.name, blob[:200])
         if program.runner != "dedup":
             assert passed in blob, program.name
@@ -238,16 +249,16 @@ def test_to_date_and_cast_as_date_answer_on_repark() -> None:
     assert str(casted.to_pylist()[0]["d"]) == "2026-01-01"
 
 
-def test_date_and_unix_timestamp_functions_refuse_on_repark() -> None:
-    """CUTOVER-DATE-1: date(ts) and unix_timestamp(ts) both refuse as missing functions."""
+def test_date_and_unix_timestamp_functions_answer_on_repark() -> None:
+    """CUTOVER-DATE-1 FIXED by DATE-FN-1: date(ts) and unix_timestamp(ts) both answer."""
     from repark import ReparkSession
 
-    spark = ReparkSession.builder.appName("sqlh1-date-refuse").getOrCreate()
+    spark = ReparkSession.builder.appName("sqlh1-date-answers").getOrCreate()
     try:
-        with pytest.raises(Exception, match="Invalid function 'date'"):
-            spark.sql("SELECT date(TIMESTAMP '2026-01-01 10:15:00')").to_arrow()
-        with pytest.raises(Exception, match="Invalid function 'unix_timestamp'"):
-            spark.sql("SELECT unix_timestamp(TIMESTAMP '2026-01-01 10:15:00')").to_arrow()
+        dated = spark.sql("SELECT date(TIMESTAMP '2026-01-01 10:15:00') AS d").to_arrow()
+        assert str(dated.to_pylist()[0]["d"]) == "2026-01-01"
+        epoch = spark.sql("SELECT unix_timestamp(TIMESTAMP '2026-01-01 10:15:00') AS e").to_arrow()
+        assert epoch.to_pylist()[0]["e"] == 1767262500
     finally:
         spark.stop()
 
@@ -292,3 +303,32 @@ def test_merge_delete_file_count_moves_with_write_concurrency(
     assert capped_count <= default_count
     if default_count > _SPARK_DELETE_FILE_FLOOR:
         assert capped_count < default_count
+
+
+@pytest.mark.parametrize(
+    "program", _COW_MERGE_PROGRAMS, ids=[program.name for program in _COW_MERGE_PROGRAMS]
+)
+def test_cow_merge_writes_no_delete_files(program: _Program, tmp_path: Path) -> None:
+    """A copy-on-write MERGE must leave delete_files empty (a delete file is a defect)."""
+    outcome = repark_outcome(program, tmp_path)
+    assert as_golden(outcome) == REPARK[program.name]
+    assert delete_file_kinds(outcome) == []
+    assert delete_file_count(outcome) == 0
+
+
+@pytest.mark.parametrize(
+    "program", _COW_MERGE_PROGRAMS, ids=[program.name for program in _COW_MERGE_PROGRAMS]
+)
+def test_cow_merge_data_file_count_matches_golden(program: _Program, tmp_path: Path) -> None:
+    """Copy-on-write MERGE pins the data-file count after the second pass."""
+    outcome = repark_outcome(program, tmp_path)
+    assert data_file_count(as_golden(outcome)) == data_file_count(REPARK[program.name])
+
+
+@pytest.mark.parametrize("program", _COW_PROGRAMS, ids=[program.name for program in _COW_PROGRAMS])
+def test_cow_write_properties_are_copy_on_write(program: _Program) -> None:
+    """S8/S9 stamp copy-on-write on delete, update, and merge."""
+    assert program.write_mode == _WRITE_COPY_ON_WRITE
+    props = table_properties(program)
+    assert "copy-on-write" in props
+    assert "merge-on-read" not in props

@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-15 DataFrame-a (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 578 → 550 —
+28 `DataFrame.*` names covered by eight new examples under `docs/examples/dataframe/`
+(`agg_stats.py`, `cube.py`, `views.py`, `cross_join.py`, `dedup_nulls.py`,
+`declare_sorted.py`, `inspect_cache.py`, `describe_ingest.py`); the 8 names the live oracle
+measured divergent stay on the backlog (`colRegex`/`col_regex` opposite-spelling regex,
+the three global-temp-view spellings refused, `exceptAll`/`except_all` refused,
+`describe` row order), registry §7 `EX-DF-1`…`EX-DF-6`, pins in
+`python/repark/tests/test_examples_dataframe_a.py`.
+pins: ex-15-dataframe-a/C-001
+
 EX-4-functions-strings-a (2026-09-03): `check_example_coverage.py` `BACKLOG_BASELINE`
 632 → 605 as merged (844 → 817 at dispatch) — 27 `F.*` string-basics names covered
 by eight examples; seven names stay on the backlog (`F.base64` BL-17, `F.encode` /
@@ -69,6 +79,10 @@ writes `docs/design/v1-0-api-freeze.json`, the frozen-surface register. `--write
 bare invocation checks the tree against the checked-in file. The register is pinned by
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
+
+FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
+1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
+pins: fn-fix-2-string-rows/C-002
 
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;

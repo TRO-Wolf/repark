@@ -15,7 +15,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
@@ -99,12 +99,19 @@ def test_datepart_alias_of_date_part(spark: ReparkSession) -> None:
         frame.select(F.date_part("YEAR", "d")).to_arrow()
 
 
-def test_to_unix_timestamp_aliases_unix_timestamp_loud_gap() -> None:
+def test_to_unix_timestamp_aliases_unix_timestamp(spark: ReparkSession) -> None:
+    """pins: date-fn-1-spark-date-spelling/C-003"""
     assert callable(F.to_unix_timestamp)
-    with pytest.raises(UnsupportedOperationException, match="unix_timestamp"):
-        F.to_unix_timestamp()
-    with pytest.raises(UnsupportedOperationException, match="unix_timestamp"):
-        F.unix_timestamp()
+    table = (
+        spark.range(1)
+        .select(
+            F.unix_timestamp(F.lit("2024-06-15 12:00:00")).alias("u"),
+            F.to_unix_timestamp(F.lit("2024-06-15 12:00:00")).alias("a"),
+        )
+        .to_arrow()
+    )
+    assert table.column("u").to_pylist() == [1718452800]
+    assert table.column("a").to_pylist() == [1718452800]
 
 
 # unix_date / unix_seconds / unix_millis / date_from_unix_date

@@ -18,6 +18,12 @@ VERDICTS: dict[str, str] = {
     "s7-ctas-if-fresh": "DIVERGES",
     "s7-merge-idempotent": "DIVERGES",
     "s7-overwrite-partitions": "DIVERGES",
+    "s8-ctas-cow": "DIVERGES",
+    "s8-merge-idempotent-cow": "DIVERGES",
+    "s8-overwrite-partitions-cow": "DIVERGES",
+    "s9-ctas-cow": "DIVERGES",
+    "s9-merge-idempotent-cow": "DIVERGES",
+    "s9-overwrite-partitions-cow": "DIVERGES",
 }
 
 REGISTRY: dict[str, str] = {
@@ -26,10 +32,16 @@ REGISTRY: dict[str, str] = {
     "s3-dedup-coalesce-cast": "CUTOVER-DEDUP-SCHEMA-1",
     "s4-overwrite-partitions": "V3-COV-7",
     "s5-maintenance-calls": "CUTOVER-CTAS-REQ-1",
-    "s6-gold-incremental": "CUTOVER-DATE-1",
+    "s6-gold-incremental": "V3-COV-7",
     "s7-ctas-if-fresh": "CUTOVER-CTAS-REQ-1",
     "s7-merge-idempotent": "CUTOVER-MERGE-FILES-1",
     "s7-overwrite-partitions": "V3-COV-7",
+    "s8-ctas-cow": "CUTOVER-CTAS-REQ-1",
+    "s8-merge-idempotent-cow": "CUTOVER-CTAS-REQ-1",
+    "s8-overwrite-partitions-cow": "V3-COV-7",
+    "s9-ctas-cow": "CUTOVER-CTAS-REQ-1",
+    "s9-merge-idempotent-cow": "CUTOVER-CTAS-REQ-1",
+    "s9-overwrite-partitions-cow": "V3-COV-7",
 }
 
 __all__ = ["REGISTRY", "REPARK", "SPARK", "VERDICTS"]

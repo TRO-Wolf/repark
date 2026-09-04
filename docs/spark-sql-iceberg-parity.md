@@ -1544,56 +1544,50 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: a month-end source in a short month clamped
   to the target month's last day.
 
-### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX
+### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.elt(F.lit(3), F.lit('a'), F.lit('b'))` and `F.elt(F.lit(0), …)`
-  answer NULL (`[None]` on a one-row frame). In-range `n=1` / `n=2` answer `'a'` /
-  `'b'`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.elt(F.lit(3), F.lit('a'), F.lit('b'))`
+  and `F.elt(F.lit(0), …)` raise `[INVALID_ARRAY_INDEX]` SQLSTATE 22003 under ANSI.
+  NULL `n` answers NULL. In-range `n=1` / `n=2` answer `'a'` / `'b'`. ANSI off
+  answers NULL for out-of-range.
 - **Apache Spark** — the same out-of-range cells raise
   `ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX]` (index 3 or 0 out of
   bounds, the array has 2 elements, SQLSTATE 22003). In-range cells agree.
-  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03, `TZ=UTC`,
-  zulu-17.)*
-- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_answers_null`
-  (and `test_elt_index_zero_answers_null`; codifies repark's current `None` so
-  the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round:
-  the example dropped `F.elt` over this silent NULL-vs-raise. A consumer that
-  treats NULL as "no such element" never sees Spark's error.
+  *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17, ANSI on.)*
+- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_raises_invalid_array_index`
+  (and `test_elt_index_zero_raises_invalid_array_index`).
+- **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
+  out-of-range; Spark raises under ANSI.
 
-### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket
+### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — over `['a1b2 Ünï_9', 'foo', 'aabbaa']`,
-  `F.regexp_count(s, '[[:alpha:]]')` is `[3, 3, 6]` and
-  `F.rlike(s, '[[:alpha:]]')` is `[True, True, True]` (Rust honours the POSIX
-  class).
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** over `['a1b2 Ünï_9', 'foo', 'aabbaa']`,
+  `F.regexp_count(s, '[[:alpha:]]')` is `[1, 0, 4]` and
+  `F.rlike(s, '[[:alpha:]]')` is `[True, False, True]`. `regexp_replace` of the
+  same pattern with `'#'` is `['#1b2 Ünï_9', 'foo', '##bb##']`. Java nested
+  class `[[:alpha:]]` is the union `{':','a','l','p','h'}`.
 - **Apache Spark** — Java parses the POSIX class as a union bracket:
   `regexp_count` is `[1, 0, 4]` and `rlike` is `[True, False, True]` on the same
-  frame. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
-  `TZ=UTC`, zulu-17.)*
+  frame. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_counts_letters`
-  (and `test_rlike_posix_alpha_matches_every_row`; codifies repark's current
-  `[3, 3, 6]` / `[True, True, True]` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
-  A script that counts letters with the POSIX class gets Spark's union-bracket
-  count instead, silently.
+  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
+  (and `test_rlike_posix_alpha_is_java_union`).
+- **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
 
-### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False
+### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.like(F.lit('ab'), F.lit('ab\\'))` (pattern ends in the escape
-  char) answers `False`. The control `F.like(F.lit('a\\b'), F.lit('a\\\\b'))` is
-  `True`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.like(F.lit('ab'), F.lit('ab\\'))`
+  (pattern ends in the escape char) raises `AnalysisException
+  [INVALID_FORMAT.ESC_AT_THE_END]` SQLSTATE 42601. The control
+  `F.like(F.lit('a\\b'), F.lit('a\\\\b'))` is `True`.
 - **Apache Spark** — the same ending-escape cell raises
   `AnalysisException [INVALID_FORMAT.ESC_AT_THE_END]` SQLSTATE 42601 (`The
   escape character is not allowed to end with.`). The control is `True` on both
-  engines. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
-  `TZ=UTC`, zulu-17.)*
+  engines. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_answers_false`
-  (codifies repark's current `False` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
-  A malformed LIKE pattern that Spark refuses is a silent non-match here.
+  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
+- **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
+  non-match.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -2325,16 +2319,19 @@ the pin rather than obeying it.
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
-  write.*.mode = merge-on-read, write.target-file-size-bytes = 268435456) AS SELECT * FROM
-  staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4) / INT /
-  nullable STRING copies the parquet nullability into Iceberg: `id` / `ingestion_timestamp` /
-  `part` required, `amount` / `units` / `note` optional. The Arrow read-back matches
-  (`id`/`part` non-null). Row values match Spark.
+  write.*.mode = merge-on-read or copy-on-write, write.target-file-size-bytes = 268435456) AS
+  SELECT * FROM staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4)
+  / INT / nullable STRING copies the parquet nullability into Iceberg: `id` /
+  `ingestion_timestamp` / `part` required, `amount` / `units` / `note` optional. The Arrow
+  read-back matches (`id`/`part` non-null). Row values match Spark. Copy-on-write MERGE
+  (S8/S9) keeps the same requiredness after `UPDATE SET *` / `INSERT *`; `delete_files` is
+  empty on both engines (not this row).
 - **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
   every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
   `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
-  and `…[s7-ctas-if-fresh]`; live
+  and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
+  `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
 - **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
   on requiredness only: types here match the parquet schema. Create-path policy, not a local
@@ -2381,22 +2378,25 @@ the pin rather than obeying it.
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
-- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
-  | spelling | repark |
-  |---|---|
-  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
-  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
-  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
+- **repark** — **FIXED 2026-09-04 (DATE-FN-1).** Spark SQL `date(expr)` is registered as
+  `CAST(expr AS DATE)` (session-zone timestamp truncation; invalid string `CAST_INVALID_INPUT`
+  under ANSI on, NULL under ANSI off). `unix_timestamp` on TIMESTAMP is epoch seconds; on a
+  string it parses `yyyy-MM-dd HH:mm:ss` in the session zone. The S6 gold join builds `fct`
+  and `agg`; after the second-day insert and `INSERT OVERWRITE` the fact rows are
+  `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and the clinic-day agg is two rows. S6 as a
+  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`)
+  and `COUNT(*)` Arrow nullability. PySpark has no `F.date`.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
-  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
-  `…::test_to_date_and_cast_as_date_answer_on_repark`,
-  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
-- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
-  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
+  `python/repark/tests/test_date_fn_1.py`,
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `python/repark/tests/test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+- **Rationale** — FIXED. The Spark-door spelling was missing; `to_date` / `CAST(ts AS DATE)`
+  already existed. `unix_timestamp` was `R-FN-BATCH1` / `B-TZ-1` and is registered on the
+  SQL door and the facade (zero-arg and one-arg; the format argument stays unsupported).
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
@@ -2527,7 +2527,7 @@ the pin rather than obeying it.
 > **FIXED 2026-08-31 (RP-4 / fork #243 F-7 slice 1).** `CALL system.rewrite_data_files` on a
 > twelve-file v3 table rewrites 12→1 and PySpark 4.1.2 + Iceberg 1.11.0 reads the same
 > `(id, _row_id, _last_updated_sequence_number)` and Arrow types (`int64`) before and after.
-> Residue: `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). Floor residue `B-MOR-3-FLOOR-1`. `V3-DANGLE-1` FIXED by V3-5.
+> Residue: `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11). `V3-DANGLE-1` FIXED by V3-5.
 
 - **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` compacts a format-v3
   table and carries `_row_id` / `_last_updated_sequence_number` through unchanged. The 2026-08-21
@@ -2592,7 +2592,7 @@ the pin rather than obeying it.
 > group of parquet position deletes on an upgraded v3 table rewrites to one PUFFIN DV per
 > data file. OD-2 of record stays the orphan-files posture and is untouched. History of the
 > refusal (OD-2 by analogy, V3-11 zeros, RP-3 C-007 conversion no-op) is the bullets below.
-> Floor residue: [B-MOR-3-FLOOR-1](#b-mor-3-floor-1--v3-parquet-to-dv-rewrite-runs-below-sparks-min-input-files).
+> Floor residue [B-MOR-3-FLOOR-1](#b-mor-3-floor-1--v3-parquet-to-dv-rewrite-runs-below-sparks-min-input-files) **FIXED 2026-09-04 (RP-11)**.
 
 - **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` on a DV-only
   v3 table returns four zeros and leaves the live Puffin vectors in place. A Spark-written
@@ -2624,21 +2624,25 @@ the pin rather than obeying it.
 
 ### B-MOR-3-FLOOR-1 — v3 parquet-to-DV rewrite runs below Spark's min-input-files
 
-- **repark** — the fork v3 arm converts every live parquet position delete, including a
-  2-file group (`rewritten=2 added=2`, two PUFFIN), a mixed leftover parquet beside a DV
-  (`rewritten=1 added=1`), and one partition-scoped parquet covering two data files
-  (`rewritten=1 added=2`, two PUFFIN).
-- **Apache Spark** — the same three shapes return four zeros and leave the parquet files
-  (groups of 1 or 2 are below `MIN_INPUT_FILES_DEFAULT = 5`). Measured 2026-09-03 cells B,
-  C, D.
+> **FIXED 2026-09-04 (RP-11).** Fork F-24 (`189a73ed`, `#266`) honours Spark's
+> `min-input-files=5` on the v3 parquet-to-DV arm. Groups of 1 or 2 return four zeros
+> and leave the parquet files. The five-file cell is unchanged (5 → 5 PUFFIN). CALL
+> still refuses `options`, so the `rewrite-all=true` bypass is not wired here.
+
+- **repark** — a 2-file upgraded group, a mixed leftover parquet beside a DV, and one
+  partition-scoped parquet covering two data files all return `0, 0, 0, 0` and leave
+  the parquet files. Five file-scoped deletes still rewrite to five PUFFIN.
+- **Apache Spark** — the same three below-floor shapes return four zeros and leave the
+  parquet files (`MIN_INPUT_FILES_DEFAULT = 5`). Measured 2026-09-03 cells B, C, D.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_converts_two_upgraded_parquet_deletes_below_spark_floor`,
-  `call_rewrite_position_delete_files_converts_mixed_remaining_parquet_below_spark_floor`,
-  `call_rewrite_position_delete_files_splits_partition_parquet_below_spark_floor`.
-  Pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003.
-- **Rationale** — BACKLOG, fork TRIGGER F-24. Do not patch the planner in RePark. Spark
-  converts the same shapes once the group reaches five files (cells B5, D5).
+  `crates/repark-spark/src/tests/call_v3_dv.rs::call_rewrite_position_delete_files_zeros_two_upgraded_parquet_deletes_below_spark_floor`,
+  `call_rewrite_position_delete_files_zeros_mixed_remaining_parquet_below_spark_floor`,
+  `call_rewrite_position_delete_files_zeros_partition_parquet_below_spark_floor`;
+  live `python/repark/tests/test_parity_live.py::test_live_rewrite_position_delete_files_below_floor_matches_spark`.
+  Pins: rp-11-repin-f24/C-002.
+- **Rationale** — FIXED. The fork planner admits the group; RePark does not patch it.
+  Spark converts the same shapes once the group reaches five files (cells B5, D5).
 
 ### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register, read, and write `v(N+1)`
 
@@ -3390,42 +3394,38 @@ the pin rather than obeying it.
   example backlog until the encoder emits Spark's padding; teaching the unpadded form would
   assert a silent wrong answer.
 
-### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric
+### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — DataFusion `initcap` treats every non-alphanumeric as a word break:
-  `'a-b'` → `'A-B'`, `'foo.bar'` → `'Foo.Bar'`, `"o'neil"` → `"O'Neil"`, `'ab_cd'` →
-  `'Ab_Cd'`, `'x\\ty'` → `'X\\tY'`, `'a-b c.d'` → `'A-B C.D'`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** a word starts only after SPACE
+  (U+0020): `'a-b'` → `'A-b'`, `'foo.bar'` → `'Foo.bar'`, `"o'neil"` → `"O'neil"`,
+  `'ab_cd'` → `'Ab_cd'`, `'x\\ty'` → `'X\\ty'`, `'a-b c.d'` → `'A-b C.d'`.
 - **Apache Spark** — splits words on SPACE only: `'A-b'`, `'Foo.bar'`, `"O'neil"`,
-  `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-4
-  critic remediation.)*
-- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_at_any_non_alnum_today`
-- **Rationale** — BACKLOG, silent divergence. Teaching the ASCII-only `'Spark'`/`'Apache'`
-  cells hid the word-break miss; the name stays on the example backlog until the kernel
-  matches Spark's space-only split.
+  `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
+- **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
+  word break.
 
-### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256`
+### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256` — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.chr(300)` / `F.char(300)` answer `'Ĭ'` (U+012C). `F.chr(-1)` raises
-  `PySparkException: Execution error: invalid Unicode scalar value: -1` and aborts the
-  select. Both spellings share the kernel.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `chr(n) == chr(n % 256)`, and
+  `n < 0` answers `''`: `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`.
+  Both spellings share the kernel. NULL `n` is NULL.
 - **Apache Spark** — `chr(n) == chr(n % 256)`, and `n < 0` answers `''`:
   `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`. *(oracle: live PySpark
-  4.1.2, 2026-09-03, EX-4 critic remediation.)*
-- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_300_is_unicode_letter_today`
-  and `…::test_fn_chr_negative_raises_today`
-- **Rationale** — BACKLOG, silent on `n >= 256` and loud on negatives. ASCII `chr(65)`
-  agrees, which is why the first example landing missed it.
+  4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
+- **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
+  on negatives.
 
-### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload
+### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.trim(col, 'x')` (and `ltrim` / `rtrim`) raise `TypeError: takes 1
-  positional argument but 2 were given` at the Python call. One-argument whitespace
-  trim agrees with Spark.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.trim(col, chars)` (and `ltrim` /
+  `rtrim`) trim that charset: `trim('xxSparkxx', 'x')` → `'Spark'`. One-argument
+  whitespace trim is unchanged.
 - **Apache Spark** — the second argument is a set of trim characters:
-  `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_is_typeerror_today`
-- **Rationale** — BACKLOG, signature gap, loud. `F.btrim(col, chars)` is the two-arg
-  strip that exists today; the `trim`/`ltrim`/`rtrim` overloads stay refused.
+  `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
+- **Rationale** — FIXED. History: the facade wrappers took one argument only.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
@@ -3780,6 +3780,102 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   on live Spark: `nth_value('v', 2, True)` over `rowsBetween(unboundedPreceding,
   unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
   not a row; the example covers the two-argument form.
+
+### EX-DF-1 — `colRegex` / `col_regex` compile the raw string; Spark strips the backticks
+
+- **repark** — `DataFrame.colRegex` (and its `col_regex` alias) compiles `colName` as-is: the
+  plain regex `colRegex("^(k)$")` selects `["k"]`, while the PySpark-documented backticked
+  spelling ``colRegex("`^(k)$`")`` raises `AnalysisException: No column matched regex`.
+  A multi-match pattern answers the first match only (Spark expands all matches in `select`).
+- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]`; the plain
+  string `colRegex("^(k)$")` raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` as an
+  unresolvable column. The two engines accept opposite spellings, so no input answers
+  Spark-equal on both. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
+  batch, six-row `g/k/v` frame.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_spelling_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
+  the example backlog; teaching either spelling would assert an answer Spark does not give.
+
+### EX-DF-2 — the three global-temp-view spellings refuse; Spark registers the view
+
+- **repark** — `createGlobalTempView`, `createOrReplaceGlobalTempView`, and
+  `create_global_temp_view` raise
+  `UnsupportedOperationException: createGlobalTempView is not supported yet (no global_temp
+  catalog; disclosed R-DF-BATCH2)`.
+- **Apache Spark** — `createGlobalTempView("gt")` registers the frame as `global_temp.gt`;
+  `SELECT k FROM global_temp.gt` answers the frame's rows (`[1, 1, 2, 2, 2, 3]` on the EX-15
+  six-row `g/k/v` frame), and the replace spelling swaps the definition the same way.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_global_temp_view_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. The refusal is
+  disclosed (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured
+  Spark answers and keeps all three spellings on the example backlog until the global_temp
+  catalog exists.
+
+### EX-DF-3 — `exceptAll` / `except_all` refuse; Spark answers the multiset difference
+
+- **repark** — both spellings raise
+  `UnsupportedOperationException: DataFrame.exceptAll multiset semantics are not Spark-correct
+  on this engine yet; use subtract() for distinct bags (octo C1-L-006)`.
+- **Apache Spark** — `[(1,), (1,), (2,)].exceptAll([(1,)])` answers `[(1,), (2,)]`: the
+  multiset difference keeps duplicate multiplicities. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_except_all_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
+  the example backlog until the multiset semantics are Spark-correct.
+
+### EX-DF-4 — `describe` row order is engine-arbitrary; Spark's is count/mean/stddev/min/max
+
+- **repark** — the five summary rows answer the same cells Spark answers, but their collect
+  order varies run to run: three consecutive collects printed three different orders.
+- **Apache Spark** — `describe("k", "v")` collects in the stable order
+  `count, mean, stddev, min, max`. The cells themselves measured identical:
+  count `('6', '5')`, mean `('1.8333333333333333', '30.0')`,
+  stddev `('0.752772652709081', '15.811388300841896')`, min `('1', '10.0')`,
+  max `('3', '50.0')`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
+  batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_divergence`
+  (cells pinned order-independently; the order itself is unpinned because repark's is
+  nondeterministic, so no red-on-fix pin can assert it).
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. `DataFrame.describe`
+  stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
+  example would teach a weaker contract than Spark answers.
+
+### EX-DF-5 — `corr` / `cov` skip NULL pairs; Spark's stat arms answer the NULL as 0.0
+
+- **repark** — on the six-row frame below, `corr("u", "v")` = `0.18898223650461363` and
+  `cov("u", "v")` = `2.5`: the NULL pair is skipped, the SQL `corr` / `covar_samp` semantics
+  the engine lowers to.
+- **Apache Spark** — the same frame answers `corr` = `0.07100716024967264` and `cov` = `1.0`,
+  exactly the values the five real pairs produce when the NULL `v` enters the moment arms as
+  `0.0` (the five-pair-plus-`(2.0, 0.0)` moments reproduce both numbers to the last digit). The
+  divergence persists under an explicit all-nullable
+  `StructType([StructField("u", DoubleType(), True), StructField("v", DoubleType(), True)])`, so
+  it is not a `createDataFrame` inference artefact. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-15 round 2; rows `[(1.0, 10.0), (2.0, 20.0), (2.0, 30.0), (3.0, 40.0),
+  (1.0, 50.0), (2.0, None)]` over `u`/`v` doubles.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_corr_cov_null_pair_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-2 re-measure (the inferred-schema
+  reading survived the explicit-schema probe). The example covers the null-free arm, where the
+  engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
+  closed here or Spark's own is restated.
+
+### EX-DF-6 — `createTempView` / `create_temp_view` replace silently; Spark refuses an existing name
+
+- **repark** — `createTempView(name)` (and its `create_temp_view` alias) behaves as
+  `createOrReplaceTempView`: when `name` already exists the definition is swapped without any
+  signal (disclosed in-source as "v1: same as createOrReplaceTempView"). A fresh name registers
+  normally, which is the arm the example teaches.
+- **Apache Spark** — `createTempView("tv")` on a fresh name registers and `SELECT` answers the
+  frame's rows (`[(7,)]`); registering the same name again raises
+  `AnalysisException: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS]` naming `tv`, so a pre-existing
+  definition is never silently replaced. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
+  EX-15 round 3; second `createTempView` of one name.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_create_temp_view_replaces_silently`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-3 promotion of the round-1
+  review-gap entry. `createTempView` / `create_temp_view` stay covered by the fresh-name arm,
+  where the engines agree; this row records the replace-on-existing arm until repark refuses an
+  existing name the way Spark does.
 
 ## 8. Drop-in disclosure rationale
 

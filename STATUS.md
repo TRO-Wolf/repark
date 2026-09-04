@@ -115,14 +115,14 @@ in published history by explicit decision:
   2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
   pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
   filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
-  FIXED 2026-09-03; floor residue `B-MOR-3-FLOOR-1`.
+  FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
     `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. Then F-24
-    (min-input-files floor on the fork), F-25 → RP-10 (`PERF-DVCLOSE-STMT-1`), PERF-SCAN-1
-    (`PERF-SCAN-3PASS-1`), SQL-HARDEN-1 (cutover SQL shapes vs Spark on Glue + S3 Tables).
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
+    `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
+    landed 2026-09-04.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
@@ -145,10 +145,11 @@ in published history by explicit decision:
   **Delivered:** `__all__` 333 → 360, 41 names working (FNP-1..6c); F-Y10-1, FNP-4c, FNP-7a/7b.
   Remaining work ships as one coherent PR per unit or tightly coupled pair.
   **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
+  **FN-FIX-2 (2026-09-04):** six silent string rows Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
+  `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
-  **Next:** FN-FIX-2 (`FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`,
-  `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`), then **Next, in order (revised 2026-08-31):**
+  **Next, in order (revised 2026-08-31):**
   FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z. Deferred: FNP-4b, FNP-6d, FNP-13, FNP-14.
 <!-- /ws -->
 
@@ -159,7 +160,9 @@ in published history by explicit decision:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
   preserve-null Unnest removes redundant projections; adjacent candidates stay
   measurement-gated. #30 merged.
-  **Next:** H-2 scoped to the cutover SQL (SQL-HARDEN-1) then the H-3 spill matrix.
+  **Next:** H-3 spill matrix.
+  **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
+  **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->

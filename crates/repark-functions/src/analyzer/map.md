@@ -11,6 +11,10 @@ under its `check_rust_file_size` ceiling and each matrix has one home.
 
 ## Contents
 
+- `like_escape.rs` — **FN-FIX-2 (2026-09-04):** a LIKE/ILIKE pattern that ends in the
+  unconsumed escape char is `DataFusionError::Plan` `[INVALID_FORMAT.ESC_AT_THE_END]`
+  SQLSTATE 42601. Foldable literals only. pins: fn-fix-2-string-rows/C-002
+- `overlay.rs` — `overlay(..., -1)` drops the Spark default length to the 3-arg form.
 - `cast_legality.rs` — Spark's CAST / TRY_CAST type-legality deny matrix covers exactly
   `{Date32, Date64} ↔ {Int8, Int16, Int32, Int64}`. Refusals are `DataFusionError::Plan` with
   `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`, both Spark type names, and the applicable

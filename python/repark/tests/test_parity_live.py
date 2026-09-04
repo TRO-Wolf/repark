@@ -277,6 +277,74 @@ def test_live_fn_fix_1_nan_ingest(spark_engine: lp.Engine) -> None:
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_2_strings(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-2-string-rows/C-003"""
+    from pyspark.sql import functions as spark_fn
+
+    initcap_table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame(
+            [("a-b",), ("foo.bar",), ("o'neil",), ("x\ty",)], ["s"]
+        ).select(spark_fn.initcap("s").alias("v"))
+    )
+    assert initcap_table.column("v").to_pylist() == ["A-b", "Foo.bar", "O'neil", "X\ty"]
+    chr_table = spark_engine.arrow_of(
+        spark_engine.session.createDataFrame([(256,), (300,), (65601,), (-1,)], ["n"]).select(
+            spark_fn.chr("n").alias("c"), spark_fn.char("n").alias("h")
+        )
+    )
+    assert chr_table.column("c").to_pylist() == ["\x00", ",", "A", ""]
+    assert chr_table.column("h").to_pylist() == ["\x00", ",", "A", ""]
+    trim_table = spark_engine.arrow_of(
+        spark_engine.session.range(1).select(
+            spark_fn.trim(spark_fn.lit("xxSparkxx"), spark_fn.lit("x")).alias("t"),
+            spark_fn.ltrim(spark_fn.lit("xxSparkxx"), spark_fn.lit("x")).alias("l"),
+            spark_fn.rtrim(spark_fn.lit("xxSparkxx"), spark_fn.lit("x")).alias("r"),
+        )
+    )
+    assert trim_table.column("t").to_pylist() == ["Spark"]
+    assert trim_table.column("l").to_pylist() == ["Sparkxx"]
+    assert trim_table.column("r").to_pylist() == ["xxSpark"]
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_fn_fix_2_regex_like(spark_engine: lp.Engine) -> None:
+    """pins: fn-fix-2-string-rows/C-003"""
+    from pyspark.errors import AnalysisException as SparkAnalysisException
+    from pyspark.errors.exceptions.captured import ArrayIndexOutOfBoundsException
+    from pyspark.sql import functions as spark_fn
+
+    frame = spark_engine.session.createDataFrame([("a1b2 Ünï_9",), ("foo",), ("aabbaa",)], ["s"])
+    count_table = spark_engine.arrow_of(
+        frame.select(spark_fn.regexp_count("s", spark_fn.lit("[[:alpha:]]")).alias("c"))
+    )
+    assert count_table.column("c").to_pylist() == [1, 0, 4]
+    rlike_table = spark_engine.arrow_of(
+        frame.select(spark_fn.rlike("s", spark_fn.lit("[[:alpha:]]")).alias("m"))
+    )
+    assert rlike_table.column("m").to_pylist() == [True, False, True]
+    replace_table = spark_engine.arrow_of(
+        frame.select(
+            spark_fn.regexp_replace("s", spark_fn.lit("[[:alpha:]]"), spark_fn.lit("#")).alias("r")
+        )
+    )
+    assert replace_table.column("r").to_pylist() == ["#1b2 Ünï_9", "foo", "##bb##"]
+    try:
+        spark_engine.session.range(1).select(
+            spark_fn.elt(spark_fn.lit(3), spark_fn.lit("a"), spark_fn.lit("b"))
+        ).toArrow()
+        raise AssertionError("elt index 3 must raise")
+    except ArrayIndexOutOfBoundsException as exc:
+        assert "INVALID_ARRAY_INDEX" in str(exc)
+    try:
+        spark_engine.session.range(1).select(
+            spark_fn.like(spark_fn.lit("ab"), spark_fn.lit("ab\\"))
+        ).toArrow()
+        raise AssertionError("like escape-at-end must raise")
+    except SparkAnalysisException as exc:
+        assert "INVALID_FORMAT.ESC_AT_THE_END" in str(exc)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
     """pins: log1p-1-precise-kernels/C-001, C-004"""
     table = spark_engine.arrow_of(spark_engine.session.sql(_LOG1P_LIVE_SQL))
@@ -286,6 +354,29 @@ def test_live_log1p_expm1_tiny_args_and_domain(spark_engine: lp.Engine) -> None:
             assert got is None, index
         else:
             assert got == want, index
+
+
+_DATE_FN_1_LIVE_SQL = (
+    "SELECT DATE(TIMESTAMP '2024-06-15 03:00:00') AS d_ts, "
+    "DATE('2024-06-15') AS d_s, "
+    "DATE(DATE '2024-06-15') AS d_d, "
+    "unix_timestamp(TIMESTAMP '2024-06-15 12:00:00') AS u_ts, "
+    "unix_timestamp('2024-06-15 12:00:00') AS u_s, "
+    "CAST((unix_timestamp(TIMESTAMP '2026-01-01 10:15:00') "
+    "- unix_timestamp(TIMESTAMP '2026-01-01 10:00:00')) / 60 AS INT) AS w"
+)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_date_fn_1_date_and_unix_timestamp(spark_engine: lp.Engine) -> None:
+    """pins: date-fn-1-spark-date-spelling/C-001, C-003"""
+    table = spark_engine.arrow_of(spark_engine.session.sql(_DATE_FN_1_LIVE_SQL))
+    assert str(table.column("d_ts").to_pylist()[0]) == "2024-06-15"
+    assert str(table.column("d_s").to_pylist()[0]) == "2024-06-15"
+    assert str(table.column("d_d").to_pylist()[0]) == "2024-06-15"
+    assert table.column("u_ts").to_pylist() == [1_718_452_800]
+    assert table.column("u_s").to_pylist() == [1_718_452_800]
+    assert table.column("w").to_pylist() == [15]
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -501,6 +592,7 @@ def test_disclosures_mirror_the_registry() -> None:
 
 
 _BMOR3_CATALOG = "bmor3live"
+_BMOR3_FLOOR_CATALOG = "bmor3floor"
 _BMOR3_ALLOW = "repark.sql.allowCreateFormatVersion3"
 
 
@@ -523,7 +615,7 @@ def _bmor3_ids(arrow) -> list[int]:
     return values
 
 
-def _bmor3_cell_b_repark(warehouse: Path) -> dict:
+def _bmor3_upgraded_parquet_repark(warehouse: Path, table: str, files: int) -> dict:
     from repark import ReparkSession
 
     spark = (
@@ -531,7 +623,7 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
         .config(_BMOR3_ALLOW, "true")
         .getOrCreate()
     )
-    target = "ice.sales.cellb"
+    target = f"ice.sales.{table}"
     try:
         spark.register_memory_catalog("ice", warehouse)
         spark.sql("CREATE NAMESPACE ice.sales")
@@ -543,23 +635,23 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
             "'write.update.mode' = 'merge-on-read', "
             "'write.delete.granularity' = 'file')"
         )
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             spark.sql(f"INSERT INTO {target} VALUES ({ident}, 'a'), ({ident + 100}, 'b')").collect()
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             spark.sql(f"DELETE FROM {target} WHERE id = {ident}").collect()
         spark.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version' = '3')").collect()
         before = _bmor3_delete_pairs(
             spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
         )
         first = spark.sql(
-            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL ice.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).to_arrow()
         after = _bmor3_delete_pairs(
             spark.sql(f"SELECT file_format, record_count FROM {target}.delete_files").to_arrow()
         )
         ids = _bmor3_ids(spark.sql(f"SELECT id FROM {target} ORDER BY id").to_arrow())
         second = spark.sql(
-            "CALL ice.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL ice.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).to_arrow()
         return {
             "before": before,
@@ -574,23 +666,23 @@ def _bmor3_cell_b_repark(warehouse: Path) -> dict:
         spark.stop()
 
 
-def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
+def _bmor3_upgraded_parquet_spark(engine: lp.Engine, catalog: str, table: str, files: int) -> dict:
     import shutil
 
     warehouse = Path(tempfile.mkdtemp(prefix="bmor3-live-spark-"))
     session = engine.session
     keys = (
-        f"spark.sql.catalog.{_BMOR3_CATALOG}",
-        f"spark.sql.catalog.{_BMOR3_CATALOG}.type",
-        f"spark.sql.catalog.{_BMOR3_CATALOG}.warehouse",
+        f"spark.sql.catalog.{catalog}",
+        f"spark.sql.catalog.{catalog}.type",
+        f"spark.sql.catalog.{catalog}.warehouse",
     )
     for key, value in zip(
         keys, ("org.apache.iceberg.spark.SparkCatalog", "hadoop", str(warehouse)), strict=True
     ):
         session.conf.set(key, value)
-    target = f"{_BMOR3_CATALOG}.sales.cellb"
+    target = f"{catalog}.sales.{table}"
     try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_BMOR3_CATALOG}.sales")
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
         session.sql(
             f"CREATE TABLE {target} (id INT, name STRING) USING iceberg "
             "TBLPROPERTIES ('format-version'='2', "
@@ -599,26 +691,26 @@ def _bmor3_cell_b_spark(engine: lp.Engine) -> dict:
             "'write.update.mode'='merge-on-read', "
             "'write.delete.granularity'='file')"
         )
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             session.createDataFrame(
                 [(ident, "a"), (ident + 100, "b")],
                 "id INT, name STRING",
             ).coalesce(1).writeTo(target).append()
-        for ident in range(1, 6):
+        for ident in range(1, files + 1):
             session.sql(f"DELETE FROM {target} WHERE id = {ident}")
         session.sql(f"ALTER TABLE {target} SET TBLPROPERTIES ('format-version'='3')")
         before = _bmor3_delete_pairs(
             session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
         )
         first = session.sql(
-            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL {catalog}.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).toArrow()
         after = _bmor3_delete_pairs(
             session.sql(f"SELECT file_format, record_count FROM {target}.delete_files").toArrow()
         )
         ids = _bmor3_ids(session.sql(f"SELECT id FROM {target} ORDER BY id").toArrow())
         second = session.sql(
-            f"CALL {_BMOR3_CATALOG}.system.rewrite_position_delete_files(table => 'sales.cellb')"
+            f"CALL {catalog}.system.rewrite_position_delete_files(table => 'sales.{table}')"
         ).toArrow()
         return {
             "before": before,
@@ -641,7 +733,19 @@ def test_live_rewrite_position_delete_files_upgraded_parquet_matches_spark(
     tmp_path: Path, spark_iceberg_engine: lp.Engine
 ) -> None:
     """pins: b-mor-3-rewrite-position-deletes-v3/C-001, C-003"""
-    assert _bmor3_cell_b_repark(tmp_path) == _bmor3_cell_b_spark(spark_iceberg_engine)
+    assert _bmor3_upgraded_parquet_repark(tmp_path, "cellb", 5) == _bmor3_upgraded_parquet_spark(
+        spark_iceberg_engine, _BMOR3_CATALOG, "cellb", 5
+    )
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_rewrite_position_delete_files_below_floor_matches_spark(
+    tmp_path: Path, spark_iceberg_engine: lp.Engine
+) -> None:
+    """pins: rp-11-repin-f24/C-002"""
+    assert _bmor3_upgraded_parquet_repark(tmp_path, "cellb2", 2) == _bmor3_upgraded_parquet_spark(
+        spark_iceberg_engine, _BMOR3_FLOOR_CATALOG, "cellb2", 2
+    )
 
 
 def _dynflatten_bed() -> object:
@@ -650,7 +754,7 @@ def _dynflatten_bed() -> object:
     package_name = "repark_datasets"
     if package_name not in sys.modules:
         package = types.ModuleType(package_name)
-        package.__path__ = [str(datasets_dir)]  # type: ignore[attr-defined]
+        package.__dict__["__path__"] = [str(datasets_dir)]
         sys.modules[package_name] = package
     return importlib.import_module("repark_datasets.nested.bed")
 

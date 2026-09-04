@@ -3,18 +3,22 @@
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use arrow::array::timezone::Tz;
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike};
-use datafusion::arrow::array::{Array, AsArray, Float64Array, Int64Array, StringBuilder};
+use chrono::{DateTime, Datelike, MappedLocalTime, NaiveDate, NaiveDateTime, TimeZone, Timelike};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, Date32Array, Float64Array, Int64Array, StringArray, StringBuilder,
+};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
-use datafusion::common::{DataFusionError, Result};
+use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
-    Volatility,
+    TypeSignature, Volatility,
 };
 
+use crate::ansi::spark_ansi_enabled_from_options;
 use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
 
@@ -46,6 +50,16 @@ pub fn spark_timestamp_to_date_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn to_date_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkToDate::new()))
+}
+
+#[must_use]
+pub fn date_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkDate::new()))
+}
+
+#[must_use]
+pub fn unix_timestamp_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkUnixTimestamp::new()))
 }
 
 /// Return ticks per second for an Arrow [`TimeUnit`].
@@ -373,6 +387,273 @@ impl ScalarUDFImpl for SparkToDate {
     }
 }
 
+#[derive(Debug)]
+struct SparkDate {
+    signature: Signature,
+}
+
+impl SparkDate {
+    fn new() -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkDate {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkDate {}
+
+impl Hash for SparkDate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkDate {
+    crate::shim_udf_boilerplate!("date");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Date32)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            self.name(),
+            DataType::Date32,
+            date_result_nullable(&args),
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_spark_date(&args)
+    }
+}
+
+#[derive(Debug)]
+struct SparkUnixTimestamp {
+    signature: Signature,
+    aliases: Vec<String>,
+}
+
+impl SparkUnixTimestamp {
+    fn new() -> Self {
+        Self {
+            signature: Signature::one_of(
+                vec![TypeSignature::Nullary, TypeSignature::Any(1)],
+                Volatility::Volatile,
+            ),
+            aliases: vec!["to_unix_timestamp".to_string()],
+        }
+    }
+}
+
+impl PartialEq for SparkUnixTimestamp {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkUnixTimestamp {}
+
+impl Hash for SparkUnixTimestamp {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkUnixTimestamp {
+    crate::shim_udf_boilerplate!("unix_timestamp");
+
+    fn aliases(&self) -> &[String] {
+        &self.aliases
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Int64)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            self.name(),
+            DataType::Int64,
+            unix_timestamp_result_nullable(&args),
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_unix_timestamp(&args)
+    }
+}
+
+fn is_utf8_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn date_result_nullable(args: &ReturnFieldArgs<'_>) -> bool {
+    match args.arg_fields.first().map(|field| field.data_type()) {
+        Some(data_type) if is_utf8_type(data_type) => true,
+        Some(DataType::Null) => true,
+        _ => nullable_like_argument(args),
+    }
+}
+
+fn unix_timestamp_result_nullable(args: &ReturnFieldArgs<'_>) -> bool {
+    match args.arg_fields.first().map(|field| field.data_type()) {
+        None => false,
+        Some(data_type) if is_utf8_type(data_type) => true,
+        Some(DataType::Null) => true,
+        _ => nullable_like_argument(args),
+    }
+}
+
+fn as_utf8_array(array: &dyn Array) -> Result<StringArray> {
+    let utf8 = cast(array, &DataType::Utf8)?;
+    utf8.as_any()
+        .downcast_ref::<StringArray>()
+        .cloned()
+        .ok_or_else(|| DataFusionError::Internal("utf8 cast did not yield Utf8".to_string()))
+}
+
+fn utf8_row_value(array: &dyn Array, row: usize) -> String {
+    as_utf8_array(array).map_or_else(
+        |_| "invalid".to_string(),
+        |values| {
+            if values.is_null(row) {
+                "invalid".to_string()
+            } else {
+                values.value(row).to_string()
+            }
+        },
+    )
+}
+
+fn malformed_date_cast(value: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CAST_INVALID_INPUT] The value '{value}' of the type \"STRING\" cannot be cast to \
+         \"DATE\" because it is malformed."
+    ))
+}
+
+fn malformed_timestamp_parse(value: &str) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[CANNOT_PARSE_TIMESTAMP] Text '{value}' could not be parsed at index 0. Use \
+         `try_to_timestamp` to tolerate invalid input string and return NULL instead."
+    ))
+}
+
+fn all_null_date32(len: usize) -> ArrayRef {
+    Arc::new(Date32Array::from(vec![None; len]))
+}
+
+fn invoke_spark_date(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+    let input = &arrays[0];
+    let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
+    let dates = match invoke_local_dates(input, args.config_options.as_ref()) {
+        Ok(dates) => dates,
+        Err(_) if ansi && is_utf8_type(input.data_type()) => {
+            return Err(malformed_date_cast(&utf8_row_value(input.as_ref(), 0)));
+        }
+        Err(_) if is_utf8_type(input.data_type()) => {
+            return Ok(ColumnarValue::Array(all_null_date32(input.len())));
+        }
+        Err(error) => return Err(error),
+    };
+    if ansi && is_utf8_type(input.data_type()) {
+        let dates_typed = dates
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .ok_or_else(|| {
+                DataFusionError::Internal("date kernel did not return Date32".to_string())
+            })?;
+        for row in 0..input.len() {
+            if !input.is_null(row) && dates_typed.is_null(row) {
+                return Err(malformed_date_cast(&utf8_row_value(input.as_ref(), row)));
+            }
+        }
+    }
+    Ok(ColumnarValue::Array(dates))
+}
+
+fn current_unix_seconds() -> Result<i64> {
+    let elapsed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| DataFusionError::Execution(error.to_string()))?;
+    i64::try_from(elapsed.as_secs()).map_err(|_| {
+        DataFusionError::Execution("unix_timestamp: current epoch seconds overflow i64".to_string())
+    })
+}
+
+fn unix_seconds_from_timestamp(array: &dyn Array) -> Result<Int64Array> {
+    let unit = argument_time_unit("unix_timestamp", array.data_type())?;
+    let per_second = ticks_per_second(unit);
+    Ok(timestamp_ticks(array)?
+        .iter()
+        .map(|ticks| ticks.map(|value| seconds_floor_from_ticks(value, per_second)))
+        .collect())
+}
+
+fn unix_seconds_from_string(array: &dyn Array, session_zone: Tz, ansi: bool) -> Result<Int64Array> {
+    let values = as_utf8_array(array)?;
+    let mut seconds = Int64Array::builder(values.len());
+    for row in 0..values.len() {
+        if values.is_null(row) {
+            seconds.append_null();
+            continue;
+        }
+        let text = values.value(row);
+        match NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S") {
+            Ok(naive) => match session_zone.from_local_datetime(&naive) {
+                MappedLocalTime::Single(instant) | MappedLocalTime::Ambiguous(instant, _) => {
+                    seconds.append_value(instant.timestamp());
+                }
+                MappedLocalTime::None => {
+                    if ansi {
+                        return Err(malformed_timestamp_parse(text));
+                    }
+                    seconds.append_null();
+                }
+            },
+            Err(_) if ansi => return Err(malformed_timestamp_parse(text)),
+            Err(_) => seconds.append_null(),
+        }
+    }
+    Ok(seconds.finish())
+}
+
+fn invoke_unix_timestamp(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    if args.args.is_empty() {
+        let seconds = current_unix_seconds()?;
+        return Ok(ColumnarValue::Scalar(ScalarValue::Int64(Some(seconds))));
+    }
+    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+    let input = &arrays[0];
+    let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
+    let seconds = match input.data_type() {
+        DataType::Timestamp(_, _) => unix_seconds_from_timestamp(input.as_ref())?,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
+            let session_zone =
+                parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
+            unix_seconds_from_string(input.as_ref(), session_zone, ansi)?
+        }
+        DataType::Null => Int64Array::from(vec![None; input.len()]),
+        other => {
+            return Err(DataFusionError::Plan(format!(
+                "'unix_timestamp' expects TIMESTAMP, STRING, or no arguments, got {other}"
+            )));
+        }
+    };
+    Ok(ColumnarValue::Array(Arc::new(seconds)))
+}
+
 /// The timestamp unit and zone annotation of the single argument.
 fn argument_timestamp_parts(
     name: &str,
@@ -674,5 +955,11 @@ mod tests {
             Date32Type::from_naive_date(NaiveDate::from_ymd_opt(2024, 6, 15).expect("date")),
             "NTZ wall date ignores the session zone"
         );
+    }
+
+    #[test]
+    fn spark_sql_date_and_unix_timestamp_names() {
+        assert_eq!(date_udf().name(), "date");
+        assert_eq!(unix_timestamp_udf().name(), "unix_timestamp");
     }
 }

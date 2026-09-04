@@ -149,6 +149,16 @@ pub fn second(arg: Expr) -> Expr {
 pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
+
+#[must_use]
+pub fn date(arg: Expr) -> Expr {
+    call(crate::timestamp_cast::date_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn unix_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::timestamp_cast::unix_timestamp_udf(), args)
+}
 /// Spark `crc32(expr)` — CRC-32 checksum as a bigint.
 #[must_use]
 pub fn crc32(arg: Expr) -> Expr {
@@ -172,6 +182,42 @@ pub fn sha2(arg: Expr, bit_length: Expr) -> Expr {
 #[must_use]
 pub fn isnan(arg: Expr) -> Expr {
     call(crate::spark_isnan::isnan_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn initcap(arg: Expr) -> Expr {
+    call(crate::spark_initcap::initcap_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn chr(arg: Expr) -> Expr {
+    call(crate::spark_chr::chr_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn elt(args: Vec<Expr>) -> Expr {
+    call(crate::spark_elt::elt_udf(), args)
+}
+
+#[must_use]
+pub fn regexp_like(str: Expr, regexp: Expr) -> Expr {
+    call(
+        crate::spark_regexp_match::regexp_like_udf(),
+        vec![str, regexp],
+    )
+}
+
+#[must_use]
+pub fn rlike(str: Expr, regexp: Expr) -> Expr {
+    call(crate::spark_regexp_match::rlike_udf(), vec![str, regexp])
+}
+
+#[must_use]
+pub fn regexp_replace(str: Expr, regexp: Expr, replacement: Expr) -> Expr {
+    call(
+        crate::spark_regexp_match::regexp_replace_udf(),
+        vec![str, regexp, replacement],
+    )
 }
 
 #[must_use]

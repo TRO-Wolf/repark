@@ -105,7 +105,9 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142.
+  pins: fn-fix-2-string-rows/C-002
+  **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002
   RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142 (pins: rp-7-f18-repin/C-005). V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
   `repark-iceberg/src/write/alter.rs` 1641→1630
   (pins: v3-10-upgrade-v2-to-v3/C-003). **CAP-1 (2026-08-26):** exact Rust and Python source-size RP-6 ratchets merge/mod.rs 1894→1892 and predicate_dml.rs 1227→1226; V3-8 ratchets predicate_dml.rs 1226→1164 after the lineage helpers move to `predicate_dml/lineage.rs` (pins: v3-8-subquery-where-lineage/C-002).
@@ -153,6 +155,8 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
   pins: rp-9-repin-f23/C-004
   **RP-10 (2026-09-04):** the same meta-pin moves to `85a4aaf0`; R114's dated cell names F-25.
   pins: rp-10-repin-f25/C-004
+  **RP-11 (2026-09-04):** the same meta-pin moves to `189a73ed`; `B-MOR-3-FLOOR-1` FIXED.
+  pins: rp-11-repin-f24/C-001, C-003
   Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
   `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
   `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
@@ -220,6 +224,8 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
   **B-MOR-3 (2026-09-03):** row 13's cell reads the FIXED ruling with the `B-MOR-3-FLOOR-1`
   residue beside it, the owner paragraph reads BUILD, `_SURFACE_RESIDUALS` and
   `_RESIDUAL_ROWS` follow row 13 out of the residual table, and the EQUAL count is 72.
+  **RP-11 (2026-09-04):** that residue is FIXED; the surface-residual class is
+  `FIXED 2026-09-04 (RP-11)`.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry

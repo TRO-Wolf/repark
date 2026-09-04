@@ -57,7 +57,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by ordering source while preserving public-entry coverage.",
     ),
     "crates/repark-functions/src/analyzer.rs": (
-        1161,
+        1142,
         "Spark analyzer rewrites remain grouped in one rule implementation.",
         "Extract a cohesive rewrite family when that family next changes.",
     ),

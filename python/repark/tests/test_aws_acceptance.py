@@ -67,6 +67,8 @@ from _sql_harden_cutover_run import (
     GOLD_CREATED_AT_FCT,
     GOLD_CREATED_BEFORE_FCT,
     as_golden,
+    data_file_count,
+    delete_file_count,
     run_program,
     without_meta,
 )
@@ -410,20 +412,12 @@ def _run_sql_harden_on_catalog(
     return results, stems
 
 
-def _assert_s6_aws_date_refusal(
-    spark: ReparkSession, catalog: str, actual: dict[str, object], stem: str
-) -> None:
-    """S6 on AWS refuses DATE() like memory and leaves only the pre-fct silver tables."""
-    errors = [cell[1] for cell in actual["statements"] if cell[0] == "ERROR"]
-    assert any("Invalid function 'date'" in str(error) for error in errors), errors
-    for suffix in GOLD_CREATED_BEFORE_FCT:
+def _assert_s6_aws_namespace(spark: ReparkSession, catalog: str, stem: str) -> None:
+    for suffix in GOLD_CREATED_BEFORE_FCT + GOLD_CREATED_AT_FCT:
         present = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
         leaked = f"{catalog}.{_NAMESPACE}.{stem}_{suffix}"
         assert spark.catalog.tableExists(present), present
         assert not spark.catalog.tableExists(leaked), leaked
-    for suffix in GOLD_CREATED_AT_FCT:
-        missing = f"{catalog}.{ACCEPTANCE_NAMESPACE}.{stem}_{suffix}"
-        assert not spark.catalog.tableExists(missing), missing
 
 
 def _assert_aws_cutover_core(
@@ -439,11 +433,13 @@ def _assert_aws_cutover_core(
         memory = without_meta(REPARK[name])
         assert isinstance(actual, dict)
         if name == "s6-gold-incremental":
-            _assert_s6_aws_date_refusal(spark, catalog, actual, stems[name])
-            continue
+            _assert_s6_aws_namespace(spark, catalog, stems[name])
         assert actual["statements"][0][0] == "OK", (name, actual["statements"][0])
         if memory["probes"][0][0] == "OK":
             assert actual["probes"][0] == memory["probes"][0], name
+        if program.write_mode == "copy-on-write" and program.runner == "merge":
+            assert delete_file_count(actual) == 0, name
+            assert data_file_count(actual) == data_file_count(memory), name
 
 
 def test_sql_harden_cutover_against_glue() -> None:
