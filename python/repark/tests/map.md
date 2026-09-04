@@ -328,6 +328,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   second pass is 1 on both engines.
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
   pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
+- [test_cutover_schema_1.py](test_cutover_schema_1.py) — **CUTOVER-SCHEMA-1 (2026-09-04):**
+  nullability derived the way Spark derives it on the cutover shapes. Always-run:
+  `read.parquet` of a required-field file reports every field nullable (flat and nested),
+  csv/json likewise; Spark-door CTAS stores every column optional including
+  `SELECT coalesce(x, 0)` (at repark's `long` width — the V3-COV-8 width half stays
+  BACKLOG, only nullability moves); the S3 dedup Arrow schema equals Spark field for field;
+  `CAST(1 AS DECIMAL)` is nullable while INT/STRING casts keep the child; the ANSI-door
+  cast fence and the SE-1 tighten-derived CTAS refusal control stay put. Live legs
+  re-derive the read/cast/dedup cells from PySpark 4.1.2 on the shared `spark_engine`.
+  The module docstring is the pins-only one-liner; this row is the reason.
+  pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
