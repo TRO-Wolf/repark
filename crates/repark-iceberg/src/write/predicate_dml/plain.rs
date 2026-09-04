@@ -7,6 +7,8 @@ use super::{
     object_name_parts, rewrite_target_refs_in_expr,
 };
 
+/// # Errors
+/// A plan error when the target namespace is invalid.
 pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);
