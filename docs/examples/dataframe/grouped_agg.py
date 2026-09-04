@@ -19,8 +19,12 @@ COVERS: list[str] = [
 ]
 
 
+def row_key(row: tuple) -> tuple:
+    return tuple((value is None, value) for value in row)
+
+
 def main() -> None:
-    """Run the measured grouped-aggregate answers on one two-group frame."""
+    """Run the measured grouped-aggregate answers, NULL grouping key included."""
     repark = ReparkSession.builder.appName("ex-df-d-grouped-agg").master("local[1]").getOrCreate()
     try:
         base = repark.createDataFrame(
@@ -74,6 +78,40 @@ def main() -> None:
         if counted_rows != counted_rows_expected:
             raise SystemExit(
                 f"GroupedData.count rows {counted_rows!r} != {counted_rows_expected!r}"
+            )
+
+        null_key = repark.createDataFrame(
+            [("a", 1), (None, 2), (None, 3)],
+            ["g", "k"],
+        )
+        null_grouped = null_key.groupBy("g")
+        null_summed = null_grouped.sum("k")
+        null_summed_columns = null_summed.columns
+        null_summed_columns_expected = ["g", "sum(k)"]
+        if null_summed_columns != null_summed_columns_expected:
+            raise SystemExit(
+                f"GroupedData.sum columns {null_summed_columns!r}"
+                f" != {null_summed_columns_expected!r}"
+            )
+        null_summed_rows = sorted((tuple(row) for row in null_summed.collect()), key=row_key)
+        null_summed_rows_expected = [("a", 1), (None, 5)]
+        if null_summed_rows != null_summed_rows_expected:
+            raise SystemExit(
+                f"GroupedData.sum rows {null_summed_rows!r} != {null_summed_rows_expected!r}"
+            )
+        null_counted = null_grouped.count()
+        null_counted_columns = null_counted.columns
+        null_counted_columns_expected = ["g", "count"]
+        if null_counted_columns != null_counted_columns_expected:
+            raise SystemExit(
+                f"GroupedData.count columns {null_counted_columns!r}"
+                f" != {null_counted_columns_expected!r}"
+            )
+        null_counted_rows = sorted((tuple(row) for row in null_counted.collect()), key=row_key)
+        null_counted_rows_expected = [("a", 1), (None, 2)]
+        if null_counted_rows != null_counted_rows_expected:
+            raise SystemExit(
+                f"GroupedData.count rows {null_counted_rows!r} != {null_counted_rows_expected!r}"
             )
 
         summed = grouped.sum("v")

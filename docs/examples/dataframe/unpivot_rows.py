@@ -12,8 +12,12 @@ COVERS: list[str] = [
 ]
 
 
+def row_key(row: tuple) -> tuple:
+    return tuple((value is None, value) for value in row)
+
+
 def main() -> None:
-    """Run the measured unpivot answers for list and string ids and values."""
+    """Run the measured unpivot answers for list and string ids and values, NULLs included."""
     repark = ReparkSession.builder.appName("ex-df-d-unpivot").master("local[1]").getOrCreate()
     try:
         wide = repark.createDataFrame(
@@ -36,6 +40,23 @@ def main() -> None:
         ]
         if melted_rows != melted_rows_expected:
             raise SystemExit(f"DataFrame.unpivot rows {melted_rows!r} != {melted_rows_expected!r}")
+
+        null_wide = repark.createDataFrame(
+            [("a", 1, 10.0, None), ("b", 2, None, 200.0)],
+            ["g", "k", "x", "y"],
+        )
+        null_melted = null_wide.unpivot("g", ["x", "y"], "var", "val")
+        null_melted_rows = sorted((tuple(row) for row in null_melted.collect()), key=row_key)
+        null_melted_rows_expected = [
+            ("a", "x", 10.0),
+            ("a", "y", None),
+            ("b", "x", None),
+            ("b", "y", 200.0),
+        ]
+        if null_melted_rows != null_melted_rows_expected:
+            raise SystemExit(
+                f"DataFrame.unpivot rows {null_melted_rows!r} != {null_melted_rows_expected!r}"
+            )
 
         single = wide.unpivot("g", "x", "var", "val")
         single_rows = sorted(tuple(row) for row in single.collect())

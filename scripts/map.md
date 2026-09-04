@@ -4,7 +4,8 @@ EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 5
 dispatch (518 → 483 through the EX-16 merge, 484 → 449 through the EX-17 merge) —
 35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`; `toJSON`
 refuses (R-DF-BATCH2) and stays a backlog row, registry §7 `EX-DF-11`…`EX-DF-17`, pins in `python/repark/tests/test_examples_dataframe_c.py`. pins: ex-18-dataframe-c/C-001
-EX-19 DataFrame-d (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 518 → 480 —
+EX-19 DataFrame-d (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 449 → 411
+shipped (518 → 480 at the dispatch base, before the EX-17/EX-18 merges) —
 38 roster names covered by ten new examples under `docs/examples/dataframe/`
 (`set_ops.py`, `frame_shape.py`, `rename_columns.py`, `unpivot_rows.py`,
 `cache_write.py`, `na_surface.py`, `stat_helpers.py`, `grouped_agg.py`,

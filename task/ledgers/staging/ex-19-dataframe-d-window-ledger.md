@@ -59,7 +59,7 @@ three are pinned in `python/repark/tests/test_examples_dataframe_d.py`. `Row.as_
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Ten files under `docs/examples/dataframe/` land runnable local examples for the 38 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 38 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 38, 518 → 480, with no other `scripts/` change; `DataFrameStatFunctions.freqItems` stays on the backlog with §7 row `EX-DF-19`, and the measured `withColumnsRenamed` and struct-`Row` arms are recorded as §7 rows `EX-DF-18`/`EX-ROW-1`, all pinned in `python/repark/tests/test_examples_dataframe_d.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (38 findings before, 0 after), the oracle table (39 rows, one per roster name), the ten scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
+| C-001 | Ten files under `docs/examples/dataframe/` land runnable local examples for the 38 Spark-equal roster names, every asserted value measured against PySpark 4.1.2 before it was written; those 38 leave `docs/examples/backlog.txt` and `BACKLOG_BASELINE` moves down by exactly 38, 518 → 480 at the dispatch base and 449 → 411 on the shipped tree after the EX-18 merge, with no other `scripts/` change; `DataFrameStatFunctions.freqItems` stays on the backlog with §7 row `EX-DF-19`, and the measured `withColumnsRenamed` and struct-`Row` arms are recorded as §7 rows `EX-DF-18`/`EX-ROW-1`, all pinned in `python/repark/tests/test_examples_dataframe_d.py`; no product file is touched; the gate's static half and its `--require-execute` leg both exit 0. | Red-first capture (38 findings before, 0 after), the oracle table (39 rows, one per roster name), the ten scripts each exit 0, and the recorded gate exit codes. | **PROVEN** |
 
 `LOGIC_SCORE` = **1/1 `PROVEN`**.
 
@@ -79,7 +79,7 @@ present, the 38 names removed and `BACKLOG_BASELINE=480`, the gate exits **0** (
 
 ## Oracle (live PySpark 4.1.2, ANSI on, local[2], JDK 17, TZ=UTC)
 
-Measured at `.venv/bin/python` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, four throwaway scripts
+Measured at `.venv/bin/python` with `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, five throwaway scripts
 under `scratch/ex19-oracle/` (gitignored, never committed) driving `_live_parity.build_spark_engine`
 and `build_repark_engine` over identical fixtures, printing per name both engines' values; one
 Spark JVM per leg, `PYSPARK_PYTHON` pinned to the venv interpreter. Leg 1: the 39-name value table.
@@ -99,6 +99,13 @@ tuples, both engines. Fixtures: six-row `g/k/v` frame
 `[("c",3),("a",1)]`; by-name and missing-column frames; swap frame `[(1,10)]`; sampleBy frame
 `[(1,10.0),(1,11.0),(2,20.0),(3,30.0)]`; applyInPandas frame
 `[("a",1,10.0),("a",2,20.0),("b",1,50.0)]`; string-fill frame `[("a",1,None),(None,2,"y")]`.
+**Round 3 (2026-09-04):** the critic's NULL controls measured on both engines (one JVM,
+throwaway `scratch/ex19-oracle/oracle_round3.py`): a NULL-bearing wide frame
+`[("a",1,10.0,None),("b",2,None,200.0)]` unpivots to
+`[('a','x',10.0),('a','y',None),('b','x',None),('b','y',200.0)]` on both engines, and a NULL
+grouping key `[("a",1),(None,2),(None,3)]` answers `sum(k)` `[('a',1),(None,5)]` and `count`
+`[('a',1),(None,2)]` on both — four MATCH arms, asserted in `unpivot_rows.py` and
+`grouped_agg.py`.
 `pins: ex-19-dataframe-d-window/C-001`
 
 | Name | Spark value (repr) | repark value (repr) | Kept / dropped | File | Note |
@@ -109,7 +116,7 @@ tuples, both engines. Fixtures: six-row `g/k/v` frame
 | `DataFrame.unionByName` | cols `['g', 'k']` rows `[('a', 1), ('b', 2)]`; missing arm `('a', 1), (None, 2)` | same | kept | `set_ops.py` | reordered columns; NULL-fill arm |
 | `DataFrame.union_by_name` | `hasattr` False (no snake spelling) | same callable | kept | `set_ops.py` | extension alias spelling |
 | `DataFrame.unpersist` | `(6, 'DataFrame')` after cache | same | kept | `cache_write.py` | returns the frame |
-| `DataFrame.unpivot` | cols `['g', 'var', 'val']` 4 rows; string arm 2 rows; two-id arm 4 rows | same | kept | `unpivot_rows.py` | |
+| `DataFrame.unpivot` | cols `['g', 'var', 'val']` 4 rows; string arm 2 rows; two-id arm 4 rows; NULL wide frame `[('a', 'x', 10.0), ('a', 'y', None), ('b', 'x', None), ('b', 'y', 200.0)]` | same | kept | `unpivot_rows.py` | NULL arm since round 3 |
 | `DataFrame.withColumn` | add cols `['g', 'k', 'v', 'w']` rows w=v+1; replace rows k*10 | same | kept | `frame_shape.py` | both arms |
 | `DataFrame.with_column` | `hasattr` False (no snake spelling) | same callable | kept | `frame_shape.py` | extension alias spelling |
 | `DataFrame.withColumns` | swap `[(10, 1)]`; newcol `[(1, 10, 11)]` | same | kept | `frame_shape.py` | atomic swap proved |
@@ -132,12 +139,12 @@ tuples, both engines. Fixtures: six-row `g/k/v` frame
 | `GroupedData.applyInPandas` | `[('a', 1, 10.0, 11.0), ('a', 2, 20.0, 21.0), ('b', 1, 50.0, 51.0)]` | same | kept | `grouped_pivot.py` | pandas bridge, DDL schema |
 | `GroupedData.apply_in_pandas` | `hasattr` False (no snake spelling) | same callable | kept | `grouped_pivot.py` | extension alias spelling |
 | `GroupedData.avg` | `[('a', 25.0), ('b', 50.0)]`; no-col `[('a', 2.0, 25.0), ('b', 1.5, 50.0)]` | same | kept | `grouped_agg.py` | no-col arm includes numeric keys |
-| `GroupedData.count` | cols `['g', 'count']` rows `[('a', 4), ('b', 2)]` | same | kept | `grouped_agg.py` | |
+| `GroupedData.count` | cols `['g', 'count']` rows `[('a', 4), ('b', 2)]`; NULL key `('a', 1), (None, 2)` | same | kept | `grouped_agg.py` | NULL-key arm since round 3 |
 | `GroupedData.max` | `[('a', 40.0), ('b', 50.0)]` | same | kept | `grouped_agg.py` | |
 | `GroupedData.mean` | equals `avg` (`hasattr` True on both) | same | kept | `grouped_agg.py` | alias on both engines |
 | `GroupedData.min` | `[('a', 10.0), ('b', 50.0)]` | same | kept | `grouped_agg.py` | |
 | `GroupedData.pivot` | explicit cols `['g', '1', '2']`; discovery `['g', '1', '2', '3']`; multi-agg `['g', '1_sum(v)', '1_count(1)', '2_sum(v)', '2_count(1)']` | same | kept | `grouped_pivot.py` | three arms, NULL cell asserted |
-| `GroupedData.sum` | `[('a', 100.0), ('b', 50.0)]`; no-col cols `['g', 'sum(k)', 'sum(v)']` rows `[('a', 8, 100.0), ('b', 3, 50.0)]` | same | kept | `grouped_agg.py` | |
+| `GroupedData.sum` | `[('a', 100.0), ('b', 50.0)]`; no-col cols `['g', 'sum(k)', 'sum(v)']` rows `[('a', 8, 100.0), ('b', 3, 50.0)]`; NULL key `[('a', 1), (None, 5)]` | same | kept | `grouped_agg.py` | NULL-key arm since round 3 |
 | `Row.asDict` | `{'g': 'a', 'k': 1}`; repr `"Row(g='a', k=1)"`; recursive `{'s': {'g': 'a', 'k': 1}}`; recursive=False struct arm `{'s': Row(g='a', k=1)}` | flat and recursive arms same; struct arm `{'s': {'g': 'a', 'k': 1}}` | kept | `row_dicts.py` | struct arm is §7 `EX-ROW-1` |
 | `Row.as_dict` | `hasattr` False (Spark class lacks it) | same callable, `{'g': 'a', 'k': 1}` | kept | `row_dicts.py` | repark extension |
 | `Row.from_mapping` | `hasattr` False (Spark class lacks it) | fields `['g', 'k']`, repr `"Row(g='a', k=1)"` | kept | `row_dicts.py` | repark extension |
@@ -164,10 +171,12 @@ SHA `7496049` (expected for this lane).
 
 Counts line (execute leg):
 
-`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 431 covered; 480 backlog; 2 exceptions; 109 examples`
+`example-coverage: 913 public names (catalog=28, column=40, dataframe=150, functions=444, io=42, ml=28, session=41, ta=86, types=32, window=22); 500 covered; 411 backlog; 2 exceptions; 130 examples`
 
-Before this unit: `393 covered; 518 backlog; 99 examples` (at `7496049`). After: `431 covered;
-480 backlog; 109 examples` — exactly the 38 kept names.
+Before this unit: `393 covered; 518 backlog; 99 examples` (at `7496049`). On this unit's own
+tree before the merges: `431 covered; 480 backlog; 109 examples` (`BACKLOG_BASELINE` 518 → 480).
+On the shipped tree, after the EX-17 and EX-18 merges: `500 covered; 411 backlog; 130 examples`
+(`BACKLOG_BASELINE` 449 → 411) — exactly the 38 kept names.
 
 ## Review-gap table (round-1 findings, resolved in-lane)
 
@@ -175,6 +184,10 @@ Before this unit: `393 covered; 518 backlog; 99 examples` (at `7496049`). After:
 |---|---|
 | The round-1 `na.fill("zz")` expected row was written from memory against a fixture with no NULL string column — the oracle had answered the no-op on both engines | caught by the example's own `SystemExit` on the first local run; round 2b measured a NULL-bearing string fixture `[("a",1,None),(None,2,"y")]` on both engines and the arm was rewritten against the measured answers |
 | repark `Row` values are unorderable, so bare `sorted(collect())` raises `TypeError` | every multi-row comparison converted to tuples before sorting (the corpus form); all ten examples re-run green |
+| Round 3 (critic): the ledger's C-001 and counts lines stated the pre-merge tree (`431 covered; 480 backlog; 109 examples`) instead of the shipped tree | rewritten to the shipped numbers (`449 → 411`, `500 covered; 411 backlog; 2 exceptions; 130 examples`), same numbers in `scripts/map.md` and the staging map row |
+| Round 3 (critic): the dataframe map carried a 20-line summary paragraph duplicating the closing summary | duplicate deleted; the EX-19 bullet block moved above the closing summary; the closing summary names `EX-DF-18`, `EX-DF-19`, and `EX-ROW-1` in four lines |
+| Round 3 (critic): `row_dicts.py` interpolated retyped literals (`'a'`, `1, 2`) in two SystemExit messages | both access checks bind `*_expected` variables and interpolate them |
+| Round 3 (critic): no NULL controls on `unpivot` and the grouped shortcuts | a NULL-bearing wide frame and a NULL grouping key measured on both engines (round-3 leg, four MATCH arms) and asserted in `unpivot_rows.py` and `grouped_agg.py` |
 
 ## Cost
 
@@ -182,6 +195,12 @@ The GLM (glm-5.3-flash) leg started 2026-09-04: read the contract and precedent,
 gate-visibility ruling question (EX-19-Q1), then after the ruling wrote one throwaway oracle
 script per leg (four Spark JVM legs total), wrote the ten example files, the divergence pins, the
 registry rows, the backlog ratchet and the maps, then committed in slices. Base `7496049`.
+
+**Round 3 (critic findings, 2026-09-04):** the shipped-tree counts replaced the pre-merge ones in
+C-001, the counts lines, `scripts/map.md`, and the staging map; the dataframe map's duplicate
+summary paragraph was deleted with the closing summary naming the three new §7 rows in four
+lines; two retyped-literal `SystemExit` messages in `row_dicts.py` now interpolate expected
+variables; and the round-3 NULL controls were measured (one further Spark JVM leg) and asserted.
 
 ## Disk
 
@@ -208,7 +227,7 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_example_coverage.py, docs/examples/inventory.txt, docs/examples/dataframe/set_ops.py, docs/examples/dataframe/frame_shape.py, docs/examples/dataframe/rename_columns.py, docs/examples/dataframe/unpivot_rows.py, docs/examples/dataframe/cache_write.py, docs/examples/dataframe/na_surface.py, docs/examples/dataframe/stat_helpers.py, docs/examples/dataframe/grouped_agg.py, docs/examples/dataframe/grouped_pivot.py, docs/examples/dataframe/row_dicts.py]
     - id: AT-2
       status: ATTACKED
-      evidence: A COVERS name on a wrong receiver is unused and red (the GroupedData/Row binding was probe-verified before authoring); the backlog is an exact baseline 480 with the divergent freqItems name still listed.
+      evidence: A COVERS name on a wrong receiver is unused and red (the GroupedData/Row binding was probe-verified before authoring); the backlog is an exact baseline 411 on the shipped tree (480 at the dispatch base) with the divergent freqItems name still listed.
       artifacts: [scripts/check_example_coverage.py, docs/examples/backlog.txt]
     - id: AT-3
       status: ATTACKED

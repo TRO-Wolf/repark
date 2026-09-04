@@ -56,8 +56,12 @@ def main() -> None:
         rebuilt_repr = repr(rebuilt)
         if rebuilt_repr != first_repr_expected:
             raise SystemExit(f"Row.from_mapping repr {rebuilt_repr!r} != {first_repr_expected!r}")
-        if rebuilt[0] != "a" or rebuilt["g"] != "a":
-            raise SystemExit(f"Row.from_mapping access {rebuilt[0]!r}, {rebuilt['g']!r} != 'a'")
+        rebuilt_access = (rebuilt[0], rebuilt["g"])
+        rebuilt_access_expected = ("a", "a")
+        if rebuilt_access != rebuilt_access_expected:
+            raise SystemExit(
+                f"Row.from_mapping access {rebuilt_access!r} != {rebuilt_access_expected!r}"
+            )
 
         duplicated = first.from_ordered_fields(("g", "g"), (1, 2))
         duplicated_repr = repr(duplicated)
@@ -73,9 +77,12 @@ def main() -> None:
                 f"Row.from_ordered_fields values {duplicated_values!r}"
                 f" != {duplicated_values_expected!r}"
             )
-        if duplicated["g"] != 1 or duplicated[1] != 2:
+        duplicated_access = (duplicated["g"], duplicated[1])
+        duplicated_access_expected = (1, 2)
+        if duplicated_access != duplicated_access_expected:
             raise SystemExit(
-                f"Row.from_ordered_fields access {duplicated['g']!r}, {duplicated[1]!r} != 1, 2"
+                f"Row.from_ordered_fields access {duplicated_access!r}"
+                f" != {duplicated_access_expected!r}"
             )
     finally:
         repark.stop()
