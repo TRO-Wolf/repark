@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import LongType, StructField, StructType
 
@@ -47,32 +46,14 @@ def _frame(spark: ReparkSession, depth: int, keep: str | None) -> Any:
     return spark.createDataFrame([row], schema=StructType(fields))
 
 
-@pytest.mark.parametrize("keep", ["id", "k"])
-def test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified(
-    spark: ReparkSession, keep: str
-) -> None:
-    """Depth 2 beside any keep column fails on qualified vs unqualified, not on duplication."""
-    ambiguous = r"\bqualified field name\b.*which would be ambiguous"
-    with pytest.raises(AnalysisException, match=ambiguous):
-        _frame(spark, 2, keep).dynamicFlatten().to_arrow()
-
-
-@pytest.mark.parametrize("depth", [3, 4])
-@pytest.mark.parametrize("keep", ["id", "k"])
-def test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name(
-    spark: ReparkSession, depth: int, keep: str
-) -> None:
-    """Depth 3 and deeper beside a keep column fail on duplication, a different message."""
-    with pytest.raises(AnalysisException, match=r"duplicate unqualified field name"):
-        _frame(spark, depth, keep).dynamicFlatten().to_arrow()
-
-
-@pytest.mark.parametrize(("depth", "keep"), [(1, "id"), (1, "k"), (3, None), (4, None)])
-def test_depth_one_with_keep_and_any_depth_without_keep_still_collect(
+@pytest.mark.parametrize("depth", [1, 2, 3, 4])
+@pytest.mark.parametrize("keep", [None, "id", "k"])
+def test_keep_column_beside_any_struct_depth_collects_the_spark_row(
     spark: ReparkSession, depth: int, keep: str | None
 ) -> None:
-    """Control: the clash needs both a sibling keep column and depth 2 or deeper."""
+    """Every cell of the keep x depth matrix collects the row live Spark returns."""
     table = _frame(spark, depth, keep).dynamicFlatten().to_arrow()
-    assert table.num_rows == 1
-    expected = ["Payload_" + "_".join([f"L{i}" for i in range(1, depth)] + ["Val"])]
-    assert table.column_names == ([keep, *expected] if keep is not None else expected)
+    leaf = "Payload_" + "_".join([f"L{index}" for index in range(1, depth)] + ["Val"])
+    assert table.column_names == ([keep, leaf] if keep is not None else [leaf])
+    expected = {leaf: 9} if keep is None else {keep: 1, leaf: 9}
+    assert table.to_pylist() == [expected]

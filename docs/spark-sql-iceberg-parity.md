@@ -3591,31 +3591,35 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
 
 ### DYNFLATTEN-QUALNAME-1 — any sibling keep column plus struct depth ≥ 2 fails `dynamicFlatten`
 
-- **repark** — `dynamicFlatten().to_arrow()` on a frame holding a scalar column beside a
-  nested struct raises `AnalysisException` from optimizer rule `push_down_leaf_projections`.
-  Measured matrix (keep ∈ {none, `id`, `k`} × depth 1–4, release tip):
+- **repark** — every cell now collects. Re-measured matrix (keep ∈ {none, `id`, `k`} ×
+  depth 1–4, release tip, 2026-09-04 after PERF-DYNFLATTEN-2):
 
   | keep \ depth | 1 | 2 | 3 | 4 |
   |---|---|---|---|---|
   | none | collects | collects | collects | collects |
-  | `id` | collects | **ambiguous** | **duplicate** | **duplicate** |
-  | `k` | collects | **ambiguous** | **duplicate** | **duplicate** |
+  | `id` | collects | collects | collects | collects |
+  | `k` | collects | collects | collects | collects |
 
-  Onset is depth 2; the keep column's name is irrelevant (`k` fails as `id` does), so this is
-  not an `id` collision. The two failures differ: depth 2 gives `Schema contains qualified
+  As filed, the failure was an `AnalysisException` from optimizer rule
+  `push_down_leaf_projections` with onset at depth 2 — depth 2 `Schema contains qualified
   field name datafusion.public.__repark_cdf_<uuid>.<keep> and unqualified field name <keep>
-  which would be ambiguous`, depth ≥ 3 gives `Schema contains duplicate unqualified field
-  name <keep>`.
+  which would be ambiguous`, depth ≥ 3 `Schema contains duplicate unqualified field name
+  <keep>` — and the keep column's name was irrelevant (`k` failed as `id` did), so it was
+  never an `id` collision.
 - **Apache Spark** — the same frame expands and returns the prefixed leaf beside the keep
-  column: columns `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
-  *(oracle: measured — PySpark 4.1.2, 2026-09-04.)*
+  column, on every cell of the same matrix: depth 3 with `id` gives columns
+  `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
+  *(oracle: measured — PySpark 4.1.2, 2026-09-04, all 12 cells.)*
 - **Pin** — `python/repark/tests/test_dynamic_flatten_divergences.py`:
-  `test_keep_column_at_depth_two_is_ambiguous_qualified_vs_unqualified` (regex
-  `\bqualified field name\b`, which cannot match `unqualified`),
-  `test_keep_column_at_depth_three_and_deeper_duplicates_the_unqualified_name`, and the
-  control `test_depth_one_with_keep_and_any_depth_without_keep_still_collect`.
-- **Rationale** — BACKLOG, intent to FIX. Filed from PERF-DYNFLATTEN-1; the measurement bed
-  nests the row id inside the leaf so flatten can run. Do not close by switching the bed.
+  `test_keep_column_beside_any_struct_depth_collects_the_spark_row`, the whole 12-cell matrix
+  as an answer pin (columns and row values), replacing the two refusal pins and their control.
+- **Rationale** — FIXED by PERF-DYNFLATTEN-2, and not by switching the bed (the do-not held).
+  The refusal was the leaf-projection rule choking on the `get_field` inside the per-leaf
+  `CASE WHEN parent IS NULL`. The null-mask extractor replaces that whole expression with one
+  opaque scalar UDF over the parent column, so the rule has nothing to hoist and the plan it
+  could not rewrite is no longer built. The measurement bed still nests the row id inside the
+  leaf; that workaround is now unnecessary and is left alone, because changing the bed would
+  move every pinned number.
 
 ### DYNFLATTEN-LISTNULL-1 — Spark keeps a null-typed list as `int32 user_properties`; repark drops it
 

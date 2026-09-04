@@ -49,6 +49,14 @@ pins: perf-dynflatten-1-measure/C-002, C-003
 | Run the measurement | `python python/repark-parity/bench/dynflatten/run_dynflatten.py --scale gate --out /tmp/oc-dynflatten-bed` |
 | Read the numbers | [../../../../docs/perf/dynamic-flatten-baseline.md](../../../../docs/perf/dynamic-flatten-baseline.md) |
 
+**PERF-DYNFLATTEN-2 re-ran this harness unchanged**, same flags both sides
+(`--scale quick --iterations 5 --warmup 1`), so the before and after tables in the baseline
+note are the same protocol and not two conventions. The floor is re-measured on each run
+because it is a property of the box that hour, not a constant: the 2026-09-04 evening runs
+sat on a far quieter host than PERF-DYNFLATTEN-1's, and the floor moved with it. Comparing an
+after-cost against a stale floor would be the same aggregation error as summing fixtures.
+pins: perf-dynflatten-2-null-mask/C-001, C-005
+
 ## Debug
 
 | Symptom | First check |

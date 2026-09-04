@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use arrow::array::{ArrayRef, DictionaryArray, FixedSizeListArray, Int32Array, LargeListArray};
+use arrow::array::{
+    Array, ArrayRef, DictionaryArray, FixedSizeListArray, Int32Array, LargeListArray,
+};
 use arrow::buffer::{NullBuffer, OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::{DataType, Field, Int32Type, Schema};
 use arrow::record_batch::RecordBatch;
 
 use super::{
     DynamicFlattenOptions, assert_int64, collect_one, column_names, dynamic_flatten, flatten,
-    i64_array, i64_cells, list_of, options, read_batch,
+    i64_array, i64_cells, list_of, options, read_batch, struct_array,
 };
 
 fn large_list_of(
@@ -186,4 +188,39 @@ async fn two_lists_keep_cartesian_schema_order() {
         i64_cells(&table, "second"),
         [Some(10), Some(20), Some(10), Some(20)]
     );
+}
+
+#[test]
+fn struct_expansion_uses_the_null_mask_extractor_not_a_case() {
+    let outer = struct_array(
+        vec![("x", DataType::Int64, i64_array(vec![Some(0), Some(5)]))],
+        Some(vec![false, true]),
+    );
+    let batch = batch_with_ids("outer", Arc::new(outer), vec![Some(1), Some(2)]);
+
+    let frame = flatten(batch, options());
+    let plan = format!("{}", frame.logical_plan().display_indent());
+    assert_eq!(plan.matches("CASE WHEN").count(), 0, "{plan}");
+    assert_eq!(plan.matches("repark_null_mask_field").count(), 1, "{plan}");
+}
+
+#[test]
+fn dictionary_struct_expansion_keeps_the_case_projection() {
+    let values = struct_array(vec![("x", DataType::Int64, i64_array(vec![Some(7)]))], None);
+    let keys = Int32Array::from(vec![Some(0)]);
+    let dictionary = DictionaryArray::<Int32Type>::try_new(keys, Arc::new(values)).expect("dict");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "wrapped",
+            dictionary.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(dictionary)],
+    )
+    .expect("batch");
+
+    let frame = flatten(batch, options());
+    let plan = format!("{}", frame.logical_plan().display_indent());
+    assert_eq!(plan.matches("CASE WHEN").count(), 1, "{plan}");
+    assert_eq!(plan.matches("repark_null_mask_field").count(), 0, "{plan}");
 }

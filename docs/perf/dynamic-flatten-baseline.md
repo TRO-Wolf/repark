@@ -184,3 +184,105 @@ cd ../.. && python python/repark-parity/bench/dynflatten/run_dynflatten.py \
 
 The runner raises rather than writing a report if the native module is a debug build.
 `make dynflatten-bench` runs `--scale gate` and writes its rendered report under the bed.
+
+## After PERF-DYNFLATTEN-2 — the null-mask struct extractor
+
+pins: perf-dynflatten-2-null-mask/C-001, C-003
+
+Everything above is PERF-DYNFLATTEN-1's and is untouched. What follows is a **second,
+self-contained before/after pair**, both halves measured the same evening on the same box with
+the same command (`run_dynflatten.py --scale quick --iterations 5 --warmup 1`, 8 threads on
+both engines, release module proved from `__debug_assertions__`). It does not extend the tables
+above: that run sat under 3-4 sibling lanes and this one did not, so the two noise floors are
+numbers about different hours and a cost is only ever read against the floor of the run it came
+from.
+
+| key | before | after |
+|---|---|---|
+| 1-minute load at run start | 4.50 | 4.53 |
+| noise floor (`struct_d3`, 6 repeats) | 4.077 ms | 0.0585 ms |
+| native | `release_or_stripped size_bytes=163106944`, release `True` | `release_or_stripped size_bytes=163145824`, release `True` |
+
+The floor collapses because it is the spread of the cell it is measured on, and that cell went
+from ~25 ms to ~1 ms. A 0.0585 ms floor is a floor for a 1 ms cell and says nothing about a
+25 ms one; the control below measures the dispersion at that scale instead.
+
+### Per-fixture execute median / min (ms) and rows out
+
+`execute` is `to_arrow()` only — the same column the candidate isolation subtracts.
+
+| shape | iso | before med | before min | after med | after min | rows_out (both) |
+|---|---|---:|---:|---:|---:|---:|
+| struct_d3 | | 25.31 | 25.16 | **0.95** | 0.94 | 100000 |
+| struct_d6 | | 71.22 | 68.79 | **1.50** | 1.43 | 100000 |
+| list_struct_1 | | 30.02 | 28.08 | 17.24 | 16.67 | 100000 |
+| list_struct_8 | | 44.09 | 27.41 | 33.55 | 21.74 | 589888 |
+| list_struct_64 | | 98.54 | 96.74 | 64.92 | 57.91 | 4505338 |
+| cartesian_two_lists | | 85.88 | 63.85 | 53.37 | 52.09 | 961708 |
+| null_typed_list | | 12.50 | 11.83 | 0.99 | 0.96 | 100000 |
+| struct_d3_nonull | y | 2.47 | 2.18 | 1.00 | 0.98 | 100000 |
+| struct_d6_nonull | y | 6.39 | 6.29 | 1.50 | 1.47 | 100000 |
+| cartesian_legs_only | y | 26.17 | 24.88 | 30.28 | 28.40 | 310150 |
+| cartesian_tags_only | y | 18.83 | 14.88 | 23.71 | 18.82 | 310150 |
+
+`rows_out` is identical on all eleven fixtures. Row-set identity is pinned separately and more
+strictly: `python/repark/tests/test_dynflatten_null_mask.py` holds the gate-scale row count,
+the Arrow schema string (names, types, nullability) and a SHA-256 over the ordered rows for
+each of the eleven shapes, captured before the extractor existed.
+
+### The candidate
+
+| candidate | fixture | how it is isolated | before | after | after ÷ after-floor | verdict |
+|---|---|---|---:|---:|---:|---|
+| null_mask_struct_extractor | **struct_d6** | 30 % null parents minus 0 % nulls | 64.83 ms | **0.01 ms** | **0.1** | **delivered** |
+| null_mask_struct_extractor | struct_d3 | same, shallower | 22.84 ms | −0.05 ms | −0.9 | delivered |
+
+The queue bar was "a single fixture's isolated cost above 3× the floor". `struct_d6`'s cost is
+now 0.1× its run's floor — the null-parent handling is no longer measurable as a cost at all,
+which is what a validity-bitmap extractor should do: the work stopped being proportional to the
+rows and became proportional to the validity buffer.
+
+### The two fixtures that moved up, and the control that explains them
+
+`cartesian_legs_only` (+4.1 ms) and `cartesian_tags_only` (+4.9 ms) are the only fixtures whose
+median rose. Neither is a regression the diff can be charged with, and the evidence is measured,
+not argued:
+
+1. **`cartesian_tags_only` has no struct anywhere in its schema** (`id`, `Tags ARRAY<STRING>`,
+   `user_properties ARRAY<VOID>`), so `expand_structs` never runs on it and the extractor is
+   never constructed. It cannot have been slowed by this change. Six back-to-back repeats of
+   that cell on the after build: 25.28, 25.96, 23.31, 28.69, 28.36, 29.67 ms — **spread
+   6.36 ms**, larger than the movement being explained.
+2. `cartesian_legs_only` does use the extractor. Six repeats: 31.26, 29.33, 32.72, 31.04,
+   30.57, 32.92 ms — spread 3.59 ms, again the order of its movement.
+3. `cartesian_two_lists` contains **both** the legs work and the tags work and fell 85.88 →
+   53.37 ms. Work the diff had genuinely added to the legs path would have to show up there too.
+
+So the dispersion at the 20-30 ms scale on this box is ~6 ms, not the 0.0585 ms floor measured
+on a 1 ms cell, and no fixture regresses beyond the dispersion measured at its own scale.
+
+### What the extractor is
+
+`crates/repark-core/src/dynamic_flatten/null_mask.rs`. Per struct leaf per level the rewrite
+used to emit `CASE WHEN parent IS NULL THEN <typed null> ELSE get_field(parent, 'field')`.
+DataFusion plans that as `EvalMethod::ExpressionOrExpression`, which **filters the whole record
+batch twice** (the then-side rows and the else-side rows), evaluates each side, and zips — per
+leaf, per level. `struct_d6` pays it eight times over six projections. The extractor is one
+scalar UDF over the parent column that takes the child array `get_field` would have returned
+and unions the parent's validity into it with `arrow::compute::nullif`: one bit-and over the
+validity buffer, no row copied. A parent with no nulls short-circuits to the child untouched.
+
+`Dictionary(_, Struct)` parents keep the CASE: `get_field` there returns
+`Dictionary(K, child)` while the typed null is `child`, and the CASE's coercion between the two
+is the shipped output type. Contract and the two rejected alternatives (both measured):
+`crates/repark-core/src/dynamic_flatten/map.md`.
+
+### `DYNFLATTEN-QUALNAME-1` closed, and not by changing the bed
+
+Do-not #6 above stands and was honoured. The refusal was `push_down_leaf_projections` choking
+on the `get_field` inside the per-leaf CASE; the extractor leaves no `get_field` in the plan for
+that rule to hoist, so the plan it could not rewrite is no longer built. All twelve cells of the
+keep × depth matrix now collect and equal live PySpark 4.1.2. The registry row is FIXED and its
+pin is now an answer pin. The bed still nests the row id inside the leaf; that workaround is now
+unnecessary and is deliberately left alone, because changing the bed would move every pinned
+number above.
