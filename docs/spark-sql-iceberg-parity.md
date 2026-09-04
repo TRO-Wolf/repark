@@ -2316,6 +2316,82 @@ the pin rather than obeying it.
   decision is create-path policy, not a defect in this statement. Both causes are recorded here
   with the measured cell so the next unit starts from the reading rather than the surprise.
 
+### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
+
+- **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
+  write.*.mode = merge-on-read, write.target-file-size-bytes = 268435456) AS SELECT * FROM
+  staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4) / INT /
+  nullable STRING copies the parquet nullability into Iceberg: `id` / `ingestion_timestamp` /
+  `part` required, `amount` / `units` / `note` optional. The Arrow read-back matches
+  (`id`/`part` non-null). Row values match Spark.
+- **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
+  every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s1-ctas-if-fresh]`
+  and `…[s7-ctas-if-fresh]`; live
+  `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
+- **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
+  on requiredness only: types here match the parquet schema. Create-path policy, not a local
+  one-line flip (same SE-1 tighten-derived refusal V3-COV-8 names).
+
+### CUTOVER-MERGE-FILES-1 — MoR `MERGE` `UPDATE SET *` / `INSERT *` writes extra delete files; the row set is Spark-equal and the second pass is row-idempotent
+
+- **repark** — after a deduped CTAS, two identical `MERGE INTO t AS Target USING staging_view AS
+  Source ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *`
+  leave the row set unchanged on the second pass. Snapshot operations are `append, overwrite,
+  overwrite` (Spark-equal). File *kind* is not Spark-equal packing: v2 writes PARQUET
+  position-delete files; v3 writes PUFFIN DVs. The delete-file *count* is host-dependent
+  (3 on a 64-core box; `repark.write.max-concurrent-files=1` or
+  `spark.sql.shuffle.partitions=1` yields 2). The golden pins kinds, not count. The always-run
+  pin is `count >= Spark's 2`. `next-row-id` on v3 is 6 on both engines.
+- **Apache Spark** — same SQL, same rows, same snapshot operations, two delete files.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s2-merge-idempotent]`
+  and `…[s7-merge-idempotent]`; live
+  `…::test_sql_harden_row_matches_the_live_spark_oracle[s2-merge-idempotent]`;
+  `…::test_merge_delete_file_count_meets_spark_floor`;
+  `…::test_merge_delete_file_count_moves_with_write_concurrency`.
+- **Rationale** — BACKLOG. The production idempotence claim (row set) holds. Extra delete
+  files are write-path packing, not a row defect. The count follows write concurrency /
+  shuffle partitions, so a golden must not pin it.
+
+### CUTOVER-DEDUP-SCHEMA-1 — silver dedup values match Spark; Arrow type and nullability do not
+
+- **repark** — `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then
+  `= 1`, then `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)`
+  answers rows `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is
+  `id string_view not null`, `amount decimal128(10,4) not null`, `units int32 not null`,
+  `note string not null`, `part int32 not null`.
+- **Apache Spark** — the same rows. Arrow schema is `id string nullable`, `amount
+  decimal128(10,4) nullable`, `units int32 not null`, `note string not null`, `part int32
+  nullable`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`.
+- **Rationale** — BACKLOG. Values are Spark-equal. `string_view` is the parquet-read Utf8View
+  path (CTAS-VIEW-1 writes it; this row is the transform before a write). Nullability after
+  `coalesce` is analyzer-level.
+
+### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
+
+- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
+  | spelling | repark |
+  |---|---|
+  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
+  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
+  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
+- **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
+  `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
+  the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
+  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `…::test_to_date_and_cast_as_date_answer_on_repark`,
+  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
+- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
+  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
+
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
 - **repark** — `CALL … rewrite_data_files(strategy => 'sort')` and a named `sort_order` refuse
@@ -3623,20 +3699,42 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (legacy still walks, map total). Statement-wall numbers live in the RP-9 ledger; the
   8-manifest "before" set is noisy and is not a claimed improvement. Full record: the RP-9
   ledger; RP-8 E-4 closed.
+- **PERF-DVCLOSE-STMT-1** — **FIXED 2026-09-04 (RP-10)** at pin `85a4aaf0` (fork F-25 `#265`).
+  `validate_fresh_dvs_only` walks data manifests newest-first and stops once every `added_dvs`
+  key is found (buffer 1 until the first manifest is consumed). On the RP-9 192-manifest
+  identity DELETE of the newest row, commit-phase data-manifest opens are **1** (hide pin:
+  191 of 192 hidden, commit succeeds). Close-phase opens stay **0**. Oldest-manifest and
+  never-found keys still take the full walk (F-25's own pins). Statement-wall numbers live
+  in the RP-10 ledger; the RP-9 `DELETE WHERE id = 0` cell is the oldest file and is not a
+  claimed wall-clock win. Pin:
+  `merge/tests/dv_commit_opens.rs::a_newest_file_identity_delete_commits_with_one_data_manifest`.
 - **PERF-DVCLOSE-STMT-1** — surfaced 2026-09-03, RP-9 r2. After the F-23 skip engages, a
   192-manifest pure-DV `DELETE` still opens every data manifest once at commit in the fork's
   `validate_fresh_dvs_only` (unconditional full pass on every DV-adding commit,
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
-- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2. `TargetScanStream::execute` runs
-  `plan_files` + `try_collect` when a partition sink is set; DataFusion then executes that
-  stream three times on the identity DELETE (`predicate_dml.rs` + `target_scan.rs`), so the
-  scan phase opens each data manifest 3× (~2.5 s of a 192-manifest statement). BACKLOG for
-  MERGE and subquery `WHERE` as well as the now-routed plain `WHERE`; queued unit
-  **PERF-SCAN-1**. The RP-9 routing change (`predicate_dml/plain.rs`) does not collapse the
-  three passes. Pin to land with that unit: kernel/manifest opens on the 192-fixture DELETE
-  so a third `plan_files` goes red.
+- **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
+  **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
+  `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
+  `seed_done` → puffin write → `delete_done`: scan-to-puffin **1 × N** data-manifest
+  opens, close **0**, commit **1 × N** plus one new delete-manifest write. Same 1+0+1
+  at both SHAs. Scan call site (1 × N): `TargetScanStream::execute` (once) →
+  `planned_or_plan` → iceberg `TableScan::plan_files` → `ObjectCache::get_manifest` →
+  `ManifestFile::load_manifest` → one `FileIO::read` / one `openat` per data manifest.
+  `plan_files` prune-vs-tasks share that cache (0 extra opens).
+  `record_scanned_partitions` and the partition-sink drain walk in-memory `FileScanTask`s
+  (0). DataFusion opens N parquet data files, not data manifests. Close 0 is fork F-23.
+  Commit 1 × N is `validate_fresh_dvs_only` (`row_delta_fresh_dv.rs:56`,
+  `PERF-DVCLOSE-STMT-1` / F-25) on a separate FileIO. The production identity DELETE /
+  matched-delete MERGE call `execute` once, so the plan-once cache cannot drop 3 × N to
+  1 × N on that path — the RP-9 3 × N scan-phase claim is not reproduced. The cache stays
+  as concurrent-`execute` hardening
+  (`three_concurrent_target_scan_executes_plan_data_manifests_once`, mutation 1 red of 1).
+  Production-path `plan_files==1` pins were deleted (a pin that cannot go red proves
+  nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
+  are the record. Remaining commit 1 × N stays
+  `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

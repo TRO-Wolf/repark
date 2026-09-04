@@ -49,7 +49,7 @@ mod insert;
 mod not_matched_by_source;
 pub(crate) mod row_lineage;
 mod snapshot_commit;
-mod target_scan;
+pub(crate) mod target_scan;
 
 use insert::{
     insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,

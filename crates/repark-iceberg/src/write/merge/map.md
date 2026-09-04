@@ -69,6 +69,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
   close as `Option<&ManifestList>` so the list is not read twice.
   pins: rp-9-repin-f23/C-002, C-005
+  **RP-10 (2026-09-04):** pin `85a4aaf0` (fork F-25). The production identity DELETE of the
+  newest row on the 192-manifest pure-DV fixture commits with every data manifest except the
+  one that holds the touched file hidden (commit-phase opens = 1). Close-phase opens stay 0.
+  pins: rp-10-repin-f25/C-002
   **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
   `commit_target::snapshot_id_for_commit` already resolved for the target scan and
   `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
@@ -115,7 +119,13 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   two routes are byte-equivalent for this scan shape (the fork's `to_arrow` builds an
   `ArrowReaderBuilder` with the same defaults, and its within-file split expansion is a no-op
   while `_pos` is projected).
+  **PERF-SCAN-1 (2026-09-03 / r2 2026-09-04):** `plan_files` + `try_collect` run once per
+  stream; later `StreamingTable` re-executes reuse the cached `FileScanTask`s. That cache
+  is concurrent-`execute` hardening, not a 3 × N → 1 × N drop on the production identity
+  DELETE (one `execute`). Registry `PERF-SCAN-3PASS-1` stays BACKLOG. Round-2 strace at
+  base `e6ebd40` and tip, N=8 and N=192: scan-to-puffin 1 × N, close 0, commit 1 × N.
   pins: rp-7-f18-repin/C-002
+  pins: perf-scan-1-plan-once/C-001, C-002, C-004
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have
