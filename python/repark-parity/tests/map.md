@@ -147,6 +147,8 @@ JVM, no repark required). See [../map.md](../map.md).
   pins: rp-8-repin-f21-f22/C-006
   **RP-9 (2026-09-03):** the same meta-pin moves to `594bdbe5`; R114's dated cell names F-23.
   pins: rp-9-repin-f23/C-004
+  **RP-10 (2026-09-04):** the same meta-pin moves to `85a4aaf0`; R114's dated cell names F-25.
+  pins: rp-10-repin-f25/C-004
   **RP-11 (2026-09-04):** the same meta-pin moves to `189a73ed`; `B-MOR-3-FLOOR-1` FIXED.
   pins: rp-11-repin-f24/C-001, C-003
   Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:

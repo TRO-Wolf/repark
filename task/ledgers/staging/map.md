@@ -36,3 +36,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured against live Spark on the memory catalog; Glue + S3 Tables legs. Four registry
   rows filed, `V3-COV-7` cited, 0 FIXED. `risk_tier: standard`. Branch
   `feat/sql-harden-1-cutover-shapes`. pins: sql-harden-1-cutover-shapes/C-001
+- [rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md) — **RP-10 (2026-09-04), in flight:**
+  the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
+  `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
+  `feat/rp-10-repin-f25`.

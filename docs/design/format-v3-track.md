@@ -303,6 +303,8 @@ closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_referenc
   `F-v3-10-partition-file-order` FIXED, `legacy_deletes.rs` deleted.
 - **RP-9:** *Done 2026-09-03.* Pin `594bdbe5` (fork F-23) skips the data-manifest walk on the
   pure-DV path when `known_partitions` is complete; `PERF-DVCLOSE-WALK-1` FIXED.
+- **RP-10:** *Done 2026-09-04.* Pin `85a4aaf0` (fork F-25) stops the fresh-DV commit walk once
+  every `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` FIXED.
 - **RP-11:** *Done 2026-09-04.* Pin `189a73ed` (fork F-24 `#266`) honours `min-input-files=5`
   on the v3 parquet-to-DV arm; `B-MOR-3-FLOOR-1` FIXED.
 

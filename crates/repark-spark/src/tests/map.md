@@ -81,6 +81,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: v3-12-legacy-delete-merge/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: rp-8-repin-f21-f22/C-002, C-003
   pins: rp-9-repin-f23/C-003, C-005
+  **RP-10 (2026-09-04):** the same `#[ignore]`d cell is the before/after wall for F-25.
+  pins: rp-10-repin-f25/C-003
   pins: perf-scan-1-plan-once/C-003
 - `v3_row_order.rs` — **V3-11 (2026-09-02):** same-commit data-file order. The ten-run pin
   `mor_merge_insert_takes_sparks_row_id_in_ten_consecutive_runs` replays the LIVE-v3 sequence

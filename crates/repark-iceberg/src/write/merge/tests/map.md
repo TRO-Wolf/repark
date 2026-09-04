@@ -9,6 +9,13 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `dv_commit_opens.rs` — **RP-10 (2026-09-04):** the 192-manifest pure-DV identity DELETE
+  of the newest row commits after every data manifest except the one that holds the
+  touched file is hidden (F-25 `validate_fresh_dvs_only` stops once every `added_dvs`
+  key is found — commit-phase opens = 1). Hiding that last manifest too refuses.
+  `execute_predicate_dml` on the same fixture deletes the newest id. Close-phase
+  opens stay 0 (RP-9 hide pin). Scan stays 3×N (`PERF-SCAN-3PASS-1`).
+  pins: rp-10-repin-f25/C-002
 - `merge.rs` — primary unit battery.
 - `lineage.rs` — V3-7 rewrite-projection and scratch-schema pins for carried `_row_id`.
   pins: v3-7-merge-lineage/C-001
