@@ -7,10 +7,6 @@ use super::{
     object_name_parts, rewrite_target_refs_in_expr,
 };
 
-/// Plain `WHERE` identity DELETE on a three-part Iceberg target (`catalog.ns.table`).
-///
-/// # Errors
-/// Fails with [`DataFusionError::Plan`] when the target namespace is invalid.
 pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);

@@ -44,7 +44,7 @@ works, so the attribute is gone rather than documented.
   four-part `table.branch_*` names, and names whose catalog is not in the session
   registry (Spark rewrites a branch DELETE onto `datafusion.public.<temp>`) stay on
   the fork `TableProvider`.
-  pins: rp-9-repin-f23/C-005
+  pins: rp-9-repin-f23/C-005 (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; the contract is stated here, not as a doc comment)
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers
