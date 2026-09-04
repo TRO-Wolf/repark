@@ -11,7 +11,7 @@ slate row.
 
 **Writable paths:** `docs/examples/dataframe/`, `docs/examples/backlog.txt`, the `BACKLOG_BASELINE`
 constant in `scripts/check_example_coverage.py`, `docs/spark-sql-iceberg-parity.md` §7,
-`python/repark/tests/test_examples_dataframe_c.py`, lockstep `map.md` files, and this ledger with
+`python/repark/tests/test_examples_dataframe_c.py`, lockstep `map.md` files, one `.typos.toml` allow-list line (`_preapare_args_for_sample`, the verbatim PySpark method name the EX-DF-13 row quotes), and this ledger with
 its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other `scripts/` line,
 `.github/`, `STATUS.md`, every other ledger, `briefs/next-sequence.md`.
 
