@@ -8,7 +8,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
-`spill.rs`, `df_guards.rs`) plus the test cohorts under `tests/` (`session.rs`,
+`spill.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
@@ -78,6 +78,52 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **R3:** RAM-relative default `clamp(0.6 × cgroup-or-MemTotal, MIN, 8 GiB)` at `build()`
   only; `builder_default_installs_eight_gib_fair_spill_pool` asserts Finite / floor / cap /
   equals helper.
+- `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
+  rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
+  two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding
+  window frame through `Accumulator::retract_batch` and refuses at execution when the accumulator
+  has none — the thirteen `WIN-SLIDE-*` registry rows. The rule probes
+  `AggregateUDF::create_sliding_accumulator` (NOT `accumulator`: `sum` and the `stddev` / `var`
+  family only grow a retract in the *sliding* one, and probing the wrong constructor rewrites them
+  too) and, when that accumulator cannot retract, swaps the `AggregateUDF` window function for a
+  `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a fresh
+  accumulator. That is Spark's `AggregateWindowFunction` strategy at Spark's O(frame x rows) cost,
+  and it is by capability, not by name: a newly registered aggregate never refuses.
+  Design notes that cost a measurement:
+  * **The physical route is closed in DataFusion 54.1.** `WindowExpr::create_window_fn` is a
+    required trait method returning `WindowFn`, a `pub` type in the private module
+    `datafusion_physical_expr::window::window_expr` that `window/mod.rs` does not re-export, so an
+    out-of-tree `WindowExpr` (and therefore the `AggregateWindowExpr` re-scan that would have
+    reused DataFusion's own frame machinery) cannot be named, let alone written. The logical
+    `WindowUDF` route the DataFusion docs name is the one that exists.
+  * **No index caching.** `StandardWindowExpr::evaluate_stateful` hands the evaluator a *retained*
+    batch that `BoundedWindowAggExec` prunes from the front between calls, shifting every index; an
+    evaluator that remembered `last_range` would silently mis-slice. The evaluator is therefore
+    index-stateless, which is also why a growing frame is not incrementally accumulated.
+  * **Synthetic accumulator arguments.** `PartitionEvaluatorArgs` carries no input `Schema`, and the
+    physical arg exprs index a schema the optimizer may have pruned since the rewrite, so
+    `AccumulatorArgs` is built over a synthetic `Schema` of the argument fields with `Column(i)`
+    exprs — literals preserved positionally from the logical args, because a few accumulators read
+    one. The probe uses the identical construction, so an accumulator the evaluator could not build
+    is one the probe could not build either, and the rewrite simply does not fire.
+  * **An empty frame answers a fresh accumulator's `evaluate()`**, never
+    `AggregateFunctionExpr::default_value` (what DataFusion's sliding path uses): that is how
+    `collect_list` answers `[]` and `approx_count_distinct` answers `0`, both Spark-measured.
+  * `FILTER (WHERE ...)` is carried as a trailing boolean argument and applied as a per-frame mask;
+    `DISTINCT` rides in `AccumulatorArgs::is_distinct`; `IGNORE NULLS` in `ignore_nulls`. The
+    original column name is restored with `NamePreserver`, because DataFusion spells an
+    `AggregateUDF` window function's schema name with `", "` between arguments and a `WindowUDF`'s
+    with `","`.
+  Pins: `tests/window_rescan.rs` and `python/repark/tests/test_win_slide_1.py`. It sits under
+  `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
+  and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
+  pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
+- `tests/window_rescan.rs` — **WIN-SLIDE-1:** the capability pins — a throwaway aggregate with no
+  `retract_batch`, registered at test time, answers over a sliding frame and plans as a re-scan;
+  `sum` keeps DataFusion's sliding accumulator; an ever-expanding frame is never rewritten; an
+  empty frame answers the fresh accumulator, not the aggregate's `default_value` (the throwaway's
+  `default_value` is a sentinel so the two are distinguishable); a `FILTER`ed non-retractable
+  aggregate answers the masked frame. pins: win-slide-1/C-005, C-006
 - `tests/aws_gate.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;

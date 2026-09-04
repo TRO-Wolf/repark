@@ -3466,111 +3466,265 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
-### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
+### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31) — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
-aggregate has no inverse (it re-scans the frame). DataFusion 54.1 refuses at execution:
+aggregate has no inverse (it re-scans the frame). DataFusion 54.1 evaluates a sliding frame
+through `Accumulator::retract_batch` and refused at execution when an accumulator has none:
 `Aggregate can not be used as a sliding accumulator because retract_batch is not implemented`.
 W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan at all are
-**absent** (not these rows). Names that plan and then refuse are the thirteen headings below.
-`approx_count_distinct` is probed on int64; on Float64 it fails earlier with a type gap.
-W-1 picks the fallback (Spark re-scan vs segment tree). *(oracle: live RePark probe, 2026-08-31;
-Spark half is documented SlidingWindowFunctionFrame plus the W-0 PySpark 4.1.2 cell.)*
+**absent** (not these rows). Names that planned and then refused are the thirteen headings below.
 
-Shared pin for every heading:
+**WIN-SLIDE-1 (2026-09-04) closed all thirteen with one mechanism**, not thirteen: every core
+session carries the `sliding_frame_rescan` analyzer rule
+([crates/repark-core/src/session/window_rescan.rs](../crates/repark-core/src/session/window_rescan.rs)).
+For an aggregate window function over a frame DataFusion would evaluate with retraction, the rule
+probes `create_sliding_accumulator`; when that accumulator cannot retract, the aggregate is wrapped
+as a `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a **fresh**
+accumulator — Spark's own `AggregateWindowFunction` strategy, at Spark's O(frame x rows) cost.
+Retractable aggregates (`sum`, `avg`, `min`, `max`, `count`, the `stddev` / `var` family) keep
+DataFusion's sliding accumulator untouched. The fallback is by capability, not by name: a newly
+registered aggregate with no `retract_batch` gets it automatically
+(`crates/repark-core/src/session/tests/window_rescan.rs`).
+`FILTER (WHERE ...)`, `DISTINCT` and `IGNORE NULLS` ride through the re-scan. An empty frame
+answers a fresh accumulator's `evaluate()` (so `collect_list` answers `[]` and
+`approx_count_distinct` answers `0`), never the aggregate's `default_value`.
+*(oracle: live PySpark 4.1.2, 2026-09-04; the refusal half is the W-0 live RePark probe,
+2026-08-31.)*
+
+Shared roster pin for every heading:
 `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_heading_per_sliding_refuse`.
+(the frozen refuse set is now empty) and
+`python/repark-parity/tests/test_w0_window_bench.py::test_every_rescanned_name_has_a_fixed_registry_row`.
 
-### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses
+### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `approx_count_distinct(vi)` over `ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW` plans, then raises the sliding-accumulator `retract_batch` refusal. On Float64 the same name fails earlier (`approx_distinct` not implemented for that type) and is not this row.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `approx_count_distinct(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. An empty frame answers `0` (a fresh HLL sketch), not NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_count_distinct]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses
+### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `approx_percentile(v, 0.5) OVER (ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)` raises the sliding-accumulator `retract_batch` refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. Functional parity gap, not a perf gap. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `approx_percentile(v, 0.5)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_percentile]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses
+### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bit_and(vi)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bit_and(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_and]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses
+### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bit_or(vi)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bit_or(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_or]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses
+### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bool_and(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bool_and(b)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `min` shim and is unchanged.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_and]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses
+### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bool_or(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bool_or(b)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `max` shim and is unchanged.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_or]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses
+### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `collect_list(v)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1. The intake named this class first.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `collect_list(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Frame row order is preserved and an empty frame answers `[]`, both Spark-measured.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_list]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses
+### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `collect_set(v)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `collect_set(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Element order is Spark-unspecified; the pin asserts the sorted multiset. Empty frame answers `[]`.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_set]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-corr — `corr` over a sliding frame refuses
+### WIN-SLIDE-corr — `corr` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `corr(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `corr(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Re-scanning carries no retraction drift: every frame is summed from its own rows, so a 1e5-row run matches Spark exactly rather than to a tolerance. Fewer than two valid pairs answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-corr]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses
+### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `covar_pop(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `covar_pop(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. One valid pair answers `0.0`; an empty frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_pop]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses
+### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `covar_samp(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `covar_samp(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Fewer than two valid pairs answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_samp]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses
+### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `percentile_approx(v, 0.5)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1. The intake named this class.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `percentile_approx(v, 0.5)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-percentile_approx]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses
+### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `try_sum(v)` over the same sliding frame raises the sliding-accumulator refusal (group `try_sum` plans; sliding does not).
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `try_sum(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. An overflow inside the frame answers NULL for that row only, Spark-measured on `try_sum(ov)` over BIGINT values at `Long.MaxValue`.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-try_sum]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
+
+### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame ignores the accuracy knob
+
+- **repark** — `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
+  CURRENT ROW` on `x = 1..200` answers the same column as the two-argument discrete p50
+  (`1.0, 50.0, 100.0, 150.0, 200.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
+  accepted and ignored, per frame exactly as per group.
+- **Apache Spark** — the Greenwald-Khanna sketch collapses at accuracy 2: the same column is
+  `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_ignores_the_accuracy_knob`
+- **Rationale** — BACKLOG. The frame case of `FN-APPROXPCT-ACC-1`, filed rather than papered over.
+  Do not emulate the sketch: Spark's low-accuracy answers are sketch artefacts, and repark keeps
+  the discrete data value. `PERF-APPROXPCT-1` (sketch memory) stays out of scope.
+
+### WIN-RANGE-DF-1 — DataFrame-door `rangeBetween` ignored its offsets unless the ORDER BY key was BIGINT — **FIXED 2026-09-04 (WIN-SLIDE-1)**
+
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `Window.orderBy("id").rangeBetween(-2, 0)` over
+  an `IntegerType` or `DoubleType` key answered the *cumulative* column (`sum(v)` over 1..6 gave
+  `1, 3, 6, 10, 15, 21`) because `Column.over` emitted the RANGE offset as `Int64`, which
+  DataFusion's window-frame coercion passes through untouched, and a bound whose type does not
+  match the order key degrades to UNBOUNDED PRECEDING. The offset is now emitted as `Utf8` — the
+  same shape DataFusion's own SQL planner produces — so coercion casts it to the key's type. The
+  column is now `1, 3, 6, 9, 12, 15`, equal to the SQL door and to Spark. `BIGINT` keys and every
+  `rowsBetween` frame were already correct and are unchanged.
+- **Apache Spark** — `rangeBetween(-2, 0)` is a value range on the order key for every numeric
+  key type. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+  every `[range_frame-*]` case (the fixture's `id` is `IntegerType`).
+- **Rationale** — FIXED. Found by WIN-SLIDE-1's two-door RANGE pin; the bug predates it and hit
+  every aggregate, retractable ones included.
+
+### WIN-COLLECT-DOOR-1 — `F.collect_list(...).over(w)` was refused at build time — **FIXED 2026-09-04 (WIN-SLIDE-1)**
+
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `F.collect_list(col).over(window)` raised
+  `ValueError: over() applies only to a window or aggregate function column`, because the facade
+  builds Spark's empty-group semantics as `coalesce(array_agg(x) IGNORE NULLS, make_array())` and
+  `Column.over` accepted only a bare aggregate at the top of the expression. `over` now pushes the
+  window spec into the single aggregate node inside a scalar wrapper, keeping the wrapper; the
+  group-by spelling is untouched. `collect_set` is the same shape and is fixed with it.
+- **Apache Spark** — `F.collect_list(col).over(w)` is an ordinary window aggregate.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+  the `[*-collect_list]` and `[*-collect_set]` cases.
+- **Rationale** — FIXED. An expression carrying two or more aggregates still refuses with the
+  original message; there is no single window to push down.
 
 ### CTAS-VIEW-1 — unpartitioned CTAS from a parquet-read view failed on Utf8View — **FIXED 2026-09-03**
 

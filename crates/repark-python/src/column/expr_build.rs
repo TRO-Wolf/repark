@@ -1,7 +1,7 @@
 //! Expression-construction helpers for [`super::PyColumn`].
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
@@ -72,6 +72,36 @@ pub(super) fn extract_projection_expr(plan: &LogicalPlan) -> PyResult<Expr> {
                 PyValueError::new_err(format!("expr plan had no projection to extract: {other}"))
             }),
     }
+}
+
+pub(super) fn single_wrapped_aggregate(expr: &Expr) -> Option<Expr> {
+    let mut found: Option<Expr> = None;
+    let mut seen = 0usize;
+    let walked = expr.apply(|node| {
+        if matches!(node, Expr::AggregateFunction(_)) {
+            seen += 1;
+            if found.is_none() {
+                found = Some(node.clone());
+            }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    if walked.is_err() || seen != 1 {
+        return None;
+    }
+    found
+}
+
+pub(super) fn replace_wrapped_aggregate(expr: Expr, windowed: &Expr) -> Result<Expr, String> {
+    expr.transform(|node| {
+        if matches!(node, Expr::AggregateFunction(_)) {
+            Ok(Transformed::yes(windowed.clone()))
+        } else {
+            Ok(Transformed::no(node))
+        }
+    })
+    .map(|transformed| transformed.data)
+    .map_err(|error| format!("could not push the window into the aggregate wrapper: {error}"))
 }
 
 pub(super) fn inner_null_treatment(expr: &Expr) -> Option<NullTreatment> {

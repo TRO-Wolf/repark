@@ -10,6 +10,8 @@ use datafusion::logical_expr::LogicalPlan;
 use datafusion::optimizer::{ApplyOrder, Optimizer, OptimizerConfig, OptimizerRule};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
+mod window_rescan;
+
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
 
@@ -31,6 +33,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_runtime_env(runtime)
         .with_default_features()
         .with_optimizer_rules(unnest_safe_optimizer_rules())
+        .with_analyzer_rules(window_rescan::analyzer_rules_with_sliding_rescan())
         .build();
     SessionContext::new_with_state(state)
 }

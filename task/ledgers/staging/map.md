@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [win-slide-1-ledger.md](win-slide-1-ledger.md) — **WIN-SLIDE-1 (2026-09-04), in flight:** the
+  thirteen aggregates that refused over a sliding frame now answer Spark-equal on both doors.
+  One mechanism, not thirteen: a `sliding_frame_rescan` analyzer rule on every core session
+  re-evaluates the frame per row into a fresh accumulator when DataFusion's sliding accumulator
+  cannot retract — by capability, so a future aggregate never refuses. The physical `WindowExpr`
+  route is closed in DF 54.1 (`WindowFn` is unexported) and §7.2 names the gap. Two door bugs
+  found and fixed on the way (`WIN-RANGE-DF-1`, `WIN-COLLECT-DOOR-1`) and the frame case of the
+  `percentile_approx` accuracy divergence filed (`WIN-SLIDE-PCT-ACC-1`). `risk_tier: standard`.
+  Branch `feat/win-slide-1`.
+  pins: win-slide-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
   **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
   `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen
