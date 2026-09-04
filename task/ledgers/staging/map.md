@@ -52,12 +52,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md) —
   **EX-15 (2026-09-04), in flight:** the v1.1 example backfill's first `DataFrame.*` batch —
   36 roster names at base `c70a306`; 28 covered by eight `docs/examples/dataframe/` files
-  (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-4` and pins in
+  (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
 - [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) —
   **EX-16 (2026-09-04), in flight:** the v1.1 example backfill's second `DataFrame.*` batch —
   36 roster names at base `f3968aa`; 30 covered by eight `docs/examples/dataframe/` files
-  (backlog 550 → 520), 6 measured divergences stay with §7 rows `EX-DF-6`…`EX-DF-8` and pins in
+  (backlog 550 → 520), 6 measured divergences stay with §7 rows `EX-DF-7`…`EX-DF-9` and pins in
   `python/repark/tests/test_examples_dataframe_b.py`. `risk_tier: standard`. Branch
   `docs/ex-16-dataframe-b`. pins: ex-16-dataframe-b/C-001

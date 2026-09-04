@@ -3828,7 +3828,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   engines agree bit-for-bit; this row records the NULL-pair arm until Spark's NULL handling is
   closed here or Spark's own is restated.
 
-### EX-DF-6 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
+### EX-DF-6 — `createTempView` / `create_temp_view` replace silently; Spark refuses an existing name
+
+- **repark** — `createTempView(name)` (and its `create_temp_view` alias) behaves as
+  `createOrReplaceTempView`: when `name` already exists the definition is swapped without any
+  signal (disclosed in-source as "v1: same as createOrReplaceTempView"). A fresh name registers
+  normally, which is the arm the example teaches.
+- **Apache Spark** — `createTempView("tv")` on a fresh name registers and `SELECT` answers the
+  frame's rows (`[(7,)]`); registering the same name again raises
+  `AnalysisException: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS]` naming `tv`, so a pre-existing
+  definition is never silently replaced. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04,
+  EX-15 round 3; second `createTempView` of one name.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_create_temp_view_replaces_silently`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 round-3 promotion of the round-1
+  review-gap entry. `createTempView` / `create_temp_view` stay covered by the fresh-name arm,
+  where the engines agree; this row records the replace-on-existing arm until repark refuses an
+  existing name the way Spark does.
+
+### EX-DF-7 — `intersectAll` / `intersect_all` refuse; Spark answers the multiset intersect
 
 - **repark** — both spellings raise
   `UnsupportedOperationException: DataFrame.intersectAll multiset semantics are not Spark-correct
@@ -3841,7 +3858,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the example backlog until the multiset intersect is Spark-correct; the distinct-bag
   `intersect` is covered and Spark-equal.
 
-### EX-DF-7 — `groupingSets` takes one column each in repark; Spark takes a list of sets
+### EX-DF-8 — `groupingSets` takes one column each in repark; Spark takes a list of sets
 
 - **repark** — `groupingSets(*cols)` lowers to `GROUPING SETS ((c1), (c2), ())`: on
   `[("a", 1), ("a", 2), ("b", 3)]` over `g`/`k`, `.groupingSets("g", "k").count()` answers
@@ -3863,7 +3880,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark-equal on both; both spellings stay on the example backlog until repark implements
   Spark's multi-set signature.
 
-### EX-DF-8 — `mergeInto` runs through the string-sugar arm; live Spark refuses every locally reachable shape
+### EX-DF-9 — `mergeInto` runs through the string-sugar arm; live Spark refuses every locally reachable shape
 
 - **repark** — `source.mergeInto(table, "id")` works end to end through the equi-join sugar:
   on target `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]`, the
@@ -3885,6 +3902,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement. Both spellings stay on
   the example backlog until Spark-equal MERGE can be demonstrated on a locally creatable
   target; the pin records repark's current working arm.
+
 
 ## 8. Drop-in disclosure rationale
 

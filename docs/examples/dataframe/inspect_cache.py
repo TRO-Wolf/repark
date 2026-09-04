@@ -35,23 +35,38 @@ def main() -> None:
             ],
             ["g", "k", "v"],
         )
-        assert frame.columns == ["g", "k", "v"]
-        assert frame.dtypes == [("g", "string"), ("k", "bigint"), ("v", "double")]
-        assert frame.count() == 6
+        names = frame.columns
+        if names != ["g", "k", "v"]:
+            raise SystemExit(f"DataFrame.columns {names!r} != ['g', 'k', 'v']")
+        schema = frame.dtypes
+        schema_expected = [("g", "string"), ("k", "bigint"), ("v", "double")]
+        if schema != schema_expected:
+            raise SystemExit(f"DataFrame.dtypes {schema!r} != {schema_expected!r}")
+        total = frame.count()
+        if total != 6:
+            raise SystemExit(f"DataFrame.count {total!r} != 6")
 
         cached = frame.cache()
-        assert cached.count() == 6
-        assert cached.columns == ["g", "k", "v"]
-        assert frame.coalesce(1).count() == 6
+        cached_total = cached.count()
+        if cached_total != 6:
+            raise SystemExit(f"DataFrame.cache count {cached_total!r} != 6")
+        cached_names = cached.columns
+        if cached_names != ["g", "k", "v"]:
+            raise SystemExit(f"DataFrame.cache columns {cached_names!r} != ['g', 'k', 'v']")
+        coalesced_total = frame.coalesce(1).count()
+        if coalesced_total != 6:
+            raise SystemExit(f"DataFrame.coalesce count {coalesced_total!r} != 6")
 
         printed = io.StringIO()
         with contextlib.redirect_stdout(printed):
             frame.explain()
-        assert printed.getvalue().strip() != ""
+        if printed.getvalue().strip() == "":
+            raise SystemExit("DataFrame.explain printed an empty plan")
         costed = io.StringIO()
         with contextlib.redirect_stdout(costed):
             frame.explain(mode="cost")
-        assert costed.getvalue().strip() != ""
+        if costed.getvalue().strip() == "":
+            raise SystemExit("DataFrame.explain printed an empty cost plan")
     finally:
         repark.stop()
 

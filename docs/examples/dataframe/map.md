@@ -42,14 +42,15 @@ construct the session as `repark = ReparkSession.builder…`; see
   every row placed exactly once.
 
 Divergent names stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5) and pins in
-`python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
+([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5, EX-DF-6) and
+pins in `python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
 the three global-temp-view spellings, `exceptAll` / `except_all`, the
-`describe` row order, and the `corr` / `cov` NULL-pair arm (the examples keep
-the arms where the engines agree). The EX-16 batch adds EX-DF-6 (`intersectAll` /
-`intersect_all` refuse; Spark answers the multiset intersect), EX-DF-7 (`groupingSets` /
+`describe` row order, the `corr` / `cov` NULL-pair arm, and the `createTempView` /
+`create_temp_view` replace-on-existing arm (the examples keep the arms where the
+engines agree). The EX-16 batch adds EX-DF-7 (`intersectAll` /
+`intersect_all` refuse; Spark answers the multiset intersect), EX-DF-8 (`groupingSets` /
 `grouping_sets` take one column each; Spark's documented shape takes a list of sets and the
-measured answers differ), and EX-DF-8 (`mergeInto` / `merge_into` work through the
+measured answers differ), and EX-DF-9 (`mergeInto` / `merge_into` work through the
 string-sugar arm; live Spark refuses every locally reachable shape), with pins in
 `python/repark/tests/test_examples_dataframe_b.py`.
 

@@ -21,17 +21,24 @@ def main() -> None:
             [(1, 5.0), (2, 6.0), (2, 7.0), (3, 8.0)],
             ["k", "x"],
         )
-        declared = ordered.declareSorted("k")
-        assert declared.collect() == [(1, 5.0), (2, 6.0), (2, 7.0), (3, 8.0)]
+        declared_rows = ordered.declareSorted("k").collect()
+        declared_expected = [(1, 5.0), (2, 6.0), (2, 7.0), (3, 8.0)]
+        if declared_rows != declared_expected:
+            raise SystemExit(
+                f"DataFrame.declareSorted rows {declared_rows!r} != {declared_expected!r}"
+            )
         multi = ordered.declare_sorted("k", "x")
-        assert multi.count() == 4
+        multi_count = multi.count()
+        if multi_count != 4:
+            raise SystemExit(f"DataFrame.declare_sorted count {multi_count!r} != 4")
 
         scrambled = repark.createDataFrame([(2, 5.0), (1, 6.0)], ["k", "x"])
         completed = False
         with contextlib.suppress(AnalysisException):
             scrambled.declareSorted("k")
             completed = True
-        assert not completed
+        if completed:
+            raise SystemExit("DataFrame.declareSorted accepted unsorted input")
     finally:
         repark.stop()
 
