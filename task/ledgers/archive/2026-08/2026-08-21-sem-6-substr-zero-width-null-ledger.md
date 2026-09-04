@@ -1,7 +1,7 @@
 # Unit ledger — SEM-6 · `regexp_substr` returns NULL for a zero-width match
 
 **Date:** 2026-08-21 · **Branch:** `fix/re3-substr-null` · **Base:** `f3eaa9d` (`main`, post-#192) ·
-**Charter:** [sem-0-charter-ledger.md](../../staging/sem-0-charter-ledger.md) · **Closes:** registry row `RE-3`
+**Charter:** [sem-0-charter-ledger.md](../../completed/sem-0-charter-ledger.md) · **Closes:** registry row `RE-3`
 
 **This unit changes what a working query returns**, on the owner's ruling of 2026-08-21 ("lets fix
 RE-3 too"). `regexp_substr('ab', '')` returned `''` and now returns NULL.

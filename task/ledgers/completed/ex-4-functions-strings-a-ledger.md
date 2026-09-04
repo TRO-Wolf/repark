@@ -141,7 +141,7 @@ is 632, this branch after the drop is 605 (632 − 27).
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) BL-17, FN-INITCAP-1, FN-CHR-1, FN-TRIM-CHARS-1

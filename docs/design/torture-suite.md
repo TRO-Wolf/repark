@@ -1,7 +1,7 @@
 # The v0.8 torture-test dataset suite — what the roadmap section actually costs
 
 **Settled 2026-08-31 · base `main` at `749eff4` (post-#287) ·
-roadmap [v0.8](../../task/roadmap/epic-term/release-roadmap-2026-08-29.md#v08--torture-test-dataset-suite) ·
+roadmap [v1.2 (was v0.8)](../../task/roadmap/epic-term/release-roadmap-2026-08-29.md#v12--torture-test-dataset-suite-was-v08) ·
 intent [PROJECT.md](../../PROJECT.md) validation workstream 2**
 
 The v0.8 section names five batteries and reads as a build from zero. It is not. Four of the five

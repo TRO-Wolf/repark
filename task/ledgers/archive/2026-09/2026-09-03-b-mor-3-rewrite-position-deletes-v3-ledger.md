@@ -3,8 +3,8 @@
 **Date:** 2026-09-03 · **Branch:** `feat/b-mor-3-rewrite-position-deletes-v3` · **Base:** `main`
 `e3ad67e` · **Model:** grok-4.6 → glm-5.3-flash (continuation) · **Path:** STANDARD
 (`risk_tier: standard`).
-**Policy:** [../../../AGENTS.md](../../../AGENTS.md) · **Registry:**
-[docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) `B-MOR-3`,
+**Policy:** [../../../AGENTS.md](../../../../AGENTS.md) · **Registry:**
+[docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) `B-MOR-3`,
 `B-MOR-3-FLOOR-1`.
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
