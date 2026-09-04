@@ -19,7 +19,7 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 
 > **Tiering (updated PR-6):** the PR gate is tier 1 (`ci.yml` + the always-run siblings —
 > every PR, no secrets, GitHub-hosted, read-only token). Tier 2 (`parity-live.yml`,
-> `aws-acceptance.yml`) is **merged-code-only** — nightly cron + manual dispatch, never
+> `aws-acceptance.yml`; job `timeout-minutes: 60` since 2026-09-04 — a cold-cache native build alone took 23 min and the 30-min cap cancelled the acceptance step mid-run) is **merged-code-only** — nightly cron + manual dispatch, never
 > `pull_request`, never a required check; `aws-acceptance.yml` is the ONE workflow that touches
 > real AWS (OIDC, environment-gated, no secrets in tier 1; OD-3 scoped object-delete on the
 > warehouse scratch prefix). Not everything here runs locally.
