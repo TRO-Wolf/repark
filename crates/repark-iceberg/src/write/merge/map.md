@@ -69,6 +69,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `plan_deletion_vectors` loads the scanned snapshot's `ManifestList` once and hands it to the
   close as `Option<&ManifestList>` so the list is not read twice.
   pins: rp-9-repin-f23/C-002, C-005
+  **RP-10 (2026-09-04):** pin `85a4aaf0` (fork F-25). The production identity DELETE of the
+  newest row on the 192-manifest pure-DV fixture commits with every data manifest except the
+  one that holds the touched file hidden (commit-phase opens = 1). Close-phase opens stay 0.
+  pins: rp-10-repin-f25/C-002
   **V3-12 C-006:** `prepare_row_delta_deletes` takes the `snapshot_id`
   `commit_target::snapshot_id_for_commit` already resolved for the target scan and
   `validate_from_snapshot`, and hands it to BOTH the legacy-delete collection and the fork
