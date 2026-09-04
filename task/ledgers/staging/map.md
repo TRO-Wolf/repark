@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
+  **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
+  `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen
+  `docs/examples/catalog/` and `docs/examples/session/` files (backlog 411 → 377; 374 → 340
+  after the EX-20 merge), `list_databases` stays (same function object as the divergent
+  `listDatabases`, §7 `EX-CAT-2`), the `registerFunction` return, `newSession` promotion,
+  empty `create_dataframe`, unset-key `conf.get`, and missing-path reader arms are §7
+  `EX-SES-1`..`EX-SES-5`, pins in
+  `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
+  `docs/ex-21-catalog-session`. pins: ex-21-catalog-session/C-001
 - [fn-regexp-extract-1-ledger.md](fn-regexp-extract-1-ledger.md) — **FN-REGEXP-EXTRACT-1
   (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (the last
   regexp kernel; closes the R-FN-BATCH1 gap the FN-FIX-2-CTRL-1 control exposed).

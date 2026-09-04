@@ -4289,6 +4289,82 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The example keeps the
   single-arg arm, where the engines agree; the dbName arm is pinned, not taught.
 
+### EX-SES-1 — `Catalog.registerFunction` answers the UDF object where Spark's alias returns `f`
+
+- **repark** — `spark.catalog.registerFunction(name, f)` answers the registered
+  `UserDefinedFunction` object (it delegates to `spark.udf.register` and keeps that return
+  contract). The registered name itself behaves Spark-equal: `functionExists` answers `True`
+  and the UDF answers inside SQL with the same value.
+- **Apache Spark** — the deprecated alias answers the original callable `f` itself
+  (`type(spark.catalog.registerFunction("fn", f)).__name__` is `'function'`); `spark.udf.register`
+  answers the `UserDefinedFunction`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, both lambdas
+  registered and called through `spark.sql("SELECT fn(4)")` → `u4` on both engines.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_register_function_returns_udf_object`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement. The example keeps the
+  registration, existence, and SQL arms, where the engines agree; the return-value arm is
+  pinned, not taught. `Catalog.listDatabases`' snake twin `list_databases` shares the EX-CAT-2
+  divergence (one function object) and stays on the backlog with it.
+
+### EX-SES-2 — an action on a `newSession()` result promotes it process-active; Spark keeps the caller
+
+- **repark** — after `spare = spark.newSession()`, the caller stays active until the first
+  action on `spare`; that action (e.g. `spare.sql("SELECT 1").collect()`) sets `spare` as the
+  process-wide active session, so `getActiveSession()` then answers `spare`.
+- **Apache Spark** — `newSession()` never flips the active session: the thread-local stays on
+  the caller before and after any action on the spare session.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, re-measured in
+  round 2 — `getActiveSession() is spark` asserted before and after `spare.sql(...).collect()`;
+  repark measured the same two arms, the second answering `spare`. `spare.stop()` then clears
+  the active slot to `None` on both engines.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_new_session_action_promotes_active`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement; the Spark column was
+  re-measured and corrected in round 2 (the first text claimed only `stop()` on the active
+  session clears the slot, which the re-measure refuted — the spare's `stop()` clears it too).
+  The example keeps the no-action arms (distinct object, caller still active, spare answers),
+  where the engines agree; the promotion arm is pinned, not taught.
+
+### EX-SES-3 — `createDataFrame` from an empty dataset with a name-list schema answers empty; Spark refuses
+
+- **repark** — `spark.createDataFrame([], ["a"])` answers an empty frame, inferring the column
+  type as string (`dtypes` `[('a', 'string')]`).
+- **Apache Spark** — raises `[CANNOT_INFER_EMPTY_SCHEMA]` ("Can not infer schema from an empty
+  dataset.", surfaced as `PySparkValueError` in 4.1.2).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2; repark measured `collect()`
+  `[]` with `dtypes` `[('a', 'string')]`. The explicit-schema arm agrees: both engines answer
+  `[]` with `dtypes` `[('a', 'int')]` for `createDataFrame([], schema="a int")`.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_create_dataframe_empty_name_list_answers_empty`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
+  the explicit-schema empty frame, where the engines agree; the name-list empty arm is pinned,
+  not taught.
+
+### EX-SES-4 — `conf.get` on an unset key raises a bare `Exception`; Spark raises `[SQL_CONF_NOT_FOUND]`
+
+- **repark** — `spark.conf.get("unset.key")` raises a bare `Exception`
+  ("Configuration property unset.key is not set.").
+- **Apache Spark** — raises `SparkNoSuchElementException` with error class `[SQL_CONF_NOT_FOUND]`
+  ("The SQL config \"unset.key\" cannot be found. Please verify that the config exists.").
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2; the two-arg default form
+  agrees — both engines answer the default for an unset key.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_conf_get_unset_key_raises_bare_exception`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
+  the two-arg default arm, where the engines agree; the unset-key error contract is pinned, not
+  taught.
+
+### EX-SES-5 — a missing path through the session file readers: same exception type, different text
+
+- **repark** — `read_csv`/`read_json`/`read_parquet` on a missing file raise `AnalysisException`
+  ("Error during planning: No files found at <path> …").
+- **Apache Spark** — raises `AnalysisException` with error class `[PATH_NOT_FOUND]`
+  ("Path does not exist: <path>"), eagerly at reader construction.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 round 2, one missing file per format
+  with the format's extension; both engines raise `AnalysisException` and the texts differ —
+  repark names the empty location it planned against, Spark the missing path.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_missing_file_readers_analysis_exception`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 round-2 measurement. The example keeps
+  the agreeing arm — each reader raises `AnalysisException` on a missing path; repark's message
+  text is pinned, not taught.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

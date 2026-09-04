@@ -55,15 +55,22 @@ file is empty.
   `sql_expr_part`, `sql_expr_without_alias` stay on the backlog as non-Spark surface;
   the repark-extension namespaces `str`/`dt` are documented with their PySpark-spelled
   twins).
+- [catalog/](catalog/map.md) — `Catalog.*` examples (EX-20: the first 18 roster names minus the
+  three measured divergences `getDatabase`/`get_database`, `listDatabases`, and the
+  `functionExists(name, dbName)` arm — EX-CAT-1..3; EX-21: the setter, exists,
+  register, and list_tables remainder; `list_databases` stays on the backlog with §7
+  `EX-CAT-2`, whose function object it shares).
 - [ta/](ta/map.md) — TA kernel examples.
 - [io/](io/map.md) — reader / writer examples.
-- [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.
+- [session/](session/map.md) — `repark.sql`, `ReparkSession` construction, and the
+  session-level surface (EX-21: builder snake spellings, active-session trio, conf,
+  catalog, frame builders, file readers, memory catalog, temp-view listing, name
+  resolution, display style, and the two loud refusals; `registerTempTable` and
+  `pandas_api` do not exist on live PySpark 4.1.2 and are taught as the refusals they
+  are).
 - [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
   snake_case spellings are repark extensions covered beside their camelCase twins; the
   tied-key ordered default frame stays a §7 divergence, EX-WIN-1).
-- [catalog/](catalog/map.md) — `Catalog.*` examples (EX-20: the first 18 roster names minus the
-  three measured divergences `getDatabase`/`get_database`, `listDatabases`, and the
-  `functionExists(name, dbName)` arm — EX-CAT-1..3); temp views only.
 - `types/`, `ml/` — the remaining EX-1 families. They
   are inventory families with no example yet; the backfill creates each
   directory (and its `map.md`) with the first example it lands there.
