@@ -42,7 +42,7 @@ got and expected reprs (the corpus form).
   (each with a NULL `v` riding the bridge back to NULL), and the `pl` polars door
   (no Spark analog).
 - [print_schema.py](print_schema.py) — `printSchema` / `print_schema`: the captured tree lines;
-  Spark's own stdout carries one more trailing blank line (§7 `EX-DF-10`).
+  Spark's own stdout carries one more trailing blank line (§7 `EX-DF-10`); the example compares after `rstrip`.
 - [random_split.py](random_split.py) — `randomSplit` / `random_split`: two weighted parts,
   every row placed exactly once.
 

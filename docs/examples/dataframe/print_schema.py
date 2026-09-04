@@ -41,7 +41,7 @@ def main() -> None:
         printed = io.StringIO()
         with contextlib.redirect_stdout(printed):
             frame.printSchema()
-        printed_lines = printed.getvalue().splitlines()
+        printed_lines = printed.getvalue().rstrip("\n").splitlines()
         if printed_lines != TREE_LINES:
             raise SystemExit(f"DataFrame.printSchema lines {printed_lines!r} != {TREE_LINES!r}")
 
