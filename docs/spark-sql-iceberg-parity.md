@@ -491,6 +491,78 @@ perfectly good read.
 
 ---
 
+### 2.5 Statement shapes dbt emits
+
+Filed by DBT-1 (2026-09-04), which measured every statement `dbt run` and `dbt test` emit for a
+`materialized='table'`, `file_format='iceberg'` model against the SQL door. The `dbt-repark`
+adapter overrides the macro behind each row, so the refusal is a design constraint on the adapter,
+not a runtime failure of the gold stage. The whole measured table — nine served shapes and ten
+refused — is `python/dbt-repark/tests/test_statement_surface.py`.
+
+#### DBT-VIEW-1 — `CREATE OR REPLACE VIEW` is refused, so dbt cannot build views
+
+- **repark** — `CREATE OR REPLACE VIEW cat.ns.v AS SELECT …` over an Iceberg catalog refuses
+  with `PySparkException: Unexpected => register_table does not support tables with data.`
+  There is no SQL view surface. The `dbt-repark` `view` materialization refuses at compile time
+  with a message naming this row, rather than emitting SQL that fails at run time.
+- **Apache Spark** — with the Iceberg extension, `CREATE OR REPLACE VIEW` creates an Iceberg
+  view and dbt's `view` materialization works. *(oracle: documented — the claim here is the
+  refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CREATE-VIEW]`
+  and `python/dbt-repark/tests/test_gold_models.py::test_view_materialization_refuses`
+- **Rationale** — DECLARED. Iceberg views are fork work; the message is the whole contract until
+  they land. `materialized='table'` covers the gold stage, which is what the cutover needs.
+
+#### DBT-TEMPVIEW-1 — no temporary views, so `incremental` and `snapshot` cannot run
+
+- **repark** — `CREATE OR REPLACE TEMPORARY VIEW v AS SELECT …` refuses with
+  `UnsupportedOperationException: This feature is not implemented: Temporary views not
+  supported`. The session temp-view surface is the facade's `createOrReplaceTempView`, not this
+  SQL form. Every dbt incremental strategy and the snapshot materialization stage their new rows
+  in a temporary view first, so `dbt-repark` refuses both at compile time.
+- **Apache Spark** — creates a session-scoped temporary view. *(oracle: documented — the claim
+  here is the refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CREATE-TEMPORARY-VIEW]`
+  and `python/dbt-repark/tests/test_gold_models.py::test_incremental_materialization_refuses`
+- **Rationale** — DECLARED. The gold stage is two full-rebuild `table` models, so
+  incremental is not on the cutover path. A later unit that wants dbt incremental needs the SQL
+  temp-view form, or an adapter-side staging relation, and that is a design decision of its own.
+
+#### DBT-DESC-1 — `DESCRIBE EXTENDED` answers Arrow type spellings and no detail block
+
+- **repark** — three-part `DESCRIBE [EXTENDED] cat.ns.t` runs and returns exactly
+  `column_name, data_type, is_nullable`, with **Arrow** type spellings (`Utf8`, `Int32`,
+  `Date32`). There is no `# Detailed Table Information` block, so no `Provider:`, `Type:`,
+  `Owner:` or `Statistics:` row. dbt-spark's `parse_describe_extended` yields no columns from
+  it. `dbt-repark` reads the facade schema instead, which answers Spark spellings (`string`,
+  `int`, `date`).
+- **Apache Spark** — returns `col_name, data_type, comment`, Spark type spellings, and the
+  detail block dbt parses for the relation's provider and type. *(oracle: documented — Spark's
+  `DESCRIBE TABLE EXTENDED` output grammar; no value oracle is involved in the shape claim.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_describe_extended_answers_arrow_type_spellings`
+  and `::test_facade_schema_answers_spark_type_spellings`
+- **Rationale** — DECLARED. The facade `Catalog` and the frame schema are the supported metadata
+  surfaces (same reading as `ST-1`); widening `DESCRIBE` into a Spark-shaped text report would
+  make a formatting contract out of a diagnostic.
+
+#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` is refused
+
+- **repark** — `SHOW TBLPROPERTIES cat.ns.t` refuses with `AnalysisException: Error during
+  planning: SHOW [VARIABLE] is not supported unless information_schema is enabled`. dbt's
+  `fetch_tbl_properties` therefore has no source. Table properties are readable from the table
+  metadata, and `ALTER TABLE … SET TBLPROPERTIES` is accepted.
+- **Apache Spark** — lists the table's properties. *(oracle: documented — the claim here is the
+  refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
+- **Rationale** — DECLARED, same family as `NS-1` / `ST-1`: RePark has no `SHOW`-family
+  information surface. No dbt path the gold stage uses calls it.
+
+---
+
 ## 3. Identifier resolution (DECLARED)
 
 ### ID-1 — a quoted identifier resolves case-sensitively
@@ -983,6 +1055,93 @@ condition the mirror exists to make impossible.
 Differences we intend to close. Each pin **codifies today's behavior** so the fix reds it on
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
+
+### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
+
+- **repark** — of the placement clauses `dbt-spark` can put on a `create table … as`, only
+  `PARTITIONED BY` is served. `LOCATION '…'` refuses with `UnsupportedOperationException: CREATE
+  TABLE … LOCATION is not supported for Iceberg CTAS yet — table location is derived from the
+  namespace warehouse`. `OPTIONS (…)` and `CLUSTERED BY (…) INTO n BUCKETS` refuse with
+  `SQL error: ParserError("Expected: end of statement, found: using …")` — the same misleading
+  position as `DBT-RELCOMMENT-1`, naming `using` rather than the clause that failed.
+  `dbt-repark` refuses `location_root`, `options` and `clustered_by` / `buckets` at compile time,
+  naming this row.
+- **Apache Spark** — accepts all four clauses on an Iceberg CTAS. *(oracle: documented — the
+  claim here is the refusal and the position it reports; no value oracle is involved.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-LOCATION]`,
+  `[R-CTAS-OPTIONS]` and `[R-CTAS-CLUSTERED-BY]`, with
+  `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]` holding the served half and
+  `python/dbt-repark/tests/test_gold_models.py::test_unsupported_ctas_clauses_refuse` holding the
+  adapter's side
+- **Rationale** — BACKLOG. `LOCATION` is a real capability gap with an honest message.
+  `CLUSTERED BY` is Hive bucketing, which Iceberg replaces with a bucket **partition
+  transform**, so the right answer there is probably a clearer refusal rather than support.
+  `OPTIONS` has no Iceberg meaning distinct from `TBLPROPERTIES`. What all three share with
+  `DBT-RELCOMMENT-1` is the parser position, and that is the part worth fixing first.
+
+### DBT-RELCOMMENT-1 — `CREATE TABLE … COMMENT` is refused on a CTAS, and after `TBLPROPERTIES` it names the wrong token
+
+- **repark** — `CREATE OR REPLACE TABLE t USING iceberg COMMENT 'x' AS SELECT …` refuses with
+  `UnsupportedOperationException: CREATE TABLE … COMMENT is not supported for Iceberg CTAS yet —
+  use TBLPROPERTIES or ALTER TABLE when comment support lands`. That message is clear. Put the
+  same `COMMENT` **after** a `TBLPROPERTIES` clause and the refusal becomes
+  `SQL error: ParserError("Expected: end of statement, found: using at Line: 1, Column: 39")` —
+  it names `using`, which is valid, instead of the `comment` clause that failed. dbt reaches the
+  second form, because `spark__create_table_as` always emits `tblproperties` before
+  `comment_clause()`. `dbt-repark` refuses `persist_docs.relation` at compile time so the
+  misleading diagnostic never reaches a user.
+- **Apache Spark** — accepts a table comment on an Iceberg CTAS and stores it in the table
+  metadata. *(oracle: documented — the claim here is the refusal, and the position the refusal
+  reports; no value oracle is involved.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-TABLE-COMMENT]`
+  and `[R-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, with
+  `python/dbt-repark/tests/test_gold_models.py::test_relation_documentation_refuses` holding the
+  adapter's side
+- **Rationale** — BACKLOG, two things at once. The capability is genuinely missing and the
+  refusal message says so. The **diagnostic** is the defect worth naming: a parser that
+  backtracks and reports the earliest unconsumed token sends a reader to a clause that is
+  correct. Whichever unit lands CTAS `COMMENT` should also check what the refusal points at when
+  a later clause is the one that failed.
+
+### DBT-COLCOMMENT-1 — `ALTER TABLE … ALTER COLUMN … COMMENT` is refused, so `persist_docs.columns` cannot run
+
+- **repark** — the statement refuses with `UnsupportedOperationException: ALTER COLUMN … COMMENT
+  is not supported yet via SQL — column COMMENT is accepted on ADD COLUMN; UpdateColumnDoc is
+  available on the write primitive`. `dbt-repark` refuses `persist_docs.columns` at compile time
+  rather than emitting it. `persist_docs.relation` is unaffected.
+- **Apache Spark** — sets the column comment on an Iceberg table. *(oracle: documented — the
+  claim here is the refusal form, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-COLUMN-COMMENT]`
+  and `python/dbt-repark/tests/test_gold_models.py::test_column_documentation_refuses`
+- **Rationale** — BACKLOG. The write primitive already carries `UpdateColumnDoc`; this is the SQL
+  spelling catching up, not a missing capability. The pin codifies today's refusal so the fix
+  reds it on purpose.
+
+### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
+
+- **repark** — with catalog `ice` registered, `SELECT count(*) FROM ns.t` resolves and answers.
+  `DESCRIBE EXTENDED ns.t` refuses with `table 'datafusion.ns.t' not found` — it resolved
+  against the DataFusion default catalog, not the registered one — and `ALTER TABLE ns.t RENAME
+  TO ns.t2` refuses with `ALTER TABLE expects a three-part catalog.namespace.table name`. The
+  three statements disagree about what a two-part name means. `dbt-repark` renders every
+  relation three-part so none of them can be reached.
+- **Apache Spark** — a two-part name resolves against the current catalog for all three
+  statements. *(oracle: documented — the claim here is the refusal and the mismatched
+  resolution, not a value.)*
+- **Pin** —
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-DESCRIBE-TWO-PART]`
+  and `[R-RENAME-TWO-PART]`, with
+  `python/dbt-repark/tests/test_gold_models.py::test_relations_are_three_part` holding the
+  adapter's side
+- **Rationale** — BACKLOG, and it is the interesting one. `NS-1` records that RePark has no
+  engine-side current catalog for free SQL, which explains the two refusals; what this row adds
+  is that `SELECT` **does** have a resolution rule, so the surface is inconsistent rather than
+  uniformly strict. A caller reading only the `SELECT` behaviour will write a two-part name and
+  be surprised by `DESCRIBE`. The fix is one resolution rule for every statement, which is
+  engine work, not adapter work.
 
 ### BL-1 — cast-failure class (G6) — oracle-backed pin home
 
