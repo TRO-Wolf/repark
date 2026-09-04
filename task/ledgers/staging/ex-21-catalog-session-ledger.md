@@ -309,7 +309,7 @@ DELIVERY_SIGNOFF:
   artifacts_verified:
     ledger: PASS (C-001 PROVEN)
     coverage_attestation: PASS (AT-1..AT-10, complete true)
-    findings_ledger: PASS (review-gap table carries the five in-lane round-1 resolutions)
+    findings_ledger: PASS (review-gap table carries the eleven in-lane round-1 and round-2 resolutions)
     shipped_flag_register: PASS (count 0)
   done_gate: PASS (gates table)
   status_update: v1.1 example backfill, Catalog remainder + SparkSession surface (a) — 34 covered, 1 kept back, 5 divergent arms filed (round 2 re-measured EX-SES-2 and filed EX-SES-3..5)
