@@ -68,6 +68,33 @@ got and expected reprs (the corpus form).
 - [export_local.py](export_local.py) — `toLocalIterator` / `to_local_iterator`,
   `toPandas` / `to_pandas`, and the repark extensions `to_numpy` and `to_polars`
   (no PySpark analog).
+- [set_ops.py](set_ops.py) — `union` / `unionAll` (the duplicate kept), `unionByName` /
+  `union_by_name` (reordered columns, and the `allowMissingColumns` NULL-fill arm).
+- [frame_shape.py](frame_shape.py) — `transform` (the callable with args), `withColumn` /
+  `with_column` (add and replace), `withColumns` / `with_columns` (the atomic swap and the
+  appended column).
+- [rename_columns.py](rename_columns.py) — `withColumnRenamed` / `with_column_renamed`
+  (including the absent-name no-op), `withColumnsRenamed` / `with_columns_renamed`
+  (the plain map and the sequential chain).
+- [unpivot_rows.py](unpivot_rows.py) — `unpivot`: string and list ids, string and list
+  values, and a NULL-bearing wide frame.
+- [cache_write.py](cache_write.py) — `unpersist` (returns the frame, count unchanged) and
+  `writeTo` / `write_to`: the V2 `create` and the SQL read-back.
+- [na_surface.py](na_surface.py) — `DataFrameNaFunctions.fill` (scalar, string, dict, subset)
+  and `DataFrameNaFunctions.drop` (default, `thresh=1`, `thresh=2` with subset).
+- [stat_helpers.py](stat_helpers.py) — the `stat` surface: `approxQuantile`, `corr`, `cov`,
+  `crosstab`, and `sampleBy` (the 1.0/0.0 arms measured exact, the 0.5 arm as a containment
+  property).
+- [grouped_agg.py](grouped_agg.py) — `GroupedData.agg` (expression and dict), `count`,
+  `sum` / `avg` / `mean` / `min` / `max` (named and no-argument numeric arms), and the NULL
+  grouping key (one NULL group, Spark-equal).
+- [grouped_pivot.py](grouped_pivot.py) — `GroupedData.pivot` (explicit values, discovery,
+  multi-aggregate naming) and `applyInPandas` / `apply_in_pandas` (the per-group pandas
+  bridge).
+- [row_dicts.py](row_dicts.py) — `Row.asDict` / `Row.as_dict` (flat, and recursive over a
+  struct field), and the repark extensions `Row.from_mapping` and `Row.from_ordered_fields`
+  (duplicate field names kept). No Spark analog for the two builders (`hasattr` measured
+  False on live PySpark 4.1.2).
 
 Divergent names and arms stay on the backlog with §7 registry rows
 ([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in
@@ -85,9 +112,12 @@ measured answers differ), EX-DF-9 (`mergeInto`'s bare-key sugar and `target.`/`s
 qualifiers; Spark wants a table-name/alias SQL condition — the covered merge program answers
 Spark's rows), and EX-DF-10 (`printSchema`'s stdout tail, FIXED by DF-PRINTSCHEMA-1),
 with pins in `python/repark/tests/test_examples_dataframe_b.py`.
+The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame), EX-DF-19 (`stat.freqItems` refuses; the name stays on the backlog), and EX-ROW-1 (a struct-valued `Row` field is a dict in repark; Spark keeps the nested `Row`), pinned in `test_examples_dataframe_d.py`; `Row.as_dict`, `Row.from_mapping`, and `Row.from_ordered_fields` are repark extensions (`hasattr` False on live PySpark 4.1.2).
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/test_examples_dataframe_a.py](../../../python/repark/tests/test_examples_dataframe_a.py)
 - Pins: [../../../python/repark/tests/test_examples_dataframe_c.py](../../../python/repark/tests/test_examples_dataframe_c.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_b.py](../../../python/repark/tests/test_examples_dataframe_b.py)
+- Pins: [../../../python/repark/tests/test_examples_dataframe_d.py](../../../python/repark/tests/test_examples_dataframe_d.py)

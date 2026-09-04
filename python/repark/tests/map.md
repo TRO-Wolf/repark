@@ -129,6 +129,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
   where Spark answers `r.a` (EX-COL-2).
   pins: ex-17-column-a/C-001
+- [test_examples_dataframe_d.py](test_examples_dataframe_d.py) — **EX-19 (2026-09-04):**
+  the three divergence pins for the DataFrame-d example batch — `withColumnsRenamed`
+  refusing duplicate final names where Spark answers the duplicate-named frame
+  (EX-DF-18), `stat.freqItems` refusing loudly where Spark answers the frequent-item
+  table (EX-DF-19), and the struct-valued `Row` field answering a dict where Spark
+  keeps the nested `Row` (EX-ROW-1). The module docstring names the row span.
+  pins: ex-19-dataframe-d-window/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
