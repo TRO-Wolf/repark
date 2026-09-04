@@ -249,3 +249,28 @@ different message from the other 117, which is the evidence that they are a dist
 Base-of-branch control, the red-first record: on `origin/main` `55652ca` with the pin module and
 nothing else, **127 of 137 red, 10 green** — the 10 being the DataFrame-door `bool_and` /
 `bool_or` cells, which were already Spark-equal.
+
+## 10. Gates
+
+Every gate the charter names, run on the final tree with the RELEASE native module
+(`repark._native.__debug_assertions__ == False`).
+
+| gate | result |
+|---|---|
+| `make ci` | exit 0 (fmt, clippy `-D warnings`, panic ban, crate DAG, lib-rs, rust/py file size, python conventions, docstring presence, example coverage, manifest, ledger check, ledger grammar, docs compaction, owner ruling, parity-live dual wire, matrix liveness, rust-check, ruff lint + format, uv lock, taplo, typos) |
+| `make verify` | exit 0 — `make ci` plus the whole Rust workspace suite |
+| `make check-python-conventions` | 232 files clean |
+| `make rust-panic-ban` | exit 0 |
+| `.venv/bin/python -m pytest python/repark/tests -q` | **4738 passed, 193 skipped** |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | **574 passed** |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_win_slide_1.py -q` | **258 passed**, exit 0, 179 s. Co-collection proven: `test_live_disclosure_still_diverges` collects and passes beside the two new live legs, which re-derive every pinned answer — 65 SQL cells, 65 DataFrame cells and the seven frame-shape pins — on live PySpark 4.1.2. Run under the orchestrator's WIN-SLIDE-1-only override of the one-JVM rule (a sibling lane's facade suite had held the box for 1 h 45 m); the leg used the lane's own ivy redirect, Spark chose its own driver port, and no repark JVM survived it. |
+| `make check-map-sync` | 182 maps clean |
+| `make check-ledger-grammar` | 39 live ledgers clean |
+| `make check-ledgers` | 235 ledgers in bins, 717 links resolve |
+| `make check-docs-compaction` | clean; `STATUS.md` and `briefs/next-sequence.md` byte-identical to `main` |
+| `scripts/ledger_lifecycle.py check --base origin/main` | exit 0 |
+| `typos .` | exit 0 |
+| comment self-check (`git diff --cached` over `*.rs` `*.py` `*.sh` `*.toml`) | no added `//`, `///`, `//!` or leading `#` on any commit |
+
+The `--timeout 900` the charter names is not a flag this suite's pytest accepts (no
+`pytest-timeout` plugin in the lock); the suite was run without it and finished in 128 s.
