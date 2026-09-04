@@ -6,8 +6,8 @@ from collections.abc import Iterator
 
 import pytest
 
-from repark.spark import functions as F  # noqa: N812
 from repark import ReparkSession
+from repark.spark import functions as F  # noqa: N812
 from repark.spark.types import DoubleType, StringType, StructField, StructType
 
 

@@ -83,7 +83,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-15-dataframe-a/C-001
 - [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):** imports
   `repark.spark.functions` (importing the `repark.functions` shim rebinds the package attribute
-  and hides the private SSOT names `test_qi1_idents.py` pins);
+  and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
   the two divergence pins for the Column-a example batch —
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
   select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
