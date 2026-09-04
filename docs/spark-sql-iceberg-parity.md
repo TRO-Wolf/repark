@@ -3550,6 +3550,35 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
   `crates/repark-spark/src/tests/ctas_view.rs::partitioned_ctas_from_view_typed_batches_still_round_trips`.
 - **Rationale** — FIXED. The 1.0.0 unpartitioned stream writer never called `conform_batch`. DataFusion's parquet reader yields `Utf8View`/`BinaryView` while the Iceberg schema derived from the plan is `string`/`binary`. Partitioned CTAS, `writeTo().append()`, and `createDataFrame` views were already fine.
 
+### DYNFLATTEN-QUALNAME-1 — three struct expands plus a keep column clash on qualified vs unqualified `id`
+
+- **repark** — `createDataFrame` / `read.parquet` of `id LONG` plus a depth-3 struct, then
+  `dynamicFlatten().to_arrow()`, raises `AnalysisException`: optimizer rule
+  `push_down_leaf_projections` failed, `Schema contains qualified field name
+  datafusion.public.__repark_cdf_<uuid>.id and unqualified field name id which would be
+  ambiguous`. Depth 2 with a keep column, and depth 3 with no sibling keep, both collect.
+- **Apache Spark** — the same frame expands and returns the prefixed leaf beside the keep
+  column: columns `['id', 'Payload_L1_L2_Val']`, row `{'id': 1, 'Payload_L1_L2_Val': 9}`.
+  *(oracle: measured — PySpark 4.1.2, 2026-09-04, the reproducer above.)*
+- **Pin** —
+  `python/repark/tests/test_dynamic_flatten.py::test_three_level_struct_with_keep_column_hits_qualified_name_clash`
+- **Rationale** — BACKLOG, intent to FIX. Filed from PERF-DYNFLATTEN-1; the measurement bed
+  nested `id` inside the leaf so flatten could run. Do not close by switching the bed.
+
+### DYNFLATTEN-LISTNULL-1 — Spark keeps a null-typed list as `int32 user_properties`; repark drops it
+
+- **repark** — `dynamicFlatten(drop_null_lists=true)` drops `array<void>` `user_properties`.
+  After flatten, `list_struct_1` is `(id int64, Legs_leg_id int64, Legs_Name string)`;
+  `cartesian_two_lists` adds `Tags string`. Struct-only shapes match Spark.
+- **Apache Spark** — `explode_outer` on the same parquet infers `user_properties` as
+  nullable `int32` and keeps the column. Value columns otherwise match after that drop.
+  *(oracle: live — PySpark 4.1.2, 2026-09-04,
+  `test_live_dynflatten_matches_spark_explode[list_struct_1]`.)*
+- **Pin** —
+  `python/repark/tests/test_parity_live.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`
+- **Rationale** — BACKLOG, intent to FIX or DECLARE. Filed from PERF-DYNFLATTEN-1. Do not
+  close by dropping the column in the Spark oracle.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

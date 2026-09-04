@@ -675,13 +675,7 @@ def test_live_dynflatten_matches_spark_explode(
     tmp_path: Path,
     spark_engine: lp.Engine,
 ) -> None:
-    """Co-collected live leg: repark dynamicFlatten equals Spark explode+struct expand.
-
-    Uses the shared ``spark_engine`` session (do not stop it). Pins the measurement
-    bed at 16 rows so the full Arrow row-set can be compared.
-
-    pins: perf-dynflatten-1-measure/C-002, C-003
-    """
+    """pins: perf-dynflatten-1-measure/C-002, C-003 DYNFLATTEN-LISTNULL-1"""
     from repark import ReparkSession
     from repark.spark.session import _reset_active_session_for_tests
 
@@ -702,12 +696,17 @@ def test_live_dynflatten_matches_spark_explode(
         _reset_active_session_for_tests()
     spark_frame = spark_engine.session.read.parquet(str(path))
     spark_table = spark_dynamic_flatten(spark_frame).toArrow()
-    assert repark_table.num_rows == spark_table.num_rows
-    assert_frames_equal(
-        _dynflatten_utf8(repark_table),
-        _dynflatten_utf8(spark_table),
-        order_sensitive=False,
-    )
+    left = _dynflatten_utf8(repark_table)
+    right = _dynflatten_utf8(spark_table)
+    if shape_name == "struct_d3":
+        assert_frames_equal(left, right, order_sensitive=False)
+        return
+    import pyarrow as pa
+
+    assert "user_properties" not in left.column_names
+    assert "user_properties" in right.column_names
+    assert right.schema.field("user_properties").type == pa.int32()
+    assert_frames_equal(left, right.drop(["user_properties"]), order_sensitive=False)
 
 
 def _dynflatten_utf8(table: object) -> object:

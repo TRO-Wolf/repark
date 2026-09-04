@@ -32,6 +32,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
+- `test_dynamic_flatten.py::test_three_level_struct_with_keep_column_hits_qualified_name_clash`
+  — `DYNFLATTEN-QUALNAME-1`. pins: perf-dynflatten-1-measure/C-003
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
