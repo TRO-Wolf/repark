@@ -3477,6 +3477,23 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
 - **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
 - **Rationale** — BACKLOG. W-1.
 
+### CTAS-VIEW-1 — unpartitioned CTAS from a parquet-read view failed on Utf8View — **FIXED 2026-09-03**
+
+| cell | 1.0.0 | 1.0.1 |
+|---|---|---|
+| `df = repark.read.format('parquet').load(p); df.createOrReplaceTempView("my_df"); CREATE TABLE c.ns.t USING iceberg AS SELECT * FROM my_df` (unpartitioned) | `Arrow Schema Error … expected Utf8 but found Utf8View at column index 0`; service-managed door reports it as a create-first abort | commits; read-back equals the source |
+| same CTAS from a `createDataFrame` view | OK | OK |
+| same CTAS with `PARTITIONED BY` | OK | OK |
+| `df.writeTo(t).append()` of the parquet-read frame | OK | OK |
+
+- **repark** — **FIXED 2026-09-03.** Unpartitioned CTAS from a parquet-read temp view commits. The unpartitioned stream writer conforms each batch (`Utf8View`/`BinaryView` → Iceberg `string`/`binary`) the same way the partitioned writer already did. History: shipped in 1.0.0, fixed for 1.0.1.
+- **Apache Spark** — the same CTAS from a parquet-read view succeeds; parquet strings store as Iceberg `string`. *(oracle: documented Spark Iceberg CTAS; local 1.0.0 wheel repro, 2026-09-03.)*
+- **Pin** — `crates/repark-spark/src/tests/ctas_view.rs::unpartitioned_ctas_from_view_typed_batches_round_trips`,
+  `python/repark/tests/test_ctas_view_typed.py::test_unpartitioned_ctas_from_parquet_temp_view_round_trips`,
+  `crates/repark-spark/src/tests/service_managed_ctas.rs::ctas_service_managed_from_view_typed_batches_round_trips`,
+  `crates/repark-spark/src/tests/ctas_view.rs::partitioned_ctas_from_view_typed_batches_still_round_trips`.
+- **Rationale** — FIXED. The 1.0.0 unpartitioned stream writer never called `conform_batch`. DataFusion's parquet reader yields `Utf8View`/`BinaryView` while the Iceberg schema derived from the plan is `string`/`binary`. Partitioned CTAS, `writeTo().append()`, and `createDataFrame` views were already fine.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

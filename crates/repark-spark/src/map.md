@@ -84,6 +84,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: b-mor-3-rewrite-position-deletes-v3/C-002, C-003, C-004
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
+  **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
+  from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
+  pins: ctas-view-1-conform-stream/C-001, C-002
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including

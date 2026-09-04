@@ -90,7 +90,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
   catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed
-  create-first path. Refuses Iceberg CREATE when any `TableScan`
+  create-first path. **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_stream` inherits
+  stream conforming from `write_data_files_from_stream_with_concurrency` (no local edit).
+  pins: ctas-view-1-conform-stream/C-002
+  Refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
   the tag. The write boundary uses the same source walk. **V3-6 C-003:**
