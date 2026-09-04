@@ -11,17 +11,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 ## Contents
 
 - [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
-  ordered queue and the reasoning for the order. Live queue (2026-08-30): fork-independent
-  **FNP-15/16**, then **MW-10** (the S3 Tables MOR leg, now that OD-3b's IAM is applied). V3-3
-  is chartered and owner-sequenced, not in this queue. A merged unit leaves this file whole;
-  its record is the archived ledger. **Re-opened 2026-09-03 (V1-GATE), emptied again the same day:**
-  **V3-COV** measured the full v3 statement-coverage comparison against PySpark that §2 pillar 4
-  of the v1.0 north star requires ([../docs/design/v3-statement-coverage.md](../docs/design/v3-statement-coverage.md));
-  it was the last engineering item before the tag, and it left this file when its ledger filed.
-  Carries the PYC unit definitions, the two hazards a pure-refactor campaign
-  has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
-  subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with
-  reasons). Unlike the campaign slates below, it is rolling: a unit leaves when it merges.
+  ordered queue and the reasoning for the order. Live queue (2026-09-04, post-v1.0.1): **F-24**,
+  F-25 → RP-10, PERF-SCAN-1, SQL-HARDEN-1, FN-FIX-2, dynamicFlatten measure, EX batches,
+  cutover inventory, H-3 spill matrix, FNP-9/10. **FNP-15/16** and MW-10 have already merged.
+  A merged unit leaves this file whole; its record is the archived ledger. Unlike the campaign
+  slates below, it is rolling: a unit leaves when it merges.
 
 - [example-backfill.md](example-backfill.md) — the **v0.7 example backfill** campaign slate:
   per-family lanes, batch contract, tiering, the gate as the acceptance bar. Charters live in
