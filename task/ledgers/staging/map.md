@@ -61,3 +61,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (backlog 578 → 550), 8 measured divergences stay with §7 rows `EX-DF-1`…`EX-DF-6` and pins in
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
+- [df-printschema-1-trailing-newline-ledger.md](df-printschema-1-trailing-newline-ledger.md) —
+  **DF-PRINTSCHEMA-1 (2026-09-04), in flight:** `printSchema` stdout byte-identical to
+  Spark's (flat, nested, array, `level=1` exact captures); `EX-DF-10` flip owed on the
+  unmerged EX-16 branch. `risk_tier: standard`. Branch
+  `fix/df-printschema-1-trailing-newline`.
+  pins: df-printschema-1-trailing-newline/C-004
