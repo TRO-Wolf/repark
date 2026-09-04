@@ -151,6 +151,8 @@ JVM, no repark required). See [../map.md](../map.md).
   pins: rp-9-repin-f23/C-004
   **RP-10 (2026-09-04):** the same meta-pin moves to `85a4aaf0`; R114's dated cell names F-25.
   pins: rp-10-repin-f25/C-004
+  **RP-11 (2026-09-04):** the same meta-pin moves to `189a73ed`; `B-MOR-3-FLOOR-1` FIXED.
+  pins: rp-11-repin-f24/C-001, C-003
   Two neighbouring meta-pins were repointed when V3-11 compacted STATUS:
   `test_plan_1_northstar_fnp_sequence.py` reads the shortened V3-6 sentence, and
   `test_v3r_1_rulings.py` reads `F-rp3-c7 consumed` from the north-star COW row — the
@@ -218,6 +220,8 @@ JVM, no repark required). See [../map.md](../map.md).
   **B-MOR-3 (2026-09-03):** row 13's cell reads the FIXED ruling with the `B-MOR-3-FLOOR-1`
   residue beside it, the owner paragraph reads BUILD, `_SURFACE_RESIDUALS` and
   `_RESIDUAL_ROWS` follow row 13 out of the residual table, and the EQUAL count is 72.
+  **RP-11 (2026-09-04):** that residue is FIXED; the surface-residual class is
+  `FIXED 2026-09-04 (RP-11)`.
   pins: v1-gate-audit/C-001, C-002, C-003, C-004, C-005, C-006
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry

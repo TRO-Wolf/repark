@@ -115,14 +115,14 @@ in published history by explicit decision:
   2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
   pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
   filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
-  FIXED 2026-09-03; floor residue `B-MOR-3-FLOOR-1`.
+  FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
   - **Next:** lineage carry and merge-on-read are complete on every served DML shape
     (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
     `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
     `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. Then F-24
-    (min-input-files floor on the fork), F-25 → RP-10 (`PERF-DVCLOSE-STMT-1`), PERF-SCAN-1
-    (`PERF-SCAN-3PASS-1`), SQL-HARDEN-1 (cutover SQL shapes vs Spark on Glue + S3 Tables).
+    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
+    `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
+    landed 2026-09-04.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

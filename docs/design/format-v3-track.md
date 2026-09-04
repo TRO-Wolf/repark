@@ -279,8 +279,8 @@ closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_referenc
   in-scope vectors (`removed_delete_files_count = 6` on the six-file fixture; `2` on
   V3E-3 partitioned; `where => 'part = 0'` keeps the sibling). `V3-DANGLE-1` FIXED.
   `B-MOR-3` FIXED 2026-09-03 (owner ruling: build): DV-only CALL returns Spark's
-  four zeros; admitted parquet→DV is one PUFFIN per data file. Floor residue
-  `B-MOR-3-FLOOR-1`. F-17 sibling-close pins re-ran green.
+  four zeros; admitted parquet→DV is one PUFFIN per data file. `B-MOR-3-FLOOR-1`
+  FIXED 2026-09-04 (RP-11). F-17 sibling-close pins re-ran green.
 - **V3-6:** *Done 2026-09-01.* Opt-in v3 CREATE consumes fork `timestamp_ns` /
   `timestamptz_ns` (value+type round-trip on the Spark and ANSI doors, facade schema
   pin, v2 refuses). Engine append fills an omitted column from a schema-carried
@@ -305,6 +305,8 @@ closing `F-v3-10-partition-file-order`, and `DvContainerClose::retained_referenc
   pure-DV path when `known_partitions` is complete; `PERF-DVCLOSE-WALK-1` FIXED.
 - **RP-10:** *Done 2026-09-04.* Pin `85a4aaf0` (fork F-25) stops the fresh-DV commit walk once
   every `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` FIXED.
+- **RP-11:** *Done 2026-09-04.* Pin `189a73ed` (fork F-24 `#266`) honours `min-input-files=5`
+  on the v3 parquet-to-DV arm; `B-MOR-3-FLOOR-1` FIXED.
 
   The original scope note: V3-6 may
   run in parallel with V3-3 or V3-4 after its fork type support is pinned; it does not wait for

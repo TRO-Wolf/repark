@@ -137,7 +137,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 |---|---|---|---|---|
 | `DML-1` | `INSERT OVERWRITE t PARTITION (part) …` | repark replaces only the source partitions; Spark SQL's default `partitionOverwriteMode=STATIC` wipes the table | DECLARED residue on a FIXED row (2026-08-30, DML-B) | repark, deliberate |
 | `G3-E8` | `UPDATE … WHERE col NOT IN (SELECT …)` and `UPDATE … WHERE EXISTS (…)` | repark refuses at the valve; Spark updates the matching rows | DEFECT, partial fix | repark |
-| `B-MOR-3` | `CALL system.rewrite_position_delete_files` | **FIXED 2026-09-03** — both engines answer four zeros on a DV-only table | FIXED (owner ruling: build); floor residue `B-MOR-3-FLOOR-1` | — |
+| `B-MOR-3` | `CALL system.rewrite_position_delete_files` | **FIXED 2026-09-03** — both engines answer four zeros on a DV-only table | FIXED (owner ruling: build); `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11) | — |
 | `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` was assigned by an unstable data-file order — two permutations across twelve runs | **FIXED (RP-8, 2026-09-03)** — the fork's `FanoutWriter::close` drains ascending, 12 of 12 runs give Spark's mapping | fork `IcebergTableProvider::insert_into` |
 | `V3-COV-4` | `DELETE FROM t WHERE id > 0` (MoR) | repark writes one Puffin DV covering every row and keeps both data files live (`t.files` `[(0, 4), (1, 4)]`); Spark drops the data file and leaves `t.files` and `t.delete_files` empty | BACKLOG | repark |
 | `V3-COV-5` | `ALTER TABLE t WRITE ORDERED BY id` | repark refuses (sort-order evolution outside I7); Spark sets the write order | BACKLOG | repark |

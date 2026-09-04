@@ -26,7 +26,7 @@ repo.
 - [fork-sync.md](fork-sync.md) — the iceberg-rust fork **sync contract**: pin-bump procedure
   (`make bump-fork-pin`), green-before-pinnable, upstream-flows-through-the-fork, the
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
-  table (one row per dedicated bump PR; started 2026-08-15; live pin RP-10 `85a4aaf0` on 2026-09-04).
+  table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. **FN-FIX-1 round 3:**
   `FN-APPROXPCT-ACC-1` and `PERF-APPROXPCT-1` BACKLOG. F-Y10-1 (2026-08-30) names SMALLINT/Int16
