@@ -56,7 +56,8 @@ file is empty.
   the repark-extension namespaces `str`/`dt` are documented with their PySpark-spelled
   twins).
 - [ta/](ta/map.md) — TA kernel examples.
-- [io/](io/map.md) — reader / writer examples.
+- [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22 lands the first 14
+  `DataFrameWriterV2` names; `overwrite` stays a backlog divergence, EX-W2-1).
 - [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.
 - [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
   snake_case spellings are repark extensions covered beside their camelCase twins; the
