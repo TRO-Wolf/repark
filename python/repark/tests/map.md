@@ -73,6 +73,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-FIX-2 (2026-09-04):**
   FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
   pins: fn-fix-2-string-rows/C-003
+- [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
+  the four divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
+  raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
+  `exceptAll`/`except_all` refusal (EX-DF-3), and `describe`'s unordered rows with
+  Spark's cells pinned order-independently (EX-DF-4).
+  pins: ex-15-dataframe-a/C-001
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

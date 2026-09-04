@@ -3749,6 +3749,66 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
   not a row; the example covers the two-argument form.
 
+### EX-DF-1 — `colRegex` / `col_regex` compile the raw string; Spark strips the backticks
+
+- **repark** — `DataFrame.colRegex` (and its `col_regex` alias) compiles `colName` as-is: the
+  plain regex `colRegex("^(k)$")` selects `["k"]`, while the PySpark-documented backticked
+  spelling ``colRegex("`^(k)$`")`` raises `AnalysisException: No column matched regex`.
+  A multi-match pattern answers the first match only (Spark expands all matches in `select`).
+- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]`; the plain
+  string `colRegex("^(k)$")` raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` as an
+  unresolvable column. The two engines accept opposite spellings, so no input answers
+  Spark-equal on both. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
+  batch, six-row `g/k/v` frame.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_spelling_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
+  the example backlog; teaching either spelling would assert an answer Spark does not give.
+
+### EX-DF-2 — the three global-temp-view spellings refuse; Spark registers the view
+
+- **repark** — `createGlobalTempView`, `createOrReplaceGlobalTempView`, and
+  `create_global_temp_view` raise
+  `UnsupportedOperationException: createGlobalTempView is not supported yet (no global_temp
+  catalog; disclosed R-DF-BATCH2)`.
+- **Apache Spark** — `createGlobalTempView("gt")` registers the frame as `global_temp.gt`;
+  `SELECT k FROM global_temp.gt` answers the frame's rows (`[1, 1, 2, 2, 2, 3]` on the EX-15
+  six-row `g/k/v` frame), and the replace spelling swaps the definition the same way.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_global_temp_view_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. The refusal is
+  disclosed (R-DF-BATCH2) and pinned in `test_df_batch2.py`; this row records the measured
+  Spark answers and keeps all three spellings on the example backlog until the global_temp
+  catalog exists.
+
+### EX-DF-3 — `exceptAll` / `except_all` refuse; Spark answers the multiset difference
+
+- **repark** — both spellings raise
+  `UnsupportedOperationException: DataFrame.exceptAll multiset semantics are not Spark-correct
+  on this engine yet; use subtract() for distinct bags (octo C1-L-006)`.
+- **Apache Spark** — `[(1,), (1,), (2,)].exceptAll([(1,)])` answers `[(1,), (2,)]`: the
+  multiset difference keeps duplicate multiplicities. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-04, EX-15 DataFrame-a batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_except_all_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
+  the example backlog until the multiset semantics are Spark-correct.
+
+### EX-DF-4 — `describe` row order is engine-arbitrary; Spark's is count/mean/stddev/min/max
+
+- **repark** — the five summary rows answer the same cells Spark answers, but their collect
+  order varies run to run: three consecutive collects printed three different orders.
+- **Apache Spark** — `describe("k", "v")` collects in the stable order
+  `count, mean, stddev, min, max`. The cells themselves measured identical:
+  count `('6', '5')`, mean `('1.8333333333333333', '30.0')`,
+  stddev `('0.752772652709081', '15.811388300841896')`, min `('1', '10.0')`,
+  max `('3', '50.0')`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
+  batch.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_divergence`
+  (cells pinned order-independently; the order itself is unpinned because repark's is
+  nondeterministic, so no red-on-fix pin can assert it).
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. `DataFrame.describe`
+  stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
+  example would teach a weaker contract than Spark answers.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
