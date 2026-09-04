@@ -1,12 +1,20 @@
 # map — scripts/
 
-EX-21 catalog-session (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 377
-shipped (374 → 340 after the EX-20 merge) — 34 roster names (9 `Catalog.*`, all 25
-`SparkSession`) covered by sixteen new examples under `docs/examples/catalog/` and
-`docs/examples/session/`; `list_databases` stays on the backlog (the same function object as
-the divergent `listDatabases`, §7 `EX-CAT-2`), the `registerFunction` return and `newSession`
-promotion arms are §7 `EX-SES-1`/`EX-SES-2`, pins in
+EX-21 catalog-session (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 374 → 340
+shipped (411 → 377 at the dispatch base, before the EX-20 merge) — 34 roster names (9
+`Catalog.*`, all 25 `SparkSession`) covered by sixteen new examples under
+`docs/examples/catalog/` and `docs/examples/session/`; `list_databases` stays on the backlog
+(the same function object as the divergent `listDatabases`, §7 `EX-CAT-2`), the
+`registerFunction` return and `newSession` promotion arms are §7 `EX-SES-1`/`EX-SES-2`, pins in
 `python/repark/tests/test_examples_window_catalog.py`. pins: ex-21-catalog-session/C-001
+EX-20 window-catalog (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 374
+shipped (449 → 412 at the dispatch base, before the EX-19 merge) —
+37 roster names (all 22 `Window`/`WindowSpec`, 15 of the first 18 `Catalog.*`) covered by eight
+new examples under `docs/examples/window/` and `docs/examples/catalog/`; `getDatabase`/
+`get_database` and `listDatabases` stay on the backlog (§7 `EX-CAT-1`/`EX-CAT-2`), the
+`functionExists(name, dbName)` arm is §7 `EX-CAT-3`, and the DataFrame-door tied-key default
+frame is §7 `EX-WIN-1`, pins in `python/repark/tests/test_examples_window_catalog.py`.
+pins: ex-20-window-catalog/C-001
 EX-18 DataFrame-c (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 550 → 515 at
 dispatch (518 → 483 through the EX-16 merge, 484 → 449 through the EX-17 merge) —
 35 `DataFrame.*` names covered by eleven new examples under `docs/examples/dataframe/`; `toJSON`
