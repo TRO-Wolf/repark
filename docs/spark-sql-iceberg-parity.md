@@ -3848,6 +3848,38 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   where the engines agree; this row records the replace-on-existing arm until repark refuses an
   existing name the way Spark does.
 
+### EX-COL-1 — a bare `F.col(...).cast(...)` select names the engine-qualified column; Spark keeps the child name
+
+- **repark** — `df.select(F.col("v").cast("double"))` names the output column
+  `datafusion.public.__repark_cdf_<plan-id>.v`: the cast of a door-built column falls to the
+  native field name instead of the tracked projection name. The same cast on a frame-bound
+  receiver (`df.v.cast("double")` / `df["v"].cast(...)`) answers `v` (Spark-equal, pinned in
+  `test_select_naming.py`), an aliased cast answers the alias, and `withColumn` is unaffected.
+- **Apache Spark** — `df.select(F.col("v").cast("double"))` names the output column `v`:
+  a cast of a NamedExpression keeps the child name in a plain select, exactly as repark's own
+  df-bound arm answers. Values are equal on both engines; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, frames
+  `[("a",1,10.0),("b",2,None)]` over `g/k/v` and `[(10.0,)]` over `v`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_col_cast_qualified_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  df-bound and aliased arms, where the engines agree; the bare `F.col` arm stays on the
+  backlog and is not re-taught until repark names it `v`.
+
+### EX-COL-2 — an unaliased `getField` select projects `r['a']`; Spark projects `r.a`
+
+- **repark** — `df.select(df.r.getField("a"))` names the output column `r['a']` (the
+  bracketed display form tracked as the projection name). An aliased read
+  (`getField("a").alias("a")`) answers the alias and is Spark-equal; values are equal on both
+  engines, and the sibling `getItem` select answers `arr[1]` on both, matching Spark.
+- **Apache Spark** — `df.select(df.r.getField("a"))` names the output column `r.a` (the
+  dotted field form). Values are equal; only the default name diverges.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-17 Column-a batch, struct
+  `r<a string, b double>` over rows `("x",2.0)` / `("y",3.0)`.)*
+- **Pin** — `python/repark/tests/test_examples_column_a.py::test_get_field_bare_projection_name`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-17 measurement. The example keeps the
+  aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
+  projects `r.a`.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
