@@ -20,6 +20,13 @@ JVM, no repark required). See [../map.md](../map.md).
 Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
+
+**PERF-DYNFLATTEN-1 round 4:** `test_dynflatten_bed.py` pins the isolation shapes
+(`*_nonull`, `cartesian_legs_only`, `cartesian_tags_only`) as flagged and separate from the
+headline set, and pins the ranking contract: candidates are ranked by isolated cost and queued
+only above 3x the measured noise floor, so a wide floor queues nothing.
+pins: perf-dynflatten-1-measure/C-001, C-003
+
 ## Contents
 
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift

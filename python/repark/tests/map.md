@@ -33,6 +33,8 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
+  attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002

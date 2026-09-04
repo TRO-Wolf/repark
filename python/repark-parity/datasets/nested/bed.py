@@ -48,7 +48,7 @@ FORBIDDEN_CLI_FLAGS: Final[tuple[str, ...]] = (
     "--from-csv",
 )
 
-ShapeKind = Literal["struct", "list_struct", "cartesian", "null_typed_list"]
+ShapeKind = Literal["struct", "list_struct", "cartesian", "null_typed_list", "tags_only"]
 
 
 class ShapeSpec(BaseModel):
@@ -60,6 +60,8 @@ class ShapeSpec(BaseModel):
     kind: ShapeKind
     struct_depth: int = Field(ge=1, le=8)
     list_width: int | None = Field(default=None, ge=1, le=64)
+    null_parent_rate: float = Field(default=NULL_PARENT_RATE, ge=0.0, le=1.0)
+    isolation: bool = False
 
 
 SHAPES: Final[tuple[ShapeSpec, ...]] = (
@@ -75,6 +77,34 @@ SHAPES: Final[tuple[ShapeSpec, ...]] = (
         list_width=CARTESIAN_LIST_WIDTH,
     ),
     ShapeSpec(name="null_typed_list", kind="null_typed_list", struct_depth=2),
+    ShapeSpec(
+        name="struct_d3_nonull",
+        kind="struct",
+        struct_depth=3,
+        null_parent_rate=0.0,
+        isolation=True,
+    ),
+    ShapeSpec(
+        name="struct_d6_nonull",
+        kind="struct",
+        struct_depth=6,
+        null_parent_rate=0.0,
+        isolation=True,
+    ),
+    ShapeSpec(
+        name="cartesian_legs_only",
+        kind="list_struct",
+        struct_depth=1,
+        list_width=CARTESIAN_LIST_WIDTH,
+        isolation=True,
+    ),
+    ShapeSpec(
+        name="cartesian_tags_only",
+        kind="tags_only",
+        struct_depth=1,
+        list_width=CARTESIAN_LIST_WIDTH,
+        isolation=True,
+    ),
 )
 
 SHAPE_BY_NAME: Final[dict[str, ShapeSpec]] = {shape.name: shape for shape in SHAPES}
@@ -87,7 +117,7 @@ def _bootstrap_repark_datasets() -> None:
         return
     datasets_dir = Path(__file__).resolve().parent.parent
     package = types.ModuleType("repark_datasets")
-    package.__path__ = [str(datasets_dir)]  # type: ignore[attr-defined]
+    package.__dict__["__path__"] = [str(datasets_dir)]
     sys.modules["repark_datasets"] = package
 
 
@@ -177,6 +207,8 @@ def ddl_for(shape: ShapeSpec | str) -> str:
     if resolved.kind == "null_typed_list":
         return f"id LONG, Payload {wrapped}, user_properties {void_list}"
     leg = "ARRAY<STRUCT<leg_id: LONG, Name: STRING>>"
+    if resolved.kind == "tags_only":
+        return f"id LONG, Tags ARRAY<STRING>, user_properties {void_list}"
     if resolved.kind == "list_struct":
         return f"id LONG, Legs {leg}, user_properties {void_list}"
     return f"id LONG, Legs {leg}, Tags ARRAY<STRING>, user_properties {void_list}"
@@ -200,6 +232,14 @@ def schema_for(shape: ShapeSpec) -> pa.Schema:
             [
                 pa.field("id", pa.int64(), nullable=False),
                 pa.field("Legs", pa.list_(_leg_struct()), nullable=True),
+                pa.field("user_properties", void_list, nullable=True),
+            ]
+        )
+    if shape.kind == "tags_only":
+        return pa.schema(
+            [
+                pa.field("id", pa.int64(), nullable=False),
+                pa.field("Tags", pa.list_(_dict_name_type()), nullable=True),
                 pa.field("user_properties", void_list, nullable=True),
             ]
         )
@@ -250,8 +290,8 @@ def _utf8_schema(schema: pa.Schema) -> pa.Schema:
     )
 
 
-def _is_null_parent(rng: random.Random) -> bool:
-    return rng.random() < NULL_PARENT_RATE
+def _is_null_parent(rng: random.Random, rate: float = NULL_PARENT_RATE) -> bool:
+    return rng.random() < rate
 
 
 def _leaf_value(rng: random.Random, value: int, *, with_row_id: bool) -> dict[str, Any]:
@@ -267,19 +307,22 @@ def _nested_payload(
     value: int,
     *,
     with_row_id: bool,
+    null_rate: float = NULL_PARENT_RATE,
 ) -> dict[str, Any] | None:
-    if _is_null_parent(rng):
+    if _is_null_parent(rng, null_rate):
         return None
     current: Any = _leaf_value(rng, value, with_row_id=with_row_id)
     for level in range(depth - 1, 0, -1):
-        if _is_null_parent(rng):
+        if _is_null_parent(rng, null_rate):
             current = None
         current = {f"L{level}": current}
     return current
 
 
-def _legs(rng: random.Random, row_index: int, width: int) -> list[dict[str, Any]] | None:
-    if _is_null_parent(rng):
+def _legs(
+    rng: random.Random, row_index: int, width: int, null_rate: float = NULL_PARENT_RATE
+) -> list[dict[str, Any]] | None:
+    if _is_null_parent(rng, null_rate):
         return None
     return [
         {
@@ -290,8 +333,8 @@ def _legs(rng: random.Random, row_index: int, width: int) -> list[dict[str, Any]
     ]
 
 
-def _tags(rng: random.Random, width: int) -> list[str] | None:
-    if _is_null_parent(rng):
+def _tags(rng: random.Random, width: int, null_rate: float = NULL_PARENT_RATE) -> list[str] | None:
+    if _is_null_parent(rng, null_rate):
         return None
     return [rng.choice(NAME_POOL) for _ in range(width)]
 
@@ -308,26 +351,37 @@ def _properties(rng: random.Random, row_index: int) -> list[None] | None:
 
 def _build_row(shape: ShapeSpec, rng: random.Random, row_index: int) -> dict[str, Any]:
     width = shape.list_width or 1
+    rate = shape.null_parent_rate
     if shape.kind == "struct":
         return {
-            "Payload": _nested_payload(rng, shape.struct_depth, row_index, with_row_id=True),
+            "Payload": _nested_payload(
+                rng, shape.struct_depth, row_index, with_row_id=True, null_rate=rate
+            ),
         }
     if shape.kind == "list_struct":
         return {
             "id": int(row_index),
-            "Legs": _legs(rng, row_index, width),
+            "Legs": _legs(rng, row_index, width, rate),
+            "user_properties": _properties(rng, row_index),
+        }
+    if shape.kind == "tags_only":
+        return {
+            "id": int(row_index),
+            "Tags": _tags(rng, width, rate),
             "user_properties": _properties(rng, row_index),
         }
     if shape.kind == "cartesian":
         return {
             "id": int(row_index),
-            "Legs": _legs(rng, row_index, width),
-            "Tags": _tags(rng, width),
+            "Legs": _legs(rng, row_index, width, rate),
+            "Tags": _tags(rng, width, rate),
             "user_properties": _properties(rng, row_index),
         }
     return {
         "id": int(row_index),
-        "Payload": _nested_payload(rng, shape.struct_depth, row_index, with_row_id=False),
+        "Payload": _nested_payload(
+            rng, shape.struct_depth, row_index, with_row_id=False, null_rate=rate
+        ),
         "user_properties": _properties(rng, row_index),
     }
 
@@ -450,6 +504,8 @@ def write_bed(
                 "kind": shape.kind,
                 "struct_depth": shape.struct_depth,
                 "list_width": shape.list_width,
+                "isolation": shape.isolation,
+                "null_parent_rate": shape.null_parent_rate,
                 "rows": rows,
                 "path": path.name,
                 "bytes": path.stat().st_size,

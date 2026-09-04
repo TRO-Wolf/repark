@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import statistics
 import subprocess
@@ -20,8 +21,19 @@ _DATASETS_DIR = Path(__file__).resolve().parents[2] / "datasets"
 _WORKER = Path(__file__).resolve().parent / "cell_worker.py"
 SKIP_RSS_REASON = "spark_rss_is_jvm_not_python; one_jvm_power_budget"
 DEFAULT_WARMUP = 1
-DEFAULT_ITERATIONS = 3
+DEFAULT_ITERATIONS = 5
 EQUALITY_ROW_CAP = 20_000
+THREADS = 8
+NOISE_MULTIPLE = 3.0
+NOISE_FLOOR_SHAPE = "struct_d3"
+NOISE_REPEATS = 5
+
+
+def native_is_release() -> bool:
+    """True when the loaded native module was compiled without debug assertions."""
+    from repark import _native
+
+    return not getattr(_native, "__debug_assertions__", True)
 
 
 def _load_bed() -> Any:
@@ -32,7 +44,7 @@ def _load_bed() -> Any:
     package_name = "repark_datasets"
     if package_name not in sys.modules:
         package = types.ModuleType(package_name)
-        package.__path__ = [str(_DATASETS_DIR)]  # type: ignore[attr-defined]
+        package.__dict__["__path__"] = [str(_DATASETS_DIR)]
         sys.modules[package_name] = package
     return importlib.import_module("repark_datasets.nested.bed")
 
@@ -56,6 +68,7 @@ def run_repark_isolated(
     ddl: str,
     warmup: int,
     iterations: int,
+    target_partitions: int | None = THREADS,
 ) -> EngineTiming:
     """Run one repark cell in a subprocess (process-lifetime peak RSS)."""
     command = [
@@ -72,6 +85,8 @@ def run_repark_isolated(
         "--iterations",
         str(iterations),
     ]
+    if target_partitions is not None:
+        command += ["--target-partitions", str(target_partitions)]
     completed = subprocess.run(command, check=False, capture_output=True, text=True)
     if not json_out.is_file():
         return EngineTiming(
@@ -137,7 +152,6 @@ def run_spark_cells(
     *,
     warmup: int,
     iterations: int,
-    collect_equality: bool,
 ) -> tuple[dict[str, EngineTiming], dict[str, bool | None], str | None]:
     """Time the Spark explode program on every fixture with one JVM."""
     version, skip = pyspark_version()
@@ -160,9 +174,10 @@ def run_spark_cells(
     previous = SparkSession.getActiveSession()
     created = previous is None
     session = (
-        SparkSession.builder.master("local[1]")
+        SparkSession.builder.master(f"local[{THREADS}]")
         .appName("dynflatten-oracle")
         .config("spark.ui.enabled", "false")
+        .config("spark.sql.shuffle.partitions", str(THREADS))
         .getOrCreate()
     )
     timings: dict[str, EngineTiming] = {}
@@ -170,19 +185,18 @@ def run_spark_cells(
     try:
         for row in files:
             parquet_path = bed_dir / row["path"]
-            source = session.read.parquet(str(parquet_path))
+            source = session.read.parquet(str(parquet_path)).cache()
+            source.count()
             for _ in range(warmup):
                 spark_dynamic_flatten(source).toArrow()
             samples: list[float] = []
             rows_out = 0
-            spark_table = None
             for _ in range(iterations):
                 started = time.perf_counter()
-                flat = spark_dynamic_flatten(source)
-                table = flat.toArrow()
+                table = spark_dynamic_flatten(source).toArrow()
                 samples.append((time.perf_counter() - started) * 1000.0)
                 rows_out = table.num_rows
-                spark_table = table
+            source.unpersist()
             timings[row["shape"]] = EngineTiming(
                 engine="pyspark",
                 outcome="ok",
@@ -191,13 +205,15 @@ def run_spark_cells(
                 execute_ms=samples,
                 median_execute_ms=_median(samples),
                 median_wall_ms=_median(samples),
+                min_execute_ms=min(samples) if samples else None,
+                min_wall_ms=min(samples) if samples else None,
                 peak_rss_bytes=None,
                 rows_out=rows_out,
+                target_partitions=THREADS,
                 message=SKIP_RSS_REASON,
                 version=version,
             )
             equality[row["shape"]] = None
-            _ = (collect_equality, spark_table)
     except BaseException as error:
         if isinstance(error, (KeyboardInterrupt, SystemExit)):
             raise
@@ -220,76 +236,109 @@ def run_spark_cells(
     return timings, equality, None
 
 
-def rank_candidates(fixtures: list[FixtureResult]) -> list[CandidateShare]:
-    """Rank the three H-3 intake candidates by measured wall share."""
-    ok = [row for row in fixtures if row.repark.outcome == "ok" and row.repark.median_wall_ms]
-    total = sum(row.repark.median_wall_ms or 0.0 for row in ok)
-    if total <= 0:
-        return [
-            CandidateShare(
-                name="optimizer_wrapper_walks",
-                wall_share=0.0,
-                evidence="no successful repark cells",
-                verdict="not worth it",
-                projected_gain="n/a",
-            )
-        ]
-    rewrite = sum(row.repark.median_rewrite_ms or 0.0 for row in ok)
-    struct_wall = sum((row.repark.median_execute_ms or 0.0) for row in ok if row.kind == "struct")
-    cartesian_wall = sum(
-        (row.repark.median_execute_ms or 0.0) for row in ok if row.kind == "cartesian"
+def _median_execute(by_shape: dict[str, FixtureResult], shape: str) -> float | None:
+    """Median execute wall for one shape, or None when the cell did not run."""
+    row = by_shape.get(shape)
+    return None if row is None else row.repark.median_execute_ms
+
+
+def _median_rewrite(by_shape: dict[str, FixtureResult], shape: str) -> float | None:
+    """Median rewrite wall for one shape, or None when the cell did not run."""
+    row = by_shape.get(shape)
+    return None if row is None else row.repark.median_rewrite_ms
+
+
+def _verdict_for(cost: float | None, noise_floor_ms: float | None) -> tuple[str, float | None]:
+    """Queue a candidate only when its isolated cost clears the noise floor by NOISE_MULTIPLE."""
+    if cost is None or noise_floor_ms is None or noise_floor_ms <= 0:
+        return "not measurable", None
+    ratio = cost / noise_floor_ms
+    return ("queued" if ratio >= NOISE_MULTIPLE else "not worth it"), ratio
+
+
+def _fmt(value: float | None) -> str:
+    """One decimal place, or empty when the value is missing or zero."""
+    return f"{value:.1f}" if value else ""
+
+
+def rank_candidates(
+    fixtures: list[FixtureResult], noise_floor_ms: float | None
+) -> list[CandidateShare]:
+    """Rank the three H-3 candidates by ISOLATED cost, not by fixture-family wall."""
+    by_shape = {
+        row.shape: row
+        for row in fixtures
+        if row.repark.outcome == "ok" and row.repark.median_wall_ms
+    }
+    execute = functools.partial(_median_execute, by_shape)
+    rewrite = functools.partial(_median_rewrite, by_shape)
+
+    walk_samples = [rewrite(name) for name in ("struct_d3", "struct_d6", "cartesian_two_lists")]
+    walk_cost = sum(value for value in walk_samples if value is not None)
+
+    null_cost = None
+    null_parts = []
+    for nulls, plain in (("struct_d3", "struct_d3_nonull"), ("struct_d6", "struct_d6_nonull")):
+        left, right = execute(nulls), execute(plain)
+        if left is not None and right is not None:
+            null_parts.append(left - right)
+    if null_parts:
+        null_cost = sum(null_parts)
+
+    cartesian_cost = None
+    both = execute("cartesian_two_lists")
+    legs = execute("cartesian_legs_only")
+    tags = execute("cartesian_tags_only")
+    if both is not None and legs is not None and tags is not None:
+        cartesian_cost = both - (legs + tags)
+
+    total = sum(
+        row.repark.median_wall_ms or 0.0
+        for row in fixtures
+        if not row.isolation and row.repark.median_wall_ms
     )
-    walk_share = rewrite / total
-    struct_share = struct_wall / total
-    cartesian_share = cartesian_wall / total
-    walk_verdict = "not worth it" if walk_share < 0.05 else "implement"
-    struct_verdict = "implement" if struct_share >= 0.20 else "not worth it"
-    cartesian_verdict = "implement" if cartesian_share >= 0.20 else "not worth it"
-    ranked = [
-        CandidateShare(
-            name="optimizer_wrapper_walks",
-            wall_share=walk_share,
-            evidence=(
-                f"rewrite median sum {rewrite:.1f} ms of total {total:.1f} ms "
-                f"(schema walks are plan-time; Rust pin holds exact counts)"
-            ),
-            verdict=walk_verdict,
-            projected_gain=(
-                "sub-millisecond on these cells"
-                if walk_verdict != "implement"
-                else "remove repeated has_struct/has_list scans"
-            ),
+
+    specs = [
+        (
+            "optimizer_wrapper_walks",
+            walk_cost,
+            "rewrite wall over struct_d3, struct_d6, cartesian (the wrapper's subtree walks)",
+            "remove repeated has_struct/has_list scans",
         ),
-        CandidateShare(
-            name="null_mask_struct_extractor",
-            wall_share=struct_share,
-            evidence=(
-                f"struct-shape execute {struct_wall:.1f} ms of total {total:.1f} ms "
-                f"(CASE WHEN parent IS NULL per field)"
-            ),
-            verdict=struct_verdict,
-            projected_gain=(
-                "validity-bitmap extract on struct_d3/struct_d6"
-                if struct_verdict == "implement"
-                else "struct execute is not the dominant wall"
-            ),
+        (
+            "null_mask_struct_extractor",
+            null_cost,
+            "struct fixtures at 30 % null parents minus the same fixtures at 0 % nulls",
+            "validity-bitmap extract instead of CASE WHEN parent IS NULL per field",
         ),
-        CandidateShare(
-            name="cartesian_multi_list_operator",
-            wall_share=cartesian_share,
-            evidence=(
-                f"cartesian execute {cartesian_wall:.1f} ms of total {total:.1f} ms "
-                f"(two sequential Unnests; zip/pad is not a substitute)"
-            ),
-            verdict=cartesian_verdict,
-            projected_gain=(
-                "one Cartesian operator"
-                if cartesian_verdict == "implement"
-                else "two Unnests are not the dominant wall"
-            ),
+        (
+            "cartesian_multi_list_operator",
+            cartesian_cost,
+            "two-list fixture minus (legs-only + tags-only), the cost the second Unnest adds",
+            "one Cartesian operator",
         ),
     ]
-    return sorted(ranked, key=lambda item: item.wall_share, reverse=True)
+    ranked: list[CandidateShare] = []
+    for name, cost, evidence, gain in specs:
+        verdict, ratio = _verdict_for(cost, noise_floor_ms)
+        share = (cost / total) if (cost is not None and total > 0) else 0.0
+        ranked.append(
+            CandidateShare(
+                name=name,
+                wall_share=share,
+                evidence=(
+                    f"{evidence}: {cost:.2f} ms"
+                    if cost is not None
+                    else f"{evidence}: not measurable in this run"
+                ),
+                verdict=verdict,
+                projected_gain=gain,
+                isolated_cost_ms=cost,
+                noise_floor_ms=noise_floor_ms,
+                cost_over_noise=ratio,
+            )
+        )
+    return sorted(ranked, key=lambda item: item.isolated_cost_ms or 0.0, reverse=True)
 
 
 def run_measurement(
@@ -303,6 +352,11 @@ def run_measurement(
 ) -> RunResult:
     """Generate the bed, time repark (isolated) and Spark (one JVM), rank candidates."""
     started = time.perf_counter()
+    started_wall = time.time()
+    release = native_is_release()
+    if not release:
+        msg = "H-3a: refusing to measure or write a report on a debug native build"
+        raise RuntimeError(msg)
     bed = _load_bed()
     bed.refuse_real_dataset_inputs(argv=[])
     manifest = bed.write_bed(scale=scale, seed=seed, out=out_dir)
@@ -310,7 +364,10 @@ def run_measurement(
     worker_dir = out_dir / "cells"
     worker_dir.mkdir(parents=True, exist_ok=True)
     repark_timings: dict[str, EngineTiming] = {}
+    all_cores: dict[str, EngineTiming] = {}
     repark_tables: dict[str, Any] = {}
+    noise_floor: float | None = None
+    noise_samples: list[float] = []
     for row in files:
         parquet_path = out_dir / row["path"]
         json_out = worker_dir / f"{row['shape']}.json"
@@ -323,6 +380,30 @@ def run_measurement(
             iterations=iterations,
         )
         repark_timings[row["shape"]] = timing
+        if row["shape"] == NOISE_FLOOR_SHAPE:
+            repeats = [timing.median_wall_ms] if timing.median_wall_ms else []
+            for index in range(NOISE_REPEATS):
+                repeat = run_repark_isolated(
+                    parquet_path,
+                    worker_dir / f"{row['shape']}_noise{index}.json",
+                    ddl=ddl,
+                    warmup=warmup,
+                    iterations=iterations,
+                )
+                if repeat.outcome == "ok" and repeat.median_wall_ms:
+                    repeats.append(repeat.median_wall_ms)
+            if len(repeats) >= 2:
+                noise_floor = max(repeats) - min(repeats)
+                noise_samples = repeats
+        if not row.get("isolation"):
+            all_cores[row["shape"]] = run_repark_isolated(
+                parquet_path,
+                worker_dir / f"{row['shape']}_allcores.json",
+                ddl=ddl,
+                warmup=warmup,
+                iterations=iterations,
+                target_partitions=None,
+            )
         if (
             timing.outcome == "ok"
             and timing.rows_out is not None
@@ -351,7 +432,6 @@ def run_measurement(
             out_dir,
             warmup=warmup,
             iterations=iterations,
-            collect_equality=scale == "gate",
         )
         if scale == "gate":
             from pyspark.sql import SparkSession
@@ -392,6 +472,8 @@ def run_measurement(
             ratio = repark.median_wall_ms / spark.median_wall_ms
         fixtures.append(
             FixtureResult(
+                isolation=bool(row.get("isolation")),
+                repark_all_cores=all_cores.get(row["shape"]),
                 shape=row["shape"],
                 kind=row["kind"],
                 struct_depth=row["struct_depth"],
@@ -425,7 +507,14 @@ def run_measurement(
         pyspark_version=pyspark_ver,
         pyspark_skip_reason=pyspark_skip,
         fixtures=fixtures,
-        candidates=rank_candidates(fixtures),
+        candidates=rank_candidates(fixtures, noise_floor),
+        run_date=time.strftime("%Y-%m-%d", time.localtime(started_wall)),
+        native_is_release=release,
+        target_partitions=THREADS,
+        spark_threads=THREADS,
+        noise_floor_ms=noise_floor,
+        noise_floor_shape=NOISE_FLOOR_SHAPE,
+        noise_samples=noise_samples,
         peak_rss_bytes=peak_rss_bytes(),
         wall_seconds=time.perf_counter() - started,
         notes=notes,
@@ -438,9 +527,12 @@ def render_markdown(result: RunResult) -> str:
     lines = [
         f"# dynamicFlatten baseline ({result.scale}, {result.machine.get('cpu', 'unknown')})",
         "",
-        "- date: 2026-09-04",
+        f"- date: {result.run_date}",
         f"- scale: `{result.scale}` seed `{result.seed}`",
-        f"- native: `{result.native_build}`",
+        f"- native: `{result.native_build}` release `{result.native_is_release}`",
+        f"- threads: repark target_partitions `{result.target_partitions}`, "
+        f"spark `local[{result.spark_threads}]`",
+        f"- noise floor: `{result.noise_floor_ms}` ms on `{result.noise_floor_shape}`",
         f"- machine: cpu `{result.machine.get('cpu')}` cores `{result.machine.get('cores')}` "
         f"governor `{result.machine.get('governor')}` ram_gib `{result.machine.get('ram_gib')}`",
         f"- repark `{result.engine_version}` pyspark `{result.pyspark_version}` "
@@ -449,38 +541,44 @@ def render_markdown(result: RunResult) -> str:
         "",
         "## Fixtures",
         "",
-        "| shape | rows_in | repark_ms | rewrite_ms | execute_ms | rss_MiB | plan_nodes | "
-        "spark_ms | ratio | rows_out | row_set_equal |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| shape | iso | rows_in | repark_med | repark_min | rewrite | rss_MiB | "
+        "spark_med | spark_min | ratio | all_cores | rows_out |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in result.fixtures:
         rss = (
-            f"{row.repark.peak_rss_bytes / (1024 * 1024):.1f}" if row.repark.peak_rss_bytes else ""
+            f"{row.repark.peak_rss_bytes / (1024 * 1024):.0f}" if row.repark.peak_rss_bytes else ""
         )
         ratio = (
             f"{row.wall_ratio_repark_over_spark:.2f}"
             if row.wall_ratio_repark_over_spark is not None
             else ""
         )
-        equal = "" if row.row_set_equal is None else str(row.row_set_equal)
+        all_cores = ""
+        if row.repark_all_cores is not None and row.repark_all_cores.median_wall_ms:
+            all_cores = f"{row.repark_all_cores.median_wall_ms:.1f}"
+
         lines.append(
-            f"| {row.shape} | {row.rows_in} | {row.repark.median_wall_ms or ''} | "
-            f"{row.repark.median_rewrite_ms or ''} | {row.repark.median_execute_ms or ''} | "
-            f"{rss} | {row.repark.plan_nodes or ''} | {row.spark.median_wall_ms or ''} | "
-            f"{ratio} | {row.repark.rows_out or ''} | {equal} |"
+            f"| {row.shape} | {'y' if row.isolation else ''} | {row.rows_in} | "
+            f"{_fmt(row.repark.median_wall_ms)} | {_fmt(row.repark.min_wall_ms)} | "
+            f"{_fmt(row.repark.median_rewrite_ms)} | {rss} | "
+            f"{_fmt(row.spark.median_wall_ms)} | {_fmt(row.spark.min_wall_ms)} | "
+            f"{ratio} | {all_cores} | {row.repark.rows_out or ''} |"
         )
     lines.extend(
         [
             "",
-            "## Candidates",
+            "## Candidates (isolated cost, not fixture-family wall)",
             "",
-            "| rank | name | wall_share | verdict | evidence |",
-            "|---:|---|---:|---|---|",
+            "| rank | name | isolated_ms | x_noise | verdict | evidence |",
+            "|---:|---|---:|---:|---|---|",
         ]
     )
     for index, candidate in enumerate(result.candidates, start=1):
+        cost = f"{candidate.isolated_cost_ms:.2f}" if candidate.isolated_cost_ms is not None else ""
+        over = f"{candidate.cost_over_noise:.1f}" if candidate.cost_over_noise is not None else ""
         lines.append(
-            f"| {index} | {candidate.name} | {candidate.wall_share:.3f} | "
+            f"| {index} | {candidate.name} | {cost} | {over} | "
             f"{candidate.verdict} | {candidate.evidence} |"
         )
     lines.extend(["", "## Notes", ""])

@@ -26,7 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report", type=Path, default=None, help="markdown report path")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--warmup", type=int, default=1)
-    parser.add_argument("--iterations", type=int, default=3)
+    parser.add_argument("--iterations", type=int, default=5)
     parser.add_argument("--skip-pyspark", action="store_true")
     return parser
 

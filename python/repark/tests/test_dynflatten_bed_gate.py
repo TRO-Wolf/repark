@@ -22,7 +22,7 @@ def _bed() -> Any:
     package_name = "repark_datasets"
     if package_name not in sys.modules:
         package = types.ModuleType(package_name)
-        package.__path__ = [str(_DATASETS_DIR)]  # type: ignore[attr-defined]
+        package.__dict__["__path__"] = [str(_DATASETS_DIR)]
         sys.modules[package_name] = package
     return importlib.import_module("repark_datasets.nested.bed")
 

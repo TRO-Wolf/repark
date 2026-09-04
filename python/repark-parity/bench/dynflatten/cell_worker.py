@@ -51,7 +51,7 @@ def _count_plan_nodes(session: Any, frame: Any) -> int | None:
 
 
 def _load_source(session: Any, parquet_path: Path, ddl: str) -> Any:
-    """Load parquet via Arrow then ``createDataFrame`` (see DYNFLATTEN-QUALNAME-1)."""
+    """Materialize parquet into an in-memory frame (see DYNFLATTEN-QUALNAME-1)."""
     import pyarrow.parquet as pq
 
     table = pq.read_table(parquet_path)
@@ -64,12 +64,24 @@ def run_repark_cell(
     ddl: str,
     warmup: int,
     iterations: int,
+    target_partitions: int | None,
 ) -> dict[str, Any]:
     """Time ``dynamicFlatten`` on one parquet in this process."""
-    from repark import ReparkSession
+    from repark import ReparkSession, _native
     from repark import __version__ as repark_version
 
-    session = ReparkSession.builder.appName("dynflatten-cell").master("local[1]").getOrCreate()
+    if getattr(_native, "__debug_assertions__", True):
+        return {
+            "engine": "repark",
+            "outcome": "error",
+            "warmup": warmup,
+            "iterations": 0,
+            "message": "refusing to measure: native module is a debug build (H-3a)",
+        }
+    builder = ReparkSession.builder.appName("dynflatten-cell").master("local[1]")
+    if target_partitions is not None:
+        builder = builder.config("spark.sql.shuffle.partitions", str(target_partitions))
+    session = builder.getOrCreate()
     try:
         source = _load_source(session, parquet_path, ddl)
         for _ in range(warmup):
@@ -97,11 +109,15 @@ def run_repark_cell(
             "outcome": "ok",
             "warmup": warmup,
             "iterations": iterations,
+            "target_partitions": target_partitions,
             "rewrite_ms": rewrite_samples,
             "execute_ms": execute_samples,
             "median_rewrite_ms": _median(rewrite_samples),
             "median_execute_ms": _median(execute_samples),
             "median_wall_ms": _median(wall),
+            "min_wall_ms": min(wall) if wall else None,
+            "min_execute_ms": min(execute_samples) if execute_samples else None,
+            "min_rewrite_ms": min(rewrite_samples) if rewrite_samples else None,
             "peak_rss_bytes": peak_rss_bytes(),
             "rows_out": rows_out,
             "plan_nodes": plan_nodes,
@@ -129,10 +145,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ddl", type=str, required=True)
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--warmup", type=int, default=1)
-    parser.add_argument("--iterations", type=int, default=3)
+    parser.add_argument("--iterations", type=int, default=5)
+    parser.add_argument("--target-partitions", type=int, default=None)
     args = parser.parse_args(argv)
     payload = run_repark_cell(
-        args.parquet, ddl=args.ddl, warmup=args.warmup, iterations=args.iterations
+        args.parquet,
+        ddl=args.ddl,
+        warmup=args.warmup,
+        iterations=args.iterations,
+        target_partitions=args.target_partitions,
     )
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(payload), encoding="utf-8")

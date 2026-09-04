@@ -25,7 +25,7 @@ def _load_datasets() -> None:
     package_name = "repark_datasets"
     if package_name not in sys.modules:
         package = types.ModuleType(package_name)
-        package.__path__ = [str(_DATASETS_DIR)]  # type: ignore[attr-defined]
+        package.__dict__["__path__"] = [str(_DATASETS_DIR)]
         sys.modules[package_name] = package
 
 
@@ -37,7 +37,9 @@ def _bed() -> Any:
 def test_shapes_cover_the_charter_axes() -> None:
     bed = _bed()
     names = {shape.name for shape in bed.SHAPES}
-    assert names == {
+    headline = {shape.name for shape in bed.SHAPES if not shape.isolation}
+    isolation = {shape.name for shape in bed.SHAPES if shape.isolation}
+    assert headline == {
         "struct_d3",
         "struct_d6",
         "list_struct_1",
@@ -46,6 +48,15 @@ def test_shapes_cover_the_charter_axes() -> None:
         "cartesian_two_lists",
         "null_typed_list",
     }
+    assert isolation == {
+        "struct_d3_nonull",
+        "struct_d6_nonull",
+        "cartesian_legs_only",
+        "cartesian_tags_only",
+    }
+    assert names == headline | isolation
+    assert bed.SHAPE_BY_NAME["struct_d3_nonull"].null_parent_rate == 0.0
+    assert bed.SHAPE_BY_NAME["struct_d3"].null_parent_rate == 0.30
     assert bed.NULL_PARENT_RATE == 0.30
     assert bed.QUICK_ROWS == 100_000
     assert bed.FULL_ROWS == 1_000_000
@@ -178,14 +189,14 @@ def test_unknown_shape_refused() -> None:
         bed.generate("not_a_shape", 8, 42)
 
 
-def _share_fixture(kind: str, execute: float, rewrite: float) -> Any:
+def _share_fixture(kind: str, execute: float, rewrite: float, shape: str | None = None) -> Any:
     """Build a ranking fixture with a known execute/rewrite split."""
     if str(_BENCH_DIR) not in sys.path:
         sys.path.insert(0, str(_BENCH_DIR))
     from dynflatten.models import EngineTiming, FixtureResult
 
     return FixtureResult(
-        shape=kind,
+        shape=shape or kind,
         kind=kind,
         struct_depth=1,
         list_width=None,
@@ -207,19 +218,37 @@ def _share_fixture(kind: str, execute: float, rewrite: float) -> Any:
     )
 
 
-def test_rank_candidates_orders_by_share() -> None:
+def test_rank_candidates_uses_isolated_cost_and_the_noise_floor() -> None:
+    """A candidate is queued only when its isolated cost clears 3x the measured noise floor."""
     if str(_BENCH_DIR) not in sys.path:
         sys.path.insert(0, str(_BENCH_DIR))
     from dynflatten.measure import rank_candidates
 
-    ranked = rank_candidates(
-        [
-            _share_fixture("struct", execute=80.0, rewrite=1.0),
-            _share_fixture("cartesian", execute=10.0, rewrite=1.0),
-            _share_fixture("list_struct", execute=8.0, rewrite=1.0),
-        ]
-    )
+    fixtures = [
+        _share_fixture("struct", execute=80.0, rewrite=1.0, shape="struct_d3"),
+        _share_fixture("struct", execute=5.0, rewrite=1.0, shape="struct_d3_nonull"),
+        _share_fixture("cartesian", execute=50.0, rewrite=1.0, shape="cartesian_two_lists"),
+        _share_fixture("list_struct", execute=24.0, rewrite=1.0, shape="cartesian_legs_only"),
+        _share_fixture("list_struct", execute=24.0, rewrite=1.0, shape="cartesian_tags_only"),
+    ]
+    ranked = rank_candidates(fixtures, noise_floor_ms=1.0)
+    by_name = {item.name: item for item in ranked}
+    assert by_name["null_mask_struct_extractor"].isolated_cost_ms == 75.0
+    assert by_name["cartesian_multi_list_operator"].isolated_cost_ms == 2.0
     assert ranked[0].name == "null_mask_struct_extractor"
-    assert ranked[0].verdict == "implement"
-    walks = next(item for item in ranked if item.name == "optimizer_wrapper_walks")
-    assert walks.verdict == "not worth it"
+    assert by_name["null_mask_struct_extractor"].verdict == "queued"
+    assert by_name["cartesian_multi_list_operator"].verdict == "not worth it"
+
+
+def test_rank_candidates_queues_nothing_when_the_noise_floor_swallows_the_cost() -> None:
+    """The same costs against a wide noise floor queue nothing."""
+    if str(_BENCH_DIR) not in sys.path:
+        sys.path.insert(0, str(_BENCH_DIR))
+    from dynflatten.measure import rank_candidates
+
+    fixtures = [
+        _share_fixture("struct", execute=80.0, rewrite=1.0, shape="struct_d3"),
+        _share_fixture("struct", execute=5.0, rewrite=1.0, shape="struct_d3_nonull"),
+    ]
+    ranked = rank_candidates(fixtures, noise_floor_ms=100.0)
+    assert all(item.verdict != "queued" for item in ranked)

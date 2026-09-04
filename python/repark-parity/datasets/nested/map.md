@@ -16,6 +16,13 @@ values) from `small()` and from files re-read under `SCHEMA` — not raw file by
 Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
+
+**PERF-DYNFLATTEN-1 round 4:** `ShapeSpec` carries `null_parent_rate` and `isolation`.
+The four `isolation` shapes (`struct_d3_nonull`, `struct_d6_nonull`, `cartesian_legs_only`,
+`cartesian_tags_only`) exist only so a candidate's cost can be subtracted out; they never
+appear in a headline table. `tags_only` is a single-list kind matching the Cartesian's Tags.
+pins: perf-dynflatten-1-measure/C-001
+
 ## Contents
 
 - `datagen.py` — schema, `generate` / `small` / `write_files` / `read_parquet` /

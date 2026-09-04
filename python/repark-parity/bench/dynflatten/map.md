@@ -13,6 +13,15 @@ pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
 Docstrings here are one line each: `check_docstring_presence` (D101/D102/D103/D105/D107)
 requires one, and nothing may say more. Reasons live in this map, not in the source.
 
+
+**Round 4 comparison contract.** Both engines get a materialized frame (repark
+`createDataFrame`; Spark `.cache().count()`) and only flatten+collect is timed, at 8 threads
+each (`spark.sql.shuffle.partitions` / `local[8]`). The `allcores` column is repark at its
+64-thread default, reported for information and not a comparison. Candidates are timed in
+isolation, never as a share of fixture wall, and are queued only above 3x the measured noise
+floor (the spread over 6 repeats of one cell). The runner refuses a debug native build.
+pins: perf-dynflatten-1-measure/C-002, C-003
+
 ## Contents
 
 - `datagen` lives in [../../datasets/nested/bed.py](../../datasets/nested/bed.py)
