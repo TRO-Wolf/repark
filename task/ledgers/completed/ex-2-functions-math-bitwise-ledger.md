@@ -187,7 +187,7 @@ examples is the four new files.
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Sibling: [ex-0-example-drift-gate-ledger.md](../archive/2026-09/2026-09-02-ex-0-example-drift-gate-ledger.md),

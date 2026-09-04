@@ -1,10 +1,10 @@
 # Charter ledger — V1-GATE · the v1.0 north-star gate statement
 
 **Date:** 2026-09-03 · **Branch:** `docs/v1-gate-audit` · **Base:** `origin/main` `84c1801` ·
-**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) ·
-**Registry:** [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
+**Model:** claude-opus-5 (medium) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) ·
+**Registry:** [../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
 `S3T-V3-1` · **Path:** STANDARD (`risk_tier: standard`; docs only plus two meta-pins).
-**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
+**Gate:** [../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3.1.
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -170,6 +170,6 @@ COVERAGE_ATTESTATION:
 ## 5. Not in scope
 
 EX-3 (#307) changed no STATUS claim — the example inventory's home is
-[../../../briefs/example-backfill.md](../../../briefs/example-backfill.md) and the EX ledgers —
+[../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md) and the EX ledgers —
 so no STATUS line was written for it. `B-MOR-3`'s section placement in the registry (§2 above)
 is left for a registry-housekeeping unit; it does not move the gate.

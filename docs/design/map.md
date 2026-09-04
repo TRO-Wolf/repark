@@ -118,7 +118,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   the delegated external lanes (§6), the one held owner gate and the one discharged before kickoff
   (§7), non-goals (§8). Executed by the
   slate in [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md).
-- [torture-suite.md](torture-suite.md) — the **v0.8 torture-test dataset suite** design (settled
+- [torture-suite.md](torture-suite.md) — the **v1.2 (was v0.8) torture-test dataset suite** design (settled
   2026-08-31). What the roadmap section costs once the existing suite is run at the roadmap's own
   scale: four of the five families already ship as checked-in generators from DS-1…DS-4
   (2026-08-16) and have only ever run at 64 rows. §1 is the measured ground truth — a full 1M
@@ -159,9 +159,9 @@ write-path maintenance wave (settled 2026-08-21, MW-0…MW-5) moved to
 | Understand the V2 Engine Hardening campaign (running) | [v2-engine-hardening.md](v2-engine-hardening.md) |
 | See what a hardening unit must do and how it is accepted | [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md) |
 | See the product contracts for list_tables / sql() boundaries / post-DDL visibility | [product-contract.md](product-contract.md) |
-| Understand the v0.8 torture-test dataset suite (units, generators, CI) | [torture-suite.md](torture-suite.md) |
+| Understand the v1.2 (was v0.8) torture-test dataset suite (units, generators, CI) | [torture-suite.md](torture-suite.md) |
 | See what a 1M-row generation of every family costs | [torture-suite.md](torture-suite.md) §1.1 |
-| See what v0.8 deliberately does not claim | [torture-suite.md](torture-suite.md) §7 |
+| See what v1.2 (was v0.8) deliberately does not claim | [torture-suite.md](torture-suite.md) §7 |
 | Answer the v1.0 freeze question for one public surface | [v1-0-api-review-2026-09-02.md](v1-0-api-review-2026-09-02.md) §2 |
 | See which rows a v1.0 `yes` cannot yet bind, and why | [v1-0-api-review-2026-09-02.md](v1-0-api-review-2026-09-02.md) §5 |
 | Understand the Agent-Agnostic Front-Door campaign | [../history/frontdoor/README.md](../history/frontdoor/README.md) (archived 2026-08-10) |

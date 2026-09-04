@@ -6,11 +6,11 @@ E-4's registry queue entry PERF-DVCLOSE-WALK-1 is **FIXED 2026-09-03 (RP-9)** at
 
 **Date:** 2026-09-03 · **Branch:** `feat/rp-8-repin-f21-f22` · **Base:** `origin/main`
 `5285a32` · **Model:** claude-opus-5 (medium) · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" · **Handoff:**
-[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" · **Handoff:**
+[../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 asks F-20, F-21, F-22 · **Path:** STANDARD (`risk_tier: standard`; one Actor cycle).
 **Proven pattern:**
-[../archive/2026-09/2026-09-02-rp-7-f18-repin-ledger.md](../archive/2026-09/2026-09-02-rp-7-f18-repin-ledger.md).
+[../archive/2026-09/2026-09-02-rp-7-f18-repin-ledger.md](2026-09-02-rp-7-f18-repin-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
