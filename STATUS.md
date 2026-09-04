@@ -147,10 +147,11 @@ in published history by explicit decision:
   **Delivered:** `__all__` 333 → 360, 41 names working (FNP-1..6c); F-Y10-1, FNP-4c, FNP-7a/7b.
   Remaining work ships as one coherent PR per unit or tightly coupled pair.
   **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
+  **FN-FIX-2 (2026-09-04):** six silent string rows Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
+  `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
   **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
   the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
-  **Next:** FN-FIX-2 (`FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`,
-  `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`), then **Next, in order (revised 2026-08-31):**
+  **Next, in order (revised 2026-08-31):**
   FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z. Deferred: FNP-4b, FNP-6d, FNP-13, FNP-14.
 <!-- /ws -->
 

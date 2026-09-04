@@ -185,6 +185,42 @@ pub fn isnan(arg: Expr) -> Expr {
 }
 
 #[must_use]
+pub fn initcap(arg: Expr) -> Expr {
+    call(crate::spark_initcap::initcap_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn chr(arg: Expr) -> Expr {
+    call(crate::spark_chr::chr_udf(), vec![arg])
+}
+
+#[must_use]
+pub fn elt(args: Vec<Expr>) -> Expr {
+    call(crate::spark_elt::elt_udf(), args)
+}
+
+#[must_use]
+pub fn regexp_like(str: Expr, regexp: Expr) -> Expr {
+    call(
+        crate::spark_regexp_match::regexp_like_udf(),
+        vec![str, regexp],
+    )
+}
+
+#[must_use]
+pub fn rlike(str: Expr, regexp: Expr) -> Expr {
+    call(crate::spark_regexp_match::rlike_udf(), vec![str, regexp])
+}
+
+#[must_use]
+pub fn regexp_replace(str: Expr, regexp: Expr, replacement: Expr) -> Expr {
+    call(
+        crate::spark_regexp_match::regexp_replace_udf(),
+        vec![str, regexp, replacement],
+    )
+}
+
+#[must_use]
 pub fn array_position(array: Expr, value: Expr) -> Expr {
     call(crate::collection::array_position_udf(), vec![array, value])
 }

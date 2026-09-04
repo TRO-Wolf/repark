@@ -43,20 +43,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FN-ARRAYSOVERLAP-1 three-valued, FN-FLATTEN-1 NULL sub-array → NULL row.
   pins: fn-fix-1-registry-rows/C-003
   pins: ex-8-functions-arrays/C-001
-- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **EX-5 remediation
-  (2026-09-03):** FN-ELT-1 pin. Out-of-range `elt` (index 3 and 0) answers NULL;
-  Spark 4.1.2 raises `INVALID_ARRAY_INDEX`. Asserts repark's current `None`.
-  pins: ex-5-functions-strings-b-regex/C-001
-- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **EX-5 remediation
-  (2026-09-03):** FN-REGEX-POSIX-1 pin. `regexp_count` / `rlike` of `[[:alpha:]]`
-  honour the POSIX class (`[3, 3, 6]` / `[True, True, True]`); Spark parses a
-  union bracket (`[1, 0, 4]` / `[True, False, True]`).
-  pins: ex-5-functions-strings-b-regex/C-001
-- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **EX-5 remediation
-  (2026-09-03):** FN-LIKE-ESCEND-1 pin. A LIKE pattern ending in the escape char
-  answers `False`; Spark raises `INVALID_FORMAT.ESC_AT_THE_END`. Control
-  `like('a\\b', 'a\\\\b')` is True on both.
-  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **FN-FIX-2 (2026-09-04):**
+  FN-ELT-1. Out-of-range `elt` (index 3, 0, −1) raises `INVALID_ARRAY_INDEX`; NULL
+  `n` is NULL; in-range 1/2 agree.
+  pins: fn-fix-2-string-rows/C-001, C-003, C-004
+- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **FN-FIX-2 (2026-09-04):**
+  FN-REGEX-POSIX-1. `regexp_count` / `rlike` / `regexp_replace` of `[[:alpha:]]` match
+  Spark's Java union bracket (`[1, 0, 4]` / `[True, False, True]` / `'##bb##'`).
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
+  FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises
+  `INVALID_FORMAT.ESC_AT_THE_END` SQLSTATE 42601. Control `like('a\\b', 'a\\\\b')`
+  is True. pins: fn-fix-2-string-rows/C-003
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
@@ -66,15 +64,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
   padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
   pins: ex-4-functions-strings-a/C-001
-- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-INITCAP-1
-  (2026-09-03):** today's `initcap` starts a word at any non-alnum (`'a-b'` → `'A-B'`);
-  Spark 4.1.2 splits on SPACE only (`'A-b'`). pins: ex-4-functions-strings-a/C-001
-- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-CHR-1 (2026-09-03):**
-  `chr(300)`/`char(300)` are `'Ĭ'` and `chr(-1)` raises; Spark is `n % 256` and `''`.
-  pins: ex-4-functions-strings-a/C-001
-- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-TRIM-CHARS-1 (2026-09-03):**
-  `F.trim`/`ltrim`/`rtrim` TypeError on a two-arg charset; Spark trims those chars.
-  pins: ex-4-functions-strings-a/C-001
+- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-FIX-2 (2026-09-04):**
+  FN-INITCAP-1. `initcap` starts a word only after SPACE (`'a-b'` → `'A-b'`).
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-FIX-2 (2026-09-04):**
+  FN-CHR-1. `chr`/`char` are `n % 256`; negatives are `''`.
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-FIX-2 (2026-09-04):**
+  FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
+  pins: fn-fix-2-string-rows/C-003
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -2288,6 +2286,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fn_fix_1_last_and_approx_percentile`, `test_live_fn_fix_1_arrays`,
   `test_live_fn_fix_1_nan_ingest`.
   pins: fn-fix-1-registry-rows/C-001, C-002, C-003, C-004
+  **FN-FIX-2:** `test_live_fn_fix_2_strings` and `test_live_fn_fix_2_regex_like` on the
+  same `spark_engine`; `test_live_disclosure_still_diverges` still collected.
+  pins: fn-fix-2-string-rows/C-001, C-003, C-004
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

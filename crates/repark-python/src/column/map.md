@@ -20,6 +20,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **DATE-FN-1:** `unix_timestamp` / `to_unix_timestamp` (0 or 1 arg). PySpark has no `F.date`.
   pins: date-fn-1-spark-date-spelling/C-002
   **FN-FIX-1:** `isnan` / `sha2` / array kernels. pins: fn-fix-1-registry-rows/C-002
+  **FN-FIX-2:** `initcap` / `chr` / `elt` / `rlike` / `regexp_like` / `regexp_replace`
+  embed the Spark kernels; `elt` left EXPECTED_DIVERGENCES. pins: fn-fix-2-string-rows/C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.

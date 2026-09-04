@@ -60,11 +60,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     ),
     ("ilike", FacadeShape::Composed, "mirror of like"),
     (
-        "elt",
-        FacadeShape::Kernel(2),
-        "facade lowers to make_array + array_element; spark elt has its own null/bounds rule",
-    ),
-    (
         "size",
         FacadeShape::Kernel(1),
         "DF-core cardinality vs spark size with spark.sql.legacy.sizeOfNull",
@@ -199,8 +194,8 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        23,
-        "SEM-1 closed LOG-1: Spark-door log is SparkLog, same kernel as the facade; ratchet 24 → 23"
+        22,
+        "FN-FIX-2 closed elt: both doors use SparkElt; ratchet 23 → 22"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

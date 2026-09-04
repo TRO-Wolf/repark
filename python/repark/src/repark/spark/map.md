@@ -56,6 +56,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs
   `sort_array`; `percentile_approx` discrete type.
   pins: fn-fix-1-registry-rows/C-002
+  **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
+  `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).
