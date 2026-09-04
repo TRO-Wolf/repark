@@ -57,7 +57,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `rlike` / `regexp_like` / SQL `regexp_like`; `regexp_extract` answer pinned (after FN-REGEXP-EXTRACT-1) on
   both doors (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED; Spark: `'alpha'`/`''`).
   Round 3: SQL `RLIKE` keyword refusal pinned (`test_sql_rlike_keyword_refuses`;
-  §7 FN-RLIKE-KEYWORD-1).
+  §7 FN-RLIKE-KEYWORD-1). Round 4 (FN-REGEXP-EXTRACT-1): the extract answer pin
+  cites `pins: fn-regexp-extract-1/C-002`.
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
 - [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
   FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises

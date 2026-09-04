@@ -27,7 +27,8 @@ No Spark cell contradicts the sibling kernels' pinned behaviour; no HALT.
 | basic groups | `regexp_extract('100-200', '(\\d+)-(\\d+)', 1)` → `'100'`; idx 2 → `'200'` | same |
 | idx 0 / omitted | idx 0 → `'100-200'`; omitted idx → `'100'` (default 1) | same |
 | no match / NULLs | no match → `''`; NULL str / regexp / idx → NULL | same |
-| idx > groups / idx < 0 | `SparkRuntimeException [INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]` naming `` `regexp_extract` ``, `between 0 and 2`, SQLSTATE 22023 | same error, both cells |
+| idx > groups / idx < 0, MATCHING input | `SparkRuntimeException [INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]` naming `` `regexp_extract` ``, `between 0 and 2`, SQLSTATE 22023 | same error, both cells (round-2 oracle `scratch/oracle_s1.py`) |
+| idx > groups / idx < 0 / idx 1 of groupless pattern, NON-matching input | `''` for all three (`'abc'` idx 3, `'abc'` idx -1, `'ABC'`/`[a-z]+` idx 1); validation runs only inside `if (m.find())` | same `''` triple (round-2 oracle `scratch/oracle_s1.py`) |
 | groupless pattern | idx 1 of `[a-z]+` → same condition, `between 0 and 0` | same |
 | POSIX union | `'([[:alpha:]]+)'` on `'alpha'` → `'alpha'`; on `'fox'` → `''` | same |
 | `\p{L}` | `'(\p{L}+)'` on `'alpha'` → `'alpha'` | same |
@@ -39,7 +40,8 @@ No Spark cell contradicts the sibling kernels' pinned behaviour; no HALT.
 
 | Name | Layer |
 |---|---|
-| `regexp_extract` | `spark_regexp.rs::SparkRegexpExtract`; `invoke_extract` takes the FIRST match's group, `''` on no match or idle group; `validate_group_index` now takes the caller's name |
+| `regexp_extract` | `spark_regexp.rs::SparkRegexpExtract`; `invoke_extract` takes the FIRST match's group, `''` on no match or idle group; `validate_group_index` takes the caller's name and runs only inside the match arm (round 2: Spark validates `idx` only after `m.find()`) |
+| widening | facade `functions_expr.py::regexp_extract` accepts a 2-arg call (`idx` defaults to 1); PySpark 4.1.2 requires `idx` (`TypeError` measured 2026-09-04); SQL door matches Spark exactly; source-compatible, recorded in the API freeze |
 | dispatch | `string.rs::functions()` + `expr_fn::regexp_extract` + `function_dispatch.rs` arm |
 | facade | `functions_expr.py::regexp_extract` (`Column \| str`, bare pattern forced-lit, `idx: int \| Column = 1`) |
 
@@ -48,6 +50,7 @@ No Spark cell contradicts the sibling kernels' pinned behaviour; no HALT.
 | Knob | Red of M |
 |---|---|
 | disable `invoke_extract` (`exec_err!` first line) | 16 red of 16 (`test_fn_regexp_extract.py`, all items) |
+| revert the round-2 move (`validate_group_index` before `regex.find`) | 3 red of 3 (`test_extract_nomatch_bad_index_returns_empty`, all params) |
 
 ## Next EX batch names
 
@@ -60,7 +63,8 @@ No Spark cell contradicts the sibling kernels' pinned behaviour; no HALT.
 | Registry | `docs/spark-sql-iceberg-parity.md` FN-REGEX-POSIX-1 controls line; no §7 R-FN-BATCH1 row names `regexp_extract` (verified by grep — the disclosure lived in the refusal string, now removed, and the frozen census snapshot) |
 | Live legs | `test_parity_live.py::test_live_fn_regexp_extract` on `spark_engine` |
 | Maps | lockstep on every touched directory |
-| Control-branch note | `fix/fn-fix-2-ctrl-1-controls` unmerged at finish: its `test_regexp_extract_refuses_on_both_doors` still expects refusal; flip to the answer pin when that PR merges |
+| Control-branch note | round-2 correction: FN-FIX-2-CTRL-1 merged as `9e1a057`; the flip to `test_regexp_extract_answers_on_both_doors` landed in merge `60ad77b0`; its docstring now cites `pins: fn-regexp-extract-1/C-002` |
+| Round-2 filings | §7 `FN-REGEX-LOOKAROUND-1` (Spark `'bar'` vs repark refusal on every regexp kernel; pin `test_extract_java_lookbehind_is_loud`); facade 2-arg widening disclosed in the registry bullet and §Kernels; `spark_regexp.rs` at 999/1000 lines — the NEXT kernel must split the file (not split now) |
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -77,7 +81,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_fn_regexp_extract.py]
     - id: AT-3
       status: ATTACKED
-      evidence: Out-of-range idx raises REGEX_GROUP_INDEX naming regexp_extract, ANSI on and off.
+      evidence: Out-of-range idx raises REGEX_GROUP_INDEX naming regexp_extract on matching input (ANSI on and off); non-matching input answers '' for any idx (round-2 oracle).
       artifacts: [crates/repark-functions/src/spark_regexp.rs]
     - id: AT-4
       status: N/A
@@ -96,7 +100,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_parity_live.py]
     - id: AT-8
       status: ATTACKED
-      evidence: spark_regexp.rs held at 996 lines; functions_expr.py held at exact baseline 2261.
+      evidence: spark_regexp.rs at 999/1000 lines (NEXT kernel must split); functions_expr.py held at exact baseline 2259.
       artifacts: [scripts/check_rust_file_size.py, scripts/check_lib_py.py]
     - id: AT-9
       status: N/A

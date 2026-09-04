@@ -89,7 +89,7 @@ def test_sql_rlike_keyword_refuses(value: str) -> None:
 
 @pytest.mark.parametrize(("value", "want"), [("alpha", "alpha"), ("fox", "")])
 def test_regexp_extract_answers_on_both_doors(value: str, want: str) -> None:
-    """FN-REGEX-POSIX-1 control: regexp_extract answers Spark's group on both doors."""
+    """regexp_extract answers Spark's group on both doors. pins: fn-regexp-extract-1/C-002"""
     repark = ReparkSession.builder.appName("fn-regex-extract").master("local[1]").getOrCreate()
     try:
         facade = (
