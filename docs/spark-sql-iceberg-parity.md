@@ -1544,56 +1544,50 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: a month-end source in a short month clamped
   to the target month's last day.
 
-### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX
+### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.elt(F.lit(3), F.lit('a'), F.lit('b'))` and `F.elt(F.lit(0), …)`
-  answer NULL (`[None]` on a one-row frame). In-range `n=1` / `n=2` answer `'a'` /
-  `'b'`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.elt(F.lit(3), F.lit('a'), F.lit('b'))`
+  and `F.elt(F.lit(0), …)` raise `[INVALID_ARRAY_INDEX]` SQLSTATE 22003 under ANSI.
+  NULL `n` answers NULL. In-range `n=1` / `n=2` answer `'a'` / `'b'`. ANSI off
+  answers NULL for out-of-range.
 - **Apache Spark** — the same out-of-range cells raise
   `ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX]` (index 3 or 0 out of
   bounds, the array has 2 elements, SQLSTATE 22003). In-range cells agree.
-  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03, `TZ=UTC`,
-  zulu-17.)*
-- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_answers_null`
-  (and `test_elt_index_zero_answers_null`; codifies repark's current `None` so
-  the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round:
-  the example dropped `F.elt` over this silent NULL-vs-raise. A consumer that
-  treats NULL as "no such element" never sees Spark's error.
+  *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17, ANSI on.)*
+- **Pin** — `python/repark/tests/test_fn_elt_out_of_range.py::test_elt_index_three_raises_invalid_array_index`
+  (and `test_elt_index_zero_raises_invalid_array_index`).
+- **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
+  out-of-range; Spark raises under ANSI.
 
-### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket
+### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — over `['a1b2 Ünï_9', 'foo', 'aabbaa']`,
-  `F.regexp_count(s, '[[:alpha:]]')` is `[3, 3, 6]` and
-  `F.rlike(s, '[[:alpha:]]')` is `[True, True, True]` (Rust honours the POSIX
-  class).
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** over `['a1b2 Ünï_9', 'foo', 'aabbaa']`,
+  `F.regexp_count(s, '[[:alpha:]]')` is `[1, 0, 4]` and
+  `F.rlike(s, '[[:alpha:]]')` is `[True, False, True]`. `regexp_replace` of the
+  same pattern with `'#'` is `['#1b2 Ünï_9', 'foo', '##bb##']`. Java nested
+  class `[[:alpha:]]` is the union `{':','a','l','p','h'}`.
 - **Apache Spark** — Java parses the POSIX class as a union bracket:
   `regexp_count` is `[1, 0, 4]` and `rlike` is `[True, False, True]` on the same
-  frame. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
-  `TZ=UTC`, zulu-17.)*
+  frame. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_counts_letters`
-  (and `test_rlike_posix_alpha_matches_every_row`; codifies repark's current
-  `[3, 3, 6]` / `[True, True, True]` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
-  A script that counts letters with the POSIX class gets Spark's union-bracket
-  count instead, silently.
+  `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
+  (and `test_rlike_posix_alpha_is_java_union`).
+- **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
 
-### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False
+### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.like(F.lit('ab'), F.lit('ab\\'))` (pattern ends in the escape
-  char) answers `False`. The control `F.like(F.lit('a\\b'), F.lit('a\\\\b'))` is
-  `True`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.like(F.lit('ab'), F.lit('ab\\'))`
+  (pattern ends in the escape char) raises `AnalysisException
+  [INVALID_FORMAT.ESC_AT_THE_END]` SQLSTATE 42601. The control
+  `F.like(F.lit('a\\b'), F.lit('a\\\\b'))` is `True`.
 - **Apache Spark** — the same ending-escape cell raises
   `AnalysisException [INVALID_FORMAT.ESC_AT_THE_END]` SQLSTATE 42601 (`The
   escape character is not allowed to end with.`). The control is `True` on both
-  engines. *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03,
-  `TZ=UTC`, zulu-17.)*
+  engines. *(oracle: live — PySpark 4.1.2, 2026-09-04, `TZ=UTC`, zulu-17.)*
 - **Pin** —
-  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_answers_false`
-  (codifies repark's current `False` so the fix reds it on purpose).
-- **Rationale** — BACKLOG, intent to FIX. Filed from the EX-5 remediation round.
-  A malformed LIKE pattern that Spark refuses is a silent non-match here.
+  `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
+- **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
+  non-match.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -2381,22 +2375,25 @@ the pin rather than obeying it.
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
-- **repark** — the gold `fct_survey_visit` shape fails at planning; the fact and agg tables are not created:
-  | spelling | repark |
-  |---|---|
-  | `DATE(ts)` (the dbt join) | `Invalid function 'date'` |
-  | `unix_timestamp(ts)` (the minutes-between cast) | `Invalid function 'unix_timestamp'` |
-  | `to_date(ts)`, `CAST(ts AS DATE)` (controls) | `2026-01-01` for `TIMESTAMP '2026-01-01 10:15:00'` |
+- **repark** — **FIXED 2026-09-04 (DATE-FN-1).** Spark SQL `date(expr)` is registered as
+  `CAST(expr AS DATE)` (session-zone timestamp truncation; invalid string `CAST_INVALID_INPUT`
+  under ANSI on, NULL under ANSI off). `unix_timestamp` on TIMESTAMP is epoch seconds; on a
+  string it parses `yyyy-MM-dd HH:mm:ss` in the session zone. The S6 gold join builds `fct`
+  and `agg`; after the second-day insert and `INSERT OVERWRITE` the fact rows are
+  `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and the clinic-day agg is two rows. S6 as a
+  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`)
+  and `COUNT(*)` Arrow nullability. PySpark has no `F.date`.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`,
-  live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
-  `…::test_to_date_and_cast_as_date_answer_on_repark`,
-  `…::test_date_and_unix_timestamp_functions_refuse_on_repark`.
-- **Rationale** — BACKLOG. DATE-FN-1 covers both refusals (`date` as a `to_date` alias and
-  `unix_timestamp`). The two working spellings stay pinned so that unit cannot drop them.
+  `python/repark/tests/test_date_fn_1.py`,
+  `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s6-gold-incremental]`
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s6-gold-incremental]`,
+  `python/repark/tests/test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+- **Rationale** — FIXED. The Spark-door spelling was missing; `to_date` / `CAST(ts AS DATE)`
+  already existed. `unix_timestamp` was `R-FN-BATCH1` / `B-TZ-1` and is registered on the
+  SQL door and the facade (zero-arg and one-arg; the format argument stays unsupported).
 
 ### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
 
@@ -3394,42 +3391,38 @@ the pin rather than obeying it.
   example backlog until the encoder emits Spark's padding; teaching the unpadded form would
   assert a silent wrong answer.
 
-### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric
+### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — DataFusion `initcap` treats every non-alphanumeric as a word break:
-  `'a-b'` → `'A-B'`, `'foo.bar'` → `'Foo.Bar'`, `"o'neil"` → `"O'Neil"`, `'ab_cd'` →
-  `'Ab_Cd'`, `'x\\ty'` → `'X\\tY'`, `'a-b c.d'` → `'A-B C.D'`.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** a word starts only after SPACE
+  (U+0020): `'a-b'` → `'A-b'`, `'foo.bar'` → `'Foo.bar'`, `"o'neil"` → `"O'neil"`,
+  `'ab_cd'` → `'Ab_cd'`, `'x\\ty'` → `'X\\ty'`, `'a-b c.d'` → `'A-b C.d'`.
 - **Apache Spark** — splits words on SPACE only: `'A-b'`, `'Foo.bar'`, `"O'neil"`,
-  `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-03, EX-4
-  critic remediation.)*
-- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_at_any_non_alnum_today`
-- **Rationale** — BACKLOG, silent divergence. Teaching the ASCII-only `'Spark'`/`'Apache'`
-  cells hid the word-break miss; the name stays on the example backlog until the kernel
-  matches Spark's space-only split.
+  `'Ab_cd'`, `'X\\ty'`, `'A-b C.d'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
+- **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
+  word break.
 
-### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256`
+### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256` — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.chr(300)` / `F.char(300)` answer `'Ĭ'` (U+012C). `F.chr(-1)` raises
-  `PySparkException: Execution error: invalid Unicode scalar value: -1` and aborts the
-  select. Both spellings share the kernel.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `chr(n) == chr(n % 256)`, and
+  `n < 0` answers `''`: `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`.
+  Both spellings share the kernel. NULL `n` is NULL.
 - **Apache Spark** — `chr(n) == chr(n % 256)`, and `n < 0` answers `''`:
   `[256, 300, 321, 65601, -1]` → `['\\x00', ',', 'A', 'A', '']`. *(oracle: live PySpark
-  4.1.2, 2026-09-03, EX-4 critic remediation.)*
-- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_300_is_unicode_letter_today`
-  and `…::test_fn_chr_negative_raises_today`
-- **Rationale** — BACKLOG, silent on `n >= 256` and loud on negatives. ASCII `chr(65)`
-  agrees, which is why the first example landing missed it.
+  4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
+- **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
+  on negatives.
 
-### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload
+### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload — **FIXED 2026-09-04 (FN-FIX-2)**
 
-- **repark** — `F.trim(col, 'x')` (and `ltrim` / `rtrim`) raise `TypeError: takes 1
-  positional argument but 2 were given` at the Python call. One-argument whitespace
-  trim agrees with Spark.
+- **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.trim(col, chars)` (and `ltrim` /
+  `rtrim`) trim that charset: `trim('xxSparkxx', 'x')` → `'Spark'`. One-argument
+  whitespace trim is unchanged.
 - **Apache Spark** — the second argument is a set of trim characters:
-  `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-03.)*
-- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_is_typeerror_today`
-- **Rationale** — BACKLOG, signature gap, loud. `F.btrim(col, chars)` is the two-arg
-  strip that exists today; the `trim`/`ltrim`/`rtrim` overloads stay refused.
+  `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
+- **Rationale** — FIXED. History: the facade wrappers took one argument only.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 

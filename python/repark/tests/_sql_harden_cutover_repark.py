@@ -1,6 +1,7 @@
 """SQL-HARDEN-1 measured matrix - the repark half, recorded 2026-09-04.
 
 pins: sql-harden-1-cutover-shapes/C-001
+pins: date-fn-1-spark-date-spelling/C-003
 """
 
 from __future__ import annotations
@@ -234,17 +235,67 @@ REPARK: dict[str, Any] = {
             ["OK", None],
             ["OK", None],
             ["OK", None],
-            ["ERROR", "Error during planning: Invalid function 'date'."],
-            ["ERROR", "Error during planning: table 'ice.cut.s6_gold_incremental_fct' not found"],
             ["OK", None],
-            ["ERROR", "Error during planning: Invalid function 'date'."],
+            ["OK", None],
+            ["OK", None],
+            ["OK", None],
         ],
         "probes": [
-            ["ERROR", "Error during planning: table 'ice.cut.s6_gold_incremental_fct' not found"],
-            ["ERROR", "Error during planning: table 'ice.cut.s6_gold_incremental_fct' not found"],
-            ["ERROR", "Error during planning: table 'ice.cut.s6_gold_incremental_agg' not found"],
-            ["ERROR", "Error during planning: table 'ice.cut.s6_gold_incremental_agg' not found"],
-            ["META", ["ABSENT"]],
+            ["OK", [["s1", 10, 15], ["s2", 20, 40], ["s3", 10, 15]]],
+            [
+                "OK",
+                [
+                    ["survey_id", "string", True],
+                    ["clinic_id", "int32", True],
+                    ["wait_time_minutes", "int32", True],
+                    ["provider_name", "string", True],
+                ],
+            ],
+            ["OK", [[10, "2026-01-01", "Thursday", 1, 1], [20, "2026-01-02", "Friday", 1, 1]]],
+            [
+                "OK",
+                [
+                    ["clinic_id", "int32", True],
+                    ["calendar_date", "date32[day]", True],
+                    ["day_of_week", "string", True],
+                    ["num_surveys", "int64", False],
+                ],
+            ],
+            [
+                "META",
+                [
+                    ["format-version", 2],
+                    [
+                        "schema",
+                        [
+                            ["calendar_date", "date", False],
+                            ["year_month", "int", False],
+                            ["year", "int", False],
+                            ["year_quarter", "string", False],
+                            ["survey_id", "string", False],
+                            ["patient_visit_id", "string", False],
+                            ["gene_prissy_score", "int", False],
+                            ["experience_score", "int", False],
+                            ["provider_name", "string", False],
+                            ["appointment_datetime", "timestamptz", False],
+                            ["clinic_id", "int", False],
+                            ["provider_seen_time", "timestamptz", False],
+                            ["checkin_time", "timestamptz", False],
+                            ["wait_time_minutes", "int", False],
+                        ],
+                    ],
+                    [
+                        "write-properties",
+                        [
+                            ["write.delete.mode", "merge-on-read"],
+                            ["write.merge.mode", "merge-on-read"],
+                            ["write.target-file-size-bytes", "268435456"],
+                            ["write.update.mode", "merge-on-read"],
+                        ],
+                    ],
+                    ["next-row-id", None],
+                ],
+            ],
         ],
     },
     "s7-ctas-if-fresh": {

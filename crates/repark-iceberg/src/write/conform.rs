@@ -61,7 +61,7 @@ pub(crate) fn conform_batch_retaining_unmapped_columns(
         .collect();
     if extra.is_empty() {
         if write_schema_types_already_match(write_schema, batch) {
-            return Ok(batch.clone());
+            return attach_write_field_ids(write_schema, batch);
         }
         return conform_batch(write_schema, write_default_columns, batch);
     }
@@ -72,7 +72,7 @@ pub(crate) fn conform_batch_retaining_unmapped_columns(
         .project(&keep)
         .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))?;
     let conformed = if write_schema_types_already_match(write_schema, &projected) {
-        projected
+        attach_write_field_ids(write_schema, &projected)?
     } else {
         conform_batch(write_schema, write_default_columns, &projected)?
     };
@@ -83,6 +83,24 @@ pub(crate) fn conform_batch_retaining_unmapped_columns(
         columns.push(Arc::clone(batch.column(index)));
     }
     RecordBatch::try_new(Arc::new(ArrowSchema::new(fields)), columns)
+        .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))
+}
+
+fn attach_write_field_ids(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
+    let fields: Vec<Arc<Field>> = write_schema
+        .fields()
+        .iter()
+        .zip(batch.schema().fields())
+        .map(|(target, source)| {
+            let Some(field_id) = target.metadata().get("PARQUET:field_id") else {
+                return Arc::clone(source);
+            };
+            let mut metadata = source.metadata().clone();
+            metadata.insert("PARQUET:field_id".to_string(), field_id.clone());
+            Arc::new(source.as_ref().clone().with_metadata(metadata))
+        })
+        .collect();
+    RecordBatch::try_new(Arc::new(ArrowSchema::new(fields)), batch.columns().to_vec())
         .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))
 }
 
@@ -186,5 +204,52 @@ fn strict_cast() -> CastOptions<'static> {
     CastOptions {
         safe: false,
         ..CastOptions::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datafusion::arrow::array::StringArray;
+    use datafusion::arrow::datatypes::DataType;
+    use std::collections::HashMap;
+
+    #[test]
+    fn retaining_unmapped_identity_attaches_write_schema_field_ids() {
+        let write = Arc::new(ArrowSchema::new(vec![
+            Field::new("survey_id", DataType::Utf8, true).with_metadata(HashMap::from([(
+                "PARQUET:field_id".to_string(),
+                "5".to_string(),
+            )])),
+        ]));
+        let source = Arc::new(ArrowSchema::new(vec![
+            Field::new("survey_id", DataType::Utf8, true).with_metadata(HashMap::from([(
+                "PARQUET:field_id".to_string(),
+                "1".to_string(),
+            )])),
+        ]));
+        let batch = RecordBatch::try_new(
+            source,
+            vec![Arc::new(StringArray::from(vec!["s1"])) as ArrayRef],
+        )
+        .expect("batch");
+        let out = conform_batch_retaining_unmapped_columns(&write, &HashSet::new(), &batch)
+            .expect("conform");
+        assert_eq!(
+            out.schema()
+                .field(0)
+                .metadata()
+                .get("PARQUET:field_id")
+                .map(String::as_str),
+            Some("5")
+        );
+        assert_eq!(
+            out.column(0)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("utf8")
+                .value(0),
+            "s1"
+        );
     }
 }

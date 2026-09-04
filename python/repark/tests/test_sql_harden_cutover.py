@@ -238,16 +238,16 @@ def test_to_date_and_cast_as_date_answer_on_repark() -> None:
     assert str(casted.to_pylist()[0]["d"]) == "2026-01-01"
 
 
-def test_date_and_unix_timestamp_functions_refuse_on_repark() -> None:
-    """CUTOVER-DATE-1: date(ts) and unix_timestamp(ts) both refuse as missing functions."""
+def test_date_and_unix_timestamp_functions_answer_on_repark() -> None:
+    """CUTOVER-DATE-1 FIXED by DATE-FN-1: date(ts) and unix_timestamp(ts) both answer."""
     from repark import ReparkSession
 
-    spark = ReparkSession.builder.appName("sqlh1-date-refuse").getOrCreate()
+    spark = ReparkSession.builder.appName("sqlh1-date-answers").getOrCreate()
     try:
-        with pytest.raises(Exception, match="Invalid function 'date'"):
-            spark.sql("SELECT date(TIMESTAMP '2026-01-01 10:15:00')").to_arrow()
-        with pytest.raises(Exception, match="Invalid function 'unix_timestamp'"):
-            spark.sql("SELECT unix_timestamp(TIMESTAMP '2026-01-01 10:15:00')").to_arrow()
+        dated = spark.sql("SELECT date(TIMESTAMP '2026-01-01 10:15:00') AS d").to_arrow()
+        assert str(dated.to_pylist()[0]["d"]) == "2026-01-01"
+        epoch = spark.sql("SELECT unix_timestamp(TIMESTAMP '2026-01-01 10:15:00') AS e").to_arrow()
+        assert epoch.to_pylist()[0]["e"] == 1767262500
     finally:
         spark.stop()
 

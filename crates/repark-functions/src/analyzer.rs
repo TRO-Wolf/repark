@@ -12,6 +12,8 @@ use datafusion::optimizer::AnalyzerRule;
 
 /// G6-3 / G6-5 cast-legality deny matrix and refusal.
 mod cast_legality;
+mod like_escape;
+mod overlay;
 
 /// Spark operator semantics over type-coerced logical plans; the rule is stateless.
 #[derive(Debug, Default)]
@@ -67,15 +69,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         Expr::ScalarFunction(function)
             if function.func.name() == "overlay" && function.args.len() == 4 =>
         {
-            if is_negative_one_literal(&function.args[3]) {
-                let mut args = function.args;
-                args.truncate(3);
-                Ok(Transformed::yes(Expr::ScalarFunction(
-                    ScalarFunction::new_udf(function.func, args),
-                )))
-            } else {
-                Ok(Transformed::no(Expr::ScalarFunction(function)))
-            }
+            Ok(overlay::rewrite(function))
         }
         Expr::Cast(_) => rewrite_timestamp_casts(expr, schema),
         Expr::TryCast(ref try_cast) => {
@@ -89,7 +83,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
             }
             Ok(Transformed::no(expr))
         }
-        other => Ok(Transformed::no(other)),
+        other => like_escape::rewrite(other),
     }
 }
 
@@ -198,19 +192,6 @@ fn epoch_seconds_for_target(target: &DataType, timestamp: Expr) -> Option<Expr> 
 }
 
 /// True when `expr` is a signed integer literal equal to `-1` (Spark overlay default len).
-fn is_negative_one_literal(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::Literal(
-            ScalarValue::Int64(Some(-1))
-                | ScalarValue::Int32(Some(-1))
-                | ScalarValue::Int16(Some(-1))
-                | ScalarValue::Int8(Some(-1)),
-            _
-        )
-    )
-}
-
 /// Rewrite division with Spark's integer promotion and zero-divisor policy.
 fn rewrite_division(
     expr: Expr,
