@@ -152,7 +152,7 @@ Before: `69 covered; 842 backlog; 15 examples`. After: `96 covered (+27); 815 ba
 
 ## Pointers
 
-- Up: [map.md](map.md)
+- Up: [map.md](../staging/map.md)
 - Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Oracle harness: `python/repark/tests/_live_parity.py` (`build_spark_iceberg_engine`)

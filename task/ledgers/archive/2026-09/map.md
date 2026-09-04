@@ -27,7 +27,11 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-09-02-v3-7-merge-lineage-ledger.md](2026-09-02-v3-7-merge-lineage-ledger.md) — **V3-7 (2026-09-02), completed:** carry `_row_id` through the RePark-owned MERGE writer; lift `V3-COW-1` MERGE where Spark-equal.
 - [2026-09-02-v3-8-subquery-where-lineage-ledger.md](2026-09-02-v3-8-subquery-where-lineage-ledger.md) — V3-8 — subquery-`WHERE` COW DML keeps v3 row lineage; `V3-COW-1` FIXED
 - [2026-09-02-v3-9-mor-predicate-dml-dv-ledger.md](2026-09-02-v3-9-mor-predicate-dml-dv-ledger.md) — V3-9 — merge-on-read predicate DML on v3 writes deletion vectors (`V3-MOR-1` FIXED; residual `V3-DV-1` BACKLOG, fork F-18 / repin RP-7)
+- [2026-09-03-b-mor-3-rewrite-position-deletes-v3-ledger.md](2026-09-03-b-mor-3-rewrite-position-deletes-v3-ledger.md) — **B-MOR-3 (2026-09-03), delivered:** owner ruling BUILD — `rewrite_position_delete_files` returns Spark's four zeros on a DV-only v3 table and converts an admitted parquet group to one PUFFIN per data file.
+- [2026-09-03-rp-8-repin-f21-f22-ledger.md](2026-09-03-rp-8-repin-f21-f22-ledger.md) — **RP-8 (2026-09-03), delivered:** the fork repin `ff4764d3` → `c1d6c9de`, consuming F-19/F-20 (`#261`), F-21 (`#262`) and F-22 (`#263`).
+- [2026-09-03-v1-gate-audit-ledger.md](2026-09-03-v1-gate-audit-ledger.md) — **V1-GATE (2026-09-03), in flight:** the v1.0 north-star gate statement.
 - [2026-09-03-v3-12-legacy-delete-merge-ledger.md](2026-09-03-v3-12-legacy-delete-merge-ledger.md) — Charter ledger — V3-12 · merge a legacy parquet position delete into the deletion vector
+- [2026-09-03-v3-cov-statement-coverage-ledger.md](2026-09-03-v3-cov-statement-coverage-ledger.md) — **V3-COV (2026-09-03), delivered:** the full v3 statement-coverage comparison against PySpark that discharges the north star's §2 pillar 4 — 81 programs, 267 cells, 71 EQUAL, 9 rows filed, 2 defects FIXED red-first.
 
 ## Pointers
 - Up: [../map.md](../map.md)
