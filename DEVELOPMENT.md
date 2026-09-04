@@ -36,7 +36,8 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
 | `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest. Run it when you touch the facade — `make verify` does not. |
 | `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pyarrow + pydantic (PYC-4), no native build, no JVM. Mirrors the CI step. |
-| `make preflight` | The pre-PR gate: `verify` + the facade suite (`make py-test-facade`) + the security/workflow gates CI also runs. Roster: [AGENTS.md](AGENTS.md) "Verify before done". |
+| `make py-test-dbt` | The **dbt-adapter** suite (`python/dbt-repark/tests`) — provisions `dbt-core` + `dbt-spark` at their pinned versions and runs against the native module `py-test-facade` builds. In `preflight`, not in `ci` (`ci` is native-build-free). No CI job runs it yet; see below. |
+| `make preflight` | The pre-PR gate: `verify` + the facade suite (`make py-test-facade`) + the dbt-adapter suite (`make py-test-dbt`) + the security/workflow gates CI also runs. Roster: [AGENTS.md](AGENTS.md) "Verify before done". |
 | `make format` | Autoformat Rust + Python (`cargo fmt`, `ruff format`). |
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |
@@ -62,6 +63,10 @@ step: locally `make py-test-facade`, and in CI the `wheels.yml` **smoke** job, w
 suite against the *packaged wheel* with the four extras installed (a facade regression must not
 pass CI on an import smoke alone). The **parity** harness runs in `ci.yml` (and `make py-test`).
 The **live-Spark oracle** tier needs a JVM: `make parity-live` / `parity-live.yml` only.
+The **dbt-adapter** suite (`python/dbt-repark/tests`, DBT-1, 2026-09-04) needs the native module
+and `dbt-core`, so it sits beside the facade suite in `preflight` as `make py-test-dbt`; **no CI
+job runs it yet**, and the wiring it wants is recorded in
+[task/ledgers/staging/dbt-1-adapter-ledger.md](task/ledgers/staging/dbt-1-adapter-ledger.md) §9.
 
 The testing **contract** (tests land in the same commit as the code; test-per-change; the
 entry-point matrix; divergence-class claims) is in [docs/testing.md](docs/testing.md) — read it

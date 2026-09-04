@@ -362,6 +362,27 @@ def test_relation_documentation_refuses(project: tuple[Path, Path]) -> None:
     assert "DBT-RELCOMMENT-1" in _failures(built)
 
 
+def test_a_missing_namespace_is_created(project: tuple[Path, Path]) -> None:
+    """A model in a namespace that does not exist yet makes dbt create it first.
+
+    This is the only path that reaches ``repark__create_schema`` and the only one that needs
+    ``repark__list_schemas`` to answer which namespaces are already there. The gold fixture
+    pre-creates its namespace, so without this case both macros are unpinned.
+    """
+    root, warehouse = project
+    _prepend_config(root, "gold_fct", "config(schema='extra')")
+    built = _invoke(["run", "--select", "gold_fct"], root)
+    assert built.success, _failures(built)
+    created = _read(warehouse, f"show namespaces in {CATALOG}")
+    assert {row["namespace"] for row in created} == {NAMESPACE, f"{NAMESPACE}_extra"}
+    fact = _read(
+        warehouse,
+        f"select survey_id, clinic_id, wait_time_minutes "
+        f"from {CATALOG}.{NAMESPACE}_extra.gold_fct order by survey_id",
+    )
+    assert fact == FCT_ROWS
+
+
 def test_partition_by_builds(project: tuple[Path, Path]) -> None:
     """``partition_by`` is the one placement clause the SQL door serves on an Iceberg CTAS."""
     root, warehouse = project
@@ -439,6 +460,29 @@ def test_incremental_materialization_refuses(project: tuple[Path, Path]) -> None
     built = _invoke(["run", "--select", "gold_fct"], root)
     assert not built.success
     assert "DBT-TEMPVIEW-1" in _failures(built)
+
+
+def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
+    """A snapshot fails with the message that names the registry row.
+
+    A snapshot is not a model, so it needs its own directory and its own block rather than a
+    config on gold_fct.
+    """
+    root, _ = project
+    snapshots = root / "snapshots"
+    snapshots.mkdir()
+    (snapshots / "gold_snapshot.sql").write_text(
+        "{% snapshot gold_snapshot %}\n"
+        "{{ config(target_schema='" + NAMESPACE + "', unique_key='survey_id', "
+        "strategy='check', check_cols=['clinic_id']) }}\n"
+        "select * from {{ ref('gold_fct') }}\n"
+        "{% endsnapshot %}\n",
+        encoding="utf-8",
+    )
+    assert _invoke(["run"], root).success
+    taken = _invoke(["snapshot"], root)
+    assert not taken.success
+    assert "DBT-TEMPVIEW-1" in _failures(taken)
 
 
 def test_column_documentation_refuses(project: tuple[Path, Path]) -> None:

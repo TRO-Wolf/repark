@@ -9,8 +9,8 @@ step, which is why the tests can run an unpublished package.
 `ReparkAdapter` **subclasses `dbt-spark`'s `SparkAdapter`** and the plugin declares
 `dependencies=["spark"]`. What that buys and what it costs is argued from the measured statement
 surface in [../../../../map.md](../../../../map.md) "The route". In one line: `dbt-spark`'s
-`create_table_as` already emits the one CTAS shape RePark serves, with the clause macros the
-production gold project configures, so re-authoring it would only risk config drift.
+`create_table_as` already emits the one CTAS shape RePark serves, and re-authoring it would put a
+second reading of `file_format` beside dbt-spark's.
 
 ## Contents
 

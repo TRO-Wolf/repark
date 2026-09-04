@@ -31,12 +31,20 @@ the same errors, so it buys a wire protocol and no working model. The measured t
 [tests/test_statement_surface.py](tests/test_statement_surface.py), which is the pin, not prose.
 
 Inside route 1 the adapter **subclasses `dbt-spark`'s `SparkAdapter`** and declares
-`dependencies=["spark"]`, rather than re-authoring from `SQLAdapter`. The reason is the
-production dbt project: gold's models are configured with `file_format='iceberg'`,
-`tblproperties`, `partition_by` and `location_root`, and `spark__create_table_as` already emits
-`create or replace table … using iceberg tblproperties (…) as …` — the one statement the SQL
-door serves. Re-authoring those clause macros would risk silent config drift in a project the
-cutover must not edit. What `dbt-spark` gets wrong for RePark is overridden and nothing else.
+`dependencies=["spark"]`, rather than re-authoring from `SQLAdapter`. The reason is
+`file_format='iceberg'`: that one key is what the whole materialization turns on, `dbt-spark`
+already reads it in two places (`spark__create_table_as`'s branch and the `table`
+materialization's `is_iceberg` test), and its iceberg arm already emits `create or replace table
+… using iceberg tblproperties (…) as …` — the one statement the SQL door serves. Re-authoring
+from `SQLAdapter` would put a second reading of that key beside dbt-spark's, where a silent
+disagreement is a wrong table rather than an error.
+
+Of the clause macros that arm calls, **two are served and reused** (`tblproperties`,
+`partition_by`) and **four are refused and overridden** (`options`, `clustered_by`,
+`location_root`, `comment`). The cutover inventory records the gold models as
+`materialized='table'` and `file_format='iceberg'` with ten test blocks and no other config, so
+none of the four refusals is known to affect it — but a project that did set one would fail at
+compile time with a named registry row rather than deep in the parser.
 
 ## Contents
 
@@ -55,7 +63,7 @@ cutover must not edit. What `dbt-spark` gets wrong for RePark is overridden and 
 | ...do this | go to |
 |---|---|
 | See what dbt emits and what RePark answers | [tests/test_statement_surface.py](tests/test_statement_surface.py) |
-| Run the two gold models end to end | `.venv/bin/python -m pytest python/dbt-repark/tests -q` |
+| Run the two gold models end to end | `make py-test-dbt` (in `make preflight`, not `make ci` — ledger §9) |
 | Change how a statement reaches the engine | [src/dbt/adapters/repark/connections.py](src/dbt/adapters/repark/connections.py) |
 | Change a macro dbt dispatches | [src/dbt/include/repark/macros/](src/dbt/include/repark/macros/map.md) |
 | Read the divergence rows this unit filed | [../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md) §2.5 |

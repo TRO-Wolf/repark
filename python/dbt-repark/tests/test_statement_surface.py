@@ -129,6 +129,18 @@ def _served() -> tuple[Shape, ...]:
             f"drop table if exists {CATALOG}.{NAMESPACE}.never_created",
             None,
         ),
+        Shape(
+            "S-CREATE-NS-DISPOSABLE",
+            "repark__create_schema",
+            f"create namespace if not exists {CATALOG}.disposable",
+            None,
+        ),
+        Shape(
+            "S-DROP-SCHEMA",
+            "spark__drop_schema",
+            f"drop schema if exists {CATALOG}.disposable cascade",
+            None,
+        ),
     )
 
 
@@ -195,7 +207,8 @@ def _refused() -> tuple[Shape, ...]:
             "spark__location_clause",
             f"create or replace table {CATALOG}.{NAMESPACE}.located using iceberg "
             "location '/tmp/elsewhere' as select 1 as a",
-            "CREATE TABLE … LOCATION is not supported for Iceberg CTAS yet",
+            "CREATE TABLE … LOCATION is not supported for Iceberg CTAS yet — table location "
+            "is derived from the namespace warehouse (or service-managed catalog)",
         ),
         Shape(
             "R-CTAS-OPTIONS",
@@ -224,6 +237,12 @@ def _refused() -> tuple[Shape, ...]:
             f"create or replace table {CATALOG}.{NAMESPACE}.commented2 using iceberg "
             f"tblproperties ({PROPERTIES}) comment 'a description' as select 1 as a",
             "Expected: end of statement, found: using",
+        ),
+        Shape(
+            "R-SET-CONF",
+            "server_side_parameters",
+            "set spark.sql.shuffle.partitions = 2",
+            'Could not find config namespace "spark"',
         ),
         Shape(
             "R-COLUMN-COMMENT",

@@ -14,13 +14,6 @@
 {% endmacro %}
 
 
-{% macro repark__drop_schema(relation) -%}
-  {%- call statement('drop_schema') -%}
-    drop namespace if exists {{ relation.database }}.{{ relation.schema }} cascade
-  {%- endcall -%}
-{% endmacro %}
-
-
 {% macro repark__list_schemas(database) -%}
   {% call statement('list_schemas', fetch_result=True, auto_begin=False) %}
     show namespaces in {{ database }}

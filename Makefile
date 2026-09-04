@@ -48,7 +48,7 @@ help: ## List available targets
 ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
-# The three Python suites are excluded because each needs something `cargo test` cannot give it:
+# The Python suites are excluded because each needs something `cargo test` cannot give it:
 #   * the FACADE suite (python/repark/tests) needs the compiled native module, so it runs behind a
 #     build step — locally `make py-test-facade` (maturin develop + pytest, extras provisioned);
 #     in CI the wheels.yml `smoke` job, which runs the same suite against the PACKAGED wheel (a
@@ -67,7 +67,7 @@ test: rust-test ## Rust workspace suite only (facade: `make py-test-facade`, als
 verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 
 .PHONY: preflight
-preflight: verify py-test-facade audit workflows-lint ## The pre-PR gate: verify + facade suite + security + workflow lint
+preflight: verify py-test-facade py-test-dbt audit workflows-lint ## The pre-PR gate: verify + facade suite + dbt-adapter suite + security + workflow lint
 
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
@@ -228,6 +228,8 @@ develop: ## Build + install the native module editable into the root .venv (matu
 # three in lockstep: a cohort whose denominator moves with an install decision is not a gate.
 FACADE_EXTRAS := --extra numpy --extra pandas --extra polars --extra ml-ext
 
+DBT_PINS := dbt-core==1.9.11 dbt-spark==1.9.3
+
 .PHONY: py-test-facade
 py-test-facade: ## Facade tests against the real native module (provisions extras, builds via maturin)
 	@# Step 1 PROVISIONS the declared extras. Without it a thin `.venv` (root `dev` group only —
@@ -244,6 +246,12 @@ py-test-facade: ## Facade tests against the real native module (provisions extra
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
 		uv run --no-project python -m pytest python/repark/tests -q
+
+.PHONY: py-test-dbt
+py-test-dbt: ## dbt-adapter suite (python/dbt-repark) — needs the native module py-test-facade builds; see python/dbt-repark/tests/map.md
+	VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" uv pip install --quiet $(DBT_PINS)
+	VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
+		uv run --no-project python -m pytest python/dbt-repark/tests -q
 
 .PHONY: parity-live
 parity-live: ## Live PySpark oracle tier: re-derive every pinned golden from real Spark 4.1.2 (needs a JVM; JVM-free `ci`/`verify` are unaffected)

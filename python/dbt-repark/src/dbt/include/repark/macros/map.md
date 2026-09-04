@@ -16,9 +16,14 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   | Macro | Why it overrides `spark__` |
   |---|---|
   | `repark__generate_database_name` | `spark__generate_database_name` returns `None`, which drops the catalog part. RePark needs it. |
-  | `repark__create_schema` | `create schema if not exists <ns>` refuses; RePark wants `create namespace if not exists <catalog>.<ns>`. |
-  | `repark__drop_schema` | same naming reason. |
+  | `repark__create_schema` | `create schema if not exists <ns>` refuses (registry `DBT-CREATENS-1`); RePark wants `create namespace if not exists <catalog>.<ns>`. |
   | `repark__list_schemas` | `show databases` refuses without a catalog (registry `NS-1`); `show namespaces in <catalog>` is the served form. |
+
+  There is deliberately **no** `repark__drop_schema`. Round 2 measured `drop schema if exists
+  <catalog>.<namespace> cascade` — what the inherited `spark__drop_schema` emits against a
+  three-part relation — and the SQL door serves it, so an override would remove nothing and no
+  test could red it. The dead override was deleted; the inherited statement is pinned at
+  `test_served_shapes_run[S-DROP-SCHEMA]`.
   | `repark__get_columns_in_relation` | routes to the adapter's Python method so no caller can fall through to `spark__`'s `describe extended`, which answers Arrow spellings (`DBT-DESC-1`). |
   | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, instead of returning a wrong-typed table. |
   | `repark__create_temporary_view` | RePark has no temporary views (`DBT-TEMPVIEW-1`). |
