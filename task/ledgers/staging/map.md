@@ -9,6 +9,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `c1d6c9de` → `594bdbe5` (F-23). The DV close skips the data-manifest walk
   when there are no legacy deletes and `known_partitions` covers every touched path;
   `PERF-DVCLOSE-WALK-1` FIXED. `risk_tier: standard`. Branch `feat/rp-9-repin-f23`.
+- [ctas-view-1-conform-stream-ledger.md](ctas-view-1-conform-stream-ledger.md) —
+  **CTAS-VIEW-1 (2026-09-03), in flight:** unpartitioned CTAS stream writer conforms
+  Utf8View/BinaryView batches to the Iceberg table schema. Branch
+  `fix/ctas-view-1-conform-stream`. `risk_tier: standard`.
 - [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md) —
   **EX-10 (2026-09-03), in flight:** the v0.7 example backfill's `F.*` null-handling,
   conditional, ordering, bit and session batch — 33 names landed in seven examples, the

@@ -19,6 +19,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+  **CTAS-VIEW-1 (2026-09-03):** `write_data_files_from_stream_with_concurrency` maps each
+  batch through `conform_batch_retaining_unmapped_columns` before the fan-out (same
+  `write_default_column_names` as the partitioned writer). Callers: Spark/ANSI CTAS,
+  unpartitioned append, overwrite stage, MERGE insert stream (lineage extras retained).
+  pins: ctas-view-1-conform-stream/C-002
   **MW-9:** `resolve_merge_mode` parses `write.delete.granularity` on the MoR
   arm (after the V2 gate, before any scan/write) so unknown values cannot
   orphan MATCHED-UPDATE parquet. Identity DELETE/UPDATE share

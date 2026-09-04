@@ -16,6 +16,7 @@ mod catalog_ops;
 mod collation;
 mod create_table;
 mod ctas;
+mod ctas_view;
 mod decimal;
 mod declared_refuse;
 mod delete_granularity;

@@ -338,6 +338,29 @@ pub(super) fn register_source(ctx: &SessionContext, name: &str, rows: &[(i32, &s
     ctx.register_batch(name, batch).unwrap();
 }
 
+pub(super) fn register_view_typed_source(ctx: &SessionContext, name: &str) {
+    use datafusion::arrow::array::{BinaryViewArray, StringViewArray};
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("name", DataType::Utf8View, true),
+        Field::new("payload", DataType::BinaryView, true),
+        Field::new("id", DataType::Int32, true),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringViewArray::from(vec![Some("a"), None, Some("c")])),
+            Arc::new(BinaryViewArray::from(vec![
+                Some(b"x".as_slice()),
+                Some(b"y".as_slice()),
+                None,
+            ])),
+            Arc::new(Int32Array::from(vec![Some(1), Some(2), Some(3)])),
+        ],
+    )
+    .unwrap();
+    ctx.register_batch(name, batch).unwrap();
+}
+
 /// Register a string-pair source whose `a` values are not parseable as integers.
 pub(super) fn register_unparsable_utf8_source(
     ctx: &SessionContext,

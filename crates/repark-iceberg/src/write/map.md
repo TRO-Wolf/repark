@@ -121,6 +121,10 @@ repark-core's error map.
   append.rs baseline 1886). A missing
   column whose Iceberg field carries a `write-default` builds against the reduced schema so the
   fork's `DataFileWriter::write` fills it (**V3-6 C-005**).
+  **CTAS-VIEW-1 (2026-09-03):** `conform_batch_retaining_unmapped_columns` is the unpartitioned
+  stream-writer map; it calls `conform_batch` then keeps MERGE lineage extras (`_row_id`).
+  Matching types skip `try_new` so CAST-NULL empty overwrite keeps source nullability.
+  pins: ctas-view-1-conform-stream/C-002
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
   ([conform.rs](conform.rs): missing /
   extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
@@ -200,6 +204,9 @@ repark-core's error map.
   would be a NEW refusal on paths that conform `List<Utf8View>` → `List<Utf8>` correctly today).
   **Not** a CAST-legality matrix — see `planning/hardening/G63-DATE-INT-DESIGN.md` §3.3.
   Ledger: [`../../../../task/wi1-insert-store-gate-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-wi1-insert-store-gate-ledger.md).
+  **CTAS-VIEW-1 (2026-09-03):** `BinaryView` is a binary-width variant with `Binary`/`LargeBinary`
+  (same class as `Utf8View` among string widths), so parquet-read binary columns store-assign.
+  pins: ctas-view-1-conform-stream/C-002
 - `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: SET/UNSET TBLPROPERTIES
   (**V3-10:** the combined `alter_table_properties` seat moved to `format_version.rs`; the three
   atomicity tests stay here beside the `CommitFaultCatalog` harness they need and now drive

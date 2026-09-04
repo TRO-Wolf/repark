@@ -462,3 +462,46 @@ async fn ctas_or_replace_on_service_managed_existing_table_stays_staged_replace(
         "the replacement definition's rows are served"
     );
 }
+
+#[tokio::test]
+async fn ctas_service_managed_from_view_typed_batches_round_trips() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(&warehouse, false).await;
+    register_view_typed_source(&ctx, "viewsrc");
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE svc.sales.viewtyped USING iceberg AS SELECT * FROM viewsrc",
+    )
+    .await
+    .expect("service-managed unpartitioned CTAS from Utf8View/BinaryView must commit");
+    assert_eq!(svc.create_table_calls(), 1);
+    assert_eq!(svc.drop_table_calls(), 0);
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT id, name FROM svc.sales.viewtyped ORDER BY id",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let mut names = Vec::new();
+    for batch in &batches {
+        let column = batch.column(1);
+        let utf8 = datafusion::arrow::compute::cast(column, &DataType::Utf8).unwrap();
+        let array = utf8.as_any().downcast_ref::<StringArray>().unwrap();
+        for index in 0..batch.num_rows() {
+            if array.is_null(index) {
+                names.push(None);
+            } else {
+                names.push(Some(array.value(index).to_string()));
+            }
+        }
+    }
+    assert_eq!(
+        names,
+        vec![Some("a".to_string()), None, Some("c".to_string())]
+    );
+}

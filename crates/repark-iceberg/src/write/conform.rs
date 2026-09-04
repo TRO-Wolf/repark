@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{ArrayRef, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{Schema as ArrowSchema, SchemaRef};
+use datafusion::arrow::datatypes::{Field, Schema as ArrowSchema, SchemaRef};
 use datafusion::error::{DataFusionError, Result};
 
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
@@ -39,6 +39,65 @@ pub(crate) fn write_default_column_names(schema: &iceberg::spec::Schema) -> Hash
         .filter(|field| field.write_default.is_some())
         .map(|field| field.name.to_ascii_lowercase())
         .collect()
+}
+
+pub(crate) fn conform_batch_retaining_unmapped_columns(
+    write_schema: &SchemaRef,
+    write_default_columns: &HashSet<String>,
+    batch: &RecordBatch,
+) -> Result<RecordBatch> {
+    let write_names: HashSet<String> = write_schema
+        .fields()
+        .iter()
+        .map(|field| field.name().to_ascii_lowercase())
+        .collect();
+    let extra: Vec<usize> = batch
+        .schema()
+        .fields()
+        .iter()
+        .enumerate()
+        .filter(|(_, field)| !write_names.contains(&field.name().to_ascii_lowercase()))
+        .map(|(index, _)| index)
+        .collect();
+    if extra.is_empty() {
+        if write_schema_types_already_match(write_schema, batch) {
+            return Ok(batch.clone());
+        }
+        return conform_batch(write_schema, write_default_columns, batch);
+    }
+    let keep: Vec<usize> = (0..batch.num_columns())
+        .filter(|index| !extra.contains(index))
+        .collect();
+    let projected = batch
+        .project(&keep)
+        .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))?;
+    let conformed = if write_schema_types_already_match(write_schema, &projected) {
+        projected
+    } else {
+        conform_batch(write_schema, write_default_columns, &projected)?
+    };
+    let mut fields: Vec<Arc<Field>> = conformed.schema().fields().iter().cloned().collect();
+    let mut columns = conformed.columns().to_vec();
+    for index in extra {
+        fields.push(Arc::new(batch.schema().field(index).clone()));
+        columns.push(Arc::clone(batch.column(index)));
+    }
+    RecordBatch::try_new(Arc::new(ArrowSchema::new(fields)), columns)
+        .map_err(|error| DataFusionError::ArrowError(Box::new(error), None))
+}
+
+fn write_schema_types_already_match(write_schema: &SchemaRef, batch: &RecordBatch) -> bool {
+    if batch.num_columns() != write_schema.fields().len() {
+        return false;
+    }
+    write_schema
+        .fields()
+        .iter()
+        .zip(batch.schema().fields())
+        .all(|(target, source)| {
+            target.data_type() == source.data_type()
+                && target.name().eq_ignore_ascii_case(source.name())
+        })
 }
 
 /// Conform ONE consumer batch to the write schema.

@@ -239,7 +239,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
-- `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
+- `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`,
+  `register_view_typed_source` (CTAS-VIEW-1 Utf8View+BinaryView), `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**
   `setup_allow_create_format_version_3` (`Model: Grok 4.6 xHigh`). **U2:** `setup` /
@@ -333,7 +334,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Sibling test modules:**
   `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
-  `provider_partition_correctness`), `service_managed_ctas`.
+  `provider_partition_correctness`), `service_managed_ctas`,
+  `ctas_view` (**CTAS-VIEW-1, 2026-09-03:** unpartitioned CTAS from Utf8View+BinaryView
+  batches with one NULL, plus the partitioned control from the same view).
+  pins: ctas-view-1-conform-stream/C-001, C-003
+  `service_managed_ctas` also has `ctas_service_managed_from_view_typed_batches_round_trips`.
+  pins: ctas-view-1-conform-stream/C-003
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
 - **Time-travel pins:**
   `time_travel_temp_views_do_not_survive_a_{successful,failed}_statement` and
