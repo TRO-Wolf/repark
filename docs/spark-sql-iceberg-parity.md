@@ -4219,6 +4219,40 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   aliased read, where the engines agree; `getField` teaches its bare-name arm only after repark
   projects `r.a`.
 
+### EX-SES-1 — `Catalog.registerFunction` answers the UDF object where Spark's alias returns `f`
+
+- **repark** — `spark.catalog.registerFunction(name, f)` answers the registered
+  `UserDefinedFunction` object (it delegates to `spark.udf.register` and keeps that return
+  contract). The registered name itself behaves Spark-equal: `functionExists` answers `True`
+  and the UDF answers inside SQL with the same value.
+- **Apache Spark** — the deprecated alias answers the original callable `f` itself
+  (`type(spark.catalog.registerFunction("fn", f)).__name__` is `'function'`); `spark.udf.register`
+  answers the `UserDefinedFunction`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, both lambdas
+  registered and called through `spark.sql("SELECT fn(4)")` → `u4` on both engines.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_register_function_returns_udf_object`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement. The example keeps the
+  registration, existence, and SQL arms, where the engines agree; the return-value arm is
+  pinned, not taught. `Catalog.listDatabases`' snake twin `list_databases` shares the EX-CAT-2
+  divergence (one function object) and stays on the backlog with it.
+
+### EX-SES-2 — an action on a `newSession()` result promotes it process-active; Spark never does
+
+- **repark** — after `spare = spark.newSession()`, the caller stays active until the first
+  action on `spare`; that action (e.g. `spare.sql("SELECT 1").collect()`) sets `spare` as the
+  process-wide active session, so `getActiveSession()` then answers `spare`. Stopping `spare`
+  clears the active slot (`None`).
+- **Apache Spark** — `newSession()` never flips the active session: the thread-local stays on
+  the caller before and after any action on the spare session, and only `stop()` on the active
+  session clears it.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch,
+  `getActiveSession() is spark` asserted before and after `spare.sql(...).collect()`; repark
+  measured the same two arms, the second answering `spare`.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_new_session_action_promotes_active`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-21 measurement. The example keeps the
+  no-action arms (distinct object, caller still active, spare answers), where the engines
+  agree; the promotion arm is pinned, not taught.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
