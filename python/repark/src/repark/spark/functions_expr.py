@@ -66,19 +66,19 @@ def upper(col: Column | str) -> Column:
     return _scalar("upper", col)
 
 
-def trim(col: Column | str) -> Column:
+def trim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim both sides (PySpark ``functions.trim``)."""
-    return _scalar("trim", col)
+    return _scalar("trim", col) if trim is None else _scalar("trim", col, trim)
 
 
-def ltrim(col: Column | str) -> Column:
+def ltrim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim leading whitespace (PySpark ``functions.ltrim``)."""
-    return _scalar("ltrim", col)
+    return _scalar("ltrim", col) if trim is None else _scalar("ltrim", col, trim)
 
 
-def rtrim(col: Column | str) -> Column:
+def rtrim(col: Column | str, trim: Column | str | None = None) -> Column:
     """Trim trailing whitespace (PySpark ``functions.rtrim``)."""
-    return _scalar("rtrim", col)
+    return _scalar("rtrim", col) if trim is None else _scalar("rtrim", col, trim)
 
 
 def length(col: Column | str) -> Column:
@@ -608,15 +608,15 @@ def months_between(date1: Column | str, date2: Column | str, roundOff: bool = Tr
     )
 
 
-def unix_timestamp(
-    timestamp: Column | str | None = None,
-    format: str | None = None,
-) -> Column:
-    """Unsupported: engine has no ``unix_timestamp``."""
-
-    raise UnsupportedOperationException(
-        "functions.unix_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+def unix_timestamp(timestamp: Column | str | None = None, format: str | None = None) -> Column:
+    """Epoch seconds (PySpark ``functions.unix_timestamp``)."""
+    if format is not None:
+        raise UnsupportedOperationException(
+            "functions.unix_timestamp format argument is not supported yet"
+        )
+    if timestamp is None:
+        return _scalar("unix_timestamp")
+    return _scalar("unix_timestamp", timestamp)
 
 
 def hash(*cols: Column | str) -> Column:

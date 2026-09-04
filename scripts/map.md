@@ -70,6 +70,10 @@ bare invocation checks the tree against the checked-in file. The register is pin
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
 
+FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
+1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
+pins: fn-fix-2-string-rows/C-002
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002

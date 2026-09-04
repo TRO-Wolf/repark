@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fn-fix-2-string-rows-ledger.md](fn-fix-2-string-rows-ledger.md) — **FN-FIX-2 (2026-09-04):**
+  six silent string rows become Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
+  `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
+  pins: fn-fix-2-string-rows/C-001, C-002, C-003, C-004
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -40,3 +44,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [date-fn-1-spark-date-spelling-ledger.md](date-fn-1-spark-date-spelling-ledger.md) —
+  **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
+  `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.
+  `risk_tier: standard`. Branch `fix/date-fn-1-spark-date-spelling`.
+  pins: date-fn-1-spark-date-spelling/C-004

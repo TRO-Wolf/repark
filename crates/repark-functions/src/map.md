@@ -36,6 +36,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Native ANSI `repark.sql()` does not load this kernel.
 - `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
   pins: fn-fix-1-registry-rows/C-002
+- `spark_initcap.rs` — **FN-FIX-2 (2026-09-04):** Spark `initcap`; a word starts only after
+  SPACE (U+0020). `'a-b'` → `'A-b'`. pins: fn-fix-2-string-rows/C-001, C-002, C-004
+- `spark_chr.rs` — **FN-FIX-2 (2026-09-04):** Spark `chr` / `char`; `n % 256`, `''` when
+  `n < 0`. pins: fn-fix-2-string-rows/C-002
+- `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
+  `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
+  is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
+- `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /
+  `regexp_replace` compile through `compile_spark_regex`. pins: fn-fix-2-string-rows/C-002
 - `percentile_approx.rs` — **FN-FIX-1 (2026-09-03):** discrete `percentile_approx` /
   `approx_percentile` in the column's type; array-of-percentages arm;
   `select_nth_unstable` per requested percentile. Accuracy knob ignored
@@ -54,7 +64,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   pins: sem-1-spark-answer-parity/C-001, C-004, C-007, C-009
 - `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
-  `is_match("")`; Dictionary(_, Utf8) coerce). **SEM-4 (2026-08-21):**
+  `is_match("")`; Dictionary(_, Utf8) coerce). **FN-FIX-2:** `compile_spark_regex`
+  translates Java nested classes before `bind_ascii_perl_classes`.
+  pins: fn-fix-2-string-rows/C-002
+  **SEM-4 (2026-08-21):**
   `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
   message for negative and over-large alike); `extract_rows` passes the index
   raw because the bound needs the compiled regex; `coerce_regexp_args` takes
@@ -295,6 +308,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (embedded CAST) + registered `to_date` overwrite share `datetime::invoke_local_dates`.
   Pin `ltz_date_is_session_zone_and_ntz_is_stored_wall`. Ledgers:
   `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
+  **DATE-FN-1 (2026-09-04):** registered `date` (Spark `CAST AS DATE`) and `unix_timestamp` (the `date` / `unix_timestamp` registrations in `expr_fn.rs` / `timestamp_cast.rs` carry no doc comments; this row is their contract)
+  (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
+  three-row input yields three identical BIGINT values.
+  pins: date-fn-1-spark-date-spelling/C-002, C-003
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL

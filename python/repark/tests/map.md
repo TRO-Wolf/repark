@@ -43,20 +43,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FN-ARRAYSOVERLAP-1 three-valued, FN-FLATTEN-1 NULL sub-array → NULL row.
   pins: fn-fix-1-registry-rows/C-003
   pins: ex-8-functions-arrays/C-001
-- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **EX-5 remediation
-  (2026-09-03):** FN-ELT-1 pin. Out-of-range `elt` (index 3 and 0) answers NULL;
-  Spark 4.1.2 raises `INVALID_ARRAY_INDEX`. Asserts repark's current `None`.
-  pins: ex-5-functions-strings-b-regex/C-001
-- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **EX-5 remediation
-  (2026-09-03):** FN-REGEX-POSIX-1 pin. `regexp_count` / `rlike` of `[[:alpha:]]`
-  honour the POSIX class (`[3, 3, 6]` / `[True, True, True]`); Spark parses a
-  union bracket (`[1, 0, 4]` / `[True, False, True]`).
-  pins: ex-5-functions-strings-b-regex/C-001
-- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **EX-5 remediation
-  (2026-09-03):** FN-LIKE-ESCEND-1 pin. A LIKE pattern ending in the escape char
-  answers `False`; Spark raises `INVALID_FORMAT.ESC_AT_THE_END`. Control
-  `like('a\\b', 'a\\\\b')` is True on both.
-  pins: ex-5-functions-strings-b-regex/C-001
+- [test_fn_elt_out_of_range.py](test_fn_elt_out_of_range.py) — **FN-FIX-2 (2026-09-04):**
+  FN-ELT-1. Out-of-range `elt` (index 3, 0, −1) raises `INVALID_ARRAY_INDEX`; NULL
+  `n` is NULL; in-range 1/2 agree.
+  pins: fn-fix-2-string-rows/C-001, C-003, C-004
+- [test_fn_regex_posix_class.py](test_fn_regex_posix_class.py) — **FN-FIX-2 (2026-09-04):**
+  FN-REGEX-POSIX-1. `regexp_count` / `rlike` / `regexp_replace` of `[[:alpha:]]` match
+  Spark's Java union bracket (`[1, 0, 4]` / `[True, False, True]` / `'##bb##'`).
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_like_escape_end.py](test_fn_like_escape_end.py) — **FN-FIX-2 (2026-09-04):**
+  FN-LIKE-ESCEND-1. A LIKE pattern ending in the escape char raises
+  `INVALID_FORMAT.ESC_AT_THE_END` SQLSTATE 42601. Control `like('a\\b', 'a\\\\b')`
+  is True. pins: fn-fix-2-string-rows/C-003
 - [test_log1p_1.py](test_log1p_1.py) — **LOG1P-1 (2026-09-02):** three-door `log1p` /
   `expm1` pins (Spark SQL, ANSI `repark.sql()`, facade), tiny-arg vs composed form,
   SEM-1 incidentals. Live Spark cell lives in `test_parity_live.py` on the
@@ -66,15 +64,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   codifies today's unpadded `F.base64` (`'Spark'` → `U3Bhcms`, `'A'` → `QQ`) so a
   padded kernel reds the pin; Spark 4.1.2 is `U3Bhcms=` / `QQ==`. Measured by EX-4.
   pins: ex-4-functions-strings-a/C-001
-- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-INITCAP-1
-  (2026-09-03):** today's `initcap` starts a word at any non-alnum (`'a-b'` → `'A-B'`);
-  Spark 4.1.2 splits on SPACE only (`'A-b'`). pins: ex-4-functions-strings-a/C-001
-- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-CHR-1 (2026-09-03):**
-  `chr(300)`/`char(300)` are `'Ĭ'` and `chr(-1)` raises; Spark is `n % 256` and `''`.
-  pins: ex-4-functions-strings-a/C-001
-- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-TRIM-CHARS-1 (2026-09-03):**
-  `F.trim`/`ltrim`/`rtrim` TypeError on a two-arg charset; Spark trims those chars.
-  pins: ex-4-functions-strings-a/C-001
+- [test_fn_initcap_divergence.py](test_fn_initcap_divergence.py) — **FN-FIX-2 (2026-09-04):**
+  FN-INITCAP-1. `initcap` starts a word only after SPACE (`'a-b'` → `'A-b'`).
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_chr_divergence.py](test_fn_chr_divergence.py) — **FN-FIX-2 (2026-09-04):**
+  FN-CHR-1. `chr`/`char` are `n % 256`; negatives are `''`.
+  pins: fn-fix-2-string-rows/C-003
+- [test_fn_trim_chars.py](test_fn_trim_chars.py) — **FN-FIX-2 (2026-09-04):**
+  FN-TRIM-CHARS-1. `F.trim`/`ltrim`/`rtrim` two-arg charset; one-arg whitespace kept.
+  pins: fn-fix-2-string-rows/C-003
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -166,7 +164,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_returns_zeros` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` returns zeros with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-10 (2026-09-02):** `test_v3_upgrade_v2_to_v3_live_matches_spark` skips FIRST when the tier is off — its repark half duplicates `test_v3_upgrade.py::test_alter_upgrade_with_the_opt_in_serves_v3_lineage` and cost 0.32 s of call time on every JVM-free run (test wall 0.52 s → 0.20 s). Its Spark helper reuses the default Ivy cache like `_live_parity.build_spark_iceberg_engine` instead of a per-call `mkdtemp`, and picks the newest Hadoop pointer by PARSED version like `_materialize`, not by lexicographic `sorted(glob)` (which would pick `v9` over `v10`). It is not folded into `_live_subquery_where_dml_measurement`: that helper memoizes ONE session's cells behind a module-level dict and returns early on the second call, so adding upgrade statements to it would couple two units' measurements to one session's ordering. **V3-9 (2026-09-02):** `test_v3_mor_subquery_where_dml_live` cites the V3-9 transcript, runs the repark half JVM-free and live-gates the MoR subquery-`WHERE` DELETE / UPDATE lineage and `PUFFIN` delete-file format against Spark (pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-005). The Spark leg is one session for both modes: `_live_subquery_where_dml_measurement` measures the COW and MoR cells once and each test asserts its own pinned values against that measurement, so the file's live wall clock fell from 24.07 / 24.05 s to 23.39 / 22.74 s (pins: v3-9-mor-predicate-dml-dv/C-008). **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin. **RP-7 (2026-09-02):** the two sibling live helpers dropped their per-call `spark.jars.ivy` `mkdtemp` + `rmtree`; on a runner with no local Iceberg jar that forced a full Maven resolve twice per nightly, and the default Ivy cache is what `_live_parity.build_spark_iceberg_engine` and the V3-10 helper already use.
   pins: rp-7-f18-repin/C-006 **RP-7 (2026-09-02):** the shared-Puffin container-close cell went to its own module rather than here — this file was 23 lines under the 1000-line cap.
   pins: rdf-1-position-delete-bounds/C-004
-- [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):**
+- [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()`
+  and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
+  and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
+  Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
+  pins: date-fn-1-spark-date-spelling/C-001, C-003, C-004
+- [test_sql_harden_cutover.py](test_sql_harden_cutover.py) — **SQL-HARDEN-1 (2026-09-04):** (DATE-FN-1 flipped the date/unix_timestamp refusal pin to an answer pin)
   the cutover pipeline cutover shapes S1–S7 (9 programs). Always-run repark half against
   `_sql_harden_cutover_repark.py`; live Spark half against `_sql_harden_cutover_spark.py`
   behind `REPARK_PARITY_LIVE=1`. Catalog `sqlh1`. Inventory
@@ -2287,6 +2290,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_live_fn_fix_1_last_and_approx_percentile`, `test_live_fn_fix_1_arrays`,
   `test_live_fn_fix_1_nan_ingest`.
   pins: fn-fix-1-registry-rows/C-001, C-002, C-003, C-004
+  **FN-FIX-2:** `test_live_fn_fix_2_strings` and `test_live_fn_fix_2_regex_like` on the
+  same `spark_engine`; `test_live_disclosure_still_diverges` still collected.
+  pins: fn-fix-2-string-rows/C-001, C-003, C-004
   Size pin `test_registry_covers_the_mandated_golden_family`
   is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
   visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.

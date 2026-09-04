@@ -96,8 +96,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   wall (NTZ = stored wall; trailing-zero fraction trimmed; year −1 is `-0001`, year 10000 is
   `+10000`). Embedded, never registered. **TZ-8 (2026-08-14):**
   `__repark_timestamp_to_date__` (embedded CAST → Date32) + registered `to_date`
-  overwrite; both share `datetime::invoke_local_dates`. Ledgers:
+  overwrite; both share `datetime::invoke_local_dates`. **DATE-FN-1 (2026-09-04):**
+  registered `date` and `unix_timestamp`. Ledgers:
   `task/tz5-cast-seconds-ledger.md`, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
+  pins: date-fn-1-spark-date-spelling/C-002
 - `src/timestamp_type.rs` — **Q10:** `spark.sql.timestampType` ConfigExtension
   (default `TIMESTAMP_LTZ`) + parse/from-map/from-options. Sibling of
   `SparkAnsiConfig`. Invalid value names both legal tokens.
