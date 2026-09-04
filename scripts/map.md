@@ -8,7 +8,7 @@ covered as repark extensions (`hasattr` False on live PySpark 4.1.2); `DataFrame
 stays on the backlog (§7 `EX-W2-1`), the empty-source `overwritePartitions` arm is §7 `EX-W2-2`,
 and the `option`/`options` branch-tag arm is §7 `EX-W2-3`, pins in
 `python/repark/tests/test_examples_window_catalog.py`.
-pins: ex-22-types-writerv2/C-001, C-002
+pins: ex-22-types-writerv2/C-001, C-002, C-004
 
 EX-20 window-catalog (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 411 → 374
 shipped (449 → 412 at the dispatch base, before the EX-19 merge) —

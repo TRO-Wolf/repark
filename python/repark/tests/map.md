@@ -150,7 +150,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `overwritePartitions` refusing where Spark no-ops (EX-W2-2), and `option`/`options` with a
   branch/tag key refusing where Spark silently writes the default branch (EX-W2-3) — via a
   `spark_v2` memory-catalog fixture. The module docstring names the row span.
-  pins: ex-20-window-catalog/C-001, ex-22-types-writerv2/C-003
+  pins: ex-20-window-catalog/C-001
+  pins: ex-22-types-writerv2/C-003
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
