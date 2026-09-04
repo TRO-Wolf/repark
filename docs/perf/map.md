@@ -20,6 +20,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   its own 1-minute load, and a cost is read against the floor of the run it came from.
   pins: perf-dynflatten-1-measure/C-003, C-004
 
+- [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
+  (2026-09-04):** the `collect()` and `withColumn`-chain cells of PERF-ANALYSIS-1 §7.3,
+  before and after, with the boundary controls that must not move. The before column is one
+  battery run at `origin/main`; the after column is the median of three repeats and the floor
+  is the spread of those three, so a cell inside its floor is not a result. Section 4 repeats
+  both halves inside one process on one module — the load-independent measurement — because the
+  two battery columns come from different hours. Section 2 records why the projection collapse
+  was measured (a perfect collapse tops out at 140 ms) and deliberately not built.
+  pins: perf-facade-1/C-001, C-005, C-006
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

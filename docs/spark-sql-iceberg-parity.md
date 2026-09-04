@@ -3797,6 +3797,57 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **PERF-FACADE-COLLECT-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. `collect()` materialized
+  every row in Python: `to_pylist()` per column, then `Row.from_ordered_fields` per row with a
+  fresh names tuple each time. Row materialization moved into `repark-python`
+  (`collect_rows.rs`), which walks each Arrow batch and emits value tuples with typed pyo3
+  conversions; the facade builds the `Row` objects from one shared names tuple per batch with
+  the cyclic collector suspended across the batch. `facade/export/1000000/collect` (7 columns,
+  release module, `target_partitions = 8`, median of 3 battery repeats): **4,908.03 → 955.76 ms**
+  (5.14×, floor 6.54); `1e5` **562.35 → 93.74 ms** (6.00×, floor 1.93); two-column frames
+  2,058.79 → 527.39 and 236.20 → 49.97. Isolated of `to_arrow`, 1e5 row materialization is
+  55× → **8.6×** the analysis' 10.1 ms facade floor. Spark 4.1.2 `local[8]` *(recorded)*
+  collects the same 1e6 frame in 3,619 ms, so repark moves from 1.37× slower to **3.79× faster**.
+  The binding converts only the cell kinds whose `to_pylist` mapping is unambiguous (null,
+  boolean, every integer width, `f32`/`f64`, the three UTF-8 and three binary layouts);
+  decimals, dates, times, timestamps, durations and every nested kind are converted by the
+  unchanged Python path and handed to the binding, and a calendar interval anywhere in the
+  schema sends the whole batch back to it, so the map → dict, tz-aware-timestamp and
+  interval-refusal contracts are the same code as before. Pin:
+  `python/repark/tests/test_perf_facade_collect_rows.py` — both converters run on the same
+  batch and every cell is compared by `repr` as well as by value. Numbers, the cProfile
+  decomposition and the GC measurement: `docs/perf/facade-boundary-baseline.md` §1.
+- **PERF-FACADE-WITHCOLUMN-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. A dependent
+  `withColumn` chain re-read `self.columns` once per existing column per call and every read
+  ran a full analyzer pass — 5,750 `column_names` calls to build a depth-100 chain.
+  `_iter_bound_columns` now reads `columns` once and passes the canonical name through (falling
+  back to the resolving path when the frame carries duplicate names, so `[AMBIGUOUS_REFERENCE]`
+  is unchanged), and `columns` answers from the plan's logical schema
+  (`logical_names.rs`) instead of the analyzed one. `facade/chain/{10,50,100}/build_only`
+  (median of 3): **8.14 → 1.83**, **328.48 → 42.28**, **2,385.23 → 366.71 ms** (4.45× / 7.77× /
+  6.50×; floors 0.07 / 0.86 / 10.23). Spark builds the depth-100 chain in 747 ms *(recorded)*,
+  so repark moves from 3.19× slower to **2.04× faster**. Execution is unchanged
+  (`chain/100/count` 94.28 → 93.92, floor 0.81). The **150 ms target is not met**: 346 ms of the
+  remaining 445 ms profiled build is DataFusion's own `LogicalPlanBuilder::project`, whose
+  `normalize_col` / `columnize_expr` scan the child schema per expression (O(N²) per `select`,
+  O(depth³) per chain). Reading names before analysis is sound because every rule in
+  `repark_functions::analyzer_rules` rewrites through `NamePreserver` and none adds, drops or
+  reorders a projection expression; pinned byte-for-byte against the analyzed names over 19
+  planned statements, a 12-deep chain and eight DataFrame transforms in
+  `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §2.
+- **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
+  `PERF-FACADE-WITHCOLUMN-1`, the depth-100 `withColumn` build is 366.71 ms against a 150 ms
+  target, and the residue is entirely DataFusion's per-expression projection validation. The
+  collapsed shape was measured, not estimated: 100 `select`s of 7+i expressions on the
+  7-column base total **140.46 ms** (one 107-expression `select` is 1.14 ms) against the shipped
+  stacked 364.34 ms, so a *perfect* collapse buys 2.6× and lands on the bar with no margin.
+  Collapsing by inlining is exponential when a new column reads an earlier new column
+  (`c[n] = f(c[n-1])`); the safe variant re-parents onto the previous projection's input only
+  when the new expression reads no computed column, which mutates the plan lineage that
+  `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the adjacent-window-layer merge
+  depend on. Wants its own scope audit before it is built. Evidence:
+  `docs/perf/facade-boundary-baseline.md` §2.
 - **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
   contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
   there are no legacy deletes and `known_partitions` covers every touched path;

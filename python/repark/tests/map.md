@@ -1622,6 +1622,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
   failing LOUD, and that a
   relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
+- `test_perf_facade_collect_rows.py` — **PERF-FACADE-COLLECT-1** (2026-09-04): the binding row
+  fast path against the pre-existing Python converter, kept callable as
+  `rows_export.rows_from_arrow_table_python`. Both converters run on the same batch and every
+  cell is compared by `repr` as well as by value, so a Decimal that lost its scale or an int
+  returned as a float is red where `==` alone would pass. Matrix: every natively converted type
+  at its extremes with a null in each column (int8..uint64 bounds, `f32` widening, ±inf,
+  non-ASCII / empty / NUL / emoji strings across the three UTF-8 layouts, the three binary
+  layouts, an all-null column), then the declined types (three decimal scales, date32, time64,
+  timestamp, list, struct), then map / tz-aware timestamp through the supplied-column route,
+  the calendar-interval refusal, duplicate display names, zero rows, zero columns, and the
+  guard that the collector is re-enabled after collect.
+  pins: perf-facade-1/C-002, C-003, C-006, C-007
+- `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
+  statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
+  `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the
+  invariant `DataFrame.columns` now depends on, since every repark analyzer rule rewrites
+  through `NamePreserver`. Unaliased arithmetic, decimal and mixed-width integer coercion,
+  wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
+  first if a rule stopped preserving names.
+  pins: perf-facade-1/C-004, C-008
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
@@ -2835,6 +2855,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add an engine-knob `.config(...)` range/validation test (batch size / partitions / memory) | `test_session_config_knobs.py` (per-key Spark rules — SAF-006/SAF-007) |
 | Add an error-taxonomy / exception-type test | `test_errors.py` |
 | Add a `Row` API / collect-row parity test (G-ROW) | `test_row.py` |
+| Add a collect row-materialization equality pin (PERF-FACADE-COLLECT-1) | `test_perf_facade_collect_rows.py` |
+| Add a logical-vs-analyzed column-name pin (PERF-FACADE-WITHCOLUMN-1) | `test_perf_facade_logical_names.py` |
 | Add a select/projection display-naming test (Group H) | `test_select_naming.py` |
 | Add H2 Group H long-tail / wrap-display / same-object self-join pins | `test_h2_group_h2.py` |
 | Add a catalog / publish-path test | `test_catalog_flow.py` |
