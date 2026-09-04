@@ -40,6 +40,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-7 (2026-09-02):** `ff4764d3` (F-18 `#260`, the Spark-equal DV container close); DataFusion family frozen.
   **RP-8 (2026-09-03):** `c1d6c9de` (F-19/F-20 `#261`, F-21 `#262`, F-22 `#263` — the close owns the legacy-delete merge and the fanout drains ascending); DataFusion family frozen.
   **RP-9 (2026-09-03):** `594bdbe5` (F-23 — the DV close skips the data-manifest walk on the pure-DV path when `known_partitions` is complete); DataFusion family frozen.
+  **RP-11 (2026-09-04):** `189a73ed` (F-24 `#266` — v3 parquet-to-DV honours `min-input-files=5`); DataFusion family frozen.
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
