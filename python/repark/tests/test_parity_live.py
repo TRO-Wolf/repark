@@ -36,19 +36,6 @@ from repark_parity import assert_frames_equal
 
 
 @pytest.fixture(scope="session")
-def spark_engine() -> Iterator[lp.Engine]:
-    """The single shared live PySpark oracle engine (session-scoped). Skips (never fails) when the
-    live flag is unset, so requesting it outside live mode is a visible skip."""
-    if not lp.LIVE:
-        pytest.skip(lp.LIVE_SKIP_REASON)
-    engine = lp.build_spark_engine()
-    try:
-        yield engine
-    finally:
-        engine.session.stop()
-
-
-@pytest.fixture(scope="session")
 def spark_iceberg_engine() -> Iterator[lp.Engine]:
     """Session-scoped Spark + Iceberg engine for lifecycle MERGE live tests (option A).
 

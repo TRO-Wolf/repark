@@ -33,6 +33,9 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   class, constant frame, unpartitioned `ORDER BY` at 1e7, `lead`/`lag` over an
   unsorted Iceberg scan, window over `memory_limit`; DuckDB 1.5.5 and PySpark
   4.1.2 oracles; see [windows/map.md](windows/map.md).
+- `dynflatten/` — **PERF-DYNFLATTEN-1** `dynamicFlatten` measurement bed +
+  isolated repark cells + Spark explode oracle; see [dynflatten/map.md](dynflatten/map.md).
+  pins: perf-dynflatten-1-measure/C-001, C-002, C-003
 - `map.md` — this file.
 
 ## I want to…
@@ -53,6 +56,8 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the P-2 TA pipeline battery | `ta/bench_kernel_race.py` (and siblings); `--quick` for n=1e5 |
 | Run the W-0 window-shape bench | `windows/run_w0.py --scale quick\|full --scratch <dir> --out <json>` |
 | Read W-0 numbers | [../../../task/window-bench-report-2026-08-31.md](../../../task/window-bench-report-2026-08-31.md) |
+| Run the dynamicFlatten measurement | `dynflatten/run_dynflatten.py --scale gate\|quick\|full --out /tmp/oc-dynflatten-bed` |
+| Read dynamicFlatten numbers | [../../../docs/perf/dynamic-flatten-baseline.md](../../../docs/perf/dynamic-flatten-baseline.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |

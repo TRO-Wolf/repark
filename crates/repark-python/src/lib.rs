@@ -73,6 +73,10 @@ fn try_init_repark_tracing() {
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     try_init_repark_tracing();
     module.add("__doc__", "repark native engine (PyO3 bindings).")?;
+    module.add(
+        "__debug_assertions__",
+        repark_core::built_with_debug_assertions(),
+    )?;
     module.add_class::<PyReparkSession>()?;
     module.add_class::<PyDataFrame>()?;
     module.add_class::<PyColumn>()?;

@@ -39,6 +39,7 @@ its manifest row in the same change, or that test reds.
 |---|---|
 | Generate the nested family (in-memory) | `nested/datagen.py` `small(rows=64, seed=42)` |
 | Generate nested files | `python python/repark-parity/datasets/nested/datagen.py --rows N --seed S --out DIR` |
+| Generate the dynamicFlatten measurement bed | `python python/repark-parity/datasets/nested/bed.py --scale gate --out /tmp/oc-dynflatten-bed` |
 | Generate schema-inference files | `python python/repark-parity/datasets/schema_inference/datagen.py --rows N --seed S --out DIR` |
 | Generate extreme-types files | `python python/repark-parity/datasets/extreme_types/datagen.py --rows N --seed S --out DIR` |
 | Generate the secrets fixture | `python python/repark-parity/datasets/secrets/datagen.py --rows N --seed S --out DIR` |
