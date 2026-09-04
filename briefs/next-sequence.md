@@ -32,40 +32,24 @@ Restated for a mixed queue:
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **F-24** — min-input-files floor on the fork (`B-MOR-3-FLOOR-1`) | Format-v3 / fork | none | STANDARD <!-- unit id=f-24 --> |
-| 2 | **F-25 → RP-10** — stop `validate_fresh_dvs_only` once every DV key is known (`PERF-DVCLOSE-STMT-1`) | Format-v3 / fork | F-24 (fork lane may overlap) | STANDARD <!-- unit id=rp-10 --> |
-| 3 | **PERF-SCAN-1** — collapse the 3× `plan_files` identity-DELETE scan (`PERF-SCAN-3PASS-1`) | Performance | none | STANDARD <!-- unit id=perf-scan-1 --> |
-| 4 | **SQL-HARDEN-1** — cutover SQL shapes vs Spark on Glue + S3 Tables | Hardening / H-2 | none | STANDARD <!-- unit id=sql-harden-1 --> |
-| 5 | **FN-FIX-2** — `FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1` | Function parity | none | STANDARD <!-- unit id=fn-fix-2 --> |
-| 6 | **PERF-DYNFLATTEN-2 residue** — `DYNFLATTEN-LISTNULL-1` / `DYNFLATTEN-READNULL-1`, the two null rows left | Performance | PERF-DYNFLATTEN-2 (built) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
-| 7 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
-| 8 | **Cutover inventory** — which workloads move, in what order, under single-writer-per-table | Cutover | SQL-HARDEN-1 | STANDARD <!-- unit id=cutover-inventory --> |
-| 9 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |
-| 10 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
-| 11 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
+| 1 | **CUTOVER-SCHEMA-1** — nullability derived Spark's way (`CUTOVER-CTAS-REQ-1`, `CUTOVER-DEDUP-SCHEMA-1`); owner ruling 2026-09-04 | Cutover | none (in flight, Muse) | STANDARD <!-- unit id=cutover-schema-1 --> |
+| 2 | **DBT-1** — a dbt path for RePark: design ledger, then the thinnest adapter that runs the two gold models | Cutover / dbt | none | STANDARD <!-- unit id=dbt-1 --> |
+| 3 | **PERF-DYNFLATTEN-2 residue** — `DYNFLATTEN-LISTNULL-1` / `DYNFLATTEN-READNULL-1`, the two null rows left | Performance | PERF-DYNFLATTEN-2 (built) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
+| 4 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
+| 5 | **Cutover canary C2–C6** — the shadow week on `<ns>_silver_repark`, then the writer flip | Cutover | CUTOVER-SCHEMA-1, pipeline-side SHADOW-1 | STANDARD <!-- unit id=cutover-inventory --> |
+| 6 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |
+| 7 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
+| 8 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
 
-<!-- unit id=f-24 -->
-**Why F-24 is first.** Spark's `MIN_INPUT_FILES_DEFAULT = 5` is a fork floor, not a RePark
-planner patch; it unblocks F-25 → RP-10.
+<!-- unit id=cutover-schema-1 -->
+**Why CUTOVER-SCHEMA-1 is first.** The owner ruled the two metadata rows are not accepted
+differences: readers nullable-by-default, CTAS `required: false`, Spark's `coalesce`/`cast`
+nullability. Blast radius is every schema pin; measured first, flipped to Spark's answer.
 <!-- /unit -->
 
-<!-- unit id=rp-10 ledger=rp-10- -->
-**Why F-25 → RP-10 follows.** `PERF-DVCLOSE-STMT-1`: F-25 stops the commit walk once every DV
-key is known; RP-10 consumes that pin.
-<!-- /unit -->
-
-<!-- unit id=perf-scan-1 -->
-**Why PERF-SCAN-1.** The identity DELETE still runs `plan_files` three times. Independent of
-the fork lane.
-<!-- /unit -->
-
-<!-- unit id=sql-harden-1 -->
-**Why SQL-HARDEN-1.** H-2 scoped to cutover SQL vs Spark on Glue and S3 Tables; feeds the
-cutover inventory.
-<!-- /unit -->
-
-<!-- unit id=fn-fix-2 -->
-**Why FN-FIX-2 before FNP-9/10.** Six filed rows the example campaign left on the backlog.
+<!-- unit id=dbt-1 -->
+**Why DBT-1 is queued.** Gold is two dbt models; RePark has no dbt path, so gold cannot move.
+Design first (in-process adapter expected), then the thinnest adapter; acceptance = canary C6.
 <!-- /unit -->
 
 <!-- unit id=perf-dynflatten-2 -->
@@ -83,8 +67,8 @@ green. Bounded parallel.
 <!-- /unit -->
 
 <!-- unit id=cutover-inventory -->
-**Why the cutover inventory waits on SQL-HARDEN-1.** Workloads and rollback need the measured
-SQL shapes first.
+**Why the canary waits.** The inventory is filed ([../docs/cutover/inventory.md](../docs/cutover/inventory.md))
+and the four rulings are taken; C2 starts when the schema unit and the shadow DAG both exist.
 <!-- /unit -->
 
 <!-- unit id=h-3-spill -->

@@ -10,7 +10,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
-- [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
+- [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one 2026-09-04: the five merged rows left; `CUTOVER-SCHEMA-1` and `DBT-1` filed on the owner's cutover rulings.
   ordered queue and the reasoning for the order. Live queue (2026-09-04, post-v1.0.1): **F-24**,
   F-25 → RP-10, PERF-SCAN-1, SQL-HARDEN-1, FN-FIX-2, dynamicFlatten measure, EX batches,
   cutover inventory, H-3 spill matrix, FNP-9/10. **FNP-15/16** and MW-10 have already merged.
