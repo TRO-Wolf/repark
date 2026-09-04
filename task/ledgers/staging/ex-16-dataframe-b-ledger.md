@@ -95,7 +95,7 @@ condition spellings; round 4 the disjoint-column-name merge shape; round 5 the e
 | `DataFrame.group_by` | RAISED `ATTRIBUTE_NOT_SUPPORTED` (no snake spelling) | agg rows `[('a', 100.0, 4), ('b', 50.0, 2)]` | kept | `group_by.py` | same callable as `groupBy` |
 | `DataFrame.groupby` | cols `['g', 'max(v)']` rows `[('a', 40.0), ('b', 50.0)]` | same | kept | `group_by.py` | dict agg; lowercase spelling answers on Spark too |
 | `DataFrame.groupingSets` | documented shape `groupingSets([("g","k"),("g",),()], "g","k")` cols `['g','k','count']` 6 rows; repark's shape cols `['k','count']` rows `[(None,1),(None,2)]` | one-set-per-col shape cols `['g','k','count']` 6 rows; documented shape RAISED `AttributeError: 'list' object has no attribute 'sql_expr_part'` | dropped | §7 `EX-DF-8` | signature and semantics differ; no input answers Spark-equal on both |
-| `DataFrame.grouping_sets` | same as `groupingSets` | same | dropped | §7 `EX-DF-7` | same callable |
+| `DataFrame.grouping_sets` | same as `groupingSets` | same | dropped | §7 `EX-DF-8` | same callable |
 | `DataFrame.head` | `('a', 1)`; `head(2)` `[('a', 1), ('a', 2)]`; `head(0)` `[]`; empty `None` | same | kept | `first_head.py` | |
 | `DataFrame.hint` | cols `['g', 'k']`, rows unchanged | same | kept | `joins_hints.py` | single-node no-op, disclosed |
 | `DataFrame.intersect` | `{(1,)}` (duplicates deduplicated) | same | kept | `joins_hints.py` | |
@@ -115,7 +115,7 @@ condition spellings; round 4 the disjoint-column-name merge shape; round 5 the e
 | `DataFrame.map_in_pandas` | RAISED `ATTRIBUTE_NOT_SUPPORTED` | same | kept | `bridges.py` | same callable |
 | `DataFrame.melt` | cols `['g','var','val']`, dtypes `string/string/double`, 12 rows with `k` widened to double | same | kept | `rows_nulls.py` | union widening equal |
 | `DataFrame.mergeInto` | v2 parquet target RAISED `UNSUPPORTED_FEATURE.TABLE_OPERATION`; documented condition spellings RAISED `AMBIGUOUS_REFERENCE` / `UNRESOLVED_COLUMN`; disjoint-name shape refused before the capability check | sugar arm answers `[(1,'A'),(2,'b'),(3,'c')]`; bound-value and Column-condition spellings raise | dropped | §7 `EX-DF-9` | no input answers Spark-equal on both |
-| `DataFrame.merge_into` | same | same | dropped | §7 `EX-DF-8` | same callable |
+| `DataFrame.merge_into` | same | same | dropped | §7 `EX-DF-9` | same callable |
 | `DataFrame.na` | fill scalar/dict, drop any/subset/all/thresh — all five arms equal to EX-15's fillna/dropna cells | same | kept | `rows_nulls.py` | the `na` property surface |
 | `DataFrame.offset` | `offset(2)` → `[(3,'c')]`; `offset(0)` → full frame | same | kept | `rows_nulls.py` | Spark 4.1.2 answers `offset` |
 | `DataFrame.orderBy` | asc → nulls first; desc → nulls last; rows `[('a',None),('b',None),('b',1),('a',2)]` / `[('a',2),('b',1),('a',None),('b',None)]` | same | kept | `rows_nulls.py` | |
