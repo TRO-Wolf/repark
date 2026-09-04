@@ -2,9 +2,9 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray, ListArray};
-use datafusion::arrow::compute::concat;
+use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::common::{Result, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
@@ -65,40 +65,41 @@ fn offset_as_usize(offset: i32) -> Result<usize> {
 
 fn flatten_list(list: &ListArray, element_type: &DataType) -> Result<ArrayRef> {
     let inner_list = list.values().as_list::<i32>();
-    let mut rows: Vec<ArrayRef> = Vec::with_capacity(list.len());
-    for row in 0..list.len() {
+    let outer_offsets = list.value_offsets();
+    let inner_offsets = inner_list.value_offsets();
+    let row_count = list.len();
+    let mut mapped: Vec<i32> = Vec::with_capacity(row_count + 1);
+    for outer in outer_offsets.iter().take(row_count + 1) {
+        let index = offset_as_usize(*outer)?;
+        mapped.push(inner_offsets[index]);
+    }
+    let mut valid: Vec<bool> = Vec::with_capacity(row_count);
+    let mut any_null = false;
+    for row in 0..row_count {
         if list.is_null(row) {
-            rows.push(null_list_row(element_type)?);
+            valid.push(false);
+            any_null = true;
             continue;
         }
-        let offsets = list.value_offsets();
-        let start = offset_as_usize(offsets[row])?;
-        let end = offset_as_usize(offsets[row + 1])?;
-        let mut saw_null_sub = false;
-        let mut elements: Vec<ScalarValue> = Vec::new();
-        for slot in start..end {
-            if inner_list.is_null(slot) {
-                saw_null_sub = true;
-                break;
-            }
-            let sub = inner_list.value(slot);
-            for element in 0..sub.len() {
-                elements.push(ScalarValue::try_from_array(&sub, element)?);
-            }
+        let start = offset_as_usize(outer_offsets[row])?;
+        let end = offset_as_usize(outer_offsets[row + 1])?;
+        let row_valid = !(start..end).any(|slot| inner_list.is_null(slot));
+        if !row_valid {
+            any_null = true;
         }
-        if saw_null_sub {
-            rows.push(null_list_row(element_type)?);
-        } else {
-            let built = ScalarValue::new_list_nullable(&elements, element_type);
-            rows.push(Arc::new(built.as_ref().clone()) as ArrayRef);
-        }
+        valid.push(row_valid);
     }
-    let refs: Vec<&dyn Array> = rows.iter().map(AsRef::as_ref).collect();
-    concat(&refs).map_err(Into::into)
-}
-
-fn null_list_row(element_type: &DataType) -> Result<ArrayRef> {
-    ScalarValue::new_null_list(element_type.clone(), true, 1).to_array()
+    let nulls = if any_null {
+        Some(NullBuffer::from(valid))
+    } else {
+        None
+    };
+    Ok(Arc::new(ListArray::try_new(
+        Arc::new(Field::new("item", element_type.clone(), true)),
+        OffsetBuffer::new(mapped.into()),
+        Arc::clone(inner_list.values()),
+        nulls,
+    )?))
 }
 
 impl ScalarUDFImpl for SparkFlatten {
@@ -138,5 +139,115 @@ impl ScalarUDFImpl for SparkFlatten {
         let list = array.as_list::<i32>();
         let element_type = inner_element_type(array.data_type())?;
         Ok(ColumnarValue::Array(flatten_list(list, &element_type)?))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datafusion::arrow::array::Int32Array;
+    use datafusion::common::config::ConfigOptions;
+    use std::time::Instant;
+
+    fn invoke(udf: &ScalarUDF, array: ArrayRef, rows: usize) -> ArrayRef {
+        let field = Arc::new(Field::new("a", array.data_type().clone(), true));
+        let return_field = Arc::new(Field::new(
+            "r",
+            DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
+            true,
+        ));
+        match udf
+            .invoke_with_args(ScalarFunctionArgs {
+                args: vec![ColumnarValue::Array(array)],
+                arg_fields: vec![field],
+                number_rows: rows,
+                return_field,
+                config_options: Arc::new(ConfigOptions::default()),
+            })
+            .expect("flatten invoke")
+        {
+            ColumnarValue::Array(out) => out,
+            ColumnarValue::Scalar(_) => panic!("expected array"),
+        }
+    }
+
+    fn packed_rows(rows: usize) -> ListArray {
+        let mut values = Vec::with_capacity(rows.saturating_mul(3));
+        let mut inner_offsets = Vec::with_capacity(rows.saturating_mul(2).saturating_add(1));
+        inner_offsets.push(0i32);
+        let mut inner_len = 0i32;
+        for _ in 0..rows {
+            values.extend_from_slice(&[1, 2, 3]);
+            inner_len += 2;
+            inner_offsets.push(inner_len);
+            inner_len += 1;
+            inner_offsets.push(inner_len);
+        }
+        let mut outer_offsets = Vec::with_capacity(rows.saturating_add(1));
+        outer_offsets.push(0i32);
+        for row in 1..=rows {
+            let offset = i32::try_from(row.saturating_mul(2)).expect("outer offset fits i32");
+            outer_offsets.push(offset);
+        }
+        let inner = ListArray::new(
+            Arc::new(Field::new("item", DataType::Int32, true)),
+            OffsetBuffer::new(inner_offsets.into()),
+            Arc::new(Int32Array::from(values)),
+            None,
+        );
+        ListArray::new(
+            Arc::new(Field::new("item", inner.data_type().clone(), true)),
+            OffsetBuffer::new(outer_offsets.into()),
+            Arc::new(inner),
+            None,
+        )
+    }
+
+    #[test]
+    fn null_sub_array_row_is_null() {
+        let values = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let inner = ListArray::new(
+            Arc::new(Field::new("item", DataType::Int32, true)),
+            OffsetBuffer::new(vec![0, 2, 2, 3].into()),
+            values,
+            Some(vec![true, false, true].into()),
+        );
+        let outer = ListArray::new(
+            Arc::new(Field::new("item", inner.data_type().clone(), true)),
+            OffsetBuffer::new(vec![0, 1, 3].into()),
+            Arc::new(inner),
+            None,
+        );
+        let out = invoke(flatten_udf().as_ref(), Arc::new(outer), 2);
+        let list = out.as_list::<i32>();
+        assert!(!list.is_null(0));
+        assert_eq!(list.value(0).len(), 2);
+        assert!(list.is_null(1));
+    }
+
+    #[test]
+    #[ignore]
+    fn one_million_rows_within_three_times_datafusion() {
+        let rows = 1_000_000_usize;
+        let fixture = packed_rows(rows);
+        let array: ArrayRef = Arc::new(fixture);
+        let ours = flatten_udf();
+        let baseline = datafusion::functions_nested::flatten::flatten_udf();
+        let _ = invoke(ours.as_ref(), Arc::clone(&array), rows);
+        let _ = invoke(baseline.as_ref(), Arc::clone(&array), rows);
+        let start = Instant::now();
+        let ours_out = invoke(ours.as_ref(), Arc::clone(&array), rows);
+        let ours_elapsed = start.elapsed();
+        let start = Instant::now();
+        let baseline_out = invoke(baseline.as_ref(), Arc::clone(&array), rows);
+        let baseline_elapsed = start.elapsed();
+        assert_eq!(ours_out.len(), baseline_out.len());
+        assert!(
+            ours_elapsed <= baseline_elapsed.saturating_mul(3),
+            "repark {:?} datafusion {:?}",
+            ours_elapsed,
+            baseline_elapsed
+        );
+        eprintln!("flatten bench repark={ours_elapsed:?} datafusion={baseline_elapsed:?}");
     }
 }

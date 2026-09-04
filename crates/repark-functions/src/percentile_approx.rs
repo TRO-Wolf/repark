@@ -147,9 +147,8 @@ fn discrete_index(percentage: f64, count: usize) -> Result<usize> {
 }
 
 fn pick(values: &[ScalarValue], percentages: &[f64], return_list: bool) -> Result<ScalarValue> {
-    let mut sorted = values.to_vec();
-    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(Ordering::Equal));
-    let count = sorted.len();
+    let mut working = values.to_vec();
+    let count = working.len();
     let default = [0.5_f64];
     let used = if percentages.is_empty() {
         &default
@@ -159,7 +158,10 @@ fn pick(values: &[ScalarValue], percentages: &[f64], return_list: bool) -> Resul
     let mut picked = Vec::with_capacity(used.len());
     for percentage in used {
         let index = discrete_index(*percentage, count)?;
-        picked.push(sorted[index].clone());
+        working.select_nth_unstable_by(index, |left, right| {
+            left.partial_cmp(right).unwrap_or(Ordering::Equal)
+        });
+        picked.push(working[index].clone());
     }
     let Some(first) = picked.first() else {
         return Ok(ScalarValue::Null);

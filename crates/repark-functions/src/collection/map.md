@@ -25,9 +25,12 @@ needed.
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).
   pins: fn-fix-1-registry-rows/C-002
-- `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap.
+- `arrays_overlap.rs` — **FN-FIX-1:** three-valued overlap. HashSet of owned
+  `ScalarValue` per row; a borrowed-key set is not a one-line change.
   pins: fn-fix-1-registry-rows/C-002
 - `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
+  Output `ListArray` from inner values + mapped offsets (no per-row concat).
+  `#[ignore]` bench `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
   pins: fn-fix-1-registry-rows/C-002
 
 ## I want to...
