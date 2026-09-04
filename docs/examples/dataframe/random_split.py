@@ -22,14 +22,26 @@ def main() -> None:
             ["n"],
         )
         parts = frame.randomSplit([0.5, 0.5])
-        assert len(parts) == 2
-        assert parts[0].columns == ["n"]
-        assert parts[1].columns == ["n"]
-        assert parts[0].count() + parts[1].count() == 6
+        part_count = len(parts)
+        if part_count != 2:
+            raise SystemExit(f"DataFrame.randomSplit parts {part_count!r} != 2")
+        first_names = parts[0].columns
+        if first_names != ["n"]:
+            raise SystemExit(f"DataFrame.randomSplit columns {first_names!r} != ['n']")
+        second_names = parts[1].columns
+        if second_names != ["n"]:
+            raise SystemExit(f"DataFrame.randomSplit columns {second_names!r} != ['n']")
+        placed = parts[0].count() + parts[1].count()
+        if placed != 6:
+            raise SystemExit(f"DataFrame.randomSplit placed rows {placed!r} != 6")
 
         snake_parts = frame.random_split([0.5, 0.5])
-        assert len(snake_parts) == 2
-        assert snake_parts[0].count() + snake_parts[1].count() == 6
+        snake_count = len(snake_parts)
+        if snake_count != 2:
+            raise SystemExit(f"DataFrame.random_split parts {snake_count!r} != 2")
+        snake_placed = snake_parts[0].count() + snake_parts[1].count()
+        if snake_placed != 6:
+            raise SystemExit(f"DataFrame.random_split placed rows {snake_placed!r} != 6")
     finally:
         repark.stop()
 

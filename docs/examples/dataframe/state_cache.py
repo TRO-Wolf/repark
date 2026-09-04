@@ -27,31 +27,56 @@ def main() -> None:
             ["g", "k"],
         )
         empty = repark.createDataFrame([], "n long")
-        assert empty.isEmpty() is True
-        assert empty.is_empty() is True
-        assert frame.isEmpty() is False
+        empty_flag = empty.isEmpty()
+        if empty_flag is not True:
+            raise SystemExit(f"DataFrame.isEmpty flag {empty_flag!r} != True")
+        snake_empty_flag = empty.is_empty()
+        if snake_empty_flag is not True:
+            raise SystemExit(f"DataFrame.is_empty flag {snake_empty_flag!r} != True")
+        full_flag = frame.isEmpty()
+        if full_flag is not False:
+            raise SystemExit(f"DataFrame.isEmpty flag {full_flag!r} != False")
 
-        assert frame.isStreaming is False
-        assert frame.is_streaming is False
+        streaming = frame.isStreaming
+        if streaming is not False:
+            raise SystemExit(f"DataFrame.isStreaming flag {streaming!r} != False")
+        snake_streaming = frame.is_streaming
+        if snake_streaming is not False:
+            raise SystemExit(f"DataFrame.is_streaming flag {snake_streaming!r} != False")
 
         uncached = repark.createDataFrame(
             [("a", 1), ("a", 2), ("b", 3)],
             ["g", "k"],
         )
-        assert uncached.is_cached is False
+        before_flag = uncached.is_cached
+        if before_flag is not False:
+            raise SystemExit(f"DataFrame.is_cached flag {before_flag!r} != False")
         uncached.cache()
-        assert uncached.is_cached is True
-        assert uncached.count() == 3
+        during_flag = uncached.is_cached
+        if during_flag is not True:
+            raise SystemExit(f"DataFrame.is_cached flag {during_flag!r} != True")
+        cached_total = uncached.count()
+        if cached_total != 3:
+            raise SystemExit(f"DataFrame.is_cached count {cached_total!r} != 3")
         uncached.unpersist()
-        assert uncached.is_cached is False
+        after_flag = uncached.is_cached
+        if after_flag is not False:
+            raise SystemExit(f"DataFrame.is_cached flag {after_flag!r} != False")
 
         persisted = repark.createDataFrame(
             [("a", 1), ("a", 2), ("b", 3)],
             ["g", "k"],
         ).persist()
-        assert persisted.is_cached is True
-        assert persisted.count() == 3
-        assert set(persisted.collect()) == {("a", 1), ("a", 2), ("b", 3)}
+        persisted_flag = persisted.is_cached
+        if persisted_flag is not True:
+            raise SystemExit(f"DataFrame.persist flag {persisted_flag!r} != True")
+        persisted_total = persisted.count()
+        if persisted_total != 3:
+            raise SystemExit(f"DataFrame.persist count {persisted_total!r} != 3")
+        persisted_rows = set(persisted.collect())
+        persisted_expected = {("a", 1), ("a", 2), ("b", 3)}
+        if persisted_rows != persisted_expected:
+            raise SystemExit(f"DataFrame.persist rows {persisted_rows!r} != {persisted_expected!r}")
 
         checkpointed = repark.createDataFrame(
             [
@@ -64,9 +89,17 @@ def main() -> None:
             ],
             ["g", "k", "v"],
         ).localCheckpoint()
-        assert checkpointed.count() == 6
-        assert checkpointed.is_cached is False
-        assert checkpointed.columns == ["g", "k", "v"]
+        checkpoint_total = checkpointed.count()
+        if checkpoint_total != 6:
+            raise SystemExit(f"DataFrame.localCheckpoint count {checkpoint_total!r} != 6")
+        checkpoint_flag = checkpointed.is_cached
+        if checkpoint_flag is not False:
+            raise SystemExit(f"DataFrame.localCheckpoint flag {checkpoint_flag!r} != False")
+        checkpoint_names = checkpointed.columns
+        if checkpoint_names != ["g", "k", "v"]:
+            raise SystemExit(
+                f"DataFrame.localCheckpoint columns {checkpoint_names!r} != ['g', 'k', 'v']"
+            )
     finally:
         repark.stop()
 

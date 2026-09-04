@@ -77,7 +77,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the three divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
   refusal with Spark's multiset answer recorded (EX-DF-7), `groupingSets`'s one-set-per-column
   answer plus the refused Spark documented shape (EX-DF-8), and `mergeInto`'s working
-  string-sugar arm (EX-DF-9).
+  string-sugar arm (EX-DF-9). The module docstring names the row span `EX-DF-7`…`EX-DF-9`.
   pins: ex-16-dataframe-b/C-001
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`

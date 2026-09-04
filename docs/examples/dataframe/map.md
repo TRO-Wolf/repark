@@ -4,7 +4,9 @@
 
 Worked examples for DataFrame, GroupedData, and the na/stat helpers. Examples
 construct the session as `repark = ReparkSession.builder…`; see
-[../map.md](../map.md).
+[../map.md](../map.md). Each example teaches by its statements and fails
+loud: a drifted measured value exits with a named `SystemExit` showing the
+got and expected reprs (the corpus form).
 
 ## Contents
 

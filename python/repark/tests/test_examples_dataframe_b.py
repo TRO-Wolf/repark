@@ -1,4 +1,4 @@
-"""Divergence pins for the EX-16 DataFrame-b example batch (registry §7 EX-DF-6..8)."""
+"""Divergence pins for the EX-16 DataFrame-b example batch (registry §7 EX-DF-7..9)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def spark() -> ReparkSession:
 
 
 def test_intersect_all_divergence(spark: ReparkSession) -> None:
-    """intersectAll / intersect_all refuse; Spark answers the multiset intersect (EX-DF-6)."""
+    """intersectAll / intersect_all refuse; Spark answers the multiset intersect (EX-DF-7)."""
     left = spark.createDataFrame([(1,), (1,), (2,)], ["n"])
     right = spark.createDataFrame([(1,), (1,), (3,)], ["n"])
     with pytest.raises(UnsupportedOperationException, match="intersectAll"):
@@ -27,7 +27,7 @@ def test_intersect_all_divergence(spark: ReparkSession) -> None:
 
 
 def test_grouping_sets_divergence(spark: ReparkSession) -> None:
-    """groupingSets is one set per column plus the grand total; Spark's shape differs (EX-DF-7)."""
+    """groupingSets is one set per column plus the grand total; Spark's shape differs (EX-DF-8)."""
     frame = spark.createDataFrame([("a", 1), ("a", 2), ("b", 3)], ["g", "k"])
     counted = frame.groupingSets("g", "k").count()
     assert counted.columns == ["g", "k", "count"]
@@ -46,7 +46,7 @@ def test_grouping_sets_divergence(spark: ReparkSession) -> None:
 
 
 def test_merge_into_divergence(spark: ReparkSession) -> None:
-    """mergeInto runs through the string-sugar arm; live Spark refuses every shape (EX-DF-8)."""
+    """mergeInto runs through the string-sugar arm; live Spark refuses every shape (EX-DF-9)."""
     spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).write.saveAsTable("ex16_b_mrg")
     source = spark.createDataFrame([(1, "A"), (3, "c")], ["id", "name"])
     (
