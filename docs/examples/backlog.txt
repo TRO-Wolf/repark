@@ -27,14 +27,12 @@ Catalog.set_current_catalog
 Catalog.set_current_database
 Catalog.tableExists
 Catalog.table_exists
-Column.dt
 Column.for_select
 Column.join_sql_part
 Column.spark_display_part
 Column.spark_wrap_display_part
 Column.sql_expr_part
 Column.sql_expr_without_alias
-Column.str
 DataFrame.colRegex
 DataFrame.col_regex
 DataFrame.createGlobalTempView

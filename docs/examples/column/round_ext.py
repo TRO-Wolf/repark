@@ -27,8 +27,9 @@ def main() -> None:
             ["g", "k", "v"],
         )
         rounded = frame.select(frame.v.round(1))
-        if rounded.columns != ["round(v, 1)"]:
-            raise SystemExit(f"Column.round columns {rounded.columns!r} != ['round(v, 1)']")
+        round_columns = ["round(v, 1)"]
+        if rounded.columns != round_columns:
+            raise SystemExit(f"Column.round columns {rounded.columns!r} != {round_columns!r}")
         rounded_rows = set(rounded.collect())
         rounded_expected = {(10.0,), (20.0,), (30.0,), (40.0,), (50.0,), (None,)}
         if rounded_rows != rounded_expected:
@@ -36,8 +37,10 @@ def main() -> None:
 
         half = F.lit(2.5)
         bumped = frame.select(half.round(0))
-        if set(bumped.collect()) != {(3.0,)}:
-            raise SystemExit(f"Column.round rows {set(bumped.collect())!r} != {(3.0,)}")
+        bump_rows = set(bumped.collect())
+        bump_expected = {(3.0,)}
+        if bump_rows != bump_expected:
+            raise SystemExit(f"Column.round rows {bump_rows!r} != {bump_expected!r}")
     finally:
         repark.stop()
 

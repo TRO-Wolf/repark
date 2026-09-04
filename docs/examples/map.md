@@ -50,10 +50,11 @@ file is empty.
   needs a cloud service, each with a one-line reason.
 - [functions/](functions/map.md) — `F.*` examples.
 - [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples.
-- [column/](column/map.md) — `Column.*` examples (EX-17: 32 names; the engine-plumbing
-  and namespace rows `dt`, `for_select`, `join_sql_part`, `spark_display_part`,
-  `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`, `str` stay on the
-  backlog as non-Spark surface).
+- [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the engine-plumbing
+  rows `for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`,
+  `sql_expr_part`, `sql_expr_without_alias` stay on the backlog as non-Spark surface;
+  the repark-extension namespaces `str`/`dt` are documented with their PySpark-spelled
+  twins).
 - [ta/](ta/map.md) — TA kernel examples.
 - [io/](io/map.md) — reader / writer examples.
 - [session/](session/map.md) — `repark.sql` and `ReparkSession` construction examples.

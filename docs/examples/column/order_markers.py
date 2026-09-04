@@ -22,31 +22,37 @@ def main() -> None:
     repark = ReparkSession.builder.appName("ex-col-order").master("local[1]").getOrCreate()
     try:
         values = repark.createDataFrame([(2.0,), (None,), (1.0,)], ["x"])
-        asc_rows = values.orderBy(values.x.asc()).collect()
-        if [tuple(row) for row in asc_rows] != [(None,), (1.0,), (2.0,)]:
-            raise SystemExit(f"Column.asc rows {asc_rows!r} != [(None,), (1.0,), (2.0,)]")
-        first_rows = values.orderBy(values.x.asc_nulls_first()).collect()
-        if [tuple(row) for row in first_rows] != [(None,), (1.0,), (2.0,)]:
+        asc_rows = [tuple(row) for row in values.orderBy(values.x.asc()).collect()]
+        asc_expected = [(None,), (1.0,), (2.0,)]
+        if asc_rows != asc_expected:
+            raise SystemExit(f"Column.asc rows {asc_rows!r} != {asc_expected!r}")
+        first_rows = [tuple(row) for row in values.orderBy(values.x.asc_nulls_first()).collect()]
+        first_expected = [(None,), (1.0,), (2.0,)]
+        if first_rows != first_expected:
+            raise SystemExit(f"Column.asc_nulls_first rows {first_rows!r} != {first_expected!r}")
+        last_rows = [tuple(row) for row in values.orderBy(values.x.asc_nulls_last()).collect()]
+        last_expected = [(1.0,), (2.0,), (None,)]
+        if last_rows != last_expected:
+            raise SystemExit(f"Column.asc_nulls_last rows {last_rows!r} != {last_expected!r}")
+        desc_rows = [tuple(row) for row in values.orderBy(values.x.desc()).collect()]
+        desc_expected = [(2.0,), (1.0,), (None,)]
+        if desc_rows != desc_expected:
+            raise SystemExit(f"Column.desc rows {desc_rows!r} != {desc_expected!r}")
+        desc_first_rows = [
+            tuple(row) for row in values.orderBy(values.x.desc_nulls_first()).collect()
+        ]
+        desc_first_expected = [(None,), (2.0,), (1.0,)]
+        if desc_first_rows != desc_first_expected:
             raise SystemExit(
-                f"Column.asc_nulls_first rows {first_rows!r} != [(None,), (1.0,), (2.0,)]"
+                f"Column.desc_nulls_first rows {desc_first_rows!r} != {desc_first_expected!r}"
             )
-        last_rows = values.orderBy(values.x.asc_nulls_last()).collect()
-        if [tuple(row) for row in last_rows] != [(1.0,), (2.0,), (None,)]:
+        desc_last_rows = [
+            tuple(row) for row in values.orderBy(values.x.desc_nulls_last()).collect()
+        ]
+        desc_last_expected = [(2.0,), (1.0,), (None,)]
+        if desc_last_rows != desc_last_expected:
             raise SystemExit(
-                f"Column.asc_nulls_last rows {last_rows!r} != [(1.0,), (2.0,), (None,)]"
-            )
-        desc_rows = values.orderBy(values.x.desc()).collect()
-        if [tuple(row) for row in desc_rows] != [(2.0,), (1.0,), (None,)]:
-            raise SystemExit(f"Column.desc rows {desc_rows!r} != [(2.0,), (1.0,), (None,)]")
-        desc_first_rows = values.orderBy(values.x.desc_nulls_first()).collect()
-        if [tuple(row) for row in desc_first_rows] != [(None,), (2.0,), (1.0,)]:
-            raise SystemExit(
-                f"Column.desc_nulls_first rows {desc_first_rows!r} != [(None,), (2.0,), (1.0,)]"
-            )
-        desc_last_rows = values.orderBy(values.x.desc_nulls_last()).collect()
-        if [tuple(row) for row in desc_last_rows] != [(2.0,), (1.0,), (None,)]:
-            raise SystemExit(
-                f"Column.desc_nulls_last rows {desc_last_rows!r} != [(2.0,), (1.0,), (None,)]"
+                f"Column.desc_nulls_last rows {desc_last_rows!r} != {desc_last_expected!r}"
             )
     finally:
         repark.stop()

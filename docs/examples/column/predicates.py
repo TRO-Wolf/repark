@@ -39,9 +39,21 @@ def main() -> None:
             raise SystemExit(f"Column.between rows {band_rows!r} != {band_expected!r}")
 
         nulls = repark.createDataFrame([(None, 20), (20, 20), (30, None), (None, None)], ["n", "m"])
+        banded = nulls.select(nulls.n, nulls.m, nulls.m.between(15, 25))
+        banded_rows = set(banded.collect())
+        banded_expected = {(None, 20, True), (20, 20, True), (30, None, None), (None, None, None)}
+        if banded_rows != banded_expected:
+            raise SystemExit(f"Column.between flags {banded_rows!r} != {banded_expected!r}")
+        banded_kept = nulls.filter(nulls.m.between(15, 25))
+        band_kept_rows = set(banded_kept.collect())
+        band_kept_expected = {(20, 20), (None, 20)}
+        if band_kept_rows != band_kept_expected:
+            raise SystemExit(f"Column.between rows {band_kept_rows!r} != {band_kept_expected!r}")
+
         safe = nulls.select(nulls.n.eqNullSafe(nulls.m))
-        if safe.columns != ["(n <=> m)"]:
-            raise SystemExit(f"Column.eqNullSafe columns {safe.columns!r} != ['(n <=> m)']")
+        safe_columns = ["(n <=> m)"]
+        if safe.columns != safe_columns:
+            raise SystemExit(f"Column.eqNullSafe columns {safe.columns!r} != {safe_columns!r}")
         safe_rows = sorted(safe.collect(), key=tuple)
         safe_expected = [(False,), (False,), (True,), (True,)]
         if safe_rows != safe_expected:

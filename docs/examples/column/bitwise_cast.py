@@ -22,40 +22,50 @@ def main() -> None:
     try:
         marks = repark.createDataFrame([(5,), (6,), (12,)], ["m"])
         anded = marks.select(marks.m.bitwiseAND(3))
-        if anded.columns != ["(m & 3)"]:
-            raise SystemExit(f"Column.bitwiseAND columns {anded.columns!r} != ['(m & 3)']")
+        and_columns = ["(m & 3)"]
+        if anded.columns != and_columns:
+            raise SystemExit(f"Column.bitwiseAND columns {anded.columns!r} != {and_columns!r}")
         and_rows = sorted(anded.collect(), key=tuple)
-        if and_rows != [(0,), (1,), (2,)]:
-            raise SystemExit(f"Column.bitwiseAND rows {and_rows!r} != [(0,), (1,), (2,)]")
+        and_expected = [(0,), (1,), (2,)]
+        if and_rows != and_expected:
+            raise SystemExit(f"Column.bitwiseAND rows {and_rows!r} != {and_expected!r}")
         ored = marks.select(marks.m.bitwiseOR(1))
-        if ored.columns != ["(m | 1)"]:
-            raise SystemExit(f"Column.bitwiseOR columns {ored.columns!r} != ['(m | 1)']")
+        or_columns = ["(m | 1)"]
+        if ored.columns != or_columns:
+            raise SystemExit(f"Column.bitwiseOR columns {ored.columns!r} != {or_columns!r}")
         or_rows = sorted(ored.collect(), key=tuple)
-        if or_rows != [(5,), (7,), (13,)]:
-            raise SystemExit(f"Column.bitwiseOR rows {or_rows!r} != [(5,), (7,), (13,)]")
+        or_expected = [(5,), (7,), (13,)]
+        if or_rows != or_expected:
+            raise SystemExit(f"Column.bitwiseOR rows {or_rows!r} != {or_expected!r}")
         xored = marks.select(marks.m.bitwiseXOR(3))
-        if xored.columns != ["(m ^ 3)"]:
-            raise SystemExit(f"Column.bitwiseXOR columns {xored.columns!r} != ['(m ^ 3)']")
+        xor_columns = ["(m ^ 3)"]
+        if xored.columns != xor_columns:
+            raise SystemExit(f"Column.bitwiseXOR columns {xored.columns!r} != {xor_columns!r}")
         xor_rows = sorted(xored.collect(), key=tuple)
-        if xor_rows != [(5,), (6,), (15,)]:
-            raise SystemExit(f"Column.bitwiseXOR rows {xor_rows!r} != [(5,), (6,), (15,)]")
+        xor_expected = [(5,), (6,), (15,)]
+        if xor_rows != xor_expected:
+            raise SystemExit(f"Column.bitwiseXOR rows {xor_rows!r} != {xor_expected!r}")
 
         plain = repark.createDataFrame([("a", 1, 10.0), ("b", 2, None)], ["g", "k", "v"])
         as_double = plain.select(plain.v.cast("double"))
-        if as_double.columns != ["v"]:
-            raise SystemExit(f"Column.cast columns {as_double.columns!r} != ['v']")
+        cast_columns = ["v"]
+        if as_double.columns != cast_columns:
+            raise SystemExit(f"Column.cast columns {as_double.columns!r} != {cast_columns!r}")
         double_rows = set(as_double.collect())
-        if double_rows != {(10.0,), (None,)}:
-            raise SystemExit(f"Column.cast rows {double_rows!r} != {(10.0,), (None,)}")
+        double_expected = {(10.0,), (None,)}
+        if double_rows != double_expected:
+            raise SystemExit(f"Column.cast rows {double_rows!r} != {double_expected!r}")
         as_string = plain.select(plain.k.cast("string"))
         string_rows = set(as_string.collect())
-        if string_rows != {("1",), ("2",)}:
-            raise SystemExit(f"Column.cast rows {string_rows!r} != {('1',), ('2',)}")
+        string_expected = {("1",), ("2",)}
+        if string_rows != string_expected:
+            raise SystemExit(f"Column.cast rows {string_rows!r} != {string_expected!r}")
 
         dirty = repark.createDataFrame([("7",), ("x",), ("42",)], ["s"])
         forgiven = dirty.select(dirty.s.try_cast("int"))
-        if forgiven.columns != ["s"]:
-            raise SystemExit(f"Column.try_cast columns {forgiven.columns!r} != ['s']")
+        try_columns = ["s"]
+        if forgiven.columns != try_columns:
+            raise SystemExit(f"Column.try_cast columns {forgiven.columns!r} != {try_columns!r}")
         forgiven_rows = set(forgiven.collect())
         forgiven_expected = {(7,), (42,), (None,)}
         if forgiven_rows != forgiven_expected:

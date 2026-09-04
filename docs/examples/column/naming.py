@@ -27,8 +27,9 @@ def main() -> None:
             ["g", "k", "v"],
         )
         renamed = frame.select(frame.k.alias("kk"), frame.g)
-        if renamed.columns != ["kk", "g"]:
-            raise SystemExit(f"Column.alias columns {renamed.columns!r} != ['kk', 'g']")
+        alias_columns = ["kk", "g"]
+        if renamed.columns != alias_columns:
+            raise SystemExit(f"Column.alias columns {renamed.columns!r} != {alias_columns!r}")
         alias_rows = sorted(renamed.collect(), key=tuple)
         alias_expected = [(1, "a"), (1, "b"), (2, "a"), (2, "a"), (2, "b"), (3, "a")]
         if alias_rows != alias_expected:
@@ -36,8 +37,11 @@ def main() -> None:
 
         words = repark.createDataFrame([("apple",), ("mango",), ("cherry",), ("apple pie",)], ["s"])
         shouts = words.select(words.s.transform(F.upper))
-        if shouts.columns != ["upper(s)"]:
-            raise SystemExit(f"Column.transform columns {shouts.columns!r} != ['upper(s)']")
+        transform_columns = ["upper(s)"]
+        if shouts.columns != transform_columns:
+            raise SystemExit(
+                f"Column.transform columns {shouts.columns!r} != {transform_columns!r}"
+            )
         shout_rows = sorted(shouts.collect(), key=tuple)
         shout_expected = [("APPLE",), ("APPLE PIE",), ("CHERRY",), ("MANGO",)]
         if shout_rows != shout_expected:

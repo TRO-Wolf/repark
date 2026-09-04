@@ -17,11 +17,13 @@ def main() -> None:
     try:
         arrays = repark.createDataFrame([([1, 2, 3],), ([4, 5],)], ["arr"])
         seconds = arrays.select(arrays.arr.getItem(1))
-        if seconds.columns != ["arr[1]"]:
-            raise SystemExit(f"Column.getItem columns {seconds.columns!r} != ['arr[1]']")
-        second_rows = set(seconds.collect())
-        if second_rows != {(2,), (5,)}:
-            raise SystemExit(f"Column.getItem rows {second_rows!r} != {(2,), (5,)}")
+        item_columns = ["arr[1]"]
+        if seconds.columns != item_columns:
+            raise SystemExit(f"Column.getItem columns {seconds.columns!r} != {item_columns!r}")
+        item_rows = set(seconds.collect())
+        item_expected = {(2,), (5,)}
+        if item_rows != item_expected:
+            raise SystemExit(f"Column.getItem rows {item_rows!r} != {item_expected!r}")
 
         schema = StructType(
             [
@@ -38,11 +40,13 @@ def main() -> None:
         )
         records = repark.createDataFrame([(("x", 2.0),), (("y", 3.0),)], schema)
         labels = records.select(records.r.getField("a").alias("a"))
-        if labels.columns != ["a"]:
-            raise SystemExit(f"Column.getField columns {labels.columns!r} != ['a']")
+        field_columns = ["a"]
+        if labels.columns != field_columns:
+            raise SystemExit(f"Column.getField columns {labels.columns!r} != {field_columns!r}")
         label_rows = set(labels.collect())
-        if label_rows != {("x",), ("y",)}:
-            raise SystemExit(f"Column.getField rows {label_rows!r} != {('x',), ('y',)}")
+        label_expected = {("x",), ("y",)}
+        if label_rows != label_expected:
+            raise SystemExit(f"Column.getField rows {label_rows!r} != {label_expected!r}")
     finally:
         repark.stop()
 

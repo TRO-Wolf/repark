@@ -30,8 +30,9 @@ def main() -> None:
         chain = chain.when(frame.k == 2, "two")
         cased = chain.otherwise("other")
         labelled = frame.select(frame.k, cased.alias("w"))
-        if labelled.columns != ["k", "w"]:
-            raise SystemExit(f"Column.otherwise columns {labelled.columns!r} != ['k', 'w']")
+        ladder_columns = ["k", "w"]
+        if labelled.columns != ladder_columns:
+            raise SystemExit(f"Column.otherwise columns {labelled.columns!r} != {ladder_columns!r}")
         rows = sorted(labelled.collect(), key=tuple)
         expected = [
             (1, "one"),

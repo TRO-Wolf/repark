@@ -62,9 +62,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `python/repark/tests/test_examples_dataframe_a.py`. `risk_tier: standard`. Branch
   `docs/ex-15-dataframe-a`. pins: ex-15-dataframe-a/C-001
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) —
-  **EX-17 (2026-09-04), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
-  40 roster names at base `e3600a1`; 32 covered by nine `docs/examples/column/` files
-  (backlog 550 → 518), 8 engine-plumbing/namespace rows stay (no PySpark analog), the two
+  **EX-17 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Column.*` (a) batch —
+  40 roster names at base `e3600a1`; 34 covered by ten `docs/examples/column/` files
+  (backlog 550 → 516), 6 engine-plumbing rows stay (no PySpark analog), the two
   measured divergent bare-name arms are §7 rows `EX-COL-1`/`EX-COL-2` with pins in
   `python/repark/tests/test_examples_column_a.py`. `risk_tier: standard`. Branch
   `docs/ex-17-column-a`. pins: ex-17-column-a/C-001
