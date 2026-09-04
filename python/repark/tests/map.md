@@ -29,6 +29,10 @@ NOT in that file is a defect, not a decision.
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
+  file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
+  `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
+  the source (value). pins: ctas-view-1-conform-stream/C-001, C-004
 - `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
   binary casts, parser limits, and facade controls.
 - [test_bl15_bl16_math_divergences.py](test_bl15_bl16_math_divergences.py) — **BL-15 FIXED
