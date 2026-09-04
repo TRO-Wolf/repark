@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dbt-repark"
+version = "0.1.0"
+description = "dbt adapter that runs compiled SQL through the RePark engine, in process."
+readme = "map.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "dbt-core>=1.9,<1.10",
+  "dbt-adapters>=1.10,<2.0",
+  "dbt-common>=1.13,<2.0",
+  "dbt-spark>=1.9,<1.10",
+  "repark>=1.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbt"]

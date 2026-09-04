@@ -60,7 +60,11 @@ file is empty.
   `functionExists(name, dbName)` arm — EX-CAT-1..3; EX-21: the setter, exists,
   register, and list_tables remainder; `list_databases` stays on the backlog with §7
   `EX-CAT-2`, whose function object it shares).
-- [ta/](ta/map.md) — TA kernel examples.
+- [ta/](ta/map.md) — TA kernel examples (EX-23: the first 40 `ta.*` backlog names, measured
+  against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture — Spark has no TA
+  kernels, so the goldens are the family's oracle; all 40 bit-identical, no §7 row. EX-24: the
+  remaining 45 `ta.*` names including the `over_columns`/`with_indicators` composition helpers;
+  all 45 bit-identical, no §7 row — the `ta.*` backlog row set is now empty).
 - [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22: the first 14
   `DataFrameWriterV2` names; `overwrite` stays a §7 divergence, EX-W2-1).
 - [session/](session/map.md) — `repark.sql`, `ReparkSession` construction, and the

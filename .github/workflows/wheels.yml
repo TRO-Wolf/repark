@@ -59,6 +59,10 @@ jobs:
           WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
           /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest ./python/repark-parity
           /tmp/wheeltest/bin/python -m pytest python/repark/tests -q
+      - name: dbt-adapter tests against the built wheel
+        run: |
+          /tmp/wheeltest/bin/pip install "dbt-core==1.9.11" "dbt-spark==1.9.3"
+          /tmp/wheeltest/bin/python -m pytest python/dbt-repark/tests -q
       - name: example-coverage execute (require native)
         run: /tmp/wheeltest/bin/python -I scripts/check_example_coverage.py --require-execute
 

@@ -5,6 +5,29 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
+  **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
+  remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45
+  covered by twelve `docs/examples/ta/` files (backlog 258 → 213; `BACKLOG_BASELINE` 258 → 213)
+  measured against the recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (Spark has
+  no TA kernels — the goldens are the family's oracle, the same `.bin` files
+  `test_ta.py`/`test_ta_volume.py` pin bit-identically); all 45 bit-identical, zero divergences,
+  no §7 row, no new pin file; the `over_columns`/`with_indicators` composition helpers are
+  covered through fused examples whose every produced column is asserted bit-exact. Red-first:
+  45 has-no-example findings with the files held out (exit 1), and the bit-exact control named
+  kernel, row and both values on a bulk overwrite (exit 1). `risk_tier: standard`. Branch
+  `docs/ex-24-ta-b`. pins: ex-24-ta-b/C-001, C-002, C-003, C-004
+- [ex-23-ta-a-ledger.md](ex-23-ta-a-ledger.md) —
+  **EX-23 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (a) batch — the
+  first 40 `ta.*` backlog names at the dispatch base `671a7144` (shipped on `bfef4a62`); all 40 covered by eight
+  `docs/examples/ta/` files (backlog 298 → 258 shipped; 340 → 300 at dispatch) measured against the recorded C TA-Lib 0.4.0
+  goldens on the 5000-row OHLCV fixture (Spark has no TA kernels — the goldens are the family's
+  oracle, the same `.bin` files `test_ta.py`/`test_ta_volume.py` pin bit-identically); all 40
+  bit-identical, zero divergences, no §7 row, no new pin file. Round 2 (critic): the examples'
+  durable control is now full-array bit-exact (`expect_bit_exact` over all 5000 rows — the
+  tail-only 1e-9 control was blind to the NaN prefix), the 24 helper docstrings are stripped to
+  house form, and the red-first re-run (four mutations) all exit 1. `risk_tier: standard`. Branch
+  `docs/ex-23-ta-a`. pins: ex-23-ta-a/C-001, C-002, C-003, C-004
 - [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
   **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
   `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen
@@ -52,6 +75,25 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+
+- [dbt-1-adapter-ledger.md](dbt-1-adapter-ledger.md) — **DBT-1 (2026-09-04), in flight:** a dbt
+  path for RePark, so cutover step C6 can move gold off Spark/Glue
+  ([../../../docs/cutover/inventory.md](../../../docs/cutover/inventory.md) ruling 2). Design
+  first: every statement shape dbt emits for the two gold models and their ten test blocks was
+  run through `repark.sql()` on a memory catalog, and the seventeen refusals are §3.2. They are
+  all in the **statement surface**, not the transport, so a Spark-Thrift endpoint was rejected on
+  measurement — the route is an in-process `dbt-repark` adapter subclassing `dbt-spark`'s
+  `SparkAdapter`, so `file_format='iceberg'` keeps one reading rather than two.
+  `dbt run` + `dbt test` build both models and pass all ten blocks on the S6 answers (59 passed,
+  1 skipped, via `make py-test-dbt` in `preflight`); the Glue leg is written and skipped for the
+  orchestrator. Ten registry rows: §2.5 `DBT-VIEW-1`, `DBT-TEMPVIEW-1`, `DBT-DESC-1`,
+  `DBT-TBLPROPS-1` (extended in round 2 to cover `SHOW TABLE EXTENDED`, whose message it shares
+  verbatim), `DBT-CREATENS-1`; §7 `B-TZ-5` (promoted from the awaiting-pins queue when this unit
+  pinned it), `DBT-CTASCLAUSE-1`, `DBT-RELCOMMENT-1`, `DBT-COLCOMMENT-1`, `DBT-QUALIFY-1`.
+  **Round 2 (Opus critic, FAIL on 7 S2 + 3 S3) is §10**; read §6 for the mutation table, which
+  now carries a zero-red control and states which mutations are true no-ops rather than gaps.
+  `risk_tier: standard`. Branch `feat/dbt-1`.
+  pins: dbt-1-adapter/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers
 - Up: [../map.md](../map.md)
