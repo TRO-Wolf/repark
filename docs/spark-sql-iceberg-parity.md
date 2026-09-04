@@ -4289,6 +4289,51 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The example keeps the
   single-arg arm, where the engines agree; the dbName arm is pinned, not taught.
 
+### EX-W2-1 — `overwrite(condition)` refuses where Spark performs the conditional overwrite
+
+- **repark** — `DataFrameWriterV2.overwrite(condition)` always raises
+  `UnsupportedOperationException` ("DataFrameWriterV2.overwrite(condition) is not supported —
+  no engine path for conditional overwrite (Group I disclosure). Use createOrReplace() for a
+  deliberate full rebuild, or DELETE + append."), regardless of table state.
+- **Apache Spark** — `writeTo(t).overwrite(F.col("id") == 1)` on an Iceberg table overwrites the
+  matching rows and keeps the rest: after seeding `(1,'a'),(2,'b')` and overwriting `id = 1`
+  with `(1,'aa')`, the table answers `[(1,'aa'), (2,'b')]`.
+  *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog
+  `local` over a local warehouse, ANSI on, 2026-09-04, EX-22 WriterV2 batch.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_condition_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. No agreeing arm exists,
+  so the name stays on the example backlog; `createOrReplace` teaches the deliberate full
+  rebuild where the engines agree.
+
+### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops
+
+- **repark** — `overwritePartitions()` with a zero-row source raises `AnalysisException`
+  ("Cannot dynamically overwrite partitions with no data...") and leaves the table untouched.
+- **Apache Spark** — dynamic overwrite with an empty source is a no-op: the same table
+  seeded `(1,'a'),(2,'b')`, overwritten from partition `a`, then overwritten again from an
+  empty source, still answers `[(2,'b'), (9,'a')]`.
+  *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine and fixture as EX-W2-1,
+  2026-09-04, EX-22 WriterV2 batch.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. The populated-source
+  arm agrees (the source's partitions are replaced, the others survive) and is the arm the
+  example teaches; the empty-source arm is pinned, not taught.
+
+### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch
+
+- **repark** — `option("branch", "b1")` (and the `tag` key) raises
+  `UnsupportedOperationException` ("writing to an Iceberg branch is not supported — repark
+  write path is current-snapshot only (I1 / R-TIME-TRAVEL)"). Non-branch options are accepted
+  for signature parity, warn once, and are ignored.
+- **Apache Spark** — `option("branch", "b1").append()` neither errors nor writes the branch:
+  the row lands on the table's default branch and `b1` keeps its seed rows.
+  *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine as EX-W2-1, branch created via
+  `ALTER TABLE … CREATE BRANCH IF NOT EXISTS b1`, 2026-09-04, EX-22 WriterV2 batch.)*
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_option_branch_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. The storage-option arm
+  (rows land identically on both engines) is the arm the example teaches; the branch/tag
+  refusal is pinned, not taught.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

@@ -145,8 +145,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   default-frame class), `getDatabase('default')` answering None description/locationUri where
   Spark fills both (EX-CAT-1), `listDatabases` re-measuring the FA-2 field shape on 4.1.2
   (EX-CAT-2), and `functionExists(name, dbName)` answering True where Spark scopes the check
-  (EX-CAT-3). The module docstring names the row span.
-  pins: ex-20-window-catalog/C-001
+  (EX-CAT-3). **EX-22 (2026-09-04)** adds the three WriterV2 pins — `overwrite(condition)`
+  refusing where Spark performs the conditional overwrite (EX-W2-1), empty-source
+  `overwritePartitions` refusing where Spark no-ops (EX-W2-2), and `option`/`options` with a
+  branch/tag key refusing where Spark silently writes the default branch (EX-W2-3) — via a
+  `spark_v2` memory-catalog fixture. The module docstring names the row span.
+  pins: ex-20-window-catalog/C-001, ex-22-types-writerv2/C-003
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
