@@ -1572,6 +1572,10 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` answers through the same
+  union path — `regexp_extract('alpha', '([[:alpha:]]+)', 1)` is `'alpha'`,
+  `regexp_extract('fox', '([[:alpha:]]+)', 1)` is `''` — pinned in
+  `python/repark/tests/test_fn_regexp_extract.py::test_extract_posix_alpha_is_java_union`.
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**

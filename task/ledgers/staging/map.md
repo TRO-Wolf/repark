@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fn-regexp-extract-1-ledger.md](fn-regexp-extract-1-ledger.md) — **FN-REGEXP-EXTRACT-1
+  (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (the last
+  regexp kernel; closes the R-FN-BATCH1 gap the FN-FIX-2-CTRL-1 control exposed).
+  pins: fn-regexp-extract-1/C-001, C-002, C-003, C-004
 - [fn-fix-2-string-rows-ledger.md](fn-fix-2-string-rows-ledger.md) — **FN-FIX-2 (2026-09-04):**
   six silent string rows become Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
   `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
