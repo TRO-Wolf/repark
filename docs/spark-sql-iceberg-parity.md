@@ -1558,6 +1558,7 @@ the pin rather than obeying it.
   (and `test_elt_index_zero_raises_invalid_array_index`).
 - **Rationale** — FIXED. History: DataFusion `array_element` answered NULL for
   out-of-range; Spark raises under ANSI.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): ANSI-off out-of-range (3, 0, −1) and NULL `n` answer NULL on both engines; ANSI-on error unchanged.
 
 ### FN-REGEX-POSIX-1 — POSIX `[[:alpha:]]` is honoured; Spark parses a union bracket — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1573,6 +1574,20 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_regex_posix_class.py::test_regexp_count_posix_alpha_is_java_union`
   (and `test_rlike_posix_alpha_is_java_union`).
 - **Rationale** — FIXED. History: the `regex` crate honoured POSIX `[[:alpha:]]`.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `[[:alpha:]x]` matches `'x'` and `'fox'` via `rlike`/`regexp_like` on both engines; neighbouring `regexp_extract` refusal PINNED (FINDING F-FN-FIX-2-CTRL-1-1, ACCEPTED_FLAGGED): repark refuses on both doors (disclosed R-FN-BATCH1 gap), Spark answers `'alpha'`/`''` (control measured 2026-09-04); the SQL `RLIKE` keyword gap is filed as FN-RLIKE-KEYWORD-1.
+
+### FN-RLIKE-KEYWORD-1 — SQL `RLIKE` keyword refuses; the `regexp_like(...)` spelling answers
+
+- **repark** — `SELECT 'x' RLIKE '[[:alpha:]x]'` raises
+  `UnsupportedOperationException: This feature is not implemented: Unsupported ast node in
+  sqltorel: RLike`. The function spelling
+  `SELECT regexp_like('x', '[[:alpha:]x]')` answers `True`.
+- **Apache Spark** — the keyword statement answers `True` (also `True` for `'fox'`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, FN-FIX-2-CTRL-1 round 3.)*
+- **Pin** — `python/repark/tests/test_fn_regex_posix_class.py::test_sql_rlike_keyword_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-04 from the FN-FIX-2-CTRL-1 round-3 measurement. Only
+  the SQL keyword stays unsupported; `rlike` / `regexp_like` / SQL `regexp_like` answer
+  Spark-equal per FN-REGEX-POSIX-1.
 
 ### FN-LIKE-ESCEND-1 — `like` with a pattern ending in the escape char answers False — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -1588,6 +1603,7 @@ the pin rather than obeying it.
   `python/repark/tests/test_fn_like_escape_end.py::test_like_pattern_ending_in_escape_raises`
 - **Rationale** — FIXED. History: DataFusion LIKE treated a trailing escape as a
   non-match.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): the escape-at-end refusal holds under ANSI off too, on both engines, for the API, SQL, and explicit-`ESCAPE` spellings.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -3404,6 +3420,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_initcap_divergence.py::test_fn_initcap_starts_word_only_after_space`
 - **Rationale** — FIXED. History: DataFusion `initcap` treated every non-alnum as a
   word break.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `'ünï_9 ab'` → `'Ünï_9 Ab'`, `''` → `''`, NULL → NULL on both engines.
 
 ### FN-CHR-1 — `chr` / `char` take a Unicode scalar, not `n % 256` — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3416,6 +3433,7 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_fn_chr_divergence.py::test_fn_chr_modulo_256_and_negative_empty`
 - **Rationale** — FIXED. History: DataFusion `chr` took a Unicode scalar and raised
   on negatives.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): `chr(0/256/65536/1114112)` → `'\x00'`, negatives → `''`, NULL → NULL on both engines.
 
 ### FN-TRIM-CHARS-1 — `trim` / `ltrim` / `rtrim` have no two-argument charset overload — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -3426,6 +3444,7 @@ the pin rather than obeying it.
   `trim('xxSparkxx', 'x')` → `'Spark'`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** — `python/repark/tests/test_fn_trim_chars.py::test_fn_trim_two_arg_charset`
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
+- **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
 ### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
 
