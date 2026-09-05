@@ -4405,7 +4405,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `ctas_partitioned8` ≤ 300 ms) are met on this box and NOT on a third, and this row does not
   claim them.** Round 1 reported both missed and quoted 880 → 478 ms, taken at load 13–22 with an
   uncommitted fork override on the after side; superseded.
-  ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
+  **Determinism, as narrowed in rounds 3–4**: the commit is an ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
   order, so at every partition count the manifest ascends by content, `_row_id` tiles it
   contiguously from zero, the committed row set is the expected digest of ids, and two runs that
   produce the same file grouping produce the same id-to-`_row_id` map. What is **not** reproducible is the

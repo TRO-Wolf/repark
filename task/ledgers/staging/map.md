@@ -12,9 +12,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   per group instead of one per row, keeping the row-wise path where Arrow total-order equality
   is not Iceberg `Struct` equality. RePark half: `IcebergPartitionWriteExec`, a CTAS write node
   with one output partition per writer, so the parquet encode and zstd run on the executor's
-  threads instead of sharing one task — no `tokio::spawn`, no new dependency. File order and the
-  `_row_id` derived from it stay deterministic after the parallel section, and a failed write
-  deletes every completed data file. `risk_tier: elevated`. Branch `perf/ice-writepath-1`.
+  threads instead of sharing one task — no `tokio::spawn`, no new dependency. The commit is an
+  ordering, not a layout: the manifest ascends by content and `_row_id` tiles it contiguously,
+  while the layout and a row's `_row_id` vary with the scan's file grouping
+  (`WRITE-GROUPING-CTAS-1`); a failed write into a fresh table deletes every data file it made. `risk_tier: elevated`. Branch `perf/ice-writepath-1`.
   pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.

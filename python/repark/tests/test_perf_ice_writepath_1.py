@@ -168,6 +168,7 @@ def _ctas_commit(engine: ReparkSession, table: str) -> dict[str, Any]:
     counts = [int(value.as_py()) for value in files.column("record_count")]
     firsts = [int(value.as_py()) for value in files.column("first_row_id")]
     lows = [value.as_py()["id"]["lower_bound"] for value in files.column("readable_metrics")]
+    highs = [value.as_py()["id"]["upper_bound"] for value in files.column("readable_metrics")]
     rows = engine.sql(f"SELECT id, _row_id FROM {table} ORDER BY id").to_arrow()
     ids = [int(value.as_py()) for value in rows.column("id")]
     lineage = [int(value.as_py()) for value in rows.column("_row_id")]
@@ -175,6 +176,7 @@ def _ctas_commit(engine: ReparkSession, table: str) -> dict[str, Any]:
         "counts": counts,
         "firsts": firsts,
         "lows": lows,
+        "grouping": repr(list(zip(lows, highs, counts, strict=True))),
         "ids": hashlib.sha256(repr(ids).encode()).hexdigest(),
         "lineage": hashlib.sha256(repr(list(zip(ids, lineage, strict=True))).encode()).hexdigest(),
     }
@@ -215,7 +217,7 @@ def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
             assert commit["ids"] == expected_ids, (
                 f"run {run} at {partitions} partitions committed a different row set"
             )
-            key = str(commit["counts"])
+            key = commit["grouping"]
             if key in seen:
                 assert seen[key] == commit["lineage"], (
                     f"two runs at {partitions} partitions produced the same file grouping "

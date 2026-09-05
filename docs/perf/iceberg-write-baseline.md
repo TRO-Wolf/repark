@@ -133,8 +133,7 @@ At `spark.sql.shuffle.partitions = 8` the shipped tree writes **4× Spark's unpa
 distribution rule that sends one partition value to one task before the write; repark has none.
 That gap is filed as **`WRITE-DISTRIBUTION-1`** with both rejected alternatives measured — capping
 the writers below the partition count costs 738 ms against 547 ms and buffers unconsumed
-partitions whole, and a round-robin `RepartitionExec` destroys the reproducibility §5's
-determinism work just established. The row set, `sum(id)` and `sum(vi)` are identical on every
+partitions whole, and a round-robin `RepartitionExec` destroys the content ordering §5 establishes. The row set, `sum(id)` and `sum(vi)` are identical on every
 build (1,000,000 rows, 499,999,500,000, 499,596,708), and
 `repark.write.max-concurrent-files = 1` still writes exactly one file — the key is binary on this
 node, measured 1 / 8 / 8 / 8 files at cap 1 / 2 / 4 / 8.
