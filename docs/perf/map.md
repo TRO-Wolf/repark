@@ -65,7 +65,7 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   honestly (1.8×/2.2× at 1e6, 2.4×/3.6× at 1e7); §3 decomposes the residue into ~1 ms
   planning, ~10 ms fixed per query, ~2× per-byte, and a `count(col)` statistics-pushdown
   gap. The DV leg stays unfolded and answers 990,000 in 4.6 ms.
-  pins: perf-ice-scan-1/C-008a, C-008b
+  pins: perf-ice-scan-1/C-008, C-011
 
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
   (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner

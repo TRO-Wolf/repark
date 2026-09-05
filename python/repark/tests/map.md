@@ -1724,7 +1724,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
   count against Spark on the same seeds. Numbers and commands:
   [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
-  pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008a, C-008b, C-009
+  pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-011, C-009
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
   through the facade, over a fixed four-file seed so the plan really has four partitions.
   Always-run: the CTAS writes one data file per plan partition (four), and
