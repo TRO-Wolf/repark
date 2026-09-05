@@ -77,7 +77,22 @@ plannable after narrowing. `ntile` accepts every int width; `lead`/`lag` are `An
 
 ## 8. Mutations
 
-Recorded here as run (one rule disabled at a time; the pins each reds).
+Run 2026-09-05 (one rule disabled at a time; every mutation reverted, tree
+verified clean after each). Rust-level mutations via
+`cargo test -p repark-functions --lib`; the wiring mutation via `make develop`
+plus `python/repark/tests/test_types_1.py`.
+
+| Mutation | Disabled rule | Pins reddened | Result |
+|---|---|---|---|
+| M1 | `narrow_node` try_from arm (Int32→Int64) | `int64_literal_in_range_narrows_to_int32`, `select_one_answers_int32`, `values_one_answers_int32` | 3 red |
+| M1b | `fold_negative_int_min` (MIN→MAX) | `negative_two_to_31_folds_to_int32_min` | 1 red |
+| M2 | `signed_aggregate_functions` → empty | `unsigned_count_like_answers_int64`, `approx_alias_answers_int64`, `grouped_unsigned_count_like_answers_int64` | 3 red |
+| M3 | `signed_window_functions` → empty | `rank_answers_int32_with_values_kept`, `row_number_dense_rank_ntile_answer_int32` | 2 red |
+| M4 | from_unixtime `DEFAULT_PATTERN` → `yyyy/MM/dd` | `renders_epoch_in_utc`, `renders_epoch_in_new_york` | 2 red |
+| M5 | count_if return type Int64→UInt64 | `counts_true_skips_false_and_null`, `empty_input_answers_zero` | 2 red |
+| M6 | wiring: `SparkIntegerLiteral` unregistered from `analyzer_rules()` | 9 × `test_types_1.py` (literal widths, VALUES, CTAS, `1+1`, both overflow modes, EXPLAIN) | 9 red, 45 pass |
+
+Score: 7 mutations, 7 bite, 0 survivors.
 
 ## 9. Live oracle
 
