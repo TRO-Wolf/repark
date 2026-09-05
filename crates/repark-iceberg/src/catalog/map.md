@@ -122,6 +122,16 @@ Source comments retain only API and safety contracts; implementation narration i
   residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
   stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
+- **PERF-ICE-SCAN-1 (2026-09-05):** `count(*)` folds and small tables scan in parallel,
+  both fork-side (F-27) and consumed here through the unchanged `IcebergTableScan` path — no
+  code in this directory changed. The fork reads row counts through an empty projection mask,
+  reports exact whole-table `partition_statistics` (`total-records` over delete-free planned
+  tasks) so DataFusion folds `count(*)`, and re-packs sub-split-size plans to
+  `min(split size, max(total/T, 64 KiB))`. MERGE reads through `plan_files` (untouched);
+  `_pos`/`_row_id`/empty projections and file-prune-only scans never re-split. The RePark
+  pins skip until the RP-13 pin bump carries F-27; the bump is the orchestrator's step, not
+  this unit's.
+  pins: perf-ice-scan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010
 - [tests/](tests/map.md) — G17 wrapper pins and the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
   validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
   scheme-selection + key-identity partitions, span secret-hygiene pins, the fork-patch
