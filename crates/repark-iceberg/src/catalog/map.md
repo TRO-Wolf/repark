@@ -74,6 +74,7 @@ Source comments retain only API and safety contracts; implementation narration i
 
   **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):**
   a third knob, `repark.iceberg.manifestCacheBytes` (default `0` = off; set bytes to opt
+  A value that is not an integer in `[0, 2^64)` is refused naming both spellings (a u64 overflow is refused as such, not as a negative).
   in — `33554432` is the measured value) with an underscore alias, sizes the fork's shared
   manifest `ObjectCache` for the memory catalog; a bad value fails loud naming both
   spellings, exactly like the entries knob. `builders.rs` passes nonzero bytes to

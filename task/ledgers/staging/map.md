@@ -47,7 +47,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-CREATE, `register_table`, rewrite + expire, time-travel, branch); the funnel pinned
   by manifest deletion; correctness pinned under a 512-byte budget over eight tables; two
   lineage detector pins holding `PERF-CATALOG-LINEAGE-CACHE-1`'s shape (knob-on NULLs,
-  knob-off assigned). `PERF-ICE-MANIFEST-1` BACKLOG-by-ledger with before/after;
+  knob-off assigned). `PERF-ICE-MANIFEST-1` BACKLOG with before/after;
   `PERF-CATALOG-CACHE-BOUND-1` NARROWED to the metadata cache;
   `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` filed BACKLOG — the
   census showed DML saving read-side repeats only, because the fork's transaction paths never

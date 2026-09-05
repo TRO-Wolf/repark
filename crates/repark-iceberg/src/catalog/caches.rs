@@ -113,7 +113,7 @@ fn parse_entries(raw: &str, key: &str, canonical: &str) -> Result<usize> {
 fn parse_bytes(raw: &str, key: &str, canonical: &str) -> Result<u64> {
     raw.trim().parse().map_err(|_| {
         DataFusionError::Plan(format!(
-            "config {} must be a non-negative integer (got {raw:?})",
+            "config {} must be an integer in [0, 2^64) (got {raw:?})",
             named(key, canonical)
         ))
     })

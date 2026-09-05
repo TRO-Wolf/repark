@@ -4679,8 +4679,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
   observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
 - **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
-  BACKLOG-by-ledger through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
-  `79119643` via RP-12), and BACKLOG-by-ledger again through PERF-ICE-CATALOG-IO-2. Every
+  BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
+  `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
   `Table` got a fresh `ObjectCache`, so `plan_files` re-read every manifest on every
   statement: 192 manifests at ~0.45 ms each, ~85 ms per statement on local FS. IO-2 wired
   the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
@@ -4736,7 +4736,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
   the key carry the assignment input, or move assignment out of the cached object. No
   RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
-  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG-by-ledger and the knob default stays
+  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
   OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
   the default-ON flip. Pins:
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows`
