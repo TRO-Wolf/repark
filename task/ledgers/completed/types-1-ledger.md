@@ -303,7 +303,7 @@ rustfmt-packed (mechanical scan for joinable assignments and paren triplets foun
 match/if arms are already minimal), and the arm is the minimal readable general form (a
 shorter `10^count`-threshold spelling trades the increase for unstatable range reasoning).
 Moving the arm out of the pattern renderer would scatter a cohesive unit across modules.
-Both cap tables carry 1709.
+Both cap tables carry 1709. (superseded by §14/N4 — 1700 via `spark_year_pad.rs`)
 
 ### 13.3 Merge-triage (gate-driven, outside the eleven)
 
