@@ -460,8 +460,13 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   int64 `approx_count_distinct`, fifteen planning-absent names after FNP-7
   removed `try_avg`, result model fields, scratch delete in `finally`, no
   retry on the error path, WIN-SLIDE registry headings).
+  **WIN-SLIDE-1 (2026-09-04):** the thirteen moved from `REFUSING_SLIDING_NAMES` (now empty) to
+  `RESCANNED_SLIDING_NAMES`; two pins were added —
+  `test_every_rescanned_name_has_a_fixed_registry_row` (each name keeps its `WIN-SLIDE-<name>`
+  heading, now carrying `FIXED 2026-09-04 (WIN-SLIDE-1)`) and
+  `test_the_frozen_sliding_refuse_set_is_empty`.
   pins: w-0-window-bench/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011;
-  fnp-7-try-inversions/C-012.
+  fnp-7-try-inversions/C-012; win-slide-1/C-008.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an

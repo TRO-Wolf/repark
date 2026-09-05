@@ -163,6 +163,12 @@ bare invocation checks the tree against the checked-in file. The register is pin
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
 
+WIN-SLIDE-1 (2026-09-04): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
+1102→1053 — `Column.over`'s body moved to `column/window.rs`, which is that row's own recorded
+split seam ("extract the remaining date or window method family"). A ratchet DOWN, not a
+baseline increase; the duplicate table in `test_cap_1_source_file_line_cap.py` moved with it.
+pins: win-slide-1/C-002
+
 FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
