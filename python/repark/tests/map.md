@@ -2560,32 +2560,42 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   un-skipped in IO-2 and runs below.
   The measured tables, the machine, the recorded load and the re-measured floor live in that
   baseline note beside the registry rows `PERF-CATALOG-CALLS-1` (FIXED in IO-1) and
-  `PERF-ICE-MANIFEST-1` (FIXED in IO-2).
+  `PERF-ICE-MANIFEST-1` (BACKLOG-by-ledger in IO-2: the knob shipped with the default
+  OFF, so the win is measured but not served until the default-ON flip).
   pins: perf-ice-catalog-io-1/C-001, C-005, C-006
-  **PERF-ICE-CATALOG-IO-2 (2026-09-05):** the part-3 pin is un-skipped (the `t_many`
-  second statement must clear 20 ms on a release module) and nine legs join it. The delete
-  instrument is `_delete_manifests`: every `*.avro` under the session warehouse is unlinked, so
-  a repeated read can only answer from the shared cache. A default session answers after the
-  deletion (the default-on pin); a `manifestCacheBytes = "0"` session fails it (the knob-off
-  control, which also proves `"0"` builds); after `rewrite_manifests` +
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):** the
+  part-3 pin is un-skipped (the `t_many` second statement must clear 20 ms on a release
+  module, with the knob set explicitly to 32 MiB) and nine legs join it. Every cache-on leg
+  sets the knob explicitly, because the default is off. The delete instrument is
+  `_delete_manifests`: every `*.avro` under the session warehouse is unlinked, so
+  a repeated read can only answer from the shared cache. An explicit-knob session answers
+  after the deletion (the sharing pin); a `manifestCacheBytes = "0"` session fails it (the
+  knob-off control, which also proves `"0"` builds); and a default session fails it too
+  (the default-off control); after `rewrite_manifests` +
   `expire_snapshots` every pre-rewrite manifest path is gone from disk and the next read still
   answers the same rows (immutability by path — the read needs only new paths); a MERGE matches
   a row the previous statement committed; a dropped and recreated table answers its own row
   count; a `register_table`-adopted table stays correct across a commit; a 512-byte budget
   answers across eight tables (eviction never corrupts — the byte bound itself is the fork's
   moka `max_capacity`, unit-pinned fork-side); and `VERSION AS OF` plus branch reads answer
-  with the cache on. The two refusal parametrizations grow by the new key (`"many"` and `"-1"`
+  with the cache on. Two lineage detector pins hold `PERF-CATALOG-LINEAGE-CACHE-1`'s shape:
+  with the knob on, an upgraded table reads NULL lineage for its carried rows (today's wrong
+  answer — the pin reds when `F-CATIO-KEY` lands); with the knob off, the same upgrade serves
+  assigned lineage. The two refusal parametrizations grow by the new key (`"many"` and `"-1"`
   fail loud; the alias names both spellings). The IO-1 commit-visibility and schema-change legs
-  run unchanged and are the cache-on re-run for those two cells, because the default session
-  they build now sizes the shared cache at 32 MiB. The two-door shape of every cell stays in
+  run unchanged with the cache OFF (their default sessions build no shared cache). The
+  two-door shape of every cell stays in
   Rust (`catalog_cache_staleness.rs`): two Python sessions cannot share one memory catalog, so
   the Python legs are single-session sequential through the same shared cache.
 
   | test | clause |
   |---|---|
   | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
-  | `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish` | C-002 |
+  | `test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish` | C-002 |
+  | `test_a_default_session_reopens_manifests_after_they_vanish` | C-002 |
   | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-002 |
+  | `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` | C-004 |
+  | `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-004 |
   | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-004 |
   | `test_a_merge_after_a_commit_matches_the_committed_row` | C-004 |
   | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-004 |
