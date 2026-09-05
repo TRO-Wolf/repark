@@ -238,10 +238,12 @@ The `collect_list` failure, quoted from the captured JVM stderr rather than infe
 Python-side exception:
 
 ```
-java.lang.OutOfMemoryError: Java heap space
 Exception in thread "refresh progress" java.lang.OutOfMemoryError: Java heap space
 26/09/05 08:41:52 ERROR Executor: Exception in task 2.0 in stage 0.0 (TID 2)
+java.lang.OutOfMemoryError: Java heap space
 ```
+
+Those are the first three of the six lines the run recorded, in the order it recorded them.
 
 The SparkContext does not survive it; the Python side sees only `Job 0 cancelled because
 SparkContext was shut down`, which is why the JVM stderr is captured — the interesting sentence is
