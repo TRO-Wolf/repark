@@ -183,6 +183,36 @@ and because a future change that moves them should have to explain itself.
 median. Cells this small are dominated by whatever else the box is doing; read them as an order
 of magnitude, not as a number to compare across runs.
 
+## 4. `createDataFrame(list of tuples)` goes column-wise (PERF-FACADE-CDF-1, 2026-09-05)
+
+The §3 create controls are now a before/after pair. The inferred list-of-rows path infers and
+converts column by column — one `set(map(type, …))` census per column, single-kind scalar
+columns straight to Arrow, mixed/exotic columns through the unchanged per-cell path — and the
+tuple loop skips the per-row permutation rebuild when the permutation is the identity. The old
+leg is not a reconstruction: it calls the kept legacy path itself, swapped in for the timed
+region. Same runner, one run, release module `163478728` B, load **10.75 → 10.51**, create
+cells capped at 3 timed iterations after 1 warm-up:
+
+| cell | old (ms) | new (ms) | × |
+|---|---:|---:|---:|
+| `create/100000/tuples_count` | 1,656.62 | **70.30** | **23.56×** |
+| `create/100000/pandas_count` (control) | — | 3.00 | — |
+| `create/10000/nested_count` | 261.70 | 273.21 | 0.96× |
+| `create/100000/explicit_count` | 1,280.50 | 1,273.94 | 1.00× |
+
+Three honest numbers, not one: the pre-unit absolute on the unchanged lane was **1,756.67 ms**
+(same runner, load 14.35 → 14.65); the same-process pair above is 1,656.62 → 70.30. The pair
+isolates the inference win — both legs share the permutation hoist. The ≤ 100 ms target is met
+30% under the bar, on a loaded box.
+
+The 0.96× nested pair is the measured delegation cost (one transpose and census before the
+identical conversion), and the 1.00× explicit pair is the design (both legs run the identical
+legacy path by dispatch — the explicit-schema path at ~1.27 s is now the slowest
+createDataFrame shape and stays out of this unit). A second full-battery run the same day
+(load ~19–25, floor **2.45 ms**, same runner) reproduced the tuples pair at 1,620.75 → 66.65
+ms and confirmed the §1/§2 cells unmoved (`collect/1000000` 940.84, `chain/100/build_only`
+344.01). Numbers: the unit ledger §8.
+
 ## What this baseline is not
 
 - **Not an idle-host baseline.** Sibling lanes were building Rust throughout. Loads are
@@ -192,8 +222,9 @@ of magnitude, not as a number to compare across runs.
   4.1.2 `local[8]` on a bed of the same schema — `collect` 1e6 3,619 ms, depth-100 chain build
   747 ms — which puts the shipped 939.85 and 366.11 at roughly 3.9× and 2.0× faster than Spark.
   Those ratios are across two runs on two beds and are indicative, not a same-run measurement.
-- **Not a `createDataFrame` result.** That candidate is `FACADE-CDF-1` and is untouched; its
-  cells appear only as controls.
+- **Not a `createDataFrame` result** (until 2026-09-05). That candidate was `FACADE-CDF-1`
+  and untouched at this writing; its cells appeared only as controls. PERF-FACADE-CDF-1 has
+  since landed — §4 is its before/after, measured with the same runner.
 - **Not the first run of this unit.** The unit's original numbers came from probe scripts under
   an untracked `scratch/` directory. They agreed with these within a few percent, but a number
   whose runner is not in the tree cannot be re-derived and is not a baseline; they were

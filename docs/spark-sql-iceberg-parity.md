@@ -4404,6 +4404,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   planned statements, a 12-deep chain and eight DataFrame transforms in
   `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §2.
+- **PERF-FACADE-CDF-1** — **FIXED 2026-09-05 (PERF-FACADE-CDF-1)**. `createDataFrame(list of
+  tuples)` normalized every cell in Python across five passes (the cell normalizer, the nested
+  preparer, the merge-refusal walk, the per-row schema check, the Arrow conversion) — 1,657 ms
+  at 1e5 where the same rows from pandas cost 3 ms. Inference and conversion are column-wise
+  now: one `set(map(type, …))` census per column, single-kind scalar columns straight to Arrow,
+  mixed/exotic columns through the unchanged per-cell path, explicit schemas still on the
+  legacy path by dispatch. Identity by construction — every shared rule is the same function
+  object on both paths, and the fast path skips work only where the census proves it a no-op.
+  Same runner, both legs in one process on one release module (load 10.75 → 10.51):
+  `create/100000/tuples_count` **1,656.62 → 70.30 ms** (23.56×, ≤ 100 ms target met 30% under
+  the bar); the nested pair reads 0.96× (the measured delegation cost) and the explicit pair
+  1.00× (identical path by dispatch). The tuple loop also skips the per-row permutation
+  rebuild when the permutation is the identity (~60 ms at 1e5, shared by both legs). Pin:
+  `python/repark/tests/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
+  every case compares Arrow field types, Arrow values and `collect()` by `(type name, repr)`,
+  plus a live leg against PySpark 4.1.2 `createDataFrame`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §4.
 - **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
   `PERF-FACADE-WITHCOLUMN-1` the depth-100 `withColumn` build is 366.11 ms against a 150 ms
   target, and the residue is entirely DataFusion's per-expression projection validation. The
@@ -4464,6 +4481,66 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
+- **PERF-CATALOG-CALLS-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 11; **FIXED
+  2026-09-05** (PERF-ICE-CATALOG-IO-1), narrowly: **the metadata document is fetched once per
+  location, not once per `load_table`.** Every statement re-read the table's `metadata.json`:
+  `strace -f -e trace=openat` with per-statement marker files on a release module, memory
+  catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
+  document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
+  by a session-scoped cache keyed by metadata-file location, built once per session and handed to
+  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
+  reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
+  still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
+  prove reachability before claiming the pointer; creation is not cacheable. (2) The count of
+  catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
+  (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
+  numbers as the knob-off read column, because the cache turns those calls into hits rather than
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
+  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
+  `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
+  Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §1.
+- **PERF-CATALOG-LOADS-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1 (PERF-ANALYSIS-1 §2 row
+  11's other half). **BACKLOG** behind a fork pin bump. A planning round resolves the table twice:
+  `IcebergSchemaProvider::table` → `IcebergTableProvider::try_new` is `load_table` #1 and
+  `TableProvider::scan` is #2, and DML adds its write-side loads — measured through the census counter at
+  SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3, unchanged by `PERF-CATALOG-CALLS-1` (they are
+  now cache hits, not fewer calls). On the memory catalog a round trip is an in-memory map read and costs nothing
+  measurable; on Glue each is a `GetTable`. Also a latent correctness defect: the provider's
+  Arrow `schema` is fixed at `try_new` and DataFusion stores ordinals against it, so a schema
+  change landing between `try_new` and `scan` plans one snapshot against another's ordinals. Fork
+  trigger **F-CATIO-A**: `IcebergSchemaProvider::resolve_table` hands the `Table` it just loaded
+  to the provider it returns and `scan` reuses it, leaving the public `try_new` load-per-scan
+  behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
+  never-committed path override as part of the 120.01 → 11.33 ms cell in
+  `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
+  fork pin bump. The metadata-location cache reaches the memory catalog only:
+  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
+  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
+  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
+  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
+  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
+  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
+  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
+  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
+  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
+  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
+  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
+  `CatalogCaches::trim` empties the cache when the retained-location count passes
+  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
+  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
+  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
+  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
+  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
+  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
+  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
+  bounds within a statement by construction and evicts one entry instead of all of them.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on

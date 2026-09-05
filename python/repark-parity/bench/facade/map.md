@@ -30,12 +30,26 @@ rather than quoting it:
 | `collect_old/N` vs `collect/N` | `DataFrame._rows_from_arrow_table` swapped back to the pure-Python converter — end to end, result list held | shipped |
 | `rows_old/N` vs `rows_new/N` | `rows_export.rows_from_arrow_table_python`, the untouched pure-Python converter | `rows_export.rows_from_arrow_table`, the shipped path |
 | `chain_old/D` vs `chain/D` | `_old_columns` / `_old_iter_bound_columns` in `cells.py`, the pre-unit bodies, swapped onto `DataFrame` for the timed region and restored in a `finally` | the shipped bodies |
+| `create_old/N/*` vs `create/N/*` | the rows-module dispatcher swapped back to `_arrow_table_from_raw_tuples_legacy` — end to end, `count()` held | shipped |
 
 Both legs see the same fixture, the same load and the same native module, so a difference is
 the code path and nothing else. The reconstruction is faithful only while those two functions
 still mirror what `PERF-FACADE-1` replaced; if `columns`, `_iter_bound_columns` or
 `_rows_from_arrow_table` changes again, the old leg stops being the right comparison and must
-be re-derived or dropped.
+be re-derived or dropped. The `create_old` leg is not a reconstruction — it calls the kept
+legacy path itself, so it stays the right comparison until the legacy path is removed.
+
+pins: perf-facade-cdf-1/C-001, C-005, C-006, C-008
+
+## The createDataFrame cells (PERF-FACADE-CDF-1)
+
+`tuples_count` reuses the seed-42 seven-column rows as in-memory tuples with a name-list
+schema — the path the unit rewrites. `nested_count` builds 10,000 deterministic nested rows in
+memory (`id`, a two-int list, a two-key dict, a two-field tuple) with a name-list schema, so
+the delegated slow arm is measured on both legs. `explicit_count` runs the same 1e5 tuples
+under a DDL schema, so the legacy-dispatched path is measured on both legs and must read ~1×.
+Input construction stays outside every timed region; the timed region is `createDataFrame`
+plus `count()`, exactly as the pre-unit control cells timed it.
 
 `collect_old/N` and `rows_old/N` measure different things on purpose: the first holds a million
 `Row` objects as `collect()` must, the second releases each batch's rows. The gap between them

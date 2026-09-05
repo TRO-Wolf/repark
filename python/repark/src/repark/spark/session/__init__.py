@@ -16,6 +16,7 @@ from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session import builder_conf as _builder_conf
 from repark.spark.session import catalog_resolution as _catalog_resolution
 from repark.spark.session import create_dataframe_arrow as _create_dataframe_arrow
+from repark.spark.session import create_dataframe_columns as _create_dataframe_columns
 from repark.spark.session import create_dataframe_inference as _create_dataframe_inference
 from repark.spark.session import create_dataframe_rows as _create_dataframe_rows
 from repark.spark.session import create_dataframe_schema as _create_dataframe_schema
