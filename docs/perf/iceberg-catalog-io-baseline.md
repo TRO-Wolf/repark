@@ -112,9 +112,11 @@ Cargo.lock` is empty). They were implemented in the fork lane
   no `with_table_metadata_cache` at `189a73ed`, so §1's AWS table's `after` column is the memory
   catalog's shape, argued by the census method, not measured on AWS.
 
-Both are test-green in the fork lane (`cargo test -p iceberg --lib` 3,612 passed, 0 failed;
-`cargo test -p iceberg-datafusion` all green including doctests), and the RePark facade suite runs
-against the override.
+Both are test-green in the fork lane: `cargo test -p iceberg --lib` 3,612 passed / 0 failed and
+`cargo test -p iceberg-datafusion` green including doctests, at the fork lane's own toolchain. A
+RePark facade run against the override reached 50 % of `python/repark/tests` with no failure
+before the run was cut short; a complete facade run against the override is part of the pin bump,
+not of this unit, and this note claims nothing more than the two fork suites and the cells below.
 
 ### 3.1 What A and B measure (release module, path override, same box, same hour)
 
