@@ -1,6 +1,6 @@
 # Unit ledger — PERF-FACADE-CDF-1 · `createDataFrame(list of tuples)` goes column-wise
 
-**Date:** 2026-09-05 · **Branch:** `perf/facade-cdf-1` · **Base:** `origin/main` `6eaccd5e` ·
+**Date:** 2026-09-05 · **Branch:** `perf/facade-cdf-1` · **Base:** `origin/main` `6f5c62c8` ·
 **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
 **Registry:** `PERF-FACADE-CDF-1` (filed FIXED at departure).
