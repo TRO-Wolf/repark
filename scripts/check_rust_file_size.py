@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1039,
+        1002,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),

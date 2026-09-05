@@ -1,0 +1,128 @@
+# map — python/repark-parity/bench/spill
+
+## Purpose
+
+**H3-SPILL-1** — the Never-OOM truth table. For every operator the engine can plan, under a
+bounded `FairSpillPool`, does it spill, degrade, fail cleanly, or take the process down? The
+harness measures; it changes no product code.
+
+Why the shape it has:
+
+- **One subprocess per cell.** Allocator state, the DataFusion `RuntimeEnv` and the tokio
+  runtime all outlive a session inside one process, so a second cell in the same process is
+  measuring the first cell's arena. Every cell is a fresh `python -m spill.cell_worker`.
+- **A resident-memory watchdog per cell, and an address-space backstop behind it.**
+  `RLIMIT_AS` alone is the wrong instrument here and the first draft of this harness proved
+  it: a worker that has merely built a session and counted a view already reserves **8.2 GiB
+  of virtual address space** against 183 MiB resident (64 tokio worker stacks, arrow and
+  jemalloc arenas), and at a 4 GiB cap `import pyarrow` itself fails to map its own shared
+  objects. A 12 GiB `RLIMIT_AS` therefore left ~3 GiB of usable headroom and killed cells for
+  reasons that had nothing to do with the operator. So the real guard is the parent: it polls
+  `VmHWM` and kills a worker that passes `--rss-cap-bytes` (default 8 GiB), recording
+  `abort_at_cap`. `--as-cap-bytes` (default 32 GiB) stays as a backstop against a pathological
+  virtual allocation. Both caps are written into every record, because an outcome that depends
+  on a limit is meaningless without the limit.
+- **Peak RSS is `VmHWM`, on both sides, and never `ru_maxrss`.** The parent polls
+  `/proc/<pid>/status` at 50 ms; `VmHWM` is a kernel high-water mark, so polling cannot miss a
+  peak that happened between reads, and a worker that aborts still leaves its number behind.
+  The worker reports its own `VmHWM` too and the record takes the larger. It must not report
+  `ru_maxrss`: **rusage is retained across `execve`**, so a child inherits its parent's
+  high-water mark. That is invisible from a small parent and wrong from a large one — the
+  first draft of the pins measured 1,286 MiB for *both* legs of a bounded-vs-unbounded
+  comparison when run inside the 4,800-test facade suite, because both numbers were pytest's.
+- **Outcome comes from metrics, not from wall time.** `EXPLAIN ANALYZE` gives
+  `spill_count` / `spilled_bytes` / `skipped_aggregation_rows` per physical operator, which
+  are deterministic at a chosen pool; wall is recorded beside them but never asserted on.
+- **The answer probe is a second small-output query.** Each roster row carries a
+  `digest_sql` whose result is a handful of rows (counts, checksums, a sort-inversion count),
+  so the wrong-answer check does not itself need the memory the cell is measuring. The driver
+  compares every bounded cell's digest against the unbounded (`pool=none`) run at the same
+  scale, and re-labels a mismatch `wrong`.
+- **Every cell has a content digest, and the kind is disclosed.** A row count is not an
+  answer check — the first draft used `str(rows_out)` for the five `api` rows, which counted
+  `collect()` at 1e7 (the product's largest unbounded allocation) as answer-checked on its row
+  count alone. Every row now carries a real digest and names its kind in `digest_kind`:
+
+  | operator(s) | `digest_kind` | what it hashes |
+  |---|---|---|
+  | every SQL row incl. `repartition` | `engine_checksum` | the row's `digest_sql`: counts, integer checksums, `sum(crc32(...))` over the key columns, a sort-inversion count where order is contractual |
+  | `dynamic_flatten` | `engine_checksum_over_flattened_frame` | `count(*)` + `sum(crc32(...))` over every flattened column |
+  | `iceberg_scan_dv` | `engine_checksum_over_scanned_table` | the same shape over the scanned table |
+  | `merge_staging` | `engine_checksum_over_merged_table` | the same shape over the merged table |
+  | `collect` | `python_row_crc32_sum_and_xor` | per-row `crc32(str(tuple(row)))`, summed mod 2^64 **and** xored, plus the row count — the materialized Python objects, not a query result |
+  | `to_pandas` | `pandas_hash_pandas_object_sum` | `hash_pandas_object(index=False)` summed mod 2^64, plus the frame shape |
+
+  Every one is commutative, so it is order-independent — checked by re-running at 1, 4 and 8
+  target partitions and getting one digest — and every one moves when a row is dropped,
+  duplicated or altered.
+- **Every repeat's digest is kept and checked, not just the first.** Repeats run exactly on the
+  cells whose outcome is unstable, which is exactly where a spilling operator could lose a row,
+  so keeping only the first run's digest would leave the wrong-answer check blind where it
+  matters most. `run_digests` holds one entry per run; a cell whose own runs disagree is
+  `wrong`, and so is one whose runs do not contain the unbounded digest.
+- **Every digest is order-independent or order-forcing, or it is not a digest.** Two traps
+  cost this unit five false `wrong` cells before they were caught. `lag(h) OVER ()` over a
+  sorted subquery does not see a sorted stream — the optimizer drops a sort nothing depends
+  on, so the inversion count came back ~500,004 and varied run to run at a *fixed* pool. The
+  probe now says `lag(h) OVER (ORDER BY h)`, which makes the sort load-bearing. And a `double`
+  sum over 1e7 rows is order-dependent in its last bits, so every float checksum is
+  `sum(cast(s AS bigint))`: integer addition is associative, and `v = id * 1.5` keeps each
+  per-row value exact in a double.
+- **A caught Rust panic is its own outcome (`internal_error`), never `error` and never
+  `clean_error`.** The distinction is the whole point of the row: a bounded pool that answers
+  with a typed refusal is Never-OOM working; one that answers with a panic caught at the
+  Python boundary is not.
+
+## Contents
+
+- `roster.py` — the operator rows, the pool and scale axes, the wide base projection
+  (~120 varied bytes/row, so 1e7 rows exceed 1 GiB).
+- `cell_worker.py` — one cell: cap, session, view, `EXPLAIN ANALYZE`, digest, JSON out.
+  Facade and Iceberg rows (`collect`, `toPandas`, `dynamicFlatten`, the DV scan, the MERGE
+  staging join) run as `api` cells, which have no plan metrics by construction.
+- `plan_metrics.py` — `EXPLAIN ANALYZE` text to per-operator-class counter totals.
+- `measure.py` — the driver: plan, spawn, poll, classify, repeat non-deterministic cells,
+  and rewrite the report after every cell so a crash costs one cell.
+- `models.py` — the pydantic records the report is made of. Round 3: `CellRecord` is `extra="forbid"` again and carries the `lane` field the evidence records.
+- `report.py` — the outcome matrix, the numbers tables and the **digest census** the baseline doc
+  carries. `--section outcomes|numbers` emit their own `### 3.n` / `### 9.n` headings so the
+  document is assembled by concatenation: the first draft sliced the generator's output with
+  `sed` and left a stray heading and a duplicate table inside the appendix. `--section census`
+  computes the answer-coverage arithmetic — how many bounded cells carry a digest, how many run
+  digests that is once repeats are counted, and why each remaining cell has none — so that
+  sentence in the baseline is measured rather than written.
+- `spark_cells.py` — the two or three Apache Spark comparison cells on the same fixture under a
+  bounded `--driver-memory`, with spill read out of the Spark event log. It redirects **file
+  descriptor 2**, not just `sys.stderr`, because the sentence that matters lives in the JVM's
+  output and never reaches the driver: a `collect_list` that dies of
+  `java.lang.OutOfMemoryError` surfaces in Python only as `Job 0 cancelled because SparkContext
+  was shut down`, and publishing the OOM without capturing it would be publishing an inference as
+  a measurement. The event-log directory is wiped per run — a second run into the same directory
+  adds a second `eventlog_v2_*` subtree and silently doubles the spill totals. There is no JVM
+  RSS field: `RUSAGE_CHILDREN` reads 0 on this launch path, and a zero is not a measurement.
+- `map.md` — this file.
+
+pins: h3-spill-1/C-001, C-002, C-003, C-007
+
+## I want to…
+
+| I want to… | Go to |
+|---|---|
+| Run the whole matrix | `measure.py --scratch <dir> --json-out <file>` |
+| Run one operator row | `measure.py --operators sort --scratch <dir> --json-out <file>` |
+| Run one cell by hand | `cell_worker.py --operator sort --pool 64M --scale 1000000 --as-cap-bytes 34359738368 --json-out <file>` |
+| Read the measured matrix | [../../../../docs/perf/spill-matrix-baseline.md](../../../../docs/perf/spill-matrix-baseline.md) |
+| Read the pins | [../../../repark/tests/test_h3_spill_matrix.py](../../../repark/tests/test_h3_spill_matrix.py) |
+
+## Debug
+
+| Symptom | Check |
+|---|---|
+| Every cell `abort_at_cap` at once | `--rss-cap-bytes` below the fixture's own footprint; raise it and re-record |
+| `ImportError: failed to map segment` | `--as-cap-bytes` under the ~8 GiB baseline virtual footprint — that is the floor, not a finding |
+| `spill_count` always 0 under a small pool | the operator has no spill path in DataFusion 54.1 — that is the finding, not a bug in the cell |
+| A cell outlives `--cell-timeout-s` | the worker is killed and recorded `abort`; raise the timeout rather than reading the kill as a defect |
+
+## Pointers
+
+- Up: [../map.md](../map.md)

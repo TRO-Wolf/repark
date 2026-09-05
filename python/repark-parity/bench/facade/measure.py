@@ -75,15 +75,23 @@ def _rows_cells(session: Any, bed: Path, rows: int, iterations: int) -> list[dic
 
 
 def _create_cells(session: Any, bed: Path, iterations: int) -> list[dict[str, Any]]:
-    """``createDataFrame`` controls from tuples and from pandas."""
+    """``createDataFrame`` old-vs-new pairs plus the pandas control."""
     import pyarrow.parquet as pq
 
     table = pq.read_table(str(ensure_fixture(bed, cells.CREATE_ROWS)))
     tuples = [tuple(row.values()) for row in table.to_pylist()]
     frame = table.to_pandas()
     names = list(COLUMNS)
+    nested = cells.build_nested_tuples(cells.CREATE_NESTED_ROWS)
+    nested_names = list(cells.CREATE_NESTED_NAMES)
+    explicit = cells.CREATE_EXPLICIT_DDL
     inner = min(iterations, cells.COLLECT_ITERATIONS)
     return [
+        cells.time_cell(
+            f"create_old/{cells.CREATE_ROWS}/tuples_count",
+            functools.partial(cells.create_with_old_dispatcher, session, tuples, names),
+            iterations=inner,
+        ),
         cells.time_cell(
             f"create/{cells.CREATE_ROWS}/tuples_count",
             lambda: session.createDataFrame(tuples, schema=names).count(),
@@ -92,6 +100,26 @@ def _create_cells(session: Any, bed: Path, iterations: int) -> list[dict[str, An
         cells.time_cell(
             f"create/{cells.CREATE_ROWS}/pandas_count",
             lambda: session.createDataFrame(frame).count(),
+            iterations=inner,
+        ),
+        cells.time_cell(
+            f"create_old/{cells.CREATE_NESTED_ROWS}/nested_count",
+            functools.partial(cells.create_with_old_dispatcher, session, nested, nested_names),
+            iterations=inner,
+        ),
+        cells.time_cell(
+            f"create/{cells.CREATE_NESTED_ROWS}/nested_count",
+            lambda: session.createDataFrame(nested, schema=nested_names).count(),
+            iterations=inner,
+        ),
+        cells.time_cell(
+            f"create_old/{cells.CREATE_ROWS}/explicit_count",
+            functools.partial(cells.create_with_old_dispatcher, session, tuples, explicit),
+            iterations=inner,
+        ),
+        cells.time_cell(
+            f"create/{cells.CREATE_ROWS}/explicit_count",
+            lambda: session.createDataFrame(tuples, schema=explicit).count(),
             iterations=inner,
         ),
     ]

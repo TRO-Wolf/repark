@@ -4358,6 +4358,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   planned statements, a 12-deep chain and eight DataFrame transforms in
   `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §2.
+- **PERF-FACADE-CDF-1** — **FIXED 2026-09-05 (PERF-FACADE-CDF-1)**. `createDataFrame(list of
+  tuples)` normalized every cell in Python across five passes (the cell normalizer, the nested
+  preparer, the merge-refusal walk, the per-row schema check, the Arrow conversion) — 1,657 ms
+  at 1e5 where the same rows from pandas cost 3 ms. Inference and conversion are column-wise
+  now: one `set(map(type, …))` census per column, single-kind scalar columns straight to Arrow,
+  mixed/exotic columns through the unchanged per-cell path, explicit schemas still on the
+  legacy path by dispatch. Identity by construction — every shared rule is the same function
+  object on both paths, and the fast path skips work only where the census proves it a no-op.
+  Same runner, both legs in one process on one release module (load 10.75 → 10.51):
+  `create/100000/tuples_count` **1,656.62 → 70.30 ms** (23.56×, ≤ 100 ms target met 30% under
+  the bar); the nested pair reads 0.96× (the measured delegation cost) and the explicit pair
+  1.00× (identical path by dispatch). The tuple loop also skips the per-row permutation
+  rebuild when the permutation is the identity (~60 ms at 1e5, shared by both legs). Pin:
+  `python/repark/tests/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
+  every case compares Arrow field types, Arrow values and `collect()` by `(type name, repr)`,
+  plus a live leg against PySpark 4.1.2 `createDataFrame`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §4.
 - **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
   `PERF-FACADE-WITHCOLUMN-1` the depth-100 `withColumn` build is 366.11 ms against a 150 ms
   target, and the residue is entirely DataFusion's per-expression projection validation. The
@@ -4418,6 +4435,66 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
+- **PERF-CATALOG-CALLS-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 11; **FIXED
+  2026-09-05** (PERF-ICE-CATALOG-IO-1), narrowly: **the metadata document is fetched once per
+  location, not once per `load_table`.** Every statement re-read the table's `metadata.json`:
+  `strace -f -e trace=openat` with per-statement marker files on a release module, memory
+  catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
+  document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
+  by a session-scoped cache keyed by metadata-file location, built once per session and handed to
+  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
+  reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
+  still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
+  prove reachability before claiming the pointer; creation is not cacheable. (2) The count of
+  catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
+  (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
+  numbers as the knob-off read column, because the cache turns those calls into hits rather than
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
+  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
+  `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
+  Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §1.
+- **PERF-CATALOG-LOADS-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1 (PERF-ANALYSIS-1 §2 row
+  11's other half). **BACKLOG** behind a fork pin bump. A planning round resolves the table twice:
+  `IcebergSchemaProvider::table` → `IcebergTableProvider::try_new` is `load_table` #1 and
+  `TableProvider::scan` is #2, and DML adds its write-side loads — measured through the census counter at
+  SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3, unchanged by `PERF-CATALOG-CALLS-1` (they are
+  now cache hits, not fewer calls). On the memory catalog a round trip is an in-memory map read and costs nothing
+  measurable; on Glue each is a `GetTable`. Also a latent correctness defect: the provider's
+  Arrow `schema` is fixed at `try_new` and DataFusion stores ordinals against it, so a schema
+  change landing between `try_new` and `scan` plans one snapshot against another's ordinals. Fork
+  trigger **F-CATIO-A**: `IcebergSchemaProvider::resolve_table` hands the `Table` it just loaded
+  to the provider it returns and `scan` reuses it, leaving the public `try_new` load-per-scan
+  behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
+  never-committed path override as part of the 120.01 → 11.33 ms cell in
+  `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
+  fork pin bump. The metadata-location cache reaches the memory catalog only:
+  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
+  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
+  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
+  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
+  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
+  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
+  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
+  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
+  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
+  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
+  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
+  `CatalogCaches::trim` empties the cache when the retained-location count passes
+  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
+  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
+  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
+  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
+  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
+  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
+  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
+  bounds within a statement by construction and evicts one entry instead of all of them.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
@@ -5023,6 +5100,61 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
+
+### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
+
+- **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` fails with
+  `PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: partition not
+  used yet (a Rust panic was caught at the Python boundary; this is a bug — please report it)`.
+  The panic is DataFusion 54.1's own `expect("partition not used yet")` at
+  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
+  side (`ProjectionExec` over `RepartitionExec`): each output partition removes its channel from
+  the shared state, so a second `execute` of the same partition finds nothing, and something on
+  the pool-refusal path re-executes it. Reproducible three runs of three, and again at 64 MiB with
+  1e7 rows. The process survives (`panic = unwind`, caught by the boundary fence) and the session
+  stays usable; a 1 GiB pool on the same query is `ok`. **Every other operator measured at the
+  same 8 MiB pool — sort, hash aggregate, distinct, hash join, sort-merge join, window,
+  `array_agg`, TopK — returns a clean typed `Resources exhausted`.** This is the plan shape, not
+  the pool machinery.
+- **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
+  raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
+  is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
+  `sort` and `hash_join`, in the baseline's §5.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. The defect is upstream in DataFusion,
+  so this unit pins the behaviour rather than patching a dependency; the repark-side deliverable
+  is the reproducer the pin already is. It is the **only** Never-OOM contract failure in the
+  180-cell matrix: a bounded pool must answer with a typed refusal, never a panic.
+
+### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit panics instead of raising `MemoryError`
+
+- **repark** — with `RLIMIT_AS` set 256 MiB above the session's own `VmSize`, `collect()` over a
+  4e6-row five-column frame fails with `PySparkException: repark internal error in
+  collect_rows.rows_from_record_batch: PyObject pointer is null (a Rust panic was caught at the
+  Python boundary; this is a bug — please report it)`. A CPython allocation returned `NULL` and
+  the row fast path panicked rather than surfacing the `MemoryError` CPython had already set.
+  With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
+  cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
+  value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
+  `collect()` is 4,393-4,471 MiB resident at every pool from unbounded down to 64 MiB, and returns
+  the identical content digest at each.
+- **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
+  `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
+  a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
+  the failure shape. Measured in §5: Spark's own `collect_list` at a 1 GiB driver heap dies with
+  `java.lang.OutOfMemoryError: Java heap space` — quoted from the JVM's own captured stderr, not
+  inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
+  the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the
+  pointer and raise `MemoryError`. It is the difference between "repark reports it is out of
+  memory" and "repark reports a bug", and a container memory limit is the ordinary way a user
+  meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
+  nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
+  Never-OOM claim.
 
 ## 8. Drop-in disclosure rationale
 

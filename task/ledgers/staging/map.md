@@ -12,6 +12,49 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/types-1`. §10: narrowing after `TypeCoercion` with a
   closing pass, `LIMIT` exempt, plain-`INSERT` conform; `make verify` green.
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
+  **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
+  5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory
+  watchdog: **zero aborts, zero wrong answers**, and 115 of the 144 bounded cells carrying a
+  disclosed content digest that equals the unbounded run (163 run digests once repeats are
+  counted). Pins only — no product code changed. Round 2 answered eight critic findings, all
+  about what the matrix checked and claimed rather than what it measured — a row count is not an
+  answer digest, a repeat's digest must not be discarded, and a published error string must be
+  one that was recorded. Two failure-shape defects filed as §7 BACKLOG rows
+  with pins that red when fixed: `H3-SPILL-NLJ-1` (a nested-loop join at a tight pool answers
+  with a caught Rust panic from DataFusion's `RepartitionExec`) and `H3-SPILL-COLLECT-1`
+  (`collect()` under an address-space limit panics on a null `PyObject` instead of raising
+  `MemoryError`). The document's honest limit is §2: windows, `Unnest`, the Iceberg scan and the
+  facade boundary take no pool reservation at all, so no pool bounds them. `risk_tier: standard`.
+  Branch `harden/h3-spill-1`.
+  pins: h3-spill-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
+  **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
+  Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once
+  per session and handed to every **memory** catalog it builds, behind `repark.iceberg.metadataCache`
+  (default on) and `repark.iceberg.metadataCacheEntries` (default 512, a high-water clear at the
+  statement door). `metadata.json` READS fall from 2 (SELECT) and 3–6 (DML) to **0 on every
+  statement that reads an existing table** — the analysis' §7.6 TOTALS split into reads and the
+  commit's own write, reads + writes reproducing §7.6 exactly. `CREATE TABLE` and CTAS still read
+  1 with the knob on and off: creation is not cacheable. `PERF-CATALOG-CALLS-1` FIXED **narrowly**
+  — the metadata document is fetched once per location; the count of catalog round trips per
+  statement is UNCHANGED, and Glue / S3 Tables are NOT wired at all.
+  Fork-gated and NOT shipped, one registry row each: one load per planning round
+  (`PERF-CATALOG-LOADS-1` / `F-CATIO-A`), the shared path-keyed manifest cache
+  (`PERF-ICE-MANIFEST-1` / `F-CATIO-B`), the Glue and S3 Tables metadata cache
+  (`PERF-CATALOG-AWS-CACHE-1` / `F-CATIO-AWS`) and a bounded LRU inside the fork's cache
+  (`PERF-CATALOG-CACHE-BOUND-1` / `F-CATIO-BOUND`). A and B are implemented and test-green in
+  `$HOME/repark-lanes/lanes/catio-fork` and measured through a temporary, never-committed path
+  override: `t_many` second-statement `count_id` **120.01 → 11.33 ms** (target ≤ 20) with a
+  repeated read opening no manifest at all. Three pins SKIP naming their ask;
+  `git diff origin/main -- Cargo.toml Cargo.lock` empty.
+  Risk-first: **twelve** Rust pins on two doors over ONE catalog plus **thirteen** always-run
+  Python legs, green before and after, with a **six**-mutation score (two of them escapes that
+  were closed). **Round 2** (Opus critic) reproduced the engine independently and found no stale
+  read or lost write; its eleven findings were all claim, scope and filing, and each is dispositioned
+  in the ledger's "Round 2 — review gaps" table. `risk_tier: elevated`. Branch
+  `perf/ice-catalog-io-1`.
+  pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45
@@ -240,3 +283,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
   `fix/cutover-schema-1`.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [perf-facade-cdf-1-ledger.md](perf-facade-cdf-1-ledger.md) —
+  **PERF-FACADE-CDF-1 (2026-09-05), in flight:** PERF-ANALYSIS-1 candidate 2 —
+  `createDataFrame(list of tuples)` stops normalizing every cell in Python five times and
+  infers + converts column-wise, with nested columns delegated to the unchanged per-cell
+  path. Target `create/100000/tuples_count` ≤ 100 ms. `risk_tier: standard`. Branch
+  `perf/facade-cdf-1`.
+  pins: perf-facade-cdf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
