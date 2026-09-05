@@ -95,7 +95,7 @@ def test_live_dynflatten_matches_spark_explode(
     assert "user_properties" not in left.column_names
     assert "user_properties" in right.column_names
     assert right.schema.field("user_properties").type == pa.int32()
-    assert left.schema.field("id").nullable is False
+    assert left.schema.field("id").nullable is True
     assert right.schema.field("id").nullable is True
     widened = left.cast(pa.schema([field.with_nullable(True) for field in left.schema]))
     assert_frames_equal(widened, right.drop(["user_properties"]), order_sensitive=False)

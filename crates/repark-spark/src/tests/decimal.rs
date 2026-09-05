@@ -203,7 +203,10 @@ async fn pin_int_times_decimal_is_12_2_i128() {
     )
     .await;
     assert_eq!((precision, scale), (12, 2), "U3 fromLiteral width");
-    assert!(!nullable, "repark marks int×decimal non-null (DEC-9)");
+    assert!(
+        nullable,
+        "int×decimal nullable like Spark (overflow-exposed operand cast; CUTOVER-SCHEMA-1)"
+    );
     assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
 }
 
@@ -320,8 +323,8 @@ async fn pin_mul_single_digit_nullability_non_null_i128() {
     .await;
     assert_eq!((precision, scale), (3, 0), "result (p,s)");
     assert!(
-        !nullable,
-        "repark marks the product non-null (Spark: nullable)"
+        nullable,
+        "product nullable like Spark (overflow-exposed (1,0) casts; CUTOVER-SCHEMA-1)"
     );
     assert_eq!(value, Some(81), "i128 value 81 at scale 0");
 }

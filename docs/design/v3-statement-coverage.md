@@ -55,7 +55,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `create-v3-bucket-transform` | create | `CREATE TABLE t (id INT, name STRING, part INT) USING iceberg PARTITIONED BY (bucket(4, id)) TBLPROPERTIES ('format-…` | — | 2 | as Spark | as Spark | **EQUAL** | — |
 | `create-v3-write-order` | create | `CREATE TABLE t (id INT, name STRING) USING iceberg TBLPROPERTIES ('format-version' = '3') WRITE ORDERED BY id` | — | 1 | parse-refuses | parse-refuses | **REFUSED** | — |
 | `create-v3-properties` | create | `CREATE TABLE t (id INT, name STRING) USING iceberg TBLPROPERTIES ('format-version' = '3', 'write.delete.mode' = 'me…` | — | 2 | stores the three `write.*` keys the DDL set | adds `write.parquet.compression-codec = zstd` | **DIVERGES** | `V3-COV-7` |
-| `ctas-v3` | create | `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS id, 'a' AS name` | — | 2 | derives `id: long, required` | derives `id: int, optional` | **DIVERGES** | `V3-COV-8` |
+| `ctas-v3` | create | `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS id, 'a' AS name` | — | 2 | derives `id: long, optional` | derives `id: int, optional` | **DIVERGES** | `V3-COV-8` |
 | `insert-into` | insert | `INSERT INTO t VALUES (5, 'e')` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-into-select` | insert | `INSERT INTO t SELECT id + 10, name FROM t` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-overwrite-table` | insert | `INSERT OVERWRITE t VALUES (9, 'z')` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |

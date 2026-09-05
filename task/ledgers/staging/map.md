@@ -28,6 +28,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   tail-only 1e-9 control was blind to the NaN prefix), the 24 helper docstrings are stripped to
   house form, and the red-first re-run (four mutations) all exit 1. `risk_tier: standard`. Branch
   `docs/ex-23-ta-a`. pins: ex-23-ta-a/C-001, C-002, C-003, C-004
+- [win-slide-1-ledger.md](win-slide-1-ledger.md) — **WIN-SLIDE-1 (2026-09-04), in flight:** the
+  thirteen aggregates that refused over a sliding frame now answer Spark-equal on both doors.
+  One mechanism, not thirteen: a `sliding_frame_rescan` analyzer rule on every core session
+  re-evaluates the frame per row into a fresh accumulator when DataFusion's sliding accumulator
+  cannot retract — by capability, so a future aggregate never refuses. The physical `WindowExpr`
+  route is closed in DF 54.1 (`WindowFn` is unexported) and §7.2 names the gap. Two door bugs
+  found and fixed on the way (`WIN-RANGE-DF-1`, `WIN-COLLECT-DOOR-1`) and the frame case of the
+  `percentile_approx` accuracy divergence filed (`WIN-SLIDE-PCT-ACC-1`). `risk_tier: standard`.
+  Branch `feat/win-slide-1`.
+  pins: win-slide-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ex-21-catalog-session-ledger.md](ex-21-catalog-session-ledger.md) —
   **EX-21 (2026-09-04, r2), in flight:** the v1.1 example backfill's `Catalog.*` remainder +
   `SparkSession` surface (a) batch — 35 roster names at base `b5b17f0`; 34 covered by sixteen
@@ -215,3 +225,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-measured every number with it, because the first baseline's probes were untracked.
   `risk_tier: standard`. Branch `perf/facade-1`.
   pins: perf-facade-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [cutover-schema-1-ledger.md](cutover-schema-1-ledger.md) —
+  **CUTOVER-SCHEMA-1 (2026-09-04), in flight:** nullability derived the way Spark
+  derives it — reader relax, CTAS all-optional on both doors, decimal-cast analyzer
+  rule, export-boundary Utf8 coercion. Closes `CUTOVER-CTAS-REQ-1` and
+  `CUTOVER-DEDUP-SCHEMA-1`, the nullability half of `V3-COV-8`, converges
+  `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
+  `fix/cutover-schema-1`.
+  pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006

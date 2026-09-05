@@ -94,6 +94,12 @@ pins: rp-4-fork-repin/C-005, C-006
   expression subqueries, R-B) is tighten-derived AND the output has a
   non-nullable field (R-D), or the output schema still carries the tag. The
   write-boundary relax is PR-D2 (via the same source walk).
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the derived Arrow schema relaxes to all-nullable
+  before Iceberg conversion, so CTAS stores every column optional the way Spark does —
+  including provably non-null `SELECT coalesce(x, 0)` outputs. The SE-1 refusal checks
+  run first on the un-relaxed schema and still fire; only the derived table schema
+  relaxes, never the written batches.
+  pins: cutover-schema-1/C-002
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and

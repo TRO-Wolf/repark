@@ -114,7 +114,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
   pins: fn-fix-2-string-rows/C-002
@@ -460,8 +460,13 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   int64 `approx_count_distinct`, fifteen planning-absent names after FNP-7
   removed `try_avg`, result model fields, scratch delete in `finally`, no
   retry on the error path, WIN-SLIDE registry headings).
+  **WIN-SLIDE-1 (2026-09-04):** the thirteen moved from `REFUSING_SLIDING_NAMES` (now empty) to
+  `RESCANNED_SLIDING_NAMES`; two pins were added —
+  `test_every_rescanned_name_has_a_fixed_registry_row` (each name keeps its `WIN-SLIDE-<name>`
+  heading, now carrying `FIXED 2026-09-04 (WIN-SLIDE-1)`) and
+  `test_the_frozen_sliding_refuse_set_is_empty`.
   pins: w-0-window-bench/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011;
-  fnp-7-try-inversions/C-012.
+  fnp-7-try-inversions/C-012; win-slide-1/C-008.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an
