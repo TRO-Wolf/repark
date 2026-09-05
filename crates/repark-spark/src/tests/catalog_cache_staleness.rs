@@ -280,6 +280,43 @@ async fn a_dropped_and_recreated_table_is_never_served_from_the_old_location() {
 
 /// pins: perf-ice-catalog-io-1/C-002
 #[tokio::test]
+async fn a_table_is_never_served_a_sibling_tables_cached_metadata() {
+    let wh = TempDir::new().unwrap();
+    let caches = CatalogCaches::default();
+    let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
+    register_source(&ctx, "other", &[(40, "x"), (50, "y"), (60, "z"), (70, "w")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.u AS SELECT * FROM other",
+    )
+    .await;
+
+    run(&ctx, &catalogs, "SELECT id FROM ice.sales.u").await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.u VALUES (80, 'v')").await;
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.u").await,
+        vec![40, 50, 60, 70, 80]
+    );
+    assert!(
+        caches.metadata_len() >= 2,
+        "both tables must be cached for this pin to mean anything"
+    );
+}
+
+/// pins: perf-ice-catalog-io-1/C-002
+#[tokio::test]
 async fn an_unchanged_pointer_costs_no_metadata_body_fetch() {
     let wh = TempDir::new().unwrap();
     let caches = CatalogCaches::default();
