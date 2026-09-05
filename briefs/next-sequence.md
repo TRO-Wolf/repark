@@ -37,7 +37,7 @@ Restated for a mixed queue:
 | 3 | **PERF-DYNFLATTEN-2 residue** — `DYNFLATTEN-LISTNULL-1` / `DYNFLATTEN-READNULL-1`, the two null rows left | Performance | PERF-DYNFLATTEN-2 (built) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
 | 4 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
 | 5 | **Cutover canary C2–C6** — the shadow week on `<ns>_silver_repark`, then the writer flip | Cutover | CUTOVER-SCHEMA-1, pipeline-side SHADOW-1 | STANDARD <!-- unit id=cutover-inventory --> |
-| 6 | **H-3 spill matrix** — Never-OOM truth: which operators spill, and how each fails past the pool | Hardening | none (measure-only) | STANDARD <!-- unit id=h-3-spill --> |
+| 6 | **H3-SPILL residue** — `H3-SPILL-NLJ-1` (a caught DataFusion panic where a refusal belongs) and `H3-SPILL-COLLECT-1` (`collect()` past the address space panics, not `MemoryError`) | Hardening | H3-SPILL-1 (measured) | STANDARD <!-- unit id=h-3-spill --> |
 | 7 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
 | 8 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
 
@@ -72,8 +72,8 @@ and the four rulings are taken; C2 starts when the schema unit and the shadow DA
 <!-- /unit -->
 
 <!-- unit id=h-3-spill -->
-**Why the H-3 spill matrix.** Never-OOM is pending this measurement. Pins only; no product
-change.
+**Why the H-3 residue.** The matrix is measured (180 cells, 0 aborts, 0 wrong); the two
+failure shapes it filed are the remaining Never-OOM work.
 <!-- /unit -->
 
 <!-- unit id=fnp-9-10 ledger=fnp-9- -->
