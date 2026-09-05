@@ -21,6 +21,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   facade boundary take no pool reservation at all, so no pool bounds them. `risk_tier: standard`.
   Branch `harden/h3-spill-1`.
   pins: h3-spill-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-2-ledger.md](perf-ice-catalog-io-2-ledger.md) —
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05), in flight:** the RePark side of CATALOG-IO part 3 at fork
+  pin `79119643` (RP-12). A session key `repark.iceberg.manifestCacheBytes` (alias
+  `repark.iceberg.manifest_cache_bytes`, default ON at 32 MiB, `0` disables) sizes the fork's
+  shared manifest `ObjectCache` for the memory catalog; every table the catalog loads shares the
+  one cache. The part-3 pin un-skips (`t_many` second-statement `count_id` ≤ 20 ms); the staleness
+  battery re-runs with the cache on; the byte bound is the fork's moka `max_capacity`. Glue and
+  S3 Tables are NOT wired (their builders have no such method at the pin). `risk_tier: standard`.
+  Branch `perf/ice-catalog-io-2`.
 - [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
   **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
   Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once
