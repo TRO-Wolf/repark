@@ -1,0 +1,138 @@
+<title>Eight Merges and a Halt</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --chip-green-bg:#E3F2E8; --chip-green-ink:#1E6B3A;
+    --chip-amber-bg:#FBF0DC; --chip-amber-ink:#8A5E0C; --chip-hold-bg:#E8E3F2; --chip-hold-ink:#4A3A8A;
+    --chip-guard-bg:#F2E3E3; --chip-guard-ink:#8A2E2E; --mono-bg:#EAF1F5; --bar:#CFE6EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+      --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+      --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --chip-green-bg:#173324; --chip-green-ink:#7CD9A0;
+    --chip-amber-bg:#332A14; --chip-amber-ink:#E5C071; --chip-hold-bg:#221D38; --chip-hold-ink:#B0A2E8;
+    --chip-guard-bg:#331B1B; --chip-guard-ink:#E89B9B; --mono-bg:#1B2830; --bar:#1F3A45;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;margin:0;}
+  main{max-width:960px;margin:0 auto;padding:40px 24px 72px;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;text-wrap:balance;line-height:1.15;margin:0;}
+  h1{font-size:40px;font-weight:700;letter-spacing:-.01em;}
+  h2{font-size:22px;font-weight:600;margin-top:8px;}
+  h3{font-size:16px;font-weight:600;}
+  p{max-width:68ch;margin:10px 0 0;}
+  .kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:32px 0 0;}
+  .lede{font-size:17px;color:var(--ink-2);max-width:66ch;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:22px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;}
+  .stat .n{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;color:var(--teal);font-variant-numeric:tabular-nums;}
+  .stat .l{font-size:12px;color:var(--ink-2);margin-top:6px;letter-spacing:.02em;}
+  .tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);}
+  table{border-collapse:collapse;width:100%;font-size:14px;}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:0;}
+  th{font-family:"IBM Plex Sans Condensed",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);font-weight:600;}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .mono,code{font-family:"IBM Plex Mono",monospace;font-size:13px;background:var(--mono-bg);padding:1px 5px;border-radius:4px;}
+  .chip{display:inline-block;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:600;font-size:12px;letter-spacing:.03em;padding:1px 8px;border-radius:10px;white-space:nowrap;}
+  .green{background:var(--chip-green-bg);color:var(--chip-green-ink);}
+  .amber{background:var(--chip-amber-bg);color:var(--chip-amber-ink);}
+  .hold{background:var(--chip-hold-bg);color:var(--chip-hold-ink);}
+  .guard{background:var(--chip-guard-bg);color:var(--chip-guard-ink);}
+  .callout{margin-top:14px;border-left:4px solid var(--teal);background:var(--card);border-radius:0 6px 6px 0;padding:14px 18px;}
+  .callout h3{color:var(--teal-2);}
+  .callout p{max-width:72ch;}
+  ul{margin:8px 0 0;padding-left:20px;max-width:72ch;}
+  li{margin:4px 0;}
+  .bar{height:8px;background:var(--bar);border-radius:4px;position:relative;margin-top:6px;}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--teal);border-radius:4px;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;}
+  @media (max-width:720px){.two{grid-template-columns:1fr;} h1{font-size:32px;}}
+  .foot{margin-top:40px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);padding-top:14px;}
+</style>
+<main>
+  <div class="kicker" style="margin-top:0">RePark · status board · Saturday 2026-09-05, 16:00 EDT</div>
+  <h1>Eight Merges and a Halt</h1>
+  <p class="lede">The perf slate is most of the way through: the catalog stops re-reading metadata, CTAS writes in parallel, createDataFrame is 23× faster, avg groups like sum. The day also survived a full disk, and a Muse worker halted on a real defect in the fork's new shared cache instead of shipping around it.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">8</div><div class="l">RePark PRs merged today</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">fork PRs merged (F-CATIO, F-28)</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">PRs in review (#386, #387, fork #270)</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">unit still building (ICE-SCAN)</div></div>
+    <div class="stat"><div class="n">79119643</div><div class="l">fork pin on main (RP-12)</div></div>
+  </div>
+
+  <div class="kicker">Landed on main today</div>
+  <h2>Every merge carried a critic PASS and green CI</h2>
+  <div class="tablewrap"><table>
+    <tr><th>PR</th><th>Unit</th><th>What changed</th><th>Measured</th><th>Rounds</th></tr>
+    <tr><td class="num">#378</td><td>H3-SPILL-1</td><td>The Never-OOM truth table: 180 cells (18 operators × 5 pools × 2 scales), content digests, two failure shapes filed.</td><td class="num">0 aborts, 0 wrong answers</td><td class="num">3</td></tr>
+    <tr><td class="num">#379</td><td>PERF-ICE-CATALOG-IO-1</td><td>A session-scoped metadata cache; evict on commit and on drop; one table load per planning round through the fork.</td><td class="num">2–6 → 0 metadata reads per statement</td><td class="num">3</td></tr>
+    <tr><td class="num">#380</td><td>PERF-ICE-WRITEPATH-1</td><td>CTAS writes one parquet file per input partition on the executor's threads; content-ordered commits; precondition-gated abort sweep.</td><td class="num">ctas 1,385 → 135 ms · partitioned 4,902 → 293 ms</td><td class="num">4</td></tr>
+    <tr><td class="num">#383</td><td>PERF-AGG-AVG-1</td><td>A GroupsAccumulator for avg and try_avg (float and decimal 32–256); retract path untouched; two divergence rows owned.</td><td class="num">avg 4.45× → 1.22× of sum</td><td class="num">3</td></tr>
+    <tr><td class="num">#384</td><td>PERF-FACADE-CDF-1</td><td>createDataFrame(list of tuples) infers and converts column-wise; every refusal text preserved; 6,000-case fuzz clean.</td><td class="num">1,657 → 70 ms at 1e5 rows</td><td class="num">2</td></tr>
+    <tr><td class="num">#385</td><td>RP-12 pin bump</td><td>Consumes fork F-26 and F-CATIO; the V1-GATE meta-pin now reads the audited pin from the fork-sync history.</td><td class="num">189a73ed → 79119643</td><td class="num">1</td></tr>
+    <tr><td class="num">#381 #382</td><td>fixes and status</td><td>The unix_timestamp clock flake; STATUS records the measured Never-OOM entry.</td><td class="num">—</td><td class="num">1</td></tr>
+  </table></div>
+  <p>Fork side: #268 (one table load per round, shared manifest ObjectCache API) and #269 (Arrow-kernel partition splitter, all 14 result types property-tested) merged; the fork main is 16639b87c.</p>
+
+  <div class="kicker">In review</div>
+  <h2>Three PRs, one unit still building</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Item</th><th>State</th><th>Where it stands</th></tr>
+    <tr><td>#386 TYPES-1</td><td><span class="chip amber">round 4</span></td><td>Spark-door Arrow types follow Spark: INT literals, count and sum widths, the rank family, from_unixtime. Nine of nine clauses proven on the live oracle. The critic found a wrapping multiply in from_unixtime for out-of-range seconds and a ledger row describing a change that does not exist; Muse is on both, plus nine smaller items. Two AGG-AVG pins also need their key column retyped int32, which is Spark's answer.</td></tr>
+    <tr><td>#387 CATALOG-IO-2</td><td><span class="chip amber">critic running</span></td><td>The session key that sizes the fork's shared manifest cache. Shipped default OFF by ruling (see the halt); with the knob set, the 193-manifest read goes 116 → 11 ms. Detector pins red when the fork fix lands. CI is re-running after the wall-clock pin was gated to release builds.</td></tr>
+    <tr><td>fork #270 F-CATIO-KEY</td><td><span class="chip green">CI green · critic running</span></td><td>The fork fix: the cache stores the context-free parse and applies each caller's list-entry inheritance and row-id assignment per read.</td></tr>
+    <tr><td>PERF-ICE-SCAN-1</td><td><span class="chip hold">building on Muse</span></td><td>count(*) stops decoding every column on Iceberg; small tables scan in parallel. Fork half F-27 plus the RePark pins; targets count(*) ≤ 5 ms at 1e6 (was 93).</td></tr>
+  </table></div>
+
+  <div class="callout">
+    <h3>The halt: a shared cache that remembered the wrong caller</h3>
+    <p>The fork's new shared manifest cache keys a parsed manifest by its path. But the parsed object is not a pure function of the file: after parsing, the fork stamps each entry with the caller's manifest-list context, including the row-id range a v3 table assigns. A v2 table carries no range; after an upgrade to v3 the same manifest path carries one. First parse wins, so a v2-context read poisoned every later v3 lineage read of that path, and four upgrade tests answered NULL row ids with the cache on.</p>
+    <p>The Muse worker stopped and filed it rather than pin around it. The ruling was to ship the RePark side with the cache off by default plus pins that turn red when the fork is fixed, and to fix the fork in parallel. The fix is up as fork #270 with CI green; the default-ON flip is a follow-up after the next pin bump.</p>
+  </div>
+
+  <div class="two">
+    <div>
+      <div class="kicker" style="margin-top:0">Operations</div>
+      <h3 style="margin-top:8px">What the day cost</h3>
+      <ul>
+        <li><b>Disk full.</b> The 1.8 TB drive hit 100% mid-afternoon; three Muse workers died silently and were relaunched from their committed branches. 345 GB reclaimed from merged lanes' build dirs; a low-space monitor is armed at 40 GB.</li>
+        <li><b>Standard pattern restored.</b> Every unit since the Opus window ran on Muse Spark 1.3 at max effort with Opus critics; the only Opus actor left was WRITEPATH's residue rounds.</li>
+        <li><b>Comment leaks caught before push.</b> Twelve <span class="mono">/// pins:</span> lines, unforced summaries and eight Muse comments were swept into map files; the orchestrator's pre-push grep stays.</li>
+        <li><b>Two CI lessons.</b> Wall-clock pins must skip on debug builds (the wheel smoke runner is debug); a literal-typing change on main flips sibling pins' expected dtypes.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="kicker" style="margin-top:0">Next</div>
+      <h3 style="margin-top:8px">The queue, in order</h3>
+      <ul>
+        <li>Merge #387 and fork #270 on PASS; #386 after round 4 and an executing critic.</li>
+        <li>RP-13 pin bump: F-27 (from ICE-SCAN), F-28, F-CATIO-KEY in one PR, then the default-ON flip for the manifest cache.</li>
+        <li>NULLABILITY-2 and PERF-APPROXPCT-1 (briefs written; lanes next), then WRITE-DISTRIBUTION-1 and the remaining perf residues.</li>
+        <li>Examples backlog: 213 of 913 left (functions long tail 127, ml 28).</li>
+      </ul>
+      <div class="kicker">Perf slate</div>
+      <div class="bar"><i style="width:67%"></i></div>
+      <p style="font-size:13px;margin-top:6px">6 of 9 slate items landed; ICE-SCAN building, APPROXPCT and the cache default-ON flip queued.</p>
+    </div>
+  </div>
+
+  <div class="kicker">Your calls</div>
+  <h2>Three things only the owner decides</h2>
+  <ul>
+    <li><b>Disk.</b> The live checkout's <span class="mono">target/</span> is 217 GB and timeshift holds 683 GB on the same drive. A <span class="mono">cargo clean</span> there is yours to run; nothing of the campaign's touches either.</li>
+    <li><b>SHADOW-1.</b> The daily shadow-diff Airflow task is still an uncommitted patch in the pipeline repo, waiting on your review and the worker image (repark wheel plus credentials).</li>
+    <li><b>#376 briefs.</b> The engine, SEPMO, performance and safety implementation briefs are your open docs PR; the campaign has not touched it.</li>
+  </ul>
+
+  <div class="foot">Sources: the merged PR list on TRO-Wolf/repark and TRO-Wolf/iceberg-rust, the unit ledgers under task/ledgers, and docs/perf baselines. Numbers are medians on release builds unless a row says otherwise; the CTAS pair is quoted on the pinned fork at load 8–14.</div>
+</main>
