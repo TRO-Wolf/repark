@@ -5067,13 +5067,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
   cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
   value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
-  `collect()` is 4,459 MiB resident at every pool from unbounded down to 64 MiB.
+  `collect()` is 4,393-4,471 MiB resident at every pool from unbounded down to 64 MiB, and returns
+  the identical content digest at each.
 - **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
   `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
   a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
   the failure shape. Measured in §5: Spark's own `collect_list` at a 1 GiB driver heap dies with
-  `java.lang.OutOfMemoryError: Java heap space` and takes the SparkContext down, which is worse
-  than repark's typed refusal on the same operator.)*
+  `java.lang.OutOfMemoryError: Java heap space` — quoted from the JVM's own captured stderr, not
+  inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
+  the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
 - **Pin** —
   `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
 - **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the

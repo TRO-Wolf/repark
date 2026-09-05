@@ -84,9 +84,22 @@ Why the shape it has:
 - `measure.py` — the driver: plan, spawn, poll, classify, repeat non-deterministic cells,
   and rewrite the report after every cell so a crash costs one cell.
 - `models.py` — the pydantic records the report is made of.
-- `report.py` — the outcome matrix and numbers tables the baseline doc carries.
-- `spark_cells.py` — the two or three Apache Spark comparison cells on the same fixture
-  under a bounded `--driver-memory`, with spill read out of the Spark event log.
+- `report.py` — the outcome matrix, the numbers tables and the **digest census** the baseline doc
+  carries. `--section outcomes|numbers` emit their own `### 3.n` / `### 9.n` headings so the
+  document is assembled by concatenation: the first draft sliced the generator's output with
+  `sed` and left a stray heading and a duplicate table inside the appendix. `--section census`
+  computes the answer-coverage arithmetic — how many bounded cells carry a digest, how many run
+  digests that is once repeats are counted, and why each remaining cell has none — so that
+  sentence in the baseline is measured rather than written.
+- `spark_cells.py` — the two or three Apache Spark comparison cells on the same fixture under a
+  bounded `--driver-memory`, with spill read out of the Spark event log. It redirects **file
+  descriptor 2**, not just `sys.stderr`, because the sentence that matters lives in the JVM's
+  output and never reaches the driver: a `collect_list` that dies of
+  `java.lang.OutOfMemoryError` surfaces in Python only as `Job 0 cancelled because SparkContext
+  was shut down`, and publishing the OOM without capturing it would be publishing an inference as
+  a measurement. The event-log directory is wiped per run — a second run into the same directory
+  adds a second `eventlog_v2_*` subtree and silently doubles the spill totals. There is no JVM
+  RSS field: `RUSAGE_CHILDREN` reads 0 on this launch path, and a zero is not a measurement.
 - `map.md` — this file.
 
 pins: h3-spill-1/C-001, C-002, C-003, C-007

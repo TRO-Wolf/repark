@@ -8,8 +8,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) —
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory
-  watchdog: **zero aborts, zero wrong answers**, 72 bounded answers all equal to the unbounded
-  run. Pins only — no product code changed. Two failure-shape defects filed as §7 BACKLOG rows
+  watchdog: **zero aborts, zero wrong answers**, and 115 of the 144 bounded cells carrying a
+  disclosed content digest that equals the unbounded run (163 run digests once repeats are
+  counted). Pins only — no product code changed. Round 2 answered eight critic findings, all
+  about what the matrix checked and claimed rather than what it measured — a row count is not an
+  answer digest, a repeat's digest must not be discarded, and a published error string must be
+  one that was recorded. Two failure-shape defects filed as §7 BACKLOG rows
   with pins that red when fixed: `H3-SPILL-NLJ-1` (a nested-loop join at a tight pool answers
   with a caught Rust panic from DataFusion's `RepartitionExec`) and `H3-SPILL-COLLECT-1`
   (`collect()` under an address-space limit panics on a null `PyObject` instead of raising

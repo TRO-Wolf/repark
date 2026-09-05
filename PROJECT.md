@@ -37,9 +37,12 @@ the dialect layers are thin translators.
   shifted to 1.1–1.4 when v1.0.0 cut at the north-star gate on 2026-09-03) lives in
   [task/roadmap/epic-term/release-roadmap-2026-08-29.md](task/roadmap/epic-term/release-roadmap-2026-08-29.md).
 - Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
-- Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM" claim
-  is pending a spill-coverage spike — DataFusion's operator spill coverage is partial; the honest
-  goal today is "spills where the engine can, documented where it cannot".*)
+- Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM"
+  claim is measured, not assumed: DataFusion's operator spill coverage is partial, so the honest
+  goal is "spills where the engine can, documented where it cannot", and the document is the
+  180-cell truth table in [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md)
+  — which operators spill, which refuse cleanly, and which take no memory-pool reservation at
+  all and so are not bounded by the pool.*)
 - Zero-copy interop — anything that speaks Arrow is a first-class citizen.
 - Reproducibility: same query + same snapshot = same bytes, every time.
 - **TA serving performance at parity with `polars_talib`** on the shapes that matter

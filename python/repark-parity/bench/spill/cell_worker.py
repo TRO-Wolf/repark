@@ -148,13 +148,27 @@ def rows_digest(collected: list[Any]) -> str:
     return f"rows:{len(collected)}:{total}:{parity}"
 
 
+PANDAS_DIGEST_CHUNK: int = 100_000
+
+
 def pandas_digest(frame: Any) -> str:
-    """Order-independent content digest of a pandas frame via `hash_pandas_object`."""
+    """Order-independent content digest of a pandas frame, hashed in row chunks.
+
+    Chunked because the probe must not distort the cell it measures: hashing a 1e7-row frame
+    whole took the worker past the 8 GiB resident cap, so the matrix would have recorded the
+    digest's memory as the operator's.
+    """
     from pandas.util import hash_pandas_object
 
-    hashed = hash_pandas_object(frame, index=False).values.astype("uint64")
-    total = int(hashed.sum(dtype="uint64"))
-    return f"pandas:{frame.shape[0]}:{frame.shape[1]}:{total}"
+    rows = int(frame.shape[0])
+    total = 0
+    for start in range(0, max(rows, 1), PANDAS_DIGEST_CHUNK):
+        chunk = frame.iloc[start : start + PANDAS_DIGEST_CHUNK]
+        if chunk.shape[0] == 0:
+            continue
+        hashed = hash_pandas_object(chunk, index=False).to_numpy(dtype="uint64")
+        total = (total + int(hashed.sum(dtype="uint64"))) & 0xFFFFFFFFFFFFFFFF
+    return f"pandas:{rows}:{int(frame.shape[1])}:{total}"
 
 
 def engine_checksum(session: Any, target: str) -> str:

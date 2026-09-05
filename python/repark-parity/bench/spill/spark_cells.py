@@ -6,7 +6,7 @@ import argparse
 import contextlib
 import json
 import os
-import resource
+import shutil
 import sys
 import time
 from collections.abc import Iterator
@@ -25,11 +25,6 @@ BASE_SELECT: str = (
     "concat(md5(cast(id AS string)), md5(cast(id + 1 AS string))) AS payload, "
     "cast(id AS double) * 1.5 AS v FROM RANGE({rows})"
 )
-
-
-def jvm_peak_rss_bytes() -> int:
-    """Peak resident set of the reaped JVM child in bytes; 0 until `spark.stop()` reaps it."""
-    return resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss * 1024
 
 
 ERROR_MARKERS: tuple[str, ...] = (
@@ -138,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json-out", type=Path, required=True)
     args = parser.parse_args(argv)
     event_log_dir = Path(args.scratch) / f"events-{args.cell}-{args.driver_memory}"
+    shutil.rmtree(event_log_dir, ignore_errors=True)
     stderr_path = Path(args.scratch) / f"stderr-{args.cell}-{args.driver_memory}.log"
     with captured_stderr(stderr_path):
         spark = build_spark(event_log_dir, args.driver_memory, args.partitions)
@@ -148,13 +144,17 @@ def main(argv: list[str] | None = None) -> int:
                 raise
             payload = {"outcome": "error", "message": f"{type(error).__name__}: {error}"[:600]}
         finally:
-            spark.stop()
+            try:
+                spark.stop()
+            except BaseException as stop_error:
+                if isinstance(stop_error, (KeyboardInterrupt, SystemExit)):
+                    raise
+                payload.setdefault("stop_error", f"{type(stop_error).__name__}: {stop_error}"[:300])
     captured = stderr_path.read_text(encoding="utf-8", errors="replace")
     payload.update(spill_totals(event_log_dir))
     payload["cell"] = args.cell
     payload["rows"] = args.rows
     payload["driver_memory"] = args.driver_memory
-    payload["jvm_peak_rss_bytes"] = jvm_peak_rss_bytes()
     payload["jvm_error_lines"] = error_lines(captured)
     payload["jvm_stderr_tail"] = captured[-4000:]
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
