@@ -72,6 +72,33 @@ Source comments retain only API and safety contracts; implementation narration i
   owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
   the pre-unit behaviour passes `CatalogCaches::disabled()`.
 
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05):** a third knob,
+  `repark.iceberg.manifestCacheBytes` (default **32 MiB, on**) with an underscore alias,
+  sizes the fork's shared manifest `ObjectCache` for the memory catalog; `0` disables it
+  and a bad value fails loud naming both spellings, exactly like the entries knob.
+  `builders.rs` passes the bytes to
+  `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
+  catalog that every table the catalog materializes shares. The default is on because the
+  CATALOG-IO measurement showed the second statement on a 193-manifest table falling from
+  120 ms to 11 ms with the cache, the cached objects are immutable at their path (a
+  rewrite or expiry writes new paths, never mutates), and the byte budget is enforced
+  fork-side by moka weighted eviction — so the cache can only evict, never corrupt.
+  The funnel was read at fork pin `79119643`: the memory catalog assembles a `Table` in
+  exactly three places (`load_table_from_location`, `create_table`, `register_table`),
+  and all three go through its `table_builder()`, which injects the shared cache; the
+  only direct `Table::builder()` in the memory catalog is a `#[cfg(test)]` fixture.
+  Named non-members, all correct-but-uncached (a private cache re-reads, it never serves
+  stale): catalog-detached `StaticTable::from_metadata*`, staged create/replace
+  transactions (RePark uses them write-side for CTAS/replace), the
+  `delete_reachable_files` maintenance walk, and every non-memory catalog (Glue, S3
+  Tables, REST, HMS, SQL build per-table caches — their builders have no
+  `with_shared_object_cache_bytes` at this pin, so `glue_catalog` / `s3tables_catalog`
+  are unchanged again). RePark itself builds no `Table` directly: every read goes
+  through `catalog.load_table`, and time-travel wraps the loaded table. **Repin duty:**
+  re-read the funnel — a new assembly path that bypasses `table_builder()` silently
+  un-shares the cache, and the delete-manifest pins below are the detector.
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-005
+
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
   no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
   `with_table_metadata_cache` at pin `189a73ed`. Every number in this unit is the memory catalog;
@@ -144,6 +171,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Invalidate one namespace after product DDL (O(1)) | `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` in `provider.rs` |
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
+| Turn the shared manifest cache off, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default 32 MiB; `0` disables) (`caches.rs`) |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |

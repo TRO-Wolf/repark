@@ -35,7 +35,11 @@ pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
 #[tracing::instrument(
     name = "catalog.memory_catalog_cached",
     skip(warehouse, caches),
-    fields(warehouse = %warehouse, metadata_cache = caches.metadata_cache().is_some())
+    fields(
+        warehouse = %warehouse,
+        metadata_cache = caches.metadata_cache().is_some(),
+        manifest_cache_bytes = caches.manifest_cache_bytes()
+    )
 )]
 pub async fn memory_catalog_cached(
     warehouse: &str,
@@ -46,6 +50,9 @@ pub async fn memory_catalog_cached(
         .with_storage_factory(storage_factory_for_location(warehouse)?);
     if let Some(metadata) = caches.metadata_cache() {
         builder = builder.with_table_metadata_cache(metadata);
+    }
+    if caches.manifest_cache_bytes() > 0 {
+        builder = builder.with_shared_object_cache_bytes(caches.manifest_cache_bytes());
     }
     let catalog = builder
         .load(

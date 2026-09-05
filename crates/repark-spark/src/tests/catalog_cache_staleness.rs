@@ -1,6 +1,8 @@
 use super::super::*;
 use super::common::*;
-use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
+use repark_iceberg::catalog::{
+    CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY,
+};
 
 async fn shared_catalog(wh: &TempDir, caches: &CatalogCaches) -> (Arc<dyn Catalog>, String) {
     let warehouse = wh.path().to_str().unwrap().to_string();
@@ -401,6 +403,7 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
     let caches = CatalogCaches::new(IcebergCacheSettings {
         metadata_cache: true,
         metadata_cache_entries: 1,
+        manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     for index in 0..8 {
@@ -518,12 +521,156 @@ async fn a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits
     );
 }
 
+async fn delete_manifest_files(catalogs: &CatalogRegistry, table: &str) -> usize {
+    let catalog = catalogs.get("ice").expect("ice").clone();
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    let loaded = catalog.load_table(&ident).await.expect("load table");
+    let location = loaded
+        .metadata_location()
+        .expect("metadata location")
+        .trim_start_matches("file://");
+    let dir = std::path::Path::new(location)
+        .parent()
+        .expect("metadata dir");
+    let mut removed = 0;
+    for entry in std::fs::read_dir(dir).expect("read metadata dir") {
+        let path = entry.expect("dir entry").path();
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "avro")
+        {
+            std::fs::remove_file(&path).expect("remove manifest");
+            removed += 1;
+        }
+    }
+    removed
+}
+
+#[tokio::test]
+async fn a_second_door_reads_manifests_from_the_cache_the_first_door_filled() {
+    let wh = TempDir::new().unwrap();
+    let ((ctx_a, cat_a), (ctx_b, cat_b)) = two_doors(&wh, &CatalogCaches::default()).await;
+    run(
+        &ctx_a,
+        &cat_a,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    refresh(&ctx_b, &cat_b).await;
+    assert_eq!(
+        ids(&ctx_a, &cat_a, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+    let removed = delete_manifest_files(&cat_a, "t").await;
+    assert!(
+        removed > 0,
+        "the pin means nothing without a manifest to delete"
+    );
+    assert_eq!(
+        ids(&ctx_b, &cat_b, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+}
+
+#[tokio::test]
+async fn with_zero_bytes_a_repeated_read_opens_manifests_again() {
+    let wh = TempDir::new().unwrap();
+    let config = HashMap::from([(MANIFEST_CACHE_BYTES_KEY.to_string(), "0".to_string())]);
+    let caches =
+        CatalogCaches::new(IcebergCacheSettings::from_config_map(&config).expect("parse zero"));
+    let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+    let removed = delete_manifest_files(&catalogs, "t").await;
+    assert!(
+        removed > 0,
+        "the pin means nothing without a manifest to delete"
+    );
+    let outcome = execute(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await;
+    let failed = match outcome {
+        Err(_) => true,
+        Ok(frame) => frame.collect().await.is_err(),
+    };
+    assert!(
+        failed,
+        "with zero bytes the repeated read must open manifests again"
+    );
+}
+
+#[tokio::test]
+async fn a_configured_byte_value_reaches_the_shared_cache() {
+    let wh = TempDir::new().unwrap();
+    let config = HashMap::from([(MANIFEST_CACHE_BYTES_KEY.to_string(), "1048576".to_string())]);
+    let settings = IcebergCacheSettings::from_config_map(&config).unwrap();
+    assert_eq!(settings.manifest_cache_bytes, 1048576);
+    let caches = CatalogCaches::new(settings);
+    let ((ctx_a, cat_a), (ctx_b, cat_b)) = two_doors(&wh, &caches).await;
+    run(
+        &ctx_a,
+        &cat_a,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    refresh(&ctx_b, &cat_b).await;
+    assert_eq!(
+        ids(&ctx_a, &cat_a, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+    let removed = delete_manifest_files(&cat_a, "t").await;
+    assert!(
+        removed > 0,
+        "the pin means nothing without a manifest to delete"
+    );
+    assert_eq!(
+        ids(&ctx_b, &cat_b, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3]
+    );
+}
+
+#[tokio::test]
+async fn a_tiny_byte_budget_still_answers_across_many_tables() {
+    let wh = TempDir::new().unwrap();
+    let caches = CatalogCaches::new(IcebergCacheSettings {
+        manifest_cache_bytes: 512,
+        ..IcebergCacheSettings::default()
+    });
+    let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
+    for index in 0..8 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("CREATE TABLE ice.sales.t{index} AS SELECT * FROM src"),
+        )
+        .await;
+    }
+    for index in 0..8 {
+        assert_eq!(
+            ids(
+                &ctx,
+                &catalogs,
+                &format!("SELECT id FROM ice.sales.t{index}")
+            )
+            .await,
+            vec![1, 2, 3]
+        );
+    }
+}
+
 #[tokio::test]
 async fn the_retained_location_bound_holds_across_many_commits() {
     let wh = TempDir::new().unwrap();
     let caches = CatalogCaches::new(IcebergCacheSettings {
         metadata_cache: true,
         metadata_cache_entries: 4,
+        manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     run(

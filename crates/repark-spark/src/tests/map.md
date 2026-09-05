@@ -472,6 +472,33 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   | `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` | C-004 |
 
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-2 (2026-09-05):** four more pins, so
+  sixteen in the module. The instrument is manifest deletion: after door A reads a table, the
+  test deletes every `*.avro` under its metadata dir, so a second door can only answer from the
+  shared cache. `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` (the funnel
+  pin — a catalog path that bypassed `table_builder()` re-reads from disk and reds);
+  `a_configured_byte_value_reaches_the_shared_cache` (the `1 MiB` config value builds a sharing
+  cache); `with_zero_bytes_a_repeated_read_opens_manifests_again` (the knob-off control — it
+  parses `"0"` through `from_config_map`, so it pins the string-to-behavior chain, not a struct
+  literal); `a_tiny_byte_budget_still_answers_across_many_tables` (512 bytes over eight tables
+  stays row-correct — eviction never corrupts). All six IO-1 staleness pins now run with the
+  manifest cache on (`CatalogCaches::default()` sizes it at 32 MiB), so they are also the
+  cache-on staleness battery. Mutation score (four mutations, one escape closed): the wiring
+  dropped reds exactly the two sharing pins; `CatalogCaches::new` ignoring the setting reds
+  `both_spellings_size_the_cache` and `zero_disables_the_shared_cache`; the parse flooring at
+  1 MiB reds `zero_disables_the_shared_cache` but NOT the knob-off control at first — it built
+  its settings from a struct literal and never touched the parser, so it was strengthened to
+  parse `"0"` until it red; the refusal naming only the set key reds
+  `a_bad_alias_names_the_key_set_and_the_canonical_one`.
+
+  | test | clause |
+  |---|---|
+  | `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` | C-002 |
+  | `a_configured_byte_value_reaches_the_shared_cache` | C-002 |
+  | `with_zero_bytes_a_repeated_read_opens_manifests_again` | C-002 |
+  | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+
+  pins: perf-ice-catalog-io-2/C-002, C-004, C-005
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
   not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,
