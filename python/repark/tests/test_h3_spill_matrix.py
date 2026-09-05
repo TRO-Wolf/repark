@@ -206,6 +206,7 @@ def peak_rss_bytes():
 
 mode, pool, rows, headroom = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 partitions = sys.argv[5]
+offset = int(sys.argv[6]) if len(sys.argv) > 6 else 0
 from repark import ReparkSession
 
 spark = (
@@ -232,7 +233,7 @@ try:
         resource.setrlimit(resource.RLIMIT_AS, (ceiling, ceiling))
         out["rows_out"] = len(frame.collect())
     else:
-        spark.range(rows).selectExpr(*columns).createOrReplaceTempView("base")
+        spark.range(offset, offset + rows).selectExpr(*columns).createOrReplaceTempView("base")
         if mode == "aggregate":
             spark.sql("EXPLAIN ANALYZE SELECT h, count(*) AS c FROM base GROUP BY h").collect()
         elif mode == "to_pandas":
@@ -262,9 +263,21 @@ print(json.dumps(out))
 """
 
 
-def _run_worker(mode: str, pool: str, rows: int, headroom: int = 0, partitions: int = 4) -> dict:
+def _run_worker(
+    mode: str, pool: str, rows: int, headroom: int = 0, partitions: int = 4, offset: int = 0
+) -> dict:
     completed = subprocess.run(
-        [sys.executable, "-c", _WORKER, mode, pool, str(rows), str(headroom), str(partitions)],
+        [
+            sys.executable,
+            "-c",
+            _WORKER,
+            mode,
+            pool,
+            str(rows),
+            str(headroom),
+            str(partitions),
+            str(offset),
+        ],
         capture_output=True,
         text=True,
         timeout=900,
@@ -304,8 +317,11 @@ def test_the_boundary_digest_is_order_independent_and_content_sensitive() -> Non
     four = _run_worker("to_pandas", "none", 400_000, partitions=4)
     one = _run_worker("to_pandas", "none", 400_000, partitions=1)
     shorter = _run_worker("to_pandas", "none", 399_999, partitions=4)
+    shifted = _run_worker("to_pandas", "none", 400_000, partitions=4, offset=1)
     assert four["digest"] == one["digest"], (four, one)
     assert four["digest"] != shorter["digest"], (four, shorter)
+    assert four["digest"] != shifted["digest"], (four, shifted)
+    assert four["rows_out"] == shifted["rows_out"], (four, shifted)
 
 
 def test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic() -> None:

@@ -5,7 +5,7 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [h3-spill-1-ledger.md](h3-spill-1-ledger.md) —
+- [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory
   watchdog: **zero aborts, zero wrong answers**, and 115 of the 144 bounded cells carrying a

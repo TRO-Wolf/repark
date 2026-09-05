@@ -83,7 +83,7 @@ Why the shape it has:
 - `plan_metrics.py` — `EXPLAIN ANALYZE` text to per-operator-class counter totals.
 - `measure.py` — the driver: plan, spawn, poll, classify, repeat non-deterministic cells,
   and rewrite the report after every cell so a crash costs one cell.
-- `models.py` — the pydantic records the report is made of.
+- `models.py` — the pydantic records the report is made of. Round 3: `CellRecord` is `extra="forbid"` again and carries the `lane` field the evidence records.
 - `report.py` — the outcome matrix, the numbers tables and the **digest census** the baseline doc
   carries. `--section outcomes|numbers` emit their own `### 3.n` / `### 9.n` headings so the
   document is assembled by concatenation: the first draft sliced the generator's output with

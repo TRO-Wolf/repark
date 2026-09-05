@@ -1644,7 +1644,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
   (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
   ruff-format lockstep.
-- `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind
+- `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
   [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
   families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the
   unbounded run's; a bounded pool that fits answers exactly; a pool refusal is the documented

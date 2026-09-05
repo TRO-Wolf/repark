@@ -43,7 +43,7 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   of the prize) and says plainly that the first draft's 140.46 ms was measuring the wrong loop.
   pins: perf-facade-1/C-001, C-006, C-007, C-009
 
-- [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the
+- [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the Round 3: the concurrency row names lane E (the ten `to_pandas` cells re-run alone).
   Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
   64 MiB) x 2 scales (1e6 / 1e7 wide rows, so 1e7 exceeds 1 GiB) = **180 cells, each in a fresh
   subprocess on a release module**, classified `ok` / `spilled` / `degraded` / `clean_error` /

@@ -32,7 +32,7 @@ bound, it also does not corrupt.
 | Per cell | one fresh subprocess, `datafusion.execution.target_partitions = 4`, session defaults otherwise (`batch_size` 65536) |
 | Guard | parent polls `/proc/<pid>/status` `VmHWM` every 50 ms and kills past `--rss-cap-bytes` 8 GiB; `RLIMIT_AS` 32 GiB is a backstop only |
 | Peak RSS | `VmHWM` on both sides, never `ru_maxrss` — rusage is retained across `execve`, so a child would report its parent's high-water mark |
-| Concurrency | three driver lanes ran concurrently; the 1-minute load at each cell's start is in the tables, and wall is read against it |
+| Concurrency | three driver lanes (A, B, C) ran concurrently; the ten `to_pandas` cells were re-run alone as lane E after the chunked-probe fix; the 1-minute load at each cell's start is in the tables, and wall is read against it |
 | Repeats | every cell whose first outcome was not `ok` ran three times; **every repeat keeps its own answer digest**, and all of them are checked |
 | Evidence | [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json) — every cell, every repeat, both caps, per-operator plan metrics, and the three Spark cells with the JVM's own stderr |
 | Harness | [python/repark-parity/bench/spill/](../../python/repark-parity/bench/spill/map.md) |

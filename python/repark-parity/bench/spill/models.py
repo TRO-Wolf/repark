@@ -39,8 +39,9 @@ class NodeMetrics(BaseModel):
 class CellRecord(BaseModel):
     """One matrix cell: operator x pool x scale, measured in its own subprocess."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
+    lane: str | None = None
     operator: str
     pool: str
     scale: int
