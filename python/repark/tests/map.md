@@ -373,6 +373,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   BACKLOG rows with current-answer pins: `CAST-NULL-1` (non-decimal cast targets),
   `CAST-BOOL-DEC-1` (boolean-to-decimal refusal), `CUTOVER-NULLDEPTH-1` (relax stops
   at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
+- [test_nullability_2.py](test_nullability_2.py) — **NULLABILITY-2 (2026-09-05):**
+  the analyzer's remaining nullability and cast residues, Spark-equal. Always-run:
+  the generalized cast-nullability matrix (string/float/timestamp-source casts
+  nullable, date-to-timestamp non-null) with a native-door DataFusion fence;
+  decimal `+`/`-`/`*` nullable iff ANSI is off; `CAST(bool AS DECIMAL)` served on
+  both doors with the `(2,2)` overflow edge; `<=>`/`eqNullSafe` non-null with a
+  required-field parquet write and an all-optional CTAS pin; reader relax at depth
+  40 plus the Arrow footer-depth refusal past it; tz-naive `timestamp_ntz` dtype
+  on parquet and `createDataFrame`. Live legs re-derive every family from PySpark
+  4.1.2 on the shared `spark_engine`.
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
