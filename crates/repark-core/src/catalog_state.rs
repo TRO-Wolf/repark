@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use iceberg::Catalog;
+use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
 /// How a registered catalog resolves a staged-CTAS location when the target namespace has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -72,13 +73,27 @@ pub struct CatalogRegistry {
     read_only_catalogs: std::collections::HashSet<String>,
     /// Local filesystem warehouse roots for SEC-02 grandfather (memory / `LocalFs` catalogs).
     local_warehouse_roots: Vec<String>,
+    iceberg_caches: Arc<CatalogCaches>,
 }
 
 impl CatalogRegistry {
     /// An empty registry.
     #[must_use]
     pub fn new() -> Self {
-        Self::default()
+        Self::with_cache_settings(IcebergCacheSettings::default())
+    }
+
+    #[must_use]
+    pub fn with_cache_settings(settings: IcebergCacheSettings) -> Self {
+        Self {
+            iceberg_caches: Arc::new(CatalogCaches::new(settings)),
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn iceberg_caches(&self) -> Arc<CatalogCaches> {
+        Arc::clone(&self.iceberg_caches)
     }
 
     /// Register `catalog` under `name` with its location `policy` (replacing any prior entry).

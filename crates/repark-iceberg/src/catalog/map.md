@@ -35,6 +35,56 @@ Source comments retain only API and safety contracts; implementation narration i
   bump to `v(N+1).metadata.json` (registry `V3-ADOPT-1` FIXED, RP-3 / fork #235). S3 Tables
   `register_table` still refuses naming fork row R126 (pins: rp-3-fork-repin/C-008).
   Catalog-edge spans record **prop key names only**, never values.
+- `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
+  and their knobs. `IcebergCacheSettings::from_config_map` reads
+  `repark.iceberg.metadataCache` (default **true**) and `repark.iceberg.metadataCacheEntries`
+  (default 512), both with an underscore alias; a bad value fails loud naming BOTH the key the
+  user set and the canonical spelling it aliases.
+  `CatalogCaches` owns the fork's opt-in `TableMetadataCache` (`catalog/table_metadata_cache.rs`)
+  keyed by **metadata-file location string**. What makes that safe across a commit is
+  **evict-on-commit plus evict-on-drop**: `MemoryCatalog` drops the pointer it replaced and seeds
+  the new one, and `drop_table` evicts. It is NOT the uuid in the file name — round 2 measured a
+  Hadoop pointer adopted through `CALL register_table` committing deterministic
+  `v(N+1).metadata.json` with no uuid, and the safety property holds there too
+  (`a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`).
+  The cache never decides WHICH location is current — the catalog pointer read still happens on
+  every `load_table`; the cache only skips the body GET and the re-parse for a location already
+  parsed. `CatalogCaches::disabled()` is the pre-unit path the before/after measurement runs in
+  the same process.
+
+  **The bound's scope is the statement door, not the load.** The fork's cache is an unbounded
+  `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
+  session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
+  ACCUMULATES across commits — measured: eight CREATEs at `entries=1` leave 2 retained and the
+  next door clears to 0. It does NOT bound retention *within* one statement: an 8-way `UNION ALL`
+  at `entries=1` retains 8 (measured; pinned by
+  `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
+  twin). That residue is one entry per distinct table the statement names — live working set the
+  planner needs, bounded by the statement's table count and cleared at the next door — not the
+  accumulation the knob exists to stop. Bounding within a statement needs a hook on cache INSERT,
+  which is fork-side; the RePark-side alternative is a `SchemaProvider` decorator carrying a
+  permanent forwarding-audit duty, which is not worth a bound on working set. Registry row
+  `PERF-CATALOG-CACHE-BOUND-1` / fork ask `F-CATIO-BOUND` carries the real fix: a bounded LRU
+  inside the fork's cache bounds within a statement by construction.
+
+  **`memory_catalog(warehouse)` keeps its v1 signature but is no longer cache-free** — it now
+  builds a private, always-on `CatalogCaches` per call, which nothing trims because no session
+  owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
+  the pre-unit behaviour passes `CatalogCaches::disabled()`.
+
+  **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
+  no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
+  `with_table_metadata_cache` at pin `189a73ed`. Every number in this unit is the memory catalog;
+  the AWS call shape is **unchanged today**. Registry row `PERF-CATALOG-AWS-CACHE-1` / fork ask
+  `F-CATIO-AWS`.
+
+  **Creation is not cacheable.** `CREATE TABLE` and CTAS read back the metadata document they just
+  wrote (the catalog proves reachability before claiming the pointer), so their census is 1
+  metadata read with the cache ON and OFF — measured on both knob settings.
+
+  Every reason for this module is written here rather than in the code, and the maps this unit
+  touched move in the commits that touched their directories.
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004, C-007
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read
   precedence + `mirror_namespace_location_keys` unidirectional non-clobbering dual-write) and
@@ -93,6 +143,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Rebuild the DF provider snapshot from the live catalog | `build_iceberg_catalog_provider` / `rebuild_catalog_provider` |
 | Invalidate one namespace after product DDL (O(1)) | `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` in `provider.rs` |
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
+| Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |
@@ -110,6 +161,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | CTAS errors "does not support tables with data" | expected — decompose into `CREATE (cols)` + `INSERT INTO` (SQL layer) |
 | Table created after register not found in SQL | provider name directory is snapshotted; product DDL invalidates the touched namespace; OOB DDL needs refresh / full rebuild. Facade listing is live (`list_table_names`) |
 | Builder returns "requires a non-empty `…` property" | Glue needs `warehouse`, S3 Tables needs `table_bucket_arn` |
+| A `load_table` reads `metadata.json` when you expected a cache hit | the location moved (any commit does that) or the entry bound tripped `CatalogCaches::trim`; `ReparkSession::iceberg_metadata_cache_stats` reports hits / misses / body fetches |
 | Constructing Glue/S3 Tables in a test without AWS | pin `region_name` so SDK-config load skips the IMDS region probe; creds resolve lazily on first request |
 | S3 Tables `301`/region errors | pass explicit `region_name`; ARN region must match SDK region |
 | Hang on Glue/S3 catalog with no logs | enable `RUST_LOG=repark_iceberg=info`; expect `catalog.*` span close timings. Span fields are key names only |

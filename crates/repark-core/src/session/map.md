@@ -8,7 +8,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
-`spill.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
+`spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
@@ -31,6 +31,21 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `datafusion.catalog.default_catalog = <a name a catalog is later registered under>` has no
   session-local home at all, and the whole family refuses loud rather than write that catalog
   (round-6 critic S1, MEASURED).
+- `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg
+  cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` calls, so a
+  memory catalog is always built with the session's `CatalogCaches`; `trim_iceberg_caches` runs at
+  the statement door (`sql_with`) and clears the metadata cache once the retained-location count
+  passes `repark.iceberg.metadataCacheEntries`; `iceberg_metadata_cache_stats` /
+  `iceberg_metadata_cache_entries` are the census the Python pins read (hits / misses / body
+  fetches = the `metadata.json` GETs a real catalog would pay). A catalog registered through
+  `register_iceberg_catalog(name, catalog)` was built by its caller and therefore carries whatever
+  caches that caller gave it — the fork's default is OFF, so the injection point is the builder,
+  not the registration.
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+- `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
+  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
+  `session.rs` baseline ratcheted 1039 → 1002.
+  pins: perf-ice-catalog-io-1/C-004
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, CORE (never door-extension —
   design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
