@@ -6,7 +6,7 @@ Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-icescan` (branch
 §5 items 4 and 5, §6 and §7.4, and re-runs the `count_star`, `count_id`, `sum_all` and
 `string_len` shapes before and after.
 
-pins: perf-ice-scan-1/C-008
+pins: perf-ice-scan-1/C-008a, C-008b
 
 ## Machine and profile
 
