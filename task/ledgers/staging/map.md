@@ -67,6 +67,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   flip close the remainder. Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY` (fork-side,
   no RePark fix exists). `risk_tier: standard`. Branch `perf/ice-catalog-io-2`.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-3-ledger.md](perf-ice-catalog-io-3-ledger.md) —
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05), in flight:** the default-ON flip IO-2's round-2
+  ruling named as the follow-up, on the fixed pin `2ed39cb0` (RP-13, `F-CATIO-KEY`).
+  `DEFAULT_MANIFEST_CACHE_BYTES` becomes 32 MiB; the four HALT tests, the staleness
+  battery and the lineage pins run on default sessions; a two-session concurrency leg
+  and a 500-table subprocess RSS comparison prove the fork-fix contract and the bound.
+  `PERF-ICE-MANIFEST-1` FIXED with the default-session number. Charter committed
+  red-first (7 OPEN). `risk_tier: elevated`. Branch `perf/ice-catalog-io-3`.
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
