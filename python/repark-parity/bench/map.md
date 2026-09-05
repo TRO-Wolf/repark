@@ -41,6 +41,11 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   legs of every before/after pair share one module and one load. No JVM, by design — the box
   allows one Spark JVM at a time and this battery must not compete for it. See
   [facade/map.md](facade/map.md). pins: perf-facade-1/C-009
+- `spill/` — **H3-SPILL-1** the Never-OOM truth table: every operator the engine can plan,
+  under a bounded `FairSpillPool` at 1e6 and 1e7 rows, classified `ok` / `spilled` /
+  `degraded` / `clean_error` / `abort` / `wrong`. One subprocess per cell under an
+  address-space cap; peak RSS polled from `/proc`; the answer compared against the unbounded
+  run. See [spill/map.md](spill/map.md). pins: h3-spill-1/C-001, C-002
 - `map.md` — this file.
 
 ## I want to…
@@ -63,6 +68,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Read W-0 numbers | [../../../task/window-bench-report-2026-08-31.md](../../../task/window-bench-report-2026-08-31.md) |
 | Run the dynamicFlatten measurement | `dynflatten/run_dynflatten.py --scale gate\|quick\|full --out /tmp/oc-dynflatten-bed` |
 | Run the facade-boundary measurement | `facade/run_facade.py --out /tmp/oc-facade-bed` (or `make facade-bench`) |
+| Run the spill matrix | `spill/measure.py --scratch <dir> --json-out <file>` |
 | Read dynamicFlatten numbers | [../../../docs/perf/dynamic-flatten-baseline.md](../../../docs/perf/dynamic-flatten-baseline.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
