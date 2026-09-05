@@ -46,3 +46,6 @@ build/
 # lives under /tmp/overnight-conductor/<lane>/scratch/, outside the repo).
 /scratch/
 PROGRESS.md
+
+# Lane hand-back artifact written by an agent at the lane root; never repo content.
+handback.json

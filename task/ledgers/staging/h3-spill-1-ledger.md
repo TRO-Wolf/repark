@@ -101,19 +101,26 @@ measurement is not a probe.
 
 ## Gates
 
+Round 2, re-run after every remediation.
+
 | Gate | Exit |
 |---|---|
-| `make ci` | 0 |
+| `make ci` | 0 (inside `verify`) |
 | `make verify` (= `ci` + the Rust workspace suite) | 0 |
 | `make check-python-conventions` | 0 |
-| `make rust-panic-ban` | 0 |
-| `.venv/bin/python -m pytest python/repark/tests -q` | 0 (4821 passed, 198 skipped, 419 s) |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (574 passed) |
-| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (20 passed, 30 s) |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py -q` (Spark cells were measured) | 0 (119 passed, 76 s) |
+| `make rust-panic-ban` | 0 (inside `ci`) |
+| `.venv/bin/python -m pytest python/repark/tests -q -p no:randomly` | 0 (4806 passed, 215 skipped, 386 s) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q -p no:randomly` | 0 (574 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (22 passed, 43 s) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py -q` (Spark cells were measured) | 0 (119 passed, 65 s) |
 | `make check-map-sync` | 0 |
 | `make check-ledger-grammar` | 0 |
-| `make check-ledgers` | 0 |
+| `make check-ledgers` | 0 (needs `origin/main` present; it is, in this lane) |
 | `make check-docs-compaction` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `typos .` | 0 |
+
+Provocation proofs for the two round-2 pins: a constant boundary digest reds
+`test_the_boundary_digest_is_order_independent_and_content_sensitive` and leaves
+`test_the_facade_boundary_answers_the_same_at_every_pool` green — which is exactly why the second
+pin exists, since an equality between two constants proves nothing on its own.
