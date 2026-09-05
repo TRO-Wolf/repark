@@ -216,9 +216,6 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
         &self,
         args: AccumulatorArgs,
     ) -> Result<Box<dyn GroupsAccumulator>> {
-        if args.is_distinct {
-            return not_impl_err!("DistinctAvgAccumulator");
-        }
         let data_type = args.exprs[0].data_type(args.schema)?;
         avg_groups::create_groups(&data_type, args.return_type(), self.null_on_overflow)
     }

@@ -115,6 +115,13 @@ SQL_MULTI_DISTINCT = (
     "SELECT avg(DISTINCT a) AS x, sum(DISTINCT b) AS y FROM (VALUES (1, 10), (2, 10)) AS t(a, b)"
 )
 
+SQL_GROUPED_MULTI_DISTINCT = (
+    "SELECT k, avg(DISTINCT a) AS x, sum(DISTINCT b) AS y FROM "
+    "(VALUES (1, 1, 10), (1, 2, 10), (2, 1, 10)) AS t(k, a, b) GROUP BY k"
+)
+
+SQL_GROUPED_AVG_NULL = "SELECT k, avg(v) AS a FROM (VALUES (1, NULL)) AS t(k, v) GROUP BY k"
+
 SQL_MANY_CHECKSUM = (
     "SELECT count(*) AS groups, sum(a) AS checksum FROM "
     "(SELECT k, avg(v) AS a FROM many_groups GROUP BY k) t"
@@ -317,6 +324,27 @@ def test_avg_multi_distinct_refuses() -> None:
 
     with pytest.raises(UnsupportedOperationException, match="DistinctAvgAccumulator"):
         _session().sql(SQL_MULTI_DISTINCT).toArrow()
+
+
+def test_avg_grouped_multi_distinct_refuses_bare() -> None:
+    """Grouped multi-distinct refuses as a bare PySparkException."""
+    """pins: perf-agg-avg-1/C-001."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException, match="DistinctAvgAccumulator") as caught:
+        _session().sql(SQL_GROUPED_MULTI_DISTINCT).toArrow()
+    assert type(caught.value) is PySparkException
+
+
+def test_avg_grouped_null_refuses_naming_groups_accumulator() -> None:
+    """Grouped avg over NULL refuses naming the groups accumulator pair."""
+    """pins: perf-agg-avg-1/C-001."""
+    from repark.errors import UnsupportedOperationException
+
+    with pytest.raises(
+        UnsupportedOperationException, match=r"AvgGroupsAccumulator for \(Null --> Float64\)"
+    ):
+        _session().sql(SQL_GROUPED_AVG_NULL).toArrow()
 
 
 def test_window_frame_avg_control() -> None:

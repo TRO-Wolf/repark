@@ -153,7 +153,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `aggregate.rs` also serves `groups_accumulator_supported` /
   `create_groups_accumulator` (**PERF-AGG-AVG-1**), delegating to `avg_groups.rs`; the
   `Accumulator` arms and `state_fields` are untouched, so window frames keep the retract
-  path, and the decimal `DecimalAverager` is shared as `pub(crate)`.
+  path, and the decimal `DecimalAverager` is shared as `pub(crate)`. Round 2 removed
+  the dead `is_distinct` early return in `create_groups_accumulator` (unreachable:
+  the only caller is guarded by `groups_accumulator_supported`).
   pins: perf-agg-avg-1/C-001, C-002
 - `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the
   `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
