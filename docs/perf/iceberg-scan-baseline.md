@@ -118,4 +118,4 @@ to the fork lane `$HOME/repark-lanes/lanes/icescan-fork` at `c18f15c96` (F-27a `
 + F-27b `c8a3c922f` + F-27d `c18f15c96`, on fork main `16639b87c`). `git diff
 origin/main -- Cargo.toml Cargo.lock` is empty at hand-back; the override script lives at
 `scratch/probes/fork_override_scan.sh` (git-excluded) and the pin bump is the
-orchestrator's RP-13 step.
+orchestrator's RP-14 step.

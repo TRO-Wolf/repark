@@ -42,7 +42,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   **PERF-ICE-SCAN-1 (2026-09-05), complete:** Iceberg `count(*)` folds (86.5 → 2.0 ms)
   and small tables scan N=8 (sum 89.5 → 36.2 ms); the 1.5×-of-parquet target is an
   honest miss (1.8–3.6×, decomposed in the baseline). Registry rows
-  `PERF-ICE-COUNTSTAR-1` and `PERF-ICE-SCANPART-1` FIXED-PENDING-PIN behind the RP-13
+  `PERF-ICE-COUNTSTAR-1` and `PERF-ICE-SCANPART-1` FIXED-PENDING-PIN behind the RP-14
   fork bump. `risk_tier: standard`. Branch `perf/ice-scan-1`.
   pins: perf-ice-scan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [rp-11-repin-f24-ledger.md](rp-11-repin-f24-ledger.md) —

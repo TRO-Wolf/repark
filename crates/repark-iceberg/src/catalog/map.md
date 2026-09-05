@@ -175,7 +175,7 @@ Source comments retain only API and safety contracts; implementation narration i
   tasks) so DataFusion folds `count(*)`, and re-packs sub-split-size plans to
   `min(split size, max(total/T, 64 KiB))`. MERGE reads through `plan_files` (untouched);
   `_pos`/`_row_id`/empty projections and file-prune-only scans never re-split. The RePark
-  pins skip until the RP-13 pin bump carries F-27; the bump is the orchestrator's step, not
+  pins skip until the RP-14 pin bump carries F-27; the bump is the orchestrator's step, not
   this unit's.
   pins: perf-ice-scan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010
 - [tests/](tests/map.md) — G17 wrapper pins and the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder

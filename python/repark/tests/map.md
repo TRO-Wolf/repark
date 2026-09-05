@@ -1713,7 +1713,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   shuffle-8. A module-scoped runtime probe (`SELECT count(*)` EXPLAIN has no
   `IcebergTableScan`) detects the F-27 fork capability once; the fold and parallelism pins
   skip with the named reason
-  `fork pin predates F-27` until the RP-13 bump, so the file is green on the pinned fork.
+  `fork pin predates F-27` until the RP-14 bump, so the file is green on the pinned fork.
   Always-run: count answers on plain/empty/DV/WHERE/LIMIT tables, identity DELETE and MERGE
   row sets (the DML-exclusion pins). F-27: the fold on a plain table, the DV/WHERE
   non-folds with correct answers, N=8 with the 24-row set intact, N=1 for the unfolded DV
