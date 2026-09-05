@@ -170,7 +170,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   indexing is bounds-checked instead of `get_unchecked` (`unsafe` is forbidden in this
   crate). Unit tests drive `update_batch` / `merge_batch` / `evaluate` / `state` /
   `size` directly with `EmitTo::First`, the way DataFusion's own groups-accumulator
-  tests do.
+  tests do; the decimal merge test merges three groups with distinct partials
+  across two states and asserts every group, so a decimal-arm index scramble reds
+  exactly it.
   pins: perf-agg-avg-1/C-001
 - `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
   per-group validity tracker, split out of `avg_groups.rs` so neither file passes the

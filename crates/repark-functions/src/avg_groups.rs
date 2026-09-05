@@ -662,6 +662,42 @@ mod tests {
     }
 
     #[test]
+    fn decimal128_groups_merge_combines_three_groups_across_two_partials() {
+        let mut first = decimal128_groups(false);
+        let values = Arc::new(
+            Decimal128Array::from(vec![Some(110), Some(220), Some(330)])
+                .with_precision_and_scale(10, 2)
+                .expect("fixture scale"),
+        ) as ArrayRef;
+        first
+            .update_batch(&[values], &[0, 1, 2], None, 3)
+            .expect("update first");
+        let first_state = first.state(EmitTo::All).expect("first state");
+        let mut second = decimal128_groups(false);
+        let values = Arc::new(
+            Decimal128Array::from(vec![Some(110), Some(440), Some(660)])
+                .with_precision_and_scale(10, 2)
+                .expect("fixture scale"),
+        ) as ArrayRef;
+        second
+            .update_batch(&[values], &[0, 1, 2], None, 3)
+            .expect("update second");
+        let second_state = second.state(EmitTo::All).expect("second state");
+        let mut merged = decimal128_groups(false);
+        merged
+            .merge_batch(&first_state, &[0, 1, 2], None, 3)
+            .expect("merge first");
+        merged
+            .merge_batch(&second_state, &[0, 1, 2], None, 3)
+            .expect("merge second");
+        let result = merged.evaluate(EmitTo::All).expect("evaluate");
+        let result = result.as_primitive::<Decimal128Type>();
+        assert_eq!(result.value(0), 1_100_000);
+        assert_eq!(result.value(1), 3_300_000);
+        assert_eq!(result.value(2), 4_950_000);
+    }
+
+    #[test]
     fn decimal128_groups_empty_group_evaluates_null() {
         let mut groups = decimal128_groups(false);
         let values = Arc::new(
