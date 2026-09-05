@@ -7,8 +7,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from repark import ReparkSession
-from repark import _native
+from repark import ReparkSession, _native
 
 
 def lane_root() -> Path:
@@ -74,8 +73,7 @@ def build(engine: ReparkSession, bed: Path) -> None:
     engine.read.parquet(str(seed1e7)).createOrReplaceTempView("src1e7")
     engine.sql("CREATE TABLE bed.ns.t_plain USING iceberg AS SELECT * FROM src1e6").collect()
     engine.sql(
-        "CREATE TABLE bed.ns.t_part USING iceberg PARTITIONED BY (part) "
-        "AS SELECT * FROM src1e6"
+        "CREATE TABLE bed.ns.t_part USING iceberg PARTITIONED BY (part) AS SELECT * FROM src1e6"
     ).collect()
     engine.sql("CREATE TABLE bed.ns.t_plain7 USING iceberg AS SELECT * FROM src1e7").collect()
     engine.sql(

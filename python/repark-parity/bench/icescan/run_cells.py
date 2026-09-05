@@ -9,8 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from repark import ReparkSession
-from repark import _native
+from repark import ReparkSession, _native
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_bed
@@ -110,7 +109,9 @@ def main() -> None:
                     f"load {result['load1_start']}->{result['load1_end']}",
                     flush=True,
                 )
-        dv_count = time_cell(engine, "iceberg_read/t_dv/count_star", "SELECT count(*) FROM bed.ns.t_dv")
+        dv_count = time_cell(
+            engine, "iceberg_read/t_dv/count_star", "SELECT count(*) FROM bed.ns.t_dv"
+        )
         results.append(dv_count)
         print(f"iceberg_read/t_dv/count_star: median {dv_count['median_ms']} ms", flush=True)
         dv_sum = time_cell(

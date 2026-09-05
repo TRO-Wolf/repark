@@ -2,9 +2,8 @@
 
 ## Purpose
 
-The tracked probes re-running the analysis §7.4 read cells; their numbers land in
-`docs/perf/iceberg-scan-baseline.md` with this unit. Every probe refuses to run against a
-debug module or a module from another tree.
+The tracked probes behind [docs/perf/iceberg-scan-baseline.md](../../../../docs/perf/iceberg-scan-baseline.md).
+Every probe refuses to run against a debug module or a module from another tree.
 
 ## Contents
 
@@ -23,6 +22,8 @@ debug module or a module from another tree.
 
 ## Pointers
 
+- The baseline that quotes these cells:
+  [docs/perf/iceberg-scan-baseline.md](../../../../docs/perf/iceberg-scan-baseline.md).
 - The analysis they re-run:
   [docs/perf/engine-iceberg-analysis-2026-09-04.md](../../../../docs/perf/engine-iceberg-analysis-2026-09-04.md)
   §7.4.

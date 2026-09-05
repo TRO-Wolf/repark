@@ -99,9 +99,7 @@ def bed(tmp_path: Path, f27_present: bool) -> dict[str, Any]:
     try:
         engine.sql(f"CREATE TABLE {CATALOG}.w.t (id INT, name STRING) USING iceberg").collect()
         _insert_8_files(engine, f"{CATALOG}.w.t")
-        engine.sql(
-            f"CREATE TABLE {CATALOG}.w.empty (id INT, name STRING) USING iceberg"
-        ).collect()
+        engine.sql(f"CREATE TABLE {CATALOG}.w.empty (id INT, name STRING) USING iceberg").collect()
         yield {"engine": engine, "f27": f27_present}
     finally:
         engine.stop()
@@ -188,8 +186,7 @@ def _mor_dv_table(engine: ReparkSession, name: str) -> str:
     """Eight files with one MoR-deleted row: 24 rows, 23 live."""
     table = f"{CATALOG}.w.{name}"
     engine.sql(
-        f"CREATE TABLE {table} (id INT, name STRING) USING iceberg "
-        f"TBLPROPERTIES ({V3}, {MOR})"
+        f"CREATE TABLE {table} (id INT, name STRING) USING iceberg TBLPROPERTIES ({V3}, {MOR})"
     ).collect()
     _insert_8_files(engine, table)
     engine.sql(f"DELETE FROM {table} WHERE id = 7").collect()
@@ -228,16 +225,13 @@ def test_unfolded_count_star_stays_single_partition(bed: dict[str, Any]) -> None
     assert _scan_n(plan) == 1, plan
 
 
-def test_lineage_scan_stays_single_partition(bed: dict[str, Any]) -> None:
-    """C-004: a _row_id projection never splits, and tiles 0..N over eight files."""
+def test_row_id_order_unchanged(bed: dict[str, Any]) -> None:
+    """C-009: _row_id still tiles 0..N over eight files under F-27 splits."""
     engine = _need_f27(bed)
     engine.sql(
-        f"CREATE TABLE {CATALOG}.w.v3 (id INT, name STRING) USING iceberg "
-        f"TBLPROPERTIES ({V3})"
+        f"CREATE TABLE {CATALOG}.w.v3 (id INT, name STRING) USING iceberg TBLPROPERTIES ({V3})"
     ).collect()
     _insert_8_files(engine, f"{CATALOG}.w.v3")
-    plan = _physical_plan(engine, f"SELECT id, _row_id FROM {CATALOG}.w.v3")
-    assert _scan_n(plan) == 1, plan
     rows = engine.sql(f"SELECT id, _row_id FROM {CATALOG}.w.v3 ORDER BY id").to_arrow()
     assert [int(value.as_py()) for value in rows.column("id")] == list(range(1, 25))
     assert [int(value.as_py()) for value in rows.column("_row_id")] == list(range(24))
@@ -270,9 +264,7 @@ def test_partitioned_row_set_matches_spark(tmp_path: Path, f27_present: bool) ->
                 f"INSERT INTO {CATALOG}.w.p VALUES ({base + 1}, {index % 2}, 'a'), "
                 f"({base + 2}, {index % 2}, 'b'), ({base + 3}, {index % 2}, 'c')"
             ).collect()
-        engine_rows = engine.sql(
-            f"SELECT id, part, name FROM {CATALOG}.w.p ORDER BY id"
-        ).to_arrow()
+        engine_rows = engine.sql(f"SELECT id, part, name FROM {CATALOG}.w.p ORDER BY id").to_arrow()
     finally:
         engine.stop()
 
@@ -294,7 +286,8 @@ def test_partitioned_row_set_matches_spark(tmp_path: Path, f27_present: bool) ->
             )
         spark_rows = session.sql(f"SELECT id, part, name FROM {catalog}.w.p ORDER BY id")
         assert [tuple(row) for row in spark_rows.collect()] == [
-            tuple(row) for row in zip(
+            tuple(row)
+            for row in zip(
                 engine_rows.column("id").to_pylist(),
                 engine_rows.column("part").to_pylist(),
                 engine_rows.column("name").to_pylist(),

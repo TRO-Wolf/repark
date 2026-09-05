@@ -1717,10 +1717,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Always-run: count answers on plain/empty/DV/WHERE/LIMIT tables, identity DELETE and MERGE
   row sets (the DML-exclusion pins). F-27: the fold on a plain table, the DV/WHERE
   non-folds with correct answers, N=8 with the 24-row set intact, N=1 for the unfolded DV
-  count (empty projections never split) and for a `_row_id` projection (tiling 0..23).
+  count (empty projections never split), and the `_row_id` 0..23 tiling. The `_row_id`
+  and `_pos` never-split halves live fork-side (`parallel_small_scan.rs`,
+  `expand_skips_*_projection`): EXPLAIN cannot plan `_row_id` (pre-existing) and `_pos`
+  is not SQL-visible in RePark.
   Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
-  count against Spark on the same seeds. Numbers and commands land in
-  `docs/perf/iceberg-scan-baseline.md` with this unit.
+  count against Spark on the same seeds. Numbers and commands:
+  [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
   pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-009
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
   through the facade, over a fixed four-file seed so the plan really has four partitions.
