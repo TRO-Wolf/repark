@@ -6,6 +6,7 @@ Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-catio` (branch
 §5 item 7, §7.4 and §7.6, and re-runs their shapes before and after.
 
 pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+pins: perf-ice-catalog-io-2/C-006
 
 ## Machine and profile
 
@@ -184,6 +185,101 @@ strace -f -e trace=openat -o scratch/strace_after.txt .venv/bin/python scratch/p
 Probe sources live under `scratch/probes/` (gitignored via `.git/info/exclude`, never committed;
 they carry no comments). The census probe marks every statement with a
 `scratch/marks/REPARKMARK_<label>_{begin,end}` file so the tracer can be cut into statements.
+
+## 5. Part 3 re-measured on the real pin (PERF-ICE-CATALOG-IO-2, 2026-09-05)
+
+Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-catio2` (branch
+`perf/ice-catalog-io-2`, base `origin/main` `7bef4afd`, fork pin `79119643`, no path
+override). Same box as §1–§4 (Threadripper 3970X, 64 threads, 125.7 GiB, governor
+`schedutil`, kernel 6.8.0-138), same versions (repark 1.0.1 / DataFusion 54.1.0 / arrow
+58.4), same shapes (the §1 20 k-row census table, the §2 1e6-row 208-file tables at 193
+vs 1 manifests — the counts reproduce exactly), same method (5 timed after 1 warm-up;
+median, min, spread; floor per run; `strace -f -e trace=openat`, ENOENT excluded). The
+native module is `_native.abi3.so` 163,517,296 B with `__debug_assertions__ is False`
+(every probe refuses otherwise). The only variable between the two columns is
+`repark.iceberg.manifestCacheBytes`: `0` (off) vs the default 32 MiB (on). The metadata
+cache is ON in both columns, so the `off` column is IO-1's shipped `on` column re-run on
+the new pin — and it reproduces it cell for cell.
+
+**Not a quiet box, again.** Load 14.5–15.9 through the timing runs (a sibling lane's
+build was live). Every cell carries its run's floor and load; a cost is only ever read
+against its own run.
+
+### 5.1 The timing cells
+
+| cell | manifest off (ms) | manifest on (ms) | override §3.1 (ms) | target |
+|---|---:|---:|---:|---|
+| `t_many/count_id/stmt1` | 123.02 (spread 9.52) | 10.73 (spread 2.17) | — | — |
+| `t_many/count_id/stmt2` | **115.81** (spread 23.00) | **10.95** (spread 1.22) | 11.33 | ≤ 20 |
+| `t_many/point/stmt2` | 124.75 (spread 18.87) | 14.75 (spread 1.18) | 14.49 | — |
+| `t_many_merged/count_id/stmt2` | 14.37 (spread 2.00) | 10.49 (spread 1.29) | 10.56 | — |
+| `t_many_merged/point/stmt2` | 17.85 (spread 4.77) | 13.20 (spread 0.69) | 13.19 | — |
+
+Floors 0.31 (off) / 1.13 (on); load 14.5 → 14.5 (off) and 15.9 → 15.9 (on). The
+`t_many` second statement clears the target at roughly half of it, and it now sits
+within 0.5 ms of its one-manifest twin (10.95 vs 10.49): the manifest penalty is gone,
+not reduced. The on-column reproduces the override's §3.1 cells within 0.4 ms on all
+four rows — the temporary override measured the real thing. The `off` second statement
+(115.81) sits 4 ms under IO-1's shipped 120.01; the run's own spread is 23 ms, so that
+delta is noise, not a claim.
+
+### 5.2 The census with the cache on
+
+| statement | manifest-list off → on | manifest off → on |
+|---|---:|---:|
+| `SELECT count(*)` (first) | 1 → 1 | 1 → 1 |
+| `SELECT count(*)` (repeat) | 1 → **0** | 1 → **0** |
+| `SELECT … WHERE …` | 1 → **0** | 1 → **0** |
+| `INSERT … SELECT` | 2 → 2 | 1 → 1 |
+| `SELECT count(*)` after the insert | 1 → 1 | 2 → **1** |
+| `DELETE` MoR v3 | 4 → 3 | 8 → **6** |
+| `UPDATE` MoR v3 | 5 → 4 | 15 → **12** |
+| `MERGE` MoR v3 | 4 → 4 | 8 → 8 |
+| `SELECT count(*)` tail | 1 → 1 | 2 → 2 |
+| `SELECT count(*)` tail (repeat) | 1 → **0** | 2 → **0** |
+
+`metadata.json` reads stay 0 on every statement that reads an existing table (1 on the
+two creators), which is IO-1's half doing its job. A repeated read now opens **nothing
+at all** except the parquet it must decode.
+
+The DML rows need their reason, because the naive reading ("the cache misses half the
+DML opens") is wrong in an instructive way. The fork's **scan** path consults the
+shared cache, but its **transaction, maintenance and inspect** paths load manifests
+straight from `FileIO`: at pin `79119643`, `transaction/` holds 0 cached reads against
+166 direct `load_manifest*` calls, and `maintenance/`, `inspect/` and
+`delete_vector_lookup.rs` hold 0. So a DML statement saves exactly its read-side
+repeats and keeps its commit-side opens: DELETE and UPDATE each drop one full
+read-side cycle (the same 4 → 3 / 8 → 6 and 5 → 4 / 15 → 12 the override's §3.2 table
+showed), the post-insert SELECT skips the one manifest it already holds, and INSERT
+and MERGE are unchanged because every manifest they touch is commit-side — MERGE opens
+the same new list and the same two new manifests four times each, which is four direct
+loads, not four misses. Per-path strace dumps (which statement opens which named file,
+first-seen marked) are in the unit ledger's evidence. This is filed as
+`PERF-CATALOG-COMMIT-CACHE-1` / fork ask `F-CATIO-COMMIT`, not fixed here: a bypassing
+path re-reads, it never serves stale, and the fork owns the fix.
+
+### 5.3 Commands
+
+```bash
+cd $HOME/repark-lanes/lanes/oc-catio2/python/repark && \
+  VIRTUAL_ENV=$HOME/repark-lanes/lanes/oc-catio2/.venv CARGO_BUILD_JOBS=8 \
+  $HOME/repark-lanes/lanes/oc-catio2/.venv/bin/maturin develop --release
+cd $HOME/repark-lanes/lanes/oc-catio2
+.venv/bin/python scratch/probes/probe_manifest.py manoff
+.venv/bin/python scratch/probes/probe_manifest.py manon
+strace -f -e trace=openat -o scratch/strace_manoff.txt .venv/bin/python scratch/probes/probe_calls.py manoff
+.venv/bin/python scratch/probes/count_calls.py scratch/strace_manoff.txt scratch/census_manoff.json
+strace -f -e trace=openat -o scratch/strace_manon.txt .venv/bin/python scratch/probes/probe_calls.py manon
+.venv/bin/python scratch/probes/count_calls.py scratch/strace_manon.txt scratch/census_manon.json
+```
+
+Probe sources live under `scratch/probes/` (gitignored, never committed; they carry no
+comments). `fixtures.py` / `probe_calls.py` / `probe_manifest.py` are the IO-1 probes
+with the lane path moved and the isolated variable changed from `metadataCache` to
+`manifestCacheBytes` (`0` vs default); `harness.py` / `count_calls.py` are byte-identical
+to IO-1's. The JSON number files (`scratch/numbers_manifest_manoff.json`,
+`scratch/numbers_manifest_manon.json`, `scratch/census_manoff.json`,
+`scratch/census_manon.json`) carry every sample, min, spread, floor repeat and load.
 
 ## Pointers
 

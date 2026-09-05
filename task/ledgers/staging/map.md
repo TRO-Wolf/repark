@@ -23,13 +23,27 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: h3-spill-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-ice-catalog-io-2-ledger.md](perf-ice-catalog-io-2-ledger.md) —
   **PERF-ICE-CATALOG-IO-2 (2026-09-05), in flight:** the RePark side of CATALOG-IO part 3 at fork
-  pin `79119643` (RP-12). A session key `repark.iceberg.manifestCacheBytes` (alias
-  `repark.iceberg.manifest_cache_bytes`, default ON at 32 MiB, `0` disables) sizes the fork's
-  shared manifest `ObjectCache` for the memory catalog; every table the catalog loads shares the
-  one cache. The part-3 pin un-skips (`t_many` second-statement `count_id` ≤ 20 ms); the staleness
-  battery re-runs with the cache on; the byte bound is the fork's moka `max_capacity`. Glue and
-  S3 Tables are NOT wired (their builders have no such method at the pin). `risk_tier: standard`.
-  Branch `perf/ice-catalog-io-2`.
+  pin `79119643` (RP-12, already on the base). A session key `repark.iceberg.manifestCacheBytes`
+  (alias `repark.iceberg.manifest_cache_bytes`, default ON at 32 MiB, `0` disables) sizes the
+  fork's shared manifest `ObjectCache` for the memory catalog; every table the catalog
+  materializes carries the one cache. Shipped: the part-3 pin un-skipped and green
+  (`t_many/count_id/stmt2` **115.81 → 10.95 ms**, target ≤ 20; repeated reads open no manifest
+  at all); the six IO-1 staleness pins re-run green with the cache on plus new Python legs per
+  cell (MERGE, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel, branch); the
+  funnel pinned by manifest deletion; correctness pinned under a 512-byte budget over eight
+  tables. `PERF-ICE-MANIFEST-1` FIXED with before/after; `PERF-CATALOG-CACHE-BOUND-1` NARROWED
+  to the metadata cache; `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` filed BACKLOG — the
+  census showed DML saving read-side repeats only, because the fork's transaction paths never
+  consult the cache (0 vs 166+ direct loads), which re-reads but never serves stale. Glue and
+  S3 Tables are NOT wired (their builders have no such method at the pin). `git diff
+  origin/main -- Cargo.toml Cargo.lock` empty.
+  Risk-first: **five** Rust parse pins plus **four** Rust delete-manifest pins plus **ten**
+  Python legs, with a **seven**-mutation score (one escape closed: the knob-off control parsed
+  no string until it was strengthened to). The in-lane critic pass found two claim-scope
+  overstatements (the map's "every table shares", the unrecorded `memory_catalog()` behaviour
+  change) and both are remediated in the ledger's critic table. `risk_tier: standard`. Branch
+  `perf/ice-catalog-io-2`.
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
   **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
   Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once

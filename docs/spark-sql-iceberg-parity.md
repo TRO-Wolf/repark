@@ -4501,6 +4501,51 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
+  **NARROWED 2026-09-05** (PERF-ICE-CATALOG-IO-2): this row is the **metadata** cache only.
+  The manifest cache this unit wires is already a byte-bounded moka cache fork-side
+  (`max_capacity` on entry weight, TinyLFU admission, overweight entries rejected), so the
+  unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
+  (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
+  observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+- **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
+  BACKLOG-by-ledger through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
+  `79119643` via RP-12); **FIXED 2026-09-05** (PERF-ICE-CATALOG-IO-2). Every `Table` got a
+  fresh `ObjectCache`, so `plan_files` re-read every manifest on every statement: 192
+  manifests at ~0.45 ms each, ~85 ms per statement on local FS. FIXED by wiring the
+  fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` (default 32 MiB
+  on, `0` disables): `CatalogCaches` carries the bytes into
+  `MemoryCatalogBuilder::with_shared_object_cache_bytes`, and every table the memory
+  catalog materializes carries the one cache. `t_many/count_id/stmt2` (193 manifests)
+  falls from **115.81 ms to 10.95 ms** (target ≤ 20; the point-query twin 124.75 →
+  14.75), and the one-manifest twin drops 14.37 → 10.49 — the repeated read now opens no
+  manifest-list and no manifest at all. Two things this row does NOT claim. (1) The
+  commit side is untouched: the fork's transaction, maintenance and inspect paths load
+  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
+  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
+  `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
+  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
+  pin, so they are unchanged. Staleness pinned with the cache on across two doors over
+  one catalog (commit visibility, `ADD COLUMNS`, MERGE after another door's commit,
+  `rewrite_manifests` + `expire_snapshots`, DROP + re-CREATE, `register_table`,
+  time-travel and branch reads), plus the funnel pin (a second door answers after every
+  manifest is deleted from disk). Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+- **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
+  behind a fork change. The fork's shared manifest cache covers the **scan** path only:
+  `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
+  `ObjectCache`, but the transaction, maintenance and inspect paths — and
+  `delete_vector_lookup.rs` — call `load_manifest*` straight on `table.file_io()`.
+  Measured at pin `79119643`: 0 cached reads against 166 direct loads in
+  `transaction/`, 0 in `maintenance/` + `inspect/` + `delete_vector_lookup.rs`. So a DML
+  statement saves exactly its read-side repeats (DELETE 4/8 → 3/6 lists/manifests,
+  UPDATE 5/15 → 4/12) and keeps every commit-side open (INSERT 2/1 → 2/1, MERGE 4/8 →
+  4/8 — MERGE opens the same new list and the same two new manifests four times each).
+  A bypassing path re-reads; it never serves stale. Fork trigger **F-CATIO-COMMIT**:
+  route the transaction/commit manifest reads through the table's `ObjectCache`. Nothing
+  in RePark changes at that trigger — the shared cache is already on every table — so
+  there is no RePark pin to un-skip; the §5 census table re-measures instead.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on

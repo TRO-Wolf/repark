@@ -78,7 +78,16 @@ Source comments retain only API and safety contracts; implementation narration i
   and a bad value fails loud naming both spellings, exactly like the entries knob.
   `builders.rs` passes the bytes to
   `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
-  catalog that every table the catalog materializes shares. The default is on because the
+  catalog that every table the catalog materializes carries. Carries, not always reads:
+  the fork's scan path (`plan_files`) consults it, but the fork's transaction, maintenance
+  and inspect paths load manifests straight from `FileIO` (0 cached reads against 166
+  direct loads in `transaction/` at this pin) — so a repeated SELECT opens nothing while a
+  DML statement keeps its commit-side opens and saves only its read-side repeats. Measured:
+  DELETE 4/8 → 3/6 lists/manifests, UPDATE 5/15 → 4/12, MERGE 4/8 → 4/8, INSERT 2/1 → 2/1.
+  That is a filed fork ask (`PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT`), not a wiring
+  defect: a bypassing path re-reads, it never serves stale. `memory_catalog(warehouse)`
+  keeps its signature and now also sizes a private shared manifest cache per call (same
+  always-on, never-trimmed shape IO-1 recorded for the metadata cache). The default is on because the
   CATALOG-IO measurement showed the second statement on a 193-manifest table falling from
   120 ms to 11 ms with the cache, the cached objects are immutable at their path (a
   rewrite or expiry writes new paths, never mutates), and the byte budget is enforced
