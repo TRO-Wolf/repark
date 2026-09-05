@@ -422,12 +422,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
   with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
   for a memory catalog (each `register_memory_catalog` otherwise builds its own namespace map).
-  Five are staleness: a commit in A is visible to B's next statement; an `ADD COLUMNS` in A is
+  Six are staleness: a commit in A is visible to B's next statement; an `ADD COLUMNS` in A is
   seen by B's next `SELECT *` (BUG-005, fresh schema per statement); a MERGE in B after A's commit
   matches A's rows and writes against them; a read after A's `rewrite_manifests` +
   `expire_snapshots` still answers; a DROP + re-CREATE is never served from the old location
-  (the memory catalog's Hive/REST `<version>-<uuid>` naming draws a fresh uuid and `drop_table`
-  evicts). **Round 2 corrected that last reason:** the uuid is NOT what makes DROP + re-CREATE
+  (`drop_table` evicts the cached pointer and the re-CREATE seeds a fresh one — evict-on-commit
+  plus evict-on-drop); and a Hadoop pointer adopted through `register_table` stays correct across
+  commits. **Round 2 corrected the DROP reason:** the Hive/REST uuid is NOT what makes DROP + re-CREATE
   safe, because a Hadoop pointer adopted through `CALL register_table` commits deterministic
   `v(N+1).metadata.json` with no uuid at all — measured, and pinned by
   `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`, which walks
