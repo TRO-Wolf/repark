@@ -4813,7 +4813,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   in RePark changes at that trigger — the shared cache is already on every table — so
   there is no RePark pin to un-skip; the §5 census table re-measures instead.
 - **PERF-CATALOG-LINEAGE-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2 (the finding
-  that HALTED it). **BACKLOG** behind a fork change. The fork's shared manifest cache keys by
+  that HALTED it). **FIXED 2026-09-05 (RP-13)** at pin `2ed39cb0` (fork F-CATIO-KEY `#270`: the
+  shared cache stores the context-free parse and applies each caller's list-entry inheritance
+  and `first_row_id` assignment per read); the knob-on detector below now asserts the assigned
+  lineage and is green. The default-ON flip is the follow-up unit. History: The fork's shared manifest cache keys by
   `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
   that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
   `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
@@ -4830,8 +4833,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
   OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
   the default-ON flip. Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows`
-  (today's wrong answer — reds when `F-CATIO-KEY` lands),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (was the wrong-answer detector; it redded on RP-13 as designed and now pins the fix),
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
