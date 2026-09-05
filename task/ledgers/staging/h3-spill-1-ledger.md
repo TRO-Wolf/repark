@@ -109,7 +109,7 @@ Round 2, re-run after every remediation.
 | `make verify` (= `ci` + the Rust workspace suite) | 0 |
 | `make check-python-conventions` | 0 |
 | `make rust-panic-ban` | 0 (inside `ci`) |
-| `.venv/bin/python -m pytest python/repark/tests -q -p no:randomly` | 0 (4806 passed, 215 skipped, 386 s) |
+| `.venv/bin/python -m pytest python/repark/tests -q -p no:randomly -rs` | 0 (4823 passed, 198 skipped, 208 s) |
 | `.venv/bin/python -m pytest python/repark-parity/tests -q -p no:randomly` | 0 (574 passed) |
 | `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (22 passed, 43 s) |
 | `REPARK_PARITY_LIVE=1 pytest test_parity_live.py -q` (Spark cells were measured) | 0 (119 passed, 65 s) |
@@ -119,6 +119,13 @@ Round 2, re-run after every remediation.
 | `make check-docs-compaction` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `typos .` | 0 |
+
+The skip count is the same 198 as round 1, and 4823 = round 1's 4821 plus the two pins added here;
+`-rs` names every skip and all of them are the documented environment gates (live tier off, real
+AWS off, an empty fuzz-repro parameter set). An earlier round-2 run of the same suite read
+4806/215 — 17 extra skips — because it was scheduled **alongside the live oracle leg's JVM**, and
+the live-cell guards skip rather than fight a session that is already up. That is a scheduling
+mistake in the gate run, not a result: the suite is recorded from the isolated run.
 
 Provocation proofs for the two round-2 pins: a constant boundary digest reds
 `test_the_boundary_digest_is_order_independent_and_content_sensitive` and leaves
