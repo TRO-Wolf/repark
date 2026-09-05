@@ -163,6 +163,13 @@ bare invocation checks the tree against the checked-in file. The register is pin
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
 
+PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
+1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
+the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
+responsibility when a charter already changes that region"). A ratchet DOWN; the duplicate
+table in `test_cap_1_source_file_line_cap.py` moved with it in the same commit.
+pins: perf-ice-catalog-io-1/C-004
+
 WIN-SLIDE-1 (2026-09-04): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
 1102→1053 — `Column.over`'s body moved to `column/window.rs`, which is that row's own recorded
 split seam ("extract the remaining date or window method family"). A ratchet DOWN, not a

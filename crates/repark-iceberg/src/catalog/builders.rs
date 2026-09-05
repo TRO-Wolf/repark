@@ -11,6 +11,7 @@ use iceberg_catalog_glue::{GLUE_CATALOG_PROP_WAREHOUSE, GlueCatalogBuilder};
 use iceberg_catalog_s3tables::{S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN, S3TablesCatalogBuilder};
 use tracing::Instrument;
 
+use crate::catalog::caches::{CatalogCaches, IcebergCacheSettings};
 use crate::catalog::location::storage_factory_for_location;
 
 /// Build the AWS-free in-memory catalog over `warehouse` for local development and tests.
@@ -22,9 +23,31 @@ use crate::catalog::location::storage_factory_for_location;
     fields(warehouse = %warehouse)
 )]
 pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
+    memory_catalog_cached(
+        warehouse,
+        &CatalogCaches::new(IcebergCacheSettings::default()),
+    )
+    .await
+}
+
+/// # Errors
+/// Returns an error when the builder rejects the warehouse configuration.
+#[tracing::instrument(
+    name = "catalog.memory_catalog_cached",
+    skip(warehouse, caches),
+    fields(warehouse = %warehouse, metadata_cache = caches.metadata_cache().is_some())
+)]
+pub async fn memory_catalog_cached(
+    warehouse: &str,
+    caches: &CatalogCaches,
+) -> Result<Arc<dyn Catalog>> {
     // Use the shared scheme selector so warehouses pick the correct FileIO backend.
-    let catalog = MemoryCatalogBuilder::default()
-        .with_storage_factory(storage_factory_for_location(warehouse)?)
+    let mut builder = MemoryCatalogBuilder::default()
+        .with_storage_factory(storage_factory_for_location(warehouse)?);
+    if let Some(metadata) = caches.metadata_cache() {
+        builder = builder.with_table_metadata_cache(metadata);
+    }
+    let catalog = builder
         .load(
             "memory",
             HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), warehouse.to_string())]),

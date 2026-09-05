@@ -30,6 +30,8 @@ use crate::{
 };
 
 mod df_guards;
+mod iceberg_caches;
+mod late_catalogs;
 mod spill;
 mod temp_views;
 
@@ -248,6 +250,8 @@ impl ReparkSessionBuilder {
         // Write-path concurrency (session conf only — never a table property).
         let write_concurrency = repark_iceberg::write::concurrency_from_config_map(&self.config)
             .map_err(|error| Error::Config(error.to_string()))?;
+        let caches = repark_iceberg::catalog::IcebergCacheSettings::from_config_map(&self.config)
+            .map_err(|error| Error::Config(error.to_string()))?;
         let scan_pruning =
             repark_iceberg::write::scan_prune::scan_pruning_from_config_map(&self.config)
                 .map_err(|error| Error::Config(error.to_string()))?;
@@ -323,7 +327,7 @@ impl ReparkSessionBuilder {
         Ok(ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
             dialect,
-            catalogs: Arc::new(RwLock::new(CatalogRegistry::new())),
+            catalogs: Arc::new(RwLock::new(CatalogRegistry::with_cache_settings(caches))),
             catalog_specs: Arc::new(catalog_specs),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
@@ -404,6 +408,7 @@ impl ReparkSession {
         if let Some(frame) = spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
         }
+        self.trim_iceberg_caches();
         // Clone the registry (cheap — keys + `Arc`s) so no lock is held across the `await`.
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
@@ -491,46 +496,6 @@ impl ReparkSession {
     #[cfg(test)]
     pub(crate) fn testing_aws_sdk_config_resolved(&self) -> bool {
         self.aws_sdk_config.get().is_some()
-    }
-
-    /// Register catalogs from a late configuration map onto the live session.
-    /// # Errors
-    /// Returns `Error::Config` if the `spark.sql.catalog.*` block is malformed.
-    pub async fn register_late_configured_catalogs(
-        &self,
-        config: &HashMap<String, String>,
-    ) -> Result<(Vec<String>, Vec<String>)> {
-        let specs = catalog_config::parse_catalog_specs(config)?;
-        // Late configuration can introduce the first AWS signal for an offline session.
-        let late_aws_signaled = specs
-            .iter()
-            .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
-            || resolve_s3_region_override(config)?.is_some()
-            || config
-                .get(AWS_ENABLE_CONFIG_KEY)
-                .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
-        self.resolve_aws_sdk_config_if(self.aws_signaled || late_aws_signaled)
-            .await;
-        let mut added = Vec::new();
-        let mut skipped = Vec::new();
-        for spec in &specs {
-            let already_iceberg = self.catalog_handle(&spec.name).is_ok();
-            let already_postgres = self
-                .postgres_catalog_names
-                .read()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .contains(&spec.name);
-            if already_iceberg || already_postgres {
-                // Keep existing registrations; never replace them silently.
-                skipped.push(spec.name.clone());
-            } else {
-                self.register_catalog_spec(spec).await?;
-                added.push(spec.name.clone());
-            }
-        }
-        added.sort();
-        skipped.sort();
-        Ok((added, skipped))
     }
 
     /// Build and register one parsed [`CatalogSpec`] via its matching `repark-catalog` builder.
@@ -784,9 +749,7 @@ impl ReparkSession {
                  would orphan its tables (their metadata lives in the replaced handle)"
             )));
         }
-        let catalog = repark_iceberg::catalog::memory_catalog(warehouse)
-            .await
-            .map_err(engine_err)?;
+        let catalog = self.memory_catalog_handle(warehouse).await?;
         // In-memory LocalFs catalogs keep the offline CTAS fallback; real warehouses fail loud.
         self.register_iceberg_catalog_with_policy(
             name,

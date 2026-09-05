@@ -9,6 +9,7 @@ use iceberg::{Catalog, NamespaceIdent};
 
 // === incremental catalog provider PERF-07 hook API (invalidate / rebuild).
 mod builders;
+mod caches;
 mod catalog_ops;
 mod lineage_columns;
 mod location;
@@ -20,7 +21,14 @@ pub use provider::{
     rebuild_catalog_provider,
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
-pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
+pub use builders::{
+    glue_catalog, iceberg_to_datafusion, memory_catalog, memory_catalog_cached, s3tables_catalog,
+};
+pub use caches::{
+    CatalogCaches, DEFAULT_METADATA_CACHE_ENTRIES, IcebergCacheSettings,
+    METADATA_CACHE_ENTRIES_KEY, METADATA_CACHE_ENTRIES_KEY_ALT, METADATA_CACHE_KEY,
+    METADATA_CACHE_KEY_ALT,
+};
 pub use catalog_ops::reregister_catalog_provider;
 pub use lineage_columns::{
     LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,
