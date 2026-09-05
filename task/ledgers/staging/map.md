@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
+  **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
+  `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
+  Decimal32/64/128/256 grouped paths with Spark's result rules and `try_avg`
+  overflow → NULL, the retract path untouched for window frames. Charter: 6 clauses,
+  all OPEN. `risk_tier: standard`. Branch `perf/agg-avg-1`.
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45
