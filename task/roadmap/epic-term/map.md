@@ -8,6 +8,21 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   2026-09-03) — PROJECT.md points here rather than restating it.
 
 ## Contents
+- [project-performance-and-unsafe-rust-brief-2026-09-04.md](project-performance-and-unsafe-rust-brief-2026-09-04.md)
+  — proposal opened 2026-09-04 consolidating production feedback, measured and candidate
+  performance improvements, possible unsafe Rust exceptions, and agent isolation, patch
+  admission, and safety review. Includes evidence limits, guard tests, delivery groups, and
+  pickup decisions. Current unsafe prohibitions and agent permissions remain in force.
+- [sepmo-efficiency-implementation-brief-2026-09-04.md](sepmo-efficiency-implementation-brief-2026-09-04.md)
+  — proposal opened 2026-09-04 for SEPMO token use and agent performance. Records the review,
+  measured document footprint, compact role packets, evidence collection, telemetry, a controlled
+  pilot, and the amendment boundaries for review and verification policy. Includes delivery
+  groups and a pickup checklist; implementation scope audit is pending.
+- [rust-unification-implementation-brief-2026-09-04.md](rust-unification-implementation-brief-2026-09-04.md)
+  — proposal opened 2026-09-04 for Rust-only batch, native database change capture, streaming,
+  and Iceberg unification. Records the owner's JVM-free production constraint, the recommended
+  PostgreSQL-to-Iceberg first milestone, recovery and performance evidence, open decisions,
+  and the pickup procedure. Implementation scope audit is pending.
 - [v1-0-iceberg-v3-northstar.md](v1-0-iceberg-v3-northstar.md) — **the v1.0 north star
   (owner-set 2026-08-23):** full production-grade Iceberg format-v3 — the four pillars, the
   acceptance matrix that gates the v1.0 tag, and the two-lane path (guarded RP-2 salvage — landed; fork
