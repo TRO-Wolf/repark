@@ -1709,8 +1709,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   from PySpark 4.1.2. Two pre-existing divergences are disclosed, not absorbed: group keys
   come back nullable where Spark marks them not-null (the live legs project to the avg
   column), and multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
-  where Spark answers.
-  pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005
+  where Spark answers. The brief's full gate list runs green with this file in the
+  tree, and §6 of the ledger records the three named mutations red.
+  pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
