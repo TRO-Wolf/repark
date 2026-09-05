@@ -1963,6 +1963,55 @@ the pin rather than obeying it.
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
 
+### FLOAT-AGG-3 — grouped avg over 1e16 plus 64 ones
+
+- **repark** — grouped `avg(v)` over one group holding `[1e16, 1.0 × 64]` lands
+  **153846153846153.84**. The groups path sums per element in row order; the base
+  summed through Arrow's lane-chunked kernel, so grouped float avgs change
+  bit-for-bit vs the base. Type: Arrow `float64` nullable.
+- **Apache Spark** — the same recipe under `local[2]`, ANSI on, lands
+  **153846153846154.34**, grouped and global alike — a 3.3e-15 relative gap, inside
+  1e-12. *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
+  (repark's exact value plus within-1e-12 of the recorded Spark value) and
+  `python/repark/tests/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
+  (live re-derivation against the oracle).
+- **Rationale** — follows FLOAT-AGG-1/2 (same accumulation-order class); the grouped
+  shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
+  until a G7 fix lands.
+
+### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps with a representable quotient
+
+- **repark** — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
+  i128 answer the wrapped quotient at `decimal128(38, 4)` instead of NULLing or
+  raising. The zero-wrap fixture (three maxima plus
+  `40282366920938463463374607431768211459`, summing to exactly 2^128) answers
+  **`0.0000`** on the SQL doors (grouped, and global on the native door); the
+  non-zero-wrap fixture (complement `40282366920938463463374607431768611459`,
+  wrapping to 400000) answers **`100000.0000`** on grouped SQL and grouped
+  DataFrame. Window `try_avg` answers `[None, None, None, 0.0000]`; window `avg`
+  raises `Arithmetic Overflow`.
+- **Apache Spark** — the same fixtures under `local[2]`, ANSI on: grouped `try_avg`
+  answers **None** and grouped `avg` raises **ARITHMETIC_OVERFLOW** (`Overflow in
+  sum of decimals`) on both fixtures, SQL and DataFrame alike (global likewise on
+  the zero-wrap fixture); window `try_avg` answers four **None**s; window `avg`
+  raises **NUMERIC_VALUE_OUT_OF_RANGE** (the first-row quotient is itself
+  unrepresentable at `Decimal(38, 4)`). The return type agrees wherever a value is
+  returned.
+  *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
+  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
+  window `try_avg` list and the window `avg` raise; reds when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
+  the general wrap class in round 3 R2-1).
+  Pre-existing: the global `Accumulator` arms are byte-identical to the base (that
+  unit's ledger C-002), so the global shape cannot have changed there; the new groups
+  path inherits the same wrapping add. The unit's `try_avg`-yields-NULL claim covers
+  only the 2×-MAX shape. A fix needs overflow latching in the groups, global and
+  retract paths — not a one-line checked add.
+
 ### G18-1 — array-column list value-field name (`item` vs `element`)
 
 - **repark** — `createDataFrame` of an array column exports Arrow list value field named `item`.
@@ -4652,6 +4701,77 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   query plus ~2× per-byte overhead, decomposed in the baseline §3), and `count(col)`
   still scans while the parquet leg folds from statistics. The RePark parallelism pins
   skip naming F-27 until the bump.
+  **NARROWED 2026-09-05** (PERF-ICE-CATALOG-IO-2): this row is the **metadata** cache only.
+  The manifest cache this unit wires is already a byte-bounded moka cache fork-side
+  (`max_capacity` on entry weight, TinyLFU admission, overweight entries rejected), so the
+  unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
+  (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
+  observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+- **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
+  BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
+  `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
+  `Table` got a fresh `ObjectCache`, so `plan_files` re-read every manifest on every
+  statement: 192 manifests at ~0.45 ms each, ~85 ms per statement on local FS. IO-2 wired
+  the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
+  unit HALTED mid-flight on `PERF-CATALOG-LINEAGE-CACHE-1` (the shared cache serves
+  wrong-context lineage on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands)
+  and landed with the knob default OFF per the round-2 ruling, so main serves no wrong
+  answer and the win is measured but not served. Measured with the knob set explicitly
+  to 32 MiB: `t_many/count_id/stmt2` (193 manifests) falls from **115.81 ms to 10.95 ms**
+  (target ≤ 20; the point-query twin 124.75 → 14.75), and the one-manifest twin drops
+  14.37 → 10.49 — the repeated read opens no manifest-list and no manifest at all. The
+  follow-up is the default-ON flip after `F-CATIO-KEY` lands and the four upgrade-lineage
+  tests pass knob-on. Two things this row does NOT claim. (1) The
+  commit side is untouched: the fork's transaction, maintenance and inspect paths load
+  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
+  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
+  `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
+  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
+  pin, so they are unchanged. Staleness pinned per cell with the cache on (the Python legs
+  set the knob explicitly: MERGE after a commit, DROP + re-CREATE, `register_table`,
+  rewrite + expire, time-travel and branch reads), the two-door Rust battery green with
+  the cache off (the default), plus the funnel pin (a second door answers after every
+  manifest is deleted from disk, knob set explicitly). Pins:
+  `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+- **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
+  behind a fork change. The fork's shared manifest cache covers the **scan** path only:
+  `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
+  `ObjectCache`, but the transaction, maintenance and inspect paths — and
+  `delete_vector_lookup.rs` — call `load_manifest*` straight on `table.file_io()`.
+  Measured at pin `79119643`: 0 cached reads against 166 direct loads in
+  `transaction/`, 0 in `maintenance/` + `inspect/` + `delete_vector_lookup.rs`. So a DML
+  statement saves exactly its read-side repeats (DELETE 4/8 → 3/6 lists/manifests,
+  UPDATE 5/15 → 4/12) and keeps every commit-side open (INSERT 2/1 → 2/1, MERGE 4/8 →
+  4/8 — MERGE opens the same new list and the same two new manifests four times each).
+  A bypassing path re-reads; it never serves stale. Fork trigger **F-CATIO-COMMIT**:
+  route the transaction/commit manifest reads through the table's `ObjectCache`. Nothing
+  in RePark changes at that trigger — the shared cache is already on every table — so
+  there is no RePark pin to un-skip; the §5 census table re-measures instead.
+- **PERF-CATALOG-LINEAGE-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2 (the finding
+  that HALTED it). **BACKLOG** behind a fork change. The fork's shared manifest cache keys by
+  `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
+  that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
+  `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
+  range forces every entry to `None` while a `Some` range assigns running counters. A V2 list
+  carries no range; the post-upgrade V3 list carries one for the SAME path — so a v2-context
+  parse poisons every later v3 read of that path within one catalog lifetime, and
+  upgrade-boundary tables serve `_row_id` NULL. Measured: 4 facade tests red with the cache
+  on (`test_v3_legacy_delete_merge` × 2, the `alter-set-format-version-3-mor` statement row,
+  `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`), all green with
+  `manifestCacheBytes = "0"` on the same binary. Per-table caches never shared across the
+  boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
+  the key carry the assignment input, or move assignment out of the cached object. No
+  RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
+  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
+  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  the default-ON flip. Pins:
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows`
+  (today's wrong answer — reds when `F-CATIO-KEY` lands),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
@@ -4673,6 +4793,33 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
   are the record. Remaining commit 1 × N stays
   `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
+- **PERF-AGG-AVG-1** — **FIXED 2026-09-05 (PERF-AGG-AVG-1)**. The Spark `avg` /
+  `try_avg` UDAF implemented `accumulator()` only, so DataFusion boxed one accumulator
+  per group. The UDAF now serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (`crates/repark-functions/src/avg_groups.rs`, null
+  tracking in `groups_null_state.rs`) over Float64 and Decimal32/64/128/256 with
+  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow on the
+  2×-MAX shape → per-group NULL (the i128 sum-wrap shape is BACKLOG row
+  AVG-DEC-SUMWRAP-1); the `Accumulator` retract arms and `state_fields` are
+  byte-identical, so window frames keep the retract path. Measured on a release
+  module at 8-thread parity (median-of-5, loads 12–17, floors 3.3 ms before /
+  4.7 ms after):
+  `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) **400.6 → 99.0–113.8
+  ms** against a `sum` control at 82.6–90.0 ms — the ratio **4.45× → 1.10–1.28×**, the
+  ≤ 1.3× gate met; TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries 17`)
+  **0.521–0.721 s → 0.143–0.355 s** against DuckDB 1.5.5 at 0.036–0.043 s on the same
+  box — 13.8–18.3× → 3.6–8.3×, the ≤ 3× bar NOT met, and no avg-only fix can meet it
+  (`sum` on the same grouping already costs 82.6 ms, 2.2× DuckDB's whole Q17; the
+  residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
+  queries through the optimizer's dedup rewrite and still refuses multi-column ones
+  with `DistinctAvgAccumulator`. Grouped float `avg` changes bit-for-bit vs the base
+  (per-element summation replaces Arrow's lane-chunked kernel): `153846153846153.84`
+  here vs Spark's `153846153846154.34` on the 1e16-plus-ones fixture, disclosed as
+  FLOAT-AGG-3. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  (24 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
+  probe red at 4.06× on the base and green at 1.21× after, 7 live legs) and 21 Rust
+  unit tests. Numbers, floors and the reproduce block:
+  `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured

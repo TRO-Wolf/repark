@@ -25,7 +25,8 @@ pub use builders::{
     glue_catalog, iceberg_to_datafusion, memory_catalog, memory_catalog_cached, s3tables_catalog,
 };
 pub use caches::{
-    CatalogCaches, DEFAULT_METADATA_CACHE_ENTRIES, IcebergCacheSettings,
+    CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, DEFAULT_METADATA_CACHE_ENTRIES,
+    IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY, MANIFEST_CACHE_BYTES_KEY_ALT,
     METADATA_CACHE_ENTRIES_KEY, METADATA_CACHE_ENTRIES_KEY_ALT, METADATA_CACHE_KEY,
     METADATA_CACHE_KEY_ALT,
 };

@@ -56,6 +56,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   same release module in back-to-back runs with their own re-measured floor and recorded load —
   not a quiet box.
   pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05)** appended §5, re-measuring part 3 on the real pin
+  (`79119643`, no override) with the manifest knob as the only variable (`0`, the default,
+  vs `33554432`, set explicitly): `t_many/count_id/stmt2`
+  115.81 → 10.95 ms, repeated reads opening no manifest at all, and the DML scope explained —
+  the fork's scan path consults the cache but its transaction/maintenance/inspect paths load
+  straight from `FileIO`, so DML saves read-side repeats only (filed `F-CATIO-COMMIT`).
+  Earlier tables untouched.
+  pins: perf-ice-catalog-io-2/C-006
 
 - [iceberg-scan-baseline.md](iceberg-scan-baseline.md) — **PERF-ICE-SCAN-1
   (2026-09-05):** the `count_star`, `count_id`, `sum_all` and `string_len` cells at 1e6 and
@@ -78,6 +86,17 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   (65.04 ms at depth 100 — under the bar, so the deferral rests on correctness, not on the size
   of the prize) and says plainly that the first draft's 140.46 ms was measuring the wrong loop.
   pins: perf-facade-1/C-001, C-006, C-007, C-009
+- [aggregate-baseline.md](aggregate-baseline.md) — **PERF-AGG-AVG-1
+  (2026-09-05):** the grouped-`avg` cells before/after the `GroupsAccumulator`
+  (`avg`/`sum` by `l_partkey` 4.45× → 1.10–1.28×, TPC-H Q17 13.8–18.3× → 3.6–8.3×
+  DuckDB with the ≤ 3× bar missed and the sum-floor unreachability proof), floors,
+  machine/profile header, and a reproduce block ending in the committed cost probe.
+  Round 2 narrows its `try_avg`-overflow sentence to the 2×-MAX shape, points the
+  sum-wrap shape at BACKLOG row `AVG-DEC-SUMWRAP-1`, and discloses the grouped-float
+  bit change (`FLOAT-AGG-3`).
+  Note this baseline's deviation from the facade precedent: the by-partkey cells run
+  from a throwaway script, not a tracked runner — only the Q17 leg (the tracked TPC-H
+  runner) and the committed probe re-derive mechanically.
   **PERF-FACADE-CDF-1 (2026-09-05)** appended §4, turning the §3 create controls into a
   before/after pair (1,656.62 → 70.30 ms at 1e5 tuples); earlier tables untouched.
   pins: perf-facade-cdf-1/C-001, C-005

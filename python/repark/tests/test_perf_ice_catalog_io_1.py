@@ -4,6 +4,7 @@ import os
 import time
 from pathlib import Path
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession, _native
@@ -12,6 +13,10 @@ _CACHE_KEY = "repark.iceberg.metadataCache"
 _ENTRIES_KEY = "repark.iceberg.metadataCacheEntries"
 _CACHE_KEY_ALT = "repark.iceberg.metadata_cache"
 _ENTRIES_KEY_ALT = "repark.iceberg.metadata_cache_entries"
+_MANIFEST_KEY = "repark.iceberg.manifestCacheBytes"
+_MANIFEST_KEY_ALT = "repark.iceberg.manifest_cache_bytes"
+_ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
+_UPGRADE_TO_V3 = "ALTER TABLE ice.ns.up SET TBLPROPERTIES ('format-version' = '3')"
 _ACCEPTANCE_ENV = "REPARK_AWS_ACCEPTANCE"
 _MANIFEST_TARGET_MS = 20.0
 _MANY_APPENDS = 48
@@ -140,7 +145,13 @@ def test_the_retained_location_bound_is_trimmed_at_the_statement_door(
 
 @pytest.mark.parametrize(
     ("key", "value"),
-    [(_CACHE_KEY, "yes"), (_ENTRIES_KEY, "0"), (_ENTRIES_KEY, "many")],
+    [
+        (_CACHE_KEY, "yes"),
+        (_ENTRIES_KEY, "0"),
+        (_ENTRIES_KEY, "many"),
+        (_MANIFEST_KEY, "many"),
+        (_MANIFEST_KEY, "-1"),
+    ],
 )
 def test_a_bad_cache_knob_fails_loud_naming_the_key(key: str, value: str) -> None:
     with pytest.raises(Exception, match=key.replace(".", r"\.")):
@@ -149,7 +160,11 @@ def test_a_bad_cache_knob_fails_loud_naming_the_key(key: str, value: str) -> Non
 
 @pytest.mark.parametrize(
     ("alias", "canonical", "value"),
-    [(_CACHE_KEY_ALT, _CACHE_KEY, "yes"), (_ENTRIES_KEY_ALT, _ENTRIES_KEY, "0")],
+    [
+        (_CACHE_KEY_ALT, _CACHE_KEY, "yes"),
+        (_ENTRIES_KEY_ALT, _ENTRIES_KEY, "0"),
+        (_MANIFEST_KEY_ALT, _MANIFEST_KEY, "many"),
+    ],
 )
 def test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one(
     alias: str, canonical: str, value: str
@@ -211,20 +226,239 @@ def test_many_manifests_answer_equal_to_one_merged_manifest(tmp_path: Path) -> N
     assert many == merged == _MANY_ROWS
 
 
-@pytest.mark.skip(
-    reason="PERF-ICE-CATALOG-IO-1 part 3 is fork-gated: the shared manifest ObjectCache needs "
-    "iceberg TableBuilder::object_cache and MemoryCatalogBuilder::with_shared_object_cache_bytes "
-    "(fork ask F-CATIO-B, landed at pin 79119643). Measured through a temporary path override; "
-    "un-skip when RePark wires with_shared_object_cache_bytes behind its config key."
+@pytest.mark.skipif(
+    _native.__debug_assertions__,
+    reason="the wall-clock target holds on a release module only; the delete-manifest pins "
+    "guard the cache on every build",
 )
 def test_the_second_statement_on_a_many_manifest_table_is_under_the_target(
     tmp_path: Path,
 ) -> None:
-    spark = _session("manifest_timing", tmp_path)
+    spark = _session("manifest_timing", tmp_path, **{_MANIFEST_KEY: "33554432"})
     _range_view(spark, _MANY_ROWS)
     _build_many(spark, "t_many")
 
     assert _second_statement_ms(spark, "t_many") <= _MANIFEST_TARGET_MS
+
+
+def _manifest_files(warehouse: Path) -> set[Path]:
+    return set(warehouse.rglob("*.avro"))
+
+
+def _delete_manifests(warehouse: Path) -> int:
+    paths = _manifest_files(warehouse)
+    for path in paths:
+        path.unlink()
+    return len(paths)
+
+
+def test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish(
+    tmp_path: Path,
+) -> None:
+    spark = _session("manifest_explicit", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
+
+    removed = _delete_manifests(tmp_path / "manifest_explicit")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
+
+
+def test_a_default_session_reopens_manifests_after_they_vanish(tmp_path: Path) -> None:
+    spark = _session("manifest_default", tmp_path)
+    _seed(spark, "t", rows=10)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
+
+    removed = _delete_manifests(tmp_path / "manifest_default")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    with pytest.raises(Exception, match="manifest"):
+        spark.sql("SELECT count(id) AS c FROM ice.ns.t").to_arrow()
+
+
+def test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again(
+    tmp_path: Path,
+) -> None:
+    spark = _session("manifest_off", tmp_path, **{_MANIFEST_KEY: "0"})
+    _seed(spark, "t", rows=10)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
+
+    removed = _delete_manifests(tmp_path / "manifest_off")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    with pytest.raises(Exception, match="manifest"):
+        spark.sql("SELECT count(id) AS c FROM ice.ns.t").to_arrow()
+
+
+def test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths(
+    tmp_path: Path,
+) -> None:
+    spark = _session("manifest_rewrite", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _range_view(spark, _MANY_ROWS)
+    _build_many(spark, "t")
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == _MANY_ROWS
+
+    warehouse = tmp_path / "manifest_rewrite"
+    before = _manifest_files(warehouse)
+    spark.sql("CALL ice.system.rewrite_manifests(table => 'ns.t')").to_arrow()
+    after = _manifest_files(warehouse)
+
+    assert after - before, "rewrite must write new manifest paths or the pin is vacuous"
+
+    spark.sql(
+        "CALL ice.system.expire_snapshots("
+        "table => 'ns.t', older_than => 9999999999999, retain_last => 1)"
+    ).to_arrow()
+
+    assert not any(path.exists() for path in before), (
+        "expire must remove every pre-rewrite manifest path from disk"
+    )
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == _MANY_ROWS
+
+
+def test_a_merge_after_a_commit_matches_the_committed_row(tmp_path: Path) -> None:
+    spark = _session("manifest_merge", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    spark.sql("INSERT INTO ice.ns.t VALUES (99, 1)").to_arrow()
+    spark.sql("SELECT 99 AS id, 0 AS vi").createOrReplaceTempView("one")
+    spark.sql(
+        "MERGE INTO ice.ns.t t USING one s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.vi = 100"
+    ).to_arrow()
+
+    assert _scalar(spark, "SELECT vi AS c FROM ice.ns.t WHERE id = 99") == 100
+
+
+def test_a_dropped_and_recreated_table_answers_its_own_rows(tmp_path: Path) -> None:
+    spark = _session("manifest_drop", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
+
+    spark.sql("DROP TABLE ice.ns.t").to_arrow()
+    _seed(spark, "t", rows=20)
+
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 20
+
+
+def test_a_registered_table_stays_correct_across_a_commit(tmp_path: Path) -> None:
+    spark = _session("manifest_register", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    pointers = sorted((tmp_path / "manifest_register").rglob("*.metadata.json"))
+
+    assert pointers, "the seed must write a metadata pointer to adopt"
+
+    spark.sql(
+        f"CALL ice.system.register_table(table => 'ns.adopted', metadata_file => '{pointers[-1]}')"
+    ).to_arrow()
+
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.adopted") == 10
+
+    spark.sql("INSERT INTO ice.ns.adopted VALUES (99, 1)").to_arrow()
+
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.adopted") == 11
+
+
+def test_a_tiny_byte_budget_still_answers_across_many_tables(tmp_path: Path) -> None:
+    spark = _session("manifest_bound", tmp_path, **{_MANIFEST_KEY: "512"})
+    _range_view(spark, 4)
+    for index in range(8):
+        spark.sql(f"CREATE TABLE ice.ns.b{index} AS SELECT * FROM src").to_arrow()
+
+    for index in range(8):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.b{index}") == 4
+
+
+def test_time_travel_reads_the_pinned_snapshot_with_the_cache_on(
+    tmp_path: Path,
+) -> None:
+    spark = _session("manifest_timetravel", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    first = spark._testing_list_snapshots("ice.ns.t")[-1][0]
+    spark.sql("INSERT INTO ice.ns.t VALUES (99, 1)").to_arrow()
+
+    assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.t VERSION AS OF {first}") == 10
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 11
+
+
+def test_branch_reads_answer_with_the_cache_on(tmp_path: Path) -> None:
+    spark = _session("manifest_branch", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    _seed(spark, "t", rows=10)
+    first = spark._testing_list_snapshots("ice.ns.t")[-1][0]
+    spark.sql(f"CREATE BRANCH kept IN ice.ns.t AS OF VERSION {first}").to_arrow()
+    spark.sql("INSERT INTO ice.ns.t VALUES (99, 1)").to_arrow()
+
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t VERSION AS OF 'kept'") == 10
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 11
+
+
+def _seed_v2_upgrade_table(spark: ReparkSession) -> None:
+    spark.sql(
+        "CREATE TABLE ice.ns.up (id INT, name STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version' = '2')"
+    ).to_arrow()
+    spark.sql("INSERT INTO ice.ns.up VALUES (1, 'a'), (2, 'b'), (3, 'c')").to_arrow()
+
+
+def _lineage_triples(spark: ReparkSession, table: str) -> list[tuple[int, int | None, int | None]]:
+    arrow = spark.sql(
+        f"SELECT id, _row_id, _last_updated_sequence_number FROM {table} ORDER BY id"
+    ).to_arrow()
+    assert arrow.schema.field("_row_id").type == pa.int64(), arrow.schema
+    assert arrow.schema.field("_last_updated_sequence_number").type == pa.int64(), arrow.schema
+    return list(
+        zip(
+            [int(value) for value in arrow.column("id").to_pylist()],
+            arrow.column("_row_id").to_pylist(),
+            arrow.column("_last_updated_sequence_number").to_pylist(),
+            strict=True,
+        )
+    )
+
+
+def test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows(
+    tmp_path: Path,
+) -> None:
+    """Detector for PERF-CATALOG-LINEAGE-CACHE-1: pins today's wrong answer, reds on the fix."""
+    spark = _session(
+        "manifest_lineage_on",
+        tmp_path,
+        **{_ALLOW_CREATE_V3_KEY: "true", _MANIFEST_KEY: "33554432"},
+    )
+    _seed_v2_upgrade_table(spark)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.up") == 3
+    spark.sql(_UPGRADE_TO_V3).to_arrow()
+    spark.sql("INSERT INTO ice.ns.up VALUES (4, 'd'), (5, 'e')").to_arrow()
+
+    assert _lineage_triples(spark, "ice.ns.up") == [
+        (1, None, None),
+        (2, None, None),
+        (3, None, None),
+        (4, 0, 2),
+        (5, 1, 2),
+    ]
+
+
+def test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows(
+    tmp_path: Path,
+) -> None:
+    """Sibling control: the same upgrade without the shared cache serves assigned lineage."""
+    spark = _session(
+        "manifest_lineage_off",
+        tmp_path,
+        **{_ALLOW_CREATE_V3_KEY: "true", _MANIFEST_KEY: "0"},
+    )
+    _seed_v2_upgrade_table(spark)
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.up") == 3
+    spark.sql(_UPGRADE_TO_V3).to_arrow()
+    spark.sql("INSERT INTO ice.ns.up VALUES (4, 'd'), (5, 'e')").to_arrow()
+
+    assert _lineage_triples(spark, "ice.ns.up") == [
+        (1, 2, 1),
+        (2, 3, 1),
+        (3, 4, 1),
+        (4, 0, 2),
+        (5, 1, 2),
+    ]
 
 
 @pytest.mark.skipif(
