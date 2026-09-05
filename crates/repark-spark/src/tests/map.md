@@ -418,6 +418,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins.
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the nine pins that gate
+  the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
+  with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
+  for a memory catalog (each `register_memory_catalog` otherwise builds its own namespace map).
+  Five are staleness: a commit in A is visible to B's next statement; an `ADD COLUMNS` in A is
+  seen by B's next `SELECT *` (BUG-005, fresh schema per statement); a MERGE in B after A's commit
+  matches A's rows and writes against them; a read after A's `rewrite_manifests` +
+  `expire_snapshots` still answers; a DROP + re-CREATE is never served from the old location
+  (the memory catalog's Hive/REST `<version>-<uuid>` naming draws a fresh uuid and `drop_table`
+  evicts, so the ABA key does not exist). Four are cache mechanics: an unmoved pointer costs no
+  body fetch and a trim under the bound keeps every entry; a commit evicts the pointer it replaced
+  and seeds the new one, so retention is FLAT across DML and the reader after a commit pays no GET;
+  the knob off reads the document on every load; the retained-location bound holds across 24
+  distinct tables and a trimmed cache still answers.
+  Mutation score (measured): trim made a no-op → the bound pin reds; the knob-off branch dropped →
+  the disabled pin reds; the cache never built → the unmoved-pointer and commit-seed pins red;
+  trim made a per-statement flush → the unmoved-pointer pin reds.
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
   not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,
