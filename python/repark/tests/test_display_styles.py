@@ -82,7 +82,7 @@ shape: (12, 2)
 ┌─────┬───────┐
 │ id  ┆ label │
 │ --- ┆ ---   │
-│ i64 ┆ str   │
+│ i32 ┆ str   │
 ╞═════╪═══════╡
 │ 1   ┆ x1    │
 │ 2   ┆ x2    │
@@ -102,7 +102,7 @@ shape: (0, 1)
 ┌─────┐
 │ id  │
 │ --- │
-│ i64 │
+│ i32 │
 ╞═════╡
 └─────┘"""
 
@@ -111,7 +111,7 @@ shape: (1, 1)
 ┌─────┐
 │ id  │
 │ --- │
-│ i64 │
+│ i32 │
 ╞═════╡
 │ 1   │
 └─────┘"""
@@ -131,7 +131,7 @@ shape: (3, 3)
 _DUCKDB_SMALL_GOLDEN = """\
 ┌───────┬─────────┐
 │   id  │  label  │
-│ int64 │ varchar │
+│ int32 │ varchar │
 ├───────┼─────────┤
 │     1 │ x1      │
 │     2 │ x2      │
@@ -142,7 +142,7 @@ _DUCKDB_SMALL_GOLDEN = """\
 _DUCKDB_ELLIPSIS_GOLDEN = """\
 ┌───────┬─────────┐
 │   id  │  label  │
-│ int64 │ varchar │
+│ int32 │ varchar │
 ├───────┼─────────┤
 │     1 │ x1      │
 │     2 │ x2      │
@@ -159,7 +159,7 @@ _DUCKDB_ELLIPSIS_GOLDEN = """\
 _DUCKDB_ONE_ROW_GOLDEN = """\
 ┌──────────┐
 │    id    │
-│  int64   │
+│  int32   │
 ├──────────┤
 │        1 │
 ├──────────┤
@@ -169,7 +169,7 @@ _DUCKDB_ONE_ROW_GOLDEN = """\
 _DUCKDB_EMPTY_GOLDEN = """\
 ┌──────────┐
 │    id    │
-│  int64   │
+│  int32   │
 ├──────────┤
 │  0 rows  │
 └──────────┘"""

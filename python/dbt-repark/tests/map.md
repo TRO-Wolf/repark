@@ -37,6 +37,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   path had **no** coverage, and truncating `fetchall` to one row survived the whole suite
   (ledger F-DBT-1-5).
   pins: dbt-1-adapter/C-002
+  The `description` type of a VALUES-literal column reads `int32` since TYPES-1 (2026-09-05): a bare
+  integer literal is Spark `int` on the Spark door.
 - `test_gold_models.py` — the acceptance. Builds a dbt project in a tmp directory from the S6
   silver fixture, runs `dbt run` and `dbt test` through `dbtRunner`, and asserts the two gold
   tables answer the S6 measured rows and that all ten test blocks pass. Also holds the

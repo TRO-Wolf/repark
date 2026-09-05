@@ -10,6 +10,7 @@ pub mod ansi;
 mod avg_groups;
 pub mod cardinality;
 pub mod collection;
+pub mod count_if;
 pub mod datetime;
 pub mod decimal_cast;
 pub mod decimal_precision;
@@ -27,6 +28,7 @@ pub mod random;
 pub mod session_time_zone;
 pub mod spark_chr;
 pub mod spark_elt;
+pub mod spark_from_unixtime;
 pub mod spark_initcap;
 pub mod spark_isnan;
 pub mod spark_length;
@@ -34,7 +36,9 @@ pub mod spark_log;
 pub mod spark_log1p;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
+pub mod spark_result_types;
 pub mod spark_split_part;
+pub mod spark_year_pad;
 pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;
@@ -75,12 +79,16 @@ pub fn register_all(ctx: &SessionContext) {
     for udwf in datafusion_spark::all_default_window_functions() {
         ctx.register_udwf(udwf.as_ref().clone());
     }
+    for udwf in spark_result_types::signed_window_functions() {
+        ctx.register_udwf(udwf.as_ref().clone());
+    }
     for udf in spark_date_shim_functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     ctx.register_udf(timestamp_cast::to_date_udf().as_ref().clone());
     ctx.register_udf(timestamp_cast::date_udf().as_ref().clone());
     ctx.register_udf(timestamp_cast::unix_timestamp_udf().as_ref().clone());
+    ctx.register_udf(spark_from_unixtime::from_unixtime_udf().as_ref().clone());
     for udf in instant_ts::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
@@ -125,6 +133,7 @@ pub fn register_all(ctx: &SessionContext) {
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
+        Arc::new(spark_result_types::SparkIntegerLiteral),
         Arc::new(decimal_precision::SparkDecimalPrecision),
         Arc::new(decimal_spark::SparkDecimalRewrite),
         Arc::new(integer_spark::SparkIntegerOverflow),
@@ -132,6 +141,9 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());
+    rules.push(Arc::new(
+        datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new(),
+    ));
     rules
 }
 

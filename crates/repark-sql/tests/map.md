@@ -86,6 +86,9 @@ holds behavior observed from outside the crate.
   one-sentence reason is the test's doc comment. Needs the `repark-spark` dev-dep — the only
   place either door may name the other, and legal because the crate-DAG guard scopes layering
   to normal edges. pins: f-y10-1-int-overflow/C-003
+  **TYPES-1 (2026-09-05):** the INSERT / ALTER / case-folding / time-travel setups declare
+  `CAST(1 AS BIGINT)` so the chartered literal-width split (Spark `Int32`, ANSI `Int64`)
+  does not move these catalog-behavior rows. pins: types-1/C-007
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
   is a **declared-divergence test**: it names the registry row it defends

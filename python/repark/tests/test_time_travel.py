@@ -108,8 +108,9 @@ def test_sql_version_as_of_snapshot_id(
     s2 = multi_snapshot["s2"]
     arrow = spark.sql(f"SELECT id, name FROM {TABLE} VERSION AS OF {s1} ORDER BY id").to_arrow()
     assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
-    # VALUES-inferred ids are BIGINT (int64) on the Iceberg/Arrow path — pin type, not only names.
-    assert _schema_names_types(arrow) == [("id", "int64"), ("name", "string")]
+    assert _schema_names_types(arrow) == [("id", "int32"), ("name", "string")], (
+        "VALUES-inferred ids are INT (int32) on the Iceberg/Arrow path"
+    )
 
     arrow2 = spark.sql(
         f"SELECT id FROM {TABLE} FOR SYSTEM_VERSION AS OF {s2} ORDER BY id"
@@ -181,7 +182,7 @@ def test_filter_projection_composition(
         f"SELECT id FROM {TABLE} VERSION AS OF {s1} WHERE id >= 2 ORDER BY id"
     ).to_arrow()
     assert _arrow_ids(arrow) == [2, 3]
-    assert _schema_names_types(arrow) == [("id", "int64")]
+    assert _schema_names_types(arrow) == [("id", "int32")]
 
 
 def test_current_read_unaffected_after_time_travel(
@@ -529,7 +530,7 @@ def test_schema_at_snapshot_not_current_schema(spark: ReparkSession, tmp_path: P
     assert s2 != s1
 
     arrow_s1 = spark.sql(f"SELECT * FROM {table} VERSION AS OF {s1}").to_arrow()
-    assert _schema_names_types(arrow_s1) == [("id", "int64"), ("name", "string")]
+    assert _schema_names_types(arrow_s1) == [("id", "int32"), ("name", "string")]
     assert "extra" not in arrow_s1.column_names
     assert _arrow_ids(arrow_s1) == [1]
 

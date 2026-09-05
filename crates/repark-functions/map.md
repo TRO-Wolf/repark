@@ -66,13 +66,15 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
   (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +
-  `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
-  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkIntegerOverflow` (F-Y10-1), then
-  `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
-  context via the Spark door's
-  `SessionExtension` in `repark-spark`) + DEC-8 `register_spark_decimal_planner` from
-  `register_all` + the shared `shim_udf_boilerplate!` macro. Error conversion from
-  `DataFusionError` happens one layer up in `repark-core` (this crate stays DataFusion-native).
+  `spark_date_shim_functions()` + `analyzer_rules()` (**TYPES-1 (2026-09-05):**
+  `SparkIntegerLiteral` first, then `SparkDecimalPrecision`, `SparkDecimalRewrite` (U4b `/` +
+  DEC-6), `SparkIntegerOverflow` (F-Y10-1), `SparkExprSemantics` + cardinality + instant_ts,
+  and a closing `TypeCoercion` — the narrowing runs after DataFusion's own coercion and
+  re-opens mixes, so the closing pass shuts them before the next rule; installed by the session
+  on every context via the Spark door's `SessionExtension` in `repark-spark`) + DEC-8
+  `register_spark_decimal_planner` from `register_all` + the shared `shim_udf_boilerplate!`
+  macro. Error conversion from `DataFusionError` happens one layer up in `repark-core` (this
+  crate stays DataFusion-native). pins: types-1/C-007
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.
@@ -160,6 +162,13 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   sized `StringBuilder` (no per-cell `Vec<char>`).
   **octo C1-Q-004:** `perf_measure_*` 1M-row benches gated on `REPARK_PERF_MEASURE=1`.
   **octo C2-Q-001:** compile pattern apostrophe/unterminated pins.
+  **TYPES-1 round 4 (2026-09-05):** the Java-pattern year arm renders Java's leading `+`
+  past 4 digits (`yyyy`, `count >= 4` — wrapped-year `from_unixtime` parity).
+  INCREASE 1704→1709 (no compressible lines — rustfmt-packed; owner approval at merge).
+  **Round 5 (2026-09-05):** negative years pad digits after the sign (`-0499`, `-0002`),
+  `yy` is `abs(year) % 100` (`-499` → `99`); the arm moves to `src/spark_year_pad.rs` and
+  `datetime.rs` ratchets 1709→1700.
+  pins: types-1/C-006
 - `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
   UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the
   same kernels registered by the SQL door.

@@ -115,26 +115,26 @@ def test_decimal_division_stays_decimal(spark: ReparkSession) -> None:
 
 def test_order_by_asc_defaults_nulls_first(spark: ReparkSession) -> None:
     result = spark.sql("SELECT v FROM (VALUES (2), (NULL), (1)) AS t(v) ORDER BY v")
-    golden = pa.table({"v": pa.array([None, 1, 2], pa.int64())})
+    golden = pa.table({"v": pa.array([None, 1, 2], pa.int32())})
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
 
 
 def test_order_by_desc_defaults_nulls_last(spark: ReparkSession) -> None:
     result = spark.sql("SELECT v FROM (VALUES (2), (NULL), (1)) AS t(v) ORDER BY v DESC")
-    golden = pa.table({"v": pa.array([2, 1, None], pa.int64())})
+    golden = pa.table({"v": pa.array([2, 1, None], pa.int32())})
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
 
 
 def test_order_by_explicit_null_placement_is_honoured(spark: ReparkSession) -> None:
     result = spark.sql("SELECT v FROM (VALUES (2), (NULL), (1)) AS t(v) ORDER BY v ASC NULLS LAST")
-    golden = pa.table({"v": pa.array([1, 2, None], pa.int64())})
+    golden = pa.table({"v": pa.array([1, 2, None], pa.int32())})
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
 
 
 def test_order_by_limit_returns_spark_rows(spark: ReparkSession) -> None:
     # The data-changing case: under LIMIT the placement decides WHICH rows survive.
     result = spark.sql("SELECT v FROM (VALUES (2), (NULL), (1)) AS t(v) ORDER BY v LIMIT 2")
-    golden = pa.table({"v": pa.array([None, 1], pa.int64())})
+    golden = pa.table({"v": pa.array([None, 1], pa.int32())})
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
 
 
