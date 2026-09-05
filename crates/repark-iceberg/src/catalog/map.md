@@ -118,11 +118,35 @@ Source comments retain only API and safety contracts; implementation narration i
   upgrade-lineage tests green knob-on, is what the default-ON flip unit waits for.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
-  **PERF-ICE-CATALOG-IO-3 (2026-09-05, red-first pins):** the default-enables pin
-  (`the_default_sizes_the_shared_cache` in `caches.rs`) lands before the flip and reds
-  while the default is `0`. The flip of `DEFAULT_MANIFEST_CACHE_BYTES` to 32 MiB, the size
-  argument, and the per-session ceiling follow in this unit.
-  pins: perf-ice-catalog-io-3/C-001
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip IO-2's round-2 ruling named
+  as the follow-up. `DEFAULT_MANIFEST_CACHE_BYTES` is `33554432` (32 MiB): every default
+  session's memory catalog now shares one manifest `ObjectCache`, and an explicit
+  `repark.iceberg.manifestCacheBytes = "0"` turns it off (a bad value still fails loud
+  naming both spellings). The size is the measured value, not a guess: IO-1's override
+  read 120.01 → 11.33 ms at 32 MiB, IO-2's real pin read 115.81 → 10.95 ms with the knob
+  set explicitly to 32 MiB, and 32 MiB is the fork's own `DEFAULT_CACHE_SIZE_BYTES` — the
+  default agrees with the fork instead of inventing a second number. The budget is weight,
+  not entries: moka `max_capacity` over estimated resident weight (768 B per manifest
+  entry, 256 B per list entry, floored at one entry), TinyLFU admission with rejection, so
+  the 193-manifest `t_many` weighs roughly 150 KB and the budget holds on the order of
+  forty thousand manifest entries — far above any measured single-node working set, and
+  still a hard ceiling. The ceiling is per memory catalog: one shared `ObjectCache` per
+  catalog handle, so a session that registers one memory catalog (the usual shape) holds
+  at most 32 MiB of manifest weight, and N catalogs hold N × 32 MiB; the metadata cache
+  keeps its own high-water bound (512 retained locations, cleared at the statement door).
+  Measured: 500 small tables hold within 64 MB of peak RSS over explicit `0` (the
+  subprocess `ru_maxrss` leg), every table row-correct in both columns. The flip is safe
+  because RP-13 landed the fork key fix first (`F-CATIO-KEY`: the cache stores the
+  context-free parse and applies each caller's list-entry inheritance and `first_row_id`
+  assignment per read): the four HALT tests, the full staleness battery and the lineage
+  pins all run on default sessions and are green. The funnel was re-read at pin
+  `2ed39cb0`: the memory catalog still assembles a `Table` in exactly the same three
+  places (`load_table_from_location`, `create_table`, `register_table`), all through
+  `table_builder()`, and the only direct `Table::builder()` is still a `#[cfg(test)]`
+  fixture. The commit-path bypass persists at the new pin (`transaction/` still loads
+  straight from `FileIO`), so `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` stays open
+  and DML still saves read-side repeats only.
+  pins: perf-ice-catalog-io-3/C-001, C-007
 
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
   no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
@@ -196,7 +220,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Invalidate one namespace after product DDL (O(1)) | `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` in `provider.rs` |
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
-| Turn the shared manifest cache on, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default `0` = off; `33554432` measured) (`caches.rs`) |
+| Turn the shared manifest cache off, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default `33554432` = on; `0` disables) (`caches.rs`) |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |

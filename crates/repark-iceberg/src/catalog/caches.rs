@@ -19,7 +19,7 @@ pub const MANIFEST_CACHE_BYTES_KEY: &str = "repark.iceberg.manifestCacheBytes";
 
 pub const MANIFEST_CACHE_BYTES_KEY_ALT: &str = "repark.iceberg.manifest_cache_bytes";
 
-pub const DEFAULT_MANIFEST_CACHE_BYTES: u64 = 0;
+pub const DEFAULT_MANIFEST_CACHE_BYTES: u64 = 33_554_432;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IcebergCacheSettings {

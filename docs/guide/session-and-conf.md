@@ -299,16 +299,19 @@ Setting **both** on the same builder refuses too: same pool, ambiguous initial s
 |---|---|---|
 | `repark.iceberg.metadataCache` | `repark.iceberg.metadata_cache` | session-scoped metadata-document cache (default `true`) |
 | `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound, cleared at the statement door (default `512`) |
-| `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `0` = off; set bytes to opt in — `33554432` is the measured value) |
+| `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `33554432` = on; `0` disables) |
 
 All three are build-time and memory-catalog-only. A bad value fails loud inside
 `getOrCreate()`, naming both the key set and the canonical spelling. The manifest
-budget sizes the fork's shared `ObjectCache`: with the knob set, a repeated read opens
-no manifest-list and no manifest at all. The default is off because the shared cache
-serves wrong-context lineage on v2→v3 upgrade-boundary tables until the fork's cache
-key carries the assignment input (`PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`); the
-default-ON flip is a follow-up unit. Numbers and the commit-side scope live in
-[../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §5.
+budget sizes the fork's shared `ObjectCache`: on a default session a repeated read opens
+no manifest-list and no manifest at all. The default is on since PERF-ICE-CATALOG-IO-3
+(2026-09-05): RP-13 landed the fork key fix first (`F-CATIO-KEY` — the cache stores the
+context-free parse and applies each caller's lineage per read), so upgrade-boundary
+tables serve assigned lineage with the cache on. To turn the cache off, set the key to
+`"0"`. The ceiling is 32 MiB of manifest weight per memory catalog (one shared cache per
+catalog handle; the fork enforces it with moka `max_capacity`). Numbers and the
+commit-side scope live in
+[../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §6.
 
 ## `repark.display.style` — a repark extra
 

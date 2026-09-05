@@ -64,6 +64,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   straight from `FileIO`, so DML saves read-side repeats only (filed `F-CATIO-COMMIT`).
   Earlier tables untouched.
   pins: perf-ice-catalog-io-2/C-006
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05)** appended §6, re-measuring on the default
+  session (no knob) against explicit `0` on one release module: `t_many/count_id/stmt2`
+  123.47 → 11.27 ms (target ≤ 20, within 0.4 ms of IO-2's explicit-knob column on every
+  row), the census reproduced cell for cell with no knob set, and 500 small tables at
+  332.2 vs 323.9 MB peak RSS (delta 8.3 MB, bar 64 MB). Earlier tables untouched.
+  pins: perf-ice-catalog-io-3/C-006
 
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
   (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner

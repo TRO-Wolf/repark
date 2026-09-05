@@ -7,6 +7,7 @@ Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-catio` (branch
 
 pins: perf-ice-catalog-io-1/C-001, C-005, C-006
 pins: perf-ice-catalog-io-2/C-006
+pins: perf-ice-catalog-io-3/C-006
 
 ## Machine and profile
 
@@ -282,6 +283,109 @@ with the lane path moved and the isolated variable changed from `metadataCache` 
 to IO-1's. The JSON number files (`scratch/numbers_manifest_manoff.json`,
 `scratch/numbers_manifest_manon.json`, `scratch/census_manoff.json`,
 `scratch/census_manon.json`) carry every sample, min, spread, floor repeat and load.
+
+## 6. The default-ON flip re-measured on the default session (PERF-ICE-CATALOG-IO-3, 2026-09-05)
+
+Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-catio3` (branch
+`perf/ice-catalog-io-3`, base `origin/main` `b4af56d0`, fork pin `2ed39cb0`, no path
+override). Same box as §1–§5 (Threadripper 3970X, 64 threads, 125.7 GiB, governor
+`schedutil`, kernel 6.8.0-138), same versions (repark 1.0.1 / DataFusion 54.1.0 / arrow
+58.4), same shapes (the §1 20 k-row census table, the §2 1e6-row 208-file tables at 193
+vs 1 manifests — the counts reproduce exactly), same method (5 timed after 1 warm-up;
+median, min, spread; floor per run; `strace -f -e trace=openat`, ENOENT excluded). The
+native module is `_native.abi3.so` 164,313,144 B with `__debug_assertions__ is False`
+(every probe refuses otherwise). The only variable between the two columns is the
+session: the default (no knob — the cache is ON at 32 MiB) vs
+`repark.iceberg.manifestCacheBytes = "0"` set explicitly. The metadata cache is ON in
+both columns.
+
+**Not a quiet box, again.** Load 8.7 through the default timing run and 6.7 through the
+explicit-`0` run (sibling lane builds live). Every cell carries its run's floor and load;
+a cost is only ever read against its own run.
+
+### 6.1 The timing cells
+
+| cell | default = ON, no knob (ms) | explicit `0` (ms) | IO-2 §5.1 on, knob set (ms) | target |
+|---|---:|---:|---:|---|
+| `t_many/count_id/stmt1` | 11.95 (spread 1.56) | 121.45 (spread 8.04) | 10.73 | — |
+| `t_many/count_id/stmt2` | **11.27** (spread 3.56) | **123.47** (spread 31.52) | 10.95 | ≤ 20 |
+| `t_many/point/stmt2` | 14.67 (spread 1.97) | 125.16 (spread 31.92) | 14.75 | — |
+| `t_many_merged/count_id/stmt2` | 10.33 (spread 0.55) | 15.52 (spread 1.66) | 10.49 | — |
+| `t_many_merged/point/stmt2` | 12.71 (spread 0.81) | 18.03 (spread 4.41) | 13.20 | — |
+
+Floors 0.46 (default) / 0.21 (off); load 8.7 → 8.7 (default) and 6.7 → 6.7 (off). The
+default second statement clears the target at roughly half of it, and it now sits
+within 1.0 ms of its one-manifest twin (11.27 vs 10.33): the manifest penalty is gone,
+not reduced. The default column reproduces IO-2's explicit-knob column within 0.4 ms on
+all four rows — the flip serves the measured win by default, and the win was never the
+knob. The explicit-`0` second statement (123.47) sits 8 ms over IO-2's off column
+(115.81); both runs' spreads are ~30 ms, so that delta is noise, not a claim.
+
+### 6.2 The census on the default session
+
+| statement | manifest-list `0` → default | manifest `0` → default |
+|---|---:|---:|
+| `SELECT count(*)` (first) | 1 → 1 | 1 → 1 |
+| `SELECT count(*)` (repeat) | 1 → **0** | 1 → **0** |
+| `SELECT … WHERE …` | 1 → **0** | 1 → **0** |
+| `INSERT … SELECT` | 2 → 2 | 1 → 1 |
+| `SELECT count(*)` after the insert | 1 → 1 | 2 → **1** |
+| `DELETE` MoR v3 | 4 → 3 | 8 → **6** |
+| `UPDATE` MoR v3 | 5 → 4 | 15 → **12** |
+| `MERGE` MoR v3 | 4 → 4 | 8 → 8 |
+| `SELECT count(*)` tail | 1 → 1 | 2 → 2 |
+| `SELECT count(*)` tail (repeat) | 1 → **0** | 2 → **0** |
+
+`metadata.json` reads stay 0 on every statement that reads an existing table (1 on the
+two creators), which is IO-1's half doing its job. The table reproduces IO-2's §5.2
+on-column cell for cell with no knob set: a repeated read opens **nothing at all**
+except the parquet it must decode. The DML scope is unchanged — the commit-path bypass
+persists at pin `2ed39cb0` (`transaction/` still loads straight from `FileIO`), so
+`PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` stays open and DML still saves
+read-side repeats only.
+
+### 6.3 Memory: 500 small tables, default versus explicit `0`
+
+Each column is a fresh subprocess touching 500 CTAS tables (4 rows each) and reading
+every one back; the number is peak `ru_maxrss`:
+
+| column | peak RSS (MB) | rows |
+|---|---:|---:|
+| default (no knob) | 332.2 | 2000 / 2000 |
+| explicit `0` | 323.9 | 2000 / 2000 |
+| delta | **8.3** | — |
+
+The committed leg (`test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget`)
+pins delta ≤ 64 MB on every build — twice the 32 MiB budget, so any regression that
+retains outside the cache reds while moka bookkeeping and allocator variance (a
+debug-module back-to-back of identical configs varied by 12 MB) stay green. The retained
+working set itself is roughly 500 KB (500 lists at 256 B plus 500 manifests at 768 B),
+far under the budget it is charged against.
+
+### 6.4 Commands
+
+```bash
+cd $HOME/repark-lanes/lanes/oc-catio3/python/repark && \
+  VIRTUAL_ENV=$HOME/repark-lanes/lanes/oc-catio3/.venv CARGO_BUILD_JOBS=8 \
+  uvx maturin@1.14.1 develop --release
+cd $HOME/repark-lanes/lanes/oc-catio3
+.venv/bin/python scratch/probes/probe_manifest.py default
+.venv/bin/python scratch/probes/probe_manifest.py off
+strace -f -e trace=openat -o scratch/strace_default.txt .venv/bin/python scratch/probes/probe_calls.py default
+.venv/bin/python scratch/probes/count_calls.py scratch/strace_default.txt scratch/census_default.json
+strace -f -e trace=openat -o scratch/strace_off.txt .venv/bin/python scratch/probes/probe_calls.py off
+.venv/bin/python scratch/probes/count_calls.py scratch/strace_off.txt scratch/census_off.json
+.venv/bin/python -m pytest python/repark/tests/test_perf_ice_catalog_io_1.py -q -k "peak_rss or second_statement"
+```
+
+Probe sources live under `scratch/probes/` (gitignored, never committed; they carry no
+comments). `fixtures.py`, `harness.py` and `count_calls.py` are byte-identical to IO-2's;
+`probe_manifest.py` / `probe_calls.py` are the IO-2 probes with the lane path moved and
+the labels changed from `manon` / `manoff` to `default` / `off` (the isolated variable
+is now the default session versus explicit `0`). The JSON number files
+(`scratch/numbers_manifest_default.json`, `scratch/numbers_manifest_off.json`,
+`scratch/census_default.json`, `scratch/census_off.json`) carry every sample, min,
+spread, floor repeat and load.
 
 ## Pointers
 
