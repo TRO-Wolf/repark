@@ -223,32 +223,6 @@ def test_tighten_derived_ctas_still_refuses(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_read_parquet_relaxes_only_to_depth_32(tmp_path: Path) -> None:
-    from repark import ReparkSession
-
-    parquet = tmp_path / "deep40.parquet"
-    inner: pa.DataType = pa.int32()
-    for level in range(40):
-        inner = pa.struct([pa.field(f"n{level}", inner, nullable=False)])
-    schema = pa.schema([pa.field("root", inner, nullable=False)])
-    value: Any = 7
-    for level in range(40):
-        value = {f"n{level}": value}
-    pq.write_table(pa.table({"root": pa.array([value], type=inner)}, schema=schema), str(parquet))
-    session = ReparkSession.builder.appName("cutover-schema-1-nulldepth").getOrCreate()
-    try:
-        read_back = session.read.parquet(str(parquet)).to_arrow().schema
-    finally:
-        session.stop()
-    flags = [read_back.field("root").nullable]
-    current = read_back.field("root").type
-    for _ in range(40):
-        child = current[0]
-        flags.append(child.nullable)
-        current = child.type
-    assert flags.index(False) == 34
-
-
 def test_read_parquet_tz_naive_timestamp_reports_string_dtype(tmp_path: Path) -> None:
     from repark import ReparkSession
 

@@ -108,6 +108,12 @@ Commit B (bool→decimal serving): 1 red, class (a).
 |---|---|---|
 | `test_cutover_schema_1.py::test_bool_to_decimal_cast_refuses_on_both_doors` | (a) | DELETED — cast served on both doors, superseded by `test_bool_to_decimal_served_on_both_doors`. Cite `CAST-BOOL-DEC-1`, FIXED. |
 
+Commit C (iterative unbounded relax): 1 red, class (a).
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_cutover_schema_1.py::test_read_parquet_relaxes_only_to_depth_32` | (a) | DELETED — relax covers every level, superseded by `test_reader_relax_covers_depth_40` + the 40/200/600 Rust pins. Cite `CUTOVER-NULLDEPTH-1`, FIXED. |
+
 ## 6. Mutation table
 
 TBD — red-first battery + one knob per rule (cast, bool-dec, nullsafe, relax, dtype).

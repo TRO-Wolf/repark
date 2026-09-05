@@ -375,7 +375,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
   NULLABILITY-2 (2026-09-05) deleted the `CAST-NULL-1` current-answer pin (behavior
   inverted; `test_nullability_2.py` supersedes it) and narrowed the row, then the
-  `CAST-BOOL-DEC-1` refusal pin (cast served; row FIXED).
+  `CAST-BOOL-DEC-1` refusal pin (cast served; row FIXED), then the
+  `CUTOVER-NULLDEPTH-1` bound pin (relax unbounded; row FIXED).
 - [test_nullability_2.py](test_nullability_2.py) — **NULLABILITY-2 (2026-09-05):**
   the analyzer's remaining nullability and cast residues, Spark-equal. Always-run:
   the generalized cast-nullability matrix (string/float/timestamp-source casts

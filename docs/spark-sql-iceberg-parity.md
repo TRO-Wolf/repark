@@ -2738,20 +2738,22 @@ only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### CUTOVER-NULLDEPTH-1 — `read.parquet` relax stops at depth 32; Spark relaxes every level
 
-- **repark** — `relax_schema_to_nullable` (`crates/repark-core/src/spark_nullable.rs`)
-  recurses to `MAX_NESTED_TYPE_DEPTH = 32`. A 40-deep required struct reads back nullable
-  down to level 33 and **non-null from level 34** (root is level 0).
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `relax_schema_to_nullable`
+  (`crates/repark-core/src/spark_nullable.rs`) is an iterative walk with no depth bound:
+  a 40-deep required struct reads back nullable at **every** level (root plus all 40).
+  Below the relax the only ceilings left are Arrow's own transport limits (the parquet
+  footer parser's flatbuffers depth 64 — an 80-deep read refuses with
+  `DepthLimitReached` — and the IPC/export nesting caps), identical machinery on both
+  engines.
 - **Apache Spark** — reads the same file back nullable at **every** level (root plus all
   40). *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
 - **Pin** —
-  `crates/repark-core/src/spark_nullable.rs::tests::deep_nesting_completes_with_nullable_flags`
-  (600-deep: the first 33 nested levels nullable, the rest non-null) plus
-  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_relaxes_only_to_depth_32`
-  (40-deep file: first non-null at level 34). Both codify today's bound; the fix reds
-  them on purpose.
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). The bound is the
-  recursion guard the module was written with; lifting or removing it is queued rather
-  than taken here. The unit's C-001 now states the bound.
+  `crates/repark-core/src/spark_nullable.rs::tests::relax_covers_depth_40`,
+  `...::relax_covers_depth_200`, `...::deep_nesting_completes_with_nullable_flags`
+  (600-deep, all nullable) plus
+  `python/repark/tests/test_nullability_2.py::test_reader_relax_covers_depth_40` and
+  `...::test_deep_read_refuses_past_arrow_footer_limit` (the transport ceiling).
+- **Rationale** — FIXED. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 

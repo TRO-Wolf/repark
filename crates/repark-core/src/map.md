@@ -144,6 +144,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a single TableScan, so EXPLAIN output is unchanged. The double infer costs one extra
   listing plus footer reads; S3 registration still happens first in `session.rs`.
   pins: cutover-schema-1/C-001, C-002
+  **NULLABILITY-2 (2026-09-05):** the walk is iterative (explicit pre-order stack,
+  bottom-up rebuild — no depth bound, no recursion blow-up) with identical type
+  coverage: struct/list/map relax, map keys and the entries flag pass through, unknown
+  shapes keep their type. Structural pins at depth 40 and 200, 600-deep all-nullable;
+  the facade pins depth 40 end to end and documents Arrow's own footer-depth ceiling
+  past it. Registry `CUTOVER-NULLDEPTH-1`.
+  pins: nullability-2/C-005
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
