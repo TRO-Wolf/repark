@@ -72,28 +72,34 @@ Source comments retain only API and safety contracts; implementation narration i
   owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
   the pre-unit behaviour passes `CatalogCaches::disabled()`.
 
-  **PERF-ICE-CATALOG-IO-2 (2026-09-05, HALTED):** a third knob,
-  `repark.iceberg.manifestCacheBytes` (default 32 MiB, `0` disables) with an underscore
-  alias, sizes the fork's shared manifest `ObjectCache` for the memory catalog; a bad value
-  fails loud naming both spellings, exactly like the entries knob. `builders.rs` passes the
-  bytes to `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
-  catalog that every table the catalog materializes carries. The unit HALTED on a fork-side
-  cache-key defect before any merge: the manifest FILE is immutable at its path, but the
-  PARSED object embeds the caller's list-entry lineage range, which the fork's `(path,
-  schema)` key does not carry — so a v2-context parse poisons later v3 reads of the same path
-  and upgrade-boundary tables serve `_row_id` NULL (4 facade tests red, knob-off green).
-  Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`; the default-ON choice from the 10×
-  measurement (115.81 → 10.95 ms) is gated on the fork key fix, and the four red tests are
-  its detector. Carries, not always reads: the fork's scan path (`plan_files`) consults the
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):**
+  a third knob, `repark.iceberg.manifestCacheBytes` (default `0` = off; set bytes to opt
+  in — `33554432` is the measured value) with an underscore alias, sizes the fork's shared
+  manifest `ObjectCache` for the memory catalog; a bad value fails loud naming both
+  spellings, exactly like the entries knob. `builders.rs` passes nonzero bytes to
+  `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
+  catalog that every table the catalog materializes carries. The unit HALTED mid-flight on
+  a fork-side cache-key defect and landed with the default OFF so main serves no wrong
+  answer: the manifest FILE is immutable at its path, but the PARSED object embeds the
+  caller's list-entry lineage range, which the fork's `(path, schema)` key does not carry
+  — so a v2-context parse poisons later v3 reads of the same path and upgrade-boundary
+  tables serve `_row_id` NULL (4 facade tests red with the knob on, green with it off).
+  Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`; the default-ON flip waits for the
+  fork key fix plus the four red tests passing knob-on, and the two lineage detector pins
+  in `test_perf_ice_catalog_io_1.py` hold the defect's shape meanwhile. The 10×
+  measurement (115.81 → 10.95 ms) was taken with the knob set explicitly to 32 MiB.
+  Carries, not always reads: the fork's scan path (`plan_files`) consults the
   cache, but the fork's transaction, maintenance and inspect paths load manifests straight
   from `FileIO` (0 cached reads against 166 direct loads in `transaction/` at this pin) — so
   a repeated SELECT opens nothing while a DML statement keeps its commit-side opens and saves
   only its read-side repeats. Measured: DELETE 4/8 → 3/6 lists/manifests, UPDATE 5/15 → 4/12,
   MERGE 4/8 → 4/8, INSERT 2/1 → 2/1. That is a filed fork ask
   (`PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT`), not a wiring defect: a bypassing path
-  re-reads, it never serves stale. `memory_catalog(warehouse)` keeps its signature and now
-  also sizes a private shared manifest cache per call (same always-on, never-trimmed shape
-  IO-1 recorded for the metadata cache). The funnel was read at fork pin `79119643`: the
+  re-reads, it never serves stale. `memory_catalog(warehouse)` keeps its signature and
+  builds NO shared manifest cache (the default is off); the always-on, never-trimmed shape
+  IO-1 recorded now covers the metadata cache only. A caller that wants the shared manifest
+  cache passes an explicit byte budget through `memory_catalog_cached`. The funnel was read
+  at fork pin `79119643`: the
   memory catalog assembles a `Table` in exactly three places (`load_table_from_location`,
   `create_table`, `register_table`), and all three go through its `table_builder()`, which
   injects the shared cache; the only direct `Table::builder()` in the memory catalog is a
@@ -107,7 +113,8 @@ Source comments retain only API and safety contracts; implementation narration i
   through `catalog.load_table`, and time-travel wraps the loaded table. **Repin duty:**
   re-read the funnel — a new assembly path that bypasses `table_builder()` silently
   un-shares the cache, and the delete-manifest pins in the Spark tests map are the detector;
-  re-check the key — a fork key that carries the assignment input un-HALTs the default-ON.
+  re-check the key — a fork key that carries the assignment input, with the four
+  upgrade-lineage tests green knob-on, is what the default-ON flip unit waits for.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
@@ -182,7 +189,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Invalidate one namespace after product DDL (O(1)) | `invalidate_catalog_namespaces` / `drop_catalog_namespace_from_provider` in `provider.rs` |
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
-| Turn the shared manifest cache off, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default 32 MiB; `0` disables) (`caches.rs`) |
+| Turn the shared manifest cache on, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default `0` = off; `33554432` measured) (`caches.rs`) |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |
