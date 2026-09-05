@@ -4226,21 +4226,19 @@ Shared roster pin for every heading:
 
 ### READ-TSNTZ-DTYPE-1 — `read.parquet` of a tz-naive TIMESTAMP reports `string` via `dtypes`/`schema`
 
-- **repark** — `read.parquet` of a file with a tz-naive `TIMESTAMP` column reports the
-  column as `string` via `dtypes` and `schema.simpleString()`, while `to_arrow()` says
-  `timestamp[us]`. The Rust mapper is right (`Timestamp(_, None) => "timestamp_ntz"`);
-  the facade `schema` property has no `timestamp_ntz` arm and falls through to
-  `StringType()`.
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `read.parquet` of a file with a
+  tz-naive `TIMESTAMP` column reports `timestamp_ntz` via `dtypes`,
+  `schema.simpleString()`, and `printSchema` (Spark-equal text), and `timestamp[us]`
+  via Arrow; `createDataFrame` with a `TimestampNTZType` schema reports likewise.
+  Tz-aware timestamps still report `timestamp`.
 - **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
   string, and `timestamp[us]` via Arrow. *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_tz_naive_timestamp_reports_string_dtype`
-  (asserts the current `string` / `string` / `timestamp[us]` triple; the fix reds it on
-  purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing and
-  facade-side: no rule in this unit touches the `dtypes` mapping. Fixing it here would
-  widen the unit past its charter; the row holds it for the facade unit that owns that
-  mapping.
+  `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype` and
+  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls).
+- **Rationale** — FIXED. The `schema` property routes the `timestamp`/`timestamp_ntz`
+  keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
+  `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### Surfaced, awaiting pins — not yet rows
 

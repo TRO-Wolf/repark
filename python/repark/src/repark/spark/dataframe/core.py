@@ -3582,7 +3582,6 @@ class DataFrame:
             NullType,
             ShortType,
             StringType,
-            TimestampType,
         )
         from repark.spark.types import (
             DataType as ReparkDataType,
@@ -3611,8 +3610,8 @@ class DataFrame:
                 data_type = BinaryType()
             elif type_key == "date":
                 data_type = DateType()
-            elif type_key == "timestamp":
-                data_type = TimestampType()
+            elif type_key in ("timestamp", "timestamp_ntz"):
+                data_type = ReparkDataType.fromDDL(type_key)
             # "Null" is the Arrow Debug spelling, which reaches every flat void column —
             # a plain NULL literal included, not just a void explode (engine spells every
             # other standard type lowercase) — W-1.

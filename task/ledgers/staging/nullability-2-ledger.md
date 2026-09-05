@@ -114,6 +114,12 @@ Commit C (iterative unbounded relax): 1 red, class (a).
 |---|---|---|
 | `test_cutover_schema_1.py::test_read_parquet_relaxes_only_to_depth_32` | (a) | DELETED — relax covers every level, superseded by `test_reader_relax_covers_depth_40` + the 40/200/600 Rust pins. Cite `CUTOVER-NULLDEPTH-1`, FIXED. |
 
+Commit D (tz-naive dtype mapping): 1 red, class (a).
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_cutover_schema_1.py::test_read_parquet_tz_naive_timestamp_reports_string_dtype` | (a) | DELETED — mapping fixed, superseded by `test_tz_naive_timestamp_dtype`. Cite `READ-TSNTZ-DTYPE-1`, FIXED. |
+
 ## 6. Mutation table
 
 TBD — red-first battery + one knob per rule (cast, bool-dec, nullsafe, relax, dtype).

@@ -223,25 +223,6 @@ def test_tighten_derived_ctas_still_refuses(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_read_parquet_tz_naive_timestamp_reports_string_dtype(tmp_path: Path) -> None:
-    from repark import ReparkSession
-
-    parquet = tmp_path / "bronze.parquet"
-    write_bronze_parquet(parquet)
-    session = ReparkSession.builder.appName("cutover-schema-1-tsntz").getOrCreate()
-    try:
-        frame = session.read.parquet(str(parquet))
-        dtypes = frame.dtypes
-        simple = frame.schema.simpleString()
-        arrow_type = str(frame.to_arrow().schema.field("ingestion_timestamp").type)
-    finally:
-        session.stop()
-    assert ("ingestion_timestamp", "string") in dtypes
-    assert "ingestion_timestamp:string" in simple
-    assert arrow_type == "timestamp[us]"
-
-
-@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_read_parquet_matches_oracle_nullability(
     tmp_path: Path, spark_engine: lp.Engine
 ) -> None:

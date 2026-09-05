@@ -213,6 +213,11 @@ converter and its two type predicates move to `dataframe/rows_export.py`; `core.
 three delegations. Ratchets DOWN.
 pins: perf-facade-1/C-001, C-005
 
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6302 — the
+`schema` property routes `timestamp`/`timestamp_ntz` through `fromDDL`, so the
+`TimestampType` import is gone (mirrored in the CAP-1 test).
+pins: nullability-2/C-006
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002
