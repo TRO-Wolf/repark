@@ -1693,6 +1693,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
   first if a rule stopped preserving names.
   pins: perf-facade-1/C-004, C-008
+- `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
+  `createDataFrame` path against the legacy row-wise path, kept callable as
+  `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
+  same input and every case compares Arrow field types, Arrow values and `collect()` by
+  `(type name, repr)` as well as by value, so a retyped cell is red where `==` alone would
+  pass. Matrix: every scalar Python type with Nones in every column and whole-None columns,
+  all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
+  tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
+  witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
+  `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.
+  pins: perf-facade-cdf-1/C-002, C-003, C-004, C-007, C-009
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
