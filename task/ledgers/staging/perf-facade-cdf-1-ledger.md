@@ -188,12 +188,14 @@ Every brief gate, observed on the final tree:
 | `ledger_lifecycle.py check --base origin/main` | exit 0 |
 | `typos .` | exit 0 |
 
-Two mid-unit reds, both closed with evidence rather than absorbed: (1) the split-contract
+Three mid-unit reds, all closed with evidence rather than absorbed: (1) the split-contract
 baseline red on the intended refactor — joined completely (new module listed, six bindings
 hashed/owned/exported, 76 edges reviewed triple by triple); (2)
 `test_sort_merge_join_spills_under_small_fair_pool` failed once under a self-inflicted
 concurrent load (two suites plus cargo on a load-29 box) — the file has zero `createDataFrame`
-calls, the test passes alone in 6.3 s, and the final full run is green.
+calls, the test passes alone in 6.3 s, and the final full run is green. (3) The closing commit
+filed the attestation in the wrong shape (mapping keys instead of the ref-05 `- id:` list) —
+a `| tail` pipe masked the red exit; fixed forward in the next commit, gates re-run unmasked.
 
 ## 11. Out of scope, observed (not claimed, not fixed)
 
@@ -210,50 +212,49 @@ calls, the test passes alone in 6.3 s, and the final full run is green.
 
 ```yaml
 COVERAGE_ATTESTATION:
-  unit: PERF-FACADE-CDF-1
-  verdict: complete
+  pr_unit: perf-facade-cdf-1
   complete: true
-  note: Actor self-attestation — no separate Critic ran in this lane; the equality pins,
-    the four mutations and the full suites are the review evidence.
+  note: Actor self-attestation — no separate Critic ran in this lane; the equality pins, the four mutations and the full suites are the review evidence.
   categories:
-    AT-1_api-facade-shape: ATTACKED
-    AT-1-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py::test_shipped_dispatcher_is_the_column_wise_path
-      - python/repark/tests/test_production_file_size.py (76 cross-owner edges pin the router binding)
-    AT-2_data-correctness: ATTACKED
-    AT-2-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py (27 equality pins: Arrow types, Arrow values, collect signatures)
-      - python/repark/tests/test_perf_facade_cdf_1.py::test_ten_thousand_rows
-    AT-3_divergence-proof: ATTACKED
-    AT-3-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py (24 refusal pins with byte-identical text)
-      - ledger §6 mutations M1/M2/M4 (dropped refusal, wrong scale, nested-as-scalar all red)
-    AT-4_performance-method: ATTACKED
-    AT-4-artifacts:
-      - python/repark-parity/bench/facade/ (seven cells, both legs one process, §8 table)
-      - ledger §8 (three honest numbers: absolute, pair, load labels)
-    AT-5_determinism-order: ATTACKED
-    AT-5-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py::test_namedtuple_rows_reorder_by_name
-      - ledger §7 (multi-failure precedence pairs named, single-failure byte-identical)
-    AT-6_errors: ATTACKED
-    AT-6-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py (refusal-type equality in every refusal pin)
-      - python/repark/tests/test_f1_errorclass.py (suite green)
-    AT-7_null-semantics: ATTACKED
-    AT-7-artifacts:
-      - python/repark/tests/test_perf_facade_cdf_1.py (None in every column, whole-None, NaN/NaT witnesses)
-      - ledger §6 mutation M3 (dropped None mask reds 9 pins)
-    AT-8_lifecycle-cleanup: ATTACKED
-    AT-8-artifacts:
-      - bench old leg and every pin swap the dispatcher in a finally/monkeypatch
-      - live run: JVM slot verified empty before and after (C-007)
-    AT-9_concurrency-parallelism: N/A
-    AT-9-justification: single-threaded facade path; no thread, lock, or async primitive added
-    AT-10_coverage-honesty: ATTACKED
-    AT-10-artifacts:
-      - ledger §6 (red-first record: collection error, then 10 stub reds + 3 test bugs)
-      - ledger §6 (the unclaimed multi-violation guard named, not pinned)
+    - id: AT-1
+      status: ATTACKED
+      evidence: The shipped dispatcher answers through the column-wise path unless a test swaps it, and the split-contract inventory pins the new router binding (rows to columns) among 76 cross-owner edges.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, python/repark/tests/test_production_file_size.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: 27 equality pins run both dispatchers on the same input and compare Arrow field types, Arrow values and collect() by (type name, repr), from single rows to 1e4 rows across every scalar kind and input shape.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: 24 refusal pins assert the same exception type and byte-identical text on both paths; the dropped-refusal, wrong-scale and nested-as-scalar mutations each red exactly their pins.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, task/ledgers/staging/perf-facade-cdf-1-ledger.md]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Seven tracked cells measure both legs in one process on one release module; the ledger reports the absolute, the pair and the load labels as three numbers, and the ≤ 100 ms target is met 30% under the bar.
+      artifacts: [python/repark-parity/bench/facade/, docs/perf/facade-boundary-baseline.md]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Namedtuple reorder and ragged/duplicate inputs pin row order and shape handling; the two multi-failure precedence pairs are named in the ledger while every single-failure input raises byte-identically.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, task/ledgers/staging/perf-facade-cdf-1-ledger.md]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every refusal pin compares exception types, not just text; the error-class suite stays green on the final tree.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, python/repark/tests/test_f1_errorclass.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: None in every column, whole-None columns, all-NaN and all-NaT witnesses; the dropped-None-mask mutation reds 9 pins and NaN compares by repr instead of never matching.
+      artifacts: [python/repark/tests/test_perf_facade_cdf_1.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The bench old leg and every pin swap the dispatcher in a finally or monkeypatch; the live run verified the JVM slot empty before and after, and no background pytest or JVM remains.
+      artifacts: [python/repark-parity/bench/facade/cells.py, python/repark/tests/test_perf_facade_cdf_1.py]
+    - id: AT-9
+      status: N/A
+      justification: single-threaded facade path; no thread, lock, or async primitive added
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red first in two layers (collection error, then 10 stub reds plus 3 test bugs fixed before green); the one unclaimed guard (multi-violation row-major choice) is named in the ledger, not pinned.
+      artifacts: [task/ledgers/staging/perf-facade-cdf-1-ledger.md]
 ```
 
 ## SLR log (D3 — one per state-changing step)
