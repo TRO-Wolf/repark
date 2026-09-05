@@ -45,7 +45,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The `repark_engine` fixture is function-scoped on purpose: the suite's autouse
   `_isolate_active_session` stops the active session between tests, so a module-scoped one is dead
   by the second case. The two live legs re-derive every pin on Spark under
-  `REPARK_PARITY_LIVE=1`. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
+  `REPARK_PARITY_LIVE=1`. **Round 2 (2026-09-04)** adds three rows the critic found unpinned:
+  the catastrophic-cancellation fixture `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]`, which separates a
+  RETRACTING sliding `sum` / `avg` from Spark's re-scan (`WIN-SLIDE-FLOAT-1`) and whose controls
+  are split three ways on measurement — bit-identical, one-ulp drift, and not-comparable (Spark
+  refuses `median` over a frame and its ANSI `corr(v, v)` divides by zero); the DATE / TIMESTAMP
+  RANGE order-key rows (`WIN-RANGE-ERRCLASS-1` for the DataFrame door's error class,
+  `WIN-RANGE-DF-1`'s scope for the SQL door); and the two sketch goldens, which
+  `WIN-SLIDE-PCT-ACC-1` published under a live-oracle line that no live test had touched. The
+  accuracy-knob test's last assertion was two constants and is now repark's own answer against
+  Spark's. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
 - **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
   attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1

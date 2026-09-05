@@ -3688,7 +3688,9 @@ probes `create_sliding_accumulator`; when that accumulator cannot retract, the a
 as a `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a **fresh**
 accumulator — Spark's own `AggregateWindowFunction` strategy, at Spark's O(frame x rows) cost.
 Retractable aggregates (`sum`, `avg`, `min`, `max`, `count`, the `stddev` / `var` family) keep
-DataFusion's sliding accumulator untouched. The fallback is by capability, not by name: a newly
+DataFusion's sliding accumulator untouched — which is a decision, not a free lunch: retraction is
+not re-scanning, and `WIN-SLIDE-FLOAT-1` measures where the two part company on floating point.
+The fallback is by capability, not by name: a newly
 registered aggregate with no `retract_batch` gets it automatically
 (`crates/repark-core/src/session/tests/window_rescan.rs`).
 `FILTER (WHERE ...)` and `DISTINCT` ride through the re-scan and are pinned; the `IGNORE NULLS`
@@ -3901,6 +3903,40 @@ Shared roster pin for every heading:
   Do not emulate the sketch: Spark's low-accuracy answers are sketch artefacts, and repark keeps
   the discrete data value. `PERF-APPROXPCT-1` (sketch memory) stays out of scope.
 
+### WIN-SLIDE-FLOAT-1 — a retracting sliding `sum` / `avg` loses a summand Spark's re-scan keeps
+
+- **repark** — DataFusion evaluates a sliding `sum` / `avg` by **retraction**: it adds the entering
+  rows to a running accumulator and subtracts the leaving ones. Catastrophic cancellation therefore
+  survives into the answer. On `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]` over
+  `ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW`, `sum(v)` is
+  `(1e16, 1e16, 0.0, 1e16, 1e16, 0.0)` and `avg(v)` is
+  `(1e16, 5e15, 0.0, 5e15, 5e15, 0.0)`: the third frame is `[1.0, 1.0]`, but adding `1.0` to a
+  running `1e16` and then subtracting `1e16` leaves `0.0`.
+- **Apache Spark** — re-scans every frame, so the same cells are `2.0` and `1.0`:
+  `sum` `(1e16, 1e16, 2.0, 1e16, 1e16, 2.0)`, `avg` `(1e16, 5e15, 1.0, 5e15, 5e15, 1.0)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sliding_sum_and_avg_retract_where_spark_rescans`
+  (repark's current column AND that it differs from Spark's), with the oracle half in
+  `::test_live_spark_rescans_the_cancellation_fixture`.
+- **Controls, measured on the same fixture** — `min`, `max`, `count`, `stddev_pop`,
+  `stddev_samp`, `bit_and`, `bit_xor`, `covar_pop` are **bit-identical** on both engines
+  (`::test_the_cancellation_fixture_is_spark_equal_off_the_sum_path`), so the divergence is the
+  running-sum path and not the frame. `var_pop`, `var_samp` and `regr_avgx` retract too and drift
+  **within one ulp** (`2.4999999999999997e31` vs `2.5e31`), which the pin holds to a 1e-15 relative
+  bound rather than to bit-equality
+  (`::test_the_variance_family_drifts_within_one_ulp_on_the_cancellation_fixture`). Two names could
+  not be measured as controls here and are NOT claimed as such: Spark refuses `median` over any
+  window frame (`INVALID_WINDOW_SPEC_FOR_AGGREGATION_FUNC`), and Spark's ANSI `corr` of a column
+  with itself raises `DIVIDE_BY_ZERO` where repark answers NULL.
+- **Rationale** — BACKLOG, and **pre-existing**: this is DataFusion's sliding-accumulator path,
+  which WIN-SLIDE-1 deliberately left untouched, not the frame re-scan it added. It is filed
+  because WIN-SLIDE-1's own §7 argues the re-scan for `corr` / `covar` precisely on this
+  cancellation ground, and the same argument convicts `sum` / `avg`. The fix is to route these
+  through the frame re-scan as well, at the O(frame x rows) cost the rest of the thirteen already
+  pay — a deliberate speed-for-exactness trade that needs an owner ruling, not a silent flip.
+  The thirteen aggregates WIN-SLIDE-1 re-scans (including `corr`, `covar_pop`, `covar_samp`) carry
+  no such drift by construction.
+
 ### WIN-RANGE-DF-1 — DataFrame-door `rangeBetween` ignored its offsets unless the ORDER BY key was BIGINT — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
 - **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `Window.orderBy("id").rangeBetween(-2, 0)` over
@@ -3915,8 +3951,46 @@ Shared roster pin for every heading:
   key type. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
   every `[range_frame-*]` case (the fixture's `id` is `IntegerType`).
+- **Scope, measured** — the fix reaches **numeric** order keys, which is the whole of this row.
+  A `DATE` or `TIMESTAMP` key never reaches it: the facade's own G2 guard
+  (`_reject_non_numeric_range_order`, PR #167) refuses a value-offset RANGE over a non-numeric key
+  before the expression is built, and that refusal's error class is its own row,
+  `WIN-RANGE-ERRCLASS-1`. The SQL door over the same keys is Spark-equal and always was:
+  `INTERVAL 2 DAYS PRECEDING` over a `DATE` key answers `(1, 3, 6, 9, 12, 15)` on both engines, so
+  does the bare `2 PRECEDING` over a `DATE` key and `INTERVAL 2 DAYS PRECEDING` over a `TIMESTAMP`
+  key, and a bare `2 PRECEDING` over a `TIMESTAMP` key refuses on both with the SAME class,
+  `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+  Pin: `::test_sql_door_range_over_a_date_key_is_spark_equal`.
 - **Rationale** — FIXED. Found by WIN-SLIDE-1's two-door RANGE pin; the bug predates it and hit
   every aggregate, retractable ones included.
+
+### WIN-RANGE-ERRCLASS-1 — DataFrame-door `rangeBetween` over a DATE / TIMESTAMP key refuses under the wrong error class
+
+- **repark** — `Window.orderBy(date_col).rangeBetween(-2, 0)` (and the `TIMESTAMP` spelling)
+  raises `[DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE] Cannot resolve RANGE window
+  frame due to data type mismatch: The data type of the order key 'd' ('date') does not match the
+  expected data type ("NUMERIC" or "INTERVAL"). SQLSTATE: 42K09`.
+- **Apache Spark** — refuses the same two frames, with the same SQLSTATE, under a different class:
+  `[DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE] Cannot resolve "(ORDER BY d ASC NULLS FIRST RANGE
+  BETWEEN -2 FOLLOWING AND CURRENT ROW)" … The data type "DATE" used in the order specification
+  does not support the data type "INT" which is used in the range frame.`
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_win_slide_1.py::test_dataframe_door_range_over_a_date_key_refuses_with_reparks_own_error_class`
+  with the oracle half in `::test_live_spark_refuses_the_date_key_range_frame_with_its_own_class`.
+- **Rationale** — BACKLOG, and **pre-existing, not a residue of `WIN-RANGE-DF-1`**. The refusal
+  comes from the Python facade's `_reject_non_numeric_range_order` (`plan_collapse.py`, landed in
+  PR #167, SE-1 PR-B), which fires on `frame.dtypes` before any expression is built and is
+  therefore untouched by WIN-SLIDE-1's change to the RANGE offset's scalar type. Filed as its own
+  row rather than folded into `WIN-RANGE-DF-1` because the registry's one-mechanism rule cuts the
+  other way here: the two share a *symptom* (a RANGE frame over a non-numeric-looking key) but not
+  a mechanism, a layer, or a status — `WIN-RANGE-DF-1` is a Rust bound-type bug that is FIXED, and
+  folding an open pre-existing gap into a FIXED row would both misattribute the gap and make the
+  FIXED status a half-truth. The fix is cheap and local: repark already emits Spark's exact class
+  on the SQL door (`window_range.rs::range_frame_invalid_type_error`), so the facade guard should
+  raise that message for datetime keys and keep its own for genuinely unacceptable ones such as
+  STRING (`test_g2_window_rand_sampleby.py::test_range_value_offset_refuses_non_numeric_order`,
+  which must stay green).
 
 ### WIN-COLLECT-DOOR-1 — `F.collect_list(...).over(w)` was refused at build time — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 

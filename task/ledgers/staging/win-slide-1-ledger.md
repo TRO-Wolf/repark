@@ -261,9 +261,9 @@ Every gate the charter names, run on the final tree with the RELEASE native modu
 | `make verify` | exit 0 — `make ci` plus the whole Rust workspace suite |
 | `make check-python-conventions` | 232 files clean |
 | `make rust-panic-ban` | exit 0 |
-| `.venv/bin/python -m pytest python/repark/tests -q` | **4738 passed, 193 skipped** |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | **574 passed** |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_win_slide_1.py -q` | **258 passed**, exit 0, 179 s. Co-collection proven: `test_live_disclosure_still_diverges` collects and passes beside the two new live legs, which re-derive every pinned answer — 65 SQL cells, 65 DataFrame cells and the seven frame-shape pins — on live PySpark 4.1.2. Run under the orchestrator's WIN-SLIDE-1-only override of the one-JVM rule (a sibling lane's facade suite had held the box for 1 h 45 m); the leg used the lane's own ivy redirect, Spark chose its own driver port, and no repark JVM survived it. |
+| `.venv/bin/python -m pytest python/repark/tests -q` | round 1 **4738 passed, 193 skipped**; round 2 **4753 passed, 195 skipped** (the fifteen new round-2 cells) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | **574 passed** (both rounds) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_win_slide_1.py -q` | round 1 **258 passed**; **round 2 275 passed**, exit 0, 116 s (the four new live legs re-derive the cancellation fixture, the DATE/TIMESTAMP refusal classes and the two sketch columns on Spark). Co-collection proven: `test_live_disclosure_still_diverges` collects and passes beside the two new live legs, which re-derive every pinned answer — 65 SQL cells, 65 DataFrame cells and the seven frame-shape pins — on live PySpark 4.1.2. Run under the orchestrator's WIN-SLIDE-1-only override of the one-JVM rule (a sibling lane's facade suite had held the box for 1 h 45 m); the leg used the lane's own ivy redirect, Spark chose its own driver port, and no repark JVM survived it. |
 | `make check-map-sync` | 182 maps clean |
 | `make check-ledger-grammar` | 39 live ledgers clean |
 | `make check-ledgers` | 235 ledgers in bins, 717 links resolve |
@@ -274,3 +274,55 @@ Every gate the charter names, run on the final tree with the RELEASE native modu
 
 The `--timeout 900` the charter names is not a flag this suite's pytest accepts (no
 `pytest-timeout` plugin in the lock); the suite was run without it and finished in 128 s.
+
+## 11. Round-2 review gaps (Opus critic, 2026-09-04)
+
+The critic PASSED the unit — 288 two-door cells against live Spark with zero wrong answers, the
+design claim confirmed behaviourally, frame-width scaling flat on every control, mutations matching
+this ledger cell for cell, registry deletion audit clean — and filed four gaps. All four are
+remediated here; none needed a change to the evaluator, which stays as reviewed.
+
+| gap | severity | remediation |
+|---|---|---|
+| **S2-1** An unfiled divergence sat under this unit's own argument: repark's sliding `sum` / `avg` RETRACT where Spark re-scans, so on `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]` the third frame answers `0.0` / `0.0` against Spark's `2.0` / `1.0`. Pre-existing, but §7 uses exactly this cancellation argument to justify re-scanning `corr` / `covar`, and the parent row asserted the retract path is kept "untouched" as if that were free. | S2 | `WIN-SLIDE-FLOAT-1` filed BACKLOG with both engines measured on that fixture and its oracle line; repark's current column pinned (and pinned as *differing* from Spark's) with a live leg; the parent `WIN-SLIDE` row's "keep the sliding accumulator untouched" sentence now says that is a decision, not a free lunch, and points at the row. |
+| **S2-2** DataFrame-door `rangeBetween(-2, 0)` over a `DATE` / `TIMESTAMP` key refuses with `DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE` where Spark refuses with `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`. | S2 | `WIN-RANGE-ERRCLASS-1` filed BACKLOG as **its own row, not folded into `WIN-RANGE-DF-1`** — see §11.1 for the reasoning — with both messages pinned and a live oracle leg; `WIN-RANGE-DF-1` gains a measured Scope paragraph (numeric keys are its whole reach; the SQL door over DATE/TIMESTAMP is Spark-equal and always was, including a bare `2 PRECEDING` over a TIMESTAMP key refusing under the SAME class on both engines). |
+| **S3-1** `test_live_spark_reproduces_the_frame_shape_pins` claimed to re-derive the sketch pins but its `checks` tuple carried none, so `WIN-SLIDE-PCT-ACC-1`'s two goldens were published under a live-oracle line no live test touched. | S3 | Both sketch columns are now re-derived in that live leg against `SPARK_EXTRA_GOLDEN`. |
+| **S3-2** `test_percentile_approx_over_a_frame_ignores_the_accuracy_knob` ended on `SPARK_EXTRA_GOLDEN["sketch_acc2"] != SPARK_EXTRA_GOLDEN["sketch_default"]` — two constants, which no engine change can red. | S3 | Replaced with `accurate != SPARK_EXTRA_GOLDEN["sketch_acc2"]`: repark's own accuracy-2 answer against Spark's, which reds the day repark implements the sketch. All three assertions in that test are now engine-sensitive. |
+
+### 11.1 Why `WIN-RANGE-ERRCLASS-1` is its own row
+
+The registry's one-mechanism rule folds rows that share a *cause*. These share only a symptom.
+`WIN-RANGE-DF-1` was a Rust bug — `Column.over` emitted the RANGE offset as `Int64`, DataFusion's
+coercion passed it through, and the frame silently widened — and it is FIXED. The DATE/TIMESTAMP
+refusal never reaches that code at all: the Python facade's `_reject_non_numeric_range_order`
+(`plan_collapse.py`, PR #167, SE-1 PR-B, long before this unit) rejects a value-offset RANGE over a
+non-numeric dtype from `frame.dtypes`, before an expression exists. Different layer, different
+cause, different status — and folding an open pre-existing gap into a FIXED row would both
+misattribute it and make that FIXED a half-truth.
+
+### 11.2 Where this ledger was wrong, and is now corrected
+
+The round-2 brief relayed that `min` / `max` / `count` / `stddev` / `var` / `regr` / `median` /
+`array_agg` / `bit_xor` all measured **correct** on the cancellation fixture. Re-measured here on
+both engines, that is not quite so, and `WIN-SLIDE-FLOAT-1` records what was actually read:
+
+- bit-identical on both engines: `min`, `max`, `count`, `stddev_pop`, `stddev_samp`, `bit_and`,
+  `bit_xor`, `covar_pop`;
+- **drifting within one ulp** (they retract too): `var_pop` and `var_samp`
+  (`2.4999999999999997e31` vs Spark's `2.5e31`), and `regr_avgx` (`5000000000000001.0` vs
+  `5000000000000000.0` in the fourth frame). Pinned to a 1e-15 relative bound, not to bit-equality;
+- **not comparable on this fixture at all**, and therefore not claimed as controls: Spark refuses
+  `median` over any window frame (`INVALID_WINDOW_SPEC_FOR_AGGREGATION_FUNC`) and Spark's ANSI
+  `corr(v, v)` raises `DIVIDE_BY_ZERO` where repark answers NULL.
+
+The fixture also *confirms* §7's design argument from the other side: `covar_pop` — one of the
+thirteen this unit re-scans — is bit-identical to Spark on the very fixture that breaks the
+retracting `sum`.
+
+### 11.3 Environment observation (the critic's, recorded not acted on)
+
+The lane venv's `_editable_impl_repark_parity.pth` points at the live checkout rather than at
+`/tmp/oc-winslide`. That is a lane-venv artifact of how the worktree was seeded, not a property of
+this unit's diff: `repark` itself resolves to `/tmp/oc-winslide/python/repark/src/repark` (checked
+every session) and `repark_parity` is imported only by `python/repark-parity/tests`, which this
+unit runs from the lane by path. Left for the orchestrator; nothing in this unit reads it.

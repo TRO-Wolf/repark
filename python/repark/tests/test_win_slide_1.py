@@ -5,6 +5,7 @@ pins: win-slide-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 from typing import Any, Final
 
@@ -278,6 +279,108 @@ SPARK_EXTRA_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
 }
 
 
+FLOAT_CANCEL_ROWS: Final[tuple[tuple[Any, ...], ...]] = (
+    (1, 1e16),
+    (2, 1.0),
+    (3, 1.0),
+    (4, 1e16),
+    (5, 1.0),
+    (6, 1.0),
+)
+
+CANCEL_FRAME: Final[str] = "ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW"
+
+REPARK_CANCEL_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
+    "sum": (1e16, 1e16, 0.0, 1e16, 1e16, 0.0),
+    "avg": (1e16, 5000000000000000.0, 0.0, 5000000000000000.0, 5000000000000000.0, 0.0),
+}
+
+SPARK_CANCEL_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
+    "sum": (1e16, 1e16, 2.0, 1e16, 1e16, 2.0),
+    "avg": (1e16, 5000000000000000.0, 1.0, 5000000000000000.0, 5000000000000000.0, 1.0),
+}
+
+CANCEL_EQUAL_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
+    "min": (1e16, 1.0, 1.0, 1.0, 1.0, 1.0),
+    "max": (1e16, 1e16, 1.0, 1e16, 1e16, 1.0),
+    "count": (1, 2, 2, 2, 2, 2),
+    "stddev_pop": (0.0, 5000000000000000.0, 0.0, 5000000000000000.0, 5000000000000000.0, 0.0),
+    "stddev_samp": (None, 7071067811865475.0, 0.0, 7071067811865475.0, 7071067811865475.0, 0.0),
+    "bit_and": (10000000000000000, 0, 1, 0, 0, 1),
+    "bit_xor": (10000000000000000, 10000000000000001, 0, 10000000000000001, 10000000000000001, 0),
+    "covar_pop": (
+        0.0,
+        2.4999999999999997e31,
+        0.0,
+        2.4999999999999997e31,
+        2.4999999999999997e31,
+        0.0,
+    ),
+}
+
+CANCEL_EQUAL_EXPRESSIONS: Final[dict[str, str]] = {
+    "min": "min(v)",
+    "max": "max(v)",
+    "count": "count(v)",
+    "stddev_pop": "stddev_pop(v)",
+    "stddev_samp": "stddev_samp(v)",
+    "bit_and": "bit_and(CAST(v AS BIGINT))",
+    "bit_xor": "bit_xor(CAST(v AS BIGINT))",
+    "covar_pop": "covar_pop(v, v)",
+}
+
+CANCEL_DRIFT_EXPRESSIONS: Final[dict[str, str]] = {
+    "var_pop": "var_pop(v)",
+    "var_samp": "var_samp(v)",
+    "regr_avgx": "regr_avgx(v, v)",
+}
+
+SPARK_CANCEL_DRIFT_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
+    "var_pop": (0.0, 2.5e31, 0.0, 2.5e31, 2.5e31, 0.0),
+    "var_samp": (None, 5e31, 0.0, 5e31, 5e31, 0.0),
+    "regr_avgx": (1e16, 5000000000000000.0, 1.0, 5000000000000000.0, 5000000000000000.0, 1.0),
+}
+
+DATE_RANGE_ROWS: Final[int] = 6
+DATE_RANGE_SUM: Final[tuple[float, ...]] = (1.0, 3.0, 6.0, 9.0, 12.0, 15.0)
+REPARK_DATE_DOOR_ERROR: Final[str] = "DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE"
+SPARK_DATE_DOOR_ERROR: Final[str] = "DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE"
+
+
+def _cancel_fixture(engine: Any) -> Any:
+    """The catastrophic-cancellation seed: 1e16 next to 1.0, so a lost 1.0 is visible."""
+    types = engine.types
+    schema = types.StructType(
+        [
+            types.StructField("id", types.IntegerType(), False),
+            types.StructField("v", types.DoubleType(), True),
+        ]
+    )
+    return engine.session.createDataFrame(list(FLOAT_CANCEL_ROWS), schema)
+
+
+def _date_range_fixture(engine: Any) -> Any:
+    """Six consecutive days with a matching timestamp, for the RANGE order-key rows."""
+    types = engine.types
+    schema = types.StructType(
+        [
+            types.StructField("d", types.DateType(), True),
+            types.StructField("ts", types.TimestampType(), True),
+            types.StructField("v", types.DoubleType(), True),
+        ]
+    )
+    base = dt.date(2026, 1, 1)
+    rows = [
+        (
+            base + dt.timedelta(days=index),
+            dt.datetime(2026, 1, 1 + index, 12, 0, 0),
+            float(index + 1),
+        )
+        for index in range(DATE_RANGE_ROWS)
+    ]
+    return engine.session.createDataFrame(rows, schema)
+
+
 def _fixture_schema(types: Any) -> Any:
     """The seven typed seed columns shared by both engines."""
     return types.StructType(
@@ -460,9 +563,10 @@ def test_percentile_approx_over_a_frame_ignores_the_accuracy_knob(repark_engine)
         "FROM win_slide_1_sketch ORDER BY k",
     )
     sampled = tuple(default_rows[index] for index in SKETCH_SAMPLE_INDICES)
+    accurate = tuple(accuracy_rows[index] for index in SKETCH_SAMPLE_INDICES)
     assert sampled == SPARK_EXTRA_GOLDEN["sketch_default"]
-    assert tuple(accuracy_rows[index] for index in SKETCH_SAMPLE_INDICES) == sampled
-    assert SPARK_EXTRA_GOLDEN["sketch_acc2"] != SPARK_EXTRA_GOLDEN["sketch_default"]
+    assert accurate == sampled
+    assert accurate != SPARK_EXTRA_GOLDEN["sketch_acc2"]
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -498,3 +602,128 @@ def test_live_spark_reproduces_the_frame_shape_pins(spark_engine) -> None:
     for expression, frame_clause, label in checks:
         rows = _sql_window_values(spark_engine, "win_slide_1_oracle", expression, frame_clause)
         assert _rows_same(rows, SPARK_EXTRA_GOLDEN[label], label), label
+    sketch = spark_engine.session.range(1, 201).selectExpr("CAST(id AS DOUBLE) AS x", "id AS k")
+    sketch.createOrReplaceTempView("win_slide_1_sketch_oracle")
+    sketch_clause = "ORDER BY k ROWS BETWEEN 99 PRECEDING AND CURRENT ROW"
+    for expression, label in (
+        ("percentile_approx(x, 0.5)", "sketch_default"),
+        ("percentile_approx(x, 0.5, 2)", "sketch_acc2"),
+    ):
+        column = _query_column(
+            spark_engine,
+            f"SELECT {expression} OVER ({sketch_clause}) AS w "
+            "FROM win_slide_1_sketch_oracle ORDER BY k",
+        )
+        sampled = tuple(column[index] for index in SKETCH_SAMPLE_INDICES)
+        assert sampled == SPARK_EXTRA_GOLDEN[label], label
+
+
+@pytest.mark.parametrize("aggregate", ["sum", "avg"])
+def test_sliding_sum_and_avg_retract_where_spark_rescans(repark_engine, aggregate) -> None:
+    """WIN-SLIDE-FLOAT-1: repark's retracting sum/avg lose a summand Spark's re-scan keeps."""
+    _cancel_fixture(repark_engine).createOrReplaceTempView("win_slide_1_cancel")
+    rows = _sql_window_values(repark_engine, "win_slide_1_cancel", f"{aggregate}(v)", CANCEL_FRAME)
+    assert _rows_same(rows, REPARK_CANCEL_GOLDEN[aggregate], aggregate)
+    assert not _rows_same(rows, SPARK_CANCEL_GOLDEN[aggregate], aggregate)
+
+
+@pytest.mark.parametrize("aggregate", sorted(CANCEL_EQUAL_EXPRESSIONS))
+def test_the_cancellation_fixture_is_spark_equal_off_the_sum_path(repark_engine, aggregate) -> None:
+    """WIN-SLIDE-FLOAT-1 control: the divergence is the running-sum path, not the frame."""
+    _cancel_fixture(repark_engine).createOrReplaceTempView("win_slide_1_cancel")
+    rows = _sql_window_values(
+        repark_engine, "win_slide_1_cancel", CANCEL_EQUAL_EXPRESSIONS[aggregate], CANCEL_FRAME
+    )
+    assert _rows_same(rows, CANCEL_EQUAL_GOLDEN[aggregate], aggregate)
+
+
+@pytest.mark.parametrize("aggregate", sorted(CANCEL_DRIFT_EXPRESSIONS))
+def test_the_variance_family_drifts_within_one_ulp_on_the_cancellation_fixture(
+    repark_engine, aggregate
+) -> None:
+    """WIN-SLIDE-FLOAT-1 control: var/regr retract too, but bounded, not answer-destroying."""
+    _cancel_fixture(repark_engine).createOrReplaceTempView("win_slide_1_cancel")
+    rows = _sql_window_values(
+        repark_engine,
+        "win_slide_1_cancel",
+        CANCEL_DRIFT_EXPRESSIONS[aggregate],
+        CANCEL_FRAME,
+    )
+    pinned = SPARK_CANCEL_DRIFT_GOLDEN[aggregate]
+    assert len(rows) == len(pinned)
+    for live, spark in zip(rows, pinned, strict=True):
+        if live is None or spark is None:
+            assert live is None and spark is None
+            continue
+        assert math.isclose(live, spark, rel_tol=1e-15, abs_tol=1e-12)
+
+
+def test_dataframe_door_range_over_a_date_key_refuses_with_reparks_own_error_class(
+    repark_engine,
+) -> None:
+    """WIN-RANGE-ERRCLASS-1: both engines refuse; the class differs (pre-existing G2 guard)."""
+    from repark.errors import AnalysisException
+
+    frame = _date_range_fixture(repark_engine)
+    functions = repark_engine.functions
+    for key in ("d", "ts"):
+        spec = repark_engine.window.orderBy(key).rangeBetween(-2, 0)
+        with pytest.raises(AnalysisException, match=REPARK_DATE_DOOR_ERROR.split(".")[1]):
+            frame.select(functions.sum("v").over(spec).alias("w")).collect()
+
+
+def test_sql_door_range_over_a_date_key_is_spark_equal(repark_engine) -> None:
+    """WIN-RANGE-DF-1 scope: the SQL door answers Spark's column over DATE and TIMESTAMP keys."""
+    _date_range_fixture(repark_engine).createOrReplaceTempView("win_slide_1_dates")
+    for clause in (
+        "ORDER BY d RANGE BETWEEN INTERVAL 2 DAYS PRECEDING AND CURRENT ROW",
+        "ORDER BY d RANGE BETWEEN 2 PRECEDING AND CURRENT ROW",
+        "ORDER BY ts RANGE BETWEEN INTERVAL 2 DAYS PRECEDING AND CURRENT ROW",
+    ):
+        rows = _query_column(
+            repark_engine,
+            f"SELECT sum(v) OVER ({clause}) AS w FROM win_slide_1_dates ORDER BY d",
+        )
+        assert _rows_same(rows, DATE_RANGE_SUM, "sum"), clause
+    from repark.errors import AnalysisException
+
+    with pytest.raises(AnalysisException, match="RANGE_FRAME_INVALID_TYPE"):
+        _query_column(
+            repark_engine,
+            "SELECT sum(v) OVER (ORDER BY ts RANGE BETWEEN 2 PRECEDING AND CURRENT ROW) AS w "
+            "FROM win_slide_1_dates ORDER BY d",
+        )
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_spark_rescans_the_cancellation_fixture(spark_engine) -> None:
+    """WIN-SLIDE-FLOAT-1 oracle: Spark re-scans, so its sum/avg keep the small summand."""
+    _cancel_fixture(spark_engine).createOrReplaceTempView("win_slide_1_cancel_oracle")
+    for aggregate in ("sum", "avg"):
+        rows = _sql_window_values(
+            spark_engine, "win_slide_1_cancel_oracle", f"{aggregate}(v)", CANCEL_FRAME
+        )
+        assert _rows_same(rows, SPARK_CANCEL_GOLDEN[aggregate], aggregate), aggregate
+    for aggregate, expression in CANCEL_EQUAL_EXPRESSIONS.items():
+        rows = _sql_window_values(
+            spark_engine, "win_slide_1_cancel_oracle", expression, CANCEL_FRAME
+        )
+        assert _rows_same(rows, CANCEL_EQUAL_GOLDEN[aggregate], aggregate), aggregate
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_spark_refuses_the_date_key_range_frame_with_its_own_class(spark_engine) -> None:
+    """WIN-RANGE-ERRCLASS-1 oracle: Spark refuses the same frame under a different class."""
+    frame = _date_range_fixture(spark_engine)
+    functions = spark_engine.functions
+    for key in ("d", "ts"):
+        spec = spark_engine.window.orderBy(key).rangeBetween(-2, 0)
+        with pytest.raises(Exception, match=SPARK_DATE_DOOR_ERROR.split(".")[1]):
+            frame.select(functions.sum("v").over(spec).alias("w")).collect()
+    _date_range_fixture(spark_engine).createOrReplaceTempView("win_slide_1_dates_oracle")
+    rows = _query_column(
+        spark_engine,
+        "SELECT sum(v) OVER (ORDER BY d RANGE BETWEEN INTERVAL 2 DAYS PRECEDING "
+        "AND CURRENT ROW) AS w FROM win_slide_1_dates_oracle ORDER BY d",
+    )
+    assert _rows_same(rows, DATE_RANGE_SUM, "sum")
