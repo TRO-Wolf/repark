@@ -2002,8 +2002,8 @@ the pin rather than obeying it.
   *(oracle: recorded 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
-  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors;
-  reds when the accumulator is fixed).
+  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
+  window `try_avg` list and the window `avg` raise; reds when fixed).
 - **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
   the general wrap class in round 3 R2-1).
   Pre-existing: the global `Accumulator` arms are byte-identical to the base (that

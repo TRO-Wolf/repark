@@ -1738,9 +1738,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `PySparkException` with the same message, and grouped `avg(NULL)` refuses as
   `UnsupportedOperationException` naming the groups accumulator pair. Round 2 records
   the `AVG-DEC-SUMWRAP-1` divergence, round 3 widens it to the general wrap class:
-  the zero-wrap fixture answers `0.0000` on the SQL doors and the non-zero-wrap fixture
-  answers `100000.0000` on grouped SQL and DataFrame — where Spark answers NULL
-  (`try_avg`) or raises (`avg`). The grouped-float drift gets its own pin: the
+  the zero-wrap fixture answers `0.0000` on the SQL doors, the non-zero-wrap fixture
+  answers `100000.0000` on grouped SQL and DataFrame, and the window `try_avg`
+  list plus the window `avg` raise are pinned in the same test — where Spark answers
+  NULL (`try_avg`) or raises (`avg`). The grouped-float drift gets its own pin: the
   1e16-plus-ones fixture pins repark's exact grouped value within 1e-12 of
   Spark's, with a seventh live leg re-deriving the tolerance (the many-groups
   fixture's exact-binary values cannot see this drift). The brief's full gate

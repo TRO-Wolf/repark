@@ -175,6 +175,26 @@ SQL_DECIMAL_SUMWRAP_NONZERO_FRAME = (
     "AS t(k, v)"
 )
 
+SQL_DECIMAL_SUMWRAP_WINDOW_TRY = (
+    "SELECT id, try_avg(v) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING "
+    "AND CURRENT ROW) AS a FROM (VALUES "
+    "(CAST(1 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(2 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(3 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(4 AS INT), CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) "
+    "AS t(id, v) ORDER BY id"
+)
+
+SQL_DECIMAL_SUMWRAP_WINDOW = (
+    "SELECT id, avg(v) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING "
+    "AND CURRENT ROW) AS a FROM (VALUES "
+    "(CAST(1 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(2 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(3 AS INT), CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST(4 AS INT), CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) "
+    "AS t(id, v) ORDER BY id"
+)
+
 SQL_FLOAT_DRIFT_GROUPED = (
     "SELECT k, avg(v) AS a FROM (VALUES (1, CAST(1e16 AS DOUBLE)), "
     + ", ".join(["(1, CAST(1.0 AS DOUBLE))"] * 64)
@@ -415,6 +435,8 @@ def test_avg_grouped_float_drift_within_spark() -> None:
 def test_avg_decimal_sumwrap_records_divergence() -> None:
     """Sum-wrap fixtures answer the wrapped quotient; Spark NULLs and raises."""
     """pins: perf-agg-avg-1/C-003."""
+    from repark.errors import PySparkException
+
     spark = _session()
     grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
     assert grouped_try.column("a").to_pylist() == [Decimal("0.0000")]
@@ -438,6 +460,11 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     assert frame_try.column("a").to_pylist() == [Decimal("100000.0000")]
     frame_avg = frame.groupBy("k").agg(F.avg("v").alias("a")).toArrow()
     assert frame_avg.column("a").to_pylist() == [Decimal("100000.0000")]
+    window_try = spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW_TRY).toArrow()
+    assert window_try.column("a").to_pylist() == [None, None, None, Decimal("0.0000")]
+    assert _sig(window_try) == [("id", "int32", True), ("a", "decimal128(38, 4)", True)]
+    with pytest.raises(PySparkException, match="Arithmetic Overflow"):
+        spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW).toArrow()
 
 
 def test_avg_grouped_null_refuses_naming_groups_accumulator() -> None:
