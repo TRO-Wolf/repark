@@ -12,16 +12,19 @@ a cost is read against the floor of the run it came from.
 
 ## 1. Builds
 
-| build | RePark tree | iceberg fork | what it isolates |
-|---|---|---|---|
-| B0 | `origin/main` | pinned `189a73ed` | the state PERF-ANALYSIS-1 measured |
-| B1 | `origin/main` | path override on `f-28-vectorized-partition-splitter` | the fork half alone |
-| B2 | `perf/ice-writepath-1` | path override on `f-28-vectorized-partition-splitter` | both halves |
+| build | RePark tree | iceberg fork | what it isolates | where its numbers may be quoted |
+|---|---|---|---|---|
+| B0 | `6eaccd5e` (this unit's base) | pinned `189a73ed` | the state before the unit | the before column of `PERF-ICE-WRITEPAR-1` |
+| B3 | `perf/ice-writepath-1` (the SHIPPED tree) | pinned `189a73ed` | the RePark half, as it will merge | the after column of `PERF-ICE-WRITEPAR-1` |
+| B1 | `6eaccd5e` | path override on `f-28-vectorized-partition-splitter` | the fork half alone | the pending fork row only |
+| B2 | `perf/ice-writepath-1` | path override on the same fork branch | both halves | the pending fork row only |
 
-The override is a temporary `[patch.crates-io]` `path =` rewrite of the five `iceberg*` entries.
-It is never committed: `git diff origin/main -- Cargo.toml Cargo.lock` is empty at hand-back, and
-the pin moves only through the fork-sync procedure ([../fork-sync.md](../fork-sync.md)) after the
-fork change lands.
+**B1 and B2 carry an uncommitted `[patch.crates-io]` path override and are NOT the shipped tree.**
+Round 1 quoted B0 → B2 in the registry; round 2 moved the registry to B0 → B3 and left the
+override builds to the fork row, which is where a number that depends on an unlanded fork belongs.
+The override is never committed: `git diff origin/main -- Cargo.toml Cargo.lock` is empty at
+hand-back, and the pin moves only through the fork-sync procedure
+([../fork-sync.md](../fork-sync.md)).
 
 ## 2. Method
 
@@ -79,46 +82,61 @@ partition value to one task, and RePark has no such rule.
 
 Per-cell isolated probe (`scratch/probes/probe_cell.py`): one process per cell, a fresh temp
 warehouse per process, one warm-up then 5 timed statements with a fresh table each, three passes
-per cell per build. Reported as the minimum across all 15 samples and the median of each pass,
-because **the box was not quiet**: sibling lanes ran `rustc` builds throughout (1-minute load 13
-to 22, `vmstat` 82-87 % idle CPU but 13-22 kB/s block-in and 54-86 kB/s block-out), and a
-partitioned CTAS at this scale is `fsync`-bound. Under that contention a median is a measurement
-of the neighbours; the minimum is the closest thing to the engine.
+per cell per build. **Round 2 re-measured B0 and B3 back to back on a quiet box** (1-minute load
+7.7–14.4, against 13–22 in round 1); the `df.write.parquet(zstd)` control reads within 5 % on both
+builds, which is what makes the pair comparable. The floor is the spread of the three pass
+medians.
 
-| cell | B0 min | B0 pass medians | B3 min | B3 pass medians | B2 min | B2 pass medians |
-|---|---:|---|---:|---|---:|---|
-| `ctas` | **880.50** | 2208.89, 1839.90, 886.91 | 735.42 | 861.65, 1372.83, 1356.68 | **478.03** | 691.20, 853.11, 1146.40 · 1548.89, 2678.87, 2406.24 |
-| `ctas_partitioned8` | **1611.25** | 9241.14, 2078.69, 7163.95 | 2213.01 | 4111.71, 2930.59, 4248.53 | **917.22** | 2821.71, 4023.67, 3002.39 · 3702.49, 5725.12, 6193.68 |
-| `df_write_parquet_zstd` (control) | 143.90 | 259.79, 168.87, 200.14 | 89.98 | 159.24, 200.63, 210.42 | 100.73 | 201.00, 200.74, 180.58 · 125.84, 195.45, 240.10 |
-| 1-minute load at each pass | | 16.4, 21.0, 21.7 | | 14.6, 14.0, 13.5 | | 18.6, 18.7, 18.8 · 19.2, 17.1, 19.0 |
+| cell | B0 min | B0 pass medians | B3 min | B3 pass medians | floor B0 / B3 |
+|---|---:|---|---:|---|---|
+| `ctas` | 1,312.39 | 1,556.88, 1,490.63, **1,384.80** | **127.54** | **135.48**, 150.36, 149.45 | 172.1 / 14.9 |
+| `ctas_partitioned8` | 4,628.11 | **4,901.75**, 5,444.76, 5,714.64 | **283.07** | 305.20, 293.92, **293.19** | 812.9 / 12.0 |
+| `df_write_parquet_zstd` (control) | 93.96 | 110.08, **107.37**, 110.66 | 98.37 | **105.56**, 118.66, 109.14 | 3.3 / 13.1 |
+| 1-minute load per pass | | 8.98, 8.27, 7.98 | | 7.71, 13.66, 14.40 | |
 
-B2 was measured twice; both pass sets are listed and the minimum is taken across both.
+| cell | B0 → B3 (best median) | B0 → B3 (min) | |
+|---|---|---|---:|
+| `ctas` | 1,384.80 → 135.48 ms | 1,312.39 → 127.54 ms | **10.2×** |
+| `ctas_partitioned8` | 4,901.75 → 293.19 ms | 4,628.11 → 283.07 ms | **16.7×** |
 
-| cell | B0 → B2 (min) | ratio |
-|---|---|---:|
-| `ctas` | 880.50 → 478.03 ms | **1.84×** |
-| `ctas_partitioned8` | 1611.25 → 917.22 ms | **1.76×** |
-| `ctas` against the parquet sink measured in the same build | 6.12× → 3.65× | |
-| `ctas_partitioned8` against the same control | 11.20× → 7.01× | |
+**Both of the analysis' targets are met on the shipped tree**: `ctas` ≤ 150 ms (135.48 median,
+127.54 min) and `ctas_partitioned8` ≤ 300 ms (293.19 median, 283.07 min). Round 1 reported both as
+missed; that was a contention artifact, and the correction is the point of this section. The same
+`ctas` cell read 880 ms on B0 and 478 ms on B2 in round 1 at load 13–22, and 299 ms on B3 in a
+round-2 pass at load 11–16 against 127 ms at load 7.7 — a 2.4× swing on one build from load alone.
+A number measured on this box above load ~10 is a measurement of the neighbours.
 
-**What these walls do not show.** B3 (the RePark half alone) does not sit between B0 and B2 on
-either cell — it reads slower than B0 on `ctas_partitioned8` and slower than B2 on `ctas`, where
-the splitter cannot matter at all. The three builds could not be measured in one window (each is
-an 8-minute release rebuild of a 163 MB module) and the disk contention moved more than the
-change did. So this table supports the direction and the size of the end-to-end gain and
-**nothing about which half produced it**; the fork half is resolved by §4 instead, where the
-measurement needs no disk. The analysis' targets (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms)
-are not met on this box: the `df.write.parquet(zstd)` control itself reads 90 to 144 ms here, so
-those targets ask for parity with the DataFusion sink, and the engine is at 3.65× of it.
+## 6. Layout, against Spark
 
-## 6. Layout
-
-| build | `ctas` data files | `ctas_partitioned8` data files |
+| engine / build | `ctas` data files | `ctas_partitioned8` data files |
 |---|---:|---:|
-| B0 | 4 | 32 |
-| B2 / B3 | 8 | 64 |
+| Spark 4.1.2 (`write.distribution-mode = hash`, the Iceberg default) | 2 | 8 |
+| repark B0 | 4 | 32 |
+| repark B3 (shipped) | 8 | 64 |
 
-One data file per DataFusion partition (8 at `spark.sql.shuffle.partitions = 8`) replaces the four
-round-robin writers, and a partitioned write multiplies that by its partition values. Row set,
-`sum(id)` and `sum(vi)` are identical on every build (1,000,000 rows, 499,999,500,000,
-499,596,708). `repark.write.max-concurrent-files = 1` still writes exactly one file.
+At `spark.sql.shuffle.partitions = 8` the shipped tree writes **4× Spark's unpartitioned count and
+8× its partitioned count**, averaging 328 KB per data file. Spark gets its counts from a
+distribution rule that sends one partition value to one task before the write; repark has none.
+That gap is filed as **`WRITE-DISTRIBUTION-1`** with both rejected alternatives measured — capping
+the writers below the partition count costs 738 ms against 547 ms and buffers unconsumed
+partitions whole, and a round-robin `RepartitionExec` destroys the reproducibility §5's
+determinism work just established. The row set, `sum(id)` and `sum(vi)` are identical on every
+build (1,000,000 rows, 499,999,500,000, 499,596,708), and
+`repark.write.max-concurrent-files = 1` still writes exactly one file — the key is binary on this
+node, measured 1 / 8 / 8 / 8 files at cap 1 / 2 / 4 / 8.
+
+## 7. Determinism (round 2)
+
+Six identical v3 CTAS over eight UNEQUAL source files
+(5000/10000/20000/40000/7000/3000/60000/1000), one process, one registered view:
+
+| ordering | distinct manifest record-count sequences | distinct `first_row_id` maps |
+|---|---:|---:|
+| round 1 — by writer index | **6 of 6** | **6 of 6** |
+| round 2 — `stable_commit_order`, by content | **1 of 6** | **1 of 6** |
+
+The instrumented run says why the writer index cannot work: partition 1 read the 3,000-row source
+file in one run and the 40,000-row file in the next, so the index is a property of that execution.
+Ordering by partition value, then every field's lower then upper bound, then record count, size
+and path is a function of the data instead. Equal-sized seed files hid this completely, which is
+why the pin now seeds unequal ones.

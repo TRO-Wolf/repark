@@ -4362,28 +4362,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
-  (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding
-  of the K writers serialized; PERF-ANALYSIS-1 read 303 ms of that against
-  `df.write.parquet(zstd)` on the same 1e6 rows. CTAS now goes through
-  `write/partition_write.rs::IcebergPartitionWriteExec`, a physical node with one output
-  partition per input partition; `execute_stream` coalesces it and DataFusion's
-  `CoalescePartitionsExec` spawns one task per partition, so the encode runs on the executor's
-  threads. RePark spawns nothing and adds no dependency — `clippy.toml` bans `tokio::spawn` and
-  `spawn_blocking`, the rust-code-quality review scan bans routing around that ban through
-  `JoinSet` or a helper crate, and `tokio` is only a dev-dependency of `repark-iceberg`. Measured
-  on a **contended** box (sibling `rustc` builds throughout, 1-minute load 13–22), minimum of 15
-  samples per cell: `ctas` **880.50 → 478.03 ms** (1.84×) and `ctas_partitioned8`
-  **1,611.25 → 917.22 ms** (1.76×), against a `df.write.parquet(zstd)` control that read
-  143.90 → 100.73 ms in the same passes. The analysis' ≤ 150 ms / ≤ 300 ms targets are NOT met and
-  ask for parity with that control; the engine is at 3.65× of it. File order and the `_row_id`
-  derived from it became deterministic in the same change — writer `p` takes partition `p`'s
-  batches in plan order, where the coalesced stream it replaces merged partitions in completion
-  order. Layout moves with it: a CTAS writes one file per plan partition (4 → 8 at
-  `shuffle.partitions = 8`, and 32 → 64 partitioned). Pins:
-  `crates/repark-iceberg/src/write/partition_write.rs` (the node's partitions overlap their
-  blocking work where one task pays four delays; writer-index file order over four differently
-  sized partitions; a late partition failure leaves no parquet file) and
-  `python/repark/tests/test_perf_ice_writepath_1.py`. Numbers and commands:
+  (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding of
+  the K writers serialized. CTAS now goes through
+  `write/partition_write.rs::IcebergPartitionWriteExec`, a physical node with one output partition
+  per input partition; `execute_stream` coalesces it and DataFusion's `CoalescePartitionsExec`
+  spawns one task per partition, so the encode runs on the executor's threads. RePark spawns
+  nothing and adds no dependency — `clippy.toml` bans `tokio::spawn` and `spawn_blocking`, the
+  rust-code-quality review scan bans routing around that ban through `JoinSet` or a helper crate,
+  and `tokio` is only a dev-dependency of `repark-iceberg`. **Measured on the SHIPPED tree**
+  (base `6eaccd5e` against `perf/ice-writepath-1`, both with the pinned fork, back to back on a
+  quiet box at 1-minute load 8–14, three passes of five timed statements per cell, floors 12–15 ms
+  on the after side): `ctas` **1,384.80 → 135.48 ms** median (1,312.39 → 127.54 min), **10.2×**,
+  and `ctas_partitioned8` **4,901.75 → 293.19 ms** median (4,628.11 → 283.07 min), **16.7×**,
+  against a `df.write.parquet(zstd)` control that read 107.37 → 105.56 ms in the same passes.
+  **Both of PERF-ANALYSIS-1's targets are met** (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms).
+  Round 1 of this unit reported both as missed and quoted 880 → 478 ms; those readings were taken
+  at load 13–22 with an uncommitted fork override on the after side, and are superseded — the same
+  cell swings 2.4× on one build from load alone. **Determinism**: identical CTAS statements over
+  identical input now commit identical manifests and identical `_row_id` ranges
+  (`write/file_order.rs::stable_commit_order`, a content-derived total order); round 1 claimed this
+  from the writer index and was wrong, because the DataFusion partition index is not stable across
+  executions — six identical v3 CTAS over eight unequal source files gave six different
+  assignments, and now give one. **Abort**: a failed write leaves no data file at all, the failing
+  writer's own rolled files included. **Layout**: a CTAS writes one file per plan partition — 4 → 8
+  unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
+  counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
+  `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
+  partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
+  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files commit one
+  manifest sequence and one `first_row_id` map; Spark row-set equality). Numbers and commands:
   `docs/perf/iceberg-write-baseline.md`.
 
 - **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured
@@ -4396,7 +4403,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   empty partition types, where Arrow total-order equality is not Iceberg `Struct` equality
   (`-0.0` and `0.0` are one group under `OrderedFloat`, two under total order). Measured in the
   fork lane on a release build over the analysis' seven-column bed, 1,048,576 rows and eight
-  partitions: **171.39 → 28.33 ms** (6.0×, 143 ms per 1e6 rows). That measurement also **corrects
+  partitions: **171.39 → 28.33 ms** (6.0×, 143 ms per 1e6 rows). That is the number this row
+  stands on, because it needs no RePark rebuild and no disk; the end-to-end CTAS cells measured
+  with the fork override (builds B1/B2 in the baseline doc) were taken on a contended box and are
+  not quoted anywhere as a shipped result. That measurement also **corrects
   the analysis**: the 813 ms it read off the partitioned-minus-unpartitioned CTAS delta is not the
   splitter, whose whole cost at that scale is 171 ms — the rest is the fanout writing 8× the data
   files. The row is FIXED here when the pin bump lands (`docs/fork-sync.md` rule 1).
