@@ -80,12 +80,13 @@ COVERAGE_ATTESTATION:
 | Gate | Exit |
 |---|---|
 | `make ci` | 0 |
-| `make verify` | 0 |
+| `make verify` (= `ci` + the Rust workspace suite) | 0 |
 | `make check-python-conventions` | 0 |
 | `make rust-panic-ban` | 0 |
-| `.venv/bin/python -m pytest python/repark/tests -q` | 0 |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 |
-| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (20 passed, 14.8 s) |
+| `.venv/bin/python -m pytest python/repark/tests -q` | 0 (4821 passed, 198 skipped, 419 s) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (574 passed) |
+| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (20 passed, 30 s) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py -q` (Spark cells were measured) | 0 (119 passed, 76 s) |
 | `make check-map-sync` | 0 |
 | `make check-ledger-grammar` | 0 |
 | `make check-ledgers` | 0 |
