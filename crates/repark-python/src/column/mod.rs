@@ -31,14 +31,13 @@ mod function_dispatch;
 mod window;
 
 use expr_build::{
-    TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, inner_null_treatment,
-    parse_data_type, percentile_approx_list_expr, refuse_nested_higher_order, strip_outer_alias,
-    window_from_aggregate,
+    TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
+    percentile_approx_list_expr, refuse_nested_higher_order, strip_outer_alias,
 };
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
 };
-use window::{spark_window_frame, unordered_window_frame};
+use window::{OverSpec, build_over_expression};
 
 /// A Python-facing immutable DataFusion expression.
 #[pyclass(name = "PyColumn", module = "repark._native", from_py_object)]
@@ -630,64 +629,16 @@ impl PyColumn {
         frame_end: Option<i64>,
     ) -> PyResult<Self> {
         fenced!("Column.over", {
-            if order_by.len() != order_ascending.len() || order_by.len() != order_nulls_first.len()
-            {
-                return Err(PyValueError::new_err(
-                    "over expects order_by, order_ascending, and order_nulls_first of equal length",
-                ));
-            }
-            let (inner, cast_type) = match &self.expr {
-                Expr::Cast(cast) => (&*cast.expr, Some(cast.field.data_type().clone())),
-                other => (other, None),
+            let spec = OverSpec {
+                partition_by,
+                order_by,
+                order_ascending,
+                order_nulls_first,
+                frame_units,
+                frame_start,
+                frame_end,
             };
-            let window_expr = match inner {
-                Expr::WindowFunction(_) => inner.clone(),
-                Expr::AggregateFunction(agg) => window_from_aggregate(agg),
-                _ => {
-                    return Err(PyValueError::new_err(
-                        "over() applies only to a window or aggregate function column \
-                         (e.g. row_number(), sum(...))",
-                    ));
-                }
-            };
-            let partitions: Vec<Expr> = partition_by.iter().map(PyColumn::expr).collect();
-            let orderings: Vec<_> = order_by
-                .iter()
-                .zip(order_ascending)
-                .zip(order_nulls_first)
-                .map(|((column, is_ascending), nulls_first)| {
-                    column.expr().sort(is_ascending, nulls_first)
-                })
-                .collect();
-            let unordered_frame = order_by
-                .is_empty()
-                .then(|| unordered_window_frame(&window_expr))
-                .transpose()
-                .map_err(crate::AnalysisException::new_err)?;
-            let mut builder = window_expr
-                .partition_by(partitions)
-                .order_by(orderings)
-                .null_treatment(inner_null_treatment(inner));
-            if let Some(units_text) = frame_units.as_deref() {
-                let start = frame_start.ok_or_else(|| {
-                    PyValueError::new_err("over frame_units requires frame_start")
-                })?;
-                let end = frame_end
-                    .ok_or_else(|| PyValueError::new_err("over frame_units requires frame_end"))?;
-                let frame =
-                    spark_window_frame(units_text, start, end).map_err(PyValueError::new_err)?;
-                builder = builder.window_frame(frame);
-            } else if let Some(frame) = unordered_frame {
-                builder = builder.window_frame(frame);
-            }
-            let windowed = builder.build().map_err(|err| {
-                PyValueError::new_err(format!("could not build window expression: {err}"))
-            })?;
-            let result = match cast_type {
-                Some(data_type) => Expr::Cast(Cast::new(Box::new(windowed), data_type)),
-                None => windowed,
-            };
-            Ok(Self::from_expr(result))
+            Ok(Self::from_expr(build_over_expression(&self.expr, spec)?))
         })
     }
 

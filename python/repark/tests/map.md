@@ -33,6 +33,28 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
+  corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
+  `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
+  and `ov` at `Long.MaxValue` for the `try_sum` overflow leg) drives thirteen aggregates over five
+  frame shapes — `rows_both`, `range_frame`, `all_null`, `empty_frame`, `partitioned` — on the SQL
+  door and the DataFrame door, against `SPARK_GOLDEN`, recorded from live PySpark 4.1.2 on
+  2026-09-04. Spark's two doors agreed on every one of the 65 cells, so one golden serves both.
+  `collect_set` is compared as a sorted multiset (Spark leaves the order unspecified); floats
+  compare to a 1e-9 relative tolerance, which the re-scan meets exactly because it never retracts.
+  The `repark_engine` fixture is function-scoped on purpose: the suite's autouse
+  `_isolate_active_session` stops the active session between tests, so a module-scoped one is dead
+  by the second case. The two live legs re-derive every pin on Spark under
+  `REPARK_PARITY_LIVE=1`. **Round 2 (2026-09-04)** adds three rows the critic found unpinned:
+  the catastrophic-cancellation fixture `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]`, which separates a
+  RETRACTING sliding `sum` / `avg` from Spark's re-scan (`WIN-SLIDE-FLOAT-1`) and whose controls
+  are split three ways on measurement — bit-identical, one-ulp drift, and not-comparable (Spark
+  refuses `median` over a frame and its ANSI `corr(v, v)` divides by zero); the DATE / TIMESTAMP
+  RANGE order-key rows (`WIN-RANGE-ERRCLASS-1` for the DataFrame door's error class,
+  `WIN-RANGE-DF-1`'s scope for the SQL door); and the two sketch goldens, which
+  `WIN-SLIDE-PCT-ACC-1` published under a live-oracle line that no live test had touched. The
+  accuracy-knob test's last assertion was two constants and is now repark's own answer against
+  Spark's. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
 - **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
   attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
@@ -2902,7 +2924,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
-| Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, thirteen sliding refuses (int64 `approx_count_distinct`), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009 |
+| Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
+| Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
 | Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,500 rows. pins: rdf-1-position-delete-bounds/C-003 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |

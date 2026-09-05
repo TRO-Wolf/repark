@@ -128,12 +128,12 @@ The coalesce CTAS pins repark's `long` width (V3-COV-8 width half stays BACKLOG)
 | revert reader rule (`session.rs`: `read_parquet_nullable` → `ParquetReadOptions::default()` + rebuild) | `test_read_parquet_reports_every_field_nullable`, `test_read_parquet_relaxes_nested_fields`, `test_dedup_arrow_schema_matches_spark`, `s3-dedup-coalesce-cast` repark half | 4 red of 265. CTAS-star stays GREEN: the CTAS relax rule derives optional from any query schema, independent of the reader — the pre-measurement expectation named CTAS-star, and the measurement corrects it. |
 | revert analyzer rule (`decimal_spark.rs`: drop the `nullable_decimal_cast` rewrite + rebuild) | `test_decimal_cast_of_non_null_is_nullable`, `test_dedup_arrow_schema_matches_spark`, `s3-dedup-coalesce-cast`, `int_times_decimal_promotes_wider_in_repark`, the three G13 nullability cells | 7 red of 265. Read/CTAS/CTAS-money/ANSI-fence/SE-1 stay green: the rule touches only overflow-exposed decimal casts, so every flipped pin bites exactly its rule. |
 
-Each knob ran the 265-pin battery (166 always-run + 99 live-skipped:
+Each knob ran the round-2 battery of 265 pins (166 always-run + 99 live-skipped:
 `test_cutover_schema_1.py` 12 + `test_sql_harden_cutover.py` 50 +
 `test_decimal128_parity.py` 38 + `test_v3_statement_coverage.py` 165) after a `make
 develop` rebuild, then restored (`git checkout -- <file>`) and rebuilt; the restore run is
 166 passed, 99 skipped. (Round-3 correction: §6 first recorded 181 / 163+18; the four
-files collect 265 / 166+99 — re-derived by collecting the files, all 99 skips live-tier.)
+files collected 265 / 166+99 when the mutations ran; on the round-3 tip they collect 269 / 170+99 (`test_cutover_schema_1.py` 16 after the four current-answer pins), and the depth-32 pin would also red under the reader knob — re-derived by collecting the files, all 99 skips live-tier.)
 `string_view` (brief item 4) SHIPPED in this unit — the Arrow export boundary coerces
 Utf8View to Utf8 (boundary-only, committed in `a472272`) — so no `CUTOVER-STRINGVIEW-1`
 row was filed; the dedup pins assert `string` throughout.

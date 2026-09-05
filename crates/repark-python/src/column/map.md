@@ -26,7 +26,20 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   pins: fn-regexp-extract-1/C-001
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
+  **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
+  `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`
+  and `F.collect_set` build Spark's empty-group semantics as
+  `coalesce(array_agg(x) IGNORE NULLS, make_array())`, so `over()` used to refuse them outright;
+  the group-by spelling is untouched, and two aggregates in one expression still refuse (there is
+  no single window to push). pins: win-slide-1/C-002
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
+  **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
+  DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the
+  shape its own SQL planner produces) and passes any other scalar through untouched — and a bound
+  whose type does not match the key degrades silently to UNBOUNDED PRECEDING, so
+  `rangeBetween(-2, 0)` over an `IntegerType` or `DoubleType` key answered the cumulative column.
+  `ROWS` / `GROUPS` bounds stay `UInt64`, which is already the coercion target.
+  Registry: `WIN-RANGE-DF-1`. pins: win-slide-1/C-003
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
 
 ## Contracts
