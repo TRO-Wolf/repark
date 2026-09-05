@@ -163,10 +163,27 @@ by construction and the rest of that delta is the fanout's file count.
 
 ## 10. Gates
 
-RePark lane, override reverted, `Cargo.toml`/`Cargo.lock` byte-identical to `origin/main`. Fork
-lane: `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -- -D warnings`,
-`cargo test -p iceberg` (exit 0), plus the repo's size / comment-block / matrix-anchor /
-agent-artifact scripts.
+RePark lane, override reverted, `git diff origin/main -- Cargo.toml Cargo.lock` empty.
+
+| gate | result |
+|---|---|
+| `make ci` | exit 0 |
+| `make verify` | exit 0 — `repark-iceberg` 398, `repark-spark` 788, `repark-sql` 341 plus every integration binary |
+| `make check-python-conventions` | exit 0 |
+| `make rust-panic-ban` | exit 0 |
+| `pytest python/repark/tests -q -x` | 4,805 passed, 200 skipped |
+| `pytest python/repark-parity/tests -q` | 574 passed |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_ice_writepath_1.py test_sql_harden_cutover.py -q` | 175 passed |
+| `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | clean |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | clean |
+| `typos .` | clean |
+
+Fork lane: `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -- -D warnings`,
+`cargo test -p iceberg` (exit 0), plus `check_rust_file_size.sh`, `check_comment_blocks.sh`,
+`check_matrix_anchors.sh` and `check_agent_artifacts.sh`.
+
+The live battery ran beside one other lane's `local[1]` JVM, which the live-cell rules allow; no
+JVM or pytest this unit started is left running.
 
 ## 11. Out of scope, observed and filed
 
