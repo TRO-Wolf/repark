@@ -20,7 +20,8 @@ from spill.models import CellRecord, MatrixReport, NodeMetrics  # noqa: E402
 from spill.plan_metrics import COUNTERS  # noqa: E402
 from spill.roster import POOLS, ROSTER, SCALES  # noqa: E402
 
-DEFAULT_AS_CAP = 12 * 1024 * 1024 * 1024
+DEFAULT_AS_CAP = 32 * 1024 * 1024 * 1024
+DEFAULT_RSS_CAP = 8 * 1024 * 1024 * 1024
 NONDETERMINISTIC: frozenset[str] = frozenset(
     {"spilled", "degraded", "clean_error", "abort", "abort_at_cap", "internal_error", "error"}
 )
@@ -106,6 +107,7 @@ def run_cell(
     cell: tuple[str, str, int],
     *,
     as_cap: int,
+    rss_cap: int,
     partitions: int,
     scratch: Path,
     timeout_s: float,
@@ -130,7 +132,7 @@ def run_cell(
     proc = subprocess.Popen(
         argv, cwd=str(_BENCH_DIR), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
-    peak = _drain_with_timeout(proc, timeout_s)
+    peak, kill_reason = _drain_with_timeout(proc, timeout_s, rss_cap)
     stderr = proc.stderr.read().decode("utf-8", "replace") if proc.stderr else ""
     wall_ms = (time.perf_counter() - started) * 1000.0
     load_end = os.getloadavg()[0]
@@ -144,8 +146,17 @@ def run_cell(
         load_start=load_start,
         load_end=load_end,
         as_cap_bytes=as_cap,
+        rss_cap_bytes=rss_cap,
         returncode=proc.returncode,
     )
+    if kill_reason == "rss_cap":
+        record.outcome = "abort_at_cap"
+        record.message = f"killed at the {rss_cap} byte resident cap"
+        return record
+    if kill_reason == "timeout":
+        record.outcome = "timeout"
+        record.message = f"killed at the {timeout_s:.0f} s cell timeout"
+        return record
     if out.is_file():
         payload = json.loads(out.read_text(encoding="utf-8"))
         record.outcome = str(payload.get("outcome", "error"))
@@ -170,18 +181,26 @@ def run_cell(
     return record
 
 
-def _drain_with_timeout(proc: subprocess.Popen[bytes], timeout_s: float) -> int:
-    """Poll VmHWM and kill the worker if it outlives `timeout_s`."""
+def _drain_with_timeout(
+    proc: subprocess.Popen[bytes], timeout_s: float, rss_cap: int
+) -> tuple[int, str | None]:
+    """Poll VmHWM; kill the worker past `rss_cap` or past `timeout_s`, and say which."""
     peak = 0
+    reason: str | None = None
     deadline = time.perf_counter() + timeout_s
     while proc.poll() is None:
         peak = max(peak, read_vmhwm(proc.pid))
+        if peak > rss_cap:
+            reason = "rss_cap"
+            proc.kill()
+            break
         if time.perf_counter() > deadline:
+            reason = "timeout"
             proc.kill()
             break
         time.sleep(0.05)
     proc.wait()
-    return max(peak, read_vmhwm(proc.pid))
+    return max(peak, read_vmhwm(proc.pid)), reason
 
 
 def _plan(operators: list[str], pools: list[str], scales: list[int]) -> list[tuple[str, str, int]]:
@@ -219,6 +238,7 @@ def run_matrix(args: argparse.Namespace) -> MatrixReport:
         record = run_cell(
             cell,
             as_cap=args.as_cap_bytes,
+            rss_cap=args.rss_cap_bytes,
             partitions=args.partitions,
             scratch=scratch,
             timeout_s=args.cell_timeout_s,
@@ -230,6 +250,7 @@ def run_matrix(args: argparse.Namespace) -> MatrixReport:
                 repeat = run_cell(
                     cell,
                     as_cap=args.as_cap_bytes,
+                    rss_cap=args.rss_cap_bytes,
                     partitions=args.partitions,
                     scratch=scratch,
                     timeout_s=args.cell_timeout_s,
@@ -257,6 +278,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scales", nargs="*", type=int, default=None)
     parser.add_argument("--partitions", type=int, default=4)
     parser.add_argument("--as-cap-bytes", type=int, default=DEFAULT_AS_CAP)
+    parser.add_argument("--rss-cap-bytes", type=int, default=DEFAULT_RSS_CAP)
     parser.add_argument("--cell-timeout-s", type=float, default=900.0)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--no-digest", action="store_true")

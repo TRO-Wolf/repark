@@ -22,6 +22,7 @@ SHORT: dict[str, str] = {
     "abort": "ABORT",
     "abort_at_cap": "ABORT-CAP",
     "internal_error": "PANIC",
+    "timeout": "TIMEOUT",
     "wrong": "WRONG",
     "error": "ERR",
 }

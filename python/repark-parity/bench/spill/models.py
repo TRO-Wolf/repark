@@ -14,6 +14,7 @@ OUTCOMES: tuple[str, ...] = (
     "abort",
     "abort_at_cap",
     "internal_error",
+    "timeout",
     "wrong",
     "error",
 )
@@ -52,6 +53,7 @@ class CellRecord(BaseModel):
     load_start: float | None = None
     load_end: float | None = None
     as_cap_bytes: int | None = None
+    rss_cap_bytes: int | None = None
     answer_digest: str | None = None
     digest_error: str | None = None
     rows_out: int | None = None

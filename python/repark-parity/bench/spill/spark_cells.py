@@ -1,0 +1,110 @@
+"""The two or three Spark comparison cells: same fixture, bounded driver memory, spill measured."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import resource
+import time
+from pathlib import Path
+from typing import Any
+
+CELLS: dict[str, str] = {
+    "sort": "SELECT id, h FROM base ORDER BY h",
+    "hash_join": "SELECT l.id, r.payload FROM base l JOIN other r ON l.h = r.h",
+    "collect_list": "SELECT k, count(a) AS n FROM (SELECT g % 8 AS k, collect_list(h) AS a "
+    "FROM base GROUP BY g % 8) GROUP BY k",
+    "nested_loop_join": "SELECT count(*) AS n FROM base l JOIN other r ON l.v < r.v",
+}
+
+BASE_SELECT: str = (
+    "SELECT id, md5(cast(id AS string)) AS h, id % 1024 AS g, "
+    "concat(md5(cast(id AS string)), md5(cast(id + 1 AS string))) AS payload, "
+    "cast(id AS double) * 1.5 AS v FROM RANGE({rows})"
+)
+
+
+def peak_rss_bytes() -> int:
+    """Peak resident set of this process (the JVM is a child, so this is the driver only)."""
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+
+
+def spill_totals(event_log_dir: Path) -> dict[str, int]:
+    """Sum memory and disk spill over every task-end event Spark logged."""
+    memory = 0
+    disk = 0
+    for path in sorted(event_log_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if '"Event":"SparkListenerTaskEnd"' not in line.replace(" ", ""):
+                continue
+            payload = json.loads(line)
+            metrics = payload.get("Task Metrics") or {}
+            memory += int(metrics.get("Memory Bytes Spilled", 0))
+            disk += int(metrics.get("Disk Bytes Spilled", 0))
+    return {"memory_bytes_spilled": memory, "disk_bytes_spilled": disk}
+
+
+def build_spark(event_log_dir: Path, driver_memory: str, partitions: int) -> Any:
+    """A local Spark whose driver heap is `driver_memory`, with the event log armed."""
+    os.environ["PYSPARK_SUBMIT_ARGS"] = f"--driver-memory {driver_memory} pyspark-shell"
+    from pyspark.sql import SparkSession
+
+    event_log_dir.mkdir(parents=True, exist_ok=True)
+    return (
+        SparkSession.builder.appName("h3-spill-spark")
+        .master(f"local[{partitions}]")
+        .config("spark.sql.shuffle.partitions", str(partitions))
+        .config("spark.eventLog.enabled", "true")
+        .config("spark.eventLog.dir", event_log_dir.as_uri())
+        .config("spark.ui.enabled", "false")
+        .getOrCreate()
+    )
+
+
+def run_cell(spark: Any, cell: str, rows: int, right_rows: int) -> dict[str, Any]:
+    """Run one comparison cell to completion and time it."""
+    spark.sql(BASE_SELECT.format(rows=rows)).createOrReplaceTempView("base")
+    spark.sql(BASE_SELECT.format(rows=right_rows)).createOrReplaceTempView("other")
+    started = time.perf_counter()
+    count = spark.sql(CELLS[cell]).count()
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    return {"outcome": "ok", "rows_out": int(count), "wall_ms": wall_ms}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI for one Spark comparison cell."""
+    parser = argparse.ArgumentParser(description="H3-SPILL-1 Spark comparison cell")
+    parser.add_argument("--cell", required=True, choices=sorted(CELLS))
+    parser.add_argument("--rows", type=int, default=10_000_000)
+    parser.add_argument("--right-rows", type=int, default=1_000_000)
+    parser.add_argument("--driver-memory", default="1g")
+    parser.add_argument("--partitions", type=int, default=4)
+    parser.add_argument("--scratch", required=True)
+    parser.add_argument("--json-out", type=Path, required=True)
+    args = parser.parse_args(argv)
+    event_log_dir = Path(args.scratch) / f"events-{args.cell}-{args.driver_memory}"
+    spark = build_spark(event_log_dir, args.driver_memory, args.partitions)
+    try:
+        payload = run_cell(spark, args.cell, args.rows, args.right_rows)
+    except BaseException as error:
+        if isinstance(error, (KeyboardInterrupt, SystemExit)):
+            raise
+        payload = {"outcome": "error", "message": f"{type(error).__name__}: {error}"[:600]}
+    finally:
+        spark.stop()
+    payload.update(spill_totals(event_log_dir))
+    payload["cell"] = args.cell
+    payload["rows"] = args.rows
+    payload["driver_memory"] = args.driver_memory
+    payload["driver_peak_rss_bytes"] = peak_rss_bytes()
+    args.json_out.parent.mkdir(parents=True, exist_ok=True)
+    args.json_out.write_text(json.dumps(payload), encoding="utf-8")
+    print(json.dumps(payload))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
