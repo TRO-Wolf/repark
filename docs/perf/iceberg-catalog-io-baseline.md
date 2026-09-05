@@ -26,13 +26,20 @@ floor, and a cost is only ever read against the floor of the run it came from. A
 
 ## 1. The file-open census (`strace -f -e trace=openat`, ENOENT excluded)
 
-One statement per marker pair, memory catalog on a local-FS warehouse, format-v3 table, 20 k
+One statement per marker pair, **memory catalog** on a local-FS warehouse, format-v3 table, 20 k
 rows. `metaR` counts `metadata.json` opened for **reading**; `metaW` counts the commit writing its
-own new pointer, which no cache can remove. Analysis §7.6 is the `before` column and it reproduced
-exactly.
+own new pointer, which no cache can remove. Both columns are the same release module, one run per
+knob setting, so the only variable is `repark.iceberg.metadataCache`.
 
-| statement | metaR before | metaR after | metaW after | manifest-list | manifest | parquet |
+Analysis §7.6 reports TOTAL `metadata.json` opens per statement (SELECT 2, INSERT 5, DELETE 6,
+UPDATE 7, MERGE 4, CTAS 3). This table splits that into reads and the commit's own write, so its
+`before` column is **reads only** and is smaller than §7.6's numbers by exactly the `metaW`
+column. Reads plus writes reproduce §7.6 exactly.
+
+| statement | metaR off | metaR on | metaW | manifest-list | manifest | parquet |
 |---|---:|---:|---:|---:|---:|---:|
+| `CREATE TABLE` | 1 | **1** | 1 | 0 | 0 | 0 |
+| `CREATE TABLE … AS SELECT` | 1 | **1** | 2 | 0 | 0 | 0 |
 | `SELECT count(*)` | 2 | **0** | 0 | 1 | 1 | 1 |
 | `SELECT count(*)` (repeat) | 2 | **0** | 0 | 1 | 1 | 1 |
 | `SELECT … WHERE part = 3 AND vi < 10` | 2 | **0** | 0 | 1 | 1 | 1 |
@@ -42,26 +49,38 @@ exactly.
 | `UPDATE` MoR v3 | 6 | **0** | 1 | 5 | 15 | 8 |
 | `MERGE` MoR v3 | 3 | **0** | 1 | 4 | 8 | 3 |
 | `SELECT count(*)` tail | 2 | **0** | 0 | 1 | 2 | 4 |
+| `SELECT count(*)` tail (repeat) | 2 | **0** | 0 | 1 | 2 | 4 |
 
-Targets were SELECT ≤ 1 and DML ≤ 2; the measured result is **0 metadata reads on every
-statement**. Manifest-list and manifest columns are unchanged, which is the point of §2 below.
+Targets were SELECT ≤ 1 and DML ≤ 2. The measured result is **0 metadata reads on every statement
+that reads an existing table**, and **1 on a statement that creates one, with the cache on and
+off alike**: `CREATE TABLE` and CTAS read back the document they have just written, because the
+catalog proves the metadata is reachable before it claims the pointer. Creation cannot be cached
+and this unit does not claim it is. Manifest-list and manifest columns are unchanged, which is the
+point of §2.
 
-**What this is on a real catalog.** The cache removes the S3 GET of the metadata document, not the
-catalog round trip that learns where the document is. Counting by the same census method, a Glue
-catalog pays, per statement:
+**What this is on a real catalog — and what it is not.** Only `memory_catalog_cached` takes a
+`CatalogCaches`. `glue_catalog` and `s3tables_catalog` are **unchanged**: the fork's
+`GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no `with_table_metadata_cache` at pin
+`189a73ed`, so no cache reaches them and nothing in this unit changes what they pay. Counting by
+the same census method, per statement:
 
-| statement | `GetTable` before | `GetTable` after | S3 GET of `metadata.json` before | after |
-|---|---:|---:|---:|---:|
-| SELECT | 2 | 2 | 2 | **0** |
-| INSERT | 5 | 5 | 4 | **0** |
-| DELETE | 6 | 6 | 5 | **0** |
-| UPDATE | 7 | 7 | 6 | **0** |
-| MERGE | 4 | 4 | 3 | **0** |
+| statement | Glue `GetTable` today | S3 GET of `metadata.json` today | after this unit |
+|---|---:|---:|---|
+| SELECT | 2 | 2 | unchanged (both) |
+| INSERT | 5 | 4 | unchanged (both) |
+| DELETE | 6 | 5 | unchanged (both) |
+| UPDATE | 7 | 6 | unchanged (both) |
+| MERGE | 4 | 3 | unchanged (both) |
 
-The `GetTable` column is unchanged because cutting it is part 1, which is fork-gated (§3). The
-AWS legs of `python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP naming that
-reason; the wall-clock evidence for Glue latency stays the recorded suite walls in
-[../tier2-aws.md](../tier2-aws.md), since this unit measures no AWS.
+Two separate asks stand between that table and a zero. `F-CATIO-AWS`
+(`PERF-CATALOG-AWS-CACHE-1`) would let a Glue or S3 Tables catalog take the cache, which is what
+would move the S3-GET column. `F-CATIO-A` (`PERF-CATALOG-LOADS-1`) would cut the `GetTable`
+column, which no cache can touch: the count of round trips per statement is the count of
+`load_table` calls, and on the memory catalog those are now **cache hits with the same count** —
+2 per SELECT, 3–6 per DML. The AWS legs of
+`python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP naming `F-CATIO-AWS`.
+The wall-clock evidence for Glue latency stays the recorded suite walls in
+[../tier2-aws.md](../tier2-aws.md); this unit measures no AWS.
 
 ## 2. The manifest cells (`t_many` vs `t_many_merged`, 1e6 rows)
 

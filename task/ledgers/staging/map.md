@@ -8,19 +8,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
   **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
   Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once
-  per session and handed to every catalog it builds, behind `repark.iceberg.metadataCache`
+  per session and handed to every **memory** catalog it builds, behind `repark.iceberg.metadataCache`
   (default on) and `repark.iceberg.metadataCacheEntries` (default 512, a high-water clear at the
-  statement door). `metadata.json` READS per statement fall from 2 (SELECT) and 3–6 (DML) to
-  **0** — the analysis' §7.6 census reproduced exactly as the before column, and the one remaining
-  open per DML is the commit writing its own pointer. `PERF-CATALOG-CALLS-1` FIXED.
-  Fork-gated and NOT shipped: one load per planning round (`F-CATIO-A`), the shared path-keyed
-  manifest cache (`F-CATIO-B`) and the Glue / S3 Tables metadata cache (`F-CATIO-AWS`). A and B
-  are implemented and test-green in `$HOME/repark-lanes/lanes/catio-fork` and measured through a
-  temporary, never-committed path override: `t_many` second-statement `count_id` **120.01 →
-  11.33 ms** (target ≤ 20) with a repeated read opening no manifest at all. `PERF-ICE-MANIFEST-1`
-  BACKLOG behind the bump; three pins SKIP naming their ask. `git diff origin/main -- Cargo.toml
-  Cargo.lock` empty. Risk-first: nine staleness and cache pins on two doors over ONE catalog,
-  green before and after, with a four-mutation score. `risk_tier: elevated`. Branch
+  statement door). `metadata.json` READS fall from 2 (SELECT) and 3–6 (DML) to **0 on every
+  statement that reads an existing table** — the analysis' §7.6 TOTALS split into reads and the
+  commit's own write, reads + writes reproducing §7.6 exactly. `CREATE TABLE` and CTAS still read
+  1 with the knob on and off: creation is not cacheable. `PERF-CATALOG-CALLS-1` FIXED **narrowly**
+  — the metadata document is fetched once per location; the count of catalog round trips per
+  statement is UNCHANGED, and Glue / S3 Tables are NOT wired at all.
+  Fork-gated and NOT shipped, one registry row each: one load per planning round
+  (`PERF-CATALOG-LOADS-1` / `F-CATIO-A`), the shared path-keyed manifest cache
+  (`PERF-ICE-MANIFEST-1` / `F-CATIO-B`), the Glue and S3 Tables metadata cache
+  (`PERF-CATALOG-AWS-CACHE-1` / `F-CATIO-AWS`) and a bounded LRU inside the fork's cache
+  (`PERF-CATALOG-CACHE-BOUND-1` / `F-CATIO-BOUND`). A and B are implemented and test-green in
+  `$HOME/repark-lanes/lanes/catio-fork` and measured through a temporary, never-committed path
+  override: `t_many` second-statement `count_id` **120.01 → 11.33 ms** (target ≤ 20) with a
+  repeated read opening no manifest at all. Three pins SKIP naming their ask;
+  `git diff origin/main -- Cargo.toml Cargo.lock` empty.
+  Risk-first: **twelve** Rust pins on two doors over ONE catalog plus **thirteen** always-run
+  Python legs, green before and after, with a **six**-mutation score (two of them escapes that
+  were closed). **Round 2** (Opus critic) reproduced the engine independently and found no stale
+  read or lost write; its eleven findings were all claim, scope and filing, and each is dispositioned
+  in the ledger's "Round 2 — review gaps" table. `risk_tier: elevated`. Branch
   `perf/ice-catalog-io-1`.
   pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
