@@ -1,6 +1,6 @@
 # Unit ledger — PERF-AGG-AVG-1 · a `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF
 
-**Date:** 2026-09-05 · **Branch:** `perf/agg-avg-1` · **Base:** `origin/main` `6eaccd5e` ·
+**Date:** 2026-09-05 · **Branch:** `perf/agg-avg-1` · **Base:** `origin/main` `6f5c62c8` ·
 **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
 **Registry:** `PERF-AGG-AVG-1` to file as FIXED with before/after (C-006).
@@ -196,13 +196,13 @@ The brief's gate list, all exit 0 on the tip (2026-09-05):
 |---|---|
 | `make ci` | exit 0 |
 | `make verify` | exit 0 |
-| `make check-python-conventions` | exit 0 (238 files clean) |
+| `make check-python-conventions` | exit 0 (246 files clean) |
 | `make rust-panic-ban` | exit 0 |
-| `pytest python/repark/tests -q --timeout 900 -x` | 4825 passed, 204 skipped, 0 failed — run WITHOUT `--timeout`: `pytest-timeout` is not in the locked env (no `--timeout` anywhere in CI either), so the flag is unrunnable here; the suite passing unguarded is the stronger signal |
-| `pytest python/repark-parity/tests -q` | 574 passed |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_agg_avg_1.py -q` | 149 passed (all 6 live legs beside `test_live_disclosure_still_diverges`) |
-| `make check-map-sync` | 188 maps clean |
-| `make check-ledger-grammar` | 45 live ledgers clean |
+| `pytest python/repark/tests -q --timeout 900 -x` | 4851 passed, 205 skipped, 0 failed — run WITHOUT `--timeout`: `pytest-timeout` is not in the locked env (no `--timeout` anywhere in CI either), so the flag is unrunnable here; the suite passing unguarded is the stronger signal. Round-2 re-measurement on the tip (the shipped 4825/204 predated the merge): 5056 collected = the 5051 at `f745325f` + 5 new round-2 pins, with two skips passing in this run. |
+| `pytest python/repark-parity/tests -q` | 574 passed (re-measured on the round-2 tip, unchanged) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_agg_avg_1.py -q` | 154 passed (all 7 live legs beside `test_live_disclosure_still_diverges`) |
+| `make check-map-sync` | 189 maps clean |
+| `make check-ledger-grammar` | 46 live ledgers clean |
 | `make check-ledgers` | clean |
 | `make check-docs-compaction` | clean |
 | `ledger_lifecycle.py check --base origin/main` | clean |
