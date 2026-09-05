@@ -197,7 +197,8 @@ vs 1 manifests — the counts reproduce exactly), same method (5 timed after 1 w
 median, min, spread; floor per run; `strace -f -e trace=openat`, ENOENT excluded). The
 native module is `_native.abi3.so` 163,517,296 B with `__debug_assertions__ is False`
 (every probe refuses otherwise). The only variable between the two columns is
-`repark.iceberg.manifestCacheBytes`: `0` (off) vs the default 32 MiB (on). The metadata
+`repark.iceberg.manifestCacheBytes`: `0` (off — the shipped default) vs `33554432`
+(on, set explicitly). The metadata
 cache is ON in both columns, so the `off` column is IO-1's shipped `on` column re-run on
 the new pin — and it reproduces it cell for cell.
 
@@ -207,7 +208,7 @@ against its own run.
 
 ### 5.1 The timing cells
 
-| cell | manifest off (ms) | manifest on (ms) | override §3.1 (ms) | target |
+| cell | manifest off = default (ms) | manifest on, knob = 32 MiB, set explicitly (ms) | override §3.1 (ms) | target |
 |---|---:|---:|---:|---|
 | `t_many/count_id/stmt1` | 123.02 (spread 9.52) | 10.73 (spread 2.17) | — | — |
 | `t_many/count_id/stmt2` | **115.81** (spread 23.00) | **10.95** (spread 1.22) | 11.33 | ≤ 20 |
@@ -225,7 +226,7 @@ delta is noise, not a claim.
 
 ### 5.2 The census with the cache on
 
-| statement | manifest-list off → on | manifest off → on |
+| statement | manifest-list off → on (knob = 32 MiB, set explicitly) | manifest off → on (knob = 32 MiB, set explicitly) |
 |---|---:|---:|
 | `SELECT count(*)` (first) | 1 → 1 | 1 → 1 |
 | `SELECT count(*)` (repeat) | 1 → **0** | 1 → **0** |
@@ -276,7 +277,8 @@ strace -f -e trace=openat -o scratch/strace_manon.txt .venv/bin/python scratch/p
 Probe sources live under `scratch/probes/` (gitignored, never committed; they carry no
 comments). `fixtures.py` / `probe_calls.py` / `probe_manifest.py` are the IO-1 probes
 with the lane path moved and the isolated variable changed from `metadataCache` to
-`manifestCacheBytes` (`0` vs default); `harness.py` / `count_calls.py` are byte-identical
+`manifestCacheBytes` (`0`, the default, vs `33554432`, set explicitly); `harness.py` /
+`count_calls.py` are byte-identical
 to IO-1's. The JSON number files (`scratch/numbers_manifest_manoff.json`,
 `scratch/numbers_manifest_manon.json`, `scratch/census_manoff.json`,
 `scratch/census_manon.json`) carry every sample, min, spread, floor repeat and load.

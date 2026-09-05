@@ -48,7 +48,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   not a quiet box.
   pins: perf-ice-catalog-io-1/C-001, C-005, C-006
   **PERF-ICE-CATALOG-IO-2 (2026-09-05)** appended §5, re-measuring part 3 on the real pin
-  (`79119643`, no override) with the manifest knob as the only variable: `t_many/count_id/stmt2`
+  (`79119643`, no override) with the manifest knob as the only variable (`0`, the default,
+  vs `33554432`, set explicitly): `t_many/count_id/stmt2`
   115.81 → 10.95 ms, repeated reads opening no manifest at all, and the DML scope explained —
   the fork's scan path consults the cache but its transaction/maintenance/inspect paths load
   straight from `FileIO`, so DML saves read-side repeats only (filed `F-CATIO-COMMIT`).
