@@ -62,7 +62,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive rewrite family when that family next changes.",
     ),
     "crates/repark-functions/src/datetime.rs": (
-        1704,
+        1709,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),

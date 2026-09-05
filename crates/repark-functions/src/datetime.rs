@@ -581,7 +581,12 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
         'y' | 'u' => Ok(if count == 2 {
             format!("{:02}", datetime.year().rem_euclid(100))
         } else {
-            format!("{:0width$}", datetime.year(), width = count)
+            let rendered = format!("{:0width$}", datetime.year(), width = count);
+            if count >= 4 && datetime.year() > 0 && rendered.len() > count {
+                format!("+{rendered}")
+            } else {
+                rendered
+            }
         }),
         'M' | 'L' => Ok(match count {
             1 => datetime.month().to_string(),

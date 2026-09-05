@@ -224,6 +224,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn wraps_extreme_seconds_like_spark() {
+        let ctx = ctx_in("UTC");
+        for (seconds, want) in [
+            ("15000000000000", "-107253-01-11 18:38:10"),
+            ("20000000000000", "+51190-09-21 03:31:30"),
+            ("-15000000000000", "+111192-12-21 05:21:49"),
+            ("9223372036854775807", "1969-12-31 23:59:59"),
+            ("-9223372036854775808", "1970-01-01 00:00:00"),
+            ("-1", "1969-12-31 23:59:59"),
+            ("1.5", "1970-01-01 00:00:01"),
+        ] {
+            assert_eq!(
+                one_string(&ctx, &format!("SELECT from_unixtime({seconds}) AS v")).await,
+                Some(want.to_string()),
+                "seconds {seconds}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn null_in_null_out() {
         let ctx = ctx_in("UTC");
         assert_eq!(

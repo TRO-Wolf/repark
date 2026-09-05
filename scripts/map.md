@@ -163,6 +163,11 @@ bare invocation checks the tree against the checked-in file. The register is pin
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
 
+TYPES-1 round 4 (2026-09-05): `check_rust_file_size.py`
+`repark-functions/src/datetime.rs` 1704→1709 (INCREASE — the Java-pattern year-sign arm;
+absorption proven impossible, owner approval at merge); mirrored in
+`test_cap_1_source_file_line_cap.py`. pins: types-1/C-006
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
