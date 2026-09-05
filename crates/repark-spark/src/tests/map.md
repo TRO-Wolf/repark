@@ -473,9 +473,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-2 (2026-09-05):** four more pins, so
-  sixteen in the module. The instrument is manifest deletion: after door A reads a table, the
-  test deletes every `*.avro` under its metadata dir, so a second door can only answer from the
-  shared cache. `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` (the funnel
+  sixteen in the module. The instrument is manifest deletion: after the first read the test
+  deletes every `*.avro` under the table's metadata dir, so a repeat that answers proves it read
+  from the shared cache — and the knob-off control must fail instead.
+  `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` (the funnel
   pin — a catalog path that bypassed `table_builder()` re-reads from disk and reds);
   `a_configured_byte_value_reaches_the_shared_cache` (the `1 MiB` config value builds a sharing
   cache); `with_zero_bytes_a_repeated_read_opens_manifests_again` (the knob-off control — it

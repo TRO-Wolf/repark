@@ -207,8 +207,11 @@ mod tests {
         for key in [MANIFEST_CACHE_BYTES_KEY, MANIFEST_CACHE_BYTES_KEY_ALT] {
             let settings =
                 IcebergCacheSettings::from_config_map(&config_of(key, "1048576")).unwrap();
-            assert_eq!(settings.manifest_cache_bytes, 1048576);
-            assert_eq!(CatalogCaches::new(settings).manifest_cache_bytes(), 1048576);
+            assert_eq!(settings.manifest_cache_bytes, 1_048_576);
+            assert_eq!(
+                CatalogCaches::new(settings).manifest_cache_bytes(),
+                1_048_576
+            );
         }
     }
 

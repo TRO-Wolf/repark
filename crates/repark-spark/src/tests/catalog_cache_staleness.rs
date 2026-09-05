@@ -610,7 +610,7 @@ async fn a_configured_byte_value_reaches_the_shared_cache() {
     let wh = TempDir::new().unwrap();
     let config = HashMap::from([(MANIFEST_CACHE_BYTES_KEY.to_string(), "1048576".to_string())]);
     let settings = IcebergCacheSettings::from_config_map(&config).unwrap();
-    assert_eq!(settings.manifest_cache_bytes, 1048576);
+    assert_eq!(settings.manifest_cache_bytes, 1_048_576);
     let caches = CatalogCaches::new(settings);
     let ((ctx_a, cat_a), (ctx_b, cat_b)) = two_doors(&wh, &caches).await;
     run(
