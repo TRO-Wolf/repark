@@ -17,6 +17,9 @@ CATALOG = "writepath_perf"
 THREADS = "8"
 SEED_ROWS = 120_000
 SEED_FILES = 4
+UNEQUAL_SIZES = (5000, 10000, 20000, 40000, 7000, 3000, 60000, 1000)
+DETERMINISM_RUNS = 5
+V3 = "'format-version' = '3'"
 WALL_ROWS = 1_000_000
 WALL_ITERATIONS = 5
 
@@ -70,6 +73,18 @@ def _wide_seed(directory: Path, rows: int, files: int) -> Path:
             compression="zstd",
             row_group_size=100_000,
         )
+    return directory
+
+
+def _unequal_seed(directory: Path) -> Path:
+    """Unequal file sizes, written once: equal sizes hide a file-order defect."""
+    import pyarrow.parquet as pq
+
+    directory.mkdir(parents=True, exist_ok=True)
+    start = 0
+    for index, size in enumerate(UNEQUAL_SIZES):
+        pq.write_table(_rows(start, start + size), directory / f"part-{index}.parquet")
+        start += size
     return directory
 
 
@@ -142,19 +157,48 @@ def test_one_concurrent_file_still_writes_exactly_one(tmp_path: Path) -> None:
         engine.stop()
 
 
-def test_repeated_ctas_writes_the_same_files_in_the_same_order(tmp_path: Path) -> None:
-    """C-005: the parallel section is followed by a deterministic file order."""
-    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
-    engine = _session("writepath-determinism", tmp_path / "wh")
+def test_repeated_ctas_commits_the_same_manifest_and_row_ids(tmp_path: Path) -> None:
+    """C-005: identical CTAS over identical input commits identical manifests and `_row_id`."""
+    source = _unequal_seed(tmp_path / "seed")
+    engine = (
+        ReparkSession.builder.appName("writepath-determinism")
+        .config("spark.sql.shuffle.partitions", THREADS)
+        .config("repark.write.max-concurrent-files", "4")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .getOrCreate()
+    )
     try:
+        engine.register_memory_catalog(CATALOG, tmp_path / "wh")
+        engine.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.w")
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
-        orders = []
-        for run in range(3):
-            table = f"{CATALOG}.w.run{run}"
-            engine.sql(f"CREATE TABLE {table} USING iceberg AS SELECT * FROM src").collect()
-            orders.append([count for _, count in _manifest_order(engine, table)])
-        assert orders[0] == orders[1] == orders[2], orders
-        assert orders[0] == [SEED_ROWS // SEED_FILES] * SEED_FILES, orders[0]
+        observed = []
+        for run in range(DETERMINISM_RUNS):
+            table = f"{CATALOG}.w.d{run}"
+            engine.sql(
+                f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({V3}) AS SELECT * FROM src"
+            ).collect()
+            files = engine.sql(
+                f"SELECT record_count, first_row_id, lower_bounds FROM {table}.files"
+            ).to_arrow()
+            counts = [int(value.as_py()) for value in files.column("record_count")]
+            firsts = [
+                None if value.as_py() is None else int(value.as_py())
+                for value in files.column("first_row_id")
+            ]
+            bounds = [str(value.as_py()) for value in files.column("lower_bounds")]
+            observed.append((counts, dict(zip(bounds, firsts, strict=True))))
+
+        assert len(UNEQUAL_SIZES) == len(observed[0][0]), observed[0][0]
+        assert sum(observed[0][0]) == sum(UNEQUAL_SIZES)
+        for run in range(1, DETERMINISM_RUNS):
+            assert observed[run][0] == observed[0][0], (
+                f"run {run} committed a different manifest record-count sequence: "
+                f"{observed[run][0]} against {observed[0][0]}"
+            )
+            assert observed[run][1] == observed[0][1], (
+                f"run {run} assigned different _row_id ranges: "
+                f"{observed[run][1]} against {observed[0][1]}"
+            )
     finally:
         engine.stop()
 

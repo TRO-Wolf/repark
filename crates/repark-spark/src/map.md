@@ -94,7 +94,8 @@ pins: rp-4-fork-repin/C-005, C-006
   partition writes its own data files instead of one coalesced stream feeding cooperative
   writers. The conform inheritance above is unchanged: the node calls the same stream writer per
   partition. The task context is the frame's own, so the node executes
-  under the state that planned it.
+  under the state that planned it. `write_ctas_query` keeps `write_ctas_stream`'s doc comment verbatim: a renamed
+  function carries its pre-existing comment unchanged.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including

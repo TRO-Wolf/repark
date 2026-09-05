@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -21,7 +21,7 @@ use iceberg::table::Table;
 
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::file_order::ascending_partition_order;
+use crate::write::file_order::stable_commit_order;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
 
 pub const WRITTEN_FILES_COL_NAME: &str = "written_files";
@@ -189,9 +189,8 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
     }
 }
 
-/// One writer per DataFusion partition; the files come back in a deterministic order.
 /// # Errors
-/// Returns the plan's execution error; every data file the attempt completed is deleted first.
+/// Returns the plan's execution error; every data file the attempt created is deleted first.
 pub async fn write_data_files_from_plan(
     table: &Table,
     input: Arc<dyn ExecutionPlan>,
@@ -218,6 +217,9 @@ pub async fn write_data_files_from_plan(
         Arc::clone(&collected),
     ));
 
+    let data_root = data_root(table);
+    let before = list_data_files(table, &data_root).await;
+
     let mut results = execute_stream(exec, context)?;
     let mut first_error: Option<DataFusionError> = None;
     while let Some(item) = results.next().await {
@@ -229,9 +231,9 @@ pub async fn write_data_files_from_plan(
     }
     let files = drain_collected(&collected)?;
     match first_error {
-        None => Ok(ascending_partition_order(files)),
+        None => Ok(stable_commit_order(files)),
         Some(error) => {
-            delete_completed_files(table, &files).await;
+            delete_attempt_files(table, &data_root, &before, &files).await;
             Err(error)
         }
     }
@@ -258,12 +260,48 @@ fn drain_collected(collected: &FileCollector) -> Result<Vec<DataFile>> {
     Ok(files)
 }
 
-async fn delete_completed_files(table: &Table, files: &[DataFile]) {
-    let file_io = table.file_io();
-    for file in files {
-        if let Err(error) = file_io.delete(file.file_path()).await {
+fn data_root(table: &Table) -> String {
+    format!(
+        "{}/data/",
+        table.metadata().location().trim_end_matches('/')
+    )
+}
+
+async fn list_data_files(table: &Table, data_root: &str) -> HashSet<String> {
+    match table.file_io().list(data_root).await {
+        Ok(entries) => entries.into_iter().map(|entry| entry.location).collect(),
+        Err(error) => {
             tracing::warn!(
-                path = %file.file_path(),
+                prefix = %data_root,
+                error = %error,
+                "could not census the table's data files before a partition write; a failed \
+                 attempt will only be able to delete the files its writers completed"
+            );
+            HashSet::new()
+        }
+    }
+}
+
+async fn delete_attempt_files(
+    table: &Table,
+    data_root: &str,
+    before: &HashSet<String>,
+    completed: &[DataFile],
+) {
+    let mut doomed: Vec<String> = completed
+        .iter()
+        .map(|file| file.file_path().to_string())
+        .collect();
+    for path in list_data_files(table, data_root).await {
+        if !before.contains(&path) && !doomed.contains(&path) {
+            doomed.push(path);
+        }
+    }
+    let file_io = table.file_io();
+    for path in doomed {
+        if let Err(error) = file_io.delete(&path).await {
+            tracing::warn!(
+                path = %path,
                 error = %error,
                 "failed to delete a data file after a failed partition write"
             );
@@ -289,12 +327,15 @@ mod tests {
 
     const BLOCKING_WRITE_MS: u64 = 120;
     const LATE_FAILURE_MS: u64 = 400;
+    const ROLL_ROWS: usize = 4000;
+    const SMALL_TARGET_FILE_BYTES: &str = "65536";
 
     struct SlowPartitionedExec {
         schema: SchemaRef,
         rows_per_partition: usize,
         blocking_delay: Duration,
         fail_partition: Option<usize>,
+        rolls_before_failure: usize,
         plan_properties: Arc<PlanProperties>,
     }
 
@@ -304,6 +345,7 @@ mod tests {
             rows_per_partition: usize,
             blocking_delay: Duration,
             fail_partition: Option<usize>,
+            rolls_before_failure: usize,
         ) -> Self {
             let schema = source_schema();
             let plan_properties = Arc::new(PlanProperties::new(
@@ -317,6 +359,7 @@ mod tests {
                 rows_per_partition,
                 blocking_delay,
                 fail_partition,
+                rolls_before_failure,
                 plan_properties,
             }
         }
@@ -366,6 +409,28 @@ mod tests {
             let offset = i32::try_from(partition * 1000).expect("row offset fits i32");
 
             if self.fail_partition == Some(partition) {
+                let rolled = self.rolls_before_failure;
+                let wide = Arc::clone(&self.schema);
+                let written = futures::stream::iter(0..rolled).map(move |roll| {
+                    let ids = (0..ROLL_ROWS)
+                        .map(|row| {
+                            offset
+                                + i32::try_from(roll * ROLL_ROWS + row).expect("roll row fits i32")
+                        })
+                        .collect::<Vec<_>>();
+                    let labels = ids
+                        .iter()
+                        .map(|id| Some(format!("r{id}{}", "p".repeat(64))))
+                        .collect::<Vec<_>>();
+                    RecordBatch::try_new(
+                        Arc::clone(&wide),
+                        vec![
+                            Arc::new(Int32Array::from(ids)),
+                            Arc::new(StringArray::from(labels)),
+                        ],
+                    )
+                    .map_err(DataFusionError::from)
+                });
                 let late = futures::stream::once(async move {
                     tokio::time::sleep(Duration::from_millis(LATE_FAILURE_MS)).await;
                     Err(DataFusionError::Execution(
@@ -374,7 +439,7 @@ mod tests {
                 });
                 return Ok(Box::pin(RecordBatchStreamAdapter::new(
                     schema,
-                    late.boxed(),
+                    written.chain(late).boxed(),
                 )));
             }
 
@@ -428,6 +493,14 @@ mod tests {
     }
 
     async fn create_table(catalog: &Arc<dyn Catalog>, name: &str) -> Table {
+        create_table_with(catalog, name, HashMap::new()).await
+    }
+
+    async fn create_table_with(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        properties: HashMap<String, String>,
+    ) -> Table {
         let schema = Schema::builder()
             .with_fields(vec![
                 NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
@@ -440,6 +513,7 @@ mod tests {
         let creation = TableCreation::builder()
             .name(name.to_string())
             .schema(schema)
+            .properties(properties)
             .build();
         catalog
             .create_table(&namespace, creation)
@@ -477,7 +551,7 @@ mod tests {
         delay: Duration,
     ) -> Vec<DataFile> {
         let table = create_table(catalog, name).await;
-        let input = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
+        let input = Arc::new(SlowPartitionedExec::new(4, 8, delay, None, 0));
         write_data_files_from_plan(
             &table,
             input,
@@ -494,7 +568,8 @@ mod tests {
         delay: Duration,
     ) -> Vec<DataFile> {
         let table = create_table(catalog, name).await;
-        let input: Arc<dyn ExecutionPlan> = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
+        let input: Arc<dyn ExecutionPlan> =
+            Arc::new(SlowPartitionedExec::new(4, 8, delay, None, 0));
         let context = Arc::new(TaskContext::default());
         let one_writer = WriteConcurrency::new(1).expect("concurrency");
         let mut files = Vec::new();
@@ -543,7 +618,7 @@ mod tests {
         let mut runs = Vec::new();
         for run in 0..3 {
             let table = create_table(&catalog, &format!("determinism{run}")).await;
-            let input = Arc::new(SlowPartitionedExec::new(4, 5, Duration::ZERO, None));
+            let input = Arc::new(SlowPartitionedExec::new(4, 5, Duration::ZERO, None, 0));
             let files = write_data_files_from_plan(
                 &table,
                 input,
@@ -567,8 +642,16 @@ mod tests {
     async fn a_failed_partition_deletes_every_completed_data_file() {
         let warehouse = TempDir::new().expect("warehouse");
         let catalog = memory_catalog(&warehouse).await;
-        let table = create_table(&catalog, "abort").await;
-        let input = Arc::new(SlowPartitionedExec::new(4, 6, Duration::ZERO, Some(2)));
+        let table = create_table_with(
+            &catalog,
+            "abort",
+            HashMap::from([(
+                "write.target-file-size-bytes".to_string(),
+                SMALL_TARGET_FILE_BYTES.to_string(),
+            )]),
+        )
+        .await;
+        let input = Arc::new(SlowPartitionedExec::new(4, 6, Duration::ZERO, Some(2), 6));
         let error = write_data_files_from_plan(
             &table,
             input,

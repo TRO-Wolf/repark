@@ -86,7 +86,7 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
   `write_query`, handing the SELECT's physical plan to
   [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md) for one writer per
-  DataFusion partition. The task context is the frame's own. CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
+  DataFusion partition. The task context is the frame's own. `write_query` keeps `write_stream`'s doc comment verbatim. CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
   catalog or LOUD refuse — never a silent `MemTable`), clause refusals, **V3-2** `format_version`
   resolved at execute against `repark.sql.allowCreateFormatVersion3` (default false; entries()
   reader, no `repark-functions` product edge; `execute_staged_create` /

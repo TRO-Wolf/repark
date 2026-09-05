@@ -176,13 +176,25 @@ repark-core's error map.
   (cap 2 or more); it still bounds the stream write paths that INSERT, MERGE, overwrite and
   predicate DML use, which this node does not touch. The knob is read from the session
   configuration, so it is a builder `.config(...)`, not a post-build `conf.set`.
-  Determinism is stronger than before, not weaker: writer `p` sees partition `p`'s batches in
-  plan order, files are collected under the writer index in a `BTreeMap` and then sorted by
-  `ascending_partition_order` (V3-11), so one commit's data files and the `_row_id` derived from
-  them are the same on every run — where the coalesced stream this replaces merged partitions in
-  completion order. An input error raises a shared flag: siblings stop taking `Ok` batches, close
-  what they hold, and every completed file is deleted through `FileIO` before the first error
-  surfaces.
+  **Determinism is content-derived, because the DataFusion partition index is NOT stable.**
+  Round 1 ordered the committed files by the writer index and claimed reproducibility; the round-2
+  critic refuted it, and the instrumented measurement says why: over eight UNEQUAL source files,
+  six identical v3 CTAS gave six different partition-index-to-source-file assignments (partition 1
+  read the 3,000-row file in one run and the 40,000-row file in the next), so the writer index is
+  a property of that execution, not of the statement. `stable_commit_order`
+  ([file_order.rs](file_order.rs)) therefore sorts the committed files by partition value first
+  (V3-11 unchanged), then by each field's lower bound in field-id order, then the upper bounds,
+  then record count, file size and path — a total order that is a function of the DATA. Six runs
+  of the refuting fixture now commit ONE manifest record-count sequence and ONE `first_row_id`
+  map. The boundary: this makes the commit reproducible whenever the scan's row-to-file grouping
+  is itself stable; if a scan split the same rows into different file groups, no writer-side
+  ordering could restore it, and files that tie on every bound fall back to the path, which
+  carries a fresh UUID.
+  An input error raises a shared flag: siblings stop taking `Ok` batches and close what they hold,
+  and the failure sweep deletes **every data file the attempt created** — the completed files
+  plus every parquet that appeared under the table's data root since the attempt began, which is
+  how the failing writer's own rolled files are reclaimed (round-2 S2-2: a 64 KiB target file size
+  left 9 of them behind before this).
   In-module pins: every input partition gets its own writer and its own data file, holding exactly
   that partition's rows in writer-index order, and a one-task drive of the same four partitions
   answers identically; the returned files carry writer-index order over three runs; and a late

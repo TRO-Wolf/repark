@@ -258,9 +258,9 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
-/// Write a CTAS SELECT into Iceberg data files, one writer per DataFusion partition.
+/// Stream a CTAS SELECT into Iceberg data files, honouring session write concurrency.
 /// # Errors
-/// Propagates plan, conform, or writer errors from `repark-write`.
+/// Propagates stream, conform, or writer errors from `repark-write`.
 pub(crate) async fn write_ctas_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,

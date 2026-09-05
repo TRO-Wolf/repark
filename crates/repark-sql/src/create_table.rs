@@ -462,7 +462,7 @@ async fn create_first_service_managed(
     finish(cx.ctx, target).await
 }
 
-/// Write a plan's partitions into Iceberg data files, honouring the session's write concurrency.
+/// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
 async fn write_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
