@@ -4763,6 +4763,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
+  decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
+  `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
+  empty projection reads row counts through `ProjectionMask::leaves(schema, [])` —
+  zero-column batches, delete vectors and positional deletes still filtering rows — and
+  `IcebergTableScan::statistics()` reports `Precision::Exact` from the frozen snapshot's
+  `total-records` summary when the planned tasks carry no residual and no deletes, so
+  DataFusion folds the count with no scan. Implemented and test-green in the fork lane
+  (`empty_projection_scan.rs`, `count_star_fold.rs`); measured through a temporary,
+  never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
+  686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
+  990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
+  (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
+- **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump, with residue. A sub-split-size
+  table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB
+  split target. Fork trigger **F-27d**: re-split and re-pack to a session-derived target
+  of `min(configured split size, max(total/T, 64 KiB))`, declining `_pos`/`_row_id`,
+  empty and file-prune-only projections so MERGE, identity-DELETE and lineage reads keep
+  their plans. Implemented and test-green in the fork lane (`bin_pack::split_tests`,
+  `parallel_small_scan.rs`); measured through a temporary, never-committed path override
+  as N=1 → N=8 with `sum_all` 89.5 → 36.2 ms at 1e6 and 596.5 → 161.9 ms at 1e7
+  (`docs/perf/iceberg-scan-baseline.md` §2). Residue, recorded not fixed: the 1.5×-of-
+  parquet target is missed (1.8×/2.2× at 1e6, 2.4×/3.6× at 1e7 — a fixed ~10 ms per
+  query plus ~2× per-byte overhead, decomposed in the baseline §3), and `count(col)`
+  still scans while the parquet leg folds from statistics. The RePark parallelism pins
+  skip naming F-27 until the bump.
   **NARROWED 2026-09-05** (PERF-ICE-CATALOG-IO-2): this row is the **metadata** cache only.
   The manifest cache this unit wires is already a byte-bounded moka cache fork-side
   (`max_capacity` on entry weight, TinyLFU admission, overweight entries rejected), so the

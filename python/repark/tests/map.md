@@ -1723,6 +1723,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PySpark returns a nested `Row`, identically on both converters, so the equality pin beside it
   is what proves the divergence is pre-existing.
   pins: perf-facade-1/C-002, C-003, C-006, C-007
+- `test_perf_ice_scan_1.py` — **PERF-ICE-SCAN-1** (2026-09-05): the `count(*)` fold and
+  parallel small-table scans over a per-test eight-file bed (24 rows, ids 1..24) at
+  shuffle-8. A module-scoped runtime probe (`SELECT count(*)` EXPLAIN has no
+  `IcebergTableScan`) detects the F-27 fork capability once; the fold and parallelism pins
+  skip with the named reason
+  `fork pin predates F-27` until the RP-14 bump, so the file is green on the pinned fork.
+  Always-run: count answers on plain/empty/DV/WHERE/LIMIT tables, identity DELETE and MERGE
+  row sets (the DML-exclusion pins). F-27: the fold on a plain table, the DV/WHERE
+  non-folds with correct answers, N=8 with the 24-row set intact, N=1 for the unfolded DV
+  count (empty projections never split), and the `_row_id` 0..23 tiling. The `_row_id`
+  and `_pos` never-split halves live fork-side (`parallel_small_scan.rs`,
+  `expand_skips_*_projection`): EXPLAIN cannot plan `_row_id` (pre-existing) and `_pos`
+  is not SQL-visible in RePark.
+  Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
+  count against Spark on the same seeds. Numbers and commands:
+  [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
+  pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-011, C-009
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
   through the facade, over a fixed four-file seed so the plan really has four partitions.
   Always-run: the CTAS writes one data file per plan partition (four), and
