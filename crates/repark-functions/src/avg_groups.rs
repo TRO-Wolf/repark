@@ -1,19 +1,20 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, ArrowNativeTypeOp, ArrowNumericType, AsArray, BooleanArray,
-    BooleanBufferBuilder, Int64Array, PrimitiveArray, PrimitiveBuilder, UInt64Array,
+    Array, ArrayRef, ArrowNativeTypeOp, ArrowNumericType, AsArray, BooleanArray, Int64Array,
+    PrimitiveArray, PrimitiveBuilder, UInt64Array,
 };
 use arrow::buffer::NullBuffer;
 use arrow::compute::cast;
 use arrow::datatypes::{
-    ArrowNativeType, ArrowPrimitiveType, DataType, Decimal32Type, Decimal64Type, Decimal128Type,
-    Decimal256Type, DecimalType, Float64Type, Int64Type, UInt64Type,
+    ArrowNativeType, DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type,
+    DecimalType, Float64Type, Int64Type, UInt64Type,
 };
 use datafusion::common::{DataFusionError, Result, exec_err, not_impl_err};
 use datafusion::logical_expr::{EmitTo, GroupsAccumulator};
 
 use crate::aggregate::DecimalAverager;
+use crate::groups_null_state::GroupNullState;
 
 pub(crate) fn groups_supported(return_type: &DataType, is_distinct: bool) -> bool {
     matches!(
@@ -120,6 +121,9 @@ fn decimal_average<T: DecimalType>(
     count: u64,
     null_on_overflow: bool,
 ) -> Result<Option<T::Native>> {
+    if count == 0 {
+        return Ok(None);
+    }
     let Some(averager) = averager else {
         return Ok(None);
     };
@@ -149,162 +153,6 @@ fn filtered_nulls(opt_filter: Option<&BooleanArray>, input: &dyn Array) -> Optio
         Some(valid) => NullBuffer::new(filter.values() & valid.inner()),
     });
     NullBuffer::union(filter_nulls.as_ref(), input.nulls())
-}
-
-enum SeenValues {
-    All { valid_groups: usize },
-    Some { valid: BooleanBufferBuilder },
-}
-
-struct GroupNullState {
-    seen: SeenValues,
-}
-
-impl GroupNullState {
-    fn new() -> Self {
-        Self {
-            seen: SeenValues::All { valid_groups: 0 },
-        }
-    }
-
-    fn size(&self) -> usize {
-        match &self.seen {
-            SeenValues::All { .. } => 0,
-            SeenValues::Some { valid } => valid.capacity() / 8,
-        }
-    }
-
-    fn take_builder(&mut self, total_num_groups: usize) -> BooleanBufferBuilder {
-        let previous = std::mem::replace(&mut self.seen, SeenValues::All { valid_groups: 0 });
-        match previous {
-            SeenValues::All { valid_groups } => {
-                let mut valid = BooleanBufferBuilder::new(total_num_groups);
-                valid.append_n(valid_groups.min(total_num_groups), true);
-                valid.append_n(total_num_groups.saturating_sub(valid_groups), false);
-                valid
-            }
-            SeenValues::Some { mut valid } => {
-                if valid.len() < total_num_groups {
-                    valid.append_n(total_num_groups - valid.len(), false);
-                }
-                valid
-            }
-        }
-    }
-
-    fn accumulate<T, F>(
-        &mut self,
-        group_indices: &[usize],
-        values: &PrimitiveArray<T>,
-        opt_filter: Option<&BooleanArray>,
-        total_num_groups: usize,
-        mut value_fn: F,
-    ) -> Result<()>
-    where
-        T: ArrowPrimitiveType + Send,
-        F: FnMut(usize, T::Native) + Send,
-    {
-        if values.len() != group_indices.len() {
-            return exec_err!("avg groups accumulate: values and group indices disagree");
-        }
-        if let Some(filter) = opt_filter
-            && filter.len() != group_indices.len()
-        {
-            return exec_err!("avg groups accumulate: filter and group indices disagree");
-        }
-        if let SeenValues::All { valid_groups } = &mut self.seen
-            && opt_filter.is_none()
-            && values.null_count() == 0
-        {
-            for (row, group_index) in group_indices.iter().enumerate() {
-                value_fn(*group_index, values.value(row));
-            }
-            *valid_groups = total_num_groups;
-            return Ok(());
-        }
-        let mut seen = self.take_builder(total_num_groups);
-        match (values.null_count() > 0, opt_filter) {
-            (false, None) => {
-                for (row, group_index) in group_indices.iter().enumerate() {
-                    seen.set_bit(*group_index, true);
-                    value_fn(*group_index, values.value(row));
-                }
-            }
-            (true, None) => {
-                let nulls = values.nulls().ok_or_else(|| {
-                    DataFusionError::Internal(
-                        "avg groups accumulate: null count without a null mask".to_string(),
-                    )
-                })?;
-                for ((row, group_index), valid) in
-                    group_indices.iter().enumerate().zip(nulls.iter())
-                {
-                    if valid {
-                        seen.set_bit(*group_index, true);
-                        value_fn(*group_index, values.value(row));
-                    }
-                }
-            }
-            (false, Some(filter)) => {
-                for ((row, group_index), keep) in
-                    group_indices.iter().enumerate().zip(filter.iter())
-                {
-                    if let Some(true) = keep {
-                        seen.set_bit(*group_index, true);
-                        value_fn(*group_index, values.value(row));
-                    }
-                }
-            }
-            (true, Some(filter)) => {
-                for ((group_index, keep), value) in
-                    group_indices.iter().zip(filter.iter()).zip(values.iter())
-                {
-                    if let Some(true) = keep
-                        && let Some(value) = value
-                    {
-                        seen.set_bit(*group_index, true);
-                        value_fn(*group_index, value);
-                    }
-                }
-            }
-        }
-        self.seen = SeenValues::Some { valid: seen };
-        Ok(())
-    }
-
-    fn build(&mut self, emit_to: EmitTo) -> Result<Option<NullBuffer>> {
-        match emit_to {
-            EmitTo::All => {
-                let previous =
-                    std::mem::replace(&mut self.seen, SeenValues::All { valid_groups: 0 });
-                match previous {
-                    SeenValues::All { .. } => Ok(None),
-                    SeenValues::Some { mut valid } => Ok(Some(NullBuffer::new(valid.finish()))),
-                }
-            }
-            EmitTo::First(count) => match &mut self.seen {
-                SeenValues::All { valid_groups } => {
-                    *valid_groups = valid_groups.saturating_sub(count);
-                    Ok(None)
-                }
-                SeenValues::Some { valid } => {
-                    let mut taken = std::mem::replace(valid, BooleanBufferBuilder::new(0));
-                    let bits = taken.finish();
-                    if count > bits.len() {
-                        return exec_err!(
-                            "avg groups emit: first-group count exceeds tracked groups"
-                        );
-                    }
-                    let head = bits.slice(0, count);
-                    let tail = bits.slice(count, bits.len() - count);
-                    let mut rest = BooleanBufferBuilder::new(tail.len());
-                    rest.append_buffer(&tail);
-                    *valid = rest;
-                    Ok(Some(NullBuffer::new(head)))
-                }
-            },
-        }
-    }
 }
 
 struct SparkAvgGroupsAccumulator<T, F>
@@ -402,43 +250,50 @@ where
         let sums = emit_to.take_needed(&mut self.sums);
         let nulls = self.null_state.build(emit_to)?;
         check_emitted(counts.len(), sums.len(), nulls.as_ref())?;
-        let mut averages = Vec::with_capacity(sums.len());
-        let mut has_null = false;
-        for (sum, count) in sums.into_iter().zip(counts) {
-            let average = (self.avg_fn)(sum, count)?;
-            has_null = has_null || average.is_none();
-            averages.push(average);
-        }
-        let array: PrimitiveArray<T> = if !has_null
-            && nulls.as_ref().is_none_or(|mask| mask.null_count() == 0)
-        {
-            let values: Vec<T::Native> = averages
-                .into_iter()
-                .map(Option::unwrap_or_default)
-                .collect();
-            PrimitiveArray::new(values.into(), nulls).with_data_type(self.return_data_type.clone())
-        } else {
-            let mut builder = PrimitiveBuilder::<T>::with_capacity(averages.len())
-                .with_data_type(self.return_data_type.clone());
-            match &nulls {
-                Some(mask) => {
-                    for (average, valid) in averages.into_iter().zip(mask.iter()) {
-                        match (valid, average) {
-                            (true, Some(value)) => builder.append_value(value),
-                            _ => builder.append_null(),
-                        }
+        let array: PrimitiveArray<T> = match &nulls {
+            Some(mask) if mask.null_count() > 0 => {
+                let mut builder = PrimitiveBuilder::<T>::with_capacity(sums.len())
+                    .with_data_type(self.return_data_type.clone());
+                for ((sum, count), valid) in sums.into_iter().zip(counts).zip(mask.iter()) {
+                    let average = if valid {
+                        (self.avg_fn)(sum, count)?
+                    } else {
+                        None
+                    };
+                    match average {
+                        Some(value) => builder.append_value(value),
+                        None => builder.append_null(),
                     }
                 }
-                None => {
+                builder.finish()
+            }
+            _ => {
+                let mut averages = Vec::with_capacity(sums.len());
+                let mut has_null = false;
+                for (sum, count) in sums.into_iter().zip(counts) {
+                    let average = (self.avg_fn)(sum, count)?;
+                    has_null = has_null || average.is_none();
+                    averages.push(average);
+                }
+                if has_null {
+                    let mut builder = PrimitiveBuilder::<T>::with_capacity(averages.len())
+                        .with_data_type(self.return_data_type.clone());
                     for average in averages {
                         match average {
                             Some(value) => builder.append_value(value),
                             None => builder.append_null(),
                         }
                     }
+                    builder.finish()
+                } else {
+                    let values: Vec<T::Native> = averages
+                        .into_iter()
+                        .map(Option::unwrap_or_default)
+                        .collect();
+                    PrimitiveArray::new(values.into(), nulls)
+                        .with_data_type(self.return_data_type.clone())
                 }
             }
-            builder.finish()
         };
         Ok(Arc::new(array))
     }
@@ -767,21 +622,6 @@ mod tests {
     }
 
     #[test]
-    fn null_state_build_first_splits_mask() {
-        let mut nulls = GroupNullState::new();
-        let values = Float64Array::from(vec![Some(1.0), None, Some(3.0)]);
-        nulls
-            .accumulate(&[0, 1, 2], &values, None, 3, |_, _| {})
-            .expect("accumulate");
-        let head = nulls.build(EmitTo::First(1)).expect("head").expect("mask");
-        assert_eq!(head.len(), 1);
-        assert_eq!(head.null_count(), 0);
-        let tail = nulls.build(EmitTo::All).expect("tail").expect("mask");
-        assert_eq!(tail.len(), 2);
-        assert_eq!(tail.null_count(), 1);
-    }
-
-    #[test]
     fn decimal128_groups_update_then_evaluate_scales_result() {
         let mut groups = decimal128_groups(false);
         let values = Arc::new(
@@ -819,6 +659,41 @@ mod tests {
         let result = merged.evaluate(EmitTo::All).expect("evaluate");
         let result = result.as_primitive::<Decimal128Type>();
         assert_eq!(result.value(0), 1_100_000);
+    }
+
+    #[test]
+    fn decimal128_groups_empty_group_evaluates_null() {
+        let mut groups = decimal128_groups(false);
+        let values = Arc::new(
+            Decimal128Array::from(vec![Some(110)])
+                .with_precision_and_scale(10, 2)
+                .expect("fixture scale"),
+        ) as ArrayRef;
+        groups
+            .update_batch(&[values], &[0], None, 2)
+            .expect("update");
+        let result = groups.evaluate(EmitTo::All).expect("evaluate");
+        let result = result.as_primitive::<Decimal128Type>();
+        assert_eq!(result.value(0), 1_100_000);
+        assert!(result.is_null(1));
+    }
+
+    #[test]
+    fn decimal128_groups_filtered_group_evaluates_null() {
+        let mut groups = decimal128_groups(false);
+        let values = Arc::new(
+            Decimal128Array::from(vec![Some(110), Some(220)])
+                .with_precision_and_scale(10, 2)
+                .expect("fixture scale"),
+        ) as ArrayRef;
+        let filter = BooleanArray::from(vec![Some(true), Some(false)]);
+        groups
+            .update_batch(&[values], &[0, 1], Some(&filter), 2)
+            .expect("update");
+        let result = groups.evaluate(EmitTo::All).expect("evaluate");
+        let result = result.as_primitive::<Decimal128Type>();
+        assert_eq!(result.value(0), 1_100_000);
+        assert!(result.is_null(1));
     }
 
     #[test]

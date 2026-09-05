@@ -17,6 +17,7 @@ pub mod decimal_spark;
 pub mod declared_refuse;
 pub mod expr_fn;
 pub mod format_version;
+mod groups_null_state;
 pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;

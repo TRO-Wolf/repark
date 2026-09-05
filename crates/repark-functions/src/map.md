@@ -172,6 +172,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `size` directly with `EmitTo::First`, the way DataFusion's own groups-accumulator
   tests do.
   pins: perf-agg-avg-1/C-001
+- `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
+  per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
+  1000-line ceiling. It re-implements the `datafusion-functions-aggregate-common`
+  `NullState` All/Some fast-path semantics (no new dependency allowed): batches with no
+  nulls and no filter skip tracking entirely, otherwise one validity bit per group with
+  `EmitTo::First` splitting the mask. The unit test pins the split.
+  pins: perf-agg-avg-1/C-001
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT

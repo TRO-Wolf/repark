@@ -54,8 +54,49 @@ fixture. The single partition is load-bearing: at 8 partitions the same shape me
 only visible when one thread carries all the groups. Shape curve (base, median of 3):
 1e5×10 1.93×, 2e5×10 single-partition 4.06×, 2e5×10 8-partition 2.77×, 2e5×30 1.87×.
 
-To record: the three named mutations (wrong group index, ignored NULL mask, decimal
-scale off by one) with which pins red.
+**Mutation score (2026-09-05, `cargo test -p repark-functions --lib`, 355 green at
+rest).** M1 wrong group index (update writes sums/counts to `(index + 1) % len`) →
+8 red: `float_groups_update_then_evaluate_averages_per_group`,
+`float_groups_filter_marks_fully_filtered_group_null`,
+`float_groups_state_layout_is_sum_then_int64_count`,
+`float_groups_emit_first_shifts_remainder`,
+`decimal128_groups_update_then_evaluate_scales_result`,
+`decimal128_groups_empty_group_evaluates_null`,
+`decimal128_groups_filtered_group_evaluates_null`,
+`group_by_avg_sql_answers_through_session`. M2a ignored input NULL mask (the
+`(true, None)` accumulate arm drops its validity check) → 4 red:
+`float_groups_update_then_evaluate_averages_per_group`,
+`float_groups_int_input_coerces_to_float`, `float_groups_merge_combines_two_partials`,
+`groups_null_state::tests::null_state_build_first_splits_mask`. M3 decimal scale off
+by one (`try_new` with `target_scale + 1`) → 8 red: all four width value pins, the
+two new decimal empty/filtered pins, the decimal state round-trip, and the SQL wiring
+test. M1 additionally proven at the Python level against a faulty release build
+(`_native.abi3.so` `163,721,640 B`): 5 red — `test_avg_grouped_small_value_and_type`,
+`test_avg_grouped_small_dataframe_door`, `test_avg_decimal128_grouped_type_and_values`,
+`test_avg_all_null_group_is_null`, `test_many_groups_answers_match_pinned_checksum`
+(checksum `3150034.90` vs `3150001.75`). Global, window, overflow and probe pins stay
+green — they do not use the groups path. The fault was reverted and the module
+rebuilt before any further measurement.
+
+**S1 found by the M2 analysis (2026-09-05).** The first `evaluate` computed the
+average closure for every group before applying the null mask; a decimal group with
+count zero (never-seen index, fully-filtered group) then divided by zero inside
+`DecimalAverager::avg` and panicked (`core::num` divide by zero, proven by dropping
+the guard: `decimal128_groups_empty_group_evaluates_null` panics). Fix, two layers:
+`decimal_average` returns NULL on count zero (the float arm and the `Accumulator`
+already did), and `evaluate` skips the closure for mask-null groups exactly the way
+DataFusion's own `evaluate` does. Pinned by `decimal128_groups_empty_group_evaluates_null`
+and `decimal128_groups_filtered_group_evaluates_null`. The analysis also showed the
+output mask is subsumed by the count guard for `avg` (mask-null ⟺ count zero, both
+set in the same closure): dropping the mask in `build` reds nothing by construction,
+so M2 is the input-mask mutation above. The mask stays as the reference shape and
+defense in depth.
+
+**Split note (declared rename).** `avg_groups.rs` passed the 1000-line ceiling with
+the fix, so the null tracker moved to `groups_null_state.rs` (867 + 182 lines); the
+only test that moved with it is
+`avg_groups::tests::null_state_build_first_splits_mask` →
+`groups_null_state::tests::null_state_build_first_splits_mask`.
 
 ## 7. Registry
 
