@@ -217,7 +217,9 @@ repark-core's error map.
   pre-existing data file is never touched. Pinned both ways:
   `a_failed_partition_deletes_every_completed_data_file` (fresh table, nothing survives) and
   `a_failed_write_into_a_committed_table_sweeps_only_its_own_files` (seeded commit, its files
-  survive).
+  survive, AND so does a file another writer drops into the data root during the attempt — which
+  is the case the gate actually guards, since the census by itself already protects everything
+  that existed before it).
   In-module pins: every input partition gets its own writer and its own data file, and the files
   come back in CONTENT order (the mock's partitions carry ascending row ranges, so content order
   and partition order coincide there — the assertion says so), and a one-task drive of the same

@@ -106,7 +106,8 @@ Seven mutations, each applied to the shipped tree, run, and reverted. None is co
 | — | M2 (drain the collector in reverse) was proven against the round-1 code and then RETIRED in round 3: `stable_commit_order` re-sorts, so the drain order is no longer observable and the mutation is green on the shipped tree. M5 is what guards the ordering now. |
 | — | a wall-differential pin was written, proven against M1, then REMOVED: it flaked inside `cargo test` (6.41 s floor against a 6.00 s delayed run) and a flaky pin is worse than none | — |
 | M4 | RePark: sweep only the completed files (the pre-round-2 abort behaviour) | the abort pin, naming the six parquet files the failing writer had rolled |
-| M5 | RePark: return `ascending_partition_order` instead of `stable_commit_order` | the round-2 determinism pin on a real plan, AND the round-3 ordering pin at 3, 4, 8 and 16 partitions |
+| M5 | RePark: return `ascending_partition_order` instead of `stable_commit_order` | the round-3 ordering pin at **all four** partition counts (3, 4, 8, 16) |
+| M6 | RePark: sweep regardless of the table being fresh | the committed-table pin, on the file another writer adds DURING the attempt — the census alone already protects files that existed before it |
 | M3 | RePark: skip `delete_completed_files` on the error path | the abort pin, naming the three surviving files |
 
 The property test is the fork half's red-first instrument by construction: it runs the previous

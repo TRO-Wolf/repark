@@ -344,6 +344,7 @@ mod tests {
         blocking_delay: Duration,
         fail_partition: Option<usize>,
         rolls_before_failure: usize,
+        interloper: Option<String>,
         plan_properties: Arc<PlanProperties>,
     }
 
@@ -354,6 +355,24 @@ mod tests {
             blocking_delay: Duration,
             fail_partition: Option<usize>,
             rolls_before_failure: usize,
+        ) -> Self {
+            Self::with_interloper(
+                partitions,
+                rows_per_partition,
+                blocking_delay,
+                fail_partition,
+                rolls_before_failure,
+                None,
+            )
+        }
+
+        fn with_interloper(
+            partitions: usize,
+            rows_per_partition: usize,
+            blocking_delay: Duration,
+            fail_partition: Option<usize>,
+            rolls_before_failure: usize,
+            interloper: Option<String>,
         ) -> Self {
             let schema = source_schema();
             let plan_properties = Arc::new(PlanProperties::new(
@@ -368,6 +387,7 @@ mod tests {
                 blocking_delay,
                 fail_partition,
                 rolls_before_failure,
+                interloper,
                 plan_properties,
             }
         }
@@ -439,8 +459,12 @@ mod tests {
                     )
                     .map_err(DataFusionError::from)
                 });
+                let interloper = self.interloper.clone();
                 let late = futures::stream::once(async move {
                     tokio::time::sleep(Duration::from_millis(LATE_FAILURE_MS)).await;
+                    if let Some(path) = interloper {
+                        std::fs::write(&path, b"another writer's file").expect("interloper write");
+                    }
                     Err(DataFusionError::Execution(
                         "injected partition source failure".into(),
                     ))
@@ -674,9 +698,20 @@ mod tests {
         let live = warehouse_data_files(&warehouse);
         assert!(!live.is_empty(), "the seeded commit left data files");
 
+        let interloper = live[0]
+            .parent()
+            .expect("data directory")
+            .join("another-writer-00000.parquet");
         let error = write_data_files_from_plan(
             &table,
-            Arc::new(SlowPartitionedExec::new(4, 6, Duration::ZERO, Some(2), 6)),
+            Arc::new(SlowPartitionedExec::with_interloper(
+                4,
+                6,
+                Duration::ZERO,
+                Some(2),
+                6,
+                Some(interloper.to_string_lossy().into_owned()),
+            )),
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
         )
@@ -694,6 +729,10 @@ mod tests {
                 "the committed table's own data file was swept: {path:?}"
             );
         }
+        assert!(
+            after.contains(&interloper),
+            "a file another writer added during the attempt was swept: {interloper:?}"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
