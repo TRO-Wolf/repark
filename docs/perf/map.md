@@ -31,6 +31,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   its own 1-minute load, and a cost is read against the floor of the run it came from.
   pins: perf-dynflatten-1-measure/C-003, C-004
 
+- [iceberg-write-baseline.md](iceberg-write-baseline.md) — **PERF-ICE-WRITEPATH-1
+  (2026-09-05):** the `iceberg_write/1000000/{ctas,ctas_partitioned8,df_write_parquet_zstd}`
+  cells before and after, on three builds (base, fork-only, both), so the fork's vectorized
+  partition splitter and RePark's per-partition write node are read apart instead of as one
+  number. Carries the build matrix, the fixture, the load at each cell and the commands, plus
+  the isolated splitter measurement taken in the fork lane where no RePark rebuild is involved.
+  pins: perf-ice-writepath-1/C-009, C-010
+
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
   (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner
   [python/repark-parity/bench/facade/](../../python/repark-parity/bench/facade/map.md)
