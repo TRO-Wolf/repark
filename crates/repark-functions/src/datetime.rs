@@ -578,16 +578,7 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
         )))
     };
     match letter {
-        'y' | 'u' => Ok(if count == 2 {
-            format!("{:02}", datetime.year().rem_euclid(100))
-        } else {
-            let rendered = format!("{:0width$}", datetime.year(), width = count);
-            if count >= 4 && datetime.year() > 0 && rendered.len() > count {
-                format!("+{rendered}")
-            } else {
-                rendered
-            }
-        }),
+        'y' | 'u' => Ok(crate::spark_year_pad::format_year(datetime.year(), count)),
         'M' | 'L' => Ok(match count {
             1 => datetime.month().to_string(),
             2 => format!("{:02}", datetime.month()),

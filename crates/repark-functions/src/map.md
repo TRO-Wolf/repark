@@ -54,6 +54,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
   compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
   even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
+- `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
+  extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
+  and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit
+  positives keep `+` — all live-measured on 4.1.2. pins: types-1/C-006
 - `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
   is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /

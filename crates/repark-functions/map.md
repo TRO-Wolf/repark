@@ -165,6 +165,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **TYPES-1 round 4 (2026-09-05):** the Java-pattern year arm renders Java's leading `+`
   past 4 digits (`yyyy`, `count >= 4` — wrapped-year `from_unixtime` parity).
   INCREASE 1704→1709 (no compressible lines — rustfmt-packed; owner approval at merge).
+  **Round 5 (2026-09-05):** negative years pad digits after the sign (`-0499`, `-0002`),
+  `yy` is `abs(year) % 100` (`-499` → `99`); the arm moves to `src/spark_year_pad.rs` and
+  `datetime.rs` ratchets 1709→1700.
   pins: types-1/C-006
 - `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
   UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the

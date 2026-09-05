@@ -38,6 +38,7 @@ pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;
 pub mod spark_split_part;
+pub mod spark_year_pad;
 pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;
