@@ -261,6 +261,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
+  PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
+  bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
+  edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -1740,6 +1743,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
   first if a rule stopped preserving names.
   pins: perf-facade-1/C-004, C-008
+- `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
+  `createDataFrame` path against the legacy row-wise path, kept callable as
+  `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
+  same input and every case compares Arrow field types, Arrow values and `collect()` by
+  `(type name, repr)` as well as by value, so a retyped cell is red where `==` alone would
+  pass. Arrow values compare by repr-per-row and collected rows by signature only, so NaN
+  cells compare instead of never matching. Matrix: every scalar Python type with Nones in
+  every column and whole-None columns,
+  all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
+  two multi-failure precedence pins asserting the new-path text,
+  tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
+  witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
+  `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.
+  The conf halves assert their own effect (struct vs map, first-only vs merged fields, UTC
+  vs naive timestamps) so a session-reuse regression cannot make them vacuous.
+  pins: perf-facade-cdf-1/C-002, C-003, C-004, C-007, C-009
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
@@ -2545,6 +2564,30 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
+- `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the catalog-IO
+  census and the manifest target on the memory catalog. The instrument is
+  `_native.iceberg_metadata_cache_census(session)`, whose `body_fetches` counter is exactly the
+  number of `metadata.json` documents the session has parsed — which is the number of S3 GETs the
+  same statement would pay on Glue or S3 Tables, so the counter IS the census without a tracer.
+  The strace census that produced the committed before/after table lives in
+  [docs/perf/iceberg-catalog-io-baseline.md](../../../docs/perf/iceberg-catalog-io-baseline.md).
+  Always-run legs: a repeated read parses nothing; INSERT / DELETE / UPDATE / MERGE each parse
+  nothing beyond the commit they write; a commit and an `ADD COLUMNS` are both seen by the next
+  statement (ADR-0004 T6 and BUG-005 at the Python door); the knob off reconstructs the pre-unit
+  path in the same process; the retained-entry bound is trimmed at the statement door and the
+  table still answers; three bad knob values fail loud naming the key and two underscore aliases
+  name BOTH the key the user set and the canonical spelling; the bound's SCOPE is pinned (an
+  8-way `UNION ALL` at `entries=1` retains 8 inside the statement and comes back under the bound
+  at the next door); and a 48-manifest table
+  answers equal to its one-manifest twin. Three legs SKIP with a named reason: the `t_many`
+  second-statement <= 20 ms target and the two AWS census legs are fork-gated (asks `F-CATIO-B`
+  and `F-CATIO-AWS` — fork pin `189a73ed` has neither `TableBuilder::object_cache` nor
+  `with_table_metadata_cache` on the Glue / S3 Tables builders), so they un-skip at the pin bump
+  that consumes them.
+  The measured tables, the machine, the recorded load and the re-measured floor live in that
+  baseline note beside the two registry rows `PERF-CATALOG-CALLS-1` (FIXED) and
+  `PERF-ICE-MANIFEST-1` (BACKLOG behind the pin bump).
+  pins: perf-ice-catalog-io-1/C-001, C-005, C-006
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

@@ -77,6 +77,8 @@ from repark.spark.session import reader_support as _reader_support
 
 from repark.spark.session import create_dataframe_values as _create_dataframe_values
 
+from repark.spark.session import create_dataframe_columns as _create_dataframe_columns
+
 from repark.spark.session import create_dataframe_schema as _create_dataframe_schema
 
 from repark.spark.session import create_dataframe_rows as _create_dataframe_rows
@@ -145,6 +147,7 @@ vars(_create_dataframe_rows).update(
         ),
         "_schema_names_and_permutation": (_create_dataframe_schema._schema_names_and_permutation),
         "_arrow_table_from_tuples": (_create_dataframe_tuples._arrow_table_from_tuples),
+        "_arrow_table_from_raw_tuples": (_create_dataframe_columns._arrow_table_from_raw_tuples),
         "_TYPED_NULL_SQL": (_create_dataframe_values._TYPED_NULL_SQL),
         "_is_pandas_dataframe": (_create_dataframe_values._is_pandas_dataframe),
         "_is_polars_dataframe": (_create_dataframe_values._is_polars_dataframe),
@@ -359,6 +362,7 @@ from repark.spark.session.create_dataframe_schema import (
 )
 
 from repark.spark.session.create_dataframe_rows import (
+    _arrow_table_from_raw_tuples_legacy,
     _bind_named_row,
     _create_dataframe_from_rows,
     _create_dataframe_from_rows_inner,
@@ -404,11 +408,19 @@ from repark.spark.session.create_dataframe_tuples import (
     _SPARK_SCALAR_MERGE_KIND_ORDER,
     _SPARK_SCALAR_MERGE_LABELS,
     _arrow_table_from_tuples,
+    _arrow_type_for_typed_null_sql,
+    _pa_array_or_refuse,
     _python_scalar_merge_kind,
+    _refuse_duplicate_tuple_column_names,
     _refuse_incompatible_scalar_merge_kinds,
     _refuse_list_element_type_merge,
     _refuse_long_double_merge,
     _values_sql_with_explicit_casts,
+)
+
+from repark.spark.session.create_dataframe_columns import (
+    _arrow_table_from_raw_tuples,
+    _arrow_table_from_raw_tuples_fast,
 )
 
 from repark.spark.session.sql_udf_parsing import (

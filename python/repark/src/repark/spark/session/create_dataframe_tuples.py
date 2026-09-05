@@ -180,6 +180,53 @@ def _refuse_list_element_type_merge(
             _refuse_incompatible_scalar_merge_kinds(kinds, column_name=column_name)
 
 
+def _refuse_duplicate_tuple_column_names(names: list[str]) -> None:
+    """Fail loud when createDataFrame tuple columns repeat a name."""
+    # Exact-duplicate names were rejected by the VALUES planner; keep fail-loud.
+
+    if len(names) != len(set(names)):
+        from repark.errors import AnalysisException
+
+        raise AnalysisException(
+            "unique expression names required; createDataFrame schema has duplicate column names"
+        )
+
+
+def _arrow_type_for_typed_null_sql(null_sql: str) -> Any:
+    """Map one all-null column CAST to its Arrow type (``CAST(NULL AS TYPE)`` → TYPE)."""
+
+    upper = null_sql.upper()
+
+    # CAST(NULL AS TYPE) → TYPE (keep DECIMAL(p,s) parens intact).
+
+    if " AS " in upper:
+        type_sql = upper.rsplit(" AS ", 1)[-1].strip()
+
+        if type_sql.endswith(")") and type_sql.count("(") < type_sql.count(")"):
+            type_sql = type_sql[:-1].strip()
+
+    else:
+        type_sql = upper
+
+    return _sql_type_to_arrow(type_sql)
+
+
+def _pa_array_or_refuse(values: list[Any], arrow_type: Any, column_name: str) -> Any:
+    """Build one Arrow array, refusing Arrow failures as ``PySparkTypeError``."""
+
+    import pyarrow as pa
+
+    try:
+        return pa.array(values, type=arrow_type)
+
+    except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError) as error:
+        # Match VALUES-path loud refusals (decimal scale, unsupported casts, …).
+
+        raise PySparkTypeError(
+            f"createDataFrame cannot build Arrow column {column_name!r}: {error}"
+        ) from error
+
+
 def _arrow_table_from_tuples(
     names: list[str],
     tuples: list[tuple[Any, ...]],
@@ -211,20 +258,9 @@ def _arrow_table_from_tuples(
 
             if sample is None:
                 if column_null_sql is not None and column_index < len(column_null_sql):
-                    upper = column_null_sql[column_index].upper()
-
-                    # CAST(NULL AS TYPE) → TYPE (keep DECIMAL(p,s) parens intact).
-
-                    if " AS " in upper:
-                        type_sql = upper.rsplit(" AS ", 1)[-1].strip()
-
-                        if type_sql.endswith(")") and type_sql.count("(") < type_sql.count(")"):
-                            type_sql = type_sql[:-1].strip()
-
-                    else:
-                        type_sql = upper
-
-                    arrow_types.append(_sql_type_to_arrow(type_sql))
+                    arrow_types.append(
+                        _arrow_type_for_typed_null_sql(column_null_sql[column_index])
+                    )
 
                 else:
                     arrow_types.append(pa.string())
@@ -484,14 +520,7 @@ def _arrow_table_from_tuples(
                 else:
                     arrow_types.append(pa.string())
 
-    # Exact-duplicate names were rejected by the VALUES planner; keep fail-loud.
-
-    if len(names) != len(set(names)):
-        from repark.errors import AnalysisException
-
-        raise AnalysisException(
-            "unique expression names required; createDataFrame schema has duplicate column names"
-        )
+    _refuse_duplicate_tuple_column_names(names)
 
     # Validate the decimal envelope before Arrow build (the VALUES path enforces it too).
 
@@ -565,15 +594,7 @@ def _arrow_table_from_tuples(
 
         values = [_prepare_nested_cell(cell, arrow_type) for cell in values]
 
-        try:
-            columns.append(pa.array(values, type=arrow_type))
-
-        except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError) as error:
-            # Match VALUES-path loud refusals (decimal scale, unsupported casts, …).
-
-            raise PySparkTypeError(
-                f"createDataFrame cannot build Arrow column {names[column_index]!r}: {error}"
-            ) from error
+        columns.append(_pa_array_or_refuse(values, arrow_type, names[column_index]))
 
     return pa.Table.from_arrays(columns, names=names)
 

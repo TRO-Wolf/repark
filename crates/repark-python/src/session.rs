@@ -98,7 +98,7 @@ fn shared_runtime() -> PyResult<Arc<Runtime>> {
 /// The Python-facing session handle and shared runtime.
 #[pyclass(name = "PyReparkSession", module = "repark._native")]
 pub struct PyReparkSession {
-    session: ReparkSession,
+    pub(crate) session: ReparkSession,
     runtime: Arc<Runtime>,
 }
 

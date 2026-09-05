@@ -418,6 +418,60 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins.
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
+  the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
+  with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
+  for a memory catalog (each `register_memory_catalog` otherwise builds its own namespace map).
+  Six are staleness: a commit in A is visible to B's next statement; an `ADD COLUMNS` in A is
+  seen by B's next `SELECT *` (BUG-005, fresh schema per statement); a MERGE in B after A's commit
+  matches A's rows and writes against them; a read after A's `rewrite_manifests` +
+  `expire_snapshots` still answers; a DROP + re-CREATE is never served from the old location
+  (`drop_table` evicts the cached pointer and the re-CREATE seeds a fresh one — evict-on-commit
+  plus evict-on-drop); and a Hadoop pointer adopted through `register_table` stays correct across
+  commits. **Round 2 corrected the DROP reason:** the Hive/REST uuid is NOT what makes DROP + re-CREATE
+  safe, because a Hadoop pointer adopted through `CALL register_table` commits deterministic
+  `v(N+1).metadata.json` with no uuid at all — measured, and pinned by
+  `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`, which walks
+  v1 → v5 through INSERT, INSERT, INSERT OVERWRITE, INSERT and stays row-correct. The safety
+  property is **evict-on-commit plus evict-on-drop**, which holds for both naming schemes.
+  Five are cache mechanics: an unmoved pointer costs no
+  body fetch and a trim under the bound keeps every entry; a commit evicts the pointer it replaced
+  and seeds the new one, so retention is FLAT across DML and the reader after a commit pays no GET;
+  a table is never served a SIBLING table's cached document; the knob off reads the document on
+  every load; the retained-location bound holds across 24 distinct tables and a trimmed cache
+  still answers. One pins the bound's SCOPE:
+  `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` records that an
+  8-way `UNION ALL` at `entries=1` retains 8 within the statement and comes back under the bound
+  at the next door — the knob bounds accumulation across statements, not working set inside one.
+  Mutation score (measured, six mutations, two of them escapes that were closed). RePark side:
+  trim made a no-op → the bound pin reds; the knob-off branch dropped → the disabled pin reds;
+  the cache never built → the unmoved-pointer and commit-seed pins red; trim made a per-statement
+  flush → NOTHING red at first, so the unmoved-pointer pin was strengthened to call `trim` between
+  its two reads until it did. Fork side, under the temporary path override: a `lookup` that serves
+  ANOTHER key's entry → the sibling-table pin reds; a manifest-list cache key with the path removed
+  → five pins red. The first form of that key mutation — a `lookup` that ignores the key entirely
+  — reds NOTHING, because the memory catalog evicts on commit so a single-table fixture holds
+  exactly one entry and any entry is the right one. The sibling-table pin exists because of that
+  escape.
+  Every citation for this module lives here, not on the tests: the owner's ruling is that a
+  `pins:` line is prose and belongs in `map.md`, and the ledger-grammar gate reads these maps.
+
+  | test | clause |
+  |---|---|
+  | `a_commit_in_one_session_is_visible_to_the_next_statement_of_another` | C-003 |
+  | `a_schema_change_in_one_session_is_seen_by_the_next_statement_of_another` | C-003 |
+  | `a_merge_after_another_sessions_commit_reads_that_sessions_rows` | C-003 |
+  | `a_read_after_another_sessions_maintenance_still_answers` | C-003 |
+  | `a_dropped_and_recreated_table_is_never_served_from_the_old_location` | C-003 |
+  | `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits` | C-003 |
+  | `an_unchanged_pointer_costs_no_metadata_body_fetch` | C-002 |
+  | `a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading` | C-002 |
+  | `a_table_is_never_served_a_sibling_tables_cached_metadata` | C-002 |
+  | `the_disabled_knob_reads_the_metadata_document_on_every_load` | C-002 |
+  | `the_retained_location_bound_holds_across_many_commits` | C-004 |
+  | `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` | C-004 |
+
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
   not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,

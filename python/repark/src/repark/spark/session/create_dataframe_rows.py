@@ -16,6 +16,7 @@ from repark.spark._temp_views import scratch_view_name
 
 
 if TYPE_CHECKING:
+    from repark.spark.session.create_dataframe_columns import _arrow_table_from_raw_tuples
     from repark.spark.session.create_dataframe_inference import (
         _INFER_NESTED_DICT_AS_STRUCT,
         _LEGACY_FIRST_ELEMENT_COERCE,
@@ -508,8 +509,6 @@ def _create_dataframe_from_rows_inner(
 
     schema = schema_names
 
-    column_null_sql: list[str] | None = None
-
     # Frame-shaped inputs first — never `if not data` on a DataFrame (pandas raises
     # "truth value is ambiguous"; G-INT).
 
@@ -609,6 +608,8 @@ def _create_dataframe_from_rows_inner(
 
             tuples = []
 
+            permutation_is_identity = permutation == list(range(width))
+
             for row_index, row in enumerate(data):
                 # Refuse str / other iterables — character-iterating a string yields wrong rows.
                 # Only list/tuple are row shapes on this path.
@@ -627,7 +628,13 @@ def _create_dataframe_from_rows_inner(
 
                 # Raw cells — normalize after all-null type inference.
 
-                tuples.append(_apply_permutation(tuple(row), permutation))
+                source_row = tuple(row)
+
+                if permutation_is_identity:
+                    tuples.append(source_row)
+
+                else:
+                    tuples.append(_apply_permutation(source_row, permutation))
 
         elif schema is not None and len(schema) == 1:
             # Scalar cells + single-column schema (typically from a bare DataType wrap →
@@ -675,6 +682,21 @@ def _create_dataframe_from_rows_inner(
 
         return _materialize_values_as_memtable_frame(session, _empty_frame_sql(names))
 
+    arrow_table = _arrow_table_from_raw_tuples(names, tuples, engine_types=engine_types)
+
+    return _materialize_arrow_as_memtable_frame(session, arrow_table)
+
+
+def _arrow_table_from_raw_tuples_legacy(
+    names: list[str],
+    raw_tuples: list[tuple[Any, ...]],
+    engine_types: list[str] | None,
+) -> Any:
+    """Row-wise Arrow build: the pre-CDF-1 path, kept as the pin oracle."""
+    tuples = raw_tuples
+
+    column_null_sql: list[str] | None = None
+
     if column_null_sql is None:
         width = len(names)
 
@@ -704,11 +726,9 @@ def _create_dataframe_from_rows_inner(
 
     # and register a MemTable via Arrow C Stream (no IPC encode/to_vec; no VALUES SQL plan).
 
-    arrow_table = _arrow_table_from_tuples(
+    return _arrow_table_from_tuples(
         names, tuples, column_null_sql=column_null_sql, engine_types=engine_types
     )
-
-    return _materialize_arrow_as_memtable_frame(session, arrow_table)
 
 
 def _drop_cdf_temp_view(session_ref: ReparkSession, name: str) -> None:
