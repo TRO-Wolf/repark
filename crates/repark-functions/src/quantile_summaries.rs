@@ -572,6 +572,17 @@ mod tests {
     }
 
     #[test]
+    fn threshold_value_serializes() {
+        let mut summary = QuantileSummaries::new(0.01);
+        summary.insert(1.0);
+        let bytes = summary.to_bytes();
+        let threshold = i32::from_be_bytes(bytes[0..4].try_into().expect("four bytes"));
+        assert_eq!(threshold, 10_000);
+        assert_eq!(DEFAULT_COMPRESS_THRESHOLD, 10_000);
+        assert_eq!(DEFAULT_HEAD_SIZE, 50_000);
+    }
+
+    #[test]
     fn from_bytes_rejects_short_and_mismatched() {
         assert!(QuantileSummaries::from_bytes(&[]).is_none());
         assert!(QuantileSummaries::from_bytes(&[0_u8; 23]).is_none());

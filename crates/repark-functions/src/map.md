@@ -67,7 +67,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (both sides compressed before merge) holds with no panic path. The head sort uses
   `total_cmp` (stable, like Spark's TimSort) while the merge loops use IEEE `<`/`<=`
   exactly as the Scala source does; f64↔decimal crosses exactly on the shortest repr and
-  quantizes HALF_UP to scale where the repr runs long.
+  quantizes HALF_UP to scale where the repr runs long. `threshold_value_serializes` pins
+  the 10000/50000 constants Spark's `QuantileSummaries` object carries.
   pins: perf-approxpct-1/C-001
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
