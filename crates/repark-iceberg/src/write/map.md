@@ -175,6 +175,16 @@ repark-core's error map.
   writer four times what it costs four), the returned files carry writer-index order (four
   partitions of different sizes, three runs), and a late failure in one partition leaves no
   parquet file in the warehouse.
+  The vectorized partition splitter this path calls on every partitioned write is fork ask
+  **F-28** on `f-28-vectorized-partition-splitter`: the splitter lexsorts the partition-value
+  columns, reads group boundaries with `arrow_ord::partition` and materializes one
+  `Literal::Struct` per group instead of one per row, keeping the row-wise path for Float,
+  Double, Unknown and empty partition types, where Arrow total-order equality is not Iceberg
+  `Struct` equality (`-0.0` and `0.0` are one group under `OrderedFloat` and two under total
+  order). It is NOT consumed here: the pin bump is its own PR
+  ([../../../../docs/fork-sync.md](../../../../docs/fork-sync.md)), so the fork half is measured
+  through a temporary, never-committed path override.
+  pins: perf-ice-writepath-1/C-001, C-002, C-003, C-007, C-008, C-011
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`

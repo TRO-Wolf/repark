@@ -1,7 +1,4 @@
-"""PERF-ICE-WRITEPATH-1 — the CTAS write node: file layout, determinism, and wall.
-
-pins: perf-ice-writepath-1/C-004, C-005, C-006, C-007
-"""
+"""PERF-ICE-WRITEPATH-1 — the CTAS write node: file layout, determinism, and wall."""
 
 import os
 import statistics

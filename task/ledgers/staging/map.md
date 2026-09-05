@@ -5,6 +5,18 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
+  **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
+  ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the
+  partition splitter groups a batch with Arrow kernels and materializes one `Literal::Struct`
+  per group instead of one per row, keeping the row-wise path where Arrow total-order equality
+  is not Iceberg `Struct` equality. RePark half: `IcebergPartitionWriteExec`, a CTAS write node
+  with one output partition per writer, so the parquet encode and zstd run on the executor's
+  threads instead of sharing one task — no `tokio::spawn`, no new dependency. File order and the
+  `_row_id` derived from it stay deterministic after the parallel section, and a failed write
+  deletes every completed data file. `risk_tier: elevated`. Branch `perf/ice-writepath-1`.
+  pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45

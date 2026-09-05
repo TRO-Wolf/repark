@@ -469,9 +469,9 @@ async fn write_query(
     query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    let task_ctx = Arc::new(query.task_ctx());
     let plan = query.create_physical_plan().await?;
-    repark_iceberg::write::write_data_files_from_plan(table, plan, ctx.task_ctx(), concurrency)
-        .await
+    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
 }
 
 /// Refresh the touched schema's name directory, then return an empty frame.

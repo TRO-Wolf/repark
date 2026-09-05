@@ -93,7 +93,8 @@ pins: rp-4-fork-repin/C-005, C-006
   [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md), so each DataFusion
   partition writes its own data files instead of one coalesced stream feeding cooperative
   writers. The conform inheritance above is unchanged: the node calls the same stream writer per
-  partition.
+  partition. The task context is the frame's own, so the node executes
+  under the state that planned it.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including

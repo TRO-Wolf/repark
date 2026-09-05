@@ -1695,7 +1695,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   seed — a ratio, because an absolute millisecond ceiling is a property of the box, not of the
   engine — and Spark's own CTAS of the same seed is compared row for row against the written
   table. Numbers and commands: [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
-  pins: perf-ice-writepath-1/C-004, C-005, C-006, C-007, C-008
+  pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the
