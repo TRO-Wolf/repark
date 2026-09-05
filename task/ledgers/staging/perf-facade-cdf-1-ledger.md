@@ -188,6 +188,14 @@ Every brief gate, observed on the final tree:
 | `ledger_lifecycle.py check --base origin/main` | exit 0 |
 | `typos .` | exit 0 |
 
+Round 2 (critic C-1..C-4, 2026-09-05): the full facade suite re-run on the round-2 tree reads
+**4,877 passed**, 199 skipped, 0 failed (`pytest python/repark/tests --timeout 900 -q`,
+413.86 s). The +24 over round 1 closes exactly: 22 collected cases from the merged
+`test_h3_spill_matrix.py` (main merge `84b29844`; the `test_date_fn_1.py` delta is
+assertion-only) plus the 2 new multi-failure pins. The round-2 brief battery is green too:
+conventions, the cdf-1 + `test_create_dataframe*.py` files (75 passed, 1 skipped), all four
+doc/ledger gates, the lifecycle check, and typos.
+
 Three mid-unit reds, all closed with evidence rather than absorbed: (1) the split-contract
 baseline red on the intended refactor — joined completely (new module listed, six bindings
 hashed/owned/exported, 76 edges reviewed triple by triple); (2)
@@ -209,6 +217,14 @@ a `| tail` pipe masked the red exit; fixed forward in the next commit, gates re-
 - The brief's environment premise (sibling release native) did not hold; §1 records what was
   established instead. The venv-local provisions (`pyspark==4.1.2`, `pytest-timeout==2.4.0`,
   lane `.pth` repoint, lane `.ivy2`) touch no lockfile or dependency.
+- A dict-first column with a later `[None]` list cell aborts the process under map conf
+  (`spark.sql.pyspark.inferNestedDictAsStruct.enabled=false`; the default is struct):
+  SIGABRT, exit 134, `Bad status: Invalid: Map array child array should have no nulls` —
+  pre-existing, identical on both legs, not fixed. Three shapes verified aborting on both
+  legs: `[({"a": 1},), ([None],)]`, `[({"a": 1},), ([None],), ({"b": 2},)]`, and
+  `[({"a": "x"},), ([None],)]` (a two-column `[({"a": 1}, 1), ([None], 2)]` aborts too).
+  Reversed order refuses loudly and identically on both legs; under the default struct conf
+  the minimal shape answers `[{'a': 1}, {'a': None}]` identically on both legs.
 
 ```yaml
 COVERAGE_ATTESTATION:
