@@ -48,15 +48,15 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 |---|---|---|---|---|
 | C-001 | Baseline first from the tracked runner on a release module, unchanged lane: the `create` cells plus floor, spread and load. | `run_facade.py --cells create`; §8. | **PROVEN** | 1,756.67 ms pre-unit (load 14.35 → 14.65) before any product commit; floor 2.45 ms re-measured on the full run. |
 | C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | **PROVEN** | 52 pins green, 1 skipped (the JVM-gated live leg): Arrow field types, Arrow values by repr, and `collect()` by `(type name, repr)` all equal on both dispatchers. |
-| C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 22 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
+| C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 24 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
 | C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | **PROVEN** | Shape pins green on both dispatchers; `test_interchange_parity.py` (TY-4/TY-5) green unchanged. Explicit schemas dispatch to the legacy path, verified by the StructType/DDL/bare-DataType pins. |
 | C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | **PROVEN** | 70.30 ms same-process (66.65 ms second run) — met 30% under the bar; residue is the transpose + census + Arrow conversion (§8). |
 | C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | **PROVEN** | Seven cells in one run: tuples/nested/explicit old-vs-new pairs plus the pandas control (§8). The old leg swaps the dispatcher in a `finally`. |
-| C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | OPEN | JVM run once, beside at most one other JVM, then stopped. |
-| C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | OPEN |  |
+| C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | **PROVEN** | 172 passed in one live run (the scalar leg plus the disclosure leg co-collected); JVM slot empty before and after. |
+| C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | **PROVEN** | Registry FIXED, baseline §4, five maps in lockstep, every brief gate exit 0 (§10). |
 | C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | **PROVEN** | Collection-error red, then 10 stub reds; 4 of 4 mutations red (§6 table). |
 
-VERDICT: 9 clauses, 7 PROVEN, 2 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Environment — what the lane actually had (2026-09-05)
 
@@ -172,6 +172,89 @@ reproduced at 1,620.75 → 66.65 ms, the floor re-measured at **2.45 ms** (five 
 against 939.85, `chain/100/build_only` 344.01 against 366.11 — load noise, no regression from
 this unit, which touches neither path). 70.30 ms is 28.7× the floor; pandas at 3.00 ms is the
 remaining structural gap (no transpose to pay).
+
+## 10. Gates (C-008)
+
+Every brief gate, observed on the final tree:
+
+| Gate | Result |
+|---|---|
+| `make ci` | exit 0 |
+| `make check-python-conventions` | exit 0 (239 files clean) |
+| `pytest python/repark/tests --timeout 900 -x` | exit 0 — **4,853 passed**, 199 skipped |
+| `pytest python/repark-parity/tests` | exit 0 — 574 passed |
+| live `test_parity_live.py` + `test_perf_facade_cdf_1.py` | exit 0 — 172 passed, JVM slot empty after |
+| `check-map-sync`, `check-ledger-grammar`, `check-ledgers`, `check-docs-compaction` | exit 0 |
+| `ledger_lifecycle.py check --base origin/main` | exit 0 |
+| `typos .` | exit 0 |
+
+Two mid-unit reds, both closed with evidence rather than absorbed: (1) the split-contract
+baseline red on the intended refactor — joined completely (new module listed, six bindings
+hashed/owned/exported, 76 edges reviewed triple by triple); (2)
+`test_sort_merge_join_spills_under_small_fair_pool` failed once under a self-inflicted
+concurrent load (two suites plus cargo on a load-29 box) — the file has zero `createDataFrame`
+calls, the test passes alone in 6.3 s, and the final full run is green.
+
+## 11. Out of scope, observed (not claimed, not fixed)
+
+- The envelope validator leaks raw `decimal.InvalidOperation` past 28 significant digits
+  (default-context `quantize`) instead of a PySpark error — pre-existing, identical on both
+  paths; the pins use 26 digits.
+- The explicit-schema path (~1.27 s at 1e5) is now the slowest `createDataFrame` shape. It
+  stays on the legacy path by design (brief: preserve); a census for declared types would be a
+  separate unit with its own pins.
+- The nested pair reads 0.96× — the measured transpose-plus-census delegation cost, accepted.
+- The brief's environment premise (sibling release native) did not hold; §1 records what was
+  established instead. The venv-local provisions (`pyspark==4.1.2`, `pytest-timeout==2.4.0`,
+  lane `.pth` repoint, lane `.ivy2`) touch no lockfile or dependency.
+
+```yaml
+COVERAGE_ATTESTATION:
+  unit: PERF-FACADE-CDF-1
+  verdict: complete
+  complete: true
+  note: Actor self-attestation — no separate Critic ran in this lane; the equality pins,
+    the four mutations and the full suites are the review evidence.
+  categories:
+    AT-1_api-facade-shape: ATTACKED
+    AT-1-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py::test_shipped_dispatcher_is_the_column_wise_path
+      - python/repark/tests/test_production_file_size.py (76 cross-owner edges pin the router binding)
+    AT-2_data-correctness: ATTACKED
+    AT-2-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py (27 equality pins: Arrow types, Arrow values, collect signatures)
+      - python/repark/tests/test_perf_facade_cdf_1.py::test_ten_thousand_rows
+    AT-3_divergence-proof: ATTACKED
+    AT-3-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py (24 refusal pins with byte-identical text)
+      - ledger §6 mutations M1/M2/M4 (dropped refusal, wrong scale, nested-as-scalar all red)
+    AT-4_performance-method: ATTACKED
+    AT-4-artifacts:
+      - python/repark-parity/bench/facade/ (seven cells, both legs one process, §8 table)
+      - ledger §8 (three honest numbers: absolute, pair, load labels)
+    AT-5_determinism-order: ATTACKED
+    AT-5-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py::test_namedtuple_rows_reorder_by_name
+      - ledger §7 (multi-failure precedence pairs named, single-failure byte-identical)
+    AT-6_errors: ATTACKED
+    AT-6-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py (refusal-type equality in every refusal pin)
+      - python/repark/tests/test_f1_errorclass.py (suite green)
+    AT-7_null-semantics: ATTACKED
+    AT-7-artifacts:
+      - python/repark/tests/test_perf_facade_cdf_1.py (None in every column, whole-None, NaN/NaT witnesses)
+      - ledger §6 mutation M3 (dropped None mask reds 9 pins)
+    AT-8_lifecycle-cleanup: ATTACKED
+    AT-8-artifacts:
+      - bench old leg and every pin swap the dispatcher in a finally/monkeypatch
+      - live run: JVM slot verified empty before and after (C-007)
+    AT-9_concurrency-parallelism: N/A
+    AT-9-justification: single-threaded facade path; no thread, lock, or async primitive added
+    AT-10_coverage-honesty: ATTACKED
+    AT-10-artifacts:
+      - ledger §6 (red-first record: collection error, then 10 stub reds + 3 test bugs)
+      - ledger §6 (the unclaimed multi-violation guard named, not pinned)
+```
 
 ## SLR log (D3 — one per state-changing step)
 
@@ -308,6 +391,26 @@ SELF_LOGIC_REVIEW:
     - no new code comment: SATISFIED (self-check below)
   success_condition: the split contract pins the new surface; the full suite confirms
   step_risks: [hash computed from the wrong tree: HANDLED(hashes match the failure diff)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-CLOSE
+  agent: Actor
+  action: close the unit ledger with gates, attestation and all clauses PROVEN
+  charter_trace: C-007, C-008
+  preconditions:
+    - every brief gate exit 0 on the final tree: SATISFIED (§10 table)
+    - pin counts stated exactly: SATISFIED (27 equality, 24 refusal, counted)
+    - no background pytest/JVM left: SATISFIED (slot verified empty)
+    - attestation grammar valid: SATISFIED (this run)
+  success_condition: the ledger departs complete with zero OPEN clauses
+  step_risks: [none: HANDLED(ledger-only change; code untouched)]
   contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
   tripwire_scan: CLEAN
   uncertainty: NONE
