@@ -5499,6 +5499,236 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
 
+### EX-FN-1 — `arrays_zip` refuses; Spark zips element-wise with NULL fill
+
+- **repark** — `F.arrays_zip("a", "b")` raises `UnsupportedOperationException:
+  functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `arrays_zip([1, 2], ["x"])` answers `[{0: 1, 1: "x"}, {0: 2, 1:
+  None}]`; `arrays_zip([], ["y", "z"])` answers `[{0: None, 1: "y"}, {0: None, 1:
+  "z"}]`; a NULL array answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the zip kernel.
+
+### EX-FN-2 — `posexplode` / `posexplode_outer` refuse; Spark emits position rows
+
+- **repark** — both spellings raise `UnsupportedOperationException` (`posexplode is not
+  supported yet (no first-class unnest-with-ordinality; ...)`; `posexplode_outer is not
+  supported yet (see posexplode; ...)`).
+- **Apache Spark** — `posexplode([10, 20])` answers `(0, 10), (1, 20)`; `posexplode_outer`
+  answers the same two rows and keeps the empty and NULL arrays as `(NULL, NULL)` rows.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_posexplode_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both spellings
+  stay on the example backlog until the engine grows unnest-with-ordinality.
+
+### EX-FN-3 — `encode` / `decode` refuse charset codecs; Spark encodes UTF-8 and US-ASCII
+
+- **repark** — `F.encode("s", "utf-8")` builds but planning raises `PySparkException:
+  There is no built-in encoding named 'utf-8', currently supported encodings are: base64,
+  base64pad, hex`. The same refusal covers `utf-16`, `US-ASCII`, and `decode` with any
+  charset: the names are binary codecs here, not charset codecs.
+- **Apache Spark** — `encode("AB", "utf-16")` answers `feff00410042` (BOM-prefixed);
+  `encode("AB", "US-ASCII")` answers `4142`; `decode(encode(s, "utf-8"), "utf-8")`
+  round-trips every row including empty and NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_encode_decode_charset_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until a charset codec reaches the planner.
+
+### EX-FN-4 — column-referencing `expr` refuses; Spark binds the reference
+
+- **repark** — `F.expr("a + 1")` raises `AnalysisException: Schema error: No field named
+  a` at construction (the facade parses eagerly; the DataFrame-bound path is declared
+  missing on the facade). Column-free spellings are served: `expr("1 + 1")` answers 2
+  and `expr("make_date(2020, 1, 1)")` answers `2020-01-01`, both Spark-equal.
+- **Apache Spark** — `expr("a + 1")` over `(1,), (2,), (None,)` answers `[2, 3, None]`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_expr_column_reference_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog: column references are the name's core use, and a literal-only
+  example would document the edge while the middle raises.
+
+### EX-FN-5 — `format_number` refuses; Spark renders grouped decimals
+
+- **repark** — `F.format_number("x", 2)` raises `UnsupportedOperationException:
+  functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `format_number(12332.12345, 2)` answers `"12,332.12"`;
+  `format_number(0.5, 2)` answers `"0.50"`; `format_number(-9876.543, 2)` answers
+  `"-9,876.54"`; at four decimals `"12,332.1234"`, `"0.5000"`, `"-9,876.5430"`; NULL
+  stays NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the grouping renderer.
+
+### EX-FN-6 — `from_csv` refuses; Spark parses the row struct
+
+- **repark** — `F.from_csv("line", "a INT, b STRING")` raises `UnsupportedOperationException:
+  functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)`.
+- **Apache Spark** — `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
+  answers NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the CSV parse kernel lands.
+
+### EX-FN-7 — `hash` refuses; Spark answers the Murmur3 ints
+
+- **repark** — `F.hash("n")` raises `UnsupportedOperationException: functions.hash is not
+  supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
+  is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the hash kernel.
+
+### EX-FN-8 — `json_tuple` refuses; Spark projects the string fields
+
+- **repark** — `F.json_tuple("line", "a", "b")` raises `UnsupportedOperationException:
+  functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)`.
+- **Apache Spark** — `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
+  JSON and NULL answer `(NULL, NULL)`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05,
+  EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the JSON tuple kernel lands.
+
+### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them
+
+- **repark** — all three raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (engine gap; disclosed R-FN-BATCH4)`).
+- **Apache Spark** — over `[1, 2, 2, 3, 4, 5]` (NULL skipped): kurtosis is
+  `-1.1517159763313605`, skewness is `0.3053162697580512`, mode is `2`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
+  stay on the example backlog until the moment kernels land.
+
+### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp
+
+- **repark** — `F.make_timestamp("y", "mo", "d", "h", "mi", "s")` raises
+  `UnsupportedOperationException: functions.make_timestamp is not supported yet (engine gap;
+  disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `(2024, 1, 15, 10, 30, 5)` answers `2024-01-15T10:30:05`; February 30
+  raises `DATETIME_FIELD_OUT_OF_BOUNDS` under ANSI. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the constructor.
+
+### EX-FN-11 — `months_between` refuses; Spark answers the month distance
+
+- **repark** — `F.months_between("e", "s")` raises `UnsupportedOperationException:
+  functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `(2017-11-01, 2017-08-01)` answers `3.0`; `(1997-02-28, 1997-10-28)`
+  answers `-8.0`; NULL answers NULL; `roundOff=false` agrees on whole months. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the month arithmetic.
+
+### EX-FN-12 — `monotonically_increasing_id` / `spark_partition_id` refuse
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (single-node ... disclosed; R-FN-BATCH4)`).
+- **Apache Spark** — `monotonically_increasing_id()` over a five-row single-partition frame
+  answers `0..4`; `spark_partition_id()` answers `0`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_single_node_ids_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until single-node id semantics land.
+
+### EX-FN-13 — `input_file_name` refuses; Spark answers the read path
+
+- **repark** — `F.input_file_name()` raises `UnsupportedOperationException:
+  functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)`.
+- **Apache Spark** — reading a two-row CSV answers the `file:///.../letters.csv` URI.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_input_file_name_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the read path is tracked.
+
+### EX-FN-14 — `raise_error` refuses at build; Spark raises `USER_RAISED_EXCEPTION`
+
+- **repark** — `F.raise_error("boom")` raises `UnsupportedOperationException:
+  functions.raise_error evaluation is not supported yet (engine raise kernel deferred;
+  disclosed E1)` before any row runs.
+- **Apache Spark** — raises `[USER_RAISED_EXCEPTION] boom`, SQLSTATE `P0001`. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_raise_error_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the raise kernel lands.
+
+### EX-FN-15 — `replace` takes a plain-string search and `$1` answers a backslash
+
+- **repark** — `F.replace("s", "a", "X")` (plain Python strings) answers the literal
+  replace and agrees with Spark's values on plain arms (`"SpXrk SQL"`, `"XXX"`, `"X.c"`).
+  But the shared spelling means different things per engine: Spark's literal spelling
+  `F.replace("s", F.lit("a"), F.lit("X"))` raises `TypeError: decoding to str: need a
+  bytes-like object, Column found` here, a column search raises the same way, and `"$1"`
+  in the replacement answers one backslash per match (`"aaa"` becomes three backslashes).
+- **Apache Spark** — the search is `lit` or a column: plain arms agree with the repark
+  values above; `replace("aaa", lit("a"), lit("$1"))` answers `"$1$1$1"` (literal, no
+  group substitution); a column search is served (`("aaa", "a")` becomes `"XXX"`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_replace_lit_spelling_refuses`
+  and `::test_replace_dollar_arm_answers_backslash`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement (facade-spelling
+  class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
+  teaching repark's plain-string spelling would teach code Spark analysis-refuses.
+
+### EX-FN-16 — `schema_of_csv` / `schema_of_json` refuse; Spark infers the structs
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (disclosed E1)`).
+- **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
+  (likewise with an explicit `sep` option); `schema_of_json('{"a": 1, "b": "x"}')`
+  answers `"STRUCT<a: BIGINT, b: STRING>"`. Both take a foldable literal, not a column.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until the schema-inference kernels land.
+
+### EX-FN-17 — `sentences` refuses; Spark nests words by sentence
+
+- **repark** — `F.sentences("s")` raises `UnsupportedOperationException: functions.sentences
+  is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `"Hello world. How are you?"` answers `[["Hello", "world"], ["How",
+  "are", "you"]]`; `""` answers `[]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_sentences_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the sentence kernel lands.
+
+### EX-FN-18 — `split` refuses; Spark cuts on the pattern
+
+- **repark** — `F.split("s", ",")` raises `UnsupportedOperationException: functions.split is
+  not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `"a,b,c"` answers `["a", "b", "c"]`; `"a,,c"` answers `["a", "", "c"]`;
+  `""` answers `[""]`; NULL answers NULL; `limit=2` answers `["a", "b,c"]`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the split kernel.
+
+### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out
+
+- **repark** — `make_interval(1, 2, 1, 3, 4, 5, 6)` cast to string answers `"14 mons 10
+  days 4 hours 5 mins 6.000000000 secs"` (DataFusion's display). The date-arithmetic arms
+  agree with Spark and carry the example coverage: `2024-01-15` plus `(1y, 2mo, 3d)`
+  answers `2025-03-18`, and `2024-01-15T10:30:05` plus `(4h, 5m, 6s)` answers
+  `2024-01-15T14:35:11`.
+- **Apache Spark** — the same interval casts to `"1 years 2 months 10 days 4 hours 5
+  minutes 6 seconds"`; the date-arithmetic arms agree with the repark answers above.
+  Collecting the interval itself refuses on both engines (Spark:
+  `CalendarIntervalType.fromInternal is not implemented`). *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_interval_string_form`
+- **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement. The name stays
+  covered by the date-arithmetic arms; this row records the display arm until the cast
+  spells Spark's units.
+
 ### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,

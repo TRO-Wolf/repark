@@ -189,6 +189,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
+- [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
+  the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
+  pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
+  `encode`/`decode` charset arms (EX-FN-3), column-referencing `expr` (EX-FN-4),
+  `format_number` (EX-FN-5), `from_csv` (EX-FN-6), `hash` (EX-FN-7), `json_tuple`
+  (EX-FN-8), the `kurtosis`/`skewness`/`mode` trio (EX-FN-9), `make_timestamp`
+  (EX-FN-10), `months_between` (EX-FN-11), the single-node id pair (EX-FN-12),
+  `input_file_name` (EX-FN-13), `raise_error` (EX-FN-14), the `replace` lit
+  spelling plus its `$` arm (EX-FN-15), the `schema_of_*` pair (EX-FN-16),
+  `sentences` (EX-FN-17) and `split` (EX-FN-18) — and the `make_interval`
+  string-cast arm pin (EX-FN-19, BACKLOG ARM on a covered name). Refusals pin at call
+  time except the plan-time `encode`/`decode` pair; the `replace` `$` arm and the
+  interval display arm pin today's wrong values so the fixes red them. The module
+  docstring names the row span `EX-FN-1`…`EX-FN-19`.
+  pins: ex-25-functions-a/C-009
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),

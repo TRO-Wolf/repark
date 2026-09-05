@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-25 functions-a (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 213 → 193 —
+the 20 plainly supported names of the 45-name `F.*` long-tail (a) roster, covered by five
+new examples under `docs/examples/functions/` plus the `F.hours` arm in
+`partition_transforms.py`, every asserted value measured on live PySpark 4.1.2 (ANSI on,
+UTC). The other 25 roster names stay on the backlog with nineteen new §7 rows (EX-FN-1..19;
+`F.base64` keeps its BL-17 row), pinned by twenty tests in
+`python/repark/tests/test_examples_functions_a.py`. No `csv_json.py`: all four CSV/JSON
+names refuse. Red-first: 20 has-no-example findings with the files held out (exit 1), and
+a wrong-median control in `stats.py` failed the execute leg by name (exit 1).
+pins: ex-25-functions-a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 EX-24 ta-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 258 → 213 — the remaining 45
 `ta.*` roster names covered by twelve new examples under `docs/examples/ta/`, measured against the
 recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (the family's oracle; the same `.bin`
