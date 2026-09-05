@@ -83,7 +83,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Blanks string-literal / quoted-identifier / comment CONTENT so the guards and the sniff cannot
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
-- `create_table.rs` — CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
+- `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
+  `write_query`, handing the SELECT's physical plan to
+  [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md) for one writer per
+  DataFusion partition. CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
   catalog or LOUD refuse — never a silent `MemTable`), clause refusals, **V3-2** `format_version`
   resolved at execute against `repark.sql.allowCreateFormatVersion3` (default false; entries()
   reader, no `repark-functions` product edge; `execute_staged_create` /

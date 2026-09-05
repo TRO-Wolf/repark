@@ -159,6 +159,18 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
+- `partition_write.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** `IcebergPartitionWriteExec`, the
+  CTAS write node with one output partition per writer. Each writer drains its assigned input
+  partitions (`w`, `w+K`, `w+2K`, …) through the existing serial writer, so the row-to-file map is
+  fixed by the plan and not by completion order; `execute_stream` coalesces the node and the
+  coalesce spawns one task per partition, which is where the parquet encode and zstd of the
+  writers stop sharing a task. RePark spawns nothing and gains no dependency: the parallelism is
+  the DataFusion executor's, which is why this is a node and not a `tokio::spawn` (`clippy.toml`
+  bans it and `tokio` is a dev-dependency of this crate). Files are collected under the writer
+  index in a `BTreeMap` and then sorted by `ascending_partition_order`, so one commit's data files
+  and the `_row_id` derived from them are the same on every run (V3-11). An input error raises a
+  shared flag: siblings stop taking `Ok` batches, close what they hold, and every completed file
+  is deleted through `FileIO` before the first error surfaces.
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`

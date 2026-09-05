@@ -88,6 +88,12 @@ pins: rp-4-fork-repin/C-005, C-006
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
   from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
   pins: ctas-view-1-conform-stream/C-001, C-002
+  **PERF-ICE-WRITEPATH-1 (2026-09-05):** `write_ctas_stream` is now `write_ctas_query` — it hands
+  the SELECT's physical plan to
+  [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md), so each DataFusion
+  partition writes its own data files instead of one coalesced stream feeding cooperative
+  writers. The conform inheritance above is unchanged: the node calls the same stream writer per
+  partition.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including

@@ -246,8 +246,7 @@ pub(crate) async fn execute_ctas(
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    let stream = query.execute_stream().await?;
-    let data_files = write_ctas_stream(ctx, staged.table(), stream).await?;
+    let data_files = write_ctas_query(ctx, staged.table(), query).await?;
     staged
         .add_data_files(data_files)
         .commit(catalog.as_ref())
@@ -259,30 +258,18 @@ pub(crate) async fn execute_ctas(
     ctx.read_empty()
 }
 
-/// Stream a CTAS SELECT into Iceberg data files, honouring session write concurrency.
+/// Write a CTAS SELECT into Iceberg data files, one writer per DataFusion partition.
 /// # Errors
-/// Propagates stream, conform, or writer errors from `repark-write`.
-pub(crate) async fn write_ctas_stream(
+/// Propagates plan, conform, or writer errors from `repark-write`.
+pub(crate) async fn write_ctas_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
-    stream: datafusion::physical_plan::SendableRecordBatchStream,
+    query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
+    let plan = query.create_physical_plan().await?;
+    repark_iceberg::write::write_data_files_from_plan(table, plan, ctx.task_ctx(), concurrency)
         .await
-    } else {
-        repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    }
 }
 
 /// Resolve table location and `FileIO` for staged CTAS before any data write.
@@ -452,8 +439,7 @@ pub(crate) async fn execute_ctas_service_managed(
 
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
-        let stream = query.execute_stream().await?;
-        let data_files = write_ctas_stream(ctx, &table, stream).await?;
+        let data_files = write_ctas_query(ctx, &table, query).await?;
         if !data_files.is_empty() {
             repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
         }
