@@ -276,3 +276,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
   `fix/cutover-schema-1`.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [perf-facade-cdf-1-ledger.md](perf-facade-cdf-1-ledger.md) —
+  **PERF-FACADE-CDF-1 (2026-09-05), in flight:** PERF-ANALYSIS-1 candidate 2 —
+  `createDataFrame(list of tuples)` stops normalizing every cell in Python five times and
+  infers + converts column-wise, with nested columns delegated to the unchanged per-cell
+  path. Target `create/100000/tuples_count` ≤ 100 ms. `risk_tier: standard`. Branch
+  `perf/facade-cdf-1`.
+  pins: perf-facade-cdf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

@@ -59,6 +59,9 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   (65.04 ms at depth 100 — under the bar, so the deferral rests on correctness, not on the size
   of the prize) and says plainly that the first draft's 140.46 ms was measuring the wrong loop.
   pins: perf-facade-1/C-001, C-006, C-007, C-009
+  **PERF-FACADE-CDF-1 (2026-09-05)** appended §4, turning the §3 create controls into a
+  before/after pair (1,656.62 → 70.30 ms at 1e5 tuples); earlier tables untouched.
+  pins: perf-facade-cdf-1/C-001, C-005
 
 - [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the Round 3: the concurrency row names lane E (the ten `to_pandas` cells re-run alone).
   Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
