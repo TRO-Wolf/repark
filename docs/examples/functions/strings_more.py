@@ -1,4 +1,5 @@
 """Demonstrate the ``F.*`` scalar-string remainder: code points, choice, caps, extract, digest."""
+
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812

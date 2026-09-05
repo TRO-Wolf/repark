@@ -64,7 +64,7 @@ def test_from_csv_refuses() -> None:
 
 def test_hash_refuses() -> None:
     """hash refuses; Spark answers the Murmur3 ints (EX-FN-7)."""
-    with pytest.raises(UnsupportedOperationException, match="functions.hash"):
+    with pytest.raises(UnsupportedOperationException, match=r"functions\.hash"):
         F.hash("n")
 
 
@@ -145,13 +145,15 @@ def test_sentences_refuses() -> None:
 
 def test_split_refuses() -> None:
     """split refuses; Spark cuts on the pattern (EX-FN-18)."""
-    with pytest.raises(UnsupportedOperationException, match="functions.split"):
+    with pytest.raises(UnsupportedOperationException, match=r"functions\.split"):
         F.split("s", ",")
 
 
 def test_make_interval_string_form(spark: ReparkSession) -> None:
     """make_interval casts to DataFusion's terse form; Spark spells units out (EX-FN-19)."""
-    frame = spark.createDataFrame([(1, 2, 1, 3, 4, 5, 6)], "y INT, mo INT, w INT, d INT, h INT, mi INT, s INT")
+    frame = spark.createDataFrame(
+        [(1, 2, 1, 3, 4, 5, 6)], "y INT, mo INT, w INT, d INT, h INT, mi INT, s INT"
+    )
     rows = frame.select(
         F.make_interval("y", "mo", "w", "d", "h", "mi", "s").cast("string").alias("v")
     ).collect()

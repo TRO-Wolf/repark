@@ -199,7 +199,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `input_file_name` (EX-FN-13), `raise_error` (EX-FN-14), the `replace` lit
   spelling plus its `$` arm (EX-FN-15), the `schema_of_*` pair (EX-FN-16),
   `sentences` (EX-FN-17) and `split` (EX-FN-18) — and the `make_interval`
-  string-cast arm pin (EX-FN-19, BACKLOG ARM on a covered name). The module
+  string-cast arm pin (EX-FN-19, BACKLOG ARM on a covered name). Refusals pin at call
+  time except the plan-time `encode`/`decode` pair; the `replace` `$` arm and the
+  interval display arm pin today's wrong values so the fixes red them. The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
   pins: ex-25-functions-a/C-009
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**

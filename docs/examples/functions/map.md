@@ -68,7 +68,11 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [to_date_timestamp.py](to_date_timestamp.py) — `F.to_date` / `F.to_timestamp` parse
 - [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
 - [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
-- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.hours`, `F.years`,
+- [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+  `F.months`, `F.days`, `F.hours` and `F.bucket` through `writeTo(...).partitionedBy(...)`,
+  each asserting rows and `.files` partition values (the hours slots 473698/473702 are
+  Spark-grounded via `unix_seconds`). Scalar `F.hours` refuses on both engines.
+  pins: ex-25-functions-a/C-007
 - [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
 - [counting.py](counting.py) — `F.count_if` counts true rows only,
 - [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly

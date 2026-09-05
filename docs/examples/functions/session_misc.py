@@ -1,4 +1,5 @@
 """Demonstrate the session-user names, ``F.randstr`` lengths and ``F.isnan``."""
+
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812

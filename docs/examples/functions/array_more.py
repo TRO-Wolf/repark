@@ -1,4 +1,5 @@
 """Demonstrate the ``F.*`` array search, order, overlap, flatten and map-merge names."""
+
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
@@ -17,9 +18,7 @@ COVERS: list[str] = [
 def main() -> None:
     repark = ReparkSession.builder.appName("ex-array-more").master("local[1]").getOrCreate()
     try:
-        arrays = repark.createDataFrame(
-            [([10, 20, 30],), ([5],), ([],), (None,)], "a ARRAY<INT>"
-        )
+        arrays = repark.createDataFrame([([10, 20, 30],), ([5],), ([],), (None,)], "a ARRAY<INT>")
         rows = arrays.select(
             F.array_position("a", 20).alias("found"),
             F.array_position("a", 99).alias("missing"),
@@ -53,7 +52,7 @@ def main() -> None:
         values = [row["overlap"] for row in rows]
         print(f"F.arrays_overlap: {values!r}")
         if values != [True, False, None, None, None]:
-            raise SystemExit(f"F.arrays_overlap values {values!r} != [True, False, None, None, None]")
+            raise SystemExit(f"F.arrays_overlap values {values!r} != the overlap triple")
 
         nested = repark.createDataFrame(
             [([[1, 2], [3], []],), ([[None], [4]],), ([None],), (None,)], "a ARRAY<ARRAY<INT>>"

@@ -1,4 +1,5 @@
 """Demonstrate the ``F.percentile_approx`` / ``F.approx_percentile`` alias pair."""
+
 from __future__ import annotations
 
 import repark.functions as F  # noqa: N812
@@ -13,7 +14,7 @@ COVERS: list[str] = [
 def main() -> None:
     repark = ReparkSession.builder.appName("ex-stats").master("local[1]").getOrCreate()
     try:
-        ranks = repark.createDataFrame([(value,) for value in list(range(1, 101)) + [None]], "x INT")
+        ranks = repark.createDataFrame([(value,) for value in [*range(1, 101), None]], "x INT")
         rows = ranks.select(
             F.percentile_approx("x", 0.5).alias("median"),
             F.approx_percentile("x", 0.5).alias("median_alias"),

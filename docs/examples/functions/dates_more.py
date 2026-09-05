@@ -1,4 +1,5 @@
 """Demonstrate ``F.add_months`` at month ends and ``F.make_interval`` in date arithmetic."""
+
 from __future__ import annotations
 
 import datetime
@@ -64,7 +65,7 @@ def main() -> None:
         values = [row["shifted"] for row in rows]
         print(f"F.make_interval date shift: {values!r}")
         if values != [datetime.date(2025, 3, 18)]:
-            raise SystemExit(f"F.make_interval date shift {values!r} != [datetime.date(2025, 3, 18)]")
+            raise SystemExit(f"F.make_interval date shift {values!r} != [2025-03-18]")
 
         stamp = repark.createDataFrame([("2024-01-15 10:30:05",)], "t STRING").select(
             F.to_timestamp("t").alias("t")
@@ -80,9 +81,7 @@ def main() -> None:
         values = [row["shifted"] for row in rows]
         print(f"F.make_interval timestamp shift: {values!r}")
         if values != [datetime.datetime(2024, 1, 15, 14, 35, 11)]:
-            raise SystemExit(
-                f"F.make_interval timestamp shift {values!r} != [datetime.datetime(2024, 1, 15, 14, 35, 11)]"
-            )
+            raise SystemExit(f"F.make_interval timestamp shift {values!r} != [2024-01-15 14:35:11]")
     finally:
         repark.stop()
 
