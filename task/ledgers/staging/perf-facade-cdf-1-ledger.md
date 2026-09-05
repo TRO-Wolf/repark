@@ -46,17 +46,17 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Baseline first from the tracked runner on a release module, unchanged lane: the `create` cells plus floor, spread and load. | `run_facade.py --cells create`; §8. | OPEN | Baseline run lands before any product commit. |
+| C-001 | Baseline first from the tracked runner on a release module, unchanged lane: the `create` cells plus floor, spread and load. | `run_facade.py --cells create`; §8. | **PROVEN** | 1,756.67 ms pre-unit (load 14.35 → 14.65) before any product commit; floor 2.45 ms re-measured on the full run. |
 | C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | **PROVEN** | 52 pins green, 1 skipped (the JVM-gated live leg): Arrow field types, Arrow values by repr, and `collect()` by `(type name, repr)` all equal on both dispatchers. |
 | C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 22 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
 | C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | **PROVEN** | Shape pins green on both dispatchers; `test_interchange_parity.py` (TY-4/TY-5) green unchanged. Explicit schemas dispatch to the legacy path, verified by the StructType/DDL/bare-DataType pins. |
-| C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | OPEN |  |
+| C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | **PROVEN** | 70.30 ms same-process (66.65 ms second run) — met 30% under the bar; residue is the transpose + census + Arrow conversion (§8). |
 | C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | **PROVEN** | Seven cells in one run: tuples/nested/explicit old-vs-new pairs plus the pandas control (§8). The old leg swaps the dispatcher in a `finally`. |
 | C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | OPEN | JVM run once, beside at most one other JVM, then stopped. |
 | C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | OPEN |  |
 | C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | **PROVEN** | Collection-error red, then 10 stub reds; 4 of 4 mutations red (§6 table). |
 
-VERDICT: 9 clauses, 5 PROVEN, 4 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 7 PROVEN, 2 OPEN, 0 REJECTED.
 
 ## 1. Environment — what the lane actually had (2026-09-05)
 
@@ -166,6 +166,13 @@ reads 1.00×: both legs run the identical legacy path by dispatch, as designed; 
 explicit-schema path at ~1.27 s is now the slowest createDataFrame shape and stays out of
 this unit (brief: preserve, not rewrite).
 
+Second run, full battery the same day (`run-full-cdf1.json`, load ~19–25): the tuples pair
+reproduced at 1,620.75 → 66.65 ms, the floor re-measured at **2.45 ms** (five medians 73.69,
+75.62, 73.17, 75.06, 73.29), and the §1/§2 cells confirmed unmoved (`collect/1000000` 940.84
+against 939.85, `chain/100/build_only` 344.01 against 366.11 — load noise, no regression from
+this unit, which touches neither path). 70.30 ms is 28.7× the floor; pandas at 3.00 ms is the
+remaining structural gap (no transpose to pay).
+
 ## SLR log (D3 — one per state-changing step)
 
 ```yaml
@@ -260,6 +267,25 @@ SELF_LOGIC_REVIEW:
     - no new code comment: SATISFIED (self-check below)
   success_condition: each conf half runs under its own session and proves it
   step_risks: [none new: HANDLED(test-only change; product untouched)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-DOCS
+  agent: Actor
+  action: commit the registry row, baseline section and map trues with numbers
+  charter_trace: C-001, C-005
+  preconditions:
+    - pairs + floor measured on labeled runs: SATISFIED (§8, two runs)
+    - earlier baseline tables untouched: SATISFIED (§4 appended; §3 bytes kept)
+    - doc gates green: SATISFIED (this run)
+  success_condition: the registry, baseline and maps state the same numbers
+  step_risks: [stale-claim drift: HANDLED(the one stale bullet amended in place, dated)]
   contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
   tripwire_scan: CLEAN
   uncertainty: NONE

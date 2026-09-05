@@ -39,7 +39,7 @@ still mirror what `PERF-FACADE-1` replaced; if `columns`, `_iter_bound_columns` 
 be re-derived or dropped. The `create_old` leg is not a reconstruction — it calls the kept
 legacy path itself, so it stays the right comparison until the legacy path is removed.
 
-pins: perf-facade-cdf-1/C-001, C-005, C-006
+pins: perf-facade-cdf-1/C-001, C-005, C-006, C-008
 
 ## The createDataFrame cells (PERF-FACADE-CDF-1)
 
