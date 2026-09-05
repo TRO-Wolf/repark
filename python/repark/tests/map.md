@@ -2672,6 +2672,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The part-3 wall-clock target (≤ 20 ms) runs on a release module only (CI's wheel smoke is a
   debug build and read 34 ms); the delete-manifest pins (the shared cache answers after every
   `*.avro` is unlinked) are the every-build guard.
+  RP-13 (2026-09-05, pin `2ed39cb0`, F-CATIO-KEY) flipped the knob-on upgrade detector from the
+  NULL-lineage answer to the assigned lineage; `PERF-CATALOG-LINEAGE-CACHE-1` is FIXED.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
