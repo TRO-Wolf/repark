@@ -2,9 +2,11 @@
 
 #[cfg(feature = "allocator-mimalloc")]
 mod allocator;
+mod collect_rows;
 mod column;
 mod dataframe;
 mod fence;
+mod logical_names;
 mod ml;
 mod session;
 
@@ -97,6 +99,8 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         "IllegalArgumentException",
         module.py().get_type::<IllegalArgumentException>(),
     )?;
+    collect_rows::register(module)?;
+    logical_names::register(module)?;
     ml::register(module)?;
     Ok(())
 }

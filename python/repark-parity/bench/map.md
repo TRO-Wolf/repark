@@ -36,6 +36,11 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 - `dynflatten/` — **PERF-DYNFLATTEN-1** `dynamicFlatten` measurement bed +
   isolated repark cells + Spark explode oracle; see [dynflatten/map.md](dynflatten/map.md).
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003
+- `facade/` — **PERF-FACADE-1** facade-boundary battery: `collect()` row materialization and
+  `withColumn` chain building, with the pre-unit code path reconstructed in-process so both
+  legs of every before/after pair share one module and one load. No JVM, by design — the box
+  allows one Spark JVM at a time and this battery must not compete for it. See
+  [facade/map.md](facade/map.md). pins: perf-facade-1/C-009
 - `map.md` — this file.
 
 ## I want to…
@@ -57,6 +62,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the W-0 window-shape bench | `windows/run_w0.py --scale quick\|full --scratch <dir> --out <json>` |
 | Read W-0 numbers | [../../../task/window-bench-report-2026-08-31.md](../../../task/window-bench-report-2026-08-31.md) |
 | Run the dynamicFlatten measurement | `dynflatten/run_dynflatten.py --scale gate\|quick\|full --out /tmp/oc-dynflatten-bed` |
+| Run the facade-boundary measurement | `facade/run_facade.py --out /tmp/oc-facade-bed` (or `make facade-bench`) |
 | Read dynamicFlatten numbers | [../../../docs/perf/dynamic-flatten-baseline.md](../../../docs/perf/dynamic-flatten-baseline.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
