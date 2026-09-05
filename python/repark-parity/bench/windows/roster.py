@@ -150,7 +150,6 @@ REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = ()
 ABSENT_PLANNING_NAMES: Final[tuple[str, ...]] = (
     "any",
     "any_value",
-    "count_if",
     "every",
     "first",
     "kurtosis",

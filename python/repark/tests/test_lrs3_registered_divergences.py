@@ -76,22 +76,4 @@ def test_the_datafusion_spelling_still_resolves_too() -> None:
     assert session.sql("SELECT approx_distinct(g) AS r FROM lrs3_alias2").collect()[0]["r"] == 2
 
 
-# ---- BL-8 — reached through the door's own spelling ------------------------------
-
-
-def test_bl8_the_door_still_returns_unsigned_where_the_facade_returns_bigint() -> None:
-    """A ratchet, and it is meant to go RED when the door is fixed.
-
-    Spark gives ``bigint`` on both doors. The facade agrees with Spark; the door does not, and the
-    cost of that gap is on disk — a ``UInt64`` column written to Parquet is read back by Spark as
-    ``decimal(20,0)``.
-    """
-    session = _session()
-    frame = session.createDataFrame([(1,), (2,), (1,)], "g int")
-    frame.createOrReplaceTempView("lrs3_bl8")
-    door = session.sql("SELECT approx_count_distinct(g) AS r FROM lrs3_bl8").toArrow()
-    facade = frame.agg(F.approx_count_distinct("g").alias("r")).toArrow()
-    assert str(facade.schema.field("r").type) == "int64"
-    assert str(door.schema.field("r").type) == "uint64", (
-        "the SQL door no longer returns unsigned — retire registry row BL-8"
-    )
+# ---- BL-8 — retired by TYPES-1 (2026-09-05): the SQL door answers bigint ----

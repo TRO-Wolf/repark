@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        6303,
+        6305,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -190,7 +190,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar UDF execution from registration and refusal cases.",
     ),
     "python/repark/tests/test_window_parity.py": (
-        1481,
+        1422,
         "Window parity frames and functions share one module.",
         "Split frame semantics from ranking and analytic function families.",
     ),

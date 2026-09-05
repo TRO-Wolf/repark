@@ -16,8 +16,9 @@ window-exec spill is UNMEASURED.
 ## Contents
 
 - `roster.py` — Spark 4.1.2 probe roster (the C-002 / C-009 finite domain), SQL
-  shapes, fifteen planning-absent names (`try_avg`
-  left the absent set when FNP-7 landed), scale constants
+  shapes, fourteen planning-absent names (`try_avg`
+  left the absent set when FNP-7 landed; `count_if` left when TYPES-1 planned it
+  on the SQL door), scale constants
   (`FULL_UNPARTITIONED_ROWS = 1e7`).
   **WIN-SLIDE-1 (2026-09-04):** `REFUSING_SLIDING_NAMES` is now `()` — the frozen refuse set is
   EMPTY, and the thirteen names moved to `RESCANNED_SLIDING_NAMES`, which the registry guard reads

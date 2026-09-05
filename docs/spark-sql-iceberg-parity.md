@@ -718,8 +718,8 @@ them, and the document is ordered by surface, never by date.
 
 ### TY-3 — an inline SQL decimal literal
 
-- **repark** — after U2, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is still Int64, so
-  `union(VALUES (1), VALUES (2.5))` yields `decimal128(21,1)` / nullable with `Decimal('1.0')`,
+- **repark** — `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is Int32, so
+  `union(VALUES (1), VALUES (2.5))` yields `decimal128(11,1)` / nullable with `Decimal('1.0')`,
   `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
@@ -738,6 +738,10 @@ them, and the document is ordered by surface, never by date.
   nor Spark's `(11,1)`. Observed type after U3 is still `decimal128(21,1)` **nullable**
   vs Spark `(11,1)` **non-null**. Residual is INT-literal-as-INT, not min-precision
   arithmetic.
+  **Dated 2026-09-05 (TYPES-1):** the width half converged — `VALUES (1)` is `Int32`, so
+  the union is `decimal128(11,1)` like Spark. The declaration is revisited and **kept**
+  on nullability only (**nullable** vs Spark **non-null**).
+  pins: types-1/C-002
 
 ### TY-4 — `createDataFrame` widens Arrow int32 to int64
 
@@ -2090,27 +2094,31 @@ the pin rather than obeying it.
 - **Rationale** — DELIBERATE refusal, low priority to fix. The facade's only fallback is the
   Cartesian path, which returns an m×n result set — a wrong answer, not a narrower one.
 
-### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type
+### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `uint64` non-null (values match Spark).
+- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `int32` non-null (values match Spark).
 - **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[rank_with_ties]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). SQL door leaves DataFusion UInt64; DF-API
-  door already casts row_number to IntegerType.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[rank_with_ties]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` casts the rank family to
+  `Int32` in the analyzer. pins: types-1/C-005
 
-### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order)
+### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order) — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `row_number() OVER (ORDER BY k, id)` → `uint64`.
+- **repark** — `row_number() OVER (ORDER BY k, id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[row_number_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Sibling of G5-RANK-TYPE-1.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[row_number_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Sibling of G5-RANK-TYPE-1. pins: types-1/C-005
 
-### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type
+### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `ntile(4) OVER (ORDER BY id)` → `uint64`.
+- **repark** — `ntile(4) OVER (ORDER BY id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Completes the ranking-family type class.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Completes the ranking-family type class.
+  pins: types-1/C-005
 
 > **Temporal `RANGE` window frames — supported, with a corrected bare-offset envelope
 > (G5b / #62, 2026-08-11).** A `RANGE` frame bounded by an interval over a `TIMESTAMP` or
@@ -2292,26 +2300,20 @@ the pin rather than obeying it.
   guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
   permanently documents absence without a silent path.
 
-### BL-8 — SQL-door count-like aggregates return `UInt64`
+### BL-8 — SQL-door count-like aggregates return `UInt64` — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** casts a count-like aggregate to signed `bigint`
-  (`df.agg(F.regr_count("y", "x"))` → `int64`, `F.approx_count_distinct` likewise), taken from the
-  aggregate's own declared return type rather than a name list. The **SQL door** does not:
-  `SELECT regr_count(y, x)` and `SELECT approx_distinct(g)` hand back Arrow `UInt64`. So the two
-  doors reach the same kernel and disagree on the result type.
+- **repark** — both doors answer signed `bigint`: the **facade** casts from the aggregate's
+  declared return type, and the **SQL door** now wraps `SignedAggregate` casts in the analyzer
+  (`SELECT regr_count(y, x)`, `SELECT approx_distinct(g)`, `SELECT count_if(...)` → `int64`).
 - **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
   *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
   `approx_count_distinct` → `struct<r:bigint>`.)*
-- **Pin** — `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`,
-  whose `DOOR_RETURNS_UNSIGNED` set is a **ratchet**: the pin asserts the door still returns
-  unsigned, so closing this row turns it RED on purpose.
-- **Rationale** — BACKLOG, split deliberately. The facade is the surface the parity campaign is
-  about and it is now correct; correcting the door means moving the cast into the shared analyzer
-  layer, where the rewrite must be idempotent across re-analysis and must not rename an `Aggregate`
-  node's output field that a parent `Projection` refers to by name. That is an engine-semantics
-  unit. Recorded rather than left as a STATUS promise, because a `UInt64` column written to
-  Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
-  the gap is on disk, not just in a schema string.
+- **Pin** — `python/repark/tests/test_types_1.py` count-like pins;
+  `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
+  (its `DOOR_RETURNS_UNSIGNED` set ratcheted to empty).
+- **Rationale** — FIXED (2026-09-05, TYPES-1). The cast moved into the shared analyzer layer
+  as an idempotent rewrite that preserves `Aggregate` output field names.
+  pins: types-1/C-003
 
 ### RE-2 — a zero-width match at a mid-surrogate position
 
@@ -2583,33 +2585,26 @@ the pin rather than obeying it.
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.
 
-### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one
+### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one — **FIXED 2026-09-05, TYPES-1**
 
-*(Nullability half closed 2026-09-04 by CUTOVER-SCHEMA-1; the BACKLOG below is width
-only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
+*(Nullability half closed 2026-09-04 by CUTOVER-SCHEMA-1; width half closed 2026-09-05 by
+TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 - **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
-  id, 'a' AS name` writes `{"name": "id", "required": false, "type": "long"}` and
-  `{"name": "name", "required": false, "type": "string"}` into the table metadata — wider but
-  **optional** since CUTOVER-SCHEMA-1 (2026-09-04). The rows round-trip and the format version
-  and partition spec are Spark-equal; the remaining divergence is the derived width.
+  id, 'a' AS name` writes `{"name": "id", "required": false, "type": "int"}` and
+  `{"name": "name", "required": false, "type": "string"}` into the table metadata — the
+  literal's own width and **optional**. The rows round-trip and the format version
+  and partition spec are Spark-equal.
 - **Apache Spark** — writes `{"name": "id", "required": false, "type": "int"}` and
   `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
   own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
   raw metadata JSON 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
-  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
-  `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
-  derivation, not the type mapping.
-- **Rationale** — BACKLOG on width; the nullability half closed 2026-09-04 (CUTOVER-SCHEMA-1).
-  **Width:** DataFusion
-  types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
-  `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
-  would make CTAS disagree with every other repark path. **Nullability:** closed — CTAS now
-  derives Iceberg requiredness from the relaxed query schema, so the committed columns are
-  optional throughout, while SE-1's tighten-derived refusal (`ctas.rs`, R-D) still refuses an
-  Iceberg CREATE whose output carries a non-nullable field from a tighten-derived source. The
-  `ctas-v3` pin is re-measured to optional; the verdict stays DIVERGES on width.
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]` (verdict now EQUAL);
+  the column-def `[create-v3-flat]` control stores `id int` optional on BOTH engines.
+- **Rationale** — FIXED (nullability 2026-09-04 CUTOVER-SCHEMA-1; width 2026-09-05 TYPES-1).
+  Integer literals narrow to `INT` on every path, so the CTAS derivation agrees with Spark.
+  pins: types-1/C-001
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
@@ -2827,20 +2822,19 @@ only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
   `ceil(total / target)` sizing, which is fork work.
 
-### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
+### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
-  a TIMESTAMP value for the same call.
+- **repark** — both doors return a session-zone STRING (`'1970-01-01 00:00:00'` at UTC): the
+  SQL door overwrites DataFusion's `from_unixtime` with a Spark kernel (1- and 2-arg shapes).
 - **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
   *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
   session zone is not UTC; repark's default zone is UTC by registry row
   [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
   differs by that already-declared row, not by this one.)*
-- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
-- **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
-  A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
-  would have written a string. Not closed here because it changes what a working query
-  returns (the same class of break `LOG-1` needed a dated ruling to take).
+- **Pin** — `python/repark/tests/test_types_1.py` `from_unixtime` pins (the LRS-4 UNIX-1
+  divergence pin retired with the row).
+- **Rationale** — FIXED (2026-09-05, TYPES-1).
+  pins: types-1/C-006
 
 ### V3-LINEAGE-1 — `rewrite_data_files` carries row lineage through format-v3 compaction
 

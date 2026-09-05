@@ -103,7 +103,7 @@ def test_rollback_to_snapshot_restores_multiset(
 
     after = spark.sql(f"SELECT id, name FROM {TABLE} ORDER BY id").to_arrow()
     assert _arrow_ids(after) == multi_snapshot["ids_s1"]
-    assert after.schema.field("id").type == pa.int64()
+    assert after.schema.field("id").type == pa.int32()
     assert after.schema.field("name").type == pa.string()
 
 
@@ -229,7 +229,7 @@ def test_rewrite_data_files_preserves_multiset_and_reduces_files(spark: ReparkSe
 
     after = spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow()
     assert _arrow_ids(after) == before_ids
-    assert after.schema.field("id").type == pa.int64()
+    assert after.schema.field("id").type == pa.int32()
     assert after.schema.field("name").type == pa.string()
 
     files_after = spark.sql(f"SELECT * FROM {table}.files").to_arrow()
@@ -434,7 +434,7 @@ def test_rewrite_manifests_compacts_like_spark(spark: ReparkSession) -> None:
     assert _manifest_count(spark, table) == 1
     after = spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow()
     assert _arrow_ids(after) == before
-    assert after.schema.field("id").type == pa.int64()
+    assert after.schema.field("id").type == pa.int32()
     assert after.schema.field("name").type == pa.string()
 
 

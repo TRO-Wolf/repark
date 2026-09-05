@@ -206,6 +206,11 @@ converter and its two type predicates move to `dataframe/rows_export.py`; `core.
 three delegations. Ratchets DOWN.
 pins: perf-facade-1/C-001, C-005
 
+TYPES-1 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6305 (INCREASE — the
+null-top `last` wrap; owner approval requested at merge) and `test_window_parity.py`
+1481→1422 (ratchets DOWN — stale tiers and the dead `TYPE_DISC` lead-in deleted).
+pins: types-1/C-008
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

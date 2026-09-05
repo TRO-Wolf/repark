@@ -65,7 +65,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/compat/runner.py", 1279),
     ("python/repark-parity/tests/test_compat_harness.py", 1021),
     ("python/repark/src/repark/spark/column.py", 1589),
-    ("python/repark/src/repark/spark/dataframe/core.py", 6303),
+    ("python/repark/src/repark/spark/dataframe/core.py", 6305),
     ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1239),
     ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1168),
     ("python/repark/src/repark/spark/dataframe/writer_readwriter.py", 1113),
@@ -91,7 +91,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_ta.py", 1020),
     ("python/repark/tests/test_tpch_compare_unit.py", 1551),
     ("python/repark/tests/test_udf.py", 1170),
-    ("python/repark/tests/test_window_parity.py", 1481),
+    ("python/repark/tests/test_window_parity.py", 1422),
 )
 
 

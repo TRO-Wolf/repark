@@ -2353,9 +2353,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`), lag/lead default + explicit default
   value + NULL payload, partitioned vs unpartitioned, ORDER BY NULLS FIRST/LAST, and ≥2
   DataFrame-API `Window.partitionBy` rows (CP-11). Seed via `createDataFrame` + temp view so the
-  corpus measures WINDOW behaviour, not VALUES literal-type noise. 31 equalities (value+type match
-  on frames/offsets/default-frame trap + temporal working path) + 11 disclosures (SQL-door ranking
-  returns Arrow `uint64` vs Spark `int32`; R4 residual; R1/R5 flipped by W-4). Every row
+  corpus measures WINDOW behaviour, not VALUES literal-type noise. 41 equalities + 1 disclosure
+  (temporal following-to-following). TYPES-1 (2026-09-05): the SQL-door ranking TYPE
+  disclosures converged to `int32` equality and the dead `TYPE_DISC` lead-in is deleted;
+  five stale Spark-2.x-era no-engine tiers removed (1481 → 1422 lines). Every row
   asserts on the Arrow path via `repark_parity.assert_frames_equal`; disclosure failures are
   CLASSIFIED CONVERGED (flip-don't-delete) vs regression. Determinism: total ORDER BY or
   peer-determined columns. Ledger: `task/w4-windows-ledger.md`.

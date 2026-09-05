@@ -70,37 +70,36 @@ def test_native_unaliased_typed_add_columns_preserve_binary_name() -> None:
     assert all("__repark_spark_int_" not in name for name in columns)
 
 
-def test_untyped_one_plus_one_type_is_int64() -> None:
-    """Bare ``SELECT 1 + 1`` stays int64 on a planner-equipped Spark session.
+def test_untyped_one_plus_one_type_is_int32() -> None:
+    """Bare ``SELECT 1 + 1`` is int32 on a planner-equipped Spark session.
 
     pins: f-y10-1-int-overflow/C-001, C-002
     """
     spark = _spark()
     table = spark.sql("SELECT 1 + 1 AS v").to_arrow()
-    assert str(table.schema.field("v").type) == "int64"
+    assert str(table.schema.field("v").type) == "int32"
     assert table.column("v").to_pylist() == [2]
 
 
-def test_untyped_overflow_widens_to_int64() -> None:
-    """Untyped ``2147483647 + 1`` widens to int64; it must not raise or wrap as INT.
+def test_untyped_overflow_raises_under_default_ansi() -> None:
+    """Untyped ``2147483647 + 1`` raises ARITHMETIC_OVERFLOW; it must not widen.
 
     pins: f-y10-1-int-overflow/C-001, C-002
     """
     spark = _spark()
-    table = spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()
-    assert str(table.schema.field("v").type) == "int64"
-    assert table.column("v").to_pylist() == [2147483648]
+    with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
+        spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()
 
 
-def test_untyped_overflow_widens_when_ansi_false() -> None:
-    """Untyped overflow stays the Int64 widen under ``ansi=false`` too.
+def test_untyped_overflow_wraps_when_ansi_false() -> None:
+    """Untyped overflow wraps as INT under ``ansi=false``, like the typed path.
 
     pins: f-y10-1-int-overflow/C-001, C-002
     """
     spark = _spark_legacy()
     table = spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()
-    assert str(table.schema.field("v").type) == "int64"
-    assert table.column("v").to_pylist() == [2147483648]
+    assert str(table.schema.field("v").type) == "int32"
+    assert table.column("v").to_pylist() == [-2147483648]
 
 
 def test_int32_add_max_plus_one_raises_under_default_ansi() -> None:

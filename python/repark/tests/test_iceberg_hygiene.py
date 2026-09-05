@@ -117,7 +117,7 @@ def test_ref_ddl_create_branch_tag_time_travel(spark: ReparkSession) -> None:
 
     tag_arrow = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'tag_s1' ORDER BY id").to_arrow()
     assert _arrow_ids(tag_arrow) == [1, 2, 3]
-    assert _schema_names_types(tag_arrow) == [("id", "int64")]
+    assert _schema_names_types(tag_arrow) == [("id", "int32")]
 
     branch_arrow = spark.sql(
         f"SELECT id FROM {TABLE} VERSION AS OF 'branch_s2' ORDER BY id"
