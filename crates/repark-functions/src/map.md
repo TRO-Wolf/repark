@@ -223,7 +223,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
   `analyzer_rules()` (`SparkIntegerLiteral` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
-  cardinality + instant_ts + a closing `TypeCoercion`; the session installs them via the
+  cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
+  DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
+  next rule (pins: types-1/C-007); the session installs them via the
   Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +

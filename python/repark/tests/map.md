@@ -2121,7 +2121,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   repark `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null. **U3 dated
   2026-08-13:** still DECLARED — U3 `fromLiteral` is `+ - *` only; UNION uses Spark
   `forType(INT)=(10,0)`, not digits. **R-2 dated 2026-08-14:** still DECLARED — hook is
-  `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm). Count-mismatch raises; `unionByName`
+  `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm).
+  **TYPES-1 dated 2026-09-05:** width converged to `decimal128(11,1)` like Spark; still
+  DECLARED on nullability only (registry TY-3 keeps the declaration; cf. the TYPES-1 union
+  residue TY-6). pins: types-1/C-002. Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -2928,8 +2931,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_lrs3_registered_divergences.py` — **LRS-3 (2026-08-20):** the pins that let registry rows
   `RAND-1` and `BL-8` land (§6: a row lands with its pin or it does not land), plus the SQL door's
-  new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
-  unsigned, so closing the row reds it on purpose.
+  new `approx_count_distinct` spelling. The `BL-8` pin was a ratchet — it asserted the door is
+  STILL unsigned, so closing the row redded it on purpose. **TYPES-1 (2026-09-05):** `BL-8` is
+  FIXED (the SQL door answers `bigint`) — the ratchet retired with the row; `RAND-1` and the
+  alias pins stay. pins: types-1/C-003
 
 - `test_sem6_substr_zero_width_null.py` — **SEM-6 (2026-08-21):** `regexp_substr` returns NULL for
   a zero-width match, closing registry row `RE-3`. Seven divergent cases and six controls; the
@@ -2969,6 +2974,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **SEM-1 (2026-08-31):** `LOG-1` pins flip to Spark: `log(8)` is the natural log on both
   Spark doors; both arities return NULL on the six non-positive edges. `UNIX-1` is unchanged.
   pins: sem-1-spark-answer-parity/C-004, C-008
+  **TYPES-1 (2026-09-05):** `UNIX-1` is FIXED (the SQL door answers session-zone STRING) —
+  its divergence pin retired with the row; the `LOG-1` pins stay. pins: types-1/C-006
 - `test_sem1_spark_log.py` — **SEM-1 (2026-08-31):** Spark-door `log` kernel, `F.log` two-arg,
   native ANSI base-10 control, `log2`/`log1p`/`ln` incidentals. Oracle live PySpark 4.1.2.
   pins: sem-1-spark-answer-parity/C-004, C-006, C-007, C-010

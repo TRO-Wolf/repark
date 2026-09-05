@@ -113,7 +113,6 @@ def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) 
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")
     result = ints.union(dec).to_arrow()
 
-    # repark's ACTUAL output after TYPES-1 — width matches Spark, nullability does not.
     repark_out = pa.table(
         [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(11, 1))],
         schema=pa.schema([pa.field("v", pa.decimal128(11, 1), nullable=True)]),

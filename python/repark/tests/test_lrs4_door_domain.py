@@ -56,6 +56,3 @@ def test_log1_both_arities_null_on_non_positive_operands() -> None:
     assert door("log(10, -1)") is None
     assert door("log(0)") is None
     assert door("log(-1)") is None
-
-
-# UNIX-1 — retired by TYPES-1 (2026-09-05): the SQL door answers STRING.

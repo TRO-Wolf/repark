@@ -74,6 +74,3 @@ def test_the_datafusion_spelling_still_resolves_too() -> None:
     session = _session()
     session.createDataFrame([(1,), (2,), (1,)], "g int").createOrReplaceTempView("lrs3_alias2")
     assert session.sql("SELECT approx_distinct(g) AS r FROM lrs3_alias2").collect()[0]["r"] == 2
-
-
-# ---- BL-8 — retired by TYPES-1 (2026-09-05): the SQL door answers bigint ----

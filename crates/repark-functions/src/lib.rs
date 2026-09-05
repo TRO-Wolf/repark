@@ -126,9 +126,7 @@ pub fn register_all(ctx: &SessionContext) {
     integer_spark::register_spark_integer_planner(ctx);
 }
 
-/// Return analyzer rules: integer-literal narrowing first, then decimal precision,
-/// decimal rewrite, semantics, safety, LTZ casts, and a closing `TypeCoercion`
-/// pass so mixes the narrowing re-opens never reach the next rule unclosed.
+/// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![

@@ -108,8 +108,9 @@ def test_sql_version_as_of_snapshot_id(
     s2 = multi_snapshot["s2"]
     arrow = spark.sql(f"SELECT id, name FROM {TABLE} VERSION AS OF {s1} ORDER BY id").to_arrow()
     assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
-    # VALUES-inferred ids are INT (int32) on the Iceberg/Arrow path — pin type, not only names.
-    assert _schema_names_types(arrow) == [("id", "int32"), ("name", "string")]
+    assert _schema_names_types(arrow) == [("id", "int32"), ("name", "string")], (
+        "VALUES-inferred ids are INT (int32) on the Iceberg/Arrow path"
+    )
 
     arrow2 = spark.sql(
         f"SELECT id FROM {TABLE} FOR SYSTEM_VERSION AS OF {s2} ORDER BY id"

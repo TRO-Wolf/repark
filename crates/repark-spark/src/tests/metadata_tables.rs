@@ -184,7 +184,6 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         .await
         .unwrap();
     assert_eq!(real[0].num_rows(), 1);
-    // CTAS-inferred integer literals are Int32 (Spark int) on the Iceberg/Arrow path.
     let x_col = real[0]
         .column(0)
         .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
