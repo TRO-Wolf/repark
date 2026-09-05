@@ -4518,7 +4518,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog materializes carries the one cache. `t_many/count_id/stmt2` (193 manifests)
   falls from **115.81 ms to 10.95 ms** (target ≤ 20; the point-query twin 124.75 →
   14.75), and the one-manifest twin drops 14.37 → 10.49 — the repeated read now opens no
-  manifest-list and no manifest at all. Two things this row does NOT claim. (1) The
+  manifest-list and no manifest at all. **HALT caveat 2026-09-05:** this FIXED row stands
+  only with `PERF-CATALOG-LINEAGE-CACHE-1` — the shared cache serves wrong-context lineage
+  on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands, so the default-ON choice
+  is gated and this unit halted before merge. Two things this row does NOT claim. (1) The
   commit side is untouched: the fork's transaction, maintenance and inspect paths load
   manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
   at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
@@ -4546,6 +4549,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   route the transaction/commit manifest reads through the table's `ObjectCache`. Nothing
   in RePark changes at that trigger — the shared cache is already on every table — so
   there is no RePark pin to un-skip; the §5 census table re-measures instead.
+- **PERF-CATALOG-LINEAGE-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2 (the finding
+  that HALTED it). **BACKLOG** behind a fork change. The fork's shared manifest cache keys by
+  `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
+  that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
+  `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
+  range forces every entry to `None` while a `Some` range assigns running counters. A V2 list
+  carries no range; the post-upgrade V3 list carries one for the SAME path — so a v2-context
+  parse poisons every later v3 read of that path within one catalog lifetime, and
+  upgrade-boundary tables serve `_row_id` NULL. Measured: 4 facade tests red with the cache
+  on (`test_v3_legacy_delete_merge` × 2, the `alter-set-format-version-3-mor` statement row,
+  `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`), all green with
+  `manifestCacheBytes = "0"` on the same binary. Per-table caches never shared across the
+  boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
+  the key carry the assignment input, or move assignment out of the cached object. No
+  RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
+  Until it lands, `PERF-ICE-MANIFEST-1`'s FIXED row below carries a HALT caveat and the
+  default-ON choice is gated: the four red tests pass knob-off today and must pass knob-on
+  before any default-ON merge.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on

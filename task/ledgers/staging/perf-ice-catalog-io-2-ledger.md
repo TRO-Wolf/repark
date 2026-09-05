@@ -4,9 +4,10 @@
 · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard** (catalog correctness: a manifest cache in a
 `plan_files` path is where staleness dies quietly; the battery below is the mitigation).
-**Registry:** `PERF-ICE-MANIFEST-1` (FIXED, see C-006), `PERF-CATALOG-CACHE-BOUND-1`
+**Registry:** `PERF-ICE-MANIFEST-1` (FIXED with a HALT caveat, see C-006), `PERF-CATALOG-CACHE-BOUND-1`
 (NARROWED to the metadata cache, see C-005), `PERF-CATALOG-COMMIT-CACHE-1` (new, BACKLOG behind
-fork ask `F-CATIO-COMMIT`, see C-006).
+fork ask `F-CATIO-COMMIT`, see C-006), `PERF-CATALOG-LINEAGE-CACHE-1` (new, BACKLOG behind fork
+ask `F-CATIO-KEY`, see HALT).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -29,15 +30,15 @@ the orchestrator's pickup).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | A session key `repark.iceberg.manifestCacheBytes` with underscore alias `repark.iceberg.manifest_cache_bytes` sizes the shared manifest cache; default ON at 32 MiB; `0` disables; a bad value fails loud at session build naming BOTH the key the user set and the canonical spelling. | Rust parse pins (both spellings, both refusals, `0` accepted, default); Python refusal legs. | **PROVEN** | `from_config_map` takes both spellings, refuses `"many"` / `"-1"` / `""` naming both, parses `"0"` to 0, and defaults to 33554432 — five pins in `caches.rs::tests`. Python: the refusal parametrizations grow by the new key and alias, and the `"0"` / `"512"` legs build. The key flows through the pre-existing `session.rs` `from_config_map` call, so no session change was needed. Default ON because the prize is 10× (115.81 → 10.95 ms), the objects are immutable at their path, the bound is fork-enforced, and the metadata cache set the default-on precedent. |
+| C-001 | A session key `repark.iceberg.manifestCacheBytes` with underscore alias `repark.iceberg.manifest_cache_bytes` sizes the shared manifest cache; default ON at 32 MiB; `0` disables; a bad value fails loud at session build naming BOTH the key the user set and the canonical spelling. | Rust parse pins (both spellings, both refusals, `0` accepted, default); Python refusal legs. | **PROVEN** | `from_config_map` takes both spellings, refuses `"many"` / `"-1"` / `""` naming both, parses `"0"` to 0, and defaults to 33554432 — five pins in `caches.rs::tests`. Python: the refusal parametrizations grow by the new key and alias, and the `"0"` / `"512"` legs build. The key flows through the pre-existing `session.rs` `from_config_map` call, so no session change was needed. Default ON was argued from the 10× prize (115.81 → 10.95 ms), file-immutability at the path, the fork-enforced bound, and the metadata-cache precedent — but HALT refutes the premise as stated (the PARSED object embeds list-entry lineage context), so the default-ON choice is gated on the F-CATIO-KEY ruling in the HALT section. |
 | C-002 | The bytes flow through `CatalogCaches` into `MemoryCatalogBuilder::with_shared_object_cache_bytes`; every table the memory catalog loads shares the ONE `ObjectCache`; the only loads outside it are the fork's `#[cfg(test)]` fixtures and catalog-detached `StaticTable` builds, both named. | Builder-wiring pins: two doors over one catalog share (a read after manifest deletion still answers); `memory_catalog` keeps its signature. | **PROVEN** | `memory_catalog_cached` passes nonzero bytes to `with_shared_object_cache_bytes`; `memory_catalog(warehouse)` keeps its signature (and now sizes a private shared cache per call, recorded like IO-1's metadata analogue). A second door answers after every manifest is deleted from disk; a configured 1 MiB value builds a sharing cache. Fork read at `79119643`: the memory catalog assembles tables in exactly three places, all through `table_builder()`; its only direct `Table::builder()` is a `#[cfg(test)]` fixture. Named non-members: `StaticTable::from_metadata*`, staged create/replace (RePark uses them write-side), the `delete_reachable_files` walk, and all non-memory catalogs. Critic correction recorded: tables CARRY the cache, but the fork's transaction/maintenance/inspect paths never consult it (0 cached vs 166 direct loads in `transaction/`) — filed as `F-CATIO-COMMIT`, not a wiring defect. |
 | C-003 | The part-3 pin is un-skipped and green: `t_many/count_id/stmt2` ≤ 20 ms on a release module; a knob-off (`0`) control shows the repeated read re-opens manifests. | The un-skipped timing leg; the knob-off delete-trick leg; `t_many_merged` before/after. | **PROVEN** | The leg runs un-skipped and green. Probe cells on the release module: `t_many/count_id/stmt2` 115.81 → **10.95 ms** (spread 1.22, target ≤ 20 — roughly half the target on a 193-manifest table, while the always-run leg times a 48-manifest fixture, so the margin is wider where it gates); `t_many_merged` 14.37 → 10.49. Knob-off controls in Rust (`with_zero_bytes_a_repeated_read_opens_manifests_again`, parsing `"0"` end to end) and Python (the re-read raises naming `manifest`). |
-| C-004 | The staleness contract holds with the manifest cache on: commit visibility, schema change, MERGE after another door's commit, DROP + re-CREATE, `register_table`, rewrite + expire immutability-by-path (next read opens only new paths, same rows), time-travel and branch reads unaffected. | The IO-1 Rust battery re-run green under default settings (it builds `CatalogCaches::default`, so the manifest cache is on) plus new Python legs per cell. | **PROVEN** | All six IO-1 Rust staleness pins run green under `CatalogCaches::default()` (32 MiB manifest cache on) — 16/16 in the module. Python: new legs for MERGE-after-commit (matches the committed row), DROP + re-CREATE (answers its own row count), `register_table` (correct across a commit), rewrite + expire (every pre-rewrite path gone from disk, next read answers the same rows), `VERSION AS OF` and branch reads; the IO-1 commit-visibility and schema-change legs run unchanged and are the cache-on re-run for those cells. Two-door shape stays in Rust (two Python sessions cannot share one memory catalog). No stale read anywhere: HALT condition never met. |
+| C-004 | The staleness contract holds with the manifest cache on: commit visibility, schema change, MERGE after another door's commit, DROP + re-CREATE, `register_table`, rewrite + expire immutability-by-path (next read opens only new paths, same rows), time-travel and branch reads unaffected. | The IO-1 Rust battery re-run green under default settings (it builds `CatalogCaches::default`, so the manifest cache is on) plus new Python legs per cell. | **REJECTED** | All six IO-1 Rust staleness pins run green under `CatalogCaches::default()` (16/16 in the module) and every new Python leg passes — but the full facade suite reds 4 tests the unit's own battery does not cover: the v2→v3 upgrade + lineage family serves `_row_id` NULL where assigned ids belong (see HALT below). The clause as written is false, so it is REJECTED, not PROVEN: the cached manifest object is not a pure function of its key (the list entry's `first_row_id` range feeds the parse and is not in the key), and a v2-context parse poisons later v3 reads of the same path within one catalog lifetime. |
 | C-005 | The byte budget binds and never corrupts: many tables under a tiny budget stay row-correct; the bound itself is the fork's moka `max_capacity`, enforced by weight rejection the fork unit-pins at this pin. | Bound-safety pins (tiny budget, many tables, rows right); the fork eviction reading. | **PROVEN** | 512 bytes over eight tables stay row-correct in Rust and Python (working set ≈ 8 KB against a 512 B budget, so the bound engages). Fork reading at the pin: moka `max_capacity(bytes)` on total entry weight (manifest entries × 768 B, list entries × 256 B, floored at 1, fork unit-pinned), TinyLFU admission with rejection, size eviction (moka 0.12.15 `admit` / `evict_lru_entries`). No byte-counter pin is writable: `ObjectCache` exposes no stats handle and moka eviction runs async — so the pin is correctness-under-eviction, and `PERF-CATALOG-CACHE-BOUND-1` is narrowed to the metadata cache it actually describes. |
 | C-006 | `t_many/count_id/stmt2` and `t_many_merged` are re-measured before/after on a release module (5 iterations, medians, spread, floor, load) with the §1 census cells; the baseline's part-3 section carries the new numbers; `PERF-ICE-MANIFEST-1` is FIXED with before/after and `PERF-CATALOG-CACHE-BOUND-1` is narrowed to the metadata cache. | The baseline note; the registry rows. | **PROVEN** | Baseline §5: release module 163,517,296 B, `__debug_assertions__` False, 5 iterations after warm-up, medians/min/spreads, floors 0.31/1.13, loads 14.5/15.9 (not a quiet box, stated), the full 12-row census re-run on both settings. `PERF-ICE-MANIFEST-1` FIXED with before/after (115.81 → 10.95); `PERF-CATALOG-CACHE-BOUND-1` NARROWED to the metadata cache; `PERF-CATALOG-COMMIT-CACHE-1` filed BACKLOG behind `F-CATIO-COMMIT`. |
 | C-007 | Every touched `map.md` moves in lockstep with reasons and `pins:` citations; no code comment is added. | `make check-map-sync`; the staged-diff comment self-check. | **PROVEN** | Seven maps move with their directories (catalog, iceberg src, spark tests, python tests, perf, guide, staging) plus this ledger: reasons and `pins:` citations, stale IO-1 sentences (`stays skipped`, `BACKLOG behind the pin bump`) trued up. The branch diff over `*.rs` / `*.py` / `*.toml` adds zero comment lines — the only `//` hit is a `"file://"` string literal, and no forced `# Errors` was needed (no new `pub fn` returns `Result`). |
 
-VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 6 PROVEN, 0 OPEN, 1 REJECTED. **HALTED** — see below.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -49,7 +50,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/catalog/caches.rs, crates/repark-spark/src/tests/catalog_cache_staleness.rs, python/repark/tests/test_perf_ice_catalog_io_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: The merge zero-savings alarm was chased to its root instead of absorbed: per-path strace dumps show MERGE opening the same new list and two new manifests four times each, and the fork read shows transaction/maintenance/inspect at 0 cached reads against 166+ direct loads. The cache consults on scan only; bypassing paths re-read and never serve stale. Filed as PERF-CATALOG-COMMIT-CACHE-1/F-CATIO-COMMIT, and the catalog map's over-claim (every table shares) was corrected to carries-but-commit-bypasses before the attestation.
+      evidence: Two deep attacks, one that filed an ask and one that halted the unit. (1) The merge zero-savings alarm was chased to its root: per-path strace dumps show MERGE opening the same new list and two new manifests four times each, and the fork read shows transaction/maintenance/inspect at 0 cached reads against 166+ direct loads; filed as PERF-CATALOG-COMMIT-CACHE-1/F-CATIO-COMMIT. (2) The facade suite's 4 upgrade-lineage failures were chased past "my wiring" to the fork's cache key: the parsed manifest embeds list-entry context (first_row_id range) that the (path, schema) key does not carry, so a v2-context parse poisons v3 reads of the same path. C-004 REJECTED, FINDING S1-1 filed OPEN, unit HALTED.
       artifacts: [docs/perf/iceberg-catalog-io-baseline.md, crates/repark-iceberg/src/catalog/map.md]
     - id: AT-3
       status: ATTACKED
@@ -147,9 +148,68 @@ round 2 established (the code was right, the writing over-claimed):
 
 No finding changed a measured number.
 
-## Staleness verdict
+## HALT — the shared cache serves a wrong-context manifest (2026-09-05)
 
-Every staleness cell is row-correct with the cache on (C-004), and the one surprise the
-measurement turned up (commit-side bypass) fails toward re-reading, never toward a stale
-answer. The brief's HALT condition — the shared cache serving a stale manifest on any cell —
-never met. No HALT.
+```text
+FINDING:
+  id: S1-1
+  severity: S1
+  category: AT-2
+  clause: C-004
+  disposition: OPEN (needs an orchestrator ruling; the fix is fork-side, out of this unit's scope)
+```
+
+The brief's HALT condition is met: with the cache on, four facade tests serve wrong
+answers — `_row_id` / `_last_updated_sequence_number` come back NULL where assigned ids
+belong — on tables that crossed the v2→v3 upgrade boundary:
+
+- `test_v3_legacy_delete_merge.py::test_v3_legacy_parquet_position_delete_merges_into_the_dv`
+- `test_v3_legacy_delete_merge.py::test_plain_where_mor_delete_over_a_legacy_parquet_delete_merges_into_the_dv`
+- `test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-set-format-version-3-mor]`
+- `test_v3_upgrade.py::test_alter_upgrade_with_the_opt_in_serves_v3_lineage`
+
+Full suite at HALT: 4 failed, 4863 passed, 211 skipped. Isolation is decisive and needs
+no rebuild: the same release binary with `repark.iceberg.manifestCacheBytes = "0"` passes
+both merge tests (throwaway probe kept at `/tmp/knobprobe/test_knobprobe.py`, per the
+scratch-probe rule). The only behavioral delta the knob moves is the
+`with_shared_object_cache_bytes` call, so the sharing itself is the defect's trigger.
+
+Root cause, read end to end at fork pin `79119643`:
+
+1. `ObjectCache::get_manifest` keys by `(manifest_path, fallback_schema_id)`
+   (`crates/iceberg/src/io/object_cache.rs`).
+2. The cached `Manifest` is NOT a pure function of that key. `ManifestFile::
+   load_manifest_with_schema_fallback` (`spec/manifest_list.rs`) parses the bytes and
+   then runs `entry.inherit_data(self)` plus `assign_first_row_ids(entries,
+   manifest_range)`, where `manifest_range` is the CALLER's list entry's `first_row_id`
+   — list state, not manifest bytes.
+3. `assign_first_row_ids` with `None` forces every entry to `None`; with `Some(range)`
+   it assigns running counters (`spec/manifest/entry.rs`).
+4. A V2 manifest list carries no range (`None`); the post-upgrade V3 list carries an
+   assigned range for the SAME manifest path. First parse wins the cache entry: a
+   v2-context parse (no assignment) poisons every later v3 read of that path within one
+   catalog lifetime. Per-table caches never shared across the boundary, which is why
+   knob-off passes.
+5. Blast radius, measured not assumed: v2-parse-then-v3-read order only. The reverse
+   order is harmless (v2 readers ignore the assigned fields), and carried v3 entries keep
+   their ranges, so v3-only operation is stable. The defect needs the upgrade boundary
+   (or any rangeless→ranged list pair over one path) plus a lineage read, in one catalog
+   lifetime.
+
+What this refutes: the "immutable at their path" premise this unit (and IO-1's §3, and
+the fork's F-CATIO-B design) reasoned from. The manifest FILE is immutable; the PARSED
+OBJECT depends on list-entry context the key does not carry. C-004 is REJECTED on that
+ground. Nothing else in the ledger falls: the key, the wiring, the timing, the census,
+the bound pins and the non-upgrade staleness cells are all still proven as stated.
+
+No RePark-side fix exists: the key is built fork-side and RePark holds no handle to
+observe or evict by it. The fork fix direction is to make the key carry the assignment
+input (the list entry's range) or to move assignment out of the cached object; Java never
+shares a parsed manifest across readers, so it has no equivalent constraint. Filed as
+`PERF-CATALOG-LINEAGE-CACHE-1` / fork ask `F-CATIO-KEY` (registry row below).
+
+Ruling needed (handback `questions[]`): (a) fix fork-side, repin, and resume this unit
+toward default-ON; or (b) land this unit with the default OFF (knob shipped, timing pin
+re-scoped to set the knob explicitly, MANIFEST-1 row held at BACKLOG-by-ledger) until the
+fork key fix lands. Either way the four red tests are the detector: they pass knob-off
+today and must pass knob-on before any default-ON merge.

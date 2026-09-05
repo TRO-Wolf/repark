@@ -41,8 +41,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Python legs, with a **seven**-mutation score (one escape closed: the knob-off control parsed
   no string until it was strengthened to). The in-lane critic pass found two claim-scope
   overstatements (the map's "every table shares", the unrecorded `memory_catalog()` behaviour
-  change) and both are remediated in the ledger's critic table. `risk_tier: standard`. Branch
-  `perf/ice-catalog-io-2`.
+  change) and both are remediated in the ledger's critic table.
+  **HALTED 2026-09-05 (FINDING S1-1, C-004 REJECTED):** the facade suite reds 4 upgrade-lineage
+  tests — the fork's `(path, schema)` manifest key does not carry the list-entry lineage range,
+  so a v2-context parse poisons v3 reads of the same path (`_row_id` NULL). Knob-off green on
+  the same binary. Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY` (fork-side, no RePark
+  fix exists); the ruling in the ledger's HALT section chooses fork-fix-then-resume vs land
+  default-OFF. `risk_tier: standard`. Branch `perf/ice-catalog-io-2`.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
   **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.

@@ -72,40 +72,42 @@ Source comments retain only API and safety contracts; implementation narration i
   owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
   the pre-unit behaviour passes `CatalogCaches::disabled()`.
 
-  **PERF-ICE-CATALOG-IO-2 (2026-09-05):** a third knob,
-  `repark.iceberg.manifestCacheBytes` (default **32 MiB, on**) with an underscore alias,
-  sizes the fork's shared manifest `ObjectCache` for the memory catalog; `0` disables it
-  and a bad value fails loud naming both spellings, exactly like the entries knob.
-  `builders.rs` passes the bytes to
-  `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
-  catalog that every table the catalog materializes carries. Carries, not always reads:
-  the fork's scan path (`plan_files`) consults it, but the fork's transaction, maintenance
-  and inspect paths load manifests straight from `FileIO` (0 cached reads against 166
-  direct loads in `transaction/` at this pin) — so a repeated SELECT opens nothing while a
-  DML statement keeps its commit-side opens and saves only its read-side repeats. Measured:
-  DELETE 4/8 → 3/6 lists/manifests, UPDATE 5/15 → 4/12, MERGE 4/8 → 4/8, INSERT 2/1 → 2/1.
-  That is a filed fork ask (`PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT`), not a wiring
-  defect: a bypassing path re-reads, it never serves stale. `memory_catalog(warehouse)`
-  keeps its signature and now also sizes a private shared manifest cache per call (same
-  always-on, never-trimmed shape IO-1 recorded for the metadata cache). The default is on because the
-  CATALOG-IO measurement showed the second statement on a 193-manifest table falling from
-  120 ms to 11 ms with the cache, the cached objects are immutable at their path (a
-  rewrite or expiry writes new paths, never mutates), and the byte budget is enforced
-  fork-side by moka weighted eviction — so the cache can only evict, never corrupt.
-  The funnel was read at fork pin `79119643`: the memory catalog assembles a `Table` in
-  exactly three places (`load_table_from_location`, `create_table`, `register_table`),
-  and all three go through its `table_builder()`, which injects the shared cache; the
-  only direct `Table::builder()` in the memory catalog is a `#[cfg(test)]` fixture.
-  Named non-members, all correct-but-uncached (a private cache re-reads, it never serves
-  stale): catalog-detached `StaticTable::from_metadata*`, staged create/replace
-  transactions (RePark uses them write-side for CTAS/replace), the
-  `delete_reachable_files` maintenance walk, and every non-memory catalog (Glue, S3
-  Tables, REST, HMS, SQL build per-table caches — their builders have no
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05, HALTED):** a third knob,
+  `repark.iceberg.manifestCacheBytes` (default 32 MiB, `0` disables) with an underscore
+  alias, sizes the fork's shared manifest `ObjectCache` for the memory catalog; a bad value
+  fails loud naming both spellings, exactly like the entries knob. `builders.rs` passes the
+  bytes to `MemoryCatalogBuilder::with_shared_object_cache_bytes`, which builds ONE cache per
+  catalog that every table the catalog materializes carries. The unit HALTED on a fork-side
+  cache-key defect before any merge: the manifest FILE is immutable at its path, but the
+  PARSED object embeds the caller's list-entry lineage range, which the fork's `(path,
+  schema)` key does not carry — so a v2-context parse poisons later v3 reads of the same path
+  and upgrade-boundary tables serve `_row_id` NULL (4 facade tests red, knob-off green).
+  Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`; the default-ON choice from the 10×
+  measurement (115.81 → 10.95 ms) is gated on the fork key fix, and the four red tests are
+  its detector. Carries, not always reads: the fork's scan path (`plan_files`) consults the
+  cache, but the fork's transaction, maintenance and inspect paths load manifests straight
+  from `FileIO` (0 cached reads against 166 direct loads in `transaction/` at this pin) — so
+  a repeated SELECT opens nothing while a DML statement keeps its commit-side opens and saves
+  only its read-side repeats. Measured: DELETE 4/8 → 3/6 lists/manifests, UPDATE 5/15 → 4/12,
+  MERGE 4/8 → 4/8, INSERT 2/1 → 2/1. That is a filed fork ask
+  (`PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT`), not a wiring defect: a bypassing path
+  re-reads, it never serves stale. `memory_catalog(warehouse)` keeps its signature and now
+  also sizes a private shared manifest cache per call (same always-on, never-trimmed shape
+  IO-1 recorded for the metadata cache). The funnel was read at fork pin `79119643`: the
+  memory catalog assembles a `Table` in exactly three places (`load_table_from_location`,
+  `create_table`, `register_table`), and all three go through its `table_builder()`, which
+  injects the shared cache; the only direct `Table::builder()` in the memory catalog is a
+  `#[cfg(test)]` fixture. Named non-members, all correct-but-uncached (a private cache
+  re-reads, it never serves stale): catalog-detached `StaticTable::from_metadata*`, staged
+  create/replace transactions (RePark uses them write-side for CTAS/replace), the
+  `delete_reachable_files` maintenance walk, and every non-memory catalog (Glue, S3 Tables,
+  REST, HMS, SQL build per-table caches — their builders have no
   `with_shared_object_cache_bytes` at this pin, so `glue_catalog` / `s3tables_catalog`
   are unchanged again). RePark itself builds no `Table` directly: every read goes
   through `catalog.load_table`, and time-travel wraps the loaded table. **Repin duty:**
   re-read the funnel — a new assembly path that bypasses `table_builder()` silently
-  un-shares the cache, and the delete-manifest pins in the Spark tests map are the detector.
+  un-shares the cache, and the delete-manifest pins in the Spark tests map are the detector;
+  re-check the key — a fork key that carries the assignment input un-HALTs the default-ON.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
