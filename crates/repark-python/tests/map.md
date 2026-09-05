@@ -18,6 +18,8 @@ C Stream value, type, and laziness behavior.
   errors until the stream is drained.
 - DataFrame joins preserve Spark key and semi/anti output schemas; windows and aggregates retain
   their facade semantics.
+- **TYPES-1 (2026-09-05):** literal-built columns read as `Int32` (Spark int); `sum` still
+  answers `Int64`. pins: types-1/C-001, C-004
 - Unsupported readers return named typed refusals without leaking credentials.
 - Panic fences return catchable exceptions and leave the interpreter usable.
 

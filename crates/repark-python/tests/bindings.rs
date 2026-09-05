@@ -160,8 +160,8 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
         let a = batch
             .column(0)
             .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("a is int64");
+            .downcast_ref::<Int32Array>()
+            .expect("a is int32");
         let b = batch
             .column(1)
             .as_any()
@@ -192,7 +192,7 @@ fn arrow_c_stream_streams_values_and_types_end_to_end() {
             3,
             "all three rows cross the streaming boundary"
         );
-        assert_eq!(int64_column(&batch, 0), vec![1, 2, 3], "id values");
+        assert_eq!(int32_column(&batch, 0), vec![1, 2, 3], "id values");
         let amt = batch
             .column(1)
             .as_any()
@@ -293,8 +293,8 @@ fn with_column_applies_a_column_expression() {
         let df = df.with_column("b", sum).expect("with_column");
         let df_cell = Py::new(py, df).expect("dataframe pyclass");
         let batch = collect_one_batch(py, &df_cell);
-        assert_eq!(int64_column(&batch, 0), vec![10]);
-        assert_eq!(int64_column(&batch, 1), vec![15], "b = a + 5");
+        assert_eq!(int32_column(&batch, 0), vec![10]);
+        assert_eq!(int32_column(&batch, 1), vec![15], "b = a + 5");
     });
 }
 
@@ -358,9 +358,9 @@ fn row_number_over_window_numbers_rows_in_order() {
         let df_cell = Py::new(py, df).expect("dataframe pyclass");
         let batch = collect_one_batch(py, &df_cell);
         // Pair each v with its row number; collection order is not guaranteed, so map then check.
-        let values = int64_column(&batch, 0);
+        let values = int32_column(&batch, 0);
         let numbers = int32_column(&batch, 1);
-        let mut paired: Vec<(i64, i32)> = values.into_iter().zip(numbers).collect();
+        let mut paired: Vec<(i32, i32)> = values.into_iter().zip(numbers).collect();
         paired.sort_unstable();
         assert_eq!(
             paired,
@@ -421,9 +421,9 @@ fn ta_window_ema_over_matches_the_kernel() {
         let df_cell = Py::new(py, df).expect("dataframe pyclass");
         let batch = collect_one_batch(py, &df_cell);
         // Pair (ts, ema) and sort by ts, since collection order is not guaranteed.
-        let ts = int64_column(&batch, 0);
+        let ts = int32_column(&batch, 0);
         let ema = float64_column(&batch, 2);
-        let mut paired: Vec<(i64, f64)> = ts.into_iter().zip(ema).collect();
+        let mut paired: Vec<(i32, f64)> = ts.into_iter().zip(ema).collect();
         paired.sort_by_key(|(t, _)| *t);
         let engine: Vec<f64> = paired.into_iter().map(|(_, e)| e).collect();
         let kernel = repark_ta::ema(&[2.0, 4.0, 6.0, 8.0, 10.0], 3).expect("ema");
@@ -483,14 +483,14 @@ fn filter_column_and_filter_sql_keep_matching_rows() {
             .expect("gt builds");
         let filtered = make_df().filter(predicate).expect("filter");
         let filtered = Py::new(py, filtered).expect("pyclass");
-        let mut values = int64_column(&collect_one_batch(py, &filtered), 0);
+        let mut values = int32_column(&collect_one_batch(py, &filtered), 0);
         values.sort_unstable();
         assert_eq!(values, vec![2, 3]);
 
         // SQL-string predicate: a <= 2.
         let filtered_sql = make_df().filter_sql("a <= 2").expect("filter_sql");
         let filtered_sql = Py::new(py, filtered_sql).expect("pyclass");
-        let mut values = int64_column(&collect_one_batch(py, &filtered_sql), 0);
+        let mut values = int32_column(&collect_one_batch(py, &filtered_sql), 0);
         values.sort_unstable();
         assert_eq!(values, vec![1, 2]);
     });
@@ -514,7 +514,7 @@ fn sort_orders_descending_with_nulls_last() {
             .expect("sort");
         let sorted = Py::new(py, sorted).expect("pyclass");
         assert_eq!(
-            int64_column(&collect_one_batch(py, &sorted), 0),
+            int32_column(&collect_one_batch(py, &sorted), 0),
             vec![3, 2, 1]
         );
     });
@@ -585,8 +585,8 @@ fn join_on_names_left_semi_keeps_matching_left_rows_only() {
         );
         // k=1 matches; k=2 has no match; k=NULL never matches (NULL = NULL is unknown), so the
         // right side's own NULL key does NOT pull it in.
-        assert_eq!(int64_column(&batch, 0), vec![1]);
-        assert_eq!(int64_column(&batch, 1), vec![100]);
+        assert_eq!(int32_column(&batch, 0), vec![1]);
+        assert_eq!(int32_column(&batch, 1), vec![100]);
     });
 }
 
@@ -610,9 +610,9 @@ fn join_on_names_left_anti_keeps_unmatched_left_rows_including_null_keys() {
         let key_column = batch
             .column(0)
             .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("k is int64");
-        let mut keys: Vec<Option<i64>> = (0..key_column.len())
+            .downcast_ref::<Int32Array>()
+            .expect("k is int32");
+        let mut keys: Vec<Option<i32>> = (0..key_column.len())
             .map(|row| {
                 if key_column.is_null(row) {
                     None
@@ -707,7 +707,7 @@ fn aggregate_group_by_sum_names_group_first_then_agg() {
         // Spark parity: the group column comes first, then the aggregate.
         assert_eq!(batch.schema().field(0).name(), "g");
         assert_eq!(batch.schema().field(1).name(), "sum(x)");
-        let mut paired: Vec<(i64, i64)> = int64_column(&batch, 0)
+        let mut paired: Vec<(i32, i64)> = int32_column(&batch, 0)
             .into_iter()
             .zip(int64_column(&batch, 1))
             .collect();
@@ -745,10 +745,10 @@ fn aggregate_count_star_counts_rows_count_col_skips_nulls() {
         let grouped = Py::new(py, grouped).expect("pyclass");
         let batch = collect_one_batch(py, &grouped);
         // Columns: g, count(1), count(x).
-        let g = int64_column(&batch, 0);
+        let g = int32_column(&batch, 0);
         let cstar = int64_column(&batch, 1);
         let ccol = int64_column(&batch, 2);
-        let mut rows: Vec<(i64, i64, i64)> = g
+        let mut rows: Vec<(i32, i64, i64)> = g
             .into_iter()
             .zip(cstar)
             .zip(ccol)
@@ -784,7 +784,7 @@ fn union_positional_keeps_left_names_by_name_resolves() {
         let batch = collect_one_batch(py, &unioned);
         assert_eq!(batch.schema().field(0).name(), "id", "left names win");
         assert_eq!(batch.schema().field(1).name(), "name");
-        let mut ids = int64_column(&batch, 0);
+        let mut ids = int32_column(&batch, 0);
         ids.sort_unstable();
         assert_eq!(ids, vec![1, 2], "union is UNION ALL — both rows kept");
 
@@ -799,7 +799,7 @@ fn union_positional_keeps_left_names_by_name_resolves() {
             .expect("union_by_name");
         let by_name = Py::new(py, by_name).expect("pyclass");
         let batch = collect_one_batch(py, &by_name);
-        let mut pairs: Vec<(i64, Option<String>)> = int64_column(&batch, 0)
+        let mut pairs: Vec<(i32, Option<String>)> = int32_column(&batch, 0)
             .into_iter()
             .zip(string_column(&batch, 1))
             .collect();
@@ -844,7 +844,7 @@ fn distinct_dedups_and_distinct_on_keeps_one_per_key() {
         let on_k = Py::new(py, on_k).expect("pyclass");
         let batch = collect_one_batch(py, &on_k);
         assert_eq!(batch.num_rows(), 2, "one survivor per key");
-        let mut keys = int64_column(&batch, 0);
+        let mut keys = int32_column(&batch, 0);
         keys.sort_unstable();
         assert_eq!(keys, vec![1, 2], "the surviving key set is {{1, 2}}");
     });

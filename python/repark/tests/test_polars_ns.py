@@ -223,3 +223,14 @@ def test_polars_differential_str_slice(spark: ReparkSession) -> None:
         pl.col("s").str.slice(1, 3).alias("sl")
     )
     assert repark_out["sl"].to_list() == polars_out["sl"].to_list()
+
+
+def test_with_row_index_answers_bigint(spark: ReparkSession) -> None:
+    """pins: types-1/C-005 — with_row_index answers BIGINT with offset values."""
+    frame = spark.createDataFrame([(2, "b"), (1, "a")], ["i", "s"])
+    indexed = frame.pl.with_row_index().spark.to_arrow()
+    field = indexed.schema.field("index")
+    assert (str(field.type), field.nullable) == ("int64", False)
+    assert indexed.column("index").to_pylist() == [0, 1]
+    shifted = frame.pl.with_row_index(offset=5).spark.to_arrow()
+    assert shifted.column("index").to_pylist() == [5, 6]

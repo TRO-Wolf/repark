@@ -60,13 +60,6 @@ FIX_G5 = (
     "the window-frame / ranking / offset parity fix "
     "(briefs/v2-engine-hardening.md, gap G5; DECLARE candidacy if the ruling is disclosure-only)"
 )
-# Shared lead-in for the SQL-door ranking TYPE disclosures (uint64 vs Spark int32).
-TYPE_DISC = (
-    "VALUE matches Spark; TYPE diverges: SQL-door ranking returns Arrow uint64 "
-    "(DataFusion UInt64) vs Spark int32 (IntegerType). DF-API row_number casts to "
-    "IntegerType (see df_api equality). Flipped by "
-)
-
 # Budget floors/ceilings pinned by test_window_row_set_covers_gap_budgets (not incidental).
 G5_BUDGET_MIN = 20
 # The ceiling is a shape pin, not a cap on honest coverage; the equality floor and the
@@ -577,11 +570,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("k", pa.int64(), True), ("r", pa.int32(), False)],
             {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "r": [1, 1, 4, 1, 5]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("k", pa.int64(), True), ("r", pa.uint64(), False)],
-            {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "r": [1, 1, 4, 1, 5]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "rank() with ties on k: peers share rank; next rank skips (1,1,3,…).",
     ),
     WindowRow(
@@ -592,11 +581,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("k", pa.int64(), True), ("r", pa.int32(), False)],
             {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "r": [1, 1, 2, 1, 3]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("k", pa.int64(), True), ("r", pa.uint64(), False)],
-            {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "r": [1, 1, 2, 1, 3]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "dense_rank() with ties on k: peers share rank; next rank does not skip (1,1,2,…).",
     ),
     WindowRow(
@@ -607,11 +592,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("k", pa.int64(), True), ("rn", pa.int32(), False)],
             {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "rn": [1, 2, 4, 3, 5]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("k", pa.int64(), True), ("rn", pa.uint64(), False)],
-            {"id": [1, 2, 3, 4, 5], "k": [1, 1, 2, 1, 3], "rn": [1, 2, 4, 3, 5]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "row_number() under total order (k, id) — deterministic 1..n (CP-7).",
     ),
     WindowRow(
@@ -622,11 +603,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("bucket", pa.int32(), False)],
             {"id": [1, 2, 3, 4, 5], "bucket": [1, 1, 2, 3, 4]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("bucket", pa.uint64(), False)],
-            {"id": [1, 2, 3, 4, 5], "bucket": [1, 1, 2, 3, 4]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "ntile(4) under total order on id — bucket assignment 1..4 over 5 rows.",
     ),
     WindowRow(
@@ -659,21 +636,7 @@ ROWS: list[WindowRow] = [
                 "r": [1, 1, 3, 1, 2],
             },
         ),
-        _table(
-            [
-                ("id", pa.int64(), True),
-                ("grp", pa.string(), True),
-                ("k", pa.int64(), True),
-                ("r", pa.uint64(), False),
-            ],
-            {
-                "id": [1, 2, 3, 4, 5],
-                "grp": ["A", "A", "A", "B", "B"],
-                "k": [1, 1, 2, 1, 3],
-                "r": [1, 1, 3, 1, 2],
-            },
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "partitioned rank() with ties inside grp A on k=1.",
     ),
     # ----- 4. Offset family — lag / lead --------------------------------------------------------
@@ -760,21 +723,7 @@ ROWS: list[WindowRow] = [
                 "rn_global": [1, 2, 3, 4, 5],
             },
         ),
-        _table(
-            [
-                ("id", pa.int64(), True),
-                ("grp", pa.string(), True),
-                ("rn_part", pa.uint64(), False),
-                ("rn_global", pa.uint64(), False),
-            ],
-            {
-                "id": [1, 2, 3, 4, 5],
-                "grp": ["A", "A", "A", "B", "B"],
-                "rn_part": [1, 2, 3, 1, 2],
-                "rn_global": [1, 2, 3, 4, 5],
-            },
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "partitioned vs unpartitioned row_number side-by-side under total orders.",
     ),
     WindowRow(
@@ -786,11 +735,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("v", pa.int64(), True), ("rn", pa.int32(), False)],
             {"id": [2, 4, 1, 3, 5], "v": [None, None, 10, 20, 30], "rn": [1, 2, 3, 4, 5]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("v", pa.int64(), True), ("rn", pa.uint64(), False)],
-            {"id": [2, 4, 1, 3, 5], "v": [None, None, 10, 20, 30], "rn": [1, 2, 3, 4, 5]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "ORDER BY v ASC NULLS FIRST inside a window: NULL rows take the leading row_numbers "
         "(total order via id tie-break).",
         order_sensitive=True,
@@ -804,11 +749,7 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("v", pa.int64(), True), ("rn", pa.int32(), False)],
             {"id": [1, 3, 5, 2, 4], "v": [10, 20, 30, None, None], "rn": [1, 2, 3, 4, 5]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("v", pa.int64(), True), ("rn", pa.uint64(), False)],
-            {"id": [1, 3, 5, 2, 4], "v": [10, 20, 30, None, None], "rn": [1, 2, 3, 4, 5]},
-        ),
-        TYPE_DISC + f"{FIX_G5} when the SQL door matches the DF cast. "
+        None,
         "ORDER BY v ASC NULLS LAST inside a window: NULL rows take the trailing row_numbers.",
         order_sensitive=True,
     ),

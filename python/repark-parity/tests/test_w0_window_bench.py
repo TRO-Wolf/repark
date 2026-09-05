@@ -135,7 +135,6 @@ def test_frozen_refuse_set_is_the_measured_thirteen() -> None:
     assert ABSENT_PLANNING_NAMES == (
         "any",
         "any_value",
-        "count_if",
         "every",
         "first",
         "kurtosis",

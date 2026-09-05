@@ -277,7 +277,7 @@ def test_ctas_into_location_uri_only_namespace_places_data_there(tmp_path: Path)
     spark.sql("CREATE TABLE glue_catalog.legacy.t AS SELECT 1 AS id")
     table = spark.sql("SELECT id FROM glue_catalog.legacy.t").to_arrow()
     assert table.to_pylist() == [{"id": 1}]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert any(glue_db_location.rglob("*.parquet")), (
         "CTAS data must land under the namespace `location_uri` (the pre-existing Glue DB shape)"
     )
@@ -296,7 +296,7 @@ def test_sql_create_namespace_location_places_ctas_data_there(tmp_path: Path) ->
     spark.sql("CREATE TABLE glue_catalog.silver.t AS SELECT 1 AS id")
     table = spark.sql("SELECT id FROM glue_catalog.silver.t").to_arrow()
     assert table.to_pylist() == [{"id": 1}]
-    assert table.schema.field("id").type == pa.int64()
+    assert table.schema.field("id").type == pa.int32()
     assert any(namespace_location.rglob("*.parquet")), (
         "CTAS data must land under the namespace `location` set by SQL CREATE NAMESPACE … LOCATION"
     )

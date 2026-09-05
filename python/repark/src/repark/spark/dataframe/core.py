@@ -3584,9 +3584,7 @@ class DataFrame:
             StringType,
             TimestampType,
         )
-        from repark.spark.types import (
-            DataType as ReparkDataType,
-        )
+        from repark.spark.types import DataType as ReparkDataType
 
         fields: list[StructField] = []
         for name, type_key, nullable in self._inner.logical_schema_fields():
@@ -3948,7 +3946,8 @@ class DataFrame:
                 planned = self._session.sql(
                     f"SELECT * EXCLUDE (__repark_rn) FROM ("
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f") WHERE (abs((__repark_rn + {plan_seed}) * 1103515245 + 12345) % 1000000) "
+                    f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
+                    f"* 1103515245 + 12345) % 1000000) "
                     f"/ 1000000.0 < {fraction_value}"
                 )
             child = self._spawn(planned)
@@ -4055,7 +4054,8 @@ class DataFrame:
                 seed_expr = str(int(seed))
                 bucket_sql = (
                     f"SELECT * EXCLUDE (__repark_rn), "
-                    f"(abs((__repark_rn + {seed_expr}) * 1103515245 + 12345) % 1000000) "
+                    f"(abs((CAST(__repark_rn AS BIGINT) + {seed_expr}) "
+                    f"* 1103515245 + 12345) % 1000000) "
                     f"/ 1000000.0 AS __repark_split_u FROM ("
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                     f")"

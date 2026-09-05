@@ -73,7 +73,7 @@ def _assert_session_runs(spark: ReparkSession) -> None:
     table = spark.sql("SELECT 1 AS n").to_arrow()
     assert isinstance(table, pa.Table)
     assert table.column("n").to_pylist() == [1]
-    assert table.schema.field("n").type == pa.int64()
+    assert table.schema.field("n").type == pa.int32()
 
 
 def _live_session() -> ReparkSession:

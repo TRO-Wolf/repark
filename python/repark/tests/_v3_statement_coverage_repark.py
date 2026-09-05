@@ -97,7 +97,7 @@ REPARK: dict[str, Any] = {
                 "META",
                 [
                     ["format-version", 3],
-                    ["schema", [["id", "long", False], ["name", "string", False]]],
+                    ["schema", [["id", "int", False], ["name", "string", False]]],
                     ["partition-fields", []],
                 ],
             ],
