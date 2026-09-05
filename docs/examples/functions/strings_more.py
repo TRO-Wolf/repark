@@ -11,7 +11,6 @@ COVERS: list[str] = [
     "F.initcap",
     "F.regexp_extract",
     "F.sha2",
-    "F.col",
     "F.lit",
 ]
 

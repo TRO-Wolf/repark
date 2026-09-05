@@ -201,7 +201,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `sentences` (EX-FN-17) and `split` (EX-FN-18) — and the `make_interval`
   string-cast arm pin (EX-FN-19, BACKLOG ARM on a covered name). The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
-  pins: ex-25-functions-a/C-008
+  pins: ex-25-functions-a/C-009
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),

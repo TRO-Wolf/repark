@@ -10,7 +10,6 @@ COVERS: list[str] = [
     "F.arrays_overlap",
     "F.flatten",
     "F.map_zip_with",
-    "F.col",
     "F.lit",
 ]
 
