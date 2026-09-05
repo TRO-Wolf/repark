@@ -33,6 +33,14 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_perf_approxpct_1.py](test_perf_approxpct_1.py) — **PERF-APPROXPCT-1 (2026-09-05):**
+  the sketch pins. The accuracy matrix (default/100/10/2 × scalar/array × NULLs ×
+  duplicate-heavy × skewed × int/float/decimal) against values recorded from live PySpark
+  4.1.2; scan-path cells run on one-partition `repartition(1)` views because multi-partition
+  merge trees differ legitimately between engines (the same UNION text answered 106.0 then
+  110.0 on consecutive runs); the 100-row frame answers Spark's default/acc10/acc2 sampled
+  columns. DataFrame-door, error-contract, type, and release-only wall-bar legs, plus live
+  legs that re-derive every golden. pins: perf-approxpct-1/C-002, C-003, C-004, C-005, C-006
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
@@ -55,6 +63,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `WIN-SLIDE-PCT-ACC-1` published under a live-oracle line that no live test had touched. The
   accuracy-knob test's last assertion was two constants and is now repark's own answer against
   Spark's. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
+  **PERF-APPROXPCT-1 (2026-09-05):** the knob test now asserts Spark's accuracy-2 sketch
+  column — the knob is honored per frame, so `WIN-SLIDE-PCT-ACC-1` closes here.
 - **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
   attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
@@ -1371,8 +1381,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-1-registry-rows/C-003
   **FN-APPROXPCT-1 FIXED 2026-09-03 (FN-FIX-1):**
   `test_approx_percentile_discrete_bigint_matches_spark`.
-  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
-  (repark `100.0` at accuracy 2; Spark `1.0`).
+  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
+  (repark `1.0` at accuracy 2, Spark-equal since **PERF-APPROXPCT-1 (2026-09-05)**).
   pins: fn-fix-1-registry-rows/C-003
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
