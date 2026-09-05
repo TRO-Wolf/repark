@@ -73,7 +73,7 @@ def test_native_unaliased_typed_add_columns_preserve_binary_name() -> None:
 def test_untyped_one_plus_one_type_is_int32() -> None:
     """Bare ``SELECT 1 + 1`` is int32 on a planner-equipped Spark session.
 
-    pins: f-y10-1-int-overflow/C-001, C-002
+    pins: types-1/C-002
     """
     spark = _spark()
     table = spark.sql("SELECT 1 + 1 AS v").to_arrow()
@@ -84,7 +84,7 @@ def test_untyped_one_plus_one_type_is_int32() -> None:
 def test_untyped_overflow_raises_under_default_ansi() -> None:
     """Untyped ``2147483647 + 1`` raises ARITHMETIC_OVERFLOW; it must not widen.
 
-    pins: f-y10-1-int-overflow/C-001, C-002
+    pins: types-1/C-002
     """
     spark = _spark()
     with pytest.raises(Exception, match="ARITHMETIC_OVERFLOW"):
@@ -94,7 +94,7 @@ def test_untyped_overflow_raises_under_default_ansi() -> None:
 def test_untyped_overflow_wraps_when_ansi_false() -> None:
     """Untyped overflow wraps as INT under ``ansi=false``, like the typed path.
 
-    pins: f-y10-1-int-overflow/C-001, C-002
+    pins: types-1/C-002
     """
     spark = _spark_legacy()
     table = spark.sql("SELECT 2147483647 + 1 AS v").to_arrow()

@@ -5,7 +5,8 @@
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `V3-COV-8` (width half) BACKLOG → **FIXED**; `BL-8` BACKLOG → **FIXED**;
 `G5-RANK-TYPE-1/2/3` BACKLOG → **FIXED**; `UNIX-1` BACKLOG → **FIXED**; `TY-3` re-measured
-residue; residues filed honestly, never absorbed.
+residue; residues filed honestly, never absorbed. Round 4 (2026-09-05): `TY-7`, `TY-8`,
+`TY-9`, `TY-10` filed; C-004/C-007 restated; §7.1/§9/§11 corrected (§13).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -28,10 +29,10 @@ public API names (the v1.0 freeze binds); any dependency or lockfile change.
 | C-001 | A bare integer literal in INT range types `Int32` on the Spark door — `SELECT 1`, `VALUES (1)`, CTAS `SELECT 1 AS x`, `df.select(lit(1))`, `withColumn('x', lit(1))` all agree; out of range stays `Int64`; CTAS stores Spark's `int`. | `test_types_1.py` literal section, red on the base; live legs under `REPARK_PARITY_LIVE=1`. | **PROVEN** | `test_types_1.py` literal section green (5 widths, VALUES, both df doors, CTAS `int32`); live leg equal on 4.1.2/UTC; UNION-literal width residue filed TY-6. |
 | C-002 | Integer arithmetic follows Spark: INT+INT→INT, INT+BIGINT→BIGINT; overflow errors under ANSI on and wraps under ANSI off, both modes measured on both doors. | `test_types_1.py` arithmetic section + ANSI-mode pins; live legs. | **PROVEN** | Widening pins + ANSI-on raise / ANSI-off wrap on both doors green; live legs equal ANSI-on (`i+1`, `b+1`, `1+1`) and ANSI-off (`INTMAX+1` wraps `(int32, False, [-2147483648])` both engines). |
 | C-003 | Count-like aggregates return `BIGINT`/`Int64` on the SQL door: `count(*)`, `count(x)`, `count(DISTINCT x)`, `approx_count_distinct`, `regr_count`, `count_if`; Arrow type AND `collect()` Python type pinned. | `test_types_1.py` aggregate section; `DOOR_RETURNS_UNSIGNED` ratchets to empty. | **PROVEN** | Aggregate section green (Arrow type + `collect()` type); `DOOR_RETURNS_UNSIGNED` is empty; live legs full-match except approx/regr nullability, pinned as `(True, False)` under BL-18. |
-| C-004 | `sum(INT)`/`sum(BIGINT)` → `BIGINT`, `sum(DECIMAL)` → Spark's widened decimal, `bit_length`/`length`/`char_length` → INT, `grouping` → INT — pinned on value, Arrow type, and `collect()` type. | `test_types_1.py` sum/length section. | **PROVEN** | Sum/length/grouping pins green on value, Arrow type and `collect()` type; live legs full-match `sum(i)`, `sum(decimal)`, `bit_length`, `length`; `grouping` Spark-raises shape observed pre-existing (§9). |
+| C-004 | `sum` over TINYINT/SMALLINT/INT/BIGINT → `BIGINT`, `sum(DECIMAL)` → Spark's widened decimal, `bit_length`/`length`/`char_length` → INT, `grouping` → INT on repark (Spark: TINYINT, grouping-set-only — disclosed TY-8) — pinned on value, Arrow type, and `collect()` type. | `test_types_1.py` sum/length section. | **PROVEN** | Sum/length/grouping pins green on value, Arrow type and `collect()` type; live legs full-match `sum` widths incl. TINYINT/SMALLINT, `sum(decimal)`, `bit_length`, `length`; grouping ROLLUP/SETS values match with the `(int32, int8)` carve-out, plain-GROUP-BY acceptance disclosed (TY-8, §13). |
 | C-005 | `rank()`, `dense_rank()`, `row_number()`, `ntile(n)` → `Int32` on both doors, with and without partitions, and inside a CTAS; `percent_rank`/`cume_dist` → `Float64`. | `test_types_1.py` rank section; window-corpus rank rows flip to equality. | **PROVEN** | Rank-family pins green (both doors, partitioned, CTAS `int32`, int cells); live legs full-match all of `rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`/`cume_dist`. |
 | C-006 | `from_unixtime` returns session-zone STRING `yyyy-MM-dd HH:mm:ss` with the optional format argument, measured under UTC and a non-UTC session zone; `unix_timestamp`/`to_timestamp` unchanged. | `test_types_1.py` from_unixtime section; UNIX-1 pin flips. | **PROVEN** | `from_unixtime` pins green (UTC + format + New York, both doors; always nullable like Spark after the live red); `unix_timestamp`/`to_timestamp` unchanged; live legs full-match. |
-| C-007 | Placement: literal narrowing runs pre-coercion (a `FunctionRewrite`), unsigned casts run post-coercion (an `AnalyzerRule`), both in `repark-functions` and installed by `SparkExtension` only; `EXPLAIN` pins prove the plan carries the casts; no public name changes; nullability untouched. | `test_types_1.py` EXPLAIN pins; ANSI-door control pins stay `int64`/`uint64`-free per stock DataFusion. | **PROVEN** | EXPLAIN pins green (`Int32(1)`, `__repark_spark_int_add__`); ANSI-door control `int64`; placement per §10 (post-coercion narrow + closing coercion, Spark-door install only); no public renames. |
+| C-007 | Placement: literal narrowing is the `AnalyzerRule` `SparkIntegerLiteral`, first in `repark_functions::analyzer_rules()` (after DataFusion's own `TypeCoercion`) with a closing `TypeCoercion`; unsigned→signed answers come from UDF-registration wrappers (`signed_aggregate_functions`, `signed_window_functions`); installed on the Spark door only; `EXPLAIN` pins prove the plan carries the rewrites; no public name changes; nullability untouched. | `test_types_1.py` EXPLAIN pins; ANSI-door control pins stay `int64`/`uint64`-free per stock DataFusion. | **PROVEN** | EXPLAIN pins green (`Int32(1)`, `__repark_spark_int_add__`); ANSI-door control `int64`; placement per §10 (post-coercion narrow + closing coercion, Spark-door install only); no public renames. |
 | C-008 | No regressions: `make verify` green, the full facade suite green with every flipped pin classified (Spark-answer flip with citation, or fixed regression), the cutover battery re-run, mutation score per rule recorded. | The suites; §8. | **PROVEN** | `make verify` exit 0; facade 4942 passed / 206 skipped (post-fix re-run, zero flips from the fix); parity 574; cutover battery 132 / 99; mutations 7/7 bite (§8); 76 triage flips classified (§11). |
 | C-009 | Docs: every flipped row FIXED with date and unit id, every residue an honest row, crate maps carry the design note and pins line, `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | **PROVEN** | `V3-COV-8`, `BL-8`, `G5-RANK-TYPE-1/2/3`, `UNIX-1` FIXED with date + unit; `TY-3` narrowed; residues `TY-6`, `BL-18` filed; crate maps + test map carry notes; `STATUS.md`, `briefs/next-sequence.md` untouched. |
 
@@ -52,19 +53,24 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 
 ### 7.1 Where each rule lives
 
-Literals narrow in a `FunctionRewrite` (`datafusion_expr::expr_rewriter::FunctionRewrite`),
-which the DF 54.1 analyzer runs before `TypeCoercion` (read off the vendored
-`analyzer/mod.rs`: `ApplyFunctionRewrites` chains ahead of every rule). Pre-coercion
-placement is what makes `int_col + 1` unify to INT while `CAST(x AS BIGINT) + 1` keeps
-its explicit BIGINT — post-coercion the two are indistinguishable. The rewrite mirrors
-the facade's `PyColumn::literal` exactly (`i32::try_from`, Int32 on fit, Int64 past it,
-`-(2^31)` folds to `Int32::MIN`).
+Literals narrow in `SparkIntegerLiteral`, an `AnalyzerRule`
+(`datafusion::optimizer::AnalyzerRule`) running FIRST in
+`repark_functions::analyzer_rules()` — after DataFusion's own `TypeCoercion`, which runs
+in DataFusion's analyzer pass ahead of ours — with a CLOSING `TypeCoercion` at the list
+end (§10: post-coercion placement keeps `SELECT 5/2 UNION ALL SELECT 7/2` at `int64
+[2, 3]`; pre-coercion narrowing let the division rewrite fire inside union CASTs). The
+rule walks each plan's expressions bottom-up (`transform_up`, `NamePreserver` keeping
+unaliased display names), narrowing `Int64` literals that fit `i32::try_from` to `Int32`
+(`-(2^31)` folds to `Int32::MIN`), rebuilding `VALUES` rows, and exempting `LIMIT`
+fetch/skip (the physical planner matches bare `Int64` only). It mirrors the facade's
+`PyColumn::literal` exactly (Int32 on fit, Int64 past it).
 
-Unsigned results cast in an `AnalyzerRule` after `TypeCoercion` (casts are explicit, so
-no re-coercion is needed). It mirrors the facade's `cast_unsigned_count_to_signed`
-exactly: probe the UDF return type with `Int64` args, wrap in `CAST AS BIGINT` iff
-unsigned. Window UDWFs probe the same way and wrap in `CAST AS INT`. The rule is a
-fixpoint under repeated analysis via `transform_down` + `Stop` on already-wrapped casts.
+Unsigned results never enter an analyzer rule: `SignedAggregate` wraps `regr_count` and
+`approx_distinct` (UDF registration, later wins) and converts the accumulator's `UInt64`
+to `Int64` at `evaluate`, refusing values past `i64::MAX`; `SignedWindow` wraps
+`rank`/`dense_rank`/`row_number`/`ntile` and answers `Int32` from `field()` plus the
+partition evaluators. Both wrappers delegate name, aliases, and signature to the inner
+DataFusion kernels, so plans carry no CASTs and no fixpoint argument is needed.
 
 `from_unixtime` is a scalar UDF overwriting DF core's (later registration wins),
 reusing the `date_format` Java-pattern compiler and the session-zone carrier.
@@ -122,14 +128,14 @@ Shared seed `(i int, b bigint, s string)` × `[(1, 10, 'a'), (2, 20, 'b'),
 | `INTMAX+1` ANSI on | raises `ARITHMETIC_OVERFLOW` | raises `ARITHMETIC_OVERFLOW` | match (repark pin + Spark probe; no live leg) |
 | `INTMAX+1` ANSI off | `(int32, False, [-2147483648])` | same | full match, live leg |
 | `UNION ALL` of `1`, `2` | `(int64, False, {1, 2})` | `(int32, False, [1, 2])` | residue, filed TY-6 |
-| `grouping(i)` under plain `GROUP BY` | `(int32, False, [0, 0, 0])` | raises `UNSUPPORTED_GROUPING_EXPRESSION` | pre-existing, untouched by TYPES-1; observed only |
+| `grouping(i)` under plain `GROUP BY` | `(int32, False, [0, 0, 0])` | raises `UNSUPPORTED_GROUPING_EXPRESSION` | disclosed TY-8 in round 4 (§13); acceptance + INT-vs-TINYINT pinned |
 
 Live gate: `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_types_1.py` —
 177 passed (includes the disclosure co-collection pin and 4 TYPES-1 live legs).
 
 ## 10. Implementation progress (2026-09-05)
 
-§7's analyzer-prefix placement is superseded: narrowing now runs FIRST in
+§7.1's original pre-coercion sketch is superseded: narrowing now runs FIRST in
 `repark_functions::analyzer_rules()` (after DataFusion's own `TypeCoercion`, which the
 prefix preceded) with a CLOSING `TypeCoercion` at the list end, and the prefix
 mechanism is reverted. Cause: narrowing-before-coercion made `TypeCoercion.coerce_union`
@@ -164,16 +170,16 @@ the pin names; otherwise the production change reverts. Rulings so far:
 
 | File | Ruling |
 |---|---|
-| `test_window_parity.py` | Five no-engine tiers (`ntile`, start-vs-end, `naive_row_number`, cache, warn) deleted as stale Spark-2.x-era duplicates of `lead`/`lag`-block-disabled semantics covered by pinned rows below; the dead `TYPE_DISC` lead-in deleted with the converged
-ranking disclosures (1481→1422 lines); one overlap row keeps a corrected assertion. Corrected: `ROWS`-bounded `last()` with null-top ordering answers NULL on both engines (Spark: `last(null, true)` skips nulls; all-null peers → NULL), so `_repark_last_all_null_rows` now wraps `F.when(overlap, NULL).otherwise(last)` (+2 lines in `core.py`, 6303→6305). Spark-source change `lead_in_frame.c` documents the same `last` rewrite. |
+| `test_window_parity.py` | The dead `TYPE_DISC` lead-in deleted with eight converged `uint64` SQL-door tiers (→ `None`, 1481→1422 lines); no test function deleted, no assertion corrected. `core.py` gains `CAST(__repark_rn AS BIGINT)` in the `sample` and `randomSplit` hash arithmetic — `row_number()` narrowed to Int32, so the LCG product keeps 64-bit arithmetic (+2 lines, 6303→6305; round 4 absorbs them back to 6303, §13). (Round-4 correction, F2: the close-out text's `last()`/`_repark_last_all_null_rows` account, its five deleted tiers, and its `lead_in_frame.c` citation were never in the diff — verified against `d49db25b`.) |
 | `test_session_config_knobs.py` | lawful flips, Spark answers pinned |
 | `test_display_styles.py` | lawful flips, Spark answers pinned |
 | `test_catalog_flow.py`, `test_explode_rewrite.py`, `test_fnp5_aggregates.py`, `test_iceberg_hygiene.py`, `test_integer_overflow_parity.py`, `test_lrs3_registered_divergences.py`, `test_lrs4_door_domain.py`, `test_maintenance_call.py`, `test_sql_passthrough_parity.py`, `test_time_travel.py`, `test_union_distinct.py`, `_acceptance.py`, `_v3_statement_coverage_*`, `docs/spark-sql-iceberg-parity.md`, `bench/windows/roster.py`, `test_w0_window_bench.py` | triaged, flips classified per file |
 
-`check_lib_py` EXCEPTIONS amendments: `core.py` 6303→6305 (+2 — the
-null-top `where()` wrap cannot collapse line-neutral under the 100-char Ruff
-ceiling; an INCREASE, owner approval requested at merge), `test_window_parity.py`
-1481→1422 (ratchet down). Mirrored in `test_cap_1_source_file_line_cap.py`.
+`check_lib_py` EXCEPTIONS amendments: `core.py` 6303→6305 (+2 — each `CAST` splits one
+f-string line, which cannot rejoin under the 100-char Ruff ceiling; an INCREASE, owner
+approval requested at merge), `test_window_parity.py` 1481→1422 (ratchet down). Mirrored
+in `test_cap_1_source_file_line_cap.py`. Round 4 (F10) absorbs the increase: one import
+joined, 6305→6303 in both tables, no approval needed.
 
 ## 12. Coverage attestation (close-out, 2026-09-05)
 
@@ -242,3 +248,67 @@ SHIPPED_FLAG_REGISTER:
   flags: []
   count: 0
 ```
+
+## 13. Round 4 — the critic's eleven findings (2026-09-05)
+
+One JVM at a time (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `TZ=UTC`); every probe
+process exited (verified via `pgrep` after each run). Banner for both round-4 probe runs:
+`BANNER spark=4.1.2 zone=UTC`. Shape cells are `(Arrow type, nullable, values)` on the
+shared `(i int, b bigint, s string)` seed behind `types1_probe`.
+
+| id | Disposition |
+|---|---|
+| F1 | The saturation premise is refuted by measurement: Spark WRAPS out-of-range seconds (`i64::MAX` → `-1s`), exactly like the shipped `wrapping_mul`. The one real gap was the `+` Java emits for 5+-digit years (`+51190-09-21`): fixed in the shared Java-pattern year arm (`count >= 4`, digits past width). All eight cells pinned on both doors + live leg. |
+| F2 | §11 rewritten to the verified diff: eight converged tiers → `None`, `TYPE_DISC` deleted, no `last()` change anywhere; `core.py` +2 is the two `__repark_rn` BIGINT casts. The triage commit message's `last()` line stays wrong (no amends); this ledger is the corrected record. |
+| F3 | C-007, §7.1, BL-8 restated to the built mechanism (narrowing = `AnalyzerRule`, unsigned = UDF-registration wrappers); G5-RANK-TYPE-1's rationale carried the same fiction and is restated with it. |
+| F4 | Pins for CASE/COALESCE/IF/array/struct/map/UNION-BIGINT/DECIMAL on both doors (map + IF are SQL-only: no facade spelling exists); live legs full-match except the TY-7 carve-out, IF/map nullability carve-outs (pre-existing DF-derive shapes, CUTOVER-SCHEMA-1 domain, no new rows), and struct/array naming notes (§13.1). |
+| F5 | ROLLUP/GROUPING-SETS shape pinned for the type: repark INT vs Spark TINYINT (TY-8 carve-out); plain-GROUP-BY acceptance disclosed (TY-8). Refusal/type-fix judged not cheap-safe: the INT comes from DataFusion's `ResolveGroupingFunction` expansion and multi-arg arity is lost after expansion. |
+| F6 | Three citations repointed to `types-1/C-002`; supersession noted here: archived `2026-08-31-f-y10-1-int-overflow` C-002 declares untyped arithmetic the intended Int64 split — TYPES-1 narrowed it to Int32. |
+| F7 | `sum` over TINYINT/SMALLINT pinned on both doors + live; `ntile(BIGINT)` acceptance disclosed (TY-9); NULL/negative/fractional `from_unixtime` cells pinned under F1; `EEE` + `dd/MM/yyyy HH:mm` pinned on both doors + live. |
+| F8 | `polars.py` `row_number` cast to BIGINT (index back to `int64`); pinned with offset values. |
+| F9 | Premise stale: no duplicate CREATE line exists in the tree (lines 99–100 are NAMESPACE + TABLE), and repark RAISES on re-create (`AnalysisException: ... already exists`). Probed, no change, no row. |
+| F10 | Absorbed: one import joined, `core.py` 6305→6303 in both cap tables; maps corrected to the real change. |
+| F11 | Verified: `crates/repark-functions/map.md` already carries the full rule order (`SparkIntegerLiteral` first … closing `TypeCoercion`); the `///` line left verbatim, no change. |
+
+### 13.1 Round-4 oracle cells
+
+Full-match rows carry live legs; carve-outs pin the differing pair.
+
+| Query | repark | Spark 4.1.2 | Standing |
+|---|---|---|---|
+| `from_unixtime` of ±15e12, 20e12, `i64::MAX/MIN`, `-1`, `1.5`, NULL | `(string, True, …)` | same, incl. `+51190`/`+111192` signed years | full match, live leg |
+| `CASE WHEN i > 1 THEN 1 ELSE 0` | `(int32, False, [0, 1, 1])` | same | full match, live leg |
+| `COALESCE(NULL::BIGINT, 1)` | `(int64, False, [1])` | same | full match, live leg |
+| `COALESCE(NULL::INT, 1)` | `(int64, False, [1])` | `(int32, False, [1])` | residue TY-7, carve-out |
+| `IF(i > 1, 1, 0)` | `(int32, True, [0, 1, 1])` | `(int32, False, [0, 1, 1])` | nullability carve-out, no row |
+| `array(1, 2)` | element `int32`, `[[1, 2]]` | same (element non-null) | element+value match, live leg |
+| `struct(1, 'a')` | `struct<c0, c1>` int32/string | `struct<col1, col2>` int32/string | field types + ordered values match, live leg; names follow DF |
+| `map(1, 'a')` (SQL) | `(map<int32,string>, True, …)` | `(map<int32,string>, False, …)` | nullability carve-out, no row; facade has no `create_map` |
+| `1 UNION ALL 2::BIGINT` ordered | `(int64, False, [1, 2])` | same, both doors | full match, live leg |
+| `decimal(10,2) + 1` (SQL, both orders) | `(decimal128(11, 2), True, …)` | same | full match, live leg |
+| facade `decimal(10,2) + lit(1)` | `(decimal128(13, 2), True, …)` | `(decimal128(11, 2), True, …)` | residue TY-10 |
+| `sum(tinyint)` / `sum(smallint)` | `(int64, True, [6])` | same, both doors | full match, live leg |
+| `ntile(2::BIGINT)` (SQL; facades take `int`) | `(int32, False, [1, 1, 2])` | raises `DATATYPE_MISMATCH` | disclosed TY-9 |
+| `grouping(i)` ROLLUP/SETS ordered | `(int32, False, [0, 0, 0, 1])` | `(int8, False, [0, 0, 0, 1])` | carve-out TY-8 |
+| `grouping(i)` plain `GROUP BY` / 2-arg | accepted `(int32, …)` | raises `UNSUPPORTED_…` / `WRONG_NUM_ARGS` | disclosed TY-8 |
+| `from_unixtime(0, 'EEE' / 'dd/MM/yyyy HH:mm')` | `Thu` / `01/01/1970 00:00` | same, both doors | full match, live leg |
+| `from_unixtime('1970-01-02')` | raises (optimizer error) | raises `CAST_INVALID_INPUT` | observed, no pin |
+| `with_row_index()` | `(int64, False, [0, 1])` | no Spark equivalent | swept + pinned |
+
+### 13.2 Size-gate notes (round 4)
+
+`datetime.rs` grows 1704→1709 (+5, the year-sign arm) — an INCREASE, owner approval
+requested at merge. Absorption was attempted first and proven impossible: the file is
+rustfmt-packed (mechanical scan for joinable assignments and paren triplets found zero;
+match/if arms are already minimal), and the arm is the minimal readable general form (a
+shorter `10^count`-threshold spelling trades the increase for unstatable range reasoning).
+Moving the arm out of the pattern renderer would scatter a cohesive unit across modules.
+Both cap tables carry 1709.
+
+### 13.3 Merge-triage (gate-driven, outside the eleven)
+
+The round-4 gate run surfaced three red pins in `test_perf_agg_avg_1.py` (landed on
+`main` after the TYPES-1 triage, merged in at `07e14435`): VALUES-literal group keys
+pinned `int64` where the narrowed door answers `int32` — the Spark answer per C-001's
+live legs. Lawful flips with `types-1/C-001` citations under the §11 classification
+rule. Pre-existing at the round-4 base; untouched by the eleven findings.

@@ -2230,8 +2230,8 @@ the pin rather than obeying it.
 - **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
   `test_window_row_matches_spark_or_still_diverges[rank_with_ties]` is an equality now.
-- **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` casts the rank family to
-  `Int32` in the analyzer. pins: types-1/C-005
+- **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` UDF-registration wrappers
+  answer `Int32` for the rank family over the DataFusion kernels. pins: types-1/C-005
 
 ### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order) — **FIXED 2026-09-05, TYPES-1**
 
@@ -2433,7 +2433,9 @@ the pin rather than obeying it.
 ### BL-8 — SQL-door count-like aggregates return `UInt64` — **FIXED 2026-09-05, TYPES-1**
 
 - **repark** — both doors answer signed `bigint`: the **facade** casts from the aggregate's
-  declared return type, and the **SQL door** now wraps `SignedAggregate` casts in the analyzer
+  declared return type, and the **SQL door** resolves `regr_count`/`approx_distinct` to
+  `SignedAggregate` UDF-registration wrappers over the DataFusion kernels (later registration
+  wins) and adds a native-`Int64` `count_if` UDAF — no analyzer rule, no plan CASTs
   (`SELECT regr_count(y, x)`, `SELECT approx_distinct(g)`, `SELECT count_if(...)` → `int64`).
 - **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
   *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
@@ -2441,8 +2443,9 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_types_1.py` count-like pins;
   `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
   (its `DOOR_RETURNS_UNSIGNED` set ratcheted to empty).
-- **Rationale** — FIXED (2026-09-05, TYPES-1). The cast moved into the shared analyzer layer
-  as an idempotent rewrite that preserves `Aggregate` output field names.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). The sign conversion moved into
+  UDF-registration wrappers that preserve the inner kernels' names, aliases, signatures,
+  and `Aggregate` output field names.
   pins: types-1/C-003
 
 ### RE-2 — a zero-width match at a mid-surrogate position

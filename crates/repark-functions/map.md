@@ -162,6 +162,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   sized `StringBuilder` (no per-cell `Vec<char>`).
   **octo C1-Q-004:** `perf_measure_*` 1M-row benches gated on `REPARK_PERF_MEASURE=1`.
   **octo C2-Q-001:** compile pattern apostrophe/unterminated pins.
+  **TYPES-1 round 4 (2026-09-05):** the Java-pattern year arm renders Java's leading `+`
+  past 4 digits (`yyyy`, `count >= 4` — wrapped-year `from_unixtime` parity).
+  INCREASE 1704→1709 (no compressible lines — rustfmt-packed; owner approval at merge).
+  pins: types-1/C-006
 - `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
   UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the
   same kernels registered by the SQL door.

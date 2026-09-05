@@ -3584,9 +3584,7 @@ class DataFrame:
             StringType,
             TimestampType,
         )
-        from repark.spark.types import (
-            DataType as ReparkDataType,
-        )
+        from repark.spark.types import DataType as ReparkDataType
 
         fields: list[StructField] = []
         for name, type_key, nullable in self._inner.logical_schema_fields():
