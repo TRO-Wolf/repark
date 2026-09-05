@@ -31,24 +31,158 @@ ledger and its `staging/map.md` row. Closed: `Cargo.toml`, `Cargo.lock`, every d
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The fork splitter's Arrow-kernel grouping returns exactly what the row-wise grouping returns — same partition keys, same batches, same rows in the same order — on every transform the fork serves, with NULL partition values and multi-field specs. | A property test running both implementations on the same seeded random batches across the transform matrix. | **OPEN** | |
-| C-002 | The row-wise path is kept, and taken, for the partition types where Arrow total-order equality is NOT Iceberg `Struct` equality: Float, Double, Unknown, and an empty partition type. | A pin that a Double identity spec stays row-wise and groups `-0.0` with `0.0`; a mutation that admits Double to the vectorized path reds it. | **OPEN** | |
-| C-003 | The fork lane is green on its own gates. | `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -D warnings`, `cargo test -p iceberg`, and the repo's size / comment-block / matrix-anchor / agent-artifact scripts. | **OPEN** | |
-| C-004 | A CTAS writes one data file per writer, and the writer count is `min(repark.write.max-concurrent-files, input partitions)` — the session knob still decides the file count. | Facade pins at cap 4 and cap 1 over one seed, with the row set and `sum(id)` equal on both. | **OPEN** | |
-| C-005 | After the parallel section the data-file order is a function of the plan, not of completion order: repeated CTAS of one seed produces the same manifest record-count sequence, so the `_row_id` derived from it is reproducible. | Three facade runs compared; a Rust pin over four differently sized partitions asserting the writer-index sequence; a mutation that drains in completion order reds it. | **OPEN** | |
-| C-006 | V3-11 holds on the new path: one commit's data files reach the manifest in ascending partition-value order. | A partitioned facade CTAS whose `.files` partition values are sorted and cover every partition. | **OPEN** | |
-| C-007 | The writers' work overlaps instead of serializing. | A Rust differential pin: an injected blocking delay costs one writer four times what it costs four writers; a mutation forcing one writer reds it. Plus the measured CTAS walls. | **OPEN** | |
-| C-008 | A failed write commits nothing and leaves no completed data file behind: the first error surfaces, sibling writers stop and close, and every file they completed is deleted through `FileIO`. | A Rust pin injecting a late failure in one partition; a mutation that skips the cleanup reds it. | **OPEN** | |
-| C-009 | The written table is Spark-equal. | A live leg comparing Spark's own CTAS of the same seed row for row against the written table, and the CTAS wall read against the DataFusion parquet sink measured in the same run. | **OPEN** | |
-| C-010 | The before/after numbers are measured on a release module on three builds (base, fork-only, both) and filed with their fixture, iteration count and load. | `docs/perf/iceberg-write-baseline.md` with the tables and the commands. | **OPEN** | |
-| C-011 | No dependency moves and the pin does not move: `git diff origin/main -- Cargo.toml Cargo.lock` is empty at hand-back, and the fork change is consumed only through a temporary, never-committed path override. | The diff, plus the registry row that records the fork dependency. | **OPEN** | |
+| C-001 | The fork splitter's Arrow-kernel grouping returns exactly what the row-wise grouping returns — same partition keys, same batches, same rows in the same order — on every transform the fork serves, with NULL partition values and multi-field specs. | A property test running both implementations on the same seeded random batches across the transform matrix. | **PROVEN** | `record_batch_partition_splitter.rs::test_arrow_order_grouping_equals_row_wise_grouping` — 15 partition specs (identity on int/long/string, truncate on string and long, bucket 4 and 8, year/month/day/hour, void beside identity, two- and three-field specs) x 7 batch sizes (0, 1, 2, 7, 64, 257, 1024) of seeded random data with NULLs in every optional source, both implementations compared as a canonical (key, batch) multiset. `cargo test -p iceberg` 0 failed. |
+| C-002 | The row-wise path is kept, and taken, for the partition types where Arrow total-order equality is NOT Iceberg `Struct` equality: Float, Double, Unknown, and an empty partition type. | A pin that a Double identity spec stays row-wise and groups `-0.0` with `0.0`; a mutation that admits Double to the vectorized path reds it. | **PROVEN** | `test_float_partition_values_stay_on_the_row_wise_split` — a Double identity spec keeps `arrow_grouping == false` and groups `0.0, -0.0, 1.0, 0.0` into 2 partitions. Mutation D (admit Double to the vectorized path) reds it: total order splits the zeros into 3. |
+| C-003 | The fork lane is green on its own gates. | `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -D warnings`, `cargo test -p iceberg`, and the repo's size / comment-block / matrix-anchor / agent-artifact scripts. | **PROVEN** | `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -- -D warnings` (Finished, no warnings), `cargo test -p iceberg` exit 0, `check_rust_file_size.sh` 438 files clean, `check_comment_blocks.sh` OK, `check_matrix_anchors.sh` OK, `check_agent_artifacts.sh` OK. |
+| C-004 | A CTAS writes one data file per writer, and the writer count is `min(repark.write.max-concurrent-files, input partitions)` — the session knob still decides the file count. | Facade pins at cap 4 and cap 1 over one seed, with the row set and `sum(id)` equal on both. | **PROVEN** | `test_ctas_writes_one_data_file_per_plan_partition` (4-file seed → 4 data files) and `test_one_concurrent_file_still_writes_exactly_one` (cap 1 → 1 file, same `sum(id)`); Rust `timed_parallel` asserts one file per partition. At 1e6 rows the live leg reads 8 and 1. |
+| C-005 | After the parallel section the data-file order is a function of the plan, not of completion order: repeated CTAS of one seed produces the same manifest record-count sequence, so the `_row_id` derived from it is reproducible. | Three facade runs compared; a Rust pin over four differently sized partitions asserting the writer-index sequence; a mutation that drains in completion order reds it. | **PROVEN** | `partition_order_of_the_returned_files_is_deterministic` — four partitions of 5/10/15/20 rows, three runs, the exact writer-index sequence; `test_repeated_ctas_writes_the_same_files_in_the_same_order` over three CTAS runs. Mutation M2 (drain in completion order) reds it. |
+| C-006 | V3-11 holds on the new path: one commit's data files reach the manifest in ascending partition-value order. | A partitioned facade CTAS whose `.files` partition values are sorted and cover every partition. | **PROVEN** | `test_partitioned_ctas_files_ascend_by_partition_value` — `.files` partition values sorted and covering 0..7; `ascending_partition_order` is applied on every return path, including the unpartitioned one where it is a no-op. |
+| C-007 | The writers' work overlaps instead of serializing. | A Rust differential pin: an injected blocking delay costs one writer four times what it costs four writers; a mutation forcing one writer reds it. Plus the measured CTAS walls. | **PROVEN** | `blocking_partition_work_overlaps_instead_of_serializing` — a 120 ms blocking delay per partition costs one task draining the same four partitions >= 2x the delay, and the node < half of that. Mutation M1 (one writer over a coalesce) reds it. Walls: `ctas` 880.50 → 478.03 ms and `ctas_partitioned8` 1,611.25 → 917.22 ms (minima, contended box) — §8. |
+| C-008 | A failed write commits nothing and leaves no completed data file behind: the first error surfaces, sibling writers stop and close, and every file they completed is deleted through `FileIO`. | A Rust pin injecting a late failure in one partition; a mutation that skips the cleanup reds it. | **PROVEN** | `a_failed_partition_deletes_every_completed_data_file` — a late failure in one of four partitions surfaces the source root cause and leaves no parquet file in the warehouse. Mutation M3 (skip the cleanup) reds it with the three sibling files named. |
+| C-009 | The written table is Spark-equal. | A live leg comparing Spark's own CTAS of the same seed row for row against the written table, and the CTAS wall read against the DataFusion parquet sink measured in the same run. | **PROVEN** | `test_written_table_row_set_matches_spark` — Spark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 CTAS of the same seed, compared row for row on id/part/label; `test_partition_writers_answer_the_single_writer_at_scale` — at 1e6 rows the two writer shapes agree on rows, `sum(id)`, `sum(vi)` and layout. Co-collected with `test_parity_live.py::test_live_disclosure_still_diverges`: 19 passed. |
+| C-010 | The before/after numbers are measured on a release module on three builds (base, fork-only, both) and filed with their fixture, iteration count and load. | `docs/perf/iceberg-write-baseline.md` with the tables and the commands. | **PROVEN** | `docs/perf/iceberg-write-baseline.md` §4 (fork half in isolation, 171.39 → 28.33 ms), §5 (three builds, every pass median, the load at each pass, and what the walls do not show), §6 (layout). Every number is from a release module that refuses to run with debug assertions on. |
+| C-011 | No dependency moves and the pin does not move: `git diff origin/main -- Cargo.toml Cargo.lock` is empty at hand-back, and the fork change is consumed only through a temporary, never-committed path override. | The diff, plus the registry row that records the fork dependency. | **PROVEN** | `git diff origin/main -- Cargo.toml Cargo.lock` empty at hand-back; the override is `scratch/probes/fork_override.sh`, excluded from git, and `Cargo.lock` is restored with `git checkout` after each measured build. `PERF-ICE-FANOUT-1` is filed BACKLOG with fork trigger F-28, not FIXED. |
+
+VERDICT: 11 clauses, 11 PROVEN, 0 OPEN, 0 REJECTED.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: perf-ice-writepath-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the brief. Both targets it names are reported as MISSED with the reason — the analysis' 813 ms was the whole partitioned-minus-unpartitioned CTAS delta, not the splitter, whose entire measured cost at that scale is 171 ms — rather than restated as met.
+      artifacts: [docs/perf/iceberg-write-baseline.md, task/ledgers/staging/perf-ice-writepath-1-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Splitter equivalence over 15 partition specs (identity on int/long/string, truncate on string and long, bucket 4 and 8, year, month, day, hour, void beside identity, two- and three-field specs) x 7 batch sizes (0, 1, 2, 7, 64, 257, 1024) of seeded random data with NULLs in every optional source; the node over zero rows, one partition, four differently sized partitions, and a late failure.
+      artifacts: [crates/repark-iceberg/src/write/partition_write.rs, python/repark/tests/test_perf_ice_writepath_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: No unwrap or expect in production; the collector lock's poisoning is a typed Execution error, not a panic; a failed writer task's error is the first error returned and the dispatcher's secondary is not allowed to mask it. make rust-panic-ban exit 0.
+      artifacts: [crates/repark-iceberg/src/write/partition_write.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The parallel section is DataFusion's coalesce, one task per partition, never more than one partition per writer — the rejected min(cap, partitions) shape is recorded with its unbounded-buffering hazard. The shared state is one Mutex over a BTreeMap written once per partition and one AtomicBool; the file order is taken from the map's key order, not from completion. No spawn, no unsafe, no new dependency.
+      artifacts: [crates/repark-iceberg/src/write/partition_write.rs, crates/repark-iceberg/src/write/map.md]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Abort — a late failure in one of four partitions surfaces the source root cause, siblings stop taking Ok batches and close, every completed data file is deleted through FileIO, and nothing is committed. The four pre-existing stream-path abort pins in merge/tests/streaming.rs are untouched and green.
+      artifacts: [crates/repark-iceberg/src/write/partition_write.rs, crates/repark-iceberg/src/write/merge/tests/streaming.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Spark equality — the live leg runs Spark 4.1.2 with iceberg-spark-runtime-4.1_2.13:1.11.0 over the same seed and compares the written table row for row; 19 passed co-collected with test_parity_live.py::test_live_disclosure_still_diverges. repark-iceberg 398, repark-spark 788 and repark-sql 341 unit tests plus every integration binary green.
+      artifacts: [python/repark/tests/test_perf_ice_writepath_1.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Seven mutations, every one red — fork scatter-index confusion, range off-by-one, group on the first key column only, admit Double to the vectorized path; RePark one writer over a coalesce, drain in completion order, skip the abort cleanup. Section 6 lists each with the pin it reddens.
+      artifacts: [task/ledgers/staging/perf-ice-writepath-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Measurement honesty — three builds, every pass median and the 1-minute load at each pass, minima reported with the reason (the box was never quiet), and a section that says plainly what the walls do NOT show, including that B3 does not sit between B0 and B2 and that the two halves are not resolved apart by them.
+      artifacts: [docs/perf/iceberg-write-baseline.md]
+    - id: AT-9
+      status: N/A
+      justification: No AWS surface is touched. The write node is engine-side over a memory catalog on the local filesystem; the Glue and S3 Tables acceptance legs are excluded by the brief and no catalog seam, credential path or region behaviour changes.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Scope — Cargo.toml and Cargo.lock are byte-identical to origin/main, the fork change is consumed only through a temporary path override that is reverted and never committed, PERF-ICE-FANOUT-1 is filed BACKLOG with fork trigger F-28 rather than FIXED, and STATUS.md and briefs/next-sequence.md are untouched.
+      artifacts: [docs/spark-sql-iceberg-parity.md, Cargo.toml]
+  complete: true
+```
 
 ## 6. Red-first and mutation (docs/testing.md "Gate provocation proofs")
 
+Seven mutations, each applied to the shipped tree, run, and reverted. None is committed.
+
+| # | mutation | pin that reddens |
+|---|---|---|
+| M-A | fork: `group_of_row[sorted_positions.value(position)]` → `group_of_row[position]` | all three splitter tests |
+| M-B | fork: `for position in range.clone()` → `range.start..range.end - 1` | all three splitter tests |
+| M-C | fork: `partition(&sorted_keys)` → `partition(&sorted_keys[..1])` | the property test (multi-field specs) |
+| M-D | fork: admit `PrimitiveType::Double` to the vectorized path | the float fallback test (3 groups where Iceberg sees 2) |
+| M1 | RePark: one writer over a `CoalescePartitionsExec` instead of one per partition | all three node tests |
+| M2 | RePark: drain the collector in reverse (completion order stands in for it) | the writer-index order pin |
+| M3 | RePark: skip `delete_completed_files` on the error path | the abort pin, naming the three surviving files |
+
+The property test is the fork half's red-first instrument by construction: it runs the previous
+implementation and the new one over the same batches, so it cannot pass unless they agree.
+
 ## 7. Design, and the alternatives that were measured
+
+**Why the RePark half is an `ExecutionPlan` node and not a spawn.** The writers had to leave one
+task for the encode to parallelize; nothing else moves that. Every spawn primitive is closed
+here: `clippy.toml` bans `tokio::spawn`, `tokio::task::spawn` and `spawn_blocking` (async
+cancel-safety, carried from v1), `.agents/skills/rust-code-quality/SKILL.md` makes it a review
+duty that the ban "is not smuggled around via `JoinSet`, `FuturesUnordered`-with-detach, or a
+helper crate" — which closes DataFusion's own `SpawnedTask` too — and `tokio` is a
+**dev-dependency** of `repark-iceberg`, so a production spawn would also need a dependency the
+brief forbids. What is left is the brief's own first route: put the write in the plan and let the
+executor's `CoalescePartitionsExec` spawn per partition, which it does
+(`RecordBatchReceiverStream::run_input`). RePark's own code spawns nothing.
+
+**Rejected: `writers = min(max-concurrent-files, input partitions)`.** It preserved the old file
+count, and it measured 738 ms against 547 ms for one-writer-per-partition on the partitioned 1e6
+CTAS. Worse, it is unbounded in memory: DataFusion's repartition channels are unbounded per
+output partition and close their gate only when EVERY channel is non-empty, so the partitions a
+writer has not reached yet buffer whole — which a CTAS over a GROUP BY or a join would hit. The
+knob now selects between one writer over a `CoalescePartitionsExec` (cap 1) and one per
+partition; it still bounds the stream write paths INSERT, MERGE, overwrite and predicate DML use,
+none of which this unit touches.
+
+**Rejected for the fork: an `arrow-row` `RowConverter`.** It is the natural group key and it is
+already in the lock file — but not in `iceberg`'s manifest, and adding it is a dependency change.
+`lexsort_to_indices` + `arrow_ord::partition` needs only `arrow-ord`, which the crate already
+depends on, and it is what the analysis proposed.
+
+**Kept for the fork: the row-wise path.** Arrow's total order is not Iceberg `Struct` equality for
+floats: `distinct` follows totalOrder, where `-0.0` and `0.0` differ, while `OrderedFloat` says
+they are equal — so two rows that Iceberg puts in one partition would become two `PartitionKey`s
+with the same value in one batch. Float, Double, Unknown and an empty partition type therefore
+stay on the row-wise path, decided once in `try_new`. NaN agrees on both sides and needs no guard.
 
 ## 8. Measurement
 
+Everything is in [../../../docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
+The headline pair, minima on a contended box (1-minute load 13–22 throughout, sibling `rustc`
+builds live):
+
+| cell | before (B0) | after (B2) | |
+|---|---:|---:|---|
+| `iceberg_write/1000000/ctas` | 880.50 ms | **478.03 ms** | 1.84× |
+| `iceberg_write/1000000/ctas_partitioned8` | 1,611.25 ms | **917.22 ms** | 1.76× |
+| `df_write_parquet_zstd` (control) | 143.90 ms | 100.73 ms | |
+| fork splitter, isolated, 1e6 rows | 171.39 ms | **28.33 ms** | 6.0× |
+
+The analysis' targets (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms) are **not met**: they ask
+for parity with the parquet sink, which reads 90–144 ms on this box. The brief's fork target
+("≥ 600 ms off `ctas_partitioned8`") rests on attributing the whole 813 ms partitioned delta to
+the splitter; the splitter's entire cost at that scale is 171 ms, so the target was unreachable
+by construction and the rest of that delta is the fanout's file count.
+
 ## 10. Gates
 
+RePark lane, override reverted, `Cargo.toml`/`Cargo.lock` byte-identical to `origin/main`. Fork
+lane: `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -- -D warnings`,
+`cargo test -p iceberg` (exit 0), plus the repo's size / comment-block / matrix-anchor /
+agent-artifact scripts.
+
 ## 11. Out of scope, observed and filed
+
+- **`PERF-ICE-FANOUT-1` is not FIXED here.** The fork change is not consumed; the pin bump is its
+  own PR (`docs/fork-sync.md` rule 1). The registry row carries the fork trigger and the measured
+  numbers, in the shape `PERF-DVCLOSE-STMT-1` used while it waited for F-25.
+- **The partitioned CTAS's file count is the remaining cost.** A partitioned write produces
+  writers × partition values data files (64 at eight partitions and eight writers). Spark's answer
+  is `write.distribution-mode = hash`, which sends one partition value to one task and writes one
+  file per value; RePark has no such rule. That, not the splitter, is what is left of the 813 ms.
+- **A writer that fails mid-write still orphans its own partial file.** Sibling writers close and
+  are cleaned up, but the failing writer's `RollingFileWriter` is dropped without a close, so a
+  partial parquet file can survive a failed write. Closing it would need the fork to return the
+  files a failed writer had already rolled; today `remove_orphan_files` reclaims them.
+- **The stream write paths are untouched.** INSERT, MERGE, overwrite and predicate DML still use
+  `write_data_files_from_stream_with_concurrency` and its four cooperative workers. Whether they
+  should move to the node is a separate unit with a much larger blast radius.
+- **The box was never quiet.** Three release rebuilds of a 163 MB module could not be measured in
+  one window, and B3 does not sit between B0 and B2. A re-measure on an idle box would settle how
+  the end-to-end gain divides between the two halves.
