@@ -68,8 +68,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `total_cmp` (stable, like Spark's TimSort) while the merge loops use IEEE `<`/`<=`
   exactly as the Scala source does; f64↔decimal crosses exactly on the shortest repr and
   quantizes HALF_UP to scale where the repr runs long. `threshold_value_serializes` pins
-  the 10000/50000 constants Spark's `QuantileSummaries` object carries.
-  pins: perf-approxpct-1/C-001
+  the 10000/50000 constants Spark's `QuantileSummaries` object carries. The edge test pins
+  the clamp sides on n=200 at exactly eps, and the eager test pins mid-insert compression
+  with no query call; all four boundary mutations die (ledger C-002).
+  pins: perf-approxpct-1/C-001 perf-approxpct-1/C-002
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
   Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`

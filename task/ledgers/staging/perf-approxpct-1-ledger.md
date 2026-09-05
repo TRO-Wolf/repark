@@ -124,7 +124,21 @@ the acc2 column reproduces the WIN-SLIDE-1 measurement exactly.
 
 ## 5. Mutation score
 
-Recorded here once the implementation lands.
+4/4 killed, each mutant verified present by printing the mutated line
+before the run (the first probe round flipped names that did not exist
+in the file — `current_upper`, `new_error` — so its greens were void;
+only this round counts). Killers: the eager-compress gate inversion
+(`sampled.len() >= threshold` → `<`, line 84) dies on the new
+`inserts_compress_eagerly_before_any_query` test — the first run
+SURVIVED, because `query()`/`to_bytes()` compress lazily and every
+existing assertion reads final state; the new test inserts 200k rows
+with no query call and pins sampled < 100k, which is exactly the
+mid-insert memory property the brief asks to bound. The min-clamp
+strictness (`<=` → `<`, line 265) dies on
+`accuracy_two_collapses_to_the_minimum`; the max-clamp one (`>=` →
+`>`, line 267) dies on the widened edge test (n=200, p at exactly eps);
+the merge-error `max` → `min` (line 166) dies on
+`merge_adopts_the_wider_error`. pins: perf-approxpct-1/C-002
 
 ## 6. Limitations
 

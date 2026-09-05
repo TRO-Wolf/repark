@@ -450,8 +450,16 @@ mod tests {
         for value in [5.0, 1.0, 9.0, 3.0, 7.0] {
             summary.insert(value);
         }
-        assert_eq!(bits(&summary.query(&[0.1])), bits(&[1.0]));
-        assert_eq!(bits(&summary.query(&[0.9])), bits(&[9.0]));
+        assert_eq!(bits(&summary.query(&[0.05])), bits(&[1.0]));
+        assert_eq!(bits(&summary.query(&[0.95])), bits(&[9.0]));
+        let mut wide = QuantileSummaries::new(0.1);
+        for value in 1..=200_i64 {
+            #[allow(clippy::cast_precision_loss)]
+            let slot = value as f64;
+            wide.insert(slot);
+        }
+        assert_eq!(bits(&wide.query(&[0.1])), bits(&[1.0]));
+        assert_eq!(bits(&wide.query(&[0.9])), bits(&[200.0]));
     }
 
     #[test]
@@ -612,5 +620,21 @@ mod tests {
         );
         assert!(bytes.len() < 2_000_000, "{}", bytes.len());
         assert_eq!(summary.count(), 1_000_000);
+    }
+
+    #[test]
+    fn inserts_compress_eagerly_before_any_query() {
+        let mut summary = QuantileSummaries::new(0.01);
+        for value in 1..=200_000_i64 {
+            #[allow(clippy::cast_precision_loss)]
+            let slot = value as f64;
+            summary.insert(slot);
+        }
+        assert!(
+            summary.sampled_count() < 100_000,
+            "{}",
+            summary.sampled_count()
+        );
+        assert_eq!(summary.count(), 200_000);
     }
 }
