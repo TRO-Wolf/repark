@@ -2579,9 +2579,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answers across eight tables (eviction never corrupts — the byte bound itself is the fork's
   moka `max_capacity`, unit-pinned fork-side); and `VERSION AS OF` plus branch reads answer
   with the cache on. Two lineage detector pins hold `PERF-CATALOG-LINEAGE-CACHE-1`'s shape:
-  with the knob on, an upgraded table reads NULL lineage for its carried rows (today's wrong
-  answer — the pin reds when `F-CATIO-KEY` lands); with the knob off, the same upgrade serves
-  assigned lineage. The two refusal parametrizations grow by the new key (`"many"` and `"-1"`
+  `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` pins today's
+  wrong answer (NULL lineage for carried rows — the pin reds when `F-CATIO-KEY` lands) and
+  `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` pins the
+  same upgrade serving assigned lineage with the knob off. The two refusal parametrizations
+  grow by the new key (`"many"` and `"-1"`
   fail loud; the alias names both spellings). The IO-1 commit-visibility and schema-change legs
   run unchanged with the cache OFF (their default sessions build no shared cache). The
   two-door shape of every cell stays in

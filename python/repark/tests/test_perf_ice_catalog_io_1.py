@@ -394,9 +394,7 @@ def _seed_v2_upgrade_table(spark: ReparkSession) -> None:
     spark.sql("INSERT INTO ice.ns.up VALUES (1, 'a'), (2, 'b'), (3, 'c')").to_arrow()
 
 
-def _lineage_triples(
-    spark: ReparkSession, table: str
-) -> list[tuple[int, int | None, int | None]]:
+def _lineage_triples(spark: ReparkSession, table: str) -> list[tuple[int, int | None, int | None]]:
     arrow = spark.sql(
         f"SELECT id, _row_id, _last_updated_sequence_number FROM {table} ORDER BY id"
     ).to_arrow()
