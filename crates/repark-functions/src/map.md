@@ -164,6 +164,40 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
   **TYPES-1 (2026-09-05):** registers `count_if` plus the `SignedAggregate` wrappers
   (`regr_count`, `approx_distinct` → `Int64`). pins: types-1/C-003
+- `aggregate.rs` also serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (**PERF-AGG-AVG-1**), delegating to `avg_groups.rs`; the
+  `Accumulator` arms and `state_fields` are untouched, so window frames keep the retract
+  path, and the decimal `DecimalAverager` is shared as `pub(crate)`. Round 2 removed
+  the dead `is_distinct` early return in `create_groups_accumulator` (unreachable:
+  the only caller is guarded by `groups_accumulator_supported`).
+  pins: perf-agg-avg-1/C-001, C-002
+- `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the
+  `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
+  own `AvgGroupsAccumulator` (`datafusion-functions-aggregate/src/average.rs`):
+  per-group `Vec<u64>` counts plus `Vec<Native>` sums, `EmitTo::First` partial emission,
+  `convert_to_state`, and a local null-state tracker (the
+  `datafusion-functions-aggregate-common` `NullState` cannot be used without a new
+  dependency, so its All/Some fast-path semantics are re-implemented here). Three
+  deliberate deviations from the reference, each forced by a house contract: the average
+  closure returns `Option` so 2×-MAX `try_avg` overflow yields per-group NULL instead
+  of failing the query (the sum-wrap shape is BACKLOG `AVG-DEC-SUMWRAP-1`); the
+  float state stays `[sum, count:Int64]` and the decimal state
+  `[count:UInt64, sum]` because `state_fields` belongs to the untouched retract path;
+  length mismatches are loud `exec_err!` instead of the reference's `assert_eq!`, and
+  indexing is bounds-checked instead of `get_unchecked` (`unsafe` is forbidden in this
+  crate). Unit tests drive `update_batch` / `merge_batch` / `evaluate` / `state` /
+  `size` directly with `EmitTo::First`, the way DataFusion's own groups-accumulator
+  tests do; the decimal merge test merges three groups with distinct partials
+  across two states and asserts every group, so a decimal-arm index scramble reds
+  exactly it.
+  pins: perf-agg-avg-1/C-001
+- `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
+  per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
+  1000-line ceiling. It re-implements the `datafusion-functions-aggregate-common`
+  `NullState` All/Some fast-path semantics (no new dependency allowed): batches with no
+  nulls and no filter skip tracking entirely, otherwise one validity bit per group with
+  `EmitTo::First` splitting the mask. The unit test pins the split.
+  pins: perf-agg-avg-1/C-001
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT

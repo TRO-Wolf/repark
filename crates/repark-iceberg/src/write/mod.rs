@@ -19,6 +19,7 @@ pub mod overwrite;
 pub mod overwrite_commit;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
+pub mod partition_write;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
@@ -78,6 +79,7 @@ pub use partition_overwrite::{
     plan_partition_overwrite, refuse_empty_dynamic_overwrite,
     stage_static_partition_overwrite_files,
 };
+pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
 pub use truncate::{commit_truncate, commit_truncate_to};

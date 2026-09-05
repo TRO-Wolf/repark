@@ -1718,6 +1718,34 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PySpark returns a nested `Row`, identically on both converters, so the equality pin beside it
   is what proves the divergence is pre-existing.
   pins: perf-facade-1/C-002, C-003, C-006, C-007
+- `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
+  through the facade, over a fixed four-file seed so the plan really has four partitions.
+  Always-run: the CTAS writes one data file per plan partition (four), and
+  `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
+  takes it — still writes exactly one; and a partitioned CTAS's files ascend by partition value
+  (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  two writer shapes agree on every answer and on their layout (one writer one file, four-cap
+  eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
+  against the written table. The ordering pin seeds EIGHT UNEQUAL files
+  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times at **3, 4, 8 and 16
+  partitions**, asserting the manifest ascends by content, that `_row_id` tiles it contiguously
+  from zero, that the row set is the expected digest of ids, and that two runs with the same file
+  grouping commit the same id-to-`_row_id` map — the grouping is identified by every file's
+  `id` bounds and record count, and the map by its hash; keying either by the record-count
+  sequence alone made the check unfalsifiable (round-3 critic G3) and would red two distinct
+  groupings that happen to share a count sequence (round-4 critic). Two groupings CAN share a
+  count sequence and differ in which rows each file holds, which is what the conjunct now catches. It deliberately does
+  NOT assert the record-count sequence: round 2 did, and CI's 4-core runner reddened it because the
+  scan groups the source files differently from run to run — measured 3 distinct groupings in 5
+  runs at 3 partitions, 4-6 in 10 at 4, and 1 in 10 at 8 and at 16, where the eight source files
+  map one-to-one onto the partitions. **8 was the round-2 pin's own configuration, which is the
+  only reason it looked green.** Equal-sized files hid the round-1 defect; a 1:1 partition count
+  hid the round-2 one; this pin varies both. There is deliberately NO wall assertion here: on a disk-contended
+  box this write is `fsync`-bound and a timing pin flakes — the speedup is measured in the
+  baseline doc and pinned deterministically in `write/partition_write.rs`, where the blocking
+  work is injected. Numbers and commands:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
+  pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the
@@ -1726,6 +1754,38 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
   first if a rule stopped preserving names.
   pins: perf-facade-1/C-004, C-008
+- `test_perf_agg_avg_1.py` — **PERF-AGG-AVG-1** (2026-09-05): grouped `avg` / `try_avg`
+  answer pins plus the cost probe that proves the `GroupsAccumulator` runs. Always-run pins
+  assert Spark-recorded values AND Arrow types: int/float/decimal global and grouped avgs
+  with NULLs, every input width coerced to double, decimal `(10,2)→(14,6)` exactly,
+  `try_avg` overflow NULL at `decimal(38,4)` on the 2×-MAX shape, plain-avg overflow raising, empty input,
+  all-NULL groups, single `avg(DISTINCT)` answering through the optimizer's dedup rewrite,
+  and the sliding-window control. The many-groups leg uses a 2e5-group fixture whose values
+  are exact in binary (halves under 32), so per-group avgs are bit-exact across engines and
+  the live leg compares full frames; only the 2e5-term checksum uses a tolerance. The probe
+  times grouped avg vs grouped sum back to back on one partition (4.06× on the base, bound
+  2.5, 1.21× after) — the single partition is what makes the per-group boxing cost
+  visible. Live legs
+  re-derive the small grouped, decimal, window, many-groups, overflow and distinct answers
+  from PySpark 4.1.2. Three pre-existing divergences are disclosed, not absorbed: group keys
+  come back nullable where Spark marks them not-null (the live legs project to the avg
+  column), multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
+  where Spark answers, and the sum-wrap fixtures answer the wrapped quotient where
+  Spark NULLs or raises (`AVG-DEC-SUMWRAP-1`, below). Round 2 pins the grouped
+  refusal shapes as measured: grouped multi-distinct refuses as a bare
+  `PySparkException` with the same message, and grouped `avg(NULL)` refuses as
+  `UnsupportedOperationException` naming the groups accumulator pair. Round 2 records
+  the `AVG-DEC-SUMWRAP-1` divergence, round 3 widens it to the general wrap class:
+  the zero-wrap fixture answers `0.0000` on the SQL doors, the non-zero-wrap fixture
+  answers `100000.0000` on grouped SQL and DataFrame, and the window `try_avg`
+  list plus the window `avg` raise are pinned in the same test — where Spark answers
+  NULL (`try_avg`) or raises (`avg`). The grouped-float drift gets its own pin: the
+  1e16-plus-ones fixture pins repark's exact grouped value within 1e-12 of
+  Spark's, with a seventh live leg re-deriving the tolerance (the many-groups
+  fixture's exact-binary values cannot see this drift). The brief's full gate
+  list runs green with this file in the tree, and §6 of the ledger records the
+  three named mutations red.
+  pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
   `createDataFrame` path against the legacy row-wise path, kept callable as
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
