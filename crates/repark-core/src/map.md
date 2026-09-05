@@ -204,7 +204,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   at registration, never at query time). **A13:** `register_memory_catalog` sets `root` to the
   warehouse (`memory_warehouse_fallback_root`, also used to normalize CALL `location`
   strings); `CatalogRegistry::from` still uses `std::env::temp_dir()`. Hoisted MOVE-ONLY
-  from the v1 SQL crate.
+  from the v1 SQL crate. **PERF-ICE-CATALOG-IO-1:** the registry also carries this session's
+  `CatalogCaches` (`with_cache_settings`, resolved once in `build()` from the conf map), so every
+  catalog the session builds shares one metadata-location cache and one retained-entry bound.
+  pins: perf-ice-catalog-io-1/C-002, C-004
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
