@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import _live_parity as lp
+import pyarrow as pa
 import pytest
 
 import repark.spark.session.create_dataframe_rows as rows_module
@@ -464,26 +465,32 @@ def test_nested_list_and_struct_cells(
 def _dict_session(value: str) -> ReparkSession:
     """A session with the nested-dict-as-struct conf set to ``value``."""
     return (
-        ReparkSession.builder.appName("pytest-perf-facade-cdf-1-dict")
+        ReparkSession.builder.appName(f"pytest-perf-facade-cdf-1-dict-{value}")
         .config("spark.sql.pyspark.inferNestedDictAsStruct.enabled", value)
         .getOrCreate()
     )
 
 
-def test_dict_cells_as_struct_and_as_map(
-    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
-) -> None:
+def _column_type(frame: Any, name: str) -> Any:
+    """The Arrow type of one named column, proving which conf took effect."""
+    return frame.to_arrow().schema.field(name).type
+
+
+def test_dict_cells_as_struct_and_as_map(monkeypatch: pytest.MonkeyPatch) -> None:
     """Dict cells follow the struct/map conf identically on both paths."""
-    assert cdf_session is not None
     data = [({"b": 1, "a": "x"},), ({"b": 2},), (None,)]
     struct_session = _dict_session("true")
     try:
         _assert_create_equal(monkeypatch, struct_session, data, ["d"])
+        struct_type = _column_type(struct_session.createDataFrame(data, ["d"]), "d")
+        assert pa.types.is_struct(struct_type)
     finally:
         struct_session.stop()
     map_session = _dict_session("false")
     try:
         _assert_create_equal(monkeypatch, map_session, data, ["d"])
+        map_type = _column_type(map_session.createDataFrame(data, ["d"]), "d")
+        assert pa.types.is_map(map_type)
     finally:
         map_session.stop()
 
@@ -495,7 +502,7 @@ def test_list_of_dict_cells(monkeypatch: pytest.MonkeyPatch, cdf_session: Repark
 
 
 def test_dict_cell_with_null_key_refuses_with_same_text(
-    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A dict cell with a null key refuses on both paths."""
     struct_session = _dict_session("true")
@@ -508,47 +515,59 @@ def test_dict_cell_with_null_key_refuses_with_same_text(
 def _legacy_coerce_session(value: str) -> ReparkSession:
     """A session with the legacy first-element conf set to ``value``."""
     return (
-        ReparkSession.builder.appName("pytest-perf-facade-cdf-1-legacy")
+        ReparkSession.builder.appName(f"pytest-perf-facade-cdf-1-legacy-{value}")
         .config("spark.sql.pyspark.legacy.inferArrayTypeFromFirstElement.enabled", value)
         .getOrCreate()
     )
 
 
-def test_legacy_first_element_coerce(
-    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
-) -> None:
+def test_legacy_first_element_coerce(monkeypatch: pytest.MonkeyPatch) -> None:
     """Nested lists follow the legacy first-element conf on both paths."""
-    assert cdf_session is not None
-    data = [([[1, 2], [3]],), ([[4]],)]
-    for value in ("true", "false"):
-        session = _legacy_coerce_session(value)
-        try:
-            _assert_create_equal(monkeypatch, session, data, ["d"])
-        finally:
-            session.stop()
+    data = [([{"a": 1}],), ([{"b": "x"}],)]
+    session = _legacy_coerce_session("true")
+    try:
+        _assert_create_equal(monkeypatch, session, data, ["d"])
+        first_only = _column_type(session.createDataFrame(data, ["d"]), "d").value_type
+        assert [field.name for field in first_only] == ["a"]
+    finally:
+        session.stop()
+    session = _legacy_coerce_session("false")
+    try:
+        _assert_create_equal(monkeypatch, session, data, ["d"])
+        merged = _column_type(session.createDataFrame(data, ["d"]), "d").value_type
+        assert [field.name for field in merged] == ["a", "b"]
+    finally:
+        session.stop()
 
 
 def _timestamp_type_session(value: str) -> ReparkSession:
     """A session with ``spark.sql.timestampType`` set to ``value``."""
     return (
-        ReparkSession.builder.appName("pytest-perf-facade-cdf-1-tstype")
+        ReparkSession.builder.appName(f"pytest-perf-facade-cdf-1-tstype-{value}")
         .config("spark.sql.timestampType", value)
         .getOrCreate()
     )
 
 
-def test_datetime_column_under_both_timestamp_types(
-    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
-) -> None:
+def test_datetime_column_under_both_timestamp_types(monkeypatch: pytest.MonkeyPatch) -> None:
     """Naive datetimes follow the LTZ/NTZ default identically on both paths."""
-    assert cdf_session is not None
     data = [(datetime.datetime(2024, 1, 2, 3, 4, 5),), (None,)]
-    for value in ("TIMESTAMP_LTZ", "TIMESTAMP_NTZ"):
-        session = _timestamp_type_session(value)
-        try:
-            _assert_create_equal(monkeypatch, session, data, ["ts"])
-        finally:
-            session.stop()
+    session = _timestamp_type_session("TIMESTAMP_LTZ")
+    try:
+        _assert_create_equal(monkeypatch, session, data, ["ts"])
+        ltz_type = _column_type(session.createDataFrame(data, ["ts"]), "ts")
+        assert pa.types.is_timestamp(ltz_type)
+        assert ltz_type.tz == "UTC"
+    finally:
+        session.stop()
+    session = _timestamp_type_session("TIMESTAMP_NTZ")
+    try:
+        _assert_create_equal(monkeypatch, session, data, ["ts"])
+        ntz_type = _column_type(session.createDataFrame(data, ["ts"]), "ts")
+        assert pa.types.is_timestamp(ntz_type)
+        assert ntz_type.tz is None
+    finally:
+        session.stop()
 
 
 def test_ml_vector_cells(monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession) -> None:

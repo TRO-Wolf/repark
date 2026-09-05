@@ -1705,6 +1705,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
   witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
   `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.
+  The conf halves assert their own effect (struct vs map, first-only vs merged fields, UTC
+  vs naive timestamps) so a session-reuse regression cannot make them vacuous.
   pins: perf-facade-cdf-1/C-002, C-003, C-004, C-007, C-009
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,

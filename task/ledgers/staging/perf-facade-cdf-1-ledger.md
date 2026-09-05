@@ -245,3 +245,24 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-CONF
+  agent: Actor
+  action: commit the conf-pin session-reuse fix with effect assertions
+  charter_trace: C-002, C-004
+  preconditions:
+    - reuse proven by the live-run warning: SATISFIED (unapplied timestampType keys)
+    - halves assert their own conf effect: SATISFIED (struct/map, first/merged, UTC/naive)
+    - pins green and warning-free: SATISFIED (52 passed, -W error::UserWarning)
+    - lint/format gates green: SATISFIED (this run)
+    - no new code comment: SATISFIED (self-check below)
+  success_condition: each conf half runs under its own session and proves it
+  step_risks: [none new: HANDLED(test-only change; product untouched)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
