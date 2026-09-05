@@ -34,6 +34,39 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   facade boundary take no pool reservation at all, so no pool bounds them. `risk_tier: standard`.
   Branch `harden/h3-spill-1`.
   pins: h3-spill-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-2-ledger.md](perf-ice-catalog-io-2-ledger.md) —
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05), landed default-OFF per the round-2 ruling:** the
+  RePark side of CATALOG-IO part 3 at fork pin `79119643` (RP-12, already on the base). A
+  session key `repark.iceberg.manifestCacheBytes`
+  (alias `repark.iceberg.manifest_cache_bytes`, default `0` = off, set bytes to opt in)
+  sizes the fork's shared manifest `ObjectCache` for the memory catalog; every table the
+  catalog materializes carries the one cache. Shipped: the part-3 pin un-skipped and green
+  with the knob set explicitly (`t_many/count_id/stmt2` **115.81 → 10.95 ms**, target ≤ 20;
+  repeated reads open no manifest at all); the six IO-1 staleness pins re-run green with
+  the cache off (the default) plus new explicit-knob Python legs per cell (MERGE, DROP +
+  re-CREATE, `register_table`, rewrite + expire, time-travel, branch); the funnel pinned
+  by manifest deletion; correctness pinned under a 512-byte budget over eight tables; two
+  lineage detector pins holding `PERF-CATALOG-LINEAGE-CACHE-1`'s shape (knob-on NULLs,
+  knob-off assigned). `PERF-ICE-MANIFEST-1` BACKLOG with before/after;
+  `PERF-CATALOG-CACHE-BOUND-1` NARROWED to the metadata cache;
+  `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` filed BACKLOG — the
+  census showed DML saving read-side repeats only, because the fork's transaction paths never
+  consult the cache (0 vs 166+ direct loads), which re-reads but never serves stale. Glue and
+  S3 Tables are NOT wired (their builders have no such method at the pin). `git diff
+  origin/main -- Cargo.toml Cargo.lock` empty.
+  Risk-first: **five** Rust parse pins plus **four** Rust delete-manifest pins plus **thirteen**
+  Python legs, with a **seven**-mutation score (one escape closed: the knob-off control parsed
+  no string until it was strengthened to). The in-lane critic pass found two claim-scope
+  overstatements (the map's "every table shares", the unrecorded `memory_catalog()` behaviour
+  change) and both are remediated in the ledger's critic table.
+  **FINDING S1-1 (C-004 REJECTED), resolved by the round-2 ruling:** the unit HALTED mid-flight
+  when the facade suite redded 4 upgrade-lineage tests — the fork's `(path, schema)` manifest
+  key does not carry the list-entry lineage range, so a v2-context parse poisons v3 reads of
+  the same path (`_row_id` NULL). The ruling landed option (b): default OFF, so the four tests
+  are green by default and the fix (`F-CATIO-KEY`, separate fork unit) plus a later default-ON
+  flip close the remainder. Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY` (fork-side,
+  no RePark fix exists). `risk_tier: standard`. Branch `perf/ice-catalog-io-2`.
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and

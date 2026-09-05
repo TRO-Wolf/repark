@@ -20,9 +20,11 @@ Source comments are condensed to API and safety contracts; executable behavior i
   session-refresh adapter (`catalog_ops.rs`), and V3-4 current-snapshot
   `lineage_columns.rs` (filters through; `V3-ROWID-2` for time-travel). Since
   **PERF-ICE-CATALOG-IO-1** it also owns `caches.rs`: the session-scoped `CatalogCaches` handed
-  to every catalog this session builds, and the two `repark.iceberg.*` knobs that shape them. See
+  to every catalog this session builds, and the `repark.iceberg.*` knobs that shape them (two in
+  IO-1, three since **PERF-ICE-CATALOG-IO-2** added `manifestCacheBytes`). See
   [catalog/map.md](catalog/map.md).
   pins: perf-ice-catalog-io-1/C-002
+  pins: perf-ice-catalog-io-2/C-001, C-002
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
   partition overwrite (DML-B) / ALTER /
   snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.
