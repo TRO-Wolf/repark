@@ -40,6 +40,12 @@ no avg-only fix can meet it: `sum` on the same grouping already costs 82.6–89.
 the residue is scan/grouping/join efficiency, PERF-ANALYSIS-1 candidate-5 territory.
 `EXPLAIN ANALYZE` after the fix: partial `avg` `elapsed_compute` 555–558 ms summed
 over 8 partitions, final 69–81 ms, the rest of the plan in microseconds.
+Grouped float `avg` changes bit-for-bit vs the base: per-element sequential
+summation replaces Arrow's lane-chunked `sum` kernel. On one group of
+`[1e16, 1.0×64]` repark answers `153846153846153.84` where Spark answers
+`153846153846154.34` (3.3e-15 relative, inside the 1e-12 the pin asserts) —
+disclosed as registry row `FLOAT-AGG-3`. The many-groups fixture's exact-binary
+values are unaffected.
 
 Reproduce (from the repo root, release module, 8-thread parity):
 
@@ -67,6 +73,6 @@ EOF
 ```
 
 The last line is the durable pin: `test_many_groups_avg_costs_like_sum` re-measures
-the ratio (bound 2.5, single partition) on every run, and the file's 23 answer pins
-plus 3 round-2 behavior pins and 6 live legs hold the Spark-equal answers the
+the ratio (bound 2.5, single partition) on every run, and the file's 24 answer pins
+plus 3 round-2 behavior pins and 7 live legs hold the Spark-equal answers the
 accumulator must keep.

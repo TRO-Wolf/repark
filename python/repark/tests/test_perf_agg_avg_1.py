@@ -148,6 +148,20 @@ SQL_DECIMAL_SUMWRAP_GLOBAL = (
     "(CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) AS t(v)"
 )
 
+SQL_FLOAT_DRIFT_GROUPED = (
+    "SELECT k, avg(v) AS a FROM (VALUES (1, CAST(1e16 AS DOUBLE)), "
+    + ", ".join(["(1, CAST(1.0 AS DOUBLE))"] * 64)
+    + ") AS t(k, v) GROUP BY k"
+)
+
+SQL_FLOAT_DRIFT_GROUPED_A = (
+    "SELECT avg(v) AS a FROM (VALUES (1, CAST(1e16 AS DOUBLE)), "
+    + ", ".join(["(1, CAST(1.0 AS DOUBLE))"] * 64)
+    + ") AS t(k, v) GROUP BY k"
+)
+
+SPARK_FLOAT_DRIFT_GROUPED = 153846153846154.34
+
 SQL_MANY_CHECKSUM = (
     "SELECT count(*) AS groups, sum(a) AS checksum FROM "
     "(SELECT k, avg(v) AS a FROM many_groups GROUP BY k) t"
@@ -362,6 +376,15 @@ def test_avg_grouped_multi_distinct_refuses_bare() -> None:
     assert type(caught.value) is PySparkException
 
 
+def test_avg_grouped_float_drift_within_spark() -> None:
+    """Grouped 1e16-plus-ones avg pins repark's bits within 1e-12 of Spark's."""
+    """pins: perf-agg-avg-1/C-003."""
+    table = _session().sql(SQL_FLOAT_DRIFT_GROUPED).toArrow()
+    assert table.column("a").to_pylist() == [153846153846153.84]
+    assert _sig(table) == [("k", "int64", True), ("a", "double", True)]
+    assert table.column("a").to_pylist() == pytest.approx([SPARK_FLOAT_DRIFT_GROUPED], rel=1e-12)
+
+
 def test_avg_decimal_sumwrap_records_divergence() -> None:
     """The sum-wrap fixture answers 0.0000 on both doors; Spark NULLs and raises."""
     """pins: perf-agg-avg-1/C-003."""
@@ -456,6 +479,14 @@ def test_live_many_groups_avg_matches_spark(
     mine = spark.sql(SQL_MANY_AVG_A).toArrow()
     theirs = spark_engine.arrow_of(spark_engine.session.sql(SQL_MANY_AVG_A))
     assert_frames_equal(mine, theirs)
+
+
+def test_live_grouped_float_drift_within_spark(spark_engine: live_parity.Engine) -> None:
+    """Live grouped 1e16-plus-ones avg stays within 1e-12 of PySpark."""
+    """pins: perf-agg-avg-1/C-003."""
+    mine = _session().sql(SQL_FLOAT_DRIFT_GROUPED_A).toArrow()
+    theirs = spark_engine.arrow_of(spark_engine.session.sql(SQL_FLOAT_DRIFT_GROUPED_A))
+    assert mine.column("a").to_pylist() == pytest.approx(theirs.column("a").to_pylist(), rel=1e-12)
 
 
 def test_live_try_avg_overflow_matches_spark(spark_engine: live_parity.Engine) -> None:

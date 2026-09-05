@@ -47,8 +47,9 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   (`avg`/`sum` by `l_partkey` 4.45× → 1.10–1.28×, TPC-H Q17 13.8–18.3× → 3.6–8.3×
   DuckDB with the ≤ 3× bar missed and the sum-floor unreachability proof), floors,
   machine/profile header, and a reproduce block ending in the committed cost probe.
-  Round 2 narrows its `try_avg`-overflow sentence to the 2×-MAX shape and points the
-  sum-wrap shape at BACKLOG row `AVG-DEC-SUMWRAP-1`.
+  Round 2 narrows its `try_avg`-overflow sentence to the 2×-MAX shape, points the
+  sum-wrap shape at BACKLOG row `AVG-DEC-SUMWRAP-1`, and discloses the grouped-float
+  bit change (`FLOAT-AGG-3`).
   Note this baseline's deviation from the facade precedent: the by-partkey cells run
   from a throwaway script, not a tracked runner — only the Q17 leg (the tracked TPC-H
   runner) and the committed probe re-derive mechanically.

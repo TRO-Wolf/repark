@@ -1963,6 +1963,24 @@ the pin rather than obeying it.
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
 
+### FLOAT-AGG-3 — grouped avg over 1e16 plus 64 ones
+
+- **repark** — grouped `avg(v)` over one group holding `[1e16, 1.0 × 64]` lands
+  **153846153846153.84**. The groups path sums per element in row order; the base
+  summed through Arrow's lane-chunked kernel, so grouped float avgs change
+  bit-for-bit vs the base. Type: Arrow `float64` nullable.
+- **Apache Spark** — the same recipe under `local[2]`, ANSI on, lands
+  **153846153846154.34**, grouped and global alike — a 3.3e-15 relative gap, inside
+  1e-12. *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
+  (repark's exact value plus within-1e-12 of the recorded Spark value) and
+  `python/repark/tests/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
+  (live re-derivation against the oracle).
+- **Rationale** — follows FLOAT-AGG-1/2 (same accumulation-order class); the grouped
+  shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
+  until a G7 fix lands.
+
 ### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps to zero
 
 - **repark** — grouped and global `avg` / `try_avg` over three `DECIMAL(38,0)` maxima
@@ -4486,9 +4504,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`sum` on the same grouping already costs 82.6 ms, 2.2× DuckDB's whole Q17; the
   residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
   queries through the optimizer's dedup rewrite and still refuses multi-column ones
-  with `DistinctAvgAccumulator`. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
-  (23 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
-  probe red at 4.06× on the base and green at 1.21× after, 6 live legs) and 21 Rust
+  with `DistinctAvgAccumulator`. Grouped float `avg` changes bit-for-bit vs the base
+  (per-element summation replaces Arrow's lane-chunked kernel): `153846153846153.84`
+  here vs Spark's `153846153846154.34` on the 1e16-plus-ones fixture, disclosed as
+  FLOAT-AGG-3. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  (24 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
+  probe red at 4.06× on the base and green at 1.21× after, 7 live legs) and 21 Rust
   unit tests. Numbers, floors and the reproduce block:
   `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
