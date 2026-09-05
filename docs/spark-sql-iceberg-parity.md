@@ -4364,6 +4364,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   planned statements, a 12-deep chain and eight DataFrame transforms in
   `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §2.
+- **PERF-FACADE-CDF-1** — **FIXED 2026-09-05 (PERF-FACADE-CDF-1)**. `createDataFrame(list of
+  tuples)` normalized every cell in Python across five passes (the cell normalizer, the nested
+  preparer, the merge-refusal walk, the per-row schema check, the Arrow conversion) — 1,657 ms
+  at 1e5 where the same rows from pandas cost 3 ms. Inference and conversion are column-wise
+  now: one `set(map(type, …))` census per column, single-kind scalar columns straight to Arrow,
+  mixed/exotic columns through the unchanged per-cell path, explicit schemas still on the
+  legacy path by dispatch. Identity by construction — every shared rule is the same function
+  object on both paths, and the fast path skips work only where the census proves it a no-op.
+  Same runner, both legs in one process on one release module (load 10.75 → 10.51):
+  `create/100000/tuples_count` **1,656.62 → 70.30 ms** (23.56×, ≤ 100 ms target met 30% under
+  the bar); the nested pair reads 0.96× (the measured delegation cost) and the explicit pair
+  1.00× (identical path by dispatch). The tuple loop also skips the per-row permutation
+  rebuild when the permutation is the identity (~60 ms at 1e5, shared by both legs). Pin:
+  `python/repark/tests/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
+  every case compares Arrow field types, Arrow values and `collect()` by `(type name, repr)`,
+  plus a live leg against PySpark 4.1.2 `createDataFrame`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §4.
 - **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
   `PERF-FACADE-WITHCOLUMN-1` the depth-100 `withColumn` build is 366.11 ms against a 150 ms
   target, and the residue is entirely DataFusion's per-expression projection validation. The

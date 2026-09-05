@@ -261,6 +261,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
+  PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
+  bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
+  edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -1713,6 +1716,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
   first if a rule stopped preserving names.
   pins: perf-facade-1/C-004, C-008
+- `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
+  `createDataFrame` path against the legacy row-wise path, kept callable as
+  `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
+  same input and every case compares Arrow field types, Arrow values and `collect()` by
+  `(type name, repr)` as well as by value, so a retyped cell is red where `==` alone would
+  pass. Arrow values compare by repr-per-row and collected rows by signature only, so NaN
+  cells compare instead of never matching. Matrix: every scalar Python type with Nones in
+  every column and whole-None columns,
+  all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
+  two multi-failure precedence pins asserting the new-path text,
+  tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
+  witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
+  `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.
+  The conf halves assert their own effect (struct vs map, first-only vs merged fields, UTC
+  vs naive timestamps) so a session-reuse regression cannot make them vacuous.
+  pins: perf-facade-cdf-1/C-002, C-003, C-004, C-007, C-009
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;

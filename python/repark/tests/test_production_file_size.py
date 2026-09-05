@@ -30,6 +30,7 @@ MODULE_FILES = (
     "create_dataframe_inference.py",
     "create_dataframe_arrow.py",
     "create_dataframe_tuples.py",
+    "create_dataframe_columns.py",
     "sql_udf_parsing.py",
     "sql_udf_rewrite.py",
     "sql_udf_discovery.py",
@@ -135,8 +136,20 @@ EXPECTED_SYMBOL_HASHES = {
     "_arrow_table_from_polars": (
         "2277a1cce4c5229beaa00ba669197a45a4ec1ef551bd50fabee387bb2aa61df8"
     ),
+    "_arrow_table_from_raw_tuples": (
+        "37f0e6f380080cd0a794b7792e813128dd311e23efb78f1dd12049b8e0368d5d"
+    ),
+    "_arrow_table_from_raw_tuples_fast": (
+        "5cb5f470039bce910210fb55148d084c63d89ed2281544438632865206819aa5"
+    ),
+    "_arrow_table_from_raw_tuples_legacy": (
+        "075bb5efe8ce7da91bae93c336cc2b0586e98d2d37a57f2f079ec136bbc2f769"
+    ),
     "_arrow_table_from_tuples": (
-        "8b02adc01a831778a4fc2c6604265207b743affb5d4b1abdccc193f014b1897b"
+        "529869d54a0a960b62cd73714d58e3c40c0b3802bddbbdb286c45908397f87cc"
+    ),
+    "_arrow_type_for_typed_null_sql": (
+        "04640ff441d2f65bd6b192d748662a3c1538e91b9939437baf7913342af9c66b"
     ),
     "_arrow_type_is_nested": ("d444bf00f930013dddb015316cfa3b7b8407febbb23aa72149f7d865c525e6f6"),
     "_arrow_type_merge_label": ("92fac695bb138a1b6db0429bbef68d9aff58b17a493218eaa72c5ec997476c1e"),
@@ -160,7 +173,7 @@ EXPECTED_SYMBOL_HASHES = {
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
     "_create_dataframe_from_rows_inner": (
-        "7998a74c921df41e1b1b57182f19ebad02f3d66997977c9a856b861319587577"
+        "db5ae911ff2aa17e40c2dc14714751331b87d238062ce759ec3e26579cace5fe"
     ),
     "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
     "_datetime64_unit_from_dtype": (
@@ -242,6 +255,7 @@ EXPECTED_SYMBOL_HASHES = {
         "2513a697619e2b2a20b482c816b254012f67063611fa48115d87146328db5a32"
     ),
     "_numpy_datetime64_unit": ("7d3dc236af2ed8f4696271213f510d0626b4b0f9552843b549668aa03f248823"),
+    "_pa_array_or_refuse": ("a70d70a7b5aa29e04adc8c56561724469135935e0c02542cf645a5142e048a0d"),
     "_pandas_dtype_needs_object_null_witness": (
         "f1ce66012fa5ec5d1d583d2bdf22490d4d5c0c19cb3eba3b7b2d4740ce89fb6f"
     ),
@@ -269,6 +283,9 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_refuse_duplicate_pandas_columns": (
         "0fb680bfb6526fb83cad0f31fb504570dc425a078db1f9213f3eb5ae913832ba"
+    ),
+    "_refuse_duplicate_tuple_column_names": (
+        "68d139b7f2ec227338fecc5c155f28762253b99e0345fab3cca6bbbcf3de561b"
     ),
     "_refuse_incompatible_scalar_merge_kinds": (
         "ccb4fb30beab7c05b5cd24885790a230dc84c6227aea51e466c93da18cd6c38b"
@@ -451,7 +468,11 @@ EXPECTED_OWNERS = {
     "_arrow_null_sql_to_type": "create_dataframe_arrow",
     "_arrow_table_from_pandas": "create_dataframe_arrow",
     "_arrow_table_from_polars": "create_dataframe_arrow",
+    "_arrow_table_from_raw_tuples": "create_dataframe_columns",
+    "_arrow_table_from_raw_tuples_fast": "create_dataframe_columns",
+    "_arrow_table_from_raw_tuples_legacy": "create_dataframe_rows",
     "_arrow_table_from_tuples": "create_dataframe_tuples",
+    "_arrow_type_for_typed_null_sql": "create_dataframe_tuples",
     "_arrow_type_is_nested": "create_dataframe_inference",
     "_arrow_type_merge_label": "create_dataframe_inference",
     "_auto_memory_catalog_wanted": "catalog_resolution",
@@ -498,6 +519,7 @@ EXPECTED_OWNERS = {
     "_null_sql_for_pandas_dtype": "create_dataframe_schema",
     "_null_sql_for_polars_dtype": "create_dataframe_schema",
     "_numpy_datetime64_unit": "create_dataframe_values",
+    "_pa_array_or_refuse": "create_dataframe_tuples",
     "_pandas_dtype_needs_object_null_witness": "create_dataframe_schema",
     "_parse_create_dataframe_schema": "create_dataframe_values",
     "_parse_jdbc_int_option": "reader_support",
@@ -510,6 +532,7 @@ EXPECTED_OWNERS = {
     "_reader_path_to_str": "reader_support",
     "_refuse_dual_memory_pool_knobs": "session_configuration",
     "_refuse_duplicate_pandas_columns": "create_dataframe_rows",
+    "_refuse_duplicate_tuple_column_names": "create_dataframe_tuples",
     "_refuse_incompatible_scalar_merge_kinds": "create_dataframe_tuples",
     "_refuse_list_element_type_merge": "create_dataframe_tuples",
     "_refuse_long_double_merge": "create_dataframe_tuples",
@@ -636,7 +659,11 @@ EXPECTED_RUNTIME_NAMES = (
     "_arrow_null_sql_to_type",
     "_arrow_table_from_pandas",
     "_arrow_table_from_polars",
+    "_arrow_table_from_raw_tuples",
+    "_arrow_table_from_raw_tuples_fast",
+    "_arrow_table_from_raw_tuples_legacy",
     "_arrow_table_from_tuples",
+    "_arrow_type_for_typed_null_sql",
     "_arrow_type_is_nested",
     "_arrow_type_merge_label",
     "_auto_memory_catalog_wanted",
@@ -685,6 +712,7 @@ EXPECTED_RUNTIME_NAMES = (
     "_null_sql_for_pandas_dtype",
     "_null_sql_for_polars_dtype",
     "_numpy_datetime64_unit",
+    "_pa_array_or_refuse",
     "_pandas_dtype_needs_object_null_witness",
     "_parse_create_dataframe_schema",
     "_parse_jdbc_int_option",
@@ -700,6 +728,7 @@ EXPECTED_RUNTIME_NAMES = (
     "_reader_path_to_str",
     "_refuse_dual_memory_pool_knobs",
     "_refuse_duplicate_pandas_columns",
+    "_refuse_duplicate_tuple_column_names",
     "_refuse_incompatible_scalar_merge_kinds",
     "_refuse_list_element_type_merge",
     "_refuse_long_double_merge",
@@ -911,7 +940,7 @@ def test_cross_owner_globals_resolve_to_their_canonical_binding() -> None:
             canonical_module = sys.modules[f"repark.spark.session.{canonical_owner}"]
             assert global_name in value.__globals__
             assert value.__globals__[global_name] is getattr(canonical_module, global_name)
-    assert len(required_bindings) == 74
+    assert len(required_bindings) == 76
 
 
 def test_split_files_stay_within_default_source_ceiling() -> None:
