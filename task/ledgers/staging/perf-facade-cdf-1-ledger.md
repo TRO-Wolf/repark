@@ -292,3 +292,25 @@ SELF_LOGIC_REVIEW:
   verdict: PROCEED
   escalation: —
 ```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-SPLITBASE
+  agent: Actor
+  action: commit the split-contract inventory join for the new module
+  charter_trace: C-008
+  preconditions:
+    - the contract failure is the intended refactor: SATISFIED (2 moved bodies, 1 net edge)
+    - inventory complete, not just quiet: SATISFIED (6 names in hashes+owners+runtime, file listed)
+    - binding delta reviewed triple by triple: SATISFIED (76 = 74 - 1 + 1 + 2, §10 note)
+    - baseline file green standalone: SATISFIED (11 passed)
+    - lint/format/size gates green: SATISFIED (this run)
+    - no new code comment: SATISFIED (self-check below)
+  success_condition: the split contract pins the new surface; the full suite confirms
+  step_risks: [hash computed from the wrong tree: HANDLED(hashes match the failure diff)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
