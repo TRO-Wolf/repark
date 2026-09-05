@@ -26,10 +26,18 @@ class OperatorSpec(BaseModel):
     sql: str = ""
     focus: str = ""
     digest_sql: str | None = None
+    digest_kind: str = "engine_checksum"
     conf: dict[str, str] = Field(default_factory=dict)
     right_rows: int | None = None
     api: str | None = None
     note: str = ""
+
+
+CHECKSUM_COLUMNS: str = (
+    "count(*) AS n, sum(crc32(cast(id as string))) AS c_id, "
+    "sum(crc32(cast(g as string))) AS c_g, sum(crc32(cast(v as string))) AS c_v, "
+    "sum(crc32(h)) AS c_h, sum(crc32(payload)) AS c_payload"
+)
 
 
 _SORT = "SELECT id, h FROM base ORDER BY h"
@@ -76,7 +84,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         sql=_AGG_MANY,
         focus="AggregateExec",
         digest_sql=(
-            "SELECT count(*) AS n, sum(c) AS total, max(c) AS mx FROM "
+            "SELECT count(*) AS n, sum(c) AS total, max(c) AS mx, sum(crc32(h)) AS c_h FROM "
             "(SELECT h, count(*) AS c FROM base GROUP BY h)"
         ),
         note="one group per row: partial and final both under pressure",
@@ -167,35 +175,44 @@ ROSTER: tuple[OperatorSpec, ...] = (
         operator="repartition",
         sql=_AGG_MANY,
         focus="RepartitionExec",
+        digest_sql=(
+            "SELECT count(*) AS n, sum(c) AS total, max(c) AS mx, sum(crc32(h)) AS c_h FROM "
+            "(SELECT h, count(*) AS c FROM base GROUP BY h)"
+        ),
         note="read off the many-group plan: RepartitionExec is never a whole plan",
     ),
     OperatorSpec(
         operator="dynamic_flatten",
         kind="api",
+        digest_kind="engine_checksum_over_flattened_frame",
         api="dynamic_flatten",
         focus="UnnestExec",
     ),
     OperatorSpec(
         operator="iceberg_scan_dv",
         kind="api",
+        digest_kind="engine_checksum_over_scanned_table",
         api="iceberg_scan_dv",
         focus="IcebergScan",
     ),
     OperatorSpec(
         operator="merge_staging",
         kind="api",
+        digest_kind="engine_checksum_over_merged_table",
         api="merge_staging",
         focus="MergeWrite",
     ),
     OperatorSpec(
         operator="collect",
         kind="api",
+        digest_kind="python_row_crc32_sum_and_xor",
         api="collect",
         focus="facade boundary",
     ),
     OperatorSpec(
         operator="to_pandas",
         kind="api",
+        digest_kind="pandas_hash_pandas_object_sum",
         api="to_pandas",
         focus="facade boundary",
     ),

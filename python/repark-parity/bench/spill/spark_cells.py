@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import resource
+import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +27,42 @@ BASE_SELECT: str = (
 )
 
 
-def peak_rss_bytes() -> int:
-    """Peak resident set of this process (the JVM is a child, so this is the driver only)."""
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+def jvm_peak_rss_bytes() -> int:
+    """Peak resident set of the reaped JVM child in bytes; 0 until `spark.stop()` reaps it."""
+    return resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss * 1024
+
+
+ERROR_MARKERS: tuple[str, ...] = (
+    "OutOfMemoryError",
+    "Exception in thread",
+    "ERROR Executor",
+    "SparkException",
+    "GC overhead limit exceeded",
+)
+
+
+def error_lines(text: str) -> list[str]:
+    """Every JVM stderr line naming a failure, so a published claim can cite what was recorded."""
+    return [line.strip() for line in text.splitlines() if any(m in line for m in ERROR_MARKERS)][
+        :40
+    ]
+
+
+@contextlib.contextmanager
+def captured_stderr(path: Path) -> Iterator[None]:
+    """Redirect file descriptor 2 to `path`, so the JVM's own stderr is captured with Python's."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sys.stderr.flush()
+    saved = os.dup(2)
+    handle = path.open("wb")
+    try:
+        os.dup2(handle.fileno(), 2)
+        yield
+    finally:
+        sys.stderr.flush()
+        os.dup2(saved, 2)
+        os.close(saved)
+        handle.close()
 
 
 def spill_totals(event_log_dir: Path) -> dict[str, int]:
@@ -86,14 +122,8 @@ def run_cell(spark: Any, cell: str, rows: int, right_rows: int) -> dict[str, Any
     frame = spark.sql(CELLS[cell])
     frame.write.format("noop").mode("overwrite").save()
     wall_ms = (time.perf_counter() - started) * 1000.0
-    count = -1
     heap = int(spark.sparkContext._jvm.java.lang.Runtime.getRuntime().maxMemory())
-    return {
-        "outcome": "ok",
-        "rows_out": int(count),
-        "wall_ms": wall_ms,
-        "jvm_max_heap_bytes": heap,
-    }
+    return {"outcome": "ok", "wall_ms": wall_ms, "jvm_max_heap_bytes": heap}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,20 +138,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json-out", type=Path, required=True)
     args = parser.parse_args(argv)
     event_log_dir = Path(args.scratch) / f"events-{args.cell}-{args.driver_memory}"
-    spark = build_spark(event_log_dir, args.driver_memory, args.partitions)
-    try:
-        payload = run_cell(spark, args.cell, args.rows, args.right_rows)
-    except BaseException as error:
-        if isinstance(error, (KeyboardInterrupt, SystemExit)):
-            raise
-        payload = {"outcome": "error", "message": f"{type(error).__name__}: {error}"[:600]}
-    finally:
-        spark.stop()
+    stderr_path = Path(args.scratch) / f"stderr-{args.cell}-{args.driver_memory}.log"
+    with captured_stderr(stderr_path):
+        spark = build_spark(event_log_dir, args.driver_memory, args.partitions)
+        try:
+            payload = run_cell(spark, args.cell, args.rows, args.right_rows)
+        except BaseException as error:
+            if isinstance(error, (KeyboardInterrupt, SystemExit)):
+                raise
+            payload = {"outcome": "error", "message": f"{type(error).__name__}: {error}"[:600]}
+        finally:
+            spark.stop()
+    captured = stderr_path.read_text(encoding="utf-8", errors="replace")
     payload.update(spill_totals(event_log_dir))
     payload["cell"] = args.cell
     payload["rows"] = args.rows
     payload["driver_memory"] = args.driver_memory
-    payload["driver_peak_rss_bytes"] = peak_rss_bytes()
+    payload["jvm_peak_rss_bytes"] = jvm_peak_rss_bytes()
+    payload["jvm_error_lines"] = error_lines(captured)
+    payload["jvm_stderr_tail"] = captured[-4000:]
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(payload), encoding="utf-8")
     print(json.dumps(payload))

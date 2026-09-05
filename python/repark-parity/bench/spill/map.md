@@ -38,6 +38,28 @@ Why the shape it has:
   so the wrong-answer check does not itself need the memory the cell is measuring. The driver
   compares every bounded cell's digest against the unbounded (`pool=none`) run at the same
   scale, and re-labels a mismatch `wrong`.
+- **Every cell has a content digest, and the kind is disclosed.** A row count is not an
+  answer check — the first draft used `str(rows_out)` for the five `api` rows, which counted
+  `collect()` at 1e7 (the product's largest unbounded allocation) as answer-checked on its row
+  count alone. Every row now carries a real digest and names its kind in `digest_kind`:
+
+  | operator(s) | `digest_kind` | what it hashes |
+  |---|---|---|
+  | every SQL row incl. `repartition` | `engine_checksum` | the row's `digest_sql`: counts, integer checksums, `sum(crc32(...))` over the key columns, a sort-inversion count where order is contractual |
+  | `dynamic_flatten` | `engine_checksum_over_flattened_frame` | `count(*)` + `sum(crc32(...))` over every flattened column |
+  | `iceberg_scan_dv` | `engine_checksum_over_scanned_table` | the same shape over the scanned table |
+  | `merge_staging` | `engine_checksum_over_merged_table` | the same shape over the merged table |
+  | `collect` | `python_row_crc32_sum_and_xor` | per-row `crc32(str(tuple(row)))`, summed mod 2^64 **and** xored, plus the row count — the materialized Python objects, not a query result |
+  | `to_pandas` | `pandas_hash_pandas_object_sum` | `hash_pandas_object(index=False)` summed mod 2^64, plus the frame shape |
+
+  Every one is commutative, so it is order-independent — checked by re-running at 1, 4 and 8
+  target partitions and getting one digest — and every one moves when a row is dropped,
+  duplicated or altered.
+- **Every repeat's digest is kept and checked, not just the first.** Repeats run exactly on the
+  cells whose outcome is unstable, which is exactly where a spilling operator could lose a row,
+  so keeping only the first run's digest would leave the wrong-answer check blind where it
+  matters most. `run_digests` holds one entry per run; a cell whose own runs disagree is
+  `wrong`, and so is one whose runs do not contain the unbounded digest.
 - **Every digest is order-independent or order-forcing, or it is not a digest.** Two traps
   cost this unit five false `wrong` cells before they were caught. `lag(h) OVER ()` over a
   sorted subquery does not see a sorted stream — the optimizer drops a sort nothing depends

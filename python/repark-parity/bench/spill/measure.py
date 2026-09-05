@@ -162,6 +162,7 @@ def run_cell(
         record.outcome = str(payload.get("outcome", "error"))
         record.message = payload.get("message")
         record.answer_digest = payload.get("answer_digest")
+        record.digest_kind = str(payload.get("digest_kind", "none"))
         record.digest_error = payload.get("digest_error")
         record.rows_out = payload.get("rows_out")
         record.nodes = _nodes_from(payload)
@@ -212,16 +213,20 @@ def _plan(operators: list[str], pools: list[str], scales: list[int]) -> list[tup
 
 
 def _apply_answer_check(records: list[CellRecord]) -> None:
-    """Mark a bounded cell `wrong` when its digest differs from the unbounded run."""
+    """Mark a cell `wrong` when any of its runs disagrees with itself or with the unbounded run."""
     baseline: dict[tuple[str, int], str] = {}
     for record in records:
         if record.pool == "none" and record.answer_digest:
-            baseline[(record.operator, record.scale)] = record.answer_digest
+            baseline.setdefault((record.operator, record.scale), record.answer_digest)
     for record in records:
-        if record.pool == "none" or not record.answer_digest:
+        seen = {digest for digest in record.run_digests if digest}
+        if len(seen) > 1:
+            record.outcome = "wrong"
+            continue
+        if record.pool == "none" or not seen:
             continue
         expected = baseline.get((record.operator, record.scale))
-        if expected is not None and expected != record.answer_digest:
+        if expected is not None and expected not in seen:
             record.outcome = "wrong"
 
 
@@ -245,6 +250,7 @@ def run_matrix(args: argparse.Namespace) -> MatrixReport:
             digest=not args.no_digest,
         )
         record.runs = [record.outcome]
+        record.run_digests = [record.answer_digest]
         if record.outcome in NONDETERMINISTIC and args.repeats > 1:
             for _ in range(args.repeats - 1):
                 repeat = run_cell(
@@ -257,6 +263,7 @@ def run_matrix(args: argparse.Namespace) -> MatrixReport:
                     digest=not args.no_digest,
                 )
                 record.runs.append(repeat.outcome)
+                record.run_digests.append(repeat.answer_digest)
         report.cells.append(record)
         _apply_answer_check(report.cells)
         out_path.parent.mkdir(parents=True, exist_ok=True)

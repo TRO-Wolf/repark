@@ -55,6 +55,8 @@ class CellRecord(BaseModel):
     as_cap_bytes: int | None = None
     rss_cap_bytes: int | None = None
     answer_digest: str | None = None
+    run_digests: list[str | None] = Field(default_factory=list)
+    digest_kind: str = "none"
     digest_error: str | None = None
     rows_out: int | None = None
     message: str | None = None

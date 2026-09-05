@@ -8,6 +8,7 @@ import json
 import resource
 import sys
 import time
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,7 @@ if str(_BENCH_DIR) not in sys.path:
     sys.path.insert(0, str(_BENCH_DIR))
 
 from spill.plan_metrics import parse_nodes, plan_text_from_rows  # noqa: E402
-from spill.roster import BASE_COLUMNS, spec_for  # noqa: E402
+from spill.roster import BASE_COLUMNS, CHECKSUM_COLUMNS, spec_for  # noqa: E402
 
 CATALOG = "spill_cat"
 NAMESPACE = "spill_ns"
@@ -119,6 +120,7 @@ def run_sql_cell(spec: Any, pool: str, rows: int, partitions: int, digest: bool)
         "nodes": totals,
         "answer_digest": answer,
         "digest_error": digest_error,
+        "digest_kind": spec.digest_kind if spec.digest_sql else "none",
         "plan_head": plan_text[:2000],
     }
 
@@ -135,29 +137,80 @@ def run_digest(session: Any, digest_sql: str | None) -> tuple[str | None, str | 
         return None, f"{type(error).__name__}: {error}"[:400]
 
 
+def rows_digest(collected: list[Any]) -> str:
+    """Order-independent content digest of materialized rows: summed and xored per-row CRC32."""
+    total = 0
+    parity = 0
+    for row in collected:
+        crc = zlib.crc32(str(tuple(row)).encode("utf-8"))
+        total = (total + crc) & 0xFFFFFFFFFFFFFFFF
+        parity ^= crc
+    return f"rows:{len(collected)}:{total}:{parity}"
+
+
+def pandas_digest(frame: Any) -> str:
+    """Order-independent content digest of a pandas frame via `hash_pandas_object`."""
+    from pandas.util import hash_pandas_object
+
+    hashed = hash_pandas_object(frame, index=False).values.astype("uint64")
+    total = int(hashed.sum(dtype="uint64"))
+    return f"pandas:{frame.shape[0]}:{frame.shape[1]}:{total}"
+
+
+def engine_checksum(session: Any, target: str) -> str:
+    """Order-independent per-column CRC32 checksum of `target`, computed in the engine."""
+    table = session.sql(f"SELECT {CHECKSUM_COLUMNS} FROM {target}").to_arrow()
+    return digest_table(table)
+
+
 def api_collect(session: Any, rows: int) -> dict[str, Any]:
-    """The facade boundary: build python Row objects for every row."""
+    """The facade boundary: build python Row objects for every row, then digest them."""
     register_base(session, "base", rows)
+    started = time.perf_counter()
     collected = session.sql("SELECT id, h, g, payload, v FROM base").collect()
-    return {"rows_out": len(collected)}
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    return {
+        "rows_out": len(collected),
+        "wall_ms": wall_ms,
+        "answer_digest": rows_digest(collected),
+    }
 
 
 def api_to_pandas(session: Any, rows: int) -> dict[str, Any]:
-    """The facade boundary: materialize the frame as pandas."""
+    """The facade boundary: materialize the frame as pandas, then digest every value."""
     register_base(session, "base", rows)
+    started = time.perf_counter()
     frame = session.sql("SELECT id, h, g, payload, v FROM base").toPandas()
-    return {"rows_out": int(frame.shape[0])}
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    return {
+        "rows_out": int(frame.shape[0]),
+        "wall_ms": wall_ms,
+        "answer_digest": pandas_digest(frame),
+    }
 
 
 def api_dynamic_flatten(session: Any, rows: int) -> dict[str, Any]:
-    """`dynamicFlatten` over a nested struct-and-list source of `rows` rows."""
+    """`dynamicFlatten` over a nested struct-and-list source, digested column by column."""
     nested = session.range(rows).selectExpr(
         "id",
         "named_struct('a', id, 'b', md5(cast(id as string))) AS s",
         "array(md5(cast(id as string)), md5(cast(id + 1 as string))) AS l",
     )
-    table = nested.dynamicFlatten().to_arrow()
-    return {"rows_out": int(table.num_rows)}
+    flat = nested.dynamicFlatten()
+    started = time.perf_counter()
+    table = flat.to_arrow()
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    flat.createOrReplaceTempView("flat")
+    checksum = session.sql(
+        "SELECT count(*) AS n, sum(crc32(cast(id as string))) AS c_id, "
+        "sum(crc32(cast(s_a as string))) AS c_sa, sum(crc32(s_b)) AS c_sb, "
+        "sum(crc32(l)) AS c_l FROM flat"
+    ).to_arrow()
+    return {
+        "rows_out": int(table.num_rows),
+        "wall_ms": wall_ms,
+        "answer_digest": digest_table(checksum),
+    }
 
 
 def _iceberg_namespace(session: Any, warehouse: Path) -> str:
@@ -185,8 +238,14 @@ def api_iceberg_scan_dv(session: Any, rows: int, warehouse: Path) -> dict[str, A
         "AS SELECT * FROM base"
     )
     session.sql(f"DELETE FROM {table} WHERE id % 100 = 0")
-    scanned = session.sql(f"SELECT count(*) AS n, sum(id) AS s FROM {table}").to_arrow()
-    return {"rows_out": int(scanned.to_pylist()[0]["n"])}
+    started = time.perf_counter()
+    scanned = session.sql(f"SELECT count(*) AS n FROM {table}").to_arrow()
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    return {
+        "rows_out": int(scanned.to_pylist()[0]["n"]),
+        "wall_ms": wall_ms,
+        "answer_digest": engine_checksum(session, table),
+    }
 
 
 def api_merge_staging(session: Any, rows: int, warehouse: Path) -> dict[str, Any]:
@@ -211,7 +270,10 @@ def api_merge_staging(session: Any, rows: int, warehouse: Path) -> dict[str, Any
         "WHEN NOT MATCHED THEN INSERT *"
     )
     merged = session.sql(f"SELECT count(*) AS n FROM {table}").to_arrow()
-    return {"rows_out": int(merged.to_pylist()[0]["n"])}
+    return {
+        "rows_out": int(merged.to_pylist()[0]["n"]),
+        "answer_digest": engine_checksum(session, table),
+    }
 
 
 API_CELLS = {
@@ -236,10 +298,10 @@ def run_api_cell(
         payload = WAREHOUSE_CELLS[spec.api](session, rows, warehouse)
     else:
         payload = API_CELLS[str(spec.api)](session, rows)
-    payload["wall_ms"] = (time.perf_counter() - started) * 1000.0
+    payload.setdefault("wall_ms", (time.perf_counter() - started) * 1000.0)
     payload["outcome"] = "ok"
     payload["nodes"] = {}
-    payload["answer_digest"] = str(payload.get("rows_out"))
+    payload["digest_kind"] = spec.digest_kind
     return payload
 
 
