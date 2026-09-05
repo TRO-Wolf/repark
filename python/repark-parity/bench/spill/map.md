@@ -28,6 +28,18 @@ Why the shape it has:
   so the wrong-answer check does not itself need the memory the cell is measuring. The driver
   compares every bounded cell's digest against the unbounded (`pool=none`) run at the same
   scale, and re-labels a mismatch `wrong`.
+- **Every digest is order-independent or order-forcing, or it is not a digest.** Two traps
+  cost this unit five false `wrong` cells before they were caught. `lag(h) OVER ()` over a
+  sorted subquery does not see a sorted stream — the optimizer drops a sort nothing depends
+  on, so the inversion count came back ~500,004 and varied run to run at a *fixed* pool. The
+  probe now says `lag(h) OVER (ORDER BY h)`, which makes the sort load-bearing. And a `double`
+  sum over 1e7 rows is order-dependent in its last bits, so every float checksum is
+  `sum(cast(s AS bigint))`: integer addition is associative, and `v = id * 1.5` keeps each
+  per-row value exact in a double.
+- **A caught Rust panic is its own outcome (`internal_error`), never `error` and never
+  `clean_error`.** The distinction is the whole point of the row: a bounded pool that answers
+  with a typed refusal is Never-OOM working; one that answers with a panic caught at the
+  Python boundary is not.
 
 ## Contents
 

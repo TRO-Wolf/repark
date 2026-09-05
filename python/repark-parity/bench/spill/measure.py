@@ -22,7 +22,7 @@ from spill.roster import POOLS, ROSTER, SCALES  # noqa: E402
 
 DEFAULT_AS_CAP = 12 * 1024 * 1024 * 1024
 NONDETERMINISTIC: frozenset[str] = frozenset(
-    {"spilled", "degraded", "clean_error", "abort", "abort_at_cap", "error"}
+    {"spilled", "degraded", "clean_error", "abort", "abort_at_cap", "internal_error", "error"}
 )
 
 
@@ -151,6 +151,7 @@ def run_cell(
         record.outcome = str(payload.get("outcome", "error"))
         record.message = payload.get("message")
         record.answer_digest = payload.get("answer_digest")
+        record.digest_error = payload.get("digest_error")
         record.rows_out = payload.get("rows_out")
         record.nodes = _nodes_from(payload)
         record.spill_count = sum(node.spill_count for node in record.nodes)

@@ -13,6 +13,7 @@ OUTCOMES: tuple[str, ...] = (
     "clean_error",
     "abort",
     "abort_at_cap",
+    "internal_error",
     "wrong",
     "error",
 )
@@ -31,6 +32,7 @@ class NodeMetrics(BaseModel):
     peak_mem_used: int = 0
     skipped_aggregation_rows: int = 0
     output_rows: int = 0
+    output_bytes: int = 0
 
 
 class CellRecord(BaseModel):
@@ -51,6 +53,7 @@ class CellRecord(BaseModel):
     load_end: float | None = None
     as_cap_bytes: int | None = None
     answer_digest: str | None = None
+    digest_error: str | None = None
     rows_out: int | None = None
     message: str | None = None
     returncode: int | None = None

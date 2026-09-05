@@ -21,6 +21,7 @@ from spill.roster import BASE_COLUMNS, spec_for  # noqa: E402
 CATALOG = "spill_cat"
 NAMESPACE = "spill_ns"
 RESOURCE_MARKERS: tuple[str, ...] = ("Resources exhausted", "ResourcesExhausted")
+PANIC_MARKERS: tuple[str, ...] = ("a Rust panic was caught", "repark internal error")
 
 
 def apply_as_cap(cap_bytes: int) -> None:
@@ -77,6 +78,20 @@ def is_clean_resource_error(message: str) -> bool:
     return any(marker in message for marker in RESOURCE_MARKERS)
 
 
+def is_caught_panic(message: str) -> bool:
+    """True when a Rust panic reached the Python boundary instead of a typed error."""
+    return any(marker in message for marker in PANIC_MARKERS)
+
+
+def classify_failure(message: str) -> str:
+    """A caught panic is `internal_error`; a pool refusal is `clean_error`."""
+    if is_caught_panic(message):
+        return "internal_error"
+    if is_clean_resource_error(message):
+        return "clean_error"
+    return "error"
+
+
 def explain_analyze(session: Any, sql: str) -> str:
     """Run `EXPLAIN ANALYZE` and return the whole plan text."""
     return plan_text_from_rows(session.sql(f"EXPLAIN ANALYZE {sql}").collect())
@@ -93,16 +108,27 @@ def run_sql_cell(spec: Any, pool: str, rows: int, partitions: int, digest: bool)
     wall_ms = (time.perf_counter() - started) * 1000.0
     totals = parse_nodes(plan_text)
     outcome = classify(totals)
-    answer: str | None = None
-    if digest and spec.digest_sql:
-        answer = digest_table(session.sql(spec.digest_sql).to_arrow())
+    answer, digest_error = run_digest(session, spec.digest_sql if digest else None)
     return {
         "outcome": outcome,
         "wall_ms": wall_ms,
         "nodes": totals,
         "answer_digest": answer,
+        "digest_error": digest_error,
         "plan_head": plan_text[:2000],
     }
+
+
+def run_digest(session: Any, digest_sql: str | None) -> tuple[str | None, str | None]:
+    """Run the small-output answer probe; a probe failure never masks the cell outcome."""
+    if not digest_sql:
+        return None, None
+    try:
+        return digest_table(session.sql(digest_sql).to_arrow()), None
+    except BaseException as error:
+        if isinstance(error, (KeyboardInterrupt, SystemExit)):
+            raise
+        return None, f"{type(error).__name__}: {error}"[:400]
 
 
 def api_collect(session: Any, rows: int) -> dict[str, Any]:
@@ -227,8 +253,7 @@ def _measure(args: argparse.Namespace) -> dict[str, Any]:
         if isinstance(error, (KeyboardInterrupt, SystemExit)):
             raise
         message = f"{type(error).__name__}: {error}"
-        outcome = "clean_error" if is_clean_resource_error(message) else "error"
-        return {"outcome": outcome, "message": message, "nodes": {}}
+        return {"outcome": classify_failure(message), "message": message, "nodes": {}}
 
 
 def main(argv: list[str] | None = None) -> int:

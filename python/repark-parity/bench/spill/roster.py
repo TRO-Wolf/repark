@@ -57,7 +57,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         digest_sql=(
             "SELECT count(*) AS n, sum(CASE WHEN prev IS NOT NULL AND prev > h THEN 1 ELSE 0 END) "
             "AS inversions, min(h) AS lo, max(h) AS hi FROM "
-            "(SELECT h, lag(h) OVER () AS prev FROM (SELECT h FROM base ORDER BY h))"
+            "(SELECT h, lag(h) OVER (ORDER BY h) AS prev FROM base)"
         ),
         note="ExternalSorter: the reference spilling operator",
     ),
@@ -86,7 +86,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         sql=_AGG_FEW,
         focus="AggregateExec",
         digest_sql=(
-            "SELECT count(*) AS n, sum(c) AS total, round(sum(s), 3) AS vsum FROM "
+            "SELECT count(*) AS n, sum(c) AS total, sum(cast(s as bigint)) AS vsum FROM "
             "(SELECT g, count(*) AS c, sum(v) AS s FROM base GROUP BY g)"
         ),
         note="1024 groups: the partial aggregate should hold",
@@ -139,7 +139,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         sql=_WIN_UNBOUNDED,
         focus="WindowAggExec",
         digest_sql=(
-            "SELECT count(*) AS n, round(sum(s), 3) AS total FROM "
+            "SELECT count(*) AS n, sum(cast(s as bigint)) AS total FROM "
             "(SELECT id, sum(v) OVER (PARTITION BY g) AS s FROM base)"
         ),
     ),
@@ -148,7 +148,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         sql=_WIN_SLIDING,
         focus="BoundedWindowAggExec",
         digest_sql=(
-            "SELECT count(*) AS n, round(sum(s), 3) AS total FROM "
+            "SELECT count(*) AS n, sum(cast(s as bigint)) AS total FROM "
             "(SELECT id, sum(v) OVER (ORDER BY id ROWS BETWEEN 99 PRECEDING AND CURRENT ROW) "
             "AS s FROM base)"
         ),
@@ -158,7 +158,7 @@ ROSTER: tuple[OperatorSpec, ...] = (
         sql=_WIN_RANGE,
         focus="BoundedWindowAggExec",
         digest_sql=(
-            "SELECT count(*) AS n, round(sum(s), 3) AS total FROM "
+            "SELECT count(*) AS n, sum(cast(s as bigint)) AS total FROM "
             "(SELECT id, sum(v) OVER (ORDER BY id RANGE BETWEEN 1000 PRECEDING AND CURRENT ROW) "
             "AS s FROM base)"
         ),
