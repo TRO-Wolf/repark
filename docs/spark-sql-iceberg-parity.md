@@ -4464,7 +4464,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   queries through the optimizer's dedup rewrite and still refuses multi-column ones
   with `DistinctAvgAccumulator`. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
   (23 Spark-recorded answer pins, the 2.5-bound cost probe red at 4.06× on the base
-  and green at 1.21× after, 6 live legs) and 21 Rust unit tests. Numbers, floors and
+  and green at 1.21× after, 6 live legs) and 20 Rust unit tests. Numbers, floors and
   the reproduce block: `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
