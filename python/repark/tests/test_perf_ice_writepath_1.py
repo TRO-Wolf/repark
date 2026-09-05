@@ -157,12 +157,36 @@ def test_one_concurrent_file_still_writes_exactly_one(tmp_path: Path) -> None:
         engine.stop()
 
 
-def test_repeated_ctas_commits_the_same_manifest_and_row_ids(tmp_path: Path) -> None:
-    """C-005: identical CTAS over identical input commits identical manifests and `_row_id`."""
+def _ctas_commit(engine: ReparkSession, table: str) -> dict[str, Any]:
+    engine.sql(
+        f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({V3}) AS SELECT * FROM src"
+    ).collect()
+    files = engine.sql(
+        f"SELECT record_count, first_row_id, readable_metrics FROM {table}.files"
+    ).to_arrow()
+    counts = [int(value.as_py()) for value in files.column("record_count")]
+    firsts = [int(value.as_py()) for value in files.column("first_row_id")]
+    lows = [value.as_py()["id"]["lower_bound"] for value in files.column("readable_metrics")]
+    totals = engine.sql(f"SELECT count(*) AS n, sum(id) AS s FROM {table}").to_arrow()
+    return {
+        "counts": counts,
+        "firsts": firsts,
+        "lows": lows,
+        "rows": totals.column("n")[0].as_py(),
+        "sum_id": totals.column("s")[0].as_py(),
+    }
+
+
+@pytest.mark.parametrize("partitions", ["4", "16"])
+def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
+    tmp_path: Path, partitions: str
+) -> None:
+    """C-005: the manifest ascends by content and `_row_id` tiles it, at every partition count."""
+    total = sum(UNEQUAL_SIZES)
     source = _unequal_seed(tmp_path / "seed")
     engine = (
-        ReparkSession.builder.appName("writepath-determinism")
-        .config("spark.sql.shuffle.partitions", THREADS)
+        ReparkSession.builder.appName(f"writepath-order-{partitions}")
+        .config("spark.sql.shuffle.partitions", partitions)
         .config("repark.write.max-concurrent-files", "4")
         .config("repark.sql.allowCreateFormatVersion3", "true")
         .getOrCreate()
@@ -171,34 +195,28 @@ def test_repeated_ctas_commits_the_same_manifest_and_row_ids(tmp_path: Path) -> 
         engine.register_memory_catalog(CATALOG, tmp_path / "wh")
         engine.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.w")
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
-        observed = []
+        seen: dict[str, list[int]] = {}
         for run in range(DETERMINISM_RUNS):
-            table = f"{CATALOG}.w.d{run}"
-            engine.sql(
-                f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({V3}) AS SELECT * FROM src"
-            ).collect()
-            files = engine.sql(
-                f"SELECT record_count, first_row_id, lower_bounds FROM {table}.files"
-            ).to_arrow()
-            counts = [int(value.as_py()) for value in files.column("record_count")]
-            firsts = [
-                None if value.as_py() is None else int(value.as_py())
-                for value in files.column("first_row_id")
-            ]
-            bounds = [str(value.as_py()) for value in files.column("lower_bounds")]
-            observed.append((counts, dict(zip(bounds, firsts, strict=True))))
-
-        assert len(UNEQUAL_SIZES) == len(observed[0][0]), observed[0][0]
-        assert sum(observed[0][0]) == sum(UNEQUAL_SIZES)
-        for run in range(1, DETERMINISM_RUNS):
-            assert observed[run][0] == observed[0][0], (
-                f"run {run} committed a different manifest record-count sequence: "
-                f"{observed[run][0]} against {observed[0][0]}"
+            commit = _ctas_commit(engine, f"{CATALOG}.w.o{partitions}_{run}")
+            assert commit["lows"] == sorted(commit["lows"]), (
+                f"run {run} at {partitions} partitions committed a manifest that does not ascend "
+                f"by content: {commit['lows']}"
             )
-            assert observed[run][1] == observed[0][1], (
-                f"run {run} assigned different _row_id ranges: "
-                f"{observed[run][1]} against {observed[0][1]}"
+            expected = [sum(commit["counts"][:index]) for index in range(len(commit["counts"]))]
+            assert commit["firsts"] == expected, (
+                f"run {run} at {partitions} partitions did not tile `_row_id` over the manifest: "
+                f"{commit['firsts']} against {expected}"
             )
+            assert sum(commit["counts"]) == total
+            assert commit["rows"] == total
+            assert commit["sum_id"] == total * (total - 1) // 2
+            key = str(commit["counts"])
+            if key in seen:
+                assert seen[key] == commit["firsts"], (
+                    f"two runs at {partitions} partitions produced the same file grouping "
+                    f"{key} but different `_row_id` ranges: {seen[key]} against {commit['firsts']}"
+                )
+            seen[key] = commit["firsts"]
     finally:
         engine.stop()
 

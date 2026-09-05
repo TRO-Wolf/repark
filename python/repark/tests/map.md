@@ -1716,10 +1716,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
   two writer shapes agree on every answer and on their layout (one writer one file, four-cap
   eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
-  against the written table. The determinism pin seeds EIGHT UNEQUAL files
-  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times, asserting one
-  manifest record-count sequence and one `first_row_id` map keyed by each file's `lower_bounds` —
-  equal-sized files hid the round-1 defect entirely. There is deliberately NO wall assertion here: on a disk-contended
+  against the written table. The ordering pin seeds EIGHT UNEQUAL files
+  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times **at 4 and at 16
+  partitions**, asserting the manifest ascends by content, that `_row_id` tiles it contiguously
+  from zero, that the row set and sums are invariant, and that two runs with the same file
+  grouping commit the same `_row_id` ranges. It deliberately does NOT assert the record-count
+  sequence: round 2 did, and CI's 4-core runner reddened it because the scan groups the source
+  files differently from run to run (4-6 distinct groupings in 10 runs at 4 partitions, 1 at 16).
+  Equal-sized files hid the round-1 defect entirely; a fixed partition count hid the round-2 one. There is deliberately NO wall assertion here: on a disk-contended
   box this write is `fsync`-bound and a timing pin flakes — the speedup is measured in the
   baseline doc and pinned deterministically in `write/partition_write.rs`, where the blocking
   work is injected. Numbers and commands:

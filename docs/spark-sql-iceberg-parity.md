@@ -4324,6 +4324,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **WRITE-GROUPING-CTAS-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 3, from a CI red on
+  the 4-core wheels runner). DataFusion's file-scan repartitioning packs the same source files
+  into writers differently from run to run **inside one process**: over eight unequal parquet
+  files, `target_partitions = 4` produced 4 to 6 distinct groupings in 10 runs (one run merged the
+  3,000-row and 1,000-row files into a single 4,000-row writer, the next did not), while
+  `target_partitions = 16` produced 1 in 10 because every file becomes its own group. The
+  committed data-file layout, and therefore the `_row_id` a given row receives, follows the
+  grouping — so a CTAS is reproducible in its ORDERING but not in its LAYOUT, and `_row_id` is not
+  stable across partition counts or across runs at a small one. BACKLOG. The write side cannot fix
+  this: the rows land in different files before any writer sees them. A fix belongs in the scan —
+  a deterministic file-group assignment (sorting the listing before packing, or one group per file
+  for CTAS) — and would cost the parallelism this unit delivers if done by disabling
+  `repartition_file_scans`, which collapses a single-file source to one writer. Pinned in its
+  narrowed form by `test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count`, which runs
+  at 4 and 16.
+
 - **WRITE-ORDER-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). The stream write
   path INSERT, MERGE, overwrite and predicate DML use
   (`write/merge/mod.rs::write_stream_into_parallel_sinks`) dispatches batches round-robin to K
@@ -4331,8 +4347,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   depends on the order the source produced them, so two identical INSERT statements over identical
   input can commit different manifests and different `_row_id` ranges. BACKLOG, pre-existing: this
   unit moved only CTAS to the write node and deliberately did not touch the stream path. The
-  CTAS-side fix is `write/file_order.rs::stable_commit_order`, a content-derived total order; the
-  same treatment applies here once the stream path's row-to-file mapping is itself stable.
+  CTAS-side treatment is `write/file_order.rs::stable_commit_order`, a content-derived total
+  order, and it buys an ORDERING only — as `WRITE-GROUPING-CTAS-1` records, the row-to-file
+  grouping is unstable ahead of the writers on both paths, so applying the same sort here would
+  make the stream path's manifest ascend by content without making its layout or its `_row_id`
+  reproducible either.
 
 - **WRITE-ABORT-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). A failed write on
   the stream path leaves every parquet file its writers had already rolled on disk: the workers
@@ -4378,19 +4397,26 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   **Both of PERF-ANALYSIS-1's targets are met** (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms).
   Round 1 of this unit reported both as missed and quoted 880 → 478 ms; those readings were taken
   at load 13–22 with an uncommitted fork override on the after side, and are superseded — the same
-  cell swings 2.4× on one build from load alone. **Determinism**: identical CTAS statements over
-  identical input now commit identical manifests and identical `_row_id` ranges
-  (`write/file_order.rs::stable_commit_order`, a content-derived total order); round 1 claimed this
-  from the writer index and was wrong, because the DataFusion partition index is not stable across
-  executions — six identical v3 CTAS over eight unequal source files gave six different
-  assignments, and now give one. **Abort**: a failed write leaves no data file at all, the failing
+  cell swings 2.4× on one build from load alone. **Determinism, as narrowed in round 3**: the commit is an
+  ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
+  order, so at every partition count the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the row set and its sums are invariant, and two runs that produce the
+  same file grouping produce the same `_row_id` ranges. What is **not** reproducible is the
+  grouping itself: DataFusion packs the same source files into writers differently from run to run
+  inside one process — 4 to 6 distinct groupings in 10 runs at `target_partitions = 4` against 1
+  in 10 at 16 — so the committed file layout and the `_row_id` a given row receives vary with it,
+  and no writer-side ordering can change that. Filed as `WRITE-GROUPING-CTAS-1`. Round 1 claimed
+  reproducibility from the writer index (refuted: the index is not stable), round 2 claimed it
+  from content (refuted by CI's 4-core runner: the grouping is not stable), round 3 pins the
+  property that holds at 4 and at 16. **Abort**: a failed write leaves no data file at all, the failing
   writer's own rolled files included. **Layout**: a CTAS writes one file per plan partition — 4 → 8
   unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
   counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
   partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
-  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files commit one
-  manifest sequence and one `first_row_id` map; Spark row-set equality). Numbers and commands:
+  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 4 AND 16
+  partitions: manifest ascending by content, `_row_id` tiling it, invariant row set, and equal
+  commits for equal groupings; Spark row-set equality). Numbers and commands:
   `docs/perf/iceberg-write-baseline.md`.
 
 - **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured

@@ -193,11 +193,18 @@ repark-core's error map.
   ([file_order.rs](file_order.rs)) therefore sorts the committed files by partition value first
   (V3-11 unchanged), then by each field's lower bound in field-id order, then the upper bounds,
   then record count, file size and path — a total order that is a function of the DATA. Six runs
-  of the refuting fixture now commit ONE manifest record-count sequence and ONE `first_row_id`
-  map. The boundary: this makes the commit reproducible whenever the scan's row-to-file grouping
-  is itself stable; if a scan split the same rows into different file groups, no writer-side
-  ordering could restore it, and files that tie on every bound fall back to the path, which
-  carries a fresh UUID.
+  of the refuting fixture commit ONE manifest record-count sequence and ONE `first_row_id` map at
+  16 partitions.
+  **Round 3 crossed that boundary and narrowed the claim.** The scan's row-to-file GROUPING is not
+  stable either: on four cores the same eight-file source is packed into four writers differently
+  from run to run inside ONE process — measured 4 to 6 distinct groupings in 10 runs at
+  `target_partitions = 4`, against 1 in 10 at 16, which is why CI's 4-core runner reddened the
+  round-2 pin and this box never did. So the committed LAYOUT and the `_row_id` a given row
+  receives are **not** reproducible across groupings, and no writer-side ordering can make them
+  so — the rows themselves land in different files. What IS true at every partition count, and is
+  what the pin now asserts at 4 and at 16: the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the row set and its sums are invariant, and two runs that produce the
+  SAME grouping produce the same commit. The residual is filed as `WRITE-GROUPING-CTAS-1`.
   An input error raises a shared flag: siblings stop taking `Ok` batches and close what they hold,
   and the failure sweep deletes **every data file the attempt created** — the completed files
   plus every parquet that appeared under the table's data root since the attempt began, which is
