@@ -76,8 +76,10 @@ Two separate asks stand between that table and a zero. `F-CATIO-AWS`
 (`PERF-CATALOG-AWS-CACHE-1`) would let a Glue or S3 Tables catalog take the cache, which is what
 would move the S3-GET column. `F-CATIO-A` (`PERF-CATALOG-LOADS-1`) would cut the `GetTable`
 column, which no cache can touch: the count of round trips per statement is the count of
-`load_table` calls, and on the memory catalog those are now **cache hits with the same count** —
-2 per SELECT, 3–6 per DML. The AWS legs of
+`load_table` calls, and those are unchanged — the cache turns them into hits, not into fewer
+calls. Measured through the census counter (`hits + misses` per statement, cache on): **SELECT 2,
+SELECT-with-filter 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** — the same numbers as the knob-off
+metadata-read column above, which is exactly the point. The AWS legs of
 `python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP naming `F-CATIO-AWS`.
 The wall-clock evidence for Glue latency stays the recorded suite walls in
 [../tier2-aws.md](../tier2-aws.md); this unit measures no AWS.

@@ -94,8 +94,8 @@ COVERAGE_ATTESTATION:
 | `repark-core/src/session/iceberg_caches.rs` | New: the memory-catalog build, the statement-door trim, the census accessors |
 | `repark-core/src/session/late_catalogs.rs` | Move-only, to pay for the wiring under CAP-1 |
 | `repark-python/src/catalog_census.rs` | New: the `iceberg_metadata_cache_census` pyfunction |
-| `repark-spark/src/tests/catalog_cache_staleness.rs` | New: ten pins on two doors over one catalog |
-| `python/repark/tests/test_perf_ice_catalog_io_1.py` | New: ten always-run legs, three skipped fork-gated legs |
+| `repark-spark/src/tests/catalog_cache_staleness.rs` | New: twelve pins on two doors over one catalog |
+| `python/repark/tests/test_perf_ice_catalog_io_1.py` | New: thirteen always-run legs, three skipped fork-gated legs |
 | `docs/perf/iceberg-catalog-io-baseline.md` | New: the census and timing tables, the four fork asks |
 
 Public API breaks: **zero**. New public names only. No dependency change. No Spark-answer change.
@@ -117,7 +117,7 @@ made the default worse than the knob's default and split the two entry points' s
 | `metadata.json` reads per SELECT | 2 | **0** | 0 | ≤ 1 |
 | `metadata.json` reads per INSERT / DELETE / UPDATE / MERGE | 4 / 5 / 6 / 3 | **0** | 0 | ≤ 2 |
 | `metadata.json` reads per CREATE / CTAS | 1 | 1 | 1 | not cacheable |
-| catalog round trips (`load_table`) per SELECT / DML | 2 / 3–6 | 2 / 3–6 | **1 / ≤ 2** | fork-gated |
+| catalog round trips (`load_table`) per SELECT / INSERT / DELETE / UPDATE / MERGE | 2 / 4 / 5 / 6 / 3 | 2 / 4 / 5 / 6 / 3 (now hits) | **1 / ≤ 2** | fork-gated |
 | manifest-list + manifest opens, repeated SELECT | 1 + 1 | 1 + 1 | **0 + 0** | — |
 | `t_many/count_id` second statement (193 manifests) | 120.35 ms | 120.01 ms | **11.33 ms** | ≤ 20 ms |
 | `t_many_merged/count_id` second statement (1 manifest) | 17.63 ms | 14.91 ms | **10.56 ms** | — |
@@ -138,7 +138,7 @@ was not, and a reader of the registry would have believed something false about 
 |---|---|---|
 | S2-1 | The Glue table gave every statement an S3-GET-after of 0 and the FIXED row said the cache is "handed to every catalog it builds" — but only `memory_catalog_cached` takes one, and the fork's AWS builders have no `with_table_metadata_cache`. | REMEDIATED. Baseline §1's AWS table now reads **unchanged today** in both columns and names the two asks that stand between it and a zero; the registry row, C-002, the crate map and the staging row all say memory-catalog-only. |
 | S2-2 | "0 metadata reads on every statement" is false for CREATE / CTAS (measured 1 with the knob on AND off; §7.6 has a CTAS row the census table dropped). | REMEDIATED. Both rows added to the census table, measured on both knob settings; every restatement now says "every statement that reads an existing table", and the baseline says plainly that creation is not cacheable and why. |
-| S2-3 | `PERF-CATALOG-CALLS-1` was filed FIXED while the `load_table` count per statement — the Glue `GetTable` count — is untouched. | REMEDIATED. The row is narrowed to "the metadata document is fetched once per location, not once per `load_table`", with three explicit non-claims; `PERF-CATALOG-LOADS-1` (F-CATIO-A) and `PERF-CATALOG-AWS-CACHE-1` (F-CATIO-AWS) filed BACKLOG in the `PERF-DVCLOSE-STMT-1` form. |
+| S2-3 | `PERF-CATALOG-CALLS-1` was filed FIXED while the `load_table` count per statement — the Glue `GetTable` count — is untouched. | REMEDIATED, and re-measured rather than taken on trust: the census counter gives `hits + misses` per statement as SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3, identical to the knob-off read column. The row is narrowed to "the metadata document is fetched once per location, not once per `load_table`", with three explicit non-claims; `PERF-CATALOG-LOADS-1` (F-CATIO-A) and `PERF-CATALOG-AWS-CACHE-1` (F-CATIO-AWS) filed BACKLOG in the `PERF-DVCLOSE-STMT-1` form. |
 | S2-4 | The bound only trims at the `sql_with` door: one statement over N tables retains N regardless of the knob (measured: 8-way UNION at `entries=1` → 8). | REMEDIATED by documenting and pinning the scope, not by moving the trim. Reproduced independently (8 CREATEs → 2 retained; UNION → 8; next door → 0; the table still answers). Bounding within a statement needs a hook on cache INSERT, which is fork-side; the RePark-side alternative is a `SchemaProvider` decorator with a permanent forwarding-audit duty, for a bound on working set rather than on a leak. Pinned both sides, stated in C-004, the crate map and the conf key's description, and `PERF-CATALOG-CACHE-BOUND-1` / `F-CATIO-BOUND` carries the real fix. |
 | S2-5 | The staging map row still said "nine pins" and "a four-mutation score" after `63bfd4a4` updated the ledger and the crate map. | REMEDIATED. Row rebuilt and every count in it re-derived from the tree: twelve Rust pins, thirteen always-run Python legs, three skipped legs, six mutations, four fork asks, five registry rows. |
 | S2-6 | C-003's ABA reason (Hive/REST uuid) is refuted on a supported path: a Hadoop layout adopted through `CALL register_table` commits deterministic `v(N+1).metadata.json`. | REMEDIATED. Measured v1 → v5 across INSERT, INSERT, INSERT OVERWRITE, INSERT with rows correct throughout, and pinned. The reason is rewritten to evict-on-commit plus evict-on-drop, which holds under both naming schemes; the crate map carries the correction. |

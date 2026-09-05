@@ -4436,9 +4436,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
   still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
   prove reachability before claiming the pointer; creation is not cacheable. (2) The count of
-  catalog ROUND TRIPS per statement is **unchanged** — 2 `load_table` calls per SELECT and 3–6
-  per DML, now served as cache hits, which on Glue is still 2 / 3–6 `GetTable`; cutting that is
-  `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
+  catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
+  (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
+  numbers as the knob-off read column, because the cache turns those calls into hits rather than
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
   before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
   (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
   `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
@@ -4448,9 +4449,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **PERF-CATALOG-LOADS-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1 (PERF-ANALYSIS-1 §2 row
   11's other half). **BACKLOG** behind a fork pin bump. A planning round resolves the table twice:
   `IcebergSchemaProvider::table` → `IcebergTableProvider::try_new` is `load_table` #1 and
-  `TableProvider::scan` is #2, and DML adds its write-side loads — measured 2 `load_table` calls
-  per SELECT and 3–6 per DML, unchanged by `PERF-CATALOG-CALLS-1` (they are now cache hits, not
-  fewer calls). On the memory catalog a round trip is an in-memory map read and costs nothing
+  `TableProvider::scan` is #2, and DML adds its write-side loads — measured through the census counter at
+  SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3, unchanged by `PERF-CATALOG-CALLS-1` (they are
+  now cache hits, not fewer calls). On the memory catalog a round trip is an in-memory map read and costs nothing
   measurable; on Glue each is a `GetTable`. Also a latent correctness defect: the provider's
   Arrow `schema` is fixed at `try_new` and DataFusion stores ordinals against it, so a schema
   change landing between `try_new` and `scan` plans one snapshot against another's ordinals. Fork
