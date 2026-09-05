@@ -201,10 +201,7 @@ async fn execute_staged_create(
 
     // Streaming bounds memory by batch size and open writers.
     let data_files = match query {
-        Some(frame) => {
-            let stream = frame.execute_stream().await?;
-            write_stream(cx.ctx, staged.table(), stream).await?
-        }
+        Some(frame) => write_query(cx.ctx, staged.table(), frame).await?,
         None => Vec::new(),
     };
     staged
@@ -438,8 +435,7 @@ async fn create_first_service_managed(
 
     let write: Result<()> = async {
         if let Some(frame) = query {
-            let stream = frame.execute_stream().await?;
-            let data_files = write_stream(cx.ctx, &table, stream).await?;
+            let data_files = write_query(cx.ctx, &table, frame).await?;
             if !data_files.is_empty() {
                 repark_iceberg::write::commit_append(&target.catalog, &table, data_files).await?;
             }
@@ -467,27 +463,15 @@ async fn create_first_service_managed(
 }
 
 /// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
-async fn write_stream(
+async fn write_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
-    stream: datafusion::physical_plan::SendableRecordBatchStream,
+    query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    } else {
-        repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    }
+    let task_ctx = Arc::new(query.task_ctx());
+    let plan = query.create_physical_plan().await?;
+    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
 }
 
 /// Refresh the touched schema's name directory, then return an empty frame.

@@ -4373,6 +4373,128 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **WRITE-GROUPING-CTAS-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 3, from a CI red on
+  the 4-core wheels runner). DataFusion's file-scan repartitioning packs the same source files
+  into writers differently from run to run **inside one process**: over eight unequal parquet
+  files, `target_partitions = 4` produced 4 to 6 distinct groupings in 10 runs (one run merged the
+  3,000-row and 1,000-row files into a single 4,000-row writer, the next did not), while
+  `target_partitions = 16` produced 1 in 10 because every file becomes its own group. The
+  committed data-file layout, and therefore the `_row_id` a given row receives, follows the
+  grouping — so a CTAS is reproducible in its ORDERING but not in its LAYOUT, and `_row_id` is not
+  stable across partition counts or across runs at a small one. BACKLOG. The write side cannot fix
+  this: the rows land in different files before any writer sees them. A fix belongs in the scan —
+  a deterministic file-group assignment (sorting the listing before packing, or one group per file
+  for CTAS) — and would cost the parallelism this unit delivers if done by disabling
+  `repartition_file_scans`, which collapses a single-file source to one writer.
+  **No red-on-fix pin can assert this**: the defect is that the grouping varies, so a pin
+  demanding a fixed grouping would be red on the current engine and green only by accident.
+  `test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count` (3, 4, 8 and 16) is green
+  with the defect and would stay green without it — it pins the ordering the write side does
+  own, not this. The flip rates above are the measurement that stands in for a pin.
+
+- **WRITE-ORDER-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). The stream write
+  path INSERT, MERGE, overwrite and predicate DML use
+  (`write/merge/mod.rs::write_stream_into_parallel_sinks`) dispatches batches round-robin to K
+  cooperative workers and returns their files in worker order, but which batches a worker receives
+  depends on the order the source produced them, so two identical INSERT statements over identical
+  input can commit different manifests and different `_row_id` ranges. BACKLOG, pre-existing: this
+  unit moved only CTAS to the write node and deliberately did not touch the stream path. The
+  CTAS-side treatment is `write/file_order.rs::stable_commit_order`, a content-derived total
+  order, and it buys an ORDERING only — as `WRITE-GROUPING-CTAS-1` records, the row-to-file
+  grouping is unstable ahead of the writers on both paths, so applying the same sort here would
+  make the stream path's manifest ascend by content without making its layout or its `_row_id`
+  reproducible either.
+
+- **WRITE-ABORT-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). A failed write on
+  the stream path leaves every parquet file its writers had already rolled on disk: the workers
+  drop their sinks without closing (the P1-R1 orphan-upload guard,
+  `merge/tests/streaming.rs::parallel_source_error_does_not_finish_sinks`), and nothing deletes
+  what the rolling writer had already flushed — the round-2 critic measured 70 orphans, 103 MB.
+  BACKLOG, pre-existing and out of this unit's scope. The CTAS node's answer is
+  `write/partition_write.rs`'s attempt sweep: census the table's data root before the write and
+  delete everything that appeared since, which reclaims the failing writer's rolled files too.
+  Only `remove_orphan_files` reclaims the stream path's today.
+
+- **WRITE-DISTRIBUTION-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). RePark has no
+  distribution rule before a write. Spark's Iceberg default is `write.distribution-mode = hash`,
+  which repartitions by partition value so one value goes to one task; for the same CTAS at
+  `spark.sql.shuffle.partitions = 8` Spark writes **2** unpartitioned and **8** partitioned data
+  files, where repark now writes **8** and **64** (average 328 KB) — 4x and 8x Spark's counts.
+  BACKLOG. Two alternatives were measured and rejected in this unit: capping the writers below the
+  partition count makes one writer drain several input partitions in sequence, which measured
+  738 ms against 547 ms on the partitioned 1e6 CTAS and is unbounded in memory (DataFusion's
+  repartition channels are unbounded per output partition and gate only when every channel is
+  non-empty, so the partitions a writer has not reached buffer whole); and a `RepartitionExec`
+  round-robin assigns batches to outputs from a shared counter, so the row-to-file mapping — and
+  with it `_row_id` — stops being reproducible, which is exactly the defect round 2 fixed. A real
+  fix is a hash-distribution rule that sends one partition value to one writer: deterministic AND
+  fewer files, and a unit of its own. The current counts are pinned by
+  `test_ctas_writes_one_data_file_per_plan_partition` and the partitioned facade pin.
+
+- **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
+  written by K cooperative futures joined in ONE task
+  (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding of
+  the K writers serialized. CTAS now goes through
+  `write/partition_write.rs::IcebergPartitionWriteExec`, a physical node with one output partition
+  per input partition; `execute_stream` coalesces it and DataFusion's `CoalescePartitionsExec`
+  spawns one task per partition, so the encode runs on the executor's threads. RePark spawns
+  nothing and adds no dependency — `clippy.toml` bans `tokio::spawn` and `spawn_blocking`, the
+  rust-code-quality review scan bans routing around that ban through `JoinSet` or a helper crate,
+  and `tokio` is only a dev-dependency of `repark-iceberg`. **Measured on the SHIPPED tree**
+  (base `6eaccd5e` against `perf/ice-writepath-1`, both with the pinned fork, back to back on a
+  quiet box at 1-minute load 8–14, three passes of five timed statements per cell, floors 12–15 ms
+  on the after side): `ctas` **1,384.80 → 135.48 ms** median (1,312.39 → 127.54 min), **10.2×**,
+  and `ctas_partitioned8` **4,901.75 → 293.19 ms** median (4,628.11 → 283.07 min), **16.7×**,
+  against a `df.write.parquet(zstd)` control that read 107.37 → 105.56 ms in the same passes.
+  **The durable result is the gain and that ratio, not the millisecond.** Three boxes have
+  measured the shipped tree: `ctas`/control 1.28× here, 1.38× on the round-2 critic's box (load
+  11.8-12.3) and 1.39× on the round-3 critic's (load 6.4-8.5); `ctas_partitioned8`/control
+  2.78× / 3.00× / 2.69× — inside 8 %. The absolutes disagree by up to 12 % (`ctas` 135.48 ms
+  here, 152.24 ms there), so **PERF-ANALYSIS-1's absolute targets (`ctas` ≤ 150 ms,
+  `ctas_partitioned8` ≤ 300 ms) are met on this box and NOT on a third, and this row does not
+  claim them.** Round 1 reported both missed and quoted 880 → 478 ms, taken at load 13–22 with an
+  uncommitted fork override on the after side; superseded.
+  **Determinism, as narrowed in rounds 3–4**: the commit is an ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
+  order, so at every partition count the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the committed row set is the expected digest of ids, and two runs that
+  produce the same file grouping produce the same id-to-`_row_id` map. What is **not** reproducible is the
+  grouping itself: DataFusion packs the same source files into writers differently from run to run
+  inside one process — 3 distinct groupings in 5 runs at `target_partitions = 3`, 4 to 6 in 10 at
+  4, and 1 in 10 at 8 and at 16 — so the committed file layout and the `_row_id` a given row receives vary with it,
+  and no writer-side ordering can change that. Filed as `WRITE-GROUPING-CTAS-1`. Round 1 claimed
+  reproducibility from the writer index (refuted: the index is not stable), round 2 claimed it
+  from content (refuted by CI's 4-core runner: the grouping is not stable), rounds 3 and 4 pin the
+  property that holds at 3, 4, 8 and 16. **Abort**: when the table has no current snapshot — the
+  CTAS case — a failed write leaves no data file at all, the failing writer's own rolled files
+  included; against a table that already has one the sweep is narrowed to the attempt's own
+  completed files. **Layout**: a CTAS writes one file per plan partition — 4 → 8
+  unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
+  counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
+  `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
+  partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
+  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
+  and 16 partitions: manifest ascending by content, `_row_id` tiling it, the row set as a digest of ids,
+  and equal id-to-`_row_id` maps for equal groupings; Spark row-set equality). Numbers and commands:
+  `docs/perf/iceberg-write-baseline.md`.
+
+- **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured
+  2026-09-05 (PERF-ICE-WRITEPATH-1). The fork's `RecordBatchPartitionSplitter::split` built one
+  `Literal::Struct` per row, keyed a `HashMap<&Struct, _>` by it and filtered the batch with a
+  full-length `BooleanArray` per group. BACKLOG here because the fix is fork-side and this tree
+  does not consume it yet. Fork trigger **F-28** (`f-28-vectorized-partition-splitter`): lexsort
+  the partition-value columns, read group boundaries with `arrow_ord::partition`, materialize one
+  literal per group and `take` per group; the row-wise path stays for Float, Double, Unknown and
+  empty partition types, where Arrow total-order equality is not Iceberg `Struct` equality
+  (`-0.0` and `0.0` are one group under `OrderedFloat`, two under total order). Measured in the
+  fork lane on a release build over the analysis' seven-column bed, 1,048,576 rows and eight
+  partitions: **171.39 → 28.33 ms** (6.0×, 143 ms per 1e6 rows). That is the number this row
+  stands on, because it needs no RePark rebuild and no disk; the end-to-end CTAS cells measured
+  with the fork override (builds B1/B2 in the baseline doc) were taken on a contended box and are
+  not quoted anywhere as a shipped result. That measurement also **corrects
+  the analysis**: the 813 ms it read off the partitioned-minus-unpartitioned CTAS delta is not the
+  splitter, whose whole cost at that scale is 171 ms — the rest is the fanout writing 8× the data
+  files. The row is FIXED here when the pin bump lands (`docs/fork-sync.md` rule 1).
+
 - **PERF-FACADE-COLLECT-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. `collect()` materialized
   every row in Python: `to_pylist()` per column, then `Row.from_ordered_fields` per row with a
   fresh names tuple each time. Row materialization moved into `repark-python`
