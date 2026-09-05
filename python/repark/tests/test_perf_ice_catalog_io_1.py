@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -21,6 +23,34 @@ _ACCEPTANCE_ENV = "REPARK_AWS_ACCEPTANCE"
 _MANIFEST_TARGET_MS = 20.0
 _MANY_APPENDS = 48
 _MANY_ROWS = 480
+_RSS_TABLES = 500
+_RSS_ROWS_EACH = 4
+_RSS_BUDGET_MB = 64.0
+_RSS_DRIVER = (
+    "import resource\n"
+    "import sys\n"
+    "from repark import ReparkSession\n"
+    "tables = int(sys.argv[1])\n"
+    "warehouse = sys.argv[2]\n"
+    "rows = int(sys.argv[3])\n"
+    'builder = ReparkSession.builder.appName("rss")\n'
+    "for pair in sys.argv[4:]:\n"
+    '    key, value = pair.split("=", 1)\n'
+    "    builder = builder.config(key, value)\n"
+    "spark = builder.getOrCreate()\n"
+    'spark.register_memory_catalog("ice", warehouse)\n'
+    'spark.sql("CREATE NAMESPACE ice.ns")\n'
+    'src_query = f"SELECT value AS id FROM range(0, {rows}) AS r(value)"\n'
+    'spark.sql(src_query).createOrReplaceTempView("src")\n'
+    "for index in range(tables):\n"
+    '    spark.sql(f"CREATE TABLE ice.ns.r{index} AS SELECT * FROM src").to_arrow()\n'
+    "total = 0\n"
+    "for index in range(tables):\n"
+    '    frame = spark.sql(f"SELECT count(id) AS c FROM ice.ns.r{index}").to_arrow()\n'
+    '    total = total + frame.column("c")[0].as_py()\n'
+    "print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)\n"
+    "print(total)\n"
+)
 
 
 def _census(spark: ReparkSession) -> tuple[bool, int, int, int, int]:
@@ -234,7 +264,7 @@ def test_many_manifests_answer_equal_to_one_merged_manifest(tmp_path: Path) -> N
 def test_the_second_statement_on_a_many_manifest_table_is_under_the_target(
     tmp_path: Path,
 ) -> None:
-    spark = _session("manifest_timing", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_timing", tmp_path)
     _range_view(spark, _MANY_ROWS)
     _build_many(spark, "t_many")
 
@@ -265,7 +295,9 @@ def test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanis
     assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
 
 
-def test_a_default_session_reopens_manifests_after_they_vanish(tmp_path: Path) -> None:
+def test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish(
+    tmp_path: Path,
+) -> None:
     spark = _session("manifest_default", tmp_path)
     _seed(spark, "t", rows=10)
     assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
@@ -273,8 +305,7 @@ def test_a_default_session_reopens_manifests_after_they_vanish(tmp_path: Path) -
     removed = _delete_manifests(tmp_path / "manifest_default")
 
     assert removed > 0, "the pin means nothing without a manifest to delete"
-    with pytest.raises(Exception, match="manifest"):
-        spark.sql("SELECT count(id) AS c FROM ice.ns.t").to_arrow()
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
 
 
 def test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again(
@@ -294,7 +325,7 @@ def test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again(
 def test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths(
     tmp_path: Path,
 ) -> None:
-    spark = _session("manifest_rewrite", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_rewrite", tmp_path)
     _range_view(spark, _MANY_ROWS)
     _build_many(spark, "t")
     assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == _MANY_ROWS
@@ -318,7 +349,7 @@ def test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths(
 
 
 def test_a_merge_after_a_commit_matches_the_committed_row(tmp_path: Path) -> None:
-    spark = _session("manifest_merge", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_merge", tmp_path)
     _seed(spark, "t", rows=10)
     spark.sql("INSERT INTO ice.ns.t VALUES (99, 1)").to_arrow()
     spark.sql("SELECT 99 AS id, 0 AS vi").createOrReplaceTempView("one")
@@ -330,7 +361,7 @@ def test_a_merge_after_a_commit_matches_the_committed_row(tmp_path: Path) -> Non
 
 
 def test_a_dropped_and_recreated_table_answers_its_own_rows(tmp_path: Path) -> None:
-    spark = _session("manifest_drop", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_drop", tmp_path)
     _seed(spark, "t", rows=10)
     assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.t") == 10
 
@@ -341,7 +372,7 @@ def test_a_dropped_and_recreated_table_answers_its_own_rows(tmp_path: Path) -> N
 
 
 def test_a_registered_table_stays_correct_across_a_commit(tmp_path: Path) -> None:
-    spark = _session("manifest_register", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_register", tmp_path)
     _seed(spark, "t", rows=10)
     pointers = sorted((tmp_path / "manifest_register").rglob("*.metadata.json"))
 
@@ -371,7 +402,7 @@ def test_a_tiny_byte_budget_still_answers_across_many_tables(tmp_path: Path) -> 
 def test_time_travel_reads_the_pinned_snapshot_with_the_cache_on(
     tmp_path: Path,
 ) -> None:
-    spark = _session("manifest_timetravel", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_timetravel", tmp_path)
     _seed(spark, "t", rows=10)
     first = spark._testing_list_snapshots("ice.ns.t")[-1][0]
     spark.sql("INSERT INTO ice.ns.t VALUES (99, 1)").to_arrow()
@@ -381,7 +412,7 @@ def test_time_travel_reads_the_pinned_snapshot_with_the_cache_on(
 
 
 def test_branch_reads_answer_with_the_cache_on(tmp_path: Path) -> None:
-    spark = _session("manifest_branch", tmp_path, **{_MANIFEST_KEY: "33554432"})
+    spark = _session("manifest_branch", tmp_path)
     _seed(spark, "t", rows=10)
     first = spark._testing_list_snapshots("ice.ns.t")[-1][0]
     spark.sql(f"CREATE BRANCH kept IN ice.ns.t AS OF VERSION {first}").to_arrow()
@@ -415,14 +446,14 @@ def _lineage_triples(spark: ReparkSession, table: str) -> list[tuple[int, int | 
     )
 
 
-def test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows(
+def test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows(
     tmp_path: Path,
 ) -> None:
     """PERF-CATALOG-LINEAGE-CACHE-1 FIXED at pin 2ed39cb0: the cache serves the caller's lineage."""
     spark = _session(
         "manifest_lineage_on",
         tmp_path,
-        **{_ALLOW_CREATE_V3_KEY: "true", _MANIFEST_KEY: "33554432"},
+        **{_ALLOW_CREATE_V3_KEY: "true"},
     )
     _seed_v2_upgrade_table(spark)
     assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.up") == 3
@@ -459,6 +490,85 @@ def test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_
         (4, 0, 2),
         (5, 1, 2),
     ]
+
+
+def test_a_warm_second_session_reads_assigned_lineage_after_the_first_session_upgrades(
+    tmp_path: Path,
+) -> None:
+    first = _session(
+        "manifest_concurrent",
+        tmp_path,
+        **{_ALLOW_CREATE_V3_KEY: "true"},
+    )
+    try:
+        second = first.newSession()
+        try:
+            warehouse = tmp_path / "manifest_concurrent"
+            second.register_memory_catalog("ice", str(warehouse))
+            second.sql("CREATE NAMESPACE ice.ns")
+            _seed_v2_upgrade_table(first)
+            assert _scalar(first, "SELECT count(id) AS c FROM ice.ns.up") == 3
+            pointers = sorted(warehouse.rglob("*.metadata.json"))
+            assert pointers, "the seed must write a metadata pointer to adopt"
+            second.sql(
+                "CALL ice.system.register_table("
+                f"table => 'ns.shadow', metadata_file => '{pointers[-1]}')"
+            ).to_arrow()
+            assert _scalar(second, "SELECT count(id) AS c FROM ice.ns.shadow") == 3
+            first.sql(_UPGRADE_TO_V3).to_arrow()
+            first.sql("INSERT INTO ice.ns.up VALUES (4, 'd'), (5, 'e')").to_arrow()
+            upgraded = sorted(warehouse.rglob("*.metadata.json"))
+            assert upgraded[-1] != pointers[-1], "the upgrade must write a new pointer"
+            second.sql(
+                "CALL ice.system.register_table("
+                f"table => 'ns.shadow_v3', metadata_file => '{upgraded[-1]}')"
+            ).to_arrow()
+            expected = [
+                (1, 2, 1),
+                (2, 3, 1),
+                (3, 4, 1),
+                (4, 0, 2),
+                (5, 1, 2),
+            ]
+            assert _lineage_triples(first, "ice.ns.up") == expected
+            assert _lineage_triples(second, "ice.ns.shadow_v3") == expected
+        finally:
+            second.stop()
+    finally:
+        first.stop()
+
+
+def _peak_rss_mb_after_touching_tables(
+    tmp_path: Path, app: str, conf: dict[str, str]
+) -> tuple[float, int]:
+    driver = tmp_path / (app + ".py")
+    driver.write_text(_RSS_DRIVER, encoding="utf-8")
+    warehouse = tmp_path / app
+    warehouse.mkdir(parents=True, exist_ok=True)
+    command = [
+        sys.executable,
+        str(driver),
+        str(_RSS_TABLES),
+        str(warehouse),
+        str(_RSS_ROWS_EACH),
+    ]
+    for key, value in conf.items():
+        command.append(key + "=" + value)
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert completed.returncode == 0, completed.stderr[-2000:]
+    lines = completed.stdout.splitlines()
+    return float(lines[0]) / 1024.0, int(lines[1])
+
+
+def test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget(
+    tmp_path: Path,
+) -> None:
+    on_mb, on_rows = _peak_rss_mb_after_touching_tables(tmp_path, "rss_default", {})
+    off_mb, off_rows = _peak_rss_mb_after_touching_tables(tmp_path, "rss_off", {_MANIFEST_KEY: "0"})
+    assert on_rows == off_rows == _RSS_TABLES * _RSS_ROWS_EACH
+    assert on_mb - off_mb <= _RSS_BUDGET_MB, (
+        f"500 tables hold {on_mb - off_mb:.1f} MB over explicit 0, budget {_RSS_BUDGET_MB:.0f} MB"
+    )
 
 
 @pytest.mark.skipif(

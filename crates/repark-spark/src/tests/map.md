@@ -503,6 +503,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
 
   pins: perf-ice-catalog-io-2/C-002, C-004, C-005
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip.
+  The funnel pin `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` now
+  builds `CatalogCaches::default()` instead of sizing 32 MiB explicitly — it is the
+  default-primary sharing pin (red while the default is `0`, green after), and the
+  explicit-`0` control `with_zero_bytes_a_repeated_read_opens_manifests_again` stays as
+  the off-control in the other direction. All six IO-1 staleness pins now run with the
+  manifest cache ON (`CatalogCaches::default()` carries the budget); the two metadata-bound
+  tests keep referencing `DEFAULT_MANIFEST_CACHE_BYTES`, so they follow the flip untouched.
+
+  | test | clause |
+  |---|---|
+  | `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` | C-003 |
+  | `with_zero_bytes_a_repeated_read_opens_manifests_again` | C-003 |
+  | `a_configured_byte_value_reaches_the_shared_cache` | C-001 |
+  | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+
+  pins: perf-ice-catalog-io-3/C-001, C-003, C-005
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
   not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,

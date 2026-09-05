@@ -118,6 +118,12 @@ Source comments retain only API and safety contracts; implementation narration i
   upgrade-lineage tests green knob-on, is what the default-ON flip unit waits for.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05, red-first pins):** the default-enables pin
+  (`the_default_sizes_the_shared_cache` in `caches.rs`) lands before the flip and reds
+  while the default is `0`. The flip of `DEFAULT_MANIFEST_CACHE_BYTES` to 32 MiB, the size
+  argument, and the per-session ceiling follow in this unit.
+  pins: perf-ice-catalog-io-3/C-001
+
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
   no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
   `with_table_metadata_cache` at pin `189a73ed`. Every number in this unit is the memory catalog;
