@@ -34,6 +34,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   facade boundary take no pool reservation at all, so no pool bounds them. `risk_tier: standard`.
   Branch `harden/h3-spill-1`.
   pins: h3-spill-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
+  **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
+  `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
+  Decimal32/64/128/256 grouped paths with Spark's result rules and `try_avg`
+  overflow → NULL on the 2×-MAX shape (`AVG-DEC-SUMWRAP-1` files the wrap shape),
+  the retract path untouched for window frames. 5 PROVEN, 0 OPEN,
+  1 REJECTED (Q17 ≤ 3× missed with the sum-floor proof; avg/sum ≤ 1.3× met); gates
+  green, attestation filed. `risk_tier: standard`. Branch `perf/agg-avg-1`.
 - [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
   **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
   Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once

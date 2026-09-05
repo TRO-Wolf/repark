@@ -1963,6 +1963,55 @@ the pin rather than obeying it.
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
 
+### FLOAT-AGG-3 — grouped avg over 1e16 plus 64 ones
+
+- **repark** — grouped `avg(v)` over one group holding `[1e16, 1.0 × 64]` lands
+  **153846153846153.84**. The groups path sums per element in row order; the base
+  summed through Arrow's lane-chunked kernel, so grouped float avgs change
+  bit-for-bit vs the base. Type: Arrow `float64` nullable.
+- **Apache Spark** — the same recipe under `local[2]`, ANSI on, lands
+  **153846153846154.34**, grouped and global alike — a 3.3e-15 relative gap, inside
+  1e-12. *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
+  (repark's exact value plus within-1e-12 of the recorded Spark value) and
+  `python/repark/tests/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
+  (live re-derivation against the oracle).
+- **Rationale** — follows FLOAT-AGG-1/2 (same accumulation-order class); the grouped
+  shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
+  until a G7 fix lands.
+
+### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps with a representable quotient
+
+- **repark** — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
+  i128 answer the wrapped quotient at `decimal128(38, 4)` instead of NULLing or
+  raising. The zero-wrap fixture (three maxima plus
+  `40282366920938463463374607431768211459`, summing to exactly 2^128) answers
+  **`0.0000`** on the SQL doors (grouped, and global on the native door); the
+  non-zero-wrap fixture (complement `40282366920938463463374607431768611459`,
+  wrapping to 400000) answers **`100000.0000`** on grouped SQL and grouped
+  DataFrame. Window `try_avg` answers `[None, None, None, 0.0000]`; window `avg`
+  raises `Arithmetic Overflow`.
+- **Apache Spark** — the same fixtures under `local[2]`, ANSI on: grouped `try_avg`
+  answers **None** and grouped `avg` raises **ARITHMETIC_OVERFLOW** (`Overflow in
+  sum of decimals`) on both fixtures, SQL and DataFrame alike (global likewise on
+  the zero-wrap fixture); window `try_avg` answers four **None**s; window `avg`
+  raises **NUMERIC_VALUE_OUT_OF_RANGE** (the first-row quotient is itself
+  unrepresentable at `Decimal(38, 4)`). The return type agrees wherever a value is
+  returned.
+  *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
+  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
+  window `try_avg` list and the window `avg` raise; reds when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
+  the general wrap class in round 3 R2-1).
+  Pre-existing: the global `Accumulator` arms are byte-identical to the base (that
+  unit's ledger C-002), so the global shape cannot have changed there; the new groups
+  path inherits the same wrapping add. The unit's `try_avg`-yields-NULL claim covers
+  only the 2×-MAX shape. A fix needs overflow latching in the groups, global and
+  retract paths — not a one-line checked add.
+
 ### G18-1 — array-column list value-field name (`item` vs `element`)
 
 - **repark** — `createDataFrame` of an array column exports Arrow list value field named `item`.
@@ -4644,6 +4693,33 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
   are the record. Remaining commit 1 × N stays
   `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
+- **PERF-AGG-AVG-1** — **FIXED 2026-09-05 (PERF-AGG-AVG-1)**. The Spark `avg` /
+  `try_avg` UDAF implemented `accumulator()` only, so DataFusion boxed one accumulator
+  per group. The UDAF now serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (`crates/repark-functions/src/avg_groups.rs`, null
+  tracking in `groups_null_state.rs`) over Float64 and Decimal32/64/128/256 with
+  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow on the
+  2×-MAX shape → per-group NULL (the i128 sum-wrap shape is BACKLOG row
+  AVG-DEC-SUMWRAP-1); the `Accumulator` retract arms and `state_fields` are
+  byte-identical, so window frames keep the retract path. Measured on a release
+  module at 8-thread parity (median-of-5, loads 12–17, floors 3.3 ms before /
+  4.7 ms after):
+  `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) **400.6 → 99.0–113.8
+  ms** against a `sum` control at 82.6–90.0 ms — the ratio **4.45× → 1.10–1.28×**, the
+  ≤ 1.3× gate met; TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries 17`)
+  **0.521–0.721 s → 0.143–0.355 s** against DuckDB 1.5.5 at 0.036–0.043 s on the same
+  box — 13.8–18.3× → 3.6–8.3×, the ≤ 3× bar NOT met, and no avg-only fix can meet it
+  (`sum` on the same grouping already costs 82.6 ms, 2.2× DuckDB's whole Q17; the
+  residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
+  queries through the optimizer's dedup rewrite and still refuses multi-column ones
+  with `DistinctAvgAccumulator`. Grouped float `avg` changes bit-for-bit vs the base
+  (per-element summation replaces Arrow's lane-chunked kernel): `153846153846153.84`
+  here vs Spark's `153846153846154.34` on the 1e16-plus-ones fixture, disclosed as
+  FLOAT-AGG-3. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  (24 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
+  probe red at 4.06× on the base and green at 1.21× after, 7 live legs) and 21 Rust
+  unit tests. Numbers, floors and the reproduce block:
+  `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
