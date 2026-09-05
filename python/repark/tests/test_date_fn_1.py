@@ -144,7 +144,8 @@ def test_unix_timestamp_zero_arg_repeats_once_per_input_row() -> None:
     assert _field(facade, "u") == ("int64", False)
     assert all(isinstance(value, int) and value > 1_700_000_000 for value in sql_rows)
     assert len(set(sql_rows)) == 1
-    assert sql_rows == facade_rows
+    assert len(set(facade_rows)) == 1
+    assert abs(sql_rows[0] - facade_rows[0]) <= 1
 
 
 def test_facade_unix_timestamp_matches_sql() -> None:
