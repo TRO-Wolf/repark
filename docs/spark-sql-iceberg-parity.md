@@ -4397,22 +4397,28 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   on the after side): `ctas` **1,384.80 → 135.48 ms** median (1,312.39 → 127.54 min), **10.2×**,
   and `ctas_partitioned8` **4,901.75 → 293.19 ms** median (4,628.11 → 283.07 min), **16.7×**,
   against a `df.write.parquet(zstd)` control that read 107.37 → 105.56 ms in the same passes.
-  **Both of PERF-ANALYSIS-1's targets are met** (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms).
-  Round 1 of this unit reported both as missed and quoted 880 → 478 ms; those readings were taken
-  at load 13–22 with an uncommitted fork override on the after side, and are superseded — the same
-  cell swings 2.4× on one build from load alone. **Determinism, as narrowed in round 3**: the commit is an
+  **The durable result is the gain and that ratio, not the millisecond.** Three boxes have
+  measured the shipped tree: `ctas`/control 1.28× here, 1.38× on the round-2 critic's box (load
+  11.8-12.3) and 1.39× on the round-3 critic's (load 6.4-8.5); `ctas_partitioned8`/control
+  2.78× / 3.00× / 2.69× — inside 8 %. The absolutes disagree by up to 12 % (`ctas` 135.48 ms
+  here, 152.24 ms there), so **PERF-ANALYSIS-1's absolute targets (`ctas` ≤ 150 ms,
+  `ctas_partitioned8` ≤ 300 ms) are met on this box and NOT on a third, and this row does not
+  claim them.** Round 1 reported both missed and quoted 880 → 478 ms, taken at load 13–22 with an
+  uncommitted fork override on the after side; superseded.
   ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
   order, so at every partition count the manifest ascends by content, `_row_id` tiles it
-  contiguously from zero, the row set and its sums are invariant, and two runs that produce the
-  same file grouping produce the same `_row_id` ranges. What is **not** reproducible is the
+  contiguously from zero, the committed row set is the expected digest of ids, and two runs that
+  produce the same file grouping produce the same id-to-`_row_id` map. What is **not** reproducible is the
   grouping itself: DataFusion packs the same source files into writers differently from run to run
-  inside one process — 4 to 6 distinct groupings in 10 runs at `target_partitions = 4` against 1
-  in 10 at 16 — so the committed file layout and the `_row_id` a given row receives vary with it,
+  inside one process — 3 distinct groupings in 5 runs at `target_partitions = 3`, 4 to 6 in 10 at
+  4, and 1 in 10 at 8 and at 16 — so the committed file layout and the `_row_id` a given row receives vary with it,
   and no writer-side ordering can change that. Filed as `WRITE-GROUPING-CTAS-1`. Round 1 claimed
   reproducibility from the writer index (refuted: the index is not stable), round 2 claimed it
-  from content (refuted by CI's 4-core runner: the grouping is not stable), round 3 pins the
-  property that holds at 4 and at 16. **Abort**: a failed write leaves no data file at all, the failing
-  writer's own rolled files included. **Layout**: a CTAS writes one file per plan partition — 4 → 8
+  from content (refuted by CI's 4-core runner: the grouping is not stable), rounds 3 and 4 pin the
+  property that holds at 3, 4, 8 and 16. **Abort**: when the table has no current snapshot — the
+  CTAS case — a failed write leaves no data file at all, the failing writer's own rolled files
+  included; against a table that already has one the sweep is narrowed to the attempt's own
+  completed files. **Layout**: a CTAS writes one file per plan partition — 4 → 8
   unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
   counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
