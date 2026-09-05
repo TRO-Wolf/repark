@@ -241,8 +241,8 @@ def test_the_fork_side_rows_are_listed_and_dated_at_the_pin() -> None:
     for row in _FORK_ROWS:
         assert f"| {row} ·" in section or f"{row} ·" in section, row
     assert "R89" in section and "R130" in section and "R136" in section
-    cargo = _read("Cargo.toml")
-    assert "189a73ed86c9bd29888fbd545f7957df8df25f18" in cargo
+    sync = _read("docs/fork-sync.md")
+    assert "189a73ed86c9bd29888fbd545f7957df8df25f18" in sync
 
 
 def test_status_carries_the_scale_line_the_gate_line_and_its_ceiling() -> None:
