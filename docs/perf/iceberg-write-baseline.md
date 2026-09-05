@@ -37,20 +37,24 @@ table per iteration, 5 timed iterations after 1 warm-up, median reported with mi
 ```bash
 lane=$HOME/repark-lanes/lanes/oc-writepath
 fork=$HOME/repark-lanes/lanes/writepath-fork
-cd "$lane" && .venv/bin/python scratch/probes/gen_bed.py 1e6 scratch/synth_1000000.parquet
+cd "$lane" && .venv/bin/python python/repark-parity/bench/writepath/gen_bed.py 1e6 scratch/synth_1000000.parquet
 # per build: point the venv's editable install at THIS tree, then measure
 cd "$lane/python/repark" && VIRTUAL_ENV="$lane/.venv" CARGO_BUILD_JOBS=8 \
   "$lane/.venv/bin/maturin" develop --release
-cd "$lane" && .venv/bin/python scratch/probes/probe_write.py scratch/synth_1000000.parquet <build>
+cd "$lane" && bash python/repark-parity/bench/writepath/run_cells.sh <build>
 # the fork override, on and off
-bash scratch/probes/fork_override.sh on
-bash scratch/probes/fork_override.sh off
+# the fork override is a temporary [patch.crates-io] path rewrite, never committed
 # the fork half in isolation, in the fork lane
 cd "$fork" && cargo test --release -p iceberg --lib arrow::record_batch_partition_splitter
+# the grouping refutation and the invariants it left standing
+.venv/bin/python python/repark-parity/bench/writepath/probe_grouping.py 10 4
+.venv/bin/python python/repark-parity/bench/writepath/probe_invariant.py 10 4
 ```
 
-The probe sources live under `scratch/probes/` and are excluded from git
-(`.git/info/exclude`); they carry no comments.
+The probes are tracked at
+[python/repark-parity/bench/writepath/](../../python/repark-parity/bench/writepath/map.md) — round
+2 cited them from an untracked `scratch/` directory, which the round-2 critic filed, since a
+number nobody can re-derive from the tree is not a baseline.
 
 ## 4. The fork half in isolation (F-28)
 
@@ -80,7 +84,7 @@ partition value to one task, and RePark has no such rule.
 
 ## 5. The RePark cells
 
-Per-cell isolated probe (`scratch/probes/probe_cell.py`): one process per cell, a fresh temp
+Per-cell isolated probe (`python/repark-parity/bench/writepath/probe_cell.py`): one process per cell, a fresh temp
 warehouse per process, one warm-up then 5 timed statements with a fresh table each, three passes
 per cell per build. **Round 2 re-measured B0 and B3 back to back on a quiet box** (1-minute load
 7.7–14.4, against 13–22 in round 1); the `df.write.parquet(zstd)` control reads within 5 % on both
@@ -99,12 +103,22 @@ medians.
 | `ctas` | 1,384.80 → 135.48 ms | 1,312.39 → 127.54 ms | **10.2×** |
 | `ctas_partitioned8` | 4,901.75 → 293.19 ms | 4,628.11 → 283.07 ms | **16.7×** |
 
-**Both of the analysis' targets are met on the shipped tree**: `ctas` ≤ 150 ms (135.48 median,
-127.54 min) and `ctas_partitioned8` ≤ 300 ms (293.19 median, 283.07 min). Round 1 reported both as
-missed; that was a contention artifact, and the correction is the point of this section. The same
-`ctas` cell read 880 ms on B0 and 478 ms on B2 in round 1 at load 13–22, and 299 ms on B3 in a
-round-2 pass at load 11–16 against 127 ms at load 7.7 — a 2.4× swing on one build from load alone.
-A number measured on this box above load ~10 is a measurement of the neighbours.
+**The durable result is the ratio to the control, not the millisecond.** Against the
+`df.write.parquet(zstd)` measured in the same passes:
+
+| cell | B0 | B3 (this box) | B3 (round-2 critic's box, load 11.8-12.3) |
+|---|---:|---:|---:|
+| `ctas` / control | 12.90× | 1.28× | 1.38× |
+| `ctas_partitioned8` / control | 45.65× | 2.78× | 3.00× |
+
+The two independent measurements of the shipped tree agree to within 8 % on the ratio and differ
+by 28-29 % on the absolute (135.48 / 293.19 ms here at load 7.7-14.4 against 173.80 / 377.04 ms
+there at load 11.8-12.3, control 105.56 against 125.73). So **the 10× and 17× gains stand and are
+reproduced independently; the analysis' absolute targets (`ctas` ≤ 150 ms,
+`ctas_partitioned8` ≤ 300 ms) are met on this box at this load and were NOT met on the critic's**.
+Round 3 therefore reports the gain and drops the unqualified "targets met" that round 2 claimed:
+on this hardware those targets sit inside the load-induced spread, which makes them a property of
+the afternoon rather than of the engine.
 
 ## 6. Layout, against Spark
 
@@ -125,18 +139,29 @@ build (1,000,000 rows, 499,999,500,000, 499,596,708), and
 `repark.write.max-concurrent-files = 1` still writes exactly one file — the key is binary on this
 node, measured 1 / 8 / 8 / 8 files at cap 1 / 2 / 4 / 8.
 
-## 7. Determinism (round 2)
+## 7. Determinism — what is true, after three attempts
 
-Six identical v3 CTAS over eight UNEQUAL source files
-(5000/10000/20000/40000/7000/3000/60000/1000), one process, one registered view:
+| ordering | claim | verdict |
+|---|---|---|
+| round 1 — by writer index | repeated CTAS commit the same manifest and `_row_id` | **REFUTED**: the DataFusion partition index is not stable across executions |
+| round 2 — `stable_commit_order`, by content | same claim | **REFUTED** by CI's 4-core runner and reproduced here: the file GROUPING is not stable either |
+| round 3 — the same order, a narrower claim | the commit is an ORDERING, not a layout | holds at 3, 4, 8 and 16 partitions |
 
-| ordering | distinct manifest record-count sequences | distinct `first_row_id` maps |
-|---|---:|---:|
-| round 1 — by writer index | **6 of 6** | **6 of 6** |
-| round 2 — `stable_commit_order`, by content | **1 of 6** | **1 of 6** |
+`stable_commit_order` is a total order on the files it is handed, but **the file SET is not a
+function of the statement**: DataFusion packs the same source files into writers differently from
+run to run. Measured over eight unequal source files, one process, one registered view:
 
-The instrumented run says why the writer index cannot work: partition 1 read the 3,000-row source
-file in one run and the 40,000-row file in the next, so the index is a property of that execution.
-Ordering by partition value, then every field's lower then upper bound, then record count, size
-and path is a function of the data instead. Equal-sized seed files hid this completely, which is
-why the pin now seeds unequal ones.
+| `target_partitions` | distinct manifest sequences | distinct `_row_id` maps | runs |
+|---:|---:|---:|---:|
+| 3 | 3 | 3 | 5 |
+| 4 | 4-6 | 4-6 | 10 |
+| 8 (one file per partition — round 2's own configuration) | 1 | 1 | 5 |
+| 16 | 1 | 1 | 10 |
+
+Round 2's pin was green only because its `shuffle.partitions = 8` met its eight source files
+one-to-one. What holds at every count, and is what the pin asserts now: the manifest ascends by
+content, `_row_id` tiles it contiguously from zero, the row set and its sums are invariant, and two
+runs that produce the same grouping produce the same `_row_id` ranges. Ten consecutive runs at
+3/4/8/16 on four cores and ten on all cores: 20 of 20 green. The residual is
+**`WRITE-GROUPING-CTAS-1`**, and it is a scan defect: the rows land in different files before any
+writer sees them.

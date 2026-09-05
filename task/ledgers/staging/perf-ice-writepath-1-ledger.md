@@ -20,7 +20,8 @@ unchanged; delete-vector and positional-delete writers; the S3 Tables / Glue acc
 `STATUS.md` and `briefs/next-sequence.md`.
 
 **Writable paths:** fork lane `crates/iceberg/src/arrow/record_batch_partition_splitter.rs`;
-RePark `crates/repark-iceberg/src/write/{partition_write.rs,mod.rs,map.md}`,
+RePark `crates/repark-iceberg/src/write/{partition_write.rs,file_order.rs,mod.rs,map.md}`,
+`python/repark-parity/bench/writepath/` and its `map.md` and the `bench/map.md` row,
 `crates/repark-spark/src/{ctas.rs,map.md}`, `crates/repark-sql/src/{create_table.rs,map.md}`,
 `python/repark/tests/{test_perf_ice_writepath_1.py,map.md}`,
 `docs/perf/{iceberg-write-baseline.md,map.md}`, `docs/spark-sql-iceberg-parity.md` §7, this
@@ -31,7 +32,7 @@ ledger and its `staging/map.md` row. Closed: `Cargo.toml`, `Cargo.lock`, every d
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The fork splitter's Arrow-kernel grouping returns exactly what the row-wise grouping returns — same partition keys, same batches, same rows in the same order — on every transform the fork serves, with NULL partition values and multi-field specs. | A property test running both implementations on the same seeded random batches across the transform matrix. | **PROVEN** | `record_batch_partition_splitter.rs::test_arrow_order_grouping_equals_row_wise_grouping` — 15 partition specs (identity on int/long/string, truncate on string and long, bucket 4 and 8, year/month/day/hour, void beside identity, two- and three-field specs) x 7 batch sizes (0, 1, 2, 7, 64, 257, 1024) of seeded random data with NULLs in every optional source, both implementations compared as a canonical (key, batch) multiset. `cargo test -p iceberg` 0 failed. |
+| C-001 | The vectorized grouping returns the same partition keys and the same batches as the row-wise grouping, compared as a canonical multiset — every partition transform the fork serves, NULL partition values, multi-field specs, and every primitive type the allow-list admits. The GROUP ORDER changes: the vectorized path returns groups in sorted-key order where the row-wise path returned first-appearance order. | A property test running both implementations on the same seeded random batches, comparing after a canonical sort; the allow-list and the matrix must name the same types. | **PROVEN** | Round 2 F12: the claim is multiset-equality plus a deliberate order change, not order-equality — downstream both are re-ordered anyway (`ascending_partition_order` on the stream paths, `stable_commit_order` on the node), so the order the splitter returns is not observable in a commit. Round 2 F6: the matrix covered result types Int/Long/String only while the allow-list admitted 14; it now carries Boolean, Decimal(9,2), Time, Timestamp, Timestamptz, TimestampNs, TimestamptzNs, String, Uuid, Fixed(4), Binary, Date, Int and Long, with identity on each plus bucket, truncate, year/month/day/hour where the fork's transforms serve them. `lexsort_to_indices` and `arrow_ord::partition` accept all of them, Decimal128 and FixedSizeBinary included. `cargo test -p iceberg --lib` green. |
 | C-002 | The row-wise path is kept, and taken, for the partition types where Arrow total-order equality is NOT Iceberg `Struct` equality: Float, Double, Unknown, and an empty partition type. | A pin that a Double identity spec stays row-wise and groups `-0.0` with `0.0`; a mutation that admits Double to the vectorized path reds it. | **PROVEN** | `test_float_partition_values_stay_on_the_row_wise_split` — a Double identity spec keeps `arrow_grouping == false` and groups `0.0, -0.0, 1.0, 0.0` into 2 partitions. Mutation D (admit Double to the vectorized path) reds it: total order splits the zeros into 3. |
 | C-003 | The fork lane is green on its own gates. | `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -D warnings`, `cargo test -p iceberg`, and the repo's size / comment-block / matrix-anchor / agent-artifact scripts. | **PROVEN** | `cargo fmt --all --check`, `cargo clippy -p iceberg --all-targets -- -D warnings` (Finished, no warnings), `cargo test -p iceberg` exit 0, `check_rust_file_size.sh` 438 files clean, `check_comment_blocks.sh` OK, `check_matrix_anchors.sh` OK, `check_agent_artifacts.sh` OK. |
 | C-004 | `repark.write.max-concurrent-files` is BINARY on the CTAS node, not a cap: 1 writes one data file through a `CoalescePartitionsExec`, 2 or more writes one data file per DataFusion partition. It still bounds the stream write paths at the worker count it names. | Facade pins at cap 1 and at the default over a fixed four-file seed; the measured file count at cap 1/2/4/8 on one 1e6-row seed. | **PROVEN** | Round 2 rewrote this clause: round 1 claimed `min(cap, partitions)`, which is not what shipped. Measured 1 / 8 / 8 / 8 data files at cap 1/2/4/8. `test_ctas_writes_one_data_file_per_plan_partition` and `test_one_concurrent_file_still_writes_exactly_one`; the semantics are stated in `write/map.md`'s `concurrency.rs` row, not in a new code comment. |
@@ -51,7 +52,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every clause walked against the brief. Both targets it names are reported as MISSED with the reason — the analysis' 813 ms was the whole partitioned-minus-unpartitioned CTAS delta, not the splitter, whose entire measured cost at that scale is 171 ms — rather than restated as met.
+      evidence: Every clause walked against the brief, and every one that overstated has been retracted in the round it was refuted — C-004's cap, C-005's determinism (twice), C-007's targets, C-008's sweep. The gain is reported as a ratio to a same-run control because two boxes disagreed 28 percent on the absolute and 8 percent on the ratio. The fork target the brief names is reported unreachable by construction with the measurement that shows why.
       artifacts: [docs/perf/iceberg-write-baseline.md, task/ledgers/staging/perf-ice-writepath-1-ledger.md]
     - id: AT-2
       status: ATTACKED
@@ -102,8 +103,10 @@ Seven mutations, each applied to the shipped tree, run, and reverted. None is co
 | M-C | fork: `partition(&sorted_keys)` → `partition(&sorted_keys[..1])` | the property test (multi-field specs) |
 | M-D | fork: admit `PrimitiveType::Double` to the vectorized path | the float fallback test (3 groups where Iceberg sees 2) |
 | M1 | RePark: one writer over a `CoalescePartitionsExec` instead of one per partition | all three node tests |
+| — | M2 (drain the collector in reverse) was proven against the round-1 code and then RETIRED in round 3: `stable_commit_order` re-sorts, so the drain order is no longer observable and the mutation is green on the shipped tree. M5 is what guards the ordering now. |
 | — | a wall-differential pin was written, proven against M1, then REMOVED: it flaked inside `cargo test` (6.41 s floor against a 6.00 s delayed run) and a flaky pin is worse than none | — |
-| M2 | RePark: drain the collector in reverse (completion order stands in for it) | the writer-index order pin |
+| M4 | RePark: sweep only the completed files (the pre-round-2 abort behaviour) | the abort pin, naming the six parquet files the failing writer had rolled |
+| M5 | RePark: return `ascending_partition_order` instead of `stable_commit_order` | the round-2 determinism pin on a real plan, AND the round-3 ordering pin at 3, 4, 8 and 16 partitions |
 | M3 | RePark: skip `delete_completed_files` on the error path | the abort pin, naming the three surviving files |
 
 The property test is the fork half's red-first instrument by construction: it runs the previous
@@ -144,22 +147,25 @@ stay on the row-wise path, decided once in `try_new`. NaN agrees on both sides a
 
 ## 8. Measurement
 
-Everything is in [../../../docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
-The headline pair, minima on a contended box (1-minute load 13–22 throughout, sibling `rustc`
-builds live):
+Everything is in [../../../docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md),
+which §1 of that file scopes build by build. The pair below is the SHIPPED tree — base `6eaccd5e`
+against the branch, both on the pinned fork, measured back to back on a quiet box (load 7.7-14.4)
+with the `df.write.parquet(zstd)` control inside 5 % on each side. Round 1's table quoted B0 → B2,
+where B2 carried a never-committed fork override; it is superseded and no B2 number appears in a
+registry row.
 
-| cell | before (B0) | after (B2) | |
-|---|---:|---:|---|
-| `iceberg_write/1000000/ctas` | 880.50 ms | **478.03 ms** | 1.84× |
-| `iceberg_write/1000000/ctas_partitioned8` | 1,611.25 ms | **917.22 ms** | 1.76× |
-| `df_write_parquet_zstd` (control) | 143.90 ms | 100.73 ms | |
-| fork splitter, isolated, 1e6 rows | 171.39 ms | **28.33 ms** | 6.0× |
+| cell | B0 | B3 (shipped) | gain | ratio to control, B0 → B3 |
+|---|---:|---:|---:|---|
+| `iceberg_write/1000000/ctas` | 1,384.80 ms | **135.48 ms** | 10.2× | 12.90× → 1.28× |
+| `iceberg_write/1000000/ctas_partitioned8` | 4,901.75 ms | **293.19 ms** | 16.7× | 45.65× → 2.78× |
+| fork splitter, isolated, 1e6 rows | 171.39 ms | **28.33 ms** | 6.0× | — |
 
-The analysis' targets (`ctas` ≤ 150 ms, `ctas_partitioned8` ≤ 300 ms) are **not met**: they ask
-for parity with the parquet sink, which reads 90–144 ms on this box. The brief's fork target
-("≥ 600 ms off `ctas_partitioned8`") rests on attributing the whole 813 ms partitioned delta to
-the splitter; the splitter's entire cost at that scale is 171 ms, so the target was unreachable
-by construction and the rest of that delta is the fanout's file count.
+The round-2 critic re-measured the shipped tree on its own box at load 11.8-12.3 and read
+173.80 / 377.04 ms against a 125.73 ms control — 1.38× / 3.00× of control against this box's
+1.28× / 2.78×. **The ratios agree to within 8 % and the gains reproduce; the absolutes differ by
+28-29 %.** So the gain is the result, and the analysis' absolute targets (`ctas` ≤ 150 ms,
+`ctas_partitioned8` ≤ 300 ms) are load-qualified: met here, not met there, and inside the spread
+either way. Round 1 called them missed and round 2 called them met; both were reading the load.
 
 ## 10. Gates
 
@@ -252,3 +258,22 @@ would buy it the same ordering and the same non-reproducible layout.
 Three rounds, three statements of C-005, each refuted by a fixture the previous one did not vary:
 round 1 fixed the file sizes, round 2 fixed the partition count, round 3 varies both. The lesson
 for the next reproducibility pin is in that sentence.
+
+## 14. Round 3 — the round-2 critic's twelve findings
+
+RePark half FAIL, fork half PASS with one S2. Every finding accepted; none disputed.
+
+| # | sev | finding | disposition |
+|---|---|---|---|
+| F1 | S1 | `stable_commit_order` is a total order on the files, but the file SET is not a function of the statement; the pin was green only because `shuffle.partitions = 8` met its eight source files 1:1 (=4 gives 2 of 3, =3 gives 3 of 5 distinct). | **REMEDIATED.** C-005, the registry row and baseline §7 retracted to the honest claim; the pin now runs at 3, 4, 8 and 16 and asserts what survives any grouping. 20 of 20 consecutive runs green (10 on four cores, 10 on all). Residue filed as `WRITE-GROUPING-CTAS-1`. |
+| F2 | S1 | Mutation M2 (drain in reverse) is GREEN on the shipped tree. | **REMEDIATED.** M2 retired with the reason (the drain order stopped being observable when `stable_commit_order` landed); M5 is the mutation that guards the ordering, and §6 says so. |
+| F3 | S1 | Ledger §8 and AT-1 still carried round 1's B2 numbers and "targets not met". | **REMEDIATED.** §8 rewritten to B0 → B3 with the ratio-to-control table and the critic's independent reading; AT-1 rewritten. |
+| F4 | S2 | "Both targets met" did not reproduce at load 11.8-12.3 (173.80 / 377.04 against a 125.73 control). | **REMEDIATED.** The ratios agree to 8 % and the gains reproduce; the absolutes differ 28-29 %. The unqualified claim is dropped everywhere and replaced by the gain plus a load qualification. |
+| F5 | S2 | M4 and M5 absent from §6; C-005's mutation obligation undischarged. | **REMEDIATED.** Both added with the pin each reds; M5 reds the round-3 pin at all four partition counts. |
+| F6 | S2 | The fork allow-list admits 14 primitive types; the matrix covered Int/Long/String. | **REMEDIATED** on the fork lane (`5f25acc08`): the matrix now covers all 14, including Decimal128 and FixedSizeBinary, which `lexsort_to_indices` and `arrow_ord::partition` do accept. Two combinations stay out because the fork's TRANSFORMS refuse them, not the splitter. |
+| F7 | S2 | `delete_attempt_files` swept every uncensused file under the table's data root. | **REMEDIATED.** The sweep arm is gated on the table having no current snapshot and falls back to the completed files otherwise; pinned both ways. |
+| F8 | S2 | Baseline §3 cited untracked probes; §6's `sum(vi)` did not match the tracked fixture. | **REMEDIATED.** The probes are tracked at `python/repark-parity/bench/writepath/`; §6 names both fixtures and both constants. |
+| F9 | S3 | `file_order.rs` missing from the writable set. | **REMEDIATED**, with the bench directory. |
+| F10 | S3 | Stale "three builds" and "three CTAS runs" in two maps. | **REMEDIATED.** |
+| F11 | S3 | An assertion message and a map line described round-1 behaviour. | **REMEDIATED**, both now say content order. |
+| F12 | S3 | C-001's "same rows in the same order" is proved only after sorting. | **REMEDIATED.** C-001 states multiset equality plus a deliberate group-order change, and why it is unobservable downstream. |
