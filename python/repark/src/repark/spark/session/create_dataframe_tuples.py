@@ -193,10 +193,7 @@ def _refuse_duplicate_tuple_column_names(names: list[str]) -> None:
 
 
 def _arrow_type_for_typed_null_sql(null_sql: str) -> Any:
-    """Map one all-null column CAST to its Arrow type (``CAST(NULL AS TYPE)`` → TYPE).
-
-    Keeps ``DECIMAL(p, s)`` parens intact while stripping the CAST wrapper paren.
-    """
+    """Map one all-null column CAST to its Arrow type (``CAST(NULL AS TYPE)`` → TYPE)."""
 
     upper = null_sql.upper()
 

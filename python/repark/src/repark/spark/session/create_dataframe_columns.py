@@ -34,11 +34,7 @@ def _arrow_table_from_raw_tuples(
     *,
     engine_types: list[str] | None,
 ) -> Any:
-    """Build the Arrow table through the column-wise path, or the legacy path.
-
-    Explicit ``StructType`` / DDL schemas stay on the legacy row-wise path by dispatch,
-    not by reimplementation; inferred schemas go column-wise.
-    """
+    """Build the Arrow table through the column-wise path or the legacy path."""
     if engine_types is not None:
         from repark.spark.session.create_dataframe_rows import (
             _arrow_table_from_raw_tuples_legacy,
@@ -109,12 +105,7 @@ def _normalize_slow_column(column_name: str, raw_values: list[Any]) -> tuple[str
 
 
 def _arrow_table_from_raw_tuples_fast(names: list[str], raw_tuples: list[tuple[Any, ...]]) -> Any:
-    """Build the Arrow table with one census pass per column, then one build pass.
-
-    Single-kind scalar columns convert straight to their Arrow type. Columns with mixed
-    or exotic cells normalize through the shared cell normalizer and build through the
-    unchanged tuple converter, so nested inference answers bit-identically.
-    """
+    """Build the Arrow table with one census pass per column, then one build pass."""
     width = len(names)
 
     raw_columns: list[list[Any]] = [

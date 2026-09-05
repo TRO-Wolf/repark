@@ -137,10 +137,10 @@ EXPECTED_SYMBOL_HASHES = {
         "2277a1cce4c5229beaa00ba669197a45a4ec1ef551bd50fabee387bb2aa61df8"
     ),
     "_arrow_table_from_raw_tuples": (
-        "5e3ab99955bf4d73ed086b20eee010fc60403a4afbdbb059560dac0b6627fb43"
+        "37f0e6f380080cd0a794b7792e813128dd311e23efb78f1dd12049b8e0368d5d"
     ),
     "_arrow_table_from_raw_tuples_fast": (
-        "101a7b75570ecef723dc96b8858757919a4df32ce0d9fe5c448d0d7e367b53a8"
+        "5cb5f470039bce910210fb55148d084c63d89ed2281544438632865206819aa5"
     ),
     "_arrow_table_from_raw_tuples_legacy": (
         "075bb5efe8ce7da91bae93c336cc2b0586e98d2d37a57f2f079ec136bbc2f769"
@@ -149,7 +149,7 @@ EXPECTED_SYMBOL_HASHES = {
         "529869d54a0a960b62cd73714d58e3c40c0b3802bddbbdb286c45908397f87cc"
     ),
     "_arrow_type_for_typed_null_sql": (
-        "4564f5c0897ae1969a4053fbd9a1b4f029b626ca9febe2613af8b83d34e8f975"
+        "04640ff441d2f65bd6b192d748662a3c1538e91b9939437baf7913342af9c66b"
     ),
     "_arrow_type_is_nested": ("d444bf00f930013dddb015316cfa3b7b8407febbb23aa72149f7d865c525e6f6"),
     "_arrow_type_merge_label": ("92fac695bb138a1b6db0429bbef68d9aff58b17a493218eaa72c5ec997476c1e"),
