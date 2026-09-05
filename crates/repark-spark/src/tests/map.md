@@ -418,7 +418,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins.
-- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the ten pins that gate
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
   the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
   with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
   for a memory catalog (each `register_memory_catalog` otherwise builds its own namespace map).
@@ -427,12 +427,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   matches A's rows and writes against them; a read after A's `rewrite_manifests` +
   `expire_snapshots` still answers; a DROP + re-CREATE is never served from the old location
   (the memory catalog's Hive/REST `<version>-<uuid>` naming draws a fresh uuid and `drop_table`
-  evicts, so the ABA key does not exist). Five are cache mechanics: an unmoved pointer costs no
+  evicts). **Round 2 corrected that last reason:** the uuid is NOT what makes DROP + re-CREATE
+  safe, because a Hadoop pointer adopted through `CALL register_table` commits deterministic
+  `v(N+1).metadata.json` with no uuid at all — measured, and pinned by
+  `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`, which walks
+  v1 → v5 through INSERT, INSERT, INSERT OVERWRITE, INSERT and stays row-correct. The safety
+  property is **evict-on-commit plus evict-on-drop**, which holds for both naming schemes.
+  Five are cache mechanics: an unmoved pointer costs no
   body fetch and a trim under the bound keeps every entry; a commit evicts the pointer it replaced
   and seeds the new one, so retention is FLAT across DML and the reader after a commit pays no GET;
   a table is never served a SIBLING table's cached document; the knob off reads the document on
   every load; the retained-location bound holds across 24 distinct tables and a trimmed cache
-  still answers.
+  still answers. One pins the bound's SCOPE:
+  `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` records that an
+  8-way `UNION ALL` at `entries=1` retains 8 within the statement and comes back under the bound
+  at the next door — the knob bounds accumulation across statements, not working set inside one.
   Mutation score (measured, six mutations, two of them escapes that were closed). RePark side:
   trim made a no-op → the bound pin reds; the knob-off branch dropped → the disabled pin reds;
   the cache never built → the unmoved-pointer and commit-seed pins red; trim made a per-statement

@@ -10,6 +10,8 @@ from repark import ReparkSession, _native
 
 _CACHE_KEY = "repark.iceberg.metadataCache"
 _ENTRIES_KEY = "repark.iceberg.metadataCacheEntries"
+_CACHE_KEY_ALT = "repark.iceberg.metadata_cache"
+_ENTRIES_KEY_ALT = "repark.iceberg.metadata_cache_entries"
 _ACCEPTANCE_ENV = "REPARK_AWS_ACCEPTANCE"
 _MANIFEST_TARGET_MS = 20.0
 _MANY_APPENDS = 48
@@ -143,6 +145,38 @@ def test_the_retained_location_bound_is_trimmed_at_the_statement_door(
 def test_a_bad_cache_knob_fails_loud_naming_the_key(key: str, value: str) -> None:
     with pytest.raises(Exception, match=key.replace(".", r"\.")):
         ReparkSession.builder.appName("census_bad").config(key, value).getOrCreate()
+
+
+@pytest.mark.parametrize(
+    ("alias", "canonical", "value"),
+    [(_CACHE_KEY_ALT, _CACHE_KEY, "yes"), (_ENTRIES_KEY_ALT, _ENTRIES_KEY, "0")],
+)
+def test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one(
+    alias: str, canonical: str, value: str
+) -> None:
+    with pytest.raises(Exception) as caught:
+        ReparkSession.builder.appName("census_alias").config(alias, value).getOrCreate()
+    message = str(caught.value)
+    assert alias in message, "the message must name the key the user actually set"
+    assert canonical in message, "and the canonical spelling it aliases"
+
+
+def test_the_metadata_cache_bound_is_a_statement_door_clear_not_a_per_load_bound(
+    tmp_path: Path,
+) -> None:
+    spark = _session("census_scope", tmp_path, **{_CACHE_KEY: "true", _ENTRIES_KEY: "1"})
+    _range_view(spark, 4)
+    for index in range(8):
+        spark.sql(f"CREATE TABLE ice.ns.u{index} AS SELECT * FROM src").to_arrow()
+
+    union = " UNION ALL ".join(f"SELECT id FROM ice.ns.u{index}" for index in range(8))
+    assert _scalar(spark, f"SELECT count(*) AS c FROM ({union})") == 32
+    assert _census(spark)[4] == 8, (
+        "one statement over N tables retains N: the bound is checked at the statement door"
+    )
+
+    assert _scalar(spark, "SELECT count(*) AS c FROM ice.ns.u3") == 4
+    assert _census(spark)[4] <= 1, "the next statement door brings it back under the bound"
 
 
 def _build_many(spark: ReparkSession, table: str, appends: int = _MANY_APPENDS) -> None:

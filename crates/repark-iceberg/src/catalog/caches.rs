@@ -35,50 +35,61 @@ impl IcebergCacheSettings {
     /// Returns a plan error naming the key when a value is not a boolean / positive integer.
     pub fn from_config_map<S: BuildHasher>(config: &HashMap<String, String, S>) -> Result<Self> {
         let mut settings = Self::default();
-        if let Some(raw) = lookup(config, METADATA_CACHE_KEY, METADATA_CACHE_KEY_ALT) {
-            settings.metadata_cache = parse_bool(raw, METADATA_CACHE_KEY)?;
+        if let Some((raw, key)) = lookup(config, METADATA_CACHE_KEY, METADATA_CACHE_KEY_ALT) {
+            settings.metadata_cache = parse_bool(raw, key, METADATA_CACHE_KEY)?;
         }
-        if let Some(raw) = lookup(
+        if let Some((raw, key)) = lookup(
             config,
             METADATA_CACHE_ENTRIES_KEY,
             METADATA_CACHE_ENTRIES_KEY_ALT,
         ) {
-            settings.metadata_cache_entries = parse_entries(raw, METADATA_CACHE_ENTRIES_KEY)?;
+            settings.metadata_cache_entries = parse_entries(raw, key, METADATA_CACHE_ENTRIES_KEY)?;
         }
         Ok(settings)
     }
 }
 
-fn lookup<'a, S: BuildHasher>(
+fn lookup<'a, 'k, S: BuildHasher>(
     config: &'a HashMap<String, String, S>,
-    key: &str,
-    alt: &str,
-) -> Option<&'a str> {
-    config
-        .get(key)
-        .or_else(|| config.get(alt))
-        .map(String::as_str)
+    key: &'k str,
+    alt: &'k str,
+) -> Option<(&'a str, &'k str)> {
+    if let Some(value) = config.get(key) {
+        return Some((value.as_str(), key));
+    }
+    config.get(alt).map(|value| (value.as_str(), alt))
 }
 
-fn parse_bool(raw: &str, key: &str) -> Result<bool> {
+fn named(key: &str, canonical: &str) -> String {
+    if key == canonical {
+        format!("`{canonical}`")
+    } else {
+        format!("`{key}` (alias of `{canonical}`)")
+    }
+}
+
+fn parse_bool(raw: &str, key: &str, canonical: &str) -> Result<bool> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "true" => Ok(true),
         "false" => Ok(false),
         other => Err(DataFusionError::Plan(format!(
-            "config `{key}` must be `true` or `false` (got {other:?})"
+            "config {} must be `true` or `false` (got {other:?})",
+            named(key, canonical)
         ))),
     }
 }
 
-fn parse_entries(raw: &str, key: &str) -> Result<usize> {
+fn parse_entries(raw: &str, key: &str, canonical: &str) -> Result<usize> {
     let value: usize = raw.trim().parse().map_err(|_| {
         DataFusionError::Plan(format!(
-            "config `{key}` must be a positive integer (got {raw:?})"
+            "config {} must be a positive integer (got {raw:?})",
+            named(key, canonical)
         ))
     })?;
     if value == 0 {
         return Err(DataFusionError::Plan(format!(
-            "config `{key}` must be >= 1 (got 0)"
+            "config {} must be >= 1 (got 0)",
+            named(key, canonical)
         )));
     }
     Ok(value)

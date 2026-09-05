@@ -406,6 +406,131 @@ async fn the_disabled_knob_reads_the_metadata_document_on_every_load() {
 
 /// pins: perf-ice-catalog-io-1/C-004
 #[tokio::test]
+async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_door() {
+    let wh = TempDir::new().unwrap();
+    let caches = CatalogCaches::new(IcebergCacheSettings {
+        metadata_cache: true,
+        metadata_cache_entries: 1,
+    });
+    let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
+    for index in 0..8 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("CREATE TABLE ice.sales.t{index} AS SELECT * FROM src"),
+        )
+        .await;
+        caches.trim();
+    }
+
+    let union = (0..8)
+        .map(|index| format!("SELECT id FROM ice.sales.t{index}"))
+        .collect::<Vec<_>>()
+        .join(" UNION ALL ");
+    assert_eq!(
+        rows(&ctx, &catalogs, &format!("SELECT id FROM ({union})")).await,
+        24
+    );
+
+    assert_eq!(
+        caches.metadata_len(),
+        8,
+        "the bound is a statement-door clear: one statement over N tables retains N"
+    );
+    caches.trim();
+    assert!(
+        caches.metadata_len() <= 1,
+        "the next door brings it back under the bound"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t3").await,
+        vec![1, 2, 3]
+    );
+}
+
+/// pins: perf-ice-catalog-io-1/C-003
+#[tokio::test]
+async fn a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits() {
+    let wh = TempDir::new().unwrap();
+    let caches = CatalogCaches::default();
+    let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.seed (id INT, name STRING)",
+    )
+    .await;
+
+    let catalog = catalogs.get("ice").expect("ice").clone();
+    let seed_ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "seed".to_string());
+    let seed = catalog.load_table(&seed_ident).await.expect("load seed");
+    let seed_location = seed.metadata_location().expect("seed location").to_string();
+    let seed_dir = seed.metadata().location().to_string();
+
+    let adopted_dir = format!("{}/hadoop_adopted", wh.path().to_str().unwrap());
+    std::fs::create_dir_all(format!("{adopted_dir}/metadata")).expect("adopted metadata dir");
+    let document = std::fs::read_to_string(seed_location.trim_start_matches("file://"))
+        .expect("read seed metadata")
+        .replace(&seed_dir, &adopted_dir);
+    let hadoop_pointer = format!("{adopted_dir}/metadata/v1.metadata.json");
+    std::fs::write(&hadoop_pointer, document).expect("write hadoop pointer");
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.register_table(table => 'sales.adopted', \
+             metadata_file => '{hadoop_pointer}')"
+        ),
+    )
+    .await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.adopted VALUES (1, 'a')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.adopted VALUES (2, 'b')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.adopted VALUES (7, 'g')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.adopted VALUES (8, 'h')",
+    )
+    .await;
+
+    let adopted_ident = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "adopted".to_string(),
+    );
+    let live = catalog
+        .load_table(&adopted_ident)
+        .await
+        .expect("load adopted");
+    let live_location = live.metadata_location().expect("adopted location");
+    assert!(
+        live_location.ends_with("/v5.metadata.json"),
+        "a Hadoop pointer stays Hadoop and is deterministic, not uuid-drawn: {live_location}"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.adopted").await,
+        vec![7, 8]
+    );
+}
+
+/// pins: perf-ice-catalog-io-1/C-004
+#[tokio::test]
 async fn the_retained_location_bound_holds_across_many_commits() {
     let wh = TempDir::new().unwrap();
     let caches = CatalogCaches::new(IcebergCacheSettings {

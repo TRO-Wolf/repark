@@ -38,23 +38,52 @@ Source comments retain only API and safety contracts; implementation narration i
 - `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
   and their knobs. `IcebergCacheSettings::from_config_map` reads
   `repark.iceberg.metadataCache` (default **true**) and `repark.iceberg.metadataCacheEntries`
-  (default 512), both with the underscore alias, both failing loud and naming the key.
+  (default 512), both with an underscore alias; a bad value fails loud naming BOTH the key the
+  user set and the canonical spelling it aliases.
   `CatalogCaches` owns the fork's opt-in `TableMetadataCache` (`catalog/table_metadata_cache.rs`)
-  keyed by **metadata-file location string**, which is why it is safe across a commit: the
-  MemoryCatalog writes Hive/REST `<version>-<uuid>.metadata.json` and `with_next_version` draws a
-  fresh uuid, so a commit moves the pointer to a key the cache has never seen and `drop_table`
-  evicts the old one. The cache never decides WHICH location is current — the catalog pointer read
-  still happens on every `load_table`; the cache only skips the body GET and the re-parse for a
-  location already parsed. `CatalogCaches::disabled()` is the pre-unit path the before/after
-  measurement runs in the same process. The fork's cache is an unbounded `HashMap`, so
-  `trim()` clears it once the retained-location count passes the knob; the session calls it at the
-  statement door (`session.rs::sql_with`), which is a high-water bound, not per-entry LRU — a fork
-  ask (`F-CATIO-BOUND`) carries the LRU. `memory_catalog(warehouse)` keeps its v1 signature and now
-  builds with the default handles; `memory_catalog_cached(warehouse, caches)` is the session's
-  entry. Glue and S3 Tables get no cache at fork pin `189a73ed`: their builders take no
-  `with_table_metadata_cache`, which is fork ask `F-CATIO-AWS`.
-  Every reason for this module is written here rather than in the code, and the eight maps this
-  unit touched move in the commits that touched their directories.
+  keyed by **metadata-file location string**. What makes that safe across a commit is
+  **evict-on-commit plus evict-on-drop**: `MemoryCatalog` drops the pointer it replaced and seeds
+  the new one, and `drop_table` evicts. It is NOT the uuid in the file name — round 2 measured a
+  Hadoop pointer adopted through `CALL register_table` committing deterministic
+  `v(N+1).metadata.json` with no uuid, and the safety property holds there too
+  (`a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`).
+  The cache never decides WHICH location is current — the catalog pointer read still happens on
+  every `load_table`; the cache only skips the body GET and the re-parse for a location already
+  parsed. `CatalogCaches::disabled()` is the pre-unit path the before/after measurement runs in
+  the same process.
+
+  **The bound's scope is the statement door, not the load.** The fork's cache is an unbounded
+  `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
+  session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
+  ACCUMULATES across commits — measured: eight CREATEs at `entries=1` leave 2 retained and the
+  next door clears to 0. It does NOT bound retention *within* one statement: an 8-way `UNION ALL`
+  at `entries=1` retains 8 (measured; pinned by
+  `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
+  twin). That residue is one entry per distinct table the statement names — live working set the
+  planner needs, bounded by the statement's table count and cleared at the next door — not the
+  accumulation the knob exists to stop. Bounding within a statement needs a hook on cache INSERT,
+  which is fork-side; the RePark-side alternative is a `SchemaProvider` decorator carrying a
+  permanent forwarding-audit duty, which is not worth a bound on working set. Registry row
+  `PERF-CATALOG-CACHE-BOUND-1` / fork ask `F-CATIO-BOUND` carries the real fix: a bounded LRU
+  inside the fork's cache bounds within a statement by construction.
+
+  **`memory_catalog(warehouse)` keeps its v1 signature but is no longer cache-free** — it now
+  builds a private, always-on `CatalogCaches` per call, which nothing trims because no session
+  owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
+  the pre-unit behaviour passes `CatalogCaches::disabled()`.
+
+  **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
+  no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
+  `with_table_metadata_cache` at pin `189a73ed`. Every number in this unit is the memory catalog;
+  the AWS call shape is **unchanged today**. Registry row `PERF-CATALOG-AWS-CACHE-1` / fork ask
+  `F-CATIO-AWS`.
+
+  **Creation is not cacheable.** `CREATE TABLE` and CTAS read back the metadata document they just
+  wrote (the catalog proves reachability before claiming the pointer), so their census is 1
+  metadata read with the cache ON and OFF — measured on both knob settings.
+
+  Every reason for this module is written here rather than in the code, and the maps this unit
+  touched move in the commits that touched their directories.
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004, C-007
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read

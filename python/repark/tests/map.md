@@ -2509,7 +2509,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nothing beyond the commit they write; a commit and an `ADD COLUMNS` are both seen by the next
   statement (ADR-0004 T6 and BUG-005 at the Python door); the knob off reconstructs the pre-unit
   path in the same process; the retained-entry bound is trimmed at the statement door and the
-  table still answers; three bad knob values fail loud naming the key; and a 48-manifest table
+  table still answers; three bad knob values fail loud naming the key and two underscore aliases
+  name BOTH the key the user set and the canonical spelling; the bound's SCOPE is pinned (an
+  8-way `UNION ALL` at `entries=1` retains 8 inside the statement and comes back under the bound
+  at the next door); and a 48-manifest table
   answers equal to its one-manifest twin. Three legs SKIP with a named reason: the `t_many`
   second-statement <= 20 ms target and the two AWS census legs are fork-gated (asks `F-CATIO-B`
   and `F-CATIO-AWS` — fork pin `189a73ed` has neither `TableBuilder::object_cache` nor
