@@ -207,7 +207,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of once per existing column: depth-100 chain build **2,385 -> 367 ms** (6.50x, 5,750 analyzer
   passes -> 0), from 3.19x slower than Spark to 2.04x faster. The 150 ms chain target is NOT
   met and is reported as missed: the residue is DataFusion's own per-expression projection
-  validation, and the collapse that would close it was measured (a perfect collapse tops out at
-  140 ms) and filed as `PERF-FACADE-CHAIN-2` rather than built. Mutation 8 of 8 red.
+  validation, and the collapse that would close it measures **65.04 ms** — under the bar, so
+  `PERF-FACADE-CHAIN-2` is deferred on correctness (plan lineage, `_origin_plan_id`,
+  `MISSING_ATTRIBUTES`) and not because the prize is small. Mutation 8 of 8 red; an independent
+  critic reproduced the unit on its own clone and reds 7 of its own. Round 2 replaced the
+  baseline with a tracked runner (`python/repark-parity/bench/facade/`, `make facade-bench`) and
+  re-measured every number with it, because the first baseline's probes were untracked.
   `risk_tier: standard`. Branch `perf/facade-1`.
-  pins: perf-facade-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: perf-facade-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

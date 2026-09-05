@@ -420,6 +420,15 @@ dynflatten-bench: ## Measure dynamicFlatten vs Spark explode (PERF-DYNFLATTEN-1;
 		--json /tmp/oc-dynflatten-bed/run.json \
 		--report /tmp/oc-dynflatten-bed/report.md
 
+.PHONY: facade-bench
+facade-bench: ## Measure the facade boundary: collect + withColumn chains (PERF-FACADE-1; writes /tmp/oc-facade-bed)
+	python python/repark-parity/bench/facade/run_facade.py \
+		--cells $${CELLS:-export,collect,rows,create,chain} \
+		--iterations $${ITERATIONS:-5} \
+		--out /tmp/oc-facade-bed \
+		--json /tmp/oc-facade-bed/run.json \
+		--report /tmp/oc-facade-bed/report.md
+
 # ------------------------------------------------------------------------------------------------
 # Autofix + hooks
 # ------------------------------------------------------------------------------------------------

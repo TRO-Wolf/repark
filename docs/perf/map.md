@@ -32,14 +32,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pins: perf-dynflatten-1-measure/C-003, C-004
 
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
-  (2026-09-04):** the `collect()` and `withColumn`-chain cells of PERF-ANALYSIS-1 §7.3,
-  before and after, with the boundary controls that must not move. The before column is one
-  battery run at `origin/main`; the after column is the median of three repeats and the floor
-  is the spread of those three, so a cell inside its floor is not a result. Section 4 repeats
-  both halves inside one process on one module — the load-independent measurement — because the
-  two battery columns come from different hours. Section 2 records why the projection collapse
-  was measured (a perfect collapse tops out at 140 ms) and deliberately not built.
-  pins: perf-facade-1/C-001, C-005, C-006
+  (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner
+  [python/repark-parity/bench/facade/](../../python/repark-parity/bench/facade/map.md)
+  (`make facade-bench`). There is no stale before column: the pre-unit code path is
+  reconstructed in the same process on the same release module and timed beside the shipped
+  one, so the only variable in each pair is which code runs. The floor is re-measured every run
+  as the spread of five repeated medians of one cell, because it is a property of the box that
+  hour. Section 2 records the measured ceiling of the projection collapse this unit defers
+  (65.04 ms at depth 100 — under the bar, so the deferral rests on correctness, not on the size
+  of the prize) and says plainly that the first draft's 140.46 ms was measuring the wrong loop.
+  pins: perf-facade-1/C-001, C-006, C-007, C-009
 
 ## Pointers
 

@@ -4003,52 +4003,73 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   fresh names tuple each time. Row materialization moved into `repark-python`
   (`collect_rows.rs`), which walks each Arrow batch and emits value tuples with typed pyo3
   conversions; the facade builds the `Row` objects from one shared names tuple per batch with
-  the cyclic collector suspended across the batch. `facade/export/1000000/collect` (7 columns,
-  release module, `target_partitions = 8`, median of 3 battery repeats): **4,908.03 → 955.76 ms**
-  (5.14×, floor 6.54); `1e5` **562.35 → 93.74 ms** (6.00×, floor 1.93); two-column frames
-  2,058.79 → 527.39 and 236.20 → 49.97. Isolated of `to_arrow`, 1e5 row materialization is
-  55× → **8.6×** the analysis' 10.1 ms facade floor. Spark 4.1.2 `local[8]` *(recorded)*
-  collects the same 1e6 frame in 3,619 ms, so repark moves from 1.37× slower to **3.79× faster**.
-  The binding converts only the cell kinds whose `to_pylist` mapping is unambiguous (null,
-  boolean, every integer width, `f32`/`f64`, the three UTF-8 and three binary layouts);
-  decimals, dates, times, timestamps, durations and every nested kind are converted by the
-  unchanged Python path and handed to the binding, and a calendar interval anywhere in the
-  schema sends the whole batch back to it, so the map → dict, tz-aware-timestamp and
-  interval-refusal contracts are the same code as before. Pin:
+  the cyclic collector suspended across the batch. Measured by the tracked runner
+  `python/repark-parity/bench/facade/run_facade.py`, both legs in one process on one release
+  module (load 6.94 → 6.46, floor 1.64 ms): end to end `collect/1000000`
+  **4,767.60 → 939.85 ms** (5.07×) and `collect/100000` **525.24 → 90.88 ms** (5.78×); the
+  converter in isolation `rows_*/1000000` **4,945.68 → 557.88 ms** (8.87×). The 382 ms between
+  the isolated converter and `collect()` is the cost of holding a million live `Row` objects,
+  which `collect()`'s contract requires and no converter removes. PERF-ANALYSIS-1 recorded
+  Spark 4.1.2 `local[8]` at 3,619 ms on a bed of the same schema (a different run, so the ~3.9×
+  is indicative, not a same-run comparison). The binding converts only the cell kinds whose
+  `to_pylist` mapping is unambiguous (null, boolean, every integer width, `f32`/`f64`, the three
+  UTF-8 and three binary layouts); decimals, dates, times, timestamps, durations and every
+  nested kind are converted by the unchanged Python path and handed to the binding, and a
+  calendar interval anywhere in the schema sends the whole batch back to it, so the map → dict,
+  tz-aware-timestamp and interval-refusal contracts are the same code as before. Pin:
   `python/repark/tests/test_perf_facade_collect_rows.py` — both converters run on the same
-  batch and every cell is compared by `repr` as well as by value. Numbers, the cProfile
-  decomposition and the GC measurement: `docs/perf/facade-boundary-baseline.md` §1.
+  batch and every cell is compared by `repr` as well as by value. Numbers and the cProfile /
+  GC decomposition: `docs/perf/facade-boundary-baseline.md` §1.
 - **PERF-FACADE-WITHCOLUMN-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. A dependent
   `withColumn` chain re-read `self.columns` once per existing column per call and every read
   ran a full analyzer pass — 5,750 `column_names` calls to build a depth-100 chain.
   `_iter_bound_columns` now reads `columns` once and passes the canonical name through (falling
   back to the resolving path when the frame carries duplicate names, so `[AMBIGUOUS_REFERENCE]`
   is unchanged), and `columns` answers from the plan's logical schema
-  (`logical_names.rs`) instead of the analyzed one. `facade/chain/{10,50,100}/build_only`
-  (median of 3): **8.14 → 1.83**, **328.48 → 42.28**, **2,385.23 → 366.71 ms** (4.45× / 7.77× /
-  6.50×; floors 0.07 / 0.86 / 10.23). Spark builds the depth-100 chain in 747 ms *(recorded)*,
-  so repark moves from 3.19× slower to **2.04× faster**. Execution is unchanged
-  (`chain/100/count` 94.28 → 93.92, floor 0.81). The **150 ms target is not met**: 346 ms of the
-  remaining 445 ms profiled build is DataFusion's own `LogicalPlanBuilder::project`, whose
-  `normalize_col` / `columnize_expr` scan the child schema per expression (O(N²) per `select`,
-  O(depth³) per chain). Reading names before analysis is sound because every rule in
+  (`logical_names.rs`) instead of the analyzed one. Same runner, same run:
+  `chain/{10,50,100}/build_only` **8.23 → 1.85**, **334.00 → 42.44**, **2,476.08 → 366.11 ms**
+  (4.45× / 7.87× / 6.76×). Execution is unchanged (`chain/100/count` 93.81 against the same
+  work before). The **150 ms target is not met**: 346 ms of the remaining 445 ms profiled build
+  is DataFusion's own `LogicalPlanBuilder::project`, whose `normalize_col` / `columnize_expr`
+  scan the child schema per expression (O(N²) per `select`, O(depth³) per chain) — see
+  `PERF-FACADE-CHAIN-2`. Reading names before analysis is sound because every rule in
   `repark_functions::analyzer_rules` rewrites through `NamePreserver` and none adds, drops or
   reorders a projection expression; pinned byte-for-byte against the analyzed names over 19
   planned statements, a 12-deep chain and eight DataFrame transforms in
   `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
   `docs/perf/facade-boundary-baseline.md` §2.
 - **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
-  `PERF-FACADE-WITHCOLUMN-1`, the depth-100 `withColumn` build is 366.71 ms against a 150 ms
+  `PERF-FACADE-WITHCOLUMN-1` the depth-100 `withColumn` build is 366.11 ms against a 150 ms
   target, and the residue is entirely DataFusion's per-expression projection validation. The
-  collapsed shape was measured, not estimated: 100 `select`s of 7+i expressions on the
-  7-column base total **140.46 ms** (one 107-expression `select` is 1.14 ms) against the shipped
-  stacked 364.34 ms, so a *perfect* collapse buys 2.6× and lands on the bar with no margin.
-  Collapsing by inlining is exponential when a new column reads an earlier new column
-  (`c[n] = f(c[n-1])`); the safe variant re-parents onto the previous projection's input only
-  when the new expression reads no computed column, which mutates the plan lineage that
-  `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the adjacent-window-layer merge
-  depend on. Wants its own scope audit before it is built. Evidence:
-  `docs/perf/facade-boundary-baseline.md` §2.
+  collapsed shape is measured, not estimated, by the tracked runner's
+  `chain_collapsed/D/build_only` cell (one expression list built once and appended to, each step
+  projecting the 7 base columns plus the `i+1` computed expressions directly onto the base frame
+  so the child schema stays 7 fields wide, whole loop timed as the stacked cell is):
+  **65.04 ms at depth 100**, 19.41 at depth 50, 1.94 at depth 10. So a *perfect* collapse lands
+  **2.3× under the 150 ms bar** and would buy a further **5.6×** at depth 100 — the prize is
+  real, and an earlier draft that reported this shape at 140.46 ms and called it "on the bar
+  with no margin" was measuring a loop that rebuilt the whole expression list every step
+  (O(depth²) Python a real collapse never pays). **The deferral rests on correctness, not on
+  the size of the prize.** Collapsing by inlining duplicates an expression subtree whenever a
+  new column reads an earlier new column, which is exponential in the depth
+  (`c[n] = f(c[n-1])`). The safe variant re-parents onto the previous projection's input only
+  when the new expression reads no computed column — it never duplicates, but it rewrites plan
+  lineage, and `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the
+  adjacent-window-layer merge are all defined in terms of that lineage. Wants its own scope
+  audit before it is built. Evidence: `docs/perf/facade-boundary-baseline.md` §2.
+- **COLLECT-STRUCT-ROW-1** — surfaced 2026-09-04, PERF-FACADE-1 round-2 review. BACKLOG.
+  A `StructType` cell comes back from `collect()` as a `dict`; live PySpark returns a nested
+  `Row`. Measured on `SELECT named_struct('n', 1, 't', 'x') AS st`: repark
+  `{'n': 1, 't': 'x'}` (`dict`), Spark `Row(n=1, t='x')` (`Row`), and Spark's
+  `row.asDict()` is `{'st': Row(n=1, t='x')}` — the nesting survives one level of `asDict`
+  there and does not here. *(oracle: measured, PySpark 4.1.2 zulu-17, 2026-09-04.)*
+  **Not introduced by PERF-FACADE-1**: the pre-existing Python converter and the new binding
+  path return the identical `dict`, which is what the unit's converter-equality pin asserts.
+  The divergence is `_arrow_cell_to_spark_python`'s struct arm, which has built a `dict` since
+  the facade was written. Fixing it means deciding what `asDict(recursive=False)` and
+  `Row.__eq__` do with nested rows, so it is a `Row`-contract unit, not a converter change.
+  Pin of repark's current answer:
+  `python/repark/tests/test_perf_facade_collect_rows.py::test_struct_cell_is_a_dict_not_a_row_collect_struct_row_1`.
 - **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
   contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
   there are no legacy deletes and `known_partitions` covers every touched path;

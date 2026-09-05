@@ -225,3 +225,14 @@ def test_collect_leaves_the_cyclic_collector_enabled(spark: ReparkSession) -> No
     assert gc.isenabled()
     spark.sql("SELECT id FROM nums LIMIT 8").collect()
     assert gc.isenabled()
+
+
+def test_struct_cell_is_a_dict_not_a_row_collect_struct_row_1(spark: ReparkSession) -> None:
+    """COLLECT-STRUCT-ROW-1: repark returns a struct cell as a dict where Spark returns a Row."""
+    frame = spark.sql("SELECT named_struct('n', 1, 't', 'x') AS st")
+    collected = frame.collect()
+    assert collected[0].st == {"n": 1, "t": "x"}
+    assert type(collected[0].st) is dict
+    reference = rows_from_arrow_table_python(frame.to_arrow())
+    assert type(reference[0].st) is dict
+    assert collected == reference

@@ -1633,6 +1633,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   timestamp, list, struct), then map / tz-aware timestamp through the supplied-column route,
   the calendar-interval refusal, duplicate display names, zero rows, zero columns, and the
   guard that the collector is re-enabled after collect.
+  It also carries the answer pin for `COLLECT-STRUCT-ROW-1`, a divergence the round-2 review
+  found and this unit did not cause: a `StructType` cell collects as a `dict` where live
+  PySpark returns a nested `Row`, identically on both converters, so the equality pin beside it
+  is what proves the divergence is pre-existing.
   pins: perf-facade-1/C-002, C-003, C-006, C-007
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
