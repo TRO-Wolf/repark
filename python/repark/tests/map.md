@@ -1720,7 +1720,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answer pins plus the cost probe that proves the `GroupsAccumulator` runs. Always-run pins
   assert Spark-recorded values AND Arrow types: int/float/decimal global and grouped avgs
   with NULLs, every input width coerced to double, decimal `(10,2)→(14,6)` exactly,
-  `try_avg` overflow NULL at `decimal(38,4)` on the 2×-MAX shape, plain-avg overflow raising,
+  `try_avg` overflow NULL at `decimal(38,4)` on the 2×-MAX shape, plain-avg overflow raising, empty input,
   all-NULL groups, single `avg(DISTINCT)` answering through the optimizer's dedup rewrite,
   and the sliding-window control. The many-groups leg uses a 2e5-group fixture whose values
   are exact in binary (halves under 32), so per-group avgs are bit-exact across engines and
