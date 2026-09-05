@@ -276,6 +276,7 @@ mod tests {
     use super::*;
 
     const BLOCKING_WRITE_MS: u64 = 120;
+    const LATE_FAILURE_MS: u64 = 400;
 
     struct SlowPartitionedExec {
         schema: SchemaRef,
@@ -348,17 +349,25 @@ mod tests {
         ) -> Result<SendableRecordBatchStream> {
             let schema = Arc::clone(&self.schema);
             let emitted = Arc::clone(&self.schema);
-            let rows = self.rows_per_partition;
+            let rows = self.rows_per_partition * (partition + 1);
             let delay = self.blocking_delay;
-            let fail = self.fail_partition == Some(partition);
-            let offset = i32::try_from(partition * rows).expect("row offset fits i32");
+            let offset = i32::try_from(partition * 1000).expect("row offset fits i32");
+
+            if self.fail_partition == Some(partition) {
+                let late = futures::stream::once(async move {
+                    tokio::time::sleep(Duration::from_millis(LATE_FAILURE_MS)).await;
+                    Err(DataFusionError::Execution(
+                        "injected partition source failure".into(),
+                    ))
+                });
+                return Ok(Box::pin(RecordBatchStreamAdapter::new(
+                    schema,
+                    late.boxed(),
+                )));
+            }
+
             let batch = futures::stream::once(async move {
                 std::thread::sleep(delay);
-                if fail {
-                    return Err(DataFusionError::Execution(
-                        "injected partition source failure".into(),
-                    ));
-                }
                 let ids = (0..rows)
                     .map(|row| offset + i32::try_from(row).expect("row fits i32"))
                     .collect::<Vec<_>>();
@@ -469,7 +478,7 @@ mod tests {
         .expect("write succeeds");
         let wall = started.elapsed();
         let rows: u64 = files.iter().map(|file| file.record_count()).sum();
-        assert_eq!(rows, 32, "every row reaches a data file");
+        assert_eq!(rows, 80, "every row reaches a data file");
         wall
     }
 
@@ -524,7 +533,11 @@ mod tests {
         }
         assert_eq!(runs[0], runs[1]);
         assert_eq!(runs[1], runs[2]);
-        assert_eq!(runs[0], vec![5, 5, 5, 5]);
+        assert_eq!(
+            runs[0],
+            vec![5, 10, 15, 20],
+            "the files come back in writer-index order, not completion order"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

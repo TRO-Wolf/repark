@@ -171,6 +171,10 @@ repark-core's error map.
   and the `_row_id` derived from them are the same on every run (V3-11). An input error raises a
   shared flag: siblings stop taking `Ok` batches, close what they hold, and every completed file
   is deleted through `FileIO` before the first error surfaces.
+  In-module pins: writer overlap is measured as a differential (the blocking delay costs one
+  writer four times what it costs four), the returned files carry writer-index order (four
+  partitions of different sizes, three runs), and a late failure in one partition leaves no
+  parquet file in the warehouse.
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
