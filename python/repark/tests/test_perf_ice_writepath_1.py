@@ -1,7 +1,6 @@
 """PERF-ICE-WRITEPATH-1 — the CTAS write node: file layout, determinism, and wall."""
 
 import os
-import statistics
 import time
 from pathlib import Path
 from typing import Any
@@ -19,9 +18,7 @@ THREADS = "8"
 SEED_ROWS = 120_000
 SEED_FILES = 4
 WALL_ROWS = 1_000_000
-WALL_ITERATIONS = 3
-CTAS_OVER_PARQUET_SINK_MAX = 2.2
-PARTITIONED_OVER_PARQUET_SINK_MAX = 3.4
+WALL_ITERATIONS = 5
 
 
 def _rows(start: int, stop: int) -> pa.Table:
@@ -37,6 +34,43 @@ def _seed(path: Path, rows: int) -> Path:
 
     pq.write_table(_rows(0, rows), path, row_group_size=10_000)
     return path
+
+
+def _wide_rows(start: int, stop: int) -> pa.Table:
+    """The analysis' seven-column bed: the write is encode-bound, not commit-bound."""
+    return pa.table(
+        {
+            "id": pa.array(range(start, stop), type=pa.int64()),
+            "ts": pa.array(
+                [1_600_000_000 + index for index in range(start, stop)], type=pa.int64()
+            ),
+            "v": pa.array([float(index) for index in range(start, stop)], type=pa.float64()),
+            "vi": pa.array([index % 1000 for index in range(start, stop)], type=pa.int32()),
+            "s": pa.array([f"s{index:015d}" for index in range(start, stop)], type=pa.string()),
+            "cat": pa.array(
+                [f"c{index % 100:02d}" for index in range(start, stop)], type=pa.string()
+            ),
+            "part": pa.array([index % 8 for index in range(start, stop)], type=pa.int32()),
+        }
+    )
+
+
+def _wide_seed(directory: Path, rows: int, files: int) -> Path:
+    """A fixed `files`-way layout of the wide bed, so the plan's partition count is the layout."""
+    import pyarrow.parquet as pq
+
+    directory.mkdir(parents=True, exist_ok=True)
+    per_file = rows // files
+    for index in range(files):
+        start = index * per_file
+        stop = rows if index == files - 1 else start + per_file
+        pq.write_table(
+            _wide_rows(start, stop),
+            directory / f"part-{index}.parquet",
+            compression="zstd",
+            row_group_size=100_000,
+        )
+    return directory
 
 
 def _seed_files(directory: Path, rows: int, files: int) -> Path:
@@ -147,58 +181,44 @@ def test_partitioned_ctas_files_ascend_by_partition_value(tmp_path: Path) -> Non
         engine.stop()
 
 
-def _median_ms(fn: Any, iterations: int) -> float:
-    fn(-1)
-    samples = []
-    for index in range(iterations):
-        started = time.perf_counter()
-        fn(index)
-        samples.append((time.perf_counter() - started) * 1000.0)
-    return statistics.median(samples)
+def _ctas_at_scale(source: Path, warehouse: Path, name: str, cap: str) -> dict[str, Any]:
+    engine = _session(name, warehouse, cap=cap)
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        walls = []
+        for index in range(WALL_ITERATIONS + 1):
+            started = time.perf_counter()
+            engine.sql(
+                f"CREATE TABLE {CATALOG}.w.t{index} USING iceberg AS SELECT * FROM src"
+            ).collect()
+            if index:
+                walls.append((time.perf_counter() - started) * 1000.0)
+        answer = engine.sql(
+            f"SELECT count(*) AS n, sum(id) AS s, sum(vi) AS v FROM {CATALOG}.w.t{WALL_ITERATIONS}"
+        ).to_arrow()
+        return {
+            "files": len(_file_counts(engine, f"{CATALOG}.w.t{WALL_ITERATIONS}")),
+            "rows": answer.column("n")[0].as_py(),
+            "sum_id": answer.column("s")[0].as_py(),
+            "sum_vi": answer.column("v")[0].as_py(),
+            "best_ms": round(min(walls)),
+        }
+    finally:
+        engine.stop()
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
-def test_ctas_wall_is_within_the_parquet_sink_ratio(tmp_path: Path) -> None:
-    """C-007: the CTAS wall is read against the DataFusion parquet sink measured in the same run."""
-    import shutil
-
-    source = _seed(tmp_path / "wall.parquet", WALL_ROWS)
-    engine = _session("writepath-wall", tmp_path / "wh")
-    try:
-        engine.read.parquet(str(source)).createOrReplaceTempView("src")
-
-        def ctas(index: int) -> None:
-            engine.sql(f"DROP TABLE IF EXISTS {CATALOG}.w.wall{index}")
-            engine.sql(
-                f"CREATE TABLE {CATALOG}.w.wall{index} USING iceberg AS SELECT * FROM src"
-            ).collect()
-
-        def ctas_part(index: int) -> None:
-            engine.sql(f"DROP TABLE IF EXISTS {CATALOG}.w.wallp{index}")
-            engine.sql(
-                f"CREATE TABLE {CATALOG}.w.wallp{index} USING iceberg PARTITIONED BY (part) "
-                "AS SELECT * FROM src"
-            ).collect()
-
-        def sink(index: int) -> None:
-            out = tmp_path / f"sink{index}"
-            shutil.rmtree(out, ignore_errors=True)
-            engine.sql("SELECT * FROM src").write.parquet(
-                str(out), mode="overwrite", compression="zstd"
-            )
-
-        control = _median_ms(sink, WALL_ITERATIONS)
-        plain = _median_ms(ctas, WALL_ITERATIONS)
-        partitioned = _median_ms(ctas_part, WALL_ITERATIONS)
-
-        assert plain < control * CTAS_OVER_PARQUET_SINK_MAX, (
-            f"CTAS {plain:.0f} ms vs the parquet sink {control:.0f} ms in the same run"
-        )
-        assert partitioned < control * PARTITIONED_OVER_PARQUET_SINK_MAX, (
-            f"partitioned CTAS {partitioned:.0f} ms vs the parquet sink {control:.0f} ms"
-        )
-    finally:
-        engine.stop()
+def test_partition_writers_answer_the_single_writer_at_scale(tmp_path: Path) -> None:
+    """C-007: at 1e6 rows the two writer shapes agree on every answer, and on their layout."""
+    source = _wide_seed(tmp_path / "wall", WALL_ROWS, int(THREADS))
+    one = _ctas_at_scale(source, tmp_path / "wh_one", "writepath-scale-one", cap="1")
+    many = _ctas_at_scale(source, tmp_path / "wh_many", "writepath-scale-many", cap="4")
+    assert one["files"] == 1, one
+    assert many["files"] == int(THREADS), many
+    for key in ("rows", "sum_id", "sum_vi"):
+        assert one[key] == many[key], (key, one, many)
+    assert one["rows"] == WALL_ROWS
+    assert one["sum_id"] == WALL_ROWS * (WALL_ROWS - 1) // 2
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)

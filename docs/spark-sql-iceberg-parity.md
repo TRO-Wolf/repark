@@ -4324,6 +4324,47 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
+  written by K cooperative futures joined in ONE task
+  (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding
+  of the K writers serialized; PERF-ANALYSIS-1 read 303 ms of that against
+  `df.write.parquet(zstd)` on the same 1e6 rows. CTAS now goes through
+  `write/partition_write.rs::IcebergPartitionWriteExec`, a physical node with one output
+  partition per input partition; `execute_stream` coalesces it and DataFusion's
+  `CoalescePartitionsExec` spawns one task per partition, so the encode runs on the executor's
+  threads. RePark spawns nothing and adds no dependency — `clippy.toml` bans `tokio::spawn` and
+  `spawn_blocking`, the rust-code-quality review scan bans routing around that ban through
+  `JoinSet` or a helper crate, and `tokio` is only a dev-dependency of `repark-iceberg`. Measured
+  on a **contended** box (sibling `rustc` builds throughout, 1-minute load 13–22), minimum of 15
+  samples per cell: `ctas` **880.50 → 478.03 ms** (1.84×) and `ctas_partitioned8`
+  **1,611.25 → 917.22 ms** (1.76×), against a `df.write.parquet(zstd)` control that read
+  143.90 → 100.73 ms in the same passes. The analysis' ≤ 150 ms / ≤ 300 ms targets are NOT met and
+  ask for parity with that control; the engine is at 3.65× of it. File order and the `_row_id`
+  derived from it became deterministic in the same change — writer `p` takes partition `p`'s
+  batches in plan order, where the coalesced stream it replaces merged partitions in completion
+  order. Layout moves with it: a CTAS writes one file per plan partition (4 → 8 at
+  `shuffle.partitions = 8`, and 32 → 64 partitioned). Pins:
+  `crates/repark-iceberg/src/write/partition_write.rs` (the node's partitions overlap their
+  blocking work where one task pays four delays; writer-index file order over four differently
+  sized partitions; a late partition failure leaves no parquet file) and
+  `python/repark/tests/test_perf_ice_writepath_1.py`. Numbers and commands:
+  `docs/perf/iceberg-write-baseline.md`.
+
+- **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured
+  2026-09-05 (PERF-ICE-WRITEPATH-1). The fork's `RecordBatchPartitionSplitter::split` built one
+  `Literal::Struct` per row, keyed a `HashMap<&Struct, _>` by it and filtered the batch with a
+  full-length `BooleanArray` per group. BACKLOG here because the fix is fork-side and this tree
+  does not consume it yet. Fork trigger **F-28** (`f-28-vectorized-partition-splitter`): lexsort
+  the partition-value columns, read group boundaries with `arrow_ord::partition`, materialize one
+  literal per group and `take` per group; the row-wise path stays for Float, Double, Unknown and
+  empty partition types, where Arrow total-order equality is not Iceberg `Struct` equality
+  (`-0.0` and `0.0` are one group under `OrderedFloat`, two under total order). Measured in the
+  fork lane on a release build over the analysis' seven-column bed, 1,048,576 rows and eight
+  partitions: **171.39 → 28.33 ms** (6.0×, 143 ms per 1e6 rows). That measurement also **corrects
+  the analysis**: the 813 ms it read off the partitioned-minus-unpartitioned CTAS delta is not the
+  splitter, whose whole cost at that scale is 171 ms — the rest is the fanout writing 8× the data
+  files. The row is FIXED here when the pin bump lands (`docs/fork-sync.md` rule 1).
+
 - **PERF-FACADE-COLLECT-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. `collect()` materialized
   every row in Python: `to_pylist()` per column, then `Row.from_ordered_fields` per row with a
   fresh names tuple each time. Row materialization moved into `repark-python`

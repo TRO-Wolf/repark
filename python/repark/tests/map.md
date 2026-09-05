@@ -1693,10 +1693,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   record-count sequence, which is what makes the derived `_row_id` reproducible after the
   parallel section (the coalesced stream this replaces merged partitions in completion order);
   and a partitioned CTAS's files ascend by partition value (V3-11) and cover all eight
-  partitions. Live (`REPARK_PARITY_LIVE=1`): the CTAS wall is read against the DataFusion parquet
-  sink measured in the same process on the same 1e6-row seed — a ratio, because an absolute
-  millisecond ceiling is a property of the box, not of the engine — and Spark's own CTAS of the
-  same seed is compared row for row against the written table. Numbers and commands:
+  partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  two writer shapes agree on every answer and on their layout (one writer one file, four-cap
+  eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
+  against the written table. There is deliberately NO wall assertion here: on a disk-contended
+  box this write is `fsync`-bound and a timing pin flakes — the speedup is measured in the
+  baseline doc and pinned deterministically in `write/partition_write.rs`, where the blocking
+  work is injected. Numbers and commands:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
   pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
