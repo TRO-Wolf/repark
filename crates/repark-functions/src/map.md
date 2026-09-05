@@ -170,6 +170,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   sits after the U4a CAST-after stop, so `CAST(arith AS DECIMAL)` keeps its wrap and
   DEC-9 stays BACKLOG; INT/STRING targets are untouched. A `coalesce(x, NULL)` wrap
   was measured and rejected: it stays non-null when `x` is non-null.
+  Round 3 (2026-09-05): the rule is nullable-iff-overflow-exposed
+  (`decimal_cast::decimal_cast_can_overflow`: small ints under their digit bound and
+  same-or-wider decimal targets stay non-null); the dead `Boolean` arm is gone —
+  every `BOOLEAN → DECIMAL` cast refuses downstream, so the arm's answer was
+  unobservable (registry `CAST-BOOL-DEC-1`).
   pins: cutover-schema-1/C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`

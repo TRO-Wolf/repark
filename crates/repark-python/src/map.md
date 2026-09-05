@@ -19,7 +19,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
 |---|---|
 | [`lib.rs`](lib.rs) | Module registration, error conversion, and tracing setup. |
 | [`allocator.rs`](allocator.rs) | Optional mimalloc allocator for wheel builds. |
-| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). |
+| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). Round 3 (2026-09-05): `coerce_batch_views` casts any analyzed-vs-physical mismatch under safe Arrow cast options — a per-batch copy; non-string mismatches either widen losslessly or refuse loud (see the two coercion pins). The four `StreamingBatchReader` comments moved here verbatim from `dataframe.rs`. |
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.

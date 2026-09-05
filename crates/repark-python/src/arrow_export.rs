@@ -15,6 +15,7 @@ use crate::fence::fence_stream_poll;
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
+/// A synchronous reader that polls one DataFusion batch per Arrow C Stream callback.
 pub(crate) struct StreamingBatchReader {
     runtime: Arc<Runtime>,
     stream: SendableRecordBatchStream,
@@ -38,7 +39,9 @@ impl StreamingBatchReader {
 impl Iterator for StreamingBatchReader {
     type Item = Result<RecordBatch, ArrowError>;
 
+    /// Pull exactly one batch.
     fn next(&mut self) -> Option<Self::Item> {
+        // The Arrow callback cannot unwind across extern "C"; fence the poll and report an error.
         let Self {
             runtime, stream, ..
         } = self;
@@ -60,6 +63,7 @@ impl Iterator for StreamingBatchReader {
 }
 
 impl RecordBatchReader for StreamingBatchReader {
+    /// The exported stream uses the analyzed logical types and Spark-style `nullable = true`.
     fn schema(&self) -> SchemaRef {
         Arc::clone(&self.schema)
     }
@@ -320,5 +324,51 @@ mod tests {
         let coerced = coerce_batch_views(&batch, &schema).expect("fast path succeeds");
         assert!(Arc::ptr_eq(coerced.column(0), batch.column(0)));
         assert_eq!(coerced.schema().fields(), batch.schema().fields());
+    }
+
+    #[test]
+    fn non_string_widening_mismatch_casts_losslessly() {
+        let physical = Arc::new(Schema::new(vec![Field::new("unit", DataType::Int32, true)]));
+        let batch = RecordBatch::try_new(
+            Arc::clone(&physical),
+            vec![Arc::new(arrow::array::Int32Array::from(vec![
+                Some(1),
+                None,
+                Some(3),
+            ]))],
+        )
+        .expect("physical batch builds");
+        let analyzed = Arc::new(Schema::new(vec![Field::new("unit", DataType::Int64, true)]));
+        let coerced = coerce_batch_views(&batch, &analyzed).expect("widening casts");
+        assert_eq!(coerced.schema().fields(), analyzed.fields());
+        let values = coerced
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Int64Array>()
+            .expect("unit column is Int64Array");
+        assert_eq!(
+            values.iter().collect::<Vec<_>>(),
+            vec![Some(1), None, Some(3)]
+        );
+    }
+
+    #[test]
+    fn uncastable_mismatch_errors_loud() {
+        let physical = Arc::new(Schema::new(vec![Field::new("unit", DataType::Int32, true)]));
+        let batch = RecordBatch::try_new(
+            Arc::clone(&physical),
+            vec![Arc::new(arrow::array::Int32Array::from(vec![Some(1)]))],
+        )
+        .expect("physical batch builds");
+        let analyzed = Arc::new(Schema::new(vec![Field::new(
+            "unit",
+            DataType::Struct(Fields::from(vec![Field::new("x", DataType::Int32, true)])),
+            true,
+        )]));
+        let error = coerce_batch_views(&batch, &analyzed).expect_err("struct mismatch refuses");
+        assert!(
+            error.to_string().contains("not supported"),
+            "loud cast refusal, got {error}"
+        );
     }
 }

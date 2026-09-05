@@ -42,7 +42,6 @@ fn decimal_cast_can_overflow(
     target_integer_digits: i32,
 ) -> bool {
     match child {
-        DataType::Boolean => target_integer_digits < 1,
         DataType::Int8 => target_integer_digits < 3,
         DataType::Int16 => target_integer_digits < 5,
         DataType::Int32 => target_integer_digits < 10,
