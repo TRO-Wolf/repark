@@ -31,6 +31,15 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   its own 1-minute load, and a cost is read against the floor of the run it came from.
   pins: perf-dynflatten-1-measure/C-003, C-004
 
+- [iceberg-write-baseline.md](iceberg-write-baseline.md) — **PERF-ICE-WRITEPATH-1
+  (2026-09-05):** the `iceberg_write/1000000/{ctas,ctas_partitioned8,df_write_parquet_zstd}`
+  cells before and after. §1 names four builds and where each may be quoted: the registry carries
+  the SHIPPED pair (base against the branch, both on the pinned fork), and the two builds that
+  carry the never-committed fork path override are quoted only in the pending fork row. Carries the build matrix, the fixture, the load at each cell and the commands, plus
+  the isolated splitter measurement taken in the fork lane where no RePark rebuild is involved.
+  Round 3 adds §7's determinism table — three attempts at the same claim, two refuted — and
+  moves the probes into the tracked bench tree.
+  pins: perf-ice-writepath-1/C-009, C-010
 - [iceberg-catalog-io-baseline.md](iceberg-catalog-io-baseline.md) — **PERF-ICE-CATALOG-IO-1
   (2026-09-05):** the `strace -f -e trace=openat` census per statement, measured on both knob
   settings, and the `t_many` / `t_many_merged` cells. `metadata.json` READS fall from 2 (SELECT)
