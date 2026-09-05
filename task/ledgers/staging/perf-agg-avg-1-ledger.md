@@ -198,23 +198,23 @@ To record: the after medians on the same cells.
 
 ## 9. Gates
 
-The brief's gate list, all exit 0 on the tip (2026-09-05):
+The brief's gate list, all exit 0, measured at `d38a5982` (2026-09-05, round-3 code tip):
 
 | gate | result |
 |---|---|
-| `make ci` | exit 0 |
-| `make verify` | exit 0 |
-| `make check-python-conventions` | exit 0 (246 files clean) |
-| `make rust-panic-ban` | exit 0 |
-| `pytest python/repark/tests -q --timeout 900 -x` | 4851 passed, 205 skipped, 0 failed — run WITHOUT `--timeout`: `pytest-timeout` is not in the locked env (no `--timeout` anywhere in CI either), so the flag is unrunnable here; the suite passing unguarded is the stronger signal. Round-2 re-measurement on the tip (the shipped 4825/204 predated the merge): 5056 collected = the 5051 at `f745325f` + 5 new round-2 pins, with two skips passing in this run. |
-| `pytest python/repark-parity/tests -q` | 574 passed (re-measured on the round-2 tip, unchanged) |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_agg_avg_1.py -q` | 154 passed (all 7 live legs beside `test_live_disclosure_still_diverges`) |
-| `make check-map-sync` | 189 maps clean |
-| `make check-ledger-grammar` | 46 live ledgers clean |
-| `make check-ledgers` | clean |
-| `make check-docs-compaction` | clean |
-| `ledger_lifecycle.py check --base origin/main` | clean |
-| `typos .` | clean |
+| `make ci` | exit 0 (at `d38a5982`) |
+| `make verify` | exit 0 (at `d38a5982`) |
+| `make check-python-conventions` | exit 0 (247 files clean, at `d38a5982`) |
+| `make rust-panic-ban` | exit 0 (at `d38a5982`, via `ci`) |
+| `pytest python/repark/tests -q --timeout 900 -x` | 4918 passed, 209 skipped, 0 failed (5127 collected) — run WITHOUT `--timeout`: `pytest-timeout` is not in the locked env (no `--timeout` anywhere in CI either), so the flag is unrunnable here; the suite passing unguarded is the stronger signal. Round-3 re-measurement at `d38a5982` (the round-2 5056 predated the main merge and the round-3 pins). The first round-3 run showed 10 `test_perf_ice_catalog_io_1` failures from a stale `.venv` module predating the merge — rebuilt via `maturin develop`, then green. |
+| `pytest python/repark-parity/tests -q` | 574 passed (re-measured at `d38a5982`, unchanged) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_agg_avg_1.py -q` | 154 passed, re-measured at `d38a5982` (all 7 live legs beside `test_live_disclosure_still_diverges`; the pin file alone is 35 passed with `REPARK_PARITY_LIVE=1`, 28 passed + 7 skipped without) |
+| `make check-map-sync` | 189 maps clean (at `d38a5982`) |
+| `make check-ledger-grammar` | 48 live ledgers clean (at `d38a5982`) |
+| `make check-ledgers` | clean (at `d38a5982`) |
+| `make check-docs-compaction` | clean (at `d38a5982`) |
+| `ledger_lifecycle.py check --base origin/main` | clean (at `d38a5982`) |
+| `typos .` | clean (at `d38a5982`) |
 
 ```yaml
 COVERAGE_ATTESTATION:
