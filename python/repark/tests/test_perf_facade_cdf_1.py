@@ -109,6 +109,37 @@ def _assert_refusals_equal(
     assert str(new_error) == str(old_error)
 
 
+def _assert_new_refusal_text(
+    monkeypatch: pytest.MonkeyPatch,
+    session: Any,
+    data: Any,
+    schema: Any,
+    error_type: type[BaseException],
+    text: str,
+) -> None:
+    """The shipped path refuses with one exact error while the legacy path differs."""
+    shipped = rows_module._arrow_table_from_raw_tuples
+    monkeypatch.setattr(rows_module, "_arrow_table_from_raw_tuples", shipped)
+    try:
+        session.createDataFrame(data, schema)
+        new_error: BaseException | None = None
+    except Exception as error:
+        new_error = error
+    monkeypatch.setattr(
+        rows_module, "_arrow_table_from_raw_tuples", rows_module._arrow_table_from_raw_tuples_legacy
+    )
+    try:
+        session.createDataFrame(data, schema)
+        old_error: BaseException | None = None
+    except Exception as error:
+        old_error = error
+    assert new_error is not None
+    assert type(new_error) is error_type
+    assert str(new_error) == text
+    assert old_error is not None
+    assert str(old_error) != text
+
+
 def test_shipped_dispatcher_is_the_column_wise_path() -> None:
     """The rows module answers through the new dispatcher unless a test swaps it."""
     assert rows_module._arrow_table_from_raw_tuples is columns_module._arrow_table_from_raw_tuples
@@ -365,6 +396,49 @@ def test_list_element_long_double_merge_refuses_with_same_text(
 ) -> None:
     """A list column mixing int and float elements refuses on both paths."""
     _assert_refusals_equal(monkeypatch, cdf_session, [([1, 2.5],)], ["x"])
+
+
+def test_multi_failure_decimal_envelope_reports_fast_column_value(
+    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
+) -> None:
+    """Same-row envelope violations in a slow and a fast column report the fast value."""
+    from repark.errors import PySparkValueError
+
+    data = [
+        (decimal.Decimal("1" + "0" * 21), decimal.Decimal("2" + "0" * 21)),
+        ("pad", decimal.Decimal("1.5")),
+    ]
+    _assert_new_refusal_text(
+        monkeypatch,
+        cdf_session,
+        data,
+        ["c0", "c1"],
+        PySparkValueError,
+        "createDataFrame Decimal value 2000000000000000000000 exceeds DECIMAL(38, 18) "
+        "magnitude (|value| must be < 10**20)",
+    )
+
+
+def test_multi_failure_cross_column_reports_build_phase_error(
+    monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession
+) -> None:
+    """A slow-column inference error behind the envelope phase reports its build refusal."""
+    from repark.errors import PySparkTypeError
+    from repark.spark.ml.linalg import SparseVector
+
+    data = [
+        ([1.0, 2.0], decimal.Decimal("1.5")),
+        (True, SparseVector(4, [1, 3], [5.0, 6.0])),
+        (-1, datetime.date(2024, 1, 2)),
+    ]
+    _assert_new_refusal_text(
+        monkeypatch,
+        cdf_session,
+        data,
+        ["c0", "c1"],
+        PySparkTypeError,
+        "createDataFrame column 'c0': expected dense float list of width 2, got bool",
+    )
 
 
 def test_list_rows_and_inferred_names(

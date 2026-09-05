@@ -1725,6 +1725,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cells compare instead of never matching. Matrix: every scalar Python type with Nones in
   every column and whole-None columns,
   all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
+  two multi-failure precedence pins asserting the new-path text,
   tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
   witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
   `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.

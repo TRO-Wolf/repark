@@ -47,8 +47,8 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Baseline first from the tracked runner on a release module, unchanged lane: the `create` cells plus floor, spread and load. | `run_facade.py --cells create`; §8. | **PROVEN** | 1,756.67 ms pre-unit (load 14.35 → 14.65) before any product commit; floor 2.45 ms re-measured on the full run. |
-| C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | **PROVEN** | 52 pins green, 1 skipped (the JVM-gated live leg): Arrow field types, Arrow values by repr, and `collect()` by `(type name, repr)` all equal on both dispatchers. |
-| C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 24 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
+| C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | **PROVEN** | 54 pins green, 1 skipped (the JVM-gated live leg): Arrow field types, Arrow values by repr, and `collect()` by `(type name, repr)` compared on both dispatchers; the 2 multi-failure pins assert the new text (C-003). |
+| C-003 | Every single-failure refusal keeps its exact text — scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval — and the two multi-failure precedence pairs pin the new text instead of the legacy text. | The refusal pins; §6 mutations. | **PROVEN** | 24 refusal pins assert same exception type and byte-identical text on both dispatchers; 2 multi-failure pins assert the new exact text while the legacy path refuses differently (§7). |
 | C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | **PROVEN** | Shape pins green on both dispatchers; `test_interchange_parity.py` (TY-4/TY-5) green unchanged. Explicit schemas dispatch to the legacy path, verified by the StructType/DDL/bare-DataType pins. |
 | C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | **PROVEN** | 70.30 ms same-process (66.65 ms second run) — met 30% under the bar; residue is the transpose + census + Arrow conversion (§8). |
 | C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | **PROVEN** | Seven cells in one run: tuples/nested/explicit old-vs-new pairs plus the pandas control (§8). The old leg swaps the dispatcher in a `finally`. |
@@ -113,9 +113,9 @@ reverted (tree verified clean after each):
 **Mutation score: 4 of 4 red.**
 
 One guard is deliberately *not* claimed as mutation-detected: the row-major-first choice
-across two violating decimal columns has no pin (multi-failure order, §7). It is the one
-branch whose behavior differs from legacy by design rather than by accident, and it is named
-here rather than left unexamined.
+across a slow and a fast violating decimal column is pinned to the new text instead
+(multi-failure order, §7). It is the one branch whose behavior differs from legacy by design
+rather than by accident, and it is named here rather than left unexamined.
 
 ## 7. Design — what the column-wise path shares and what it proves
 
@@ -226,7 +226,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_perf_facade_cdf_1.py]
     - id: AT-3
       status: ATTACKED
-      evidence: 24 refusal pins assert the same exception type and byte-identical text on both paths; the dropped-refusal, wrong-scale and nested-as-scalar mutations each red exactly their pins.
+      evidence: 24 refusal pins assert the same exception type and byte-identical text on both paths, 2 multi-failure pins assert the new exact text; the dropped-refusal, wrong-scale and nested-as-scalar mutations each red exactly their pins.
       artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, task/ledgers/staging/perf-facade-cdf-1-ledger.md]
     - id: AT-4
       status: ATTACKED
@@ -234,7 +234,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark-parity/bench/facade/, docs/perf/facade-boundary-baseline.md]
     - id: AT-5
       status: ATTACKED
-      evidence: Namedtuple reorder and ragged/duplicate inputs pin row order and shape handling; the two multi-failure precedence pairs are named in the ledger while every single-failure input raises byte-identically.
+      evidence: Namedtuple reorder and ragged/duplicate inputs pin row order and shape handling; the two multi-failure precedence pairs are named and pinned to the new text in the ledger while every single-failure input raises byte-identically.
       artifacts: [python/repark/tests/test_perf_facade_cdf_1.py, task/ledgers/staging/perf-facade-cdf-1-ledger.md]
     - id: AT-6
       status: ATTACKED
@@ -253,7 +253,7 @@ COVERAGE_ATTESTATION:
       justification: single-threaded facade path; no thread, lock, or async primitive added
     - id: AT-10
       status: ATTACKED
-      evidence: Red first in two layers (collection error, then 10 stub reds plus 3 test bugs fixed before green); the one unclaimed guard (multi-violation row-major choice) is named in the ledger, not pinned.
+      evidence: Red first in two layers (collection error, then 10 stub reds plus 3 test bugs fixed before green); the one unclaimed guard (multi-violation row-major choice) is pinned to the new text in the ledger, not covered by a mutation.
       artifacts: [task/ledgers/staging/perf-facade-cdf-1-ledger.md]
 ```
 
