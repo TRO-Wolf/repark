@@ -2596,7 +2596,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
   | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
 
-  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

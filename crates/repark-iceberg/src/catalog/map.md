@@ -106,7 +106,7 @@ Source comments retain only API and safety contracts; implementation narration i
   through `catalog.load_table`, and time-travel wraps the loaded table. **Repin duty:**
   re-read the funnel — a new assembly path that bypasses `table_builder()` silently
   un-shares the cache, and the delete-manifest pins in the Spark tests map are the detector.
-  pins: perf-ice-catalog-io-2/C-001, C-002, C-005
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-005, C-007
 
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
   no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no
