@@ -4324,6 +4324,42 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **WRITE-ORDER-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). The stream write
+  path INSERT, MERGE, overwrite and predicate DML use
+  (`write/merge/mod.rs::write_stream_into_parallel_sinks`) dispatches batches round-robin to K
+  cooperative workers and returns their files in worker order, but which batches a worker receives
+  depends on the order the source produced them, so two identical INSERT statements over identical
+  input can commit different manifests and different `_row_id` ranges. BACKLOG, pre-existing: this
+  unit moved only CTAS to the write node and deliberately did not touch the stream path. The
+  CTAS-side fix is `write/file_order.rs::stable_commit_order`, a content-derived total order; the
+  same treatment applies here once the stream path's row-to-file mapping is itself stable.
+
+- **WRITE-ABORT-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). A failed write on
+  the stream path leaves every parquet file its writers had already rolled on disk: the workers
+  drop their sinks without closing (the P1-R1 orphan-upload guard,
+  `merge/tests/streaming.rs::parallel_source_error_does_not_finish_sinks`), and nothing deletes
+  what the rolling writer had already flushed — the round-2 critic measured 70 orphans, 103 MB.
+  BACKLOG, pre-existing and out of this unit's scope. The CTAS node's answer is
+  `write/partition_write.rs`'s attempt sweep: census the table's data root before the write and
+  delete everything that appeared since, which reclaims the failing writer's rolled files too.
+  Only `remove_orphan_files` reclaims the stream path's today.
+
+- **WRITE-DISTRIBUTION-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). RePark has no
+  distribution rule before a write. Spark's Iceberg default is `write.distribution-mode = hash`,
+  which repartitions by partition value so one value goes to one task; for the same CTAS at
+  `spark.sql.shuffle.partitions = 8` Spark writes **2** unpartitioned and **8** partitioned data
+  files, where repark now writes **8** and **64** (average 328 KB) — 4x and 8x Spark's counts.
+  BACKLOG. Two alternatives were measured and rejected in this unit: capping the writers below the
+  partition count makes one writer drain several input partitions in sequence, which measured
+  738 ms against 547 ms on the partitioned 1e6 CTAS and is unbounded in memory (DataFusion's
+  repartition channels are unbounded per output partition and gate only when every channel is
+  non-empty, so the partitions a writer has not reached buffer whole); and a `RepartitionExec`
+  round-robin assigns batches to outputs from a shared counter, so the row-to-file mapping — and
+  with it `_row_id` — stops being reproducible, which is exactly the defect round 2 fixed. A real
+  fix is a hash-distribution rule that sends one partition value to one writer: deterministic AND
+  fewer files, and a unit of its own. The current counts are pinned by
+  `test_ctas_writes_one_data_file_per_plan_partition` and the partitioned facade pin.
+
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
   (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding

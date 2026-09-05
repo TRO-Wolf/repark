@@ -159,6 +159,14 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
+- `concurrency.rs` — **PERF-ICE-WRITEPATH-1 round 2 (2026-09-05):** on the CTAS write node
+  `repark.write.max-concurrent-files` is **binary, not a cap** — 1 writes one data file through a
+  `CoalescePartitionsExec`, 2 or more writes one data file per DataFusion partition. Measured at
+  cap 1/2/4/8 on one 1e6-row seed: 1 / 8 / 8 / 8 data files. It still bounds the stream write
+  paths (INSERT, MERGE, overwrite, predicate DML) at the worker count it names, which is the
+  meaning the module's own doc comments carry and which this unit did not change. The reason it
+  cannot be a cap on the node is in `partition_write.rs` below.
+
 - `partition_write.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** `IcebergPartitionWriteExec`, the
   CTAS write node. One output partition per input partition, each draining exactly that partition
   through the existing serial writer; `execute_stream` coalesces the node and the coalesce spawns
