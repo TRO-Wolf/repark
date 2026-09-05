@@ -2562,6 +2562,41 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   baseline note beside the two registry rows `PERF-CATALOG-CALLS-1` (FIXED) and
   `PERF-ICE-MANIFEST-1` (BACKLOG behind the pin bump).
   pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05):** the part-3 pin is un-skipped (the `t_many`
+  second statement must clear 20 ms on a release module) and nine legs join it. The delete
+  instrument is `_delete_manifests`: every `*.avro` under the session warehouse is unlinked, so
+  a repeated read can only answer from the shared cache. A default session answers after the
+  deletion (the default-on pin); a `manifestCacheBytes = "0"` session fails it (the knob-off
+  control, which also proves `"0"` builds); after `rewrite_manifests` +
+  `expire_snapshots` every pre-rewrite manifest path is gone from disk and the next read still
+  answers the same rows (immutability by path — the read needs only new paths); a MERGE matches
+  a row the previous statement committed; a dropped and recreated table answers its own row
+  count; a `register_table`-adopted table stays correct across a commit; a 512-byte budget
+  answers across eight tables (eviction never corrupts — the byte bound itself is the fork's
+  moka `max_capacity`, unit-pinned fork-side); and `VERSION AS OF` plus branch reads answer
+  with the cache on. The two refusal parametrizations grow by the new key (`"many"` and `"-1"`
+  fail loud; the alias names both spellings). The IO-1 commit-visibility and schema-change legs
+  run unchanged and are the cache-on re-run for those two cells, because the default session
+  they build now sizes the shared cache at 32 MiB. The two-door shape of every cell stays in
+  Rust (`catalog_cache_staleness.rs`): two Python sessions cannot share one memory catalog, so
+  the Python legs are single-session sequential through the same shared cache.
+
+  | test | clause |
+  |---|---|
+  | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
+  | `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish` | C-002 |
+  | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-002 |
+  | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-004 |
+  | `test_a_merge_after_a_commit_matches_the_committed_row` | C-004 |
+  | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-004 |
+  | `test_a_registered_table_stays_correct_across_a_commit` | C-004 |
+  | `test_a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+  | `test_time_travel_reads_the_pinned_snapshot_with_the_cache_on` | C-004 |
+  | `test_branch_reads_answer_with_the_cache_on` | C-004 |
+  | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
+  | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
+
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
