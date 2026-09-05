@@ -107,15 +107,12 @@ SQL_WINDOW_SLIDING_A = (
     "AS t(id, v)"
 )
 
-SQL_AVG_DISTINCT = (
-    "SELECT avg(DISTINCT v) AS a FROM (VALUES (1.0), (2.0), (2.0)) AS t(v)"
-)
+SQL_AVG_DISTINCT = "SELECT avg(DISTINCT v) AS a FROM (VALUES (1.0), (2.0), (2.0)) AS t(v)"
 
 SQL_AVG_DISTINCT_INT = "SELECT avg(DISTINCT v) AS a FROM (VALUES (1), (2), (2)) AS t(v)"
 
 SQL_MULTI_DISTINCT = (
-    "SELECT avg(DISTINCT a) AS x, sum(DISTINCT b) AS y "
-    "FROM (VALUES (1, 10), (2, 10)) AS t(a, b)"
+    "SELECT avg(DISTINCT a) AS x, sum(DISTINCT b) AS y FROM (VALUES (1, 10), (2, 10)) AS t(a, b)"
 )
 
 SQL_MANY_CHECKSUM = (
@@ -219,9 +216,7 @@ def test_avg_grouped_small_dataframe_door() -> None:
     """The DataFrame groupBy door answers the same grouped avgs."""
     """pins: perf-agg-avg-1/C-003."""
     spark = _session()
-    frame = spark.sql(
-        "SELECT k, v FROM (VALUES ('a', 1.0), ('a', 3.0), ('b', 4.0)) AS t(k, v)"
-    )
+    frame = spark.sql("SELECT k, v FROM (VALUES ('a', 1.0), ('a', 3.0), ('b', 4.0)) AS t(k, v)")
     table = frame.groupBy("k").agg(F.avg("v").alias("a")).orderBy("k").toArrow()
     assert table.column("a").to_pylist() == [2.0, 4.0]
 
@@ -341,9 +336,7 @@ def test_many_groups_answers_match_pinned_checksum(tmp_path: Path) -> None:
     _many_groups_view(spark, fixture)
     checksum = spark.sql(SQL_MANY_CHECKSUM).toArrow()
     assert checksum.column("groups").to_pylist() == [MANY_GROUPS]
-    assert checksum.column("checksum").to_pylist() == pytest.approx(
-        [3150001.7499999637], rel=1e-9
-    )
+    assert checksum.column("checksum").to_pylist() == pytest.approx([3150001.7499999637], rel=1e-9)
     sample = spark.sql(SQL_MANY_SAMPLE).toArrow()
     assert sample.column("k").to_pylist() == [0, 1, 2]
     assert sample.column("a").to_pylist() == [17.5, 14.833333333333334, 19.27777777777778]

@@ -1703,7 +1703,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   are exact in binary (halves under 32), so per-group avgs are bit-exact across engines and
   the live leg compares full frames; only the 2e5-term checksum uses a tolerance. The probe
   times grouped avg vs grouped sum back to back on one partition (4.06× on the base, bound
-  2.5) — the single partition is what makes the per-group boxing cost visible. Live legs
+  2.5, 1.21× after) — the single partition is what makes the per-group boxing cost
+  visible. Live legs
   re-derive the small grouped, decimal, window, many-groups, overflow and distinct answers
   from PySpark 4.1.2. Two pre-existing divergences are disclosed, not absorbed: group keys
   come back nullable where Spark marks them not-null (the live legs project to the avg
