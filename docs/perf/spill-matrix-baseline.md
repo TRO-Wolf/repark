@@ -206,8 +206,12 @@ remediation sentence naming both `repark.memory.limit.gb` (build time) and
 
 **Never touches the pool.** `window_sliding_rows` and `window_range` are flat at ~250 MiB across
 every pool at both scales: a bounded frame streams, and the window operators are not pool-accounted
-anyway. `topk` is a bounded heap and is `ok` down to 64 MiB at 1e6 — its refusals at 1e7 come from
-the `RepartitionExec` and merge reservations beneath it, not from the heap. `dynamic_flatten`
+anyway. `topk` is `ok` down to 64 MiB at 1e6, and its two refusals at 1e7 are worth reading rather
+than assuming: at 256 MiB the reservation that fails is `SortPreservingMergeExec[0]` beneath it,
+but at 64 MiB it is `TopK[0]` itself — *"Failed to allocate additional 1856.0 KB for TopK[0] with
+14.0 MB already allocated"*. **A bounded-cardinality TopK is not a bounded-memory TopK:** the heap
+holds 100 rows but pins the whole 64k-row batches those rows point into, so its footprint scales
+with batch size and row width, not with `LIMIT`. `dynamic_flatten`
 (2,142 MiB at a 64 MiB pool against 2,119 unbounded), `to_pandas` (2,120 against 2,078), `collect`
 (4,393 against 4,413) and the Iceberg DV scan (679 against 699) are flat at every pool including
 64 MiB, because none of them registers with
