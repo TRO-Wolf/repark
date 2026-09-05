@@ -341,9 +341,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   csv/json likewise; Spark-door CTAS stores every column optional including
   `SELECT coalesce(x, 0)` (at repark's `long` width — the V3-COV-8 width half stays
   BACKLOG, only nullability moves); the S3 dedup Arrow schema equals Spark field for field;
-  `CAST(1 AS DECIMAL)` is nullable while INT/STRING casts keep the child; the ANSI-door
-  cast fence and the SE-1 tighten-derived CTAS refusal control stay put. Live legs
-  re-derive the read/cast/dedup cells from PySpark 4.1.2 on the shared `spark_engine`.
+  `CAST(1 AS DECIMAL)` is nullable while `CAST(1 AS INT/STRING)` keeps the non-null
+  literal; the ANSI-door cast fence and the SE-1 tighten-derived CTAS refusal control
+  stay put. Live legs re-derive the read/cast/dedup cells from PySpark 4.1.2 on the
+  shared `spark_engine`. Round 3 (2026-09-05) pins four pre-existing divergences as
+  BACKLOG rows with current-answer pins: `CAST-NULL-1` (non-decimal cast targets),
+  `CAST-BOOL-DEC-1` (boolean-to-decimal refusal), `CUTOVER-NULLDEPTH-1` (relax stops
+  at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
