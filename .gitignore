@@ -47,5 +47,4 @@ build/
 /scratch/
 PROGRESS.md
 
-# Lane hand-back artifact written by an agent at the lane root; never repo content.
 handback.json
