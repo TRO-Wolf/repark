@@ -114,11 +114,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** `session.rs`
-  1039 → 1002 with the script baseline, after `register_late_configured_catalogs` moved to
-  `session/late_catalogs.rs`.
-  pins: perf-ice-catalog-io-1/C-004
-  **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale.
+  H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
+  `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
+  warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
+  second escape rule. pins: h3-spill-1/C-001
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
   pins: fn-fix-2-string-rows/C-002

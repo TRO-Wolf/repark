@@ -167,7 +167,11 @@ in published history by explicit decision:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
   preserve-null Unnest removes redundant projections; adjacent candidates stay
   measurement-gated. #30 merged.
-  **Next:** H-3 spill matrix.
+  **H3-SPILL-1 (2026-09-05):** the Never-OOM truth table is measured — 18 operators × 5 pools
+  × 2 scales = 180 cells, 0 aborts, 0 wrong answers, two failure shapes filed
+  (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool bounds only the operators that register
+  with it: [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md).
+  **Next:** the two filed shapes.
   **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
   **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
@@ -301,8 +305,9 @@ Recorded, not built. Each names the trigger that would start it.
   connectivity count (6 names, same bucket) is tracked in
   [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names themselves live in
   the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
-- **Never-OOM (spill coverage)** — the goal in [PROJECT.md](PROJECT.md) is stated honestly as
-  *pending a spill-coverage spike*; the spike is a natural V2 Engine Hardening input.
+- **Never-OOM (spill coverage)** — measured 2026-09-05 (H3-SPILL-1):
+  [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md); the honest scope in
+  [PROJECT.md](PROJECT.md) holds — spills where the engine can, documented where it cannot.
 
 ## Release blockers
 
