@@ -16,6 +16,9 @@ FLOOR_CELL = "collect/100000"
 CHAIN_DEPTHS = (10, 50, 100)
 EXPORT_ROWS = (100_000, 1_000_000)
 CREATE_ROWS = 100_000
+CREATE_NESTED_ROWS = 10_000
+CREATE_NESTED_NAMES = ("id", "arr", "obj", "tpl")
+CREATE_EXPLICIT_DDL = "id BIGINT, ts BIGINT, v DOUBLE, vi INT, s STRING, cat STRING, part INT"
 COLLECT_ITERATIONS = 3
 
 
@@ -160,3 +163,28 @@ def rows_via_old(batches: list[Any]) -> int:
     from repark.spark.dataframe.rows_export import rows_from_arrow_table_python
 
     return sum(len(rows_from_arrow_table_python(batch)) for batch in batches)
+
+
+def build_nested_tuples(count: int) -> list[tuple[Any, ...]]:
+    """Deterministic nested rows: an int, a list, a dict and a tuple per row."""
+    return [
+        (
+            index,
+            [index, index + 1],
+            {"a": index, "b": f"s{index % 7}"},
+            (index % 3, f"t{index % 5}"),
+        )
+        for index in range(count)
+    ]
+
+
+def create_with_old_dispatcher(session: Any, data: Any, schema: Any) -> int:
+    """Run ``createDataFrame`` end to end with the legacy row-wise path swapped in."""
+    import repark.spark.session.create_dataframe_rows as rows_module
+
+    shipped = rows_module._arrow_table_from_raw_tuples
+    rows_module._arrow_table_from_raw_tuples = rows_module._arrow_table_from_raw_tuples_legacy
+    try:
+        return int(session.createDataFrame(data, schema).count())
+    finally:
+        rows_module._arrow_table_from_raw_tuples = shipped

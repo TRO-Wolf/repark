@@ -51,12 +51,12 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 | C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 22 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
 | C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | **PROVEN** | Shape pins green on both dispatchers; `test_interchange_parity.py` (TY-4/TY-5) green unchanged. Explicit schemas dispatch to the legacy path, verified by the StructType/DDL/bare-DataType pins. |
 | C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | OPEN |  |
-| C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | OPEN | Old leg swaps the dispatcher back to the legacy path in a `finally`, as PERF-FACADE-1 did for collect. |
+| C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | **PROVEN** | Seven cells in one run: tuples/nested/explicit old-vs-new pairs plus the pandas control (§8). The old leg swaps the dispatcher in a `finally`. |
 | C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | OPEN | JVM run once, beside at most one other JVM, then stopped. |
 | C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | OPEN |  |
 | C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | OPEN |  |
 
-VERDICT: 9 clauses, 3 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 4 PROVEN, 5 OPEN, 0 REJECTED.
 
 ## 1. Environment — what the lane actually had (2026-09-05)
 
@@ -105,7 +105,52 @@ lands with the runs).
 
 ## 7. Design — what the column-wise path shares and what it proves
 
-(error-precedence pairs land here with the final wording.)
+Identity by construction: every shared rule is the same function object on both legs — the
+cell normalizer, the all-null witness, the tuple converter for slow columns, the decimal
+validator, the timestamp default, the nested-cell preparer, and the three tuples.py helpers.
+The fast path skips work only where the census proves it a no-op: a `{int}` census cannot
+carry a second merge kind (so the refusal walk is skipped); pure-`None` is all-null (so
+normalization is skipped); `type()` — never `isinstance` — draws the line because `bool`
+subclasses `int` and `datetime` subclasses `date`. Floats refuse infinity through Arrow
+`is_inf` with the byte-identical text; datetimes keep per-cell preparation; decimals keep the
+envelope validator with row-major-first reporting across fast decimal columns; times are
+stringified exactly as the preparer does.
+
+Error precedence differs only when two independent failures coexist (every single-failure
+input raises the byte-identical error, pinned): (1) a slow column validates its envelope
+inside its own build while fast decimal columns report row-major-first, so violations in a
+slow column and elsewhere can report a different value than legacy row-major; (2) a slow
+column's inference error raises in the build phase, after the envelope phase and the
+duplicate-name check, where legacy raises all inference errors first.
+
+The identity-permutation hoist in the tuple loop sits upstream of the dispatcher and benefits
+both legs equally (~60 ms at 1e5); the old/new pair isolates the inference win, and the
+absolute before/after includes the hoist — §8 reports all three numbers, not one.
+
+## 8. Measurement (C-001, C-005, C-006)
+
+Tracked runner, one run, release module `163,478,728 B`, load **10.75 → 10.51** (one sibling
+`rustc` still live), 5 iterations after 1 warm-up (create cells cap at 3), bed
+`~/repark-lanes/beds/oc-cdf1/run-create-pairs.json`:
+
+| cell | old | new | × |
+|---|---:|---:|---:|
+| `create/100000/tuples_count` | 1,656.62 | **70.30** | **23.56×** |
+| `create/100000/pandas_count` (control) | — | 3.00 | — |
+| `create/10000/nested_count` | 261.70 | 273.21 | 0.96× |
+| `create/100000/explicit_count` | 1,280.50 | 1,273.94 | 1.00× |
+
+The pre-unit baseline on the unchanged lane (same runner, load 14.35 → 14.65) read
+`tuples_count` **1,756.67 ms** and `pandas_count` 3.19 ms. Three honest numbers: the
+absolute before/after is 1,756.67 → 70.30 across two runs on two loads; the same-process
+pair is 1,656.62 → 70.30, which isolates the inference win (the old leg shares the
+permutation hoist). Target ≤ 100 ms **met**, 30% under the bar.
+
+The nested pair reads 0.96×: the slow arm does the same conversion plus one transpose and
+census (~11 ms at 1e4) — the measured delegation cost, not a regression. The explicit pair
+reads 1.00×: both legs run the identical legacy path by dispatch, as designed; the
+explicit-schema path at ~1.27 s is now the slowest createDataFrame shape and stays out of
+this unit (brief: preserve, not rewrite).
 
 ## SLR log (D3 — one per state-changing step)
 
@@ -141,6 +186,25 @@ SELF_LOGIC_REVIEW:
     - no new code comment: SATISFIED (self-check below)
   success_condition: the commit's pins, gates and maps all hold on this tip
   step_risks: [shared-helper behavior drift: HANDLED(helper bodies are moved code; suite + pins)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-RUNNER
+  agent: Actor
+  action: commit the runner pairs with the measured numbers and maps
+  charter_trace: C-006
+  preconditions:
+    - seven cells measured in one process: SATISFIED (§8 table)
+    - lint/format/size/map gates green: SATISFIED (this run)
+    - no new code comment: SATISFIED (self-check below)
+  success_condition: the pairs reproduce on a re-run and the map states the contract
+  step_risks: [old leg unfaithful: HANDLED(it calls the kept legacy path itself)]
   contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
   tripwire_scan: CLEAN
   uncertainty: NONE
