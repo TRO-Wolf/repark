@@ -22,10 +22,14 @@ Why the shape it has:
   `abort_at_cap`. `--as-cap-bytes` (default 32 GiB) stays as a backstop against a pathological
   virtual allocation. Both caps are written into every record, because an outcome that depends
   on a limit is meaningless without the limit.
-- **Peak RSS is read from `/proc/<pid>/status` `VmHWM` by the parent**, polled at 50 ms.
-  `VmHWM` is a kernel high-water mark, so polling cannot miss a peak that happened between
-  reads, and a worker that aborts still leaves its number behind. A surviving worker also
-  reports `ru_maxrss`; the record takes the larger.
+- **Peak RSS is `VmHWM`, on both sides, and never `ru_maxrss`.** The parent polls
+  `/proc/<pid>/status` at 50 ms; `VmHWM` is a kernel high-water mark, so polling cannot miss a
+  peak that happened between reads, and a worker that aborts still leaves its number behind.
+  The worker reports its own `VmHWM` too and the record takes the larger. It must not report
+  `ru_maxrss`: **rusage is retained across `execve`**, so a child inherits its parent's
+  high-water mark. That is invisible from a small parent and wrong from a large one — the
+  first draft of the pins measured 1,286 MiB for *both* legs of a bounded-vs-unbounded
+  comparison when run inside the 4,800-test facade suite, because both numbers were pytest's.
 - **Outcome comes from metrics, not from wall time.** `EXPLAIN ANALYZE` gives
   `spill_count` / `spilled_bytes` / `skipped_aggregation_rows` per physical operator, which
   are deterministic at a chosen pool; wall is recorded beside them but never asserted on.

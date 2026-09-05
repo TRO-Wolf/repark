@@ -1650,7 +1650,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   unbounded run's; a bounded pool that fits answers exactly; a pool refusal is the documented
   Spark-shaped exception (`fair(` required, `greedy(` and any caught Rust panic forbidden, both
   resize knobs named) and leaves the session usable. Then the limits, each in a fresh
-  subprocess with its own `ru_maxrss`: spilling holds resident memory 200 MiB below the
+  subprocess reading its own `VmHWM` (never `ru_maxrss`, which survives `execve` and would
+  report pytest's own footprint): spilling holds resident memory 200 MiB below the
   unbounded run and under 3x the pool, while `toPandas` at a 64 MiB pool is over 6x the pool —
   the facade boundary is not pool-accounted and no pool makes it so. Two defect pins codify
   today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool

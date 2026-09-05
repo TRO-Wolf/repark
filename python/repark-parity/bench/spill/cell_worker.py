@@ -30,8 +30,12 @@ def apply_as_cap(cap_bytes: int) -> None:
 
 
 def peak_rss_bytes() -> int:
-    """Peak resident set of this process in bytes."""
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+    """Peak resident set of this process, read from `VmHWM` because `ru_maxrss` survives exec."""
+    with Path("/proc/self/status").open(encoding="utf-8") as handle:
+        for line in handle:
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1]) * 1024
+    return 0
 
 
 def build_session(pool: str, conf: dict[str, str], partitions: int) -> Any:

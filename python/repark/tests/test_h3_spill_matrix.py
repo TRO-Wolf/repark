@@ -198,7 +198,10 @@ def vm_size_bytes():
 
 
 def peak_rss_bytes():
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+    for line in open("/proc/self/status"):
+        if line.startswith("VmHWM:"):
+            return int(line.split()[1]) * 1024
+    return 0
 
 
 mode, pool, rows, headroom = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])

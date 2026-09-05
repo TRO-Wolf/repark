@@ -29,6 +29,7 @@ under a 64 MiB pool. They do not OOM here because the box is large, not because 
 | Python | 3.12.3 |
 | Per cell | one fresh subprocess, `datafusion.execution.target_partitions = 4`, session defaults otherwise (`batch_size` 65536) |
 | Guard | parent polls `/proc/<pid>/status` `VmHWM` every 50 ms and kills past `--rss-cap-bytes` 8 GiB; `RLIMIT_AS` 32 GiB is a backstop only |
+| Peak RSS | `VmHWM` on both sides, never `ru_maxrss` — rusage is retained across `execve`, so a child would report its parent's high-water mark |
 | Concurrency | three driver lanes ran concurrently; the 1-minute load at each cell's start is in the tables, and wall is read against it |
 | Repeats | every cell whose first outcome was not `ok` ran three times; the `runs` list is in the JSON |
 | Evidence | [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json) — every cell, every repeat, both caps, per-operator plan metrics |
