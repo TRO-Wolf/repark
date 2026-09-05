@@ -159,6 +159,89 @@ repark-core's error map.
   check and the cast kernel. This is the bulk-append hot path and the identity case is the common
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
+- `concurrency.rs` — **PERF-ICE-WRITEPATH-1 round 2 (2026-09-05):** on the CTAS write node
+  `repark.write.max-concurrent-files` is **binary, not a cap** — 1 writes one data file through a
+  `CoalescePartitionsExec`, 2 or more writes one data file per DataFusion partition. Measured at
+  cap 1/2/4/8 on one 1e6-row seed: 1 / 8 / 8 / 8 data files. It still bounds the stream write
+  paths (INSERT, MERGE, overwrite, predicate DML) at the worker count it names, which is the
+  meaning the module's own doc comments carry and which this unit did not change. The reason it
+  cannot be a cap on the node is in `partition_write.rs` below.
+
+- `partition_write.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** `IcebergPartitionWriteExec`, the
+  CTAS write node. One output partition per input partition, each draining exactly that partition
+  through the existing serial writer; `execute_stream` coalesces the node and the coalesce spawns
+  one task per partition, which is where the parquet encode and zstd of the writers stop sharing
+  a task. RePark spawns nothing and gains no dependency: the parallelism is the DataFusion
+  executor's, which is why this is a node and not a `tokio::spawn` (`clippy.toml` bans that, the
+  rust-code-quality scan bans routing around it through `JoinSet` or a helper crate, and `tokio`
+  is a dev-dependency of this crate).
+  **One writer per input partition, not `min(cap, partitions)`.** A writer that drained several
+  input partitions in sequence measured 738 ms against 547 ms for one-each on the partitioned 1e6
+  CTAS, and worse, it is unbounded in memory: DataFusion's repartition channels are unbounded
+  per output partition and only gate when EVERY channel is non-empty, so the partitions a writer
+  has not reached yet buffer whole. `repark.write.max-concurrent-files` therefore selects between
+  one writer over a `CoalescePartitionsExec` (cap 1, one data file) and one writer per partition
+  (cap 2 or more); it still bounds the stream write paths that INSERT, MERGE, overwrite and
+  predicate DML use, which this node does not touch. The knob is read from the session
+  configuration, so it is a builder `.config(...)`, not a post-build `conf.set`.
+  **Determinism is content-derived, because the DataFusion partition index is NOT stable.**
+  Round 1 ordered the committed files by the writer index and claimed reproducibility; the round-2
+  critic refuted it, and the instrumented measurement says why: over eight UNEQUAL source files,
+  six identical v3 CTAS gave six different partition-index-to-source-file assignments (partition 1
+  read the 3,000-row file in one run and the 40,000-row file in the next), so the writer index is
+  a property of that execution, not of the statement. `stable_commit_order`
+  ([file_order.rs](file_order.rs)) therefore sorts the committed files by partition value first
+  (V3-11 unchanged), then by each field's lower bound in field-id order, then the upper bounds,
+  then record count, file size and path — a total order that is a function of the DATA. Six runs
+  of the refuting fixture commit ONE manifest record-count sequence and ONE `first_row_id` map at
+  16 partitions.
+  **Round 3 crossed that boundary and narrowed the claim.** The scan's row-to-file GROUPING is not
+  stable either: on four cores the same eight-file source is packed into four writers differently
+  from run to run inside ONE process — measured 4 to 6 distinct groupings in 10 runs at
+  `target_partitions = 4`, against 1 in 10 at 16, which is why CI's 4-core runner reddened the
+  round-2 pin and this box never did. So the committed LAYOUT and the `_row_id` a given row
+  receives are **not** reproducible across groupings, and no writer-side ordering can make them
+  so — the rows themselves land in different files. What IS true at every partition count, and is
+  what the pin now asserts at 3, 4, 8 and 16: the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the committed row set is the expected digest of ids, and two runs that
+  produce the SAME grouping produce the same id-to-`_row_id` map — keyed by a hash of that map,
+  since keying it by the record-count sequence made the conjunct unfalsifiable (round-3 critic
+  G3). The residual is filed as `WRITE-GROUPING-CTAS-1`.
+  An input error raises a shared flag: siblings stop taking `Ok` batches and close what they hold,
+  and the failure sweep deletes **every data file the attempt created** — the completed files
+  plus every parquet that appeared under the table's data root since the attempt began, which is
+  how the failing writer's own rolled files are reclaimed (round-2 S2-2: a 64 KiB target file size
+  left 9 of them behind before this).
+  **The sweep's precondition is checked, not assumed** (round-2 F7): the census-and-sweep arm runs
+  only when the table has NO current snapshot — the CTAS case, where the table is staged or freshly
+  created and this statement is its only writer. Against a table that already has a snapshot the
+  sweep falls back to deleting just the files its own writers completed, so a concurrent or
+  pre-existing data file is never touched. Pinned both ways:
+  `a_failed_partition_deletes_every_completed_data_file` (fresh table, nothing survives) and
+  `a_failed_write_into_a_committed_table_sweeps_only_its_own_files` (seeded commit, its files
+  survive, AND so does a file another writer drops into the data root during the attempt — which
+  is the case the gate actually guards, since the census by itself already protects everything
+  that existed before it).
+  In-module pins: every input partition gets its own writer and its own data file, and the files
+  come back in CONTENT order (the mock's partitions carry ascending row ranges, so content order
+  and partition order coincide there — the assertion says so), and a one-task drive of the same
+  four partitions answers identically; the returned files carry writer-index order over three runs; and a late
+  failure in one partition leaves no parquet file in the warehouse. There is deliberately no
+  wall-clock assertion in the unit suite — under `cargo test` on a loaded box the fixed cost of
+  four small parquet writes swamped the injected delay (a 6.4 s floor against a 6.0 s delayed
+  run), so the timing evidence lives in
+  [../../../../docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md)
+  instead, where it is measured on a release module. `make verify` is green with the pin in place.
+  The vectorized partition splitter this path calls on every partitioned write is fork ask
+  **F-28** on `f-28-vectorized-partition-splitter`: the splitter lexsorts the partition-value
+  columns, reads group boundaries with `arrow_ord::partition` and materializes one
+  `Literal::Struct` per group instead of one per row, keeping the row-wise path for Float,
+  Double, Unknown and empty partition types, where Arrow total-order equality is not Iceberg
+  `Struct` equality (`-0.0` and `0.0` are one group under `OrderedFloat` and two under total
+  order). It is NOT consumed here: the pin bump is its own PR
+  ([../../../../docs/fork-sync.md](../../../../docs/fork-sync.md)), so the fork half is measured
+  through a temporary, never-committed path override.
+  pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
