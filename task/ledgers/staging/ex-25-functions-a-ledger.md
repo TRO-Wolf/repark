@@ -139,7 +139,7 @@ search (the plain-string spelling is a facade-spelling divergence, EX-FN-15), an
 | `F.replace` | `lit`/column search; `$1` literal | plain-str search; `$1` backslash | stayed | EX-FN-15 |
 | `F.schema_of_csv` | `STRUCT<_c0: INT, _c1: STRING>` | refuses E1 | stayed | EX-FN-16 |
 | `F.schema_of_json` | `STRUCT<a: BIGINT, b: STRING>` | refuses E1 | stayed | EX-FN-16 |
-| `F.sentences` | nested words; `""` → `[[]]`; NULL NULL | refuses R-FN-BATCH2 | stayed | EX-FN-17 |
+| `F.sentences` | nested words; `""` → `[]`; NULL NULL | refuses R-FN-BATCH2 | stayed | EX-FN-17 |
 | `F.session_user` | `john` (login-dependent) | `repark` | covered (shape-check) | `functions/session_misc.py` |
 | `F.sha2` | 224/256 hexes incl. empty-string digests | identical | covered | `functions/strings_more.py` |
 | `F.skewness` | 0.3053162697580512 over [1,2,2,3,4,5] | refuses R-FN-BATCH4 | stayed | EX-FN-9 |
