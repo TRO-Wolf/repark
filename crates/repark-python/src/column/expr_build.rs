@@ -112,13 +112,33 @@ pub(super) fn inner_null_treatment(expr: &Expr) -> Option<NullTreatment> {
     }
 }
 
-pub(super) fn percentile_approx_list_expr(argument: Expr, percentages: Vec<f64>) -> Expr {
+pub(super) fn percentile_approx_scalar_expr(
+    argument: Expr,
+    percentile: f64,
+    accuracy: Option<i64>,
+) -> Expr {
+    let udaf = repark_functions::percentile_approx::percentile_approx_udaf();
+    match accuracy {
+        Some(value) => udaf.call(vec![argument, lit(percentile), lit(value)]),
+        None => udaf.call(vec![argument, lit(percentile)]),
+    }
+}
+
+pub(super) fn percentile_approx_list_expr(
+    argument: Expr,
+    percentages: Vec<f64>,
+    accuracy: Option<i64>,
+) -> Expr {
     let values: Vec<ScalarValue> = percentages
         .into_iter()
         .map(|percentage| ScalarValue::Float64(Some(percentage)))
         .collect();
     let list = ScalarValue::List(ScalarValue::new_list_nullable(&values, &DataType::Float64));
-    repark_functions::percentile_approx::percentile_approx_udaf().call(vec![argument, lit(list)])
+    let udaf = repark_functions::percentile_approx::percentile_approx_udaf();
+    match accuracy {
+        Some(value) => udaf.call(vec![argument, lit(list), lit(value)]),
+        None => udaf.call(vec![argument, lit(list)]),
+    }
 }
 
 pub(super) fn window_from_aggregate(

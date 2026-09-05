@@ -14,6 +14,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 ## Modules
 
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
+  **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
+  take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display
+  names keep the two-arg Spark shape). The list call construction collapses to a `let` and
+  the percentage validation folds into a named closure; both hold the file at its exact
+  baseline (ratchet 1053→1052 with the accuracy import). pins: perf-approxpct-1/C-002
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
   LOG1P-1: `log1p` / `expm1` arms embed `repark_functions::expr_fn` kernels.
   pins: log1p-1-precise-kernels/C-002
@@ -32,6 +37,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `coalesce(array_agg(x) IGNORE NULLS, make_array())`, so `over()` used to refuse them outright;
   the group-by spelling is untouched, and two aggregates in one expression still refuse (there is
   no single window to push). pins: win-slide-1/C-002
+  **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx_scalar_expr` (new) and
+  `percentile_approx_list_expr` take `Option<i64>` accuracy and build the two- or three-arg
+  UDAF call. pins: perf-approxpct-1/C-002
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

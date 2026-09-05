@@ -1574,19 +1574,19 @@ def percentile_approx(
     accuracy: int | None = None,
 ) -> Column:
     """Discrete percentile of the column's type (PySpark ``functions.percentile_approx``)."""
-    del accuracy
+    tail = "" if accuracy is None else f", {accuracy if type(accuracy) is int else 'NULL'}"
     column, part = _aggregate_argument(col)
     if isinstance(percentage, (list, tuple)):
         pcts = [float(item) for item in percentage]
         if any(item < 0.0 or item > 1.0 for item in pcts):
             raise IllegalArgumentException("percentile_approx percentages must be in [0, 1]")
-        agg_name = f"percentile_approx({part}, {list(pcts)})"
+        agg_name = f"percentile_approx({part}, {list(pcts)}{tail})"
         return Column(
-            column._inner.approx_percentile_list(pcts),
+            column._inner.approx_percentile_list(pcts, accuracy),
             agg_name=agg_name,
             sql_expr=(
                 f"percentile_approx({column.sql_expr_part()}, "
-                f"array({', '.join(str(item) for item in pcts)}))"
+                f"array({', '.join(str(item) for item in pcts)}){tail})"
             ),
             spark_display=agg_name,
             projection_name=agg_name,
@@ -1600,11 +1600,11 @@ def percentile_approx(
     pct = float(percentage)
     if not 0.0 <= pct <= 1.0:
         raise IllegalArgumentException(f"percentile_approx percentage must be in [0, 1], got {pct}")
-    agg_name = f"percentile_approx({part}, {pct})"
+    agg_name = f"percentile_approx({part}, {pct}{tail})"
     return Column(
-        column._inner.approx_percentile_cont(pct),
+        column._inner.approx_percentile_cont(pct, accuracy),
         agg_name=agg_name,
-        sql_expr=f"percentile_approx({column.sql_expr_part()}, {pct})",
+        sql_expr=f"percentile_approx({column.sql_expr_part()}, {pct}{tail})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,

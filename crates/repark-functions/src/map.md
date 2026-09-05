@@ -52,6 +52,23 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`FN-APPROXPCT-ACC-1`). Group held in memory (`PERF-APPROXPCT-1`).
   Flatten offset-buffer rewrite lives in `collection/flatten.rs`.
   pins: fn-fix-1-registry-rows/C-002
+  **PERF-APPROXPCT-1 (2026-09-05):** the buffer is a Greenwald-Khanna
+  `QuantileSummaries` (new `quantile_summaries.rs`), a line-faithful port of Spark 4.1's
+  insert/compress/merge/query (same thresholds, delta rule, backwards merge test,
+  Long-division target error, edge rules); state is the serialized summary plus the
+  percentages list. Accuracy is honored (default 10000): literals extract at accumulator
+  build so a bad knob fails before any row moves, non-literals fall back to first-row-wins
+  in `update_batch`. A NULL array element reads as 0.0 (Spark's `toDoubleArray` unboxes
+  null to 0.0 — measured on live 4.1.2, not guessed); an empty array answers NULL. Answers
+  are inserted doubles cast back, so the `as` int casts never meet an out-of-range value.
+  pins: perf-approxpct-1/C-001
+- `quantile_summaries.rs` — the sketch behind `percentile_approx.rs` (see that row). Merge
+  takes the other side by reference and stages a flushed clone, so the Digest discipline
+  (both sides compressed before merge) holds with no panic path. The head sort uses
+  `total_cmp` (stable, like Spark's TimSort) while the merge loops use IEEE `<`/`<=`
+  exactly as the Scala source does; f64↔decimal crosses exactly on the shortest repr and
+  quantizes HALF_UP to scale where the repr runs long.
+  pins: perf-approxpct-1/C-001
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
   Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`

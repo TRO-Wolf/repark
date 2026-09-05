@@ -58,6 +58,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs
   `sort_array`; `percentile_approx` discrete type.
   pins: fn-fix-1-registry-rows/C-002
+  **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx` threads accuracy: the native
+  `_inner` call takes it as `Option` (None is the two-arg default), and the `sql_expr`
+  carries a `, {accuracy}` tail because the list form always lowers through the
+  global-aggregate SQL path (nested parens fail the native classifier), where a missing
+  tail would silently run at default accuracy. Non-int accuracy renders as NULL in the tail
+  so the SQL path fails loudly in the UDAF instead of interpolating garbage.
+  pins: perf-approxpct-1/C-002
   **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
   `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002
   **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the
