@@ -64,6 +64,10 @@ byte-identical error): the envelope scan reports the row-major-first violation a
 columns while slow columns validate inside their own build, and a slow column's inference error
 raises in the build phase rather than the inference phase. The ledger names the pairs.
 
+The tuple loop skips `_apply_permutation` when the permutation is the identity (hoisted
+once, not per row) — the profiler charged the rebuild ~60 ms at 1e5. Only
+namedtuple-plus-reorder takes the permuting arm.
+
 pins: perf-facade-cdf-1/C-002, C-003, C-004
 
 ## Pointers

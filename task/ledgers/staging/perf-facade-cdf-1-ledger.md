@@ -54,9 +54,9 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 | C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | **PROVEN** | Seven cells in one run: tuples/nested/explicit old-vs-new pairs plus the pandas control (§8). The old leg swaps the dispatcher in a `finally`. |
 | C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | OPEN | JVM run once, beside at most one other JVM, then stopped. |
 | C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | OPEN |  |
-| C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | OPEN |  |
+| C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | **PROVEN** | Collection-error red, then 10 stub reds; 4 of 4 mutations red (§6 table). |
 
-VERDICT: 9 clauses, 4 PROVEN, 5 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 5 PROVEN, 4 OPEN, 0 REJECTED.
 
 ## 1. Environment — what the lane actually had (2026-09-05)
 
@@ -100,8 +100,22 @@ equality likewise (repr-per-row now), and a 38-significant-digit Decimal that tr
 — pre-existing behavior on both paths, shrunk to 26 digits here and noted in §11 rather than
 pinned.
 
-**Mutation.** Four brief-named faults, each run uncommitted against the green pins: (table
-lands with the runs).
+**Mutation.** Four brief-named faults, each run uncommitted against the green pins and
+reverted (tree verified clean after each):
+
+| # | Mutation | Result |
+|---|---|---|
+| M1 | `{int, float}` census builds `float64` instead of refusing (the merge refusal dropped) | **RED** — `test_long_double_merge_refuses_with_same_text` only (1 failed, 51 passed) |
+| M2 | decimal arm infers `decimal128(38, 9)` (wrong scale) | **RED** — `test_decimal_column_at_several_scales` only (Arrow type string and repr both move) |
+| M3 | fast build drops `None` cells before `pa.array` (the None mask skipped) | **RED** — 9 pins: every equality case with Nones in fast-arm columns (scalar matrix, whole-None, bytes, date/datetime, decimal, int64 extremes, dict key-union, single row, 1e4 rows) |
+| M4 | `{list}` census takes the scalar path (nested treated as scalar) | **RED** — 4 pins: the list-element merge refusal plus the three list-column equality pins |
+
+**Mutation score: 4 of 4 red.**
+
+One guard is deliberately *not* claimed as mutation-detected: the row-major-first choice
+across two violating decimal columns has no pin (multi-failure order, §7). It is the one
+branch whose behavior differs from legacy by design rather than by accident, and it is named
+here rather than left unexamined.
 
 ## 7. Design — what the column-wise path shares and what it proves
 
@@ -205,6 +219,26 @@ SELF_LOGIC_REVIEW:
     - no new code comment: SATISFIED (self-check below)
   success_condition: the pairs reproduce on a re-run and the map states the contract
   step_risks: [old leg unfaithful: HANDLED(it calls the kept legacy path itself)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-HOIST
+  agent: Actor
+  action: commit the identity-permutation hoist with the mutation record
+  charter_trace: C-009
+  preconditions:
+    - 4 of 4 mutations red with the tree clean after each: SATISFIED (§6 table)
+    - pins + neighbors green on the hoist: SATISFIED (119 passed)
+    - lint/format/map gates green: SATISFIED (this run)
+    - no new code comment: SATISFIED (self-check below)
+  success_condition: the hoist commit keeps every pin green and the maps true
+  step_risks: [permute-arm behavior change: HANDLED(namedtuple-reorder pin + suite)]
   contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
   tripwire_scan: CLEAN
   uncertainty: NONE

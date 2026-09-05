@@ -608,6 +608,8 @@ def _create_dataframe_from_rows_inner(
 
             tuples = []
 
+            permutation_is_identity = permutation == list(range(width))
+
             for row_index, row in enumerate(data):
                 # Refuse str / other iterables — character-iterating a string yields wrong rows.
                 # Only list/tuple are row shapes on this path.
@@ -626,7 +628,13 @@ def _create_dataframe_from_rows_inner(
 
                 # Raw cells — normalize after all-null type inference.
 
-                tuples.append(_apply_permutation(tuple(row), permutation))
+                source_row = tuple(row)
+
+                if permutation_is_identity:
+                    tuples.append(source_row)
+
+                else:
+                    tuples.append(_apply_permutation(source_row, permutation))
 
         elif schema is not None and len(schema) == 1:
             # Scalar cells + single-column schema (typically from a bare DataType wrap →
