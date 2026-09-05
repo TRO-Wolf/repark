@@ -166,6 +166,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
   `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
   pins: rp-8-repin-f21-f22/C-006
+  **RP-12 (2026-09-05):** the meta-pin reads the audited pin `189a73ed` from `docs/fork-sync.md`'s
+  pin history instead of `Cargo.toml`, so the V1-GATE audit stays true across later bumps.
   **RP-9 (2026-09-03):** the same meta-pin moves to `594bdbe5`; R114's dated cell names F-23.
   pins: rp-9-repin-f23/C-004
   **RP-10 (2026-09-04):** the same meta-pin moves to `85a4aaf0`; R114's dated cell names F-25.

@@ -214,7 +214,8 @@ def test_many_manifests_answer_equal_to_one_merged_manifest(tmp_path: Path) -> N
 @pytest.mark.skip(
     reason="PERF-ICE-CATALOG-IO-1 part 3 is fork-gated: the shared manifest ObjectCache needs "
     "iceberg TableBuilder::object_cache and MemoryCatalogBuilder::with_shared_object_cache_bytes "
-    "(fork ask F-CATIO-B). Measured through a temporary path override; un-skip at the pin bump."
+    "(fork ask F-CATIO-B, landed at pin 79119643). Measured through a temporary path override; "
+    "un-skip when RePark wires with_shared_object_cache_bytes behind its config key."
 )
 def test_the_second_statement_on_a_many_manifest_table_is_under_the_target(
     tmp_path: Path,

@@ -2518,7 +2518,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
-- `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the catalog-IO
+- `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05; RP-12 landed F-CATIO at
+  pin `79119643`, the part-3 pin stays skipped until RePark wires the shared cache):** the catalog-IO
   census and the manifest target on the memory catalog. The instrument is
   `_native.iceberg_metadata_cache_census(session)`, whose `body_fetches` counter is exactly the
   number of `metadata.json` documents the session has parsed — which is the number of S3 GETs the
