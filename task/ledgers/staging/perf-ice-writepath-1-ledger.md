@@ -178,11 +178,12 @@ RePark lane, override reverted, `git diff origin/main -- Cargo.toml Cargo.lock` 
 | `make verify` | exit 0 — `repark-iceberg` 398, `repark-spark` 788, `repark-sql` 341 plus every integration binary |
 | `make check-python-conventions` | exit 0 |
 | `make rust-panic-ban` | exit 0 |
-| `pytest python/repark/tests -q` | round 3 on the merged tree: **4,828 passed, 200 skipped**. Round 2 read 4,805 / 200 on this lane (round-2 re-run on the shipped tree). The round-2 critic measured 4,803 / 202 on its own module: two live-oracle tests skip without `pyspark` in the environment, and this lane has it installed. The count is environment-dependent, not tree-dependent. |
+| `pytest python/repark/tests -q` | round 3 final: **4,830 passed, 200 skipped**. Round 2 read 4,805 / 200 on this lane (round-2 re-run on the shipped tree). The round-2 critic measured 4,803 / 202 on its own module: two live-oracle tests skip without `pyspark` in the environment, and this lane has it installed. The count is environment-dependent, not tree-dependent. |
 | `pytest python/repark-parity/tests -q` | 574 passed |
-| the C-005 pin, 10 consecutive runs under `taskset -c 0-3` and 10 on all cores | 20 of 20 green |
+| the C-005 pin at 3/4/8/16, 10 consecutive runs under `taskset -c 0-3` and 10 on all cores | 20 of 20 green |
+| fork lane: `cargo test -p iceberg --lib arrow::record_batch_partition_splitter` over all 14 allow-listed types | 4 passed |
 | `cargo test -p repark-spark --lib v3_row_order` | 6 passed (the V3-11 order pins) |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_ice_writepath_1.py test_sql_harden_cutover.py -q` | round 3: **176 passed** (the ordering pin is parametrized over 4 and 16) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_ice_writepath_1.py test_sql_harden_cutover.py -q` | round 3 final: **178 passed** (the ordering pin is parametrized over 3, 4, 8, 16) |
 | `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | clean |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | clean |
 | `typos .` | clean |
