@@ -6,8 +6,10 @@ UDAF implemented `accumulator()` only, so DataFusion boxed one accumulator per g
 `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) cost 389 ms where `sum`
 cost 88 ms, and TPC-H Q17 ran 11.9× DuckDB with `elapsed_compute=2.46 s` in the
 partial `avg`. After: per-group `Vec<u64>` counts plus `Vec<Native>` sums over
-Float64 and Decimal32/64/128/256, `try_avg` overflow → per-group NULL, the retract
-path untouched for window frames. The `sum` leg beside every `avg` leg is the control:
+Float64 and Decimal32/64/128/256, `try_avg` overflow on the 2×-MAX shape →
+per-group NULL (the i128 sum-wrap shape is BACKLOG row `AVG-DEC-SUMWRAP-1` in
+`docs/spark-sql-iceberg-parity.md`), the retract path untouched for window frames.
+The `sum` leg beside every `avg` leg is the control:
 it runs the same grouping through DataFusion's own groups accumulator, so the ratio
 is the avg-specific cost with scan, grouping and load divided out.
 
@@ -66,4 +68,5 @@ EOF
 
 The last line is the durable pin: `test_many_groups_avg_costs_like_sum` re-measures
 the ratio (bound 2.5, single partition) on every run, and the file's 23 answer pins
-plus 6 live legs hold the Spark-equal answers the accumulator must keep.
+plus 3 round-2 behavior pins and 6 live legs hold the Spark-equal answers the
+accumulator must keep.

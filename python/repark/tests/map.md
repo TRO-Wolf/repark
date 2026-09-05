@@ -1732,8 +1732,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   where Spark answers. Round 2 pins the grouped refusal shapes as measured: grouped
   multi-distinct refuses as a bare `PySparkException` with the same message, and
   grouped `avg(NULL)` refuses as `UnsupportedOperationException` naming the groups
-  accumulator pair. The brief's full gate list runs green with this file in the
-  tree, and §6 of the ledger records the three named mutations red.
+  accumulator pair. Round 2 also records the `AVG-DEC-SUMWRAP-1` divergence: the
+  i128 sum-wrap fixture answers `0.0000` on both doors where Spark answers NULL
+  (`try_avg`) or raises (`avg`). The brief's full gate list runs green with this
+  file in the tree, and §6 of the ledger records the three named mutations red.
   pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,

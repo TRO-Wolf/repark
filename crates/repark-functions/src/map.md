@@ -165,8 +165,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `datafusion-functions-aggregate-common` `NullState` cannot be used without a new
   dependency, so its All/Some fast-path semantics are re-implemented here). Three
   deliberate deviations from the reference, each forced by a house contract: the average
-  closure returns `Option` so `try_avg` overflow yields per-group NULL instead of failing
-  the query; the float state stays `[sum, count:Int64]` and the decimal state
+  closure returns `Option` so 2×-MAX `try_avg` overflow yields per-group NULL instead
+  of failing the query (the sum-wrap shape is BACKLOG `AVG-DEC-SUMWRAP-1`); the
+  float state stays `[sum, count:Int64]` and the decimal state
   `[count:UInt64, sum]` because `state_fields` belongs to the untouched retract path;
   length mismatches are loud `exec_err!` instead of the reference's `assert_eq!`, and
   indexing is bounds-checked instead of `get_unchecked` (`unsafe` is forbidden in this

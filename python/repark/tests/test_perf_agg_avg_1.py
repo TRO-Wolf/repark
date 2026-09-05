@@ -122,6 +122,32 @@ SQL_GROUPED_MULTI_DISTINCT = (
 
 SQL_GROUPED_AVG_NULL = "SELECT k, avg(v) AS a FROM (VALUES (1, NULL)) AS t(k, v) GROUP BY k"
 
+SQL_DECIMAL_SUMWRAP_GROUPED_TRY = (
+    "SELECT k, try_avg(v) AS a FROM (VALUES "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) "
+    "AS t(k, v) GROUP BY k"
+)
+
+SQL_DECIMAL_SUMWRAP_GROUPED = (
+    "SELECT k, avg(v) AS a FROM (VALUES "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) "
+    "AS t(k, v) GROUP BY k"
+)
+
+SQL_DECIMAL_SUMWRAP_GLOBAL = (
+    "SELECT avg(v) AS a FROM (VALUES "
+    "(CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) AS t(v)"
+)
+
 SQL_MANY_CHECKSUM = (
     "SELECT count(*) AS groups, sum(a) AS checksum FROM "
     "(SELECT k, avg(v) AS a FROM many_groups GROUP BY k) t"
@@ -334,6 +360,22 @@ def test_avg_grouped_multi_distinct_refuses_bare() -> None:
     with pytest.raises(PySparkException, match="DistinctAvgAccumulator") as caught:
         _session().sql(SQL_GROUPED_MULTI_DISTINCT).toArrow()
     assert type(caught.value) is PySparkException
+
+
+def test_avg_decimal_sumwrap_records_divergence() -> None:
+    """The sum-wrap fixture answers 0.0000 on both doors; Spark NULLs and raises."""
+    """pins: perf-agg-avg-1/C-003."""
+    spark = _session()
+    grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
+    assert grouped_try.column("a").to_pylist() == [Decimal("0.0000")]
+    assert _sig(grouped_try) == [("k", "int64", True), ("a", "decimal128(38, 4)", True)]
+    grouped = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).toArrow()
+    assert grouped.column("a").to_pylist() == [Decimal("0.0000")]
+    native_grouped = repark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).to_arrow()
+    assert native_grouped.column("a").to_pylist() == [Decimal("0.0000")]
+    native_global = repark.sql(SQL_DECIMAL_SUMWRAP_GLOBAL).to_arrow()
+    assert native_global.column("a").to_pylist() == [Decimal("0.0000")]
+    assert _sig(native_global) == [("a", "decimal128(38, 4)", True)]
 
 
 def test_avg_grouped_null_refuses_naming_groups_accumulator() -> None:

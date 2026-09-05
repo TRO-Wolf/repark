@@ -32,8 +32,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **PERF-AGG-AVG-1 (2026-09-05):** the UDAF now also serves grouped aggregation
   through `src/avg_groups.rs` (`groups_accumulator_supported` /
   `create_groups_accumulator` over Float64 and Decimal32/64/128/256, `try_avg`
-  overflow → per-group NULL); the `Accumulator` retract arms are untouched for window
-  frames. The 300 ms isolated cost on `avg(l_quantity) GROUP BY l_partkey` (200 k
+  overflow on the 2×-MAX shape → per-group NULL, the sum-wrap shape filed as
+  BACKLOG `AVG-DEC-SUMWRAP-1`); the `Accumulator` retract arms are untouched for
+  window frames. The 300 ms isolated cost on `avg(l_quantity) GROUP BY l_partkey` (200 k
   groups) was one boxed accumulator per group; the groups path keeps one sum and one
   count vector. pins: perf-agg-avg-1/C-001, C-002
 

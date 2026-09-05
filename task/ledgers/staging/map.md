@@ -25,7 +25,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
   Decimal32/64/128/256 grouped paths with Spark's result rules and `try_avg`
-  overflow → NULL, the retract path untouched for window frames. 5 PROVEN, 0 OPEN,
+  overflow → NULL on the 2×-MAX shape (`AVG-DEC-SUMWRAP-1` files the wrap shape),
+  the retract path untouched for window frames. 5 PROVEN, 0 OPEN,
   1 REJECTED (Q17 ≤ 3× missed with the sum-floor proof; avg/sum ≤ 1.3× met); gates
   green, attestation filed. `risk_tier: standard`. Branch `perf/agg-avg-1`.
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —

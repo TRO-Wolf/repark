@@ -1963,6 +1963,28 @@ the pin rather than obeying it.
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
 
+### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps to zero
+
+- **repark** — grouped and global `avg` / `try_avg` over three `DECIMAL(38,0)` maxima
+  plus `40282366920938463463374607431768211459` (the four values sum to exactly
+  2^128, so the i128 accumulator wraps to 0) answer **`0.0000`** at
+  `decimal128(38, 4)` on both SQL doors. Window `try_avg` answers
+  `[None, None, None, 0.0000]`; window `avg` raises `Arithmetic Overflow`.
+- **Apache Spark** — the same fixture under `local[2]`, ANSI on: grouped and global
+  `try_avg` answer **None**; grouped and global `avg` raise **ARITHMETIC_OVERFLOW**
+  (`Overflow in sum of decimals`); window `try_avg` answers four **None**s; window
+  `avg` raises. The return type agrees wherever a value is returned.
+  *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
+  (asserts today's `0.0000` on both doors; reds when the accumulator is fixed).
+- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4).
+  Pre-existing: the global `Accumulator` arms are byte-identical to the base (that
+  unit's ledger C-002), so the global shape cannot have changed there; the new groups
+  path inherits the same wrapping add. The unit's `try_avg`-yields-NULL claim covers
+  only the 2×-MAX shape. A fix needs overflow latching in the groups, global and
+  retract paths — not a one-line checked add.
+
 ### G18-1 — array-column list value-field name (`item` vs `element`)
 
 - **repark** — `createDataFrame` of an array column exports Arrow list value field named `item`.
@@ -4450,10 +4472,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   per group. The UDAF now serves `groups_accumulator_supported` /
   `create_groups_accumulator` (`crates/repark-functions/src/avg_groups.rs`, null
   tracking in `groups_null_state.rs`) over Float64 and Decimal32/64/128/256 with
-  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow → per-group
-  NULL; the `Accumulator` retract arms and `state_fields` are byte-identical, so window
-  frames keep the retract path. Measured on a release module at 8-thread parity
-  (median-of-5, loads 12–17, floors 3.3 ms before / 4.7 ms after):
+  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow on the
+  2×-MAX shape → per-group NULL (the i128 sum-wrap shape is BACKLOG row
+  AVG-DEC-SUMWRAP-1); the `Accumulator` retract arms and `state_fields` are
+  byte-identical, so window frames keep the retract path. Measured on a release
+  module at 8-thread parity (median-of-5, loads 12–17, floors 3.3 ms before /
+  4.7 ms after):
   `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) **400.6 → 99.0–113.8
   ms** against a `sum` control at 82.6–90.0 ms — the ratio **4.45× → 1.10–1.28×**, the
   ≤ 1.3× gate met; TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries 17`)
@@ -4463,9 +4487,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
   queries through the optimizer's dedup rewrite and still refuses multi-column ones
   with `DistinctAvgAccumulator`. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
-  (23 Spark-recorded answer pins, the 2.5-bound cost probe red at 4.06× on the base
-  and green at 1.21× after, 6 live legs) and 21 Rust unit tests. Numbers, floors and
-  the reproduce block: `docs/perf/aggregate-baseline.md`.
+  (23 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
+  probe red at 4.06× on the base and green at 1.21× after, 6 live legs) and 21 Rust
+  unit tests. Numbers, floors and the reproduce block:
+  `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
