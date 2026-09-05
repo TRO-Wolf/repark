@@ -46,3 +46,5 @@ build/
 # lives under /tmp/overnight-conductor/<lane>/scratch/, outside the repo).
 /scratch/
 PROGRESS.md
+
+handback.json
