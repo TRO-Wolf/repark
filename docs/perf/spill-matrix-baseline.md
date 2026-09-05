@@ -191,8 +191,9 @@ doing
 exactly what the north star claims, and it is the only part of the claim the pool is responsible
 for.
 
-**Degrades before it spills.** At 1e6 and 1e7 the high-cardinality aggregate and `distinct` report
-`skipped_aggregation_rows` equal to ~95 % of input rows at the 8 GiB and unbounded pools: the
+**Degrades before it spills.** The high-cardinality aggregate, `distinct` and `repartition` report
+`skipped_aggregation_rows` of 475,700 at 1e6 (48 % of input) and 9,480,000 at 1e7 (95 %) at the
+8 GiB and unbounded pools: the
 partial aggregate measures its own hit rate, concludes grouping is pointless when nearly every row
 is its own group, and streams rows straight to the final aggregate instead. It is a degradation,
 not a spill, and it is why those rows read `degr` rather than `ok`.
