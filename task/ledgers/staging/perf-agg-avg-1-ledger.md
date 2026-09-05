@@ -34,14 +34,14 @@ lines, so no `EXCEPTIONS` row and no CAP-1 mirror edit).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The UDAF serves grouped aggregation through a `GroupsAccumulator` on every input it serves today: Float64 (int/float coerce as before) and Decimal32/64/128/256 with Spark's `(min(38,p+4), min(38,s+4))` result rules; `try_avg` decimal overflow yields NULL per group; `avg(DISTINCT)` still refuses. | `crates/repark-functions/src/avg_groups.rs`; `groups_accumulator_supported` / `create_groups_accumulator` in `aggregate.rs`; the Rust unit tests (`update_batch` / `merge_batch` / `evaluate` / `state` / `size`, `EmitTo::First`). | **OPEN** | Which threshold separates base from fixed on the many-groups probe? Base ratio ≈ 4.4× avg/sum; fixed ratio unmeasured. State the bound in C-004 once both are measured. |
-| C-002 | The retract path is unchanged: `SparkAvgWithRetract` keeps its `retract_batch` arms, window-frame `avg` (float and decimal) answers as before, and every existing avg pin stays green. | The untouched `Accumulator` impls; `test_perf_agg_avg_1.py` window control; the full `repark-functions` Rust suite. | **OPEN** | Window control unmeasured; existing pins unrun on this lane. |
-| C-003 | Grouped `avg` / `try_avg` answers are Spark-equal on int, float and decimal inputs with NULLs, on empty input, on ≥ 1e5 groups, and on decimal result precision/scale — every expectation recorded from live PySpark 4.1.2, value AND Arrow-path type. | `python/repark/tests/test_perf_agg_avg_1.py` (always-run pins + `REPARK_PARITY_LIVE=1` legs); the recorded Spark outputs in §8. | **OPEN** | Spark goldens unrecorded; the JVM slot is held by sibling lanes. |
-| C-004 | The many-groups probe is red on the base and green after: `avg` over ≥ 1e5 groups costs no more than the stated multiple of `sum` over the same grouping, measured back to back in one process. | The probe in `test_perf_agg_avg_1.py`; the base red run and the after green run with loads in §8. | **OPEN** | Bound TBD from the measured base/fixed margins (see C-001). |
-| C-005 | The delivery gates are met on the analysis' own cells at 8-thread parity on a release module: `decimal/sf1/avg_decimal_by_partkey` ≤ 1.3× `sum_decimal_by_partkey`, and TPC-H Q17 ≤ 3× DuckDB with DuckDB recorded on the same box. | §8; `docs/perf/aggregate-baseline.md`; the TPC-H runner output. | **OPEN** | Before numbers unmeasured on this lane. |
-| C-006 | Docs and gates: registry row `PERF-AGG-AVG-1` FIXED with before/after, a `docs/perf` aggregate baseline with the machine/profile header and a reproduce block, `map.md` lockstep for every directory touched, the brief's full gate list exit 0, and the three named mutations red. | §6, §7, §9; the gates table. | **OPEN** | Nothing filed yet. |
+| C-001 | The UDAF serves grouped aggregation through a `GroupsAccumulator` on every input it serves today: Float64 (int/float coerce as before) and Decimal32/64/128/256 with Spark's `(min(38,p+4), min(38,s+4))` result rules; `try_avg` decimal overflow yields NULL per group. | `crates/repark-functions/src/avg_groups.rs`; `groups_accumulator_supported` / `create_groups_accumulator` in `aggregate.rs`; the Rust unit tests (`update_batch` / `merge_batch` / `evaluate` / `state` / `size`, `EmitTo::First`). | **PROVEN** | `groups_supported` true for Float64 + all four decimal returns, false for distinct and anything else; `create_groups` builds all five arms. 21 Rust tests green (18 avg + null-state + 2 decimal empty/filtered guards + SQL wiring). Amended 2026-09-05: the charter asserted `avg(DISTINCT)` refuses, but the brief conditioned on "if served" — measured, single-column answers through the optimizer's dedup rewrite (plan-proven, never reaches the UDAF distinct arm) and multi-column refuses with `DistinctAvgAccumulator`. Both pinned at both tiers. |
+| C-002 | The retract path is unchanged: `SparkAvgWithRetract` keeps its `retract_batch` arms, window-frame `avg` (float and decimal) answers as before, and every existing avg pin stays green. | The untouched `Accumulator` impls; `test_perf_agg_avg_1.py` window control; the full `repark-functions` Rust suite. | **PROVEN** | `git diff origin/main` on `aggregate.rs`: imports + two additive methods + three `pub(crate)` visibility words only; every `Accumulator` arm, `state_fields` and `return_type` byte-identical. Window control `[1.0, 1.5, 2.0, 4.0]` green always-run and live. Full crate suite 355 passed, 0 failed. |
+| C-003 | Grouped `avg` / `try_avg` answers are Spark-equal on int, float and decimal inputs with NULLs, on empty input, on 2e5 groups, and on decimal result precision/scale — every expectation recorded from live PySpark 4.1.2, value AND Arrow-path type. | `python/repark/tests/test_perf_agg_avg_1.py` (always-run pins + `REPARK_PARITY_LIVE=1` legs); the recorded Spark outputs in §8. | **PROVEN** | 24 passed, 6 skipped routine; 149 passed in the `test_parity_live.py` co-collection with `REPARK_PARITY_LIVE=1` (all 6 live legs green beside `test_live_disclosure_still_diverges`). Every literal in the file was printed by the throwaway recorder from live Spark and is quoted verbatim in §8. Two pre-existing divergences disclosed, not absorbed: group keys nullable here vs not-null on Spark (live legs project to the avg column), multi-column distinct refuses here vs answers on Spark. |
+| C-004 | The many-groups probe is red on the base and green after: `avg` over 2e5 groups costs no more than 2.5× `sum` over the same grouping, measured back to back in one process on one partition. | The probe in `test_perf_agg_avg_1.py`; the base red run and the after green run with loads in §8. | **PROVEN** | Bound 2.5 set from the margins: base 4.06× (avg 133.9 ms vs sum 33.0 ms, load 6.12) red; after 1.21× (avg 38.1 ms vs sum 31.4 ms) green. The single partition is load-bearing (8 partitions: 2.77× base) — §6. |
+| C-005 | The delivery gates are met on the analysis' own cells at 8-thread parity on a release module: `decimal/sf1/avg_decimal_by_partkey` ≤ 1.3× `sum_decimal_by_partkey`, and TPC-H Q17 ≤ 3× DuckDB with DuckDB recorded on the same box. | §8; `docs/perf/aggregate-baseline.md`; the TPC-H runner output. | **REJECTED** | avg/sum **4.45× → 1.10–1.28×** — target ≤ 1.3× **met** (isolated cost 310.6 ms = 94× floor → 10–25 ms = 2–5× floor). Q17 **13.8–18.3× → 3.6–8.3×** DuckDB — target ≤ 3× **NOT met**, so the conjunction is rejected; reported as a miss here, in the registry row and in the baseline, with the `EXPLAIN ANALYZE` decomposition (partial avg 555–558 ms over 8 partitions, final 69–81 ms, rest microseconds) and the sum-floor proof that no avg-only fix reaches the bar (`sum` alone costs 2.2× DuckDB's whole Q17). |
+| C-006 | Docs and gates: registry row `PERF-AGG-AVG-1` FIXED with before/after, a `docs/perf` aggregate baseline with the machine/profile header and a reproduce block, `map.md` lockstep for every directory touched, the brief's full gate list exit 0, and the three named mutations red. | §6, §7, §9; the gates table. | **OPEN** | Registry row filed, baseline filed, five `map.md` files in lockstep, mutations red (§6). The brief's full gate list runs next; this clause flips with the gates table. |
 
-VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 4 PROVEN, 1 OPEN, 1 REJECTED.
 
 ## 6. Red-first and mutation (docs/testing.md "Gate provocation proofs")
 
@@ -100,7 +100,11 @@ only test that moved with it is
 
 ## 7. Registry
 
-To file: `PERF-AGG-AVG-1` in `docs/spark-sql-iceberg-parity.md` §7, measured-perf form.
+Filed: `PERF-AGG-AVG-1` **FIXED 2026-09-05** in `docs/spark-sql-iceberg-parity.md` §7,
+measured-perf form with before/after, the Q17 bar reported as missed with the
+sum-floor unreachability proof, and the pin citations. `docs/perf/aggregate-baseline.md`
+holds the machine/profile header, the floors and the reproduce block, with its
+`docs/perf/map.md` row.
 
 ## 8. Numbers
 
@@ -122,6 +126,33 @@ timed with `to_arrow_table`, not `fetchall` — materializing 2e5 Python decimal
 480 ms and is not the engine. TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries
 17`, two runs): repark 0.721 s / 0.521 s vs DuckDB 0.040 s / 0.038 s → 18.25× / 13.84×
 (status OK, 1 row each).
+
+**After (2026-09-05, tip release module `163,720,360 B`, `__debug_assertions__ False`,
+load 12–17, 5 timed + 1 warm-up, final build with the §6 guard):**
+
+| cell | median | min | spread | load |
+|---|---|---:|---:|---|
+| `decimal/sf1/avg_decimal_by_partkey/tp8` | 110.1 (rounds: 99.8, 113.8, 99.0) | 90.0 | 24.3 | 13–17 |
+| `decimal/sf1/avg_double_by_partkey/tp8` | 98.8 | 90.8 | 10.2 | 17.03 |
+| `decimal/sf1/sum_decimal_by_partkey/tp8` | 85.9 (rounds: 82.6, 89.7, 89.7) | 74.1 | 16.7 | 13–17 |
+| floor (6 repeated sum medians) | — | — | **4.7** | 17.03 |
+| avg/sum ratio | **1.10–1.28×** (gate ≤ 1.3×: met) | — | — | — |
+| DuckDB `avg_double_by_partkey` (arrow fetch) | 88.7 | — | 5.0 | — |
+
+Isolated avg cost 10–25 ms = 2–5× the 4.7 ms floor (was 310.6 ms = 94× the 3.3 ms
+floor). One 1.89× by-partkey sample (avg leg 170.7 ms, sum leg 90.3 ms in the same
+script) is scheduling noise — its sibling control stayed flat and the next two rounds
+measured 1.27× and 1.10×; it is reported, not hidden. TPC-H Q17 repeats-3 boards:
+repark 0.143 / 0.146 / 0.216 / 0.355 s vs DuckDB 0.036–0.043 s → 3.56× / 4.10× /
+5.36× / 8.29× (status OK, 1 row each); one repeats-5 median 0.268 s → 6.81×. The ≤
+3× bar is NOT met. `EXPLAIN ANALYZE` after the fix: partial `avg(l_quantity)` by
+`l_partkey` `elapsed_compute` 555–558 ms summed over 8 partitions (output 1.56 M
+state rows — no per-partition reduction), final 69–81 ms, everything else
+microseconds. `sum` on the same grouping costs 82.6–89.7 ms, so even a free `avg`
+lands Q17 at 2.2× DuckDB before the join: the residue is scan/grouping/join
+efficiency, out of this unit's scope. Committed probe
+(`test_many_groups_avg_costs_like_sum`, single partition, median-of-5): avg 38.1 ms
+vs sum 31.4 ms = **1.21×** (bound 2.5, green; was 4.06× red).
 
 **Oracle record (2026-09-05, live PySpark 4.1.2 `local[2]`, ANSI on, UTC, shuffle 2,
 beside one sibling JVM).** Every literal in `test_perf_agg_avg_1.py` was printed by

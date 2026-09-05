@@ -4445,6 +4445,27 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
   are the record. Remaining commit 1 × N stays
   `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
+- **PERF-AGG-AVG-1** — **FIXED 2026-09-05 (PERF-AGG-AVG-1)**. The Spark `avg` /
+  `try_avg` UDAF implemented `accumulator()` only, so DataFusion boxed one accumulator
+  per group. The UDAF now serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (`crates/repark-functions/src/avg_groups.rs`, null
+  tracking in `groups_null_state.rs`) over Float64 and Decimal32/64/128/256 with
+  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow → per-group
+  NULL; the `Accumulator` retract arms and `state_fields` are byte-identical, so window
+  frames keep the retract path. Measured on a release module at 8-thread parity
+  (median-of-5, loads 12–17, floors 3.3 ms before / 4.7 ms after):
+  `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) **400.6 → 99.0–113.8
+  ms** against a `sum` control at 82.6–90.0 ms — the ratio **4.45× → 1.10–1.28×**, the
+  ≤ 1.3× gate met; TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries 17`)
+  **0.521–0.721 s → 0.143–0.355 s** against DuckDB 1.5.5 at 0.036–0.043 s on the same
+  box — 13.8–18.3× → 3.6–8.3×, the ≤ 3× bar NOT met, and no avg-only fix can meet it
+  (`sum` on the same grouping already costs 82.6 ms, 2.2× DuckDB's whole Q17; the
+  residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
+  queries through the optimizer's dedup rewrite and still refuses multi-column ones
+  with `DistinctAvgAccumulator`. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  (23 Spark-recorded answer pins, the 2.5-bound cost probe red at 4.06× on the base
+  and green at 1.21× after, 6 live legs) and 21 Rust unit tests. Numbers, floors and
+  the reproduce block: `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
