@@ -5575,7 +5575,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **repark** — `F.sentences("s")` raises `UnsupportedOperationException: functions.sentences
   is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
 - **Apache Spark** — `"Hello world. How are you?"` answers `[["Hello", "world"], ["How",
-  "are", "you"]]`; `""` answers `[[]]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
+  "are", "you"]]`; `""` answers `[]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
   ANSI on, 2026-09-05, EX-25 batch.)*
 - **Pin** — `python/repark/tests/test_examples_functions_a.py::test_sentences_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
