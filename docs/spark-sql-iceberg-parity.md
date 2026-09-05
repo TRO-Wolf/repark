@@ -774,6 +774,20 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — DECLARED until a schema-preserving create path exists. Values stay equal; only
   the container precision/scale widens. The pin asserts source and round-trip Arrow + polars
   dtypes so a silent preservation reds it.
+
+### TY-6 — SQL-text `UNION` of small integer literals answers BIGINT
+
+- **repark** — `SELECT * FROM (SELECT 1 AS r UNION ALL SELECT 2 AS r)` answers `int64` /
+  non-null. The plan-build union schema is computed before the TYPES-1 narrowing pass, so
+  the narrowed branches coerce back to the stale wide schema. Base behaves the same; TYPES-1
+  narrowed every other literal shape but left this one.
+- **Apache Spark** — answers `int32` / non-null with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe.)*
+- **Pin** — none yet; the TYPES-1 ledger §9 records both measured shapes.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Fixing it means re-deriving the
+  union schema after narrowing, which is a planner change beyond a type-widening unit.
+  pins: types-1/C-001
+
 ### TZ-2 — the session-timezone default is `UTC`
 
 - **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set
@@ -3708,6 +3722,18 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — BACKLOG, filed 2026-09-03 from the EX-4 measurement. The name stays on the
   example backlog until the encoder emits Spark's padding; teaching the unpadded form would
   assert a silent wrong answer.
+
+### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null
+
+- **repark** — both answer `int64` with Spark's values (TYPES-1 fixed the `UInt64` half under
+  BL-8) but derive **nullable** from the wrapped DataFusion kernels.
+- **Apache Spark** — answers `int64` / **non-null** with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
+  (pins the `(True, False)` nullability pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Nullability derivation is
+  CUTOVER-SCHEMA-1's domain and out of TYPES-1's charter; the pin holds the divergence.
+  pins: types-1/C-003
 
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 

@@ -139,9 +139,10 @@ def test_overflow_errors_when_ansi_on() -> None:
 
 
 def test_overflow_wraps_when_ansi_off() -> None:
-    """pins: types-1/C-002 — INT overflow wraps under ANSI off on both doors."""
+    """pins: types-1/C-002 — INT overflow wraps under ANSI off, shape and all."""
     session = _session(**{ANSI_KEY: "false"})
     frame = _seed(session)
+    assert _door_type(session, "SELECT 2147483647 + 1 AS r") == ("int32", False)
     assert session.sql("SELECT 2147483647 + 1 AS r").toArrow().column("r").to_pylist() == [
         -2147483648
     ]
@@ -462,9 +463,51 @@ def test_live_aggregates_and_rank_match_the_oracle(spark_engine: lp.Engine) -> N
         "SELECT count(DISTINCT s) AS r FROM types1_probe",
         "SELECT count_if(i > 1) AS r FROM types1_probe",
         "SELECT sum(i) AS r FROM types1_probe",
+        "SELECT sum(CAST(b AS DECIMAL(10, 2))) AS r FROM types1_probe",
+        "SELECT bit_length(s) AS r FROM types1_probe WHERE s IS NOT NULL",
+        "SELECT length(s) AS r FROM types1_probe WHERE s IS NOT NULL",
         "SELECT rank() OVER (ORDER BY i) AS r FROM types1_probe",
+        "SELECT dense_rank() OVER (ORDER BY i) AS r FROM types1_probe",
         "SELECT row_number() OVER (ORDER BY i) AS r FROM types1_probe",
         "SELECT ntile(2) OVER (ORDER BY i) AS r FROM types1_probe",
+        "SELECT percent_rank() OVER (ORDER BY i) AS r FROM types1_probe",
+        "SELECT cume_dist() OVER (ORDER BY i) AS r FROM types1_probe",
         "SELECT from_unixtime(0) AS r",
+        "SELECT from_unixtime(0, 'yyyy/MM/dd') AS r",
     ]:
         assert _live_type(engine, query) == _live_type(spark_engine, query)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_sketch_and_regression_counts_match_on_type_and_value(
+    spark_engine: lp.Engine,
+) -> None:
+    """pins: types-1/C-003 — approx and regr_count match Spark on type and value.
+
+    Nullability is carved out: repark derives nullable from the DataFusion
+    kernels while Spark marks both non-null (registry row BL-18).
+    """
+    session = _session()
+    _seed(session)
+    _seed_oracle(spark_engine)
+    engine = _live_engine(session)
+    for query in [
+        "SELECT approx_count_distinct(s) AS r FROM types1_probe",
+        "SELECT regr_count(b, i) AS r FROM types1_probe",
+    ]:
+        mine = _live_type(engine, query)
+        spark = _live_type(spark_engine, query)
+        assert (mine[0], mine[2]) == (spark[0], spark[2])
+        assert (mine[1], spark[1]) == (True, False)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_overflow_wraps_when_ansi_off(spark_engine: lp.Engine) -> None:
+    """pins: types-1/C-002 — INTMAX+1 wraps identically with ANSI off, both engines."""
+    session = _session(**{ANSI_KEY: "false"})
+    spark_engine.session.conf.set("spark.sql.ansi.enabled", "false")
+    try:
+        query = "SELECT 2147483647 + 1 AS r"
+        assert _live_type(_live_engine(session), query) == _live_type(spark_engine, query)
+    finally:
+        spark_engine.session.conf.set("spark.sql.ansi.enabled", "true")
