@@ -148,6 +148,33 @@ SQL_DECIMAL_SUMWRAP_GLOBAL = (
     "(CAST('40282366920938463463374607431768211459' AS DECIMAL(38, 0)))) AS t(v)"
 )
 
+SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY = (
+    "SELECT k, try_avg(v) AS a FROM (VALUES "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('40282366920938463463374607431768611459' AS DECIMAL(38, 0)))) "
+    "AS t(k, v) GROUP BY k"
+)
+
+SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED = (
+    "SELECT k, avg(v) AS a FROM (VALUES "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('40282366920938463463374607431768611459' AS DECIMAL(38, 0)))) "
+    "AS t(k, v) GROUP BY k"
+)
+
+SQL_DECIMAL_SUMWRAP_NONZERO_FRAME = (
+    "SELECT k, v FROM (VALUES "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('99999999999999999999999999999999999999' AS DECIMAL(38, 0))), "
+    "(1, CAST('40282366920938463463374607431768611459' AS DECIMAL(38, 0)))) "
+    "AS t(k, v)"
+)
+
 SQL_FLOAT_DRIFT_GROUPED = (
     "SELECT k, avg(v) AS a FROM (VALUES (1, CAST(1e16 AS DOUBLE)), "
     + ", ".join(["(1, CAST(1.0 AS DOUBLE))"] * 64)
@@ -386,7 +413,7 @@ def test_avg_grouped_float_drift_within_spark() -> None:
 
 
 def test_avg_decimal_sumwrap_records_divergence() -> None:
-    """The sum-wrap fixture answers 0.0000 on both doors; Spark NULLs and raises."""
+    """Sum-wrap fixtures answer the wrapped quotient; Spark NULLs and raises."""
     """pins: perf-agg-avg-1/C-003."""
     spark = _session()
     grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
@@ -399,6 +426,18 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     native_global = repark.sql(SQL_DECIMAL_SUMWRAP_GLOBAL).to_arrow()
     assert native_global.column("a").to_pylist() == [Decimal("0.0000")]
     assert _sig(native_global) == [("a", "decimal128(38, 4)", True)]
+    nonzero_try = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY).toArrow()
+    assert nonzero_try.column("a").to_pylist() == [Decimal("100000.0000")]
+    assert _sig(nonzero_try) == [("k", "int64", True), ("a", "decimal128(38, 4)", True)]
+    nonzero = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).toArrow()
+    assert nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
+    native_nonzero = repark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).to_arrow()
+    assert native_nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
+    frame = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_FRAME)
+    frame_try = frame.groupBy("k").agg(F.try_avg("v").alias("a")).toArrow()
+    assert frame_try.column("a").to_pylist() == [Decimal("100000.0000")]
+    frame_avg = frame.groupBy("k").agg(F.avg("v").alias("a")).toArrow()
+    assert frame_avg.column("a").to_pylist() == [Decimal("100000.0000")]
 
 
 def test_avg_grouped_null_refuses_naming_groups_accumulator() -> None:

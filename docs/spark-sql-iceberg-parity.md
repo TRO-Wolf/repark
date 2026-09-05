@@ -1981,22 +1981,31 @@ the pin rather than obeying it.
   shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
   until a G7 fix lands.
 
-### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps to zero
+### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps with a representable quotient
 
-- **repark** — grouped and global `avg` / `try_avg` over three `DECIMAL(38,0)` maxima
-  plus `40282366920938463463374607431768211459` (the four values sum to exactly
-  2^128, so the i128 accumulator wraps to 0) answer **`0.0000`** at
-  `decimal128(38, 4)` on both SQL doors. Window `try_avg` answers
-  `[None, None, None, 0.0000]`; window `avg` raises `Arithmetic Overflow`.
-- **Apache Spark** — the same fixture under `local[2]`, ANSI on: grouped and global
-  `try_avg` answer **None**; grouped and global `avg` raise **ARITHMETIC_OVERFLOW**
-  (`Overflow in sum of decimals`); window `try_avg` answers four **None**s; window
-  `avg` raises. The return type agrees wherever a value is returned.
+- **repark** — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
+  i128 answer the wrapped quotient at `decimal128(38, 4)` instead of NULLing or
+  raising. The zero-wrap fixture (three maxima plus
+  `40282366920938463463374607431768211459`, summing to exactly 2^128) answers
+  **`0.0000`** on the SQL doors (grouped, and global on the native door); the
+  non-zero-wrap fixture (complement `40282366920938463463374607431768611459`,
+  wrapping to 400000) answers **`100000.0000`** on grouped SQL and grouped
+  DataFrame. Window `try_avg` answers `[None, None, None, 0.0000]`; window `avg`
+  raises `Arithmetic Overflow`.
+- **Apache Spark** — the same fixtures under `local[2]`, ANSI on: grouped `try_avg`
+  answers **None** and grouped `avg` raises **ARITHMETIC_OVERFLOW** (`Overflow in
+  sum of decimals`) on both fixtures, SQL and DataFrame alike (global likewise on
+  the zero-wrap fixture); window `try_avg` answers four **None**s; window `avg`
+  raises **NUMERIC_VALUE_OUT_OF_RANGE** (the first-row quotient is itself
+  unrepresentable at `Decimal(38, 4)`). The return type agrees wherever a value is
+  returned.
   *(oracle: recorded 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
-  (asserts today's `0.0000` on both doors; reds when the accumulator is fixed).
-- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4).
+  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors;
+  reds when the accumulator is fixed).
+- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
+  the general wrap class in round 3 R2-1).
   Pre-existing: the global `Accumulator` arms are byte-identical to the base (that
   unit's ledger C-002), so the global shape cannot have changed there; the new groups
   path inherits the same wrapping add. The unit's `try_avg`-yields-NULL claim covers

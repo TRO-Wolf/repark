@@ -1720,7 +1720,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   answer pins plus the cost probe that proves the `GroupsAccumulator` runs. Always-run pins
   assert Spark-recorded values AND Arrow types: int/float/decimal global and grouped avgs
   with NULLs, every input width coerced to double, decimal `(10,2)→(14,6)` exactly,
-  `try_avg` overflow NULL at `decimal(38,4)`, plain-avg overflow raising, empty input,
+  `try_avg` overflow NULL at `decimal(38,4)` on the 2×-MAX shape, plain-avg overflow raising,
   all-NULL groups, single `avg(DISTINCT)` answering through the optimizer's dedup rewrite,
   and the sliding-window control. The many-groups leg uses a 2e5-group fixture whose values
   are exact in binary (halves under 32), so per-group avgs are bit-exact across engines and
@@ -1729,14 +1729,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   2.5, 1.21× after) — the single partition is what makes the per-group boxing cost
   visible. Live legs
   re-derive the small grouped, decimal, window, many-groups, overflow and distinct answers
-  from PySpark 4.1.2. Two pre-existing divergences are disclosed, not absorbed: group keys
+  from PySpark 4.1.2. Three pre-existing divergences are disclosed, not absorbed: group keys
   come back nullable where Spark marks them not-null (the live legs project to the avg
-  column), and multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
-  where Spark answers. Round 2 pins the grouped refusal shapes as measured: grouped
-  multi-distinct refuses as a bare `PySparkException` with the same message, and
-  grouped `avg(NULL)` refuses as `UnsupportedOperationException` naming the groups
-  accumulator pair. Round 2 also records the `AVG-DEC-SUMWRAP-1` divergence: the
-  i128 sum-wrap fixture answers `0.0000` on both doors where Spark answers NULL
+  column), multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
+  where Spark answers, and the sum-wrap fixtures answer the wrapped quotient where
+  Spark NULLs or raises (`AVG-DEC-SUMWRAP-1`, below). Round 2 pins the grouped
+  refusal shapes as measured: grouped multi-distinct refuses as a bare
+  `PySparkException` with the same message, and grouped `avg(NULL)` refuses as
+  `UnsupportedOperationException` naming the groups accumulator pair. Round 2 records
+  the `AVG-DEC-SUMWRAP-1` divergence, round 3 widens it to the general wrap class:
+  the zero-wrap fixture answers `0.0000` on the SQL doors and the non-zero-wrap fixture
+  answers `100000.0000` on grouped SQL and DataFrame — where Spark answers NULL
   (`try_avg`) or raises (`avg`). The grouped-float drift gets its own pin: the
   1e16-plus-ones fixture pins repark's exact grouped value within 1e-12 of
   Spark's, with a seventh live leg re-deriving the tolerance (the many-groups
