@@ -59,13 +59,8 @@ impl ScalarUDFImpl for SparkFromUnixtime {
         Ok(DataType::Utf8)
     }
 
-    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
-        Ok(Arc::new(Field::new(
-            "from_unixtime",
-            DataType::Utf8,
-            nullable,
-        )))
+    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new("from_unixtime", DataType::Utf8, true)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {

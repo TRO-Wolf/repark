@@ -52,7 +52,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Int64`. pins: types-1/C-003
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
   overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
-  compiler; 1- and 2-arg shapes. pins: types-1/C-006
+  compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
+  even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
 - `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
   is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /

@@ -2826,6 +2826,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 - **repark** — both doors return a session-zone STRING (`'1970-01-01 00:00:00'` at UTC): the
   SQL door overwrites DataFusion's `from_unixtime` with a Spark kernel (1- and 2-arg shapes).
+  Nullable on both doors, like Spark (even for non-null input).
 - **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
   *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
   session zone is not UTC; repark's default zone is UTC by registry row

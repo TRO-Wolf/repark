@@ -328,13 +328,13 @@ def test_percent_rank_family_is_float64(call: str) -> None:
 
 
 def test_from_unixtime_is_a_session_zone_string() -> None:
-    """pins: types-1/C-006 — from_unixtime answers a UTC STRING on both doors."""
+    """pins: types-1/C-006 — from_unixtime answers a UTC STRING, nullable like Spark."""
     session = _session()
     frame = _seed(session)
-    assert _door_type(session, "SELECT from_unixtime(0) AS r") == ("string", False)
+    assert _door_type(session, "SELECT from_unixtime(0) AS r") == ("string", True)
     assert session.sql("SELECT from_unixtime(0) AS r").collect()[0][0] == "1970-01-01 00:00:00"
     facade = frame.select(F.from_unixtime(F.lit(0)).alias("r"))
-    assert _frame_type(facade) == ("string", False)
+    assert _frame_type(facade) == ("string", True)
     assert type(facade.collect()[0][0]) is str
 
 
@@ -358,7 +358,7 @@ def test_from_unixtime_format_argument(pattern: str, want: str) -> None:
     """pins: types-1/C-006 — from_unixtime renders the optional Java format pattern."""
     session = _session()
     query = f"SELECT from_unixtime(0, '{pattern}') AS r"
-    assert _door_type(session, query) == ("string", False)
+    assert _door_type(session, query) == ("string", True)
     assert session.sql(query).collect()[0][0] == want
 
 

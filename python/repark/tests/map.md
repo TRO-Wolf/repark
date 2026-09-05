@@ -339,7 +339,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins, ANSI-door stock-type controls, and live-oracle legs behind `REPARK_PARITY_LIVE=1`.
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
-  coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform.
+  coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
+  `from_unixtime` always nullable like Spark 4.1.2.
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
