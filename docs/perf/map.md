@@ -46,6 +46,28 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   before/after pair (1,656.62 → 70.30 ms at 1e5 tuples); earlier tables untouched.
   pins: perf-facade-cdf-1/C-001, C-005
 
+- [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the Round 3: the concurrency row names lane E (the ten `to_pandas` cells re-run alone).
+  Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
+  64 MiB) x 2 scales (1e6 / 1e7 wide rows, so 1e7 exceeds 1 GiB) = **180 cells, each in a fresh
+  subprocess on a release module**, classified `ok` / `spilled` / `degraded` / `clean_error` /
+  `internal_error`, with peak RSS polled from `/proc`, wall, and the 1-minute load beside each.
+  **No cell aborted the process and no cell returned a wrong answer** — 115 of the 144 bounded
+  cells carry a content digest and every one equals the unbounded run (163 run digests once the
+  repeats are counted, because a repeated cell keeps a digest per run); the 29 without are 28
+  refusals plus one probe that exhausted the same pool it was probing. §1.1 names the digest kind
+  per operator, because a row count is not an answer check. Three Apache Spark cells on
+  the same fixture at `spark.driver.memory=1g` sit beside it, including the one where Spark is
+  the worse citizen (`collect_list` dies with a Java OOM that takes the SparkContext down where
+  repark refuses with a typed exception, quoted from the JVM's own captured stderr). Section 2
+  reads DataFusion 54.1's spill support out of
+  the vendored source rather than inferring it, because that table is the ceiling on any
+  Never-OOM claim: windows, `Unnest`, the Iceberg scan and the facade boundary take no
+  reservation at all, so the pool cannot bound them — though each still returns the identical
+  digest at every pool, so what the pool does not bound it also does not corrupt. Per-cell
+  evidence including every repeat and the JVM stderr lines:
+  [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
+  pins: h3-spill-1/C-002, C-003, C-004, C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

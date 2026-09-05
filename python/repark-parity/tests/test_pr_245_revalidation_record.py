@@ -49,6 +49,7 @@ _FROZEN_SQP_FILES = {
     ),
 }
 _SQL_LITERAL_CALLS = {
+    "python/repark-parity/bench/spill/cell_worker.py": {"sql_string_literal": 1},
     "python/repark-parity/bench/tpcds/datagen.py": {"escape_sql_single_quotes": 1},
     "python/repark-parity/bench/tpcds/runner.py": {"escape_sql_single_quotes": 1},
     "python/repark-parity/bench/tpch/datagen.py": {"escape_sql_single_quotes": 1},
