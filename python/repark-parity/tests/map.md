@@ -114,7 +114,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
   pins: fn-fix-2-string-rows/C-002

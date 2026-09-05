@@ -190,6 +190,11 @@ DF-PRINTSCHEMA-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6371→6368
 `printSchema` strip arm is gone.
 pins: df-printschema-1-trailing-newline/C-004
 
+PERF-FACADE-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6368→6303 — the Arrow row
+converter and its two type predicates move to `dataframe/rows_export.py`; `core.py` keeps
+three delegations. Ratchets DOWN.
+pins: perf-facade-1/C-001, C-005
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

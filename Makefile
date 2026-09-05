@@ -24,6 +24,7 @@
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MATURIN := uvx maturin@1.14.1
 RUFF   := uvx ruff@0.15.22
+PYTHON ?= python
 TAPLO  := uvx taplo@0.9.3
 TYPOS  := uvx typos@1.47.2
 ZIZMOR := uvx zizmor@1.26.1
@@ -419,6 +420,15 @@ dynflatten-bench: ## Measure dynamicFlatten vs Spark explode (PERF-DYNFLATTEN-1;
 		--out /tmp/oc-dynflatten-bed \
 		--json /tmp/oc-dynflatten-bed/run.json \
 		--report /tmp/oc-dynflatten-bed/report.md
+
+.PHONY: facade-bench
+facade-bench: ## Measure the facade boundary (PERF-FACADE-1; writes /tmp/oc-facade-bed; PYTHON=.venv/bin/python outside an activated venv)
+	$(PYTHON) python/repark-parity/bench/facade/run_facade.py \
+		--cells $${CELLS:-export,collect,rows,create,chain} \
+		--iterations $${ITERATIONS:-5} \
+		--out /tmp/oc-facade-bed \
+		--json /tmp/oc-facade-bed/run.json \
+		--report /tmp/oc-facade-bed/report.md
 
 # ------------------------------------------------------------------------------------------------
 # Autofix + hooks

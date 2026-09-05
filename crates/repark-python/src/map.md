@@ -34,6 +34,18 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
   `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
+| [`collect_rows.rs`](collect_rows.rs) | Arrow batch → Python value tuples for `collect`.
+  Imports the batch back through the Arrow C Data Interface and converts only the cell kinds
+  whose `to_pylist` mapping is unambiguous; anything else is supplied pre-converted by the
+  facade or declined with `None`, so the facade's converter keeps decimals, dates, times,
+  timestamps, intervals and nested values. It converts cells, never rows — the facade builds
+  every `Row`, so `Row` semantics have one implementation.
+  pins: perf-facade-1/C-002 |
+| [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
+  with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
+  through `NamePreserver` and none adds, drops or reorders a projection expression;
+  `column_names` stays analyzer-backed as the oracle the byte-equality pin measures against.
+  pins: perf-facade-1/C-004 |
 | [`ml.rs`](ml.rs) | Batch-streaming binders for linear, logistic, and KMeans fits. |
 | [`tests.rs`](tests.rs) | Unit pins for module registration and exception/type identity. |
 
