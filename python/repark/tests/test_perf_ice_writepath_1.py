@@ -17,30 +17,46 @@ LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live write-path oracle is skipped (
 CATALOG = "writepath_perf"
 THREADS = "8"
 SEED_ROWS = 120_000
+SEED_FILES = 4
 WALL_ROWS = 1_000_000
 WALL_ITERATIONS = 3
 CTAS_OVER_PARQUET_SINK_MAX = 2.2
 PARTITIONED_OVER_PARQUET_SINK_MAX = 3.4
 
 
+def _rows(start: int, stop: int) -> pa.Table:
+    ids = pa.array(range(start, stop), type=pa.int64())
+    parts = pa.array([index % 8 for index in range(start, stop)], type=pa.int32())
+    labels = pa.array([f"r{index:07d}" for index in range(start, stop)], type=pa.string())
+    return pa.table({"id": ids, "part": parts, "label": labels})
+
+
 def _seed(path: Path, rows: int) -> Path:
     """One file, written once, so the layout the writers see is fixed."""
     import pyarrow.parquet as pq
 
-    ids = pa.array(range(rows), type=pa.int64())
-    parts = pa.array([index % 8 for index in range(rows)], type=pa.int32())
-    labels = pa.array([f"r{index:07d}" for index in range(rows)], type=pa.string())
-    table = pa.table({"id": ids, "part": parts, "label": labels})
-    pq.write_table(table, path, row_group_size=10_000)
+    pq.write_table(_rows(0, rows), path, row_group_size=10_000)
     return path
 
 
-def _session(name: str, warehouse: Path) -> ReparkSession:
-    engine = (
-        ReparkSession.builder.appName(name)
-        .config("spark.sql.shuffle.partitions", THREADS)
-        .getOrCreate()
-    )
+def _seed_files(directory: Path, rows: int, files: int) -> Path:
+    """A fixed `files`-way layout, written once: the plan then has `files` partitions."""
+    import pyarrow.parquet as pq
+
+    directory.mkdir(parents=True, exist_ok=True)
+    per_file = rows // files
+    for index in range(files):
+        start = index * per_file
+        stop = rows if index == files - 1 else start + per_file
+        pq.write_table(_rows(start, stop), directory / f"part-{index}.parquet")
+    return directory
+
+
+def _session(name: str, warehouse: Path, cap: str | None = None) -> ReparkSession:
+    builder = ReparkSession.builder.appName(name).config("spark.sql.shuffle.partitions", THREADS)
+    if cap is not None:
+        builder = builder.config("repark.write.max-concurrent-files", cap)
+    engine = builder.getOrCreate()
     engine.register_memory_catalog(CATALOG, warehouse)
     engine.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.w")
     return engine
@@ -59,58 +75,62 @@ def _manifest_order(engine: ReparkSession, table: str) -> list[Any]:
     ]
 
 
-def test_ctas_file_count_follows_max_concurrent_files(tmp_path: Path) -> None:
-    """C-004: one data file per writer, and the writer count is the session's cap."""
-    source = _seed(tmp_path / "seed.parquet", SEED_ROWS)
+def test_ctas_writes_one_data_file_per_plan_partition(tmp_path: Path) -> None:
+    """C-004: the CTAS write node writes one data file per DataFusion partition."""
+    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("writepath-file-count", tmp_path / "wh")
     try:
-        engine.sql(f"CREATE OR REPLACE TEMPORARY VIEW src AS SELECT * FROM parquet.`{source}`")
-        engine.conf.set("repark.write.max-concurrent-files", "4")
-        engine.sql(f"CREATE TABLE {CATALOG}.w.four USING iceberg AS SELECT * FROM src").collect()
-        engine.conf.set("repark.write.max-concurrent-files", "1")
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        engine.sql(f"CREATE TABLE {CATALOG}.w.many USING iceberg AS SELECT * FROM src").collect()
+        counts = _file_counts(engine, f"{CATALOG}.w.many")
+        assert len(counts) == SEED_FILES, counts
+        assert sum(counts) == SEED_ROWS
+        rows = engine.sql(f"SELECT sum(id) AS s, count(*) AS n FROM {CATALOG}.w.many").to_arrow()
+        assert rows.column("n")[0].as_py() == SEED_ROWS
+        assert rows.column("s")[0].as_py() == SEED_ROWS * (SEED_ROWS - 1) // 2
+    finally:
+        engine.stop()
+
+
+def test_one_concurrent_file_still_writes_exactly_one(tmp_path: Path) -> None:
+    """C-004: `repark.write.max-concurrent-files = 1` still writes a single data file."""
+    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
+    engine = _session("writepath-one-file", tmp_path / "wh", cap="1")
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
         engine.sql(f"CREATE TABLE {CATALOG}.w.one USING iceberg AS SELECT * FROM src").collect()
-
-        four = _file_counts(engine, f"{CATALOG}.w.four")
-        one = _file_counts(engine, f"{CATALOG}.w.one")
-        assert len(four) == 4, four
-        assert len(one) == 1, one
-        assert sum(four) == SEED_ROWS
-        assert sum(one) == SEED_ROWS
-
-        rows_four = engine.sql(
-            f"SELECT sum(id) AS s, count(*) AS n FROM {CATALOG}.w.four"
-        ).to_arrow()
-        rows_one = engine.sql(f"SELECT sum(id) AS s, count(*) AS n FROM {CATALOG}.w.one").to_arrow()
-        assert rows_four.column("s")[0].as_py() == rows_one.column("s")[0].as_py()
-        assert rows_four.column("n")[0].as_py() == SEED_ROWS
+        counts = _file_counts(engine, f"{CATALOG}.w.one")
+        assert len(counts) == 1, counts
+        assert counts[0] == SEED_ROWS
+        rows = engine.sql(f"SELECT sum(id) AS s FROM {CATALOG}.w.one").to_arrow()
+        assert rows.column("s")[0].as_py() == SEED_ROWS * (SEED_ROWS - 1) // 2
     finally:
         engine.stop()
 
 
 def test_repeated_ctas_writes_the_same_files_in_the_same_order(tmp_path: Path) -> None:
     """C-005: the parallel section is followed by a deterministic file order."""
-    source = _seed(tmp_path / "seed.parquet", SEED_ROWS)
+    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("writepath-determinism", tmp_path / "wh")
     try:
-        engine.sql(f"CREATE OR REPLACE TEMPORARY VIEW src AS SELECT * FROM parquet.`{source}`")
-        engine.conf.set("repark.write.max-concurrent-files", "4")
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
         orders = []
         for run in range(3):
             table = f"{CATALOG}.w.run{run}"
             engine.sql(f"CREATE TABLE {table} USING iceberg AS SELECT * FROM src").collect()
             orders.append([count for _, count in _manifest_order(engine, table)])
         assert orders[0] == orders[1] == orders[2], orders
-        assert sum(orders[0]) == SEED_ROWS
+        assert orders[0] == [SEED_ROWS // SEED_FILES] * SEED_FILES, orders[0]
     finally:
         engine.stop()
 
 
 def test_partitioned_ctas_files_ascend_by_partition_value(tmp_path: Path) -> None:
     """C-006: V3-11 — one commit's data files reach the manifest in ascending partition order."""
-    source = _seed(tmp_path / "seed.parquet", SEED_ROWS)
+    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("writepath-partition-order", tmp_path / "wh")
     try:
-        engine.sql(f"CREATE OR REPLACE TEMPORARY VIEW src AS SELECT * FROM parquet.`{source}`")
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
         engine.sql(
             f"CREATE TABLE {CATALOG}.w.part USING iceberg PARTITIONED BY (part) "
             "AS SELECT * FROM src"
@@ -145,7 +165,7 @@ def test_ctas_wall_is_within_the_parquet_sink_ratio(tmp_path: Path) -> None:
     source = _seed(tmp_path / "wall.parquet", WALL_ROWS)
     engine = _session("writepath-wall", tmp_path / "wh")
     try:
-        engine.sql(f"CREATE OR REPLACE TEMPORARY VIEW src AS SELECT * FROM parquet.`{source}`")
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
 
         def ctas(index: int) -> None:
             engine.sql(f"DROP TABLE IF EXISTS {CATALOG}.w.wall{index}")
@@ -187,10 +207,10 @@ def test_written_table_row_set_matches_spark(tmp_path: Path) -> None:
     import _live_parity as live_parity
     from pyspark.sql import SparkSession
 
-    source = _seed(tmp_path / "seed.parquet", 20_000)
+    source = _seed_files(tmp_path / "seed", 20_000, SEED_FILES)
     engine = _session("writepath-rowset", tmp_path / "wh")
     try:
-        engine.sql(f"CREATE OR REPLACE TEMPORARY VIEW src AS SELECT * FROM parquet.`{source}`")
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
         engine.sql(
             f"CREATE TABLE {CATALOG}.w.rows USING iceberg PARTITIONED BY (part) "
             "AS SELECT * FROM src"

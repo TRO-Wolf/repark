@@ -8,13 +8,14 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, Schem
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::{SendableRecordBatchStream, TaskContext};
 use datafusion::physical_expr::{EquivalenceProperties, Partitioning};
+use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
 use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, ExecutionPlanProperties, PlanProperties,
     execute_stream,
 };
-use futures::{StreamExt, TryStreamExt};
+use futures::StreamExt;
 use iceberg::spec::DataFile;
 use iceberg::table::Table;
 
@@ -82,11 +83,6 @@ impl IcebergPartitionWriteExec {
             plan_properties,
         }
     }
-
-    fn assigned_input_partitions(&self, writer: usize) -> Vec<usize> {
-        let inputs = self.input.output_partitioning().partition_count();
-        (writer..inputs).step_by(self.writers).collect()
-    }
 }
 
 impl ExecutionPlan for IcebergPartitionWriteExec {
@@ -133,7 +129,6 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
         partition: usize,
         context: Arc<TaskContext>,
     ) -> Result<SendableRecordBatchStream> {
-        let assigned = self.assigned_input_partitions(partition);
         let input = Arc::clone(&self.input);
         let table = self.table.clone();
         let collected = Arc::clone(&self.collected);
@@ -145,9 +140,8 @@ impl ExecutionPlan for IcebergPartitionWriteExec {
 
         let written = futures::stream::once(async move {
             let batches = Box::pin(
-                futures::stream::iter(assigned)
-                    .map(move |index| input.execute(index, Arc::clone(&context)))
-                    .try_flatten()
+                input
+                    .execute(partition, context)?
                     .map(move |item| {
                         if item.is_err() {
                             raise_abort.store(true, Ordering::SeqCst);
@@ -196,8 +190,18 @@ pub async fn write_data_files_from_plan(
     context: Arc<TaskContext>,
     concurrency: WriteConcurrency,
 ) -> Result<Vec<DataFile>> {
-    let inputs = input.output_partitioning().partition_count();
-    let writers = concurrency.max_concurrent_files.min(inputs.max(1)).max(1);
+    let inputs = input.output_partitioning().partition_count().max(1);
+    let single = concurrency.max_concurrent_files <= 1;
+    let (input, writers) = if single && inputs > 1 {
+        (
+            Arc::new(CoalescePartitionsExec::new(input)) as Arc<dyn ExecutionPlan>,
+            1,
+        )
+    } else if single {
+        (input, 1)
+    } else {
+        (input, inputs)
+    };
     let collected: FileCollector = Arc::new(Mutex::new(BTreeMap::new()));
     let exec = Arc::new(IcebergPartitionWriteExec::new(
         table.clone(),
@@ -459,12 +463,7 @@ mod tests {
         found
     }
 
-    async fn timed_write(
-        catalog: &Arc<dyn Catalog>,
-        name: &str,
-        writers: usize,
-        delay: Duration,
-    ) -> Duration {
+    async fn timed_parallel(catalog: &Arc<dyn Catalog>, name: &str, delay: Duration) -> Duration {
         let table = create_table(catalog, name).await;
         let input = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
         let started = Instant::now();
@@ -472,13 +471,36 @@ mod tests {
             &table,
             input,
             Arc::new(TaskContext::default()),
-            WriteConcurrency::new(writers).expect("concurrency"),
+            WriteConcurrency::new(4).expect("concurrency"),
         )
         .await
         .expect("write succeeds");
         let wall = started.elapsed();
+        assert_eq!(files.len(), 4, "one data file per DataFusion partition");
         let rows: u64 = files.iter().map(|file| file.record_count()).sum();
         assert_eq!(rows, 80, "every row reaches a data file");
+        wall
+    }
+
+    async fn timed_one_task(catalog: &Arc<dyn Catalog>, name: &str, delay: Duration) -> Duration {
+        let table = create_table(catalog, name).await;
+        let input: Arc<dyn ExecutionPlan> = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
+        let context = Arc::new(TaskContext::default());
+        let one_writer = WriteConcurrency::new(1).expect("concurrency");
+        let started = Instant::now();
+        let mut files = Vec::new();
+        for partition in 0..4 {
+            let stream = input
+                .execute(partition, Arc::clone(&context))
+                .expect("execute");
+            files.extend(
+                write_data_files_from_stream_with_concurrency(&table, stream, one_writer)
+                    .await
+                    .expect("serial write succeeds"),
+            );
+        }
+        let wall = started.elapsed();
+        assert_eq!(files.len(), 4);
         wall
     }
 
@@ -488,23 +510,23 @@ mod tests {
         let catalog = memory_catalog(&warehouse).await;
         let delay = Duration::from_millis(BLOCKING_WRITE_MS);
 
-        let serial_floor = timed_write(&catalog, "serialfloor", 1, Duration::ZERO).await;
-        let serial = timed_write(&catalog, "serial", 1, delay).await;
-        let parallel_floor = timed_write(&catalog, "parallelfloor", 4, Duration::ZERO).await;
-        let parallel = timed_write(&catalog, "parallel", 4, delay).await;
+        let one_task_floor = timed_one_task(&catalog, "serialfloor", Duration::ZERO).await;
+        let one_task = timed_one_task(&catalog, "serial", delay).await;
+        let parallel_floor = timed_parallel(&catalog, "parallelfloor", Duration::ZERO).await;
+        let parallel = timed_parallel(&catalog, "parallel", delay).await;
 
-        let serial_cost = serial.saturating_sub(serial_floor);
+        let one_task_cost = one_task.saturating_sub(one_task_floor);
         let parallel_cost = parallel.saturating_sub(parallel_floor);
         assert!(
-            serial_cost >= delay * 2,
-            "one writer must pay four blocking delays: floor {serial_floor:?}, \
-             with delay {serial:?}"
+            one_task_cost >= delay * 2,
+            "four partitions drained in one task pay four blocking delays: floor \
+             {one_task_floor:?}, with delay {one_task:?}"
         );
         assert!(
-            parallel_cost * 2 < serial_cost,
-            "four partition writers must overlap their blocking work: parallel cost \
-             {parallel_cost:?} (floor {parallel_floor:?}, wall {parallel:?}) vs serial cost \
-             {serial_cost:?} (floor {serial_floor:?}, wall {serial:?})"
+            parallel_cost * 2 < one_task_cost,
+            "the write node's partitions must overlap their blocking work: parallel cost \
+             {parallel_cost:?} (floor {parallel_floor:?}, wall {parallel:?}) vs one-task cost \
+             {one_task_cost:?} (floor {one_task_floor:?}, wall {one_task:?})"
         );
     }
 

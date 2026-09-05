@@ -160,20 +160,32 @@ repark-core's error map.
   one; the guard and the strict cast still run for every pair that actually differs.
   pins: v3-cov-statement-coverage/C-004
 - `partition_write.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** `IcebergPartitionWriteExec`, the
-  CTAS write node with one output partition per writer. Each writer drains its assigned input
-  partitions (`w`, `w+K`, `w+2K`, …) through the existing serial writer, so the row-to-file map is
-  fixed by the plan and not by completion order; `execute_stream` coalesces the node and the
-  coalesce spawns one task per partition, which is where the parquet encode and zstd of the
-  writers stop sharing a task. RePark spawns nothing and gains no dependency: the parallelism is
-  the DataFusion executor's, which is why this is a node and not a `tokio::spawn` (`clippy.toml`
-  bans it and `tokio` is a dev-dependency of this crate). Files are collected under the writer
-  index in a `BTreeMap` and then sorted by `ascending_partition_order`, so one commit's data files
-  and the `_row_id` derived from them are the same on every run (V3-11). An input error raises a
-  shared flag: siblings stop taking `Ok` batches, close what they hold, and every completed file
-  is deleted through `FileIO` before the first error surfaces.
-  In-module pins: writer overlap is measured as a differential (the blocking delay costs one
-  writer four times what it costs four), the returned files carry writer-index order (four
-  partitions of different sizes, three runs), and a late failure in one partition leaves no
+  CTAS write node. One output partition per input partition, each draining exactly that partition
+  through the existing serial writer; `execute_stream` coalesces the node and the coalesce spawns
+  one task per partition, which is where the parquet encode and zstd of the writers stop sharing
+  a task. RePark spawns nothing and gains no dependency: the parallelism is the DataFusion
+  executor's, which is why this is a node and not a `tokio::spawn` (`clippy.toml` bans that, the
+  rust-code-quality scan bans routing around it through `JoinSet` or a helper crate, and `tokio`
+  is a dev-dependency of this crate).
+  **One writer per input partition, not `min(cap, partitions)`.** A writer that drained several
+  input partitions in sequence measured 738 ms against 547 ms for one-each on the partitioned 1e6
+  CTAS, and worse, it is unbounded in memory: DataFusion's repartition channels are unbounded
+  per output partition and only gate when EVERY channel is non-empty, so the partitions a writer
+  has not reached yet buffer whole. `repark.write.max-concurrent-files` therefore selects between
+  one writer over a `CoalescePartitionsExec` (cap 1, one data file) and one writer per partition
+  (cap 2 or more); it still bounds the stream write paths that INSERT, MERGE, overwrite and
+  predicate DML use, which this node does not touch. The knob is read from the session
+  configuration, so it is a builder `.config(...)`, not a post-build `conf.set`.
+  Determinism is stronger than before, not weaker: writer `p` sees partition `p`'s batches in
+  plan order, files are collected under the writer index in a `BTreeMap` and then sorted by
+  `ascending_partition_order` (V3-11), so one commit's data files and the `_row_id` derived from
+  them are the same on every run — where the coalesced stream this replaces merged partitions in
+  completion order. An input error raises a shared flag: siblings stop taking `Ok` batches, close
+  what they hold, and every completed file is deleted through `FileIO` before the first error
+  surfaces.
+  In-module pins: the node's partitions overlap their blocking work where one task draining the
+  same four partitions pays four delays; the returned files carry writer-index order (four
+  partitions of different sizes, three runs); and a late failure in one partition leaves no
   parquet file in the warehouse.
   The vectorized partition splitter this path calls on every partitioned write is fork ask
   **F-28** on `f-28-vectorized-partition-splitter`: the splitter lexsorts the partition-value
@@ -184,7 +196,7 @@ repark-core's error map.
   order). It is NOT consumed here: the pin bump is its own PR
   ([../../../../docs/fork-sync.md](../../../../docs/fork-sync.md)), so the fork half is measured
   through a temporary, never-committed path override.
-  pins: perf-ice-writepath-1/C-001, C-002, C-003, C-007, C-008, C-011
+  pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`

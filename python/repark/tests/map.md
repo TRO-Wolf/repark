@@ -1686,15 +1686,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   is what proves the divergence is pre-existing.
   pins: perf-facade-1/C-002, C-003, C-006, C-007
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
-  through the facade. Always-run: the data-file count equals `repark.write.max-concurrent-files`
-  (4 and 1 on the same seed, same row set and same `sum(id)`); three CTAS runs of the same seed
-  produce the same manifest record-count sequence, which is what makes the derived `_row_id`
-  reproducible after the parallel section; and a partitioned CTAS's files ascend by partition
-  value (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): the CTAS wall is
-  read against the DataFusion parquet sink measured in the same process on the same 1e6-row
-  seed — a ratio, because an absolute millisecond ceiling is a property of the box, not of the
-  engine — and Spark's own CTAS of the same seed is compared row for row against the written
-  table. Numbers and commands: [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
+  through the facade, over a fixed four-file seed so the plan really has four partitions.
+  Always-run: the CTAS writes one data file per plan partition (four), and
+  `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
+  takes it — still writes exactly one; three CTAS runs of the same seed produce the same manifest
+  record-count sequence, which is what makes the derived `_row_id` reproducible after the
+  parallel section (the coalesced stream this replaces merged partitions in completion order);
+  and a partitioned CTAS's files ascend by partition value (V3-11) and cover all eight
+  partitions. Live (`REPARK_PARITY_LIVE=1`): the CTAS wall is read against the DataFusion parquet
+  sink measured in the same process on the same 1e6-row seed — a ratio, because an absolute
+  millisecond ceiling is a property of the box, not of the engine — and Spark's own CTAS of the
+  same seed is compared row for row against the written table. Numbers and commands:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
   pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
