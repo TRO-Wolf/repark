@@ -586,7 +586,7 @@ fn divide_by_zero_error() -> DataFusionError {
     )
 }
 
-fn numeric_out_of_range_error(precision: u8, scale: i8) -> DataFusionError {
+pub(crate) fn numeric_out_of_range_error(precision: u8, scale: i8) -> DataFusionError {
     DataFusionError::Execution(format!(
         "[NUMERIC_VALUE_OUT_OF_RANGE] cannot be represented as Decimal({precision}, {scale}). \
          If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. \

@@ -1935,20 +1935,19 @@ the pin rather than obeying it.
 
 ### CAST-BOOL-DEC-1 — `BOOLEAN → DECIMAL` refuses where Spark answers `1.00`
 
-- **repark** — `SELECT CAST(true AS DECIMAL(10,2)) AS v` refuses on BOTH doors with
-  `UnsupportedOperationException` (`Optimizer rule 'simplify_expressions' failed`, caused
-  by `This feature is not implemented: Unsupported CAST from Boolean to
-  Decimal128(10, 2)`) — identically under ANSI on and off.
-- **Apache Spark** — answers `decimal128(10,2)` **non-null** `1.00` under both ANSI modes.
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `CAST(true AS DECIMAL(10,2))`
+  answers `1.00` at `decimal128(10,2)`, non-null, on both doors; `CAST(false …)`
+  answers `0.00`; `DECIMAL(1,0)` answers `1`; `DECIMAL(2,2)` is nullable — ANSI-on
+  raises `NUMERIC_VALUE_OUT_OF_RANGE`, ANSI-off NULLs (the native door raises,
+  ANSI-like).
+- **Apache Spark** — same value, type, and nullability on every cell, both ANSI modes.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_bool_to_decimal_cast_refuses_on_both_doors`
-  (asserts the refusal needle on the facade under both ANSI modes and on the native
-  door; the fix reds it on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing: no
-  rule in this unit or earlier ones teaches the planner a boolean-to-decimal cast. The
-  decimal-cast nullability rule's `Boolean` arm was dead exactly because of this
-  refusal and was removed in the same round.
+  `python/repark/tests/test_nullability_2.py::test_bool_to_decimal_served_on_both_doors`
+  and `crates/repark-functions/src/bool_decimal.rs` (rule pins).
+- **Rationale** — FIXED. A both-doors analyzer rule rewrites the cast to a
+  precision-carrying UDF that reads ANSI for the overflow edge; the UDF's return field
+  marks overflow-exposed targets nullable. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 

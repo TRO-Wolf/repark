@@ -23,6 +23,10 @@ and hand execution, SQL, and ML semantics to the engine crates.
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
+  **NULLABILITY-2 (2026-09-05):** `finish_session` installs
+  `repark_functions::install_shared_analyzer_rules` (integer overflow plus boolean-to-decimal
+  casts, both doors) in place of the integer-only call — one line for one line, same count.
+  pins: nullability-2/C-003 |
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   Native and Spark Python sessions install F-Y10-1 integer overflow checks.

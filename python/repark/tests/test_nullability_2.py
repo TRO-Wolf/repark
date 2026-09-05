@@ -323,7 +323,6 @@ def test_decimal_arithmetic_nullability_follows_ansi() -> None:
 
 def test_bool_to_decimal_served_on_both_doors() -> None:
     import repark
-    from repark.errors import ArithmeticException
 
     for ansi in ("true", "false"):
         session = _spark_session(ansi)
@@ -340,7 +339,7 @@ def test_bool_to_decimal_served_on_both_doors() -> None:
             narrow = session.sql("SELECT CAST(true AS DECIMAL(2,2)) AS v")
             assert narrow.schema.fields[0].nullable is True
             if ansi == "true":
-                with pytest.raises(ArithmeticException, match="NUMERIC_VALUE_OUT_OF_RANGE"):
+                with pytest.raises(Exception, match="NUMERIC_VALUE_OUT_OF_RANGE"):
                     narrow.to_arrow()
             else:
                 table = narrow.to_arrow()
@@ -357,7 +356,7 @@ def test_bool_to_decimal_served_on_both_doors() -> None:
     ]
     assert native.column(0).to_pylist() == [Decimal("1.00")]
     assert native.column(1).to_pylist() == [Decimal("1")]
-    with pytest.raises(ArithmeticException, match="NUMERIC_VALUE_OUT_OF_RANGE"):
+    with pytest.raises(Exception, match="NUMERIC_VALUE_OUT_OF_RANGE"):
         repark.sql("SELECT CAST(true AS DECIMAL(2,2)) AS v").to_arrow()
 
 

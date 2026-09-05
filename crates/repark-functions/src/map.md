@@ -228,6 +228,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   run transform-down with marker-stop (never descend into a marker, stop after a
   wrap) so re-analysis is a no-op — the idempotency `Column.sql` relies on.
   pins: nullability-2/C-001, C-002, C-004
+- `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
+  rule, installed on BOTH doors via `install_shared_analyzer_rules` (the session
+  installer calls it in place of the integer-only one — same line count, so the
+  session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
+  precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
+  reads ANSI once at plan time for the overflow edge (`(2,2)`: raise vs NULL);
+  its return field marks overflow-exposed targets nullable. Registry
+  `CAST-BOOL-DEC-1`.
+  pins: nullability-2/C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.

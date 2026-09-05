@@ -8,6 +8,7 @@ pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
 mod avg_groups;
+pub mod bool_decimal;
 pub mod cardinality;
 pub mod collection;
 pub mod datetime;
@@ -120,6 +121,12 @@ pub fn register_all(ctx: &SessionContext) {
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
+}
+
+/// Analyzer rules shared by both doors: integer overflow plus boolean-to-decimal casts.
+pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
+    integer_spark::install_integer_overflow(ctx);
+    bool_decimal::install_bool_decimal_cast(ctx);
 }
 
 /// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.

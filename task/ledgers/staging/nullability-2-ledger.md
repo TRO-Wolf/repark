@@ -102,6 +102,12 @@ Commit A (analyzer: cast + decimal-arith + null-safe-equal): 4 reds, all class (
 | `test_tvl_parity_row[null_eq_vs_null_safe_eq]` + `[df_eq_null_safe_select]` | (a) | Both flipped to equality rows (budget holds: equalities grow, disclosures shrink). Cite `G12-1`/`G12-2`, FIXED. |
 | `test_reg_1_registry_truth_up.py::test_cited_pins_exist_and_dec9_stays_open` | (a) | Mirror pin: asserts the DEC-9 FIXED text now (name kept per the G2 precedent). Cite `DEC-9`, FIXED. |
 
+Commit B (bool→decimal serving): 1 red, class (a).
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_cutover_schema_1.py::test_bool_to_decimal_cast_refuses_on_both_doors` | (a) | DELETED — cast served on both doors, superseded by `test_bool_to_decimal_served_on_both_doors`. Cite `CAST-BOOL-DEC-1`, FIXED. |
+
 ## 6. Mutation table
 
 TBD — red-first battery + one knob per rule (cast, bool-dec, nullsafe, relax, dtype).

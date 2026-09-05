@@ -223,30 +223,6 @@ def test_tighten_derived_ctas_still_refuses(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_bool_to_decimal_cast_refuses_on_both_doors() -> None:
-    import repark
-    from repark import ReparkSession
-    from repark.errors import UnsupportedOperationException
-
-    needle = "Unsupported CAST from Boolean to Decimal128"
-    for ansi in ("true", "false"):
-        active = ReparkSession.getActiveSession()
-        if active is not None:
-            active.stop()
-        session = (
-            ReparkSession.builder.appName("cutover-schema-1-bool-dec")
-            .config("spark.sql.ansi.enabled", ansi)
-            .getOrCreate()
-        )
-        try:
-            with pytest.raises(UnsupportedOperationException, match=needle):
-                session.sql("SELECT CAST(true AS DECIMAL(10,2)) AS v").to_arrow()
-        finally:
-            session.stop()
-    with pytest.raises(UnsupportedOperationException, match=needle):
-        repark.sql("SELECT CAST(true AS DECIMAL(10,2)) AS v").to_arrow()
-
-
 def test_read_parquet_relaxes_only_to_depth_32(tmp_path: Path) -> None:
     from repark import ReparkSession
 
