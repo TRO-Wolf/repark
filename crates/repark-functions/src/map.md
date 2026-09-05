@@ -210,6 +210,24 @@ scalars live under [`try_invert/`](try_invert/map.md).
   every `BOOLEAN → DECIMAL` cast refuses downstream, so the arm's answer was
   unobservable (registry `CAST-BOOL-DEC-1`).
   pins: cutover-schema-1/C-003
+  **NULLABILITY-2 (2026-09-05):** the cast hook is generalized
+  (`nullable_spark_cast`): string→{integral, float, boolean, date, timestamp},
+  float→integral, timestamp→{int8, int16, int32}, and decimal→integral casts wrap
+  the non-null child; decimal targets keep the overflow-exposure check. String
+  literals that parse as the date/timestamp target are exempt — DataFusion plans
+  `DATE 'x'` and the explicit spelling identically with no planner hook, so the
+  exemption keeps typed literals Spark-equal and concedes explicit valid-literal
+  casts (registry `CAST-NULL-1` residue). The `(38,·)` add/sub UDFs propagate
+  operand nullability (division stays always-nullable).
+  pins: nullability-2/C-001, C-002
+- `spark_nullability.rs` — **NULLABILITY-2 (2026-09-05):** the `SparkNullability`
+  analyzer rule, slotted after `SparkDecimalRewrite`: date→timestamp casts and
+  null-safe equal wrap their output in the non-null identity UDF
+  (`__repark_spark_nonnull__`); decimal `+`/`-`/`*` (native and `(38,·)`-UDF
+  forms) wrap their output in the nullable marker iff ANSI is off. Output wraps
+  run transform-down with marker-stop (never descend into a marker, stop after a
+  wrap) so re-analysis is a no-op — the idempotency `Column.sql` relies on.
+  pins: nullability-2/C-001, C-002, C-004
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.

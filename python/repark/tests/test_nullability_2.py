@@ -21,14 +21,14 @@ _CAST_VALUE_ROWS: list[tuple[str, str, str, bool, Any]] = [
     ("str_to_bool", "SELECT CAST('true' AS BOOLEAN) AS v", "bool", True, True),
     (
         "str_to_date",
-        "SELECT CAST('2020-01-01' AS DATE) AS v",
+        "SELECT CAST(s AS DATE) AS v FROM (SELECT '2020-01-01' AS s) t",
         "date32[day]",
         True,
         datetime.date(2020, 1, 1),
     ),
     (
         "str_to_ts",
-        "SELECT CAST('2020-01-01 00:00:00' AS TIMESTAMP) AS v",
+        "SELECT CAST(s AS TIMESTAMP) AS v FROM (SELECT '2020-01-01 00:00:00' AS s) t",
         "timestamp[us, tz=UTC]",
         True,
         datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC),
@@ -83,16 +83,12 @@ _CAST_VALUE_ROWS: list[tuple[str, str, str, bool, Any]] = [
         False,
         "2020-01-01",
     ),
-    ("dec_to_int", "SELECT CAST(CAST(1 AS DECIMAL(10,2)) AS INT) AS v", "int32", True, 1),
-    ("dec_to_long", "SELECT CAST(CAST(1 AS DECIMAL(10,2)) AS BIGINT) AS v", "int64", True, 1),
-    ("dec_to_double", "SELECT CAST(CAST(1 AS DECIMAL(10,2)) AS DOUBLE) AS v", "double", True, 1.0),
-    (
-        "dec_to_string",
-        "SELECT CAST(CAST(1 AS DECIMAL(10,2)) AS STRING) AS v",
-        "string",
-        True,
-        "1.00",
-    ),
+    ("dec_to_int", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS INT) AS v", "int32", True, 1),
+    ("dec_to_long", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS BIGINT) AS v", "int64", True, 1),
+    ("dec_to_short", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS SMALLINT) AS v", "int16", True, 1),
+    ("dec_to_byte", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS TINYINT) AS v", "int8", True, 1),
+    ("dec_to_double", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS DOUBLE) AS v", "double", False, 1.0),
+    ("dec_to_string", "SELECT CAST(CAST(1 AS DECIMAL(10,0)) AS STRING) AS v", "string", False, "1"),
     (
         "ts_to_dec",
         "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS DECIMAL(20,0)) AS v",
@@ -267,6 +263,23 @@ def test_cast_nullability_matches_spark() -> None:
                 assert (name, logical.nullable) == (name, nullable)
         finally:
             session.stop()
+
+
+def test_valid_literal_cast_to_date_or_ts_stays_nonnull() -> None:
+    session = _spark_session("true")
+    try:
+        typed = session.sql(
+            "SELECT DATE '2020-01-01' AS d, TIMESTAMP '2020-01-01 00:00:00' AS t"
+        ).to_arrow()
+        assert [field.nullable for field in typed.schema] == [False, False]
+        literal = session.sql(
+            "SELECT CAST('2020-01-01' AS DATE) AS d, CAST('2020-01-01 00:00:00' AS TIMESTAMP) AS t"
+        ).to_arrow()
+        assert [field.nullable for field in literal.schema] == [False, False]
+        invalid = session.sql("SELECT CAST('abc' AS DATE) AS d").schema.fields[0]
+        assert invalid.nullable is True
+    finally:
+        session.stop()
 
 
 def test_cast_nullability_native_door_keeps_datafusion() -> None:

@@ -1202,9 +1202,9 @@ the pin rather than obeying it.
 - **Pin** — the oracle-backed home is now
   `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The remaining
   live divergences under ANSI ON are
-  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5), and it is nullability only, plus
   [CAST-NULL-1](#cast-null-1--non-decimal-cast-nullability-keeps-or-flips-the-child-where-spark-does-the-opposite)
-  (four non-decimal cast-target nullability cells, likewise nullability only). Equality
+  (explicit valid-literal→date/timestamp cells only, likewise nullability only;
+  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5) closed 2026-09-05). Equality
   pins: `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
   `…[try_cast_malformed_string_to_int_null]`, `…[try_cast_overflow_tinyint_null]`.
 - **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed, and again 2026-08-15 when
@@ -1212,8 +1212,8 @@ the pin rather than obeying it.
   the recorded corpus. The sentence this bullet used to carry — "the residual silently-wrong-result
   class is G6-3 (DATE→INT)" — became false at that commit: G6-3 and G6-5 are both CLOSED, the
   corpus grew 10 → 15 rows recording all five converged doors, and what is left under ANSI ON is
-  G6-4's CAST nullability (value+type already agree after #64) plus CAST-NULL-1's four
-  non-decimal target cells (filed 2026-09-05; likewise nullability only, values agree).
+  CAST-NULL-1's explicit valid-literal residue (likewise nullability only, values agree);
+  G6-4 closed 2026-09-05 (NULLABILITY-2).
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
@@ -1592,19 +1592,19 @@ the pin rather than obeying it.
 
 ### DEC-9 — overflow-capable binary arithmetic is marked non-null
 
-- **repark** — the three pinned cells now match Spark's nullable marking at the same types
-  and values: `9*9` → `(3,0)` nullable `81`; `9+9` → `(2,0)` nullable `18`; `999*999` → `(7,0)`
-  nullable `998001`. The nullability arrives through the overflow-exposed operand casts
-  (`CAST(int AS DECIMAL)` is nullable), which the op propagates. Re-measured 2026-09-04
-  (CUTOVER-SCHEMA-1).
-- **Apache Spark** — marks the same results **nullable** (overflow-capable binary arithmetic) at
-  the same types and values. *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `INT * INT` and `BIGINT + BIGINT`
+  over non-null operands are non-null (Spark never NULLs integral arithmetic: ANSI-off
+  wraps, ANSI-on raises); decimal `+`/`-`/`*` over non-null operands is nullable iff ANSI
+  is off (Spark `CheckOverflow`); the `(38,·)` add/sub/mul UDFs propagate operand
+  nullability. The three pinned int-operand cells still match at the same types/values.
+- **Apache Spark** — same nullability on every cell, both ANSI modes. *(oracle: recorded;
+  re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** — `[mul_single_digit_nullability_differs]`, `[add_single_digit_nullability_differs]`,
-  `[mul_three_digit_capacity_nullability_differs]`
-- **Rationale** — BACKLOG, intent to FIX (gap G13), narrowed 2026-09-04 (CUTOVER-SCHEMA-1):
-  the pinned int-operand cells converged through the decimal-cast rule and now assert
-  equality; what stays open is overflow-capable marking where the operands are genuinely
-  non-null (null-safe casts), whose Spark answer is not yet measured.
+  `[mul_three_digit_capacity_nullability_differs]`, and
+  `python/repark/tests/test_nullability_2.py::test_decimal_arithmetic_nullability_follows_ansi`
+- **Rationale** — FIXED. CUTOVER-SCHEMA-1 (2026-09-04) converged the int-operand cells
+  through the decimal-cast rule; this unit measured the genuinely-non-null-operand
+  remainder on the live oracle and implemented the ANSI-gated rule.
 
 > **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
 > re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are
@@ -1867,61 +1867,71 @@ the pin rather than obeying it.
 
 ### G6-4 — TIMESTAMP→INT nullability only (after TZ-5)
 
-- **repark** — `CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT)` under UTC yields int32
-  **non-null** `1577836800` (unix seconds).
-- **Apache Spark** — same value and Arrow type; the CAST is typed **nullable**.
-  *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `CAST(TIMESTAMP '2020-01-01
+  00:00:00' AS INT)` under UTC yields int32 **nullable** `1577836800` (unix seconds),
+  both ANSI modes.
+- **Apache Spark** — same value, Arrow type, and nullability.
+  *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
 - `live-mirror: cast_timestamp_to_int_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (same class as G12 null-safe-equal
-  nullability). X-1 originally queued this as raise-vs-value; #64 un-refused the INT path
-  and the residual is nullability only (`task/tz5-cast-seconds-ledger.md` §10). Re-measured
-  unchanged 2026-09-04 (CUTOVER-SCHEMA-1): the analyzer rule covers decimal targets only, so
-  this cell still reads int32 non-null.
+- **Rationale** — FIXED. X-1 originally queued this as raise-vs-value; #64 un-refused the
+  INT path and the residual was nullability only (`task/tz5-cast-seconds-ledger.md` §10);
+  the generalized cast rule wraps the timestamp operand in the nullable marker.
 
 ### G12-1 — null-safe equal result nullability (SQL `<=>`)
 
-- **repark** — `SELECT (NULL <=> NULL) AS nse` yields Arrow `bool` **nullable** (value TRUE).
-- **Apache Spark** — same expression yields Arrow `bool` **non-nullable** (value TRUE).
-  *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `SELECT (NULL <=> NULL) AS nse`
+  yields Arrow `bool` **non-nullable** (value TRUE), both ANSI modes; the plan schema and
+  written parquet field are non-null, CTAS stays all-optional per its own rule.
+- **Apache Spark** — same value, Arrow type, and nullability.
+  *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
 - `live-mirror: null_safe_eq_sql_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12). VALUE already matches; only
-  schema nullability diverges. Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in
-  this unit touches null-safe equal.
+- **Rationale** — FIXED. VALUE already matched; the analyzer now wraps the operator in a
+  non-null marker.
 
 ### G12-2 — null-safe equal result nullability (DataFrame `eqNullSafe`)
 
-- **repark** — `Column.eqNullSafe` select yields Arrow `bool` **nullable** (values match Spark).
-- **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `Column.eqNullSafe` select yields
+  Arrow `bool` **non-nullable** (values match Spark), both ANSI modes.
+- **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded;
+  re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
 - `live-mirror: null_safe_eq_df_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12 — DF door twin of G12-1).
-  Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in this unit touches null-safe
-  equal.
+- **Rationale** — FIXED (gap G12 — DF door twin of G12-1, same analyzer rule).
 
 ### CAST-NULL-1 — non-decimal CAST nullability keeps or flips the child where Spark does the opposite
 
-- **repark** — from a non-null child, `CAST('1' AS INT)` answers int32 **non-null** `1`,
-  `CAST('2020-01-01' AS DATE)` answers date32 **non-null**, `CAST('2020-01-01 00:00:00'
-  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **non-null**, and `CAST(DATE '2020-01-01'
-  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **nullable** — identically under ANSI on
-  and off. Values match Spark on all four cells.
-- **Apache Spark** — the same four casts answer int32 **nullable**, date32 **nullable**,
-  `timestamp[us, tz=UTC]` **nullable**, and `timestamp[us, tz=UTC]` **non-null** —
+- **repark** — from a non-null child, string→{integral, float, boolean} casts answer
+  **nullable** (literals and columns alike); string→{date, timestamp} casts answer
+  **nullable** for column and invalid-literal operands but stay **non-null** for
+  parses-valid string literals; float→integral and timestamp→{int8, int16, int32}
+  answer **nullable**; decimal→integral answers **nullable**;
+  `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers **non-null** — identically under ANSI
+  on and off. Values match Spark on every cell.
+- **Apache Spark** — the same casts answer **nullable** throughout (including explicit
+  valid-literal→date/timestamp casts), except date→timestamp which is **non-null** —
   identically under ANSI on and off. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
   2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_cast_null_1_non_decimal_targets_keep_or_flip_the_child`
-  (asserts repark's four current nullability answers under both ANSI modes; the fix reds
-  it on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing:
-  this unit's analyzer rule covers decimal targets only and never touched these cells.
-  The string-source casts can fail at runtime (hence nullable on Spark); the
-  date-to-timestamp cast cannot (hence non-null). The unit's ledger R-4 first recorded
-  "keeps the child" as oracle truth; the round-3 measurement corrects it.
+  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
+  (the generalized matrix, both ANSI modes),
+  `...::test_valid_literal_cast_to_date_or_ts_stays_nonnull` (the residue cells),
+  and `crates/repark-functions/src/spark_nullability.rs` (rule pins).
+- **Rationale** — BACKLOG, narrowed 2026-09-05 (NULLABILITY-2): every cell is
+  Spark-equal except explicit valid-string-literal→date/timestamp casts, which stay
+  non-null because DataFusion plans `DATE 'x'` / `TIMESTAMP 'x'` and the explicit
+  spelling to byte-identical plans with no planner hook — the rule exempts
+  parses-valid literals so typed literals stay non-null (Spark-equal) and sacrifices
+  the explicit valid-literal spelling. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### CAST-BOOL-DEC-1 — `BOOLEAN → DECIMAL` refuses where Spark answers `1.00`
 

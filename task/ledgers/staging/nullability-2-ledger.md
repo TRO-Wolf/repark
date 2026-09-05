@@ -55,7 +55,7 @@ arithmetic cell measured under BOTH ANSI modes on both engines.
 
 | # | Rule | Oracle evidence |
 |---|---|---|
-| R-1 | A cast from a non-null child is nullable iff the conversion can fail: string→{integral, float, boolean, date, timestamp, decimal} nullable; float→integral nullable; timestamp→{int8, int16, int32} nullable; decimal→{integral, float, string} nullable (DataFusion agrees, no rule needed); date→timestamp NON-null; integral↔integral (narrow or wide), integral→{float, string, bool}, bool→{integral, string}, date→string, timestamp→{date, long, double, float, string}, int/long→timestamp non-null. The nullability flag is IDENTICAL under ANSI on/off on every cell. | round 1–3 matrix; the brief's "narrowing nullable" hypothesis is false for integral narrowing (`bigint_to_int` non-null) |
+| R-1 | A cast from a non-null child is nullable iff the conversion can fail: string→{integral, float, boolean, date, timestamp, decimal} nullable; float→integral nullable; timestamp→{int8, int16, int32} nullable; decimal→integral nullable; date→timestamp NON-null; integral↔integral (narrow or wide), integral→{float, string, bool}, bool→{integral, string}, decimal→{double, string, boolean}, date→string, timestamp→{date, long, double, float, string}, int/long→timestamp non-null. The nullability flag is IDENTICAL under ANSI on/off on every cell. Two corrections while implementing: (1) decimal-source nullability needs a NON-NULL decimal operand to observe — the round-1/2 `dec_to_*` cells used an overflow-exposed (nullable) inner cast and passed vacuously; re-measured with `DECIMAL(10,0)` operands (2026-09-05, same oracle). (2) DataFusion plans `DATE 'x'` / `TIMESTAMP 'x'` and explicit `CAST('<valid>' AS DATE/TIMESTAMP)` identically with no planner hook, so the rule exempts parses-valid string literals for date/timestamp targets: typed literals stay non-null (Spark-equal), explicit valid-literal casts are the honest residue (Spark nullable), invalid literals and columns wrap. | round 1–3 matrix + decimal-source re-measurement; the brief's "narrowing nullable" hypothesis is false for integral narrowing (`bigint_to_int` non-null) |
 | R-2 | Decimal `+`/`-`/`*` over non-null operands is nullable iff ANSI is OFF (Spark `CheckOverflow`, null-on-overflow); ANSI ON propagates operand nullability. Integral arithmetic is non-null over non-null operands in both modes (ANSI-off wraps, ANSI-on raises — never NULL). Decimal div/rem nullable in both modes (both engines agree). Float arithmetic propagates (both agree). | `dec_add/dec_sub/dec_mul/dec_col_*` flip T→F across ANSI off→on; `int_add/mul`, `bigint_add`, `colarith` non-null both modes; `dec38_add` non-null ANSI-on |
 | R-3 | `CAST(bool AS DECIMAL(p,s))`: true→1, false→0 at target scale; nullable iff the target holds no integer digit (`(10,2)`/false→`0.00` non-null; `(1,0)`→`1` non-null; `(2,2)` nullable — ANSI-on raises `NUMERIC_VALUE_OUT_OF_RANGE`, ANSI-off NULL). | `bool_to_dec*` cells both modes; logical schema nullable=True for `(2,2)` even ANSI-on |
 | R-4 | `<=>` and `eqNullSafe` are non-null boolean on every input shape (nulls, values, mixed). | `nse_sql_*` + `eqnullsafe_df` all `bool` non-null both modes |
@@ -71,15 +71,36 @@ float→`double` in the logical schema (comment at `dataframe.rs:163`); Arrow ag
 O-4 `9*9`-style literal arithmetic widens to int64 on repark (int32 on Spark);
 nullability agrees. O-5 overflowing `CAST(int AS DECIMAL(2,2))` errors on repark
 under ANSI-off where Spark NULLs (pre-existing, same class as O-2).
+O-6 csv/json `read.schema()` with a `TimestampNTZType` field refuses (`unknown
+cast type 'timestamp_ntz'` → engine `Unsupported SQL type TIMESTAMP_NTZ`):
+serving tz-naive reads there is cast-planning work beyond the dtype mapping.
+O-7 `CAST(decimal AS BOOLEAN)` refuses on repark (`Unsupported CAST from
+Decimal128 to Boolean`) where Spark serves non-null (measured 2026-09-05):
+cast support, not nullability marking.
 
-## 4. Baseline (pre-fix, `bc7c76cc`)
+## 4. Baseline (pre-fix, `bc7c76cc` + charter commit)
 
-TBD — facade + parity suites before the first fix commit.
+| Suite | Result |
+|---|---|
+| facade `python/repark/tests -q` | 4940 passed, 211 skipped, EXIT 0 (547 s; `/tmp/nullab2_baseline_facade.log`) |
+| parity `python/repark-parity/tests -q` | TBD |
+
+Collected before `test_nullability_2.py` existed (pure pre-change).
 
 ## 5. Blast-radius classification
 
-TBD — every red is class (a) Spark-answer flip with citation or class (b) regression
-to fix, per the CUTOVER-SCHEMA-1 method.
+Every red is class (a) Spark-answer flip with citation or class (b) regression
+to fix, per the CUTOVER-SCHEMA-1 method. Full-suite runs at §7; targeted files
+per commit below.
+
+Commit A (analyzer: cast + decimal-arith + null-safe-equal): 4 reds, all class (a).
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_cutover_schema_1.py::test_cast_null_1_non_decimal_targets_keep_or_flip_the_child` | (a) | DELETED — behavior inverted, superseded by `test_nullability_2.py` (matrix + residue pins). Cite `CAST-NULL-1`, narrowed. |
+| `test_cast_failure_row[timestamp_to_int_nullability]` | (a) | Flipped to an equality row; the two CP-1 classifier tests move to a synthetic content-disclosure fixture (this was the last real one). Cite `G6-4`, FIXED. |
+| `test_tvl_parity_row[null_eq_vs_null_safe_eq]` + `[df_eq_null_safe_select]` | (a) | Both flipped to equality rows (budget holds: equalities grow, disclosures shrink). Cite `G12-1`/`G12-2`, FIXED. |
+| `test_reg_1_registry_truth_up.py::test_cited_pins_exist_and_dec9_stays_open` | (a) | Mirror pin: asserts the DEC-9 FIXED text now (name kept per the G2 precedent). Cite `DEC-9`, FIXED. |
 
 ## 6. Mutation table
 

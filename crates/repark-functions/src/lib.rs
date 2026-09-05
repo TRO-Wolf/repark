@@ -32,6 +32,7 @@ pub mod spark_isnan;
 pub mod spark_length;
 pub mod spark_log;
 pub mod spark_log1p;
+pub mod spark_nullability;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_split_part;
@@ -127,6 +128,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
         Arc::new(decimal_precision::SparkDecimalPrecision),
         Arc::new(decimal_spark::SparkDecimalRewrite),
+        Arc::new(spark_nullability::SparkNullability),
         Arc::new(integer_spark::SparkIntegerOverflow),
         Arc::new(analyzer::SparkExprSemantics),
     ];

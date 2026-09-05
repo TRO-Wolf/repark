@@ -223,35 +223,6 @@ def test_tighten_derived_ctas_still_refuses(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_cast_null_1_non_decimal_targets_keep_or_flip_the_child() -> None:
-    from repark import ReparkSession
-
-    text = (
-        "SELECT CAST('1' AS INT) AS i, CAST('2020-01-01' AS DATE) AS d,"
-        " CAST('2020-01-01 00:00:00' AS TIMESTAMP) AS t,"
-        " CAST(DATE '2020-01-01' AS TIMESTAMP) AS dt"
-    )
-    for ansi in ("true", "false"):
-        active = ReparkSession.getActiveSession()
-        if active is not None:
-            active.stop()
-        session = (
-            ReparkSession.builder.appName("cutover-schema-1-cast-null-1")
-            .config("spark.sql.ansi.enabled", ansi)
-            .getOrCreate()
-        )
-        try:
-            cells = _schema_cells(session.sql(text).to_arrow())
-        finally:
-            session.stop()
-        assert cells == [
-            ["i", "int32", False],
-            ["d", "date32[day]", False],
-            ["t", "timestamp[us, tz=UTC]", False],
-            ["dt", "timestamp[us, tz=UTC]", True],
-        ]
-
-
 def test_bool_to_decimal_cast_refuses_on_both_doors() -> None:
     import repark
     from repark import ReparkSession

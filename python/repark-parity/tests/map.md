@@ -252,7 +252,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   states the delivered spellings (incl. correlated DELETE IN and uncorrelated UPDATE IN) and the
   true remainder (C-003); the three STATUS bullets match the registry under the ceiling (C-004);
   every cited test resolves and DEC-9 stays BACKLOG (C-005); no row deleted and the maps are in
-  lockstep (C-006).
+  lockstep (C-006). NULLABILITY-2 (2026-09-05) flipped C-005 to the DEC-9 FIXED text
+  (test name kept per the G2 precedent).
   Cycle 2 (Critic): the DEC notes date by the fix's landing day (2026-08-14), and the TZ-8
   residual names only the pinned spellings (`date_sub` refuses too but is unpinned — not claimed).
   Departure: the `date_sub` window ends at the next heading; DEC rows are asserted by their

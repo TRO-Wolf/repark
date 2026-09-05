@@ -118,7 +118,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
         return Transformed::new(expr, false, TreeNodeRecursion::Stop);
     }
     if let Expr::Cast(cast) = &expr
-        && let Some(nullable) = crate::decimal_cast::nullable_decimal_cast(cast, schema)
+        && let Some(nullable) = crate::decimal_cast::nullable_spark_cast(cast, schema)
     {
         return Transformed::new(nullable, true, TreeNodeRecursion::Continue);
     }
@@ -266,10 +266,8 @@ macro_rules! decimal_arith_udf {
                     .map(|field| field.data_type().clone())
                     .collect();
                 let data_type = self.return_type(&arg_types)?;
-                let nullable = matches!(
-                    $name_literal,
-                    DECIMAL_DIV_NAME | DECIMAL_ADD_NAME | DECIMAL_SUB_NAME
-                ) || args.arg_fields.iter().any(|field| field.is_nullable());
+                let nullable = matches!($name_literal, DECIMAL_DIV_NAME)
+                    || args.arg_fields.iter().any(|field| field.is_nullable());
                 Ok(Arc::new(Field::new($name_literal, data_type, nullable)))
             }
 
