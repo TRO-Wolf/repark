@@ -78,7 +78,6 @@ async fn ids(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec
     out
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_commit_in_one_session_is_visible_to_the_next_statement_of_another() {
     let wh = TempDir::new().unwrap();
@@ -108,7 +107,6 @@ async fn a_commit_in_one_session_is_visible_to_the_next_statement_of_another() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_schema_change_in_one_session_is_seen_by_the_next_statement_of_another() {
     let wh = TempDir::new().unwrap();
@@ -147,7 +145,6 @@ async fn a_schema_change_in_one_session_is_seen_by_the_next_statement_of_another
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_merge_after_another_sessions_commit_reads_that_sessions_rows() {
     let wh = TempDir::new().unwrap();
@@ -194,7 +191,6 @@ async fn a_merge_after_another_sessions_commit_reads_that_sessions_rows() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_read_after_another_sessions_maintenance_still_answers() {
     let wh = TempDir::new().unwrap();
@@ -244,7 +240,6 @@ async fn a_read_after_another_sessions_maintenance_still_answers() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_dropped_and_recreated_table_is_never_served_from_the_old_location() {
     let wh = TempDir::new().unwrap();
@@ -278,7 +273,6 @@ async fn a_dropped_and_recreated_table_is_never_served_from_the_old_location() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-002
 #[tokio::test]
 async fn a_table_is_never_served_a_sibling_tables_cached_metadata() {
     let wh = TempDir::new().unwrap();
@@ -315,7 +309,6 @@ async fn a_table_is_never_served_a_sibling_tables_cached_metadata() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-002
 #[tokio::test]
 async fn an_unchanged_pointer_costs_no_metadata_body_fetch() {
     let wh = TempDir::new().unwrap();
@@ -348,7 +341,6 @@ async fn an_unchanged_pointer_costs_no_metadata_body_fetch() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-002
 #[tokio::test]
 async fn a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading() {
     let wh = TempDir::new().unwrap();
@@ -383,7 +375,6 @@ async fn a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-002
 #[tokio::test]
 async fn the_disabled_knob_reads_the_metadata_document_on_every_load() {
     let wh = TempDir::new().unwrap();
@@ -404,7 +395,6 @@ async fn the_disabled_knob_reads_the_metadata_document_on_every_load() {
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-004
 #[tokio::test]
 async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_door() {
     let wh = TempDir::new().unwrap();
@@ -448,7 +438,6 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-003
 #[tokio::test]
 async fn a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits() {
     let wh = TempDir::new().unwrap();
@@ -529,7 +518,6 @@ async fn a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits
     );
 }
 
-/// pins: perf-ice-catalog-io-1/C-004
 #[tokio::test]
 async fn the_retained_location_bound_holds_across_many_commits() {
     let wh = TempDir::new().unwrap();

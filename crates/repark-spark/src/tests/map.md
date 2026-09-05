@@ -452,6 +452,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   — reds NOTHING, because the memory catalog evicts on commit so a single-table fixture holds
   exactly one entry and any entry is the right one. The sibling-table pin exists because of that
   escape.
+  Every citation for this module lives here, not on the tests: the owner's ruling is that a
+  `pins:` line is prose and belongs in `map.md`, and the ledger-grammar gate reads these maps.
+
+  | test | clause |
+  |---|---|
+  | `a_commit_in_one_session_is_visible_to_the_next_statement_of_another` | C-003 |
+  | `a_schema_change_in_one_session_is_seen_by_the_next_statement_of_another` | C-003 |
+  | `a_merge_after_another_sessions_commit_reads_that_sessions_rows` | C-003 |
+  | `a_read_after_another_sessions_maintenance_still_answers` | C-003 |
+  | `a_dropped_and_recreated_table_is_never_served_from_the_old_location` | C-003 |
+  | `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits` | C-003 |
+  | `an_unchanged_pointer_costs_no_metadata_body_fetch` | C-002 |
+  | `a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading` | C-002 |
+  | `a_table_is_never_served_a_sibling_tables_cached_metadata` | C-002 |
+  | `the_disabled_knob_reads_the_metadata_document_on_every_load` | C-002 |
+  | `the_retained_location_bound_holds_across_many_commits` | C-004 |
+  | `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` | C-004 |
+
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
