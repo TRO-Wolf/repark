@@ -92,9 +92,12 @@ already did), and `evaluate` skips the closure for mask-null groups exactly the 
 DataFusion's own `evaluate` does. Pinned by `decimal128_groups_empty_group_evaluates_null`
 and `decimal128_groups_filtered_group_evaluates_null`. The analysis also showed the
 output mask is subsumed by the count guard for `avg` (mask-null ⟺ count zero, both
-set in the same closure): dropping the mask in `build` reds nothing by construction,
-so M2 is the input-mask mutation above. The mask stays as the reference shape and
-defense in depth.
+set in the same closure): dropping the `EmitTo::All` mask in `build` reds exactly
+`null_state_build_first_splits_mask` (round 2 measured; the shipped sentence said
+"reds nothing by construction" — the subsumption holds for the 20 `avg_groups`
+tests, but the null-state unit test pins the mask object itself), so M2 is the
+input-mask mutation above. The mask stays as the reference shape and defense in
+depth.
 
 **Split note (declared rename).** `avg_groups.rs` passed the 1000-line ceiling with
 the fix, so the null tracker moved to `groups_null_state.rs` (867 + 182 lines); the
@@ -236,7 +239,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_perf_agg_avg_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Three named faults built and run, not reasoned: wrong group index reds 8 Rust pins and 5 Python pins (the Python leg needed its own release build, rebuilt clean afterwards); ignored input NULL mask reds 4; decimal scale off by one reds 8 across all four widths. The output-mask subsumption (dropping the mask reds nothing because the count guard covers it) is proven in section 6, not assumed.
+      evidence: Three named faults built and run, not reasoned: wrong group index reds 8 Rust pins and 5 Python pins (the Python leg needed its own release build, rebuilt clean afterwards); ignored input NULL mask reds 4; decimal scale off by one reds 8 across all four widths. The output-mask subsumption (dropping the EmitTo::All mask reds only the null-state unit test because the count guard covers the avg paths) is proven in section 6, not assumed.
       artifacts: [task/ledgers/staging/perf-agg-avg-1-ledger.md]
   complete: true
 ```
