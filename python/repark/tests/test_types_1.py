@@ -509,6 +509,10 @@ def test_from_unixtime_follows_the_session_zone() -> None:
     assert session.sql("SELECT from_unixtime(0) AS r").collect()[0][0] == "1969-12-31 19:00:00"
     facade = frame.select(F.from_unixtime(F.lit(0)).alias("r"))
     assert facade.collect()[0][0] == "1969-12-31 19:00:00"
+    legacy = "SELECT from_unixtime(-77900000000) AS r"
+    assert session.sql(legacy).collect()[0][0] == "-0499-06-13 10:10:38"
+    legacy_facade = frame.select(F.from_unixtime(F.lit(-77900000000)).alias("r"))
+    assert legacy_facade.collect()[0][0] == "-0499-06-13 10:10:38"
 
 
 @pytest.mark.parametrize(
@@ -531,6 +535,35 @@ def test_from_unixtime_wraps_extreme_seconds_like_spark(text: str, value: Any, w
     assert _door_type(session, query) == ("string", True)
     assert session.sql(query).collect()[0][0] == want
     facade = frame.select(F.from_unixtime(F.lit(value)).alias("r"))
+    assert _frame_type(facade) == ("string", True)
+    assert facade.collect()[0][0] == want
+
+
+@pytest.mark.parametrize(
+    ("seconds", "pattern", "want"),
+    [
+        (-77900000000, None, "-0499-06-13 15:06:40"),
+        (-62200000000, None, "-0002-12-17 14:13:20"),
+        (-77900000000, "yyyy", "-0499"),
+        (-62200000000, "yyyy", "-0002"),
+        (-77900000000, "yy", "99"),
+        (-62200000000, "yy", "02"),
+    ],
+)
+def test_from_unixtime_pads_negative_years_after_the_sign(
+    seconds: int, pattern: str | None, want: str
+) -> None:
+    """pins: types-1/C-006 — negative 3- and 4-digit years pad after the sign, both doors."""
+    session = _session()
+    frame = _seed(session)
+    if pattern is None:
+        query = f"SELECT from_unixtime({seconds}) AS r"
+        facade = frame.select(F.from_unixtime(F.lit(seconds)).alias("r"))
+    else:
+        query = f"SELECT from_unixtime({seconds}, '{pattern}') AS r"
+        facade = frame.select(F.from_unixtime(F.lit(seconds), pattern).alias("r"))
+    assert _door_type(session, query) == ("string", True)
+    assert session.sql(query).collect()[0][0] == want
     assert _frame_type(facade) == ("string", True)
     assert facade.collect()[0][0] == want
 
@@ -751,7 +784,7 @@ def test_live_overflow_wraps_when_ansi_off(spark_engine: lp.Engine) -> None:
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_from_unixtime_extremes_match_the_oracle(spark_engine: lp.Engine) -> None:
-    """pins: types-1/C-006 — live Spark agrees on wrapped years, NULL, signs, fractions."""
+    """pins: types-1/C-006 — live Spark agrees on wrapped years, padded negatives, signs."""
     session = _session()
     _seed(session)
     _seed_oracle(spark_engine)
@@ -765,8 +798,18 @@ def test_live_from_unixtime_extremes_match_the_oracle(spark_engine: lp.Engine) -
         "CAST(NULL AS BIGINT)",
         "-1",
         "1.5",
+        "-77900000000",
+        "-62200000000",
     ]:
         query = f"SELECT from_unixtime({seconds}) AS r"
+        assert _live_type(engine, query) == _live_type(spark_engine, query)
+    for seconds, pattern in [
+        ("-77900000000", "yyyy"),
+        ("-62200000000", "yyyy"),
+        ("-77900000000", "yy"),
+        ("-62200000000", "yy"),
+    ]:
+        query = f"SELECT from_unixtime({seconds}, '{pattern}') AS r"
         assert _live_type(engine, query) == _live_type(spark_engine, query)
 
 

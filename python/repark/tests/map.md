@@ -342,7 +342,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ANSI-off overflow leg, from_unixtime extremes, a grouping type carve-out, re-coercion
   shapes). Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
   TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
-  wrapped-year from_unixtime cells.
+  wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
+  from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
