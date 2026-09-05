@@ -43,7 +43,15 @@ impl Debug for IcebergPartitionWriteExec {
         formatter
             .debug_struct("IcebergPartitionWriteExec")
             .field("table", &self.table.identifier().to_string())
+            .field("input", &self.input)
             .field("writers", &self.writers)
+            .field(
+                "collected",
+                &self.collected.lock().map(|files| files.len()).ok(),
+            )
+            .field("aborted", &self.aborted)
+            .field("result_schema", &self.result_schema)
+            .field("plan_properties", &self.plan_properties)
             .finish()
     }
 }
@@ -86,7 +94,7 @@ impl IcebergPartitionWriteExec {
 }
 
 impl ExecutionPlan for IcebergPartitionWriteExec {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "IcebergPartitionWriteExec"
     }
 
@@ -213,10 +221,10 @@ pub async fn write_data_files_from_plan(
     let mut results = execute_stream(exec, context)?;
     let mut first_error: Option<DataFusionError> = None;
     while let Some(item) = results.next().await {
-        if let Err(error) = item {
-            if first_error.is_none() {
-                first_error = Some(error);
-            }
+        if let Err(error) = item
+            && first_error.is_none()
+        {
+            first_error = Some(error);
         }
     }
     let files = drain_collected(&collected)?;
@@ -327,7 +335,7 @@ mod tests {
     }
 
     impl ExecutionPlan for SlowPartitionedExec {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "SlowPartitionedExec"
         }
 
@@ -463,31 +471,32 @@ mod tests {
         found
     }
 
-    async fn timed_parallel(catalog: &Arc<dyn Catalog>, name: &str, delay: Duration) -> Duration {
+    async fn parallel_write(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        delay: Duration,
+    ) -> Vec<DataFile> {
         let table = create_table(catalog, name).await;
         let input = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
-        let started = Instant::now();
-        let files = write_data_files_from_plan(
+        write_data_files_from_plan(
             &table,
             input,
             Arc::new(TaskContext::default()),
             WriteConcurrency::new(4).expect("concurrency"),
         )
         .await
-        .expect("write succeeds");
-        let wall = started.elapsed();
-        assert_eq!(files.len(), 4, "one data file per DataFusion partition");
-        let rows: u64 = files.iter().map(|file| file.record_count()).sum();
-        assert_eq!(rows, 80, "every row reaches a data file");
-        wall
+        .expect("write succeeds")
     }
 
-    async fn timed_one_task(catalog: &Arc<dyn Catalog>, name: &str, delay: Duration) -> Duration {
+    async fn one_task_write(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        delay: Duration,
+    ) -> Vec<DataFile> {
         let table = create_table(catalog, name).await;
         let input: Arc<dyn ExecutionPlan> = Arc::new(SlowPartitionedExec::new(4, 8, delay, None));
         let context = Arc::new(TaskContext::default());
         let one_writer = WriteConcurrency::new(1).expect("concurrency");
-        let started = Instant::now();
         let mut files = Vec::new();
         for partition in 0..4 {
             let stream = input
@@ -499,34 +508,31 @@ mod tests {
                     .expect("serial write succeeds"),
             );
         }
-        let wall = started.elapsed();
-        assert_eq!(files.len(), 4);
-        wall
+        files
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-    async fn blocking_partition_work_overlaps_instead_of_serializing() {
+    async fn every_input_partition_gets_its_own_writer_and_data_file() {
         let warehouse = TempDir::new().expect("warehouse");
         let catalog = memory_catalog(&warehouse).await;
         let delay = Duration::from_millis(BLOCKING_WRITE_MS);
 
-        let one_task_floor = timed_one_task(&catalog, "serialfloor", Duration::ZERO).await;
-        let one_task = timed_one_task(&catalog, "serial", delay).await;
-        let parallel_floor = timed_parallel(&catalog, "parallelfloor", Duration::ZERO).await;
-        let parallel = timed_parallel(&catalog, "parallel", delay).await;
+        let node = parallel_write(&catalog, "node", delay).await;
+        let one_task = one_task_write(&catalog, "onetask", delay).await;
 
-        let one_task_cost = one_task.saturating_sub(one_task_floor);
-        let parallel_cost = parallel.saturating_sub(parallel_floor);
-        assert!(
-            one_task_cost >= delay * 2,
-            "four partitions drained in one task pay four blocking delays: floor \
-             {one_task_floor:?}, with delay {one_task:?}"
+        assert_eq!(node.len(), 4, "one data file per DataFusion partition");
+        assert_eq!(
+            node.iter().map(DataFile::record_count).collect::<Vec<_>>(),
+            vec![8, 16, 24, 32],
+            "each writer holds exactly its own partition's rows, in writer-index order"
         );
-        assert!(
-            parallel_cost * 2 < one_task_cost,
-            "the write node's partitions must overlap their blocking work: parallel cost \
-             {parallel_cost:?} (floor {parallel_floor:?}, wall {parallel:?}) vs one-task cost \
-             {one_task_cost:?} (floor {one_task_floor:?}, wall {one_task:?})"
+        assert_eq!(
+            one_task
+                .iter()
+                .map(DataFile::record_count)
+                .collect::<Vec<_>>(),
+            node.iter().map(DataFile::record_count).collect::<Vec<_>>(),
+            "the one-task drive answers the same, only in one task"
         );
     }
 
@@ -546,12 +552,7 @@ mod tests {
             )
             .await
             .expect("write succeeds");
-            runs.push(
-                files
-                    .iter()
-                    .map(|file| file.record_count())
-                    .collect::<Vec<_>>(),
-            );
+            runs.push(files.iter().map(DataFile::record_count).collect::<Vec<_>>());
         }
         assert_eq!(runs[0], runs[1]);
         assert_eq!(runs[1], runs[2]);

@@ -183,10 +183,15 @@ repark-core's error map.
   completion order. An input error raises a shared flag: siblings stop taking `Ok` batches, close
   what they hold, and every completed file is deleted through `FileIO` before the first error
   surfaces.
-  In-module pins: the node's partitions overlap their blocking work where one task draining the
-  same four partitions pays four delays; the returned files carry writer-index order (four
-  partitions of different sizes, three runs); and a late failure in one partition leaves no
-  parquet file in the warehouse.
+  In-module pins: every input partition gets its own writer and its own data file, holding exactly
+  that partition's rows in writer-index order, and a one-task drive of the same four partitions
+  answers identically; the returned files carry writer-index order over three runs; and a late
+  failure in one partition leaves no parquet file in the warehouse. There is deliberately no
+  wall-clock assertion in the unit suite — under `cargo test` on a loaded box the fixed cost of
+  four small parquet writes swamped the injected delay (a 6.4 s floor against a 6.0 s delayed
+  run), so the timing evidence lives in
+  [../../../../docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md)
+  instead, where it is measured on a release module.
   The vectorized partition splitter this path calls on every partitioned write is fork ask
   **F-28** on `f-28-vectorized-partition-splitter`: the splitter lexsorts the partition-value
   columns, reads group boundaries with `arrow_ord::partition` and materializes one
