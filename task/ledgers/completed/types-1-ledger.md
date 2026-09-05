@@ -33,7 +33,7 @@ public API names (the v1.0 freeze binds); any dependency or lockfile change.
 | C-005 | `rank()`, `dense_rank()`, `row_number()`, `ntile(n)` → `Int32` on both doors, with and without partitions, and inside a CTAS; `percent_rank`/`cume_dist` → `Float64`. | `test_types_1.py` rank section; window-corpus rank rows flip to equality. | **PROVEN** | Rank-family pins green (both doors, partitioned, CTAS `int32`, int cells); live legs full-match all of `rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`/`cume_dist`. |
 | C-006 | `from_unixtime` returns session-zone STRING `yyyy-MM-dd HH:mm:ss` with the optional format argument, measured under UTC and a non-UTC session zone; `unix_timestamp`/`to_timestamp` unchanged. | `test_types_1.py` from_unixtime section; UNIX-1 pin flips. | **PROVEN** | `from_unixtime` pins green (UTC + format + New York, both doors; always nullable like Spark after the live red); `unix_timestamp`/`to_timestamp` unchanged; live legs full-match. |
 | C-007 | Placement: literal narrowing is the `AnalyzerRule` `SparkIntegerLiteral`, first in `repark_functions::analyzer_rules()` (after DataFusion's own `TypeCoercion`) with a closing `TypeCoercion`; unsigned→signed answers come from UDF-registration wrappers (`signed_aggregate_functions`, `signed_window_functions`); installed on the Spark door only; `EXPLAIN` pins prove the plan carries the rewrites; no public name changes; nullability untouched. | `test_types_1.py` EXPLAIN pins; ANSI-door control pins stay `int64`/`uint64`-free per stock DataFusion. | **PROVEN** | EXPLAIN pins green (`Int32(1)`, `__repark_spark_int_add__`); ANSI-door control `int64`; placement per §10 (post-coercion narrow + closing coercion, Spark-door install only); no public renames. |
-| C-008 | No regressions: `make verify` green, the full facade suite green with every flipped pin classified (Spark-answer flip with citation, or fixed regression), the cutover battery re-run, mutation score per rule recorded. | The suites; §8. | **PROVEN** | `make verify` exit 0; facade 4942 passed / 206 skipped (post-fix re-run, zero flips from the fix); parity 574; cutover battery 132 / 99; mutations 7/7 bite (§8); 76 triage flips classified (§11). |
+| C-008 | No regressions: `make verify` green, the full facade suite green with every flipped pin classified (Spark-answer flip with citation, or fixed regression), the dbt-adapter suite green (`make py-test-dbt`, the `preflight` gate after the facade suite — added in round 5, §14), the cutover battery re-run, mutation score per rule recorded. | The suites; §8. | **PROVEN** | `make verify` exit 0; facade 4942 passed / 206 skipped (post-fix re-run, zero flips from the fix); parity 574; cutover battery 132 / 99; mutations 7/7 bite (§8); 76 triage flips classified (§11); dbt-adapter suite 59 passed / 1 skipped (cursor `description` int64→int32 flip = the Spark answer per C-001, retyped `ffae551d`). |
 | C-009 | Docs: every flipped row FIXED with date and unit id, every residue an honest row, crate maps carry the design note and pins line, `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | **PROVEN** | `V3-COV-8`, `BL-8`, `G5-RANK-TYPE-1/2/3`, `UNIX-1` FIXED with date + unit; `TY-3` narrowed; residues `TY-6`, `BL-18` filed; crate maps + test map carry notes; `STATUS.md`, `briefs/next-sequence.md` untouched. |
 
 VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
@@ -45,7 +45,7 @@ VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
 | `crates/repark-functions` | `spark_result_types.rs` (+tests): `SparkIntegerLiteral` narrowing, `SignedAggregate`/`SignedWindow` wrappers; `count_if.rs`, `spark_from_unixtime.rs` new UDFs; `integer_spark`/`decimal_precision`/`datetime`/`timestamp_cast`/`try_invert`/`expr_fn`/`aggregate` conform; `lib.rs` rule wiring. |
 | `crates/repark-spark` | `spark_ast.rs` plain-`INSERT` INT→BIGINT conform projection. |
 | `crates/repark-python`, `crates/repark-sql` | Door-parity ratchet 22→21, dispatch/nullability conform, cross-door and bindings pins. |
-| `python/repark` | `test_types_1.py` (54 pins + 4 live legs); facade-suite triage flips; `core.py` null-top `last()` correction (+2 lines). |
+| `python/repark` | `test_types_1.py` (54 pins + 4 live legs); facade-suite triage flips; `core.py` `CAST(__repark_rn AS BIGINT)` in `sample`/`randomSplit` (+2 lines, absorbed back to 6303 in round 4). |
 | `python/repark-parity` | Stale no-engine window tiers removed; bench roster/map conform. |
 | `docs`, `scripts`, `task` | Registry rows FIXED/filed; `check_lib_py` baselines amended; this ledger. |
 
@@ -312,3 +312,34 @@ The round-4 gate run surfaced three red pins in `test_perf_agg_avg_1.py` (landed
 pinned `int64` where the narrowed door answers `int32` — the Spark answer per C-001's
 live legs. Lawful flips with `types-1/C-001` citations under the §11 classification
 rule. Pre-existing at the round-4 base; untouched by the eleven findings.
+
+## 14. Round 5 — the executing critic's four findings (2026-09-05)
+
+One JVM at a time (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `TZ=UTC`); every probe
+process exited (verified via `pgrep` after each run; the crashed first spread probe
+left one gateway behind — killed by PID, verified gone). Banner for all round-5 probe
+runs: `BANNER spark=4.1.2 zone=UTC`. The critic confirmed the round-3 wrapping claim
+cell for cell; the round-3 saturation claim was wrong. Shape cells are
+`(Arrow type, nullable, values)`.
+
+| id | Disposition |
+|---|---|
+| N1 | The year arm now pads digits and re-attaches the sign (`-0499`, `-0002`), and `yy` is `abs(year) % 100` (`-499` → `99` — the shipped `rem_euclid` answered `01`, caught by the round-5 unit test against the measured oracle); 5+-digit positives keep `+`. Four UTC cells (default, `yyyy`, `yy`) pinned on both doors plus a New York cell; live legs on the UTC default/`yyyy`/`yy` cells. Bite: the new pins fail 5× on the pre-fix native module; the Rust wrap test fails on the stashed old arm (`-499-…` vs `-0499-…`). |
+| N2 | §6 and the dataframe `map.md` rewritten to the real change (`CAST(__repark_rn AS BIGINT)` in `sample`/`randomSplit`), as §11 already reads. |
+| N3 | C-008's gate roster and evidence carry `make py-test-dbt`: the cursor `description` flip int64→int32 is the Spark answer per C-001, retyped in `ffae551d`. |
+| N4 | `datetime.rs` 1709→1700 via the `spark_year_pad.rs` extraction (§13.2's scatter objection superseded by the brief's sanctioned helper-module out); both cap tables mirrored in the fix commit. |
+
+### 14.1 Round-5 oracle cells
+
+Measured ANSI on/off × UTC/America/New_York; `from_unixtime` is ANSI-independent and
+zone-dependent only in wall-clock fields. Full-match rows carry live legs.
+
+| Query | repark | Spark 4.1.2 | Standing |
+|---|---|---|---|
+| `from_unixtime(-77900000000)` (UTC) | `(string, True, ['-0499-06-13 15:06:40'])` | same | full match, live leg |
+| `from_unixtime(-77900000000, 'yyyy' / 'yy')` | `'-0499'` / `'99'` | same | full match, live legs |
+| `from_unixtime(-62200000000)` (UTC) | `(string, True, ['-0002-12-17 14:13:20'])` | same | full match, live leg |
+| `from_unixtime(-62200000000, 'yyyy' / 'yy')` | `'-0002'` / `'02'` | same | full match, live legs |
+| `from_unixtime(-77900000000)` (New York) | `'-0499-06-13 10:10:38'` | same | full match, always-run pin |
+| `from_unixtime(-62200000000)` (New York) | `'-0002-12-17 09:17:18'` | same | full match, oracle only |
+| `'yy'` spread, 27 years −2500…51190 | `abs(year) % 100`, zero-padded | same | rule fit; pinned cells carry live legs |

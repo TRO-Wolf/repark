@@ -50,7 +50,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   door's Arrow types follow Spark — INT literals, BIGINT count-likes, the INT rank family,
   session-zone STRING `from_unixtime`. 9 clauses PROVEN, 7 live legs on Spark 4.1.2.
   `V3-COV-8`, `BL-8`, `G5-RANK-TYPE-1/2/3`, `UNIX-1` FIXED; `TY-3` narrowed; `TY-6`,
-  `BL-18`, `TY-7`, `TY-8`, `TY-9`, `TY-10` filed (round-4 §13 corrects §7.1/§11).
+  `BL-18`, `TY-7`, `TY-8`, `TY-9`, `TY-10` filed (round-4 §13 corrects §7.1/§11;
+  round-5 §14 corrects §6/C-008 and pads negative years).
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## Pointers
