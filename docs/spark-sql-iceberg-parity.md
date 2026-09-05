@@ -5030,6 +5030,59 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
 
+### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
+
+- **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` fails with
+  `PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: partition not
+  used yet (a Rust panic was caught at the Python boundary; this is a bug — please report it)`.
+  The panic is DataFusion 54.1's own `expect("partition not used yet")` at
+  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
+  side (`ProjectionExec` over `RepartitionExec`): each output partition removes its channel from
+  the shared state, so a second `execute` of the same partition finds nothing, and something on
+  the pool-refusal path re-executes it. Reproducible three runs of three, and again at 64 MiB with
+  1e7 rows. The process survives (`panic = unwind`, caught by the boundary fence) and the session
+  stays usable; a 1 GiB pool on the same query is `ok`. **Every other operator measured at the
+  same 8 MiB pool — sort, hash aggregate, distinct, hash join, sort-merge join, window,
+  `array_agg`, TopK — returns a clean typed `Resources exhausted`.** This is the plan shape, not
+  the pool machinery.
+- **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
+  raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
+  is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
+  `sort` and `hash_join`, in the baseline's §5.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. The defect is upstream in DataFusion,
+  so this unit pins the behaviour rather than patching a dependency; the repark-side deliverable
+  is the reproducer the pin already is. It is the **only** Never-OOM contract failure in the
+  180-cell matrix: a bounded pool must answer with a typed refusal, never a panic.
+
+### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit panics instead of raising `MemoryError`
+
+- **repark** — with `RLIMIT_AS` set 256 MiB above the session's own `VmSize`, `collect()` over a
+  4e6-row five-column frame fails with `PySparkException: repark internal error in
+  collect_rows.rows_from_record_batch: PyObject pointer is null (a Rust panic was caught at the
+  Python boundary; this is a bug — please report it)`. A CPython allocation returned `NULL` and
+  the row fast path panicked rather than surfacing the `MemoryError` CPython had already set.
+  With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
+  cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
+  value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
+  `collect()` is 4,459 MiB resident at every pool from unbounded down to 64 MiB.
+- **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
+  `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
+  a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
+  the failure shape. Measured in §5: Spark's own `collect_list` at a 1 GiB driver heap dies with
+  `java.lang.OutOfMemoryError: Java heap space` and takes the SparkContext down, which is worse
+  than repark's typed refusal on the same operator.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the
+  pointer and raise `MemoryError`. It is the difference between "repark reports it is out of
+  memory" and "repark reports a bug", and a container memory limit is the ordinary way a user
+  meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
+  nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
+  Never-OOM claim.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

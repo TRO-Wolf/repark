@@ -63,7 +63,7 @@ Why the shape it has:
   under a bounded `--driver-memory`, with spill read out of the Spark event log.
 - `map.md` — this file.
 
-pins: h3-spill-1/C-001, C-002, C-003
+pins: h3-spill-1/C-001, C-002, C-003, C-007
 
 ## I want to…
 
