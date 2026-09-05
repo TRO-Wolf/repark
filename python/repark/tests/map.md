@@ -1644,6 +1644,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
   (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
   ruff-format lockstep.
+- `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
+  [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
+  families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the
+  unbounded run's; a bounded pool that fits answers exactly; a pool refusal is the documented
+  Spark-shaped exception (`fair(` required, `greedy(` and any caught Rust panic forbidden, both
+  resize knobs named) and leaves the session usable. Then the limits, each in a fresh
+  subprocess reading its own `VmHWM` (never `ru_maxrss`, which survives `execve` and would
+  report pytest's own footprint): spilling holds resident memory 200 MiB below the
+  unbounded run and under 3x the pool, while `toPandas` at a 64 MiB pool is over 6x the pool —
+  the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
+  same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
+  equal at 1 and 4 target partitions while moving when one row is removed (the provocation
+  control: a constant digest reds the second pin, not the first). Two defect pins codify
+  today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
+  panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
+  and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
+  session's own `VmSize` panics on a null `PyObject` instead of raising `MemoryError`; the
+  6 GiB-headroom control is green). The ceiling is host-relative on purpose — an absolute
+  `RLIMIT_AS` is a property of the box, not of the code.
+  pins: h3-spill-1/C-003, C-004, C-005, C-006
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

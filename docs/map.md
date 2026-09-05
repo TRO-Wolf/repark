@@ -54,6 +54,14 @@ repo.
   ten runs) and deterministic at 11 in Spark 4.1.2 + Iceberg 1.11.0 (10 of 10) — BACKLOG,
   follow-up unit V3-11, pinned by the invariant rather than a flapping value.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001
+  **H3-SPILL-1 (2026-09-05):** §7 `H3-SPILL-NLJ-1` and `H3-SPILL-COLLECT-1` BACKLOG — the two
+  failure-shape rows the 180-cell Never-OOM matrix found. Both are about *how* repark runs out of
+  memory, not about a value: a nested-loop join at a tight pool answers with a caught Rust panic
+  from DataFusion's `RepartitionExec` instead of a typed refusal, and `collect()` under an
+  address-space limit panics on a null `PyObject` instead of raising `MemoryError`. Neither is a
+  wrong answer and neither aborts the process, so both are pinned rather than fixed here; the
+  measurement is [perf/spill-matrix-baseline.md](perf/spill-matrix-baseline.md).
+  pins: h3-spill-1/C-005, C-006
   **FN-REGEXP-EXTRACT-1 round 2 (2026-09-04):** §7 `FN-REGEX-LOOKAROUND-1` BACKLOG
   (Spark `'bar'` vs repark refusal on every regexp kernel); `FN-REGEX-POSIX-1`
   Controls rewritten (extract answers, former refusal pin superseded); facade
