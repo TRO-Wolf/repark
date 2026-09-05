@@ -171,9 +171,10 @@ RePark lane, override reverted, `git diff origin/main -- Cargo.toml Cargo.lock` 
 | `make verify` | exit 0 — `repark-iceberg` 398, `repark-spark` 788, `repark-sql` 341 plus every integration binary |
 | `make check-python-conventions` | exit 0 |
 | `make rust-panic-ban` | exit 0 |
-| `pytest python/repark/tests -q -x` | see §12 (round 2 re-run) |
+| `pytest python/repark/tests -q` | **4,805 passed, 200 skipped** on this lane (round-2 re-run on the shipped tree). The round-2 critic measured 4,803 / 202 on its own module: two live-oracle tests skip without `pyspark` in the environment, and this lane has it installed. The count is environment-dependent, not tree-dependent. |
 | `pytest python/repark-parity/tests -q` | 574 passed |
-| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_ice_writepath_1.py test_sql_harden_cutover.py -q` | 175 passed |
+| `cargo test -p repark-spark --lib v3_row_order` | 6 passed (the V3-11 order pins) |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_perf_ice_writepath_1.py test_sql_harden_cutover.py -q` | 175 passed (round-2 re-run) |
 | `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | clean |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | clean |
 | `typos .` | clean |
