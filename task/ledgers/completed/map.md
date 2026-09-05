@@ -46,6 +46,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   `PERF-DVCLOSE-WALK-1` FIXED.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), complete:** the
   scope audit for `RE-1` and `LOG-1`; both closed to Spark by SEM-1. Campaign closed 2026-09-04.
+- [types-1-ledger.md](types-1-ledger.md) — **TYPES-1 (2026-09-05), complete:** the SQL
+  door's Arrow types follow Spark — INT literals, BIGINT count-likes, the INT rank family,
+  session-zone STRING `from_unixtime`. 9 clauses PROVEN, 4 live legs on Spark 4.1.2.
+  `V3-COV-8`, `BL-8`, `G5-RANK-TYPE-1/2/3`, `UNIX-1` FIXED; `TY-3` narrowed; `TY-6`,
+  `BL-18` filed.
+  pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## Pointers
 - Up: [../map.md](../map.md)
