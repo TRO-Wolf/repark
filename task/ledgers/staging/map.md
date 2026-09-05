@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [types-1-ledger.md](types-1-ledger.md) — **TYPES-1 (2026-09-05), in flight:** the SQL
+  door's Arrow types follow Spark — integer literals narrow to INT, count-like aggregates
+  and the rank family cast to BIGINT/INT in the plan, `from_unixtime` returns a
+  session-zone STRING. `V3-COV-8` (width), `BL-8`, `G5-RANK-TYPE-1/2/3`, `UNIX-1` to FIXED.
+  `risk_tier: standard`. Branch `fix/types-1`.
+  pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45
