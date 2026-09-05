@@ -226,6 +226,11 @@ def test_many_manifests_answer_equal_to_one_merged_manifest(tmp_path: Path) -> N
     assert many == merged == _MANY_ROWS
 
 
+@pytest.mark.skipif(
+    _native.__debug_assertions__,
+    reason="the wall-clock target holds on a release module only; the manifest-open census "
+    "pins guard the cache on every build",
+)
 def test_the_second_statement_on_a_many_manifest_table_is_under_the_target(
     tmp_path: Path,
 ) -> None:
