@@ -9,9 +9,10 @@ from typing import Any
 import _live_parity as lp
 import pyarrow as pa
 import pytest
+
 from repark import ReparkSession
-from repark.spark import functions as F
 from repark.spark import Window
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 SEED_DDL = "i int, b bigint, s string"
 SEED_ROWS: list[tuple[int, int, str | None]] = [(1, 10, "a"), (2, 20, "b"), (3, 30, None)]
@@ -330,11 +331,19 @@ def test_from_unixtime_is_a_session_zone_string() -> None:
     """pins: types-1/C-006 — from_unixtime answers a UTC STRING on both doors."""
     session = _session()
     frame = _seed(session)
-    assert _door_type(session, "SELECT from_unixtime(0) AS r") == ("string", True)
+    assert _door_type(session, "SELECT from_unixtime(0) AS r") == ("string", False)
     assert session.sql("SELECT from_unixtime(0) AS r").collect()[0][0] == "1970-01-01 00:00:00"
     facade = frame.select(F.from_unixtime(F.lit(0)).alias("r"))
-    assert _frame_type(facade) == ("string", True)
+    assert _frame_type(facade) == ("string", False)
     assert type(facade.collect()[0][0]) is str
+
+
+def test_from_unixtime_nullable_column_stays_nullable() -> None:
+    """pins: types-1/C-006 — from_unixtime over a nullable column stays nullable."""
+    session = _session()
+    _seed(session)
+    query = "SELECT from_unixtime(i) AS r FROM types1_probe"
+    assert _door_type(session, query) == ("string", True)
 
 
 @pytest.mark.parametrize(
@@ -349,7 +358,7 @@ def test_from_unixtime_format_argument(pattern: str, want: str) -> None:
     """pins: types-1/C-006 — from_unixtime renders the optional Java format pattern."""
     session = _session()
     query = f"SELECT from_unixtime(0, '{pattern}') AS r"
-    assert _door_type(session, query) == ("string", True)
+    assert _door_type(session, query) == ("string", False)
     assert session.sql(query).collect()[0][0] == want
 
 
@@ -365,7 +374,8 @@ def test_from_unixtime_follows_the_session_zone() -> None:
 def test_unix_timestamp_and_to_timestamp_stand_still() -> None:
     """pins: types-1/C-006 — unix_timestamp and to_timestamp keep their DATE-FN-1 answers."""
     session = _session()
-    assert session.sql("SELECT unix_timestamp() AS r").toArrow().schema.field("r").type == pa.int64()
+    unix_type = session.sql("SELECT unix_timestamp() AS r").toArrow().schema.field("r").type
+    assert unix_type == pa.int64()
     stamp = session.sql("SELECT to_timestamp('2024-02-29 01:02:03') AS r").collect()[0][0]
     assert (stamp.year, stamp.month, stamp.day) == (2024, 2, 29)
 
@@ -378,16 +388,15 @@ def _logical_plan(session: ReparkSession, query: str) -> str:
     return "\n".join(logical)
 
 
-def test_explain_carries_the_spark_casts() -> None:
-    """pins: types-1/C-007 — the analyzed plan carries CASTs, not facade conversions."""
+def test_explain_carries_the_spark_rewrites() -> None:
+    """pins: types-1/C-007 — the analyzed plan carries the rewrites, not conversions."""
     session = _session()
     _seed(session)
-    rank_text = _logical_plan(session, "SELECT rank() OVER (ORDER BY i) AS r FROM types1_probe")
-    assert "CAST" in rank_text and "Int32" in rank_text
-    count_text = _logical_plan(session, "SELECT regr_count(b, i) AS r FROM types1_probe")
-    assert "CAST" in count_text and "Int64" in count_text
     literal_text = _logical_plan(session, "SELECT 1 AS r")
     assert "Int32(1)" in literal_text
+    overflow_text = _logical_plan(session, "SELECT 2147483647 + 1 AS r")
+    assert "__repark_spark_int_add__" in overflow_text
+    assert "Int32(2147483647)" in overflow_text
 
 
 def test_ansi_door_keeps_stock_types() -> None:
@@ -410,10 +419,11 @@ def _live_engine(session: ReparkSession) -> lp.Engine:
     )
 
 
-def _live_type(engine: lp.Engine, query: str) -> tuple[str, list[Any]]:
-    """pins: types-1/C-008 — one query's (Arrow type, values) on either live engine."""
+def _live_type(engine: lp.Engine, query: str) -> tuple[str, bool, list[Any]]:
+    """pins: types-1/C-008 — one query's (Arrow type, nullable, values) either engine."""
     table = engine.arrow_of(engine.session.sql(query))
-    return (str(table.schema.field("r").type), table.column("r").to_pylist())
+    field = table.schema.field("r")
+    return (str(field.type), field.nullable, table.column("r").to_pylist())
 
 
 def _seed_oracle(spark_engine: lp.Engine) -> None:

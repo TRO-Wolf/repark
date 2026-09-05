@@ -335,6 +335,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   family, session-zone STRING `from_unixtime` with the format argument, EXPLAIN plan-cast
   pins, ANSI-door stock-type controls, and live-oracle legs behind `REPARK_PARITY_LIVE=1`.
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
+  coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform.
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()`
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).

@@ -84,3 +84,30 @@ Recorded here as run (one rule disabled at a time; the pins each reds).
 Banner, zone, and per-shape readings recorded here when a JVM slot frees (two sibling
 lanes hold one each as of 2026-09-05; this lane polls with `pgrep` and never starts a
 second JVM).
+
+## 10. Implementation progress (2026-09-05)
+
+§7's analyzer-prefix placement is superseded: narrowing now runs FIRST in
+`repark_functions::analyzer_rules()` (after DataFusion's own `TypeCoercion`, which the
+prefix preceded) with a CLOSING `TypeCoercion` at the list end, and the prefix
+mechanism is reverted. Cause: narrowing-before-coercion made `TypeCoercion.coerce_union`
+wrap narrowed branches in `CAST`s to the stale plan-build union schema, and the
+division rewrite then fired inside the cast (`SELECT 5/2 UNION ALL SELECT 7/2` went
+`int64 [2, 3]`). Order now: coerce on pre-narrow `Int64`, narrow, rewrite, close.
+`SessionState::optimize` re-runs the analyzer, so every execution sees three passes;
+the fixpoint is stable. `LIMIT` fetch/skip are exempt (the physical planner matches
+bare `Int64` only). Plain-`INSERT` DML gets a post-analysis conform projection for
+the narrowing-opened `(Int32 → BIGINT)` shape (`conform_insert_narrowed_ints` in
+`spark_ast.rs`); every other shape passes through as before. Fallout fixed in the
+same slice: `decimal_precision` default-cast arms (`(20,0)` accepts narrowed `Int32`,
+`(10,0)` keeps user casts declared), `try_divide` interval divisor accepts `Int32`,
+the three `integer_spark` widening pins rewritten to Spark behavior (`1+1` is `Int32`,
+`INTMAX+1` raises under ANSI and wraps when ANSI is off, matching the typed path),
+the door-parity ratchet 22 → 21 (`from_unixtime` converged), bindings/cross-door
+helpers to `Int32` (cross-door catalog setups neutralized with declared `BIGINT`).
+`make verify` green.
+
+Known residue (out of scope, observed not fixed): SQL-text `UNION` of small literals
+answers `BIGINT` (the stale plan-build union schema; base behaves the same — Spark
+answers `INT`); legacy-mode `INTMAX+1` wraps where Spark answers `NULL` (chartered by
+C-002, same as the typed path).

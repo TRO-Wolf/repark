@@ -667,7 +667,7 @@ fn argument_timestamp_parts(
     }
 }
 
-fn parse_session_zone(zone_id: &str) -> Result<Tz> {
+pub(crate) fn parse_session_zone(zone_id: &str) -> Result<Tz> {
     Tz::from_str(zone_id).map_err(|error| {
         DataFusionError::Execution(format!(
             "session timezone {zone_id:?} could not be resolved at query time ({error})"

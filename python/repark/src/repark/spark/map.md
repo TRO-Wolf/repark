@@ -63,6 +63,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the
   kernel (bare pattern forced-lit, optional idx defaulting to 1).
   pins: fn-regexp-extract-1/C-001
+  **TYPES-1 (2026-09-05):** `from_unixtime` forwards the optional format argument.
+  pins: types-1/C-006
 - `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
   `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
   `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).

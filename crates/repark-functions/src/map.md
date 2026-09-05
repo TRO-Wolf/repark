@@ -42,6 +42,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
+  `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
+  `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
+  for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
+  `Int64`, `SignedWindow` casts the rank family to `Int32`.
+  pins: types-1/C-001, C-003, C-005, C-007
+- `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
+  `Int64`. pins: types-1/C-003
+- `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
+  overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
+  compiler; 1- and 2-arg shapes. pins: types-1/C-006
 - `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
   is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /
@@ -150,13 +161,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Spark-typed decimal `avg` with decimal `retract_batch` (no Numeric→Float64 coerce).
   **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
+  **TYPES-1 (2026-09-05):** registers `count_if` plus the `SignedAggregate` wrappers
+  (`regr_count`, `approx_distinct` → `Int64`). pins: types-1/C-003
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
   columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **first** in
-  `analyzer_rules()` (before `SparkDecimalRewrite` then `SparkExprSemantics`).
+  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **second** in
+  `analyzer_rules()` (after `SparkIntegerLiteral`, before `SparkDecimalRewrite` then
+  `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
+  narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
+  pins: types-1/C-002
 - `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
@@ -180,12 +196,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.
   pins: f-y10-1-int-overflow/C-001
+  **TYPES-1 (2026-09-05)** retired the literal-width split below: pure-literal `1 + 1`
+  is `Int32`, `2147483647 + 1` raises under ANSI and wraps when ANSI is off.
+  pins: types-1/C-002
 - `integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs that
   read `SparkAnsiConfig` (DEC U5 shape). `ansi=true` raises Spark's
   `ARITHMETIC_OVERFLOW`; `ansi=false` wraps at the source Arrow type. An
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
-  Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
-  split). SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
+  **TYPES-1 (2026-09-05):** the planner leaves pure-literal pairs to the analyzer, which
+  now sees narrowed literals — `1 + 1` is `Int32`, `2147483647 + 1` raises/wraps.
+  SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
   Lambda-variable operands never arm (FNP-4c interaction; pin
   `lambda_variable_operands_do_not_arm`).
   Planner `Planned` results alias to the original BinaryExpr name so
@@ -200,9 +220,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
   (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` →
-  `SparkIntegerOverflow` → Spark semantics +
-  cardinality + instant_ts; the session installs them via the Spark door's `SessionExtension`;
+  `analyzer_rules()` (`SparkIntegerLiteral` → `SparkDecimalPrecision` →
+  `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
+  cardinality + instant_ts + a closing `TypeCoercion`; the session installs them via the
+  Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
@@ -332,6 +353,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
   three-row input yields three identical BIGINT values.
   pins: date-fn-1-spark-date-spelling/C-002, C-003
+  **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
+  `spark_from_unixtime.rs`. pins: types-1/C-006
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
@@ -374,6 +397,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);
   SAF-002 downcast evidence + defensive `cast` before `as_primitive`/`as_string` (pin
   `trunc_accepts_large_utf8_format_without_panic`).
+  **TYPES-1 (2026-09-05):** the `date_format` pattern compiler and wall-clock helpers are
+  `pub(crate)` for `spark_from_unixtime.rs`. pins: types-1/C-006
 - `format_version.rs` — **V3-10:** `resolve_alter_format_version` is the one `ALTER … format-version`
   resolver for every door: it parses the request, refuses a downgrade and anything above
   `MAX_SUPPORTED_FORMAT_VERSION` naming the key and both versions, returns `None` for the
@@ -392,6 +417,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   functions. Builders embed the same shims registered by the SQL door, including `unix_date`,
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
   columns remain self-contained without a `SessionContext`.
+  **TYPES-1 (2026-09-05):** `from_unixtime` builder over the new UDF. pins: types-1/C-006
 
 Facade builders embed the same kernels registered by the SQL door, including `to_timestamp`, `avg`,
 the additional `datafusion-spark` functions, and map builders; keep both dispatch surfaces aligned.
