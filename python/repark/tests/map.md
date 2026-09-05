@@ -2498,6 +2498,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
+- `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the catalog-IO
+  census and the manifest target on the memory catalog. The instrument is
+  `_native.iceberg_metadata_cache_census(session)`, whose `body_fetches` counter is exactly the
+  number of `metadata.json` documents the session has parsed — which is the number of S3 GETs the
+  same statement would pay on Glue or S3 Tables, so the counter IS the census without a tracer.
+  The strace census that produced the committed before/after table lives in
+  [docs/perf/iceberg-catalog-io-baseline.md](../../../docs/perf/iceberg-catalog-io-baseline.md).
+  Always-run legs: a repeated read parses nothing; INSERT / DELETE / UPDATE / MERGE each parse
+  nothing beyond the commit they write; a commit and an `ADD COLUMNS` are both seen by the next
+  statement (ADR-0004 T6 and BUG-005 at the Python door); the knob off reconstructs the pre-unit
+  path in the same process; the retained-entry bound is trimmed at the statement door and the
+  table still answers; three bad knob values fail loud naming the key; and a 48-manifest table
+  answers equal to its one-manifest twin. Three legs SKIP with a named reason: the `t_many`
+  second-statement <= 20 ms target and the two AWS census legs are fork-gated (asks `F-CATIO-B`
+  and `F-CATIO-AWS` — fork pin `189a73ed` has neither `TableBuilder::object_cache` nor
+  `with_table_metadata_cache` on the Glue / S3 Tables builders), so they un-skip at the pin bump
+  that consumes them.
+  pins: perf-ice-catalog-io-1/C-001, C-005
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

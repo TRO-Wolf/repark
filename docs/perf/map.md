@@ -31,6 +31,19 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   its own 1-minute load, and a cost is read against the floor of the run it came from.
   pins: perf-dynflatten-1-measure/C-003, C-004
 
+- [iceberg-catalog-io-baseline.md](iceberg-catalog-io-baseline.md) — **PERF-ICE-CATALOG-IO-1
+  (2026-09-05):** the `strace -f -e trace=openat` census per statement (analysis §7.6 reproduced
+  exactly as the before column) and the `t_many` / `t_many_merged` cells, before and after the
+  session metadata-location cache. `metadata.json` READS fall from 2 (SELECT) and 3–6 (DML) to
+  **0 on every statement**; the one remaining open per DML is the commit writing its own pointer,
+  which no cache removes. The manifest cells do not move (120.4 → 120.0 ms) and were never going
+  to: that cost is 192 manifests re-read through a fresh `ObjectCache` per `Table`, which is
+  fork-gated part 3. §3 names the three fork asks (`F-CATIO-A`, `F-CATIO-B`, `F-CATIO-AWS`), what
+  each measures, and why the Glue column of the AWS table is argued by the census method rather
+  than measured. Both timing columns are the same release module in back-to-back runs with their
+  own re-measured floor and recorded load — not a quiet box.
+  pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
   (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner
   [python/repark-parity/bench/facade/](../../python/repark-parity/bench/facade/map.md)

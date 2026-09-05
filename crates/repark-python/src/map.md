@@ -42,6 +42,15 @@ and hand execution, SQL, and ML semantics to the engine crates.
   timestamps, intervals and nested values. It converts cells, never rows — the facade builds
   every `Row`, so `Row` semantics have one implementation.
   pins: perf-facade-1/C-002 |
+| [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
+  `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
+  entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
+  read: `body_fetches` is exactly the number of `metadata.json` documents parsed, which on a Glue
+  or S3 Tables catalog is the number of S3 GETs the statement would pay. A free `#[pyfunction]`
+  rather than a `PyReparkSession` method, because `session.rs` sits on its exact CAP-1 baseline
+  and pyo3 allows one `#[pymethods]` block per type; the product path pays nothing, since the
+  counters are two relaxed atomic loads read only when asked.
+  pins: perf-ice-catalog-io-1/C-001 |
 | [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
   with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
   through `NamePreserver` and none adds, drops or reorders a projection expression;
