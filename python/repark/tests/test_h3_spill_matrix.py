@@ -205,12 +205,13 @@ def peak_rss_bytes():
 
 
 mode, pool, rows, headroom = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+partitions = sys.argv[5]
 from repark import ReparkSession
 
 spark = (
     ReparkSession.builder.appName("h3-spill-worker")
     .config("datafusion.runtime.memory_limit", "0" if pool == "none" else pool)
-    .config("datafusion.execution.target_partitions", "4")
+    .config("datafusion.execution.target_partitions", partitions)
     .getOrCreate()
 )
 columns = [
@@ -235,7 +236,18 @@ try:
         if mode == "aggregate":
             spark.sql("EXPLAIN ANALYZE SELECT h, count(*) AS c FROM base GROUP BY h").collect()
         elif mode == "to_pandas":
-            out["rows_out"] = int(spark.sql("SELECT * FROM base").toPandas().shape[0])
+            frame = spark.sql("SELECT * FROM base").toPandas()
+            out["rows_out"] = int(frame.shape[0])
+            from pandas.util import hash_pandas_object
+
+            digest = 0
+            for start in range(0, max(int(frame.shape[0]), 1), 100_000):
+                chunk = frame.iloc[start : start + 100_000]
+                if chunk.shape[0] == 0:
+                    continue
+                hashed = hash_pandas_object(chunk, index=False).to_numpy(dtype="uint64")
+                digest = (digest + int(hashed.sum(dtype="uint64"))) & 0xFFFFFFFFFFFFFFFF
+            out["digest"] = str(frame.shape[0]) + ":" + str(digest)
         elif mode == "nested_loop_join":
             spark.range(64).selectExpr(*columns).createOrReplaceTempView("other")
             spark.sql(
@@ -250,9 +262,9 @@ print(json.dumps(out))
 """
 
 
-def _run_worker(mode: str, pool: str, rows: int, headroom: int = 0) -> dict:
+def _run_worker(mode: str, pool: str, rows: int, headroom: int = 0, partitions: int = 4) -> dict:
     completed = subprocess.run(
-        [sys.executable, "-c", _WORKER, mode, pool, str(rows), str(headroom)],
+        [sys.executable, "-c", _WORKER, mode, pool, str(rows), str(headroom), str(partitions)],
         capture_output=True,
         text=True,
         timeout=900,
@@ -277,6 +289,23 @@ def test_the_pool_does_not_bound_the_facade_boundary() -> None:
     assert result["outcome"] == "ok", result
     assert result["rows_out"] == 2_000_000
     assert result["peak_rss_bytes"] > 6 * 64 * 1024 * 1024, result
+
+
+def test_the_facade_boundary_answers_the_same_at_every_pool() -> None:
+    bounded = _run_worker("to_pandas", "64M", 400_000)
+    unbounded = _run_worker("to_pandas", "none", 400_000)
+    assert bounded["outcome"] == "ok", bounded
+    assert unbounded["outcome"] == "ok", unbounded
+    assert bounded["digest"], bounded
+    assert bounded["digest"] == unbounded["digest"], (bounded, unbounded)
+
+
+def test_the_boundary_digest_is_order_independent_and_content_sensitive() -> None:
+    four = _run_worker("to_pandas", "none", 400_000, partitions=4)
+    one = _run_worker("to_pandas", "none", 400_000, partitions=1)
+    shorter = _run_worker("to_pandas", "none", 399_999, partitions=4)
+    assert four["digest"] == one["digest"], (four, one)
+    assert four["digest"] != shorter["digest"], (four, shorter)
 
 
 def test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic() -> None:

@@ -1653,7 +1653,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   subprocess reading its own `VmHWM` (never `ru_maxrss`, which survives `execve` and would
   report pytest's own footprint): spilling holds resident memory 200 MiB below the
   unbounded run and under 3x the pool, while `toPandas` at a 64 MiB pool is over 6x the pool —
-  the facade boundary is not pool-accounted and no pool makes it so. Two defect pins codify
+  the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
+  same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
+  equal at 1 and 4 target partitions while moving when one row is removed (the provocation
+  control: a constant digest reds the second pin, not the first). Two defect pins codify
   today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
   panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
   and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
