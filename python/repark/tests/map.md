@@ -1698,7 +1698,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
   same input and every case compares Arrow field types, Arrow values and `collect()` by
   `(type name, repr)` as well as by value, so a retyped cell is red where `==` alone would
-  pass. Matrix: every scalar Python type with Nones in every column and whole-None columns,
+  pass. Arrow values compare by repr-per-row and collected rows by signature only, so NaN
+  cells compare instead of never matching. Matrix: every scalar Python type with Nones in
+  every column and whole-None columns,
   all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
   tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
   witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,

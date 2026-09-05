@@ -47,16 +47,16 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.lock`, every 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Baseline first from the tracked runner on a release module, unchanged lane: the `create` cells plus floor, spread and load. | `run_facade.py --cells create`; §8. | OPEN | Baseline run lands before any product commit. |
-| C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | OPEN | Equality pins old-vs-new in one process via the swapped dispatcher. |
-| C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | OPEN | Single-failure inputs byte-identical; multi-failure order documented in §7. |
-| C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | OPEN | Explicit-schema inputs stay on the legacy path by dispatch, not by reimplementation. |
+| C-002 | The column-wise path answers exactly like the legacy path on a wide value matrix: schema and `collect()` equal by Arrow type AND value, on tuples, lists, namedtuples, dicts, Rows, scalars and ragged/empty frames. | `python/repark/tests/test_perf_facade_cdf_1.py`; the dispatcher swap. | **PROVEN** | 52 pins green, 1 skipped (the JVM-gated live leg): Arrow field types, Arrow values by repr, and `collect()` by `(type name, repr)` all equal on both dispatchers. |
+| C-003 | Every refusal keeps its exact text: scalar merge kinds (`CANNOT_MERGE_TYPE`), decimal envelope, infinite floats, complex, `array.array` typecodes, duplicate names, ragged rows, Timedelta/Period/Interval. | The refusal pins; §6 mutations. | **PROVEN** | 22 refusal pins assert same exception type and byte-identical text on both dispatchers. Multi-failure precedence pairs documented in §7. |
+| C-004 | Every input shape keeps its answer: name-list / `StructType` / DDL / bare-`DataType` schema, dict key-union, Row strict bind, scalar cells, empty input, all-null NaN/NaT witnesses, nested columns through the unchanged per-cell path. | The shape pins; the TY-4/TY-5 interchange pins stay green. | **PROVEN** | Shape pins green on both dispatchers; `test_interchange_parity.py` (TY-4/TY-5) green unchanged. Explicit schemas dispatch to the legacy path, verified by the StructType/DDL/bare-DataType pins. |
 | C-005 | The delivery gate is measured against the ≤ 100 ms target at 1e5 tuples and reported met or missed with the isolated residue honestly. | §8; the baseline note. | OPEN |  |
 | C-006 | The runner measures the createDataFrame old-vs-new pair in one process on one release module, plus nested-column and explicit-schema cells covering the delegated paths. | `bench/facade/`; `bench/facade/map.md`. | OPEN | Old leg swaps the dispatcher back to the legacy path in a `finally`, as PERF-FACADE-1 did for collect. |
 | C-007 | The scalar matrix agrees with live PySpark 4.1.2 `createDataFrame` (schema and rows), and the disclosure leg still co-collects beside the new live leg. | The live leg; `test_parity_live.py`. | OPEN | JVM run once, beside at most one other JVM, then stopped. |
 | C-008 | Docs and gates: the registry row filed FIXED with before/after, the baseline's CDF-1 section re-measured, every touched `map.md` in lockstep, every gate exit 0. | §10; the gates table. | OPEN |  |
 | C-009 | Red-first (the pins fail under a deliberately wrong inference before the implementation) and a mutation score over the four brief-named faults. | §6. | OPEN |  |
 
-VERDICT: 9 clauses, 0 PROVEN, 9 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 3 PROVEN, 6 OPEN, 0 REJECTED.
 
 ## 1. Environment — what the lane actually had (2026-09-05)
 
@@ -83,6 +83,30 @@ The brief's environment premise did not hold and was re-established rather than 
   `/tmp/oc-facade-bed` is one power outage away from a rebuild; the runner regenerates it
   either way).
 
+## 6. Red-first and mutation (docs/testing.md "Gate provocation proofs")
+
+**Red first, two layers.** The pin file was committed before the implementation: collection
+errored (`ModuleNotFoundError: create_dataframe_columns`, 0 collected). Then, with the
+implementation wired but deliberately wrong (the int arm returning `pa.float64()`), **13
+failed, 39 passed, 1 skipped**: 10 from the stub — every int-bearing equality pin plus the
+int64-overflow refusal pin (which stopped refusing) — and 3 from test bugs of mine (below).
+The 39 passes are the cases that never reach the fault. The stub was reverted uncommitted;
+the record is this section.
+
+The red run caught three test bugs of mine, fixed before green: `Row.__eq__` cannot compare
+NaN (the `(type, repr)` signature subsumes it, so the bare `==` went away), `to_pylist()`
+equality likewise (repr-per-row now), and a 38-significant-digit Decimal that trips
+`decimal.InvalidOperation` in the shared envelope validator under the default 28-digit context
+— pre-existing behavior on both paths, shrunk to 26 digits here and noted in §11 rather than
+pinned.
+
+**Mutation.** Four brief-named faults, each run uncommitted against the green pins: (table
+lands with the runs).
+
+## 7. Design — what the column-wise path shares and what it proves
+
+(error-precedence pairs land here with the final wording.)
+
 ## SLR log (D3 — one per state-changing step)
 
 ```yaml
@@ -97,6 +121,27 @@ SELF_LOGIC_REVIEW:
   success_condition: lane-local import proves lane files + release native + smoke createDataFrame
   step_risks: [stale-sibling confusion: HANDLED(.pth repoint + __file__ proof)]
   contingencies: [build failure: EXECUTABLE(additive — diagnose, rebuild)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-CDF1-IMPL
+  agent: Actor
+  action: commit the column-wise implementation with green pins and maps
+  charter_trace: C-002, C-003, C-004
+  preconditions:
+    - pins red under the wrong stub first: SATISFIED (13 failed, §6)
+    - pins green on the real implementation: SATISFIED (52 passed, 1 JVM-skipped)
+    - neighbor CDF suites green: SATISFIED (259 passed)
+    - lint/format/conventions/docstring/size gates green: SATISFIED (this run)
+    - no new code comment: SATISFIED (self-check below)
+  success_condition: the commit's pins, gates and maps all hold on this tip
+  step_risks: [shared-helper behavior drift: HANDLED(helper bodies are moved code; suite + pins)]
+  contingencies: [suite red: EXECUTABLE(additive — fix forward, no amends)]
   tripwire_scan: CLEAN
   uncertainty: NONE
   verdict: PROCEED

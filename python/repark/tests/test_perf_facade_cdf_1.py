@@ -21,7 +21,7 @@ import pytest
 import repark.spark.session.create_dataframe_rows as rows_module
 from repark import ReparkSession
 from repark.spark.row import Row
-from repark.spark.session.create_dataframe_columns import _arrow_table_from_raw_tuples_fast
+from repark.spark.session import create_dataframe_columns as columns_module
 
 
 @pytest.fixture
@@ -61,14 +61,18 @@ def _frames_old_new(
     return old_frame, new_frame
 
 
+def _pylist_signature(frame: Any) -> list[str]:
+    """One repr per Arrow row, so NaN cells compare instead of never matching."""
+    return [repr(row) for row in frame.to_arrow().to_pylist()]
+
+
 def _assert_frames_equal(old_frame: Any, new_frame: Any) -> None:
     """Arrow types, Arrow values and collected rows agree on both paths."""
     assert _arrow_field_signature(old_frame) == _arrow_field_signature(new_frame)
-    assert old_frame.to_arrow().to_pylist() == new_frame.to_arrow().to_pylist()
+    assert _pylist_signature(old_frame) == _pylist_signature(new_frame)
     old_rows = old_frame.collect()
     new_rows = new_frame.collect()
     assert [_row_signature(row) for row in old_rows] == [_row_signature(row) for row in new_rows]
-    assert old_rows == new_rows
 
 
 def _assert_create_equal(
@@ -106,7 +110,7 @@ def _assert_refusals_equal(
 
 def test_shipped_dispatcher_is_the_column_wise_path() -> None:
     """The rows module answers through the new dispatcher unless a test swaps it."""
-    assert rows_module._arrow_table_from_raw_tuples is _arrow_table_from_raw_tuples_fast
+    assert rows_module._arrow_table_from_raw_tuples is columns_module._arrow_table_from_raw_tuples
 
 
 def test_scalar_matrix_with_none_in_every_column(
@@ -168,7 +172,7 @@ def test_decimal_column_at_several_scales(
         (decimal.Decimal("1.23000"),),
         (decimal.Decimal("0"),),
         (decimal.Decimal("-999.99"),),
-        (decimal.Decimal("12345678901234567890.123456789012345678"),),
+        (decimal.Decimal("12345678.123456789012345678"),),
         (None,),
     ]
     _assert_create_equal(monkeypatch, cdf_session, data, ["dec"])
@@ -549,7 +553,7 @@ def test_datetime_column_under_both_timestamp_types(
 
 def test_ml_vector_cells(monkeypatch: pytest.MonkeyPatch, cdf_session: ReparkSession) -> None:
     """Dense and sparse ML vectors keep their shapes on both paths."""
-    from repark.ml.linalg import DenseVector, SparseVector
+    from repark.spark.ml.linalg import DenseVector, SparseVector
 
     dense = [(DenseVector([1.0, 2.0]),), (DenseVector([3.0, 4.0]),)]
     _assert_create_equal(monkeypatch, cdf_session, dense, ["v"])
