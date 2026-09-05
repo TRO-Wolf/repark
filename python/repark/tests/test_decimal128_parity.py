@@ -182,6 +182,7 @@ class CtasRow:
     # When set, the SELECT half is also a Spark equality oracle (value+type before write).
     # When None, the SELECT half is a repark-only type pin (Spark diverges on the SELECT).
     spark_select: pa.Table | None = None
+    expected_written: pa.Table | None = None
 
 
 # Gap G2 - decimal128 arithmetic bit-exactness (value AND exact decimal128(p,s))
@@ -396,9 +397,11 @@ G2_ROWS: list[DecimalRow] = [
         "G2",
         "SELECT 5 * CAST(1.50 AS DECIMAL(10,2)) AS v",
         _dec(12, 2, Decimal("7.50"), nullable=True),
-        _dec(12, 2, Decimal("7.50")),
+        None,
         "INT * DECIMAL: U3 / DEC-8 fromLiteral closed the width (both (12,2), value 7.50). "
-        "Spark marks nullable; repark stays non-null (DEC-9 / U5). Name kept. "
+        "CUTOVER-SCHEMA-1 (2026-09-04) closed nullability: the `5` to DECIMAL(1,0) operand "
+        "cast is overflow-exposed, hence nullable, so the product is nullable on both. "
+        "Name kept. "
         f"{FIX_G2}.",
     ),
 ]
@@ -483,17 +486,21 @@ G13_ROWS: list[DecimalRow] = [
         "G13",
         "SELECT CAST(9 AS DECIMAL(1,0)) * CAST(9 AS DECIMAL(1,0)) AS v",
         _dec(3, 0, Decimal("81"), nullable=True),
-        _dec(3, 0, Decimal("81")),
-        "value 81 and type (3,0) agree, but Spark marks the result nullable (overflow-capable "
-        f"binary arithmetic) while repark marks it non-null. A nullability-only pin. {FIX_G13}.",
+        None,
+        "value 81 and type (3,0) agree; both nullable since CUTOVER-SCHEMA-1 (2026-09-04): "
+        "the (1,0) operand casts are overflow-exposed, hence nullable. DEC-9 proper "
+        "(overflow-capable marking of non-null operands) stays BACKLOG. Name kept. "
+        f"{FIX_G13}.",
     ),
     DecimalRow(
         "add_single_digit_nullability_differs",
         "G13",
         "SELECT CAST(9 AS DECIMAL(1,0)) + CAST(9 AS DECIMAL(1,0)) AS v",
         _dec(2, 0, Decimal("18"), nullable=True),
-        _dec(2, 0, Decimal("18")),
-        "same nullability class on add: value 18 at (2,0) agrees; Spark nullable, repark not. "
+        None,
+        "same nullability class on add: value 18 at (2,0) agrees; both nullable since "
+        "CUTOVER-SCHEMA-1 (2026-09-04) via the overflow-exposed (1,0) operand casts. "
+        "DEC-9 proper stays BACKLOG. Name kept. "
         f"{FIX_G13}.",
     ),
     DecimalRow(
@@ -501,8 +508,10 @@ G13_ROWS: list[DecimalRow] = [
         "G13",
         "SELECT CAST(999 AS DECIMAL(3,0)) * CAST(999 AS DECIMAL(3,0)) AS v",
         _dec(7, 0, Decimal("998001"), nullable=True),
-        _dec(7, 0, Decimal("998001")),
-        "near-capacity multiply: value 998001 at (7,0) agrees; nullability still diverges. "
+        None,
+        "near-capacity multiply: value 998001 at (7,0) agrees; both nullable since "
+        "CUTOVER-SCHEMA-1 (2026-09-04) via the overflow-exposed (3,0) operand casts. "
+        "DEC-9 proper stays BACKLOG. Name kept. "
         f"{FIX_G13}.",
     ),
 ]
@@ -520,15 +529,21 @@ CTAS_ROWS: list[CtasRow] = [
         "ctas_add_money_preserves_decimal128",
         "SELECT CAST(1.23 AS DECIMAL(10,2)) + CAST(4.56 AS DECIMAL(10,2)) AS q",
         _one_row([("q", pa.decimal128(11, 2), False)], {"q": Decimal("5.79")}),
-        "CTAS of an equality-class add: decimal128(11,2) value 5.79 survives Iceberg write+read.",
+        "CTAS of an equality-class add: decimal128(11,2) value 5.79 survives Iceberg write+read. "
+        "Post-read q is nullable since CUTOVER-SCHEMA-1 (2026-09-04): CTAS stores derived "
+        "columns optional the way Spark does (CUTOVER-CTAS-REQ-1).",
         spark_select=_one_row([("q", pa.decimal128(11, 2), False)], {"q": Decimal("5.79")}),
+        expected_written=_one_row([("q", pa.decimal128(11, 2), True)], {"q": Decimal("5.79")}),
     ),
     CtasRow(
         "ctas_mul_money_qty_preserves_decimal128",
         "SELECT CAST(19.99 AS DECIMAL(10,2)) * CAST(3 AS DECIMAL(10,0)) AS q",
         _one_row([("q", pa.decimal128(21, 2), False)], {"q": Decimal("59.97")}),
-        "CTAS of money x qty: decimal128(21,2) 59.97 preserved end to end.",
+        "CTAS of money x qty: decimal128(21,2) 59.97 preserved end to end. Post-read q is "
+        "nullable since CUTOVER-SCHEMA-1 (2026-09-04): CTAS stores derived columns optional "
+        "the way Spark does (CUTOVER-CTAS-REQ-1).",
         spark_select=_one_row([("q", pa.decimal128(21, 2), False)], {"q": Decimal("59.97")}),
+        expected_written=_one_row([("q", pa.decimal128(21, 2), True)], {"q": Decimal("59.97")}),
     ),
     CtasRow(
         "ctas_div_preserves_repark_result_type",
@@ -795,9 +810,8 @@ def test_ctas_decimal_type_preserved(row: CtasRow, ctas_session: ReparkSession) 
 
     When ``spark_select`` is set, it is the recorded Spark SELECT oracle and MUST equal
     ``expected`` (the write-back pin and the Spark oracle cannot drift apart), and the live
-    repark SELECT is asserted equal to it before and after the round-trip. When
-    ``spark_select`` is None, only repark's own write-path preservation is asserted
-    (no Iceberg-on-Spark).
+    repark SELECT is asserted equal to it before the round-trip. When ``spark_select`` is
+    None, only repark's own write-path preservation is asserted (no Iceberg-on-Spark).
     """
     if row.spark_select is not None:
         # Well-formedness: the CTAS expected table and the Spark SELECT oracle are one pin.
@@ -806,8 +820,9 @@ def test_ctas_decimal_type_preserved(row: CtasRow, ctas_session: ReparkSession) 
     # Pre-write SELECT half (repark).
     select_frame = ctas_session.sql(row.select_sql)
     select_arrow = select_frame.to_arrow()
-    # The expected table is the post-read shape; SELECT and post-read must agree on type+value.
+    # The expected table is the SELECT shape; the write-back half uses its own shape.
     assert_frames_equal(select_arrow, row.expected)
 
     written = _ctas_writeback(ctas_session, row.name, row.select_sql)
-    assert_frames_equal(written, row.expected)
+    written_expected = row.expected_written if row.expected_written is not None else row.expected
+    assert_frames_equal(written, written_expected)

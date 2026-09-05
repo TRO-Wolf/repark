@@ -23,7 +23,7 @@ _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
 _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/catalog_config.rs", 1044),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
-    ("crates/repark-core/src/session.rs", 1040),
+    ("crates/repark-core/src/session.rs", 1039),
     ("crates/repark-core/src/session/tests/session.rs", 1412),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
     ("crates/repark-functions/src/analyzer.rs", 1142),
@@ -39,7 +39,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/predicate_dml.rs", 1142),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1442),
     ("crates/repark-python/src/column/mod.rs", 1053),
-    ("crates/repark-python/src/dataframe.rs", 1171),
+    ("crates/repark-python/src/dataframe.rs", 1127),
     ("crates/repark-python/src/session.rs", 1177),
     ("crates/repark-spark/src/alter.rs", 1830),
     ("crates/repark-spark/src/metadata_tables.rs", 1062),

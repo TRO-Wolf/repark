@@ -225,3 +225,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-measured every number with it, because the first baseline's probes were untracked.
   `risk_tier: standard`. Branch `perf/facade-1`.
   pins: perf-facade-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [cutover-schema-1-ledger.md](cutover-schema-1-ledger.md) —
+  **CUTOVER-SCHEMA-1 (2026-09-04), in flight:** nullability derived the way Spark
+  derives it — reader relax, CTAS all-optional on both doors, decimal-cast analyzer
+  rule, export-boundary Utf8 coercion. Closes `CUTOVER-CTAS-REQ-1` and
+  `CUTOVER-DEDUP-SCHEMA-1`, the nullability half of `V3-COV-8`, converges
+  `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
+  `fix/cutover-schema-1`.
+  pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006

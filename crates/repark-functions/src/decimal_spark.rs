@@ -117,6 +117,11 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     {
         return Transformed::new(expr, false, TreeNodeRecursion::Stop);
     }
+    if let Expr::Cast(cast) = &expr
+        && let Some(nullable) = crate::decimal_cast::nullable_decimal_cast(cast, schema)
+    {
+        return Transformed::new(nullable, true, TreeNodeRecursion::Continue);
+    }
     let Expr::BinaryExpr(binary) = expr else {
         return Transformed::no(expr);
     };
@@ -600,6 +605,7 @@ mod tests {
     use datafusion::prelude::SessionContext;
 
     use crate::analyzer_rules;
+    use crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME;
 
     fn spark_door_config(ansi_enabled: bool) -> datafusion::prelude::SessionConfig {
         let mut config = crate::ansi::with_spark_ansi_config(
@@ -804,5 +810,127 @@ mod tests {
             once.schema().field(0).data_type(),
             twice.schema().field(0).data_type()
         );
+    }
+
+    async fn analyzed(ctx: &SessionContext, sql: &str) -> LogicalPlan {
+        let plan = ctx.state().create_logical_plan(sql).await.unwrap();
+        crate::analyze_eagerly(&ctx.state(), plan).unwrap()
+    }
+
+    async fn cast_cell(sql: &str) -> (bool, bool) {
+        let ctx = ctx();
+        let plan = analyzed(&ctx, sql).await;
+        let nullable = plan.schema().field(0).is_nullable();
+        let marked = plan
+            .display_indent_schema()
+            .to_string()
+            .contains(DECIMAL_CAST_NULLABLE_NAME);
+        (nullable, marked)
+    }
+
+    #[tokio::test]
+    async fn decimal_cast_nullability_matches_measured_cells() {
+        for (sql, nullable) in [
+            ("SELECT CAST(CAST(1 AS INT) AS DECIMAL(10,0)) AS v", false),
+            ("SELECT CAST(9 AS DECIMAL(10,0)) AS v", false),
+            ("SELECT CAST(9 AS DECIMAL(1,0)) AS v", true),
+            ("SELECT CAST(9999999999 AS DECIMAL(10,0)) AS v", true),
+            ("SELECT CAST(CAST(1 AS INT) AS DECIMAL(10,4)) AS v", true),
+            ("SELECT CAST(CAST(1 AS INT) AS DECIMAL(9,0)) AS v", true),
+            (
+                "SELECT CAST(CAST(1 AS BIGINT) AS DECIMAL(38,18)) AS v",
+                false,
+            ),
+            ("SELECT CAST(CAST(1 AS BIGINT) AS DECIMAL(19,0)) AS v", true),
+            ("SELECT CAST(1.23 AS DECIMAL(10,2)) AS v", false),
+            ("SELECT CAST(1.23 AS DECIMAL(12,4)) AS v", false),
+            (
+                "SELECT CAST(CAST(1.234 AS DECIMAL(30,15)) AS DECIMAL(10,4)) AS v",
+                true,
+            ),
+            (
+                "SELECT CAST(CAST(1.234 AS DECIMAL(10,4)) AS DECIMAL(8,4)) AS v",
+                true,
+            ),
+            (
+                "SELECT CAST(CAST(CAST(3 AS INT) AS DECIMAL(10,0)) AS DECIMAL(10,2)) AS v",
+                true,
+            ),
+            (
+                "SELECT CAST(CAST(1.23 AS DECIMAL(10,2)) AS DECIMAL(10,0)) AS v",
+                false,
+            ),
+            (
+                "SELECT CAST(CAST(1.5 AS DOUBLE) AS DECIMAL(10,2)) AS v",
+                true,
+            ),
+            ("SELECT CAST('5' AS DECIMAL(10,0)) AS v", true),
+            ("SELECT CAST(true AS DECIMAL(10,2)) AS v", false),
+        ] {
+            let (is_nullable, marked) = cast_cell(sql).await;
+            assert_eq!(is_nullable, nullable, "{sql}");
+            assert_eq!(marked, nullable, "{sql}");
+        }
+    }
+
+    #[tokio::test]
+    async fn non_decimal_casts_and_nullable_children_are_not_wrapped() {
+        for (sql, nullable) in [
+            (
+                "SELECT CAST(1 AS INT) AS i, CAST(1 AS STRING) AS s",
+                vec![false, false],
+            ),
+            (
+                "SELECT CAST(CAST(NULL AS INT) AS DECIMAL(10,4)) AS d",
+                vec![true],
+            ),
+        ] {
+            let ctx = ctx();
+            let plan = analyzed(&ctx, sql).await;
+            let flags: Vec<bool> = plan
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.is_nullable())
+                .collect();
+            assert_eq!(flags, nullable, "{sql}");
+            assert!(
+                !plan
+                    .display_indent_schema()
+                    .to_string()
+                    .contains(DECIMAL_CAST_NULLABLE_NAME)
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn cast_over_add_is_left_to_u4a() {
+        let sql = "SELECT CAST(CAST(1.5 AS DECIMAL(10,2)) + CAST(2.5 AS DECIMAL(10,2)) AS DECIMAL(9,2)) AS v";
+        let (is_nullable, marked) = cast_cell(sql).await;
+        assert!(!is_nullable);
+        assert!(!marked);
+    }
+
+    #[tokio::test]
+    async fn decimal_cast_rewrite_is_idempotent() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(1 AS DECIMAL(10,4)) AS d";
+        let plan = ctx.state().create_logical_plan(sql).await.unwrap();
+        let once = crate::analyze_eagerly(&ctx.state(), plan).unwrap();
+        let twice = crate::analyze_eagerly(&ctx.state(), once.clone()).unwrap();
+        assert!(once.schema().field(0).is_nullable());
+        assert_eq!(
+            once.display_indent_schema().to_string(),
+            twice.display_indent_schema().to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn decimal_cast_rewrite_keeps_values() {
+        let ctx = ctx();
+        let literal = batch(&ctx, "SELECT CAST(1 AS DECIMAL(10,4)) AS d").await;
+        assert_eq!(decimal128_cell(&literal), (10, 4, Some(10_000)));
+        let nulls = batch(&ctx, "SELECT CAST(CAST(NULL AS INT) AS DECIMAL(10,4)) AS d").await;
+        assert_eq!(decimal128_cell(&nulls), (10, 4, None));
     }
 }

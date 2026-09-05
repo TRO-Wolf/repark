@@ -2,6 +2,7 @@
 
 #[cfg(feature = "allocator-mimalloc")]
 mod allocator;
+mod arrow_export;
 mod collect_rows;
 mod column;
 mod dataframe;

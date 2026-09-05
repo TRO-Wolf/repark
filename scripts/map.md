@@ -173,6 +173,11 @@ FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
 
+CUTOVER-SCHEMA-1 (2026-09-04): `check_rust_file_size.py`
+`repark-core/src/session.rs` 1040→1039 and `repark-python/src/dataframe.rs` 1171→1127 —
+reader-relax and export-boundary extraction; both ratchet DOWN.
+pins: cutover-schema-1/C-001
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002

@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError, RwLock};
 
 use aws_config::{BehaviorVersion, SdkConfig};
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
-use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
+use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
 use repark_iceberg::catalog::build_iceberg_catalog_provider;
@@ -819,8 +819,7 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
-        self.context()
-            .read_parquet(path, ParquetReadOptions::default())
+        crate::spark_nullable::read_parquet_nullable(self.context(), path)
             .await
             .map_err(engine_err)
     }

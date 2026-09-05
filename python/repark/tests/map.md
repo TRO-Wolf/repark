@@ -98,9 +98,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **PERF-DYNFLATTEN-2** keeps this leg as its live gate: both engines `read.parquet`, so the
   null-mask extractor is exercised on the path where leaf projection pushdown lives, not only on
   the `createDataFrame` path the bench measures. 17 passed / 105 deselected, unchanged.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the reader relax converged the row — repark `id` now
+  nullable like Spark, so the pin asserts `True` on both sides. DYNFLATTEN-READNULL-1 FIXED.
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: perf-dynflatten-2-null-mask/C-004
   pins: perf-dynflatten-1-measure/C-002, C-003
+  pins: cutover-schema-1/C-001
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -348,8 +351,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
   second pass is 1 on both engines.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** REPARK halves re-measured to the Spark-equal
+  nullability derivation (79 schema-triple cells); s3 verdict EQUAL
+  (`CUTOVER-DEDUP-SCHEMA-1` FIXED), CTAS-REQ programs still DIVERGE only on `V3-COV-7`
+  (`CUTOVER-CTAS-REQ-1` FIXED).
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
   pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
+- [test_cutover_schema_1.py](test_cutover_schema_1.py) — **CUTOVER-SCHEMA-1 (2026-09-04):**
+  nullability derived the way Spark derives it on the cutover shapes. Always-run:
+  `read.parquet` of a required-field file reports every field nullable (flat and nested),
+  csv/json likewise; Spark-door CTAS stores every column optional including
+  `SELECT coalesce(x, 0)` (at repark's `long` width — the V3-COV-8 width half stays
+  BACKLOG, only nullability moves); the S3 dedup Arrow schema equals Spark field for field;
+  `CAST(1 AS DECIMAL)` is nullable while `CAST(1 AS INT/STRING)` keeps the non-null
+  literal; the ANSI-door cast fence and the SE-1 tighten-derived CTAS refusal control
+  stay put. Live legs re-derive the read/cast/dedup cells from PySpark 4.1.2 on the
+  shared `spark_engine`. Round 3 (2026-09-05) pins four pre-existing divergences as
+  BACKLOG rows with current-answer pins: `CAST-NULL-1` (non-decimal cast targets),
+  `CAST-BOOL-DEC-1` (boolean-to-decimal refusal), `CUTOVER-NULLDEPTH-1` (relax stops
+  at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
+  The module docstring is the pins-only one-liner; this row is the reason.
+  pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
@@ -394,7 +416,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
   Iceberg 1.11.0. One module per engine, so neither grows past the ceiling and a re-measurement
   diff reads as one side moving. All three are `_`-prefixed, so pytest never collects them.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** `ctas-v3` re-measured to optional (the V3-COV-8
+  nullability half); verdict stays DIVERGES on width.
   pins: v3-cov-statement-coverage/C-003
+  pins: cutover-schema-1/C-002
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — **V3-12 (2026-09-02):** the
   facade door's cell for a v3 merge-on-read write over an upgraded table's legacy parquet
   position delete. `_repark_legacy_merge_shape` and `_spark_legacy_merge_shape` run the SAME five
@@ -2251,6 +2276,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DEC-8 `(38,20)*(38,20)` equality at `(38,6)`; DEC-9 nullability residue kept).
   Recorded against live PySpark 4.1.2. DEC-6 overflow raise is **LANDED** (checked `+`
   UDF). Budget pin: G2 20-26, G13 6-12. Ledger: `task/r2-dec-close-ledger.md`.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** `int_times_decimal_promotes_wider_in_repark` plus the
+  three G13 nullability cells flip to equality (overflow-exposed operand casts); the two
+  money CTAS rows split the post-write shape into `expected_written` (nullable — Spark's
+  CTAS-optional derivation) while the SELECT half stays non-null with the recorded oracle.
+  pins: cutover-schema-1/C-002, C-003
 - `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
   `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
   and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the

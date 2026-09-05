@@ -22,6 +22,9 @@ holds behavior observed from outside the crate.
 - `declared_sorted_tighten.rs` — ANSI CREATE, VIEW, and SELECT INTO refuse tightened plans
   before publication. Derived expressions, subqueries, cached views, default-catalog names,
   and lazy view hops are covered. Nullable projections and ordinary CTAS remain allowed.
+- `ctas_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS over a non-null parquet read
+  commits every Iceberg field optional and reads every Arrow field nullable, Spark-equal;
+  the tighten-derived refusal still fires on a genuinely non-nullable source.
 - `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
   `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session

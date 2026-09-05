@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1040,
+        1039,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),
@@ -122,7 +122,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract the remaining date or window method family.",
     ),
     "crates/repark-python/src/dataframe.rs": (
-        1171,
+        1127,
         "PyO3 DataFrame methods share one binding surface.",
         "Split action methods from plan-building methods without moving row work to Python.",
     ),

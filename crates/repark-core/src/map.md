@@ -134,6 +134,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
 - `read_options.rs` — CSV/JSON Spark option-map helpers and the local-CSV all-Utf8 inference
   workaround for `nullValue`.
+- `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
+  derivation. `relax_schema_to_nullable` marks every field nullable, recursive over
+  struct/list/map (map keys stay required — Arrow forbids nullable map keys), depth-bound
+  32 past which flags still flip but children keep file nullability; both CTAS doors
+  derive their Iceberg schema through it, so derived columns store optional the way
+  Spark stores them. `read_parquet_nullable` infers the file schema, relaxes it, and
+  re-reads with the relaxed schema as the DataFusion schema override — the plan keeps
+  a single TableScan, so EXPLAIN output is unchanged. The double infer costs one extra
+  listing plus footer reads; S3 registration still happens first in `session.rs`.
+  pins: cutover-schema-1/C-001, C-002
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
