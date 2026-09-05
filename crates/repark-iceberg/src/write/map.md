@@ -202,9 +202,11 @@ repark-core's error map.
   round-2 pin and this box never did. So the committed LAYOUT and the `_row_id` a given row
   receives are **not** reproducible across groupings, and no writer-side ordering can make them
   so — the rows themselves land in different files. What IS true at every partition count, and is
-  what the pin now asserts at 4 and at 16: the manifest ascends by content, `_row_id` tiles it
-  contiguously from zero, the row set and its sums are invariant, and two runs that produce the
-  SAME grouping produce the same commit. The residual is filed as `WRITE-GROUPING-CTAS-1`.
+  what the pin now asserts at 3, 4, 8 and 16: the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the committed row set is the expected digest of ids, and two runs that
+  produce the SAME grouping produce the same id-to-`_row_id` map — keyed by a hash of that map,
+  since keying it by the record-count sequence made the conjunct unfalsifiable (round-3 critic
+  G3). The residual is filed as `WRITE-GROUPING-CTAS-1`.
   An input error raises a shared flag: siblings stop taking `Ok` batches and close what they hold,
   and the failure sweep deletes **every data file the attempt created** — the completed files
   plus every parquet that appeared under the table's data root since the attempt began, which is

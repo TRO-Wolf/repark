@@ -1712,18 +1712,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   through the facade, over a fixed four-file seed so the plan really has four partitions.
   Always-run: the CTAS writes one data file per plan partition (four), and
   `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
-  takes it — still writes exactly one; three CTAS runs of the same seed produce the same manifest
-  record-count sequence, which is what makes the derived `_row_id` reproducible after the
-  parallel section (the coalesced stream this replaces merged partitions in completion order);
-  and a partitioned CTAS's files ascend by partition value (V3-11) and cover all eight
-  partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  takes it — still writes exactly one; and a partitioned CTAS's files ascend by partition value
+  (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
   two writer shapes agree on every answer and on their layout (one writer one file, four-cap
   eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
   against the written table. The ordering pin seeds EIGHT UNEQUAL files
-  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times **at 4 and at 16
+  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times at **3, 4, 8 and 16
   partitions**, asserting the manifest ascends by content, that `_row_id` tiles it contiguously
-  from zero, that the row set and sums are invariant, and that two runs with the same file
-  grouping commit the same `_row_id` ranges. It runs at 3, 4, 8 and 16 partitions and deliberately does
+  from zero, that the row set is the expected digest of ids, and that two runs with the same file
+  grouping commit the same id-to-`_row_id` map — keyed by a hash of that map, since keying it by
+  the record-count sequence made the check unfalsifiable (round-3 critic G3): `_row_id` is already
+  asserted to be the cumulative sum of those counts. Two groupings CAN share a count sequence and
+  differ in which rows each file holds, which is what the conjunct now catches. It deliberately does
   NOT assert the record-count sequence: round 2 did, and CI's 4-core runner reddened it because the
   scan groups the source files differently from run to run — measured 3 distinct groupings in 5
   runs at 3 partitions, 4-6 in 10 at 4, and 1 in 10 at 8 and at 16, where the eight source files

@@ -1,5 +1,6 @@
 """PERF-ICE-WRITEPATH-1 — the CTAS write node: file layout, determinism, and wall."""
 
+import hashlib
 import os
 import time
 from pathlib import Path
@@ -167,13 +168,15 @@ def _ctas_commit(engine: ReparkSession, table: str) -> dict[str, Any]:
     counts = [int(value.as_py()) for value in files.column("record_count")]
     firsts = [int(value.as_py()) for value in files.column("first_row_id")]
     lows = [value.as_py()["id"]["lower_bound"] for value in files.column("readable_metrics")]
-    totals = engine.sql(f"SELECT count(*) AS n, sum(id) AS s FROM {table}").to_arrow()
+    rows = engine.sql(f"SELECT id, _row_id FROM {table} ORDER BY id").to_arrow()
+    ids = [int(value.as_py()) for value in rows.column("id")]
+    lineage = [int(value.as_py()) for value in rows.column("_row_id")]
     return {
         "counts": counts,
         "firsts": firsts,
         "lows": lows,
-        "rows": totals.column("n")[0].as_py(),
-        "sum_id": totals.column("s")[0].as_py(),
+        "ids": hashlib.sha256(repr(ids).encode()).hexdigest(),
+        "lineage": hashlib.sha256(repr(list(zip(ids, lineage, strict=True))).encode()).hexdigest(),
     }
 
 
@@ -183,6 +186,7 @@ def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
 ) -> None:
     """C-005: the manifest ascends by content and `_row_id` tiles it, at every partition count."""
     total = sum(UNEQUAL_SIZES)
+    expected_ids = hashlib.sha256(repr(list(range(total))).encode()).hexdigest()
     source = _unequal_seed(tmp_path / "seed")
     engine = (
         ReparkSession.builder.appName(f"writepath-order-{partitions}")
@@ -195,7 +199,7 @@ def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
         engine.register_memory_catalog(CATALOG, tmp_path / "wh")
         engine.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.w")
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
-        seen: dict[str, list[int]] = {}
+        seen: dict[str, str] = {}
         for run in range(DETERMINISM_RUNS):
             commit = _ctas_commit(engine, f"{CATALOG}.w.o{partitions}_{run}")
             assert commit["lows"] == sorted(commit["lows"]), (
@@ -208,15 +212,16 @@ def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
                 f"{commit['firsts']} against {expected}"
             )
             assert sum(commit["counts"]) == total
-            assert commit["rows"] == total
-            assert commit["sum_id"] == total * (total - 1) // 2
+            assert commit["ids"] == expected_ids, (
+                f"run {run} at {partitions} partitions committed a different row set"
+            )
             key = str(commit["counts"])
             if key in seen:
-                assert seen[key] == commit["firsts"], (
+                assert seen[key] == commit["lineage"], (
                     f"two runs at {partitions} partitions produced the same file grouping "
-                    f"{key} but different `_row_id` ranges: {seen[key]} against {commit['firsts']}"
+                    f"{key} but a different id-to-`_row_id` map"
                 )
-            seen[key] = commit["firsts"]
+            seen[key] = commit["lineage"]
     finally:
         engine.stop()
 

@@ -4336,9 +4336,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   this: the rows land in different files before any writer sees them. A fix belongs in the scan —
   a deterministic file-group assignment (sorting the listing before packing, or one group per file
   for CTAS) — and would cost the parallelism this unit delivers if done by disabling
-  `repartition_file_scans`, which collapses a single-file source to one writer. Pinned in its
-  narrowed form by `test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count`, which runs
-  at 4 and 16.
+  `repartition_file_scans`, which collapses a single-file source to one writer.
+  **No red-on-fix pin can assert this**: the defect is that the grouping varies, so a pin
+  demanding a fixed grouping would be red on the current engine and green only by accident.
+  `test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count` (3, 4, 8 and 16) is green
+  with the defect and would stay green without it — it pins the ordering the write side does
+  own, not this. The flip rates above are the measurement that stands in for a pin.
 
 - **WRITE-ORDER-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). The stream write
   path INSERT, MERGE, overwrite and predicate DML use
@@ -4414,9 +4417,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
   partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
-  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 4 AND 16
-  partitions: manifest ascending by content, `_row_id` tiling it, invariant row set, and equal
-  commits for equal groupings; Spark row-set equality). Numbers and commands:
+  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
+  and 16 partitions: manifest ascending by content, `_row_id` tiling it, the row set as a digest of ids,
+  and equal id-to-`_row_id` maps for equal groupings; Spark row-set equality). Numbers and commands:
   `docs/perf/iceberg-write-baseline.md`.
 
 - **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured
