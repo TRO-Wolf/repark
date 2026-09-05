@@ -16,9 +16,11 @@ use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDF, AggregateUDFImpl, Coercion, ReversedUDAF, Signature, TypeSignature,
-    TypeSignatureClass, Volatility,
+    Accumulator, AggregateUDF, AggregateUDFImpl, Coercion, GroupsAccumulator, ReversedUDAF,
+    Signature, TypeSignature, TypeSignatureClass, Volatility,
 };
+
+use crate::avg_groups;
 
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
@@ -206,6 +208,18 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
         }
     }
 
+    fn groups_accumulator_supported(&self, args: AccumulatorArgs) -> bool {
+        avg_groups::groups_supported(args.return_field.data_type(), args.is_distinct)
+    }
+
+    fn create_groups_accumulator(
+        &self,
+        args: AccumulatorArgs,
+    ) -> Result<Box<dyn GroupsAccumulator>> {
+        let data_type = args.exprs[0].data_type(args.schema)?;
+        avg_groups::create_groups(&data_type, args.return_type(), self.null_on_overflow)
+    }
+
     fn state_fields(&self, args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
         if args.input_fields[0].data_type().is_decimal() {
             Ok(vec![
@@ -246,7 +260,7 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
 }
 
 /// Small copy of DF `DecimalAverager` (`datafusion-functions-aggregate-common` 54.1 `utils.rs`).
-struct DecimalAverager<T: DecimalType> {
+pub(crate) struct DecimalAverager<T: DecimalType> {
     sum_mul: T::Native,
     target_mul: T::Native,
     target_precision: u8,
@@ -254,7 +268,7 @@ struct DecimalAverager<T: DecimalType> {
 }
 
 impl<T: DecimalType> DecimalAverager<T> {
-    fn try_new(sum_scale: i8, target_precision: u8, target_scale: i8) -> Result<Self> {
+    pub(crate) fn try_new(sum_scale: i8, target_precision: u8, target_scale: i8) -> Result<Self> {
         let ten = T::Native::from_usize(10).ok_or_else(|| {
             datafusion::common::DataFusionError::Internal(
                 "DecimalAverager: 10 does not fit the decimal native type".to_string(),
@@ -276,7 +290,7 @@ impl<T: DecimalType> DecimalAverager<T> {
         }
     }
 
-    fn avg(
+    pub(crate) fn avg(
         &self,
         sum: T::Native,
         count: T::Native,

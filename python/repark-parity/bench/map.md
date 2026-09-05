@@ -9,6 +9,12 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 
 ## Contents
 
+- [writepath/](writepath/map.md) — the tracked probes behind
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md): the write
+  cells, the grouping refutation and the grouping-independent invariants
+  (PERF-ICE-WRITEPATH-1 round 3).
+  pins: perf-ice-writepath-1/C-010
+
 - `bench_coalesce_chain.py` — progressive withColumns/sort/show wall times on a VALUES frame.
 - `bench_mor_merge.py` — local memory-catalog MoR vs COW MERGE phase timings;
   `--seed parquet` (fast polars seed) + `--concurrency N` (`repark.write.max-concurrent-files`)
