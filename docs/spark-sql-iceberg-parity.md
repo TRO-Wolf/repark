@@ -4424,6 +4424,39 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
+- **PERF-CATALOG-CALLS-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 11; **FIXED
+  2026-09-05** (PERF-ICE-CATALOG-IO-1). Every statement re-resolved the table and re-read its
+  `metadata.json`: `strace -f -e trace=openat` with per-statement marker files on a release
+  module, memory catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6,
+  MERGE 3** metadata-document READS (the analysis' §7.6 counts, split here into reads and the
+  commit's own write). Each is a Glue `GetTable` plus an S3 GET on a real catalog. FIXED by a
+  session-scoped cache keyed by metadata-file location, built once per session and handed to
+  every catalog it builds (`repark.iceberg.metadataCache`, default on;
+  `repark.iceberg.metadataCacheEntries`, default 512): **reads are 0 on every statement**, and
+  the one remaining `metadata.json` open per DML is `O_WRONLY` — the commit writing its own new
+  pointer, which no cache removes. The catalog pointer stays authoritative, so the fix removes
+  the S3 GET and not the `GetTable`; cutting the `GetTable` count is fork ask `F-CATIO-A`.
+  Staleness pinned across two doors over one catalog (commit visibility, `ADD COLUMNS`, a MERGE
+  after another door's commit, `rewrite_manifests` + `expire_snapshots`, DROP + re-CREATE).
+  Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §1.
+- **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; **BACKLOG** behind a
+  fork pin bump (PERF-ICE-CATALOG-IO-1). Every `Table` gets a fresh `ObjectCache`
+  (`iceberg/src/table.rs` `build`), so `plan_files` re-reads every manifest through `FileIO` on
+  every statement. Re-measured on a release module: `t_many` (208 files, **193** manifests)
+  second-statement `count_id` **120.35 ms** against its one-manifest twin at **17.63 ms** —
+  ~103 ms for 192 manifests, and the metadata cache above does not move it (120.01 ms with the
+  cache on), because the cost is manifests, not metadata. Fixed only in the fork lane
+  (`F-CATIO-B`: `TableBuilder::object_cache` plus
+  `MemoryCatalogBuilder::with_shared_object_cache_bytes`, so one path-keyed bounded cache is
+  shared across `Table` instances) and measured through a temporary, never-committed path
+  override at **11.33 ms** — within 0.8 ms of the one-manifest twin, so the manifest penalty is
+  gone rather than reduced; a repeated SELECT then opens **no** manifest-list and **no** manifest
+  at all. Safe by construction: manifests and manifest lists are immutable at their path, and
+  maintenance writes new paths. The timing pin
+  `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` SKIPs naming this ask
+  and un-skips at the bump. Tables: `docs/perf/iceberg-catalog-io-baseline.md` §2, §3.
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on

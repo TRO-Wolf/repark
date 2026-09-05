@@ -112,9 +112,37 @@ Cargo.lock` is empty). They were implemented in the fork lane
   no `with_table_metadata_cache` at `189a73ed`, so §1's AWS table's `after` column is the memory
   catalog's shape, argued by the census method, not measured on AWS.
 
-Measured numbers for A and B are in §4 of this file's "after the override" table once the pin bump
-lands; the fork lane carries the change and its tests
-(`cargo test -p iceberg --lib` 3,612 passed; `cargo test -p iceberg-datafusion` all green).
+Both are test-green in the fork lane (`cargo test -p iceberg --lib` 3,612 passed, 0 failed;
+`cargo test -p iceberg-datafusion` all green including doctests), and the RePark facade suite runs
+against the override.
+
+### 3.1 What A and B measure (release module, path override, same box, same hour)
+
+| cell | shipped (ms) | with A + B (ms) | target |
+|---|---:|---:|---|
+| `t_many/count_id/stmt2` (193 manifests) | 120.01 | **11.33** | ≤ 20 |
+| `t_many/point/stmt2` | 121.16 | **14.49** | — |
+| `t_many_merged/count_id/stmt2` (1 manifest) | 14.91 | **10.56** | — |
+| `t_many_merged/point/stmt2` | 17.72 | **13.19** | — |
+
+Floor 0.87 ms, load 10.3 → 9.9. Two things separate: the 193-manifest table stops paying for its
+manifests at all (120.0 → 11.3, and it now sits within 0.8 ms of its one-manifest twin, so the
+manifest penalty is **gone**, not reduced), and the one-manifest twin still drops 14.9 → 10.6,
+which is part 1 — the planning round that used to load the table twice now loads it once.
+
+### 3.2 The census with A + B
+
+| statement | manifest-list shipped → override | manifest shipped → override |
+|---|---:|---:|
+| `SELECT count(*)` (first) | 1 → 1 | 1 → 1 |
+| `SELECT count(*)` (repeat) | 1 → **0** | 1 → **0** |
+| `SELECT … WHERE …` | 1 → **0** | 1 → **0** |
+| `DELETE` MoR v3 | 4 → 3 | 8 → **6** |
+| `UPDATE` MoR v3 | 5 → 4 | 15 → **12** |
+| `SELECT count(*)` tail (repeat) | 1 → **0** | 2 → **0** |
+
+`metadata.json` reads stay 0 everywhere, which is the shipped half doing its job. A repeated read
+now opens **nothing at all** except the parquet it must decode.
 
 ## 4. Commands
 

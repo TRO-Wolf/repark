@@ -5,6 +5,24 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-ice-catalog-io-1-ledger.md](perf-ice-catalog-io-1-ledger.md) —
+  **PERF-ICE-CATALOG-IO-1 (2026-09-05), in flight:** the catalog-IO unit at base `6eaccd5e`.
+  Shipped: a session-scoped Iceberg metadata cache keyed by metadata-file **location**, built once
+  per session and handed to every catalog it builds, behind `repark.iceberg.metadataCache`
+  (default on) and `repark.iceberg.metadataCacheEntries` (default 512, a high-water clear at the
+  statement door). `metadata.json` READS per statement fall from 2 (SELECT) and 3–6 (DML) to
+  **0** — the analysis' §7.6 census reproduced exactly as the before column, and the one remaining
+  open per DML is the commit writing its own pointer. `PERF-CATALOG-CALLS-1` FIXED.
+  Fork-gated and NOT shipped: one load per planning round (`F-CATIO-A`), the shared path-keyed
+  manifest cache (`F-CATIO-B`) and the Glue / S3 Tables metadata cache (`F-CATIO-AWS`). A and B
+  are implemented and test-green in `$HOME/repark-lanes/lanes/catio-fork` and measured through a
+  temporary, never-committed path override: `t_many` second-statement `count_id` **120.01 →
+  11.33 ms** (target ≤ 20) with a repeated read opening no manifest at all. `PERF-ICE-MANIFEST-1`
+  BACKLOG behind the bump; three pins SKIP naming their ask. `git diff origin/main -- Cargo.toml
+  Cargo.lock` empty. Risk-first: nine staleness and cache pins on two doors over ONE catalog,
+  green before and after, with a four-mutation score. `risk_tier: elevated`. Branch
+  `perf/ice-catalog-io-1`.
+  pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45

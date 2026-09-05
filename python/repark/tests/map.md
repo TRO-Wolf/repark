@@ -2515,7 +2515,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `F-CATIO-AWS` — fork pin `189a73ed` has neither `TableBuilder::object_cache` nor
   `with_table_metadata_cache` on the Glue / S3 Tables builders), so they un-skip at the pin bump
   that consumes them.
-  pins: perf-ice-catalog-io-1/C-001, C-005
+  The measured tables, the machine, the recorded load and the re-measured floor live in that
+  baseline note beside the two registry rows `PERF-CATALOG-CALLS-1` (FIXED) and
+  `PERF-ICE-MANIFEST-1` (BACKLOG behind the pin bump).
+  pins: perf-ice-catalog-io-1/C-001, C-005, C-006
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

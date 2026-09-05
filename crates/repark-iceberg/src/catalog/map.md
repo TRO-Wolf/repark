@@ -53,7 +53,9 @@ Source comments retain only API and safety contracts; implementation narration i
   builds with the default handles; `memory_catalog_cached(warehouse, caches)` is the session's
   entry. Glue and S3 Tables get no cache at fork pin `189a73ed`: their builders take no
   `with_table_metadata_cache`, which is fork ask `F-CATIO-AWS`.
-  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+  Every reason for this module is written here rather than in the code, and the eight maps this
+  unit touched move in the commits that touched their directories.
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004, C-007
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read
   precedence + `mirror_namespace_location_keys` unidirectional non-clobbering dual-write) and
