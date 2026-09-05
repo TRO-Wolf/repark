@@ -274,7 +274,7 @@ async fn delete_completed_files(table: &Table, files: &[DataFile]) {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     use datafusion::arrow::array::{Int32Array, StringArray};
     use datafusion::arrow::datatypes::{Field as ArrowField, Schema as ArrowSchema};

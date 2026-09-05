@@ -191,7 +191,7 @@ repark-core's error map.
   four small parquet writes swamped the injected delay (a 6.4 s floor against a 6.0 s delayed
   run), so the timing evidence lives in
   [../../../../docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md)
-  instead, where it is measured on a release module.
+  instead, where it is measured on a release module. `make verify` is green with the pin in place.
   The vectorized partition splitter this path calls on every partitioned write is fork ask
   **F-28** on `f-28-vectorized-partition-splitter`: the splitter lexsorts the partition-value
   columns, reads group boundaries with `arrow_ord::partition` and materializes one
