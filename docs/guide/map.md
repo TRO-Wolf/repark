@@ -28,7 +28,9 @@ illustrative. A claim with no verified basis does not go in.
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
   and the keys users actually set — `spark.sql.pyspark.inferNestedDictAsStruct.enabled` (FA-4),
   `spark.sql.session.timeZone` (TZ-2 / TZ-3), `spark.sql.ansi.enabled`, target partitions, batch
-  size, the one-truth memory pool, `repark.display.style`.
+  size, the one-truth memory pool, the Iceberg catalog caches (`metadataCache` /
+  `metadataCacheEntries` / `manifestCacheBytes`, all build-time, memory-catalog-only),
+  `repark.display.style`.
 - [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; select /
   filter / groupBy / joins (incl. the semi family and the conditionless refusal, G4-3) / window
   functions; the action table (`collect` / `to_arrow` / `to_arrow_batches` / `toPandas` /

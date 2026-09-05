@@ -2617,7 +2617,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
 - `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05; RP-12 landed F-CATIO at
-  pin `79119643`, the part-3 pin stays skipped until RePark wires the shared cache):** the catalog-IO
+  pin `79119643`; IO-2 un-skipped the part-3 pin):** the catalog-IO
   census and the manifest target on the memory catalog. The instrument is
   `_native.iceberg_metadata_cache_census(session)`, whose `body_fetches` counter is exactly the
   number of `metadata.json` documents the session has parsed — which is the number of S3 GETs the
@@ -2632,15 +2632,65 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   name BOTH the key the user set and the canonical spelling; the bound's SCOPE is pinned (an
   8-way `UNION ALL` at `entries=1` retains 8 inside the statement and comes back under the bound
   at the next door); and a 48-manifest table
-  answers equal to its one-manifest twin. Three legs SKIP with a named reason: the `t_many`
-  second-statement <= 20 ms target and the two AWS census legs are fork-gated (asks `F-CATIO-B`
-  and `F-CATIO-AWS` — fork pin `189a73ed` has neither `TableBuilder::object_cache` nor
-  `with_table_metadata_cache` on the Glue / S3 Tables builders), so they un-skip at the pin bump
-  that consumes them.
+  answers equal to its one-manifest twin. Two legs SKIP with a named reason: the AWS census legs
+  are fork-gated (ask `F-CATIO-AWS` — fork pin `189a73ed` has no `with_table_metadata_cache` on
+  the Glue / S3 Tables builders), so they un-skip at the pin bump that consumes them. The third
+  skip IO-1 filed here — the `t_many` second-statement <= 20 ms target, fork ask `F-CATIO-B` —
+  un-skipped in IO-2 and runs below.
   The measured tables, the machine, the recorded load and the re-measured floor live in that
-  baseline note beside the two registry rows `PERF-CATALOG-CALLS-1` (FIXED) and
-  `PERF-ICE-MANIFEST-1` (BACKLOG behind the pin bump).
+  baseline note beside the registry rows `PERF-CATALOG-CALLS-1` (FIXED in IO-1) and
+  `PERF-ICE-MANIFEST-1` (BACKLOG in IO-2: the knob shipped with the default
+  OFF, so the win is measured but not served until the default-ON flip).
   pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):** the
+  part-3 pin is un-skipped (the `t_many` second statement must clear 20 ms on a release
+  module, with the knob set explicitly to 32 MiB) and nine legs join it. Every cache-on leg
+  sets the knob explicitly, because the default is off. The delete instrument is
+  `_delete_manifests`: every `*.avro` under the session warehouse is unlinked, so
+  a repeated read can only answer from the shared cache. An explicit-knob session answers
+  after the deletion (the sharing pin); a `manifestCacheBytes = "0"` session fails it (the
+  knob-off control, which also proves `"0"` builds); and a default session fails it too
+  (the default-off control); after `rewrite_manifests` +
+  `expire_snapshots` every pre-rewrite manifest path is gone from disk and the next read still
+  answers the same rows (immutability by path — the read needs only new paths); a MERGE matches
+  a row the previous statement committed; a dropped and recreated table answers its own row
+  count; a `register_table`-adopted table stays correct across a commit; a 512-byte budget
+  answers across eight tables (eviction never corrupts — the byte bound itself is the fork's
+  moka `max_capacity`, unit-pinned fork-side); and `VERSION AS OF` plus branch reads answer
+  with the cache on. Two lineage detector pins hold `PERF-CATALOG-LINEAGE-CACHE-1`'s shape:
+  `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` pins today's
+  wrong answer (NULL lineage for carried rows — the pin reds when `F-CATIO-KEY` lands) and
+  `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` pins the
+  same upgrade serving assigned lineage with the knob off. The two refusal parametrizations
+  grow by the new key (`"many"` and `"-1"`
+  fail loud; the alias names both spellings). The IO-1 commit-visibility and schema-change legs
+  run unchanged with the cache OFF (their default sessions build no shared cache). The
+  two-door shape of every cell stays in
+  Rust (`catalog_cache_staleness.rs`): two Python sessions cannot share one memory catalog, so
+  the Python legs are single-session sequential through the same shared cache.
+
+  | test | clause |
+  |---|---|
+  | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
+  | `test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish` | C-002 |
+  | `test_a_default_session_reopens_manifests_after_they_vanish` | C-002 |
+  | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-002 |
+  | `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` | C-004 |
+  | `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-004 |
+  | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-004 |
+  | `test_a_merge_after_a_commit_matches_the_committed_row` | C-004 |
+  | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-004 |
+  | `test_a_registered_table_stays_correct_across_a_commit` | C-004 |
+  | `test_a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+  | `test_time_travel_reads_the_pinned_snapshot_with_the_cache_on` | C-004 |
+  | `test_branch_reads_answer_with_the_cache_on` | C-004 |
+  | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
+  | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
+
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006
+  The part-3 wall-clock target (≤ 20 ms) runs on a release module only (CI's wheel smoke is a
+  debug build and read 34 ms); the delete-manifest pins (the shared cache answers after every
+  `*.avro` is unlinked) are the every-build guard.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

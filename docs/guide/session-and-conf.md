@@ -293,6 +293,23 @@ or SQL SET datafusion.runtime.memory_limit = 'NG' — same pool, one truth.
 
 Setting **both** on the same builder refuses too: same pool, ambiguous initial size.
 
+## Iceberg catalog caches
+
+| Key | Alias | Meaning |
+|---|---|---|
+| `repark.iceberg.metadataCache` | `repark.iceberg.metadata_cache` | session-scoped metadata-document cache (default `true`) |
+| `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound, cleared at the statement door (default `512`) |
+| `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `0` = off; set bytes to opt in — `33554432` is the measured value) |
+
+All three are build-time and memory-catalog-only. A bad value fails loud inside
+`getOrCreate()`, naming both the key set and the canonical spelling. The manifest
+budget sizes the fork's shared `ObjectCache`: with the knob set, a repeated read opens
+no manifest-list and no manifest at all. The default is off because the shared cache
+serves wrong-context lineage on v2→v3 upgrade-boundary tables until the fork's cache
+key carries the assignment input (`PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`); the
+default-ON flip is a follow-up unit. Numbers and the commit-side scope live in
+[../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §5.
+
 ## `repark.display.style` — a repark extra
 
 `df.show()` defaults to a PySpark-shaped ASCII grid (`spark` style). Two other renderers are
