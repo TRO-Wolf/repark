@@ -1284,7 +1284,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_facade_hygiene.py` — R-FACADE-HYGIENE (W7) cdf hide/GC, fillna, dropDuplicates, OOS.
 
 - `test_df_batch2.py (lint: functions_api not F; N802 sampleBy)` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census + C5 unpivot quote / cube alias.
-- `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake)
+- `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake) TYPES-1 round 4 pins `with_row_index` BIGINT (pins: types-1/C-005).
 - `test_polars_ns.py (skeptic fix: real-path starts_with/slice + quote pin; full census)` — R-POLARS-NS str/dt/fill_null + differential.
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
