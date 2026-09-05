@@ -5,16 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [perf-ice-scan-1-ledger.md](perf-ice-scan-1-ledger.md) —
-  **PERF-ICE-SCAN-1 (2026-09-05), in flight:** Iceberg `count(*)` stops decoding every
-  column, and small tables scan in parallel. Fork half **F-27**: an empty projection reads
-  row counts through an empty `ProjectionMask`; `IcebergTableScan` reports exact
-  whole-table statistics so DataFusion folds `count(*)`; `plan_partition_work` re-splits
-  and re-packs to a session-derived target so sub-split-size tables reach T partitions.
-  RePark half: skip-until-F-27 pins, the before/after baseline, registry rows
-  `PERF-ICE-COUNTSTAR-1` and `PERF-ICE-SCANPART-1` FIXED-PENDING-PIN. `risk_tier: standard`.
-  Branch `perf/ice-scan-1`.
-  pins: perf-ice-scan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the
