@@ -150,6 +150,24 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Spark-typed decimal `avg` with decimal `retract_batch` (no Numeric→Float64 coerce).
   **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
+- `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05), drafted, not yet wired:** the
+  `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
+  own `AvgGroupsAccumulator` (`datafusion-functions-aggregate/src/average.rs`):
+  per-group `Vec<u64>` counts plus `Vec<Native>` sums, `EmitTo::First` partial emission,
+  `convert_to_state`, and a local null-state tracker (the
+  `datafusion-functions-aggregate-common` `NullState` cannot be used without a new
+  dependency, so its All/Some fast-path semantics are re-implemented here). Three
+  deliberate deviations from the reference, each forced by a house contract: the average
+  closure returns `Option` so `try_avg` overflow yields per-group NULL instead of failing
+  the query; the float state stays `[sum, count:Int64]` and the decimal state
+  `[count:UInt64, sum]` because `state_fields` belongs to the untouched retract path;
+  length mismatches are loud `exec_err!` instead of the reference's `assert_eq!`, and
+  indexing is bounds-checked instead of `get_unchecked` (`unsafe` is forbidden in this
+  crate). Unit tests drive `update_batch` / `merge_batch` / `evaluate` / `state` /
+  `size` directly with `EmitTo::First`, the way DataFusion's own groups-accumulator
+  tests do. This row flips to wired when `aggregate.rs` serves
+  `groups_accumulator_supported` / `create_groups_accumulator`.
+  pins: perf-agg-avg-1/C-001
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT

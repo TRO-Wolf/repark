@@ -45,8 +45,17 @@ VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
 
 ## 6. Red-first and mutation (docs/testing.md "Gate provocation proofs")
 
-To record: the base red run of the many-groups probe, and the three named mutations
-(wrong group index, ignored NULL mask, decimal scale off by one) with which pins red.
+**Red first (2026-09-05, base `6eaccd5e` release module `163,478,728 B`, load 6.12).**
+`python/repark/tests/test_perf_agg_avg_1.py`: **1 failed, 23 passed, 6 skipped**.
+The failure is the many-groups probe, red where the fix changes the answer path:
+`avg 133.9 ms vs sum 33.0 ms` (4.06×, bound 2.5) on the 2e5-group single-partition
+fixture. The single partition is load-bearing: at 8 partitions the same shape measures
+2.77× and at 1e5 groups 1.93×, both under the bound — the per-group boxing cost is
+only visible when one thread carries all the groups. Shape curve (base, median of 3):
+1e5×10 1.93×, 2e5×10 single-partition 4.06×, 2e5×10 8-partition 2.77×, 2e5×30 1.87×.
+
+To record: the three named mutations (wrong group index, ignored NULL mask, decimal
+scale off by one) with which pins red.
 
 ## 7. Registry
 
@@ -54,7 +63,42 @@ To file: `PERF-AGG-AVG-1` in `docs/spark-sql-iceberg-parity.md` §7, measured-pe
 
 ## 8. Numbers
 
-To record: before/after medians, spreads, floors, × floor, loads, release proofs.
+**Before (2026-09-05, base `6eaccd5e`, release `163,478,728 B`,
+`__debug_assertions__ False`, load 14.6–15.5, 5 timed + 1 warm-up):**
+
+| cell | median | min | spread | load |
+|---|---|---:|---:|---|
+| `decimal/sf1/avg_decimal_by_partkey/tp8` | 400.6 | 361.4 | 54.5 | 14.78 |
+| `decimal/sf1/avg_double_by_partkey/tp8` | 433.3 | 429.9 | 66.0 | 14.78–14.64 |
+| `decimal/sf1/sum_decimal_by_partkey/tp8` | 90.0 | 72.0 | 26.1 | 14.64 |
+| floor (6 repeated sum medians) | — | — | **3.3** | 14.64–15.13 |
+| DuckDB `avg_decimal_by_partkey` (arrow fetch) | 102.1 | — | 7.1 | — |
+| DuckDB `sum_decimal_by_partkey` (arrow fetch) | 114.7 | — | 6.0 | — |
+
+Isolated avg cost 310.6 ms = 94× the 3.3 ms floor; avg/sum ratio 4.45×. The analysis
+(389/437/88 ms, floor ~11 ms, DuckDB 102/113) reproduces within load noise. DuckDB
+timed with `to_arrow_table`, not `fetchall` — materializing 2e5 Python decimals costs
+480 ms and is not the engine. TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries
+17`, two runs): repark 0.721 s / 0.521 s vs DuckDB 0.040 s / 0.038 s → 18.25× / 13.84×
+(status OK, 1 row each).
+
+**Oracle record (2026-09-05, live PySpark 4.1.2 `local[2]`, ANSI on, UTC, shuffle 2,
+beside one sibling JVM).** Every literal in `test_perf_agg_avg_1.py` was printed by
+`/tmp/aggavg_record.py` (throwaway, imports the test module's own SQL constants) and
+is quoted here verbatim: int global `double [2.75]`; float global `double
+[1.1666666666666667]`; grouped small `(string not-null, double) [(a,2.0), (b,4.0),
+(c,None)]`; decimal grouped `(int32 not-null, decimal128(14,6)) [(1,1.650000),
+(2,3.300000)]`; decimal global `decimal128(14,6) [1.650000]`; `try_avg` overflow
+`decimal128(38,4) [None]`; plain-avg overflow RAISES `ArithmeticException
+[NUMERIC_VALUE_OUT_OF_RANGE...] cannot be represented as Decimal(38, 4)`; empty
+double global `double [None]`; all-NULL grouped `[(a,None), (b,1.0)]`; window
+`[1.0, 1.5, 2.0, 4.0]`; single distinct decimal `decimal128(6,5) [1.50000]` and int
+`double [1.5]`; multi-distinct `(double, int64) [(1.5, 10)]`; all six input widths
+`double [3.0]`; many-groups checksum `(groups 200000, checksum 3150001.7499999637)`
+and head rows `[(0,17.5), (1,14.833333333333334), (2,19.27777777777778)]`, 2e5 rows,
+0 nulls.
+
+To record: the after medians on the same cells.
 
 ## 9. Gates
 
