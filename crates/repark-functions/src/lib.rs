@@ -7,6 +7,7 @@ pub(crate) use shim_macros::shim_udf_boilerplate;
 pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
+mod avg_groups;
 pub mod cardinality;
 pub mod collection;
 pub mod datetime;

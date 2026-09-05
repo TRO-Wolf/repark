@@ -7,8 +7,8 @@ use arrow::array::{
 use arrow::buffer::NullBuffer;
 use arrow::compute::cast;
 use arrow::datatypes::{
-    ArrowNativeType, ArrowPrimitiveType, DataType, Decimal128Type, Decimal256Type,
-    Decimal32Type, Decimal64Type, DecimalType, Float64Type, Int64Type, UInt64Type,
+    ArrowNativeType, ArrowPrimitiveType, DataType, Decimal32Type, Decimal64Type, Decimal128Type,
+    Decimal256Type, DecimalType, Float64Type, Int64Type, UInt64Type,
 };
 use datafusion::common::{DataFusionError, Result, exec_err, not_impl_err};
 use datafusion::logical_expr::{EmitTo, GroupsAccumulator};
@@ -32,54 +32,58 @@ pub(crate) fn create_groups(
     null_on_overflow: bool,
 ) -> Result<Box<dyn GroupsAccumulator>> {
     match (data_type, return_type) {
-        (DataType::Float64, DataType::Float64) => Ok(Box::new(
-            SparkAvgGroupsAccumulator::<Float64Type, _>::new(
+        (DataType::Float64, DataType::Float64) => {
+            Ok(Box::new(SparkAvgGroupsAccumulator::<Float64Type, _>::new(
                 data_type,
                 return_type,
                 true,
                 float_average,
-            ),
-        )),
-        (DataType::Decimal32(_, sum_scale), DataType::Decimal32(target_precision, target_scale)) => {
-            decimal_groups::<Decimal32Type>(
-                data_type,
-                return_type,
-                *sum_scale,
-                *target_precision,
-                *target_scale,
-                null_on_overflow,
-            )
+            )))
         }
-        (DataType::Decimal64(_, sum_scale), DataType::Decimal64(target_precision, target_scale)) => {
-            decimal_groups::<Decimal64Type>(
-                data_type,
-                return_type,
-                *sum_scale,
-                *target_precision,
-                *target_scale,
-                null_on_overflow,
-            )
-        }
-        (DataType::Decimal128(_, sum_scale), DataType::Decimal128(target_precision, target_scale)) => {
-            decimal_groups::<Decimal128Type>(
-                data_type,
-                return_type,
-                *sum_scale,
-                *target_precision,
-                *target_scale,
-                null_on_overflow,
-            )
-        }
-        (DataType::Decimal256(_, sum_scale), DataType::Decimal256(target_precision, target_scale)) => {
-            decimal_groups::<Decimal256Type>(
-                data_type,
-                return_type,
-                *sum_scale,
-                *target_precision,
-                *target_scale,
-                null_on_overflow,
-            )
-        }
+        (
+            DataType::Decimal32(_, sum_scale),
+            DataType::Decimal32(target_precision, target_scale),
+        ) => decimal_groups::<Decimal32Type>(
+            data_type,
+            return_type,
+            *sum_scale,
+            *target_precision,
+            *target_scale,
+            null_on_overflow,
+        ),
+        (
+            DataType::Decimal64(_, sum_scale),
+            DataType::Decimal64(target_precision, target_scale),
+        ) => decimal_groups::<Decimal64Type>(
+            data_type,
+            return_type,
+            *sum_scale,
+            *target_precision,
+            *target_scale,
+            null_on_overflow,
+        ),
+        (
+            DataType::Decimal128(_, sum_scale),
+            DataType::Decimal128(target_precision, target_scale),
+        ) => decimal_groups::<Decimal128Type>(
+            data_type,
+            return_type,
+            *sum_scale,
+            *target_precision,
+            *target_scale,
+            null_on_overflow,
+        ),
+        (
+            DataType::Decimal256(_, sum_scale),
+            DataType::Decimal256(target_precision, target_scale),
+        ) => decimal_groups::<Decimal256Type>(
+            data_type,
+            return_type,
+            *sum_scale,
+            *target_precision,
+            *target_scale,
+            null_on_overflow,
+        ),
         (data_type, return_type) => {
             not_impl_err!("AvgGroupsAccumulator for ({data_type} --> {return_type})")
         }
@@ -106,12 +110,12 @@ where
         data_type,
         return_type,
         false,
-        move |sum, count| decimal_average(&averager, sum, count, null_on_overflow),
+        move |sum, count| decimal_average(averager.as_ref(), sum, count, null_on_overflow),
     )))
 }
 
 fn decimal_average<T: DecimalType>(
-    averager: &Option<DecimalAverager<T>>,
+    averager: Option<&DecimalAverager<T>>,
     sum: T::Native,
     count: u64,
     null_on_overflow: bool,
@@ -130,7 +134,7 @@ fn decimal_average<T: DecimalType>(
     averager.avg(sum, count_native, null_on_overflow)
 }
 
-#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_precision_loss, clippy::unnecessary_wraps)]
 fn float_average(sum: f64, count: u64) -> Result<Option<f64>> {
     if count == 0 {
         Ok(None)
@@ -171,10 +175,7 @@ impl GroupNullState {
     }
 
     fn take_builder(&mut self, total_num_groups: usize) -> BooleanBufferBuilder {
-        let previous = std::mem::replace(
-            &mut self.seen,
-            SeenValues::All { valid_groups: 0 },
-        );
+        let previous = std::mem::replace(&mut self.seen, SeenValues::All { valid_groups: 0 });
         match previous {
             SeenValues::All { valid_groups } => {
                 let mut valid = BooleanBufferBuilder::new(total_num_groups);
@@ -206,19 +207,20 @@ impl GroupNullState {
         if values.len() != group_indices.len() {
             return exec_err!("avg groups accumulate: values and group indices disagree");
         }
-        if let Some(filter) = opt_filter {
-            if filter.len() != group_indices.len() {
-                return exec_err!("avg groups accumulate: filter and group indices disagree");
-            }
+        if let Some(filter) = opt_filter
+            && filter.len() != group_indices.len()
+        {
+            return exec_err!("avg groups accumulate: filter and group indices disagree");
         }
-        if let SeenValues::All { valid_groups } = &mut self.seen {
-            if opt_filter.is_none() && values.null_count() == 0 {
-                for (row, group_index) in group_indices.iter().enumerate() {
-                    value_fn(*group_index, values.value(row));
-                }
-                *valid_groups = total_num_groups;
-                return Ok(());
+        if let SeenValues::All { valid_groups } = &mut self.seen
+            && opt_filter.is_none()
+            && values.null_count() == 0
+        {
+            for (row, group_index) in group_indices.iter().enumerate() {
+                value_fn(*group_index, values.value(row));
             }
+            *valid_groups = total_num_groups;
+            return Ok(());
         }
         let mut seen = self.take_builder(total_num_groups);
         match (values.null_count() > 0, opt_filter) {
@@ -254,16 +256,14 @@ impl GroupNullState {
                 }
             }
             (true, Some(filter)) => {
-                for ((group_index, keep), value) in group_indices
-                    .iter()
-                    .zip(filter.iter())
-                    .zip(values.iter())
+                for ((group_index, keep), value) in
+                    group_indices.iter().zip(filter.iter()).zip(values.iter())
                 {
-                    if let Some(true) = keep {
-                        if let Some(value) = value {
-                            seen.set_bit(*group_index, true);
-                            value_fn(*group_index, value);
-                        }
+                    if let Some(true) = keep
+                        && let Some(value) = value
+                    {
+                        seen.set_bit(*group_index, true);
+                        value_fn(*group_index, value);
                     }
                 }
             }
@@ -275,10 +275,8 @@ impl GroupNullState {
     fn build(&mut self, emit_to: EmitTo) -> Result<Option<NullBuffer>> {
         match emit_to {
             EmitTo::All => {
-                let previous = std::mem::replace(
-                    &mut self.seen,
-                    SeenValues::All { valid_groups: 0 },
-                );
+                let previous =
+                    std::mem::replace(&mut self.seen, SeenValues::All { valid_groups: 0 });
                 match previous {
                     SeenValues::All { .. } => Ok(None),
                     SeenValues::Some { mut valid } => Ok(Some(NullBuffer::new(valid.finish()))),
@@ -290,7 +288,7 @@ impl GroupNullState {
                     Ok(None)
                 }
                 SeenValues::Some { valid } => {
-                    let taken = std::mem::replace(valid, BooleanBufferBuilder::new(0));
+                    let mut taken = std::mem::replace(valid, BooleanBufferBuilder::new(0));
                     let bits = taken.finish();
                     if count > bits.len() {
                         return exec_err!(
@@ -355,18 +353,18 @@ where
             Ok(cast(&values[0], &self.sum_data_type)?)
         }
     }
+}
 
-    fn check_emitted(&self, counts: usize, sums: usize, nulls: &Option<NullBuffer>) -> Result<()> {
-        if counts != sums {
-            return exec_err!("avg groups emit: counts and sums disagree");
-        }
-        if let Some(nulls) = nulls {
-            if nulls.len() != sums {
-                return exec_err!("avg groups emit: null mask and sums disagree");
-            }
-        }
-        Ok(())
+fn check_emitted(counts: usize, sums: usize, nulls: Option<&NullBuffer>) -> Result<()> {
+    if counts != sums {
+        return exec_err!("avg groups emit: counts and sums disagree");
     }
+    if let Some(nulls) = nulls
+        && nulls.len() != sums
+    {
+        return exec_err!("avg groups emit: null mask and sums disagree");
+    }
+    Ok(())
 }
 
 impl<T, F> GroupsAccumulator for SparkAvgGroupsAccumulator<T, F>
@@ -403,7 +401,7 @@ where
         let counts = emit_to.take_needed(&mut self.counts);
         let sums = emit_to.take_needed(&mut self.sums);
         let nulls = self.null_state.build(emit_to)?;
-        self.check_emitted(counts.len(), sums.len(), &nulls)?;
+        check_emitted(counts.len(), sums.len(), nulls.as_ref())?;
         let mut averages = Vec::with_capacity(sums.len());
         let mut has_null = false;
         for (sum, count) in sums.into_iter().zip(counts) {
@@ -412,14 +410,13 @@ where
             averages.push(average);
         }
         let array: PrimitiveArray<T> = if !has_null
-            && nulls
-                .as_ref()
-                .is_none_or(|mask| mask.null_count() == 0)
+            && nulls.as_ref().is_none_or(|mask| mask.null_count() == 0)
         {
-            let values: Vec<T::Native> =
-                averages.into_iter().map(|v| v.unwrap_or_default()).collect();
-            PrimitiveArray::new(values.into(), nulls)
-                .with_data_type(self.return_data_type.clone())
+            let values: Vec<T::Native> = averages
+                .into_iter()
+                .map(Option::unwrap_or_default)
+                .collect();
+            PrimitiveArray::new(values.into(), nulls).with_data_type(self.return_data_type.clone())
         } else {
             let mut builder = PrimitiveBuilder::<T>::with_capacity(averages.len())
                 .with_data_type(self.return_data_type.clone());
@@ -450,9 +447,9 @@ where
         let nulls = self.null_state.build(emit_to)?;
         let counts = emit_to.take_needed(&mut self.counts);
         let sums = emit_to.take_needed(&mut self.sums);
-        self.check_emitted(counts.len(), sums.len(), &nulls)?;
-        let sums =
-            PrimitiveArray::<T>::new(sums.into(), nulls.clone()).with_data_type(self.sum_data_type.clone());
+        check_emitted(counts.len(), sums.len(), nulls.as_ref())?;
+        let sums = PrimitiveArray::<T>::new(sums.into(), nulls.clone())
+            .with_data_type(self.sum_data_type.clone());
         if self.state_sum_first {
             let mut as_i64 = Vec::with_capacity(counts.len());
             for count in counts {
@@ -494,7 +491,7 @@ where
                 return exec_err!("avg groups merge: counts and group indices disagree");
             }
             let mut converted = Vec::with_capacity(raw_counts.len());
-            for count in raw_counts.iter() {
+            for count in raw_counts {
                 match count {
                     None => converted.push(0),
                     Some(count) => converted.push(u64::try_from(count).map_err(|_| {
@@ -595,7 +592,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use arrow::array::{Decimal128Array, Decimal256Array, Decimal32Array, Decimal64Array, Float64Array};
+    use arrow::array::{
+        Decimal32Array, Decimal64Array, Decimal128Array, Decimal256Array, Float64Array,
+    };
     use datafusion::prelude::SessionContext;
 
     fn float_groups(null_on_overflow: bool) -> Box<dyn GroupsAccumulator> {
@@ -615,8 +614,12 @@ mod tests {
     #[test]
     fn float_groups_update_then_evaluate_averages_per_group() {
         let mut groups = float_groups(false);
-        let values = Arc::new(Float64Array::from(vec![Some(1.0), Some(3.0), None, Some(5.0)]))
-            as ArrayRef;
+        let values = Arc::new(Float64Array::from(vec![
+            Some(1.0),
+            Some(3.0),
+            None,
+            Some(5.0),
+        ])) as ArrayRef;
         groups
             .update_batch(&[values], &[0, 0, 1, 1], None, 3)
             .expect("update");
@@ -646,9 +649,11 @@ mod tests {
     #[test]
     fn float_groups_int_input_coerces_to_float() {
         let mut groups = float_groups(false);
-        let values = Arc::new(arrow::array::Int64Array::from(vec![Some(1), Some(3), None]))
-            as ArrayRef;
-        groups.update_batch(&[values], &[0, 0, 0], None, 1).expect("update");
+        let values =
+            Arc::new(arrow::array::Int64Array::from(vec![Some(1), Some(3), None])) as ArrayRef;
+        groups
+            .update_batch(&[values], &[0, 0, 0], None, 1)
+            .expect("update");
         let result = groups.evaluate(EmitTo::All).expect("evaluate");
         let result = result.as_primitive::<Float64Type>();
         assert!((result.value(0) - 2.0).abs() < 1e-12);
@@ -658,7 +663,9 @@ mod tests {
     fn float_groups_state_layout_is_sum_then_int64_count() {
         let mut groups = float_groups(false);
         let values = Arc::new(Float64Array::from(vec![Some(1.0), Some(3.0)])) as ArrayRef;
-        groups.update_batch(&[values], &[0, 1], None, 2).expect("update");
+        groups
+            .update_batch(&[values], &[0, 1], None, 2)
+            .expect("update");
         let state = groups.state(EmitTo::All).expect("state");
         assert_eq!(state.len(), 2);
         assert_eq!(state[0].data_type(), &DataType::Float64);
@@ -668,9 +675,7 @@ mod tests {
         assert!((sums.value(0) - 1.0).abs() < 1e-12);
         assert_eq!(counts.value(1), 1);
         let mut merged = float_groups(false);
-        merged
-            .merge_batch(&state, &[0, 1], None, 2)
-            .expect("merge");
+        merged.merge_batch(&state, &[0, 1], None, 2).expect("merge");
         let result = merged.evaluate(EmitTo::All).expect("evaluate");
         let result = result.as_primitive::<Float64Type>();
         assert!((result.value(0) - 1.0).abs() < 1e-12);
@@ -681,11 +686,15 @@ mod tests {
     fn float_groups_merge_combines_two_partials() {
         let mut first = float_groups(false);
         let values = Arc::new(Float64Array::from(vec![Some(1.0), Some(2.0)])) as ArrayRef;
-        first.update_batch(&[values], &[0, 0], None, 1).expect("update");
+        first
+            .update_batch(&[values], &[0, 0], None, 1)
+            .expect("update");
         let first_state = first.state(EmitTo::All).expect("state");
         let mut second = float_groups(false);
         let values = Arc::new(Float64Array::from(vec![Some(3.0), None])) as ArrayRef;
-        second.update_batch(&[values], &[0, 0], None, 1).expect("update");
+        second
+            .update_batch(&[values], &[0, 0], None, 1)
+            .expect("update");
         let second_state = second.state(EmitTo::All).expect("state");
         let mut merged = float_groups(false);
         merged
@@ -751,7 +760,9 @@ mod tests {
         let mut groups = float_groups(false);
         assert_eq!(groups.size(), 0);
         let values = Arc::new(Float64Array::from(vec![Some(1.0)])) as ArrayRef;
-        groups.update_batch(&[values], &[0], None, 100).expect("update");
+        groups
+            .update_batch(&[values], &[0], None, 100)
+            .expect("update");
         assert!(groups.size() >= 100 * std::mem::size_of::<u64>() * 2);
     }
 
@@ -796,7 +807,9 @@ mod tests {
                 .with_precision_and_scale(10, 2)
                 .expect("fixture scale"),
         ) as ArrayRef;
-        groups.update_batch(&[values], &[0], None, 1).expect("update");
+        groups
+            .update_batch(&[values], &[0], None, 1)
+            .expect("update");
         let state = groups.state(EmitTo::All).expect("state");
         assert_eq!(state.len(), 2);
         assert_eq!(state[0].data_type(), &DataType::UInt64);
@@ -851,7 +864,9 @@ mod tests {
                 .with_precision_and_scale(5, 2)
                 .expect("fixture scale"),
         ) as ArrayRef;
-        groups.update_batch(&[values], &[0, 0], None, 1).expect("update");
+        groups
+            .update_batch(&[values], &[0, 0], None, 1)
+            .expect("update");
         let result = groups.evaluate(EmitTo::All).expect("evaluate");
         assert_eq!(result.data_type(), &DataType::Decimal32(9, 6));
         assert_eq!(result.as_primitive::<Decimal32Type>().value(0), 1_650_000);
@@ -870,7 +885,9 @@ mod tests {
                 .with_precision_and_scale(10, 2)
                 .expect("fixture scale"),
         ) as ArrayRef;
-        groups.update_batch(&[values], &[0, 0], None, 1).expect("update");
+        groups
+            .update_batch(&[values], &[0, 0], None, 1)
+            .expect("update");
         let result = groups.evaluate(EmitTo::All).expect("evaluate");
         assert_eq!(result.data_type(), &DataType::Decimal64(14, 6));
         assert_eq!(result.as_primitive::<Decimal64Type>().value(0), 1_650_000);
@@ -892,7 +909,9 @@ mod tests {
             .with_precision_and_scale(10, 2)
             .expect("fixture scale"),
         ) as ArrayRef;
-        groups.update_batch(&[values], &[0, 0], None, 1).expect("update");
+        groups
+            .update_batch(&[values], &[0, 0], None, 1)
+            .expect("update");
         let result = groups.evaluate(EmitTo::All).expect("evaluate");
         assert_eq!(result.data_type(), &DataType::Decimal256(14, 6));
         assert_eq!(
@@ -919,8 +938,13 @@ mod tests {
 
     #[test]
     fn create_groups_rejects_unsupported_pair() {
-        let error = create_groups(&DataType::Utf8, &DataType::Float64, false).expect_err("reject");
-        assert!(error.to_string().contains("AvgGroupsAccumulator"), "{error}");
+        let Err(error) = create_groups(&DataType::Utf8, &DataType::Float64, false) else {
+            panic!("unsupported pair must be rejected");
+        };
+        assert!(
+            error.to_string().contains("AvgGroupsAccumulator"),
+            "{error}"
+        );
     }
 
     #[tokio::test]
