@@ -788,6 +788,73 @@ them, and the document is ordered by surface, never by date.
   union schema after narrowing, which is a planner change beyond a type-widening unit.
   pins: types-1/C-001
 
+### TY-7 — `COALESCE` of an INT and a narrowed literal answers BIGINT
+
+- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int64` / non-null.
+  DataFusion's own `TypeCoercion` runs before the TYPES-1 narrowing pass and unifies the
+  still-wide literal to BIGINT behind an explicit `CAST`; narrowing then shrinks the
+  literal inside the cast, and the closing coercion keeps the explicit wide type.
+- **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_stays_wide_on_repark`
+  and `::test_live_recoercion_shapes_match_the_oracle`
+  (pins the `(int64, int32)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Stripping DataFusion's
+  explicit casts would re-open the UNION division rewrite the §10 placement closed; the
+  placement keeps the wide answer on this shape.
+  pins: types-1/C-001
+
+### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
+
+- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int32` /
+  non-null with Spark's values, and is also accepted under a plain `GROUP BY i`
+  (all zeros) and with several arguments (bitmask). All three come from DataFusion's
+  `ResolveGroupingFunction`, which hardcodes the `CAST(... AS Int32)` expansion;
+  TYPES-1 narrowed no grouping shape.
+- **Apache Spark** — answers `int8` / non-null with the same values on the grouping-set
+  shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
+  `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
+  round-4 probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
+  `::test_grouping_under_plain_group_by_is_accepted`, and
+  `::test_live_grouping_sets_match_on_value_with_type_carve_out`
+  (pins the `(int32, int8)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Spark parity needs a repark
+  grouping layer (tinyint answer, grouping-set-context refusal, one-arg arity); a post-rule
+  recast would couple to DataFusion's internal `__grouping_id` expansion shape, and the
+  arity is already lost after expansion.
+  pins: types-1/C-004
+
+### TY-9 — `ntile` accepts a BIGINT bucket count
+
+- **repark** — `SELECT ntile(CAST(2 AS BIGINT)) OVER (ORDER BY i)` is accepted and
+  answers `int32` / non-null `[1, 1, 2]`. The signed window wrapper delegates its
+  signature to DataFusion's `ntile`, which takes every integer width; TYPES-1 changed
+  only the answer width. The facade shape does not exist: both `ntile` facades take a
+  plain integer, not a column.
+- **Apache Spark** — refuses with `DATATYPE_MISMATCH` (`ntile` requires INT). *(oracle:
+  live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared int/bigint/string
+  seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_ntile_with_bigint_argument_is_accepted`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Plan-time refusal needs
+  argument validation the window wrapper has no hook for; that machinery is its own unit.
+  pins: types-1/C-005
+
+### TY-10 — facade `decimal + lit(1)` skips literal min-precision
+
+- **repark** — `F.col("b").cast("decimal(10,2)") + F.lit(1)` answers `decimal128(13, 2)`,
+  the typed-INT width, while the SQL door's `CAST(b AS DECIMAL(10, 2)) + 1` answers
+  `decimal128(11, 2)`. The facade literal never presents the bare-literal shape the
+  min-precision arm matches, so the typed arm fires instead. Predates TYPES-1 (facade
+  literals were `Int32` before narrowing); TYPES-1 left the facade shape alone.
+- **Apache Spark** — answers `decimal128(11, 2)` on both doors with the same values.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared
+  int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Min-precision matching is
+  decimal-precision territory; widening the arm to facade literal shapes is its own unit.
+  pins: types-1/C-001
+
 ### TZ-2 — the session-timezone default is `UTC`
 
 - **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set

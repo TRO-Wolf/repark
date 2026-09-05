@@ -425,22 +425,22 @@ def test_avg_grouped_multi_distinct_refuses_bare() -> None:
 
 def test_avg_grouped_float_drift_within_spark() -> None:
     """Grouped 1e16-plus-ones avg pins repark's bits within 1e-12 of Spark's."""
-    """pins: perf-agg-avg-1/C-003."""
+    """pins: perf-agg-avg-1/C-003; types-1/C-001 (VALUES k is int32 on Spark)."""
     table = _session().sql(SQL_FLOAT_DRIFT_GROUPED).toArrow()
     assert table.column("a").to_pylist() == [153846153846153.84]
-    assert _sig(table) == [("k", "int64", True), ("a", "double", True)]
+    assert _sig(table) == [("k", "int32", True), ("a", "double", True)]
     assert table.column("a").to_pylist() == pytest.approx([SPARK_FLOAT_DRIFT_GROUPED], rel=1e-12)
 
 
 def test_avg_decimal_sumwrap_records_divergence() -> None:
     """Sum-wrap fixtures answer the wrapped quotient; Spark NULLs and raises."""
-    """pins: perf-agg-avg-1/C-003."""
+    """pins: perf-agg-avg-1/C-003; types-1/C-001 (VALUES k is int32 on Spark)."""
     from repark.errors import PySparkException
 
     spark = _session()
     grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
     assert grouped_try.column("a").to_pylist() == [Decimal("0.0000")]
-    assert _sig(grouped_try) == [("k", "int64", True), ("a", "decimal128(38, 4)", True)]
+    assert _sig(grouped_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
     grouped = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).toArrow()
     assert grouped.column("a").to_pylist() == [Decimal("0.0000")]
     native_grouped = repark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).to_arrow()
@@ -450,7 +450,7 @@ def test_avg_decimal_sumwrap_records_divergence() -> None:
     assert _sig(native_global) == [("a", "decimal128(38, 4)", True)]
     nonzero_try = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY).toArrow()
     assert nonzero_try.column("a").to_pylist() == [Decimal("100000.0000")]
-    assert _sig(nonzero_try) == [("k", "int64", True), ("a", "decimal128(38, 4)", True)]
+    assert _sig(nonzero_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
     nonzero = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).toArrow()
     assert nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
     native_nonzero = repark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).to_arrow()

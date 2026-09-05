@@ -336,9 +336,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_types_1.py](test_types_1.py) — **TYPES-1 (2026-09-05):** Spark-door Arrow-type
   pins — INT literals and arithmetic in both ANSI modes, BIGINT count-likes, the INT rank
   family, session-zone STRING `from_unixtime` with the format argument, EXPLAIN plan-cast
-  pins, ANSI-door stock-type controls, and four live-oracle legs behind
+  pins, ANSI-door stock-type controls, and seven live-oracle legs behind
   `REPARK_PARITY_LIVE=1` (full-match shapes, an approx/regr nullability carve-out, an
-  ANSI-off overflow leg).
+  ANSI-off overflow leg, from_unixtime extremes, a grouping type carve-out, re-coercion
+  shapes). Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
+  TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
+  wrapped-year from_unixtime cells.
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,

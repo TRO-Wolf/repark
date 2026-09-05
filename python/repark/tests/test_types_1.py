@@ -150,6 +150,95 @@ def test_overflow_wraps_when_ansi_off() -> None:
     assert got.column("r").to_pylist() == [-2147483648, -2147483647, -2147483646]
 
 
+def test_narrowed_literal_in_case_and_if() -> None:
+    """pins: types-1/C-001 — narrowed literals in CASE and IF answer INT, both doors."""
+    session = _session()
+    frame = _seed(session)
+    case = "SELECT CASE WHEN i > 1 THEN 1 ELSE 0 END AS r FROM types1_probe"
+    assert _door_type(session, case) == ("int32", False)
+    assert session.sql(case).toArrow().column("r").to_pylist() == [0, 1, 1]
+    facade_case = frame.select(F.when(F.col("i") > 1, F.lit(1)).otherwise(F.lit(0)).alias("r"))
+    assert _frame_type(facade_case) == ("int32", False)
+    assert facade_case.toArrow().column("r").to_pylist() == [0, 1, 1]
+    conditional = "SELECT IF(i > 1, 1, 0) AS r FROM types1_probe"
+    assert _door_type(session, conditional) == ("int32", True)
+    assert session.sql(conditional).toArrow().column("r").to_pylist() == [0, 1, 1]
+
+
+def test_coalesce_with_bigint_stays_wide_on_both_doors() -> None:
+    """pins: types-1/C-001 — COALESCE of BIGINT and a narrowed literal answers BIGINT."""
+    session = _session()
+    frame = _seed(session)
+    query = "SELECT COALESCE(CAST(NULL AS BIGINT), 1) AS r"
+    assert _door_type(session, query) == ("int64", False)
+    assert session.sql(query).collect()[0][0] == 1
+    facade = frame.select(F.coalesce(F.lit(None).cast("bigint"), F.lit(1)).alias("r"))
+    assert _frame_type(facade) == ("int64", False)
+    assert facade.collect()[0][0] == 1
+
+
+def test_coalesce_with_int_stays_wide_on_repark() -> None:
+    """pins: types-1/C-001 — COALESCE of INT and a narrowed literal answers BIGINT (TY-7)."""
+    session = _session()
+    query = "SELECT COALESCE(CAST(NULL AS INT), 1) AS r"
+    assert _door_type(session, query) == ("int64", False)
+    assert session.sql(query).collect()[0][0] == 1
+
+
+def test_narrowed_literal_in_array_struct_map() -> None:
+    """pins: types-1/C-001 — array/struct/map of narrowed literals carry INT, both doors."""
+    session = _session()
+    frame = _seed(session)
+    array = "SELECT array(1, 2) AS r"
+    assert _door_type(session, array) == ("list<element: int32>", False)
+    assert session.sql(array).toArrow().column("r").to_pylist() == [[1, 2]]
+    facade_array = frame.select(F.array(F.lit(1), F.lit(2)).alias("r"))
+    assert _frame_type(facade_array) == ("list<item: int32>", True)
+    assert facade_array.toArrow().column("r").to_pylist() == [[1, 2], [1, 2], [1, 2]]
+    struct = "SELECT struct(1, 'a') AS r"
+    assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", True)
+    assert session.sql(struct).toArrow().column("r").to_pylist() == [{"c0": 1, "c1": "a"}]
+    facade_struct = frame.select(F.struct(F.lit(1), F.lit("a")).alias("r"))
+    assert _frame_type(facade_struct) == ("struct<1: int32, a: string>", True)
+    mapping = "SELECT map(1, 'a') AS r"
+    assert _door_type(session, mapping) == ("map<int32, string>", True)
+    assert session.sql(mapping).toArrow().column("r").to_pylist() == [[(1, "a")]]
+
+
+def test_narrowed_literal_in_union_with_bigint() -> None:
+    """pins: types-1/C-001 — a narrowed literal unifies with BIGINT, both doors."""
+    session = _session()
+    union = "SELECT 1 AS r UNION ALL SELECT CAST(2 AS BIGINT) AS r ORDER BY r"
+    assert _door_type(session, union) == ("int64", False)
+    assert session.sql(union).toArrow().column("r").to_pylist() == [1, 2]
+    facade_union = (
+        session.sql("SELECT 1 AS r")
+        .union(session.sql("SELECT CAST(2 AS BIGINT) AS r"))
+        .orderBy("r")
+    )
+    assert _frame_type(facade_union) == ("int64", False)
+    assert facade_union.toArrow().column("r").to_pylist() == [1, 2]
+
+
+def test_narrowed_literal_against_decimal_matches_on_the_sql_door() -> None:
+    """pins: types-1/C-001 — DECIMAL(10,2) beside a narrowed literal answers (11,2)."""
+    session = _session()
+    _seed(session)
+    query = "SELECT CAST(b AS DECIMAL(10, 2)) + 1 AS r FROM types1_probe"
+    assert _door_type(session, query) == ("decimal128(11, 2)", True)
+    assert session.sql(query).collect()[0][0] == Decimal("11.00")
+    flipped = "SELECT 1 + CAST(b AS DECIMAL(10, 2)) AS r FROM types1_probe"
+    assert _door_type(session, flipped) == ("decimal128(11, 2)", True)
+
+
+def test_facade_decimal_plus_literal_skips_min_precision() -> None:
+    """pins: types-1/C-001 — facade decimal + lit(1) answers (13,2) (TY-10: Spark (11,2))."""
+    frame = _seed(_session())
+    facade = frame.select((F.col("b").cast("decimal(10,2)") + F.lit(1)).alias("r"))
+    assert _frame_type(facade) == ("decimal128(13, 2)", True)
+    assert facade.collect()[0][0] == Decimal("11.00")
+
+
 @pytest.mark.parametrize(
     "query",
     ["SELECT count(*) AS r FROM types1_probe", "SELECT count(i) AS r FROM types1_probe"],
@@ -220,6 +309,19 @@ def test_sum_of_decimal_widens_like_spark() -> None:
     assert session.sql(query).collect()[0][0] == Decimal("60.00")
 
 
+@pytest.mark.parametrize("width", ["TINYINT", "SMALLINT"])
+def test_sum_of_narrow_integers_is_bigint(width: str) -> None:
+    """pins: types-1/C-004 — sum over TINYINT and SMALLINT answers BIGINT, both doors."""
+    session = _session()
+    frame = _seed(session)
+    query = f"SELECT sum(CAST(i AS {width})) AS r FROM types1_probe"
+    assert _door_type(session, query) == ("int64", True)
+    assert session.sql(query).collect()[0][0] == 6
+    facade = frame.select(F.sum(F.col("i").cast(width.lower())).alias("r"))
+    assert _frame_type(facade) == ("int64", True)
+    assert facade.collect()[0][0] == 6
+
+
 @pytest.mark.parametrize(
     ("name", "want"),
     [
@@ -239,14 +341,29 @@ def test_length_family_is_int(name: str, want: int) -> None:
     assert session.sql(query).collect()[0][0] == want
 
 
-def test_grouping_is_int() -> None:
-    """pins: types-1/C-004 — grouping answers INT."""
+def test_grouping_in_rollup_and_sets_answers_int() -> None:
+    """pins: types-1/C-004 — grouping under ROLLUP and GROUPING SETS answers INT."""
+    session = _session()
+    frame = _seed(session)
+    for query in [
+        "SELECT i, grouping(i) AS r FROM types1_probe GROUP BY ROLLUP(i) ORDER BY i NULLS LAST",
+        "SELECT i, grouping(i) AS r FROM types1_probe "
+        "GROUP BY GROUPING SETS ((i), ()) ORDER BY i NULLS LAST",
+    ]:
+        assert _door_type(session, query) == ("int32", False)
+        assert session.sql(query).toArrow().column("r").to_pylist() == [0, 0, 0, 1]
+    rolled = frame.rollup("i").agg(F.grouping("i").alias("r"))
+    assert _frame_type(rolled) == ("int32", False)
+    assert sorted(rolled.toArrow().column("r").to_pylist()) == [0, 0, 0, 1]
+
+
+def test_grouping_under_plain_group_by_is_accepted() -> None:
+    """pins: types-1/C-004 — plain GROUP BY accepts grouping (TY-8: Spark raises)."""
     session = _session()
     _seed(session)
-    assert _door_type(session, "SELECT grouping(i) AS r FROM types1_probe GROUP BY i") == (
-        "int32",
-        False,
-    )
+    query = "SELECT grouping(i) AS r FROM types1_probe GROUP BY i"
+    assert _door_type(session, query) == ("int32", False)
+    assert session.sql(query).toArrow().column("r").to_pylist() == [0, 0, 0]
 
 
 @pytest.mark.parametrize(
@@ -328,6 +445,15 @@ def test_percent_rank_family_is_float64(call: str) -> None:
     assert _frame_type(facade) == ("double", False)
 
 
+def test_ntile_with_bigint_argument_is_accepted() -> None:
+    """pins: types-1/C-005 — ntile over a BIGINT bucket count answers INT (TY-9: refuses)."""
+    session = _session()
+    _seed(session)
+    query = "SELECT ntile(CAST(2 AS BIGINT)) OVER (ORDER BY i) AS r FROM types1_probe"
+    assert _door_type(session, query) == ("int32", False)
+    assert session.sql(query).toArrow().column("r").to_pylist() == [1, 1, 2]
+
+
 def test_from_unixtime_is_a_session_zone_string() -> None:
     """pins: types-1/C-006 — from_unixtime answers a UTC STRING, nullable like Spark."""
     session = _session()
@@ -353,6 +479,8 @@ def test_from_unixtime_nullable_column_stays_nullable() -> None:
         ("yyyy/MM/dd", "1970/01/01"),
         ("HH:mm", "00:00"),
         ("yyyy-MM-dd HH:mm:ss", "1970-01-01 00:00:00"),
+        ("EEE", "Thu"),
+        ("dd/MM/yyyy HH:mm", "01/01/1970 00:00"),
     ],
 )
 def test_from_unixtime_format_argument(pattern: str, want: str) -> None:
@@ -363,6 +491,17 @@ def test_from_unixtime_format_argument(pattern: str, want: str) -> None:
     assert session.sql(query).collect()[0][0] == want
 
 
+def test_from_unixtime_weekday_and_european_formats_on_the_facade() -> None:
+    """pins: types-1/C-006 — the facade renders EEE and dd/MM/yyyy HH:mm like Spark."""
+    frame = _seed(_session())
+    weekday = frame.select(F.from_unixtime(F.lit(0), "EEE").alias("r"))
+    assert _frame_type(weekday) == ("string", True)
+    assert weekday.collect()[0][0] == "Thu"
+    european = frame.select(F.from_unixtime(F.lit(0), "dd/MM/yyyy HH:mm").alias("r"))
+    assert _frame_type(european) == ("string", True)
+    assert european.collect()[0][0] == "01/01/1970 00:00"
+
+
 def test_from_unixtime_follows_the_session_zone() -> None:
     """pins: types-1/C-006 — from_unixtime renders in America/New_York on both doors."""
     session = _session(**{ZONE_KEY: "America/New_York"})
@@ -370,6 +509,42 @@ def test_from_unixtime_follows_the_session_zone() -> None:
     assert session.sql("SELECT from_unixtime(0) AS r").collect()[0][0] == "1969-12-31 19:00:00"
     facade = frame.select(F.from_unixtime(F.lit(0)).alias("r"))
     assert facade.collect()[0][0] == "1969-12-31 19:00:00"
+
+
+@pytest.mark.parametrize(
+    ("text", "value", "want"),
+    [
+        ("15000000000000", 15000000000000, "-107253-01-11 18:38:10"),
+        ("20000000000000", 20000000000000, "+51190-09-21 03:31:30"),
+        ("-15000000000000", -15000000000000, "+111192-12-21 05:21:49"),
+        ("9223372036854775807", 2**63 - 1, "1969-12-31 23:59:59"),
+        ("-9223372036854775808", -(2**63), "1970-01-01 00:00:00"),
+        ("-1", -1, "1969-12-31 23:59:59"),
+        ("1.5", 1.5, "1970-01-01 00:00:01"),
+    ],
+)
+def test_from_unixtime_wraps_extreme_seconds_like_spark(text: str, value: Any, want: str) -> None:
+    """pins: types-1/C-006 — out-of-range seconds wrap to Spark's years, both doors."""
+    session = _session()
+    frame = _seed(session)
+    query = f"SELECT from_unixtime({text}) AS r"
+    assert _door_type(session, query) == ("string", True)
+    assert session.sql(query).collect()[0][0] == want
+    facade = frame.select(F.from_unixtime(F.lit(value)).alias("r"))
+    assert _frame_type(facade) == ("string", True)
+    assert facade.collect()[0][0] == want
+
+
+def test_from_unixtime_null_stays_null_on_both_doors() -> None:
+    """pins: types-1/C-006 — NULL seconds answer NULL, SQL door and facade."""
+    session = _session()
+    frame = _seed(session)
+    query = "SELECT from_unixtime(CAST(NULL AS BIGINT)) AS r"
+    assert _door_type(session, query) == ("string", True)
+    assert session.sql(query).collect()[0][0] is None
+    facade = frame.select(F.from_unixtime(F.lit(None)).alias("r"))
+    assert _frame_type(facade) == ("string", True)
+    assert facade.collect()[0][0] is None
 
 
 def test_unix_timestamp_and_to_timestamp_stand_still() -> None:
@@ -433,6 +608,22 @@ def _seed_oracle(spark_engine: lp.Engine) -> None:
     frame.createOrReplaceTempView(SEED_VIEW)
 
 
+def _live_array_cell(table: pa.Table) -> tuple[str, list[Any]]:
+    """pins: types-1/C-001 — one array query's (element type, values) either engine."""
+    field = table.schema.field("r")
+    assert isinstance(field.type, pa.ListType)
+    return (str(field.type.value_type), table.column("r").to_pylist())
+
+
+def _live_struct_cell(table: pa.Table) -> tuple[list[str], list[list[Any]]]:
+    """pins: types-1/C-001 — one struct query's (field types, ordered values) either engine."""
+    field = table.schema.field("r")
+    assert isinstance(field.type, pa.StructType)
+    types = [str(field.type.field(index).type) for index in range(field.type.num_fields)]
+    rows = [list(row.values()) for row in table.column("r").to_pylist()]
+    return (types, rows)
+
+
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_literal_and_arithmetic_match_the_oracle(spark_engine: lp.Engine) -> None:
     """pins: types-1/C-001 — live Spark agrees on literal widths and INT arithmetic."""
@@ -463,6 +654,8 @@ def test_live_aggregates_and_rank_match_the_oracle(spark_engine: lp.Engine) -> N
         "SELECT count(DISTINCT s) AS r FROM types1_probe",
         "SELECT count_if(i > 1) AS r FROM types1_probe",
         "SELECT sum(i) AS r FROM types1_probe",
+        "SELECT sum(CAST(i AS TINYINT)) AS r FROM types1_probe",
+        "SELECT sum(CAST(i AS SMALLINT)) AS r FROM types1_probe",
         "SELECT sum(CAST(b AS DECIMAL(10, 2))) AS r FROM types1_probe",
         "SELECT bit_length(s) AS r FROM types1_probe WHERE s IS NOT NULL",
         "SELECT length(s) AS r FROM types1_probe WHERE s IS NOT NULL",
@@ -474,6 +667,8 @@ def test_live_aggregates_and_rank_match_the_oracle(spark_engine: lp.Engine) -> N
         "SELECT cume_dist() OVER (ORDER BY i) AS r FROM types1_probe",
         "SELECT from_unixtime(0) AS r",
         "SELECT from_unixtime(0, 'yyyy/MM/dd') AS r",
+        "SELECT from_unixtime(0, 'EEE') AS r",
+        "SELECT from_unixtime(0, 'dd/MM/yyyy HH:mm') AS r",
     ]:
         assert _live_type(engine, query) == _live_type(spark_engine, query)
 
@@ -502,6 +697,47 @@ def test_live_sketch_and_regression_counts_match_on_type_and_value(
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_recoercion_shapes_match_the_oracle(spark_engine: lp.Engine) -> None:
+    """pins: types-1/C-001 — live Spark agrees on narrowed literals in CASE and kin."""
+    session = _session()
+    _seed(session)
+    _seed_oracle(spark_engine)
+    engine = _live_engine(session)
+    for query in [
+        "SELECT CASE WHEN i > 1 THEN 1 ELSE 0 END AS r FROM types1_probe",
+        "SELECT COALESCE(CAST(NULL AS BIGINT), 1) AS r",
+        "SELECT 1 AS r UNION ALL SELECT CAST(2 AS BIGINT) AS r ORDER BY r",
+        "SELECT CAST(b AS DECIMAL(10, 2)) + 1 AS r FROM types1_probe",
+        "SELECT 1 + CAST(b AS DECIMAL(10, 2)) AS r FROM types1_probe",
+    ]:
+        assert _live_type(engine, query) == _live_type(spark_engine, query)
+    narrow = "SELECT COALESCE(CAST(NULL AS INT), 1) AS r"
+    mine = _live_type(engine, narrow)
+    spark = _live_type(spark_engine, narrow)
+    assert (mine[0], spark[0]) == ("int64", "int32")
+    assert mine[1] is spark[1] is False
+    assert mine[2] == spark[2]
+    conditional = "SELECT IF(i > 1, 1, 0) AS r FROM types1_probe"
+    mine = _live_type(engine, conditional)
+    spark = _live_type(spark_engine, conditional)
+    assert (mine[0], mine[2]) == (spark[0], spark[2])
+    assert (mine[1], spark[1]) == (True, False)
+    mapping = "SELECT map(1, 'a') AS r"
+    mine = _live_type(engine, mapping)
+    spark = _live_type(spark_engine, mapping)
+    assert (mine[0], mine[2]) == (spark[0], spark[2])
+    assert (mine[1], spark[1]) == (True, False)
+    array_query = "SELECT array(1, 2) AS r"
+    mine_nested = _live_array_cell(engine.arrow_of(engine.session.sql(array_query)))
+    spark_nested = _live_array_cell(spark_engine.arrow_of(spark_engine.session.sql(array_query)))
+    assert mine_nested == spark_nested
+    struct_query = "SELECT struct(1, 'a') AS r"
+    mine_nested = _live_struct_cell(engine.arrow_of(engine.session.sql(struct_query)))
+    spark_nested = _live_struct_cell(spark_engine.arrow_of(spark_engine.session.sql(struct_query)))
+    assert mine_nested == spark_nested
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_overflow_wraps_when_ansi_off(spark_engine: lp.Engine) -> None:
     """pins: types-1/C-002 — INTMAX+1 wraps identically with ANSI off, both engines."""
     session = _session(**{ANSI_KEY: "false"})
@@ -511,3 +747,45 @@ def test_live_overflow_wraps_when_ansi_off(spark_engine: lp.Engine) -> None:
         assert _live_type(_live_engine(session), query) == _live_type(spark_engine, query)
     finally:
         spark_engine.session.conf.set("spark.sql.ansi.enabled", "true")
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_from_unixtime_extremes_match_the_oracle(spark_engine: lp.Engine) -> None:
+    """pins: types-1/C-006 — live Spark agrees on wrapped years, NULL, signs, fractions."""
+    session = _session()
+    _seed(session)
+    _seed_oracle(spark_engine)
+    engine = _live_engine(session)
+    for seconds in [
+        "15000000000000",
+        "20000000000000",
+        "-15000000000000",
+        "9223372036854775807",
+        "-9223372036854775808",
+        "CAST(NULL AS BIGINT)",
+        "-1",
+        "1.5",
+    ]:
+        query = f"SELECT from_unixtime({seconds}) AS r"
+        assert _live_type(engine, query) == _live_type(spark_engine, query)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_grouping_sets_match_on_value_with_type_carve_out(
+    spark_engine: lp.Engine,
+) -> None:
+    """pins: types-1/C-004 — grouping values match; the (int32, int8) pair is pinned (TY-8)."""
+    session = _session()
+    _seed(session)
+    _seed_oracle(spark_engine)
+    engine = _live_engine(session)
+    for query in [
+        "SELECT i, grouping(i) AS r FROM types1_probe GROUP BY ROLLUP(i) ORDER BY i NULLS LAST",
+        "SELECT i, grouping(i) AS r FROM types1_probe "
+        "GROUP BY GROUPING SETS ((i), ()) ORDER BY i NULLS LAST",
+    ]:
+        mine = _live_type(engine, query)
+        spark = _live_type(spark_engine, query)
+        assert (mine[0], spark[0]) == ("int32", "int8")
+        assert mine[1] is spark[1] is False
+        assert mine[2] == spark[2]
