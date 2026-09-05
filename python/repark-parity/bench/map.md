@@ -69,6 +69,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the dynamicFlatten measurement | `dynflatten/run_dynflatten.py --scale gate\|quick\|full --out /tmp/oc-dynflatten-bed` |
 | Run the facade-boundary measurement | `facade/run_facade.py --out /tmp/oc-facade-bed` (or `make facade-bench`) |
 | Run the spill matrix | `spill/measure.py --scratch <dir> --json-out <file>` |
+| Read the spill matrix | [../../../docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md) |
 | Read dynamicFlatten numbers | [../../../docs/perf/dynamic-flatten-baseline.md](../../../docs/perf/dynamic-flatten-baseline.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |

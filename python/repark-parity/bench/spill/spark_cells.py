@@ -13,9 +13,8 @@ from typing import Any
 CELLS: dict[str, str] = {
     "sort": "SELECT id, h FROM base ORDER BY h",
     "hash_join": "SELECT l.id, r.payload FROM base l JOIN other r ON l.h = r.h",
-    "collect_list": "SELECT k, count(a) AS n FROM (SELECT g % 8 AS k, collect_list(h) AS a "
-    "FROM base GROUP BY g % 8) GROUP BY k",
-    "nested_loop_join": "SELECT count(*) AS n FROM base l JOIN other r ON l.v < r.v",
+    "collect_list": "SELECT g % 8 AS k, collect_list(h) AS a FROM base GROUP BY g % 8",
+    "nested_loop_join": "SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v",
 }
 
 BASE_SELECT: str = (
@@ -34,17 +33,27 @@ def spill_totals(event_log_dir: Path) -> dict[str, int]:
     """Sum memory and disk spill over every task-end event Spark logged."""
     memory = 0
     disk = 0
+    tasks = 0
+    records = 0
     for path in sorted(event_log_dir.rglob("*")):
-        if not path.is_file():
+        if not path.is_file() or path.name.startswith((".", "appstatus")):
             continue
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             if '"Event":"SparkListenerTaskEnd"' not in line.replace(" ", ""):
                 continue
             payload = json.loads(line)
             metrics = payload.get("Task Metrics") or {}
+            tasks += 1
             memory += int(metrics.get("Memory Bytes Spilled", 0))
             disk += int(metrics.get("Disk Bytes Spilled", 0))
-    return {"memory_bytes_spilled": memory, "disk_bytes_spilled": disk}
+            shuffle = metrics.get("Shuffle Write Metrics") or {}
+            records += int(shuffle.get("Shuffle Records Written", 0))
+    return {
+        "memory_bytes_spilled": memory,
+        "disk_bytes_spilled": disk,
+        "tasks_seen": tasks,
+        "shuffle_records_written": records,
+    }
 
 
 def build_spark(event_log_dir: Path, driver_memory: str, partitions: int) -> Any:
@@ -59,19 +68,32 @@ def build_spark(event_log_dir: Path, driver_memory: str, partitions: int) -> Any
         .config("spark.sql.shuffle.partitions", str(partitions))
         .config("spark.eventLog.enabled", "true")
         .config("spark.eventLog.dir", event_log_dir.as_uri())
+        .config("spark.eventLog.compress", "false")
         .config("spark.ui.enabled", "false")
         .getOrCreate()
     )
 
 
 def run_cell(spark: Any, cell: str, rows: int, right_rows: int) -> dict[str, Any]:
-    """Run one comparison cell to completion and time it."""
+    """Run one comparison cell to completion through the `noop` sink and time it.
+
+    The sink matters: `count()` lets Spark's optimizer drop the very operator under test
+    (an `ORDER BY` a count does not need), so the first draft measured a plan without a sort.
+    """
     spark.sql(BASE_SELECT.format(rows=rows)).createOrReplaceTempView("base")
     spark.sql(BASE_SELECT.format(rows=right_rows)).createOrReplaceTempView("other")
     started = time.perf_counter()
-    count = spark.sql(CELLS[cell]).count()
+    frame = spark.sql(CELLS[cell])
+    frame.write.format("noop").mode("overwrite").save()
     wall_ms = (time.perf_counter() - started) * 1000.0
-    return {"outcome": "ok", "rows_out": int(count), "wall_ms": wall_ms}
+    count = -1
+    heap = int(spark.sparkContext._jvm.java.lang.Runtime.getRuntime().maxMemory())
+    return {
+        "outcome": "ok",
+        "rows_out": int(count),
+        "wall_ms": wall_ms,
+        "jvm_max_heap_bytes": heap,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

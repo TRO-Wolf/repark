@@ -72,8 +72,8 @@ pins: h3-spill-1/C-001, C-002, C-003
 | Run the whole matrix | `measure.py --scratch <dir> --json-out <file>` |
 | Run one operator row | `measure.py --operators sort --scratch <dir> --json-out <file>` |
 | Run one cell by hand | `cell_worker.py --operator sort --pool 64M --scale 1000000 --as-cap-bytes 34359738368 --json-out <file>` |
-| Read the measured matrix | `docs/perf/spill-matrix-baseline.md` (lands with the run) |
-| Read the pins | `python/repark/tests/test_h3_spill_matrix.py` (lands with the run) |
+| Read the measured matrix | [../../../../docs/perf/spill-matrix-baseline.md](../../../../docs/perf/spill-matrix-baseline.md) |
+| Read the pins | [../../../repark/tests/test_h3_spill_matrix.py](../../../repark/tests/test_h3_spill_matrix.py) |
 
 ## Debug
 

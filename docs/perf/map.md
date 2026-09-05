@@ -43,6 +43,22 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   of the prize) and says plainly that the first draft's 140.46 ms was measuring the wrong loop.
   pins: perf-facade-1/C-001, C-006, C-007, C-009
 
+- [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the
+  Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
+  64 MiB) x 2 scales (1e6 / 1e7 wide rows, so 1e7 exceeds 1 GiB) = **180 cells, each in a fresh
+  subprocess on a release module**, classified `ok` / `spilled` / `degraded` / `clean_error` /
+  `internal_error`, with peak RSS polled from `/proc`, wall, and the 1-minute load beside each.
+  **No cell aborted the process and no cell returned a wrong answer** — 72 bounded cells
+  produced an answer digest and all 72 equalled the unbounded run. Three Apache Spark cells on
+  the same fixture at `spark.driver.memory=1g` sit beside it, including the one where Spark is
+  the worse citizen (`collect_list` dies with a Java OOM that takes the SparkContext down where
+  repark refuses with a typed exception). Section 2 reads DataFusion 54.1's spill support out of
+  the vendored source rather than inferring it, because that table is the ceiling on any
+  Never-OOM claim: windows, `Unnest`, the Iceberg scan and the facade boundary take no
+  reservation at all, so the pool cannot bound them. Per-cell evidence including every repeat:
+  [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
+  pins: h3-spill-1/C-002, C-003, C-004, C-005
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
