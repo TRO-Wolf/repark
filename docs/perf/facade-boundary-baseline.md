@@ -30,11 +30,12 @@ pins: perf-facade-1/C-001, C-006, C-007, C-009
 
 ```bash
 cd python/repark && maturin develop --release
-cd ../.. && python python/repark-parity/bench/facade/run_facade.py \
+cd ../.. && .venv/bin/python python/repark-parity/bench/facade/run_facade.py \
   --out /tmp/oc-facade-bed --json /tmp/oc-facade-bed/run.json
 ```
 
-`make facade-bench` runs the same battery and writes its rendered report under the bed.
+`PYTHON=.venv/bin/python make facade-bench` runs the same battery and writes its rendered
+report under the bed (bare `make facade-bench` works inside an activated venv).
 `--cells export,collect,rows,create,chain` selects groups; `--iterations` and `--floor-repeats`
 set the sample counts. The runner raises rather than measure a debug native module.
 

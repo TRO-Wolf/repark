@@ -27,13 +27,20 @@ rather than quoting it:
 
 | cell pair | old leg | new leg |
 |---|---|---|
+| `collect_old/N` vs `collect/N` | `DataFrame._rows_from_arrow_table` swapped back to the pure-Python converter — end to end, result list held | shipped |
 | `rows_old/N` vs `rows_new/N` | `rows_export.rows_from_arrow_table_python`, the untouched pure-Python converter | `rows_export.rows_from_arrow_table`, the shipped path |
 | `chain_old/D` vs `chain/D` | `_old_columns` / `_old_iter_bound_columns` in `cells.py`, the pre-unit bodies, swapped onto `DataFrame` for the timed region and restored in a `finally` | the shipped bodies |
 
 Both legs see the same fixture, the same load and the same native module, so a difference is
 the code path and nothing else. The reconstruction is faithful only while those two functions
-still mirror what `PERF-FACADE-1` replaced; if `columns` or `_iter_bound_columns` changes
-again, the old leg stops being the right comparison and must be re-derived or dropped.
+still mirror what `PERF-FACADE-1` replaced; if `columns`, `_iter_bound_columns` or
+`_rows_from_arrow_table` changes again, the old leg stops being the right comparison and must
+be re-derived or dropped.
+
+`collect_old/N` and `rows_old/N` measure different things on purpose: the first holds a million
+`Row` objects as `collect()` must, the second releases each batch's rows. The gap between them
+on the shipped path is the cost of holding the result, which is where the remaining headroom
+is; on the pre-unit path the two are indistinguishable because it was collector-bound anyway.
 
 ## Cell contract
 
@@ -68,8 +75,8 @@ bound on the prize, never as evidence that the change is safe.
 
 - `fixture.py` — the seed-42 seven-column parquet (`id`, `ts`, `v`, `vi`, `s`, `cat`, `part`),
   written once per size under the bed and reused.
-- `cells.py` — release proof, load sampling, `time_cell`, the chain builders and the two
-  pre-unit function bodies.
+- `cells.py` — release proof, load sampling, `time_cell`, the chain builders and the three
+  pre-unit reconstructions (`_old_columns`, `_old_iter_bound_columns`, `collect_with_old_converter`).
 - `measure.py` — orchestrator, floor, markdown renderer.
 - `run_facade.py` — CLI (`--cells`, `--iterations`, `--floor-repeats`, `--out`, `--json`,
   `--report`).
@@ -80,16 +87,23 @@ bound on the prize, never as evidence that the change is safe.
 
 | I want to… | Go to |
 |---|---|
-| Run the whole battery | `python python/repark-parity/bench/facade/run_facade.py --out /tmp/oc-facade-bed` |
+| Run the whole battery | `.venv/bin/python python/repark-parity/bench/facade/run_facade.py --out /tmp/oc-facade-bed` |
 | Run one group | `… run_facade.py --cells chain` (groups: `export`, `collect`, `rows`, `create`, `chain`) |
-| Run it the way `make` does | `make facade-bench` |
+| Run it the way `make` does | `PYTHON=.venv/bin/python make facade-bench` |
 | Read the numbers | [../../../../docs/perf/facade-boundary-baseline.md](../../../../docs/perf/facade-boundary-baseline.md) |
+
+The `make` target resolves its interpreter through `$(PYTHON)`, default `python`. The runner
+imports `repark`, `pyarrow` and `numpy`, so it needs the project venv: inside an activated venv
+the default works, and outside one pass `PYTHON=.venv/bin/python`. The neighbouring
+`dynflatten-bench` target hard-codes bare `python` and carries the same requirement without the
+override.
 
 ## Debug
 
 | Symptom | First check |
 |---|---|
 | `refusing to measure on a debug native build` | `maturin develop --release`, then re-check `_native.__debug_assertions__` |
+| `python: not found` from `make facade-bench` | pass `PYTHON=.venv/bin/python`, or activate the venv first |
 | medians drift between runs | read the 1-minute load columns; sibling lanes building Rust move every cell, which is why both legs of each pair run in one process |
 | `chain_old` is not ~6× `chain` | the reconstructed pre-unit bodies no longer mirror the shipped ones; see "The before/after contract" |
 | fixture looks stale | delete the bed directory; `ensure_fixture` only writes when the file is absent |

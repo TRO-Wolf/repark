@@ -255,7 +255,7 @@ DELIVERY_SIGNOFF:
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `typos .` | 0 |
 | `maturin develop --release` | 0 (`__debug_assertions__ False`, `163,171,800 B`) |
-| `make facade-bench` | 0 (the tracked baseline runner; 32 cells) |
+| `PYTHON=.venv/bin/python make facade-bench` | 0 (the tracked baseline runner; 32 cells). Bare `make facade-bench` needs an activated venv — the target resolves `$(PYTHON)`, default `python`, and the runner imports `repark`/`pyarrow`/`numpy`. `dynflatten-bench` hard-codes bare `python` and carries the same requirement without the override. |
 
 **Known load-flaky, not this unit:**
 `python/repark-parity/tests/test_t2_spill_reach.py::test_sort_merge_join_spills_under_small_fair_pool`
