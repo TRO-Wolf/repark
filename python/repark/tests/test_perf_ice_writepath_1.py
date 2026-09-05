@@ -177,7 +177,7 @@ def _ctas_commit(engine: ReparkSession, table: str) -> dict[str, Any]:
     }
 
 
-@pytest.mark.parametrize("partitions", ["4", "16"])
+@pytest.mark.parametrize("partitions", ["3", "4", "8", "16"])
 def test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count(
     tmp_path: Path, partitions: str
 ) -> None:

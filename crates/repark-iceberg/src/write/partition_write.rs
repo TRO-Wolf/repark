@@ -218,7 +218,12 @@ pub async fn write_data_files_from_plan(
     ));
 
     let data_root = data_root(table);
-    let before = list_data_files(table, &data_root).await;
+    let fresh = table.metadata().current_snapshot().is_none();
+    let before = if fresh {
+        list_data_files(table, &data_root).await
+    } else {
+        HashSet::new()
+    };
 
     let mut results = execute_stream(exec, context)?;
     let mut first_error: Option<DataFusionError> = None;
@@ -233,7 +238,7 @@ pub async fn write_data_files_from_plan(
     match first_error {
         None => Ok(stable_commit_order(files)),
         Some(error) => {
-            delete_attempt_files(table, &data_root, &before, &files).await;
+            delete_attempt_files(table, &data_root, fresh, &before, &files).await;
             Err(error)
         }
     }
@@ -285,6 +290,7 @@ async fn list_data_files(table: &Table, data_root: &str) -> HashSet<String> {
 async fn delete_attempt_files(
     table: &Table,
     data_root: &str,
+    fresh: bool,
     before: &HashSet<String>,
     completed: &[DataFile],
 ) {
@@ -292,9 +298,11 @@ async fn delete_attempt_files(
         .iter()
         .map(|file| file.file_path().to_string())
         .collect();
-    for path in list_data_files(table, data_root).await {
-        if !before.contains(&path) && !doomed.contains(&path) {
-            doomed.push(path);
+    if fresh {
+        for path in list_data_files(table, data_root).await {
+            if !before.contains(&path) && !doomed.contains(&path) {
+                doomed.push(path);
+            }
         }
     }
     let file_io = table.file_io();
@@ -599,7 +607,8 @@ mod tests {
         assert_eq!(
             node.iter().map(DataFile::record_count).collect::<Vec<_>>(),
             vec![8, 16, 24, 32],
-            "each writer holds exactly its own partition's rows, in writer-index order"
+            "each writer holds exactly its own partition's rows, and the files come back in \
+             content order — here the partitions' row ranges ascend with the partition index"
         );
         assert_eq!(
             one_task
@@ -636,6 +645,55 @@ mod tests {
             vec![5, 10, 15, 20],
             "the files come back in writer-index order, not completion order"
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_failed_write_into_a_committed_table_sweeps_only_its_own_files() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table_with(
+            &catalog,
+            "committed",
+            HashMap::from([(
+                "write.target-file-size-bytes".to_string(),
+                SMALL_TARGET_FILE_BYTES.to_string(),
+            )]),
+        )
+        .await;
+        let seeded = write_data_files_from_plan(
+            &table,
+            Arc::new(SlowPartitionedExec::new(2, 4, Duration::ZERO, None, 0)),
+            Arc::new(TaskContext::default()),
+            WriteConcurrency::new(4).expect("concurrency"),
+        )
+        .await
+        .expect("seed write succeeds");
+        let table = crate::write::append::commit_append(&catalog, &table, seeded)
+            .await
+            .expect("seed commit");
+        let live = warehouse_data_files(&warehouse);
+        assert!(!live.is_empty(), "the seeded commit left data files");
+
+        let error = write_data_files_from_plan(
+            &table,
+            Arc::new(SlowPartitionedExec::new(4, 6, Duration::ZERO, Some(2), 6)),
+            Arc::new(TaskContext::default()),
+            WriteConcurrency::new(4).expect("concurrency"),
+        )
+        .await
+        .expect_err("the injected partition failure must surface");
+        assert!(
+            error
+                .to_string()
+                .contains("injected partition source failure")
+        );
+        let after = warehouse_data_files(&warehouse);
+        for path in &live {
+            assert!(
+                after.contains(path),
+                "the committed table's own data file was swept: {path:?}"
+            );
+        }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

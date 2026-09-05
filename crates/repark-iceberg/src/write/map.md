@@ -210,9 +210,18 @@ repark-core's error map.
   plus every parquet that appeared under the table's data root since the attempt began, which is
   how the failing writer's own rolled files are reclaimed (round-2 S2-2: a 64 KiB target file size
   left 9 of them behind before this).
-  In-module pins: every input partition gets its own writer and its own data file, holding exactly
-  that partition's rows in writer-index order, and a one-task drive of the same four partitions
-  answers identically; the returned files carry writer-index order over three runs; and a late
+  **The sweep's precondition is checked, not assumed** (round-2 F7): the census-and-sweep arm runs
+  only when the table has NO current snapshot — the CTAS case, where the table is staged or freshly
+  created and this statement is its only writer. Against a table that already has a snapshot the
+  sweep falls back to deleting just the files its own writers completed, so a concurrent or
+  pre-existing data file is never touched. Pinned both ways:
+  `a_failed_partition_deletes_every_completed_data_file` (fresh table, nothing survives) and
+  `a_failed_write_into_a_committed_table_sweeps_only_its_own_files` (seeded commit, its files
+  survive).
+  In-module pins: every input partition gets its own writer and its own data file, and the files
+  come back in CONTENT order (the mock's partitions carry ascending row ranges, so content order
+  and partition order coincide there — the assertion says so), and a one-task drive of the same
+  four partitions answers identically; the returned files carry writer-index order over three runs; and a late
   failure in one partition leaves no parquet file in the warehouse. There is deliberately no
   wall-clock assertion in the unit suite — under `cargo test` on a loaded box the fixed cost of
   four small parquet writes swamped the injected delay (a 6.4 s floor against a 6.0 s delayed

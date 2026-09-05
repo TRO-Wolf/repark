@@ -1720,10 +1720,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times **at 4 and at 16
   partitions**, asserting the manifest ascends by content, that `_row_id` tiles it contiguously
   from zero, that the row set and sums are invariant, and that two runs with the same file
-  grouping commit the same `_row_id` ranges. It deliberately does NOT assert the record-count
-  sequence: round 2 did, and CI's 4-core runner reddened it because the scan groups the source
-  files differently from run to run (4-6 distinct groupings in 10 runs at 4 partitions, 1 at 16).
-  Equal-sized files hid the round-1 defect entirely; a fixed partition count hid the round-2 one. There is deliberately NO wall assertion here: on a disk-contended
+  grouping commit the same `_row_id` ranges. It runs at 3, 4, 8 and 16 partitions and deliberately does
+  NOT assert the record-count sequence: round 2 did, and CI's 4-core runner reddened it because the
+  scan groups the source files differently from run to run — measured 3 distinct groupings in 5
+  runs at 3 partitions, 4-6 in 10 at 4, and 1 in 10 at 8 and at 16, where the eight source files
+  map one-to-one onto the partitions. **8 was the round-2 pin's own configuration, which is the
+  only reason it looked green.** Equal-sized files hid the round-1 defect; a 1:1 partition count
+  hid the round-2 one; this pin varies both. There is deliberately NO wall assertion here: on a disk-contended
   box this write is `fsync`-bound and a timing pin flakes — the speedup is measured in the
   baseline doc and pinned deterministically in `write/partition_write.rs`, where the blocking
   work is injected. Numbers and commands:
