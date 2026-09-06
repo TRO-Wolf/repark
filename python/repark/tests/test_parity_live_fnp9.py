@@ -1,4 +1,4 @@
-"""The FNP-9/10 live-oracle leg: the collections and JSON goldens re-derived from Spark. Split out of ``test_parity_live.py`` when that file reached its 1000-line ceiling; it shares the session-scoped ``spark_engine`` fixture from ``conftest.py``, so it co-collects and co-runs with ``test_live_disclosure_still_diverges`` in one JVM."""
+"""The FNP-9/10 live-oracle leg: collections and JSON goldens re-derived from Spark."""
 
 from __future__ import annotations
 
