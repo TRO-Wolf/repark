@@ -144,7 +144,9 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   pins: ex-25-functions-a/C-005
 - [session_misc.py](session_misc.py) — `F.current_user` / `F.session_user` / `F.user`
   as non-empty strings, `F.version` as a stable non-empty string, seeded `F.uniform`
-  matching Spark's XORShift draws, `F.randstr` lengths plain and seeded, and
+  matching Spark's XORShift draws on a single partition (Spark seeds each partition
+  with `seed + partitionIndex`, so the stream is partition-dependent; the example
+  runs `local[1]`), `F.randstr` lengths plain and seeded, and
   `F.isnan` with NULL answering false. `F.monotonically_increasing_id` /
   `F.spark_partition_id` (EX-FN-12), `F.input_file_name` (EX-FN-13),
   `F.raise_error` (EX-FN-14) and `F.expr` (EX-FN-4) stay on the backlog.

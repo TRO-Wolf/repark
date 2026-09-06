@@ -87,8 +87,10 @@ halves below are verbatim cell output. Each shipped example was also run standal
 lane root before any commit (exit 0, all three). The lane venv resolves `repark` to the lane
 with a release native (`repark._native.__debug_assertions__` False). One JVM at a time beside
 the FNP-9 critic lane's JVM; every oracle JVM this unit started was stopped by its script
-(`spark.stop()`). Seeded `F.uniform` matched Spark's XORShift draws bit-identically, so those
-values are asserted, not only shaped.
+(`spark.stop()`). Seeded `F.uniform` matched Spark's XORShift draws bit-identically on a
+single partition (Spark seeds each partition with `seed + partitionIndex`, so `range(8)` under
+`local[2]` answers a different stream; the example runs `local[1]`), so those values are
+asserted, not only shaped.
 
 | Name | Spark cell | repark cell | Verdict | File / row |
 |---|---|---|---|---|
