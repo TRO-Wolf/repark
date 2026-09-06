@@ -1,0 +1,1 @@
+claude --print --model sonnet --output-format json

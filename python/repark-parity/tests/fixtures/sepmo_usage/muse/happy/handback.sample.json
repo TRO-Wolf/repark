@@ -1,0 +1,11 @@
+{
+  "status": "CONCLUDED",
+  "summary": "fixture",
+  "questions": [],
+  "commits": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa docs(fixture): one",
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb docs(fixture): two"
+  ],
+  "gates": [{"command": "make ci", "exit": 0}],
+  "out_of_scope_observed": []
+}
