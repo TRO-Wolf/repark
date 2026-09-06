@@ -107,6 +107,36 @@ def _is_monotone(path: str, column: str) -> tuple[int, bool]:
     return len(values), all(a <= b for a, b in pairwise(values))
 
 
+def _struct_seed_table(start: int, stop: int) -> pa.Table:
+    ids = pa.array(range(start, stop), type=pa.int64())
+    parts = pa.array([index % PARTITION_VALUES for index in range(start, stop)], type=pa.int32())
+    names = pa.array([f"n{index:06d}" for index in range(start, stop)], type=pa.string())
+    stamps = pa.array(
+        [1_704_067_200_000_000 + (index % 30) * 86_400_000_000 for index in range(start, stop)],
+        type=pa.timestamp("us"),
+    )
+    structs = pa.array(
+        [{"a": index * 10, "b": f"s{index}"} for index in range(start, stop)],
+        type=pa.struct([("a", pa.int64()), ("b", pa.string())]),
+    )
+    return pa.table({"id": ids, "name": names, "part": parts, "ts": stamps, "st": structs})
+
+
+def _struct_seed_files(directory: Path, rows: int, files: int) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    per_file = rows // files
+    for index in range(files):
+        start = index * per_file
+        stop = rows if index == files - 1 else start + per_file
+        pq.write_table(_struct_seed_table(start, stop), directory / f"part-{index}.parquet")
+    return directory
+
+
+def _nested_key_monotone(path: str) -> tuple[int, bool]:
+    keys = [row["a"] for row in pq.read_table(path, columns=["st"]).column("st").to_pylist()]
+    return len(keys), all(a <= b for a, b in pairwise(keys))
+
+
 def _ctas(engine: ReparkSession, table: str, version: str, extra: str = "") -> None:
     engine.sql(
         f"CREATE TABLE {table} USING iceberg PARTITIONED BY (part) "
@@ -249,6 +279,25 @@ def test_write_order_bad_column_refuses_without_committing(tmp_path: Path) -> No
         engine.stop()
 
 
+def test_write_order_transform_sort_refuses_without_committing(tmp_path: Path) -> None:
+    """WRITE-ORDER-TRANSFORM-1 red-when-fixed: transform orders refuse loud, nothing commits."""
+    warehouse = tmp_path / "wh"
+    source = _struct_seed_files(tmp_path / "seed", 8_000, 2)
+    engine = _session("wo-transform", warehouse)
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        _ctas(engine, f"{CATALOG}.w.t", "2")
+        before = _metadata_count(warehouse, "t")
+        with pytest.raises(Exception, match="not supported yet"):
+            engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (bucket(4, id))").collect()
+        with pytest.raises(Exception, match="not supported yet"):
+            engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (days(ts))").collect()
+        assert _metadata_count(warehouse, "t") == before
+        assert _write_state(warehouse, "t")[1] == 0
+    finally:
+        engine.stop()
+
+
 def test_write_distribution_none_ctas_skips_the_hash_rule(tmp_path: Path) -> None:
     """C-007: dist=none CTAS writes writers x values; hash keeps one file per value."""
     for mode, expected in (("none", SEED_FILES * PARTITION_VALUES), ("hash", PARTITION_VALUES)):
@@ -338,6 +387,58 @@ def test_write_ordered_ctas_replace_keeps_hash_layout_and_resets_order(tmp_path:
                 "null-order": "nulls-first",
             }
         ], orders
+    finally:
+        engine.stop()
+
+
+def test_write_ordered_by_dotted_name_resolves_the_nested_field(tmp_path: Path) -> None:
+    """F2: WRITE ORDERED BY (st.a) lands identity on the nested field id, default 1, range."""
+    for version in ("2", "3"):
+        warehouse = tmp_path / f"wh-{version}"
+        source = _struct_seed_files(tmp_path / f"seed-{version}", 8_000, 2)
+        engine = _session(f"wo-dotted-{version}", warehouse)
+        try:
+            engine.read.parquet(str(source)).createOrReplaceTempView("src")
+            _ctas(engine, f"{CATALOG}.w.t", version)
+            engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (st.a DESC)").collect()
+            meta = _metadata(warehouse, "t")
+            orders, default, dist = _state_of(meta)
+            assert dist == "range", (orders, default, dist)
+            assert default == 1, (orders, default, dist)
+            assert len(orders) == 2, (orders, default, dist)
+            nested = next(field for field in meta["schemas"][-1]["fields"] if field["name"] == "st")
+            nested_id = next(
+                child["id"] for child in nested["type"]["fields"] if child["name"] == "a"
+            )
+            assert nested_id == 6, meta["schemas"][-1]
+            assert orders[1]["fields"] == [
+                {
+                    "transform": "identity",
+                    "source-id": nested_id,
+                    "direction": "desc",
+                    "null-order": "nulls-last",
+                }
+            ], orders
+        finally:
+            engine.stop()
+
+
+def test_write_ordered_nested_overwrite_writes_sorted_files(tmp_path: Path) -> None:
+    """F2: after WRITE ORDERED BY (st.a), an INSERT OVERWRITE commits nested-monotone files."""
+    warehouse = tmp_path / "wh"
+    source = _struct_seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
+    engine = _session("wo-nested-overwrite", warehouse, "1")
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        _ctas(engine, f"{CATALOG}.w.t", "2")
+        engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (st.a)").collect()
+        engine.sql(f"INSERT OVERWRITE {CATALOG}.w.t SELECT * FROM src ORDER BY id DESC").collect()
+        files = _data_files(engine, f"{CATALOG}.w.t")
+        assert len(files) == PARTITION_VALUES, [f["record_count"] for f in files]
+        for row in files:
+            count, monotone = _nested_key_monotone(row["file_path"])
+            assert monotone, (row["file_path"], count)
+        assert sum(f["record_count"] for f in files) == SEED_ROWS
     finally:
         engine.stop()
 
@@ -453,3 +554,62 @@ def test_write_order_metadata_matches_spark_after_same_statements(tmp_path: Path
         assert states[index][1] == spark_states[index][1], form
         assert states[index][2] == spark_states[index][2], form
         assert states[index][0] == spark_states[index][0], form
+
+
+@pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
+def test_write_ordered_nested_metadata_matches_spark(tmp_path: Path) -> None:
+    """F2 live: WRITE ORDERED BY (st.a) leaves equal metadata on both engines, v2 and v3."""
+    import _live_parity as live_parity
+    from pyspark.sql import SparkSession
+
+    versions = ("2", "3")
+    warehouse = tmp_path / "wh"
+    source = _struct_seed_files(tmp_path / "seed", 8_000, 2)
+    engine = _session("wo-nested-live", warehouse)
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        for version in versions:
+            _ctas(engine, f"{CATALOG}.w.t{version}", version)
+        for version in versions:
+            engine.sql(f"ALTER TABLE {CATALOG}.w.t{version} WRITE ORDERED BY (st.a)").collect()
+        states = [_write_state(warehouse, f"t{version}") for version in versions]
+    finally:
+        engine.stop()
+
+    owned = SparkSession.getActiveSession() is None
+    oracle = live_parity.build_spark_iceberg_engine(
+        tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
+    )
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
+    session = oracle.session
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+        for version in versions:
+            session.sql(
+                f"CREATE TABLE {catalog}.w.t{version} USING iceberg PARTITIONED BY (part) "
+                f"TBLPROPERTIES ('format-version' = '{version}') AS SELECT * FROM spark_src"
+            )
+        for version in versions:
+            session.sql(f"ALTER TABLE {catalog}.w.t{version} WRITE ORDERED BY (st.a)")
+        spark_states = []
+        for version in versions:
+            directory = tmp_path / "spark-wh" / "w" / f"t{version}" / "metadata"
+            metas = sorted(directory.glob("*.metadata.json"))
+            with metas[-1].open() as handle:
+                meta = json.load(handle)
+            spark_states.append(
+                (
+                    sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
+                    meta.get("default-sort-order-id", -1),
+                    meta.get("properties", {}).get("write.distribution-mode"),
+                )
+            )
+    finally:
+        if owned:
+            session.stop()
+
+    for index, version in enumerate(versions):
+        assert states[index][1] == spark_states[index][1], version
+        assert states[index][2] == spark_states[index][2], version
+        assert states[index][0] == spark_states[index][0], version

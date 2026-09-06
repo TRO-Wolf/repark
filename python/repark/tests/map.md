@@ -1991,6 +1991,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   name-sorted read goes stale). Live (`REPARK_PARITY_LIVE=1`): the same five statements on
   both engines leave equal sort orders, default ids, and distribution properties, and the same
   DDL + overwrite over the same seed commits the same row set per partition value on both.
+  Round 2 (2026-09-06): the transform-sort DDL refusal committing nothing (the
+  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin), the dotted `(st.a)` DDL transition on v2 and
+  v3 over a struct seed, nested-monotone overwrite files, and the live dotted-order metadata
+  equality on both versions.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
