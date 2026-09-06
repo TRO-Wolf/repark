@@ -5,13 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [perf-approxpct-1-ledger.md](perf-approxpct-1-ledger.md) —
-  **PERF-APPROXPCT-1 (2026-09-05), in flight:** Spark's Greenwald-Khanna
-  `QuantileSummaries` behind `percentile_approx` / `approx_percentile`, so the
-  accuracy knob moves the answers and bounds the memory on the group-by path
-  and per frame on the WIN-SLIDE-1 re-scan path.
-  `risk_tier: standard`. Branch `perf/approxpct-1`.
-  pins: perf-approxpct-1/C-001, C-004, C-005, C-006
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the

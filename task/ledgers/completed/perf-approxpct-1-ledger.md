@@ -25,14 +25,14 @@ the f64 round-trip (noted in §6); any DataFusion fork change.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The new sketch module reproduces Spark 4.1 `QuantileSummaries` insert / compress / merge / query semantics exactly (compressThreshold 10000, head 50000, relativeError 1/accuracy, the delta rule, the backwards merge test, Long-division targetError, the edge rules). | Rust unit tests in the new module: insert/compress invariants, merge associativity, query bounds. | PROVEN | `cargo test -p repark-functions`: 17 sketch + 8 accumulator tests green; single-partition end-to-end agrees with Spark exactly (§4). pins: perf-approxpct-1/C-001 |
-| C-002 | `percentile_approx` / `approx_percentile` honour accuracy on the group-by path on the SQL door and the DataFrame door, Spark-equal on the matrix (accuracy default/100/10/2 × scalar/array × NULLs × duplicate-heavy × skewed × int/float/decimal), measured on live PySpark 4.1.2. | `test_perf_approxpct_1.py` always-run pins + live legs. | OPEN | 56 always-run legs green on the debug module; the live legs run in the gates. pins: perf-approxpct-1/C-002 |
-| C-003 | The WIN-SLIDE-1 frame re-scan path honours accuracy per frame: x=1..200, 100-row frame, accuracy 2 answers Spark's `(1.0, 1.0, 1.0, 51.0, 101.0)`. | The flipped `test_win_slide_1.py` sketch pin + a matrix leg. | OPEN | The evaluator builds a fresh accumulator per frame; the sketch rides it unchanged. |
+| C-002 | `percentile_approx` / `approx_percentile` honour accuracy on the group-by path on the SQL door and the DataFrame door, Spark-equal on the matrix (accuracy default/100/10/2 × scalar/array × NULLs × duplicate-heavy × skewed × int/float/decimal), measured on live PySpark 4.1.2. | `test_perf_approxpct_1.py` always-run pins + live legs. | PROVEN | 56 always-run legs green in the facade suite (4960 passed); the 4 live matrix/single/edge legs re-measured green against live 4.1.2. pins: perf-approxpct-1/C-002 |
+| C-003 | The WIN-SLIDE-1 frame re-scan path honours accuracy per frame: x=1..200, 100-row frame, accuracy 2 answers Spark's `(1.0, 1.0, 1.0, 51.0, 101.0)`. | The flipped `test_win_slide_1.py` sketch pin + a matrix leg. | PROVEN | The flipped sketch pin green in the facade suite; `test_sliding_frame_honours_accuracy_per_frame` and the live frame-column leg green. pins: perf-approxpct-1/C-003 |
 | C-004 | Memory is sketch-bounded and wall is within bar: peak RSS for `percentile_approx(x, 0.5)` over 1e7 rows in one group carries a ≤ few-MB state (fresh subprocess, release module), and wall at 1e6 rows is within 1.5× of the current kernel. | `docs/perf/approx-percentile-baseline.md` before/after tables + a structural pin. | PROVEN | AFTER in §3 and the baseline doc: 1e7 peak 2507.8 → 650.0 MB (floor 188 MB), state kilobytes (`million_row_state_stays_small`, `inserts_compress_eagerly_before_any_query`); warm 1e6 wall 0.02 s beats the 1.5× bar. pins: perf-approxpct-1/C-004 |
 | C-005 | `FN-APPROXPCT-ACC-1`'s residue is re-measured and closed or narrowed honestly, and all three registry rows carry dates and the unit id. | The three flipped rows in `docs/spark-sql-iceberg-parity.md`. | PROVEN | All three rows FIXED 2026-09-05 (PERF-APPROXPCT-1) with Spark-equal answers re-measured on the suite; the `FN-APPROXPCT-1` residue pointer closed. pins: perf-approxpct-1/C-005 |
-| C-006 | No regressions: the pre-existing percentile pins (default-accuracy discrete answers, the win-slide 65-cell matrix, the live legs) stay green; `make ci`, `make verify`, the facade suite, the parity suite, the live tier on the touched legs, and `make py-test-dbt` are green; the mutation score is run. | The gates + §5. | OPEN | Every dbt flip classified. |
-| C-007 | Docs in lockstep: the baseline doc, the touched `map.md` files, the ledger grammar; `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | OPEN | |
+| C-006 | No regressions: the pre-existing percentile pins (default-accuracy discrete answers, the win-slide 65-cell matrix, the live legs) stay green; `make ci`, `make verify`, the facade suite, the parity suite, the live tier on the touched legs, and `make py-test-dbt` are green; the mutation score is run. | The gates + §5. | PROVEN | verify exit 0 (48 ok), facade 4960 passed, parity 574 passed, 8 live legs passed, dbt 59 passed with zero flips; mutation 4/4 in §5. pins: perf-approxpct-1/C-006 |
+| C-007 | Docs in lockstep: the baseline doc, the touched `map.md` files, the ledger grammar; `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | PROVEN | `check-ledgers`, `check-ledger-grammar`, `check-map-sync` green in `make ci`; `git status` shows no touch on either file. pins: perf-approxpct-1/C-007 |
 
-VERDICT: 7 clauses, 3 PROVEN, 4 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## 1. Scope audit
 
@@ -191,3 +191,50 @@ the merge-error `max` → `min` (line 166) dies on
 - The WIN-SLIDE-1 staging ledger's C-006 prose ("ignores the accuracy knob") goes
   stale the moment this unit lands its flip; that unit trues up its own ledger,
   and the hand-back flags it.
+
+## 7. Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: perf-approxpct-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-007 walked one by one against behavior, not paraphrase; the verdict table carries the evidence per clause.
+      artifacts: [task/ledgers/completed/perf-approxpct-1-ledger.md, python/repark/tests/test_perf_approxpct_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty, all-NULL, NULL array element, duplicates, skew, negatives, same-value, int/float/decimal, invalid accuracy and percentage all exercised.
+      artifacts: [python/repark/tests/test_perf_approxpct_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Invalid accuracy and percentage raise Spark-measured contracts; temporal/string inputs fail loud; empty input answers NULL.
+      artifacts: [python/repark/tests/test_perf_approxpct_1.py, crates/repark-functions/src/percentile_approx.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Multi-partition merge trees diverge legitimately, so scan pins run on repartition(1) views; merge associativity and bounds pinned in Rust.
+      artifacts: [crates/repark-functions/src/quantile_summaries.rs, python/repark/tests/test_perf_approxpct_1.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no trust-boundary crossing; the serialized sketch state never leaves the process.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Answer types follow the column (int stays int); decimal round-trips exactly and quantizes HALF_UP past the f64 repr, disclosed in the ledger.
+      artifacts: [python/repark/tests/test_perf_approxpct_1.py, crates/repark-functions/src/quantile_summaries.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The unit is the AT-7 fix: 1e7 state 2.5 GB to kilobytes, before/after cells plus structural pins on mid-insert and final size.
+      artifacts: [docs/perf/approx-percentile-baseline.md, crates/repark-functions/src/quantile_summaries.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark error contracts measured live, not presumed; accuracy validated at plan time; the NULL-array-element 0.0 read measured on 4.1.2.
+      artifacts: [python/repark/tests/test_perf_approxpct_1.py]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface; every failure path raises a loud typed error.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation score 4/4 with each mutant verified present; the void first round (flipped names absent from the file) disclosed in section 5.
+      artifacts: [crates/repark-functions/src/quantile_summaries.rs, task/ledgers/completed/perf-approxpct-1-ledger.md]
+```

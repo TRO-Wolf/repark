@@ -38,6 +38,13 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
   **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
   pins: fn-fix-1-registry-rows/C-001
+- [perf-approxpct-1-ledger.md](perf-approxpct-1-ledger.md) —
+  **PERF-APPROXPCT-1 (2026-09-05), complete:** Spark's Greenwald-Khanna
+  `QuantileSummaries` behind `percentile_approx` / `approx_percentile`, so the
+  accuracy knob moves the answers and bounds the memory on the group-by path
+  and per frame on the WIN-SLIDE-1 re-scan path.
+  `risk_tier: standard`. Branch `perf/approxpct-1`.
+  pins: perf-approxpct-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [rp-11-repin-f24-ledger.md](rp-11-repin-f24-ledger.md) —
   **RP-11 (2026-09-04), complete:** fork repin `85a4aaf0` → `189a73ed` (F-24);
   `B-MOR-3-FLOOR-1` FIXED.
