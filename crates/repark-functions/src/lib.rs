@@ -25,6 +25,7 @@ pub mod instant_ts;
 pub mod integer_spark;
 mod java_regex;
 pub mod percentile_approx;
+pub mod quantile_summaries;
 pub mod random;
 pub mod session_time_zone;
 pub mod spark_chr;

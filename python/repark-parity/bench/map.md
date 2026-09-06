@@ -56,6 +56,11 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
   See [icescan/map.md](icescan/map.md).
   pins: perf-ice-scan-1/C-009
+- [approxpct/](approxpct/map.md) — **PERF-APPROXPCT-1 round 2 (2026-09-06)** sketch
+  cells: `run_cells.py ROWS ATTEMPTS [--control]` times the `percentile_approx(id,
+  0.5)` wall/peak/answer rows (or the `count(id)` control) on a range scan, release
+  module only. See [approxpct/map.md](approxpct/map.md).
+  pins: perf-approxpct-1/C-004
 - `map.md` — this file.
 
 ## I want to…

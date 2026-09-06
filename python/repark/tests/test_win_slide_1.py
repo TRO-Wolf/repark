@@ -548,8 +548,8 @@ def test_current_row_to_unbounded_following_answers(
     assert _rows_same(rows, SPARK_EXTRA_GOLDEN[label], label)
 
 
-def test_percentile_approx_over_a_frame_ignores_the_accuracy_knob(repark_engine) -> None:
-    """C-006: repark answers the discrete p50 per frame; Spark's accuracy-2 sketch diverges."""
+def test_percentile_approx_over_a_frame_honours_the_accuracy_knob(repark_engine) -> None:
+    """C-006: repark answers Spark's accuracy-2 sketch column per frame, like the default one."""
     frame = repark_engine.session.range(1, 201).selectExpr("CAST(id AS DOUBLE) AS x", "id AS k")
     frame.createOrReplaceTempView("win_slide_1_sketch")
     clause = "ORDER BY k ROWS BETWEEN 99 PRECEDING AND CURRENT ROW"
@@ -565,8 +565,7 @@ def test_percentile_approx_over_a_frame_ignores_the_accuracy_knob(repark_engine)
     sampled = tuple(default_rows[index] for index in SKETCH_SAMPLE_INDICES)
     accurate = tuple(accuracy_rows[index] for index in SKETCH_SAMPLE_INDICES)
     assert sampled == SPARK_EXTRA_GOLDEN["sketch_default"]
-    assert accurate == sampled
-    assert accurate != SPARK_EXTRA_GOLDEN["sketch_acc2"]
+    assert accurate == SPARK_EXTRA_GOLDEN["sketch_acc2"]
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
