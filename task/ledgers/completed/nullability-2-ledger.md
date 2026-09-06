@@ -1,3 +1,26 @@
+# Errata — round 4 (2026-09-06, grok-4.6, critic remediation)
+
+No verdict below changes: the clause table is untouched. What round 4
+corrects, serves, and records:
+
+- C3-1 — SERVED. CSV `inferSchema` casts the raw text (Utf8-forced scan,
+  then CAST(str AS TIMESTAMP)), the same path `nullValue` already used.
+  Offset-bearing cells keep their instant in UTC, `America/New_York`, and
+  `Asia/Kolkata`; offset-free cells still localize in the session zone.
+  Pins: `2020-06-01T12:00:00+02:00` and `2020-06-01T12:00:00Z` on both
+  doors + live; every round-3 cell re-run including Kolkata. Remote/gzip
+  CSV still skip the Utf8 pre-scan (pre-existing `nullValue` limit).
+- C3-2 — DOCUMENTED. READ-TSNTZ-DTYPE-1 "Spark-equal in the session zone"
+  stays; the offset and `Z` cells are on the pin list.
+- C3-3 — DELETED. The Struct/List/Map arms of `nonnull_spark_cast` were
+  tautological: DataFusion's Cast nullability already follows the child,
+  and `spark_cast_nullable_from_nonnull_child` returns false for those
+  types. The wrap pin `complex_casts_of_nonnull_children_are_nonnull` is
+  gone. The facade column CAST pin remains.
+- C3-4 — SERVED. `nullValue`+`inferSchema` date-only text `2020-06-01`
+  promotes to `date` (timestamp candidate still requires `:`). Both doors
+  + live; round-3 nullValue timestamp cells re-verified.
+
 # Errata — round 3 (2026-09-06, grok-4.6, critic remediation)
 
 No verdict below changes: the clause table is untouched. What round 3

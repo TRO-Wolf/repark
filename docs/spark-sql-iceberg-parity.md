@@ -4382,19 +4382,23 @@ Shared roster pin for every heading:
   `schema.simpleString()`, and `printSchema` (Spark-equal text), and `timestamp[us]`
   via Arrow; `createDataFrame` with a `TimestampNTZType` schema reports likewise.
   Tz-aware timestamps still report `timestamp`. `read.csv` with `inferSchema` casts
-  inferred tz-naive timestamps to instant `timestamp` through CAST(str AS TIMESTAMP),
-  so `spark.sql.session.timeZone` localizes the wall clock (UTC and
-  `America/New_York`; DST gap `2020-03-08 02:30:00` → 07:30Z measured). `nullValue`
-  plus `inferSchema` takes the same timestamp promotion. JSON reads also run that
-  cast (`reader.py` `_apply_reader_schema_semantics`); DataFusion infers Utf8, so
+  the raw text to instant `timestamp` through CAST(str AS TIMESTAMP), so
+  `spark.sql.session.timeZone` localizes offset-free wall clocks (UTC,
+  `America/New_York`, `Asia/Kolkata`; DST gap `2020-03-08 02:30:00` → 07:30Z
+  measured) and offset-bearing cells (`2020-06-01T12:00:00+02:00`,
+  `2020-06-01T12:00:00Z`) keep their instant in every session zone. `nullValue`
+  plus `inferSchema` takes the same timestamp promotion and promotes date-only
+  text (`2020-06-01`) to `date`. JSON reads also run the leftover ntz recast
+  (`reader.py` `_apply_reader_schema_semantics`); DataFusion infers Utf8, so
   without `inferTimestamp` the cell stays `string` on both engines (measured
   `{"ts": "2020-06-01 12:00:00"}`). Parquet/`createDataFrame` NTZ paths stay
   `timestamp_ntz`.
 - **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
   string, and `timestamp[us]` via Arrow; infers CSV timestamps as `timestamp` in the
-  session zone; JSON without `inferTimestamp` stays `string`.
+  session zone (offset-bearing text keeps the instant); infers date-only CSV text as
+  `date`; JSON without `inferTimestamp` stays `string`.
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06; session-zone
-  / nullValue / JSON-path legs 2026-09-06.)*
+  / nullValue / JSON-path legs 2026-09-06; offset / `Z` / Kolkata / date legs 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
   `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls),
