@@ -15,6 +15,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `core.py` owns `DataFrame`, plan construction, joins, actions, schema/type conversion, cache,
   checkpoint, temp-view registration, declared sorting, `dynamicFlatten`, and public re-exports.
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
+  NULLABILITY-2 (2026-09-05): the `schema` property maps the `timestamp`/`timestamp_ntz`
+  type keys through `ReparkDataType.fromDDL` — `fromDDL("timestamp")` equals the old
+  `TimestampType()` arm, and `timestamp_ntz` now lands on `TimestampNTZType` instead of
+  the `StringType` fallback. One import line removed (6303 → 6302, mirrored in the CAP-1
+  test). Registry `READ-TSNTZ-DTYPE-1`.
+  pins: nullability-2/C-006
   TYPES-1 (2026-09-05): `sample`/`randomSplit` hash arithmetic wraps `__repark_rn` in
   `CAST(__repark_rn AS BIGINT)` (+2 lines, absorbed back in round 4).
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in

@@ -107,7 +107,7 @@ def test_status_known_issues_match_the_registry() -> None:
 
 
 def test_cited_pins_exist_and_dec9_stays_open() -> None:
-    """pins: reg-1-registry-truth-up/C-005 — every cited test exists; DEC-9 still reads BACKLOG."""
+    """pins: reg-1-registry-truth-up/C-005 — every cited test exists; DEC-9 FIXED (name kept)."""
     decimal_rs = "crates/repark-spark/src/tests/decimal.rs"
     session_tz_rs = "crates/repark-spark/tests/session_timezone.rs"
     dml_rs = "crates/repark-spark/src/tests/dml.rs"
@@ -138,7 +138,7 @@ def test_cited_pins_exist_and_dec9_stays_open() -> None:
     assert "mul_38_20_plans_via_the_expr_planner" in text
     assert "timestamp_to_date_paths_read_the_session_zone" in text
     assert "### DEC-9 — overflow-capable binary arithmetic is marked non-null" in text
-    assert "BACKLOG, intent to FIX (gap G13), narrowed 2026-09-04 (CUTOVER-SCHEMA-1)" in text
+    assert "FIXED 2026-09-05 (NULLABILITY-2)" in text
 
 
 def test_no_row_deleted_and_maps_in_lockstep() -> None:

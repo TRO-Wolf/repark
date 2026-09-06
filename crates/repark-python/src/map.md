@@ -23,6 +23,10 @@ and hand execution, SQL, and ML semantics to the engine crates.
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. `fenced_panic_detail` tells a fenced panic apart from an ordinary stream error by downcasting the Arrow external error, which is what lets `arrow_export.rs` rewrite only the panics. pins: h3-spill-residue-1/C-002 |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
+  **NULLABILITY-2 (2026-09-05):** `finish_session` installs
+  `repark_functions::install_shared_analyzer_rules` (integer overflow plus boolean-to-decimal
+  casts, both doors) in place of the integer-only call — one line for one line, same count.
+  pins: nullability-2/C-003 |
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
   Native and Spark Python sessions install F-Y10-1 integer overflow checks.

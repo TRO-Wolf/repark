@@ -633,9 +633,6 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "fillna_scalar_numeric_nullability",
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
-        "cast_timestamp_to_int_nullability",
-        "null_safe_eq_sql_nullability",
-        "null_safe_eq_df_nullability",
         "sum_catastrophic_cancellation_fixture",
         "avg_catastrophic_cancellation_fixture",
         "nested_array_list_field_name",
@@ -645,7 +642,7 @@ def test_registry_covers_the_mandated_golden_family() -> None:
     }, "every load-bearing disclosure is present"
     # A disclosure is a DIVERGENCE detector; a converged pair belongs in the corpus as a
     # shared-raise equality — that keeps `test_disclosures_mirror_the_registry` green both ways.
-    assert len(lp.DISCLOSURES) == 13, "disclosure roster is an exact-set pin, not a floor"
+    assert len(lp.DISCLOSURES) == 10, "disclosure roster is an exact-set pin, not a floor"
 
 
 def test_lifecycle_registry_budget() -> None:
