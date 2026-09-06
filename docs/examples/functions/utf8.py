@@ -14,12 +14,13 @@ COVERS: list[str] = [
     "F.is_valid_utf8",
     "F.make_valid_utf8",
     "F.try_validate_utf8",
+    "F.validate_utf8",
     "F.col",
 ]
 
 
 def main() -> None:
-    """Check the byte counts and the three invalid-sequence behaviours on one binary frame."""
+    """Check the byte counts, the invalid-sequence trio, and validate_utf8's loud path."""
     repark = ReparkSession.builder.appName("ex-utf8").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame(
@@ -52,6 +53,27 @@ def main() -> None:
             print(f"F.{name}: {values!r}")
             if values != expected:
                 raise SystemExit(f"F.{name} values {values!r} != {expected!r}")
+
+        valid = repark.createDataFrame(
+            [(b"abc",), ("Café".encode(),), (b"",), (None,)],
+            ["b"],
+        )
+        rows = valid.select(F.validate_utf8(F.col("b")).alias("checked")).collect()
+        values = [row["checked"] for row in rows]
+        print(f"F.validate_utf8: {values!r}")
+        if values != ["abc", "Café", "", None]:
+            raise SystemExit(f"F.validate_utf8 values {values!r} != ['abc', 'Café', '', None]")
+        bad = repark.createDataFrame([(b"\xff",)], ["b"])
+        try:
+            bad.select(F.validate_utf8(F.col("b")).alias("checked")).collect()
+        except Exception as error:
+            print(f"F.validate_utf8 invalid raises: {error}")
+            if "INVALID_UTF8_STRING" not in str(error):
+                raise SystemExit(
+                    f"F.validate_utf8 raised without INVALID_UTF8_STRING: {error}"
+                ) from error
+        else:
+            raise SystemExit("F.validate_utf8(b'\\xff') did not raise")
     finally:
         repark.stop()
 

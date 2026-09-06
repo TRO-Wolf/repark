@@ -48,7 +48,10 @@ file is empty.
   (`BACKLOG_BASELINE` in the gate script).
 - [exceptions.txt](exceptions.txt) — public names whose only honest example
   needs a cloud service, each with a one-line reason.
-- [functions/](functions/map.md) — `F.*` examples.
+- [functions/](functions/map.md) — `F.*` examples (EX-28: `F.validate_utf8`,
+  `F.unix_timestamp` / `F.to_unix_timestamp`, `F.try_to_time`, `F.user`,
+  `F.version`, `F.uniform`; `try_to_timestamp` stays as §7 EX-FN-20, the
+  `unix_timestamp` format argument as EX-FN-21).
 - [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples
   (EX-26: the repark-only `dynamicFlatten` / `dynamic_flatten` pair).
 - [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the engine-plumbing

@@ -5846,6 +5846,32 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the date-arithmetic arms; this row records the display arm until the cast
   spells Spark's units.
 
+### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
+
+- **repark** — `F.try_to_timestamp("s")` raises `UnsupportedOperationException:
+  functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
+  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_try_to_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
+  example backlog until the engine grows the tolerant timestamp parse.
+
+### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern
+
+- **repark** — `F.unix_timestamp("s", "yyyy-MM-dd")` raises `UnsupportedOperationException:
+  functions.unix_timestamp format argument is not supported yet`. The no-format arms agree
+  with Spark and carry the example coverage: `"2024-06-15 12:00:00"` answers `1718452800`,
+  `"1970-01-01 00:00:00"` answers `0`, NULL answers NULL, and a timestamp column of the same
+  noon instant answers `1718452800`. Zero-argument `unix_timestamp()` is a current-epoch int,
+  stable across rows of one query.
+- **Apache Spark** — `unix_timestamp("2024-06-15", "yyyy-MM-dd")` answers `1718409600`;
+  `"1970-01-02"` answers `86400`; NULL answers NULL. The no-format arms agree with the repark
+  answers above. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_unix_timestamp_format_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
+  covered by the no-format arms; this row records the format argument until the parser
+  accepts Spark's pattern.
+
 ### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
