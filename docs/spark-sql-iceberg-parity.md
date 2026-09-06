@@ -2878,12 +2878,14 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `relax_schema_to_nullable`
   (`crates/repark-core/src/spark_nullable.rs`) is an iterative walk with no depth bound:
   a 40-deep required struct reads back nullable at **every** level (root plus all 40).
-  Below the relax the only ceilings left are Arrow's own transport limits (the parquet
-  footer parser's flatbuffers depth 64 — an 80-deep read refuses with
-  `DepthLimitReached` — and the IPC/export nesting caps), identical machinery on both
-  engines.
+  Below the relax the only ceilings left are Arrow's own transport limits: the parquet
+  footer parser's flatbuffers depth 64 (arrow-ipc 58.4.0 `max_footer_fb_depth` default —
+  a 60-deep struct reads back nullable at all 61 levels, 61+ refuses with
+  `DepthLimitReached` at `ARROW:schema` footer decode, before the relax runs) and the
+  IPC/export nesting caps. Bound bisected 2026-09-06 (NULLABILITY-2 round 2).
 - **Apache Spark** — reads the same file back nullable at **every** level (root plus all
-  40). *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+  40); reads 60- and 61-deep files Spark-side. *(oracle: live PySpark 4.1.2, UTC,
+  2026-09-05; 60/61 legs 2026-09-06.)*
 - **Pin** —
   `crates/repark-core/src/spark_nullable.rs::tests::relax_covers_depth_40`,
   `...::relax_covers_depth_200`, `...::deep_nesting_completes_with_nullable_flags`

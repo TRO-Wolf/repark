@@ -621,19 +621,30 @@ def test_reader_relax_covers_depth_40(tmp_path: Path) -> None:
 
 
 def test_deep_read_refuses_past_arrow_footer_limit(tmp_path: Path) -> None:
-    parquet = tmp_path / "deep80.parquet"
-    inner: pa.DataType = pa.int32()
-    for level in range(80):
-        inner = pa.struct([pa.field(f"n{level}", inner, nullable=False)])
-    schema = pa.schema([pa.field("root", inner, nullable=False)])
-    value: Any = 7
-    for level in range(80):
-        value = {f"n{level}": value}
-    pq.write_table(pa.table({"root": pa.array([value], type=inner)}, schema=schema), str(parquet))
+    for depth in (60, 61):
+        inner: pa.DataType = pa.int32()
+        for level in range(depth):
+            inner = pa.struct([pa.field(f"n{level}", inner, nullable=False)])
+        schema = pa.schema([pa.field("root", inner, nullable=False)])
+        value: Any = 7
+        for level in range(depth):
+            value = {f"n{level}": value}
+        target = tmp_path / f"deep{depth}.parquet"
+        pq.write_table(
+            pa.table({"root": pa.array([value], type=inner)}, schema=schema), str(target)
+        )
     session = _spark_session("true")
     try:
+        read_back = session.read.parquet(str(tmp_path / "deep60.parquet")).to_arrow().schema
+        flags = [read_back.field("root").nullable]
+        current = read_back.field("root").type
+        for _ in range(60):
+            child = current[0]
+            flags.append(child.nullable)
+            current = child.type
+        assert flags == [True] * 61
         with pytest.raises(Exception, match="DepthLimitReached"):
-            session.read.parquet(str(parquet)).to_arrow()
+            session.read.parquet(str(tmp_path / "deep61.parquet")).to_arrow()
     finally:
         session.stop()
 
