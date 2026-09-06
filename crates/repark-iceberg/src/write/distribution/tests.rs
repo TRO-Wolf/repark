@@ -154,7 +154,7 @@ fn source_batch(schema: &SchemaRef, partition: usize, rows: usize) -> Result<Rec
     .map_err(DataFusionError::from)
 }
 
-fn iceberg_schema() -> IcebergSchema {
+pub(super) fn iceberg_schema() -> IcebergSchema {
     IcebergSchema::builder()
         .with_fields(vec![
             NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
@@ -166,7 +166,7 @@ fn iceberg_schema() -> IcebergSchema {
         .expect("schema")
 }
 
-async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
+pub(super) async fn memory_catalog(warehouse: &TempDir) -> Arc<dyn Catalog> {
     let path = warehouse
         .path()
         .to_str()
@@ -215,7 +215,7 @@ async fn create_table_with(
         .expect("load table")
 }
 
-async fn declare_order(
+pub(super) async fn declare_order(
     catalog: &Arc<dyn Catalog>,
     name: &str,
     fields: Vec<crate::write::sort_order::WriteSortField>,
@@ -748,7 +748,7 @@ async fn none_distribution_mode_deals_stream_batches_round_robin() {
     assert_eq!(layout(&files), expected);
 }
 
-fn shuffled_full_batches() -> Vec<RecordBatch> {
+pub(super) fn shuffled_full_batches() -> Vec<RecordBatch> {
     let schema = source_schema();
     [vec![3_i64, 1], vec![4, 0, 2]]
         .into_iter()

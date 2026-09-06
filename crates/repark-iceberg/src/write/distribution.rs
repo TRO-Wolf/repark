@@ -3,8 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use datafusion::arrow::array::RecordBatch;
+use datafusion::arrow::array::{Array, BooleanArray, RecordBatch, StructArray};
 use datafusion::arrow::compute::cast;
+use datafusion::arrow::compute::kernels::nullif::nullif;
 use datafusion::arrow::datatypes::{DataType, Schema};
 use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::error::{DataFusionError, Result};
@@ -17,7 +18,9 @@ use datafusion::physical_plan::repartition::RepartitionExec;
 use datafusion::physical_plan::sorts::sort::SortExec;
 use futures::{Stream, TryStreamExt};
 use iceberg::arrow::type_to_arrow_type;
-use iceberg::spec::{DataFile, NullOrder, SortDirection, Transform};
+use iceberg::spec::{
+    DataFile, NullOrder, Schema as IcebergSchema, SortDirection, StructType, Transform, Type,
+};
 use iceberg::table::Table;
 use iceberg::transform::create_transform_function;
 use iceberg::writer::IcebergWriter;
@@ -26,6 +29,8 @@ use crate::write::merge::iceberg_err;
 use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
 
 mod router;
+#[cfg(test)]
+mod sort_order_tests;
 #[cfg(test)]
 mod tests;
 
@@ -212,16 +217,40 @@ fn default_sort_lex_ordering(table: &Table, schema: &Schema) -> Result<Option<Le
                 field.transform, field.source_id
             )));
         }
-        let source = iceberg_schema.field_by_id(field.source_id).ok_or_else(|| {
-            DataFusionError::Plan(format!(
-                "the table's default sort order names source field id {}, which the table \
-                     schema lacks",
-                field.source_id
-            ))
-        })?;
-        let index = schema.index_of(&source.name)?;
+        let path = sort_field_name_path(iceberg_schema, field.source_id)?;
+        let index = schema.index_of(&path[0])?;
+        let mut expr: Arc<dyn PhysicalExpr> = Arc::new(Column::new(&path[0], index));
+        let mut data_type = schema.field(index).data_type().clone();
+        for (depth, segment) in path.iter().enumerate().skip(1) {
+            let DataType::Struct(children) = &data_type else {
+                return Err(DataFusionError::Plan(format!(
+                    "the table's default sort order names nested field `{}`, but `{}` is not a \
+                     struct column",
+                    path.join("."),
+                    path[..depth].join(".")
+                )));
+            };
+            let (child_index, child_field) = children
+                .iter()
+                .enumerate()
+                .find(|(_, child)| child.name() == segment)
+                .ok_or_else(|| {
+                    DataFusionError::Plan(format!(
+                        "the table's default sort order names nested field `{}`, which the \
+                         written batches lack",
+                        path.join(".")
+                    ))
+                })?;
+            data_type = child_field.data_type().clone();
+            expr = Arc::new(NestedFieldExpr {
+                source: expr,
+                child_index,
+                child_name: segment.clone(),
+                result_type: data_type.clone(),
+            });
+        }
         exprs.push(PhysicalSortExpr {
-            expr: Arc::new(Column::new(&source.name, index)),
+            expr,
             options: datafusion::arrow::compute::SortOptions {
                 descending: field.direction == SortDirection::Descending,
                 nulls_first: field.null_order == NullOrder::First,
@@ -229,6 +258,139 @@ fn default_sort_lex_ordering(table: &Table, schema: &Schema) -> Result<Option<Le
         });
     }
     Ok(LexOrdering::new(exprs))
+}
+
+fn sort_field_name_path(schema: &IcebergSchema, source_id: i32) -> Result<Vec<String>> {
+    fn descend(scope: &StructType, source_id: i32, trail: &mut Vec<String>) -> bool {
+        for field in scope.fields() {
+            if field.id == source_id {
+                trail.push(field.name.clone());
+                return true;
+            }
+            if let Type::Struct(inner) = field.field_type.as_ref() {
+                trail.push(field.name.clone());
+                if descend(inner, source_id, trail) {
+                    return true;
+                }
+                trail.pop();
+            }
+        }
+        false
+    }
+    let mut trail = Vec::new();
+    if descend(schema.as_struct(), source_id, &mut trail) {
+        return Ok(trail);
+    }
+    if schema.field_by_id(source_id).is_some() {
+        return Err(DataFusionError::NotImplemented(format!(
+            "the table's default sort order names source field id {source_id} inside a list, \
+             map, or other non-struct type — only top-level and struct fields are supported"
+        )));
+    }
+    Err(DataFusionError::Plan(format!(
+        "the table's default sort order names source field id {source_id}, which the table \
+         schema lacks"
+    )))
+}
+
+#[derive(Debug, Eq)]
+pub(crate) struct NestedFieldExpr {
+    source: Arc<dyn PhysicalExpr>,
+    child_index: usize,
+    child_name: String,
+    result_type: DataType,
+}
+
+impl PartialEq for NestedFieldExpr {
+    fn eq(&self, other: &Self) -> bool {
+        self.source.eq(&other.source)
+            && self.child_index == other.child_index
+            && self.result_type == other.result_type
+    }
+}
+
+impl Hash for NestedFieldExpr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.source.hash(state);
+        self.child_index.hash(state);
+        self.result_type.hash(state);
+    }
+}
+
+impl Display for NestedFieldExpr {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}.{}", self.source, self.child_name)
+    }
+}
+
+impl PhysicalExpr for NestedFieldExpr {
+    fn data_type(&self, _input_schema: &Schema) -> Result<DataType> {
+        Ok(self.result_type.clone())
+    }
+
+    fn nullable(&self, _input_schema: &Schema) -> Result<bool> {
+        Ok(true)
+    }
+
+    fn evaluate(&self, batch: &RecordBatch) -> Result<ColumnarValue> {
+        let array = self.source.evaluate(batch)?.into_array(batch.num_rows())?;
+        let strukt = array
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .ok_or_else(|| {
+                DataFusionError::Internal(format!(
+                    "sort field `{}` expects a struct column, got {}",
+                    self.child_name,
+                    array.data_type()
+                ))
+            })?;
+        let child = strukt
+            .columns()
+            .get(self.child_index)
+            .cloned()
+            .ok_or_else(|| {
+                DataFusionError::Internal(format!(
+                    "sort field `{}` names struct child {}, but the column has {}",
+                    self.child_name,
+                    self.child_index,
+                    strukt.num_columns()
+                ))
+            })?;
+        let Some(valid) = strukt.nulls() else {
+            return Ok(ColumnarValue::Array(child));
+        };
+        if valid.null_count() == 0 {
+            return Ok(ColumnarValue::Array(child));
+        }
+        let mask = BooleanArray::from(valid.iter().map(|is_valid| !is_valid).collect::<Vec<_>>());
+        Ok(ColumnarValue::Array(nullif(child.as_ref(), &mask)?))
+    }
+
+    fn children(&self) -> Vec<&Arc<dyn PhysicalExpr>> {
+        vec![&self.source]
+    }
+
+    fn with_new_children(
+        self: Arc<Self>,
+        children: Vec<Arc<dyn PhysicalExpr>>,
+    ) -> Result<Arc<dyn PhysicalExpr>> {
+        let [source] = <[Arc<dyn PhysicalExpr>; 1]>::try_from(children).map_err(|children| {
+            DataFusionError::Internal(format!(
+                "NestedFieldExpr expects exactly one child, got {}",
+                children.len()
+            ))
+        })?;
+        Ok(Arc::new(Self {
+            source,
+            child_index: self.child_index,
+            child_name: self.child_name.clone(),
+            result_type: self.result_type.clone(),
+        }))
+    }
+
+    fn fmt_sql(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{self}")
+    }
 }
 
 pub(crate) async fn fanout_sorted_serial<S>(

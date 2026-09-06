@@ -18,7 +18,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
   spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new
   order, the malformed shapes refusing, case-insensitive matching, identical-order id reuse,
-  and the transform-sort fork-ceiling refusal. The two WRITE-refusal blocks left
+  the transform-sort fork-ceiling refusal, and the dotted nested-name resolution (round 2,
+  2026-09-06). The two WRITE-refusal blocks left
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006

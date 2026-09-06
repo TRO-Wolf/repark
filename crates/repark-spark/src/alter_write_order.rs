@@ -235,7 +235,7 @@ fn parse_order_list(significant: &[Sig], start: usize) -> Result<(Vec<WriteOrder
 }
 
 fn parse_order_segment(segment: &[Sig]) -> Result<WriteOrderField> {
-    let name = match segment.first() {
+    let mut name = match segment.first() {
         Some(Sig::Word(word)) => word.clone(),
         Some(Sig::String(_)) => {
             return Err(DataFusionError::Plan(
@@ -250,13 +250,21 @@ fn parse_order_segment(segment: &[Sig]) -> Result<WriteOrderField> {
             ));
         }
     };
-    if matches!(segment.get(1), Some(Sig::LParen)) {
+    let mut index = 1usize;
+    while matches!(segment.get(index), Some(Sig::Period)) {
+        let Some(Sig::Word(part)) = segment.get(index + 1) else {
+            break;
+        };
+        name.push('.');
+        name.push_str(part);
+        index += 2;
+    }
+    if matches!(segment.get(index), Some(Sig::LParen)) {
         return Err(DataFusionError::NotImplemented(format!(
             "ALTER TABLE WRITE ORDERED BY transform `{name}(…)` is not supported yet — the \
              fork's sort-order action only models identity sort fields"
         )));
     }
-    let mut index = 1usize;
     let mut direction = SortDirection::Ascending;
     if word_eq(segment, index, "ASC") {
         index += 1;

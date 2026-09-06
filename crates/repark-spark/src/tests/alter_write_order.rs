@@ -296,6 +296,92 @@ async fn write_order_backtick_column_resolves() {
     assert_eq!(table.metadata().default_sort_order().fields.len(), 1);
 }
 
+async fn create_struct_target(catalogs: &CatalogRegistry, table: &str) {
+    use iceberg::TableCreation;
+    use iceberg::spec::{NestedField, PrimitiveType, Schema as IcebergSchema, StructType, Type};
+    let schema = IcebergSchema::builder()
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+            NestedField::optional(
+                2,
+                "st",
+                Type::Struct(StructType::new(vec![
+                    NestedField::optional(3, "a", Type::Primitive(PrimitiveType::Long)).into(),
+                    NestedField::optional(4, "b", Type::Primitive(PrimitiveType::String)).into(),
+                ])),
+            )
+            .into(),
+        ])
+        .build()
+        .unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            TableCreation::builder()
+                .name(table.to_string())
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn write_ordered_by_dotted_name_resolves_the_nested_field() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_struct_target(&catalogs, "t").await;
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.t WRITE ORDERED BY (st.a DESC)",
+    )
+    .await
+    .unwrap();
+    let table = load_write_target(&catalogs, "t").await;
+    let metadata = table.metadata();
+    assert_eq!(metadata.default_sort_order_id(), 1);
+    let fields = &metadata.default_sort_order().fields;
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].source_id, 3);
+    assert_eq!(fields[0].direction, SortDirection::Descending);
+    assert_eq!(fields[0].null_order, NullOrder::Last);
+    assert_eq!(
+        metadata
+            .properties()
+            .get("write.distribution-mode")
+            .map(String::as_str),
+        Some("range")
+    );
+    create_struct_target(&catalogs, "u").await;
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.u WRITE ORDERED BY (ST.A)",
+    )
+    .await
+    .unwrap();
+    let table = load_write_target(&catalogs, "u").await;
+    assert_eq!(table.metadata().default_sort_order().fields[0].source_id, 3);
+}
+
+#[tokio::test]
+async fn write_ordered_by_bad_dotted_name_refuses_and_commits_nothing() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_struct_target(&catalogs, "t").await;
+    for form in [
+        "ALTER TABLE ice.sales.t WRITE ORDERED BY (st.nope)",
+        "ALTER TABLE ice.sales.t WRITE ORDERED BY (id.a)",
+        "ALTER TABLE ice.sales.t WRITE ORDERED BY (st.a.b)",
+    ] {
+        let error = execute(&ctx, &catalogs, form).await.expect_err(form);
+        assert!(error.to_string().contains("Cannot find field"), "{error}");
+    }
+    let table = load_write_target(&catalogs, "t").await;
+    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+}
+
 #[tokio::test]
 async fn write_order_transform_sort_refuses_as_fork_ceiling() {
     let wh = TempDir::new().unwrap();

@@ -303,10 +303,12 @@ repark-core's error map.
   in-memory source before the funnel writes it — `fanout_sorted_serial` / `fanout_sorted_stream`
   for the partitioned funnel, `drive_unpartitioned` for the unpartitioned one — so CTAS, INSERT
   OVERWRITE, and MERGE all commit monotone files with no new dependency and no spawned task. A
-  sort field on a non-identity transform refuses loud; only identity fields sort. In-module pins:
+  sort field on a non-identity transform refuses loud; only identity fields sort. A dotted sort
+  field resolves to the nested field id and sorts on the nested value through a struct-field
+  expression with parent-null masking (round 2, 2026-09-06). In-module pins:
   the `none`/`hash`/`range` layouts, the unknown-mode planning error, cross-batch sorting, the
-  identity return without an order, monotone committed files on both funnel entries, and the
-  `none` round-robin stream layout.
+  identity return without an order, monotone committed files on both funnel entries, the
+  `none` round-robin stream layout, the nested sort, and the transform refusal.
   pins: write-order-dist-1/C-007, C-008, C-010
   See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
@@ -371,7 +373,8 @@ repark-core's error map.
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the
-  table schema (an unknown column is a loud `DataInvalid` and commits nothing), an empty field
+  table schema, dotted paths through struct types included (an unknown column is a loud
+  `DataInvalid` and commits nothing), an empty field
   list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
   and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006

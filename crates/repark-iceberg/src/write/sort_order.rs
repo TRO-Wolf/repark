@@ -1,4 +1,4 @@
-use iceberg::spec::{NullOrder, SortDirection};
+use iceberg::spec::{NullOrder, Schema as IcebergSchema, SortDirection, StructType, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
 
@@ -22,19 +22,7 @@ pub async fn apply_write_order(
     let schema = table.metadata().current_schema();
     let mut resolved: Vec<(String, SortDirection, NullOrder)> = Vec::with_capacity(fields.len());
     for field in fields {
-        let needle = field.name.to_ascii_lowercase();
-        let canonical = schema
-            .as_struct()
-            .fields()
-            .iter()
-            .find(|existing| existing.name.to_ascii_lowercase() == needle)
-            .map(|existing| existing.name.clone())
-            .ok_or_else(|| {
-                Error::new(
-                    ErrorKind::DataInvalid,
-                    format!("Cannot find field {} in table schema", field.name),
-                )
-            })?;
+        let canonical = resolve_sort_field(schema, &field.name)?;
         resolved.push((canonical, field.direction, field.null_order));
     }
     let tx = Transaction::new(&table);
@@ -54,4 +42,34 @@ pub async fn apply_write_order(
     }
     tx.commit(catalog).await?;
     Ok(())
+}
+
+fn resolve_sort_field(schema: &IcebergSchema, name: &str) -> Result<String> {
+    let mut scope: &StructType = schema.as_struct();
+    let mut canonical: Vec<&str> = Vec::new();
+    let segments: Vec<&str> = name.split('.').collect();
+    for (depth, segment) in segments.iter().enumerate() {
+        let needle = segment.to_ascii_lowercase();
+        let found = scope
+            .fields()
+            .iter()
+            .find(|existing| existing.name.to_ascii_lowercase() == needle)
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::DataInvalid,
+                    format!("Cannot find field {name} in table schema"),
+                )
+            })?;
+        canonical.push(found.name.as_str());
+        if depth + 1 < segments.len() {
+            let Type::Struct(inner) = found.field_type.as_ref() else {
+                return Err(Error::new(
+                    ErrorKind::DataInvalid,
+                    format!("Cannot find field {name} in table schema"),
+                ));
+            };
+            scope = inner;
+        }
+    }
+    Ok(canonical.join("."))
 }

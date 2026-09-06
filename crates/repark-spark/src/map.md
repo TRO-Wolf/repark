@@ -158,7 +158,8 @@ pins: rp-4-fork-repin/C-005, C-006
   unsorted order 0), `WRITE DISTRIBUTED BY PARTITION [LOCALLY] ORDERED BY` (both + `hash`),
   `WRITE UNORDERED` (order 0 + `none`). A bare `ASC` defaults to `NULLS FIRST`, a bare
   `DESC` to `NULLS LAST`, the way Spark resolves them; a transform sort field, a quoted
-  column, and every malformed shape refuse loud before anything commits. It is a sibling
+  column, and every malformed shape refuse loud before anything commits. Dotted nested names
+  (`st.a`) parse to the nested field (round 2, 2026-09-06). It is a sibling
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
