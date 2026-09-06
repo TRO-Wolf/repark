@@ -4798,11 +4798,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
   (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
   observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
-  **IO-3 note (2026-09-05):** the manifest half is now measured bounded — 500 small tables
-  peak at 332.2 MB of RSS with the default cache versus 323.9 MB with explicit `0`
-  (delta 8.3 MB, every table row-correct in both columns), pinned every build at ≤ 64 MB
-  by `test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget`.
-  This row stays BACKLOG for the metadata-cache LRU only (`F-CATIO-BOUND`).
+  **IO-3 round 2 (2026-09-05):** the "measured bounded" claim above is withdrawn. The
+  32 MiB budget binds the fork's ESTIMATED manifest weight (768 B per manifest entry,
+  256 B per list entry), not resident bytes: lane measurement puts resident at ~7.5×
+  the charged weight (~7.5 KB per cached small manifest+list at 2,000–8,000 tables,
+  via read-phase VmRSS growth). No peak-RSS ratio is claimed — single-driver peak
+  deltas ride ±20 MB of allocator/phase noise (the explicit-`0` peak is non-monotonic
+  across table counts: 323.9 / 340.1 / 322.6 MB at 500 / 2,000 / 8,000). What the
+  500-table leg still proves is no retention outside the cache (both columns
+  row-correct; the default peak stays within the 64 MB bar); the weight bound itself
+  is unexercised (8 MB charged of 32 MB at 8,000 tables). The under-count is now
+  `PERF-CATALOG-CACHE-WEIGHT-1` / `F-CATIO-WEIGHT`. This row stays BACKLOG for the
+  metadata-cache LRU only (`F-CATIO-BOUND`).
+- **PERF-CATALOG-CACHE-WEIGHT-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-3 round 2.
+  **BACKLOG** behind a fork change. Fork ask **F-CATIO-WEIGHT**: the fork's
+  `estimate_manifest_weight` (`object_cache.rs:57`: entries × 768 B; lists 256 B) under-counts
+  resident bytes ~7.5× for small manifests. Lane-measured at pin `2ed39cb0`: read-phase
+  VmRSS growth over the CTAS-phase level is ~15 MB at 2,000 tables and 59 MB at 8,000
+  tables against 2.0 / 8.0 MB charged (~7.5 KB resident per cached manifest+list), and
+  the estimate sits below the objects' own file bytes (3,466 B manifest + 1,604 B list
+  per table) before any parsed-form overhead. So the 32 MiB default budgets estimated
+  weight, not resident bytes: a session filling the bound holds 617.5 MB resident
+  (602.9 MB peak) against 338.8 MB with the cache off — ~265–278 MB of entries above
+  a ~340–352 MB base, ~8× charged (the 32,768-table at-bound run). Red-when-fixed pin:
+  `test_a_budget_sized_to_the_charged_weight_retains_every_table` (256 tables fit a
+  280000 budget at charged weight, so the coldest table still hits after every manifest
+  is deleted; true weights evict it and the leg reds). Today's ratio is a documented
+  number, not an assertion — peak-RSS deltas ride ±20 MB of allocator/phase noise, so
+  no numeric pin could hold it. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.3.
 - **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
   BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
   `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
@@ -4868,8 +4892,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
   the key carry the assignment input, or move assignment out of the cached object. No
   RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
-  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
-  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  Until the fix landed, `PERF-ICE-MANIFEST-1` stayed BACKLOG and the knob default stayed
+  OFF: the four upgrade-lineage tests passed by default and had to pass knob-on before
   the default-ON flip. Pins:
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (was the wrong-answer detector as `test_with_the_knob_on_…`; it redded on RP-13 as designed,

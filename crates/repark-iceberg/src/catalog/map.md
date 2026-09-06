@@ -125,17 +125,28 @@ Source comments retain only API and safety contracts; implementation narration i
   naming both spellings). The size is the measured value, not a guess: IO-1's override
   read 120.01 → 11.33 ms at 32 MiB, IO-2's real pin read 115.81 → 10.95 ms with the knob
   set explicitly to 32 MiB, and 32 MiB is the fork's own `DEFAULT_CACHE_SIZE_BYTES` — the
-  default agrees with the fork instead of inventing a second number. The budget is weight,
-  not entries: moka `max_capacity` over estimated resident weight (768 B per manifest
-  entry, 256 B per list entry, floored at one entry), TinyLFU admission with rejection, so
-  the 193-manifest `t_many` weighs roughly 150 KB and the budget holds on the order of
-  forty thousand manifest entries — far above any measured single-node working set, and
-  still a hard ceiling. The ceiling is per memory catalog: one shared `ObjectCache` per
-  catalog handle, so a session that registers one memory catalog (the usual shape) holds
-  at most 32 MiB of manifest weight, and N catalogs hold N × 32 MiB; the metadata cache
-  keeps its own high-water bound (512 retained locations, cleared at the statement door).
+  default agrees with the fork instead of inventing a second number. The budget is the
+  fork's estimated weight, not entries and not resident bytes: moka `max_capacity` over
+  the estimate (768 B per manifest entry, 256 B per list entry, floored at one entry),
+  TinyLFU admission with rejection, so the 193-manifest `t_many` weighs roughly 150 KB
+  and the budget holds on the order of forty thousand manifest entries — far above any
+  measured single-node working set. The 32 MiB is NOT a resident-bytes ceiling: round 2
+  measured ~7.5 KB resident per cached small manifest+list at 2,000–8,000 tables (~7.5×
+  the estimate; the estimate sits below the objects' own file bytes), filed as registry
+  `PERF-CATALOG-CACHE-WEIGHT-1` / fork ask `F-CATIO-WEIGHT`. The ceiling is per memory
+  catalog: one shared `ObjectCache` per catalog handle, so a session that registers one
+  memory catalog (the usual shape) is budgeted 32 MiB of manifest weight, and N catalogs
+  N × 32 MiB; the metadata cache keeps its own high-water bound (512 retained locations,
+  cleared at the statement door). Size the budget to the working set (about 1 KiB of
+  charged weight per small-manifest table): a budget far under it churns — repeat reads
+  over an over-budget working set miss (pinned: at 128 KiB over 256 tables with every
+  manifest deleted, cold tables miss while hot tables still hit), so a second pass over
+  2,000 tables costs what explicit `"0"` costs (8.1 s vs 8.2 s, against 5.6 s cached);
+  below ~1 MiB prefer `"0"`.
   Measured: 500 small tables hold within 64 MB of peak RSS over explicit `0` (the
-  subprocess `ru_maxrss` leg), every table row-correct in both columns. The flip is safe
+  subprocess `ru_maxrss` leg), every table row-correct in both columns — that leg proves
+  no retention outside the cache, not the weight bound, which is unexercised (8 MB
+  charged of 32 MB at 8,000 tables). The flip is safe
   because RP-13 landed the fork key fix first (`F-CATIO-KEY`: the cache stores the
   context-free parse and applies each caller's list-entry inheritance and `first_row_id`
   assignment per read): the four HALT tests, the full staleness battery and the lineage
@@ -146,7 +157,7 @@ Source comments retain only API and safety contracts; implementation narration i
   fixture. The commit-path bypass persists at the new pin (`transaction/` still loads
   straight from `FileIO`), so `PERF-CATALOG-COMMIT-CACHE-1` / `F-CATIO-COMMIT` stays open
   and DML still saves read-side repeats only.
-  pins: perf-ice-catalog-io-3/C-001, C-007
+  pins: perf-ice-catalog-io-3/C-001, C-005, C-007
 
   **Glue and S3 Tables are NOT wired.** `glue_catalog` / `s3tables_catalog` are unchanged and take
   no `CatalogCaches`, because the fork's `GlueCatalogBuilder` / `S3TablesCatalogBuilder` have no

@@ -308,8 +308,12 @@ no manifest-list and no manifest at all. The default is on since PERF-ICE-CATALO
 (2026-09-05): RP-13 landed the fork key fix first (`F-CATIO-KEY` — the cache stores the
 context-free parse and applies each caller's lineage per read), so upgrade-boundary
 tables serve assigned lineage with the cache on. To turn the cache off, set the key to
-`"0"`. The ceiling is 32 MiB of manifest weight per memory catalog (one shared cache per
-catalog handle; the fork enforces it with moka `max_capacity`). Numbers and the
+`"0"`. The 32 MiB is the fork's estimated manifest weight per memory catalog (one shared
+cache per catalog handle; the fork enforces it with moka `max_capacity`), not a
+resident-bytes ceiling — a cached small manifest+list measures ~7.5 KB resident
+against ~1 KiB charged. Size the budget to the working set: a budget far under it
+churns, so a second pass over 2,000 tables at 128 KiB costs what explicit `"0"` costs
+(8.1 s vs 8.2 s, against 5.6 s cached); below ~1 MiB prefer `"0"`. Numbers and the
 commit-side scope live in
 [../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §6.
 
