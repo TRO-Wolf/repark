@@ -314,9 +314,9 @@ def test_empty_and_all_null_answer_null(repark_engine: Any) -> None:
     assert no_percentages is None
 
 
-@pytest.mark.parametrize("accuracy", ["0", "-3", "NULL", "2147483648"])
+@pytest.mark.parametrize("accuracy", ["0", "-3", "NULL", "2147483648", "TRUE", "'100'"])
 def test_invalid_accuracy_raises(repark_engine: Any, accuracy: str) -> None:
-    """C-002: an out-of-range or NULL accuracy fails loudly on the SQL door."""
+    """C-002: an out-of-range, NULL or mistyped accuracy fails loudly on the SQL door."""
     with pytest.raises(Exception, match="accuracy"):
         query = f"SELECT percentile_approx(x, 0.5, {accuracy}) AS p FROM ({SEQ200_DOUBLE_SQL})"
         _scalar(repark_engine, query)

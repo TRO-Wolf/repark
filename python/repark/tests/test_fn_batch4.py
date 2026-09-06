@@ -174,6 +174,39 @@ def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> Non
         percentile_approx("x", True)  # type: ignore[arg-type]
 
 
+def test_percentile_approx_bool_accuracy_rejected(spark: ReparkSession) -> None:
+    """Round 2: bool accuracy fails with Spark's INTEGRAL contract (live 4.1.2)."""
+    from repark.errors import PySparkTypeError
+
+    with pytest.raises(PySparkTypeError, match="accuracy") as caught:
+        percentile_approx("x", 0.5, True)  # type: ignore[arg-type]
+    assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert caught.value.getMessageParameters() == {"arg_name": "accuracy", "arg_type": "bool"}
+
+
+@pytest.mark.parametrize(("bad", "arg_type"), [(2.0, "float"), ("100", "str")])
+def test_percentile_approx_non_integral_accuracy_rejected(
+    spark: ReparkSession, bad: object, arg_type: str
+) -> None:
+    """Round 2: float/str accuracy fails with Spark's INTEGRAL contract (live 4.1.2)."""
+    from repark.errors import PySparkTypeError
+
+    with pytest.raises(PySparkTypeError, match="accuracy") as caught:
+        percentile_approx("x", 0.5, bad)  # type: ignore[arg-type]
+    assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert caught.value.getMessageParameters() == {"arg_name": "accuracy", "arg_type": arg_type}
+
+
+def test_percentile_approx_numpy_accuracy_runs(spark: ReparkSession) -> None:
+    """Round 2: numpy integer accuracy runs as the int on scalar and list forms."""
+    numpy = pytest.importorskip("numpy")
+    frame = spark.createDataFrame([(index,) for index in range(1, 201)], ["id"])
+    scalar = frame.select(percentile_approx("id", 0.5, numpy.int64(100)).alias("p"))
+    assert scalar.collect()[0][0] == 99
+    listed = frame.select(percentile_approx("id", [0.5], numpy.int64(100)).alias("p"))
+    assert list(listed.collect()[0][0]) == [99]
+
+
 def test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer(
     spark: ReparkSession,
 ) -> None:

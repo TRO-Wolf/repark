@@ -282,6 +282,8 @@ file-backed module.
 DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
 `check_lib_py.py` `writer_readwriter.py` 1117→1113.
   FN-REGEXP-EXTRACT-1 (2026-09-04): `functions_expr.py` ceiling 2261 → 2259 (ratchet down).
+  PERF-APPROXPCT-1 round 2 (2026-09-06): `functions_expr.py` ceiling 2259 → 2258
+  (accuracy check out to `_integral.py`, one shared Column return).
 
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;

@@ -21,6 +21,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   explicit fallback to string.
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
+- `_integral.py` — **Round 2 (2026-09-06):** Spark INTEGRAL-type coercion for facade
+  integer knobs (`checked_integral`); numpy integers run, bool/float/str fail with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`. pins: perf-approxpct-1/C-002
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
@@ -62,8 +65,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_inner` call takes it as `Option` (None is the two-arg default), and the `sql_expr`
   carries a `, {accuracy}` tail because the list form always lowers through the
   global-aggregate SQL path (nested parens fail the native classifier), where a missing
-  tail would silently run at default accuracy. Non-int accuracy renders as NULL in the tail
-  so the SQL path fails loudly in the UDAF instead of interpolating garbage.
+  tail would silently run at default accuracy.
+  pins: perf-approxpct-1/C-002
+  **Round 2 (2026-09-06):** accuracy normalizes through `_integral.checked_integral`
+  before either path (Spark's INTEGRAL contract, measured on live 4.1.2): numpy integers
+  run as the int on both forms, bool/float/str fail with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` — the NULL-tail fallback is gone. The two
+  Column builds merged into one shared return; ceiling 2259 → 2258.
   pins: perf-approxpct-1/C-002
   **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
   `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002

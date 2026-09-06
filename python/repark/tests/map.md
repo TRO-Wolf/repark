@@ -1420,6 +1420,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
   (repark `1.0` at accuracy 2, Spark-equal since **PERF-APPROXPCT-1 (2026-09-05)**).
   pins: fn-fix-1-registry-rows/C-003
+  **Round 2 (2026-09-06):** bool/float/str accuracy pins fail with Spark's INTEGRAL
+  contract; numpy integer accuracy runs as the int on scalar and list forms.
+  pins: perf-approxpct-1/C-002
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
