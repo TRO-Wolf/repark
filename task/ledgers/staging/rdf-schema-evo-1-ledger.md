@@ -136,7 +136,7 @@ self-heals on the pin (C-007).
   (10/10 pins, 7 red under the batch revert, 12 attack shapes with no lost value). RePark pin bump
   RP-15 `8bc325a3` → `85db42f2` by the orchestrator (`make bump-fork-pin`), rows in
   `docs/fork-sync.md` and the root `map.md`; the eleven pins re-run green on the bumped native
-  (see §10).
+  (§10).
 - **What it changes:** `crates/iceberg/src/maintenance/rewrite_data_files_write.rs` re-points
   each compaction read task at the current schema with the full current projection, so the
   Arrow reader evolves every file's batches before the splitter and writer see them;
@@ -157,3 +157,14 @@ self-heals on the pin (C-007).
   python/repark/tests/test_maintenance_call.py` — 26 passed.
 - `make py-test-dbt`, `make check-map-sync`, `make check-ledger-grammar`, `make check-ledgers`,
   `make check-docs-compaction`, `ledger_lifecycle.py check --base origin/main`, `typos` — exit 0.
+
+## 10. Pin bump RP-15 (orchestrator, 2026-09-06)
+
+| step | result |
+|---|---|
+| `make bump-fork-pin REV=85db42f2…` | 5 rev lines rewritten, `Cargo.lock` fork entries only |
+| release native rebuilt on the bumped pin | `repark._native.__debug_assertions__` False |
+| `pytest test_rdf_schema_evo_1.py test_maintenance_call.py -q` | 26 passed (11 pins + 15 maintenance) |
+| RePark-side critic (Muse) on `e25592c5` | PASS: 27 passed with `test_mw5_baseline_delta.py`, parity harness 624, V1-GATE meta-pin 14; owner shape + eleven pins EQUAL to live Spark 4.1.2; eight extra evolution shapes clean |
+| registry `RDF-SCHEMA-EVO-1` | FIXED 2026-09-06 (RP-15) |
+
