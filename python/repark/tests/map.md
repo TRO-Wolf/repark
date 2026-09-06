@@ -674,6 +674,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- `test_rdf_schema_evo_1.py` — **RDF-SCHEMA-EVO-1** (2026-09-06): `rewrite_data_files` The module docstring is the one-line form; the unit story is in this row and the ledger.
+  after schema evolution, through the facade over 6-file seeds with no later write. Red on
+  fork `8bc325a3` (the owner's 7v8 refusal and its drop/rename/promote/v3 siblings), green
+  on fork `fix/rdf-schema-evo-1`: owner add+spec 6→3, partitioned add-only 6→1, drop 6→3,
+  rename 6→3, both promotions 6→1, v3-with-DV 6/3/1 with the DV gone. Controls: the
+  unpartitioned add-only and post-evolution-write shapes (green both sides), plus the
+  `rewrite_position_delete_files` / `rewrite_manifests` zeros on the evolved table. Every
+  row set, schema and file multiset measured on live PySpark 4.1.2 first. Spark door only.
+  pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
   maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
   to end on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs). F-16r
