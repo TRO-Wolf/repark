@@ -2751,6 +2751,53 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `*.avro` is unlinked) are the every-build guard.
   RP-13 (2026-09-05, pin `2ed39cb0`, F-CATIO-KEY) flipped the knob-on upgrade detector from the
   NULL-lineage answer to the assigned lineage; `PERF-CATALOG-LINEAGE-CACHE-1` is FIXED.
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip. Every IO-2 explicit-knob leg
+  now runs on the default session as its primary — the timing pin, the six staleness legs
+  (rewrite + expire, MERGE, DROP + re-CREATE, `register_table`, time-travel, branch) and
+  the lineage pin — with the explicit `0` as the off-control in both directions. The
+  default-off control is inverted into the primary sharing pin (a default session answers
+  after every `*.avro` is unlinked; red while the default is `0`, green after), the
+  explicit-knob sharing leg stays (explicit bytes still share), and the explicit-`0` leg
+  stays as the off-control. Two legs join: a two-session concurrency leg (session A
+  upgrades a v2 table to v3 while session B holds a warm pre-upgrade cache over the same
+  warehouse, then B reads assigned lineage — the fork fix's contract) and a 500-table
+  subprocess RSS leg (peak `ru_maxrss` default versus explicit `0`, within 64 MB).
+  Round 2 (critic remediation, same unit) joins two structural legs: a 128 KiB thrash pin
+  over 256 tables (after every manifest is deleted, cold tables miss and hot tables
+  hit — a token budget churns without benefit) and a charged-weight pin
+  (256 tables fit a 280000 budget at the fork's estimated weight, so the coldest table
+  still hits; true fork weights evict it and red the leg — registry
+  `PERF-CATALOG-CACHE-WEIGHT-1`). Renames
+  (the flip inverts their meaning):
+  `test_a_default_session_reopens_manifests_after_they_vanish` →
+  `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish`,
+  `test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows` →
+  `test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`.
+
+  | test | clause |
+  |---|---|
+  | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
+  | `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish` | C-003 |
+  | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-003 |
+  | `test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish` | C-001 |
+  | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-003 |
+  | `test_a_merge_after_a_commit_matches_the_committed_row` | C-003 |
+  | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-003 |
+  | `test_a_registered_table_stays_correct_across_a_commit` | C-003 |
+  | `test_time_travel_reads_the_pinned_snapshot_with_the_cache_on` | C-003 |
+  | `test_branch_reads_answer_with_the_cache_on` | C-003 |
+  | `test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-003 |
+  | `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-003 |
+  | `test_a_warm_second_session_reads_assigned_lineage_after_the_first_session_upgrades` | C-004 |
+  | `test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget` | C-005 |
+  | `test_a_sub_megabyte_byte_budget_churns_cold_tables_while_hot_tables_hit` | C-005 |
+  | `test_a_budget_sized_to_the_charged_weight_retains_every_table` | C-005 |
+  | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
+  | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
+  | the four v3 upgrade/legacy tests (`test_v3_legacy_delete_merge.py` × 2, the `alter-set-format-version-3-mor` statement row, `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`) | C-002 |
+  | the re-measured `t_many` / `t_many_merged` cells | C-006 |
+
+  pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

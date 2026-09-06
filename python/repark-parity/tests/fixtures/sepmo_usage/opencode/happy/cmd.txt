@@ -1,0 +1,1 @@
+opencode run --dir workspace --agent worker --format json --variant high

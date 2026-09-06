@@ -1,0 +1,5 @@
+{"type":"session.created","properties":{"sessionID":"ses_fixture"}}
+{"type":"message.part.updated","properties":{"sessionID":"ses_fixture","part":{"type":"step-finish","reason":"tool-calls","cost":0.01,"tokens":{"input":100,"output":20,"reasoning":5,"cache":{"read":40,"write":0}}}}}
+{"type":"tool_call","properties":{"name":"bash"}}
+{"type":"message.part.updated","properties":{"sessionID":"ses_fixture","part":{"type":"step-finish","reason":"stop","cost":0.02,"tokens":{"input":150,"output":30,"reasoning":7,"cache":{"read":10,"write":0}}}}}
+{"type":"tool_call","properties":{"name":"read"}}

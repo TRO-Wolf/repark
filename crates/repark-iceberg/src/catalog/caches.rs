@@ -19,7 +19,7 @@ pub const MANIFEST_CACHE_BYTES_KEY: &str = "repark.iceberg.manifestCacheBytes";
 
 pub const MANIFEST_CACHE_BYTES_KEY_ALT: &str = "repark.iceberg.manifest_cache_bytes";
 
-pub const DEFAULT_MANIFEST_CACHE_BYTES: u64 = 0;
+pub const DEFAULT_MANIFEST_CACHE_BYTES: u64 = 33_554_432;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IcebergCacheSettings {
@@ -191,8 +191,11 @@ mod tests {
     }
 
     #[test]
-    fn the_default_disables_the_shared_cache() {
-        assert_eq!(IcebergCacheSettings::default().manifest_cache_bytes, 0);
+    fn the_default_sizes_the_shared_cache() {
+        assert_eq!(
+            IcebergCacheSettings::default().manifest_cache_bytes,
+            33_554_432
+        );
         assert_eq!(
             CatalogCaches::default().manifest_cache_bytes(),
             DEFAULT_MANIFEST_CACHE_BYTES

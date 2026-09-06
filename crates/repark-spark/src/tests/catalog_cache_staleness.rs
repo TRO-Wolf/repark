@@ -549,9 +549,7 @@ async fn delete_manifest_files(catalogs: &CatalogRegistry, table: &str) -> usize
 #[tokio::test]
 async fn a_second_door_reads_manifests_from_the_cache_the_first_door_filled() {
     let wh = TempDir::new().unwrap();
-    let config = HashMap::from([(MANIFEST_CACHE_BYTES_KEY.to_string(), "33554432".to_string())]);
-    let caches =
-        CatalogCaches::new(IcebergCacheSettings::from_config_map(&config).expect("parse bytes"));
+    let caches = CatalogCaches::default();
     let ((ctx_a, cat_a), (ctx_b, cat_b)) = two_doors(&wh, &caches).await;
     run(
         &ctx_a,
