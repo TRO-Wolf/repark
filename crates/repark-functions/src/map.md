@@ -78,6 +78,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   null to 0.0 — measured on live 4.1.2, not guessed); an empty array answers NULL. Answers
   are inserted doubles cast back, so the `as` int casts never meet an out-of-range value.
   pins: perf-approxpct-1/C-001
+  **Round 2 (2026-09-06):** `merge_batch` stages partial summaries and folds once in
+  `evaluate`/`state`, sorted by serialized bytes — the final task sees one partial per
+  call in arrival order (16 calls at 1e6), so a within-call sort fixed nothing and one
+  session answered 5 distinct values. The fold is order-free given the partial set; the
+  sketch arithmetic is untouched. Empty partials skip (a merge no-op).
+  pins: perf-approxpct-1/C-004
 - `quantile_summaries.rs` — the sketch behind `percentile_approx.rs` (see that row). Merge
   takes the other side by reference and stages a flushed clone, so the Digest discipline
   (both sides compressed before merge) holds with no panic path. The head sort uses
@@ -88,6 +94,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the clamp sides on n=200 at exactly eps, and the eager test pins mid-insert compression
   with no query call; all four boundary mutations die (ledger §5).
   pins: perf-approxpct-1/C-001 perf-approxpct-1/C-006
+  **Round 2 (2026-09-06):** `accuracy_ten_and_hundred_pin_single_scan_answers` pins the
+  acc10/acc100 single-scan medians (90.0/99.0) and `state_size_follows_one_over_eps` pins
+  the 1e6-row serialized sizes (952656/4776/72 B at acc 10000/100/2); the merge-threshold
+  ×4.0 mutant dies on exactly these two and survives the older seventeen.
+  pins: perf-approxpct-1/C-006
 - `spark_log1p.rs` — **LOG1P-1 (2026-09-02):** Spark-named `log1p` / `expm1` kernels
   (`f64::ln_1p` / `f64::exp_m1` via Arrow `unary`; `log1p` then `nullif` on `x <= -1`).
   Numeric coerce to Float64; NULL in → NULL out. Registered from `register_all`

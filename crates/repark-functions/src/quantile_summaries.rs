@@ -605,6 +605,36 @@ mod tests {
     }
 
     #[test]
+    fn accuracy_ten_and_hundred_pin_single_scan_answers() {
+        for (error, expected) in [(0.1, 90.0), (0.01, 99.0)] {
+            let mut summary = QuantileSummaries::new(error);
+            for value in 1..=200_i64 {
+                #[allow(clippy::cast_precision_loss)]
+                let slot = value as f64;
+                summary.insert(slot);
+            }
+            assert_eq!(bits(&summary.query(&[0.5])), bits(&[expected]), "{error}");
+        }
+    }
+
+    #[test]
+    fn state_size_follows_one_over_eps() {
+        for (error, samples, bytes) in [(0.0001, 39_693, 952_656), (0.01, 198, 4_776), (0.5, 2, 72)]
+        {
+            let mut summary = QuantileSummaries::new(error);
+            for value in 1..=1_000_000_i64 {
+                #[allow(clippy::cast_precision_loss)]
+                let slot = value as f64;
+                summary.insert(slot);
+            }
+            let serial = summary.to_bytes();
+            assert_eq!(summary.sampled_count(), samples, "{error}");
+            assert_eq!(serial.len(), bytes, "{error}");
+            assert_eq!(summary.count(), 1_000_000);
+        }
+    }
+
+    #[test]
     fn million_row_state_stays_small() {
         let mut summary = QuantileSummaries::new(0.0001);
         for value in 1..=1_000_000_i64 {

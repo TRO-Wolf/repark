@@ -41,6 +41,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   110.0 on consecutive runs); the 100-row frame answers Spark's default/acc10/acc2 sampled
   columns. DataFrame-door, error-contract, type, and release-only wall-bar legs, plus live
   legs that re-derive every golden. pins: perf-approxpct-1/C-002, C-003, C-004, C-005, C-006
+  **Round 2 (2026-09-06):** the wall pin asserts an N/accuracy band around the true median
+  (the exact 500000 held only where the debug skip hid it) under a 1.0 s bar;
+  `test_million_row_repeats_one_value` pins one value over 10 runs at default and acc100
+  plus the 2N/accuracy triangle bound against live Spark's 500082, and
+  `test_hundred_thousand_groups_repeat_bit_equal` pins 1e5 groups bit-equal across runs.
+  pins: perf-approxpct-1/C-004
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,

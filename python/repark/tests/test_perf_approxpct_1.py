@@ -168,7 +168,9 @@ SKETCH_GOLDEN: Final[dict[str, tuple[Any, ...]]] = {
 }
 
 WALL_ROWS: Final[int] = 1_000_000
-WALL_BAR_SECONDS: Final[float] = 120.0
+WALL_BAR_SECONDS: Final[float] = 1.0
+WALL_ACCURACY: Final[int] = 10_000
+SPARK_MILLION_P50: Final[int] = 500082
 
 
 @pytest.fixture
@@ -344,7 +346,12 @@ def test_answer_types_follow_the_column(repark_engine: Any) -> None:
 
 
 def test_million_row_wall_stays_within_bar(repark_engine: Any) -> None:
-    """C-004: the sketch answers 1e6 rows inside the bar (release only; debug skips)."""
+    """C-004: the sketch answers 1e6 rows inside the bar (release only; debug skips).
+
+    The answer sits within N/accuracy of the true median (the GK rank budget at
+    uniform density); the bar is 1.0 s, headroom over the old kernel's 0.13-0.21 s
+    warm wall for a loaded box.
+    """
     import time
 
     import repark._native as native
@@ -355,8 +362,48 @@ def test_million_row_wall_stays_within_bar(repark_engine: Any) -> None:
     started = time.monotonic()
     value = frame.selectExpr("percentile_approx(id, 0.5) AS p").collect()[0][0]
     elapsed = time.monotonic() - started
-    assert value == 500_000
+    assert abs(value - 500_000) <= WALL_ROWS // WALL_ACCURACY
     assert elapsed < WALL_BAR_SECONDS, f"{elapsed:.1f}s over the {WALL_BAR_SECONDS:.0f}s bar"
+
+
+def test_million_row_repeats_one_value(repark_engine: Any) -> None:
+    """Round 2: 1e6 p50 answers one value over 10 runs at default and acc100.
+
+    The default answer sits within 2N/accuracy of live Spark's 500082 (both answers
+    carry the GK rank budget, so the triangle bound holds; BANNER spark=4.1.2 tz=UTC,
+    2026-09-06, local[2]).
+    """
+    import repark._native as native
+
+    if native.__debug_assertions__:
+        pytest.skip("repeatability pins run on release modules only")
+    frame = repark_engine.session.range(1, WALL_ROWS + 1)
+    default = {
+        frame.selectExpr("percentile_approx(id, 0.5) AS p").collect()[0][0] for _ in range(10)
+    }
+    assert len(default) == 1
+    coarse = {
+        frame.selectExpr("percentile_approx(id, 0.5, 100) AS p").collect()[0][0] for _ in range(10)
+    }
+    assert len(coarse) == 1
+    assert abs(default.pop() - SPARK_MILLION_P50) <= 2 * WALL_ROWS // WALL_ACCURACY
+
+
+def test_hundred_thousand_groups_repeat_bit_equal(repark_engine: Any) -> None:
+    """Round 2: 1e5 groups answer bit-equal columns on back-to-back runs."""
+    import repark._native as native
+
+    if native.__debug_assertions__:
+        pytest.skip("repeatability pins run on release modules only")
+    grouped = repark_engine.session.range(1, WALL_ROWS + 1).selectExpr(
+        "id % 100000 AS k", "id AS v"
+    )
+    grouped.createOrReplaceTempView("approxpct_1_groups")
+    query = "SELECT k, percentile_approx(v, 0.5) AS p FROM approxpct_1_groups GROUP BY k"
+    first = sorted((row[0], row[1]) for row in repark_engine.session.sql(query).collect())
+    second = sorted((row[0], row[1]) for row in repark_engine.session.sql(query).collect())
+    assert len(first) == 100_000
+    assert first == second
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)

@@ -365,6 +365,7 @@ fn double_to_scalar(value: f64, data_type: &DataType) -> Result<ScalarValue> {
 #[derive(Debug)]
 struct PercentileAccumulator {
     summary: QuantileSummaries,
+    pending: Vec<QuantileSummaries>,
     percentages: Option<Vec<f64>>,
     accuracy_known: bool,
     value_type: DataType,
@@ -381,11 +382,33 @@ impl PercentileAccumulator {
     ) -> Self {
         Self {
             summary: QuantileSummaries::new(relative_error(accuracy)),
+            pending: Vec::new(),
             percentages,
             accuracy_known,
             value_type,
             return_list,
         }
+    }
+
+    fn fold_pending(&mut self) {
+        if self.pending.is_empty() {
+            return;
+        }
+        let error = self.summary.relative_error();
+        let mut keyed = Vec::with_capacity(self.pending.len() + 1);
+        for part in self.pending.drain(..) {
+            let mut keyed_part = part.clone();
+            keyed.push((keyed_part.to_bytes(), part));
+        }
+        let owned = std::mem::replace(&mut self.summary, QuantileSummaries::new(error));
+        let mut keyed_owned = owned.clone();
+        keyed.push((keyed_owned.to_bytes(), owned));
+        keyed.sort_by(|left, right| left.0.cmp(&right.0));
+        let mut folded = QuantileSummaries::new(error);
+        for (_, part) in &keyed {
+            folded.merge(part);
+        }
+        self.summary = folded;
     }
 
     fn typed_null(&self) -> Result<ScalarValue> {
@@ -427,6 +450,7 @@ impl Accumulator for PercentileAccumulator {
     }
 
     fn evaluate(&mut self) -> Result<ScalarValue> {
+        self.fold_pending();
         if self.summary.count() == 0 && self.summary.buffered_count() == 0 {
             return self.typed_null();
         }
@@ -459,10 +483,16 @@ impl Accumulator for PercentileAccumulator {
             .percentages
             .as_ref()
             .map_or(0, |known| known.len() * size_of::<f64>());
-        size_of_val(self) + self.summary.size_bytes() + percentages
+        let staged = self
+            .pending
+            .iter()
+            .map(QuantileSummaries::size_bytes)
+            .sum::<usize>();
+        size_of_val(self) + self.summary.size_bytes() + percentages + staged
     }
 
     fn state(&mut self) -> Result<Vec<ScalarValue>> {
+        self.fold_pending();
         let blob = self.summary.to_bytes();
         let known = self.percentages.clone().unwrap_or_default();
         let percentages: Vec<ScalarValue> = known
@@ -492,7 +522,10 @@ impl Accumulator for PercentileAccumulator {
             let Some(other) = QuantileSummaries::from_bytes(blobs.value(row)) else {
                 return exec_err!("percentile_approx state is not a valid sketch");
             };
-            self.summary.merge(&other);
+            if other.count() == 0 {
+                continue;
+            }
+            self.pending.push(other);
         }
         if self.percentages.is_none()
             && let Some(percentage_state) = states.get(1)
@@ -702,6 +735,84 @@ mod tests {
             right.evaluate().expect("a merged median evaluates"),
             ScalarValue::Int64(Some(3))
         );
+    }
+
+    fn state_bytes(values: std::ops::RangeInclusive<i64>) -> Vec<u8> {
+        let mut partial = accumulator(Some(vec![0.5]), DataType::Int64, false);
+        let collected: Vec<i64> = values.collect();
+        let width = collected.len();
+        let column: ArrayRef = Arc::new(Int64Array::from(collected));
+        let percentages: ArrayRef = Arc::new(Float64Array::from(vec![0.5; width]));
+        partial
+            .update_batch(&[column, percentages])
+            .expect("partial rows update");
+        let states = partial.state().expect("a state serializes");
+        match &states[0] {
+            ScalarValue::Binary(Some(blob)) => blob.clone(),
+            other => panic!("a binary state, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn merge_batch_folds_partials_in_canonical_order() {
+        use arrow::array::BinaryArray;
+
+        fn folded(order: &[usize], blobs: &[Vec<u8>]) -> (Vec<u8>, ScalarValue) {
+            let mut merged = accumulator(Some(vec![0.5]), DataType::Int64, false);
+            let rows: Vec<Option<&[u8]>> = order
+                .iter()
+                .map(|index| Some(blobs[*index].as_slice()))
+                .collect();
+            let states: ArrayRef = Arc::new(BinaryArray::from(rows));
+            merged.merge_batch(&[states]).expect("states merge");
+            let serial = merged.state().expect("a state serializes");
+            let bytes = match &serial[0] {
+                ScalarValue::Binary(Some(blob)) => blob.clone(),
+                other => panic!("a binary state, got {other:?}"),
+            };
+            (bytes, merged.evaluate().expect("a merged median evaluates"))
+        }
+
+        let blobs = [
+            state_bytes(1..=100),
+            state_bytes(101..=200),
+            state_bytes(201..=300),
+        ];
+        let first = folded(&[0, 1, 2], &blobs);
+        for order in [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]] {
+            assert_eq!(folded(&order, &blobs), first, "{order:?}");
+        }
+        assert_eq!(first.1, ScalarValue::Int64(Some(150)));
+    }
+
+    #[test]
+    fn merge_batch_calls_fold_in_canonical_order() {
+        fn folded(order: &[usize], blobs: &[Vec<u8>]) -> (Vec<u8>, ScalarValue) {
+            let mut merged = accumulator(Some(vec![0.5]), DataType::Int64, false);
+            for index in order {
+                let single = ScalarValue::Binary(Some(blobs[*index].clone()))
+                    .to_array()
+                    .expect("a single state builds an array");
+                merged.merge_batch(&[single]).expect("a state merges");
+            }
+            let serial = merged.state().expect("a state serializes");
+            let bytes = match &serial[0] {
+                ScalarValue::Binary(Some(blob)) => blob.clone(),
+                other => panic!("a binary state, got {other:?}"),
+            };
+            (bytes, merged.evaluate().expect("a merged median evaluates"))
+        }
+
+        let blobs = [
+            state_bytes(1..=100),
+            state_bytes(101..=200),
+            state_bytes(201..=300),
+        ];
+        let first = folded(&[0, 1, 2], &blobs);
+        for order in [[0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]] {
+            assert_eq!(folded(&order, &blobs), first, "{order:?}");
+        }
+        assert_eq!(first.1, ScalarValue::Int64(Some(150)));
     }
 
     #[test]
