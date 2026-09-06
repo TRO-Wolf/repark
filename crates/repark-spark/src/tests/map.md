@@ -276,7 +276,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
-  `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
+  `call`, and `call_orphan`, plus `session_functions` (SQL-DOOR-SESSION-FN-1: `user()` /
+  `current_user()` / `session_user()` answer the facade identity, `version()` answers the repark
+  string, expression/WHERE/FROM-`t` cells, bare-name column-or-error fences, the broken-call
+  original-error fence, case-insensitive and arity pins;
+  pins: sql-door-session-fn-1/C-002, C-003, C-004).
+  `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and

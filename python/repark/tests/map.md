@@ -3408,6 +3408,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_sem1_spark_log.py` — **SEM-1 (2026-08-31):** Spark-door `log` kernel, `F.log` two-arg,
   native ANSI base-10 control, `log2`/`log1p`/`ln` incidentals. Oracle live PySpark 4.1.2.
   pins: sem-1-spark-answer-parity/C-004, C-006, C-007, C-010
+- [test_sql_door_session_fn_1.py](test_sql_door_session_fn_1.py) — **SQL-DOOR-SESSION-FN-1
+  (2026-09-06):** `user()` / `current_user()` / `session_user()` / `version()` on the Spark SQL
+  door equal the facade strings on the Arrow path (value AND type), inside expressions, WHERE
+  and FROM-`t`; bare-name column-or-error fences; native-door unchanged fences; one
+  `REPARK_PARITY_LIVE=1` shape leg (non-empty, `session_user() = current_user()`,
+  door `version()` equals `F.version()`). Oracle live PySpark 4.1.2.
+  pins: sql-door-session-fn-1/C-002, C-003, C-004
 
 ## I want to...
 
