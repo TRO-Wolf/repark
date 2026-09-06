@@ -15,6 +15,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 - `df_guard.rs` — seven DataFusion 54.1 guard pins.
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `a13.rs` — `file://` warehouse fallback-root pin.
+- `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
+  `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway
+  `winslide_probe_sum` UDAF exists only here: it has no `retract_batch`, so it proves the fallback
+  fires on an aggregate the rule has never heard of, and its `default_value` is the sentinel
+  `-1.0`, so the empty-frame pin distinguishes "fresh accumulator" from "aggregate default".
+  Mutation: make the rule probe `accumulator` instead of `create_sliding_accumulator` and
+  `a_retractable_aggregate_keeps_datafusions_sliding_accumulator` reds.
+  pins: win-slide-1/C-005, C-006
 
 ## Pointers
 

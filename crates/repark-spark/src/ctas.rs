@@ -188,8 +188,9 @@ pub(crate) async fn execute_ctas(
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+    let derived_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
     let iceberg_schema =
-        arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
+        arrow_schema_to_schema_auto_assign_ids(&derived_schema).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &ctas.partition_fields)?;
     let format_version =
         crate::create_table::iceberg_create_format_version(ctx, ctas.format_version.as_deref())?;
@@ -245,8 +246,7 @@ pub(crate) async fn execute_ctas(
     };
 
     // STREAM the SELECT into the staged table (WG-2 bounded memory).
-    let stream = query.execute_stream().await?;
-    let data_files = write_ctas_stream(ctx, staged.table(), stream).await?;
+    let data_files = write_ctas_query(ctx, staged.table(), query).await?;
     staged
         .add_data_files(data_files)
         .commit(catalog.as_ref())
@@ -261,27 +261,15 @@ pub(crate) async fn execute_ctas(
 /// Stream a CTAS SELECT into Iceberg data files, honouring session write concurrency.
 /// # Errors
 /// Propagates stream, conform, or writer errors from `repark-write`.
-pub(crate) async fn write_ctas_stream(
+pub(crate) async fn write_ctas_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
-    stream: datafusion::physical_plan::SendableRecordBatchStream,
+    query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    } else {
-        repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    }
+    let task_ctx = Arc::new(query.task_ctx());
+    let plan = query.create_physical_plan().await?;
+    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
 }
 
 /// Resolve table location and `FileIO` for staged CTAS before any data write.
@@ -451,8 +439,7 @@ pub(crate) async fn execute_ctas_service_managed(
 
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
-        let stream = query.execute_stream().await?;
-        let data_files = write_ctas_stream(ctx, &table, stream).await?;
+        let data_files = write_ctas_query(ctx, &table, query).await?;
         if !data_files.is_empty() {
             repark_iceberg::write::commit_append(catalog, &table, data_files).await?;
         }

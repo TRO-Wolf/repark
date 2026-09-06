@@ -53,7 +53,7 @@ def test_regression_aggregate_matches_the_closed_form(name: str, expected: float
 # RATCHETS DOWN ONLY. The facade casts a count-like aggregate to signed bigint (Spark has no
 # unsigned integer type); the SQL door still returns the engine's `UInt64`. Fixing the door turns
 # this test red — the row leaves, it does not get widened.
-DOOR_RETURNS_UNSIGNED = {"regr_count"}
+DOOR_RETURNS_UNSIGNED: set[str] = set()
 
 
 def test_regression_aggregates_agree_with_the_sql_door() -> None:

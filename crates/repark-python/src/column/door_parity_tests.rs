@@ -92,11 +92,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     ),
     ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
     (
-        "from_unixtime",
-        FacadeShape::Kernel(1),
-        "SQL door returns TIMESTAMP, the facade and Spark return STRING — registry row UNIX-1",
-    ),
-    (
         "array",
         FacadeShape::Kernel(1),
         "facade builds `make_array`, the door resolves the `array` alias; values agree, only the \
@@ -194,8 +189,8 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        22,
-        "FN-FIX-2 closed elt: both doors use SparkElt; ratchet 23 → 22"
+        21,
+        "TYPES-1 closed from_unixtime: both doors return Spark STRING; ratchet 22 → 21"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

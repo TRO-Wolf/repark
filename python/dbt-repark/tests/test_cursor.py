@@ -83,7 +83,7 @@ def test_description_carries_every_column(session: Any) -> None:
     assert described is not None
     assert [column[0] for column in described] == ["n", "s"]
     assert [column[6] for column in described] == [True, True]
-    assert [column[1] for column in described] == ["int64", "string"]
+    assert [column[1] for column in described] == ["int32", "string"]
 
 
 def test_a_statement_with_no_columns_has_no_description(session: Any) -> None:

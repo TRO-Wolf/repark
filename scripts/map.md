@@ -1,5 +1,15 @@
 # map — scripts/
 
+EX-25 functions-a (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 213 → 193 —
+the 20 plainly supported names of the 45-name `F.*` long-tail (a) roster, covered by five
+new examples under `docs/examples/functions/` plus the `F.hours` arm in
+`partition_transforms.py`, every asserted value measured on live PySpark 4.1.2 (ANSI on,
+UTC). The other 25 roster names stay on the backlog with nineteen new §7 rows (EX-FN-1..19;
+`F.base64` keeps its BL-17 row), pinned by twenty tests in
+`python/repark/tests/test_examples_functions_a.py`. No `csv_json.py`: all four CSV/JSON
+names refuse. Red-first: 20 has-no-example findings with the files held out (exit 1), and
+a wrong-median control in `stats.py` failed the execute leg by name (exit 1).
+pins: ex-25-functions-a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 EX-24 ta-b (2026-09-04): `check_example_coverage.py` `BACKLOG_BASELINE` 258 → 213 — the remaining 45
 `ta.*` roster names covered by twelve new examples under `docs/examples/ta/`, measured against the
 recorded C TA-Lib 0.4.0 goldens on the 5000-row OHLCV fixture (the family's oracle; the same `.bin`
@@ -163,9 +173,35 @@ bare invocation checks the tree against the checked-in file. The register is pin
 `python/repark-parity/tests/test_api_freeze.py`, so `make py-test` is the gate; regenerate in the
 same commit as any intended additive change. pins: api-freeze/C-003
 
+TYPES-1 round 4 (2026-09-05): `check_rust_file_size.py`
+`repark-functions/src/datetime.rs` 1704→1709 (INCREASE — the Java-pattern year-sign arm;
+absorption proven impossible, owner approval at merge); mirrored in
+`test_cap_1_source_file_line_cap.py`. pins: types-1/C-006
+TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709→1700 — the year arm moves to
+`src/spark_year_pad.rs`; mirrored in `test_cap_1_source_file_line_cap.py`.
+pins: types-1/C-006
+
+PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
+1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
+the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
+responsibility when a charter already changes that region"). A ratchet DOWN; the duplicate
+table in `test_cap_1_source_file_line_cap.py` moved with it in the same commit.
+pins: perf-ice-catalog-io-1/C-004
+
+WIN-SLIDE-1 (2026-09-04): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
+1102→1053 — `Column.over`'s body moved to `column/window.rs`, which is that row's own recorded
+split seam ("extract the remaining date or window method family"). A ratchet DOWN, not a
+baseline increase; the duplicate table in `test_cap_1_source_file_line_cap.py` moved with it.
+pins: win-slide-1/C-002
+
 FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
+
+CUTOVER-SCHEMA-1 (2026-09-04): `check_rust_file_size.py`
+`repark-core/src/session.rs` 1040→1039 and `repark-python/src/dataframe.rs` 1171→1127 —
+reader-relax and export-boundary extraction; both ratchet DOWN.
+pins: cutover-schema-1/C-001
 
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
@@ -189,6 +225,20 @@ pins: v3-10-upgrade-v2-to-v3/C-003
 DF-PRINTSCHEMA-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6371→6368 — the
 `printSchema` strip arm is gone.
 pins: df-printschema-1-trailing-newline/C-004
+
+PERF-FACADE-1 (2026-09-04): `check_lib_py.py` `dataframe/core.py` 6368→6303 — the Arrow row
+converter and its two type predicates move to `dataframe/rows_export.py`; `core.py` keeps
+three delegations. Ratchets DOWN.
+pins: perf-facade-1/C-001, C-005
+
+TYPES-1 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6305 (INCREASE — the
+two `__repark_rn` BIGINT casts; owner approval requested at merge) and
+`test_window_parity.py` 1481→1422 (ratchets DOWN — converged tiers and the dead
+`TYPE_DISC` lead-in deleted).
+pins: types-1/C-008
+TYPES-1 round 4 (2026-09-05): `dataframe/core.py` 6305→6303 — one import joined absorbs
+the INCREASE; the ceiling ratchets DOWN again, no approval needed.
+pins: types-1/C-008
 
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.

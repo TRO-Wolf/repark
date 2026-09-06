@@ -5,25 +5,23 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::{Arc, OnceLock};
 
-use arrow::array::{RecordBatch, RecordBatchReader};
+use arrow::array::RecordBatchReader;
 use arrow::datatypes::{DataType as ArrowDataType, SchemaRef};
-use arrow::error::ArrowError;
 use arrow::ffi::FFI_ArrowSchema;
 use arrow::ffi_stream::FFI_ArrowArrayStream;
 use arrow::util::pretty::pretty_format_batches;
 use datafusion::common::{Column, JoinType};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::Expr;
-use datafusion::physical_plan::SendableRecordBatchStream;
 use datafusion::prelude::col;
-use futures::StreamExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyCapsule;
 use tokio::runtime::Runtime;
 
+use crate::arrow_export::StreamingBatchReader;
 use crate::column::PyColumn;
-use crate::fence::{fence_stream_poll, fenced, fenced_span};
+use crate::fence::{fenced, fenced_span};
 use crate::{datafusion_to_py_err, to_py_err};
 
 /// The Arrow C stream interface mandates this exact capsule name (a NUL-terminated C string).
@@ -34,7 +32,7 @@ const ARROW_SCHEMA_CAPSULE_NAME: &CStr = c"arrow_schema";
 
 // See `with_stream_poll_no_detach`; this flag covers nested Python-backed stream polls.
 thread_local! {
-    static STREAM_POLL_NO_DETACH: Cell<bool> = const { Cell::new(false) };
+    pub(crate) static STREAM_POLL_NO_DETACH: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Run `body` with nested polls skipping PyO3 attach/detach.
@@ -265,41 +263,6 @@ fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: 
     }
 }
 
-/// A synchronous reader that polls one DataFusion batch per Arrow C Stream callback.
-struct StreamingBatchReader {
-    runtime: Arc<Runtime>,
-    stream: SendableRecordBatchStream,
-    schema: SchemaRef,
-}
-
-impl Iterator for StreamingBatchReader {
-    type Item = Result<RecordBatch, ArrowError>;
-
-    /// Pull exactly one batch.
-    fn next(&mut self) -> Option<Self::Item> {
-        // The Arrow callback cannot unwind across extern "C"; fence the poll and report an error.
-        let Self {
-            runtime, stream, ..
-        } = self;
-        fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
-            let no_detach = STREAM_POLL_NO_DETACH.with(Cell::get);
-            let polled = if no_detach {
-                runtime.block_on(stream.next())
-            } else {
-                Python::attach(|python| python.detach(|| runtime.block_on(stream.next())))
-            };
-            polled.map(|batch| batch.map_err(|error| ArrowError::ExternalError(Box::new(error))))
-        })
-    }
-}
-
-impl RecordBatchReader for StreamingBatchReader {
-    /// The exported stream uses the analyzed logical types and Spark-style `nullable = true`.
-    fn schema(&self) -> SchemaRef {
-        Arc::clone(&self.schema)
-    }
-}
-
 // Transform methods return a fresh `PyDataFrame`; pyclass args arrive by value from Python.
 #[allow(
     clippy::must_use_candidate,
@@ -437,15 +400,16 @@ impl PyDataFrame {
             let _ = requested_schema;
             // Use analyzed logical types with Spark nullability.
             let schema: SchemaRef = self.analyzed_arrow_schema_native()?;
+            let schema = crate::arrow_export::coerced_export_schema(&schema);
             // Open a lazy batch stream — the physical plan build runs with the GIL released.
             let stream = py
                 .detach(|| self.runtime.block_on(self.df.clone().execute_stream()))
                 .map_err(datafusion_to_py_err)?;
-            let reader: Box<dyn RecordBatchReader + Send> = Box::new(StreamingBatchReader {
-                runtime: Arc::clone(&self.runtime),
+            let reader: Box<dyn RecordBatchReader + Send> = Box::new(StreamingBatchReader::new(
+                Arc::clone(&self.runtime),
                 stream,
                 schema,
-            });
+            ));
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
 
             // pyo3 0.29 renamed the destructor helper; pass a static `CStr` name.
@@ -728,15 +692,17 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
-    use arrow::array::Int64Array;
+    use arrow::array::{Int64Array, RecordBatch};
     use arrow::datatypes::{DataType, Field, Schema};
     use arrow::ffi_stream::ArrowArrayStreamReader;
     use datafusion::catalog::streaming::StreamingTable;
     use datafusion::error::DataFusionError;
     use datafusion::execution::TaskContext;
+    use datafusion::physical_plan::SendableRecordBatchStream;
     use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
     use datafusion::physical_plan::streaming::PartitionStream;
     use datafusion::prelude::{SessionConfig, SessionContext};
+    use futures::StreamExt;
 
     /// A panic in the nested-poll guard restores the TLS flag for later export polls.
     #[test]
@@ -936,11 +902,8 @@ mod tests {
                     Err(DataFusionError::Execution("boom on batch 2".into())),
                 ],
             );
-            let mut reader = StreamingBatchReader {
-                runtime: reader_test_runtime(),
-                stream,
-                schema: int64_schema(),
-            };
+            let mut reader =
+                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
 
             let first = reader
                 .next()
@@ -975,11 +938,7 @@ mod tests {
                     Ok(int64_batch(&[4, 5, 6])),
                 ],
             );
-            let reader = StreamingBatchReader {
-                runtime: reader_test_runtime(),
-                stream,
-                schema: int64_schema(),
-            };
+            let reader = StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
 
             assert_eq!(
                 reader.schema(),
@@ -1019,11 +978,8 @@ mod tests {
                 int64_schema(),
                 vec![Err(DataFusionError::Execution("kaboom".into()))],
             );
-            let mut reader = StreamingBatchReader {
-                runtime: reader_test_runtime(),
-                stream,
-                schema: int64_schema(),
-            };
+            let mut reader =
+                StreamingBatchReader::new(reader_test_runtime(), stream, int64_schema());
 
             let error = reader
                 .next()

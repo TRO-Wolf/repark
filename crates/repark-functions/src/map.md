@@ -42,6 +42,22 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
+  `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
+  `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
+  for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
+  `Int64`, `SignedWindow` casts the rank family to `Int32`.
+  pins: types-1/C-001, C-003, C-005, C-007
+- `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
+  `Int64`. pins: types-1/C-003
+- `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`
+  overwriting scalar UDF answering session-zone STRING, reusing the `date_format` pattern
+  compiler; 1- and 2-arg shapes; always nullable (Spark marks `FromUnixTime` nullable
+  even for non-null input — live-measured on 4.1.2). pins: types-1/C-006
+- `spark_year_pad.rs` — **TYPES-1 round 5 (2026-09-05):** the Java-pattern year arm
+  extracted from `datetime.rs` (`datetime.rs` 1709→1700): negative years pad the digits
+  and re-attach the sign (`-0499`), `yy` is `abs(year) % 100` (`-499` → `99`), 5+-digit
+  positives keep `+` — all live-measured on 4.1.2. pins: types-1/C-006
 - `java_regex.rs` — **FN-FIX-2 (2026-09-04):** Java nested character-class union. `[[:alpha:]]`
   is `{':','a','l','p','h'}`, not POSIX alpha. pins: fn-fix-2-string-rows/C-002
 - `spark_regexp_match.rs` — **FN-FIX-2 (2026-09-04):** `regexp_like` / `rlike` /
@@ -150,27 +166,85 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Spark-typed decimal `avg` with decimal `retract_batch` (no Numeric→Float64 coerce).
   **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
+  **TYPES-1 (2026-09-05):** registers `count_if` plus the `SignedAggregate` wrappers
+  (`regr_count`, `approx_distinct` → `Int64`). pins: types-1/C-003
+- `aggregate.rs` also serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (**PERF-AGG-AVG-1**), delegating to `avg_groups.rs`; the
+  `Accumulator` arms and `state_fields` are untouched, so window frames keep the retract
+  path, and the decimal `DecimalAverager` is shared as `pub(crate)`. Round 2 removed
+  the dead `is_distinct` early return in `create_groups_accumulator` (unreachable:
+  the only caller is guarded by `groups_accumulator_supported`).
+  pins: perf-agg-avg-1/C-001, C-002
+- `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the
+  `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
+  own `AvgGroupsAccumulator` (`datafusion-functions-aggregate/src/average.rs`):
+  per-group `Vec<u64>` counts plus `Vec<Native>` sums, `EmitTo::First` partial emission,
+  `convert_to_state`, and a local null-state tracker (the
+  `datafusion-functions-aggregate-common` `NullState` cannot be used without a new
+  dependency, so its All/Some fast-path semantics are re-implemented here). Three
+  deliberate deviations from the reference, each forced by a house contract: the average
+  closure returns `Option` so 2×-MAX `try_avg` overflow yields per-group NULL instead
+  of failing the query (the sum-wrap shape is BACKLOG `AVG-DEC-SUMWRAP-1`); the
+  float state stays `[sum, count:Int64]` and the decimal state
+  `[count:UInt64, sum]` because `state_fields` belongs to the untouched retract path;
+  length mismatches are loud `exec_err!` instead of the reference's `assert_eq!`, and
+  indexing is bounds-checked instead of `get_unchecked` (`unsafe` is forbidden in this
+  crate). Unit tests drive `update_batch` / `merge_batch` / `evaluate` / `state` /
+  `size` directly with `EmitTo::First`, the way DataFusion's own groups-accumulator
+  tests do; the decimal merge test merges three groups with distinct partials
+  across two states and asserts every group, so a decimal-arm index scramble reds
+  exactly it.
+  pins: perf-agg-avg-1/C-001
+- `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
+  per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
+  1000-line ceiling. It re-implements the `datafusion-functions-aggregate-common`
+  `NullState` All/Some fast-path semantics (no new dependency allowed): batches with no
+  nulls and no filter skip tracking entirely, otherwise one validity bit per group with
+  `EmitTo::First` splitting the mask. The unit test pins the split.
+  pins: perf-agg-avg-1/C-001
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
   columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **first** in
-  `analyzer_rules()` (before `SparkDecimalRewrite` then `SparkExprSemantics`).
+  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **second** in
+  `analyzer_rules()` (after `SparkIntegerLiteral`, before `SparkDecimalRewrite` then
+  `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
+  narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.
   Ledger: `task/v2-dec-u3u4-ledger.md`.
+  pins: types-1/C-002
 - `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
   before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
   compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
   from `lib.rs` (`analyzer_rules` + `register_all`). Ledger: `task/r2-dec-close-ledger.md`.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the rule also carries Spark's decimal-cast
+  nullability — `CAST(x AS DECIMAL)` with a non-null child wraps the child in the
+  `__repark_decimal_cast_nullable__` identity UDF, whose `return_field_from_args`
+  declares nullable. The UDF survives the optimizer (physical and analyzed schemas
+  agree), the wrap is idempotent (a wrapped child reads nullable, so re-analysis
+  skips it), and inner decimal arithmetic still rewrites on the way down. The branch
+  sits after the U4a CAST-after stop, so `CAST(arith AS DECIMAL)` keeps its wrap and
+  DEC-9 stays BACKLOG; INT/STRING targets are untouched. A `coalesce(x, NULL)` wrap
+  was measured and rejected: it stays non-null when `x` is non-null.
+  Round 3 (2026-09-05): the rule is nullable-iff-overflow-exposed
+  (`decimal_cast::decimal_cast_can_overflow`: small ints under their digit bound and
+  same-or-wider decimal targets stay non-null); the dead `Boolean` arm is gone —
+  every `BOOLEAN → DECIMAL` cast refuses downstream, so the arm's answer was
+  unobservable (registry `CAST-BOOL-DEC-1`).
+  pins: cutover-schema-1/C-003
 - Integer `+ − *` overflow (**F-Y10-1 C-001**, measured 2026-08-30): same-width
   Int32/Int64 `BinaryExpr` wrapped via Arrow `arrow-arith`; `CAST(INT) + 1`
   widened to Int64 because DataFusion types a bare integer literal as Int64.
   pins: f-y10-1-int-overflow/C-001
+  **TYPES-1 (2026-09-05)** retired the literal-width split below: pure-literal `1 + 1`
+  is `Int32`, `2147483647 + 1` raises under ANSI and wraps when ANSI is off.
+  pins: types-1/C-002
 - `integer_spark.rs` — **F-Y10-1:** checked integer `+` / `-` / `*` UDFs that
   read `SparkAnsiConfig` (DEC U5 shape). `ansi=true` raises Spark's
   `ARITHMETIC_OVERFLOW`; `ansi=false` wraps at the source Arrow type. An
   `ExprPlanner` keeps `CAST(INT) + 1` as Int32 so TypeCoercion cannot widen it.
-  Pure-literal `1 + 1` / `2147483647 + 1` stay Int64 (the intended literal-width
-  split). SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
+  **TYPES-1 (2026-09-05):** the planner leaves pure-literal pairs to the analyzer, which
+  now sees narrowed literals — `1 + 1` is `Int32`, `2147483647 + 1` raises/wraps.
+  SMALLINT/Int16 still Arrow-wraps (residue 2026-08-30; not this partition).
   Lambda-variable operands never arm (FNP-4c interaction; pin
   `lambda_variable_operands_do_not_arm`).
   Planner `Planned` results alias to the original BinaryExpr name so
@@ -185,9 +259,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
   (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` →
-  `SparkIntegerOverflow` → Spark semantics +
-  cardinality + instant_ts; the session installs them via the Spark door's `SessionExtension`;
+  `analyzer_rules()` (`SparkIntegerLiteral` → `SparkDecimalPrecision` →
+  `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
+  cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
+  DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
+  next rule (pins: types-1/C-007); the session installs them via the
+  Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
@@ -317,6 +394,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
   three-row input yields three identical BIGINT values.
   pins: date-fn-1-spark-date-spelling/C-002, C-003
+  **TYPES-1 (2026-09-05):** `parse_session_zone` is `pub(crate)` for
+  `spark_from_unixtime.rs`. pins: types-1/C-006
 - `collection.rs` — `SparkElementAt` (`element_at`; public `element_at_udf()` for the facade embed):
   arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
@@ -345,7 +424,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`trunc(date, fmt)` → `Date32`; invalid fmt → NULL, so `'Q'` is NULL not `QUARTER`), `DateTrunc`
   (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first arg order, overrides DataFusion's native
   `date_trunc`), `DateFormat` (Java-pattern → `Utf8`; `format_java_pattern` handles quoted literals +
-  `y M L d D q Q E H m s` — unsupported letters raise). Each exposed via a named `*_udf()` constructor.
+  `y M L d D q Q E H m s` — unsupported letters raise). TYPES-1 round 4 (2026-09-05): `yyyy`
+  renders Java's leading `+` past 4 digits (pins: types-1/C-006). Each exposed via a named
+  `*_udf()` constructor.
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
   the UDFs through a real `SessionContext` against ISO-8601 / Spark goldens.
@@ -359,6 +440,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);
   SAF-002 downcast evidence + defensive `cast` before `as_primitive`/`as_string` (pin
   `trunc_accepts_large_utf8_format_without_panic`).
+  **TYPES-1 (2026-09-05):** the `date_format` pattern compiler and wall-clock helpers are
+  `pub(crate)` for `spark_from_unixtime.rs`. pins: types-1/C-006
 - `format_version.rs` — **V3-10:** `resolve_alter_format_version` is the one `ALTER … format-version`
   resolver for every door: it parses the request, refuses a downgrade and anything above
   `MAX_SUPPORTED_FORMAT_VERSION` naming the key and both versions, returns `None` for the
@@ -377,6 +460,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   functions. Builders embed the same shims registered by the SQL door, including `unix_date`,
   `bit_length`, regexp/split functions, `shuffle`, `map_from_entries`, and `str_to_map`, so facade
   columns remain self-contained without a `SessionContext`.
+  **TYPES-1 (2026-09-05):** `from_unixtime` builder over the new UDF. pins: types-1/C-006
 
 Facade builders embed the same kernels registered by the SQL door, including `to_timestamp`, `avg`,
 the additional `datafusion-spark` functions, and map builders; keep both dispatch surfaces aligned.

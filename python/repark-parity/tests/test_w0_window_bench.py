@@ -34,6 +34,7 @@ from windows.roster import (  # noqa: E402
     FULL_UNPARTITIONED_ROWS,
     PROBE_NAMES,
     REFUSING_SLIDING_NAMES,
+    RESCANNED_SLIDING_NAMES,
     RETRACT_NAMES,
     constant_select,
     lead_lag_select,
@@ -112,8 +113,9 @@ def test_probe_roster_matches_the_charter_enumeration() -> None:
 
 
 def test_frozen_refuse_set_is_the_measured_thirteen() -> None:
-    """C-009: the refuse subset is a frozen finite list, not a moving guess."""
-    assert REFUSING_SLIDING_NAMES == (
+    """C-009 / WIN-SLIDE-1 C-008: the thirteen once-refusing names are the frozen finite list."""
+    assert REFUSING_SLIDING_NAMES == ()
+    assert RESCANNED_SLIDING_NAMES == (
         "approx_count_distinct",
         "approx_percentile",
         "bit_and",
@@ -128,12 +130,11 @@ def test_frozen_refuse_set_is_the_measured_thirteen() -> None:
         "percentile_approx",
         "try_sum",
     )
-    assert set(REFUSING_SLIDING_NAMES) <= set(PROBE_NAMES)
+    assert set(RESCANNED_SLIDING_NAMES) <= set(PROBE_NAMES)
     assert spec_by_name("approx_count_distinct").sql_expr == "approx_count_distinct(vi)"
     assert ABSENT_PLANNING_NAMES == (
         "any",
         "any_value",
-        "count_if",
         "every",
         "first",
         "kurtosis",
@@ -159,6 +160,23 @@ def test_registry_has_a_heading_per_sliding_refuse() -> None:
     for name in REFUSING_SLIDING_NAMES:
         heading = registry_heading(name)
         assert heading in text, heading
+
+
+def test_every_rescanned_name_has_a_fixed_registry_row() -> None:
+    """WIN-SLIDE-1 C-008: each once-refusing name keeps its heading, now marked FIXED."""
+    registry = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
+    text = registry.read_text(encoding="utf-8")
+    for name in RESCANNED_SLIDING_NAMES:
+        heading = registry_heading(name)
+        assert heading in text, heading
+        row = text.split(heading, 1)[1].split("\n### ", 1)[0]
+        assert "FIXED 2026-09-04 (WIN-SLIDE-1)" in row, name
+
+
+def test_the_frozen_sliding_refuse_set_is_empty() -> None:
+    """WIN-SLIDE-1 C-008: no built-in aggregate refuses a sliding frame any more."""
+    assert REFUSING_SLIDING_NAMES == ()
+    assert len(RESCANNED_SLIDING_NAMES) == 13
 
 
 def test_full_unpartitioned_rows_is_ten_million() -> None:

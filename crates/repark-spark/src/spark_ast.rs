@@ -1,6 +1,7 @@
 //! Spark AST defaults for DataFusion passthrough statements.
 
 use std::ops::ControlFlow;
+use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 use datafusion::common::DFSchema;
@@ -8,8 +9,8 @@ use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::config::Dialect;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
-use datafusion::logical_expr::expr::{Exists, InSubquery};
-use datafusion::logical_expr::{Expr as DataFusionExpr, ExprSchemable, LogicalPlan};
+use datafusion::logical_expr::expr::{Alias, Exists, InSubquery};
+use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
@@ -73,6 +74,7 @@ pub(crate) async fn execute_passthrough(
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
+    let plan = conform_insert_narrowed_ints(ctx, plan).await?;
     let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);
@@ -80,6 +82,63 @@ pub(crate) async fn execute_passthrough(
     // Return materialized command results so later collection cannot re-run the write.
     let batches = dataframe.collect().await?;
     ctx.read_batches(batches)
+}
+
+async fn conform_insert_narrowed_ints(
+    ctx: &SessionContext,
+    plan: LogicalPlan,
+) -> Result<LogicalPlan> {
+    let LogicalPlan::Dml(dml) = plan else {
+        return Ok(plan);
+    };
+    if !matches!(dml.op, WriteOp::Insert(_)) {
+        return Ok(LogicalPlan::Dml(dml));
+    }
+    let input = Arc::clone(&dml.input);
+    let LogicalPlan::Projection(projection) = input.as_ref() else {
+        return Ok(LogicalPlan::Dml(dml));
+    };
+    let Ok(provider) = ctx.table_provider(dml.table_name.clone()).await else {
+        return Ok(LogicalPlan::Dml(dml));
+    };
+    let target = provider.schema();
+    if target.fields().len() != projection.expr.len() {
+        return Ok(LogicalPlan::Dml(dml));
+    }
+    let input_schema = projection.input.schema();
+    let mut exprs: Vec<DataFusionExpr> = Vec::with_capacity(projection.expr.len());
+    let mut changed = false;
+    for (expr, target_field) in projection.expr.iter().zip(target.fields()) {
+        let Ok(source_type) = expr.get_type(input_schema.as_ref()) else {
+            exprs.push(expr.clone());
+            continue;
+        };
+        if source_type == ArrowDataType::Int32 && *target_field.data_type() == ArrowDataType::Int64
+        {
+            let (inner, name) = match expr {
+                DataFusionExpr::Alias(Alias { expr, name, .. }) => {
+                    (expr.as_ref().clone(), name.clone())
+                }
+                other => (other.clone(), target_field.name().clone()),
+            };
+            let cast = DataFusionExpr::Cast(Cast::new(Box::new(inner), ArrowDataType::Int64));
+            exprs.push(cast.alias(name));
+            changed = true;
+        } else {
+            exprs.push(expr.clone());
+        }
+    }
+    if !changed {
+        return Ok(LogicalPlan::Dml(dml));
+    }
+    let conformed = LogicalPlan::Projection(datafusion::logical_expr::Projection::try_new(
+        exprs,
+        Arc::clone(&projection.input),
+    )?);
+    Ok(LogicalPlan::Dml(datafusion::logical_expr::DmlStatement {
+        input: Arc::new(conformed),
+        ..dml
+    }))
 }
 
 async fn try_execute_identity_dml(
@@ -394,9 +453,7 @@ fn spark_source_type_name(source: &ArrowDataType) -> String {
 mod tests {
     use std::sync::Arc;
 
-    use datafusion::arrow::array::{
-        Array, BinaryArray, Int32Array, Int64Array, RecordBatch, UInt64Array,
-    };
+    use datafusion::arrow::array::{Array, BinaryArray, Int32Array, RecordBatch, UInt64Array};
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use datafusion::prelude::SessionContext;
 
@@ -535,7 +592,7 @@ mod tests {
         let first = batches[0]
             .column(0)
             .as_any()
-            .downcast_ref::<Int64Array>()
+            .downcast_ref::<Int32Array>()
             .unwrap();
         assert_eq!(first.value(0), 10, "0-based, shifted exactly once");
         assert!(batches[0].column(1).is_null(0), "negative index is NULL");

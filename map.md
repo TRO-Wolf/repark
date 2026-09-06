@@ -42,6 +42,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-9 (2026-09-03):** `594bdbe5` (F-23 — the DV close skips the data-manifest walk on the pure-DV path when `known_partitions` is complete); DataFusion family frozen.
   **RP-10 (2026-09-04):** `85a4aaf0` (F-25 — `validate_fresh_dvs_only` stops once every `added_dvs` key is found); DataFusion family frozen.
   **RP-11 (2026-09-04):** `189a73ed` (F-24 `#266` — v3 parquet-to-DV honours `min-input-files=5`); DataFusion family frozen.
+  **RP-12 (2026-09-05):** `79119643` (F-26 `#267` DV container close `known_partitions`; F-CATIO `#268` one load per planning round + shared `ObjectCache`, default off — RePark wires it in a follow-up unit).
+  **RP-13 (2026-09-05):** `2ed39cb0` (F-28 `#269` Arrow-kernel partition splitter; F-CATIO-KEY `#270` the shared manifest cache stores the raw parse — `PERF-CATALOG-LINEAGE-CACHE-1` FIXED; the default-ON flip is the next unit; F-27 rides RP-14).
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
@@ -84,7 +86,10 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   must resolve; `make install-hooks` wires both). `.typos.toml`'s `extend-words` carries the domain
   vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
-  port-source pin's own config, never invented to silence a real misspelling.
+  port-source pin's own config, never invented to silence a real misspelling. `.gitignore` also
+  carries `handback.json`, the hand-back artifact an agent writes at the lane root: a `git add -A`
+  picked it up twice during H3-SPILL-1, and it is never repository content.
+  pins: h3-spill-1/C-001
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
   (`repark-parity`). See [python/map.md](python/map.md).

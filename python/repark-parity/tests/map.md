@@ -114,9 +114,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142.
+  H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
+  `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
+  warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
+  second escape rule. pins: h3-spill-1/C-001
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
+  TYPES-1 (2026-09-05): `dataframe/core.py` 6303 → 6305 (increase — the two `__repark_rn` BIGINT casts) and `test_window_parity.py` 1481 → 1422 with the gate table. TYPES-1 round 4 (2026-09-05): `core.py` 6305 → 6303 with the gate table (one import joined absorbs the increase); `datetime.rs` 1704 → 1709 with the gate table (increase — the year-sign arm, no compressible lines, owner approval at merge). TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709 → 1700 with the gate table (the year arm moves to `spark_year_pad.rs`).
   pins: fn-fix-2-string-rows/C-002
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002
   RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142 (pins: rp-7-f18-repin/C-005). V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
@@ -162,6 +167,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
   `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
   pins: rp-8-repin-f21-f22/C-006
+  **RP-12 (2026-09-05):** the meta-pin reads the audited pin `189a73ed` from `docs/fork-sync.md`'s
+  pin history instead of `Cargo.toml`, so the V1-GATE audit stays true across later bumps.
   **RP-9 (2026-09-03):** the same meta-pin moves to `594bdbe5`; R114's dated cell names F-23.
   pins: rp-9-repin-f23/C-004
   **RP-10 (2026-09-04):** the same meta-pin moves to `85a4aaf0`; R114's dated cell names F-25.
@@ -457,11 +464,16 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_w0_window_bench.py` — **W-0:** engine-free pins for the window-shape
   bench (roster equals the charter enumeration, 1e7 unpartitioned constant,
   seeded generator, DuckDB/PySpark pins, thirteen sliding refuses including
-  int64 `approx_count_distinct`, fifteen planning-absent names after FNP-7
-  removed `try_avg`, result model fields, scratch delete in `finally`, no
+  int64 `approx_count_distinct`, fourteen planning-absent names after TYPES-1
+  planned `count_if`, result model fields, scratch delete in `finally`, no
   retry on the error path, WIN-SLIDE registry headings).
+  **WIN-SLIDE-1 (2026-09-04):** the thirteen moved from `REFUSING_SLIDING_NAMES` (now empty) to
+  `RESCANNED_SLIDING_NAMES`; two pins were added —
+  `test_every_rescanned_name_has_a_fixed_registry_row` (each name keeps its `WIN-SLIDE-<name>`
+  heading, now carrying `FIXED 2026-09-04 (WIN-SLIDE-1)`) and
+  `test_the_frozen_sliding_refuse_set_is_empty`.
   pins: w-0-window-bench/C-001, C-002, C-003, C-004, C-007, C-008, C-009, C-010, C-011;
-  fnp-7-try-inversions/C-012.
+  fnp-7-try-inversions/C-012; win-slide-1/C-008.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an

@@ -718,8 +718,8 @@ them, and the document is ordered by surface, never by date.
 
 ### TY-3 — an inline SQL decimal literal
 
-- **repark** — after U2, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is still Int64, so
-  `union(VALUES (1), VALUES (2.5))` yields `decimal128(21,1)` / nullable with `Decimal('1.0')`,
+- **repark** — `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is Int32, so
+  `union(VALUES (1), VALUES (2.5))` yields `decimal128(11,1)` / nullable with `Decimal('1.0')`,
   `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
@@ -738,6 +738,10 @@ them, and the document is ordered by surface, never by date.
   nor Spark's `(11,1)`. Observed type after U3 is still `decimal128(21,1)` **nullable**
   vs Spark `(11,1)` **non-null**. Residual is INT-literal-as-INT, not min-precision
   arithmetic.
+  **Dated 2026-09-05 (TYPES-1):** the width half converged — `VALUES (1)` is `Int32`, so
+  the union is `decimal128(11,1)` like Spark. The declaration is revisited and **kept**
+  on nullability only (**nullable** vs Spark **non-null**).
+  pins: types-1/C-002
 
 ### TY-4 — `createDataFrame` widens Arrow int32 to int64
 
@@ -770,6 +774,87 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — DECLARED until a schema-preserving create path exists. Values stay equal; only
   the container precision/scale widens. The pin asserts source and round-trip Arrow + polars
   dtypes so a silent preservation reds it.
+
+### TY-6 — SQL-text `UNION` of small integer literals answers BIGINT
+
+- **repark** — `SELECT * FROM (SELECT 1 AS r UNION ALL SELECT 2 AS r)` answers `int64` /
+  non-null. The plan-build union schema is computed before the TYPES-1 narrowing pass, so
+  the narrowed branches coerce back to the stale wide schema. Base behaves the same; TYPES-1
+  narrowed every other literal shape but left this one.
+- **Apache Spark** — answers `int32` / non-null with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe.)*
+- **Pin** — none yet; the TYPES-1 ledger §9 records both measured shapes.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Fixing it means re-deriving the
+  union schema after narrowing, which is a planner change beyond a type-widening unit.
+  pins: types-1/C-001
+
+### TY-7 — `COALESCE` of an INT and a narrowed literal answers BIGINT
+
+- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int64` / non-null.
+  DataFusion's own `TypeCoercion` runs before the TYPES-1 narrowing pass and unifies the
+  still-wide literal to BIGINT behind an explicit `CAST`; narrowing then shrinks the
+  literal inside the cast, and the closing coercion keeps the explicit wide type.
+- **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_stays_wide_on_repark`
+  and `::test_live_recoercion_shapes_match_the_oracle`
+  (pins the `(int64, int32)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Stripping DataFusion's
+  explicit casts would re-open the UNION division rewrite the §10 placement closed; the
+  placement keeps the wide answer on this shape.
+  pins: types-1/C-001
+
+### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
+
+- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int32` /
+  non-null with Spark's values, and is also accepted under a plain `GROUP BY i`
+  (all zeros) and with several arguments (bitmask). All three come from DataFusion's
+  `ResolveGroupingFunction`, which hardcodes the `CAST(... AS Int32)` expansion;
+  TYPES-1 narrowed no grouping shape.
+- **Apache Spark** — answers `int8` / non-null with the same values on the grouping-set
+  shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
+  `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
+  round-4 probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
+  `::test_grouping_under_plain_group_by_is_accepted`, and
+  `::test_live_grouping_sets_match_on_value_with_type_carve_out`
+  (pins the `(int32, int8)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Spark parity needs a repark
+  grouping layer (tinyint answer, grouping-set-context refusal, one-arg arity); a post-rule
+  recast would couple to DataFusion's internal `__grouping_id` expansion shape, and the
+  arity is already lost after expansion.
+  pins: types-1/C-004
+
+### TY-9 — `ntile` accepts a BIGINT bucket count
+
+- **repark** — `SELECT ntile(CAST(2 AS BIGINT)) OVER (ORDER BY i)` is accepted and
+  answers `int32` / non-null `[1, 1, 2]`. The signed window wrapper delegates its
+  signature to DataFusion's `ntile`, which takes every integer width; TYPES-1 changed
+  only the answer width. The facade shape does not exist: both `ntile` facades take a
+  plain integer, not a column.
+- **Apache Spark** — refuses with `DATATYPE_MISMATCH` (`ntile` requires INT). *(oracle:
+  live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared int/bigint/string
+  seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_ntile_with_bigint_argument_is_accepted`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Plan-time refusal needs
+  argument validation the window wrapper has no hook for; that machinery is its own unit.
+  pins: types-1/C-005
+
+### TY-10 — facade `decimal + lit(1)` skips literal min-precision
+
+- **repark** — `F.col("b").cast("decimal(10,2)") + F.lit(1)` answers `decimal128(13, 2)`,
+  the typed-INT width, while the SQL door's `CAST(b AS DECIMAL(10, 2)) + 1` answers
+  `decimal128(11, 2)`. The facade literal never presents the bare-literal shape the
+  min-precision arm matches, so the typed arm fires instead. Predates TYPES-1 (facade
+  literals were `Int32` before narrowing); TYPES-1 left the facade shape alone.
+- **Apache Spark** — answers `decimal128(11, 2)` on both doors with the same values.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared
+  int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Min-precision matching is
+  decimal-precision territory; widening the arm to facade literal shapes is its own unit.
+  pins: types-1/C-001
+
 ### TZ-2 — the session-timezone default is `UTC`
 
 - **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set
@@ -1200,9 +1285,11 @@ the pin rather than obeying it.
   claim is retired: this repository has never recorded a non-ANSI NULL for this recipe, and the
   live session is ANSI ON. *(oracle: recorded — PySpark 4.1.2, ANSI on.)*
 - **Pin** — the oracle-backed home is now
-  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The ONE remaining
-  live divergence under ANSI ON is
-  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5), and it is nullability only. Equality
+  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The remaining
+  live divergences under ANSI ON are
+  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5), and it is nullability only, plus
+  [CAST-NULL-1](#cast-null-1--non-decimal-cast-nullability-keeps-or-flips-the-child-where-spark-does-the-opposite)
+  (four non-decimal cast-target nullability cells, likewise nullability only). Equality
   pins: `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
   `…[try_cast_malformed_string_to_int_null]`, `…[try_cast_overflow_tinyint_null]`.
 - **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed, and again 2026-08-15 when
@@ -1210,7 +1297,8 @@ the pin rather than obeying it.
   the recorded corpus. The sentence this bullet used to carry — "the residual silently-wrong-result
   class is G6-3 (DATE→INT)" — became false at that commit: G6-3 and G6-5 are both CLOSED, the
   corpus grew 10 → 15 rows recording all five converged doors, and what is left under ANSI ON is
-  G6-4's CAST nullability (value+type already agree after #64).
+  G6-4's CAST nullability (value+type already agree after #64) plus CAST-NULL-1's four
+  non-decimal target cells (filed 2026-09-05; likewise nullability only, values agree).
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
@@ -1536,15 +1624,18 @@ the pin rather than obeying it.
 
 ### DEC-5 — `INT * DECIMAL` result width and nullability
 
-- **repark** — `5 * CAST(1.50 AS DECIMAL(10,2))` yields `decimal128(12,2)` **non-null** with
-  value `7.50` (U3 `fromLiteral`: the integer literal `5` is `DECIMAL(1,0)`). Typed
+- **repark** — **FIXED 2026-09-05 (CUTOVER-SCHEMA-1 round 3).** `5 * CAST(1.50 AS
+  DECIMAL(10,2))` yields `decimal128(12,2)` **nullable** with value `7.50` (U3
+  `fromLiteral`: the integer literal `5` is `DECIMAL(1,0)`; the operand cast is
+  overflow-exposed, hence nullable, so the product is nullable). Typed
   `CAST(5 AS INT) * …` stays `(21,2)`.
 - **Apache Spark** — yields `decimal128(12,2)` **nullable** with the same value. *(oracle:
-  recorded.)*
-- **Pin** — `[int_times_decimal_promotes_wider_in_repark]` (still a disclosure — nullability)
-  + Rust `pin_int_times_decimal_is_12_2_i128`
-- **Rationale** — BACKLOG, **width closed**. Campaign DEC-8 / U3 (`#91`) closed the
-  **width**. Nullability is DEC-9. Do not mark this row FIXED until both faces close.
+  recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
+- **Pin** — `[int_times_decimal_promotes_wider_in_repark]` (now an equality — nullable
+  on both engines) + Rust `pin_int_times_decimal_is_12_2_i128` (now asserts nullable)
+- **Rationale** — FIXED. Campaign DEC-8 / U3 (`#91`) closed the **width**;
+  CUTOVER-SCHEMA-1 closed **nullability** through the decimal-cast rule. Both faces now
+  agree with Spark.
 
 > **Name collision.** Campaign DEC-8 is integer-literal min-precision (this width).
 > Registry DEC-8 is `(38,20)*(38,20)` plan-refuse — a different class.
@@ -1586,15 +1677,19 @@ the pin rather than obeying it.
 
 ### DEC-9 — overflow-capable binary arithmetic is marked non-null
 
-- **repark** — marks small mul/add results **non-null** while values and `(p,s)` agree with
-  Spark: `9*9` → `(3,0)` non-null `81`; `9+9` → `(2,0)` non-null `18`; `999*999` → `(7,0)`
-  non-null `998001`.
+- **repark** — the three pinned cells now match Spark's nullable marking at the same types
+  and values: `9*9` → `(3,0)` nullable `81`; `9+9` → `(2,0)` nullable `18`; `999*999` → `(7,0)`
+  nullable `998001`. The nullability arrives through the overflow-exposed operand casts
+  (`CAST(int AS DECIMAL)` is nullable), which the op propagates. Re-measured 2026-09-04
+  (CUTOVER-SCHEMA-1).
 - **Apache Spark** — marks the same results **nullable** (overflow-capable binary arithmetic) at
   the same types and values. *(oracle: recorded.)*
 - **Pin** — `[mul_single_digit_nullability_differs]`, `[add_single_digit_nullability_differs]`,
   `[mul_three_digit_capacity_nullability_differs]`
-- **Rationale** — BACKLOG, intent to FIX (gap G13). Nullability-only pin; a schema-sensitive
-  consumer that trusts non-null is wrong under repark's marking.
+- **Rationale** — BACKLOG, intent to FIX (gap G13), narrowed 2026-09-04 (CUTOVER-SCHEMA-1):
+  the pinned int-operand cells converged through the decimal-cast rule and now assert
+  equality; what stays open is overflow-capable marking where the operands are genuinely
+  non-null (null-safe casts), whose Spark answer is not yet measured.
 
 > **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
 > re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are
@@ -1865,7 +1960,9 @@ the pin rather than obeying it.
 - `live-mirror: cast_timestamp_to_int_nullability`
 - **Rationale** — BACKLOG, intent to FIX or DECLARE (same class as G12 null-safe-equal
   nullability). X-1 originally queued this as raise-vs-value; #64 un-refused the INT path
-  and the residual is nullability only (`task/tz5-cast-seconds-ledger.md` §10).
+  and the residual is nullability only (`task/tz5-cast-seconds-ledger.md` §10). Re-measured
+  unchanged 2026-09-04 (CUTOVER-SCHEMA-1): the analyzer rule covers decimal targets only, so
+  this cell still reads int32 non-null.
 
 ### G12-1 — null-safe equal result nullability (SQL `<=>`)
 
@@ -1876,7 +1973,8 @@ the pin rather than obeying it.
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
 - `live-mirror: null_safe_eq_sql_nullability`
 - **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12). VALUE already matches; only
-  schema nullability diverges.
+  schema nullability diverges. Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in
+  this unit touches null-safe equal.
 
 ### G12-2 — null-safe equal result nullability (DataFrame `eqNullSafe`)
 
@@ -1886,6 +1984,46 @@ the pin rather than obeying it.
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
 - `live-mirror: null_safe_eq_df_nullability`
 - **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12 — DF door twin of G12-1).
+  Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in this unit touches null-safe
+  equal.
+
+### CAST-NULL-1 — non-decimal CAST nullability keeps or flips the child where Spark does the opposite
+
+- **repark** — from a non-null child, `CAST('1' AS INT)` answers int32 **non-null** `1`,
+  `CAST('2020-01-01' AS DATE)` answers date32 **non-null**, `CAST('2020-01-01 00:00:00'
+  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **non-null**, and `CAST(DATE '2020-01-01'
+  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **nullable** — identically under ANSI on
+  and off. Values match Spark on all four cells.
+- **Apache Spark** — the same four casts answer int32 **nullable**, date32 **nullable**,
+  `timestamp[us, tz=UTC]` **nullable**, and `timestamp[us, tz=UTC]` **non-null** —
+  identically under ANSI on and off. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
+  2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_cutover_schema_1.py::test_cast_null_1_non_decimal_targets_keep_or_flip_the_child`
+  (asserts repark's four current nullability answers under both ANSI modes; the fix reds
+  it on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing:
+  this unit's analyzer rule covers decimal targets only and never touched these cells.
+  The string-source casts can fail at runtime (hence nullable on Spark); the
+  date-to-timestamp cast cannot (hence non-null). The unit's ledger R-4 first recorded
+  "keeps the child" as oracle truth; the round-3 measurement corrects it.
+
+### CAST-BOOL-DEC-1 — `BOOLEAN → DECIMAL` refuses where Spark answers `1.00`
+
+- **repark** — `SELECT CAST(true AS DECIMAL(10,2)) AS v` refuses on BOTH doors with
+  `UnsupportedOperationException` (`Optimizer rule 'simplify_expressions' failed`, caused
+  by `This feature is not implemented: Unsupported CAST from Boolean to
+  Decimal128(10, 2)`) — identically under ANSI on and off.
+- **Apache Spark** — answers `decimal128(10,2)` **non-null** `1.00` under both ANSI modes.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_cutover_schema_1.py::test_bool_to_decimal_cast_refuses_on_both_doors`
+  (asserts the refusal needle on the facade under both ANSI modes and on the native
+  door; the fix reds it on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing: no
+  rule in this unit or earlier ones teaches the planner a boolean-to-decimal cast. The
+  decimal-cast nullability rule's `Boolean` arm was dead exactly because of this
+  refusal and was removed in the same round.
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 
@@ -1909,6 +2047,55 @@ the pin rather than obeying it.
   and `crates/repark-spark/src/tests/float_agg.rs::pin_avg_f64_bits_at_target_partitions_2`
 - `live-mirror: avg_catastrophic_cancellation_fixture`
 - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
+
+### FLOAT-AGG-3 — grouped avg over 1e16 plus 64 ones
+
+- **repark** — grouped `avg(v)` over one group holding `[1e16, 1.0 × 64]` lands
+  **153846153846153.84**. The groups path sums per element in row order; the base
+  summed through Arrow's lane-chunked kernel, so grouped float avgs change
+  bit-for-bit vs the base. Type: Arrow `float64` nullable.
+- **Apache Spark** — the same recipe under `local[2]`, ANSI on, lands
+  **153846153846154.34**, grouped and global alike — a 3.3e-15 relative gap, inside
+  1e-12. *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_grouped_float_drift_within_spark`
+  (repark's exact value plus within-1e-12 of the recorded Spark value) and
+  `python/repark/tests/test_perf_agg_avg_1.py::test_live_grouped_float_drift_within_spark`
+  (live re-derivation against the oracle).
+- **Rationale** — follows FLOAT-AGG-1/2 (same accumulation-order class); the grouped
+  shape is new in PERF-AGG-AVG-1. Value diverges, type agrees. DECLARE candidacy
+  until a G7 fix lands.
+
+### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps with a representable quotient
+
+- **repark** — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
+  i128 answer the wrapped quotient at `decimal128(38, 4)` instead of NULLing or
+  raising. The zero-wrap fixture (three maxima plus
+  `40282366920938463463374607431768211459`, summing to exactly 2^128) answers
+  **`0.0000`** on the SQL doors (grouped, and global on the native door); the
+  non-zero-wrap fixture (complement `40282366920938463463374607431768611459`,
+  wrapping to 400000) answers **`100000.0000`** on grouped SQL and grouped
+  DataFrame. Window `try_avg` answers `[None, None, None, 0.0000]`; window `avg`
+  raises `Arithmetic Overflow`.
+- **Apache Spark** — the same fixtures under `local[2]`, ANSI on: grouped `try_avg`
+  answers **None** and grouped `avg` raises **ARITHMETIC_OVERFLOW** (`Overflow in
+  sum of decimals`) on both fixtures, SQL and DataFrame alike (global likewise on
+  the zero-wrap fixture); window `try_avg` answers four **None**s; window `avg`
+  raises **NUMERIC_VALUE_OUT_OF_RANGE** (the first-row quotient is itself
+  unrepresentable at `Decimal(38, 4)`). The return type agrees wherever a value is
+  returned.
+  *(oracle: recorded 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
+  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
+  window `try_avg` list and the window `avg` raise; reds when fixed).
+- **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
+  the general wrap class in round 3 R2-1).
+  Pre-existing: the global `Accumulator` arms are byte-identical to the base (that
+  unit's ledger C-002), so the global shape cannot have changed there; the new groups
+  path inherits the same wrapping add. The unit's `try_avg`-yields-NULL claim covers
+  only the 2×-MAX shape. A fix needs overflow latching in the groups, global and
+  retract paths — not a one-line checked add.
 
 ### G18-1 — array-column list value-field name (`item` vs `element`)
 
@@ -2037,27 +2224,31 @@ the pin rather than obeying it.
 - **Rationale** — DELIBERATE refusal, low priority to fix. The facade's only fallback is the
   Cartesian path, which returns an m×n result set — a wrong answer, not a narrower one.
 
-### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type
+### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `uint64` non-null (values match Spark).
+- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `int32` non-null (values match Spark).
 - **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[rank_with_ties]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). SQL door leaves DataFusion UInt64; DF-API
-  door already casts row_number to IntegerType.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[rank_with_ties]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` UDF-registration wrappers
+  answer `Int32` for the rank family over the DataFusion kernels. pins: types-1/C-005
 
-### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order)
+### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order) — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `row_number() OVER (ORDER BY k, id)` → `uint64`.
+- **repark** — `row_number() OVER (ORDER BY k, id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[row_number_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Sibling of G5-RANK-TYPE-1.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[row_number_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Sibling of G5-RANK-TYPE-1. pins: types-1/C-005
 
-### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type
+### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `ntile(4) OVER (ORDER BY id)` → `uint64`.
+- **repark** — `ntile(4) OVER (ORDER BY id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Completes the ranking-family type class.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Completes the ranking-family type class.
+  pins: types-1/C-005
 
 > **Temporal `RANGE` window frames — supported, with a corrected bare-offset envelope
 > (G5b / #62, 2026-08-11).** A `RANGE` frame bounded by an interval over a `TIMESTAMP` or
@@ -2239,26 +2430,23 @@ the pin rather than obeying it.
   guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
   permanently documents absence without a silent path.
 
-### BL-8 — SQL-door count-like aggregates return `UInt64`
+### BL-8 — SQL-door count-like aggregates return `UInt64` — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** casts a count-like aggregate to signed `bigint`
-  (`df.agg(F.regr_count("y", "x"))` → `int64`, `F.approx_count_distinct` likewise), taken from the
-  aggregate's own declared return type rather than a name list. The **SQL door** does not:
-  `SELECT regr_count(y, x)` and `SELECT approx_distinct(g)` hand back Arrow `UInt64`. So the two
-  doors reach the same kernel and disagree on the result type.
+- **repark** — both doors answer signed `bigint`: the **facade** casts from the aggregate's
+  declared return type, and the **SQL door** resolves `regr_count`/`approx_distinct` to
+  `SignedAggregate` UDF-registration wrappers over the DataFusion kernels (later registration
+  wins) and adds a native-`Int64` `count_if` UDAF — no analyzer rule, no plan CASTs
+  (`SELECT regr_count(y, x)`, `SELECT approx_distinct(g)`, `SELECT count_if(...)` → `int64`).
 - **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
   *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
   `approx_count_distinct` → `struct<r:bigint>`.)*
-- **Pin** — `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`,
-  whose `DOOR_RETURNS_UNSIGNED` set is a **ratchet**: the pin asserts the door still returns
-  unsigned, so closing this row turns it RED on purpose.
-- **Rationale** — BACKLOG, split deliberately. The facade is the surface the parity campaign is
-  about and it is now correct; correcting the door means moving the cast into the shared analyzer
-  layer, where the rewrite must be idempotent across re-analysis and must not rename an `Aggregate`
-  node's output field that a parent `Projection` refers to by name. That is an engine-semantics
-  unit. Recorded rather than left as a STATUS promise, because a `UInt64` column written to
-  Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
-  the gap is on disk, not just in a schema string.
+- **Pin** — `python/repark/tests/test_types_1.py` count-like pins;
+  `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
+  (its `DOOR_RETURNS_UNSIGNED` set ratcheted to empty).
+- **Rationale** — FIXED (2026-09-05, TYPES-1). The sign conversion moved into
+  UDF-registration wrappers that preserve the inner kernels' names, aliases, signatures,
+  and `Aggregate` output field names.
+  pins: types-1/C-003
 
 ### RE-2 — a zero-width match at a mid-surrogate position
 
@@ -2530,43 +2718,34 @@ the pin rather than obeying it.
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.
 
-### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one
+### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one — **FIXED 2026-09-05, TYPES-1**
+
+*(Nullability half closed 2026-09-04 by CUTOVER-SCHEMA-1; width half closed 2026-09-05 by
+TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 - **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
-  id, 'a' AS name` writes `{"name": "id", "required": true, "type": "long"}` and
-  `{"name": "name", "required": true, "type": "string"}` into the table metadata — wider and
-  **required**. The rows round-trip and the format version and partition spec are Spark-equal;
-  the divergence is the derived schema.
+  id, 'a' AS name` writes `{"name": "id", "required": false, "type": "int"}` and
+  `{"name": "name", "required": false, "type": "string"}` into the table metadata — the
+  literal's own width and **optional**. The rows round-trip and the format version
+  and partition spec are Spark-equal.
 - **Apache Spark** — writes `{"name": "id", "required": false, "type": "int"}` and
   `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
   own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
   raw metadata JSON 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
-  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
-  `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
-  derivation, not the type mapping.
-- **Rationale** — BACKLOG, two causes in one cell and neither is local. **Width:** DataFusion
-  types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
-  `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
-  would make CTAS disagree with every other repark path. **Nullability:** the open question is
-  which default the create path keeps — Spark's optional-by-default CTAS derivation, or repark's
-  required. It is not a one-line flip in either direction: SE-1's tighten-derived refusal
-  (`ctas.rs`, R-D) already refuses an Iceberg CREATE whose output carries a non-nullable field
-  from a tighten-derived source, so a `required` derived column is the state that path treats as
-  load-bearing, and relaxing the derivation to `optional` moves what that guard sees. The
-  decision is create-path policy, not a defect in this statement. Both causes are recorded here
-  with the measured cell so the next unit starts from the reading rather than the surprise.
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]` (verdict now EQUAL);
+  the column-def `[create-v3-flat]` control stores `id int` optional on BOTH engines.
+- **Rationale** — FIXED (nullability 2026-09-04 CUTOVER-SCHEMA-1; width 2026-09-05 TYPES-1).
+  Integer literals narrow to `INT` on every path, so the CTAS derivation agrees with Spark.
+  pins: types-1/C-001
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
-- **repark** — `CREATE TABLE IF NOT EXISTS t USING iceberg TBLPROPERTIES (format-version 2 or 3,
-  write.*.mode = merge-on-read or copy-on-write, write.target-file-size-bytes = 268435456) AS
-  SELECT * FROM staging_view` over a single-file parquet of VARCHAR / TIMESTAMP / DECIMAL(10,4)
-  / INT / nullable STRING copies the parquet nullability into Iceberg: `id` /
-  `ingestion_timestamp` / `part` required, `amount` / `units` / `note` optional. The Arrow
-  read-back matches (`id`/`part` non-null). Row values match Spark. Copy-on-write MERGE
-  (S8/S9) keeps the same requiredness after `UPDATE SET *` / `INSERT *`; `delete_files` is
-  empty on both engines (not this row).
+- **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field
+  optional (`required: false`) and reads every Arrow field nullable. Row values match Spark.
+  Copy-on-write MERGE (S8/S9) keeps every field optional after `UPDATE SET *` / `INSERT *`;
+  `delete_files` is empty on both engines (not this row). The CTAS-REQ programs still DIVERGE
+  on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`).
 - **Apache Spark** — the same CTAS stores every field optional (`required: false`) and reads
   every Arrow field nullable. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
 - **Pin** —
@@ -2574,9 +2753,11 @@ the pin rather than obeying it.
   and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
   `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
-- **Rationale** — BACKLOG. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
-  on requiredness only: types here match the parquet schema. Create-path policy, not a local
-  one-line flip (same SE-1 tighten-derived refusal V3-COV-8 names).
+- **Rationale** — FIXED. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
+  on requiredness only: types here match the parquet schema. The parquet reader now relaxes
+  non-null file nullability to nullable, and CTAS derives Iceberg requiredness from the
+  relaxed query schema, so the committed schema is optional throughout. SE-1's
+  tighten-derived refusal still guards the genuinely non-nullable case.
 
 ### CUTOVER-MERGE-FILES-1 — MoR `MERGE` `UPDATE SET *` / `INSERT *` writes extra delete files; the row set is Spark-equal and the second pass is row-idempotent
 
@@ -2602,20 +2783,45 @@ the pin rather than obeying it.
 
 ### CUTOVER-DEDUP-SCHEMA-1 — silver dedup values match Spark; Arrow type and nullability do not
 
-- **repark** — `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then
-  `= 1`, then `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)`
-  answers rows `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is
-  `id string_view not null`, `amount decimal128(10,4) not null`, `units int32 not null`,
-  `note string not null`, `part int32 not null`.
+- **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).**
+  `row_number() OVER (PARTITION BY id ORDER BY ingestion_timestamp DESC)` then `= 1`, then
+  `coalesce(col, lit(default)).cast(DecimalType(10,4)|IntegerType|StringType)` answers rows
+  `[A, 0.0000, 0, unknown, 10]` / `[B, 2.5000, 2, keep, 20]`. Arrow schema is `id string
+  nullable`, `amount decimal128(10,4) nullable`, `units int32 not null`, `note string not
+  null`, `part int32 nullable` — Spark-equal cell for cell, so s3 as a program is EQUAL.
 - **Apache Spark** — the same rows. Arrow schema is `id string nullable`, `amount
   decimal128(10,4) nullable`, `units int32 not null`, `note string not null`, `part int32
   nullable`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
   `python/repark/tests/test_sql_harden_cutover.py::test_sql_harden_row_reproduces_the_measured_repark_answer[s3-dedup-coalesce-cast]`
-  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`.
-- **Rationale** — BACKLOG. Values are Spark-equal. `string_view` is the parquet-read Utf8View
-  path (CTAS-VIEW-1 writes it; this row is the transform before a write). Nullability after
-  `coalesce` is analyzer-level.
+  and live `…::test_sql_harden_row_matches_the_live_spark_oracle[s3-dedup-coalesce-cast]`;
+  the export-boundary coercion surface is pinned by
+  `crates/repark-python/src/arrow_export.rs::tests::non_string_widening_mismatch_casts_losslessly`
+  + `…::uncastable_mismatch_errors_loud`.
+- **Rationale** — FIXED. The Arrow export boundary coerces Utf8View to Utf8 (a per-batch
+  Arrow `cast` — a copy — at the export boundary; `coerce_batch_views` casts any
+  analyzed-vs-physical mismatch under safe cast options, so a non-string mismatch either
+  widens losslessly or refuses loud), and decimal-cast nullability derives from the
+  cast's overflow exposure the way Spark derives it, so the analyzer-level
+  `coalesce`/`cast` nullability lands on Spark's answer (`units`/`note` stay non-null,
+  the rest nullable).
+
+### CUTOVER-NULLDEPTH-1 — `read.parquet` relax stops at depth 32; Spark relaxes every level
+
+- **repark** — `relax_schema_to_nullable` (`crates/repark-core/src/spark_nullable.rs`)
+  recurses to `MAX_NESTED_TYPE_DEPTH = 32`. A 40-deep required struct reads back nullable
+  down to level 33 and **non-null from level 34** (root is level 0).
+- **Apache Spark** — reads the same file back nullable at **every** level (root plus all
+  40). *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+- **Pin** —
+  `crates/repark-core/src/spark_nullable.rs::tests::deep_nesting_completes_with_nullable_flags`
+  (600-deep: the first 33 nested levels nullable, the rest non-null) plus
+  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_relaxes_only_to_depth_32`
+  (40-deep file: first non-null at level 34). Both codify today's bound; the fix reds
+  them on purpose.
+- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). The bound is the
+  recursion guard the module was written with; lifting or removing it is queued rather
+  than taken here. The unit's C-001 now states the bound.
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
@@ -2625,8 +2831,9 @@ the pin rather than obeying it.
   string it parses `yyyy-MM-dd HH:mm:ss` in the session zone. The S6 gold join builds `fct`
   and `agg`; after the second-day insert and `INSERT OVERWRITE` the fact rows are
   `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and the clinic-day agg is two rows. S6 as a
-  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`)
-  and `COUNT(*)` Arrow nullability. PySpark has no `F.date`.
+  program still DIVERGES on `V3-COV-7` (Spark stamps `write.parquet.compression-codec = zstd`).
+  `COUNT(*)` Arrow nullability matches Spark since 2026-09-04 (CUTOVER-SCHEMA-1). PySpark has
+  no `F.date`.
 - **Apache Spark** — the same SQL builds `fct` and `agg`. After a second-day insert and
   `INSERT OVERWRITE` of the fact, rows are `(s1, 10, 15), (s2, 20, 40), (s3, 10, 15)` and
   the clinic-day agg is two rows. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-04.)*
@@ -2748,20 +2955,20 @@ the pin rather than obeying it.
   engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
   `ceil(total / target)` sizing, which is fork work.
 
-### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
+### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
-  a TIMESTAMP value for the same call.
+- **repark** — both doors return a session-zone STRING (`'1970-01-01 00:00:00'` at UTC): the
+  SQL door overwrites DataFusion's `from_unixtime` with a Spark kernel (1- and 2-arg shapes).
+  Nullable on both doors, like Spark (even for non-null input).
 - **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
   *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
   session zone is not UTC; repark's default zone is UTC by registry row
   [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
   differs by that already-declared row, not by this one.)*
-- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
-- **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
-  A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
-  would have written a string. Not closed here because it changes what a working query
-  returns (the same class of break `LOG-1` needed a dated ruling to take).
+- **Pin** — `python/repark/tests/test_types_1.py` `from_unixtime` pins (the LRS-4 UNIX-1
+  divergence pin retired with the row).
+- **Rationale** — FIXED (2026-09-05, TYPES-1).
+  pins: types-1/C-006
 
 ### V3-LINEAGE-1 — `rewrite_data_files` carries row lineage through format-v3 compaction
 
@@ -3635,6 +3842,18 @@ the pin rather than obeying it.
   example backlog until the encoder emits Spark's padding; teaching the unpadded form would
   assert a silent wrong answer.
 
+### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null
+
+- **repark** — both answer `int64` with Spark's values (TYPES-1 fixed the `UInt64` half under
+  BL-8) but derive **nullable** from the wrapped DataFusion kernels.
+- **Apache Spark** — answers `int64` / **non-null** with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
+  (pins the `(True, False)` nullability pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Nullability derivation is
+  CUTOVER-SCHEMA-1's domain and out of TYPES-1's charter; the pin holds the divergence.
+  pins: types-1/C-003
+
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
 - **repark** — **FIXED 2026-09-04 (FN-FIX-2).** a word starts only after SPACE
@@ -3671,111 +3890,341 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: the facade wrappers took one argument only.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): an empty trim set is a no-op and a NULL trim set answers NULL on both engines.
 
-### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31)
+### WIN-SLIDE — non-retractable aggregates over a sliding frame (W-0, 2026-08-31) — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
 Spark evaluates an aggregate over `ROWS BETWEEN n PRECEDING AND CURRENT ROW` even when the
-aggregate has no inverse (it re-scans the frame). DataFusion 54.1 refuses at execution:
+aggregate has no inverse (it re-scans the frame). DataFusion 54.1 evaluates a sliding frame
+through `Accumulator::retract_batch` and refused at execution when an accumulator has none:
 `Aggregate can not be used as a sliding accumulator because retract_batch is not implemented`.
 W-0 measured the Spark 4.1.2 built-in aggregate roster; names that do not plan at all are
-**absent** (not these rows). Names that plan and then refuse are the thirteen headings below.
-`approx_count_distinct` is probed on int64; on Float64 it fails earlier with a type gap.
-W-1 picks the fallback (Spark re-scan vs segment tree). *(oracle: live RePark probe, 2026-08-31;
-Spark half is documented SlidingWindowFunctionFrame plus the W-0 PySpark 4.1.2 cell.)*
+**absent** (not these rows). Names that planned and then refused are the thirteen headings below.
 
-Shared pin for every heading:
+**WIN-SLIDE-1 (2026-09-04) closed all thirteen with one mechanism**, not thirteen: every core
+session carries the `sliding_frame_rescan` analyzer rule
+([crates/repark-core/src/session/df_guards/window_rescan.rs](../crates/repark-core/src/session/df_guards/window_rescan.rs)).
+For an aggregate window function over a frame DataFusion would evaluate with retraction, the rule
+probes `create_sliding_accumulator`; when that accumulator cannot retract, the aggregate is wrapped
+as a `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a **fresh**
+accumulator — Spark's own `AggregateWindowFunction` strategy, at Spark's O(frame x rows) cost.
+Retractable aggregates (`sum`, `avg`, `min`, `max`, `count`, the `stddev` / `var` family) keep
+DataFusion's sliding accumulator untouched — which is a decision, not a free lunch: retraction is
+not re-scanning, and `WIN-SLIDE-FLOAT-1` measures where the two part company on floating point.
+The fallback is by capability, not by name: a newly
+registered aggregate with no `retract_batch` gets it automatically
+(`crates/repark-core/src/session/tests/window_rescan.rs`).
+`FILTER (WHERE ...)` and `DISTINCT` ride through the re-scan and are pinned; the `IGNORE NULLS`
+flag DataFusion's SQL dialect accepts on an aggregate (Spark does not, outside
+`first` / `last` / `nth_value`) is carried into the accumulator's arguments unchanged. An empty
+frame answers a fresh accumulator's `evaluate()` (so `collect_list` answers `[]` and
+`approx_count_distinct` answers `0`), never the aggregate's `default_value`.
+*(oracle: live PySpark 4.1.2, 2026-09-04; the refusal half is the W-0 live RePark probe,
+2026-08-31.)*
+
+Shared roster pin for every heading:
 `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_heading_per_sliding_refuse`.
+(the frozen refuse set is now empty) and
+`python/repark-parity/tests/test_w0_window_bench.py::test_every_rescanned_name_has_a_fixed_registry_row`.
 
-### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses
+### WIN-SLIDE-approx_count_distinct — `approx_count_distinct` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `approx_count_distinct(vi)` over `ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW` plans, then raises the sliding-accumulator `retract_batch` refusal. On Float64 the same name fails earlier (`approx_distinct` not implemented for that type) and is not this row.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `approx_count_distinct(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. An empty frame answers `0` (a fresh HLL sketch), not NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_count_distinct]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses
+### WIN-SLIDE-approx_percentile — `approx_percentile` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `approx_percentile(v, 0.5) OVER (ORDER BY id ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)` raises the sliding-accumulator `retract_batch` refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. Functional parity gap, not a perf gap. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `approx_percentile(v, 0.5)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-approx_percentile]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses
+### WIN-SLIDE-bit_and — `bit_and` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bit_and(vi)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bit_and(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_and]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses
+### WIN-SLIDE-bit_or — `bit_or` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bit_or(vi)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bit_or(vi)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. NULL inputs are skipped; an all-NULL frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bit_or]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses
+### WIN-SLIDE-bool_and — `bool_and` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bool_and(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bool_and(b)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `min` shim and is unchanged.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_and]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses
+### WIN-SLIDE-bool_or — `bool_or` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `bool_or(vi <> 0)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `bool_or(b)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The SQL door reaches the UDAF; the DataFrame door was already a `max` shim and is unchanged.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-bool_or]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses
+### WIN-SLIDE-collect_list — `collect_list` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `collect_list(v)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1. The intake named this class first.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `collect_list(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Frame row order is preserved and an empty frame answers `[]`, both Spark-measured.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_list]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses
+### WIN-SLIDE-collect_set — `collect_set` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `collect_set(v)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `collect_set(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Element order is Spark-unspecified; the pin asserts the sorted multiset. Empty frame answers `[]`.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-collect_set]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-corr — `corr` over a sliding frame refuses
+### WIN-SLIDE-corr — `corr` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `corr(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `corr(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Re-scanning carries no retraction drift: every frame is summed from its own rows, so a 1e5-row run matches Spark exactly rather than to a tolerance. Fewer than two valid pairs answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-corr]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses
+### WIN-SLIDE-covar_pop — `covar_pop` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `covar_pop(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `covar_pop(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. One valid pair answers `0.0`; an empty frame answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_pop]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses
+### WIN-SLIDE-covar_samp — `covar_samp` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `covar_samp(v, v2)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `covar_samp(v, v2)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. Fewer than two valid pairs answers NULL.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-covar_samp]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses
+### WIN-SLIDE-percentile_approx — `percentile_approx` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `percentile_approx(v, 0.5)` over the same sliding frame raises the sliding-accumulator refusal.
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1. The intake named this class.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `percentile_approx(v, 0.5)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. The discrete data value of each frame; the accuracy knob stays ignored (`WIN-SLIDE-PCT-ACC-1`).
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-percentile_approx]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses
+### WIN-SLIDE-try_sum — `try_sum` over a sliding frame refuses — **FIXED 2026-09-04 (WIN-SLIDE-1)**
 
-- **repark** — `try_sum(v)` over the same sliding frame raises the sliding-accumulator refusal (group `try_sum` plans; sliding does not).
-- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame. *(oracle: documented.)*
-- **Pin** — `python/repark/tests/test_w0_window_bench_smoke.py::test_sliding_refuse_set_matches_the_frozen_roster`
-- **Rationale** — BACKLOG. W-1.
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `try_sum(v)` answers Spark's column over every
+  sliding frame on both doors — a `ROWS` frame with both bounds, a `RANGE` frame, a frame with
+  NULLs in the column, an empty frame, a partition boundary, and `CURRENT ROW … UNBOUNDED
+  FOLLOWING`. An overflow inside the frame answers NULL for that row only, Spark-measured on `try_sum(ov)` over BIGINT values at `Long.MaxValue`.
+- **Apache Spark** — accepts the aggregate as a window function and re-scans the frame.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sql_door_matches_the_spark_pin` and
+  `::test_dataframe_door_matches_the_spark_pin`, both parametrised `[<shape>-try_sum]` over the
+  five frame shapes.
+- **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
+  refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
+
+### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame ignores the accuracy knob
+
+- **repark** — `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
+  CURRENT ROW` on `x = 1..200` answers the same column as the two-argument discrete p50
+  (`1.0, 25.0, 50.0, 100.0, 150.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
+  accepted and ignored, per frame exactly as per group.
+- **Apache Spark** — the Greenwald-Khanna sketch collapses at accuracy 2: the same column is
+  `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_ignores_the_accuracy_knob`
+- **Rationale** — BACKLOG. The frame case of `FN-APPROXPCT-ACC-1`, filed rather than papered over.
+  Do not emulate the sketch: Spark's low-accuracy answers are sketch artefacts, and repark keeps
+  the discrete data value. `PERF-APPROXPCT-1` (sketch memory) stays out of scope.
+
+### WIN-SLIDE-FLOAT-1 — a retracting sliding `sum` / `avg` loses a summand Spark's re-scan keeps
+
+- **repark** — DataFusion evaluates a sliding `sum` / `avg` by **retraction**: it adds the entering
+  rows to a running accumulator and subtracts the leaving ones. Catastrophic cancellation therefore
+  survives into the answer. On `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]` over
+  `ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW`, `sum(v)` is
+  `(1e16, 1e16, 0.0, 1e16, 1e16, 0.0)` and `avg(v)` is
+  `(1e16, 5e15, 0.0, 5e15, 5e15, 0.0)`: the third frame is `[1.0, 1.0]`, but adding `1.0` to a
+  running `1e16` and then subtracting `1e16` leaves `0.0`.
+- **Apache Spark** — re-scans every frame, so the same cells are `2.0` and `1.0`:
+  `sum` `(1e16, 1e16, 2.0, 1e16, 1e16, 2.0)`, `avg` `(1e16, 5e15, 1.0, 5e15, 5e15, 1.0)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_sliding_sum_and_avg_retract_where_spark_rescans`
+  (repark's current column AND that it differs from Spark's), with the oracle half in
+  `::test_live_spark_rescans_the_cancellation_fixture`.
+- **Controls, measured on the same fixture** — `min`, `max`, `count`, `stddev_pop`,
+  `stddev_samp`, `bit_and`, `bit_xor`, `covar_pop` are **bit-identical** on both engines
+  (`::test_the_cancellation_fixture_is_spark_equal_off_the_sum_path`), so the divergence is the
+  running-sum path and not the frame. `var_pop`, `var_samp` and `regr_avgx` retract too and drift
+  **within one ulp** (`2.4999999999999997e31` vs `2.5e31`), which the pin holds to a 1e-15 relative
+  bound rather than to bit-equality
+  (`::test_the_variance_family_drifts_within_one_ulp_on_the_cancellation_fixture`). Two names could
+  not be measured as controls here and are NOT claimed as such: Spark refuses `median` over any
+  window frame (`INVALID_WINDOW_SPEC_FOR_AGGREGATION_FUNC`), and Spark's ANSI `corr` of a column
+  with itself raises `DIVIDE_BY_ZERO` where repark answers NULL.
+- **Rationale** — BACKLOG, and **pre-existing**: this is DataFusion's sliding-accumulator path,
+  which WIN-SLIDE-1 deliberately left untouched, not the frame re-scan it added. It is filed
+  because WIN-SLIDE-1's own §7 argues the re-scan for `corr` / `covar` precisely on this
+  cancellation ground, and the same argument convicts `sum` / `avg`. The fix is to route these
+  through the frame re-scan as well, at the O(frame x rows) cost the rest of the thirteen already
+  pay — a deliberate speed-for-exactness trade that needs an owner ruling, not a silent flip.
+  The thirteen aggregates WIN-SLIDE-1 re-scans (including `corr`, `covar_pop`, `covar_samp`) carry
+  no such drift by construction.
+
+### WIN-RANGE-DF-1 — DataFrame-door `rangeBetween` ignored its offsets unless the ORDER BY key was BIGINT — **FIXED 2026-09-04 (WIN-SLIDE-1)**
+
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `Window.orderBy("id").rangeBetween(-2, 0)` over
+  an `IntegerType` or `DoubleType` key answered the *cumulative* column (`sum(v)` over 1..6 gave
+  `1, 3, 6, 10, 15, 21`) because `Column.over` emitted the RANGE offset as `Int64`, which
+  DataFusion's window-frame coercion passes through untouched, and a bound whose type does not
+  match the order key degrades to UNBOUNDED PRECEDING. The offset is now emitted as `Utf8` — the
+  same shape DataFusion's own SQL planner produces — so coercion casts it to the key's type. The
+  column is now `1, 3, 6, 9, 12, 15`, equal to the SQL door and to Spark. `BIGINT` keys and every
+  `rowsBetween` frame were already correct and are unchanged.
+- **Apache Spark** — `rangeBetween(-2, 0)` is a value range on the order key for every numeric
+  key type. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+  every `[range_frame-*]` case (the fixture's `id` is `IntegerType`).
+- **Scope, measured** — the fix reaches **numeric** order keys, which is the whole of this row.
+  A `DATE` or `TIMESTAMP` key never reaches it: the facade's own G2 guard
+  (`_reject_non_numeric_range_order`, PR #167) refuses a value-offset RANGE over a non-numeric key
+  before the expression is built, and that refusal's error class is its own row,
+  `WIN-RANGE-ERRCLASS-1`. The SQL door over the same keys is Spark-equal and always was:
+  `INTERVAL 2 DAYS PRECEDING` over a `DATE` key answers `(1, 3, 6, 9, 12, 15)` on both engines, so
+  does the bare `2 PRECEDING` over a `DATE` key and `INTERVAL 2 DAYS PRECEDING` over a `TIMESTAMP`
+  key, and a bare `2 PRECEDING` over a `TIMESTAMP` key refuses on both with the SAME class,
+  `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`. *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+  Pin: `::test_sql_door_range_over_a_date_key_is_spark_equal`.
+- **Rationale** — FIXED. Found by WIN-SLIDE-1's two-door RANGE pin; the bug predates it and hit
+  every aggregate, retractable ones included.
+
+### WIN-RANGE-ERRCLASS-1 — DataFrame-door `rangeBetween` over a DATE / TIMESTAMP key refuses under the wrong error class
+
+- **repark** — `Window.orderBy(date_col).rangeBetween(-2, 0)` (and the `TIMESTAMP` spelling)
+  raises `[DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE] Cannot resolve RANGE window
+  frame due to data type mismatch: The data type of the order key 'd' ('date') does not match the
+  expected data type ("NUMERIC" or "INTERVAL"). SQLSTATE: 42K09`.
+- **Apache Spark** — refuses the same two frames, with the same SQLSTATE, under a different class:
+  `[DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE] Cannot resolve "(ORDER BY d ASC NULLS FIRST RANGE
+  BETWEEN -2 FOLLOWING AND CURRENT ROW)" … The data type "DATE" used in the order specification
+  does not support the data type "INT" which is used in the range frame.`
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** —
+  `python/repark/tests/test_win_slide_1.py::test_dataframe_door_range_over_a_date_key_refuses_with_reparks_own_error_class`
+  with the oracle half in `::test_live_spark_refuses_the_date_key_range_frame_with_its_own_class`.
+- **Rationale** — BACKLOG, and **pre-existing, not a residue of `WIN-RANGE-DF-1`**. The refusal
+  comes from the Python facade's `_reject_non_numeric_range_order` (`plan_collapse.py`, landed in
+  PR #167, SE-1 PR-B), which fires on `frame.dtypes` before any expression is built and is
+  therefore untouched by WIN-SLIDE-1's change to the RANGE offset's scalar type. Filed as its own
+  row rather than folded into `WIN-RANGE-DF-1` because the registry's one-mechanism rule cuts the
+  other way here: the two share a *symptom* (a RANGE frame over a non-numeric-looking key) but not
+  a mechanism, a layer, or a status — `WIN-RANGE-DF-1` is a Rust bound-type bug that is FIXED, and
+  folding an open pre-existing gap into a FIXED row would both misattribute the gap and make the
+  FIXED status a half-truth. The fix is cheap and local: repark already emits Spark's exact class
+  on the SQL door (`window_range.rs::range_frame_invalid_type_error`), so the facade guard should
+  raise that message for datetime keys and keep its own for genuinely unacceptable ones such as
+  STRING (`test_g2_window_rand_sampleby.py::test_range_value_offset_refuses_non_numeric_order`,
+  which must stay green).
+
+### WIN-COLLECT-DOOR-1 — `F.collect_list(...).over(w)` was refused at build time — **FIXED 2026-09-04 (WIN-SLIDE-1)**
+
+- **repark** — **FIXED 2026-09-04 (WIN-SLIDE-1).** `F.collect_list(col).over(window)` raised
+  `ValueError: over() applies only to a window or aggregate function column`, because the facade
+  builds Spark's empty-group semantics as `coalesce(array_agg(x) IGNORE NULLS, make_array())` and
+  `Column.over` accepted only a bare aggregate at the top of the expression. `over` now pushes the
+  window spec into the single aggregate node inside a scalar wrapper, keeping the wrapper; the
+  group-by spelling is untouched. `collect_set` is the same shape and is fixed with it.
+- **Apache Spark** — `F.collect_list(col).over(w)` is an ordinary window aggregate.
+  *(oracle: live PySpark 4.1.2, 2026-09-04.)*
+- **Pin** — `python/repark/tests/test_win_slide_1.py::test_dataframe_door_matches_the_spark_pin`,
+  the `[*-collect_list]` and `[*-collect_set]` cases.
+- **Rationale** — FIXED. An expression carrying two or more aggregates still refuses with the
+  original message; there is no single window to push down.
 
 ### CTAS-VIEW-1 — unpartitioned CTAS from a parquet-read view failed on Utf8View — **FIXED 2026-09-03**
 
@@ -3842,19 +4291,36 @@ and `python/repark-parity/tests/test_w0_window_bench.py::test_registry_has_a_hea
 
 ### DYNFLATTEN-READNULL-1 — `read.parquet` keeps a parquet `required` column non-nullable; Spark widens it
 
-- **repark** — `read.parquet` of a file whose `id` column is stored `required` yields an Arrow
-  field with `nullable=False`, and `dynamicFlatten` carries that through. Measured on the
-  PERF-DYNFLATTEN-1 bed: parquet `id` nullable `False` → repark `read.parquet` `False`. The
-  facade's other door disagrees with itself: `createDataFrame` with the same DDL yields `True`.
+- **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** `read.parquet` of a file whose `id`
+  column is stored `required` now yields `nullable=True`, and `dynamicFlatten` carries that
+  through on all three bed shapes. The facade's two doors agree again.
 - **Apache Spark** — `read.parquet` of the same file reports `id` nullable `True`; Spark widens
   every parquet column to nullable on read. *(oracle: measured — PySpark 4.1.2, 2026-09-04,
   bed shape `list_struct_1` at 16 rows.)*
 - **Pin** —
   `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode`
-  (asserts repark `False` and Spark `True`, then compares values after widening).
-- **Rationale** — BACKLOG, intent to DECLARE or FIX. Surfaced by PERF-DYNFLATTEN-1 when the
-  live pin was made symmetric (both engines `read.parquet` of one file); the earlier asymmetric
-  pin hid it because `createDataFrame` widens. Values agree; only nullability differs.
+  (asserts repark `True` and Spark `True`, then compares values after widening).
+- **Rationale** — FIXED. The parquet reader relaxes non-null file nullability to nullable
+  the way Spark does. The live pin's repark half moved `False` → `True`; values agree
+  throughout.
+
+### READ-TSNTZ-DTYPE-1 — `read.parquet` of a tz-naive TIMESTAMP reports `string` via `dtypes`/`schema`
+
+- **repark** — `read.parquet` of a file with a tz-naive `TIMESTAMP` column reports the
+  column as `string` via `dtypes` and `schema.simpleString()`, while `to_arrow()` says
+  `timestamp[us]`. The Rust mapper is right (`Timestamp(_, None) => "timestamp_ntz"`);
+  the facade `schema` property has no `timestamp_ntz` arm and falls through to
+  `StringType()`.
+- **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
+  string, and `timestamp[us]` via Arrow. *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+- **Pin** —
+  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_tz_naive_timestamp_reports_string_dtype`
+  (asserts the current `string` / `string` / `timestamp[us]` triple; the fix reds it on
+  purpose).
+- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing and
+  facade-side: no rule in this unit touches the `dtypes` mapping. Fixing it here would
+  widen the unit past its charter; the row holds it for the facade unit that owns that
+  mapping.
 
 ### Surfaced, awaiting pins — not yet rows
 
@@ -3998,6 +4464,217 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 ---
 
+- **WRITE-GROUPING-CTAS-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 3, from a CI red on
+  the 4-core wheels runner). DataFusion's file-scan repartitioning packs the same source files
+  into writers differently from run to run **inside one process**: over eight unequal parquet
+  files, `target_partitions = 4` produced 4 to 6 distinct groupings in 10 runs (one run merged the
+  3,000-row and 1,000-row files into a single 4,000-row writer, the next did not), while
+  `target_partitions = 16` produced 1 in 10 because every file becomes its own group. The
+  committed data-file layout, and therefore the `_row_id` a given row receives, follows the
+  grouping — so a CTAS is reproducible in its ORDERING but not in its LAYOUT, and `_row_id` is not
+  stable across partition counts or across runs at a small one. BACKLOG. The write side cannot fix
+  this: the rows land in different files before any writer sees them. A fix belongs in the scan —
+  a deterministic file-group assignment (sorting the listing before packing, or one group per file
+  for CTAS) — and would cost the parallelism this unit delivers if done by disabling
+  `repartition_file_scans`, which collapses a single-file source to one writer.
+  **No red-on-fix pin can assert this**: the defect is that the grouping varies, so a pin
+  demanding a fixed grouping would be red on the current engine and green only by accident.
+  `test_ctas_commit_is_ordered_and_contiguous_at_any_partition_count` (3, 4, 8 and 16) is green
+  with the defect and would stay green without it — it pins the ordering the write side does
+  own, not this. The flip rates above are the measurement that stands in for a pin.
+
+- **WRITE-ORDER-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). The stream write
+  path INSERT, MERGE, overwrite and predicate DML use
+  (`write/merge/mod.rs::write_stream_into_parallel_sinks`) dispatches batches round-robin to K
+  cooperative workers and returns their files in worker order, but which batches a worker receives
+  depends on the order the source produced them, so two identical INSERT statements over identical
+  input can commit different manifests and different `_row_id` ranges. BACKLOG, pre-existing: this
+  unit moved only CTAS to the write node and deliberately did not touch the stream path. The
+  CTAS-side treatment is `write/file_order.rs::stable_commit_order`, a content-derived total
+  order, and it buys an ORDERING only — as `WRITE-GROUPING-CTAS-1` records, the row-to-file
+  grouping is unstable ahead of the writers on both paths, so applying the same sort here would
+  make the stream path's manifest ascend by content without making its layout or its `_row_id`
+  reproducible either.
+
+- **WRITE-ABORT-INSERT-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). A failed write on
+  the stream path leaves every parquet file its writers had already rolled on disk: the workers
+  drop their sinks without closing (the P1-R1 orphan-upload guard,
+  `merge/tests/streaming.rs::parallel_source_error_does_not_finish_sinks`), and nothing deletes
+  what the rolling writer had already flushed — the round-2 critic measured 70 orphans, 103 MB.
+  BACKLOG, pre-existing and out of this unit's scope. The CTAS node's answer is
+  `write/partition_write.rs`'s attempt sweep: census the table's data root before the write and
+  delete everything that appeared since, which reclaims the failing writer's rolled files too.
+  Only `remove_orphan_files` reclaims the stream path's today.
+
+- **WRITE-DISTRIBUTION-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). RePark has no
+  distribution rule before a write. Spark's Iceberg default is `write.distribution-mode = hash`,
+  which repartitions by partition value so one value goes to one task; for the same CTAS at
+  `spark.sql.shuffle.partitions = 8` Spark writes **2** unpartitioned and **8** partitioned data
+  files, where repark now writes **8** and **64** (average 328 KB) — 4x and 8x Spark's counts.
+  BACKLOG. Two alternatives were measured and rejected in this unit: capping the writers below the
+  partition count makes one writer drain several input partitions in sequence, which measured
+  738 ms against 547 ms on the partitioned 1e6 CTAS and is unbounded in memory (DataFusion's
+  repartition channels are unbounded per output partition and gate only when every channel is
+  non-empty, so the partitions a writer has not reached buffer whole); and a `RepartitionExec`
+  round-robin assigns batches to outputs from a shared counter, so the row-to-file mapping — and
+  with it `_row_id` — stops being reproducible, which is exactly the defect round 2 fixed. A real
+  fix is a hash-distribution rule that sends one partition value to one writer: deterministic AND
+  fewer files, and a unit of its own. The current counts are pinned by
+  `test_ctas_writes_one_data_file_per_plan_partition` and the partitioned facade pin.
+
+- **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
+  written by K cooperative futures joined in ONE task
+  (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding of
+  the K writers serialized. CTAS now goes through
+  `write/partition_write.rs::IcebergPartitionWriteExec`, a physical node with one output partition
+  per input partition; `execute_stream` coalesces it and DataFusion's `CoalescePartitionsExec`
+  spawns one task per partition, so the encode runs on the executor's threads. RePark spawns
+  nothing and adds no dependency — `clippy.toml` bans `tokio::spawn` and `spawn_blocking`, the
+  rust-code-quality review scan bans routing around that ban through `JoinSet` or a helper crate,
+  and `tokio` is only a dev-dependency of `repark-iceberg`. **Measured on the SHIPPED tree**
+  (base `6eaccd5e` against `perf/ice-writepath-1`, both with the pinned fork, back to back on a
+  quiet box at 1-minute load 8–14, three passes of five timed statements per cell, floors 12–15 ms
+  on the after side): `ctas` **1,384.80 → 135.48 ms** median (1,312.39 → 127.54 min), **10.2×**,
+  and `ctas_partitioned8` **4,901.75 → 293.19 ms** median (4,628.11 → 283.07 min), **16.7×**,
+  against a `df.write.parquet(zstd)` control that read 107.37 → 105.56 ms in the same passes.
+  **The durable result is the gain and that ratio, not the millisecond.** Three boxes have
+  measured the shipped tree: `ctas`/control 1.28× here, 1.38× on the round-2 critic's box (load
+  11.8-12.3) and 1.39× on the round-3 critic's (load 6.4-8.5); `ctas_partitioned8`/control
+  2.78× / 3.00× / 2.69× — inside 8 %. The absolutes disagree by up to 12 % (`ctas` 135.48 ms
+  here, 152.24 ms there), so **PERF-ANALYSIS-1's absolute targets (`ctas` ≤ 150 ms,
+  `ctas_partitioned8` ≤ 300 ms) are met on this box and NOT on a third, and this row does not
+  claim them.** Round 1 reported both missed and quoted 880 → 478 ms, taken at load 13–22 with an
+  uncommitted fork override on the after side; superseded.
+  **Determinism, as narrowed in rounds 3–4**: the commit is an ordering, not a layout. `write/file_order.rs::stable_commit_order` gives a content-derived total
+  order, so at every partition count the manifest ascends by content, `_row_id` tiles it
+  contiguously from zero, the committed row set is the expected digest of ids, and two runs that
+  produce the same file grouping produce the same id-to-`_row_id` map. What is **not** reproducible is the
+  grouping itself: DataFusion packs the same source files into writers differently from run to run
+  inside one process — 3 distinct groupings in 5 runs at `target_partitions = 3`, 4 to 6 in 10 at
+  4, and 1 in 10 at 8 and at 16 — so the committed file layout and the `_row_id` a given row receives vary with it,
+  and no writer-side ordering can change that. Filed as `WRITE-GROUPING-CTAS-1`. Round 1 claimed
+  reproducibility from the writer index (refuted: the index is not stable), round 2 claimed it
+  from content (refuted by CI's 4-core runner: the grouping is not stable), rounds 3 and 4 pin the
+  property that holds at 3, 4, 8 and 16. **Abort**: when the table has no current snapshot — the
+  CTAS case — a failed write leaves no data file at all, the failing writer's own rolled files
+  included; against a table that already has one the sweep is narrowed to the attempt's own
+  completed files. **Layout**: a CTAS writes one file per plan partition — 4 → 8
+  unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
+  counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
+  `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
+  partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
+  `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
+  and 16 partitions: manifest ascending by content, `_row_id` tiling it, the row set as a digest of ids,
+  and equal id-to-`_row_id` maps for equal groupings; Spark row-set equality). Numbers and commands:
+  `docs/perf/iceberg-write-baseline.md`.
+
+- **PERF-ICE-FANOUT-1** — surfaced 2026-09-04 (PERF-ANALYSIS-1 candidate 7), measured
+  2026-09-05 (PERF-ICE-WRITEPATH-1). The fork's `RecordBatchPartitionSplitter::split` built one
+  `Literal::Struct` per row, keyed a `HashMap<&Struct, _>` by it and filtered the batch with a
+  full-length `BooleanArray` per group. BACKLOG here because the fix is fork-side and this tree
+  does not consume it yet. Fork trigger **F-28** (`f-28-vectorized-partition-splitter`): lexsort
+  the partition-value columns, read group boundaries with `arrow_ord::partition`, materialize one
+  literal per group and `take` per group; the row-wise path stays for Float, Double, Unknown and
+  empty partition types, where Arrow total-order equality is not Iceberg `Struct` equality
+  (`-0.0` and `0.0` are one group under `OrderedFloat`, two under total order). Measured in the
+  fork lane on a release build over the analysis' seven-column bed, 1,048,576 rows and eight
+  partitions: **171.39 → 28.33 ms** (6.0×, 143 ms per 1e6 rows). That is the number this row
+  stands on, because it needs no RePark rebuild and no disk; the end-to-end CTAS cells measured
+  with the fork override (builds B1/B2 in the baseline doc) were taken on a contended box and are
+  not quoted anywhere as a shipped result. That measurement also **corrects
+  the analysis**: the 813 ms it read off the partitioned-minus-unpartitioned CTAS delta is not the
+  splitter, whose whole cost at that scale is 171 ms — the rest is the fanout writing 8× the data
+  files. The row is FIXED here when the pin bump lands (`docs/fork-sync.md` rule 1).
+
+- **PERF-FACADE-COLLECT-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. `collect()` materialized
+  every row in Python: `to_pylist()` per column, then `Row.from_ordered_fields` per row with a
+  fresh names tuple each time. Row materialization moved into `repark-python`
+  (`collect_rows.rs`), which walks each Arrow batch and emits value tuples with typed pyo3
+  conversions; the facade builds the `Row` objects from one shared names tuple per batch with
+  the cyclic collector suspended across the batch. Measured by the tracked runner
+  `python/repark-parity/bench/facade/run_facade.py`, both legs in one process on one release
+  module (load 6.94 → 6.46, floor 1.64 ms): end to end `collect/1000000`
+  **4,767.60 → 939.85 ms** (5.07×) and `collect/100000` **525.24 → 90.88 ms** (5.78×); the
+  converter in isolation `rows_*/1000000` **4,945.68 → 557.88 ms** (8.87×). The 382 ms between
+  the isolated converter and `collect()` is the cost of holding a million live `Row` objects,
+  which `collect()`'s contract requires and no converter removes. PERF-ANALYSIS-1 recorded
+  Spark 4.1.2 `local[8]` at 3,619 ms on a bed of the same schema (a different run, so the ~3.9×
+  is indicative, not a same-run comparison). The binding converts only the cell kinds whose
+  `to_pylist` mapping is unambiguous (null, boolean, every integer width, `f32`/`f64`, the three
+  UTF-8 and three binary layouts); decimals, dates, times, timestamps, durations and every
+  nested kind are converted by the unchanged Python path and handed to the binding, and a
+  calendar interval anywhere in the schema sends the whole batch back to it, so the map → dict,
+  tz-aware-timestamp and interval-refusal contracts are the same code as before. Pin:
+  `python/repark/tests/test_perf_facade_collect_rows.py` — both converters run on the same
+  batch and every cell is compared by `repr` as well as by value. Numbers and the cProfile /
+  GC decomposition: `docs/perf/facade-boundary-baseline.md` §1.
+- **PERF-FACADE-WITHCOLUMN-1** — **FIXED 2026-09-04 (PERF-FACADE-1)**. A dependent
+  `withColumn` chain re-read `self.columns` once per existing column per call and every read
+  ran a full analyzer pass — 5,750 `column_names` calls to build a depth-100 chain.
+  `_iter_bound_columns` now reads `columns` once and passes the canonical name through (falling
+  back to the resolving path when the frame carries duplicate names, so `[AMBIGUOUS_REFERENCE]`
+  is unchanged), and `columns` answers from the plan's logical schema
+  (`logical_names.rs`) instead of the analyzed one. Same runner, same run:
+  `chain/{10,50,100}/build_only` **8.23 → 1.85**, **334.00 → 42.44**, **2,476.08 → 366.11 ms**
+  (4.45× / 7.87× / 6.76×). Execution is unchanged (`chain/100/count` 93.81 against the same
+  work before). The **150 ms target is not met**: 346 ms of the remaining 445 ms profiled build
+  is DataFusion's own `LogicalPlanBuilder::project`, whose `normalize_col` / `columnize_expr`
+  scan the child schema per expression (O(N²) per `select`, O(depth³) per chain) — see
+  `PERF-FACADE-CHAIN-2`. Reading names before analysis is sound because every rule in
+  `repark_functions::analyzer_rules` rewrites through `NamePreserver` and none adds, drops or
+  reorders a projection expression; pinned byte-for-byte against the analyzed names over 19
+  planned statements, a 12-deep chain and eight DataFrame transforms in
+  `python/repark/tests/test_perf_facade_logical_names.py`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §2.
+- **PERF-FACADE-CDF-1** — **FIXED 2026-09-05 (PERF-FACADE-CDF-1)**. `createDataFrame(list of
+  tuples)` normalized every cell in Python across five passes (the cell normalizer, the nested
+  preparer, the merge-refusal walk, the per-row schema check, the Arrow conversion) — 1,657 ms
+  at 1e5 where the same rows from pandas cost 3 ms. Inference and conversion are column-wise
+  now: one `set(map(type, …))` census per column, single-kind scalar columns straight to Arrow,
+  mixed/exotic columns through the unchanged per-cell path, explicit schemas still on the
+  legacy path by dispatch. Identity by construction — every shared rule is the same function
+  object on both paths, and the fast path skips work only where the census proves it a no-op.
+  Same runner, both legs in one process on one release module (load 10.75 → 10.51):
+  `create/100000/tuples_count` **1,656.62 → 70.30 ms** (23.56×, ≤ 100 ms target met 30% under
+  the bar); the nested pair reads 0.96× (the measured delegation cost) and the explicit pair
+  1.00× (identical path by dispatch). The tuple loop also skips the per-row permutation
+  rebuild when the permutation is the identity (~60 ms at 1e5, shared by both legs). Pin:
+  `python/repark/tests/test_perf_facade_cdf_1.py` — both dispatchers run on the same input and
+  every case compares Arrow field types, Arrow values and `collect()` by `(type name, repr)`,
+  plus a live leg against PySpark 4.1.2 `createDataFrame`. Numbers:
+  `docs/perf/facade-boundary-baseline.md` §4.
+- **PERF-FACADE-CHAIN-2** — surfaced 2026-09-04, PERF-FACADE-1. BACKLOG. After
+  `PERF-FACADE-WITHCOLUMN-1` the depth-100 `withColumn` build is 366.11 ms against a 150 ms
+  target, and the residue is entirely DataFusion's per-expression projection validation. The
+  collapsed shape is measured, not estimated, by the tracked runner's
+  `chain_collapsed/D/build_only` cell (one expression list built once and appended to, each step
+  projecting the 7 base columns plus the `i+1` computed expressions directly onto the base frame
+  so the child schema stays 7 fields wide, whole loop timed as the stacked cell is):
+  **65.04 ms at depth 100**, 19.41 at depth 50, 1.94 at depth 10. So a *perfect* collapse lands
+  **2.3× under the 150 ms bar** and would buy a further **5.6×** at depth 100 — the prize is
+  real, and an earlier draft that reported this shape at 140.46 ms and called it "on the bar
+  with no margin" was measuring a loop that rebuilt the whole expression list every step
+  (O(depth²) Python a real collapse never pays). **The deferral rests on correctness, not on
+  the size of the prize.** Collapsing by inlining duplicates an expression subtree whenever a
+  new column reads an earlier new column, which is exponential in the depth
+  (`c[n] = f(c[n-1])`). The safe variant re-parents onto the previous projection's input only
+  when the new expression reads no computed column — it never duplicates, but it rewrites plan
+  lineage, and `_origin_plan_id`, the `MISSING_ATTRIBUTES` contract and the
+  adjacent-window-layer merge are all defined in terms of that lineage. Wants its own scope
+  audit before it is built. Evidence: `docs/perf/facade-boundary-baseline.md` §2.
+- **COLLECT-STRUCT-ROW-1** — surfaced 2026-09-04, PERF-FACADE-1 round-2 review. BACKLOG.
+  A `StructType` cell comes back from `collect()` as a `dict`; live PySpark returns a nested
+  `Row`. Measured on `SELECT named_struct('n', 1, 't', 'x') AS st`: repark
+  `{'n': 1, 't': 'x'}` (`dict`), Spark `Row(n=1, t='x')` (`Row`), and Spark's
+  `row.asDict()` is `{'st': Row(n=1, t='x')}` — the nesting survives one level of `asDict`
+  there and does not here. *(oracle: measured, PySpark 4.1.2 zulu-17, 2026-09-04.)*
+  **Not introduced by PERF-FACADE-1**: the pre-existing Python converter and the new binding
+  path return the identical `dict`, which is what the unit's converter-equality pin asserts.
+  The divergence is `_arrow_cell_to_spark_python`'s struct arm, which has built a `dict` since
+  the facade was written. Fixing it means deciding what `asDict(recursive=False)` and
+  `Row.__eq__` do with nested rows, so it is a `Row`-contract unit, not a converter change.
+  Pin of repark's current answer:
+  `python/repark/tests/test_perf_facade_collect_rows.py::test_struct_cell_is_a_dict_not_a_row_collect_struct_row_1`.
 - **PERF-DVCLOSE-WALK-1** — **FIXED 2026-09-03 (RP-9)** at pin `594bdbe5` (fork F-23). Fork
   contract: `close_touched_dv_containers_with_partitions` skips the data-manifest walk when
   there are no legacy deletes and `known_partitions` covers every touched path;
@@ -4026,6 +4703,169 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `row_delta.rs` → `row_delta_fresh_dv.rs:51`). BACKLOG. Fork trigger **F-25**: stop once
   `live_data_entry_by_path` holds every `added_dvs` key. Opens-per-phase in the RP-9 ledger
   round-2 table (commit = 1× per data manifest).
+- **PERF-CATALOG-CALLS-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 11; **FIXED
+  2026-09-05** (PERF-ICE-CATALOG-IO-1), narrowly: **the metadata document is fetched once per
+  location, not once per `load_table`.** Every statement re-read the table's `metadata.json`:
+  `strace -f -e trace=openat` with per-statement marker files on a release module, memory
+  catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
+  document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
+  by a session-scoped cache keyed by metadata-file location, built once per session and handed to
+  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
+  reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
+  still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
+  prove reachability before claiming the pointer; creation is not cacheable. (2) The count of
+  catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
+  (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
+  numbers as the knob-off read column, because the cache turns those calls into hits rather than
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
+  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
+  `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
+  Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §1.
+- **PERF-CATALOG-LOADS-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1 (PERF-ANALYSIS-1 §2 row
+  11's other half). **BACKLOG** behind a fork pin bump. A planning round resolves the table twice:
+  `IcebergSchemaProvider::table` → `IcebergTableProvider::try_new` is `load_table` #1 and
+  `TableProvider::scan` is #2, and DML adds its write-side loads — measured through the census counter at
+  SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3, unchanged by `PERF-CATALOG-CALLS-1` (they are
+  now cache hits, not fewer calls). On the memory catalog a round trip is an in-memory map read and costs nothing
+  measurable; on Glue each is a `GetTable`. Also a latent correctness defect: the provider's
+  Arrow `schema` is fixed at `try_new` and DataFusion stores ordinals against it, so a schema
+  change landing between `try_new` and `scan` plans one snapshot against another's ordinals. Fork
+  trigger **F-CATIO-A**: `IcebergSchemaProvider::resolve_table` hands the `Table` it just loaded
+  to the provider it returns and `scan` reuses it, leaving the public `try_new` load-per-scan
+  behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
+  never-committed path override as part of the 120.01 → 11.33 ms cell in
+  `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
+  fork pin bump. The metadata-location cache reaches the memory catalog only:
+  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
+  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
+  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
+  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
+  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
+  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
+  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
+  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
+  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
+  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
+  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
+  `CatalogCaches::trim` empties the cache when the retained-location count passes
+  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
+  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
+  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
+  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
+  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
+  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
+  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
+  bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
+  decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
+  `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
+  empty projection reads row counts through `ProjectionMask::leaves(schema, [])` —
+  zero-column batches, delete vectors and positional deletes still filtering rows — and
+  `IcebergTableScan::statistics()` reports `Precision::Exact` from the frozen snapshot's
+  `total-records` summary when the planned tasks carry no residual and no deletes, so
+  DataFusion folds the count with no scan. Implemented and test-green in the fork lane
+  (`empty_projection_scan.rs`, `count_star_fold.rs`); measured through a temporary,
+  never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
+  686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
+  990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
+  (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
+- **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump, with residue. A sub-split-size
+  table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB
+  split target. Fork trigger **F-27d**: re-split and re-pack to a session-derived target
+  of `min(configured split size, max(total/T, 64 KiB))`, declining `_pos`/`_row_id`,
+  empty and file-prune-only projections so MERGE, identity-DELETE and lineage reads keep
+  their plans. Implemented and test-green in the fork lane (`bin_pack::split_tests`,
+  `parallel_small_scan.rs`); measured through a temporary, never-committed path override
+  as N=1 → N=8 with `sum_all` 89.5 → 36.2 ms at 1e6 and 596.5 → 161.9 ms at 1e7
+  (`docs/perf/iceberg-scan-baseline.md` §2). Residue, recorded not fixed: the 1.5×-of-
+  parquet target is missed (1.8×/2.2× at 1e6, 2.4×/3.6× at 1e7 — a fixed ~10 ms per
+  query plus ~2× per-byte overhead, decomposed in the baseline §3), and `count(col)`
+  still scans while the parquet leg folds from statistics. The RePark parallelism pins
+  skip naming F-27 until the bump.
+  **NARROWED 2026-09-05** (PERF-ICE-CATALOG-IO-2): this row is the **metadata** cache only.
+  The manifest cache this unit wires is already a byte-bounded moka cache fork-side
+  (`max_capacity` on entry weight, TinyLFU admission, overweight entries rejected), so the
+  unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
+  (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
+  observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+- **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
+  BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
+  `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
+  `Table` got a fresh `ObjectCache`, so `plan_files` re-read every manifest on every
+  statement: 192 manifests at ~0.45 ms each, ~85 ms per statement on local FS. IO-2 wired
+  the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
+  unit HALTED mid-flight on `PERF-CATALOG-LINEAGE-CACHE-1` (the shared cache serves
+  wrong-context lineage on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands)
+  and landed with the knob default OFF per the round-2 ruling, so main serves no wrong
+  answer and the win is measured but not served. Measured with the knob set explicitly
+  to 32 MiB: `t_many/count_id/stmt2` (193 manifests) falls from **115.81 ms to 10.95 ms**
+  (target ≤ 20; the point-query twin 124.75 → 14.75), and the one-manifest twin drops
+  14.37 → 10.49 — the repeated read opens no manifest-list and no manifest at all. The
+  follow-up is the default-ON flip after `F-CATIO-KEY` lands and the four upgrade-lineage
+  tests pass knob-on. Two things this row does NOT claim. (1) The
+  commit side is untouched: the fork's transaction, maintenance and inspect paths load
+  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
+  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
+  `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
+  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
+  pin, so they are unchanged. Staleness pinned per cell with the cache on (the Python legs
+  set the knob explicitly: MERGE after a commit, DROP + re-CREATE, `register_table`,
+  rewrite + expire, time-travel and branch reads), the two-door Rust battery green with
+  the cache off (the default), plus the funnel pin (a second door answers after every
+  manifest is deleted from disk, knob set explicitly). Pins:
+  `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
+  `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+- **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
+  behind a fork change. The fork's shared manifest cache covers the **scan** path only:
+  `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
+  `ObjectCache`, but the transaction, maintenance and inspect paths — and
+  `delete_vector_lookup.rs` — call `load_manifest*` straight on `table.file_io()`.
+  Measured at pin `79119643`: 0 cached reads against 166 direct loads in
+  `transaction/`, 0 in `maintenance/` + `inspect/` + `delete_vector_lookup.rs`. So a DML
+  statement saves exactly its read-side repeats (DELETE 4/8 → 3/6 lists/manifests,
+  UPDATE 5/15 → 4/12) and keeps every commit-side open (INSERT 2/1 → 2/1, MERGE 4/8 →
+  4/8 — MERGE opens the same new list and the same two new manifests four times each).
+  A bypassing path re-reads; it never serves stale. Fork trigger **F-CATIO-COMMIT**:
+  route the transaction/commit manifest reads through the table's `ObjectCache`. Nothing
+  in RePark changes at that trigger — the shared cache is already on every table — so
+  there is no RePark pin to un-skip; the §5 census table re-measures instead.
+- **PERF-CATALOG-LINEAGE-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2 (the finding
+  that HALTED it). **FIXED 2026-09-05 (RP-13)** at pin `2ed39cb0` (fork F-CATIO-KEY `#270`: the
+  shared cache stores the context-free parse and applies each caller's list-entry inheritance
+  and `first_row_id` assignment per read); the knob-on detector below now asserts the assigned
+  lineage and is green. The default-ON flip is the follow-up unit. History: The fork's shared manifest cache keys by
+  `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
+  that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
+  `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
+  range forces every entry to `None` while a `Some` range assigns running counters. A V2 list
+  carries no range; the post-upgrade V3 list carries one for the SAME path — so a v2-context
+  parse poisons every later v3 read of that path within one catalog lifetime, and
+  upgrade-boundary tables serve `_row_id` NULL. Measured: 4 facade tests red with the cache
+  on (`test_v3_legacy_delete_merge` × 2, the `alter-set-format-version-3-mor` statement row,
+  `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`), all green with
+  `manifestCacheBytes = "0"` on the same binary. Per-table caches never shared across the
+  boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
+  the key carry the assignment input, or move assignment out of the cached object. No
+  RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
+  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
+  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  the default-ON flip. Pins:
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (was the wrong-answer detector; it redded on RP-13 as designed and now pins the fix),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
   **REFUTED 2026-09-04** (no scan-phase defect on the production path). `strace -f -e openat` on the production Spark
   `DELETE WHERE id = 0` at base `e6ebd40` and tip `dd5b0b7`, N=8 and N=192, split on
@@ -4047,6 +4887,33 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   nothing). No follow-up unit: the scan phase is already 1 × N and the call sites above
   are the record. Remaining commit 1 × N stays
   `PERF-DVCLOSE-STMT-1`. Strace and call-site tables: PERF-SCAN-1 ledger round 2.
+- **PERF-AGG-AVG-1** — **FIXED 2026-09-05 (PERF-AGG-AVG-1)**. The Spark `avg` /
+  `try_avg` UDAF implemented `accumulator()` only, so DataFusion boxed one accumulator
+  per group. The UDAF now serves `groups_accumulator_supported` /
+  `create_groups_accumulator` (`crates/repark-functions/src/avg_groups.rs`, null
+  tracking in `groups_null_state.rs`) over Float64 and Decimal32/64/128/256 with
+  Spark's `(min(38,p+4), min(38,s+4))` result rules and `try_avg` overflow on the
+  2×-MAX shape → per-group NULL (the i128 sum-wrap shape is BACKLOG row
+  AVG-DEC-SUMWRAP-1); the `Accumulator` retract arms and `state_fields` are
+  byte-identical, so window frames keep the retract path. Measured on a release
+  module at 8-thread parity (median-of-5, loads 12–17, floors 3.3 ms before /
+  4.7 ms after):
+  `avg(l_quantity) GROUP BY l_partkey` (200 k groups, 6 M rows) **400.6 → 99.0–113.8
+  ms** against a `sum` control at 82.6–90.0 ms — the ratio **4.45× → 1.10–1.28×**, the
+  ≤ 1.3× gate met; TPC-H Q17 (`run_tpch.py --sf 1 --repeats 3 --queries 17`)
+  **0.521–0.721 s → 0.143–0.355 s** against DuckDB 1.5.5 at 0.036–0.043 s on the same
+  box — 13.8–18.3× → 3.6–8.3×, the ≤ 3× bar NOT met, and no avg-only fix can meet it
+  (`sum` on the same grouping already costs 82.6 ms, 2.2× DuckDB's whole Q17; the
+  residue is scan/grouping/join efficiency). `avg(DISTINCT)` still routes single-column
+  queries through the optimizer's dedup rewrite and still refuses multi-column ones
+  with `DistinctAvgAccumulator`. Grouped float `avg` changes bit-for-bit vs the base
+  (per-element summation replaces Arrow's lane-chunked kernel): `153846153846153.84`
+  here vs Spark's `153846153846154.34` on the 1e16-plus-ones fixture, disclosed as
+  FLOAT-AGG-3. Pins: `python/repark/tests/test_perf_agg_avg_1.py`
+  (24 Spark-recorded answer pins plus 3 round-2 behavior pins, the 2.5-bound cost
+  probe red at 4.06× on the base and green at 1.21× after, 7 live legs) and 21 Rust
+  unit tests. Numbers, floors and the reproduce block:
+  `docs/perf/aggregate-baseline.md`.
 - **FN-NTHVALUE-IGNORENULLS-1** — surfaced 2026-09-03, EX-14 review. The facade `F.nth_value`
   takes `(col, offset)` only; PySpark 4.1.2's `nth_value(col, offset, ignoreNulls=False)` third
   arm raises `TypeError: nth_value() takes 2 positional arguments but 3 were given` here. Measured
@@ -4631,6 +5498,291 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
+
+### EX-FN-1 — `arrays_zip` refuses; Spark zips element-wise with NULL fill
+
+- **repark** — `F.arrays_zip("a", "b")` raises `UnsupportedOperationException:
+  functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `arrays_zip([1, 2], ["x"])` answers `[{0: 1, 1: "x"}, {0: 2, 1:
+  None}]`; `arrays_zip([], ["y", "z"])` answers `[{0: None, 1: "y"}, {0: None, 1:
+  "z"}]`; a NULL array answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the zip kernel.
+
+### EX-FN-2 — `posexplode` / `posexplode_outer` refuse; Spark emits position rows
+
+- **repark** — both spellings raise `UnsupportedOperationException` (`posexplode is not
+  supported yet (no first-class unnest-with-ordinality; ...)`; `posexplode_outer is not
+  supported yet (see posexplode; ...)`).
+- **Apache Spark** — `posexplode([10, 20])` answers `(0, 10), (1, 20)`; `posexplode_outer`
+  answers the same two rows and keeps the empty and NULL arrays as `(NULL, NULL)` rows.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_posexplode_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both spellings
+  stay on the example backlog until the engine grows unnest-with-ordinality.
+
+### EX-FN-3 — `encode` / `decode` refuse charset codecs; Spark encodes UTF-8 and US-ASCII
+
+- **repark** — `F.encode("s", "utf-8")` builds but planning raises `PySparkException:
+  There is no built-in encoding named 'utf-8', currently supported encodings are: base64,
+  base64pad, hex`. The same refusal covers `utf-16`, `US-ASCII`, and `decode` with any
+  charset: the names are binary codecs here, not charset codecs.
+- **Apache Spark** — `encode("AB", "utf-16")` answers `feff00410042` (BOM-prefixed);
+  `encode("AB", "US-ASCII")` answers `4142`; `decode(encode(s, "utf-8"), "utf-8")`
+  round-trips every row including empty and NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_encode_decode_charset_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until a charset codec reaches the planner.
+
+### EX-FN-4 — column-referencing `expr` refuses; Spark binds the reference
+
+- **repark** — `F.expr("a + 1")` raises `AnalysisException: Schema error: No field named
+  a` at construction (the facade parses eagerly; the DataFrame-bound path is declared
+  missing on the facade). Column-free spellings are served: `expr("1 + 1")` answers 2
+  and `expr("make_date(2020, 1, 1)")` answers `2020-01-01`, both Spark-equal.
+- **Apache Spark** — `expr("a + 1")` over `(1,), (2,), (None,)` answers `[2, 3, None]`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_expr_column_reference_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog: column references are the name's core use, and a literal-only
+  example would document the edge while the middle raises.
+
+### EX-FN-5 — `format_number` refuses; Spark renders grouped decimals
+
+- **repark** — `F.format_number("x", 2)` raises `UnsupportedOperationException:
+  functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `format_number(12332.12345, 2)` answers `"12,332.12"`;
+  `format_number(0.5, 2)` answers `"0.50"`; `format_number(-9876.543, 2)` answers
+  `"-9,876.54"`; at four decimals `"12,332.1234"`, `"0.5000"`, `"-9,876.5430"`; NULL
+  stays NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the grouping renderer.
+
+### EX-FN-6 — `from_csv` refuses; Spark parses the row struct
+
+- **repark** — `F.from_csv("line", "a INT, b STRING")` raises `UnsupportedOperationException:
+  functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)`.
+- **Apache Spark** — `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
+  answers NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the CSV parse kernel lands.
+
+### EX-FN-7 — `hash` refuses; Spark answers the Murmur3 ints
+
+- **repark** — `F.hash("n")` raises `UnsupportedOperationException: functions.hash is not
+  supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
+  is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the hash kernel.
+
+### EX-FN-8 — `json_tuple` refuses; Spark projects the string fields
+
+- **repark** — `F.json_tuple("line", "a", "b")` raises `UnsupportedOperationException:
+  functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)`.
+- **Apache Spark** — `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
+  JSON and NULL answer `(NULL, NULL)`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05,
+  EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the JSON tuple kernel lands.
+
+### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them
+
+- **repark** — all three raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (engine gap; disclosed R-FN-BATCH4)`).
+- **Apache Spark** — over `[1, 2, 2, 3, 4, 5]` (NULL skipped): kurtosis is
+  `-1.1517159763313605`, skewness is `0.3053162697580512`, mode is `2`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
+  stay on the example backlog until the moment kernels land.
+
+### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp
+
+- **repark** — `F.make_timestamp("y", "mo", "d", "h", "mi", "s")` raises
+  `UnsupportedOperationException: functions.make_timestamp is not supported yet (engine gap;
+  disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `(2024, 1, 15, 10, 30, 5)` answers `2024-01-15T10:30:05`; February 30
+  raises `DATETIME_FIELD_OUT_OF_BOUNDS` under ANSI. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the constructor.
+
+### EX-FN-11 — `months_between` refuses; Spark answers the month distance
+
+- **repark** — `F.months_between("e", "s")` raises `UnsupportedOperationException:
+  functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `(2017-11-01, 2017-08-01)` answers `3.0`; `(1997-02-28, 1997-10-28)`
+  answers `-8.0`; NULL answers NULL; `roundOff=false` agrees on whole months. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the month arithmetic.
+
+### EX-FN-12 — `monotonically_increasing_id` / `spark_partition_id` refuse
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (single-node ... disclosed; R-FN-BATCH4)`).
+- **Apache Spark** — `monotonically_increasing_id()` over a five-row single-partition frame
+  answers `0..4`; `spark_partition_id()` answers `0`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_single_node_ids_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until single-node id semantics land.
+
+### EX-FN-13 — `input_file_name` refuses; Spark answers the read path
+
+- **repark** — `F.input_file_name()` raises `UnsupportedOperationException:
+  functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)`.
+- **Apache Spark** — reading a two-row CSV answers the `file:///.../letters.csv` URI.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_input_file_name_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the read path is tracked.
+
+### EX-FN-14 — `raise_error` refuses at build; Spark raises `USER_RAISED_EXCEPTION`
+
+- **repark** — `F.raise_error("boom")` raises `UnsupportedOperationException:
+  functions.raise_error evaluation is not supported yet (engine raise kernel deferred;
+  disclosed E1)` before any row runs.
+- **Apache Spark** — raises `[USER_RAISED_EXCEPTION] boom`, SQLSTATE `P0001`. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_raise_error_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the raise kernel lands.
+
+### EX-FN-15 — `replace` takes a plain-string search and `$1` answers a backslash
+
+- **repark** — `F.replace("s", "a", "X")` (plain Python strings) answers the literal
+  replace and agrees with Spark's values on plain arms (`"SpXrk SQL"`, `"XXX"`, `"X.c"`).
+  But the shared spelling means different things per engine: Spark's literal spelling
+  `F.replace("s", F.lit("a"), F.lit("X"))` raises `TypeError: decoding to str: need a
+  bytes-like object, Column found` here, a column search raises the same way, and `"$1"`
+  in the replacement answers one backslash per match (`"aaa"` becomes three backslashes).
+- **Apache Spark** — the search is `lit` or a column: plain arms agree with the repark
+  values above; `replace("aaa", lit("a"), lit("$1"))` answers `"$1$1$1"` (literal, no
+  group substitution); a column search is served (`("aaa", "a")` becomes `"XXX"`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_replace_lit_spelling_refuses`
+  and `::test_replace_dollar_arm_answers_backslash`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement (facade-spelling
+  class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
+  teaching repark's plain-string spelling would teach code Spark analysis-refuses.
+
+### EX-FN-16 — `schema_of_csv` / `schema_of_json` refuse; Spark infers the structs
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (disclosed E1)`).
+- **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
+  (likewise with an explicit `sep` option); `schema_of_json('{"a": 1, "b": "x"}')`
+  answers `"STRUCT<a: BIGINT, b: STRING>"`. Both take a foldable literal, not a column.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until the schema-inference kernels land.
+
+### EX-FN-17 — `sentences` refuses; Spark nests words by sentence
+
+- **repark** — `F.sentences("s")` raises `UnsupportedOperationException: functions.sentences
+  is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `"Hello world. How are you?"` answers `[["Hello", "world"], ["How",
+  "are", "you"]]`; `""` answers `[]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_sentences_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the sentence kernel lands.
+
+### EX-FN-18 — `split` refuses; Spark cuts on the pattern
+
+- **repark** — `F.split("s", ",")` raises `UnsupportedOperationException: functions.split is
+  not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `"a,b,c"` answers `["a", "b", "c"]`; `"a,,c"` answers `["a", "", "c"]`;
+  `""` answers `[""]`; NULL answers NULL; `limit=2` answers `["a", "b,c"]`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the split kernel.
+
+### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out
+
+- **repark** — `make_interval(1, 2, 1, 3, 4, 5, 6)` cast to string answers `"14 mons 10
+  days 4 hours 5 mins 6.000000000 secs"` (DataFusion's display). The date-arithmetic arms
+  agree with Spark and carry the example coverage: `2024-01-15` plus `(1y, 2mo, 3d)`
+  answers `2025-03-18`, and `2024-01-15T10:30:05` plus `(4h, 5m, 6s)` answers
+  `2024-01-15T14:35:11`.
+- **Apache Spark** — the same interval casts to `"1 years 2 months 10 days 4 hours 5
+  minutes 6 seconds"`; the date-arithmetic arms agree with the repark answers above.
+  Collecting the interval itself refuses on both engines (Spark:
+  `CalendarIntervalType.fromInternal is not implemented`). *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_interval_string_form`
+- **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement. The name stays
+  covered by the date-arithmetic arms; this row records the display arm until the cast
+  spells Spark's units.
+
+### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
+
+- **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` fails with
+  `PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: partition not
+  used yet (a Rust panic was caught at the Python boundary; this is a bug — please report it)`.
+  The panic is DataFusion 54.1's own `expect("partition not used yet")` at
+  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
+  side (`ProjectionExec` over `RepartitionExec`): each output partition removes its channel from
+  the shared state, so a second `execute` of the same partition finds nothing, and something on
+  the pool-refusal path re-executes it. Reproducible three runs of three, and again at 64 MiB with
+  1e7 rows. The process survives (`panic = unwind`, caught by the boundary fence) and the session
+  stays usable; a 1 GiB pool on the same query is `ok`. **Every other operator measured at the
+  same 8 MiB pool — sort, hash aggregate, distinct, hash join, sort-merge join, window,
+  `array_agg`, TopK — returns a clean typed `Resources exhausted`.** This is the plan shape, not
+  the pool machinery.
+- **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
+  raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
+  is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
+  `sort` and `hash_join`, in the baseline's §5.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. The defect is upstream in DataFusion,
+  so this unit pins the behaviour rather than patching a dependency; the repark-side deliverable
+  is the reproducer the pin already is. It is the **only** Never-OOM contract failure in the
+  180-cell matrix: a bounded pool must answer with a typed refusal, never a panic.
+
+### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit panics instead of raising `MemoryError`
+
+- **repark** — with `RLIMIT_AS` set 256 MiB above the session's own `VmSize`, `collect()` over a
+  4e6-row five-column frame fails with `PySparkException: repark internal error in
+  collect_rows.rows_from_record_batch: PyObject pointer is null (a Rust panic was caught at the
+  Python boundary; this is a bug — please report it)`. A CPython allocation returned `NULL` and
+  the row fast path panicked rather than surfacing the `MemoryError` CPython had already set.
+  With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
+  cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
+  value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
+  `collect()` is 4,393-4,471 MiB resident at every pool from unbounded down to 64 MiB, and returns
+  the identical content digest at each.
+- **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
+  `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
+  a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
+  the failure shape. Measured in §5: Spark's own `collect_list` at a 1 GiB driver heap dies with
+  `java.lang.OutOfMemoryError: Java heap space` — quoted from the JVM's own captured stderr, not
+  inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
+  the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
+- **Pin** —
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
+- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the
+  pointer and raise `MemoryError`. It is the difference between "repark reports it is out of
+  memory" and "repark reports a bug", and a container memory limit is the ordinary way a user
+  meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
+  nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
+  Never-OOM claim.
 
 ## 8. Drop-in disclosure rationale
 

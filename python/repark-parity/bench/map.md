@@ -9,6 +9,12 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 
 ## Contents
 
+- [writepath/](writepath/map.md) — the tracked probes behind
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md): the write
+  cells, the grouping refutation and the grouping-independent invariants
+  (PERF-ICE-WRITEPATH-1 round 3).
+  pins: perf-ice-writepath-1/C-010
+
 - `bench_coalesce_chain.py` — progressive withColumns/sort/show wall times on a VALUES frame.
 - `bench_mor_merge.py` — local memory-catalog MoR vs COW MERGE phase timings;
   `--seed parquet` (fast polars seed) + `--concurrency N` (`repark.write.max-concurrent-files`)
@@ -36,6 +42,20 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 - `dynflatten/` — **PERF-DYNFLATTEN-1** `dynamicFlatten` measurement bed +
   isolated repark cells + Spark explode oracle; see [dynflatten/map.md](dynflatten/map.md).
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003
+- `facade/` — **PERF-FACADE-1** facade-boundary battery: `collect()` row materialization and
+  `withColumn` chain building, with the pre-unit code path reconstructed in-process so both
+  legs of every before/after pair share one module and one load. No JVM, by design — the box
+  allows one Spark JVM at a time and this battery must not compete for it. See
+  [facade/map.md](facade/map.md). pins: perf-facade-1/C-009
+- `spill/` — **H3-SPILL-1** the Never-OOM truth table: every operator the engine can plan,
+  under a bounded `FairSpillPool` at 1e6 and 1e7 rows, classified `ok` / `spilled` /
+  `degraded` / `clean_error` / `abort` / `wrong`. One subprocess per cell under an
+  address-space cap; peak RSS polled from `/proc`; the answer compared against the unbounded
+  run. See [spill/map.md](spill/map.md). pins: h3-spill-1/C-001, C-002
+- [icescan/](icescan/map.md) — **PERF-ICE-SCAN-1** read cells: bed generator plus the
+  §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
+  See [icescan/map.md](icescan/map.md).
+  pins: perf-ice-scan-1/C-009
 - `map.md` — this file.
 
 ## I want to…
@@ -57,6 +77,9 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the W-0 window-shape bench | `windows/run_w0.py --scale quick\|full --scratch <dir> --out <json>` |
 | Read W-0 numbers | [../../../task/window-bench-report-2026-08-31.md](../../../task/window-bench-report-2026-08-31.md) |
 | Run the dynamicFlatten measurement | `dynflatten/run_dynflatten.py --scale gate\|quick\|full --out /tmp/oc-dynflatten-bed` |
+| Run the facade-boundary measurement | `facade/run_facade.py --out /tmp/oc-facade-bed` (or `make facade-bench`) |
+| Run the spill matrix | `spill/measure.py --scratch <dir> --json-out <file>` |
+| Read the spill matrix | [../../../docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md) |
 | Read dynamicFlatten numbers | [../../../docs/perf/dynamic-flatten-baseline.md](../../../docs/perf/dynamic-flatten-baseline.md) |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |

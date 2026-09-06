@@ -19,6 +19,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
 |---|---|
 | [`lib.rs`](lib.rs) | Module registration, error conversion, and tracing setup. |
 | [`allocator.rs`](allocator.rs) | Optional mimalloc allocator for wheel builds. |
+| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). Round 3 (2026-09-05): `coerce_batch_views` casts any analyzed-vs-physical mismatch under safe Arrow cast options — a per-batch copy; non-string mismatches either widen losslessly or refuse loud (see the two coercion pins). The four `StreamingBatchReader` comments moved here verbatim from `dataframe.rs`. |
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
 | [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
@@ -34,6 +35,27 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
   `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
+| [`collect_rows.rs`](collect_rows.rs) | Arrow batch → Python value tuples for `collect`.
+  Imports the batch back through the Arrow C Data Interface and converts only the cell kinds
+  whose `to_pylist` mapping is unambiguous; anything else is supplied pre-converted by the
+  facade or declined with `None`, so the facade's converter keeps decimals, dates, times,
+  timestamps, intervals and nested values. It converts cells, never rows — the facade builds
+  every `Row`, so `Row` semantics have one implementation.
+  pins: perf-facade-1/C-002 |
+| [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
+  `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
+  entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
+  read: `body_fetches` is exactly the number of `metadata.json` documents parsed, which on a Glue
+  or S3 Tables catalog is the number of S3 GETs the statement would pay. A free `#[pyfunction]`
+  rather than a `PyReparkSession` method, because `session.rs` sits on its exact CAP-1 baseline
+  and pyo3 allows one `#[pymethods]` block per type; the product path pays nothing, since the
+  counters are two relaxed atomic loads read only when asked.
+  pins: perf-ice-catalog-io-1/C-001 |
+| [`logical_names.rs`](logical_names.rs) | `DataFrame.columns` from the plan's logical schema,
+  with no analyzer pass. Sound because every rule in `repark_functions::analyzer_rules` rewrites
+  through `NamePreserver` and none adds, drops or reorders a projection expression;
+  `column_names` stays analyzer-backed as the oracle the byte-equality pin measures against.
+  pins: perf-facade-1/C-004 |
 | [`ml.rs`](ml.rs) | Batch-streaming binders for linear, logistic, and KMeans fits. |
 | [`tests.rs`](tests.rs) | Unit pins for module registration and exception/type identity. |
 

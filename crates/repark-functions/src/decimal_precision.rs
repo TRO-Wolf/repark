@@ -187,14 +187,13 @@ fn is_default_integer_to_decimal(cast_target: &DataType, native: &DataType) -> b
         (cast_target, native),
         (
             DataType::Decimal128(20, 0),
-            DataType::Int64 | DataType::UInt64
-        ) | (
-            DataType::Decimal128(10, 0),
-            DataType::Int32 | DataType::UInt32
-        ) | (
-            DataType::Decimal128(5, 0),
-            DataType::Int16 | DataType::UInt16
-        ) | (DataType::Decimal128(3, 0), DataType::Int8 | DataType::UInt8)
+            DataType::Int64 | DataType::UInt64 | DataType::Int32
+        ) | (DataType::Decimal128(10, 0), DataType::UInt32)
+            | (
+                DataType::Decimal128(5, 0),
+                DataType::Int16 | DataType::UInt16
+            )
+            | (DataType::Decimal128(3, 0), DataType::Int8 | DataType::UInt8)
     )
 }
 
@@ -467,6 +466,17 @@ mod tests {
         let ctx = ctx();
         let batch = batch(&ctx, "SELECT 50 * CAST(1.50 AS DECIMAL(10,2)) AS v").await;
         assert_eq!(decimal128_cell(&batch), (13, 2, Some(7500)));
+    }
+
+    #[tokio::test]
+    async fn user_cast_decimal_times_decimal_keeps_declared_precision() {
+        let ctx = ctx();
+        let batch = batch(
+            &ctx,
+            "SELECT CAST(5 AS DECIMAL(10,0)) * CAST(1.50 AS DECIMAL(10,2)) AS v",
+        )
+        .await;
+        assert_eq!(decimal128_cell(&batch), (21, 2, Some(750)));
     }
 
     #[tokio::test]

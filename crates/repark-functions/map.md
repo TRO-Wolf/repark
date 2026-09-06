@@ -29,6 +29,14 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `group_avg_decimal256_stays_decimal_14_6_i256`.
   FN-FIX-1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases
   on the discrete UDAF. pins: fn-fix-1-registry-rows/C-002
+  **PERF-AGG-AVG-1 (2026-09-05):** the UDAF now also serves grouped aggregation
+  through `src/avg_groups.rs` (`groups_accumulator_supported` /
+  `create_groups_accumulator` over Float64 and Decimal32/64/128/256, `try_avg`
+  overflow on the 2×-MAX shape → per-group NULL, the sum-wrap shape filed as
+  BACKLOG `AVG-DEC-SUMWRAP-1`); the `Accumulator` retract arms are untouched for
+  window frames. The 300 ms isolated cost on `avg(l_quantity) GROUP BY l_partkey` (200 k
+  groups) was one boxed accumulator per group; the groups path keeps one sum and one
+  count vector. pins: perf-agg-avg-1/C-001, C-002
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
@@ -58,13 +66,15 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **FN-FIX-1** `percentile_approx` / `approx_percentile` discrete UDAF
   (`percentile_approx_udaf` with alias); `approx_percentile_cont` stays the t-digest name for ML +
-  `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
-  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkIntegerOverflow` (F-Y10-1), then
-  `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
-  context via the Spark door's
-  `SessionExtension` in `repark-spark`) + DEC-8 `register_spark_decimal_planner` from
-  `register_all` + the shared `shim_udf_boilerplate!` macro. Error conversion from
-  `DataFusionError` happens one layer up in `repark-core` (this crate stays DataFusion-native).
+  `spark_date_shim_functions()` + `analyzer_rules()` (**TYPES-1 (2026-09-05):**
+  `SparkIntegerLiteral` first, then `SparkDecimalPrecision`, `SparkDecimalRewrite` (U4b `/` +
+  DEC-6), `SparkIntegerOverflow` (F-Y10-1), `SparkExprSemantics` + cardinality + instant_ts,
+  and a closing `TypeCoercion` — the narrowing runs after DataFusion's own coercion and
+  re-opens mixes, so the closing pass shuts them before the next rule; installed by the session
+  on every context via the Spark door's `SessionExtension` in `repark-spark`) + DEC-8
+  `register_spark_decimal_planner` from `register_all` + the shared `shim_udf_boilerplate!`
+  macro. Error conversion from `DataFusionError` happens one layer up in `repark-core` (this
+  crate stays DataFusion-native). pins: types-1/C-007
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.
@@ -152,6 +162,13 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   sized `StringBuilder` (no per-cell `Vec<char>`).
   **octo C1-Q-004:** `perf_measure_*` 1M-row benches gated on `REPARK_PERF_MEASURE=1`.
   **octo C2-Q-001:** compile pattern apostrophe/unterminated pins.
+  **TYPES-1 round 4 (2026-09-05):** the Java-pattern year arm renders Java's leading `+`
+  past 4 digits (`yyyy`, `count >= 4` — wrapped-year `from_unixtime` parity).
+  INCREASE 1704→1709 (no compressible lines — rustfmt-packed; owner approval at merge).
+  **Round 5 (2026-09-05):** negative years pad digits after the sign (`-0499`, `-0002`),
+  `yy` is `abs(year) % 100` (`-499` → `99`); the arm moves to `src/spark_year_pad.rs` and
+  `datetime.rs` ratchets 1709→1700.
+  pins: types-1/C-006
 - `src/expr_fn.rs` — logical-`Expr` builders for date functions, including `weekday`, that embed
   UDF instances for facade columns; `date_add`/`last_day` and the regexp/split builders share the
   same kernels registered by the SQL door.

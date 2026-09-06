@@ -33,6 +33,28 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
+  corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
+  `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
+  and `ov` at `Long.MaxValue` for the `try_sum` overflow leg) drives thirteen aggregates over five
+  frame shapes — `rows_both`, `range_frame`, `all_null`, `empty_frame`, `partitioned` — on the SQL
+  door and the DataFrame door, against `SPARK_GOLDEN`, recorded from live PySpark 4.1.2 on
+  2026-09-04. Spark's two doors agreed on every one of the 65 cells, so one golden serves both.
+  `collect_set` is compared as a sorted multiset (Spark leaves the order unspecified); floats
+  compare to a 1e-9 relative tolerance, which the re-scan meets exactly because it never retracts.
+  The `repark_engine` fixture is function-scoped on purpose: the suite's autouse
+  `_isolate_active_session` stops the active session between tests, so a module-scoped one is dead
+  by the second case. The two live legs re-derive every pin on Spark under
+  `REPARK_PARITY_LIVE=1`. **Round 2 (2026-09-04)** adds three rows the critic found unpinned:
+  the catastrophic-cancellation fixture `v = [1e16, 1.0, 1.0, 1e16, 1.0, 1.0]`, which separates a
+  RETRACTING sliding `sum` / `avg` from Spark's re-scan (`WIN-SLIDE-FLOAT-1`) and whose controls
+  are split three ways on measurement — bit-identical, one-ulp drift, and not-comparable (Spark
+  refuses `median` over a frame and its ANSI `corr(v, v)` divides by zero); the DATE / TIMESTAMP
+  RANGE order-key rows (`WIN-RANGE-ERRCLASS-1` for the DataFrame door's error class,
+  `WIN-RANGE-DF-1`'s scope for the SQL door); and the two sketch goldens, which
+  `WIN-SLIDE-PCT-ACC-1` published under a live-oracle line that no live test had touched. The
+  accuracy-knob test's last assertion was two constants and is now repark's own answer against
+  Spark's. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
 - **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
   attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
@@ -76,9 +98,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **PERF-DYNFLATTEN-2** keeps this leg as its live gate: both engines `read.parquet`, so the
   null-mask extractor is exercised on the path where leaf projection pushdown lives, not only on
   the `createDataFrame` path the bench measures. 17 passed / 105 deselected, unchanged.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the reader relax converged the row — repark `id` now
+  nullable like Spark, so the pin asserts `True` on both sides. DYNFLATTEN-READNULL-1 FIXED.
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: perf-dynflatten-2-null-mask/C-004
   pins: perf-dynflatten-1-measure/C-002, C-003
+  pins: cutover-schema-1/C-001
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -164,6 +189,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
+- [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
+  the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
+  pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
+  `encode`/`decode` charset arms (EX-FN-3), column-referencing `expr` (EX-FN-4),
+  `format_number` (EX-FN-5), `from_csv` (EX-FN-6), `hash` (EX-FN-7), `json_tuple`
+  (EX-FN-8), the `kurtosis`/`skewness`/`mode` trio (EX-FN-9), `make_timestamp`
+  (EX-FN-10), `months_between` (EX-FN-11), the single-node id pair (EX-FN-12),
+  `input_file_name` (EX-FN-13), `raise_error` (EX-FN-14), the `replace` lit
+  spelling plus its `$` arm (EX-FN-15), the `schema_of_*` pair (EX-FN-16),
+  `sentences` (EX-FN-17) and `split` (EX-FN-18) — and the `make_interval`
+  string-cast arm pin (EX-FN-19, BACKLOG ARM on a covered name). Refusals pin at call
+  time except the plan-time `encode`/`decode` pair; the `replace` `$` arm and the
+  interval display arm pin today's wrong values so the fixes red them. The module
+  docstring names the row span `EX-FN-1`…`EX-FN-19`.
+  pins: ex-25-functions-a/C-009
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
@@ -227,15 +267,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_integer_overflow_parity.py](test_integer_overflow_parity.py) — **F-Y10-1:** integer
   `+` / `-` / `*` overflow shared-raise under default ANSI and Int32/Int64 wrap when
   `ansi=false`, SQL and facade expression (`F` import uses the PySpark N812 noqa).
-  Untyped `1 + 1` / `2147483647 + 1` stay int64 (literal-width split).
+  Untyped `1 + 1` / `2147483647 + 1` answer int32 (TYPES-1 narrowed the literal-width
+  split; the archived F-Y10-1 claim is superseded — those three cells cite types-1/C-002).
   Unaliased planner-hit SQL keeps BinaryExpr column names.
   Native ``repark.sql()`` overflow raise is pinned. Facade i32 sub/mul wrap and
   i64 CAST+lit wrap cells are pinned (ASCII docstring operators for RUF002;
   ruff format on long CAST SQL).
-  pins: f-y10-1-int-overflow/C-001, C-002, C-003.
+  pins: f-y10-1-int-overflow/C-001, C-002, C-003; types-1/C-002 (untyped cells).
 - `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
+  PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
+  bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
+  edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -305,7 +349,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds. RP-6: `test_partitioned_dv_update_commits_and_rewrite_returns_zeros` pins Spark-equal `(id, _row_id, seq)` after live-DV UPDATE; `rewrite_position_delete_files` returns zeros with rows and fixture bytes unchanged after the UPDATE. JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked and `thiserror` duplicate `skip`. PLAN-1 makes the ledger lookup lifecycle-aware across staging, completed, and archive, and checks the landed #253 commit instead of the current branch. **Nightly fix (2026-09-01):** the three live helpers now qualify `CALL <catalog>.system.register_table` through `LIFECYCLE_SPARK_CATALOG`; unqualified, Spark resolved it against `spark_catalog` and the CI leg had been red since its first run (2026-08-28). The north-star meta-pin now checks the row cites V3E-5 and the oracle version regardless of its status glyph, so an honest ⚠ does not red it. V3-7: `test_v3_merge_matched_update_live_cow_and_mor` cites the V3-7 ledger transcript (not `/tmp`) and live-gates COW/MoR matched-UPDATE MERGE. **V3-10 (2026-09-02):** `test_v3_upgrade_v2_to_v3_live_matches_spark` skips FIRST when the tier is off — its repark half duplicates `test_v3_upgrade.py::test_alter_upgrade_with_the_opt_in_serves_v3_lineage` and cost 0.32 s of call time on every JVM-free run (test wall 0.52 s → 0.20 s). Its Spark helper reuses the default Ivy cache like `_live_parity.build_spark_iceberg_engine` instead of a per-call `mkdtemp`, and picks the newest Hadoop pointer by PARSED version like `_materialize`, not by lexicographic `sorted(glob)` (which would pick `v9` over `v10`). It is not folded into `_live_subquery_where_dml_measurement`: that helper memoizes ONE session's cells behind a module-level dict and returns early on the second call, so adding upgrade statements to it would couple two units' measurements to one session's ordering. **V3-9 (2026-09-02):** `test_v3_mor_subquery_where_dml_live` cites the V3-9 transcript, runs the repark half JVM-free and live-gates the MoR subquery-`WHERE` DELETE / UPDATE lineage and `PUFFIN` delete-file format against Spark (pins: v3-9-mor-predicate-dml-dv/C-002, C-003, C-005). The Spark leg is one session for both modes: `_live_subquery_where_dml_measurement` measures the COW and MoR cells once and each test asserts its own pinned values against that measurement, so the file's live wall clock fell from 24.07 / 24.05 s to 23.39 / 22.74 s (pins: v3-9-mor-predicate-dml-dv/C-008). **RDF-1 (2026-09-02):** it read `completed/` by absolute path and reded the moment the archive ritual moved that ledger; both ledger reads now share `_ledger_text`, the staging/completed/archive lookup PLAN-1 already used for the V3E-5 meta-pin. **RP-7 (2026-09-02):** the two sibling live helpers dropped their per-call `spark.jars.ivy` `mkdtemp` + `rmtree`; on a runner with no local Iceberg jar that forced a full Maven resolve twice per nightly, and the default Ivy cache is what `_live_parity.build_spark_iceberg_engine` and the V3-10 helper already use.
   pins: rp-7-f18-repin/C-006 **RP-7 (2026-09-02):** the shared-Puffin container-close cell went to its own module rather than here — this file was 23 lines under the 1000-line cap.
   pins: rdf-1-position-delete-bounds/C-004
-- [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()`
+- [test_types_1.py](test_types_1.py) — **TYPES-1 (2026-09-05):** Spark-door Arrow-type
+  pins — INT literals and arithmetic in both ANSI modes, BIGINT count-likes, the INT rank
+  family, session-zone STRING `from_unixtime` with the format argument, EXPLAIN plan-cast
+  pins, ANSI-door stock-type controls, and seven live-oracle legs behind
+  `REPARK_PARITY_LIVE=1` (full-match shapes, an approx/regr nullability carve-out, an
+  ANSI-off overflow leg, from_unixtime extremes, a grouping type carve-out, re-coercion
+  shapes). Round 4 adds CASE/COALESCE/IF/array/struct/map/UNION/DECIMAL re-coercion cells,
+  TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
+  wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
+  from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.
+  pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
+  coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
+  `from_unixtime` always nullable like Spark 4.1.2.
+- [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
   Live co-collect `test_parity_live.py::test_live_date_fn_1_date_and_unix_timestamp`.
@@ -326,8 +384,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   host-dependent (3 on a 64-core box) and the always-run pin is `count >= Spark's 2`.
   CoW MERGE: `delete_files` empty (a delete file is a defect); data-file count after the
   second pass is 1 on both engines.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** REPARK halves re-measured to the Spark-equal
+  nullability derivation (79 schema-triple cells); s3 verdict EQUAL
+  (`CUTOVER-DEDUP-SCHEMA-1` FIXED), CTAS-REQ programs still DIVERGE only on `V3-COV-7`
+  (`CUTOVER-CTAS-REQ-1` FIXED).
   pins: sql-harden-1-cutover-shapes/C-001, C-002, C-003, C-004
   pins: sql-harden-2-cow-shapes/C-001, C-002, C-003, C-004
+- [test_cutover_schema_1.py](test_cutover_schema_1.py) — **CUTOVER-SCHEMA-1 (2026-09-04):**
+  nullability derived the way Spark derives it on the cutover shapes. Always-run:
+  `read.parquet` of a required-field file reports every field nullable (flat and nested),
+  csv/json likewise; Spark-door CTAS stores every column optional including
+  `SELECT coalesce(x, 0)` (at repark's `long` width — the V3-COV-8 width half stays
+  BACKLOG, only nullability moves); the S3 dedup Arrow schema equals Spark field for field;
+  `CAST(1 AS DECIMAL)` is nullable while `CAST(1 AS INT/STRING)` keeps the non-null
+  literal; the ANSI-door cast fence and the SE-1 tighten-derived CTAS refusal control
+  stay put. Live legs re-derive the read/cast/dedup cells from PySpark 4.1.2 on the
+  shared `spark_engine`. Round 3 (2026-09-05) pins four pre-existing divergences as
+  BACKLOG rows with current-answer pins: `CAST-NULL-1` (non-decimal cast targets),
+  `CAST-BOOL-DEC-1` (boolean-to-decimal refusal), `CUTOVER-NULLDEPTH-1` (relax stops
+  at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
+  The module docstring is the pins-only one-liner; this row is the reason.
+  pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
@@ -372,7 +449,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
   Iceberg 1.11.0. One module per engine, so neither grows past the ceiling and a re-measurement
   diff reads as one side moving. All three are `_`-prefixed, so pytest never collects them.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** `ctas-v3` re-measured to optional (the V3-COV-8
+  nullability half); verdict stays DIVERGES on width.
   pins: v3-cov-statement-coverage/C-003
+  pins: cutover-schema-1/C-002
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — **V3-12 (2026-09-02):** the
   facade door's cell for a v3 merge-on-read write over an upgraded table's legacy parquet
   position delete. `_repark_legacy_merge_shape` and `_spark_legacy_merge_shape` run the SAME five
@@ -1221,7 +1301,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_facade_hygiene.py` — R-FACADE-HYGIENE (W7) cdf hide/GC, fillna, dropDuplicates, OOS.
 
 - `test_df_batch2.py (lint: functions_api not F; N802 sampleBy)` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census + C5 unpivot quote / cube alias.
-- `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake)
+- `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake) TYPES-1 round 4 pins `with_row_index` BIGINT (pins: types-1/C-005).
 - `test_polars_ns.py (skeptic fix: real-path starts_with/slice + quote pin; full census)` — R-POLARS-NS str/dt/fill_null + differential.
 - `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
   Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
@@ -1597,6 +1677,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
   (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
   ruff-format lockstep.
+- `test_h3_spill_matrix.py` — **H3-SPILL-1** the Never-OOM pins behind Round 3 (2026-09-05): the boundary-digest pin also compares two equal-cardinality frames with different content (`offset=1`), so a row-count digest cannot pass it.
+  [docs/perf/spill-matrix-baseline.md](../../../docs/perf/spill-matrix-baseline.md). Three
+  families: a spilling operator spills (`spill_count > 0`) **and** its digest equals the
+  unbounded run's; a bounded pool that fits answers exactly; a pool refusal is the documented
+  Spark-shaped exception (`fair(` required, `greedy(` and any caught Rust panic forbidden, both
+  resize knobs named) and leaves the session usable. Then the limits, each in a fresh
+  subprocess reading its own `VmHWM` (never `ru_maxrss`, which survives `execve` and would
+  report pytest's own footprint): spilling holds resident memory 200 MiB below the
+  unbounded run and under 3x the pool, while `toPandas` at a 64 MiB pool is over 6x the pool —
+  the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
+  same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
+  equal at 1 and 4 target partitions while moving when one row is removed (the provocation
+  control: a constant digest reds the second pin, not the first). Two defect pins codify
+  today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
+  panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
+  and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
+  session's own `VmSize` panics on a null `PyObject` instead of raising `MemoryError`; the
+  6 GiB-headroom control is green). The ceiling is host-relative on purpose — an absolute
+  `RLIMIT_AS` is a property of the box, not of the code.
+  pins: h3-spill-1/C-003, C-004, C-005, C-006
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
@@ -1622,6 +1722,123 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
   failing LOUD, and that a
   relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
+- `test_perf_facade_collect_rows.py` — **PERF-FACADE-COLLECT-1** (2026-09-04): the binding row
+  fast path against the pre-existing Python converter, kept callable as
+  `rows_export.rows_from_arrow_table_python`. Both converters run on the same batch and every
+  cell is compared by `repr` as well as by value, so a Decimal that lost its scale or an int
+  returned as a float is red where `==` alone would pass. Matrix: every natively converted type
+  at its extremes with a null in each column (int8..uint64 bounds, `f32` widening, ±inf,
+  non-ASCII / empty / NUL / emoji strings across the three UTF-8 layouts, the three binary
+  layouts, an all-null column), then the declined types (three decimal scales, date32, time64,
+  timestamp, list, struct), then map / tz-aware timestamp through the supplied-column route,
+  the calendar-interval refusal, duplicate display names, zero rows, zero columns, and the
+  guard that the collector is re-enabled after collect.
+  It also carries the answer pin for `COLLECT-STRUCT-ROW-1`, a divergence the round-2 review
+  found and this unit did not cause: a `StructType` cell collects as a `dict` where live
+  PySpark returns a nested `Row`, identically on both converters, so the equality pin beside it
+  is what proves the divergence is pre-existing.
+  pins: perf-facade-1/C-002, C-003, C-006, C-007
+- `test_perf_ice_scan_1.py` — **PERF-ICE-SCAN-1** (2026-09-05): the `count(*)` fold and
+  parallel small-table scans over a per-test eight-file bed (24 rows, ids 1..24) at
+  shuffle-8. A module-scoped runtime probe (`SELECT count(*)` EXPLAIN has no
+  `IcebergTableScan`) detects the F-27 fork capability once; the fold and parallelism pins
+  skip with the named reason
+  `fork pin predates F-27` until the RP-14 bump, so the file is green on the pinned fork.
+  Always-run: count answers on plain/empty/DV/WHERE/LIMIT tables, identity DELETE and MERGE
+  row sets (the DML-exclusion pins). F-27: the fold on a plain table, the DV/WHERE
+  non-folds with correct answers, N=8 with the 24-row set intact, N=1 for the unfolded DV
+  count (empty projections never split), and the `_row_id` 0..23 tiling. The `_row_id`
+  and `_pos` never-split halves live fork-side (`parallel_small_scan.rs`,
+  `expand_skips_*_projection`): EXPLAIN cannot plan `_row_id` (pre-existing) and `_pos`
+  is not SQL-visible in RePark.
+  Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
+  count against Spark on the same seeds. Numbers and commands:
+  [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
+  pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-011, C-009
+- `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
+  through the facade, over a fixed four-file seed so the plan really has four partitions.
+  Always-run: the CTAS writes one data file per plan partition (four), and
+  `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
+  takes it — still writes exactly one; and a partitioned CTAS's files ascend by partition value
+  (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  two writer shapes agree on every answer and on their layout (one writer one file, four-cap
+  eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
+  against the written table. The ordering pin seeds EIGHT UNEQUAL files
+  (5000/10000/20000/40000/7000/3000/60000/1000) and runs a v3 CTAS five times at **3, 4, 8 and 16
+  partitions**, asserting the manifest ascends by content, that `_row_id` tiles it contiguously
+  from zero, that the row set is the expected digest of ids, and that two runs with the same file
+  grouping commit the same id-to-`_row_id` map — the grouping is identified by every file's
+  `id` bounds and record count, and the map by its hash; keying either by the record-count
+  sequence alone made the check unfalsifiable (round-3 critic G3) and would red two distinct
+  groupings that happen to share a count sequence (round-4 critic). Two groupings CAN share a
+  count sequence and differ in which rows each file holds, which is what the conjunct now catches. It deliberately does
+  NOT assert the record-count sequence: round 2 did, and CI's 4-core runner reddened it because the
+  scan groups the source files differently from run to run — measured 3 distinct groupings in 5
+  runs at 3 partitions, 4-6 in 10 at 4, and 1 in 10 at 8 and at 16, where the eight source files
+  map one-to-one onto the partitions. **8 was the round-2 pin's own configuration, which is the
+  only reason it looked green.** Equal-sized files hid the round-1 defect; a 1:1 partition count
+  hid the round-2 one; this pin varies both. There is deliberately NO wall assertion here: on a disk-contended
+  box this write is `fsync`-bound and a timing pin flakes — the speedup is measured in the
+  baseline doc and pinned deterministically in `write/partition_write.rs`, where the blocking
+  work is injected. Numbers and commands:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
+  pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
+- `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
+  statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
+  `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the
+  invariant `DataFrame.columns` now depends on, since every repark analyzer rule rewrites
+  through `NamePreserver`. Unaliased arithmetic, decimal and mixed-width integer coercion,
+  wildcards, joins, unions, windows and case-preserved aliases are the cells that would move
+  first if a rule stopped preserving names.
+  pins: perf-facade-1/C-004, C-008
+- `test_perf_agg_avg_1.py` — **PERF-AGG-AVG-1** (2026-09-05): grouped `avg` / `try_avg`
+  answer pins plus the cost probe that proves the `GroupsAccumulator` runs. Always-run pins
+  assert Spark-recorded values AND Arrow types: int/float/decimal global and grouped avgs
+  with NULLs, every input width coerced to double, decimal `(10,2)→(14,6)` exactly,
+  `try_avg` overflow NULL at `decimal(38,4)` on the 2×-MAX shape, plain-avg overflow raising, empty input,
+  all-NULL groups, single `avg(DISTINCT)` answering through the optimizer's dedup rewrite,
+  and the sliding-window control. The many-groups leg uses a 2e5-group fixture whose values
+  are exact in binary (halves under 32), so per-group avgs are bit-exact across engines and
+  the live leg compares full frames; only the 2e5-term checksum uses a tolerance. The probe
+  times grouped avg vs grouped sum back to back on one partition (4.06× on the base, bound
+  2.5, 1.21× after) — the single partition is what makes the per-group boxing cost
+  visible. Live legs
+  re-derive the small grouped, decimal, window, many-groups, overflow and distinct answers
+  from PySpark 4.1.2. Three pre-existing divergences are disclosed, not absorbed: group keys
+  come back nullable where Spark marks them not-null (the live legs project to the avg
+  column), multi-column distinct aggregates refuse with `DistinctAvgAccumulator`
+  where Spark answers, and the sum-wrap fixtures answer the wrapped quotient where
+  Spark NULLs or raises (`AVG-DEC-SUMWRAP-1`, below). Round 2 pins the grouped
+  refusal shapes as measured: grouped multi-distinct refuses as a bare
+  `PySparkException` with the same message, and grouped `avg(NULL)` refuses as
+  `UnsupportedOperationException` naming the groups accumulator pair. Round 2 records
+  the `AVG-DEC-SUMWRAP-1` divergence, round 3 widens it to the general wrap class:
+  the zero-wrap fixture answers `0.0000` on the SQL doors, the non-zero-wrap fixture
+  answers `100000.0000` on grouped SQL and DataFrame, and the window `try_avg`
+  list plus the window `avg` raise are pinned in the same test — where Spark answers
+  NULL (`try_avg`) or raises (`avg`). The grouped-float drift gets its own pin: the
+  1e16-plus-ones fixture pins repark's exact grouped value within 1e-12 of
+  Spark's, with a seventh live leg re-deriving the tolerance (the many-groups
+  fixture's exact-binary values cannot see this drift). The brief's full gate
+  list runs green with this file in the tree, and §6 of the ledger records the
+  three named mutations red.
+  pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
+  `createDataFrame` path against the legacy row-wise path, kept callable as
+  `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
+  same input and every case compares Arrow field types, Arrow values and `collect()` by
+  `(type name, repr)` as well as by value, so a retyped cell is red where `==` alone would
+  pass. Arrow values compare by repr-per-row and collected rows by signature only, so NaN
+  cells compare instead of never matching. Matrix: every scalar Python type with Nones in
+  every column and whole-None columns,
+  all merge-kind refusals with exact text, decimal envelope and int64-overflow refusals,
+  two multi-failure precedence pins asserting the new-path text,
+  tuples/lists/namedtuples/dicts/Rows/scalars, every schema form, empty frames, NaN/NaT
+  witnesses, nested columns under both struct/map and legacy-coerce confs, ML vectors,
+  `array.array` typecodes, 1e4 rows, and a live leg against PySpark 4.1.2 `createDataFrame`.
+  The conf halves assert their own effect (struct vs map, first-only vs merged fields, UTC
+  vs naive timestamps) so a session-reuse regression cannot make them vacuous.
+  pins: perf-facade-cdf-1/C-002, C-003, C-004, C-007, C-009
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
   `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
@@ -2001,7 +2218,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   repark `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null. **U3 dated
   2026-08-13:** still DECLARED — U3 `fromLiteral` is `+ - *` only; UNION uses Spark
   `forType(INT)=(10,0)`, not digits. **R-2 dated 2026-08-14:** still DECLARED — hook is
-  `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm). Count-mismatch raises; `unionByName`
+  `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm).
+  **TYPES-1 dated 2026-09-05:** width converged to `decimal128(11,1)` like Spark; still
+  DECLARED on nullability only (registry TY-3 keeps the declaration; cf. the TYPES-1 union
+  residue TY-6). pins: types-1/C-002. Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -2205,6 +2425,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DEC-8 `(38,20)*(38,20)` equality at `(38,6)`; DEC-9 nullability residue kept).
   Recorded against live PySpark 4.1.2. DEC-6 overflow raise is **LANDED** (checked `+`
   UDF). Budget pin: G2 20-26, G13 6-12. Ledger: `task/r2-dec-close-ledger.md`.
+  **CUTOVER-SCHEMA-1 (2026-09-04):** `int_times_decimal_promotes_wider_in_repark` plus the
+  three G13 nullability cells flip to equality (overflow-exposed operand casts); the two
+  money CTAS rows split the post-write shape into `expected_written` (nullable — Spark's
+  CTAS-optional derivation) while the SELECT half stays non-null with the recorded oracle.
+  pins: cutover-schema-1/C-002, C-003
 - `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
   `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
   and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the
@@ -2270,9 +2495,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`), lag/lead default + explicit default
   value + NULL payload, partitioned vs unpartitioned, ORDER BY NULLS FIRST/LAST, and ≥2
   DataFrame-API `Window.partitionBy` rows (CP-11). Seed via `createDataFrame` + temp view so the
-  corpus measures WINDOW behaviour, not VALUES literal-type noise. 31 equalities (value+type match
-  on frames/offsets/default-frame trap + temporal working path) + 11 disclosures (SQL-door ranking
-  returns Arrow `uint64` vs Spark `int32`; R4 residual; R1/R5 flipped by W-4). Every row
+  corpus measures WINDOW behaviour, not VALUES literal-type noise. 41 equalities + 1 disclosure
+  (temporal following-to-following). TYPES-1 (2026-09-05): the SQL-door ranking TYPE
+  disclosures converged to `int32` equality and the dead `TYPE_DISC` lead-in is deleted;
+  five stale Spark-2.x-era no-engine tiers removed (1481 → 1422 lines). Every row
   asserts on the Arrow path via `repark_parity.assert_frames_equal`; disclosure failures are
   CLASSIFIED CONVERGED (flip-don't-delete) vs regression. Determinism: total ORDER BY or
   peer-determined columns. Ledger: `task/w4-windows-ledger.md`.
@@ -2422,6 +2648,83 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
+- `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05; RP-12 landed F-CATIO at
+  pin `79119643`; IO-2 un-skipped the part-3 pin):** the catalog-IO
+  census and the manifest target on the memory catalog. The instrument is
+  `_native.iceberg_metadata_cache_census(session)`, whose `body_fetches` counter is exactly the
+  number of `metadata.json` documents the session has parsed — which is the number of S3 GETs the
+  same statement would pay on Glue or S3 Tables, so the counter IS the census without a tracer.
+  The strace census that produced the committed before/after table lives in
+  [docs/perf/iceberg-catalog-io-baseline.md](../../../docs/perf/iceberg-catalog-io-baseline.md).
+  Always-run legs: a repeated read parses nothing; INSERT / DELETE / UPDATE / MERGE each parse
+  nothing beyond the commit they write; a commit and an `ADD COLUMNS` are both seen by the next
+  statement (ADR-0004 T6 and BUG-005 at the Python door); the knob off reconstructs the pre-unit
+  path in the same process; the retained-entry bound is trimmed at the statement door and the
+  table still answers; three bad knob values fail loud naming the key and two underscore aliases
+  name BOTH the key the user set and the canonical spelling; the bound's SCOPE is pinned (an
+  8-way `UNION ALL` at `entries=1` retains 8 inside the statement and comes back under the bound
+  at the next door); and a 48-manifest table
+  answers equal to its one-manifest twin. Two legs SKIP with a named reason: the AWS census legs
+  are fork-gated (ask `F-CATIO-AWS` — fork pin `189a73ed` has no `with_table_metadata_cache` on
+  the Glue / S3 Tables builders), so they un-skip at the pin bump that consumes them. The third
+  skip IO-1 filed here — the `t_many` second-statement <= 20 ms target, fork ask `F-CATIO-B` —
+  un-skipped in IO-2 and runs below.
+  The measured tables, the machine, the recorded load and the re-measured floor live in that
+  baseline note beside the registry rows `PERF-CATALOG-CALLS-1` (FIXED in IO-1) and
+  `PERF-ICE-MANIFEST-1` (BACKLOG in IO-2: the knob shipped with the default
+  OFF, so the win is measured but not served until the default-ON flip).
+  pins: perf-ice-catalog-io-1/C-001, C-005, C-006
+  **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):** the
+  part-3 pin is un-skipped (the `t_many` second statement must clear 20 ms on a release
+  module, with the knob set explicitly to 32 MiB) and nine legs join it. Every cache-on leg
+  sets the knob explicitly, because the default is off. The delete instrument is
+  `_delete_manifests`: every `*.avro` under the session warehouse is unlinked, so
+  a repeated read can only answer from the shared cache. An explicit-knob session answers
+  after the deletion (the sharing pin); a `manifestCacheBytes = "0"` session fails it (the
+  knob-off control, which also proves `"0"` builds); and a default session fails it too
+  (the default-off control); after `rewrite_manifests` +
+  `expire_snapshots` every pre-rewrite manifest path is gone from disk and the next read still
+  answers the same rows (immutability by path — the read needs only new paths); a MERGE matches
+  a row the previous statement committed; a dropped and recreated table answers its own row
+  count; a `register_table`-adopted table stays correct across a commit; a 512-byte budget
+  answers across eight tables (eviction never corrupts — the byte bound itself is the fork's
+  moka `max_capacity`, unit-pinned fork-side); and `VERSION AS OF` plus branch reads answer
+  with the cache on. Two lineage detector pins hold `PERF-CATALOG-LINEAGE-CACHE-1`'s shape:
+  `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` pins today's
+  wrong answer (NULL lineage for carried rows — the pin reds when `F-CATIO-KEY` lands) and
+  `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` pins the
+  same upgrade serving assigned lineage with the knob off. The two refusal parametrizations
+  grow by the new key (`"many"` and `"-1"`
+  fail loud; the alias names both spellings). The IO-1 commit-visibility and schema-change legs
+  run unchanged with the cache OFF (their default sessions build no shared cache). The
+  two-door shape of every cell stays in
+  Rust (`catalog_cache_staleness.rs`): two Python sessions cannot share one memory catalog, so
+  the Python legs are single-session sequential through the same shared cache.
+
+  | test | clause |
+  |---|---|
+  | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
+  | `test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish` | C-002 |
+  | `test_a_default_session_reopens_manifests_after_they_vanish` | C-002 |
+  | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-002 |
+  | `test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows` | C-004 |
+  | `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-004 |
+  | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-004 |
+  | `test_a_merge_after_a_commit_matches_the_committed_row` | C-004 |
+  | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-004 |
+  | `test_a_registered_table_stays_correct_across_a_commit` | C-004 |
+  | `test_a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+  | `test_time_travel_reads_the_pinned_snapshot_with_the_cache_on` | C-004 |
+  | `test_branch_reads_answer_with_the_cache_on` | C-004 |
+  | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
+  | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
+
+  pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006
+  The part-3 wall-clock target (≤ 20 ms) runs on a release module only (CI's wheel smoke is a
+  debug build and read 34 ms); the delete-manifest pins (the shared cache answers after every
+  `*.avro` is unlinked) are the every-build guard.
+  RP-13 (2026-09-05, pin `2ed39cb0`, F-CATIO-KEY) flipped the knob-on upgrade detector from the
+  NULL-lineage answer to the assigned lineage; `PERF-CATALOG-LINEAGE-CACHE-1` is FIXED.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
@@ -2777,8 +3080,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_lrs3_registered_divergences.py` — **LRS-3 (2026-08-20):** the pins that let registry rows
   `RAND-1` and `BL-8` land (§6: a row lands with its pin or it does not land), plus the SQL door's
-  new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
-  unsigned, so closing the row reds it on purpose.
+  new `approx_count_distinct` spelling. The `BL-8` pin was a ratchet — it asserted the door is
+  STILL unsigned, so closing the row redded it on purpose. **TYPES-1 (2026-09-05):** `BL-8` is
+  FIXED (the SQL door answers `bigint`) — the ratchet retired with the row; `RAND-1` and the
+  alias pins stay. pins: types-1/C-003
 
 - `test_sem6_substr_zero_width_null.py` — **SEM-6 (2026-08-21):** `regexp_substr` returns NULL for
   a zero-width match, closing registry row `RE-3`. Seven divergent cases and six controls; the
@@ -2818,6 +3123,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **SEM-1 (2026-08-31):** `LOG-1` pins flip to Spark: `log(8)` is the natural log on both
   Spark doors; both arities return NULL on the six non-positive edges. `UNIX-1` is unchanged.
   pins: sem-1-spark-answer-parity/C-004, C-008
+  **TYPES-1 (2026-09-05):** `UNIX-1` is FIXED (the SQL door answers session-zone STRING) —
+  its divergence pin retired with the row; the `LOG-1` pins stay. pins: types-1/C-006
 - `test_sem1_spark_log.py` — **SEM-1 (2026-08-31):** Spark-door `log` kernel, `F.log` two-arg,
   native ANSI base-10 control, `log2`/`log1p`/`ln` incidentals. Oracle live PySpark 4.1.2.
   pins: sem-1-spark-answer-parity/C-004, C-006, C-007, C-010
@@ -2835,6 +3142,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add an engine-knob `.config(...)` range/validation test (batch size / partitions / memory) | `test_session_config_knobs.py` (per-key Spark rules — SAF-006/SAF-007) |
 | Add an error-taxonomy / exception-type test | `test_errors.py` |
 | Add a `Row` API / collect-row parity test (G-ROW) | `test_row.py` |
+| Add a collect row-materialization equality pin (PERF-FACADE-COLLECT-1) | `test_perf_facade_collect_rows.py` |
+| Add a logical-vs-analyzed column-name pin (PERF-FACADE-WITHCOLUMN-1) | `test_perf_facade_logical_names.py` |
 | Add a select/projection display-naming test (Group H) | `test_select_naming.py` |
 | Add H2 Group H long-tail / wrap-display / same-object self-join pins | `test_h2_group_h2.py` |
 | Add a catalog / publish-path test | `test_catalog_flow.py` |
@@ -2846,7 +3155,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
-| Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, thirteen sliding refuses (int64 `approx_count_distinct`), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009 |
+| Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
+| Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
 | Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,500 rows. pins: rdf-1-position-delete-bounds/C-003 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |

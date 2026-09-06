@@ -117,6 +117,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
+- `decimal.rs` — the Spark-door decimal128 pins at `i128` precision: result `(p,s)`, value,
+  and nullability for the G2/G13 corpus shapes. **CUTOVER-SCHEMA-1 (2026-09-04):**
+  `pin_int_times_decimal_is_12_2_i128` and `pin_mul_single_digit_nullability_non_null_i128`
+  flip to nullable (overflow-exposed operand casts, Spark-equal); names kept.
+  pins: cutover-schema-1/C-003
 - `v3_cow.rs` — v3 UPDATE, sequential COW DELETE, and MERGE matched-update keep `_row_id`
   (V3-7 Spark-equal MERGE lift; RP-6 UPDATE/DELETE). V3-8 replaced the subquery keep-refusal
   with the outside-the-hole control (`UPDATE … NOT IN` refuses without `V3-COW-1` and leaves
@@ -317,6 +322,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
   `time_travel`, `metadata_tables` (**RP-5:** the two pins guard the fork behavior with the engine shim gone, pins: rp-5-fork-repin/C-003; **RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
+  **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
+  the Iceberg/Arrow path — the CTAS guard reads its literal column as `Int32`.
+  pins: types-1/C-001.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
   and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,
@@ -413,6 +421,91 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins.
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
+  the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
+  with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
+  for a memory catalog (each `register_memory_catalog` otherwise builds its own namespace map).
+  Six are staleness: a commit in A is visible to B's next statement; an `ADD COLUMNS` in A is
+  seen by B's next `SELECT *` (BUG-005, fresh schema per statement); a MERGE in B after A's commit
+  matches A's rows and writes against them; a read after A's `rewrite_manifests` +
+  `expire_snapshots` still answers; a DROP + re-CREATE is never served from the old location
+  (`drop_table` evicts the cached pointer and the re-CREATE seeds a fresh one — evict-on-commit
+  plus evict-on-drop); and a Hadoop pointer adopted through `register_table` stays correct across
+  commits. **Round 2 corrected the DROP reason:** the Hive/REST uuid is NOT what makes DROP + re-CREATE
+  safe, because a Hadoop pointer adopted through `CALL register_table` commits deterministic
+  `v(N+1).metadata.json` with no uuid at all — measured, and pinned by
+  `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits`, which walks
+  v1 → v5 through INSERT, INSERT, INSERT OVERWRITE, INSERT and stays row-correct. The safety
+  property is **evict-on-commit plus evict-on-drop**, which holds for both naming schemes.
+  Five are cache mechanics: an unmoved pointer costs no
+  body fetch and a trim under the bound keeps every entry; a commit evicts the pointer it replaced
+  and seeds the new one, so retention is FLAT across DML and the reader after a commit pays no GET;
+  a table is never served a SIBLING table's cached document; the knob off reads the document on
+  every load; the retained-location bound holds across 24 distinct tables and a trimmed cache
+  still answers. One pins the bound's SCOPE:
+  `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` records that an
+  8-way `UNION ALL` at `entries=1` retains 8 within the statement and comes back under the bound
+  at the next door — the knob bounds accumulation across statements, not working set inside one.
+  Mutation score (measured, six mutations, two of them escapes that were closed). RePark side:
+  trim made a no-op → the bound pin reds; the knob-off branch dropped → the disabled pin reds;
+  the cache never built → the unmoved-pointer and commit-seed pins red; trim made a per-statement
+  flush → NOTHING red at first, so the unmoved-pointer pin was strengthened to call `trim` between
+  its two reads until it did. Fork side, under the temporary path override: a `lookup` that serves
+  ANOTHER key's entry → the sibling-table pin reds; a manifest-list cache key with the path removed
+  → five pins red. The first form of that key mutation — a `lookup` that ignores the key entirely
+  — reds NOTHING, because the memory catalog evicts on commit so a single-table fixture holds
+  exactly one entry and any entry is the right one. The sibling-table pin exists because of that
+  escape.
+  Every citation for this module lives here, not on the tests: the owner's ruling is that a
+  `pins:` line is prose and belongs in `map.md`, and the ledger-grammar gate reads these maps.
+
+  | test | clause |
+  |---|---|
+  | `a_commit_in_one_session_is_visible_to_the_next_statement_of_another` | C-003 |
+  | `a_schema_change_in_one_session_is_seen_by_the_next_statement_of_another` | C-003 |
+  | `a_merge_after_another_sessions_commit_reads_that_sessions_rows` | C-003 |
+  | `a_read_after_another_sessions_maintenance_still_answers` | C-003 |
+  | `a_dropped_and_recreated_table_is_never_served_from_the_old_location` | C-003 |
+  | `a_hadoop_pointer_adopted_by_register_table_stays_correct_across_commits` | C-003 |
+  | `an_unchanged_pointer_costs_no_metadata_body_fetch` | C-002 |
+  | `a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading` | C-002 |
+  | `a_table_is_never_served_a_sibling_tables_cached_metadata` | C-002 |
+  | `the_disabled_knob_reads_the_metadata_document_on_every_load` | C-002 |
+  | `the_retained_location_bound_holds_across_many_commits` | C-004 |
+  | `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` | C-004 |
+
+  pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+- `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-2 (2026-09-05):** four more pins, so
+  sixteen in the module. The instrument is manifest deletion: after the first read the test
+  deletes every `*.avro` under the table's metadata dir, so a repeat that answers proves it read
+  from the shared cache — and the knob-off control must fail instead.
+  `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` (the funnel
+  pin — it sizes the cache explicitly at 32 MiB through `from_config_map`, because the
+  default is off; a catalog path that bypassed `table_builder()` re-reads from disk and
+  reds); `a_configured_byte_value_reaches_the_shared_cache` (the `1 MiB` config value
+  builds a sharing cache); `with_zero_bytes_a_repeated_read_opens_manifests_again` (the
+  knob-off control — it parses `"0"` through `from_config_map`, so it pins the
+  string-to-behavior chain, not a struct literal);
+  `a_tiny_byte_budget_still_answers_across_many_tables` (512 bytes over eight tables
+  stays row-correct — eviction never corrupts). All six IO-1 staleness pins run with the
+  manifest cache OFF (`CatalogCaches::default()` carries 0); the cache-on staleness
+  battery is the Python legs in `test_perf_ice_catalog_io_1.py`, which set the knob
+  explicitly. Mutation score (four mutations, one escape closed): the wiring
+  dropped reds exactly the two sharing pins; `CatalogCaches::new` ignoring the setting reds
+  `both_spellings_size_the_cache` and `zero_disables_the_shared_cache`; the parse flooring at
+  1 MiB reds `zero_disables_the_shared_cache` but NOT the knob-off control at first — it built
+  its settings from a struct literal and never touched the parser, so it was strengthened to
+  parse `"0"` until it red; the refusal naming only the set key reds
+  `a_bad_alias_names_the_key_set_and_the_canonical_one`.
+
+  | test | clause |
+  |---|---|
+  | `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` | C-002 |
+  | `a_configured_byte_value_reaches_the_shared_cache` | C-002 |
+  | `with_zero_bytes_a_repeated_read_opens_manifests_again` | C-002 |
+  | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
+
+  pins: perf-ice-catalog-io-2/C-002, C-004, C-005
 - `dml.rs` pins the `g3e8_*` subquery-predicate valve: the refuse family for both verbs and
   adjacent negatives that prove the valve did
   not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,

@@ -641,3 +641,8 @@ pub fn log1p(arg: Expr) -> Expr {
 pub fn expm1(arg: Expr) -> Expr {
     call(crate::spark_log1p::expm1_udf(), vec![arg])
 }
+
+#[must_use]
+pub fn from_unixtime(args: Vec<Expr>) -> Expr {
+    call(crate::spark_from_unixtime::from_unixtime_udf(), args)
+}

@@ -88,12 +88,26 @@ pins: rp-4-fork-repin/C-005, C-006
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
   from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
   pins: ctas-view-1-conform-stream/C-001, C-002
+  **PERF-ICE-WRITEPATH-1 (2026-09-05):** `write_ctas_stream` is now `write_ctas_query` — it hands
+  the SELECT's physical plan to
+  [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md), so each DataFusion
+  partition writes its own data files instead of one coalesced stream feeding cooperative
+  writers. The conform inheritance above is unchanged: the node calls the same stream writer per
+  partition. The task context is the frame's own, so the node executes
+  under the state that planned it. `write_ctas_query` keeps `write_ctas_stream`'s doc comment verbatim: a renamed
+  function carries its pre-existing comment unchanged.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including
   expression subqueries, R-B) is tighten-derived AND the output has a
   non-nullable field (R-D), or the output schema still carries the tag. The
   write-boundary relax is PR-D2 (via the same source walk).
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the derived Arrow schema relaxes to all-nullable
+  before Iceberg conversion, so CTAS stores every column optional the way Spark does —
+  including provably non-null `SELECT coalesce(x, 0)` outputs. The SE-1 refusal checks
+  run first on the un-relaxed schema and still fire; only the derived table schema
+  relaxes, never the written batches.
+  pins: cutover-schema-1/C-002
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and
@@ -190,6 +204,9 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **TYPES-1 (2026-09-05):** after eager analysis, plain-`INSERT` DML wraps narrowed `Int32`
+  sources into `BIGINT` targets (`conform_insert_narrowed_ints`); every other shape passes
+  through untouched. pins: types-1/C-001
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

@@ -15,8 +15,21 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `core.py` owns `DataFrame`, plan construction, joins, actions, schema/type conversion, cache,
   checkpoint, temp-view registration, declared sorting, `dynamicFlatten`, and public re-exports.
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
+  TYPES-1 (2026-09-05): `sample`/`randomSplit` hash arithmetic wraps `__repark_rn` in
+  `CAST(__repark_rn AS BIGINT)` (+2 lines, absorbed back in round 4).
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
+- `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
+  `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
+  pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
+  binding fast path in front of it. The fast path is declined — whole batch, straight to the
+  Python converter — whenever a column may hold a calendar interval or the object cannot export
+  `__arrow_c_array__`; map and tz-aware-timestamp columns are converted in Python and handed to
+  the binding as supplied columns, so `_arrow_cell_to_spark_python` keeps its refusal table.
+  Two costs the old loop paid per row are gone: the names tuple is built once per batch instead
+  of once per `Row`, and the cyclic collector is suspended across the batch, restored in a
+  `finally`, because a million freshly tracked `Row` objects otherwise make every generation-2
+  pass rescan the whole result. pins: perf-facade-1/C-001, C-002, C-003
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
@@ -32,6 +45,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - Transformations remain lazy. Actions and Arrow exports execute the plan.
 - `to_arrow_batches` holds one Arrow batch and emits one typed empty batch for an empty result.
   `collect` materializes rows and converts maps to dictionaries; calendar intervals refuse.
+- `columns` reads the plan's logical schema, not the analyzed one. A dependent `withColumn`
+  chain used to pay one analyzer pass per existing column per call — 5,750 `column_names` calls
+  at depth 100 — because `_bind_schema_column` re-resolved each name against `self.columns`.
+  `_iter_bound_columns` now reads `columns` once and passes the canonical name through, falling
+  back to the resolving path when the frame carries duplicate names so the `[AMBIGUOUS_REFERENCE]`
+  contract is unchanged. pins: perf-facade-1/C-004, C-005
 - Arrow export maps execution failures to `PySparkException` while preserving the engine message.
   Planning and analysis errors keep their classified facade exceptions.
 - DataFrame origins preserve side identity through joins. Semi and anti joins emit left columns
@@ -74,6 +93,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - Origin or display regressions: inspect `_origin_map`, engine-name overlays, and `_spawn` paths.
 - File-size records: PYC-1 (2026-08-22) moved the UDF callbacks from `core.py` to
   `udf_bridge.py`. Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows;
-  `udf_bridge.py` stays below the source-size default.
+  `udf_bridge.py` stays below the source-size default. TYPES-1 round 4 (2026-09-05): `core.py`
+  6305→6303 — one import joined absorbs the round's increase (pins: types-1/C-008).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

@@ -8,10 +8,14 @@ mod tests;
 
 // v1 repark-catalog crate-root surface (names unchanged).
 pub use catalog::{
-    CATALOG_LISTING_STRATEGY, NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY,
-    ReparkCatalogProvider, build_iceberg_catalog_provider, drop_catalog_namespace_from_provider,
-    file_io_for_location, glue_catalog, iceberg_to_datafusion, invalidate_catalog_namespaces,
-    list_namespace_names, list_table_names, memory_catalog, mirror_namespace_location_keys,
+    CATALOG_LISTING_STRATEGY, CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES,
+    DEFAULT_METADATA_CACHE_ENTRIES, IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY,
+    MANIFEST_CACHE_BYTES_KEY_ALT, METADATA_CACHE_ENTRIES_KEY, METADATA_CACHE_ENTRIES_KEY_ALT,
+    METADATA_CACHE_KEY, METADATA_CACHE_KEY_ALT, NAMESPACE_LOCATION_PROPERTY,
+    NAMESPACE_LOCATION_URI_PROPERTY, ReparkCatalogProvider, build_iceberg_catalog_provider,
+    drop_catalog_namespace_from_provider, file_io_for_location, glue_catalog,
+    iceberg_to_datafusion, invalidate_catalog_namespaces, list_namespace_names, list_table_names,
+    memory_catalog, memory_catalog_cached, mirror_namespace_location_keys,
     rebuild_catalog_provider, register_iceberg_catalog, reregister_catalog_provider,
     resolve_namespace_location, s3tables_catalog, storage_factory_for_location,
 };

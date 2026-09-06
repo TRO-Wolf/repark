@@ -3023,7 +3023,9 @@ class DataFrame:
             return list(self._display_names)
         if self._map_bridge is not None:
             return list(self._map_bridge["schema"].names)
-        return list(self._inner.column_names())
+        from repark import _native
+
+        return _native.logical_column_names(self._inner)
 
     def _display_overlay_names(self) -> list[str] | None:
         """Return display names when they differ from engine field names, else None."""
@@ -3266,7 +3268,10 @@ class DataFrame:
                 self._bind_engine_display_column(display, engine)
                 for display, engine in zip(self._display_names, self._engine_names, strict=True)
             ]
-        return [self._bind_schema_column(name) for name in self.columns]
+        names = self.columns
+        if len(set(names)) != len(names):
+            return [self._bind_schema_column(name) for name in names]
+        return [self._bind_schema_column(name, name) for name in names]
 
     def _origin_plan_ids(self) -> frozenset[str]:
         """Plan ids this frame can still attribute (own id + nested origin-map keys)."""
@@ -3373,7 +3378,7 @@ class DataFrame:
             sort_nulls_first=column._sort_nulls_first,
         )
 
-    def _bind_schema_column(self, name: str) -> Column:
+    def _bind_schema_column(self, name: str, canonical: str | None = None) -> Column:
         """Bind a name case-insensitively and quote its canonical engine identifier.
 
         Preserve the requested display spelling and attach origin metadata for joins.
@@ -3381,7 +3386,7 @@ class DataFrame:
         from repark import _native
         from repark.spark._idents import quote_ident as _quote_ident
 
-        canonical = self._resolve_getitem_column_name(name)
+        canonical = self._resolve_getitem_column_name(name) if canonical is None else canonical
         engine_field = self._engine_field_for_display(canonical)
         quoted = _quote_ident(engine_field)
         native = _native.PyColumn.column(quoted)
@@ -3579,9 +3584,7 @@ class DataFrame:
             StringType,
             TimestampType,
         )
-        from repark.spark.types import (
-            DataType as ReparkDataType,
-        )
+        from repark.spark.types import DataType as ReparkDataType
 
         fields: list[StructField] = []
         for name, type_key, nullable in self._inner.logical_schema_fields():
@@ -3943,7 +3946,8 @@ class DataFrame:
                 planned = self._session.sql(
                     f"SELECT * EXCLUDE (__repark_rn) FROM ("
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f") WHERE (abs((__repark_rn + {plan_seed}) * 1103515245 + 12345) % 1000000) "
+                    f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
+                    f"* 1103515245 + 12345) % 1000000) "
                     f"/ 1000000.0 < {fraction_value}"
                 )
             child = self._spawn(planned)
@@ -4050,7 +4054,8 @@ class DataFrame:
                 seed_expr = str(int(seed))
                 bucket_sql = (
                     f"SELECT * EXCLUDE (__repark_rn), "
-                    f"(abs((__repark_rn + {seed_expr}) * 1103515245 + 12345) % 1000000) "
+                    f"(abs((CAST(__repark_rn AS BIGINT) + {seed_expr}) "
+                    f"* 1103515245 + 12345) % 1000000) "
                     f"/ 1000000.0 AS __repark_split_u FROM ("
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                     f")"
@@ -6075,49 +6080,16 @@ class DataFrame:
     @staticmethod
     def _arrow_type_needs_spark_python_convert(arrow_type: Any) -> bool:
         """True when cells need ``_arrow_cell_to_spark_python`` (map / tz-aware timestamp)."""
-        import pyarrow as pa
+        from repark.spark.dataframe.rows_export import arrow_type_needs_spark_python_convert
 
-        if pa.types.is_map(arrow_type) or (
-            pa.types.is_timestamp(arrow_type) and arrow_type.tz is not None
-        ):
-            return True
-        is_list_type = (
-            pa.types.is_list(arrow_type)
-            or pa.types.is_large_list(arrow_type)
-            or pa.types.is_fixed_size_list(arrow_type)
-        )
-        if is_list_type:
-            return DataFrame._arrow_type_needs_spark_python_convert(arrow_type.value_type)
-        if pa.types.is_struct(arrow_type):
-            return any(
-                DataFrame._arrow_type_needs_spark_python_convert(field.type) for field in arrow_type
-            )
-        return False
+        return arrow_type_needs_spark_python_convert(arrow_type)
 
     @staticmethod
     def _arrow_type_may_hold_calendar_interval(arrow_type: Any) -> bool:
         """Return whether an Arrow type can contain a calendar interval."""
-        import pyarrow as pa
+        from repark.spark.dataframe.rows_export import arrow_type_may_hold_calendar_interval
 
-        # pyarrow exposes month_day_nano under ``is_interval`` (no separate helper on 25.x).
-        if pa.types.is_interval(arrow_type):
-            return True
-        is_list_type = (
-            pa.types.is_list(arrow_type)
-            or pa.types.is_large_list(arrow_type)
-            or pa.types.is_fixed_size_list(arrow_type)
-        )
-        if is_list_type:
-            return DataFrame._arrow_type_may_hold_calendar_interval(arrow_type.value_type)
-        if pa.types.is_struct(arrow_type):
-            return any(
-                DataFrame._arrow_type_may_hold_calendar_interval(field.type) for field in arrow_type
-            )
-        if pa.types.is_map(arrow_type):
-            return DataFrame._arrow_type_may_hold_calendar_interval(
-                arrow_type.key_type
-            ) or DataFrame._arrow_type_may_hold_calendar_interval(arrow_type.item_type)
-        return False
+        return arrow_type_may_hold_calendar_interval(arrow_type)
 
     @staticmethod
     def _rows_from_arrow_table(table: Any) -> list[Row]:
@@ -6125,46 +6097,9 @@ class DataFrame:
 
         Map values become dictionaries, and calendar intervals are refused.
         """
-        names = list(table.column_names)
-        column_count = table.num_columns
-        row_count = table.num_rows
-        if row_count == 0:
-            return []
-        # Zero-column frames still produce empty-value rows (zip(*[]) is empty).
-        if column_count == 0:
-            empty_names: list[str] = []
-            empty_values: list[Any] = []
-            return [Row.from_ordered_fields(empty_names, empty_values) for _ in range(row_count)]
+        from repark.spark.dataframe.rows_export import rows_from_arrow_table
 
-        field_types = [table.schema.field(index).type for index in range(column_count)]
-        needs_convert = [
-            DataFrame._arrow_type_needs_spark_python_convert(field_type)
-            for field_type in field_types
-        ]
-        may_calendar = any(
-            DataFrame._arrow_type_may_hold_calendar_interval(field_type)
-            for field_type in field_types
-        )
-
-        columns_python: list[list[Any]] = []
-        for index in range(column_count):
-            raw_values = table.column(index).to_pylist()
-            if needs_convert[index]:
-                column_type = field_types[index]
-                columns_python.append(
-                    [_arrow_cell_to_spark_python(cell, column_type) for cell in raw_values]
-                )
-            else:
-                columns_python.append(raw_values)
-
-        if may_calendar:
-            for column_values in columns_python:
-                for value in column_values:
-                    _refuse_calendar_interval_python_value(value)
-
-        return [
-            Row.from_ordered_fields(names, values) for values in zip(*columns_python, strict=True)
-        ]
+        return rows_from_arrow_table(table)
 
     @staticmethod
     def _require_non_negative_limit(num: int) -> int:

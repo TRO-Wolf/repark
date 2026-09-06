@@ -129,7 +129,7 @@ PROBE_NAMES: Final[tuple[str, ...]] = tuple(spec.name for spec in PROBE_SPECS)
 
 TIMED_SLIDING_NAMES: Final[tuple[str, ...]] = ("sum", "avg", "min", "max", "count")
 
-REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = (
+RESCANNED_SLIDING_NAMES: Final[tuple[str, ...]] = (
     "approx_count_distinct",
     "approx_percentile",
     "bit_and",
@@ -145,10 +145,11 @@ REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = (
     "try_sum",
 )
 
+REFUSING_SLIDING_NAMES: Final[tuple[str, ...]] = ()
+
 ABSENT_PLANNING_NAMES: Final[tuple[str, ...]] = (
     "any",
     "any_value",
-    "count_if",
     "every",
     "first",
     "kurtosis",

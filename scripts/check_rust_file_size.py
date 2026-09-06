@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session.rs": (
-        1040,
+        1002,
         "The session root still combines construction, planning, and execution entry points.",
         "Extract one existing responsibility when a charter already changes that region.",
     ),
@@ -62,7 +62,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive rewrite family when that family next changes.",
     ),
     "crates/repark-functions/src/datetime.rs": (
-        1704,
+        1700,
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),
@@ -117,12 +117,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1102,
+        1053,
         "PyO3 Column methods remain grouped in one binding module.",
         "Extract the remaining date or window method family.",
     ),
     "crates/repark-python/src/dataframe.rs": (
-        1171,
+        1127,
         "PyO3 DataFrame methods share one binding surface.",
         "Split action methods from plan-building methods without moving row work to Python.",
     ),

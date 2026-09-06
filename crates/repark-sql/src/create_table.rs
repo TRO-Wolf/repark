@@ -108,8 +108,15 @@ pub(crate) async fn execute_create_table(
     };
     repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
         .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+    let relaxed_schema;
+    let ctas_schema = if query.is_some() {
+        relaxed_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
+        &relaxed_schema
+    } else {
+        arrow_schema.as_ref()
+    };
     let iceberg_schema =
-        arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
+        arrow_schema_to_schema_auto_assign_ids(ctas_schema).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
@@ -194,10 +201,7 @@ async fn execute_staged_create(
 
     // Streaming bounds memory by batch size and open writers.
     let data_files = match query {
-        Some(frame) => {
-            let stream = frame.execute_stream().await?;
-            write_stream(cx.ctx, staged.table(), stream).await?
-        }
+        Some(frame) => write_query(cx.ctx, staged.table(), frame).await?,
         None => Vec::new(),
     };
     staged
@@ -431,8 +435,7 @@ async fn create_first_service_managed(
 
     let write: Result<()> = async {
         if let Some(frame) = query {
-            let stream = frame.execute_stream().await?;
-            let data_files = write_stream(cx.ctx, &table, stream).await?;
+            let data_files = write_query(cx.ctx, &table, frame).await?;
             if !data_files.is_empty() {
                 repark_iceberg::write::commit_append(&target.catalog, &table, data_files).await?;
             }
@@ -460,27 +463,15 @@ async fn create_first_service_managed(
 }
 
 /// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
-async fn write_stream(
+async fn write_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
-    stream: datafusion::physical_plan::SendableRecordBatchStream,
+    query: DataFrame,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    } else {
-        repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await
-    }
+    let task_ctx = Arc::new(query.task_ctx());
+    let plan = query.create_physical_plan().await?;
+    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
 }
 
 /// Refresh the touched schema's name directory, then return an empty frame.

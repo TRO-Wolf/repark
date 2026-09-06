@@ -23,11 +23,11 @@ _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
 _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/catalog_config.rs", 1044),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
-    ("crates/repark-core/src/session.rs", 1040),
+    ("crates/repark-core/src/session.rs", 1002),
     ("crates/repark-core/src/session/tests/session.rs", 1412),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
     ("crates/repark-functions/src/analyzer.rs", 1142),
-    ("crates/repark-functions/src/datetime.rs", 1704),
+    ("crates/repark-functions/src/datetime.rs", 1700),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1630),
     ("crates/repark-iceberg/src/write/append.rs", 1884),
@@ -38,8 +38,8 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
     ("crates/repark-iceberg/src/write/predicate_dml.rs", 1142),
     ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1442),
-    ("crates/repark-python/src/column/mod.rs", 1102),
-    ("crates/repark-python/src/dataframe.rs", 1171),
+    ("crates/repark-python/src/column/mod.rs", 1053),
+    ("crates/repark-python/src/dataframe.rs", 1127),
     ("crates/repark-python/src/session.rs", 1177),
     ("crates/repark-spark/src/alter.rs", 1830),
     ("crates/repark-spark/src/metadata_tables.rs", 1062),
@@ -65,7 +65,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark-parity/compat/runner.py", 1279),
     ("python/repark-parity/tests/test_compat_harness.py", 1021),
     ("python/repark/src/repark/spark/column.py", 1589),
-    ("python/repark/src/repark/spark/dataframe/core.py", 6368),
+    ("python/repark/src/repark/spark/dataframe/core.py", 6303),
     ("python/repark/src/repark/spark/dataframe/joins_columns.py", 1239),
     ("python/repark/src/repark/spark/dataframe/plan_collapse.py", 1168),
     ("python/repark/src/repark/spark/dataframe/writer_readwriter.py", 1113),
@@ -91,7 +91,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_ta.py", 1020),
     ("python/repark/tests/test_tpch_compare_unit.py", 1551),
     ("python/repark/tests/test_udf.py", 1170),
-    ("python/repark/tests/test_window_parity.py", 1481),
+    ("python/repark/tests/test_window_parity.py", 1422),
 )
 
 

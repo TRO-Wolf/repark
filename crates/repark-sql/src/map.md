@@ -83,7 +83,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Blanks string-literal / quoted-identifier / comment CONTENT so the guards and the sniff cannot
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
-- `create_table.rs` — CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
+- `create_table.rs` — **PERF-ICE-WRITEPATH-1 (2026-09-05):** the CTAS arm's `write_stream` is now
+  `write_query`, handing the SELECT's physical plan to
+  [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md) for one writer per
+  DataFusion partition. The task context is the frame's own. `write_query` keeps `write_stream`'s doc comment verbatim. CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
   catalog or LOUD refuse — never a silent `MemTable`), clause refusals, **V3-2** `format_version`
   resolved at execute against `repark.sql.allowCreateFormatVersion3` (default false; entries()
   reader, no `repark-functions` product edge; `execute_staged_create` /
@@ -109,7 +112,9 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   cannot persist a required column. Both paths use the shared belt: `router.rs::delegate` is
   `PreExecute::plan` → SEC-02 → `PreExecute::guard` → `PreExecute::execute`; CTAS derivation
   plans and guards before target creation or publication, then returns the lazy SELECT frame.
-  Later execution performs the SELECT. Tests:
+  Later execution performs the SELECT. **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS derives Iceberg
+  requiredness from the relaxed query schema (optional throughout on parquet reads), so the
+  R-D refusal above sees the Spark-equal derivation. Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
   (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in),
