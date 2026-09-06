@@ -69,7 +69,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the listing families (`list_iceberg_table_names` live list-on-access / `list_temp_view_names`
   / `list_df_schema_table_names`), `refresh_catalog_provider`, `read_parquet` (an
   `s3://`/`s3a://` path lazily registers that bucket's store once — per-session guard),
-  `read_csv` / `read_json` (Spark-style option maps), `read_iceberg_table` + `TimeTravelOpts`
+  `read_csv` (delegates to `read_options::read_csv_path`) / `read_json` (Spark-style option maps), `read_iceberg_table` + `TimeTravelOpts`
   (snapshot-id / as-of-timestamp / branch / tag, mutual exclusion), and the `testing_` seams
   (`testing_create_ref` / `testing_list_snapshots` / `testing_oob_create_table` /
   `testing_oob_drop_table`). Excel/postgres readers are deferred with their crates. The file's
@@ -144,9 +144,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   latter is absent). Fail-loud `Error::Config` naming the exact key. Registration policy: Glue
   `RequireExplicitLocation`; S3 Tables `ServiceManagedLocation`; memory keeps the temp
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
-- `read_options.rs` — CSV/JSON Spark option-map helpers and the local-CSV all-Utf8 scan
-  for `nullValue` and `inferSchema` (raw text kept so timestamp CAST honours offsets).
+- `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
+  all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
+  local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so
+  `session.rs` could drop under the default file-size ceiling. Round 2: `inferSchema`
+  without `nullValue` keeps DataFusion's 1000-row sample. Round 3: `utf8_columns`
+  forces an all-Utf8 schema from the first local record (no second infer), so a
+  `multiLine` re-read past 1000 records cannot raise on chunked record boundaries.
+  Round 4: a `multiLine` first read also uses that infer-free schema, so quoted
+  fields with embedded newlines infer at any record count. Round 5: an embedded
+  newline inside the header still raises (line-based first-record read);
+  DECLARED `CSV-INFER-HEADER-NEWLINE`.
   pins: nullability-2/C-006
+  pins: csv-infer-perf-1/C-002, C-005
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk

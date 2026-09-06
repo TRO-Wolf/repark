@@ -23,14 +23,13 @@ _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
 _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/catalog_config.rs", 1044),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
-    ("crates/repark-core/src/session.rs", 1002),
     ("crates/repark-core/src/session/tests/session.rs", 1412),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
     ("crates/repark-functions/src/analyzer.rs", 1142),
     ("crates/repark-functions/src/datetime.rs", 1700),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1630),
-    ("crates/repark-iceberg/src/write/append.rs", 1884),
+    ("crates/repark-iceberg/src/write/append.rs", 1883),
     ("crates/repark-iceberg/src/write/merge/mod.rs", 1795),
     ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1068),
     ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),
@@ -73,7 +72,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/functions_expr.py", 2255),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
-    ("python/repark/src/repark/spark/session/reader.py", 1026),
+    ("python/repark/src/repark/spark/session/reader.py", 1022),
     ("python/repark/src/repark/spark/session/session_core.py", 2411),
     ("python/repark/src/repark/spark/ta.py", 1818),
     ("python/repark/src/repark/spark/types.py", 1834),
@@ -179,7 +178,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 37
+    assert len(rust_approved) == 36
     assert len(python_approved) == 32
 
 

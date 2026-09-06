@@ -46,6 +46,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
   pins: perf-ice-catalog-io-1/C-004
+  **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
+  `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
+  pins: csv-infer-perf-1/C-006
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, CORE (never door-extension —
   design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
