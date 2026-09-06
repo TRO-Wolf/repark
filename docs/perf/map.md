@@ -124,12 +124,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pins: h3-spill-1/C-002, C-003, C-004, C-005
 - [approx-percentile-baseline.md](approx-percentile-baseline.md) — **PERF-APPROXPCT-1
   (2026-09-05):** the `percentile_approx` cells before/after the Greenwald-Khanna
-  sketch (1e7 wall 2.95 → 0.15 s, peak 2507.8 → 650.0 MB against a 188 MB
-  `count(id)` floor; warm-1e6 wall 0.02 s beats the 1.5× bar), the sublinear
-  residual attributed to transient batches (inferred), and the accuracy-knob
-  cells pointed at the unit ledger §4, not restated. Like the aggregate
-  baseline's by-partkey cells, the harness is a throwaway script — only the
-  committed wall probe and the Rust state pins re-derive mechanically.
+  sketch (1e7 wall 2.95 → 0.14 s, peak 2507.8 → 752.9 MB against a 188.6 MB
+  `count(id)` floor; warm-1e6 wall 0.03 s under the committed 1.0 s bar), the
+  sublinear residual attributed to transient batches (inferred), state sizes
+  (952656/4776/72 B at acc 10000/100/2), and the accuracy-knob cells pointed at
+  the unit ledger §4, not restated. **Round 2 (2026-09-06):** the after column is
+  re-derived through the tracked
+  [approxpct harness](../../python/repark-parity/bench/approxpct/map.md); the before
+  column stands recorded (no second release build of the pre-unit tree).
   pins: perf-approxpct-1/C-004
 
 ## Pointers

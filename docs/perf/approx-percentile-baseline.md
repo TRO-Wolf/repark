@@ -8,51 +8,55 @@ the accuracy knob). Before: one group held every input value boxed, so a
 1e7-row group peaked at 2.5 GB and the accuracy argument was silently
 ignored. After: inserts buffer in a 50 k head, flush into a compressed
 sample set (threshold 10000, `relativeError = 1/accuracy`), merge before
-query on multi-partition scans; per-group state is kilobytes and the
-accuracy knob moves the answers exactly as Spark's does (the committed
-matrix pins both against live 4.1.2 goldens). The `count(id)` leg beside
-every cell is the control: it runs the same scan with no sketch state, so
+query on multi-partition scans; per-group state is 952656 B at default
+accuracy (39693 samples after 1e6 inserts; 4776 B at acc 100, 72 B at acc 2 —
+O((1/eps)·log(eps N)), "kilobytes" only at accuracy ≤ 100) and the accuracy
+knob moves the answers as Spark's does on single-partition inputs (the committed
+matrix pins both against live 4.1.2 goldens; multi-partition merges are
+deterministic within the GK bound — `FN-APPROXPCT-ORDER-1`). The `count(id)` leg
+beside every cell is the control: it runs the same scan with no sketch state, so
 peak-minus-floor is the aggregate-attributable cost.
 
-Machine/profile (2026-09-05): this box (64 threads, 125 GB RAM, shared
-lane box), release module (`__debug_assertions__ False`), fresh
+Machine/profile (2026-09-06 re-derivation): this box (64 threads, 125 GB RAM,
+shared lane box), release module (`__debug_assertions__ False`), fresh
 subprocess per cell, 1-minute load recorded beside each run. Loads:
-before ~25–30, after ~11 (shared box; the wall comparison favors neither
-side by more than the noise — the gap is 20×). Every cell is a single
+before ~25–30 (recorded 2026-09-05), after ~6–9. Every cell is a single
 run, not a median; the 1e6 triplet is cold + two warm attempts in one
 process.
 
-| cell | before (base `bc7c76cc`) | after (tip `d476556e`) | control `count(id)` |
-|---|---:|---:|---:|
-| 1e6, attempt 0 (cold), wall / peak | 1.28 s / 475.7 MB | 0.03 s / 378.5 MB | — |
-| 1e6, attempt 1 (warm), wall / peak | 0.21 s / 644.9 MB | 0.02 s / 476.6 MB | — |
-| 1e6, attempt 2 (warm), wall / peak | 0.13 s / 697.7 MB | 0.02 s / 488.6 MB | — |
-| 1e6, answer (median of 1..1e6) | 500000 | 500001 / 499911 / 499971 | — |
-| 1e7, fresh subprocess, wall / peak | 2.95 s / 2507.8 MB | 0.15 s / 650.0 MB | 0.03 s / 188.2 MB |
+| cell | before (base `bc7c76cc`, recorded) | after (round 2 `001eee7d`) | control `count(id)` |
+|---|---|---:|---:|
+| 1e6, attempt 0 (cold), wall / peak | 1.28 s / 475.7 MB | 0.03 s / 398.4 MB | — |
+| 1e6, attempt 1 (warm), wall / peak | 0.21 s / 644.9 MB | 0.03 s / 478.5 MB | — |
+| 1e6, attempt 2 (warm), wall / peak | 0.13 s / 697.7 MB | 0.03 s / 526.6 MB | — |
+| 1e6, answer (median of 1..1e6) | 500000 | 499971 / 499971 / 499971 | — |
+| 1e7, fresh subprocess, wall / peak | 2.95 s / 2507.8 MB | 0.14 s / 752.9 MB | 0.02 s / 188.6 MB |
 | 1e7, answer (true median 5000000.5) | 5000000 | 4999593 (err 407, budget 50000) | — |
-| 1e7 aggregate-attributable (peak − floor) | 2320 MB | 462 MB | — |
+| 1e7 aggregate-attributable (peak − floor) | 2320 MB | 564 MB | — |
 
-Notes. The warm-1e6 wall bar was "within 1.5× of before" (0.13–0.21 s);
-after runs 0.02 s, ~7–10× faster, because the sketch never materializes
-the group. The 1e7 residual (462 MB over the floor) is not sketch state:
-state is kilobytes, pinned by `million_row_state_stays_small` (< 2 MB
-serialized at 1 M rows) and by `inserts_compress_eagerly_before_any_query`
-(sampled < 100 k after 200 k inserts with no query call); the residual
-scales sublinearly (190 MB at 1e6 → 462 MB at 1e7) and reads as transient
-Arrow batches plus allocator retention in a 0.15 s run — inferred, not
-measured. Error budget: default accuracy 100 → eps 0.005, so ±50000 at
-1e7; the measured 407 is two orders of magnitude inside. Accuracy-knob
-cells (default/10/2 on int, double, decimal, grouped, and window-frame
-paths) live in the unit ledger §4 with live-Spark goldens, not here.
+Notes. The committed warm-1e6 wall bar is 1.0 s (round 2;
+`test_million_row_wall_stays_within_bar`); after runs 0.03 s against the old
+kernel's 0.13–0.21 s. The 1e7 residual (564 MB over the floor) is not sketch
+state: state is 0.95 MB at default accuracy, pinned by `state_size_follows_one_over_eps`
+(952656/4776/72 B at acc 10000/100/2 after 1e6 inserts) and bounded mid-insert by
+`inserts_compress_eagerly_before_any_query`; the residual scales sublinearly and
+reads as transient Arrow batches plus allocator retention in a 0.14 s run —
+inferred, not measured. Error budget: default accuracy 10000 → eps 0.0001, so
+±100 rank at 1e6 (±50000 at 1e7); the measured 29 (1e6) and 407 (1e7) sit inside.
+Accuracy-knob cells (default/10/2 on int, double, decimal, grouped, and
+window-frame paths) live in the unit ledger §4 with live-Spark goldens, not here.
+
+Recorded, not reproduced: the before column was measured 2026-09-05 with the
+throwaway `/tmp/bench_approx.py` (ledger §3) and stands as recorded — re-running
+it needs a second release build of the pre-unit tree, which round 2 did not do.
+Only the after column (tracked harness below) and the committed pins re-derive.
 
 Reproduce (from the repo root, release module):
 
 ```
 cd python/repark && VIRTUAL_ENV=$PWD/../../.venv uvx maturin@1.14.1 develop --release
-.venv/bin/python /tmp/bench_approx.py 1000000 3   # cold + two warm attempts
-.venv/bin/python /tmp/bench_approx.py 10000000 1  # fresh subprocess
+CELL=python/repark-parity/bench/approxpct/run_cells.py
+.venv/bin/python $CELL 1000000 3   # cold + two warm attempts
+.venv/bin/python $CELL 10000000 1  # fresh subprocess
+.venv/bin/python $CELL 10000000 1 --control
 ```
-
-(`/tmp/bench_approx.py` is the scratch harness: `range(1, N+1)` →
-`percentile_approx(id, 0.5)`, wall plus `ru_maxrss`, printed per attempt.
-`/tmp/bench_count.py` is the same shape with `count(id)`.)

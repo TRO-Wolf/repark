@@ -1,3 +1,39 @@
+# Errata — round 2 (2026-09-06, critic F-1..F-9)
+
+No verdict moves: every clause stays PROVEN; the claims below narrow to what the
+re-measurement supports. Code fixes: the deferred canonical fold (`merge_batch`
+stages, `evaluate`/`state` fold once sorted by serialized bytes), the N/accuracy
+wall band, the 1.0 s bar, the INTEGRAL accuracy contract. Pins: the 1e6
+repeatability/bound/group pins, the acc10/acc100 and state-size Rust pins, the
+accuracy rejection/acceptance pins.
+
+- E-1 (F-2, C-005): the three FIXED rows narrow to "Spark-equal on
+  single-partition inputs and bit-equal on the pinned matrix; multi-partition
+  merges are deterministic within the GK bound"; `FN-APPROXPCT-ORDER-1` (OPEN)
+  files the 1e6 divergence (repark 499971 every run, Spark 500082 every run,
+  |diff| 111 inside the 2N/accuracy budget 200; BANNER spark=4.1.2 tz=UTC,
+  2026-09-06, local[2]). Mechanism, measured: the final task sees one partial
+  per `merge_batch` call in arrival order (15x65536 + 1x16960 rows at 1e6), so
+  only a deferred fold fixes the order; a within-call sort changed nothing.
+- E-2 (F-3, C-004/§3/AT-7): "state is kilobytes" holds only at accuracy ≤ 100.
+  Measured after 1e6 inserts: 952656 B / 39693 samples at acc 10000, 4776 B at
+  acc 100, 72 B at acc 2 - O((1/eps) log(eps N)), pinned by
+  `state_size_follows_one_over_eps`. AFTER re-derived through the tracked
+  harness (baseline round 2): 1e7 0.14 s / 752.9 MB against a 188.6 MB floor.
+- E-3 (F-1/F-5, C-004): the wall pin asserts |value - 500000| ≤ N/accuracy (=100;
+  measured 29) and the bar is 1.0 s; the exact-500000 assert never ran green on
+  release. C-004's wall clause now has a pin that ran green on a release module.
+- E-4 (F-6, §5): "4/4" was the Rust-local boundary-mutant score. The
+  merge-threshold x4.0 mutant (acc10 p50 90 -> 41) died on the Python matrix and
+  on zero of the 17 Rust tests; the new acc10/acc100 pins kill it. Rust score 6/6.
+- E-5 (F-8, §4): the skew fixture is 1..200 + 1e9 (not 1..1000), default 101.0
+  (not 501.0); acc2 1.0 and p99/acc2 1e9 stand.
+- E-6 (F-9, §6): the facade-accuracy-edges paragraph is superseded. Measured on
+  live 4.1.2: Spark RUNS numpy integer accuracy (np.int64(2) collapses to 1.0)
+  and rejects bool/float/str with DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE - the
+  round-2 brief's "Spark rejects both" was wrong for numpy, so repark accepts
+  numpy integers and rejects the rest with that contract, pinned on both doors.
+
 # Charter ledger — PERF-APPROXPCT-1 · the Greenwald-Khanna sketch behind `percentile_approx`
 
 **Date:** 2026-09-05 · **Branch:** `perf/approxpct-1` · **Base:** `origin/main`
