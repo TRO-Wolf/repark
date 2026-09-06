@@ -23,7 +23,7 @@ pins: rp-4-fork-repin/C-005, C-006
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_time_travelled` / `execute_inner`
-  + pre-parse intercepts (alter I6/I7, create-namespace, describe/show, ref DDL) + the
+  + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
@@ -151,6 +151,18 @@ pins: rp-4-fork-repin/C-005, C-006
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
   `spark.sql.timestampType` carrier. REPLACE COLUMNS stays on the LTZ wrapper
   (parse-time, no session).
+- `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
+  WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
+  (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,
+  property untouched), `WRITE DISTRIBUTED BY PARTITION` (`hash`, default order reset to the
+  unsorted order 0), `WRITE DISTRIBUTED BY PARTITION [LOCALLY] ORDERED BY` (both + `hash`),
+  `WRITE UNORDERED` (order 0 + `none`). A bare `ASC` defaults to `NULLS FIRST`, a bare
+  `DESC` to `NULLS LAST`, the way Spark resolves them; a transform sort field, a quoted
+  column, and every malformed shape refuse loud before anything commits. Dotted nested names
+  (`st.a`) parse to the nested field (round 2, 2026-09-06). It is a sibling
+  module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
+  [tests/alter_write_order.rs](tests/alter_write_order.rs).
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both

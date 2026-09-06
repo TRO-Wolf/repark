@@ -1566,11 +1566,8 @@ where
         )));
     }
     let build_writer = || async { build_unpartitioned_data_file_writer(table).await };
-    if max_concurrent == 1 {
-        let writer = build_writer().await?;
-        return write_stream_into(ForkBatchWriter { inner: writer }, conformed).await;
-    }
-    write_stream_into_parallel(max_concurrent, conformed, build_writer).await
+    crate::write::distribution::drive_unpartitioned(table, conformed, max_concurrent, build_writer)
+        .await
 }
 
 /// Open one unpartitioned Parquet `DataFileWriter` for `table` (unique file-name UUID per call).
@@ -1607,14 +1604,14 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
 }
 
 /// A minimal batch sink: write batches, then close into the produced data files.
-trait BatchWriter {
+pub(crate) trait BatchWriter {
     async fn write_batch(&mut self, batch: RecordBatch) -> Result<()>;
     async fn finish(&mut self) -> Result<Vec<DataFile>>;
 }
 
 /// Production [`BatchWriter`] over the fork's `DataFileWriter`.
-struct ForkBatchWriter<W: IcebergWriter> {
-    inner: W,
+pub(crate) struct ForkBatchWriter<W: IcebergWriter> {
+    pub(crate) inner: W,
 }
 
 impl<W: IcebergWriter> BatchWriter for ForkBatchWriter<W> {
@@ -1628,7 +1625,7 @@ impl<W: IcebergWriter> BatchWriter for ForkBatchWriter<W> {
 }
 
 /// Drive a record-batch stream into one [`BatchWriter`], writing each batch as it arrives.
-async fn write_stream_into<K, S>(mut sink: K, mut stream: S) -> Result<Vec<DataFile>>
+pub(crate) async fn write_stream_into<K, S>(mut sink: K, mut stream: S) -> Result<Vec<DataFile>>
 where
     K: BatchWriter,
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -1640,7 +1637,7 @@ where
 }
 
 /// Fan batches to `max_concurrent` independent writers (round-robin).
-async fn write_stream_into_parallel<S, F, Fut, W>(
+pub(crate) async fn write_stream_into_parallel<S, F, Fut, W>(
     max_concurrent: usize,
     stream: S,
     mut make_writer: F,

@@ -138,12 +138,16 @@ repark-core's error map.
   `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
   (registry `V3-ADOPT-1` FIXED).
   **WRITE-DISTRIBUTION-2 (2026-09-06):** the concurrent dispatcher no longer deals whole
-  batches round-robin. It routes each batch through `distribution.rs::PartitionRouter`, which
+  batches round-robin. It routes each batch through `distribution/router.rs::PartitionRouter`, which
   splits the batch's rows by hash of the writer's partition values, and sends each part to its
   slot's worker — one partition value lands in one writer on every partitioned stream write
   (INSERT OVERWRITE, MERGE inserts, staged appends). The serial path and the unpartitioned
-  path are untouched.
+  path are untouched by this unit.
   pins: write-distribution-2/C-001
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry delegates to the distribution
+  module's sorted drivers, so a declared default sort order sorts every partitioned staged
+  write at no behaviour change when no order is declared.
+  pins: write-order-dist-1/C-008
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
   `commit_truncate_to` commits onto a named branch.
@@ -291,6 +295,22 @@ repark-core's error map.
   Utf8View`); a late failure into a partitioned table leaves no data file. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md) §6–§8.
   pins: write-distribution-2/C-001, C-002, C-004, C-005, C-006, C-008
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the rule reads `write.distribution-mode` — `none`
+  skips it (the CTAS falls back to writers × values and the stream dispatcher deals whole
+  batches round-robin), unset and `hash` keep one file per value, `range` takes the hash shape
+  plus the per-writer sort below, and anything else is a planning error. When the table declares
+  a default sort order, each writer sorts its own stream through DataFusion's `SortExec` over an
+  in-memory source before the funnel writes it — `fanout_sorted_serial` / `fanout_sorted_stream`
+  for the partitioned funnel, `drive_unpartitioned` for the unpartitioned one — so CTAS, INSERT
+  OVERWRITE, and MERGE all commit monotone files with no new dependency and no spawned task. A
+  sort field on a non-identity transform refuses loud; only identity fields sort. A dotted sort
+  field resolves to the nested field id and sorts on the nested value through a struct-field
+  expression with parent-null masking (round 2, 2026-09-06). In-module pins:
+  the `none`/`hash`/`range` layouts, the unknown-mode planning error, cross-batch sorting, the
+  identity return without an order, monotone committed files on both funnel entries, the
+  `none` round-robin stream layout, the nested sort, and the transform refusal.
+  pins: write-order-dist-1/C-007, C-008, C-010
+  See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
@@ -350,6 +370,14 @@ repark-core's error map.
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+- `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
+  write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
+  `write.distribution-mode` property set: column names resolve case-insensitively against the
+  table schema, dotted paths through struct types included (an unknown column is a loud
+  `DataInvalid` and commits nothing), an empty field
+  list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
+  and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

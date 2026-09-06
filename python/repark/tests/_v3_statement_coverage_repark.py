@@ -452,12 +452,7 @@ REPARK: dict[str, Any] = {
         ],
     },
     "alter-write-ordered-by": {
-        "statements": [
-            [
-                "ERROR",
-                "This feature is not implemented: ALTER TABLE WRITE ORDERED BY / WRITE DISTRI",
-            ]
-        ],
+        "statements": [["OK", None]],
         "probes": [
             ["OK", [[1, "a"], [2, "b"], [3, "c"], [4, "d"]]],
             ["OK", [[1, 0, 1], [2, 1, 1], [3, 2, 1], [4, 3, 1]]],

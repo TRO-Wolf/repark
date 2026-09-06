@@ -29,6 +29,17 @@ engine.sql("CREATE NAMESPACE IF NOT EXISTS ice.perf")
 engine.read.parquet(SRC).createOrReplaceTempView("src")
 
 
+def setup(index: int) -> None:
+    """Build the target the timed statement writes; untimed."""
+    if CELL in ("insert_overwrite", "insert_overwrite_ordered"):
+        engine.sql(
+            f"CREATE TABLE ice.perf.t{index} USING iceberg PARTITIONED BY (part) "
+            "AS SELECT * FROM src"
+        ).collect()
+    if CELL == "insert_overwrite_ordered":
+        engine.sql(f"ALTER TABLE ice.perf.t{index} WRITE ORDERED BY (id)").collect()
+
+
 def run(index: int) -> None:
     """Run the selected cell once against a fresh table."""
     if CELL == "ctas":
@@ -38,6 +49,8 @@ def run(index: int) -> None:
             f"CREATE TABLE ice.perf.t{index} USING iceberg PARTITIONED BY (part) "
             "AS SELECT * FROM src"
         ).collect()
+    elif CELL in ("insert_overwrite", "insert_overwrite_ordered"):
+        engine.sql(f"INSERT OVERWRITE ice.perf.t{index} SELECT * FROM src").collect()
     elif CELL == "df_write_parquet_zstd":
         engine.sql("SELECT * FROM src").write.parquet(
             str(root / f"pq{index}"), mode="overwrite", compression="zstd"
@@ -47,9 +60,11 @@ def run(index: int) -> None:
 
 
 load_start = os.getloadavg()[0]
+setup(0)
 run(0)
 samples = []
 for index in range(1, REPS + 1):
+    setup(index)
     started = time.perf_counter()
     run(index)
     samples.append((time.perf_counter() - started) * 1000.0)
