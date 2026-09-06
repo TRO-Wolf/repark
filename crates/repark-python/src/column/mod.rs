@@ -219,7 +219,7 @@ impl PyColumn {
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
-            let context = SessionContext::new();
+            let context: SessionContext = expr_build::expr_context_for_sql(sql);
             repark_functions::register_all(&context);
             for rule in repark_functions::analyzer_rules() {
                 context.add_analyzer_rule(rule);

@@ -25,6 +25,7 @@ pub mod instant_ts;
 pub mod integer_spark;
 mod java_regex;
 pub mod json;
+pub mod lambda_rebind;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
@@ -157,6 +158,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     rules.push(Arc::new(
         datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new(),
     ));
+    rules.push(Arc::new(lambda_rebind::LambdaRebind));
     rules
 }
 

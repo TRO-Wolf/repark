@@ -26,6 +26,7 @@ mod dml;
 mod float_agg;
 mod insert_overwrite;
 mod join_null_keys;
+mod lambda_door;
 mod local_fs_ddl;
 mod merge;
 mod merge_nmbs;

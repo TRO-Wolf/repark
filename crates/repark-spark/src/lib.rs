@@ -78,6 +78,7 @@ pub(crate) use namespace_ddl::{
     execute_create_namespace, execute_drop_namespace, execute_drop_table,
     try_parse_create_namespace,
 };
+pub use normalize::dialect_for_executing_parse;
 pub(crate) use normalize::{
     DmlSubqueryVerb, MorDmlKind, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
     build_transform_field, delete_target_object_name, object_name_from_table_with_joins,

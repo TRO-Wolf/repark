@@ -30,7 +30,8 @@ pub(crate) async fn execute_passthrough(
     sql: &str,
 ) -> Result<DataFrame> {
     let state = ctx.state();
-    let dialect = state.config().options().sql_parser.dialect;
+    let session_dialect = state.config().options().sql_parser.dialect;
+    let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
     let mut statement = state.sql_to_statement(sql, &dialect)?;

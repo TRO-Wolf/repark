@@ -83,6 +83,17 @@ refuses today. The same gate arms the `PyColumn.sql` throwaway context, which ru
 internal SQL. CTAS routes its SELECT through `execute_passthrough`, so it is covered by the
 same change.
 
+Two analyzer findings fell out of the first door tests, both fixed in the mechanism. First,
+SQL planning binds lambda parameters before analysis, so `SparkIntegerLiteral`'s narrowing
+of `make_array(1, 2, 3)` to `List<Int32>` left the bound `x` at `Int64` and the physical
+planner refused (`LambdaVariable field and schema field mismatch`). `LambdaRebind`, last in
+`analyzer_rules()`, re-resolves every binding from the current value types. Second, the
+physical planner remaps lambda bodies by referenced position, so an `(x, i)` body mentioning
+only `i` reads the element slot; the same rule packs such a body into the facade's own
+`named_struct` + `get_field("__hof_body")` shape (the exact expression
+`functions_lambda._keep_lambda_params` builds), which is why the rule skips unary and
+fully-referenced bodies — the Column door's plans stay byte-identical.
+
 ## Design decisions taken inside the unit
 
 | Decision | Reason |

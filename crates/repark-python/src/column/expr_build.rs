@@ -8,6 +8,7 @@ use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
     Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
 };
+use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -32,6 +33,13 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
         Expr::Alias(alias) => *alias.expr,
         other => other,
     }
+}
+
+pub(super) fn expr_context_for_sql(sql: &str) -> SessionContext {
+    let mut config = SessionConfig::new();
+    config.options_mut().sql_parser.dialect =
+        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Generic);
+    SessionContext::new_with_config(config)
 }
 
 /// Collapse nested `Alias` layers to one outer rename.

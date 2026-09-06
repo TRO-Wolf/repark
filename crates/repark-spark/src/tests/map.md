@@ -14,6 +14,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
+  `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
+  function (not the subquery keyword), `forall` on empty, `aggregate` with and without
+  `finish`, `reduce`, `zip_with` null-padding, the four map names, the
+  `DUPLICATED_MAP_KEY` raise, and the gate guard (`count("v")` stays the identifier count,
+  so lambda-free SQL still parses Generic).
+  pins: fnp-8/C-004
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
   upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the

@@ -54,6 +54,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx_scalar_expr` (new) and
   `percentile_approx_list_expr` take `Option<i64>` accuracy and build the two- or three-arg
   UDAF call. pins: perf-approxpct-1/C-002
+  **FNP-8 (2026-09-06):** `expr_context_for_sql` builds the `PyColumn.sql` throwaway
+  context with `repark_spark::dialect_for_executing_parse`, so column-free `F.expr` with
+  `x -> y` parses as a lambda. `mod.rs` stays at its exact 1052 baseline — the call site
+  is a one-line swap. pins: fnp-8/C-004
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

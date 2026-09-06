@@ -48,6 +48,15 @@ scalars live under [`try_invert/`](try_invert/map.md).
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+- `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, last in
+  `analyzer_rules()`. Two passes over lambda bindings: it packs a multi-parameter lambda
+  body that leaves a parameter unreferenced into the facade's own `named_struct` +
+  `get_field("__hof_body")` shape (the physical planner remaps by referenced position, so
+  an `(x, i)` body mentioning only `i` would read the element slot), then re-resolves
+  every binding from the current value types (the narrowing rules run after SQL planning
+  bound them). Unary and fully-referenced bodies pass through untouched, so the Column
+  door's plans are byte-identical.
+  pins: fnp-8/C-004
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each
@@ -343,8 +352,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
   DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
-  next rule (pins: types-1/C-007); the session installs them via the
-  Spark door's `SessionExtension`;
+  next rule (pins: types-1/C-007) + a final `LambdaRebind` (pins: fnp-8/C-004); the
+  session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
