@@ -16,6 +16,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured month-end and interval date-arithmetic arms."""
     repark = ReparkSession.builder.appName("ex-dates-more").master("local[1]").getOrCreate()
     try:
         month_starts = repark.createDataFrame(
