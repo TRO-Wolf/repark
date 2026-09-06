@@ -223,6 +223,14 @@ H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/da
 it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
 with it in the same commit. pins: h3-spill-residue-1/C-002
 
+WRITE-ORDER-DIST-1 (2026-09-06): `check_rust_file_size.py` `repark-spark/src/alter.rs`
+1830→1821 (the WRITE ORDERED/DISTRIBUTED refusal leaves for the new `alter_write_order.rs`
+module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/append.rs`
+1884→1883 and `write/merge/mod.rs` 1795→1792 (the funnel entries delegate to the
+distribution module's sorted drivers). All three ratchet DOWN; the duplicate table in
+`test_cap_1_source_file_line_cap.py` moves with them in the same commit.
+pins: write-order-dist-1/C-012
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
