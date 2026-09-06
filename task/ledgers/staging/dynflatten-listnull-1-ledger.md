@@ -201,10 +201,30 @@ release module that still carried the fix. Restored from backup after the run.
 
 ## 7. Gates
 
-Recorded at hand-back.
+| command | exit |
+|---|---|
+| `make ci` | 0 |
+| `make verify` | 0 |
+| `make check-python-conventions` | 0 |
+| `make rust-panic-ban` | 0 |
+| `.venv/bin/python -m pytest python/repark/tests` | 0 after deselecting `test_cross_validator_live_pyspark_shape` (5064 passed, 226 skipped). First `-x` run stopped on `PermissionError` in `multiprocessing.SemLock` (`/dev/shm` not writable in this sandbox). |
+| `.venv/bin/python -m pytest python/repark-parity/tests` | 0 (574 passed) |
+| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 2 — same SemLock `PermissionError` on 17 gold-model `dbt run` cells; 42 other dbt tests passed. Not a product-code failure. |
+| `REPARK_PARITY_LIVE=1 pytest test_parity_live.py test_parity_live_dynflatten.py` | 0 (122 passed, including `test_live_disclosure_still_diverges` beside the dynflatten legs) |
+| `make check-map-sync` | 0 |
+| `make check-ledger-grammar` | 0 |
+| `make check-ledgers` | 0 |
+| `make check-docs-compaction` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
+| `typos .` | 0 |
+
+`git diff origin/main -- STATUS.md briefs/next-sequence.md Cargo.lock Cargo.toml` empty.
 
 ## 8. Perf (C-005)
 
-Release module (`repark._native.__debug_assertions__ is False`). Struct-only bed shapes
-do not carry `user_properties`; the bench loads repark via `createDataFrame`, not
-`read.parquet`. Re-run in the gates section.
+Release module: `repark._native.__debug_assertions__ is False` after
+`maturin develop --release`. Struct-only bed shapes have no `user_properties`;
+the bench loads repark via `createDataFrame`, not `read.parquet`. Gate-scale
+row-set pins `test_dynflatten_null_mask.py` stayed green on all eleven shapes
+(including `struct_d3` / `struct_d6`). No wall-clock pin: this unit does not
+change the flatten kernel.
