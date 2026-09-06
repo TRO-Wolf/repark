@@ -319,7 +319,7 @@ repark-parity slice.
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix
   rule, the adapter trailer, a re-render of the dynamic section, `bash -n` on
   each gate command, and prefix-negating phrases; `diff` prints the dynamic
-  section only. Field extractors live in `sepmo_packet_extract.py` (assembler
+  section only. Field extractors live in `sepmo_packet_extract.py` (assembler The banned-trailer literals the checker scans for are assembled at runtime, so the tree never carries them (the pre-push hook forbids them).
   stays under the default Python ceiling). Fixtures under
   `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
   Invocation: `python3 scripts/sepmo_packet.py build …` or

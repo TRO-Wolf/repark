@@ -29,7 +29,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
-- `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 2):** compact worker
+- `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 2):** compact worker The forged-trailer probe assembles its literal at runtime for the same reason.
   packet pins: schema validity, prefix byte-identity across five briefs,
   constraint preservation (dropped rule, forged trailer, JSON/markdown
   disagreement, prefix-negating dynamic, uncaptured boundary path), `bash -n`
