@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
+`BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
+names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
+Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC). Twenty-seven
+roster names stay on the backlog with existing EX-FN / BL-17 / FNP-15 / FNP-16
+rows; two new §7 rows (EX-FN-20 `try_to_timestamp`, EX-FN-21 `unix_timestamp`
+format arm) are pinned by `python/repark/tests/test_examples_functions_b.py`.
+Red-first: 7 has-no-example findings with the new COVERS names stripped
+(exit 1), and a wrong-epoch control in `dates_more.py` failed the execute
+leg by name (exit 1).
+pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
+
 EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
 examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
@@ -204,6 +216,13 @@ TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709→1700 — the year arm moves t
 `src/spark_year_pad.rs`; mirrored in `test_cap_1_source_file_line_cap.py`.
 pins: types-1/C-006
 
+H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/dataframe.rs`
+1127→1126 — arming the Arrow reader's pool-refusal containment is one builder call
+(`.with_refusals(...)`) rather than a fourth constructor argument, and the lookup itself
+(`refusal_log`) lives in `arrow_export.rs`, so the binding surface came out a line shorter than
+it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
+with it in the same commit. pins: h3-spill-residue-1/C-002
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
@@ -260,6 +279,15 @@ converter and its two type predicates move to `dataframe/rows_export.py`; `core.
 three delegations. Ratchets DOWN.
 pins: perf-facade-1/C-001, C-005
 
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6302 — the
+`schema` property routes `timestamp`/`timestamp_ntz` through `fromDDL`, so the
+`TimestampType` import is gone (mirrored in the CAP-1 test).
+pins: nullability-2/C-006
+
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `tests/_live_parity.py` 1877→1778 — the
+three converged nullability disclosures and their six check functions are gone
+(mirrored in the CAP-1 test).
+pins: nullability-2/C-007
 TYPES-1 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6305 (INCREASE — the
 two `__repark_rn` BIGINT casts; owner approval requested at merge) and
 `test_window_parity.py` 1481→1422 (ratchets DOWN — converged tiers and the dead

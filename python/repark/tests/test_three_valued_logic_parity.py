@@ -254,16 +254,12 @@ ROWS: list[TvlRow] = [
             [("eq", _BOOL, True), ("nse", _BOOL, False)],
             {"eq": None, "nse": True},
         ),
-        # VALUE agrees; nullability of nse diverges — Spark marks null-safe equal non-nullable,
-        # repark's Arrow bool is nullable.
-        repark=_one_row(
-            [("eq", _BOOL, True), ("nse", _BOOL, True)],
-            {"eq": None, "nse": True},
-        ),
+        repark=None,
         note=(
             "NULL = NULL is UNKNOWN (NULL); NULL <=> NULL (Spark null-safe equal / "
-            "IS NOT DISTINCT FROM) is TRUE. VALUE matches; DISCLOSURE on nse nullability "
-            f"(Spark non-null bool vs repark nullable bool). Flipped by {FIX_G12}."
+            "IS NOT DISTINCT FROM) is TRUE at non-null bool on both engines since "
+            "NULLABILITY-2 (2026-09-05): the analyzer wraps the operator in a non-null "
+            "marker. Name kept."
         ),
     ),
     # IS [NOT] NULL vs = NULL
@@ -358,15 +354,11 @@ ROWS: list[TvlRow] = [
             [("nse", _BOOL, False)],
             {"nse": [True, True, False, False]},
         ),
-        # VALUE agrees; nullability of nse diverges (same family as SQL <=> disclosure).
-        repark=_table(
-            [("nse", _BOOL, True)],
-            {"nse": [True, True, False, False]},
-        ),
+        repark=None,
         note=(
             "CP-11 DataFrame door: ``Column.eqNullSafe`` select — NULL <=> NULL is TRUE, "
-            "NULL <=> 1 is FALSE. VALUE matches; DISCLOSURE on nse nullability "
-            f"(Spark non-null bool vs repark nullable bool). Flipped by {FIX_G12}. "
+            "NULL <=> 1 is FALSE, non-null bool on both engines since NULLABILITY-2 "
+            "(2026-09-05). Name kept. "
             "Distinct from the SQL ``<=>`` spelling in null_eq_vs_null_safe_eq."
         ),
     ),

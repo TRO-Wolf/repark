@@ -1287,9 +1287,9 @@ the pin rather than obeying it.
 - **Pin** — the oracle-backed home is now
   `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The remaining
   live divergences under ANSI ON are
-  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5), and it is nullability only, plus
   [CAST-NULL-1](#cast-null-1--non-decimal-cast-nullability-keeps-or-flips-the-child-where-spark-does-the-opposite)
-  (four non-decimal cast-target nullability cells, likewise nullability only). Equality
+  (explicit valid-literal→date/timestamp cells only, likewise nullability only;
+  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5) closed 2026-09-05). Equality
   pins: `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
   `…[try_cast_malformed_string_to_int_null]`, `…[try_cast_overflow_tinyint_null]`.
 - **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed, and again 2026-08-15 when
@@ -1297,8 +1297,8 @@ the pin rather than obeying it.
   the recorded corpus. The sentence this bullet used to carry — "the residual silently-wrong-result
   class is G6-3 (DATE→INT)" — became false at that commit: G6-3 and G6-5 are both CLOSED, the
   corpus grew 10 → 15 rows recording all five converged doors, and what is left under ANSI ON is
-  G6-4's CAST nullability (value+type already agree after #64) plus CAST-NULL-1's four
-  non-decimal target cells (filed 2026-09-05; likewise nullability only, values agree).
+  CAST-NULL-1's explicit valid-literal residue (likewise nullability only, values agree);
+  G6-4 closed 2026-09-05 (NULLABILITY-2).
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
@@ -1677,19 +1677,19 @@ the pin rather than obeying it.
 
 ### DEC-9 — overflow-capable binary arithmetic is marked non-null
 
-- **repark** — the three pinned cells now match Spark's nullable marking at the same types
-  and values: `9*9` → `(3,0)` nullable `81`; `9+9` → `(2,0)` nullable `18`; `999*999` → `(7,0)`
-  nullable `998001`. The nullability arrives through the overflow-exposed operand casts
-  (`CAST(int AS DECIMAL)` is nullable), which the op propagates. Re-measured 2026-09-04
-  (CUTOVER-SCHEMA-1).
-- **Apache Spark** — marks the same results **nullable** (overflow-capable binary arithmetic) at
-  the same types and values. *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `INT * INT` and `BIGINT + BIGINT`
+  over non-null operands are non-null (Spark never NULLs integral arithmetic: ANSI-off
+  wraps, ANSI-on raises); decimal `+`/`-`/`*` over non-null operands is nullable iff ANSI
+  is off (Spark `CheckOverflow`); the `(38,·)` add/sub/mul UDFs propagate operand
+  nullability. The three pinned int-operand cells still match at the same types/values.
+- **Apache Spark** — same nullability on every cell, both ANSI modes. *(oracle: recorded;
+  re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** — `[mul_single_digit_nullability_differs]`, `[add_single_digit_nullability_differs]`,
-  `[mul_three_digit_capacity_nullability_differs]`
-- **Rationale** — BACKLOG, intent to FIX (gap G13), narrowed 2026-09-04 (CUTOVER-SCHEMA-1):
-  the pinned int-operand cells converged through the decimal-cast rule and now assert
-  equality; what stays open is overflow-capable marking where the operands are genuinely
-  non-null (null-safe casts), whose Spark answer is not yet measured.
+  `[mul_three_digit_capacity_nullability_differs]`, and
+  `python/repark/tests/test_nullability_2.py::test_decimal_arithmetic_nullability_follows_ansi`
+- **Rationale** — FIXED. CUTOVER-SCHEMA-1 (2026-09-04) converged the int-operand cells
+  through the decimal-cast rule; this unit measured the genuinely-non-null-operand
+  remainder on the live oracle and implemented the ANSI-gated rule.
 
 > **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
 > re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are
@@ -2020,78 +2020,143 @@ the pin rather than obeying it.
 
 ### G6-4 — TIMESTAMP→INT nullability only (after TZ-5)
 
-- **repark** — `CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT)` under UTC yields int32
-  **non-null** `1577836800` (unix seconds).
-- **Apache Spark** — same value and Arrow type; the CAST is typed **nullable**.
-  *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `CAST(TIMESTAMP '2020-01-01
+  00:00:00' AS INT)` under UTC yields int32 **nullable** `1577836800` (unix seconds),
+  both ANSI modes.
+- **Apache Spark** — same value, Arrow type, and nullability.
+  *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
-- `live-mirror: cast_timestamp_to_int_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (same class as G12 null-safe-equal
-  nullability). X-1 originally queued this as raise-vs-value; #64 un-refused the INT path
-  and the residual is nullability only (`task/tz5-cast-seconds-ledger.md` §10). Re-measured
-  unchanged 2026-09-04 (CUTOVER-SCHEMA-1): the analyzer rule covers decimal targets only, so
-  this cell still reads int32 non-null.
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
+- **Rationale** — FIXED. X-1 originally queued this as raise-vs-value; #64 un-refused the
+  INT path and the residual was nullability only (`task/tz5-cast-seconds-ledger.md` §10);
+  the generalized cast rule wraps the timestamp operand in the nullable marker.
 
 ### G12-1 — null-safe equal result nullability (SQL `<=>`)
 
-- **repark** — `SELECT (NULL <=> NULL) AS nse` yields Arrow `bool` **nullable** (value TRUE).
-- **Apache Spark** — same expression yields Arrow `bool` **non-nullable** (value TRUE).
-  *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `SELECT (NULL <=> NULL) AS nse`
+  yields Arrow `bool` **non-nullable** (value TRUE), both ANSI modes; the plan schema and
+  written parquet field are non-null, CTAS stays all-optional per its own rule.
+- **Apache Spark** — same value, Arrow type, and nullability.
+  *(oracle: recorded; re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
-- `live-mirror: null_safe_eq_sql_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12). VALUE already matches; only
-  schema nullability diverges. Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in
-  this unit touches null-safe equal.
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
+- **Rationale** — FIXED. VALUE already matched; the analyzer now wraps the operator in a
+  non-null marker.
 
 ### G12-2 — null-safe equal result nullability (DataFrame `eqNullSafe`)
 
-- **repark** — `Column.eqNullSafe` select yields Arrow `bool` **nullable** (values match Spark).
-- **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded.)*
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `Column.eqNullSafe` select yields
+  Arrow `bool` **non-nullable** (values match Spark), both ANSI modes.
+- **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded;
+  re-measured live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
-- `live-mirror: null_safe_eq_df_nullability`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12 — DF door twin of G12-1).
-  Re-measured unchanged 2026-09-04 (CUTOVER-SCHEMA-1): no rule in this unit touches null-safe
-  equal.
+  (flipped to an equality row) and
+  `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
+- **Rationale** — FIXED (gap G12 — DF door twin of G12-1, same analyzer rule).
 
 ### CAST-NULL-1 — non-decimal CAST nullability keeps or flips the child where Spark does the opposite
 
-- **repark** — from a non-null child, `CAST('1' AS INT)` answers int32 **non-null** `1`,
-  `CAST('2020-01-01' AS DATE)` answers date32 **non-null**, `CAST('2020-01-01 00:00:00'
-  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **non-null**, and `CAST(DATE '2020-01-01'
-  AS TIMESTAMP)` answers `timestamp[us, tz=UTC]` **nullable** — identically under ANSI on
-  and off. Values match Spark on all four cells.
-- **Apache Spark** — the same four casts answer int32 **nullable**, date32 **nullable**,
-  `timestamp[us, tz=UTC]` **nullable**, and `timestamp[us, tz=UTC]` **non-null** —
-  identically under ANSI on and off. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
-  2026-09-05.)*
+- **repark** — from a non-null child, string→{integral, float, boolean} casts answer
+  **nullable** (literals and columns alike); string→{date, timestamp} casts answer
+  **nullable** for column and invalid-literal operands but stay **non-null** for
+  parses-valid string literals; float→integral and timestamp→{int8, int16, int32}
+  answer **nullable**; decimal→integral answers **nullable**;
+  `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers **non-null** — identically under ANSI
+  on and off. Complex casts propagate the child flag (STRUCT/ARRAY/MAP cast of a
+  non-null child answers **non-null**, even when an element conversion can fail —
+  the failure NULLs the element, ANSI-off, or raises, ANSI-on); `STRUCT()`/`MAP()`/
+  `ARRAY()` constructors answer **non-null**. Values match Spark on every cell.
+- **Apache Spark** — the same casts answer **nullable** throughout (including explicit
+  valid-literal→date/timestamp casts), except date→timestamp which is **non-null** —
+  identically under ANSI on and off; complex casts and constructors answer **non-null**
+  from non-null children. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
+  2026-09-05; complex cells 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_cast_null_1_non_decimal_targets_keep_or_flip_the_child`
-  (asserts repark's four current nullability answers under both ANSI modes; the fix reds
-  it on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing:
-  this unit's analyzer rule covers decimal targets only and never touched these cells.
-  The string-source casts can fail at runtime (hence nullable on Spark); the
-  date-to-timestamp cast cannot (hence non-null). The unit's ledger R-4 first recorded
-  "keeps the child" as oracle truth; the round-3 measurement corrects it.
+  `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
+  (the generalized matrix, both ANSI modes),
+  `...::test_valid_literal_cast_to_date_or_ts_stays_nonnull` (the residue cells),
+  `...::test_complex_cast_nullability_matches_spark` (complex casts + constructors,
+  both ANSI modes, both doors),
+  and `crates/repark-functions/src/spark_nullability.rs` (rule pins).
+- **Rationale** — BACKLOG, narrowed 2026-09-05 (NULLABILITY-2): every cell is
+  Spark-equal except explicit valid-string-literal→date/timestamp casts, which stay
+  non-null because DataFusion plans `DATE 'x'` / `TIMESTAMP 'x'` and the explicit
+  spelling to byte-identical plans with no planner hook — the rule exempts
+  parses-valid literals so typed literals stay non-null (Spark-equal) and sacrifices
+  the explicit valid-literal spelling. Extended 2026-09-06 (NULLABILITY-2 round 2)
+  with the complex-cast propagation rule. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### CAST-BOOL-DEC-1 — `BOOLEAN → DECIMAL` refuses where Spark answers `1.00`
 
-- **repark** — `SELECT CAST(true AS DECIMAL(10,2)) AS v` refuses on BOTH doors with
-  `UnsupportedOperationException` (`Optimizer rule 'simplify_expressions' failed`, caused
-  by `This feature is not implemented: Unsupported CAST from Boolean to
-  Decimal128(10, 2)`) — identically under ANSI on and off.
-- **Apache Spark** — answers `decimal128(10,2)` **non-null** `1.00` under both ANSI modes.
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `CAST(true AS DECIMAL(10,2))`
+  answers `1.00` at `decimal128(10,2)`, non-null, on both doors; `CAST(false …)`
+  answers `0.00`; `DECIMAL(1,0)` answers `1`; `DECIMAL(2,2)` is nullable — ANSI-on
+  raises `NUMERIC_VALUE_OUT_OF_RANGE`, ANSI-off NULLs (the native door raises,
+  ANSI-like).
+- **Apache Spark** — same value, type, and nullability on every cell, both ANSI modes.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-05.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_bool_to_decimal_cast_refuses_on_both_doors`
-  (asserts the refusal needle on the facade under both ANSI modes and on the native
-  door; the fix reds it on purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing: no
-  rule in this unit or earlier ones teaches the planner a boolean-to-decimal cast. The
-  decimal-cast nullability rule's `Boolean` arm was dead exactly because of this
-  refusal and was removed in the same round.
+  `python/repark/tests/test_nullability_2.py::test_bool_to_decimal_served_on_both_doors`
+  and `crates/repark-functions/src/bool_decimal.rs` (rule pins).
+- **Rationale** — FIXED. A both-doors analyzer rule rewrites the cast to a
+  precision-carrying UDF that reads ANSI for the overflow edge; the UDF's return field
+  marks overflow-exposed targets nullable. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
+
+### COMPLEX-ELEM-NULL-1 — constructor element nullability does not propagate the child flag
+
+- **repark** — `STRUCT(1 AS a)` answers `struct<a: int32>` with a **nullable**
+  element; `MAP('a', 1)` answers `map<string, int32>` with a **nullable** value
+  field; `ARRAY(1, 2)` answers `list<element: int32>` with a **nullable** element.
+  (Top-level flags are Spark-equal since 2026-09-06, CAST-NULL-1.)
+- **Apache Spark** — the same constructors answer `struct<a: int32 not null>`,
+  `MapType(StringType(), IntegerType(), False)`, and `list<element: int32 not null>`:
+  elements are non-null exactly when their children are. Values match.
+  *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
+  (red when fixed).
+- **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
+  shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
+  (NULLABILITY-2 round 2).
+
+### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
+
+- **repark** — `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refuses on both doors with
+  `ParseException: Expected: (, found: <`; DataFrame `.cast(MapType(...))` refuses
+  with `unknown cast type 'map<string,long>'`. Stock sqlparser has no MAP type, so
+  there is no rewrite target — serving it is a cast-UDF plus token-rewrite feature.
+- **Apache Spark** — answers `{'a': 1}` at `map<string, int64>`, non-null.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1`
+  (red when fixed).
+- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
+
+### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
+
+- **repark** — `CAST(1 AS SMALLINT)` / `CAST(1 AS TINYINT)` report `int` and
+  `CAST(1.5 AS FLOAT)` reports `double` via `dtypes`/`schema`, while Arrow keeps the
+  narrow type (`int16`/`int8`/`float`). The engine's `arrow_type_key`
+  (`crates/repark-python/src/dataframe.rs`) collapses Int8/Int16→`int` and
+  Float32→`double`; the facade mapping already has `short`/`byte`/`float` branches
+  the engine never emits.
+- **Apache Spark** — reports `smallint` / `tinyint` / `float`. Nullability agrees;
+  only the width label diverges. *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
+  plus the dtype asserts in `...::test_cast_nullability_matches_spark`
+  (`_CAST_FLAG_ROWS`, red when fixed).
+- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 
@@ -2178,14 +2243,16 @@ the pin rather than obeying it.
 
 ### G18-2 — `collect_list` list nullability and value-field name
 
-- **repark** — `groupBy.agg(collect_list)` exports `list<item: int64>` **nullable** (elements
-  nullable).
+- **repark** — `groupBy.agg(collect_list)` exports `list<item: int64>` **non-nullable**
+  (elements nullable) — the top-level flag converged 2026-09-06 (NULLABILITY-2 round 2:
+  the empty-array branch marks non-null like Spark).
 - **Apache Spark** — exports `list<element: int64 not null>` **non-nullable**. Values match
   under the G18 order-insensitive comparator. *(oracle: recorded.)*
 - **Pin** —
   `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[collect_list_grouped]`
 - `live-mirror: nested_collect_list_nullability`
-- **Rationale** — TYPE disclosure (field name + collect_list nullability). Same G10 follow-on.
+- **Rationale** — TYPE disclosure (field name + element flag; the top-level nullability
+  half converged 2026-09-06). Same G10 follow-on.
 
 ### G18-3 — array-of-struct list value-field name
 
@@ -2876,20 +2943,24 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### CUTOVER-NULLDEPTH-1 — `read.parquet` relax stops at depth 32; Spark relaxes every level
 
-- **repark** — `relax_schema_to_nullable` (`crates/repark-core/src/spark_nullable.rs`)
-  recurses to `MAX_NESTED_TYPE_DEPTH = 32`. A 40-deep required struct reads back nullable
-  down to level 33 and **non-null from level 34** (root is level 0).
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `relax_schema_to_nullable`
+  (`crates/repark-core/src/spark_nullable.rs`) is an iterative walk with no depth bound:
+  a 40-deep required struct reads back nullable at **every** level (root plus all 40).
+  Below the relax the only ceilings left are Arrow's own transport limits: the parquet
+  footer parser's flatbuffers depth 64 (arrow-ipc 58.4.0 `max_footer_fb_depth` default —
+  a 60-deep struct reads back nullable at all 61 levels, 61+ refuses with
+  `DepthLimitReached` at `ARROW:schema` footer decode, before the relax runs) and the
+  IPC/export nesting caps. Bound bisected 2026-09-06 (NULLABILITY-2 round 2).
 - **Apache Spark** — reads the same file back nullable at **every** level (root plus all
-  40). *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+  40); reads 60- and 61-deep files Spark-side. *(oracle: live PySpark 4.1.2, UTC,
+  2026-09-05; 60/61 legs 2026-09-06.)*
 - **Pin** —
-  `crates/repark-core/src/spark_nullable.rs::tests::deep_nesting_completes_with_nullable_flags`
-  (600-deep: the first 33 nested levels nullable, the rest non-null) plus
-  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_relaxes_only_to_depth_32`
-  (40-deep file: first non-null at level 34). Both codify today's bound; the fix reds
-  them on purpose.
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). The bound is the
-  recursion guard the module was written with; lifting or removing it is queued rather
-  than taken here. The unit's C-001 now states the bound.
+  `crates/repark-core/src/spark_nullable.rs::tests::relax_covers_depth_40`,
+  `...::relax_covers_depth_200`, `...::deep_nesting_completes_with_nullable_flags`
+  (600-deep, all nullable) plus
+  `python/repark/tests/test_nullability_2.py::test_reader_relax_covers_depth_40` and
+  `...::test_deep_read_refuses_past_arrow_footer_limit` (the transport ceiling).
+- **Rationale** — FIXED. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### CUTOVER-DATE-1 — gold dbt SQL `DATE(timestamp)` refuses; Spark runs the join including `unix_timestamp`
 
@@ -4387,21 +4458,36 @@ Shared roster pin for every heading:
 
 ### READ-TSNTZ-DTYPE-1 — `read.parquet` of a tz-naive TIMESTAMP reports `string` via `dtypes`/`schema`
 
-- **repark** — `read.parquet` of a file with a tz-naive `TIMESTAMP` column reports the
-  column as `string` via `dtypes` and `schema.simpleString()`, while `to_arrow()` says
-  `timestamp[us]`. The Rust mapper is right (`Timestamp(_, None) => "timestamp_ntz"`);
-  the facade `schema` property has no `timestamp_ntz` arm and falls through to
-  `StringType()`.
+- **repark** — **FIXED 2026-09-05 (NULLABILITY-2).** `read.parquet` of a file with a
+  tz-naive `TIMESTAMP` column reports `timestamp_ntz` via `dtypes`,
+  `schema.simpleString()`, and `printSchema` (Spark-equal text), and `timestamp[us]`
+  via Arrow; `createDataFrame` with a `TimestampNTZType` schema reports likewise.
+  Tz-aware timestamps still report `timestamp`. `read.csv` with `inferSchema` casts
+  the raw text to instant `timestamp` through CAST(str AS TIMESTAMP), so
+  `spark.sql.session.timeZone` localizes offset-free wall clocks (UTC,
+  `America/New_York`, `Asia/Kolkata`; DST gap `2020-03-08 02:30:00` → 07:30Z
+  measured) and offset-bearing cells (`2020-06-01T12:00:00+02:00`,
+  `2020-06-01T12:00:00Z`) keep their instant in every session zone. `nullValue`
+  plus `inferSchema` takes the same timestamp promotion and promotes date-only
+  text (`2020-06-01`) to `date`. JSON reads also run the leftover ntz recast
+  (`reader.py` `_apply_reader_schema_semantics`); DataFusion infers Utf8, so
+  without `inferTimestamp` the cell stays `string` on both engines (measured
+  `{"ts": "2020-06-01 12:00:00"}`). Parquet/`createDataFrame` NTZ paths stay
+  `timestamp_ntz`.
 - **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
-  string, and `timestamp[us]` via Arrow. *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+  string, and `timestamp[us]` via Arrow; infers CSV timestamps as `timestamp` in the
+  session zone (offset-bearing text keeps the instant); infers date-only CSV text as
+  `date`; JSON without `inferTimestamp` stays `string`.
+  *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06; session-zone
+  / nullValue / JSON-path legs 2026-09-06; offset / `Z` / Kolkata / date legs 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_cutover_schema_1.py::test_read_parquet_tz_naive_timestamp_reports_string_dtype`
-  (asserts the current `string` / `string` / `timestamp[us]` triple; the fix reds it on
-  purpose).
-- **Rationale** — BACKLOG, filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3). Pre-existing and
-  facade-side: no rule in this unit touches the `dtypes` mapping. Fixing it here would
-  widen the unit past its charter; the row holds it for the facade unit that owns that
-  mapping.
+  `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
+  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls),
+  `...::test_csv_inferschema_timestamp_reports_timestamp`,
+  and `...::test_live_csv_inferschema_matches_oracle`.
+- **Rationale** — FIXED. The `schema` property routes the `timestamp`/`timestamp_ntz`
+  keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
+  `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### Surfaced, awaiting pins — not yet rows
 
@@ -5868,45 +5954,97 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the date-arithmetic arms; this row records the display arm until the cast
   spells Spark's units.
 
-### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
+### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
+
+- **repark** — `F.try_to_timestamp("s")` raises `UnsupportedOperationException:
+  functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
+  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_try_to_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
+  example backlog until the engine grows the tolerant timestamp parse.
+
+### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern
+
+- **repark** — `F.unix_timestamp("s", "yyyy-MM-dd")` raises `UnsupportedOperationException:
+  functions.unix_timestamp format argument is not supported yet`. The no-format arms agree
+  with Spark and carry the example coverage: `"2024-06-15 12:00:00"` answers `1718452800`,
+  `"1970-01-01 00:00:00"` answers `0`, NULL answers NULL, and a timestamp column of the same
+  noon instant answers `1718452800`. Zero-argument `unix_timestamp()` is a current-epoch int,
+  stable across rows of one query.
+- **Apache Spark** — `unix_timestamp("2024-06-15", "yyyy-MM-dd")` answers `1718409600`;
+  `"1970-01-02"` answers `86400`; NULL answers NULL. The no-format arms agree with the repark
+  answers above. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_unix_timestamp_format_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
+  covered by the no-format arms; this row records the format argument until the parser
+  accepts Spark's pattern.
+
+### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
-  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` fails with
-  `PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: partition not
-  used yet (a Rust panic was caught at the Python boundary; this is a bug — please report it)`.
-  The panic is DataFusion 54.1's own `expect("partition not used yet")` at
-  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
-  side (`ProjectionExec` over `RepartitionExec`): each output partition removes its channel from
-  the shared state, so a second `execute` of the same partition finds nothing, and something on
-  the pool-refusal path re-executes it. Reproducible three runs of three, and again at 64 MiB with
-  1e7 rows. The process survives (`panic = unwind`, caught by the boundary fence) and the session
-  stays usable; a 1 GiB pool on the same query is `ok`. **Every other operator measured at the
-  same 8 MiB pool — sort, hash aggregate, distinct, hash join, sort-merge join, window,
-  `array_agg`, TopK — returns a clean typed `Resources exhausted`.** This is the plan shape, not
-  the pool machinery.
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` now raises the same typed
+  refusal **exception** every other operator gives: `PySparkException: Resources exhausted: Failed
+  to allocate additional 1024.2 KB for NestedLoopJoinLoad[2] with 7.0 MB already allocated for this
+  reservation - 1022.7 KB remain available for the total memory pool: fair(pool_size: 8.0 MB)`,
+  followed by the containment disclosure and the two resize knobs. A 1 GiB pool on the same query
+  is still `ok`, and the other 17 operators at the same 8 MiB pool are unchanged.
+  **The exception is clean; the console is not.** The panic still unwinds through DataFusion
+  before repark converts it, so Rust's default hook prints it first: **4 `thread
+  'tokio-rt-worker' … panicked at …/repartition/mod.rs:1277` blocks on stderr**, one per output
+  partition, 13 stderr lines in all (measured 2026-09-06). repark declines to install a process-
+  wide `std::panic::set_hook` to swallow them — it is an embedded library and the hook would
+  outrank the host application's own — so the noise is disclosed rather than hidden. It goes away
+  when the upstream defect does.
+  **The defect is still upstream and unfixed.** DataFusion 54.1's `NestedLoopJoinExec` executes
+  partition 0 of its build (left) child once in `execute` (`build_side_data.try_once`), and then,
+  when that in-memory load is refused by the pool, `initiate_fallback` executes **the same child
+  instance again** from partition 0 to spill it (`joins/nested_loop_join.rs`). `RepartitionExec`
+  removes each output partition's channel from its shared state on first `execute`, so the second
+  call finds nothing and hits `expect("partition not used yet")` at
+  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`. repark may not patch a
+  dependency, so it contains the consequence instead: a bounded session's `FairSpillPool` is
+  wrapped in `RefusalRecordingPool`, and when the Arrow export reader catches a fenced panic that
+  a recorded pool refusal preceded, it reports the refusal rather than a bug. **Four** gates keep
+  that narrow: the item is a fenced panic; its payload is one of the panics DataFusion 54.1 can
+  reach on its pool-refusal and spill-fallback paths (an allow-list cited line by line in
+  `crates/repark-python/src/map.md`); **the session's pool recorded a refusal since the reader
+  opened** — the log is session-scoped, not per-stream, because `MemoryPool` carries no stream
+  identity, and a successful spilling query records refusals too, so the allow-list is what keeps
+  the rule bounded; and the session is bounded at all. An unrelated fenced panic after a refusal
+  — an injected `index out of bounds`, say — is still reported as the bug it is, and that
+  direction is pinned.
 - **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
   raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
   is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
   `sort` and `hash_join`, in the baseline's §5.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic`
-- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. The defect is upstream in DataFusion,
-  so this unit pins the behaviour rather than patching a dependency; the repark-side deliverable
-  is the reproducer the pin already is. It is the **only** Never-OOM contract failure in the
-  180-cell matrix: a bounded pool must answer with a typed refusal, never a panic.
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception`
+  (the pin forbids the caught-panic marker AND DataFusion's own `partition not used yet` payload);
+  `crates/repark-python/src/arrow_export.rs` (five containment pins);
+  `crates/repark-core/src/pool_refusals.rs` and
+  `crates/repark-core/src/session/tests/pool_refusals.rs` (the pool wrapper and its wiring)
+- **Rationale** — FIXED 2026-09-06 by H3-SPILL-RESIDUE-1, repark-side containment of an upstream
+  defect; the upstream issue text is in
+  `task/ledgers/staging/h3-spill-residue-1-ledger.md`. Filed BACKLOG 2026-09-05 by H3-SPILL-1. It
+  was the **only** Never-OOM contract failure in the 180-cell matrix: a bounded pool must answer
+  with a typed refusal, never a panic.
+  pins: h3-spill-residue-1/C-002
 
-### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit panics instead of raising `MemoryError`
+### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit raises `MemoryError` — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — with `RLIMIT_AS` set 256 MiB above the session's own `VmSize`, `collect()` over a
-  4e6-row five-column frame fails with `PySparkException: repark internal error in
-  collect_rows.rows_from_record_batch: PyObject pointer is null (a Rust panic was caught at the
-  Python boundary; this is a bug — please report it)`. A CPython allocation returned `NULL` and
-  the row fast path panicked rather than surfacing the `MemoryError` CPython had already set.
-  With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
-  cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
-  value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
-  `collect()` is 4,393-4,471 MiB resident at every pool from unbounded down to 64 MiB, and returns
-  the identical content digest at each.
+  4e6-row five-column frame now raises `MemoryError` — CPython's own, with no message, exactly as
+  a failed allocation in pure Python would. Every CPython allocation on the row fast path
+  (`collect_rows.rows_from_record_batch`) is built through `Bound::from_owned_ptr_or_err`, so a
+  NULL return surfaces the error CPython already set instead of reaching pyo3's `panic_on_null`.
+  pyo3's safe constructors could not be used: `PyTuple::new`, `PyList::new` and the scalar
+  `IntoPyObject` impls all reach `assume_owned`, which panics on NULL even where the signature
+  returns `PyResult`. With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows,
+  so the limit is the cause, not the row count. The facade boundary still takes no memory-pool
+  reservation at all, so no value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit`
+  changes its footprint: a 1e7-row `collect()` is 4,393-4,471 MiB resident at every pool from
+  unbounded down to 64 MiB, and returns the identical content digest at each.
 - **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
   `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
   a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
@@ -5915,13 +6053,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
   the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
-- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the
-  pointer and raise `MemoryError`. It is the difference between "repark reports it is out of
-  memory" and "repark reports a bug", and a container memory limit is the ordinary way a user
-  meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
-  nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
-  Never-OOM claim.
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error`;
+  `crates/repark-python/src/collect_rows.rs` (the NULL-check unit pins, including the deliberate
+  `PyTuple_New(-1)` provocation)
+- **Rationale** — FIXED 2026-09-06 by H3-SPILL-RESIDUE-1. Filed BACKLOG 2026-09-05 by H3-SPILL-1.
+  It is the difference between "repark reports it is out of memory" and "repark reports a bug",
+  and a container memory limit is the ordinary way a user meets it. The baseline's §7 ranked it
+  second of the five moves that would advance the Never-OOM claim; the first (pool-accounting the
+  facade boundary) is still open.
+  pins: h3-spill-residue-1/C-001
 
 ### EX-IO-1 — bare `load()` defaults to parquet on Spark; repark raises
 

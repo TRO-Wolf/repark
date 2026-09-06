@@ -224,6 +224,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
+- [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
+  the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
+  refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
+  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
+  `EX-FN-20` and `EX-FN-21`.
+  pins: ex-28-scalar-remainder/C-006
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
   pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
@@ -335,6 +341,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
+  NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -417,7 +424,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
-  `from_unixtime` always nullable like Spark 4.1.2.
+  `from_unixtime` always nullable like Spark 4.1.2. The array/struct/map cell flags
+  converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal).
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
@@ -458,8 +466,41 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   BACKLOG rows with current-answer pins: `CAST-NULL-1` (non-decimal cast targets),
   `CAST-BOOL-DEC-1` (boolean-to-decimal refusal), `CUTOVER-NULLDEPTH-1` (relax stops
   at depth 32), `READ-TSNTZ-DTYPE-1` (tz-naive timestamp reads `string` via `dtypes`).
+  NULLABILITY-2 (2026-09-05) deleted the `CAST-NULL-1` current-answer pin (behavior
+  inverted; `test_nullability_2.py` supersedes it) and narrowed the row, then the
+  `CAST-BOOL-DEC-1` refusal pin (cast served; row FIXED), then the
+  `CUTOVER-NULLDEPTH-1` bound pin (relax unbounded; row FIXED) and the
+  `READ-TSNTZ-DTYPE-1` mistype pin (mapping fixed; row FIXED). All four round-3 pins
+  are now deleted; their coverage lives in `test_nullability_2.py`.
+- [test_nullability_2.py](test_nullability_2.py) — **NULLABILITY-2 (2026-09-05):**
+  the analyzer's remaining nullability and cast residues, Spark-equal. Always-run:
+  the generalized cast-nullability matrix (string/float/timestamp-source casts
+  nullable, date-to-timestamp non-null) with a native-door DataFusion fence;
+  decimal `+`/`-`/`*` nullable iff ANSI is off; `CAST(bool AS DECIMAL)` served on
+  both doors with the `(2,2)` overflow edge; `<=>`/`eqNullSafe` non-null with a
+  required-field parquet write and an all-optional CTAS pin; reader relax at depth
+  40 plus the Arrow footer-depth refusal past it; tz-naive `timestamp_ntz` dtype
+  on parquet and `createDataFrame`. Live legs re-derive every family from PySpark
+  4.1.2 on the shared `spark_engine`.
+  Round 2 (2026-09-06): complex casts propagate the child flag with non-null
+  `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
+  the `MAP<…>` CAST spelling and constructor element flags stay pinned refusals;
+  CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
+  reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
+  The CSV-infer live leg also pins JSON inference staying `string` on both engines.
+  The 60-deep half of the boundary pin asserts all 61 relax flags, not just readability.
+  Round 3 (2026-09-06): CSV `inferSchema` timestamps localize in the session zone
+  (UTC and `America/New_York`, DataFrame and SQL doors, DST gap cell
+  `2020-03-08 02:30:00` → 07:30Z measured); `nullValue`+`inferSchema` promotes
+  timestamps; a non-null struct COLUMN (Arrow required field, not a constructor)
+  CAST is non-null; JSON without `inferTimestamp` stays `string` on both engines
+  (the CSV cast also runs on the JSON path and is a no-op on Utf8).
+  Round 4 (2026-09-06): offset-bearing CSV cells (`2020-06-01T12:00:00+02:00` and
+  `Z`) keep their instant in UTC / `America/New_York` / `Asia/Kolkata` on both
+  doors + live; date-only `nullValue`+`inferSchema` promotes to `date`.
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
@@ -1752,14 +1793,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
   same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
   equal at 1 and 4 target partitions while moving when one row is removed (the provocation
-  control: a constant digest reds the second pin, not the first). Two defect pins codify
-  today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
-  panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
-  and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
-  session's own `VmSize` panics on a null `PyObject` instead of raising `MemoryError`; the
-  6 GiB-headroom control is green). The ceiling is host-relative on purpose — an absolute
-  `RLIMIT_AS` is a property of the box, not of the code.
+  control: a constant digest reds the second pin, not the first). Two former defect pins now
+  assert the Never-OOM answer, flipped by **H3-SPILL-RESIDUE-1** (2026-09-06): `H3-SPILL-NLJ-1`
+  — a nested-loop join at an 8 MiB pool refuses with the same typed exception every other
+  operator gives (`fair(` required, `greedy(`, the caught-panic marker and DataFusion's
+  `partition not used yet` payload all forbidden, both resize knobs named); the 1 GiB control
+  still answers. `H3-SPILL-COLLECT-1` — `collect()` under an `RLIMIT_AS` ceiling set 256 MiB
+  above the session's own `VmSize` raises `MemoryError` (the message starts with the type
+  name), never a caught panic; the 6 GiB-headroom control still returns all 4e6 rows. The
+  ceiling is host-relative on purpose — an absolute `RLIMIT_AS` is a property of the box, not
+  of the code. The subprocess worker keeps 900 characters of the message, not 400: the typed
+  refusal plus both REPARK remediation lines is longer than the bug report it replaced, and a
+  400-character truncation cut the resize knobs off the very assertion that names them.
   pins: h3-spill-1/C-003, C-004, C-005, C-006
+  pins: h3-spill-residue-1/C-001, C-002
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
@@ -2724,7 +2771,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
      `register_memory_catalog` + `with_cow_props=True`.
   `DISCLOSURES` = the load-bearing recorded divergences (exact-set pin in
   `test_parity_live.py`; 14 names after the 2026-08-12 L-1 landing-truth sweep — the original
-  four plus G6/G12/G7/G18/G4b live-mirrors). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
+  four plus G6/G12/G7/G18/G4b live-mirrors; 10 after NULLABILITY-2 retired the three
+  nullability mirrors on 2026-09-05). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.

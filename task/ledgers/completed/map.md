@@ -38,6 +38,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
   **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
   pins: fn-fix-1-registry-rows/C-001
+- [nullability-2-ledger.md](nullability-2-ledger.md) —
+  **NULLABILITY-2 (2026-09-05), complete:** the analyzer's remaining nullability
+  and cast residues, Spark-equal — eight registry rows FIXED, live roster 13 → 10.
+  pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-approxpct-1-ledger.md](perf-approxpct-1-ledger.md) —
   **PERF-APPROXPCT-1 (2026-09-05), complete:** Spark's Greenwald-Khanna
   `QuantileSummaries` behind `percentile_approx` / `approx_percentile`, so the
