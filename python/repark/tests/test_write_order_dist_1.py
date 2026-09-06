@@ -94,6 +94,14 @@ def _data_files(engine: ReparkSession, table: str) -> list:
     return engine.sql(f"SELECT file_path, record_count FROM {table}.files").to_arrow().to_pylist()
 
 
+def _rows_by_part(paths: list[str]) -> dict[int, list[tuple[int, str]]]:
+    by_part: dict[int, list[tuple[int, str]]] = {}
+    for path in paths:
+        for row in pq.read_table(path, columns=["id", "part", "name"]).to_pylist():
+            by_part.setdefault(row["part"], []).append((row["id"], row["name"]))
+    return {part: sorted(rows) for part, rows in by_part.items()}
+
+
 def _is_monotone(path: str, column: str) -> tuple[int, bool]:
     values = pq.read_table(path, columns=[column]).column(column).to_pylist()
     return len(values), all(a <= b for a, b in pairwise(values))
@@ -278,7 +286,7 @@ def test_write_ordered_overwrite_writes_sorted_files(tmp_path: Path) -> None:
 
 
 def test_write_ordered_merge_writes_sorted_files(tmp_path: Path) -> None:
-    """C-008: after WRITE ORDERED BY, a MERGE commits monotone files and Spark's rows."""
+    """C-008: after WRITE ORDERED BY, a MERGE commits monotone files with every row."""
     warehouse = tmp_path / "wh"
     source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("wo-sorted-merge", warehouse, "1")
@@ -332,6 +340,54 @@ def test_write_ordered_ctas_replace_keeps_hash_layout_and_resets_order(tmp_path:
         ], orders
     finally:
         engine.stop()
+
+
+@pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
+def test_write_ordered_overwrite_row_set_matches_spark(tmp_path: Path) -> None:
+    """C-008: RePark and Spark commit the same row set per value after DDL + overwrite."""
+    import _live_parity as live_parity
+    from pyspark.sql import SparkSession
+
+    warehouse = tmp_path / "wh"
+    source = _seed_files(tmp_path / "seed", 8_000, 2)
+    engine = _session("wo-rows", warehouse)
+    try:
+        engine.read.parquet(str(source)).createOrReplaceTempView("src")
+        _ctas(engine, f"{CATALOG}.w.t", "2")
+        engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (id)").collect()
+        engine.sql(f"INSERT OVERWRITE {CATALOG}.w.t SELECT * FROM src").collect()
+        files = _data_files(engine, f"{CATALOG}.w.t")
+        got = _rows_by_part([row["file_path"] for row in files])
+        for row in files:
+            count, monotone = _is_monotone(row["file_path"], "id")
+            assert monotone, (row["file_path"], count)
+    finally:
+        engine.stop()
+
+    owned = SparkSession.getActiveSession() is None
+    oracle = live_parity.build_spark_iceberg_engine(
+        tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
+    )
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
+    session = oracle.session
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+        session.sql(
+            f"CREATE TABLE {catalog}.w.t USING iceberg PARTITIONED BY (part) "
+            f"TBLPROPERTIES ('format-version' = '2') AS SELECT * FROM spark_src"
+        )
+        session.sql(f"ALTER TABLE {catalog}.w.t WRITE ORDERED BY (id)")
+        session.sql(f"INSERT OVERWRITE {catalog}.w.t SELECT * FROM spark_src")
+        spark_files = session.sql(f"SELECT file_path FROM {catalog}.w.t.files").collect()
+        want = _rows_by_part([row["file_path"] for row in spark_files])
+    finally:
+        if owned:
+            session.stop()
+
+    assert got.keys() == want.keys()
+    for part in want:
+        assert got[part] == want[part], part
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
