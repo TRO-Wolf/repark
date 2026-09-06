@@ -112,6 +112,13 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   evidence including every repeat and the JVM stderr lines:
   [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
   pins: h3-spill-1/C-002, C-003, C-004, C-005
+- [approx-percentile-baseline.md](approx-percentile-baseline.md) — **PERF-APPROXPCT-1
+  (2026-09-05):** the `percentile_approx` cells before/after the Greenwald-Khanna
+  sketch (1e7 wall 2.95 → 0.15 s, peak 2507.8 → 650.0 MB against a 188 MB
+  `count(id)` floor; warm-1e6 wall 0.02 s beats the 1.5× bar), the sublinear
+  residual attributed to transient batches (inferred), and the accuracy-knob
+  cells pointed at the unit ledger §4, not restated.
+  pins: perf-approxpct-1/C-004
 
 ## Pointers
 

@@ -24,15 +24,15 @@ the f64 round-trip (noted in §6); any DataFusion fork change.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The new sketch module reproduces Spark 4.1 `QuantileSummaries` insert / compress / merge / query semantics exactly (compressThreshold 10000, head 50000, relativeError 1/accuracy, the delta rule, the backwards merge test, Long-division targetError, the edge rules). | Rust unit tests in the new module: insert/compress invariants, merge associativity, query bounds. | PROVEN | `cargo test -p repark-functions`: 15 sketch + 8 accumulator tests green; single-partition end-to-end agrees with Spark exactly (§4). pins: perf-approxpct-1/C-001 |
+| C-001 | The new sketch module reproduces Spark 4.1 `QuantileSummaries` insert / compress / merge / query semantics exactly (compressThreshold 10000, head 50000, relativeError 1/accuracy, the delta rule, the backwards merge test, Long-division targetError, the edge rules). | Rust unit tests in the new module: insert/compress invariants, merge associativity, query bounds. | PROVEN | `cargo test -p repark-functions`: 17 sketch + 8 accumulator tests green; single-partition end-to-end agrees with Spark exactly (§4). pins: perf-approxpct-1/C-001 |
 | C-002 | `percentile_approx` / `approx_percentile` honour accuracy on the group-by path on the SQL door and the DataFrame door, Spark-equal on the matrix (accuracy default/100/10/2 × scalar/array × NULLs × duplicate-heavy × skewed × int/float/decimal), measured on live PySpark 4.1.2. | `test_perf_approxpct_1.py` always-run pins + live legs. | OPEN | 56 always-run legs green on the debug module; the live legs run in the gates. pins: perf-approxpct-1/C-002 |
 | C-003 | The WIN-SLIDE-1 frame re-scan path honours accuracy per frame: x=1..200, 100-row frame, accuracy 2 answers Spark's `(1.0, 1.0, 1.0, 51.0, 101.0)`. | The flipped `test_win_slide_1.py` sketch pin + a matrix leg. | OPEN | The evaluator builds a fresh accumulator per frame; the sketch rides it unchanged. |
-| C-004 | Memory is sketch-bounded and wall is within bar: peak RSS for `percentile_approx(x, 0.5)` over 1e7 rows in one group carries a ≤ few-MB state (fresh subprocess, release module), and wall at 1e6 rows is within 1.5× of the current kernel. | `docs/perf/approx-percentile-baseline.md` before/after tables + a structural pin. | OPEN | BEFORE measured on the base release module in §3. |
-| C-005 | `FN-APPROXPCT-ACC-1`'s residue is re-measured and closed or narrowed honestly, and all three registry rows carry dates and the unit id. | The three flipped rows in `docs/spark-sql-iceberg-parity.md`. | OPEN | |
+| C-004 | Memory is sketch-bounded and wall is within bar: peak RSS for `percentile_approx(x, 0.5)` over 1e7 rows in one group carries a ≤ few-MB state (fresh subprocess, release module), and wall at 1e6 rows is within 1.5× of the current kernel. | `docs/perf/approx-percentile-baseline.md` before/after tables + a structural pin. | PROVEN | AFTER in §3 and the baseline doc: 1e7 peak 2507.8 → 650.0 MB (floor 188 MB), state kilobytes (`million_row_state_stays_small`, `inserts_compress_eagerly_before_any_query`); warm 1e6 wall 0.02 s beats the 1.5× bar. pins: perf-approxpct-1/C-004 |
+| C-005 | `FN-APPROXPCT-ACC-1`'s residue is re-measured and closed or narrowed honestly, and all three registry rows carry dates and the unit id. | The three flipped rows in `docs/spark-sql-iceberg-parity.md`. | PROVEN | All three rows FIXED 2026-09-05 (PERF-APPROXPCT-1) with Spark-equal answers re-measured on the suite; the `FN-APPROXPCT-1` residue pointer closed. pins: perf-approxpct-1/C-005 |
 | C-006 | No regressions: the pre-existing percentile pins (default-accuracy discrete answers, the win-slide 65-cell matrix, the live legs) stay green; `make ci`, `make verify`, the facade suite, the parity suite, the live tier on the touched legs, and `make py-test-dbt` are green; the mutation score is run. | The gates + §5. | OPEN | Every dbt flip classified. |
 | C-007 | Docs in lockstep: the baseline doc, the touched `map.md` files, the ledger grammar; `STATUS.md` and `briefs/next-sequence.md` untouched. | The gates. | OPEN | |
 
-VERDICT: 7 clauses, 1 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 7 clauses, 3 PROVEN, 4 OPEN, 0 REJECTED.
 
 ## 1. Scope audit
 
@@ -76,6 +76,29 @@ Answers 500000 / 5000000, both correct. The 1e7 state is ~2.5 GB for a
 one-group sketchable aggregate; the AFTER column must carry megabytes. Wall
 bar: warm AFTER at 1e6 within 1.5× of warm BEFORE (~0.13–0.21 s at load
 ~30; the AFTER run re-records its own load and repeats).
+
+AFTER (release module rebuilt with the sketch, `debug=False`, load ~11,
+same harness `/tmp/bench_approx.py`; `count(id)` floor 188 MB at both
+scales — engine baseline with fully streamed input):
+
+| cell | wall | peak RSS | answer |
+|---|---|---|---|
+| 1e6, attempt 0 (cold session) | 0.03 s | 378.5 MB | 500001 |
+| 1e6, attempt 1 (warm) | 0.02 s | 476.6 MB | 499911 |
+| 1e6, attempt 2 (warm) | 0.02 s | 488.6 MB | 499971 |
+| 1e7, fresh subprocess | 0.15 s | 650.0 MB | 4999593 |
+
+1e7 wall 2.95 s → 0.15 s (20×), peak 2507.8 MB → 650.0 MB; sketch-
+attributable (minus the 188 MB floor) 2320 MB → 462 MB. The 462 MB
+residual is not sketch state — state is kilobytes, pinned by
+`million_row_state_stays_small` (< 2 MB serialized at 1 M rows) — and
+scales sublinearly (190 MB at 1e6 → 462 MB at 1e7); the likely shape is
+transient Arrow batches plus allocator retention in a 0.15 s run, not
+live O(N) state, but that attribution is inferred, not measured. Warm
+1e6 wall 0.02 s beats the 1.5× bar against 0.13–0.21 s (load differed:
+~11 vs ~30, recorded). Errors: |4999593 − 5000000.5| = 407 against a
+0.005·1e7 = 50000 budget.
+pins: perf-approxpct-1/C-004
 
 ## 4. Accuracy matrix
 
@@ -138,7 +161,7 @@ strictness (`<=` → `<`, line 265) dies on
 `accuracy_two_collapses_to_the_minimum`; the max-clamp one (`>=` →
 `>`, line 267) dies on the widened edge test (n=200, p at exactly eps);
 the merge-error `max` → `min` (line 166) dies on
-`merge_adopts_the_wider_error`. pins: perf-approxpct-1/C-002
+`merge_adopts_the_wider_error`. pins: perf-approxpct-1/C-006
 
 ## 6. Limitations
 

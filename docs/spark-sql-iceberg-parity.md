@@ -1684,31 +1684,41 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
 - **Rationale** — FIXED. History: t-digest interpolation returned DOUBLE.
-  Residue: the accuracy knob is accepted and ignored (`FN-APPROXPCT-ACC-1`).
+  Residue closed 2026-09-05 (PERF-APPROXPCT-1): the accuracy knob reaches the
+  sketch (`FN-APPROXPCT-ACC-1`).
 
-### FN-APPROXPCT-ACC-1 — `percentile_approx` accuracy 2 is ignored; Spark's Greenwald-Khanna sketch collapses
+### FN-APPROXPCT-ACC-1 — `percentile_approx` accuracy 2 is honored; Spark's Greenwald-Khanna sketch collapses — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
-- **repark** — `percentile_approx(x, 0.5, 2)` over 1..200 is `100.0` (same as the
-  two-arg discrete p50). The third argument is accepted and ignored on the facade
-  (`del accuracy`) and on SQL.
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1).** `percentile_approx(x, 0.5,
+  2)` over 1..200 is `1.0`, `percentile_approx(x, 0.5)` and `…, 10000` are
+  `100.0` — Spark's column exactly. The third argument reaches the sketch on the
+  facade and on SQL (validated at plan time, `accuracy < 2` raises).
 - **Apache Spark** — `percentile_approx(x, 0.5, 2)` is `1.0` (Greenwald-Khanna at
   accuracy 2). `percentile_approx(x, 0.5)` and `…, 10000` are `100.0`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
-- **Rationale** — BACKLOG. Do not emulate the sketch. Spark's low-accuracy answers
-  are sketch artefacts; repark keeps the discrete data value.
+  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
+  and the Spark-measured matrix
+  `python/repark/tests/test_perf_approxpct_1.py::test_accuracy_matrix_matches_spark`.
+- **Rationale** — FIXED. History: the knob was accepted and ignored while the
+  kernel answered the discrete rank.
 
-### PERF-APPROXPCT-1 — `percentile_approx` holds the whole group; Spark's sketch bounds memory
+### PERF-APPROXPCT-1 — `percentile_approx` bounds memory with Spark's sketch — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
-- **repark** — the UDAF collects group values and picks the discrete rank
-  (`select_nth_unstable`). Memory is O(n) per group.
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1).** the UDAF runs Spark 4.1's
+  Greenwald-Khanna `QuantileSummaries` (50 k head, threshold 10000,
+  `relativeError = 1/accuracy`): per-group state is kilobytes, and 1e7 rows
+  peak at 650.0 MB in 0.15 s where the boxed group peaked at 2507.8 MB in
+  2.95 s.
 - **Apache Spark** — Greenwald-Khanna QuantileSummaries bound sketch memory by
   the accuracy knob.
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
-- **Rationale** — BACKLOG. Discrete-value semantics stay; do not build the sketch
-  in FN-FIX-1.
+  `python/repark/tests/test_perf_approxpct_1.py::test_million_row_wall_stays_within_bar`
+  (Rust: `quantile_summaries::tests::million_row_state_stays_small` and
+  `inserts_compress_eagerly_before_any_query`).
+- **Rationale** — FIXED. History: the UDAF collected group values and picked the
+  discrete rank (`select_nth_unstable`), O(n) memory per group. Cells:
+  `docs/perf/approx-percentile-baseline.md`.
 
 ### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false — **FIXED 2026-09-03 (FN-FIX-1)**
 
@@ -4016,20 +4026,22 @@ Shared roster pin for every heading:
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
   refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame ignores the accuracy knob
+### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame honors the accuracy knob — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
-- **repark** — `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
-  CURRENT ROW` on `x = 1..200` answers the same column as the two-argument discrete p50
-  (`1.0, 25.0, 50.0, 100.0, 150.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
-  accepted and ignored, per frame exactly as per group.
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1).** `percentile_approx(x, 0.5,
+  2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND CURRENT ROW` on `x = 1..200`
+  answers `1.0, 1.0, 1.0, 51.0, 101.0` at rows 1 / 50 / 100 / 150 / 200 —
+  Spark's sketch column exactly, per frame as per group. The default-accuracy
+  column is unchanged (`1.0, 25.0, 50.0, 100.0, 150.0`).
 - **Apache Spark** — the Greenwald-Khanna sketch collapses at accuracy 2: the same column is
   `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_ignores_the_accuracy_knob`
-- **Rationale** — BACKLOG. The frame case of `FN-APPROXPCT-ACC-1`, filed rather than papered over.
-  Do not emulate the sketch: Spark's low-accuracy answers are sketch artefacts, and repark keeps
-  the discrete data value. `PERF-APPROXPCT-1` (sketch memory) stays out of scope.
+  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_honours_the_accuracy_knob`
+  and
+  `python/repark/tests/test_perf_approxpct_1.py::test_sliding_frame_honours_accuracy_per_frame`.
+- **Rationale** — FIXED. History: the frame case of `FN-APPROXPCT-ACC-1`, where the
+  knob was accepted and ignored.
 
 ### WIN-SLIDE-FLOAT-1 — a retracting sliding `sum` / `avg` loses a summand Spark's re-scan keeps
 
