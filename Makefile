@@ -219,6 +219,10 @@ census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate on
 sepmo-usage: ## Collect SEPMO worker usage records (not a CI gate). ARGS='collect <dir>' or ARGS='index <dir>'
 	$(PYTHON) scripts/sepmo_usage.py $(ARGS)
 
+.PHONY: sepmo-packet
+sepmo-packet: ## Build/check/diff SEPMO compact worker packets (not a CI gate). ARGS='build …' or ARGS='check <packet>'
+	$(PYTHON) scripts/sepmo_packet.py $(ARGS)
+
 .PHONY: check-lib-py
 check-lib-py: ## Python source ceiling + facade no-stub guard
 	@# Exact baselines + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
