@@ -115,6 +115,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in the ledger's "Round 2 — review gaps" table. `risk_tier: elevated`. Branch
   `perf/ice-catalog-io-1`.
   pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ex-26-io-session-ledger.md](ex-26-io-session-ledger.md) —
+  **EX-26 (2026-09-06), in flight:** the v1.1 example backfill's reader/writer/session long-tail
+  batch — the 50-name roster at base `24932dee` (= `origin/main` at dispatch); 29 names covered
+  by twelve new `docs/examples/{io,session,dataframe}/` files (backlog 193 → 164;
+  `BACKLOG_BASELINE` 193 → 164), every asserted value measured on live PySpark 4.1.2 (ANSI on,
+  UTC) or on repark's documented answer for the repark-only names; seventeen roster names keep
+  their prior stays rows and the four excel names stay with the new §7 EX-IO-7 row, while eleven
+  new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
+  tests in `test_examples_io_session.py` (plus a dated EX-SES-1 Spark-half correction). Red-first: 29
+  has-no-example findings with the files held out (exit 1), and the wrong-bytes control in
+  `writer_csv.py` failed the execute leg by name (exit 1). `risk_tier: standard`. Branch
+  `docs/ex-26-io-session`.
+  pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - [ex-25-functions-a-ledger.md](ex-25-functions-a-ledger.md) —
   **EX-25 (2026-09-05), in flight:** the v1.1 example backfill's `F.*` long-tail (a) batch —
   the 45-name roster at base `bc7c76cc` (= `origin/main` at dispatch); 20 names covered by five
