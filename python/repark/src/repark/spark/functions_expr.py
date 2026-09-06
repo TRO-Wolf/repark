@@ -559,11 +559,11 @@ def to_timestamp(col: Column | str, format: str | None = None) -> Column:
     return _scalar("to_timestamp", col)
 
 
-def from_unixtime(col: Column | str | int) -> Column:
+def from_unixtime(col: Column | str | int, format: str | None = None) -> Column:
     """Epoch seconds → **string** timestamp (PySpark ``functions.from_unixtime``)."""
-    if isinstance(col, int) and not isinstance(col, bool):
-        return _scalar("from_unixtime", lit(col))
-    return _scalar("from_unixtime", col)
+    first = lit(col) if isinstance(col, int) and not isinstance(col, bool) else col
+    args = [first] if format is None else [first, lit(format)]
+    return _scalar("from_unixtime", *args)
 
 
 def date_sub(start: Column | str, days: Column | int | str) -> Column:

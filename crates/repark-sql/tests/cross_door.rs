@@ -161,7 +161,7 @@ async fn cross_door_insert_lands_the_same_rows() {
 
     for door in [&ansi, &spark] {
         door.session
-            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label")
+            .sql("CREATE TABLE ice.sales.orders AS SELECT CAST(1 AS BIGINT) AS id, 'a' AS label")
             .await
             .expect("CTAS");
         door.session
@@ -287,7 +287,7 @@ async fn cross_door_alter_lands_the_same_evolved_schema() {
 
     for door in [&ansi, &spark] {
         door.session
-            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label, 2 AS drop_me")
+            .sql("CREATE TABLE ice.sales.orders AS SELECT CAST(1 AS BIGINT) AS id, 'a' AS label, CAST(2 AS BIGINT) AS drop_me")
             .await
             .expect("CTAS");
     }
@@ -410,7 +410,7 @@ async fn cross_door_time_travel_pins_the_same_snapshot_content() {
     let mut first_snapshot = Vec::new();
     for door in [&ansi, &spark] {
         door.session
-            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label")
+            .sql("CREATE TABLE ice.sales.orders AS SELECT CAST(1 AS BIGINT) AS id, 'a' AS label")
             .await
             .expect("CTAS");
         let history = door
@@ -477,7 +477,7 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
     make_namespace(&spark, true).await;
     for door in [&ansi, &spark] {
         door.session
-            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label")
+            .sql("CREATE TABLE ice.sales.orders AS SELECT CAST(1 AS BIGINT) AS id, 'a' AS label")
             .await
             .expect("CTAS");
     }

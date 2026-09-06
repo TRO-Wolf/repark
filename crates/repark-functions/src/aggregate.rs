@@ -12,7 +12,6 @@ use arrow::datatypes::{
 };
 use datafusion::common::types::{NativeType, logical_float64};
 use datafusion::common::{Result, ScalarValue, exec_err, not_impl_err};
-use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
@@ -25,7 +24,9 @@ use crate::avg_groups;
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
-    vec![avg_udaf(), try_avg_udaf(), approx_count_distinct_udaf()]
+    let mut functions = vec![avg_udaf(), try_avg_udaf(), crate::count_if::count_if_udaf()];
+    functions.extend(crate::spark_result_types::signed_aggregate_functions());
+    functions
 }
 
 /// Spark `try_sum` — overflow yields NULL. Reuses the datafusion-spark kernel.
@@ -38,17 +39,6 @@ pub fn try_sum_udaf() -> Arc<AggregateUDF> {
 #[must_use]
 pub fn try_avg_udaf() -> Arc<AggregateUDF> {
     Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::try_avg()))
-}
-
-/// Expose DataFusion's `approx_distinct` under Spark's `approx_count_distinct` spelling as well.
-#[must_use]
-pub fn approx_count_distinct_udaf() -> Arc<AggregateUDF> {
-    Arc::new(
-        approx_distinct_udaf()
-            .as_ref()
-            .clone()
-            .with_aliases(["approx_count_distinct"]),
-    )
 }
 
 /// Return Spark-compatible `avg` with Spark's null/count and argument contracts.

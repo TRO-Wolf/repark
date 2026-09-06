@@ -69,6 +69,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [make_calendar.py](make_calendar.py) — `F.make_date` builds a date from year/month/day
 - [utc_offsets.py](utc_offsets.py) — `F.from_utc_timestamp` / `F.to_utc_timestamp` render
 - [partition_transforms.py](partition_transforms.py) — the partition transforms `F.years`,
+  `F.months`, `F.days`, `F.hours` and `F.bucket` through `writeTo(...).partitionedBy(...)`,
+  each asserting rows and `.files` partition values (the hours slots 473698/473702 are
+  Spark-grounded via `unix_seconds`). Scalar `F.hours` refuses on both engines.
+  pins: ex-25-functions-a/C-007
 - [summarize.py](summarize.py) — `F.count` / `F.count("*")`, `F.sum`, `F.avg` /
 - [counting.py](counting.py) — `F.count_if` counts true rows only,
 - [first_last.py](first_last.py) — `F.first` / `F.last` over an explicitly
@@ -108,6 +112,34 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid UTF-8 trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD, `F.try_validate_utf8` answers NULL.
 - [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates, `F.regexp_count`, `F.regexp_replace`, `F.regexp_substr`, `F.regexp_instr`, and `F.regexp_extract_all` by capture-group index.
 - [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with `F.ilike` folding case on the same patterns.
+- [array_more.py](array_more.py) — `F.array_position` found/missing/NULL, `F.array_sort`
+  ascending with NULLs last, `F.arrays_overlap` with its NULL decisions, `F.flatten`
+  over NULL sub-arrays, and `F.map_zip_with` merging two maps key by key.
+  `F.arrays_zip` and the `posexplode` pair stay on the backlog (EX-FN-1, EX-FN-2).
+  pins: ex-25-functions-a/C-002
+- [strings_more.py](strings_more.py) — `F.chr` / `F.char` modulo-256 spellings with the
+  negative-empty edge, `F.elt` in range with its `INVALID_ARRAY_INDEX` raise, `F.initcap`
+  splitting words on spaces only, `F.regexp_extract` by group with empty no-match, and
+  `F.sha2` at 224 and 256 bits. `F.base64` (BL-17), `F.encode` / `F.decode` (EX-FN-3),
+  `F.replace` (EX-FN-15), `F.split` (EX-FN-18), `F.format_number` (EX-FN-5) and
+  `F.sentences` (EX-FN-17) stay on the backlog.
+  pins: ex-25-functions-a/C-003
+- [dates_more.py](dates_more.py) — `F.add_months` from month ends both directions, and
+  `F.make_interval` shifting a date and a timestamp (the string-cast arm diverges,
+  EX-FN-19). `F.months_between` (EX-FN-11) and `F.make_timestamp` (EX-FN-10) stay on
+  the backlog.
+  pins: ex-25-functions-a/C-004
+- [stats.py](stats.py) — the `F.percentile_approx` / `F.approx_percentile` alias pair
+  agreeing on the median and the extremes over 1..100 (the accuracy knob stays
+  ignored, FN-APPROXPCT-ACC-1). `F.kurtosis` / `F.skewness` / `F.mode` stay on the
+  backlog (EX-FN-9).
+  pins: ex-25-functions-a/C-005
+- [session_misc.py](session_misc.py) — `F.current_user` / `F.session_user` as non-empty
+  strings, `F.randstr` lengths plain and seeded, and `F.isnan` with NULL answering
+  false. `F.monotonically_increasing_id` / `F.spark_partition_id` (EX-FN-12),
+  `F.input_file_name` (EX-FN-13), `F.raise_error` (EX-FN-14) and `F.expr` (EX-FN-4)
+  stay on the backlog.
+  pins: ex-25-functions-a/C-006
 ## Pointers
 
 - Up: [../map.md](../map.md)

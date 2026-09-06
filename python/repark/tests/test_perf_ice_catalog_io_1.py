@@ -415,10 +415,10 @@ def _lineage_triples(spark: ReparkSession, table: str) -> list[tuple[int, int | 
     )
 
 
-def test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows(
+def test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows(
     tmp_path: Path,
 ) -> None:
-    """Detector for PERF-CATALOG-LINEAGE-CACHE-1: pins today's wrong answer, reds on the fix."""
+    """PERF-CATALOG-LINEAGE-CACHE-1 FIXED at pin 2ed39cb0: the cache serves the caller's lineage."""
     spark = _session(
         "manifest_lineage_on",
         tmp_path,
@@ -430,9 +430,9 @@ def test_with_the_knob_on_an_upgraded_table_reads_null_lineage_for_carried_rows(
     spark.sql("INSERT INTO ice.ns.up VALUES (4, 'd'), (5, 'e')").to_arrow()
 
     assert _lineage_triples(spark, "ice.ns.up") == [
-        (1, None, None),
-        (2, None, None),
-        (3, None, None),
+        (1, 2, 1),
+        (2, 3, 1),
+        (3, 4, 1),
         (4, 0, 2),
         (5, 1, 2),
     ]

@@ -789,8 +789,8 @@ def assert_mor_maintenance_outcome(
     rows = outcome.rows
     id_field = rows.schema.field("id")
     name_field = rows.schema.field("name")
-    if id_field.type != pa.int64():
-        raise AssertionError(f"id type {id_field.type} != int64")
+    if id_field.type != pa.int32():
+        raise AssertionError(f"id type {id_field.type} != int32")
     if name_field.type != pa.string():
         raise AssertionError(f"name type {name_field.type} != string")
 

@@ -317,7 +317,8 @@ class PolarsFrame:
         if not order_cols:
             raise PySparkValueError("with_row_index on a zero-column frame is undefined")
         window = Window.orderBy(*order_cols)
-        indexed = self._frame.with_column(name, row_number().over(window) + spark_lit(offset - 1))
+        ranked = row_number().over(window).cast("bigint")
+        indexed = self._frame.with_column(name, ranked + spark_lit(offset - 1))
         return PolarsFrame(indexed)
 
     def collect(self) -> Any:

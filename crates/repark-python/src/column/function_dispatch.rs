@@ -319,9 +319,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             repark_functions::expr_fn::to_timestamp(exprs.clone())
         }
         "from_unixtime" => {
-            need(1)?;
-            let ts = expr_fn::to_timestamp_seconds(vec![exprs[0].clone()]);
-            expr_fn::to_char(ts, lit("%Y-%m-%d %H:%M:%S"))
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at most 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::from_unixtime(exprs.clone())
         }
         "reverse" => {
             need(1)?;
