@@ -419,6 +419,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
   `fix/cutover-schema-1`.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [nullability-2-ledger.md](../completed/nullability-2-ledger.md) —
+  **NULLABILITY-2 (2026-09-05), complete:** the analyzer's remaining nullability
+  and cast residues, Spark-equal — generalized cast nullability, boolean→decimal,
+  null-safe equal non-null, reader relax at every depth, tz-naive dtype mapping.
+  Closes or narrows `CAST-NULL-1`, `CAST-BOOL-DEC-1`, `DEC-9` (remainder),
+  `G6-4`, `G12-1`, `G12-2`, `CUTOVER-NULLDEPTH-1`, `READ-TSNTZ-DTYPE-1`.
+  `risk_tier: elevated`. Branch `fix/nullability-2`.
+  pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-facade-cdf-1-ledger.md](perf-facade-cdf-1-ledger.md) —
   **PERF-FACADE-CDF-1 (2026-09-05), in flight:** PERF-ANALYSIS-1 candidate 2 —
   `createDataFrame(list of tuples)` stops normalizing every cell in Python five times and

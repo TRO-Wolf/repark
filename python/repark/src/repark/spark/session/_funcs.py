@@ -322,6 +322,7 @@ from repark.spark.session.reader_support import (
     _JSON_NATIVE_OPTION_KEYS,
     _JSON_UNSUPPORTED_PARSE_OPTIONS,
     _UNSUPPORTED_SEMANTIC_READER_OPTIONS,
+    _cast_inferred_naive_timestamps,
     _json_input_nonempty,
     _json_multiline_empty_schema_is_mismatch,
     _parse_jdbc_int_option,

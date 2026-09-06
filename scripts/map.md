@@ -272,6 +272,15 @@ converter and its two type predicates move to `dataframe/rows_export.py`; `core.
 three delegations. Ratchets DOWN.
 pins: perf-facade-1/C-001, C-005
 
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6302 — the
+`schema` property routes `timestamp`/`timestamp_ntz` through `fromDDL`, so the
+`TimestampType` import is gone (mirrored in the CAP-1 test).
+pins: nullability-2/C-006
+
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `tests/_live_parity.py` 1877→1778 — the
+three converged nullability disclosures and their six check functions are gone
+(mirrored in the CAP-1 test).
+pins: nullability-2/C-007
 TYPES-1 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6305 (INCREASE — the
 two `__repark_rn` BIGINT casts; owner approval requested at merge) and
 `test_window_parity.py` 1481→1422 (ratchets DOWN — converged tiers and the dead
