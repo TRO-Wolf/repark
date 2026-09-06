@@ -19,7 +19,7 @@ v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
 for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling
-2026-09-03). 1.1.0 is additive: WIN-SLIDE-1, the dbt path (DBT-1), FN-REGEXP-EXTRACT-1, the
+2026-09-03). 1.1.0 is additive: WIN-SLIDE-1, the dbt path (DBT-1), FN-REGEXP-EXTRACT-1, FNP-9/10, the
 Spark-door type corrections (TYPES-1, CUTOVER-SCHEMA-1, NULLABILITY-2), and the performance
 units — collect()/withColumn/createDataFrame in the binding (FACADE-1, FACADE-CDF-1), avg
 GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and manifest caches
