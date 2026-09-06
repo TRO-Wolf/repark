@@ -239,6 +239,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   interval display arm pin today's wrong values so the fixes red them. The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
   pins: ex-25-functions-a/C-009
+- [test_examples_ml.py](test_examples_ml.py) — **EX-27 (2026-09-05, round 2
+  2026-09-06):** the nine divergence pins for the ml example batch —
+  Vector.size as a method (EX-ML-1), VectorUDT typeName/`sqlType`/`jsonValue`/
+  serialize (EX-ML-2), HasInputCol not extending Params plus Tokenizer unset
+  inputCol (EX-ML-3), ParamGridBuilder.baseOn pairs and the tuple reverse arm
+  (EX-ML-4), mixin setters (EX-ML-5), empty Pipeline.getStages (EX-ML-6),
+  Spark-shaped UnaryTransformer (EX-ML-7), repark-ml persistence format
+  (EX-ML-8), and DenseVector.dot / squared_distance (EX-ML-9). The module
+  docstring names the row span `EX-ML-1`…`EX-ML-9`.
+  pins: ex-27-ml/C-007
 - [test_examples_io_session.py](test_examples_io_session.py) — **EX-26 (2026-09-06):**
   the thirteen divergence pins for the reader/writer/session example batch — the bare-load
   default (EX-IO-1), schema on parquet (EX-IO-2), the csv infer-schema width with agreeing
