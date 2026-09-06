@@ -1,17 +1,4 @@
-"""RDF-SCHEMA-EVO-1 — ``rewrite_data_files`` after schema evolution.
-
-Owner defect (2026-09-06, S3 Tables): after ``ADD COLUMN`` (7 -> 8 columns)
-and ``ADD PARTITION FIELD``, ``CALL ...rewrite_data_files`` raised
-``DataInvalid, batch_columns: 7, expected_columns: 8`` — compaction read old
-files under the snapshot-pinned old schema while the partition calculator
-and writer build on the current schema. Every shape below compacts with NO
-later write (a post-evolution write re-pins the snapshot schema and
-self-heals; pinned as the control). Spark door only: MAINTENANCE_CALL is
-DeliberatelyAbsent on the ANSI door (matrix.rs).
-
-Oracle: live PySpark 4.1.2 + Iceberg 1.11.0, local[2], ANSI on (cells in the
-ledger). Red on fork pin ``8bc325a3``, green on ``fix/rdf-schema-evo-1``.
-"""
+"""RDF-SCHEMA-EVO-1: rewrite_data_files after schema evolution, pinned against Spark."""
 
 from __future__ import annotations
 
