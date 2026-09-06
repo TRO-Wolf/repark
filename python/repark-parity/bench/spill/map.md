@@ -114,6 +114,14 @@ pins: h3-spill-1/C-001, C-002, C-003, C-007
 | Read the measured matrix | [../../../../docs/perf/spill-matrix-baseline.md](../../../../docs/perf/spill-matrix-baseline.md) |
 | Read the pins | [../../../repark/tests/test_h3_spill_matrix.py](../../../repark/tests/test_h3_spill_matrix.py) |
 
+**H3-SPILL-RESIDUE-1 (2026-09-06)** re-ran two narrowed slices of this harness to close the two
+defects the matrix found: the whole 8 MiB column at 1e6 (all 18 operators, before and after — 17
+identical cell for cell, `nested_loop_join` `internal_error` → `clean_error`) and the single
+`nested_loop_join` 64 MiB / 1e7 cell at `--repeats 3` (`internal_error` ×3 → `clean_error` ×3).
+Nothing in the harness changed; the narrowed commands are in the baseline's §8, and the fixed
+outcomes are in its §6.
+pins: h3-spill-residue-1/C-005
+
 ## Debug
 
 | Symptom | Check |

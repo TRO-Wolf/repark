@@ -1787,14 +1787,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
   same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
   equal at 1 and 4 target partitions while moving when one row is removed (the provocation
-  control: a constant digest reds the second pin, not the first). Two defect pins codify
-  today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
-  panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
-  and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
-  session's own `VmSize` panics on a null `PyObject` instead of raising `MemoryError`; the
-  6 GiB-headroom control is green). The ceiling is host-relative on purpose — an absolute
-  `RLIMIT_AS` is a property of the box, not of the code.
+  control: a constant digest reds the second pin, not the first). Two former defect pins now
+  assert the Never-OOM answer, flipped by **H3-SPILL-RESIDUE-1** (2026-09-06): `H3-SPILL-NLJ-1`
+  — a nested-loop join at an 8 MiB pool refuses with the same typed exception every other
+  operator gives (`fair(` required, `greedy(`, the caught-panic marker and DataFusion's
+  `partition not used yet` payload all forbidden, both resize knobs named); the 1 GiB control
+  still answers. `H3-SPILL-COLLECT-1` — `collect()` under an `RLIMIT_AS` ceiling set 256 MiB
+  above the session's own `VmSize` raises `MemoryError` (the message starts with the type
+  name), never a caught panic; the 6 GiB-headroom control still returns all 4e6 rows. The
+  ceiling is host-relative on purpose — an absolute `RLIMIT_AS` is a property of the box, not
+  of the code. The subprocess worker keeps 900 characters of the message, not 400: the typed
+  refusal plus both REPARK remediation lines is longer than the bug report it replaced, and a
+  400-character truncation cut the resize knobs off the very assertion that names them.
   pins: h3-spill-1/C-003, C-004, C-005, C-006
+  pins: h3-spill-residue-1/C-001, C-002
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
