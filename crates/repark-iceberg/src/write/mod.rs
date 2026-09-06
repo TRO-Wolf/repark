@@ -28,6 +28,7 @@ pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
+pub mod sort_order;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`).

@@ -576,6 +576,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_v3_statement_coverage_golden.py](_v3_statement_coverage_golden.py) — **V3-COV (2026-09-03):**
   `VERDICTS` per program, and the join of the two engine halves it re-exports.
   pins: v3-cov-statement-coverage/C-003
+  **WRITE-ORDER-DIST-1 (2026-09-06):** `alter-write-ordered-by` flips DIVERGES→EQUAL.
+  pins: write-order-dist-1/C-001
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
@@ -585,6 +587,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nullability half); verdict stays DIVERGES on width.
   pins: v3-cov-statement-coverage/C-003
   pins: cutover-schema-1/C-002
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the `alter-write-ordered-by` repark half is `OK` —
+  the statement the row runs now executes instead of refusing.
+  pins: write-order-dist-1/C-001
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — **V3-12 (2026-09-02):** the
   facade door's cell for a v3 merge-on-read write over an upgraded table's legacy parquet
   position delete. `_repark_legacy_merge_shape` and `_spark_legacy_merge_shape` run the SAME five
@@ -1971,6 +1976,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   write 32 where Spark writes 8 (open fork ask, ledger C-009). Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §6–§8.
   pins: write-distribution-2/C-001, C-002, C-003
+- `test_write_order_dist_1.py` — **WRITE-ORDER-DIST-1** (2026-09-06): the five `ALTER TABLE …
+  WRITE …` forms and the writes they shape, through the facade over fixed 8-value seeds at
+  `shuffle.partitions = 8` — an 8,000-row two-file seed for the DDL transitions, a 120,000-row
+  four-file seed for the layout and sortedness pins. Always-run: each form's `metadata.json`
+  transition (sort orders, default id, `write.distribution-mode` — `WRITE ORDERED BY` on v2
+  and v3), the bad-column and malformed-shape refusals committing no metadata version, `none`
+  CTAS writing writers × values against `hash`'s one file per value, monotone parquet per
+  file after `WRITE ORDERED BY` on INSERT OVERWRITE and MERGE, and the CTAS-replace shape the
+  oracle measured: the replace keeps one file per value and the `range` property, keeps the
+  order list, and resets the default order to 0 — so its files are Spark's unsorted hash
+  layout, not sorted files (the current metadata resolves through `metadata_log_entries`,
+  whose last row is the current file, because a replace restarts version numbering and a
+  name-sorted read goes stale). Live (`REPARK_PARITY_LIVE=1`): the same five statements on
+  both engines leave equal sort orders, default ids, and distribution properties, and the same
+  DDL + overwrite over the same seed commits the same row set per partition value on both.
+  Round 2 (2026-09-06): the transform-sort DDL refusal committing nothing (the
+  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin), the dotted `(st.a)` DDL transition on v2 and
+  v3 over a struct seed, nested-monotone overwrite files, and the live dotted-order metadata
+  equality on both versions.
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the

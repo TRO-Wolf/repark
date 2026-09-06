@@ -444,45 +444,6 @@ async fn alter_unsupported_forms_refuse_loud() {
         "got: {set_nn_err}"
     );
 
-    let write_order_err = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.loud WRITE ORDERED BY id",
-    )
-    .await
-    .expect_err("WRITE ORDERED BY must refuse");
-    assert!(
-        write_order_err
-            .to_string()
-            .to_lowercase()
-            .contains("write ordered")
-            || write_order_err
-                .to_string()
-                .to_lowercase()
-                .contains("not supported"),
-        "got: {write_order_err}"
-    );
-
-    // WRITE DISTRIBUTED BY uses the same residual refusal path as ORDERED.
-    let write_dist_err = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.loud WRITE DISTRIBUTED BY PARTITION",
-    )
-    .await
-    .expect_err("WRITE DISTRIBUTED BY must refuse");
-    assert!(
-        write_dist_err
-            .to_string()
-            .to_lowercase()
-            .contains("write distributed")
-            || write_dist_err
-                .to_string()
-                .to_lowercase()
-                .contains("not supported"),
-        "got: {write_dist_err}"
-    );
-
     // REPLACE PARTITION FIELD rejects a transform expression on the left side.
     let lhs_err = execute(
         &ctx,

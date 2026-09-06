@@ -37,6 +37,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   idempotent). V3-7: v3 MERGE carries stored `_row_id` through `row_lineage.rs`
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
   pins: v3-7-merge-lineage/C-001
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the unpartitioned staged-write entry delegates to the
+  distribution module's `drive_unpartitioned`, so a declared default sort order sorts that path
+  too; the batch-sink helpers it shares (`BatchWriter`, `ForkBatchWriter`,
+  `write_stream_into`, `write_stream_into_parallel`) are `pub(crate)` for that caller.
+  pins: write-order-dist-1/C-008
 - `dv_close.rs` — v3 `RowDelta` DV-container close. `prepare_row_delta_deletes` writes
   V2 parquet position deletes or calls `close_touched_dv_containers_with_partitions` on V3, then
   `apply` stamps sibling sequences. C-003 pin

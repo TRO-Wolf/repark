@@ -235,6 +235,21 @@ out a line shorter than it went in. A ratchet DOWN; the duplicate table in
 `test_cap_1_source_file_line_cap.py` moved with it in the same commit.
 pins: write-distribution-2/C-001
 
+WRITE-ORDER-DIST-1 (2026-09-06): `check_rust_file_size.py` `repark-spark/src/alter.rs`
+1830→1821 (the WRITE ORDERED/DISTRIBUTED refusal leaves for the new `alter_write_order.rs`
+module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/append.rs`
+1884→1883 and `write/merge/mod.rs` 1795→1792 (the funnel entries delegate to the
+distribution module's sorted drivers). All three ratchet DOWN; the duplicate table in
+`test_cap_1_source_file_line_cap.py` moves with them in the same commit.
+`repark-spark/src/tests/alter.rs` 1436→1397 — the `WRITE ORDERED BY` /
+`WRITE DISTRIBUTED BY` refusal blocks leave `alter_unsupported_forms_refuse_loud`;
+the forms now execute and their pins live in `tests/alter_write_order.rs`.
+pins: write-order-dist-1/C-012
+
+WRITE-ORDER-DIST-1 merge with `origin/main` (2026-09-06): both units took one line out of
+`write/append.rs` on disjoint hunks, so the merged file is 1882, one below either side's
+1883 — the merge ratchets the exact ceiling 1883→1882 in both tables in the merge commit.
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing

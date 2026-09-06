@@ -2845,18 +2845,25 @@ the pin rather than obeying it.
 
 ### V3-COV-5 — `ALTER TABLE … WRITE ORDERED BY` is unimplemented
 
-- **repark** — `ALTER TABLE t WRITE ORDERED BY id` refuses `NotImplemented`: *ALTER TABLE WRITE
-  ORDERED BY / WRITE DISTRIBUTED BY is not supported yet — sort-order evolution is out of I7
-  READY (partition-spec DDL)*. `CREATE TABLE … WRITE ORDERED BY` is a parse error on **both**
-  engines, so the create arm is not a divergence.
+- **repark** — **FIXED 2026-09-06 (WRITE-ORDER-DIST-1).** `ALTER TABLE t WRITE ORDERED BY (id,
+  name DESC NULLS LAST)` appends the sort order, makes it default, and sets
+  `write.distribution-mode = range`, on v2 and v3 — and the `WRITE LOCALLY ORDERED BY`,
+  `WRITE DISTRIBUTED BY PARTITION [LOCALLY ORDERED BY]`, and `WRITE UNORDERED` siblings set
+  the transitions the oracle measured (property untouched / `hash` with the default reset /
+  `none` with the default reset). The write path honors both halves: `none` skips the hash
+  distribution rule, and a declared default order sorts each writer's stream. `CREATE TABLE …
+  WRITE ORDERED BY` is a parse error on **both** engines, so the create arm is still not a
+  divergence.
 - **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
-  Iceberg 1.11.0, 2026-09-03.)*
+  Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
-  and `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-write-ordered-by]`
-- **Rationale** — BACKLOG. Sort-order evolution was scoped out of I7, which delivered
-  partition-spec DDL only; `RDF-SORT-1` is the sibling row on the maintenance side
-  (`rewrite_data_files` refuses `sort` / `sort_order`). Both retire together when the fork's
-  sort-order write path lands.
+  (the repark half flipped `ERROR` → `OK`, the verdict `DIVERGES` → `EQUAL`) and
+  `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-write-ordered-by]`; the
+  five-form behavior is pinned in `python/repark/tests/test_write_order_dist_1.py`
+- **Rationale** — FIXED, not declared. Sort-order evolution was scoped out of I7, which delivered
+  partition-spec DDL only; this unit builds it on the fork's `replace_sort_order`, which the
+  pinned rev exposes. `RDF-SORT-1` stays open beside it: that row is the maintenance-procedure
+  sort (`rewrite_data_files`), a different surface from the table write order fixed here.
 
 ### V3-COV-7 — `CREATE TABLE` stamps Spark's parquet-codec default; RePark stamps only the DDL
 
@@ -3034,7 +3041,10 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   and
   `crates/repark-spark/src/tests/call_rewrite_options.rs::call_rewrite_sort_order_refuses_and_does_not_compact`
 - **Rationale** — DECLARED fork ceiling until a later iceberg-rust rev ports sort rewrite.
-  `where` and `binpack` are honerable on this rev and are not this row.
+  `where` and `binpack` are honerable on this rev and are not this row. 2026-09-06
+  (WRITE-ORDER-DIST-1): the table write order fixed in `WRITE-ORDER-DIST-1` does not move this
+  row — a declared default order sorts the files a write commits, but `rewrite_data_files`
+  still takes no `sort` / `sort_order`, which is what this row claims.
 
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
 
@@ -4806,6 +4816,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   ledger. Numbers and commands: `docs/perf/iceberg-write-baseline.md` §8. The stream write paths
   this row left open are covered since 2026-09-06 by `WRITE-DISTRIBUTION-2`, except plain
   `INSERT INTO`, which executes inside the fork.
+ 2026-09-06
+  (WRITE-ORDER-DIST-1): the rule now reads `write.distribution-mode` — `none` skips it, unset
+  and `hash` keep one file per value, `range` takes the hash shape — and a declared default
+  sort order sorts each writer's stream before the funnel writes it (see `WRITE-ORDER-DIST-1`;
+  numbers in `docs/perf/iceberg-write-baseline.md` §10).
 
 - **WRITE-DISTRIBUTION-2** — **FIXED 2026-09-06 (WRITE-DISTRIBUTION-2)**; surfaced 2026-09-06
   (WRITE-DISTRIBUTION-1 critic). The hash distribution rule lived only under the CTAS node. The
@@ -4813,7 +4828,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   value: at `spark.sql.shuffle.partitions = 8` over the 1e6 bed `INSERT OVERWRITE` wrote **32**
   files and `MERGE … WHEN NOT MATCHED THEN INSERT` wrote **32** where Spark writes **8** and
   **8**. The fix routes each batch by hash of the writer's partition values in the dispatcher
-  (`write/distribution.rs::PartitionRouter`: the writer's own `PartitionValueCalculator` plus
+  (`write/distribution/router.rs::PartitionRouter`: the writer's own `PartitionValueCalculator` plus
   `create_hashes` under DataFusion's seeded `REPARTITION_RANDOM_STATE`, one pass over the
   one-shot stream, no spawn) and sends each part to its slot's worker. A `RepartitionExec` cannot
   hang on these paths — the input is a one-shot `SendableRecordBatchStream` a node would
@@ -4833,11 +4848,82 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (dropping it fails with the fork's `Unsupported data type for truncate transform: Utf8View`),
   a late failure into a partitioned table leaves no data file, and §8 carries the measured
   `_row_id`-map counts (1 manifest sequence; 3 / 4 / 4 maps at 3 / 4 / 8 partitions). Pins:
-  `crates/repark-iceberg/src/write/distribution.rs` (stream one value → one writer, determinism,
+  `crates/repark-iceberg/src/write/distribution/tests.rs`
+  (stream one value → one writer, determinism,
   NULL values, a two-field spec, MERGE inserts through the MERGE entry, the truncate cast, the
   partitioned abort) and `python/repark/tests/test_write_distribution_2.py` (overwrite and merge
   write 8 files with the row set proved; a `truncate(3, s)` CTAS writes one file per prefix;
   live: the same layouts as Spark). Numbers: `docs/perf/iceberg-write-baseline.md` §6 and §9.
+
+- **WRITE-ORDER-DIST-1** — **FIXED 2026-09-06 (WRITE-ORDER-DIST-1)**. Spark users declare a
+  table's write layout with five `ALTER TABLE … WRITE …` forms; RePark refused all five, never
+  read `write.distribution-mode` (the WRITE-DISTRIBUTION-1 hash rule ran unconditionally), and
+  never sorted within a file. The five forms now parse in a pre-parse intercept
+  (`repark-spark/src/alter_write_order.rs` — sqlparser carries none of them) and apply through
+  one transaction over the fork's `replace_sort_order` plus a property set: `WRITE ORDERED BY`
+  appends the order, makes it default, and sets `range`; `WRITE LOCALLY ORDERED BY` sets the
+  order and leaves the property untouched; `WRITE DISTRIBUTED BY PARTITION` sets `hash` and
+  resets the default to the unsorted order 0; `… [LOCALLY] ORDERED BY` sets both plus `hash`;
+  `WRITE UNORDERED` resets to 0 and sets `none` — each transition equals live Spark 4.1.2's on
+  v2 and v3, including the ASC/DESC null defaults, the identical-order id reuse, and the loud
+  bad-column refusal. On the write path `none` skips the hash rule (a CTAS falls back to
+  writers × values; the stream dispatcher deals whole batches round-robin) and a declared
+  default order sorts each writer's stream through DataFusion's
+  `SortExec` before the funnel writes it, so CTAS, INSERT OVERWRITE, and MERGE commit monotone
+  files with no new dependency and no spawned task. A CTAS replace after `WRITE ORDERED BY`
+  keeps one file per value and resets the default to 0 — Spark's measured shape, pinned, not
+  the sorted files an early draft of the pin assumed. **Measured base against branch back to
+  back, same bed, control paired**: no overhead on the unordered path (the control ratios
+  overlap on both cells), and the declared order costs +71 ms best-median (+5.4%) on the 1e6
+  overwrite (measured pre-merge; the merged tree routes the stream cells to 8 files —
+  baseline §9 and §10). Round 2 (2026-09-06): dotted nested names (`WRITE ORDERED BY (st.a)`)
+  resolve to the nested field id and sort on the nested value with parent-null masking,
+  Spark-equal on v2 and v3 (live pin); transform orders stay refused, rowed in
+  `WRITE-ORDER-TRANSFORM-1`. Pins:
+  `crates/repark-spark/src/tests/alter_write_order.rs` (the five forms plus
+  the bare `DISTRIBUTED BY PARTITION ORDERED BY` spelling Spark also accepts, the `UNORDERED`
+  reset, bad-column and malformed-shape refusals committing nothing, case-insensitive matching,
+  identical-order id reuse, the transform-sort fork-ceiling refusal, the dotted nested-name
+  resolution),
+  `crates/repark-iceberg/src/write/distribution/tests.rs` (the `none`/`hash`/`range` layouts, the
+  unknown-mode planning error, cross-batch sorting, monotone committed files on both funnel
+  entries) and `distribution/sort_order_tests.rs` (the nested sort, the transform refusal),
+  and `python/repark/tests/test_write_order_dist_1.py` (every `metadata.json`
+  transition on v2 and v3, the refusals, the transform refusal, the gating counts, monotone
+  overwrite/MERGE files, the dotted DDL and nested-monotone files, the
+  replace shape; live: the same five statements leave equal metadata on both engines, the
+  same DDL + overwrite commits the same row set per value, and the dotted order leaves equal
+  metadata on v2 and v3). All ten round-1 always-run pins fail on the
+  base native and pass on the branch. Numbers and commands:
+  `docs/perf/iceberg-write-baseline.md` §10.
+
+- **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
+  accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
+  order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,
+  `write.distribution-mode = range`, identically on v2 and v3 (live Spark 4.1.2). RePark's DDL
+  refuses loud — `transform \`bucket(…)\` is not supported yet — the fork's sort-order action
+  only models identity sort fields` — and commits nothing, and a write into a transform-ordered
+  table refuses loud on the same ceiling (`uses transform \`bucket[4]\` on source id 1, only
+  identity sort fields are supported`, measured on a Spark-registered bucket-order table whose
+  2,000 rows read back before the refused overwrite). The fork's `ReplaceSortOrderAction`
+  hardcodes `Transform::Identity` and `TableCommit`'s builder is `pub(crate)`, so no RePark-side
+  commit path can land a transform sort field — support needs fork work plus DDL parse and
+  per-writer sort on the transformed value. BACKLOG, stated here rather than silent.
+  Red-when-fixed pins (they assert today's refusal and red once the behavior lands): the DDL
+  refusal (`crates/repark-spark/src/tests/alter_write_order.rs` and
+  `python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_refuses_without_committing`)
+  and the write-path refusal
+  (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
+- **WRITE-RANGE-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1). On a partitioned table
+  `write.distribution-mode = range` takes the hash shape plus per-file sort (pinned in
+  `WRITE-ORDER-DIST-1`); the unbuilt half is an explicit global range shuffle — key ranges
+  partitioned across files by contract. What is measured (round-1 critic, live Spark 4.1.2 and
+  RePark): an unpartitioned ordered overwrite on the stream path lands 3 contiguous gapless
+  ranges, not the monotone-but-overlapping files this row first claimed — and a CTAS never
+  carries an order (a replace resets the default to 0, pinned in `WRITE-ORDER-DIST-1` C-010),
+  so the CTAS half of the residual never materializes. BACKLOG: the range shuffle stays a unit
+  of its own, and this unit's `range` is the hash shape plus the per-writer sort, stated here
+  rather than silent.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
