@@ -3062,7 +3062,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
   `test_arrays_zip_refuses` becomes `test_arrays_zip_names_its_fields_by_position` (EX-FN-1
   retires into FNP9-ARRAYS-ZIP-NAMES-1) and `test_schema_of_pair_refuses` becomes
-  `test_schema_of_csv_refuses` (EX-FN-16 narrows). pins: fnp-9-collections-json/C-003, C-006
+  `test_schema_of_csv_refuses` (EX-FN-16 narrows — `schema_of_json` left that row when the
+  kernel landed). pins: fnp-9-collections-json/C-003, C-006
+- `test_functions_split_identity.py` — **FNP-9/10 (2026-09-05):** the installer chain appends
+  `functions_json.FNP9_NAMES` LAST, so the pre-split, declared-absent, higher-order and `try_*`
+  blocks keep their positions and the count moves 444 → 452.
+  pins: fnp-9-collections-json/C-001
+- `test_fn_batch2.py` — **FNP-9/10 (2026-09-05):** loses its `arrays_zip` refusal arm and the
+  now-unused import; no §7 row named `arrays_zip` under `R-FN-BATCH2`, because that disclosure
+  lived in the refusal string the kernel replaced. pins: fnp-9-collections-json/C-006
 
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,

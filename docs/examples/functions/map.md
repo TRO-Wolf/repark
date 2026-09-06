@@ -30,6 +30,10 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
 - [map_build.py](map_build.py) — `F.create_map` per row, `F.map_concat` onto a constant map,
   and `F.array_insert` at the front, at the back through `-1`, and past the end where Spark
   pads with NULLs.
+
+Both scripts carry the FNP-9/10 clause citations, which live here and not in the script bodies:
+`json_family.py` pins: fnp-9-collections-json/C-002, C-003, C-004, C-005 ·
+`map_build.py` pins: fnp-9-collections-json/C-006.
 - [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
   the outer spelling keeping the empty and NULL rows.
 - [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,

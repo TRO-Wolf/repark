@@ -359,21 +359,7 @@ def str_to_map(
 
 
 def create_map(*cols: Column | str) -> Column:
-    """Map from alternating key/value columns (PySpark ``functions.create_map``).
-
-    Spark spells this ``map(k1, v1, ...)`` in SQL; the name ``create_map`` exists only on the
-    Python surface. An odd argument count raises, a NULL key raises at evaluation, and no
-    arguments answer an empty map.
-
-    Args:
-        *cols: alternating key and value columns, or column names.
-
-    Returns:
-        A ``MAP`` column.
-
-    Raises:
-        PySparkValueError: the argument count is odd.
-    """
+    """Map from alternating key/value columns (PySpark ``functions.create_map``)."""
     if len(cols) % 2 != 0:
         raise PySparkValueError(
             "create_map requires an even number of key/value arguments",
@@ -383,31 +369,12 @@ def create_map(*cols: Column | str) -> Column:
 
 
 def map_concat(*cols: Column | str) -> Column:
-    """Union of maps (PySpark ``functions.map_concat``).
-
-    Args:
-        *cols: map columns, or column names.
-
-    Returns:
-        A ``MAP`` column; NULL where any argument is NULL.
-    """
+    """Union of maps (PySpark ``functions.map_concat``)."""
     return _scalar("map_concat", *cols)
 
 
 def array_insert(arr: Column | str, pos: Column | int, value: Column | object) -> Column:
-    """Insert ``value`` at 1-based ``pos`` (PySpark ``functions.array_insert``).
-
-    A negative ``pos`` counts back from the end, so ``-1`` appends. A position past either end
-    pads with NULLs. Position ``0`` raises ``INVALID_INDEX_OF_ZERO``.
-
-    Args:
-        arr: the array column, or a column name.
-        pos: the 1-based position, as an int or a Column.
-        value: the value to insert; a non-Column is a literal.
-
-    Returns:
-        An ``ARRAY`` column.
-    """
+    """Insert ``value`` at 1-based ``pos`` (PySpark ``functions.array_insert``)."""
     inserted = value if isinstance(value, Column) else lit(value)
     return _scalar("array_insert", arr, pos, inserted)
 

@@ -22,10 +22,7 @@ def spark() -> Iterator[ReparkSession]:
 
 
 def test_arrays_zip_names_its_fields_by_position(spark: ReparkSession) -> None:
-    """arrays_zip zips with NULL fill; the field names are positional (FNP9-ARRAYS-ZIP-NAMES-1).
-
-    pins: fnp-9-collections-json/C-006, C-008
-    """
+    """arrays_zip zips with NULL fill; the field names are positional (FNP9-ARRAYS-ZIP-NAMES-1)."""
     frame = spark.createDataFrame([([1, 2], ["x"])], "a ARRAY<INT>, b ARRAY<STRING>")
     table = frame.select(F.arrays_zip("a", "b").alias("v")).toArrow()
     assert table.column("v").to_pylist() == [[{"0": 1, "1": "x"}, {"0": 2, "1": None}]]
@@ -135,11 +132,7 @@ def test_replace_dollar_arm_answers_backslash(spark: ReparkSession) -> None:
 
 
 def test_schema_of_csv_refuses() -> None:
-    """schema_of_csv refuses; Spark infers the struct (EX-FN-16).
-
-    schema_of_json left this row when FNP-9/10 built the kernel.
-    pins: fnp-9-collections-json/C-003
-    """
+    """schema_of_csv refuses; Spark infers the struct (EX-FN-16)."""
     with pytest.raises(UnsupportedOperationException, match="schema_of_csv"):
         F.schema_of_csv("line")
 

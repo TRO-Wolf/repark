@@ -936,10 +936,7 @@ def test_live_rewrite_position_delete_files_below_floor_matches_spark(
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_fnp9_collections_json(spark_engine: lp.Engine) -> None:
-    """The FNP-9/10 goldens re-derived from live Spark 4.1.2.
-
-    pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, C-006
-    """
+    """The FNP-9/10 goldens re-derived from live Spark 4.1.2."""
     oracle = spark_engine.session.sql(
         "SELECT get_json_object('{\"a\":1.50}', '$.a') AS number_spelling, "
         "get_json_object('{\"a\":[1,2,3]}', '$.a[*]') AS wildcard_many, "

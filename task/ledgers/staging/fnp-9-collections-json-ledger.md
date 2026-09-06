@@ -297,7 +297,7 @@ No worktree was created and no other lane's artifacts were touched.
 | Live leg | `test_parity_live.py::test_live_fnp9_collections_json`, co-collected beside `test_live_disclosure_still_diverges` |
 | Registry | §7 `FNP9-ARRAYS-ZIP-NAMES-1` (retires `EX-FN-1`), `FNP9-GENERATORS-1` (supersedes `EX-FN-2`), `FNP9-BYNAME-1`, `FNP9-SEQUENCE-1`, `FNP10-JSON-OPTIONS-1`, `FNP10-JSON-SCHEMA-COLUMN-1`, `FNP9-ARRAY-INSERT-BIGINT-1`; `EX-FN-16` narrowed to `schema_of_csv` |
 | Examples | `docs/examples/functions/json_family.py`, `docs/examples/functions/map_build.py`; `BACKLOG_BASELINE` 164 → 163 as `F.schema_of_json` leaves the backlog |
-| Ceilings | none moved. `functions_expr.py` stays at its exact 2259 (two lines freed by the real wrappers are spent refusing a JSON option mapping); `functions.py` at 1985 and `column/mod.rs` at 1053, which is why the new facade surface is a new module and the new dispatch arms are a child module |
+| Ceilings | `check_lib_py.py` `functions_expr.py` 2259 → 2256 (ratchets DOWN), mirrored in `test_cap_1_source_file_line_cap.py`; `functions.py` held at 1985 and `column/mod.rs` at 1053, which is why the new facade surface is a new module and the new dispatch arms are a child module |
 | Maps | lockstep on every touched directory |
 
 ## Out of scope, observed
@@ -317,6 +317,25 @@ No worktree was created and no other lane's artifacts were touched.
 - `from_json` supports only STRING map keys and refuses any other key type loudly. Spark parses
   a JSON object's keys into the declared key type, so `MAP<INT, STRING>` works there. A loud
   refusal on a rare shape, recorded rather than built.
+
+## Docstrings replaced (forced, nothing stripped silently)
+
+The no-comment rule leaves exactly one one-line docstring where the presence gate demands it, and
+a pre-existing docstring is never reworded. Four were REPLACED rather than left, each because the
+old text would now be false, and each is named here so no reviewer has to find it in a diff:
+
+| Where | Old text | Why it could not stand |
+|---|---|---|
+| `functions_expr.py::arrays_zip` | *"Unsupported because the engine has no `arrays_zip` function."* | The engine has one now. |
+| `functions_expr.py::schema_of_json` | *"Infer JSON schema as DDL (PySpark `functions.schema_of_json`). E1 type pre-check only."* | It is no longer a type pre-check; the name answers. |
+| `test_examples_functions_a.py::test_arrays_zip_refuses` → `…_names_its_fields_by_position` | *"arrays_zip refuses; Spark zips element-wise with NULL fill (EX-FN-1)."* | The name answers; only the field names diverge, so the EX-FN-1 pin flips into FNP9-ARRAYS-ZIP-NAMES-1. |
+| `test_examples_functions_a.py::test_schema_of_pair_refuses` → `test_schema_of_csv_refuses` | *"schema_of_csv and schema_of_json refuse; Spark infers the structs (EX-FN-16)."* | `schema_of_json` left that row. |
+
+Everything else pre-existing is byte-identical, including
+`test_functions_split_identity.py`'s *"Pre-split 360 names stay the prefix; FNP-15/16 then FNP-4c
+then FNP-7 append."* and `test_ex_0_example_coverage.py`'s docstring — the FNP-9/10 facts they
+carry live in `python/repark/tests/map.md` and `python/repark-parity/tests/map.md` instead. Every
+`pins:` citation this unit adds lives in a directory `map.md` row, never in Python.
 
 ## Known cost, recorded not fixed
 

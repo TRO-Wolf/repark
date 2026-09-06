@@ -1,9 +1,4 @@
-"""JSON facade wrappers (FNP-10), and the installer for the FNP-9/10 surface.
-
-The JSON functions are defined here; the collection constructors this unit added live in
-their family home, ``functions_collections``, and are re-exported through :func:`install_into`
-so ``functions.py`` gains the whole surface without growing past its size baseline.
-"""
+"""JSON facade wrappers, and the installer for the FNP-9/10 surface."""
 
 from __future__ import annotations
 
@@ -41,58 +36,22 @@ def _refuse_json_options(name: str, options: dict[str, str] | None) -> None:
 
 
 def get_json_object(col: Column | str, path: str) -> Column:
-    """Extract one JSONPath value as a string (PySpark ``functions.get_json_object``).
-
-    Args:
-        col: the JSON string column, or a column name.
-        path: the path, which must start with ``$``.
-
-    Returns:
-        A ``STRING`` column; NULL for a missing path, a malformed document, or a JSON null.
-    """
+    """Extract one JSONPath value as a string (PySpark ``functions.get_json_object``)."""
     return _scalar("get_json_object", col, path, lit_indices=frozenset({1}))
 
 
 def json_array_length(col: Column | str) -> Column:
-    """Length of a JSON array (PySpark ``functions.json_array_length``).
-
-    Args:
-        col: the JSON string column, or a column name.
-
-    Returns:
-        An ``INT`` column; NULL when the document is not an array or is malformed.
-    """
+    """Length of a JSON array (PySpark ``functions.json_array_length``)."""
     return _scalar("json_array_length", col)
 
 
 def json_object_keys(col: Column | str) -> Column:
-    """Keys of a JSON object in document order (PySpark ``functions.json_object_keys``).
-
-    Args:
-        col: the JSON string column, or a column name.
-
-    Returns:
-        An ``ARRAY<STRING>`` column; NULL when the document is not an object or is malformed.
-    """
+    """Keys of a JSON object in document order (PySpark ``functions.json_object_keys``)."""
     return _scalar("json_object_keys", col)
 
 
 def to_json(col: Column | str, options: dict[str, str] | None = None) -> Column:
-    """Render a STRUCT, ARRAY, or MAP column as JSON (PySpark ``functions.to_json``).
-
-    A NULL struct field is omitted; a NULL map value is written as ``null``. Both are Spark's,
-    measured on 4.1.2.
-
-    Args:
-        col: the column to render, or a column name.
-        options: refused when non-empty; repark implements none of Spark's JSON writer options.
-
-    Returns:
-        A ``STRING`` column; NULL where the input value is NULL.
-
-    Raises:
-        UnsupportedOperationException: ``options`` is non-empty.
-    """
+    """Render a STRUCT, ARRAY, or MAP column as JSON (PySpark ``functions.to_json``)."""
     _refuse_json_options("to_json", options)
     return _scalar("to_json", col)
 
@@ -102,24 +61,7 @@ def from_json(
     schema: DataType | str | Column,
     options: dict[str, str] | None = None,
 ) -> Column:
-    """Parse a JSON string column against a schema (PySpark ``functions.from_json``).
-
-    PERMISSIVE is the default mode: a missing field, a JSON null, and a value of the wrong shape
-    are all NULL, and a malformed document yields an all-NULL result rather than an error.
-
-    Args:
-        col: the JSON string column, or a column name.
-        schema: a DDL string or a :class:`DataType`. A Column is refused because the result type
-            must be known when the expression is built, and the facade cannot fold one.
-        options: only ``mode`` and ``columnNameOfCorruptRecord`` are honoured; any other key is
-            refused rather than silently ignored.
-
-    Returns:
-        A column of the schema's type.
-
-    Raises:
-        UnsupportedOperationException: ``schema`` is a Column.
-    """
+    """Parse a JSON string column against a schema (PySpark ``functions.from_json``)."""
     if isinstance(schema, Column):
         raise UnsupportedOperationException(
             "from_json does not accept a Column schema: repark resolves the result type when "

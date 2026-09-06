@@ -454,10 +454,7 @@ def schema_of_csv(csv: Column | str, options: dict[str, str] | None = None) -> C
 
 
 def schema_of_json(json: Column | str, options: dict[str, str] | None = None) -> Column:
-    """Infer a JSON document's schema as a DDL string (PySpark ``functions.schema_of_json``).
-
-    A bare ``str`` is the JSON document itself, not a column name, matching PySpark.
-    """
+    """Infer a JSON document's schema as a DDL string (PySpark ``functions.schema_of_json``)."""
     from repark.spark.functions_json import _refuse_json_options
 
     _refuse_json_options("schema_of_json", options)

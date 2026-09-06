@@ -42,10 +42,7 @@ def _sql(text: str, name: str = "r"):
 
 
 def test_get_json_object_answers_sparks_values_on_both_doors() -> None:
-    """`$.a` / `$.b` / `$.c.d` / `$.c.d[0]` / `$` / a missing path.
-
-    pins: fnp-9-collections-json/C-002
-    """
+    """`$.a` / `$.b` / `$.c.d` / `$.c.d[0]` / `$` / a missing path."""
     cases = {
         "$.a": ["1", "2", None, None],
         "$.b": ["hi", None, None, None],
@@ -91,10 +88,7 @@ def test_get_json_object_answers_sparks_values_on_both_doors() -> None:
 def test_get_json_object_scalar_and_path_grammar_cells(
     document: str, path: str, want: str | None
 ) -> None:
-    """Number spelling, leaf quoting, and the parse rules Spark answers NULL for.
-
-    pins: fnp-9-collections-json/C-002
-    """
+    """Number spelling, leaf quoting, and the parse rules Spark answers NULL for."""
     got = _column(
         _session()
         .sql("SELECT 1 AS one")
@@ -125,10 +119,7 @@ def test_get_json_object_scalar_and_path_grammar_cells(
     ],
 )
 def test_get_json_object_wildcard_collect_rule(document: str, path: str, want: str | None) -> None:
-    """A wildcard collects: none is NULL, one at the top is bare, more is a JSON array.
-
-    pins: fnp-9-collections-json/C-002
-    """
+    """A wildcard collects: none is NULL, one at the top is bare, more is a JSON array."""
     got = _column(
         _session()
         .sql("SELECT 1 AS one")
@@ -138,7 +129,7 @@ def test_get_json_object_wildcard_collect_rule(document: str, path: str, want: s
 
 
 def test_json_array_length_answers_int_or_null_on_both_doors() -> None:
-    """Length of an array, NULL off shape. pins: fnp-9-collections-json/C-002"""
+    """Length of an array, NULL off shape."""
     door_type, door_null, door = _sql("SELECT json_array_length(j) AS r FROM fnp9")
     assert door == [None, None, 3, None]
     assert door_type == pa.int32()
@@ -159,10 +150,7 @@ def test_json_array_length_answers_int_or_null_on_both_doors() -> None:
 
 
 def test_json_object_keys_answers_document_order_on_both_doors() -> None:
-    """Insertion order kept, duplicates kept, NULL off shape.
-
-    pins: fnp-9-collections-json/C-002
-    """
+    """Insertion order kept, duplicates kept, NULL off shape."""
     door_type, door_null, door = _sql("SELECT json_object_keys(j) AS r FROM fnp9")
     assert door == [["a", "b", "c"], ["a", "b"], None, None]
     assert door_type.value_type == pa.string()
@@ -187,7 +175,7 @@ def test_json_object_keys_answers_document_order_on_both_doors() -> None:
 
 
 def test_to_json_omits_null_struct_fields_and_writes_null_map_values() -> None:
-    """The asymmetry is Spark's, measured on 4.1.2. pins: fnp-9-collections-json/C-004"""
+    """The asymmetry is Spark's, measured on 4.1.2."""
     struct_type, struct_null, rendered = _column(
         _frame().select(F.to_json(F.struct("ai", "k", "v")).alias("r"))
     )
@@ -206,10 +194,7 @@ def test_to_json_omits_null_struct_fields_and_writes_null_map_values() -> None:
 
 
 def test_to_json_spells_scalars_the_way_java_does() -> None:
-    """Doubles use Double.toString; NaN and Infinity are JSON strings; binary is base64.
-
-    pins: fnp-9-collections-json/C-004
-    """
+    """Doubles use Double.toString; NaN and Infinity are JSON strings; binary is base64."""
     spark = _session()
     numbers = spark.sql(
         "SELECT CAST(1e20 AS DOUBLE) AS big, CAST(3 AS DOUBLE) AS whole, "
@@ -236,13 +221,13 @@ def test_to_json_spells_scalars_the_way_java_does() -> None:
 
 
 def test_to_json_refuses_a_scalar_argument() -> None:
-    """Spark types to_json over STRUCT/ARRAY/MAP only. pins: fnp-9-collections-json/C-004"""
+    """Spark types to_json over STRUCT/ARRAY/MAP only."""
     with pytest.raises(Exception, match="STRUCT, ARRAY, or MAP"):
         _frame().select(F.to_json("v").alias("r")).collect()
 
 
 def test_from_json_is_permissive_on_both_doors() -> None:
-    """Missing, mistyped, and malformed all answer NULL. pins: fnp-9-collections-json/C-005"""
+    """Missing, mistyped, and malformed all answer NULL."""
     want = [{"a": 1, "b": "hi"}, {"a": 2, "b": None}, {"a": None, "b": None}, None]
     door_type, door_null, door = _sql("SELECT from_json(j, 'a INT, b STRING') AS r FROM fnp9")
     assert door == want
@@ -278,7 +263,7 @@ def test_from_json_is_permissive_on_both_doors() -> None:
     ],
 )
 def test_from_json_leaf_and_container_cells(document: str, schema: str, want: object) -> None:
-    """Each measured Spark cell, on the Column door. pins: fnp-9-collections-json/C-005"""
+    """Each measured Spark cell, on the Column door."""
     got = _column(
         _session().sql("SELECT 1 AS one").select(F.from_json(F.lit(document), schema).alias("r"))
     )
@@ -289,7 +274,7 @@ def test_from_json_leaf_and_container_cells(document: str, schema: str, want: ob
 
 
 def test_from_json_container_top_levels() -> None:
-    """ARRAY and MAP schemas at the top level. pins: fnp-9-collections-json/C-005"""
+    """ARRAY and MAP schemas at the top level."""
     arrays = _column(
         _session()
         .sql("SELECT 1 AS one")
@@ -305,10 +290,7 @@ def test_from_json_container_top_levels() -> None:
 
 
 def test_from_json_corrupt_record_column_takes_the_raw_text() -> None:
-    """A schema field named _corrupt_record gets the raw document.
-
-    pins: fnp-9-collections-json/C-005
-    """
+    """A schema field named _corrupt_record gets the raw document."""
     got = _column(
         _session()
         .sql("SELECT 1 AS one")
@@ -318,10 +300,7 @@ def test_from_json_corrupt_record_column_takes_the_raw_text() -> None:
 
 
 def test_from_json_option_coverage_is_loud() -> None:
-    """FAILFAST raises, DROPMALFORMED and an unknown option refuse.
-
-    pins: fnp-9-collections-json/C-005, C-008
-    """
+    """FAILFAST raises, DROPMALFORMED and an unknown option refuse."""
     spark = _session()
     frame = spark.sql("SELECT 1 AS one")
     with pytest.raises(Exception, match="MALFORMED_RECORD_IN_PARSING"):
@@ -341,10 +320,7 @@ def test_from_json_option_coverage_is_loud() -> None:
 
 
 def test_to_json_and_schema_of_json_refuse_options() -> None:
-    """repark implements no JSON writer or inference option and says so (FNP10-JSON-OPTIONS-1).
-
-    pins: fnp-9-collections-json/C-003, C-004, C-008
-    """
+    """repark implements no JSON writer or inference option and says so (FNP10-JSON-OPTIONS-1)."""
     with pytest.raises(UnsupportedOperationException, match="FNP10-JSON-OPTIONS-1"):
         F.to_json(F.struct(F.lit(1).alias("a")), {"ignoreNullFields": "false"})
     with pytest.raises(UnsupportedOperationException, match="FNP10-JSON-OPTIONS-1"):
@@ -358,19 +334,13 @@ def test_to_json_and_schema_of_json_refuse_options() -> None:
 
 
 def test_from_json_refuses_a_column_schema() -> None:
-    """repark resolves the result type when the expression is built.
-
-    pins: fnp-9-collections-json/C-005, C-008
-    """
+    """repark resolves the result type when the expression is built."""
     with pytest.raises(UnsupportedOperationException, match="Column schema"):
         F.from_json(F.lit('{"a":1}'), F.schema_of_json(F.lit('{"a":1}')))
 
 
 def test_schema_of_json_infers_sparks_ddl_on_both_doors() -> None:
-    """Fields sort; a lone null is STRING; a wide integer is DECIMAL.
-
-    pins: fnp-9-collections-json/C-003
-    """
+    """Fields sort; a lone null is STRING; a wide integer is DECIMAL."""
     door_type, door_null, door = _sql(f"SELECT schema_of_json('{DOCUMENT}') AS r FROM fnp9")
     assert door == ["STRUCT<a: BIGINT, b: STRING, c: STRUCT<d: ARRAY<BIGINT>>>"] * 4
     assert door_type == pa.string()
@@ -400,19 +370,19 @@ def test_schema_of_json_infers_sparks_ddl_on_both_doors() -> None:
     ],
 )
 def test_schema_of_json_inference_cells(document: str, want: str) -> None:
-    """Each measured inference cell. pins: fnp-9-collections-json/C-003"""
+    """Each measured inference cell."""
     got = _column(_session().sql("SELECT 1 AS one").select(F.schema_of_json(document).alias("r")))
     assert got[2] == [want]
 
 
 def test_schema_of_json_raises_on_a_malformed_document() -> None:
-    """Spark raises here rather than answering NULL. pins: fnp-9-collections-json/C-003"""
+    """Spark raises here rather than answering NULL."""
     with pytest.raises(Exception, match="MALFORMED_RECORD_IN_PARSING"):
         _session().sql("SELECT 1 AS one").select(F.schema_of_json("{bad").alias("r")).collect()
 
 
 def test_create_map_builds_a_non_null_map_from_alternating_arguments() -> None:
-    """PySpark's create_map is Spark SQL's map(...). pins: fnp-9-collections-json/C-006"""
+    """PySpark's create_map is Spark SQL's map(...)."""
     mapped_type, mapped_null, mapped = _column(
         _frame().select(F.create_map(F.col("k"), F.col("v")).alias("r"))
     )
@@ -430,7 +400,7 @@ def test_create_map_builds_a_non_null_map_from_alternating_arguments() -> None:
 
 
 def test_create_map_refuses_an_odd_argument_count_a_null_key_and_a_duplicate() -> None:
-    """Three loud rules Spark also enforces. pins: fnp-9-collections-json/C-006"""
+    """Three loud rules Spark also enforces."""
     from repark.errors import PySparkValueError
 
     with pytest.raises(PySparkValueError, match="even number"):
@@ -444,10 +414,7 @@ def test_create_map_refuses_an_odd_argument_count_a_null_key_and_a_duplicate() -
 
 
 def test_map_concat_unions_maps_on_both_doors() -> None:
-    """A NULL argument nulls the row; a repeated key raises.
-
-    pins: fnp-9-collections-json/C-006
-    """
+    """A NULL argument nulls the row; a repeated key raises."""
     joined_type, joined_null, joined = _column(
         _frame().select(
             F.map_concat(
@@ -479,7 +446,7 @@ def test_map_concat_unions_maps_on_both_doors() -> None:
 
 
 def test_array_insert_places_and_pads_on_both_doors() -> None:
-    """Positive, negative, and past-the-end positions. pins: fnp-9-collections-json/C-006"""
+    """Positive, negative, and past-the-end positions."""
     front_type, front_null, front = _column(
         _frame().select(F.array_insert("ai", 1, F.lit(9)).alias("r"))
     )
@@ -510,10 +477,7 @@ def test_array_insert_places_and_pads_on_both_doors() -> None:
     ],
 )
 def test_array_insert_negative_and_padding_cells(position: int, want: list[int | None]) -> None:
-    """The -1-appends rule and NULL padding at both ends.
-
-    pins: fnp-9-collections-json/C-006
-    """
+    """The -1-appends rule and NULL padding at both ends."""
     spark = _session()
     frame = spark.sql("SELECT array(1, 2, 3) AS ai")
     got = _column(frame.select(F.array_insert("ai", position, F.lit(9)).alias("r")))
@@ -521,7 +485,7 @@ def test_array_insert_negative_and_padding_cells(position: int, want: list[int |
 
 
 def test_array_insert_zero_raises_and_nulls_propagate() -> None:
-    """Index 0 is INVALID_INDEX_OF_ZERO on both doors. pins: fnp-9-collections-json/C-006"""
+    """Index 0 is INVALID_INDEX_OF_ZERO on both doors."""
     with pytest.raises(Exception, match="INVALID_INDEX_OF_ZERO"):
         _frame().select(F.array_insert("ai", 0, F.lit(9)).alias("r")).collect()
     with pytest.raises(Exception, match="INVALID_INDEX_OF_ZERO"):
@@ -535,10 +499,7 @@ def test_array_insert_zero_raises_and_nulls_propagate() -> None:
 
 
 def test_arrays_zip_pads_to_the_longest_on_both_doors() -> None:
-    """NULL fill, non-null element struct, NULL row for a NULL argument.
-
-    pins: fnp-9-collections-json/C-006
-    """
+    """NULL fill, non-null element struct, NULL row for a NULL argument."""
     zipped_type, zipped_null, zipped = _column(
         _frame().select(F.arrays_zip("ai", "arrs").alias("r"))
     )
@@ -560,30 +521,20 @@ def test_arrays_zip_pads_to_the_longest_on_both_doors() -> None:
 
 
 def test_arrays_zip_field_names_are_positional_not_the_column_name() -> None:
-    """A recorded divergence: Spark names the field after an attribute child.
-
-    pins: fnp-9-collections-json/C-008
-    """
+    """A recorded divergence: Spark names the field after an attribute child."""
     zipped_type, _, _ = _column(_frame().select(F.arrays_zip("ai", "arrs").alias("r")))
     assert [field.name for field in zipped_type.value_type] == ["0", "1"]
 
 
 @pytest.mark.parametrize("name", ["inline", "inline_outer", "stack", "call_udf", "call_function"])
 def test_fnp9_multi_column_and_by_name_names_stay_absent(name: str) -> None:
-    """A name this unit did not build stays absent rather than half-answering.
-
-    This pin reds the day the seam lands and the name is exported.
-    pins: fnp-9-collections-json/C-007
-    """
+    """A name this unit did not build stays absent rather than half-answering."""
     assert not hasattr(F, name)
     assert name not in F.__all__
 
 
 def test_json_tuple_still_refuses_on_the_facade() -> None:
-    """The SQL door answers one struct where Spark projects N columns.
-
-    pins: fnp-9-collections-json/C-007
-    """
+    """The SQL door answers one struct where Spark projects N columns."""
     with pytest.raises(UnsupportedOperationException, match="json_tuple"):
         F.json_tuple(F.lit(DOCUMENT), "a")
     door = _sql("SELECT json_tuple(j, 'a', 'b') AS r FROM fnp9", "r")
@@ -591,10 +542,7 @@ def test_json_tuple_still_refuses_on_the_facade() -> None:
 
 
 def test_every_built_name_is_exported_from_the_facade() -> None:
-    """The unit's built surface reaches `F.` and `__all__`.
-
-    pins: fnp-9-collections-json/C-001
-    """
+    """The unit's built surface reaches `F.` and `__all__`."""
     built = [
         "array_insert",
         "arrays_zip",

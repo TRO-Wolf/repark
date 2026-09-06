@@ -65,7 +65,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
   answer, so a non-empty mapping refuses instead of being ignored.
   `install_into` runs LAST in `functions.py`'s installer chain, which
-  `test_functions_split_identity.py` pins by position.
+  `test_functions_split_identity.py` pins by position. The rules each wrapper carries — Spark's
+  `map(k1, v1, …)` spelling behind `create_map`, the `-1`-appends and NULL-padding rules of
+  `array_insert`, the NULL-fill of `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record`
+  column of `from_json`, and `schema_of_json` reading a bare `str` as the document rather than a
+  column name — are recorded here and in the unit ledger, not in the function bodies: each keeps
+  exactly the one-line docstring the presence gate requires.
   pins: fnp-9-collections-json/C-001, C-007
   FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
   docstring is one line.

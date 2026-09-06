@@ -252,10 +252,9 @@ TYPES-1 round 4 (2026-09-05): `dataframe/core.py` 6305→6303 — one import joi
 the INCREASE; the ceiling ratchets DOWN again, no approval needed.
 pins: types-1/C-008
 
-FNP-9/10 (2026-09-05): no size ceiling moves. `functions_expr.py` stays at its exact 2259 —
-`arrays_zip` and `schema_of_json` trade a six-line refusal each for a shorter real wrapper, and
-`schema_of_json` spends the two freed lines refusing a JSON option mapping rather than ignoring
-it. The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
+FNP-9/10 (2026-09-06): `check_lib_py.py` `functions_expr.py` 2259→2256 — `arrays_zip` and
+`schema_of_json` trade a multi-line refusal each for a one-line real wrapper; ratchets DOWN.
+The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
 instead of growing `functions.py`, which stays at its exact 1985.
 `check_example_coverage.py` gains `functions_json.py` as a fourth installer source and
 `FNP9_NAMES` as an export binding, so the eight new `F.*` names enter the walk; both new

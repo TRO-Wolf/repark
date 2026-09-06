@@ -1,7 +1,4 @@
-"""Demonstrate building and joining maps, and inserting into an array at a position.
-
-pins: fnp-9-collections-json/C-006
-"""
+"""Demonstrate building and joining maps, and inserting into an array at a position."""
 
 from __future__ import annotations
 

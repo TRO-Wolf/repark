@@ -372,12 +372,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 
 def test_functions_all_matches_pre_split_inventory() -> None:
-    """Pre-split 360 names stay the prefix; FNP-15/16, FNP-4c, FNP-7 then FNP-9/10 append.
+    """Pre-split 360 names stay the prefix; FNP-15/16 then FNP-4c then FNP-7 append.
 
     pins: fnp-15-16/C-016
     pins: fnp-4c-higher-order-kernels/C-011
     pins: fnp-7-try-inversions/C-013
-    pins: fnp-9-collections-json/C-001
     """
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
     from repark.spark.functions_json import FNP9_NAMES

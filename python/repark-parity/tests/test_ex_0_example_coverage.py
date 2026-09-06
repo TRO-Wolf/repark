@@ -36,7 +36,6 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     """C-001: the AST walk names every family and the native SQL door.
 
     pins: ex-1-class-surfaces/C-001
-    pins: fnp-9-collections-json/C-001
     """
     gate = _load_gate()
     rows = gate.enumerate_public_surface(_REPO)

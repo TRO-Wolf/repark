@@ -1,7 +1,4 @@
-"""Demonstrate the ``F.*`` JSON family: read a field, count, list keys, parse, and render.
-
-pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
-"""
+"""Demonstrate the ``F.*`` JSON family: read a field, count, list keys, parse, and render."""
 
 from __future__ import annotations
 
