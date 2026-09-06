@@ -14,6 +14,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured table persist and positional insert arms."""
     repark = ReparkSession.builder.appName("ex26-writer-tables").master("local[1]").getOrCreate()
     try:
         frame = repark.createDataFrame([(1, "a"), (2, "b")], "id INT, name STRING")

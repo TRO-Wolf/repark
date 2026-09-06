@@ -71,7 +71,8 @@ network.
   in SQL and on a frame (EX-26). The register return arm is §7 `EX-SES-6`.
   pins: ex-26-io-session/C-011
 - [udtf.py](udtf.py) — `SparkSession.udtf`: register a table function, read it
-  through `FROM` with literal args (EX-26).
+  through `FROM` with literal args (EX-26). The example imports `udtf` from
+  `repark.spark.functions`, the PySpark drop-in path.
   pins: ex-26-io-session/C-012
 
 ## Pointers

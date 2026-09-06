@@ -12,6 +12,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured sql select and table-by-name arms."""
     repark = ReparkSession.builder.appName("ex26-sql-table").master("local[1]").getOrCreate()
     try:
         numbers = repark.createDataFrame([(1, 10.0), (2, 20.0), (3, 30.0)], "k INT, v DOUBLE")

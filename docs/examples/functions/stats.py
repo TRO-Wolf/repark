@@ -12,6 +12,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured percentile-approx alias-pair arms."""
     repark = ReparkSession.builder.appName("ex-stats").master("local[1]").getOrCreate()
     try:
         ranks = repark.createDataFrame([(value,) for value in [*range(1, 101), None]], "x INT")

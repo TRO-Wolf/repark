@@ -14,6 +14,7 @@ def tag_with_u(value: object) -> str:
 
 
 def main() -> None:
+    """Run the measured scalar-UDF register, SQL, and frame arms."""
     repark = ReparkSession.builder.appName("ex26-udf").master("local[1]").getOrCreate()
     try:
         registered = repark.udf.register("fn_ex26", tag_with_u)

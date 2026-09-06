@@ -14,6 +14,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured session-user, randstr, and isnan arms."""
     repark = ReparkSession.builder.appName("ex-session-misc").master("local[1]").getOrCreate()
     try:
         single = repark.createDataFrame([(1,)], "x INT")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from repark.spark import ReparkSession
-from repark.spark.udtf import udtf as make_udtf
+from repark.spark.functions import udtf as make_udtf
 
 COVERS: list[str] = [
     "SparkSession.udtf",
@@ -19,6 +19,7 @@ class PlusOne:
 
 
 def main() -> None:
+    """Run the measured table-function register and FROM-read arms."""
     repark = ReparkSession.builder.appName("ex26-udtf").master("local[1]").getOrCreate()
     try:
         repark.udtf.register("plus_ex26", PlusOne)

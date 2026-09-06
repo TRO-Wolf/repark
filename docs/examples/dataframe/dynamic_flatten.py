@@ -12,6 +12,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured struct-expansion and list-explosion arms."""
     repark = ReparkSession.builder.appName("ex26-flatten").master("local[1]").getOrCreate()
     try:
         schema = StructType(

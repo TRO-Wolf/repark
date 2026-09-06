@@ -12,6 +12,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured version contract and context identity arms."""
     repark = ReparkSession.builder.appName("ex26-identity").master("local[1]").getOrCreate()
     try:
         version = repark.version
