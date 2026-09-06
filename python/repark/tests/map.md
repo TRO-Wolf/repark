@@ -3053,6 +3053,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   that pin reds the day the multi-column generator seam lands and they are exported.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
+- `test_parity_live.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
+  fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
+  4.1.2 under `REPARK_PARITY_LIVE=1`. pins: fnp-9-collections-json/C-002, C-003, C-004, C-005,
+  C-006
+
 - `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
   `test_arrays_zip_refuses` becomes `test_arrays_zip_names_its_fields_by_position` (EX-FN-1
   retires into FNP9-ARRAYS-ZIP-NAMES-1) and `test_schema_of_pair_refuses` becomes
