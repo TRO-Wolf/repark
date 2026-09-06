@@ -22,6 +22,18 @@ needed.
   policy (duplicate keys raise rather than last-wins).
 - `array_position.rs` — **FN-FIX-1:** not-found → `0`; NULL only for NULL array/needle.
   pins: fn-fix-1-registry-rows/C-002
+- `array_insert.rs` — **FNP-9 (2026-09-05):** Spark `array_insert(array, position, value)`. A
+  positive position is 1-based; a negative one counts back from the end so `-1` appends. A
+  position past either end pads with NULLs. Position `0` raises `INVALID_INDEX_OF_ZERO`, and a
+  BIGINT position is refused the way Spark refuses it. pins: fnp-9-collections-json/C-006
+- `arrays_zip.rs` — **FNP-9 (2026-09-05):** Spark `arrays_zip`. Zips to the LONGEST array and
+  NULL-fills the rest; the struct field takes the argument's column name when that name is a
+  plain identifier and its 0-based position otherwise, which is Spark's `Attribute`-or-index
+  rule read off the argument field. pins: fnp-9-collections-json/C-006
+- `map_concat.rs` — **FNP-9 (2026-09-05):** Spark `map_concat`. A NULL argument nulls the row;
+  a key repeated across the concatenated maps raises `DUPLICATED_MAP_KEY` with the text
+  `map_from_entries` and `str_to_map` already use; no arguments answer an empty
+  `MAP<STRING,STRING>`. pins: fnp-9-collections-json/C-006
 - `array_sort.rs` — **FN-FIX-1:** `array_sort` NULLs LAST; `sort_array` Spark order
   (asc NULLS FIRST, desc NULLS LAST).
   pins: fn-fix-1-registry-rows/C-002

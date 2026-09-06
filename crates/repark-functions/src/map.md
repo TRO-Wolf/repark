@@ -48,6 +48,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+- `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
+  `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
+  `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`).
+  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005
 - `count_if.rs` — **TYPES-1 (2026-09-05):** SQL-door `count_if` aggregate UDF answering
   `Int64`. pins: types-1/C-003
 - `spark_from_unixtime.rs` — **TYPES-1 (2026-09-05):** SQL-door `from_unixtime`

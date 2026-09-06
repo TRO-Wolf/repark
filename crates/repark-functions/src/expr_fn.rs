@@ -646,3 +646,51 @@ pub fn expm1(arg: Expr) -> Expr {
 pub fn from_unixtime(args: Vec<Expr>) -> Expr {
     call(crate::spark_from_unixtime::from_unixtime_udf(), args)
 }
+
+#[must_use]
+pub fn get_json_object(json: Expr, path: Expr) -> Expr {
+    call(crate::json::get_json_object_udf(), vec![json, path])
+}
+
+#[must_use]
+pub fn json_array_length(json: Expr) -> Expr {
+    call(crate::json::json_array_length_udf(), vec![json])
+}
+
+#[must_use]
+pub fn json_object_keys(json: Expr) -> Expr {
+    call(crate::json::json_object_keys_udf(), vec![json])
+}
+
+#[must_use]
+pub fn schema_of_json(args: Vec<Expr>) -> Expr {
+    call(crate::json::schema_of_json_udf(), args)
+}
+
+#[must_use]
+pub fn to_json(args: Vec<Expr>) -> Expr {
+    call(crate::json::to_json_udf(), args)
+}
+
+#[must_use]
+pub fn from_json(args: Vec<Expr>) -> Expr {
+    call(crate::json::from_json_udf(), args)
+}
+
+#[must_use]
+pub fn array_insert(array: Expr, position: Expr, value: Expr) -> Expr {
+    call(
+        crate::collection::array_insert_udf(),
+        vec![array, position, value],
+    )
+}
+
+#[must_use]
+pub fn arrays_zip(args: Vec<Expr>) -> Expr {
+    call(crate::collection::arrays_zip_udf(), args)
+}
+
+#[must_use]
+pub fn map_concat(args: Vec<Expr>) -> Expr {
+    call(crate::collection::map_concat_udf(), args)
+}
