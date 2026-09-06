@@ -42,9 +42,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the issue text is in the ledger; no dependency changed. Measured before and after on release
   modules: the matrix's only `internal_error` cell is `clean_error` 3/3, the other 17 operators
   at 8 MiB are identical cell for cell, and the `collect` happy path's two five-run distributions
-  overlap. Five mutations, five kills; one of them (a fresh refusal log on the runtime pool swap)
-  was a real defect in this unit's first implementation. `risk_tier: elevated`.
-  Branch `harden/h3-spill-residue-1`.
+  overlap. **Round 2 (2026-09-06)** answered five critic findings, one of them S1: the containment
+  rule was unbounded — an injected `index out of bounds` panic after one refusal came back as a
+  pool refusal — so a fourth gate now requires the payload to be one DataFusion 54.1 can reach on
+  its refusal and spill-fallback paths, cited line by line. The scope claim was corrected rather
+  than the code: the refusal log is session-scoped, not per-stream, and cannot be per-stream. Two
+  more honest-limits disclosures landed: a contained refusal still prints 4 panic blocks to
+  stderr, and `toPandas()` under a 64 MiB address-space headroom aborts the process where
+  `collect()` raises `MemoryError`. Seven mutations, seven kills. `risk_tier: elevated`.
+  Branch `harden/h3-spill-residue-1`, PR #401.
   pins: h3-spill-residue-1/C-001, C-002, C-003, C-004, C-005
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×

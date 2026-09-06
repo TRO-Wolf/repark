@@ -69,7 +69,10 @@ repo.
   `internal_error` cell is gone. `collect()` raises `MemoryError`; a nested-loop join at a bounded
   pool refuses with the same typed exception every other operator gives. The DataFusion defect
   behind the second one is still open upstream — repark reports the pool refusal that caused the
-  panic rather than patching a dependency.
+  panic rather than patching a dependency, and only for the panic payloads that path can produce.
+  Round 2 (2026-09-06) also records what the fix does NOT do: the contained refusal still prints
+  the raw panic to stderr four times, because silencing it would need a process-wide panic hook
+  this library declines to install.
   pins: h3-spill-1/C-005, C-006; h3-spill-residue-1/C-001, C-002, C-003
   **FN-REGEXP-EXTRACT-1 round 2 (2026-09-04):** §7 `FN-REGEX-LOOKAROUND-1` BACKLOG
   (Spark `'bar'` vs repark refusal on every regexp kernel); `FN-REGEX-POSIX-1`

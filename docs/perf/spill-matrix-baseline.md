@@ -23,6 +23,16 @@ under a 64 MiB pool. They do not OOM here because the box is large, not because 
 — though each does return the identical answer digest at every pool, so what the pool does not
 bound, it also does not corrupt.
 
+**And one honest limit the census does not carry.** "No cell aborted" is a statement about these
+180 cells, not about the boundary in general: outside the matrix, `toPandas()` on a 4e6-row frame
+under `RLIMIT_AS` = `VmSize` + 64 MiB **aborts the process** 3/3 — `terminate called after
+throwing an instance of 'std::system_error' … Resource temporarily unavailable`, SIGABRT and a
+core dump — because pyarrow's C++ thread pool cannot create a thread and a C++ exception crosses
+a `noexcept` boundary. It is not repark's panic and no repark code can catch it. At the identical
+ceiling `collect()` raises `MemoryError` 3/3 with an empty stderr, which is the whole difference:
+repark's own row path is contained (§6, `H3-SPILL-COLLECT-1`), and the pyarrow conversion beneath
+`toPandas()` is not.
+
 ## 1. The machine, the module, the method
 
 | | |
@@ -313,9 +323,32 @@ consequence rather than reporting a bug. A bounded session's `FairSpillPool` is 
 which delegates every method — including `Display`, so refusal text is byte-identical — and
 records the `try_grow` refusals. The Arrow export reader keeps the refusal count it opened with;
 when a poll comes back as a *fenced panic* AND the pool has refused since, it reports the
-engine's own refusal text plus one disclosure line instead of the internal error. Three gates
-keep it narrow: only a fenced panic, only after a refusal on that reader's own stream, and never
-on an unbounded session (which installs no log at all).
+engine's own refusal text plus one disclosure line instead of the internal error.
+
+**Four** gates keep it narrow, and the fourth exists because the first three did not. Round 1
+shipped three — a fenced panic, a refusal since the reader opened, a bounded session — and the
+critic killed the rule by injecting `panic!("index out of bounds …")` after one refusal and
+watching it come back as `Resources exhausted … fair(pool_size …)`. The fix is an allow-list of
+the panics DataFusion 54.1 can actually reach on its pool-refusal and spill-fallback paths, each
+read from the vendored source and cited line by line in
+[../../crates/repark-python/src/map.md](../../crates/repark-python/src/map.md); a payload that is
+not on it stays the bug report it is, and both directions are pinned.
+
+**What "after a refusal" means, exactly.** `PoolRefusalLog` is **session-scoped**: the gate is a
+counter delta between the reader's open and the failing poll, over the pool the *session* owns.
+It is not per-stream, and it cannot be — `MemoryPool::try_grow` receives a `MemoryReservation`,
+not a stream identity — so a refusal raised by another query on the same session, or by a
+successful spilling query (which refuses and then spills, by design), also arms the rewrite. That
+is why the allow-list carries the weight: the counter says *a refusal happened here*, and the
+allow-list says *this panic is one the refusal path can produce*.
+
+**The exception is clean; the console is not.** The panic unwinds through DataFusion before
+repark converts it, so Rust's default hook prints it first: 4 `thread 'tokio-rt-worker' …
+panicked at …/repartition/mod.rs:1277` blocks, one per output partition, 13 stderr lines in all
+(measured 2026-09-06). A process-wide `std::panic::set_hook` would silence them, and repark
+declines to install one: it is a library inside someone else's Python process, and a global hook
+would outrank the host application's. The noise is disclosed here instead, and it ends when the
+upstream defect does.
 
 **Measured, 2026-09-06, release module, one fresh subprocess per cell:**
 

@@ -5768,12 +5768,19 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 ### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
-  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` now fails with the same typed
-  refusal every other operator gives: `PySparkException: Resources exhausted: Failed to allocate
-  additional 1024.2 KB for NestedLoopJoinLoad[2] with 7.0 MB already allocated for this
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` now raises the same typed
+  refusal **exception** every other operator gives: `PySparkException: Resources exhausted: Failed
+  to allocate additional 1024.2 KB for NestedLoopJoinLoad[2] with 7.0 MB already allocated for this
   reservation - 1022.7 KB remain available for the total memory pool: fair(pool_size: 8.0 MB)`,
   followed by the containment disclosure and the two resize knobs. A 1 GiB pool on the same query
   is still `ok`, and the other 17 operators at the same 8 MiB pool are unchanged.
+  **The exception is clean; the console is not.** The panic still unwinds through DataFusion
+  before repark converts it, so Rust's default hook prints it first: **4 `thread
+  'tokio-rt-worker' … panicked at …/repartition/mod.rs:1277` blocks on stderr**, one per output
+  partition, 13 stderr lines in all (measured 2026-09-06). repark declines to install a process-
+  wide `std::panic::set_hook` to swallow them — it is an embedded library and the hook would
+  outrank the host application's own — so the noise is disclosed rather than hidden. It goes away
+  when the upstream defect does.
   **The defect is still upstream and unfixed.** DataFusion 54.1's `NestedLoopJoinExec` executes
   partition 0 of its build (left) child once in `execute` (`build_side_data.try_once`), and then,
   when that in-memory load is refused by the pool, `initiate_fallback` executes **the same child
@@ -5783,9 +5790,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`. repark may not patch a
   dependency, so it contains the consequence instead: a bounded session's `FairSpillPool` is
   wrapped in `RefusalRecordingPool`, and when the Arrow export reader catches a fenced panic that
-  a recorded pool refusal preceded, it reports the refusal rather than a bug. Three gates keep
-  that narrow — only a fenced panic, only after a refusal recorded on that reader's own stream,
-  and never on an unbounded session.
+  a recorded pool refusal preceded, it reports the refusal rather than a bug. **Four** gates keep
+  that narrow: the item is a fenced panic; its payload is one of the panics DataFusion 54.1 can
+  reach on its pool-refusal and spill-fallback paths (an allow-list cited line by line in
+  `crates/repark-python/src/map.md`); **the session's pool recorded a refusal since the reader
+  opened** — the log is session-scoped, not per-stream, because `MemoryPool` carries no stream
+  identity, and a successful spilling query records refusals too, so the allow-list is what keeps
+  the rule bounded; and the session is bounded at all. An unrelated fenced panic after a refusal
+  — an injected `index out of bounds`, say — is still reported as the bug it is, and that
+  direction is pinned.
 - **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
   raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
   is the failure shape, not a value. The measured Spark comparison cells on the same fixture are

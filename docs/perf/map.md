@@ -117,7 +117,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   re-run before and after to show the other 17 operators cell-for-cell identical, and the
   `collect` happy path carries five facade-bench medians per module rather than one.
   The 180-cell tables are NOT re-run — they stay the 2026-09-05 measurement, with the one
-  moved cell called out where it appears. pins: h3-spill-residue-1/C-001, C-002, C-003
+  moved cell called out where it appears. **Round 2 (2026-09-06)** added three honest limits §6
+  and §1 did not carry: the containment's fourth gate and why three were not enough, that the
+  refusal log is session-scoped rather than per-stream (and cannot be), the four stderr panic
+  blocks a contained refusal still prints, and — outside the 180 cells — `toPandas()` under a
+  64 MiB address-space headroom aborting the process 3/3 where `collect()` raises `MemoryError`
+  3/3 at the identical ceiling. pins: h3-spill-residue-1/C-001, C-002, C-003
   Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
   64 MiB) x 2 scales (1e6 / 1e7 wide rows, so 1e7 exceeds 1 GiB) = **180 cells, each in a fresh
   subprocess on a release module**, classified `ok` / `spilled` / `degraded` / `clean_error` /
