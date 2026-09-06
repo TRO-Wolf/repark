@@ -6,7 +6,7 @@ twelve new examples under `docs/examples/{io,session,dataframe}/`, every asserte
 measured on live PySpark 4.1.2 (ANSI on, UTC) or — for the repark-only names — on repark's
 documented answer. Seventeen roster names keep their prior stays rows
 (EX-DF/EX-CAT/EX-W2/EX-DF-19); the four excel names stay with the new §7 EX-IO-7 row, and
-ten new rows (EX-IO-1..9, EX-SES-6) pin the diverged arms of covered names, with eleven
+eleven new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
 tests in `python/repark/tests/test_examples_io_session.py`. Red-first: 29 has-no-example
 findings with the files held out (exit 1), and a wrong-bytes control in `writer_csv.py`
 failed the execute leg by name (exit 1).

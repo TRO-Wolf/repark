@@ -108,9 +108,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   by twelve new `docs/examples/{io,session,dataframe}/` files (backlog 193 → 164;
   `BACKLOG_BASELINE` 193 → 164), every asserted value measured on live PySpark 4.1.2 (ANSI on,
   UTC) or on repark's documented answer for the repark-only names; seventeen roster names keep
-  their prior stays rows and the four excel names stay with the new §7 EX-IO-7 row, while ten
-  new rows (EX-IO-1..9, EX-SES-6) pin the diverged arms of covered names, with eleven tests in
-  `test_examples_io_session.py` (plus a dated EX-SES-1 Spark-half correction). Red-first: 29
+  their prior stays rows and the four excel names stay with the new §7 EX-IO-7 row, while eleven
+  new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
+  tests in `test_examples_io_session.py` (plus a dated EX-SES-1 Spark-half correction). Red-first: 29
   has-no-example findings with the files held out (exit 1), and the wrong-bytes control in
   `writer_csv.py` failed the execute leg by name (exit 1). `risk_tier: standard`. Branch
   `docs/ex-26-io-session`.
