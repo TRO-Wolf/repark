@@ -253,7 +253,6 @@ def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
 
 
 _CSV_PROMOTE_CANDIDATES: tuple[str, ...] = ("bigint", "double", "boolean", "timestamp", "date")
-_CSV_STRING_PROMOTE_WIDTH = 4
 _CSV_TYPED_DTYPES: frozenset[str] = frozenset(
     {
         "timestamp",
@@ -268,7 +267,7 @@ _CSV_TYPED_DTYPES: frozenset[str] = frozenset(
 )
 
 
-def _leftover_candidates_for(dtype: str, column_count: int) -> tuple[str, ...] | None:
+def _leftover_candidates_for(dtype: str) -> tuple[str, ...] | None:
     """Return try_cast candidates for a native-inferred leftover string column."""
     if dtype in {"bigint", "int"}:
         return ("bigint", "double")
@@ -280,7 +279,7 @@ def _leftover_candidates_for(dtype: str, column_count: int) -> tuple[str, ...] |
         return ("timestamp",)
     if dtype == "date":
         return ("timestamp", "date")
-    if dtype == "string" and column_count <= _CSV_STRING_PROMOTE_WIDTH:
+    if dtype == "string":
         return ("bigint", "double")
     return None
 
@@ -316,7 +315,7 @@ def _finish_csv_infer_schema(
     for name, dtype in dict(frame.dtypes).items():
         if dtype != "string":
             continue
-        leftover = _leftover_candidates_for(original.get(name, "string"), len(original))
+        leftover = _leftover_candidates_for(original.get(name, "string"))
         if leftover is not None:
             candidates_by_name[name] = leftover
     if candidates_by_name:

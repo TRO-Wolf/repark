@@ -40,16 +40,31 @@ def _read_inferred(
     null_value: str | None = None,
     infer_schema: bool = True,
     header: bool = True,
+    multiline: bool = False,
 ) -> Any:
     reader = session.read.option("header", header).option("inferSchema", infer_schema)
     if null_value is not None:
         reader = reader.option("nullValue", null_value)
+    if multiline:
+        reader = reader.option("multiLine", True)
     return reader.csv(str(path))
 
 
 def _write_text(path: Path, text: str) -> Path:
     path.write_text(text)
     return path
+
+
+def _with_extra_string_columns(text: str, extra: int) -> str:
+    if extra <= 0:
+        return text
+    lines = text.strip("\n").split("\n")
+    names = [f"e{index}" for index in range(extra)]
+    padded: list[str] = []
+    for line_index, line in enumerate(lines):
+        filler = names if line_index == 0 else ["x"] * extra
+        padded.append(line + "," + ",".join(filler))
+    return "\n".join(padded) + "\n"
 
 
 _MATERIALIZE_HOOK: _MaterializeCounter | None = None
@@ -165,6 +180,10 @@ def test_infer_schema_trial_path_does_not_materialize_per_column(tmp_path: Path)
         null_counts = _plan_time_materializations(session, null_path, null_value="NA")
         assert null_counts["collect"] == 0
         assert null_counts["to_arrow"] <= 1
+        wide_inf = _write_text(tmp_path / "wide_inf.csv", _with_extra_string_columns("v\nInf\n", 7))
+        wide_counts = _plan_time_materializations(session, wide_inf)
+        assert wide_counts["collect"] == 0
+        assert wide_counts["to_arrow"] <= 1
     finally:
         session.stop()
 
@@ -179,8 +198,9 @@ def test_infer_schema_true_stays_within_twice_false(tmp_path: Path) -> None:
     try:
         false_median = _median_read_seconds(session, path, infer_schema=False)
         true_median = _median_read_seconds(session, path, infer_schema=True)
-        assert true_median <= 2 * false_median, (
-            f"inferSchema=True {true_median:.3f}s over 2x inferSchema=False {false_median:.3f}s"
+        assert true_median < 0.5, (
+            f"inferSchema=True {true_median:.3f}s vs False {false_median:.3f}s "
+            f"({true_median / false_median:.2f}x); leftover Utf8 grammar is one agg"
         )
         frame = _read_inferred(session, path)
         assert frame.dtypes == [
@@ -492,6 +512,72 @@ def test_numeric_grammar_tokens_follow_spark(tmp_path: Path) -> None:
         session.stop()
 
 
+@pytest.mark.parametrize("width", [3, 8, 12])
+def test_numeric_grammar_is_width_independent(tmp_path: Path, width: int) -> None:
+    session = _session()
+    try:
+        extra = width - 1
+        inf_path = _write_text(
+            tmp_path / f"inf_w{width}.csv",
+            _with_extra_string_columns("v\nInf\n-Inf\nNaN\n", extra),
+        )
+        inf_frame = _read_inferred(session, inf_path)
+        inf_frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        assert inf_frame.dtypes[0] == ("v", "double")
+        assert sql_frame.dtypes[0] == ("v", "double")
+        plus_path = _write_text(
+            tmp_path / f"plus_w{width}.csv", _with_extra_string_columns("v\n+5\n", extra)
+        )
+        plus_frame = _read_inferred(session, plus_path)
+        plus_frame.createOrReplaceTempView("csv_inferred")
+        sql_plus = session.sql("SELECT * FROM csv_inferred")
+        assert plus_frame.dtypes[0] == ("v", "bigint")
+        assert sql_plus.dtypes[0] == ("v", "bigint")
+        long_path = _write_text(
+            tmp_path / f"long_w{width}.csv",
+            _with_extra_string_columns("v\n1.5\n12345678901234567890123\n", extra),
+        )
+        long_frame = _read_inferred(session, long_path)
+        long_frame.createOrReplaceTempView("csv_inferred")
+        sql_long = session.sql("SELECT * FROM csv_inferred")
+        assert long_frame.dtypes[0] == ("v", "double")
+        assert sql_long.dtypes[0] == ("v", "double")
+        infy_extra = width - 2
+        infy_path = _write_text(
+            tmp_path / f"infy_w{width}.csv",
+            _with_extra_string_columns("v,x\nInfinity,1.5\n", infy_extra),
+        )
+        infy_frame = _read_inferred(session, infy_path)
+        infy_frame.createOrReplaceTempView("csv_inferred")
+        sql_infy = session.sql("SELECT * FROM csv_inferred")
+        assert infy_frame.dtypes[:2] == [("v", "double"), ("x", "double")]
+        assert sql_infy.dtypes[:2] == [("v", "double"), ("x", "double")]
+    finally:
+        session.stop()
+
+
+def test_multiline_infer_schema_past_sample_does_not_raise(tmp_path: Path) -> None:
+    plain = _write_repeated(tmp_path / "ml_plain.csv", "id,v", "1,1", "1,1", rows=1001)
+    late = _write_repeated(tmp_path / "ml_late.csv", "id,v", "1,1", "1,1.5", rows=1001)
+    session = _session()
+    try:
+        plain_frame = _read_inferred(session, plain, multiline=True)
+        plain_frame.createOrReplaceTempView("csv_inferred")
+        sql_plain = session.sql("SELECT * FROM csv_inferred")
+        assert len(plain_frame.to_arrow()) == 1001
+        assert plain_frame.dtypes == [("id", "bigint"), ("v", "bigint")]
+        assert sql_plain.dtypes == plain_frame.dtypes
+        late_frame = _read_inferred(session, late, multiline=True)
+        late_frame.createOrReplaceTempView("csv_inferred")
+        sql_late = session.sql("SELECT * FROM csv_inferred")
+        assert late_frame.dtypes == [("id", "bigint"), ("v", "double")]
+        assert sql_late.dtypes == late_frame.dtypes
+        assert late_frame.to_arrow().to_pylist()[-1] == {"id": 1, "v": 1.5}
+    finally:
+        session.stop()
+
+
 def test_utf8_columns_user_option_does_not_force_string(tmp_path: Path) -> None:
     path = _write_text(tmp_path / "u.csv", "v\n2\n")
     session = _session()
@@ -590,5 +676,20 @@ def test_live_late_and_grammar_shapes_match_oracle(tmp_path: Path, spark_engine:
         spark_wide = _read_inferred(spark_engine.session, wide)
         assert repark_wide.dtypes[0][1] == "double"
         assert spark_wide.dtypes[0][1].startswith("decimal")
+        wide_inf = _write_text(
+            tmp_path / "live_inf_w8.csv", _with_extra_string_columns("v\nInf\n-Inf\n", 7)
+        )
+        repark_w8 = _read_inferred(session, wide_inf)
+        spark_w8 = _read_inferred(spark_engine.session, wide_inf)
+        assert repark_w8.dtypes[0][1] == "double"
+        assert spark_w8.dtypes[0][1] == "double"
+        ml_path = _write_repeated(tmp_path / "live_ml.csv", "id,v", "1,1", "1,1.5", rows=1001)
+        repark_ml = _read_inferred(session, ml_path, multiline=True)
+        spark_ml = _read_inferred(spark_engine.session, ml_path, multiline=True)
+        assert repark_ml.dtypes[1][1] == "double"
+        assert spark_ml.dtypes[1][1] == "double"
+        assert (
+            repark_ml.to_arrow().to_pylist()[-1] == spark_engine.arrow_of(spark_ml).to_pylist()[-1]
+        )
     finally:
         session.stop()

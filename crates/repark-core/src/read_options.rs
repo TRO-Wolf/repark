@@ -157,7 +157,7 @@ pub(crate) async fn read_csv_path(
 ) -> Result<DataFrame> {
     let mut csv_options = csv_read_options_from_map(options)?;
     // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.
-    let utf8_schema = if csv_force_utf8_schema(options) {
+    let utf8_schema = if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") {
         csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
     } else {
         None
@@ -169,6 +169,9 @@ pub(crate) async fn read_csv_path(
         .read_csv(path, csv_options.clone())
         .await
         .map_err(engine_err)?;
+    if utf8_schema.is_some() {
+        return Ok(frame);
+    }
     match csv_utf8_column_schema(options, frame.schema().as_ref()) {
         None => Ok(frame),
         Some(schema) => context

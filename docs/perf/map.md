@@ -165,9 +165,10 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   canonical fold's cost, not a re-derivation of the same kernel.
   pins: perf-approxpct-1/C-004
 - [csv-infer-baseline.md](csv-infer-baseline.md) — **CSV-INFER-PERF-1 (2026-09-06):**
-  local CSV `inferSchema` before/after on a 300k × 8 file (True 2.339 s → 0.079 s,
-  plan-time `to_arrow` 34 → 0). Native inference plus Utf8-only timestamp columns;
-  `nullValue` keeps one `try_cast` aggregation.
+  local CSV `inferSchema` before/after on a 300k × 8 file (True 2.339 s → 0.155 s,
+  plan-time `to_arrow` 34 → 1, True/False **2.01×**). Leftover numeric grammar at
+  every width; `multiLine` re-read is infer-free. `nullValue` keeps one `try_cast`
+  aggregation.
   pins: csv-infer-perf-1/C-001, C-005, C-006
 
 ## Pointers

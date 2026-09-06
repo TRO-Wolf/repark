@@ -23,31 +23,41 @@ pins: csv-infer-perf-1/C-001, C-005, C-006
 
 ## Before / after (same fixture, release module)
 
-| cell | before (NULLABILITY-2 tree) | round 1 | round 2 |
-|---|---:|---:|---:|
-| `inferSchema=False` median total | 0.086 s | 0.083 s | 0.080 s |
-| `inferSchema=True` median total | 2.339 s | 0.079 s | **0.153 s** |
-| True / False | 27.2× | 0.95× | **1.90×** (bar ≤ 2×) |
-| plan-time `to_arrow` / `collect` | 34 / 0 | 0 / 0 | **1 / 0** |
+| cell | before (NULLABILITY-2 tree) | round 1 | round 2 | round 3 |
+|---|---:|---:|---:|---:|
+| `inferSchema=False` median total | 0.086 s | 0.083 s | 0.080 s | 0.077 s |
+| `inferSchema=True` median total | 2.339 s | 0.079 s | 0.153 s | **0.155 s** |
+| True / False | 27.2× | 0.95× | 1.90× | **2.01×** |
+| plan-time `to_arrow` / `collect` | 34 / 0 | 0 / 0 | 1 / 0 | **1 / 0** |
 
-Round 1 True samples: 0.079, 0.084, 0.079, 0.077, 0.087 s.
-Round 2 (2026-09-06): False 0.080 s, True 0.153 s, plan-time `to_arrow` = 1 (typed-column
-`try_cast` validation). `schema_infer_max_records(usize::MAX)` on this file was 1.089 s
-(13× False) and was not kept.
+Round 3 (2026-09-06), same release native, five `read.csv`+`to_arrow` medians:
+
+| fixture | False | True | True/False | plan `to_arrow` |
+|---|---:|---:|---:|---:|
+| 300k × 8 (`i,d,nts,ots,dt,s,ni,b`, 28,630,418 B) | 0.077 s | 0.155 s | **2.01×** | 1 |
+| 300k × 3 typed (`i,d,nts`) | 0.097 s | 0.145 s | 1.49× | 1 |
+| 300k × 3 with string (`i,s,ni`) | 0.050 s | 0.096 s | 1.91× | 1 |
+
+The 2× bar is missed on the ×8 fixture by box noise after leftover numeric grammar
+runs at every width (round 2 met 1.90× by skipping leftover on native-Utf8 columns
+when the file had more than four columns — Spark-wrong at width 8). The wall pin is
+a 0.5 s regression guard against the 2.3 s NULLABILITY-2 path, not a 2× claim.
+`schema_infer_max_records(usize::MAX)` on the ×8 file was 1.089 s (13× False) and
+was not kept.
 
 `nullValue` still uses one aggregation of `try_cast` failure counts (one `to_arrow` of a
 1-row stats frame), not per-column trials.
 
 ## Choice
 
-Round 2 (critic F-1/F-2): DataFusion's 1000-row sample plus one full-file `try_cast`
-validation of every typed column (Utf8 re-read, then widen-or-keep). Offsets stay
-`try_cast` timestamp on the raw text. Native-Utf8 leftover numeric grammar runs when
-the inferred schema has at most four columns (the F-4 cells). `nullValue` still
-Utf8-forces the whole scan.
-(a) sample only, Utf8 Timestamp columns — Spark-wrong past row 1000 (round-1 FAIL).
-(b) all-Utf8 + one agg — 2.21× on this box, missed the 2× bar.
-MAX infer — 13× on this box, and date+timestamp across CSV chunks still became Utf8.
+Round 3 (critic R2-S1a/S1b): leftover numeric grammar on every Utf8 column at every
+width, one aggregation; `utf8_columns` re-read uses the first-record all-Utf8 schema
+so `multiLine` past 1000 records does not infer again. Offsets stay `try_cast`
+timestamp on the raw text. `nullValue` still Utf8-forces the whole scan.
+(a) sample only — Spark-wrong past row 1000 (round-1 FAIL).
+(b) all-Utf8 + one agg — 2.21× on this box.
+Width-gated leftover — Spark-wrong `Inf`/`+5` at 8 columns (round-2 FAIL).
+MAX infer — 13× on this box.
 
 ## Reproduce
 

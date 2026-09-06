@@ -507,9 +507,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
-  plan-time `to_arrow`/`collect` stay 0 on an int-only inferSchema and ≤ 1 when leftover
-  strings or `nullValue` need one `try_cast` aggregation; wall pin `inferSchema=True` ≤ 2×
-  `False` on a 300k × 8 CSV (release only);
+  plan-time `to_arrow`/`collect` stay ≤ 1 on inferSchema (one `try_cast` aggregation)
+  and 0 when `inferSchema=False`; wall pin on a 300k × 8 CSV is a 0.5 s regression
+  guard (release only) — the 2× bar is measured in `docs/perf/csv-infer-baseline.md`
+  and is not met by skipping leftover grammar on wide frames;
   11 Spark-equal shapes the prior suite lacked (int-then-double, late-bad-int, 007,
   NA-without-nullValue, bool, string, offset, Z, date, `nullValue` date/timestamp) on the
   DataFrame door and the temp-view SQL door; live leg vs PySpark 4.1.2 (007 width stays
@@ -519,6 +520,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `header=False` × offset × `America/New_York`; `Inf`/`NaN`/`Infinity`/`+5`/23-digit;
   `utf8_columns` ignored; `csv(path)` does not store `path` for a later `load()`;
   empty columns are `string` not `void`; 20-digit integers stay `double` (Spark `decimal`).
+  **Round 3:** leftover numeric grammar is width-independent (`Inf`/`+5`/23-digit at 3, 8,
+  and 12 columns, both doors); `multiLine` + `inferSchema` past 1000 records does not
+  raise; plan-time `to_arrow` stays ≤ 1 on an 8-column `Inf` file.
   pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
