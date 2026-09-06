@@ -60,6 +60,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
+- [test_dynflatten_listnull.py](test_dynflatten_listnull.py) — **DYNFLATTEN-LISTNULL-1
+  (2026-09-06):** parquet `list<null>` (`int32` physical + Null logical) reads as
+  `list<int32>` on both DataFrame doors (`read.parquet` and `read_parquet`); default
+  `dynamicFlatten` keeps the column as nullable `int32` NULLs (one per parent);
+  `make_array()` / ARRAY<VOID> still drops under `drop_null_lists=True`. Live co-collect
+  is `test_parity_live_dynflatten.py`. Mutation: skip `promote_parquet_null_types` and
+  the read/flatten pins red. Registry row FIXED; bench `createDataFrame` load path still
+  drops ARRAY<VOID>; struct-only bed shapes unchanged.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_dynflatten_null_mask.py](test_dynflatten_null_mask.py) — **PERF-DYNFLATTEN-2
   (2026-09-04):** the before/after correctness pin, one row per bed shape. `ROWS` holds,
   per shape, the row count, the Arrow schema string (names, types, nullability) and the
@@ -100,10 +109,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the `createDataFrame` path the bench measures. 17 passed / 105 deselected, unchanged.
   **CUTOVER-SCHEMA-1 (2026-09-04):** the reader relax converged the row — repark `id` now
   nullable like Spark, so the pin asserts `True` on both sides. DYNFLATTEN-READNULL-1 FIXED.
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06):** the list shapes now compare the full frame, including
+  `user_properties` as nullable `int32` (Spark's parquet reader; repark promotes Null logical
+  type the same way). `struct_d3` was already equal.
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: perf-dynflatten-2-null-mask/C-004
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: cutover-schema-1/C-001
+  pins: dynflatten-listnull-1/C-004
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -1226,12 +1239,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `small()` scale (64 rows / seed 42 — never the 1M CLI default), written to `tmp_path` and
   read back through the facade; the generator table is the oracle, assertions are Arrow
   value+type. **nested** (the held DS-1 pins, landed on #154): parquet keeps the capitalized
-  nested schema incl. `array<void>`; string-form / casefold / `F.col` / getitem
+  nested schema incl. parquet `user_properties` as `list<int32>`; string-form / casefold / `F.col` / getitem
   `explode('Legs')`; `explode_outer` keeps null+empty rows on the scalar-element lists
   (`Tags`/`Scores`) **and** on `array<struct>` `Legs` (DF-2 flipped the refuse pin
   in place); `dynamicFlatten` struct unnest with parent-path prefixes and full-depth
-  in-place column order (13 columns; row count is the outer-explode cartesian — see
-  `_nested_full_flatten_rows`) with the null-typed list dropped; the BUG-CANDIDATE that
+  in-place column order (14 columns; row count is the outer-explode cartesian — see
+  `_nested_full_flatten_rows`) with parquet `user_properties` kept as nullable int32
+  (DYNFLATTEN-LISTNULL-1); the BUG-CANDIDATE that
   pinned `count()` failing inside `push_down_leaf_projections` on that full-depth plan is
   FLIPPED IN PLACE (DEFECT-2, 2026-08-18): `test_nested_dynamic_flatten_count_action_is_green`
   now pins `count() == to_arrow().num_rows` plus a narrowing `select`. **schema_inference** POLICY:

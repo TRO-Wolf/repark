@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repark.dev/sepmo/packets/packet.schema.json",
+  "title": "SEPMO compact worker packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "packet_version",
+    "identity",
+    "source_identity",
+    "authority",
+    "scope",
+    "implementation_context",
+    "verification",
+    "permissions_and_resources",
+    "handoff",
+    "stable_prefix",
+    "dynamic_markdown"
+  ],
+  "properties": {
+    "packet_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Packet format version. Stable prefix layout is bound to this value."
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "role",
+        "attempt",
+        "packet_format_version",
+        "task_reference",
+        "adapter"
+      ],
+      "properties": {
+        "unit": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "enum": ["actor", "critic"] },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "packet_format_version": { "type": "string", "const": "1" },
+        "task_reference": { "type": "string", "minLength": 1 },
+        "adapter": {
+          "type": "string",
+          "enum": ["muse", "grok", "glm", "opus"]
+        }
+      }
+    },
+    "source_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "base_revision",
+        "working_diff_identity",
+        "untracked_inputs",
+        "brief_hash"
+      ],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "base_revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "Base git revision the unit is built on."
+        },
+        "working_diff_identity": {
+          "type": "string",
+          "description": "Identity of the working tree diff at assembly. Empty when unknown."
+        },
+        "untracked_inputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "brief_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the sanitized brief bytes used at assembly."
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "binding_version",
+        "source_references",
+        "constraints"
+      ],
+      "properties": {
+        "contract": { "type": "string", "minLength": 1 },
+        "binding_version": { "type": "string", "minLength": 1 },
+        "source_references": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "Verbatim stable-prefix rules. A dropped rule fails check."
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "objective",
+        "requirement_ids",
+        "acceptance_criteria",
+        "exclusions"
+      ],
+      "properties": {
+        "objective": { "type": "string" },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "acceptance_criteria": { "type": "string" },
+        "exclusions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "implementation_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relevant_files",
+        "callers",
+        "interfaces",
+        "dependency_decisions",
+        "known_traps"
+      ],
+      "properties": {
+        "relevant_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "callers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "interfaces": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "dependency_decisions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "known_traps": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commands",
+        "behavioral_cases",
+        "oracle_requirements",
+        "evidence_destinations"
+      ],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "behavioral_cases": { "type": "string" },
+        "oracle_requirements": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence_destinations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "permissions_and_resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorized_actions",
+        "ownership_boundaries",
+        "resource_limits",
+        "escalation_conditions"
+      ],
+      "properties": {
+        "authorized_actions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ownership_boundaries": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "resource_limits": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "escalation_conditions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_output_fields",
+        "unresolved_decisions",
+        "dependency_consumers"
+      ],
+      "properties": {
+        "expected_output_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "unresolved_decisions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "dependency_consumers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "stable_prefix": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact markdown prefix. Must be byte-identical across units."
+    },
+    "dynamic_markdown": {
+      "type": "string",
+      "description": "Unit-specific markdown that follows the stable prefix."
+    }
+  }
+}
