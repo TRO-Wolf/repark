@@ -85,7 +85,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split by function family while preserving the public re-export surface.",
     ),
     "python/repark/src/repark/spark/functions_expr.py": (
-        2259,
+        2258,
         "Expression-building function families share one module.",
         "Split string, collection, or predicate expression families.",
     ),
