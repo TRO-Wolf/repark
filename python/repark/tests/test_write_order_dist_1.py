@@ -72,13 +72,22 @@ def _metadata_count(warehouse: Path, table: str) -> int:
 
 
 def _write_state(warehouse: Path, table: str) -> tuple[list[dict], int, str | None]:
-    meta = _metadata(warehouse, table)
+    return _state_of(_metadata(warehouse, table))
+
+
+def _state_of(meta: dict) -> tuple[list[dict], int, str | None]:
     orders = sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"])
     return (
         orders,
         meta.get("default-sort-order-id", -1),
         meta.get("properties", {}).get("write.distribution-mode"),
     )
+
+
+def _current_metadata(engine: ReparkSession, table: str) -> dict:
+    rows = engine.sql(f"SELECT file FROM {table}.metadata_log_entries").to_arrow().to_pylist()
+    with Path(rows[-1]["file"]).open() as handle:
+        return json.load(handle)
 
 
 def _data_files(engine: ReparkSession, table: str) -> list:
@@ -292,8 +301,8 @@ def test_write_ordered_merge_writes_sorted_files(tmp_path: Path) -> None:
         engine.stop()
 
 
-def test_write_ordered_ctas_replace_writes_sorted_files(tmp_path: Path) -> None:
-    """C-010: range keeps the CTAS at one sorted file per partition value."""
+def test_write_ordered_ctas_replace_keeps_hash_layout_and_resets_order(tmp_path: Path) -> None:
+    """C-010: replace keeps the hash layout and resets the default order, like Spark."""
     warehouse = tmp_path / "wh"
     source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("wo-sorted-ctas", warehouse)
@@ -307,9 +316,20 @@ def test_write_ordered_ctas_replace_writes_sorted_files(tmp_path: Path) -> None:
         ).collect()
         files = _data_files(engine, f"{CATALOG}.w.t")
         assert len(files) == PARTITION_VALUES, [f["record_count"] for f in files]
-        for row in files:
-            count, monotone = _is_monotone(row["file_path"], "id")
-            assert monotone, (row["file_path"], count)
+        assert sum(f["record_count"] for f in files) == SEED_ROWS
+        meta = _current_metadata(engine, f"{CATALOG}.w.t")
+        orders, default, dist = _state_of(meta)
+        assert len(orders) == 2, (orders, default, dist)
+        assert default == 0, (orders, default, dist)
+        assert dist == "range", (orders, default, dist)
+        assert orders[1]["fields"] == [
+            {
+                "transform": "identity",
+                "source-id": 1,
+                "direction": "asc",
+                "null-order": "nulls-first",
+            }
+        ], orders
     finally:
         engine.stop()
 

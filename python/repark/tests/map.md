@@ -1921,10 +1921,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   four-file seed for the layout and sortedness pins. Always-run: each form's `metadata.json`
   transition (sort orders, default id, `write.distribution-mode` — `WRITE ORDERED BY` on v2
   and v3), the bad-column and malformed-shape refusals committing no metadata version, `none`
-  CTAS writing writers × values against `hash`'s one file per value, and monotone parquet per
-  file after `WRITE ORDERED BY` on INSERT OVERWRITE, MERGE, and CTAS replace. Live
-  (`REPARK_PARITY_LIVE=1`): the same five statements on both engines leave equal sort orders,
-  default ids, and distribution properties.
+  CTAS writing writers × values against `hash`'s one file per value, monotone parquet per
+  file after `WRITE ORDERED BY` on INSERT OVERWRITE and MERGE, and the CTAS-replace shape the
+  oracle measured: the replace keeps one file per value and the `range` property, keeps the
+  order list, and resets the default order to 0 — so its files are Spark's unsorted hash
+  layout, not sorted files (the current metadata resolves through `metadata_log_entries`,
+  whose last row is the current file, because a replace restarts version numbering and a
+  name-sorted read goes stale). Live (`REPARK_PARITY_LIVE=1`): the same five statements on
+  both engines leave equal sort orders, default ids, and distribution properties.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
