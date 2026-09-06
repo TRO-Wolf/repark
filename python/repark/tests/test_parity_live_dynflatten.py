@@ -68,7 +68,8 @@ def test_live_dynflatten_matches_spark_explode(
     tmp_path: Path,
     spark_engine: lp.Engine,
 ) -> None:
-    """pins: perf-dynflatten-1-measure/C-002, C-003 DYNFLATTEN-LISTNULL-1 DYNFLATTEN-READNULL-1"""
+    """pins: perf-dynflatten-1-measure/C-002, C-003 DYNFLATTEN-LISTNULL-1 DYNFLATTEN-READNULL-1
+    pins: dynflatten-listnull-1/C-004"""
     from repark import ReparkSession
     from repark.spark.session import _reset_active_session_for_tests
 
@@ -89,13 +90,11 @@ def test_live_dynflatten_matches_spark_explode(
 
     left = _dynflatten_utf8(repark_table)
     right = _dynflatten_utf8(spark_table)
-    if shape_name == "struct_d3":
-        assert_frames_equal(left, right, order_sensitive=False)
-        return
-    assert "user_properties" not in left.column_names
-    assert "user_properties" in right.column_names
-    assert right.schema.field("user_properties").type == pa.int32()
-    assert left.schema.field("id").nullable is True
-    assert right.schema.field("id").nullable is True
-    widened = left.cast(pa.schema([field.with_nullable(True) for field in left.schema]))
-    assert_frames_equal(widened, right.drop(["user_properties"]), order_sensitive=False)
+    if shape_name != "struct_d3":
+        assert "user_properties" in left.column_names
+        assert "user_properties" in right.column_names
+        assert left.schema.field("user_properties").type == pa.int32()
+        assert right.schema.field("user_properties").type == pa.int32()
+        assert left.schema.field("id").nullable is True
+        assert right.schema.field("id").nullable is True
+    assert_frames_equal(left, right, order_sensitive=False)

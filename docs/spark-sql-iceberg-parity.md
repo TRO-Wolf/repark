@@ -4348,17 +4348,26 @@ Shared roster pin for every heading:
 
 ### DYNFLATTEN-LISTNULL-1 — Spark keeps a null-typed list as `int32 user_properties`; repark drops it
 
-- **repark** — `dynamicFlatten(drop_null_lists=true)` drops `array<void>` `user_properties`.
-  After flatten, `list_struct_1` is `(id int64, Legs_leg_id int64, Legs_Name string)`;
-  `cartesian_two_lists` adds `Tags string`. Struct-only shapes match Spark.
-- **Apache Spark** — `explode_outer` on the same parquet infers `user_properties` as
-  nullable `int32` and keeps the column. Value columns otherwise match after that drop.
-  *(oracle: live — PySpark 4.1.2, 2026-09-04,
-  `test_live_dynflatten_matches_spark_explode[list_struct_1]`.)*
+- **repark** — **FIXED 2026-09-06 (DYNFLATTEN-LISTNULL-1).** `read.parquet` of a parquet
+  `list<null>` column (`optional int32 element (Null)` in the file footer) now reports
+  `array<int>` the way Spark does, so default `dynamicFlatten` keeps `user_properties` as
+  nullable `int32` NULLs (one row per parent; NULL and EMPTY lists both explode-outer to
+  NULL). `drop_null_lists=True` is unchanged and still drops an actual SQL / createDataFrame
+  `array<void>` (`make_array()`). Struct-only shapes still match. The bench's
+  `createDataFrame(ARRAY<VOID>)` load path still drops the column; the live pin is
+  `read.parquet` on both engines.
+- **Apache Spark** — parquet read infers `user_properties` as `array<int>` (`IntegerType`,
+  `containsNull=true`, column nullable); `explode_outer` yields nullable `int32` with one
+  NULL per parent. Measured PySpark 4.1.2, 2026-09-06, bed `list_struct_1` at 16 rows and a
+  three-row `list<null>` control (`None` / `[]` / `[None]`).
 - **Pin** —
-  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE. Filed from PERF-DYNFLATTEN-1. Do not
-  close by dropping the column in the Spark oracle.
+  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`;
+  always-run `python/repark/tests/test_dynflatten_listnull.py` (both DataFrame doors + the
+  `make_array()` drop control).
+- **Rationale** — FIXED. The promotion lives in `read_parquet_nullable` after the
+  nullability relax (`promote_parquet_null_types`), not in `drop_null_lists`. Spark's
+  answer is the parquet reader's INT32 default for a Null logical type, not explode.
+  Do not close by dropping the column in the Spark oracle.
 
 ### DYNFLATTEN-READNULL-1 — `read.parquet` keeps a parquet `required` column non-nullable; Spark widens it
 

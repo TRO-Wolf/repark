@@ -148,9 +148,12 @@ output is at or under `EQUALITY_ROW_CAP` (20,000 rows), which the 1e5 fixtures e
 | struct_d3, struct_d6 | True | |
 | the other five | False | `DYNFLATTEN-LISTNULL-1`, one cause |
 
-The five False shapes are exactly the five carrying `user_properties ARRAY<VOID>`. Live
-co-collect is `test_live_dynflatten_matches_spark_explode`, now symmetric (**both** engines
+The five False shapes are exactly the five carrying `user_properties ARRAY<VOID>` on the
+bench's `createDataFrame(ARRAY<VOID>)` load path. Live co-collect is
+`test_live_dynflatten_matches_spark_explode`, now symmetric (**both** engines
 `read.parquet` of one file), which surfaced `DYNFLATTEN-READNULL-1`.
+**DYNFLATTEN-LISTNULL-1 (2026-09-06):** the live `read.parquet` path now matches Spark on
+those five shapes (parquet Null logical type → int32). The bench load path is unchanged.
 
 ## Do not (binding)
 
@@ -286,3 +289,14 @@ keep × depth matrix now collect and equal live PySpark 4.1.2. The registry row 
 pin is now an answer pin. The bed still nests the row id inside the leaf; that workaround is now
 unnecessary and is deliberately left alone, because changing the bed would move every pinned
 number above.
+
+## After DYNFLATTEN-LISTNULL-1 — parquet Null logical type reads as int32
+
+pins: dynflatten-listnull-1/C-005
+
+Everything above is untouched. The fix is in `read_parquet_nullable`, not in
+`dynamicFlatten` / `drop_null_lists`. The bench still loads repark through
+`createDataFrame(ARRAY<VOID>)`, so its flatten wall and `rows_out` on the list shapes do
+not pay for an extra int32 column; struct-only shapes never had `user_properties`.
+Re-run numbers for the struct-only bed land in the unit ledger, not here, so the tables
+above stay the hour they were measured.

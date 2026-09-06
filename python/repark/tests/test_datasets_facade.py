@@ -14,6 +14,8 @@ current behavior and reports; it does not change the engine":
 * ``BUG-CANDIDATE`` — behavior that looks wrong and is reported, not fixed here. If one
   reds because the behavior was fixed, re-point the pin at the corrected behavior and
   move the ledger row.
+
+pins: dynflatten-listnull-1/C-003
 """
 
 from __future__ import annotations
@@ -127,7 +129,7 @@ def _nested_full_flatten_rows(rows: list[dict[str, Any]], *, empty_as_null: bool
 
     Every list on the path is exploded with outer semantics: NULL and EMPTY each
     contribute width 1 (one null-element row), a populated list its length;
-    ``user_properties`` (``array<void>``) is dropped (``drop_null_lists`` default), so it
+    parquet ``user_properties`` is list<int32> and explodes with width 1, so it
     is not in the product.
 
     Per input row: ``legs_width`` sums, over legs and fills, each fill's ``Meta.Tags``
@@ -188,7 +190,7 @@ def test_nested_parquet_read_keeps_capitalized_nested_schema(
     # Null-typed list survives the round trip as a list of nulls (array<void>).
     properties_type = table.schema.field("user_properties").type
     assert _is_arrow_list(properties_type)
-    assert pa.types.is_null(properties_type.value_type)
+    assert properties_type.value_type == pa.int32()
 
     rows = table.to_pylist()
     truth = _nested_truth()
@@ -323,7 +325,7 @@ def test_nested_dynamic_flatten_unnests_struct_columns(
 def test_nested_dynamic_flatten_full_depth_column_order(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Full-depth ``dynamicFlatten``: in-place expansion order + the drop of ``array<void>``."""
+    """Full-depth ``dynamicFlatten``: in-place expansion order + parquet null list as int32."""
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
 
@@ -344,10 +346,11 @@ def test_nested_dynamic_flatten_full_depth_column_order(
         "Legs_Fills_Meta_Extra_Flags",
         "Tags",
         "Scores",
+        "user_properties",
     ]
-    assert "user_properties" not in flat.columns
-
     table = flat.to_arrow()
+    assert table.schema.field("user_properties").type == pa.int32()
+    assert all(value is None for value in table.column("user_properties").to_pylist())
     truth = _nested_truth()
     expected = _nested_full_flatten_rows(truth)
     assert table.num_rows == expected

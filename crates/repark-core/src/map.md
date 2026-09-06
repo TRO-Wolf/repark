@@ -135,7 +135,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `read_options.rs` — CSV/JSON Spark option-map helpers and the local-CSV all-Utf8 scan
   for `nullValue` and `inferSchema` (raw text kept so timestamp CAST honours offsets).
   pins: nullability-2/C-006
-- `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
+- `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability The `LargeList` / `FixedSizeList` / `ListView` / `LargeListView` promote arms mirror the relax walk's list arms and are unreachable from DataFusion's parquet inference today (only `List` is produced); they are kept for the same shape symmetry, not pinned (DYNFLATTEN-LISTNULL-1 critic F2).
   derivation. `relax_schema_to_nullable` marks every field nullable, recursive over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys), depth-bound
   32 past which flags still flip but children keep file nullability; both CTAS doors
@@ -145,13 +145,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a single TableScan, so EXPLAIN output is unchanged. The double infer costs one extra
   listing plus footer reads; S3 registration still happens first in `session.rs`.
   pins: cutover-schema-1/C-001, C-002
-  **NULLABILITY-2 (2026-09-05):** the walk is iterative (explicit pre-order stack,
+  **NULLABILITY-2 (2026-09-05):** the relax walk is iterative (explicit pre-order stack,
   bottom-up rebuild — no depth bound, no recursion blow-up) with identical type
   coverage: struct/list/map relax, map keys and the entries flag pass through, unknown
   shapes keep their type. Structural pins at depth 40 and 200, 600-deep all-nullable;
   the facade pins depth 40 end to end and documents Arrow's own footer-depth ceiling
   past it. Registry `CUTOVER-NULLDEPTH-1`.
   pins: nullability-2/C-005
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06):** after the nullability relax, `promote_parquet_null_types`
+  maps Arrow `Null` (parquet physical INT32 + Null logical type) to `Int32`, recursive over
+  its own struct/list/map walk, depth-bound 32 (`MAX_NESTED_TYPE_DEPTH` now serves only this
+  promote walk; the relax walk above is unbounded). Spark's parquet reader does this; DataFusion
+  keeps `Null`. CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
+  column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
+  that never went through this reader.
+  pins: dynflatten-listnull-1/C-002, C-006
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
