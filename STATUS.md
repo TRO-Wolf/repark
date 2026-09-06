@@ -7,21 +7,25 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-03._
+_Last updated: 2026-09-06._
 
 ## Release state
 
-**v1.0.1 shipped (2026-09-04)** — the first patch on v1.0.0 (2026-09-03, the first stable tag; v0.1.0–v0.6.0
-2026-08-15 → 08-31): tag-triggered `release.yml`, PyPI trusted publishing, `cp312-abi3` manylinux wheel,
-wheel-only (crates.io publishing structurally deferred, see docs/release.md), version SSOT at the
-Cargo workspace (`1.0.1`). v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
+**v1.1.0 shipped (2026-09-06)** — the first minor on v1.0.0 (2026-09-03, the first stable tag;
+v1.0.1 the first patch, 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`,
+PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only (crates.io publishing
+structurally deferred, see docs/release.md), version SSOT at the Cargo workspace (`1.1.0`).
+v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
-(V1-GATE #320, V3-COV #321), the legacy-delete chain closed end to end (V3-12 → fork F-21 /
-F-22 → RP-8). From this tag the API freeze binds:
-additive-only within the major for every frozen row of
-[v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling 2026-09-03: cut at the
-gate, ahead of the 0.x ladder). 1.0.1 carries CTAS-VIEW-1 (the `read.parquet` → CTAS
-failure on the 1.0.0 wheel), FN-FIX-1, RP-9 and B-MOR-3. Release mechanics:
+(V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
+for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling
+2026-09-03). 1.1.0 is additive: WIN-SLIDE-1, the dbt path (DBT-1), FN-REGEXP-EXTRACT-1, FNP-9/10, the
+Spark-door type corrections (TYPES-1, CUTOVER-SCHEMA-1, NULLABILITY-2), and the performance
+units — collect()/withColumn/createDataFrame in the binding (FACADE-1, FACADE-CDF-1), avg
+GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and manifest caches
+(CATALOG-IO-1..3, default ON), parallel CTAS writers with a hash distribution rule
+(WRITEPATH-1, WRITE-DISTRIBUTION-1), count(*) folds and parallel small-table scans (ICE-SCAN-1),
+and the dynamicFlatten null-mask extractor (DYNFLATTEN-2, LISTNULL-1). Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
@@ -311,6 +315,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.0.1 shipped 2026-09-04; the tag history is in [Release state](#release-state).
+**None.** v1.1.0 shipped 2026-09-06; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
