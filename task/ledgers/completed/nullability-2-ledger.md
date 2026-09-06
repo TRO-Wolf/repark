@@ -1,3 +1,43 @@
+# Errata — round 2 (2026-09-06, muse-spark-1.3, critic remediation)
+
+No verdict below changes: the clause table is untouched. What round 2 corrects,
+serves, and files:
+
+- L-1 — the §7 live row ("193 passed, 106 s") was errors counted as passes: the
+  lane venv had no pyspark, so the command gave 106 passed + 87 errors. Stated
+  plainly. Re-provisioned per `make parity-live`
+  (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars
+  --extra ml-ext --no-install-package repark`, pyspark 4.1.2 confirmed) and re-ran:
+  TRUE counts 193 passed, 81 s, exit 0, zero skips, zero red cells.
+- C-1 — SERVED, with a corrected rule. The brief's "non-null iff every element cast
+  is" hypothesis is refuted by measurement: Spark marks every complex cast of a
+  non-null child non-null (top level = child flag; a failing element NULLs the
+  element ANSI-off, raises ANSI-on). `nonnull_spark_cast` covers same-kind
+  Struct/List/Map pairs; `STRUCT()`/`MAP()`/`ARRAY()` constructors mark non-null.
+  Pins: facade complex rows (both doors, both ANSI) + live leg + Rust pins, all
+  bite-proven. Map→Map is rule-covered but SQL-untestable until C-2 lands.
+  Residue filed: COMPLEX-ELEM-NULL-1 (constructor ELEMENT flags stay nullable;
+  red-when-fixed pin). No C-001 exception needed.
+- C-2 — RESIDUE (not served): filed CAST-MAP-SPELL-1 with a red-when-fixed pin
+  (both doors + `df.cast`). Stock sqlparser has no MAP type, so no rewrite target
+  exists; serving it is a cast-UDF + token-rewrite feature, not a small fix.
+- T-1 — SERVED: CSV `inferSchema` casts inferred tz-naive columns to instant
+  `timestamp` (dtype, Arrow `timestamp[us, tz=UTC]`, and values all Spark-equal).
+  Parquet/`createDataFrame` NTZ paths untouched. JSON inference stays `string` on
+  both engines (measured) and is pinned. READ-TSNTZ-DTYPE-1 extended.
+- D-1 — bound bisected: reads at 60, refuses at 61 (`DepthLimitReached`). Source is
+  arrow-ipc 58.4.0 `max_footer_fb_depth` default 64 (≈60 struct levels, per its own
+  docs) at `ARROW:schema` footer decode — before repark's unbounded relax runs.
+  Spark reads 60/61. Pin + CUTOVER-NULLDEPTH-1 updated.
+- P-1 — `_CAST_FLAG_ROWS` now asserts dtype too (today's `int`, red when fixed);
+  no pre-existing row covered the collapse, so filed LOGICAL-WIDTH-1 (Int8/Int16→
+  `int`, Float32→`double` in `arrow_type_key`) with a red-when-fixed pin.
+- M-1 — C-005 reads with R-5's bound: relax covers every nesting level the
+  transport delivers (parquet footer decode caps at 60 struct levels, D-1).
+- Round-2 convergence (class (a)): G18-2's `collect_list` nullability half is now
+  Spark-equal (the empty-array branch marks non-null); disclosure + live-mirror
+  check narrowed, row narrowed, name + element flag still diverge.
+
 # Unit ledger — NULLABILITY-2 · the analyzer's remaining nullability and cast residues
 
 **Retires:** this ledger moves to `../completed/` when the orchestrator merges this lane.
