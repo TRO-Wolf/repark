@@ -556,6 +556,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** the same leaf pins the session-user-call sniff
+  (`session_user_sniff_matches_parenthesised_user_calls`,
+  `session_user_sniff_ignores_bare_names_and_lookalikes`).
+  pins: sql-door-session-fn-1/C-003
 
 ## Mapping rule
 

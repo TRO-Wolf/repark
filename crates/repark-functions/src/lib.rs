@@ -28,6 +28,7 @@ pub mod json;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
+pub mod session_functions;
 pub mod session_time_zone;
 pub mod spark_chr;
 pub mod spark_elt;
@@ -129,6 +130,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_elt::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    session_functions::register(ctx);
     validate::register(ctx);
     try_invert::register(ctx);
     higher_order::register(ctx);

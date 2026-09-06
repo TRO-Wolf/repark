@@ -177,6 +177,11 @@ pins: rp-4-fork-repin/C-005, C-006
   valve) completes short names from the session defaults (SEC-001). V3-7 MERGE keeps
   `_row_id`; subquery-WHERE DML still refuses `V3-COW-1`.
   pins: v3-7-merge-lineage/C-002; rp-6-fork-repin/C-002
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** `sql_may_have_session_user_call` sniffs an
+  unquoted `user` / `current_user` / `session_user` word followed by `(` (whitespace and
+  comments skipped; quoted words, lookalike names, string literals, and bare uses stay
+  silent) to gate the passthrough's Databricks retry.
+  pins: sql-door-session-fn-1/C-003
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
@@ -207,6 +212,17 @@ pins: rp-4-fork-repin/C-005, C-006
   **TYPES-1 (2026-09-05):** after eager analysis, plain-`INSERT` DML wraps narrowed `Int32`
   sources into `BIGINT` targets (`conform_insert_narrowed_ints`); every other shape passes
   through untouched. pins: types-1/C-001
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** the executing parse is Generic, which reads
+  `user` / `current_user` / `session_user` as paren-less special functions and rejects the
+  `()` form before the function router runs (sqlparser 0.62
+  `parse_expr_prefix_by_reserved_word`, PostgreSql|Generic arm — the pinned parser cannot
+  change, so the fix sits here). On a Generic parse failure the passthrough retries with
+  the Databricks dialect when the `normalize` sniff fires, and returns the ORIGINAL error
+  when the retry also fails; the range-frame restate path shares the helper. A second
+  rewrite restores bare `user` / `current_user` / `session_user` no-paren function nodes to
+  (compound) identifiers, so registration of the new UDFs cannot flip a shadowing column
+  to the session string — bare uses keep today's column-or-error behavior exactly.
+  pins: sql-door-session-fn-1/C-003
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval
