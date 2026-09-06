@@ -93,6 +93,7 @@ _CSV_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
         "escape",
         "comment",
         "nullvalue",
+        "inferschema",
         "multiline",
         "compression",
     }
@@ -266,12 +267,9 @@ def _csv_string_column_has_clock(frame: DataFrame, name: str) -> bool:
 def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     """Spark-like type promotion on an all-string CSV frame after nullValue application.
 
-
-
-    Tries bigint → double → boolean → timestamp per column via engine CAST; keeps string
-    on failure. Timestamp requires a ``:`` so a date-only cell is not promoted to midnight.
+    Tries bigint → double → boolean → timestamp → date per column via engine CAST; keeps
+    string on failure. Timestamp requires a ``:``; date requires its absence.
     Validates each trial by materializing so a late bad value rejects the type.
-
     """
 
     from repark.spark import functions as F  # noqa: N812
@@ -281,32 +279,35 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     if not columns:
         return frame
 
-    candidates = ("bigint", "double", "boolean", "timestamp")
-
+    candidates = ("bigint", "double", "boolean", "timestamp", "date")
+    dtypes = dict(frame.dtypes)
     selects: list[Any] = []
 
     for name in columns:
+        if dtypes.get(name) != "string":
+            selects.append(F.col(name))
+            continue
+
         promoted: Any | None = None
+        has_clock = _csv_string_column_has_clock(frame, name)
 
         for type_name in candidates:
-            if type_name == "timestamp" and not _csv_string_column_has_clock(frame, name):
+            if type_name == "timestamp" and not has_clock:
+                continue
+            if type_name == "date" and has_clock:
                 continue
 
             trial = frame.select(F.col(name).cast(type_name).alias(name))
 
             try:
                 trial.to_arrow()
-
                 promoted = type_name
-
                 break
-
             except (AnalysisException, PySparkException, RuntimeError, ValueError, TypeError):
                 continue
 
         if promoted is not None:
             selects.append(F.col(name).cast(promoted).alias(name))
-
         else:
             selects.append(F.col(name))
 

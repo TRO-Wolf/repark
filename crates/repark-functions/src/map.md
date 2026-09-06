@@ -239,7 +239,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `DATE 'x'` and the explicit spelling identically with no planner hook, so the
   exemption keeps typed literals Spark-equal and concedes explicit valid-literal
   casts (registry `CAST-NULL-1` residue). The `(38,·)` add/sub UDFs propagate
-  operand nullability (division stays always-nullable).
+  operand nullability (division stays always-nullable). Round 4 (2026-09-06):
+  `nonnull_spark_cast` is Date32 → Timestamp only; DataFusion already marks CAST
+  of a non-null struct/list/map child non-null, so those wrap arms were deleted.
   pins: nullability-2/C-001, C-002
 - `spark_nullability.rs` — **NULLABILITY-2 (2026-09-05):** the `SparkNullability`
   analyzer rule, slotted after `SparkDecimalRewrite`: date→timestamp casts and
@@ -248,9 +250,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   forms) wrap their output in the nullable marker iff ANSI is off. Output wraps
   run transform-down with marker-stop (never descend into a marker, stop after a
   wrap) so re-analysis is a no-op — the idempotency `Column.sql` relies on.
-  Round 2 (2026-09-06): same-kind complex casts (STRUCT/ARRAY/MAP) of non-null
-  children wrap too, and `named_struct`/`struct`/`map`/`make_array` constructors
+  Round 2 (2026-09-06): `named_struct`/`struct`/`map`/`make_array` constructors
   mark non-null — Spark's top-level propagation, measured both ANSI modes.
+  Round 4 (2026-09-06): the Struct/List/Map arms of `nonnull_spark_cast` are
+  deleted. DataFusion's Cast nullability already follows the child for those
+  types, so the wrap was tautological; `nonnull_spark_cast` remains Date32 →
+  Timestamp only. The facade column-CAST pin still holds Spark-equal non-null
+  struct CAST.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).

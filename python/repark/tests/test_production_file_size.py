@@ -53,7 +53,7 @@ EXPECTED_SYMBOL_HASHES = {
         "a12bc15fe92be778c5e4dcad3d4afec7f4c3dc9b703bc77502fad3634f4bca51"
     ),
     "_CREATE_VIEW_SQL_RE": ("103bd4882a26a6712d5b0eeb140dcd4c1dbf7d39ef272928bbe9dce905a90d6f"),
-    "_CSV_NATIVE_OPTION_KEYS": ("d0f743f41e3a04767b0834d202bd7887a186b0566ad0406629338c52fa6d8e0d"),
+    "_CSV_NATIVE_OPTION_KEYS": ("8e13aab183a2aa984c64cae44afa5e5df199126703e1bf389a08cb9a11bee4a1"),
     "_CSV_UNSUPPORTED_PARSE_OPTIONS": (
         "a682b3aa888458d288c0d36a45d7521e1ad24d013b19ab02e3c2a224fc8f73e7"
     ),
@@ -272,7 +272,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_prepare_nested_cell": ("fe9a531e3994ae6480ad877931fd4d3b8d4542f66c1e3b31a2a324f564c754b6"),
     "_promote_csv_string_types": (
-        "07e763001d3d7ccb35d13c137e04d5186b5776b3730685946144bac7027ff84d"
+        "d8097ea91461aac72535b59354984fa513f8d905f1ce097cd61a1ef78a3b5545"
     ),
     "_python_scalar_merge_kind": (
         "85a1a39e3f8170786cc246e35c3f263c32ec17365fa570d056fd62c330f93d3f"

@@ -823,7 +823,7 @@ class DataFrameReader:
 
         # inferSchema=true after nullValue Utf8 force: re-promote integer/double/boolean columns
         # via engine casts (Python only builds the plan — no row loops).
-        if null_token is not None:
+        if null_token is not None or (self._format or "").lower() == "csv":
             frame = _promote_csv_string_types(frame)
         return _cast_inferred_naive_timestamps(frame)
 

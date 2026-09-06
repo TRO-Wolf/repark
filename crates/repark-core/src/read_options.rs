@@ -144,6 +144,13 @@ pub(crate) fn name_looks_compressed(name: &str) -> bool {
     )
 }
 
+pub(crate) fn csv_force_utf8_schema(options: &HashMap<String, String>) -> bool {
+    options.contains_key("nullvalue")
+        || options
+            .get("inferschema")
+            .is_some_and(|raw| matches!(parse_bool_option("inferSchema", raw), Ok(true)))
+}
+
 /// Build an all-Utf8 schema from the first local CSV record when `nullValue` is set.
 pub(crate) fn csv_utf8_schema_from_path(
     path: &str,

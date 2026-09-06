@@ -444,6 +444,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   timestamps; a non-null struct COLUMN (Arrow required field, not a constructor)
   CAST is non-null; JSON without `inferTimestamp` stays `string` on both engines
   (the CSV cast also runs on the JSON path and is a no-op on Utf8).
+  Round 4 (2026-09-06): offset-bearing CSV cells (`2020-06-01T12:00:00+02:00` and
+  `Z`) keep their instant in UTC / `America/New_York` / `Asia/Kolkata` on both
+  doors + live; date-only `nullValue`+`inferSchema` promotes to `date`.
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

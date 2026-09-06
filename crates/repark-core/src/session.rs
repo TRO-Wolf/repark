@@ -800,7 +800,7 @@ impl ReparkSession {
         }
         let mut csv_options = csv_read_options_from_map(options)?;
         // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.
-        let utf8_schema = if options.contains_key("nullvalue") {
+        let utf8_schema = if crate::read_options::csv_force_utf8_schema(options) {
             csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
         } else {
             None

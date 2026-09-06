@@ -332,8 +332,20 @@ _COMPLEX_CAST_ROWS: list[tuple[str, str, str, bool, Any]] = [
 _CSV_TS_ZONES: tuple[tuple[str, datetime.datetime], ...] = (
     ("UTC", datetime.datetime(2020, 6, 1, 12, 0, tzinfo=datetime.UTC)),
     ("America/New_York", datetime.datetime(2020, 6, 1, 16, 0, tzinfo=datetime.UTC)),
+    ("Asia/Kolkata", datetime.datetime(2020, 6, 1, 6, 30, tzinfo=datetime.UTC)),
 )
 _CSV_DST_NY = datetime.datetime(2020, 3, 8, 7, 30, tzinfo=datetime.UTC)
+_CSV_OFFSET_INSTANT = datetime.datetime(2020, 6, 1, 10, 0, tzinfo=datetime.UTC)
+_CSV_DATE = datetime.date(2020, 6, 1)
+_CSV_INFER_TEXTS: tuple[tuple[str, str], ...] = (
+    ("plain", "id,ts\nA,2020-06-01 12:00:00\n"),
+    ("na", "id,ts\nA,2020-06-01 12:00:00\nB,NA\n"),
+    ("dst", "id,ts\nA,2020-03-08 02:30:00\n"),
+    ("offset", "id,ts\nA,2020-06-01T12:00:00+02:00\n"),
+    ("zulu", "id,ts\nA,2020-06-01T12:00:00Z\n"),
+    ("date", "id,d\nA,2020-06-01\n"),
+    ("date_na", "id,d\nA,2020-06-01\nB,NA\n"),
+)
 
 
 def _spark_session(ansi: str, zone: str = "UTC") -> Any:
@@ -355,6 +367,15 @@ def _read_inferred_csv(session: Any, path: Path, *, null_value: str | None = Non
     if null_value is not None:
         reader = reader.option("nullValue", null_value)
     return reader.csv(str(path))
+
+
+def _write_csv_infer_files(tmp_path: Path) -> dict[str, Path]:
+    files = {name: tmp_path / f"{name}.csv" for name, _ in _CSV_INFER_TEXTS}
+    for name, text in _CSV_INFER_TEXTS:
+        files[name].write_text(text)
+    files["json"] = tmp_path / "infer.json"
+    files["json"].write_text('{"id": "A", "ts": "2020-06-01 12:00:00"}\n')
+    return files
 
 
 def test_cast_nullability_matches_spark() -> None:
@@ -744,34 +765,32 @@ def test_csv_json_timestamp_reads_keep_string_dtype(tmp_path: Path) -> None:
 
 
 def test_csv_inferschema_timestamp_reports_timestamp(tmp_path: Path) -> None:
-    csv_path = tmp_path / "infer.csv"
-    csv_path.write_text("id,ts\nA,2020-06-01 12:00:00\n")
-    csv_na = tmp_path / "infer_na.csv"
-    csv_na.write_text("id,ts\nA,2020-06-01 12:00:00\nB,NA\n")
-    csv_dst = tmp_path / "infer_dst.csv"
-    csv_dst.write_text("id,ts\nA,2020-03-08 02:30:00\n")
-    json_path = tmp_path / "infer.json"
-    json_path.write_text('{"id": "A", "ts": "2020-06-01 12:00:00"}\n')
+    files = _write_csv_infer_files(tmp_path)
     for zone, instant in _CSV_TS_ZONES:
         session = _spark_session("true", zone)
         try:
-            frame = _read_inferred_csv(session, csv_path)
-            frame.createOrReplaceTempView("csv_inferred")
-            sql_frame = session.sql("SELECT ts FROM csv_inferred")
-            table = frame.to_arrow()
-            assert frame.dtypes == [("id", "string"), ("ts", "timestamp")]
-            assert str(table.schema.field("ts").type) == "timestamp[us, tz=UTC]"
-            assert table.column("ts").to_pylist() == [instant]
-            assert sql_frame.dtypes == [("ts", "timestamp")]
-            assert sql_frame.to_arrow().column("ts").to_pylist() == [instant]
-            na = _read_inferred_csv(session, csv_na, null_value="NA")
-            assert na.dtypes == [("id", "string"), ("ts", "timestamp")]
-            assert na.to_arrow().column("ts").to_pylist() == [instant, None]
-            json_frame = session.read.json(str(json_path))
+            for name, expected, column, dtype, null_value in (
+                ("plain", [instant], "ts", "timestamp", None),
+                ("offset", [_CSV_OFFSET_INSTANT], "ts", "timestamp", None),
+                ("zulu", [_CSV_TS_ZONES[0][1]], "ts", "timestamp", None),
+                ("date", [_CSV_DATE], "d", "date", None),
+                ("na", [instant, None], "ts", "timestamp", "NA"),
+                ("date_na", [_CSV_DATE, None], "d", "date", "NA"),
+            ):
+                frame = _read_inferred_csv(session, files[name], null_value=null_value)
+                frame.createOrReplaceTempView("csv_inferred")
+                table = frame.to_arrow()
+                sql_vals = session.sql(f"SELECT {column} FROM csv_inferred")
+                assert frame.dtypes[-1] == (column, dtype)
+                assert table.column(column).to_pylist() == expected
+                assert sql_vals.to_arrow().column(column).to_pylist() == expected
+                if dtype == "timestamp":
+                    assert str(table.schema.field(column).type) == "timestamp[us, tz=UTC]"
+            json_frame = session.read.json(str(files["json"]))
             assert json_frame.dtypes == [("id", "string"), ("ts", "string")]
             assert json_frame.to_arrow().column("ts").to_pylist() == ["2020-06-01 12:00:00"]
             if zone == "America/New_York":
-                dst = _read_inferred_csv(session, csv_dst)
+                dst = _read_inferred_csv(session, files["dst"])
                 assert dst.to_arrow().column("ts").to_pylist() == [_CSV_DST_NY]
         finally:
             session.stop()
@@ -862,50 +881,37 @@ def test_live_arith_bool_nse_match_oracle(spark_engine: lp.Engine) -> None:
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_csv_inferschema_matches_oracle(tmp_path: Path, spark_engine: lp.Engine) -> None:
-    csv_path = tmp_path / "infer.csv"
-    csv_path.write_text("id,ts\nA,2020-06-01 12:00:00\n")
-    csv_na = tmp_path / "infer_na.csv"
-    csv_na.write_text("id,ts\nA,2020-06-01 12:00:00\nB,NA\n")
-    csv_dst = tmp_path / "infer_dst.csv"
-    csv_dst.write_text("id,ts\nA,2020-03-08 02:30:00\n")
-    json_path = tmp_path / "infer.json"
-    json_path.write_text('{"id": "A", "ts": "2020-06-01 12:00:00"}\n')
+    files = _write_csv_infer_files(tmp_path)
     for zone, _instant in _CSV_TS_ZONES:
         session = _spark_session("true", zone)
         try:
             with lp.spark_session_conf(spark_engine, (("spark.sql.session.timeZone", zone),)):
-                repark_csv = _read_inferred_csv(session, csv_path)
-                spark_csv = _read_inferred_csv(spark_engine.session, csv_path)
-                repark_csv.createOrReplaceTempView("csv_inferred_live")
-                sql_csv = session.sql("SELECT ts FROM csv_inferred_live")
-                repark_table = repark_csv.to_arrow()
-                spark_table = spark_engine.arrow_of(spark_csv)
-                assert repark_csv.dtypes == spark_csv.dtypes
-                assert ("ts", "timestamp") in repark_csv.dtypes
-                assert str(repark_table.schema.field("ts").type) == str(
-                    spark_table.schema.field("ts").type
-                )
-                assert repark_table.column("ts").to_pylist() == spark_table.column("ts").to_pylist()
-                assert sql_csv.to_arrow().column("ts").to_pylist() == (
-                    repark_table.column("ts").to_pylist()
-                )
-                repark_na = _read_inferred_csv(session, csv_na, null_value="NA")
-                spark_na = _read_inferred_csv(spark_engine.session, csv_na, null_value="NA")
-                assert repark_na.dtypes == spark_na.dtypes
-                assert (
-                    repark_na.to_arrow().column("ts").to_pylist()
-                    == spark_engine.arrow_of(spark_na).column("ts").to_pylist()
-                )
-                repark_json = session.read.json(str(json_path))
-                spark_json = spark_engine.session.read.json(str(json_path))
+                cases: list[tuple[str, str, str | None]] = [
+                    ("plain", "ts", None),
+                    ("offset", "ts", None),
+                    ("zulu", "ts", None),
+                    ("date", "d", None),
+                    ("na", "ts", "NA"),
+                    ("date_na", "d", "NA"),
+                ]
+                if zone == "America/New_York":
+                    cases.append(("dst", "ts", None))
+                for name, column, null_value in cases:
+                    repark_csv = _read_inferred_csv(session, files[name], null_value=null_value)
+                    spark_csv = _read_inferred_csv(
+                        spark_engine.session, files[name], null_value=null_value
+                    )
+                    repark_csv.createOrReplaceTempView("csv_inferred_live")
+                    repark_vals = repark_csv.to_arrow().column(column).to_pylist()
+                    spark_vals = spark_engine.arrow_of(spark_csv).column(column).to_pylist()
+                    sql_frame = session.sql(f"SELECT {column} FROM csv_inferred_live")
+                    sql_vals = sql_frame.to_arrow().column(column).to_pylist()
+                    assert repark_csv.dtypes == spark_csv.dtypes
+                    assert repark_vals == spark_vals == sql_vals
+                repark_json = session.read.json(str(files["json"]))
+                spark_json = spark_engine.session.read.json(str(files["json"]))
                 assert repark_json.dtypes == spark_json.dtypes
                 assert ("ts", "string") in repark_json.dtypes
-                if zone == "America/New_York":
-                    repark_dst = _read_inferred_csv(session, csv_dst)
-                    spark_dst = _read_inferred_csv(spark_engine.session, csv_dst)
-                    assert repark_dst.to_arrow().column("ts").to_pylist() == (
-                        spark_engine.arrow_of(spark_dst).column("ts").to_pylist()
-                    )
         finally:
             session.stop()
 
