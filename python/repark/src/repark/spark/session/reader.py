@@ -825,7 +825,7 @@ class DataFrameReader:
         # via engine casts (Python only builds the plan — no row loops).
         if null_token is not None:
             return _promote_csv_string_types(frame)
-        return frame
+        return _cast_inferred_naive_timestamps(frame)
 
     def _option_str(self, key_lower: str) -> str | None:
         """Return a string reader option value if set (case-insensitive key)."""

@@ -4379,12 +4379,17 @@ Shared roster pin for every heading:
   tz-naive `TIMESTAMP` column reports `timestamp_ntz` via `dtypes`,
   `schema.simpleString()`, and `printSchema` (Spark-equal text), and `timestamp[us]`
   via Arrow; `createDataFrame` with a `TimestampNTZType` schema reports likewise.
-  Tz-aware timestamps still report `timestamp`.
+  Tz-aware timestamps still report `timestamp`. `read.csv` with `inferSchema` casts
+  inferred tz-naive timestamps to instant `timestamp` (Spark-equal dtype, Arrow
+  `timestamp[us, tz=UTC]`, tz-aware values) since 2026-09-06 (NULLABILITY-2 round 2);
+  JSON inference stays `string` on both engines.
 - **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
-  string, and `timestamp[us]` via Arrow. *(oracle: live PySpark 4.1.2, UTC, 2026-09-05.)*
+  string, and `timestamp[us]` via Arrow; infers CSV timestamps as `timestamp`.
+  *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06.)*
 - **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype` and
-  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls).
+  `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
+  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls), and
+  `...::test_csv_inferschema_timestamp_reports_timestamp`.
 - **Rationale** — FIXED. The `schema` property routes the `timestamp`/`timestamp_ntz`
   keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
   `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).

@@ -698,6 +698,26 @@ def test_csv_json_timestamp_reads_keep_string_dtype(tmp_path: Path) -> None:
         session.stop()
 
 
+def test_csv_inferschema_timestamp_reports_timestamp(tmp_path: Path) -> None:
+    csv_path = tmp_path / "infer.csv"
+    csv_path.write_text("id,ts\nA,2020-01-01 00:00:00\n")
+    json_path = tmp_path / "infer.json"
+    json_path.write_text('{"id": "A", "ts": "2020-01-01T00:00:00"}\n')
+    session = _spark_session("true")
+    try:
+        frame = session.read.option("header", True).option("inferSchema", True).csv(str(csv_path))
+        assert frame.dtypes == [("id", "string"), ("ts", "timestamp")]
+        table = frame.to_arrow()
+        assert str(table.schema.field("ts").type) == "timestamp[us, tz=UTC]"
+        assert table.column("ts").to_pylist() == [
+            datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+        ]
+        inferred_json = session.read.option("inferSchema", True).json(str(json_path))
+        assert inferred_json.dtypes == [("id", "string"), ("ts", "string")]
+    finally:
+        session.stop()
+
+
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 def test_live_cast_matrix_matches_oracle(spark_engine: lp.Engine) -> None:
     session = _spark_session("true")
@@ -777,6 +797,36 @@ def test_live_arith_bool_nse_match_oracle(spark_engine: lp.Engine) -> None:
             )
             assert repark_df.to_arrow().schema[0].nullable is False
             assert spark_engine.arrow_of(spark_df).schema[0].nullable is False
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_csv_inferschema_matches_oracle(tmp_path: Path, spark_engine: lp.Engine) -> None:
+    csv_path = tmp_path / "infer.csv"
+    csv_path.write_text("id,ts\nA,2020-01-01 00:00:00\n")
+    json_path = tmp_path / "infer.json"
+    json_path.write_text('{"id": "A", "ts": "2020-01-01T00:00:00"}\n')
+    session = _spark_session("true")
+    try:
+        repark_csv = (
+            session.read.option("header", True).option("inferSchema", True).csv(str(csv_path))
+        )
+        spark_csv = (
+            spark_engine.session.read.option("header", True)
+            .option("inferSchema", True)
+            .csv(str(csv_path))
+        )
+        assert repark_csv.dtypes == spark_csv.dtypes
+        assert ("ts", "timestamp") in repark_csv.dtypes
+        repark_table = repark_csv.to_arrow()
+        spark_table = spark_engine.arrow_of(spark_csv)
+        assert str(repark_table.schema.field("ts").type) == str(spark_table.schema.field("ts").type)
+        assert repark_table.column("ts").to_pylist() == spark_table.column("ts").to_pylist()
+        repark_json = session.read.option("inferSchema", True).json(str(json_path))
+        spark_json = spark_engine.session.read.option("inferSchema", True).json(str(json_path))
+        assert repark_json.dtypes == spark_json.dtypes
+        assert ("ts", "string") in repark_json.dtypes
     finally:
         session.stop()
 

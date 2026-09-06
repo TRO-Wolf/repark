@@ -300,6 +300,26 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     return frame.select(*selects)
 
 
+def _cast_inferred_naive_timestamps(frame: DataFrame) -> DataFrame:
+    """Cast inferred tz-naive timestamps to instant ``timestamp`` (Spark inferSchema).
+
+    Spark infers timestamps as ``timestamp`` on every text source; the engine infers
+    tz-naive Arrow, which the facade otherwise reports ``timestamp_ntz`` (correct for
+    parquet/NTZ sources). Runs only past the user-schema and no-infer returns, so an
+    explicit user schema never reaches it.
+    """
+
+    from repark.spark import functions as F  # noqa: N812
+
+    selects = [
+        F.col(name).cast("timestamp").alias(name) if dtype == "timestamp_ntz" else F.col(name)
+        for name, dtype in frame.dtypes
+    ]
+    if not selects:
+        return frame
+    return frame.select(*selects)
+
+
 def _schema_fields(schema: Any) -> list[dict[str, Any]]:
     """Normalize StructType / DDL / field-list into ``[{name, dataType}, …]`` for reader casts."""
 

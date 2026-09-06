@@ -424,6 +424,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the `MAP<…>` CAST spelling and constructor element flags stay pinned refusals;
   CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
   reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
+  The CSV-infer live leg also pins JSON inference staying `string` on both engines.
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
