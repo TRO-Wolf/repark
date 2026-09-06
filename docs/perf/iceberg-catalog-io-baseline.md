@@ -394,7 +394,7 @@ Both columns carry an N-flat ~140–150 MB read-phase level (allocator arena gro
 under the plan+execute pattern, not retained entries — it is there with the cache
 off). Above it the default column retains ~7.5 KB per table at 2,000–8,000 tables
 (~15 MB / 59.3 MB against 2.0 / 8.0 MB charged — ~7.5× the fork's estimate),
-consistent across both counts; the 500-table delta (25 MB on 0.5 MB charged) is
+a noisy per-run figure (independent 2,000-table samples measured growth deltas from 4.6 to 47.2 MB); the ratio rests on the file-bytes floor (5.1× charged, deterministic) and the 32,768-table at-bound run (~8×); the 500-table delta (25 MB on 0.5 MB charged) is
 fixed-level wobble, not retention, and is disclosed as such. The estimate under-counts
 before any parsed-form overhead is even considered: one table's manifest list is
 1,604 B and its manifest 3,466 B on disk (5,070 B of file bytes charged as 1,024 B).
