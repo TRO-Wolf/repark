@@ -135,10 +135,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `read_options.rs` — CSV/JSON Spark option-map helpers and the local-CSV all-Utf8 scan
   for `nullValue` and `inferSchema` (raw text kept so timestamp CAST honours offsets).
   pins: nullability-2/C-006
-- `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability The `LargeList` / `FixedSizeList` / `ListView` / `LargeListView` promote arms mirror the relax walk's list arms and are unreachable from DataFusion's parquet inference today (only `List` is produced); they are kept for the same shape symmetry, not pinned (DYNFLATTEN-LISTNULL-1 critic F2).
-  derivation. `relax_schema_to_nullable` marks every field nullable, recursive over
-  struct/list/map (map keys stay required — Arrow forbids nullable map keys), depth-bound
-  32 past which flags still flip but children keep file nullability; both CTAS doors
+- `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
+  derivation. `relax_schema_to_nullable` marks every field nullable over
+  struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk
+  is iterative and unbounded since NULLABILITY-2 (below); both CTAS doors
   derive their Iceberg schema through it, so derived columns store optional the way
   Spark stores them. `read_parquet_nullable` infers the file schema, relaxes it, and
   re-reads with the relaxed schema as the DataFusion schema override — the plan keeps
@@ -156,7 +156,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   maps Arrow `Null` (parquet physical INT32 + Null logical type) to `Int32`, recursive over
   its own struct/list/map walk, depth-bound 32 (`MAX_NESTED_TYPE_DEPTH` now serves only this
   promote walk; the relax walk above is unbounded). Spark's parquet reader does this; DataFusion
-  keeps `Null`. CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
+  keeps `Null`. The `LargeList` / `FixedSizeList` / `ListView` / `LargeListView` promote arms
+  mirror the relax walk's list arms and are unreachable from DataFusion's parquet inference
+  today (only `List` is produced); they are kept for shape symmetry, not pinned
+  (DYNFLATTEN-LISTNULL-1 critic F2). CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
   column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
   that never went through this reader.
   pins: dynflatten-listnull-1/C-002, C-006
