@@ -1,3 +1,9 @@
+# Errata — round 2 addendum (2026-09-06): the L-1 re-run below counted the round-1
+battery (193 tests). With the 7 round-2 pins added to `test_nullability_2.py`,
+the same 4-file live selection finishes 200 passed, 86 s, exit 0, zero skips.
+Follow-on inside C-1: positional `struct()` joins the constructor arm and four
+TYPES-1 array/struct/map flags flip class (a) (Spark-measured).
+
 # Errata — round 2 (2026-09-06, muse-spark-1.3, critic remediation)
 
 No verdict below changes: the clause table is untouched. What round 2 corrects,
