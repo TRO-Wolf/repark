@@ -193,7 +193,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   five pointers, so no row can quietly regrow its own copy of a claim that was false on all
   six.
   pins: rp-8-repin-f21-f22/C-004
-  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so
+  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so The STATUS stamp it pins moved to 2026-09-06 with the v1.1.0 release PR.
   it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
   `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
   pins: rp-8-repin-f21-f22/C-006
