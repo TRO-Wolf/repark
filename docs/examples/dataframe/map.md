@@ -95,6 +95,11 @@ got and expected reprs (the corpus form).
   struct field), and the repark extensions `Row.from_mapping` and `Row.from_ordered_fields`
   (duplicate field names kept). No Spark analog for the two builders (`hasattr` measured
   False on live PySpark 4.1.2).
+- [dynamic_flatten.py](dynamic_flatten.py) — `dynamicFlatten` / `dynamic_flatten`:
+  struct expansion plus list explosion, the no-explode arm, both spellings agreeing
+  (EX-26). Repark extension, no Spark analog (`hasattr` measured False on live
+  PySpark 4.1.2).
+  pins: ex-26-io-session/C-013
 
 Divergent names and arms stay on the backlog with §7 registry rows
 ([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in

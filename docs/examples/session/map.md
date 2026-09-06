@@ -5,8 +5,9 @@
 Worked examples for `repark.sql`, the `ReparkSession` construction door, and
 the session-level surface: the builder chain, the active-session trio, conf,
 the catalog property, frame builders, the file readers, the memory Iceberg
-catalog, temp-view listing, name resolution, the display style, and the two
-loud refusals. Examples construct the session as
+catalog, temp-view listing, name resolution, the display style, the two
+loud refusals, SQL and table reads, version and context identity, and UDF/UDTF
+registration. Examples construct the session as
 `repark = ReparkSession.builder…` (owner ruling, 2026-09-01). Local
 filesystem, memory catalog, and temp views only — no cloud, no JVM, no
 network.
@@ -58,6 +59,20 @@ network.
   `SparkSession.pandas_api`: both refuse loud with
   `UnsupportedOperationException` naming the supported route; neither name
   exists on live PySpark 4.1.2.
+- [sql_table.py](sql_table.py) — `SparkSession.sql` (filtered ordered select)
+  and `SparkSession.table` (temp-view read plus the missing-name raise)
+  (EX-26). The missing-table text is §7 `EX-IO-8`.
+  pins: ex-26-io-session/C-009
+- [version_context.py](version_context.py) — `SparkSession.version` (the
+  `repark-<dist>` contract, §8) and `SparkSession.sparkContext` (builder-echoed
+  master, stable application id, accepted `setLogLevel`) (EX-26).
+  pins: ex-26-io-session/C-010
+- [udf.py](udf.py) — `SparkSession.udf`: register a scalar UDF, answer with it
+  in SQL and on a frame (EX-26). The register return arm is §7 `EX-SES-6`.
+  pins: ex-26-io-session/C-011
+- [udtf.py](udtf.py) — `SparkSession.udtf`: register a table function, read it
+  through `FROM` with literal args (EX-26).
+  pins: ex-26-io-session/C-012
 
 ## Pointers
 
