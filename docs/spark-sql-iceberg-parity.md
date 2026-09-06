@@ -6110,7 +6110,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   transform rows equal the pre-save rows. `PipelineModel.load` of a Spark-saved
   tree raises `IllegalArgumentException: missing metadata.json under <path>`.
 - **Apache Spark** — `PipelineModel.write().save` writes `metadata/part-*` plus
-  `stages/N_*/metadata/part-*.txt` plus `data/part-*.snappy.parquet` for stages that carry fitted data (`VectorAssembler` has `metadata/` only)`` (no `metadata.json`). Spark's
+  `stages/N_*/metadata/part-*.txt` plus `data/part-*.snappy.parquet` for stages that carry fitted data (`VectorAssembler` has `metadata/` only) (no `metadata.json`). Spark's
   `PipelineModel.load` of a repark-saved tree raises
   `AnalysisException: [PATH_NOT_FOUND] Path does not exist: file:<path>/metadata`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2; cross-load measured
