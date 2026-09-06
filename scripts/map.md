@@ -2,7 +2,7 @@
 
 CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
 1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
-retired (file under the default 1000). `test_cap_1_source_file_line_cap.py` dropped
+retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` dropped
 the matching `_RUST_BASELINES` row in the same commit. Round 2: `check_lib_py.py`
 `reader.py` 1026 → 1022 (path argument, no stored `path` option).
 pins: csv-infer-perf-1/C-006
