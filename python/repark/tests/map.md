@@ -1779,6 +1779,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count against Spark on the same seeds. Numbers and commands:
   [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
   pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-011, C-009
+  RP-14 (2026-09-06, pin `8bc325a3`, F-27) un-skipped the fork-gated pins: count(*) folds, the DV/residual/LIMIT
+  non-fold cells and the parallel-split row-set pins run on every build now.
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
   through the facade, over a fixed four-file seed so the plan really has four partitions.
   Always-run: the CTAS writes one data file per plan partition (four), and

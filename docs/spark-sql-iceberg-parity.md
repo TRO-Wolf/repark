@@ -4838,7 +4838,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
-  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
   1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
   decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
   `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
@@ -4853,7 +4853,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
   (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
 - **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
-  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump, with residue. A sub-split-size
+  **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump, with residue. A sub-split-size
   table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB
   split target. Fork trigger **F-27d**: re-split and re-pack to a session-derived target
   of `min(configured split size, max(total/T, 64 KiB))`, declining `_pos`/`_row_id`,
