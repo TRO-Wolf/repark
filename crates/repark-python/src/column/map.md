@@ -20,6 +20,18 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the percentage validation folds into a named closure; both hold the file at its exact
   baseline (ratchet 1053→1052 with the accuracy import). pins: perf-approxpct-1/C-002
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch.
+  Its default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before
+  refusing.
+- [`function_dispatch/dispatch_json.rs`](function_dispatch/dispatch_json.rs) —
+  **FNP-9/10 (2026-09-05):** arms for
+  `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
+  `from_json`, `array_insert`, `arrays_zip` and `map_concat`, plus `create_map`, which lowers
+  the facade's alternating key/value arguments to DataFusion's `map(keys, values)` — the same
+  shape the Spark door already builds for `map(...)`, so the facade still makes one engine
+  call. The arms live here and not in `function_dispatch.rs` because that file was at 992 of
+  its 1000-line ceiling; the cohesive `column/dispatch/` split the campaign charter names is
+  FNP-Z's, and the slate forbids doing it piecemeal inside a feature unit.
+  pins: fnp-9-collections-json/C-006, C-007
   LOG1P-1: `log1p` / `expm1` arms embed `repark_functions::expr_fn` kernels.
   pins: log1p-1-precise-kernels/C-002
   **DATE-FN-1:** `unix_timestamp` / `to_unix_timestamp` (0 or 1 arg). PySpark has no `F.date`.

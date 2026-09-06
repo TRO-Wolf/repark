@@ -24,7 +24,6 @@ from repark.spark.functions import (
     array_repeat,
     array_sort,
     array_union,
-    arrays_zip,
     ascii,
     base64,
     chr,
@@ -180,8 +179,6 @@ def test_batch2_loud_unsupported(spark: ReparkSession) -> None:
     # FNP-3: soundex ships (datafusion-spark kernel). See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="sentences"):
         sentences("s")
-    with pytest.raises(UnsupportedOperationException, match="arrays_zip"):
-        arrays_zip("a", "b")
     # FNP-3: map_from_arrays ships — its stub docstring noted the SQL door already resolved it.
     # See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="locate"):

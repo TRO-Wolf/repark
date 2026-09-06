@@ -25,6 +25,8 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+mod dispatch_json;
+
 use super::expr_build::reciprocal_trig_or_inf;
 
 /// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
@@ -917,11 +919,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::bitmap_count(exprs[0].clone())
         }
-        other => {
-            return Err(PyValueError::new_err(format!(
-                "call_scalar: unsupported function {other:?}"
-            )));
-        }
+        other => return dispatch_json::call_scalar_expr(other, exprs),
     };
     Ok(expr)
 }
