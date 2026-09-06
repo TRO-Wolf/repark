@@ -84,6 +84,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   session answered 5 distinct values. The fold is order-free given the partial set; the
   sketch arithmetic is untouched. Empty partials skip (a merge no-op).
   pins: perf-approxpct-1/C-004
+  **Round 3 (2026-09-06):** `return_type` plan-refuses a non-integral accuracy with
+  Spark's `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` wording (INTEGRAL / SQLSTATE
+  42K09 / BOOLEAN·DOUBLE·STRING·DECIMAL). Structured sqlExpr/inputSql params are
+  not in the DataFusion `Plan` error (`FN-APPROXPCT-ACC-TYPE-1`).
+  pins: perf-approxpct-1/C-002
 - `quantile_summaries.rs` — the sketch behind `percentile_approx.rs` (see that row). Merge
   takes the other side by reference and stages a flushed clone, so the Digest discipline
   (both sides compressed before merge) holds with no panic path. The head sort uses

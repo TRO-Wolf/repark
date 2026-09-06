@@ -47,6 +47,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   plus the 2N/accuracy triangle bound against live Spark's 500082, and
   `test_hundred_thousand_groups_repeat_bit_equal` pins 1e5 groups bit-equal across runs.
   pins: perf-approxpct-1/C-004
+  **Round 3 (2026-09-06):** DataFrame-door non-integral accuracy is Spark's
+  `AnalysisException` class/message/params; SQL-door is AnalysisException with the
+  class in the message and `getErrorClass`/`getMessageParameters` None
+  (`FN-APPROXPCT-ACC-TYPE-1`, red-when-fixed);
+  `test_run_cells_help_exits_zero` pins argparse `--help`.
+  pins: perf-approxpct-1/C-002
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
@@ -1432,6 +1438,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-1-registry-rows/C-003
   **Round 2 (2026-09-06):** bool/float/str accuracy pins fail with Spark's INTEGRAL
   contract; numpy integer accuracy runs as the int on scalar and list forms.
+  pins: perf-approxpct-1/C-002
+  **Round 3 (2026-09-06):** those refusals are `AnalysisException` with Spark's
+  class, message and params (`sqlExpr`/`paramIndex`/`inputSql`/`inputType`/
+  `requiredType`), not `PySparkTypeError`.
   pins: perf-approxpct-1/C-002
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census

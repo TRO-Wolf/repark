@@ -132,6 +132,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   re-derived through the tracked
   [approxpct harness](../../python/repark-parity/bench/approxpct/map.md); the before
   column stands recorded (no second release build of the pre-unit tree).
+  **Round 3 (2026-09-06):** the 1e7 attributable 462 → 564 MB is the deferred
+  canonical fold's cost, not a re-derivation of the same kernel.
   pins: perf-approxpct-1/C-004
 
 ## Pointers

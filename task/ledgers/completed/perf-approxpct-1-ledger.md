@@ -1,3 +1,31 @@
+# Errata — round 3 (2026-09-06, critic C-1..C-3)
+
+No verdict moves: every clause stays PROVEN. C-1 measures live Spark 4.1.2
+accuracy-type failures as `AnalysisException` /
+`DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` / SQLSTATE 42K09 with params
+`{sqlExpr, paramIndex: third, inputSql, inputType, requiredType: "INTEGRAL"}`
+(True/BOOLEAN, DataFrame 1.5/DOUBLE, SQL 1.5/DECIMAL(2,1), "10"/STRING). The
+DataFrame door now raises that class with Spark's message and params (construction
+time; Spark waits until analysis). The SQL door raises `AnalysisException` with
+the class in the message (`Error during planning:` prefix) but cannot carry
+Spark's sqlExpr/inputSql params from Rust — filed `FN-APPROXPCT-ACC-TYPE-1`,
+red-when-fixed pin
+`test_sql_non_integral_accuracy_is_analysis_without_spark_params`. Raw
+`numpy.int64` through Spark's `lit` is `CAST(2 AS BIGINT) AS 2` and
+INTERNAL_ERROR; repark still accepts `__index__` as INTEGRAL. C-2: `run_cells.py
+--help` is argparse usage, not a ValueError traceback. C-3: the 1e7 attributable
+peak 462 → 564 MB is the deferred canonical fold's cost, not a re-derivation.
+
+- E-7 (C-1, E-6): E-6's "pinned on both doors" with client-side
+  `{arg_name, arg_type}` / `PySparkTypeError` is superseded. DataFrame door:
+  Spark's class, message and params. SQL door: class in the message only;
+  `getErrorClass`/`getMessageParameters` stay None (native Plan error).
+- E-8 (C-2): `python/repark-parity/bench/approxpct/run_cells.py --help` exits 0
+  with usage; missing args exit non-zero without a traceback.
+- E-9 (C-3, E-2): E-2's "AFTER re-derived" 752.9 MB / 564 MB attributable is the
+  deferred canonical fold's cost against round-1 AFTER 650.0 MB / 462 MB
+  attributable, not a second measurement of the same kernel.
+
 # Errata — round 2 (2026-09-06, critic F-1..F-9)
 
 No verdict moves: every clause stays PROVEN; the claims below narrow to what the

@@ -41,7 +41,10 @@ state: state is 0.95 MB at default accuracy, pinned by `state_size_follows_one_o
 (952656/4776/72 B at acc 10000/100/2 after 1e6 inserts) and bounded mid-insert by
 `inserts_compress_eagerly_before_any_query`; the residual scales sublinearly and
 reads as transient Arrow batches plus allocator retention in a 0.14 s run —
-inferred, not measured. Error budget: default accuracy 10000 → eps 0.0001, so
+inferred, not measured. The jump from the round-1 AFTER attributable 462 MB
+(650.0 − 188) to this 564 MB (752.9 − 188.6) is the deferred canonical fold's
+cost (stage every partial, sort, fold once), not a re-derivation of the same
+kernel. Error budget: default accuracy 10000 → eps 0.0001, so
 ±100 rank at 1e6 (±50000 at 1e7); the measured 29 (1e6) and 407 (1e7) sit inside.
 Accuracy-knob cells (default/10/2 on int, double, decimal, grouped, and
 window-frame paths) live in the unit ledger §4 with live-Spark goldens, not here.

@@ -44,6 +44,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   accuracy knob moves the answers and bounds the memory on the group-by path
   and per frame on the WIN-SLIDE-1 re-scan path.
   `risk_tier: standard`. Branch `perf/approxpct-1`.
+  Round-3 errata (2026-09-06): DataFrame-door Spark `AnalysisException` params;
+  SQL-door `FN-APPROXPCT-ACC-TYPE-1`; fold-cost 462 → 564 MB.
   pins: perf-approxpct-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-ice-scan-1-ledger.md](perf-ice-scan-1-ledger.md) —
   **PERF-ICE-SCAN-1 (2026-09-05), complete:** Iceberg `count(*)` folds (86.5 → 2.0 ms)

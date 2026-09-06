@@ -21,9 +21,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   explicit fallback to string.
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
-- `_integral.py` — **Round 2 (2026-09-06):** Spark INTEGRAL-type coercion for facade
-  integer knobs (`checked_integral`); numpy integers run, bool/float/str fail with
-  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`. pins: perf-approxpct-1/C-002
+- `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
+  integer knobs (`checked_integral`); numpy `__index__` types run, bool/float/str fail
+  with `AnalysisException` / `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` carrying Spark's
+  sqlExpr/paramIndex/inputSql/inputType/requiredType (live 4.1.2). pins: perf-approxpct-1/C-002
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
@@ -72,6 +73,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   run as the int on both forms, bool/float/str fail with
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` — the NULL-tail fallback is gone. The two
   Column builds merged into one shared return; ceiling 2259 → 2258.
+  pins: perf-approxpct-1/C-002
+  **Round 3 (2026-09-06):** that refusal is `AnalysisException` with Spark's class,
+  message and params (not `PySparkTypeError` / `{arg_name, arg_type}`).
   pins: perf-approxpct-1/C-002
   **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
   `chr`/`elt`/`rlike` lower onto Spark kernels. pins: fn-fix-2-string-rows/C-002

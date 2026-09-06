@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Final
 
 import _live_parity as lp
 import pyarrow as pa
 import pytest
+
+from repark.errors import AnalysisException
 
 SEQ200_DOUBLE_SQL: Final[str] = " UNION ALL ".join(
     f"SELECT CAST({index} AS DOUBLE) AS x" for index in range(1, 201)
@@ -314,12 +319,97 @@ def test_empty_and_all_null_answer_null(repark_engine: Any) -> None:
     assert no_percentages is None
 
 
-@pytest.mark.parametrize("accuracy", ["0", "-3", "NULL", "2147483648", "TRUE", "'100'"])
+@pytest.mark.parametrize("accuracy", ["0", "-3", "NULL", "2147483648"])
 def test_invalid_accuracy_raises(repark_engine: Any, accuracy: str) -> None:
-    """C-002: an out-of-range, NULL or mistyped accuracy fails loudly on the SQL door."""
+    """C-002: an out-of-range or NULL accuracy fails loudly on the SQL door."""
     with pytest.raises(Exception, match="accuracy"):
         query = f"SELECT percentile_approx(x, 0.5, {accuracy}) AS p FROM ({SEQ200_DOUBLE_SQL})"
         _scalar(repark_engine, query)
+
+
+def _spark_accuracy_params(sql_expr: str, input_sql: str, input_type: str) -> dict[str, str]:
+    """Spark 4.1.2 UNEXPECTED_INPUT_TYPE params for a rejected accuracy argument."""
+    return {
+        "sqlExpr": f'"{sql_expr}"',
+        "paramIndex": "third",
+        "inputSql": f'"{input_sql}"',
+        "inputType": f'"{input_type}"',
+        "requiredType": '"INTEGRAL"',
+    }
+
+
+@pytest.mark.parametrize(
+    ("bad", "input_sql", "input_type"),
+    [(True, "true", "BOOLEAN"), (1.5, "1.5", "DOUBLE"), ("10", "10", "STRING")],
+)
+def test_dataframe_non_integral_accuracy_matches_spark_analysis(
+    repark_engine: Any, bad: object, input_sql: str, input_type: str
+) -> None:
+    """C-1: DataFrame door raises AnalysisException with Spark's class, message and params."""
+    from repark.spark import functions as spark_functions
+
+    with pytest.raises(AnalysisException) as caught:
+        spark_functions.percentile_approx("x", 0.5, bad)  # type: ignore[arg-type]
+    sql_expr = f"percentile_approx(x, 0.5, {input_sql})"
+    assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert caught.value.getMessageParameters() == _spark_accuracy_params(
+        sql_expr, input_sql, input_type
+    )
+    message = str(caught.value)
+    assert message.startswith("[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]")
+    assert 'The third parameter requires the "INTEGRAL" type' in message
+    assert f'however "{input_sql}" has the type "{input_type}"' in message
+    assert "SQLSTATE: 42K09" in message
+
+
+@pytest.mark.parametrize(
+    ("literal", "spark_type"),
+    [("TRUE", "BOOLEAN"), ("1.5", "DECIMAL"), ("'100'", "STRING")],
+)
+def test_sql_non_integral_accuracy_is_analysis_without_spark_params(
+    repark_engine: Any, literal: str, spark_type: str
+) -> None:
+    """C-1 / FN-APPROXPCT-ACC-TYPE-1: SQL door is AnalysisException; params stay None.
+
+    Red-when-fixed: getErrorClass/getMessageParameters become Spark's structured
+    payload (sqlExpr, paramIndex, inputSql, inputType, requiredType).
+    """
+    with pytest.raises(AnalysisException) as caught:
+        query = f"SELECT percentile_approx(x, 0.5, {literal}) AS p FROM ({SEQ200_DOUBLE_SQL})"
+        _scalar(repark_engine, query)
+    message = str(caught.value)
+    assert "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE" in message
+    assert "INTEGRAL" in message
+    assert spark_type in message
+    assert "SQLSTATE: 42K09" in message
+    assert caught.value.getErrorClass() is None
+    assert caught.value.getMessageParameters() is None
+
+
+def test_run_cells_help_exits_zero() -> None:
+    """C-2: run_cells.py --help prints usage and does not raise ValueError."""
+    script = (
+        Path(__file__).resolve().parents[3] / "python/repark-parity/bench/approxpct/run_cells.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "rows" in result.stdout.lower()
+    assert "ValueError" not in result.stderr
+    missing = subprocess.run(
+        [sys.executable, str(script)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert missing.returncode != 0
+    assert "usage" in missing.stderr.lower()
+    assert "ValueError" not in missing.stderr
+    assert "Traceback" not in missing.stderr
 
 
 @pytest.mark.parametrize("percentage", ["1.5", "-0.5", "NULL"])

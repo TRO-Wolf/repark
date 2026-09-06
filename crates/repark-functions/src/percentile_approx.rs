@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use arrow::array::{Array, ArrayRef, BinaryArray};
 use arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
-use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::common::{Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
@@ -146,6 +146,45 @@ fn scalar_as_f64(value: &ScalarValue) -> Result<f64> {
         }
         other => exec_err!("percentile_approx percentage must be numeric, got {other}"),
     }
+}
+
+fn accuracy_type_is_integral(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+    )
+}
+
+fn spark_sql_type(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Boolean => "BOOLEAN".to_string(),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => "STRING".to_string(),
+        DataType::Float32 => "FLOAT".to_string(),
+        DataType::Float64 => "DOUBLE".to_string(),
+        DataType::Decimal128(precision, scale) | DataType::Decimal256(precision, scale) => {
+            format!("DECIMAL({precision},{scale})")
+        }
+        other => other.to_string(),
+    }
+}
+
+fn refuse_non_integral_accuracy(data_type: &DataType) -> Result<()> {
+    if accuracy_type_is_integral(data_type) || matches!(data_type, DataType::Null) {
+        return Ok(());
+    }
+    plan_err!(
+        "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"percentile_approx\" due to \
+         data type mismatch: The third parameter requires the \"INTEGRAL\" type, however the \
+         argument has the type \"{}\". SQLSTATE: 42K09",
+        spark_sql_type(data_type)
+    )
 }
 
 fn accuracy_from_scalar(value: &ScalarValue) -> Result<i64> {
@@ -553,6 +592,9 @@ impl AggregateUDFImpl for SparkPercentileApprox {
         let Some(percentage_type) = arg_types.get(1) else {
             return exec_err!("percentile_approx requires a percentage");
         };
+        if let Some(accuracy_type) = arg_types.get(2) {
+            refuse_non_integral_accuracy(accuracy_type)?;
+        }
         Ok(return_data_type(value_type, percentage_type))
     }
 
@@ -607,6 +649,7 @@ impl AggregateUDFImpl for SparkPercentileApprox {
 #[cfg(test)]
 mod tests {
     use arrow::array::{Float64Array, Int64Array};
+    use datafusion::logical_expr::AggregateUDFImpl;
 
     use super::*;
 
@@ -644,6 +687,38 @@ mod tests {
                 good
             );
         }
+    }
+
+    #[test]
+    fn return_type_rejects_non_integral_accuracy() {
+        let function = SparkPercentileApprox::new();
+        let value_and_percentage = [DataType::Int64, DataType::Float64];
+        let ok = function
+            .return_type(&[DataType::Int64, DataType::Float64, DataType::Int32])
+            .expect("integral accuracy is accepted");
+        assert_eq!(ok, DataType::Int64);
+        for bad in [
+            DataType::Boolean,
+            DataType::Float64,
+            DataType::Utf8,
+            DataType::Decimal128(2, 1),
+        ] {
+            let mut types = value_and_percentage.to_vec();
+            types.push(bad.clone());
+            let err = function
+                .return_type(&types)
+                .expect_err("non-integral accuracy fails analysis");
+            let text = err.to_string();
+            assert!(
+                text.contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
+                "{bad:?}: {text}"
+            );
+            assert!(text.contains("INTEGRAL"), "{bad:?}: {text}");
+            assert!(text.contains(&spark_sql_type(&bad)), "{bad:?}: {text}");
+        }
+        function
+            .return_type(&[DataType::Int64, DataType::Float64, DataType::Null])
+            .expect("NULL accuracy is not UNEXPECTED_INPUT_TYPE");
     }
 
     #[test]

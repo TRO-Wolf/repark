@@ -6,6 +6,7 @@ One attempt per line: wall seconds, ru_maxrss peak, the answer, start/end load.
 peak RSS attributable; the caller runs one process per baseline row.
 """
 
+import argparse
 import os
 import resource
 import subprocess
@@ -43,13 +44,30 @@ def load1() -> float:
     return os.getloadavg()[0]
 
 
-def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse ROWS ATTEMPTS [--control]. `--help` prints usage and exits 0."""
+    parser = argparse.ArgumentParser(
+        prog="run_cells.py",
+        description="Time the PERF-APPROXPCT-1 sketch cells: wall, peak RSS, answer, load.",
+    )
+    parser.add_argument("rows", type=int, help="row count of range(1, ROWS+1)")
+    parser.add_argument("attempts", type=int, help="attempts in this process (cold + warm)")
+    parser.add_argument(
+        "--control",
+        action="store_true",
+        help="time count(id) instead of the sketch",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
     """Time every attempt of one baseline row on a range scan."""
+    args = parse_args(sys.argv[1:] if argv is None else argv)
     lane = lane_root()
     refuse_unless_release(lane)
-    rows = int(sys.argv[1])
-    attempts = int(sys.argv[2])
-    control = "--control" in sys.argv[3:]
+    rows = args.rows
+    attempts = args.attempts
+    control = args.control
     engine = ReparkSession.builder.appName("approxpct-cells").getOrCreate()
     try:
         frame = engine.range(1, rows + 1)

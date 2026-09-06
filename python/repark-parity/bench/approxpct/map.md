@@ -17,6 +17,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   or `count(id)` under `--control`. Prints one attempt per line (wall seconds,
   `ru_maxrss` peak MiB, the answer, start/end 1-minute load). The caller runs one
   fresh process per baseline row so peak RSS stays attributable.
+  **Round 3 (2026-09-06):** argparse; `--help` prints usage and exits 0 (no
+  ValueError traceback). pins: perf-approxpct-1/C-002
 
 ## Pointers
 

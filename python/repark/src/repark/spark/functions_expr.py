@@ -1575,7 +1575,7 @@ def percentile_approx(
     accuracy: int | None = None,
 ) -> Column:
     """Discrete percentile of the column's type (PySpark ``functions.percentile_approx``)."""
-    checked = checked_integral("accuracy", accuracy)
+    checked = checked_integral("accuracy", accuracy, col, percentage)
     tail = "" if checked is None else f", {checked}"
     column, part = _aggregate_argument(col)
     if isinstance(percentage, (list, tuple)):

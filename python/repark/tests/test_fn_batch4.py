@@ -8,7 +8,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark.functions import (
     approx_percentile,
     bit_and,
@@ -174,27 +174,50 @@ def test_percentile_approx_bool_percentage_rejected(spark: ReparkSession) -> Non
         percentile_approx("x", True)  # type: ignore[arg-type]
 
 
-def test_percentile_approx_bool_accuracy_rejected(spark: ReparkSession) -> None:
-    """Round 2: bool accuracy fails with Spark's INTEGRAL contract (live 4.1.2)."""
-    from repark.errors import PySparkTypeError
+def _spark_accuracy_params(sql_expr: str, input_sql: str, input_type: str) -> dict[str, str]:
+    """Spark 4.1.2 UNEXPECTED_INPUT_TYPE params for a rejected accuracy argument."""
+    return {
+        "sqlExpr": f'"{sql_expr}"',
+        "paramIndex": "third",
+        "inputSql": f'"{input_sql}"',
+        "inputType": f'"{input_type}"',
+        "requiredType": '"INTEGRAL"',
+    }
 
-    with pytest.raises(PySparkTypeError, match="accuracy") as caught:
+
+def test_percentile_approx_bool_accuracy_rejected(spark: ReparkSession) -> None:
+    """DataFrame door: bool accuracy is Spark's AnalysisException (live 4.1.2)."""
+    with pytest.raises(AnalysisException) as caught:
         percentile_approx("x", 0.5, True)  # type: ignore[arg-type]
     assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-    assert caught.value.getMessageParameters() == {"arg_name": "accuracy", "arg_type": "bool"}
+    assert caught.value.getMessageParameters() == _spark_accuracy_params(
+        "percentile_approx(x, 0.5, true)", "true", "BOOLEAN"
+    )
+    message = str(caught.value)
+    assert message.startswith("[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]")
+    assert 'The third parameter requires the "INTEGRAL" type' in message
+    assert 'however "true" has the type "BOOLEAN"' in message
+    assert "SQLSTATE: 42K09" in message
 
 
-@pytest.mark.parametrize(("bad", "arg_type"), [(2.0, "float"), ("100", "str")])
+@pytest.mark.parametrize(
+    ("bad", "input_sql", "input_type"),
+    [(1.5, "1.5", "DOUBLE"), ("10", "10", "STRING")],
+)
 def test_percentile_approx_non_integral_accuracy_rejected(
-    spark: ReparkSession, bad: object, arg_type: str
+    spark: ReparkSession, bad: object, input_sql: str, input_type: str
 ) -> None:
-    """Round 2: float/str accuracy fails with Spark's INTEGRAL contract (live 4.1.2)."""
-    from repark.errors import PySparkTypeError
-
-    with pytest.raises(PySparkTypeError, match="accuracy") as caught:
+    """DataFrame door: float/str accuracy is Spark's AnalysisException (live 4.1.2)."""
+    with pytest.raises(AnalysisException) as caught:
         percentile_approx("x", 0.5, bad)  # type: ignore[arg-type]
+    sql_expr = f"percentile_approx(x, 0.5, {input_sql})"
     assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
-    assert caught.value.getMessageParameters() == {"arg_name": "accuracy", "arg_type": arg_type}
+    assert caught.value.getMessageParameters() == _spark_accuracy_params(
+        sql_expr, input_sql, input_type
+    )
+    message = str(caught.value)
+    assert f'however "{input_sql}" has the type "{input_type}"' in message
+    assert "SQLSTATE: 42K09" in message
 
 
 def test_percentile_approx_numpy_accuracy_runs(spark: ReparkSession) -> None:

@@ -1779,7 +1779,8 @@ the pin rather than obeying it.
   and `…, 10000` are `100.0` — Spark-equal on single-partition inputs and bit-equal
   on the pinned matrix; multi-partition merges are deterministic within the GK bound
   (`FN-APPROXPCT-ORDER-1`). The third argument reaches the sketch on the facade and
-  on SQL (validated at plan time, out-of-range raises).
+  on SQL (validated at plan time, out-of-range raises). Non-integral accuracy is
+  Spark-equal on the DataFrame door; the SQL door is `FN-APPROXPCT-ACC-TYPE-1`.
 - **Apache Spark** — `percentile_approx(x, 0.5, 2)` is `1.0` (Greenwald-Khanna at
   accuracy 2). `percentile_approx(x, 0.5)` and `…, 10000` are `100.0`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
@@ -1815,6 +1816,31 @@ the pin rather than obeying it.
   No live-mirror: the DISCLOSURES table sits at its exact file-size ceiling, so an
   entry needs unrelated churn; the repark side is pinned by always-run repeatability
   pins and the Spark side rests on the recorded banner.
+
+### FN-APPROXPCT-ACC-TYPE-1 — SQL-door non-integral `accuracy` is AnalysisException without Spark's params
+
+- **repark** — SQL `percentile_approx(x, 0.5, TRUE)` / `1.5` / `'100'` raises
+  `AnalysisException` whose message carries
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, `INTEGRAL`, SQLSTATE 42K09 and the
+  Spark type name (BOOLEAN / DECIMAL(2,1) / STRING). `getErrorClass()` and
+  `getMessageParameters()` are None: DataFusion `Plan` errors do not carry
+  Spark's `{sqlExpr, paramIndex, inputSql, inputType, requiredType}` map, and
+  `return_type` sees only `DataType`s. The DataFrame door is Spark-equal
+  (class, message and params) at construction.
+- **Apache Spark** — both doors raise `AnalysisException`
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` with params
+  `{sqlExpr, paramIndex: "third", inputSql, inputType, requiredType: "INTEGRAL"}`
+  and SQLSTATE 42K09. SQL `1.5` is DECIMAL(2,1); DataFrame `1.5` is DOUBLE.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, `local[2]`, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_perf_approxpct_1.py::test_sql_non_integral_accuracy_is_analysis_without_spark_params`
+  (red-when-fixed: `getErrorClass`/`getMessageParameters` stay None) and
+  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_bool_accuracy_rejected`
+  (DataFrame door Spark-equal).
+- **Rationale** — OPEN, filed 2026-09-06 from the PERF-APPROXPCT-1 round-3 review.
+  Not a silent accept: the SQL door fails analysis with Spark's class in the
+  message. Structured params and the exact sqlExpr/inputSql wording need the
+  expression text at `return_type`, which DataFusion does not pass.
 
 ### PERF-APPROXPCT-1 — `percentile_approx` bounds memory with Spark's sketch — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
