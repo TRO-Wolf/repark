@@ -17,6 +17,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured scalar-string remainder arms."""
     repark = ReparkSession.builder.appName("ex-strings-more").master("local[1]").getOrCreate()
     try:
         ints = repark.createDataFrame(
