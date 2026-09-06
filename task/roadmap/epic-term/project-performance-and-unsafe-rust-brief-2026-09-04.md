@@ -27,6 +27,8 @@ Quick navigation: [pickup](#1-read-this-at-pickup), [project feedback](#3-produc
 [agent permissions](#10-agent-capabilities), [enforcement](#12-worker-isolation-and-patch-admission),
 [guard tests](#14-tests-for-the-agent-safeguards), [delivery sequence](#15-recommended-delivery-sequence).
 
+> **Reconciliation note (2026-09-06, orchestrator):** the perf slate that followed this brief has landed on main since it was written — PERF-ICE-CATALOG-IO-1/2/3 (session metadata cache; the fork's shared manifest cache, on by default at 32 MiB after fork F-CATIO-KEY), PERF-ICE-WRITEPATH-1 (parallel CTAS writers), PERF-AGG-AVG-1 (a `GroupsAccumulator` for avg/try_avg), PERF-FACADE-1 and PERF-FACADE-CDF-1 (collect and createDataFrame), PERF-DYNFLATTEN-2, PERF-ICE-SCAN-1 (count(*) folds; parallel small-table scans, fork F-27) and PERF-APPROXPCT-1 (Greenwald-Khanna `percentile_approx`, in review). Read the candidate rows P-2 to P-5 below against `docs/perf/engine-iceberg-analysis-2026-09-04.md` and the registry's `PERF-*` rows before reopening any of them; the brief's text is preserved as written.
+
 ## 1. Read this at pickup
 
 1. Follow the current contributor read path. Inspect the checkout and preserve work in flight.

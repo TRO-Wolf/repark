@@ -8,7 +8,7 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   2026-09-03) — PROJECT.md points here rather than restating it.
 
 ## Contents
-- [project-performance-and-unsafe-rust-brief-2026-09-04.md](project-performance-and-unsafe-rust-brief-2026-09-04.md)
+- [project-performance-and-unsafe-rust-brief-2026-09-04.md](project-performance-and-unsafe-rust-brief-2026-09-04.md) A 2026-09-06 reconciliation note at its head lists the slate units that landed after it was written.
   — proposal opened 2026-09-04 consolidating production feedback, measured and candidate
   performance improvements, possible unsafe Rust exceptions, and agent isolation, patch
   admission, and safety review. Includes evidence limits, guard tests, delivery groups, and
