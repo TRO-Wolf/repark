@@ -8,14 +8,15 @@ use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
-    DmlSubqueryVerb, MorDmlKind, alter, build_ctas, call, create_table, delete_target_object_name,
-    describe_show, execute_create_namespace, execute_ctas, execute_drop_namespace,
-    execute_drop_table, execute_insert_overwrite, execute_truncate, merge, metadata_tables,
-    object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
-    refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
-    refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
-    spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
-    try_parse_create_namespace, write_to_branch,
+    DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, create_table,
+    delete_target_object_name, describe_show, execute_create_namespace, execute_ctas,
+    execute_drop_namespace, execute_drop_table, execute_insert_overwrite, execute_truncate, merge,
+    metadata_tables, object_name_from_table_with_joins, parse_single_normalized,
+    passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
+    refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
+    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
+    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace,
+    write_to_branch,
 };
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -277,6 +278,12 @@ async fn try_preparse_intercepts(
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
         return Some(match parsed {
             Ok(ddl) => alter::execute_iceberg_alter_ddl(ctx, catalogs, ddl).await,
+            Err(error) => Err(error),
+        });
+    }
+    if let Some(parsed) = alter_write_order::try_parse_write_order_ddl(sql) {
+        return Some(match parsed {
+            Ok(ddl) => alter_write_order::execute_write_order_ddl(ctx, catalogs, ddl).await,
             Err(error) => Err(error),
         });
     }

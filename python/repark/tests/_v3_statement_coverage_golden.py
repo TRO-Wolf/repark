@@ -59,7 +59,7 @@ VERDICTS: dict[str, str] = {
     "alter-add-column-partitioned": "EQUAL",
     "alter-set-tblproperties": "EQUAL",
     "alter-unset-tblproperties": "EQUAL",
-    "alter-write-ordered-by": "DIVERGES",
+    "alter-write-ordered-by": "EQUAL",
     "alter-set-format-version-3": "EQUAL",
     "alter-set-format-version-3-mor": "EQUAL",
     "truncate-table": "EQUAL",
