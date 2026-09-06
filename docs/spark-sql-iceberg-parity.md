@@ -4870,6 +4870,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
   (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
   observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+  **IO-3 round 2 (2026-09-05):** the "measured bounded" claim above is withdrawn. The
+  32 MiB budget binds the fork's ESTIMATED manifest weight (768 B per manifest entry,
+  256 B per list entry), not resident bytes: lane measurement puts resident at ~7.5×
+  the charged weight (~7.5 KB per cached small manifest+list at 2,000–8,000 tables,
+  via read-phase VmRSS growth). No peak-RSS ratio is claimed — single-driver peak
+  deltas ride ±20 MB of allocator/phase noise (the explicit-`0` peak is non-monotonic
+  across table counts: 323.9 / 340.1 / 322.6 MB at 500 / 2,000 / 8,000). What the
+  500-table leg still proves is no retention outside the cache (both columns
+  row-correct; the default peak stays within the 64 MB bar); the weight bound itself
+  is unexercised (8 MB charged of 32 MB at 8,000 tables). The under-count is now
+  `PERF-CATALOG-CACHE-WEIGHT-1` / `F-CATIO-WEIGHT`. This row stays BACKLOG for the
+  metadata-cache LRU only (`F-CATIO-BOUND`).
+- **PERF-CATALOG-CACHE-WEIGHT-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-3 round 2.
+  **BACKLOG** behind a fork change. Fork ask **F-CATIO-WEIGHT**: the fork's
+  `estimate_manifest_weight` (`object_cache.rs:57`: entries × 768 B; lists 256 B) under-counts
+  resident bytes ~7.5× for small manifests. Lane-measured at pin `2ed39cb0`: read-phase
+  VmRSS growth over the CTAS-phase level is ~15 MB at 2,000 tables and 59 MB at 8,000
+  tables against 2.0 / 8.0 MB charged (~7.5 KB resident per cached manifest+list), and
+  the estimate sits below the objects' own file bytes (3,466 B manifest + 1,604 B list
+  per table) before any parsed-form overhead. So the 32 MiB default budgets estimated
+  weight, not resident bytes: a session filling the bound holds 617.5 MB resident
+  (602.9 MB peak) against 338.8 MB with the cache off — ~265–278 MB of entries above
+  a ~340–352 MB base, ~8× charged (the 32,768-table at-bound run). Red-when-fixed pin:
+  `test_a_budget_sized_to_the_charged_weight_retains_every_table` (256 tables fit a
+  280000 budget at charged weight, so the coldest table still hits after every manifest
+  is deleted; true weights evict it and the leg reds). Today's ratio is a documented
+  number, not an assertion — peak-RSS deltas ride ±20 MB of allocator/phase noise, so
+  no numeric pin could hold it. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.3.
 - **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
   BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
   `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
@@ -4878,27 +4907,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
   unit HALTED mid-flight on `PERF-CATALOG-LINEAGE-CACHE-1` (the shared cache serves
   wrong-context lineage on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands)
-  and landed with the knob default OFF per the round-2 ruling, so main serves no wrong
-  answer and the win is measured but not served. Measured with the knob set explicitly
-  to 32 MiB: `t_many/count_id/stmt2` (193 manifests) falls from **115.81 ms to 10.95 ms**
-  (target ≤ 20; the point-query twin 124.75 → 14.75), and the one-manifest twin drops
-  14.37 → 10.49 — the repeated read opens no manifest-list and no manifest at all. The
-  follow-up is the default-ON flip after `F-CATIO-KEY` lands and the four upgrade-lineage
-  tests pass knob-on. Two things this row does NOT claim. (1) The
+  and landed with the knob default OFF per the round-2 ruling, so main served no wrong
+  answer and the win was measured but not served. **FIXED 2026-09-05
+  (PERF-ICE-CATALOG-IO-3):** RP-13 landed `F-CATIO-KEY` at pin `2ed39cb0` and this unit
+  flipped the default to 32 MiB, so every default session's memory catalog shares one
+  manifest cache. Measured on the default session (no knob set):
+  `t_many/count_id/stmt2` (193 manifests) falls from **123.47 ms to 11.27 ms**
+  (target ≤ 20; the point-query twin 125.16 → 14.67), and the one-manifest twin drops
+  15.52 → 10.33 — the repeated read opens no manifest-list and no manifest at all, and
+  the default column reproduces IO-2's explicit-knob column within 0.4 ms on every row.
+  Two things this row does NOT claim. (1) The
   commit side is untouched: the fork's transaction, maintenance and inspect paths load
-  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
-  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  manifests straight from `FileIO` (still bypassing at pin `2ed39cb0`),
+  so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
   build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell with the cache on (the Python legs
-  set the knob explicitly: MERGE after a commit, DROP + re-CREATE, `register_table`,
-  rewrite + expire, time-travel and branch reads), the two-door Rust battery green with
-  the cache off (the default), plus the funnel pin (a second door answers after every
-  manifest is deleted from disk, knob set explicitly). Pins:
+  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
+  reads), the two-door Rust battery green with the cache on (the default), the funnel pin
+  on the default session, the four upgrade-lineage tests green on default sessions, and a
+  two-session concurrency leg plus a 500-table RSS leg. Pins:
   `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
   `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
-  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.
 - **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
   behind a fork change. The fork's shared manifest cache covers the **scan** path only:
   `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
@@ -4917,7 +4949,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   that HALTED it). **FIXED 2026-09-05 (RP-13)** at pin `2ed39cb0` (fork F-CATIO-KEY `#270`: the
   shared cache stores the context-free parse and applies each caller's list-entry inheritance
   and `first_row_id` assignment per read); the knob-on detector below now asserts the assigned
-  lineage and is green. The default-ON flip is the follow-up unit. History: The fork's shared manifest cache keys by
+  lineage and is green. The default-ON flip landed as PERF-ICE-CATALOG-IO-3 (2026-09-05).
+  History: The fork's shared manifest cache keys by
   `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
   that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
   `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
@@ -4931,11 +4964,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
   the key carry the assignment input, or move assignment out of the cached object. No
   RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
-  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
-  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  Until the fix landed, `PERF-ICE-MANIFEST-1` stayed BACKLOG and the knob default stayed
+  OFF: the four upgrade-lineage tests passed by default and had to pass knob-on before
   the default-ON flip. Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
-  (was the wrong-answer detector; it redded on RP-13 as designed and now pins the fix),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (was the wrong-answer detector as `test_with_the_knob_on_…`; it redded on RP-13 as designed,
+  IO-3 renamed it onto the default session, and now it pins the fix),
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)

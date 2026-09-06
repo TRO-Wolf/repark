@@ -322,6 +322,39 @@ repark-parity slice.
 
 ## Contents
 
+- `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
+  assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
+  first) and a JSON sidecar; `check` validates the schema, every stable-prefix
+  rule, sidecar `authority.constraints == STABLE_RULES` (order and text), the
+  adapter trailer, a re-render of the dynamic section, `bash -n` on each gate
+  command, and prefix-negating phrases; `diff` prints the dynamic section only.
+  Field extractors live in `sepmo_packet_extract.py` (so the assembler stays
+  under the default Python ceiling). The banned-trailer literals the checker
+  scans for are assembled at runtime, so the tree never carries them (the
+  pre-push hook forbids them). Fixtures under
+  `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
+  Invocation: `python3 scripts/sepmo_packet.py build …` or
+  `make sepmo-packet ARGS='check <packet>'`.
+  pins: sepmo-e2/C-002, C-003, C-004, C-008
+- `sepmo_packet_extract.py` — **SEPMO-E2 (2026-09-06, round 3):** brief field
+  extractors for the packet assembler: fenced/inline gate commands, writable /
+  closed / never-touch lists, a PATH_TOKEN plus bare-directory scan of boundary
+  spans that fails `build` when a path is not captured, brief-declared
+  hand-back keys, trailer and prefix-negation scans. Loaded as a sibling of
+  `sepmo_packet.py`.
+  pins: sepmo-e2/C-002
+- `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
+  `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
+  table (or `--jsonl`). Muse tokens come from the session store via `runs.tsv` column 6
+  (env `SEPMO_MUSE_SESSIONS_ROOT` / `SEPMO_MUSE_RUNS_TSV` for tests). Grok reads
+  `cache_read_input_tokens` and `modelUsage`. A minority of unparsed JSONL lines, or an
+  `exit` file with no `run.terminal.completed`, emits a degraded record (`truncated: true`,
+  `missing_reason` on `steps`/`tool_calls`); session-store tokens stay valid. Majority-bad
+  JSONL and a non-run directory still fail loudly. Any argument containing `://` is refused
+  on the raw path. Null, never zero, when an adapter does not report a field. No network.
+  Invocation: `python3 scripts/sepmo_usage.py collect <run-dir>` or
+  `make sepmo-usage ARGS='collect <run-dir>'` (not a CI gate).
+  pins: sepmo-e0-e1/C-004, C-005, C-006
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
@@ -691,6 +724,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
+| Collect SEPMO worker usage | `python3 scripts/sepmo_usage.py collect <run-dir>` / `index <dir>` (`make sepmo-usage`) |
+| Assemble a SEPMO compact worker packet | `python3 scripts/sepmo_packet.py build --unit <id> --role actor --base <sha> --brief <md> --out-dir <dir>` |
 
 ## Pointers
 
