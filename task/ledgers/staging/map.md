@@ -11,6 +11,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   parse via a sniff-gated Databricks retry and answer the facade strings (`repark`;
   `repark-<workspace>`), bare forms keep column-or-error behavior, native door untouched.
   `risk_tier: standard`. Branch `fix/sql-door-session-fn-1`.
+  pins: sql-door-session-fn-1/C-001, C-002, C-003, C-004, C-005
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,

@@ -3414,7 +3414,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and FROM-`t`; bare-name column-or-error fences; native-door unchanged fences; one
   `REPARK_PARITY_LIVE=1` shape leg (non-empty, `session_user() = current_user()`,
   door `version()` equals `F.version()`). Oracle live PySpark 4.1.2.
-  pins: sql-door-session-fn-1/C-002, C-003, C-004
+  pins: sql-door-session-fn-1/C-001, C-002, C-003, C-004, C-005
 
 ## I want to...
 

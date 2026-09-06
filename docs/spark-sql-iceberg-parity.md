@@ -6666,6 +6666,50 @@ field NAME.
   agree; the missing methods are pinned, not taught. The API freeze closes
   `python/repark/src` to this unit.
 
+### SQL-SESSION-FN-1 — `user()` / `current_user()` / `session_user()` on the Spark SQL door
+
+- **repark** — **FIXED 2026-09-06 (SQL-DOOR-SESSION-FN-1)** for the parenthesised
+  forms on the Spark door: all three answer `repark` (equal to `F.current_user()`,
+  Utf8 non-null), top level and inside expressions, `WHERE`, and `FROM t`. A wrong
+  arity refuses loud naming the function (DataFusion's wording, not Spark's
+  `WRONG_NUM_ARGS`). Two residues stay: a bare `SELECT user` (and its two siblings)
+  answers a shadowing column when one exists (Spark-equal) but raises `No field named
+  user` when none does (Spark answers the login); the native door still raises
+  `ParseException` (`Expected: end of statement, found: (`) on the parenthesised forms.
+- **Apache Spark** — the parenthesised and bare forms all answer the login (`john` on
+  the measuring box, equal to `F.current_user()`); a shadowing column wins over a bare
+  name; a wrong arity raises `WRONG_NUM_ARGS`. *(oracle: live PySpark 4.1.2, ANSI on,
+  `local[2]`, 2026-09-06, SQL-DOOR-SESSION-FN-1 batch.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/session_functions.rs` (door parse + evaluate per form,
+  expression/`WHERE`/`FROM t` cells, bare-name and broken-call fences),
+  `crates/repark-spark/src/tests/normalize.rs::session_user_sniff_*` (retry-gate unit
+  pins), `python/repark/tests/test_sql_door_session_fn_1.py` (facade door cells, bare and
+  native fences, `test_live_session_function_shapes_match_spark`)
+- **Rationale** — FIXED for the parenthesised Spark-door forms; the bare-unresolvable
+  shape and the native door are BACKLOG residues with fence pins, filed 2026-09-06 from
+  the EX-28 critic cells F-2/F-3. The repark identity is the product default `repark`
+  (ADR-0004 forbids an OS-user read), so the login value itself is intentionally not
+  Spark-equal — only the shape is pinned against live Spark.
+
+### SQL-VERSION-1 — `version()` on the Spark SQL door
+
+- **repark** — **FIXED 2026-09-06 (SQL-DOOR-SESSION-FN-1):** the Spark door answers
+  `repark-<workspace>` (equal to `F.version()` and `ReparkSession.version`, Utf8
+  non-null), top level and inside expressions. Residue: the native door still answers
+  DataFusion's `Apache DataFusion …` string (unchanged, fence-pinned).
+- **Apache Spark** — `4.1.2 f0bb2e6a47d0ebda424ffd633fcea8644a597954` on both doors.
+  *(oracle: live PySpark 4.1.2, ANSI on, `local[2]`, 2026-09-06,
+  SQL-DOOR-SESSION-FN-1 batch.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/session_functions.rs::spark_door_version_call_answers_repark_version`
+  (+ the concat cell), `python/repark/tests/test_sql_door_session_fn_1.py::test_spark_door_version_call_answers_facade_version`
+  and `::test_live_session_function_shapes_match_spark`
+- **Rationale** — FIXED for the Spark door; the native door is a BACKLOG residue with a
+  fence pin, filed 2026-09-06 from the EX-28 critic cells F-2/F-3. The repark version is
+  the distribution string by design (the facade contract), so only the shape
+  (non-empty, door-equals-facade) is pinned against live Spark.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
