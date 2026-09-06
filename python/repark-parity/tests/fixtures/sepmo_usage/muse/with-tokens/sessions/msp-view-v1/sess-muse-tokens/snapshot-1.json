@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "session_id": "sess-muse-tokens",
+  "continuation": {
+    "view_materialization": {
+      "current_state": {
+        "tokenUsage": {
+          "cumulative": {
+            "outputTokens": 30,
+            "promptTokens": 250,
+            "totalTokens": 280
+          },
+          "usage": {
+            "cacheReadTokens": 80,
+            "cacheWriteTokens": 5,
+            "cachedTokens": 80,
+            "inputTokens": 150,
+            "outputTokens": 20,
+            "reasoningTokens": 3
+          }
+        }
+      }
+    }
+  }
+}

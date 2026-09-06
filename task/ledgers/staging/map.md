@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
+  **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
+  collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
+  records; majority-bad still fails. Muse tokens come from the session store
+  (`runs.tsv` join, `.msp-view-v1` pinned); cost is still absent. Grok live keys
+  include `cache_read_input_tokens` and `modelUsage`. OpenCode sqlite has token
+  and cost columns. Claude transcripts are not accessible. Collector is
+  `scripts/sepmo_usage.py`. `risk_tier: standard`. Branch
+  `sepmo/e0-e1-usage-collector`.
+  pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the
@@ -67,6 +77,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   flip close the remainder. Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY` (fork-side,
   no RePark fix exists). `risk_tier: standard`. Branch `perf/ice-catalog-io-2`.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-3-ledger.md](perf-ice-catalog-io-3-ledger.md) —
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05), landed default-ON:** the flip IO-2's round-2
+  ruling named as the follow-up, on the fixed pin `2ed39cb0` (RP-13, `F-CATIO-KEY`).
+  `DEFAULT_MANIFEST_CACHE_BYTES` is 32 MiB; the four HALT tests, the staleness
+  battery and the lineage pins run on default sessions and are green; a two-session
+  concurrency leg and a 500-table subprocess RSS comparison (332.2 vs 323.9 MB, delta
+  8.3, bar 64) prove the fork-fix contract and the bound.
+  `t_many/count_id/stmt2` **123.47 → 11.27 ms** on the default session (target ≤ 20);
+  `PERF-ICE-MANIFEST-1` FIXED with the default-session number;
+  `PERF-CATALOG-CACHE-BOUND-1` narrowed with the measured RSS. Charter committed
+  red-first (the default pins redded on the base, then green after). 7 PROVEN, 0 OPEN.
+  `risk_tier: elevated`. Branch `perf/ice-catalog-io-3`.
+  pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
@@ -102,6 +125,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in the ledger's "Round 2 — review gaps" table. `risk_tier: elevated`. Branch
   `perf/ice-catalog-io-1`.
   pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ex-26-io-session-ledger.md](ex-26-io-session-ledger.md) —
+  **EX-26 (2026-09-06), in flight:** the v1.1 example backfill's reader/writer/session long-tail
+  batch — the 50-name roster at base `24932dee` (= `origin/main` at dispatch); 29 names covered
+  by twelve new `docs/examples/{io,session,dataframe}/` files (backlog 193 → 164;
+  `BACKLOG_BASELINE` 193 → 164), every asserted value measured on live PySpark 4.1.2 (ANSI on,
+  UTC) or on repark's documented answer for the repark-only names; seventeen roster names keep
+  their prior stays rows and the four excel names stay with the new §7 EX-IO-7 row, while eleven
+  new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
+  tests in `test_examples_io_session.py` (plus a dated EX-SES-1 Spark-half correction). Red-first: 29
+  has-no-example findings with the files held out (exit 1), and the wrong-bytes control in
+  `writer_csv.py` failed the execute leg by name (exit 1). `risk_tier: standard`. Branch
+  `docs/ex-26-io-session`.
+  pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - [ex-25-functions-a-ledger.md](ex-25-functions-a-ledger.md) —
   **EX-25 (2026-09-05), in flight:** the v1.1 example backfill's `F.*` long-tail (a) batch —
   the 45-name roster at base `bc7c76cc` (= `origin/main` at dispatch); 20 names covered by five

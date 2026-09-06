@@ -4880,6 +4880,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
   (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
   observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+  **IO-3 round 2 (2026-09-05):** the "measured bounded" claim above is withdrawn. The
+  32 MiB budget binds the fork's ESTIMATED manifest weight (768 B per manifest entry,
+  256 B per list entry), not resident bytes: lane measurement puts resident at ~7.5×
+  the charged weight (~7.5 KB per cached small manifest+list at 2,000–8,000 tables,
+  via read-phase VmRSS growth). No peak-RSS ratio is claimed — single-driver peak
+  deltas ride ±20 MB of allocator/phase noise (the explicit-`0` peak is non-monotonic
+  across table counts: 323.9 / 340.1 / 322.6 MB at 500 / 2,000 / 8,000). What the
+  500-table leg still proves is no retention outside the cache (both columns
+  row-correct; the default peak stays within the 64 MB bar); the weight bound itself
+  is unexercised (8 MB charged of 32 MB at 8,000 tables). The under-count is now
+  `PERF-CATALOG-CACHE-WEIGHT-1` / `F-CATIO-WEIGHT`. This row stays BACKLOG for the
+  metadata-cache LRU only (`F-CATIO-BOUND`).
+- **PERF-CATALOG-CACHE-WEIGHT-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-3 round 2.
+  **BACKLOG** behind a fork change. Fork ask **F-CATIO-WEIGHT**: the fork's
+  `estimate_manifest_weight` (`object_cache.rs:57`: entries × 768 B; lists 256 B) under-counts
+  resident bytes ~7.5× for small manifests. Lane-measured at pin `2ed39cb0`: read-phase
+  VmRSS growth over the CTAS-phase level is ~15 MB at 2,000 tables and 59 MB at 8,000
+  tables against 2.0 / 8.0 MB charged (~7.5 KB resident per cached manifest+list), and
+  the estimate sits below the objects' own file bytes (3,466 B manifest + 1,604 B list
+  per table) before any parsed-form overhead. So the 32 MiB default budgets estimated
+  weight, not resident bytes: a session filling the bound holds 617.5 MB resident
+  (602.9 MB peak) against 338.8 MB with the cache off — ~265–278 MB of entries above
+  a ~340–352 MB base, ~8× charged (the 32,768-table at-bound run). Red-when-fixed pin:
+  `test_a_budget_sized_to_the_charged_weight_retains_every_table` (256 tables fit a
+  280000 budget at charged weight, so the coldest table still hits after every manifest
+  is deleted; true weights evict it and the leg reds). Today's ratio is a documented
+  number, not an assertion — peak-RSS deltas ride ±20 MB of allocator/phase noise, so
+  no numeric pin could hold it. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.3.
 - **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
   BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
   `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
@@ -4888,27 +4917,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
   unit HALTED mid-flight on `PERF-CATALOG-LINEAGE-CACHE-1` (the shared cache serves
   wrong-context lineage on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands)
-  and landed with the knob default OFF per the round-2 ruling, so main serves no wrong
-  answer and the win is measured but not served. Measured with the knob set explicitly
-  to 32 MiB: `t_many/count_id/stmt2` (193 manifests) falls from **115.81 ms to 10.95 ms**
-  (target ≤ 20; the point-query twin 124.75 → 14.75), and the one-manifest twin drops
-  14.37 → 10.49 — the repeated read opens no manifest-list and no manifest at all. The
-  follow-up is the default-ON flip after `F-CATIO-KEY` lands and the four upgrade-lineage
-  tests pass knob-on. Two things this row does NOT claim. (1) The
+  and landed with the knob default OFF per the round-2 ruling, so main served no wrong
+  answer and the win was measured but not served. **FIXED 2026-09-05
+  (PERF-ICE-CATALOG-IO-3):** RP-13 landed `F-CATIO-KEY` at pin `2ed39cb0` and this unit
+  flipped the default to 32 MiB, so every default session's memory catalog shares one
+  manifest cache. Measured on the default session (no knob set):
+  `t_many/count_id/stmt2` (193 manifests) falls from **123.47 ms to 11.27 ms**
+  (target ≤ 20; the point-query twin 125.16 → 14.67), and the one-manifest twin drops
+  15.52 → 10.33 — the repeated read opens no manifest-list and no manifest at all, and
+  the default column reproduces IO-2's explicit-knob column within 0.4 ms on every row.
+  Two things this row does NOT claim. (1) The
   commit side is untouched: the fork's transaction, maintenance and inspect paths load
-  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
-  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  manifests straight from `FileIO` (still bypassing at pin `2ed39cb0`),
+  so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
   build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell with the cache on (the Python legs
-  set the knob explicitly: MERGE after a commit, DROP + re-CREATE, `register_table`,
-  rewrite + expire, time-travel and branch reads), the two-door Rust battery green with
-  the cache off (the default), plus the funnel pin (a second door answers after every
-  manifest is deleted from disk, knob set explicitly). Pins:
+  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
+  reads), the two-door Rust battery green with the cache on (the default), the funnel pin
+  on the default session, the four upgrade-lineage tests green on default sessions, and a
+  two-session concurrency leg plus a 500-table RSS leg. Pins:
   `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
   `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
-  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.
 - **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
   behind a fork change. The fork's shared manifest cache covers the **scan** path only:
   `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
@@ -4927,7 +4959,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   that HALTED it). **FIXED 2026-09-05 (RP-13)** at pin `2ed39cb0` (fork F-CATIO-KEY `#270`: the
   shared cache stores the context-free parse and applies each caller's list-entry inheritance
   and `first_row_id` assignment per read); the knob-on detector below now asserts the assigned
-  lineage and is green. The default-ON flip is the follow-up unit. History: The fork's shared manifest cache keys by
+  lineage and is green. The default-ON flip landed as PERF-ICE-CATALOG-IO-3 (2026-09-05).
+  History: The fork's shared manifest cache keys by
   `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
   that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
   `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
@@ -4941,11 +4974,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
   the key carry the assignment input, or move assignment out of the cached object. No
   RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
-  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
-  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  Until the fix landed, `PERF-ICE-MANIFEST-1` stayed BACKLOG and the knob default stayed
+  OFF: the four upgrade-lineage tests passed by default and had to pass knob-on before
   the default-ON flip. Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
-  (was the wrong-answer detector; it redded on RP-13 as designed and now pins the fix),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (was the wrong-answer detector as `test_with_the_knob_on_…`; it redded on RP-13 as designed,
+  IO-3 renamed it onto the default session, and now it pins the fix),
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
@@ -5451,7 +5485,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   and the UDF answers inside SQL with the same value.
 - **Apache Spark** — the deprecated alias answers the original callable `f` itself
   (`type(spark.catalog.registerFunction("fn", f)).__name__` is `'function'`); `spark.udf.register`
-  answers the `UserDefinedFunction`.
+  answers a plain wrapped function too (type name `'function'`, the `functools.wraps` wrapper —
+  corrected 2026-09-06 by EX-26, which re-measured this half on two JVM runs plus the installed
+  source; the EX-21 text misstated it as the `UserDefinedFunction`. See EX-SES-6.).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, both lambdas
   registered and called through `spark.sql("SELECT fn(4)")` → `u4` on both engines.)*
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_register_function_returns_udf_object`
@@ -5865,6 +5901,170 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
   nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
   Never-OOM claim.
+
+### EX-IO-1 — bare `load()` defaults to parquet on Spark; repark raises
+
+- **repark** — `spark.read.option("path", pq).load()` with no `format(...)` raises
+  `AnalysisException: DATA_SOURCE_NOT_FOUND: Failed to find the data source: (empty). Call
+  format(...) before load(...) (repark does not default empty format to parquet)`.
+- **Apache Spark** — reads the parquet directory and answers its rows (`[(1, 'a'), (2, 'b')]`
+  on the EX-26 two-row `id`/`name` frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session
+  zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_bare_load_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  `format(...).load(...)` arms, where the engines agree; the bare-load default is pinned, not
+  taught.
+
+### EX-IO-2 — `schema()` on a parquet read: Spark projects it; repark refuses
+
+- **repark** — `spark.read.schema("name STRING").parquet(pq)` raises
+  `AnalysisException: DataFrameReader.schema(...) is not applied on parquet reads yet (use
+  csv/json schema, or cast after read)`.
+- **Apache Spark** — applies the schema as a projection: dtypes `[('name', 'string')]` and
+  rows `[('a',), ('b',)]` on the same frame. *(oracle: live PySpark 4.1.2, ANSI on, UTC session
+  zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_schema_on_parquet_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The name stays
+  covered by the csv/json schema arms, where the engines agree; the parquet arm is pinned, not
+  taught.
+
+### EX-IO-3 — csv `inferSchema` widens ints to bigint; Spark answers int, rows agree
+
+- **repark** — `spark.read.csv(path, header=True, inferSchema=True)` answers dtypes
+  `[('id', 'bigint'), ('name', 'string')]` and rows `[(1, 'a'), (2, 'b'), (3, 'c')]` on the
+  EX-26 `id`/`name` letters file.
+- **Apache Spark** — answers dtypes `[('id', 'int'), ('name', 'string')]` and the same rows.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_infer_schema_width`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the default, header, null-value, and explicit-schema arms, where schema and rows agree; the
+  infer arm is pinned, not taught.
+
+### EX-IO-4 — csv writes carry a header by default; Spark writes none
+
+- **repark** — both the `csv(path)` shorthand and `format("csv").save(path)` write one data
+  file reading `"id,name\n1,a\n2,b\n"` with no header option set.
+- **Apache Spark** — both spellings write `"1,a\n2,b\n"`; the header appears only with
+  `header=true`, which answers `"id,name\n1,a\n2,b\n"` on both engines. *(oracle: live PySpark
+  4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch, both spellings measured.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_header_default_true`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the explicit-header arms, where bytes agree; the default is pinned, not taught.
+
+### EX-IO-5 — `save()` with no format: Spark writes parquet; repark raises
+
+- **repark** — `frame.write.save(path)` with the default iceberg format raises
+  `AnalysisException: DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'); use
+  saveAsTable for Iceberg tables`.
+- **Apache Spark** — writes one `.snappy.parquet` part file (the
+  `spark.sql.sources.default` format). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone,
+  2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_save_default_format_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  explicit-format arms, where bytes and layout agree; the default is pinned, not taught.
+
+### EX-IO-6 — `saveAsTable` outside iceberg refuses; Spark serves the format
+
+- **repark** — `frame.write.format("csv").saveAsTable(name)` raises
+  `PySparkValueError: repark.write supports only format('iceberg') for saveAsTable, got
+  'csv'`.
+- **Apache Spark** — creates the csv-backed table and answers its rows (`[(1, 'a'), (2, 'b')]`
+  on the EX-26 frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 batch.)*
+- **Pin** —
+  `python/repark/tests/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the default-format arm, where rows and dtypes agree; other formats are pinned, not taught.
+
+### EX-IO-7 — the excel surface refuses; the engine connector is deferred past milestone one
+
+- **repark** — `spark.read.excel(path)` and `spark.read_excel(path)` raise
+  `UnsupportedOperationException: spark.read.excel (read_excel) is not available in this build:
+  the repark-excel / repark-postgres read connectors are scheduled post-milestone-one. See the
+  "Post-milestone-one (BACKLOG)" row in task/todo.md.`; `spark.read.sheet_names(path)` and
+  `spark.excel_sheet_names(path)` raise the same error naming `spark.read.sheet_names
+  (excel_sheet_names)`.
+- **Apache Spark** — has no excel reader at all: `hasattr` is False for `read.excel`,
+  `read.sheet_names`, `read_excel`, and `excel_sheet_names`, so no oracle values exist for
+  these four names. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-06, EX-26 batch, hasattr
+  probe.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_excel_reader_refuses` and
+  `…::test_excel_sheet_names_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. A refusal is documented
+  as a refusal, never as an example that swallows it; all four names stay on the example backlog
+  until the connector lands.
+
+### EX-IO-8 — missing-table reads share the exception type with Spark but not the text
+
+- **repark** — `spark.read.table(name)`, `spark.table(name)`, and
+  `frame.write.insertInto(name)` on a missing name raise `AnalysisException: Error during
+  planning: table 'spark_catalog.default.<name>' not found`.
+- **Apache Spark** — raises `AnalysisException` with error class `[TABLE_OR_VIEW_NOT_FOUND]`
+  (`The table or view \`<name>\` cannot be found. …`). *(oracle: live PySpark 4.1.2, ANSI on,
+  UTC session zone, 2026-09-06, EX-26 batch, all three entry points measured.)*
+- **Arity arm (added 2026-09-06, round 2)** — `insertInto` with the wrong column count raises
+  `AnalysisException` on both engines with different texts. repark answers `Error during
+  planning: Column count doesn't match insert query!` for too many and too few alike. Spark
+  answers `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` (`Cannot write to
+  \`spark_catalog\`.\`default\`.\`t_ex26_r3\`, the reason is too many data columns: Table columns:
+  \`id\`, \`name\`. Data columns: \`x\`, \`y\`, \`z\`.`) and the `NOT_ENOUGH_DATA_COLUMNS` twin
+  (`Data columns: \`x\`.`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 round 2, both widths measured.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_missing_table_text` and
+  `…::test_insert_arity_text`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The examples keep the
+  agreeing arm — each entry point raises `AnalysisException` on a missing name, and the arity
+  arm raises `AnalysisException` on both engines; repark's message texts are pinned, not
+  taught.
+
+### EX-IO-9 — `saveAsTable` on an existing table shares the type with Spark, not the text
+
+- **repark** — `frame.write.saveAsTable(name)` on an existing table raises
+  `AnalysisException: table '<name>' already exists; use mode('append'|'overwrite'|'ignore')
+  to write into an existing table`.
+- **Apache Spark** — raises `AnalysisException` with error class
+  `[TABLE_OR_VIEW_ALREADY_EXISTS]` (`Cannot create table or view … because it already
+  exists. …`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26
+  batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_saveas_table_exists_text`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  create arm, where rows and dtypes agree; the exists text is pinned, not taught.
+
+### EX-IO-10 — writer output dirs: Spark writes `_SUCCESS`, checksums, and `part-*` names; repark writes one data file
+
+- **repark** — `csv`/`json` writes (the shorthand, `format(...).save`, and `partitionBy`)
+  emit exactly one data file per output dir (one per `name=` leaf when partitioned) with a
+  random name and no marker or checksum sidecars: csv `['weZUoWyiy84qKvcb_0.csv']`, json
+  `['CKpaZsfMlTvLvmSX_0.json']`, partitioned `['name=a/FFp4eSALY8DjS6Zh.csv',
+  'name=b/FFp4eSALY8DjS6Zh.csv']` on the EX-26 two-row frame.
+- **Apache Spark** — writes `part-00000-<uuid>-c000.<ext>` data files plus an empty `_SUCCESS`
+  marker and `.<name>.crc` checksums: csv `['._SUCCESS.crc',
+  '.part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv.crc', '_SUCCESS',
+  'part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv']`, json the same shape, and
+  partitioned `['_SUCCESS', '._SUCCESS.crc']` at the top with one
+  `part-00000-<uuid>.c000.csv` plus its checksum per leaf (the uuid varies per write).
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_writer_output_listing`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 round-2 measurement. The examples
+  keep the data-file bytes and counts, where the engines agree; the marker and naming shape is
+  pinned, not taught.
+
+### EX-SES-6 — `spark.udf.register` answers the UDF object in repark, a plain function in Spark
+
+- **repark** — `spark.udf.register("fn", f)` answers the registered `UserDefinedFunction`
+  object. The registered name itself behaves Spark-equal: `SELECT fn(4)` answers `[('u4',)]`
+  and the returned object answers on a frame (`[('u1',), ('u2',)]`).
+- **Apache Spark** — answers a plain wrapped function (`type(...).__name__` is `'function'`;
+  the object is the `functools.wraps` wrapper, neither the original lambda nor a
+  `UserDefinedFunction`); the SQL and frame values agree with repark's. Measured on two
+  independent JVM runs and confirmed in the installed 4.1.2 source (`register` returns
+  `udf_obj._wrapped()`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_udf_register_returns_udf_object`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  registration, SQL, and frame arms, where the engines agree; the return arm is pinned, not
+  taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
+  that row's pin — repark's `catalog.registerFunction` return — is unaffected.
 
 ## 8. Drop-in disclosure rationale
 

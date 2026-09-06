@@ -49,7 +49,8 @@ file is empty.
 - [exceptions.txt](exceptions.txt) — public names whose only honest example
   needs a cloud service, each with a one-line reason.
 - [functions/](functions/map.md) — `F.*` examples.
-- [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples.
+- [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples
+  (EX-26: the repark-only `dynamicFlatten` / `dynamic_flatten` pair).
 - [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the engine-plumbing
   rows `for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`,
   `sql_expr_part`, `sql_expr_without_alias` stay on the backlog as non-Spark surface;
@@ -66,13 +67,16 @@ file is empty.
   remaining 45 `ta.*` names including the `over_columns`/`with_indicators` composition helpers;
   all 45 bit-identical, no §7 row — the `ta.*` backlog row set is now empty).
 - [io/](io/map.md) — reader / writer / WriterV2 examples (EX-22: the first 14
-  `DataFrameWriterV2` names; `overwrite` stays a §7 divergence, EX-W2-1).
+  `DataFrameWriterV2` names; `overwrite` stays a §7 divergence, EX-W2-1. EX-26: the V1
+  reader/writer surface — csv/json readers, format/load, smartCsv, csv/json/partitioned/table
+  writers; the excel quartet stays with §7 `EX-IO-7`).
 - [session/](session/map.md) — `repark.sql`, `ReparkSession` construction, and the
   session-level surface (EX-21: builder snake spellings, active-session trio, conf,
   catalog, frame builders, file readers, memory catalog, temp-view listing, name
   resolution, display style, and the two loud refusals; `registerTempTable` and
   `pandas_api` do not exist on live PySpark 4.1.2 and are taught as the refusals they
-  are).
+  are. EX-26: sql/table reads, version/context identity, udf/udtf registration; the
+  excel pair stays with §7 `EX-IO-7`).
 - [window/](window/map.md) — `Window` / `WindowSpec` examples (EX-20: all 22 names;
   snake_case spellings are repark extensions covered beside their camelCase twins; the
   tied-key ordered default frame stays a §7 divergence, EX-WIN-1).

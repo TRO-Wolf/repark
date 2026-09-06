@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-26 io-session (2026-09-06): `check_example_coverage.py` `BACKLOG_BASELINE` 193 → 164 —
+the 29 covered names of the 50-name reader/writer/session/DataFrame roster, taught by
+twelve new examples under `docs/examples/{io,session,dataframe}/`, every asserted value
+measured on live PySpark 4.1.2 (ANSI on, UTC) or — for the repark-only names — on repark's
+documented answer. Seventeen roster names keep their prior stays rows
+(EX-DF/EX-CAT/EX-W2/EX-DF-19); the four excel names stay with the new §7 EX-IO-7 row, and
+eleven new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
+tests in `python/repark/tests/test_examples_io_session.py`. Red-first: 29 has-no-example
+findings with the files held out (exit 1), and a wrong-bytes control in `writer_csv.py`
+failed the execute leg by name (exit 1).
+pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
+
 EX-25 functions-a (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 213 → 193 —
 the 20 plainly supported names of the 45-name `F.*` long-tail (a) roster, covered by five
 new examples under `docs/examples/functions/` plus the `F.hours` arm in
@@ -311,6 +323,18 @@ repark-parity slice.
 
 ## Contents
 
+- `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
+  `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
+  table (or `--jsonl`). Muse tokens come from the session store via `runs.tsv` column 6
+  (env `SEPMO_MUSE_SESSIONS_ROOT` / `SEPMO_MUSE_RUNS_TSV` for tests). Grok reads
+  `cache_read_input_tokens` and `modelUsage`. A minority of unparsed JSONL lines, or an
+  `exit` file with no `run.terminal.completed`, emits a degraded record (`truncated: true`,
+  `missing_reason` on `steps`/`tool_calls`); session-store tokens stay valid. Majority-bad
+  JSONL and a non-run directory still fail loudly. Any argument containing `://` is refused
+  on the raw path. Null, never zero, when an adapter does not report a field. No network.
+  Invocation: `python3 scripts/sepmo_usage.py collect <run-dir>` or
+  `make sepmo-usage ARGS='collect <run-dir>'` (not a CI gate).
+  pins: sepmo-e0-e1/C-004, C-005, C-006
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
@@ -680,6 +704,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
+| Collect SEPMO worker usage | `python3 scripts/sepmo_usage.py collect <run-dir>` / `index <dir>` (`make sepmo-usage`) |
 
 ## Pointers
 
