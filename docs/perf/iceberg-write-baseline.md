@@ -129,6 +129,20 @@ the afternoon rather than of the engine.
 | repark B3 (shipped) | 8 | 64 |
 | repark B4 (`perf/write-distribution-1`, WRITE-DISTRIBUTION-1, 2026-09-06) | 8 | **8** |
 
+The stream write paths at the same 1e6 bed and `shuffle.partitions = 8` (WRITE-DISTRIBUTION-2,
+2026-09-06; the bed's `part` takes 8 values, §9):
+
+| engine / build | `INSERT INTO` | `INSERT OVERWRITE` | `saveAsTable(append)` | `MERGE … NOT MATCHED INSERT` |
+|---|---:|---:|---:|---:|
+| Spark 4.1.2 | 8 | 8 | 8 | 8 |
+| repark B4' (`origin/main` `b4933a99`) | 64 | 32 | 64 | 32 |
+| repark B5 (`perf/write-distribution-2`) | 64 | **8** | 64 | **8** |
+
+`INSERT INTO` and `saveAsTable(append)` execute inside the fork's `insert_into` and stay at 64
+where Spark writes 8 — an open fork ask, registry `WRITE-DISTRIBUTION-2`. The row set,
+`sum(id)` and the eight partition values are identical on every build (1,000,000 rows,
+499,999,500,000).
+
 At `spark.sql.shuffle.partitions = 8` the shipped tree writes **4× Spark's unpartitioned count and
 8× its partitioned count**, averaging 328 KB per data file. Spark gets its counts from a
 distribution rule that sends one partition value to one task before the write; repark has none.
@@ -218,3 +232,48 @@ the data and two runs of one plan commit the same `(partition value, record coun
 channel, so the `_row_id` a given row receives is not reproducible run to run on the partitioned
 path; the manifest still ascends by partition value and `_row_id` still tiles it contiguously
 from zero (pinned through the v3 facade CTAS). The unpartitioned path keeps §7's claim unchanged.
+
+Measured 2026-09-06 (WRITE-DISTRIBUTION-2, review gap F-4) over five v3 partitioned CTAS runs
+per count on the four-file 120,000-row facade seed, one process, a fresh table per run: **1**
+distinct manifest `(partition value, record count)` sequence at `target_partitions` 3, 4 and 8,
+and **3 / 4 / 4** distinct id-to-`_row_id` maps — the grouping is a function of the data, the
+`_row_id` a given row receives follows the channel interleaving.
+
+## 9. WRITE-DISTRIBUTION-2 — the rule on the stream write paths (2026-09-06)
+
+`write/append.rs`'s concurrent dispatcher routes each batch by hash of the writer's partition
+values (`distribution.rs::PartitionRouter`) instead of dealing whole batches round-robin. Build
+**B5** is `perf/write-distribution-2` on the pinned fork; **B4'** is `origin/main` `b4933a99`
+with the base release native. Same 1e6 bed and probe method as §5 (one process per cell, a fresh
+table per statement, one warm-up then timed runs), measured sequentially — the base native
+first, then the fixed native — at 1-minute load 10–13 before and 6–16 after; the control is
+read in the same passes. Every pass median is listed.
+
+| cell | B4' min | B4' pass medians | B5 min | B5 pass medians | files B4' / B5 |
+|---|---:|---|---:|---|---|
+| `insert_overwrite` | 900.45 | **932.72**, 940.2, 967.15 | 720.51 | 887.67, 951.44, **805.68** | 32 / **8** |
+| `df_write_parquet_zstd` (control) | 87.29 | 108.57, 103.76, **103.64** | 98.13 | 149.26, 116.36, **109.2** | — |
+| 1-minute load per pass | | 12.67–12.05, 11.49–11.05, 11.05–10.64 | | 5.74–8.88, 8.88–14.12, 14.12–14.11 | |
+| RSS peak, overwrite cell (MB) | | 711, 700, 692 | | 597, 609, 613 | |
+
+| cell | B4' → B5 (best median) | B4' → B5 (min) | ratio to control, B4' → B5 |
+|---|---|---|---|
+| `insert_overwrite` | 932.72 → 805.68 ms (**1.16×**) | 900.45 → 720.51 ms (1.25×) | **8.59× → 7.38×** |
+
+Single-pass cells (3 runs each, same bed): `merge_insert` 32 → **8** files (892.42 → 796.63 ms
+median); `insert_into` and `save_as_table_append` stay at 64 files (256.81 → 271.82 ms and
+249.63 → 261.98 ms) — both execute inside the fork's `insert_into`, which this unit does not
+touch (open fork ask, registry `WRITE-DISTRIBUTION-2`). The row set is invariant on every
+stream cell before and after: 1,000,000 rows, `sum(id)` 499,999,500,000.
+
+**Read the file counts, not the milliseconds.** The unit's claim is the layout: 8 files where
+Spark writes 8. The overwrite wall improves 1.16× on the best median because 8 files close and
+commit faster than 32; the min moves 1.25×. RSS peak on the overwrite cell falls 692–711 →
+597–613 MB — fewer open writers hold fewer buffers. The pair was measured sequentially across
+a native swap, not interleaved, so the absolute walls carry the box's afternoon; the
+control-paired ratios are the comparable figures.
+
+**Spark.** Live Spark 4.1.2 (`iceberg-spark-runtime-4.1_2.13:1.11.0`,
+`shuffle.partitions = 8`) over the same 1e6 bed writes 8 files for every one of the four
+statements (`test_stream_write_layout_matches_spark` pins the overwrite and merge layouts on
+the facade seed).
