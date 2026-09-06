@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
 import sys
 from difflib import unified_diff
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 PACKET_VERSION: str = "1"
@@ -30,22 +32,6 @@ AUTHORED_BY: dict[str, str] = {
     "glm": "Authored-By: GLM (glm-5.3-flash)",
     "opus": "Authored-By: Claude Opus",
 }
-ACTOR_HANDOFF: tuple[str, ...] = ("status", "commits", "gates", "notes", "questions")
-CRITIC_HANDOFF: tuple[str, ...] = (
-    "findings",
-    "coverage_attestation",
-    "dispositions",
-    "evidence",
-)
-CLOSED_TOKENS: tuple[str, ...] = (
-    ".github/",
-    "STATUS.md",
-    "briefs/next-sequence.md",
-    "crates/",
-    "python/repark/src/",
-)
-PATH_TOKEN: re.Pattern[str] = re.compile(r"(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]+")
-HOME_DIR: re.Pattern[str] = re.compile(r"/(?:home|Users)/[A-Za-z0-9._-]+")
 REMOTE_SCHEME: re.Pattern[str] = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]+:/")
 UNIT_SAFE: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._-]+$")
 SHA_SAFE: re.Pattern[str] = re.compile(r"^[0-9a-f]{7,40}$")
@@ -53,9 +39,18 @@ DYNAMIC_SPLIT: str = "\n## Dynamic\n"
 SCHEMA_RELATIVE: str = "docs/sepmo/packets/packet.schema.json"
 
 STABLE_RULES: tuple[str, ...] = (
-    "No code comments anywhere (Python `#` beyond `# noqa`; docstrings one "
-    "line where `check-docstring-presence` demands).",
-    "Reasons live in `map.md`s and the ledger.",
+    "No code comments anywhere: Python `#` beyond `# noqa`; Rust `//` `///` "
+    "`//!`; TOML/YAML/shell `#`; docstrings one line where "
+    "`check-docstring-presence` demands.",
+    "The only forced exception is one `/// # Errors` line clippy demands on a "
+    "`pub fn` returning `Result`.",
+    "On a new fork file the ASF header plus one `///` where the fork's "
+    "`deny(missing_docs)` forces it on a new `pub` item.",
+    "Never delete a pre-existing comment.",
+    "Reasons live in `map.md`s (`pins: <unit>/C-NNN`) and the ledger.",
+    "Self-check before every commit: `git diff --cached | grep -nE "
+    "'^\\+.*(//|#)' -- '*.rs' '*.py' '*.toml' | grep -v '#\\[' | grep -v noqa` "
+    "prints nothing beyond the forced lines.",
     'Identity `git -c user.name="TRO-Wolf" -c '
     "user.email=64240326+TRO-Wolf@users.noreply.github.com`.",
     "The LAST line of every commit message is the adapter Authored-By trailer "
@@ -64,13 +59,27 @@ STABLE_RULES: tuple[str, ...] = (
     "Never edit `$HOME/.claude/`. Wrapper patches live under "
     "`docs/sepmo/telemetry/wrapper-patches/`.",
     "No home paths in the tree.",
+    "Never change dependencies or `Cargo.lock` unless the packet names a "
+    "sanctioned writer (`make bump-fork-pin`).",
     "Three cargo builders is the box cap. One cargo invocation at a time, in "
     "one lane at a time, unless the packet names a different bound.",
-    "Live PySpark is the oracle when a unit asserts Spark values. One JVM "
-    "beside at most one other. Redirect ivy into the lane. Kill what you start.",
+    "Numbers and native-module checks need `maturin develop --release`. Prove "
+    "`__debug_assertions__` is False and the path is under the lane. Record "
+    "load; keep the box quiet.",
+    "Live PySpark is the oracle when a unit asserts Spark values. Provision "
+    "with `--extra record` as `make parity-live` does.",
+    "One JVM beside at most one other. Wait for an empty box (60 s poll, up to 15 min).",
+    "Redirect ivy into the lane (`cp -a ~/.ivy2.5.2 <lane>/.ivy2` + "
+    '`PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=<lane>/.ivy2 pyspark-shell"`). '
+    "`JAVA_HOME` is Java 17. ANSI on; UTC session zone unless the case is "
+    "about zones. Kill what you start.",
     "Size ceilings only ratchet down. A new Python file stays under 1000 lines.",
+    "Every ratchet in `scripts/check_lib_py.py` is mirrored in "
+    "`python/repark-parity/tests/test_cap_1_source_file_line_cap.py` in the "
+    "same commit.",
     "Do not raise a gate baseline without owner approval. Do not change what any gate requires.",
-    "`map.md` in every directory, updated in the same change. A new directory gets a new `map.md`.",
+    "`map.md` in every directory, updated in the same change. A new directory "
+    "gets a new `map.md`. No amends.",
     "A ledger in `completed/` or `archive/` is frozen. Do not amend it.",
 )
 
@@ -85,9 +94,16 @@ STABLE_PREFIX: str = (
     "is invalid.\n"
     "\n"
     "### Comment ban\n"
-    "No code comments anywhere (Python `#` beyond `# noqa`; docstrings one "
-    "line where `check-docstring-presence` demands). Reasons live in "
-    "`map.md`s and the ledger.\n"
+    "No code comments anywhere: Python `#` beyond `# noqa`; Rust `//` `///` "
+    "`//!`; TOML/YAML/shell `#`; docstrings one line where "
+    "`check-docstring-presence` demands. The only forced exception is one "
+    "`/// # Errors` line clippy demands on a `pub fn` returning `Result`. On "
+    "a new fork file the ASF header plus one `///` where the fork's "
+    "`deny(missing_docs)` forces it on a new `pub` item. Never delete a "
+    "pre-existing comment. Reasons live in `map.md`s (`pins: <unit>/C-NNN`) "
+    "and the ledger. Self-check before every commit: `git diff --cached | grep "
+    "-nE '^\\+.*(//|#)' -- '*.rs' '*.py' '*.toml' | grep -v '#\\[' | grep -v "
+    "noqa` prints nothing beyond the forced lines.\n"
     "\n"
     "### Identity and trailer\n"
     'Identity `git -c user.name="TRO-Wolf" -c '
@@ -98,33 +114,70 @@ STABLE_PREFIX: str = (
     "### Prohibitions\n"
     "Never push, never `gh`, never `aws`, never `--no-verify`, never touch "
     "`.github/`. Never edit `$HOME/.claude/`. Wrapper patches live under "
-    "`docs/sepmo/telemetry/wrapper-patches/`. No home paths in the tree.\n"
+    "`docs/sepmo/telemetry/wrapper-patches/`. No home paths in the tree. Never "
+    "change dependencies or `Cargo.lock` unless the packet names a sanctioned "
+    "writer (`make bump-fork-pin`).\n"
     "\n"
     "### Cargo cap\n"
     "Three cargo builders is the box cap. One cargo invocation at a time, in "
     "one lane at a time, unless the packet names a different bound.\n"
     "\n"
+    "### Release module\n"
+    "Numbers and native-module checks need `maturin develop --release`. Prove "
+    "`__debug_assertions__` is False and the path is under the lane. Record "
+    "load; keep the box quiet.\n"
+    "\n"
     "### Live-oracle provisioning\n"
-    "Live PySpark is the oracle when a unit asserts Spark values. One JVM "
-    "beside at most one other. Redirect ivy into the lane. Kill what you "
-    "start.\n"
+    "Live PySpark is the oracle when a unit asserts Spark values. Provision "
+    "with `--extra record` as `make parity-live` does. One JVM beside at most "
+    "one other. Wait for an empty box (60 s poll, up to 15 min). Redirect ivy "
+    "into the lane (`cp -a ~/.ivy2.5.2 <lane>/.ivy2` + "
+    '`PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=<lane>/.ivy2 pyspark-shell"`). '
+    "`JAVA_HOME` is Java 17. ANSI on; UTC session zone unless the case is "
+    "about zones. Kill what you start.\n"
     "\n"
     "### Size ceilings\n"
     "Size ceilings only ratchet down. A new Python file stays under 1000 "
-    "lines. Do not raise a gate baseline without owner approval. Do not "
+    "lines. Every ratchet in `scripts/check_lib_py.py` is mirrored in "
+    "`python/repark-parity/tests/test_cap_1_source_file_line_cap.py` in the "
+    "same commit. Do not raise a gate baseline without owner approval. Do not "
     "change what any gate requires.\n"
     "\n"
     "### Map lockstep\n"
     "`map.md` in every directory, updated in the same change. A new directory "
-    "gets a new `map.md`.\n"
+    "gets a new `map.md`. No amends.\n"
     "\n"
     "### Frozen ledgers\n"
     "A ledger in `completed/` or `archive/` is frozen. Do not amend it.\n"
 )
 
 
-class PacketError(Exception):
-    """A build, check, or diff input that must fail loudly."""
+def _load_extract() -> ModuleType:
+    """Load the sibling field-extractor module next to this file."""
+    path: Path = Path(__file__).resolve().with_name("sepmo_packet_extract.py")
+    name: str = "sepmo_packet_extract"
+    loaded: ModuleType | None = sys.modules.get(name)
+    if loaded is not None and Path(getattr(loaded, "__file__", "")).resolve() == path:
+        return loaded
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_extract = _load_extract()
+PacketError = _extract.PacketError
+HOME_DIR = _extract.HOME_DIR
+parse_brief = _extract.parse_brief
+section_named = _extract.section_named
+extract_gate_commands = _extract.extract_gate_commands
+extract_boundaries = _extract.extract_boundaries
+assert_boundaries_captured = _extract.assert_boundaries_captured
+looks_like_command = _extract.looks_like_command
+command_is_shell = _extract.command_is_shell
 
 
 def build_packet(
@@ -140,7 +193,8 @@ def build_packet(
     """Assemble one packet object from a sanitized brief."""
     _validate_identity(unit, role, adapter, base_revision, attempt)
     sanitized: str = sanitize_text(brief_text)
-    title, sections = parse_brief(sanitized)
+    title, sections = _extract.parse_brief(sanitized)
+    boundaries: dict[str, list[str]] = _extract.extract_boundaries(sections, sanitized)
     packet: dict[str, Any] = {
         "packet_version": PACKET_VERSION,
         "identity": {
@@ -164,11 +218,15 @@ def build_packet(
             "source_references": list(SOURCE_REFERENCES),
             "constraints": list(STABLE_RULES),
         },
-        "scope": _scope_group(unit, role, title, sections),
-        "implementation_context": _context_group(sanitized, sections),
-        "verification": _verification_group(sanitized, sections),
-        "permissions_and_resources": _permissions_group(role, sections),
-        "handoff": _handoff_group(role, sections),
+        "scope": _extract.scope_group(unit, role, title, sections, boundaries["closed"]),
+        "implementation_context": _extract.context_group(
+            sanitized, sections, boundaries["dependency_decisions"]
+        ),
+        "verification": _extract.verification_group(sanitized, sections),
+        "permissions_and_resources": _extract.permissions_group(
+            role, boundaries["writable"], boundaries["closed"]
+        ),
+        "handoff": _extract.handoff_group(role, sanitized),
         "stable_prefix": STABLE_PREFIX,
         "dynamic_markdown": "",
     }
@@ -219,6 +277,16 @@ def check_packet(
     if str(packet.get("dynamic_markdown") or "") != dynamic_of(markdown).lstrip("\n"):
         findings.append("JSON dynamic_markdown does not match the markdown dynamic section")
     findings.extend(check_constraints(prefix))
+    if sha256_text(prefix) != sha256_text(STABLE_PREFIX):
+        findings.append("prefix hash mismatch")
+    findings.extend(_check_rerender(packet, markdown))
+    adapter: str = str(packet.get("identity", {}).get("adapter") or "")
+    if adapter in AUTHORED_BY:
+        findings.extend(_extract.trailer_findings(AUTHORED_BY[adapter], markdown, packet))
+    findings.extend(_extract.prefix_negation_findings(dynamic_of(markdown)))
+    commands: Any = packet.get("verification", {}).get("commands") or []
+    if isinstance(commands, list):
+        findings.extend(_extract.validate_commands([str(item) for item in commands]))
     if HOME_DIR.search(markdown) or HOME_DIR.search(json.dumps(packet)):
         findings.append("packet contains a home directory path")
     if brief_text is not None:
@@ -237,6 +305,25 @@ def check_constraints(prefix: str) -> list[str]:
     for rule in STABLE_RULES:
         if rule not in prefix:
             findings.append(f"missing stable rule: {rule}")
+    return findings
+
+
+def _check_rerender(packet: dict[str, Any], markdown: str) -> list[str]:
+    """Re-render the dynamic section from sidecar fields and compare."""
+    findings: list[str] = []
+    try:
+        rendered: str = render_dynamic(packet)
+        markdown_dynamic: str = dynamic_of(markdown).lstrip("\n")
+    except (KeyError, TypeError, PacketError) as error:
+        findings.append(f"cannot re-render dynamic section: {error}")
+        return findings
+    stored: str = str(packet.get("dynamic_markdown") or "")
+    if rendered != markdown_dynamic:
+        findings.append("re-rendered dynamic section does not match the markdown dynamic section")
+    if rendered != stored:
+        findings.append("JSON dynamic_markdown does not match a re-render from sidecar fields")
+    if stored != markdown_dynamic:
+        findings.append("JSON dynamic_markdown does not match the markdown dynamic section")
     return findings
 
 
@@ -282,43 +369,6 @@ def sanitize_text(text: str) -> str:
 def sha256_text(text: str) -> str:
     """Return the SHA-256 hex digest of UTF-8 text."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def parse_brief(text: str) -> tuple[str, dict[str, str]]:
-    """Split a brief into its title and `##` sections."""
-    lines: list[str] = text.splitlines()
-    title: str = ""
-    if lines and lines[0].startswith("# "):
-        title = lines[0][2:].strip()
-    sections: dict[str, str] = {}
-    current: str = "_lead"
-    buffer: list[str] = []
-    for line in lines:
-        if line.startswith("## "):
-            sections[current] = "\n".join(buffer).strip()
-            current = line[3:].strip()
-            buffer = []
-            continue
-        buffer.append(line)
-    sections[current] = "\n".join(buffer).strip()
-    return title, sections
-
-
-def section_named(sections: dict[str, str], *names: str) -> str:
-    """Return the first section whose heading starts with one of the names."""
-    lowered: dict[str, str] = {key.lower(): value for key, value in sections.items()}
-    for name in names:
-        needle: str = name.lower()
-        for key, value in lowered.items():
-            if key == needle or key.startswith(needle):
-                return value
-    return ""
-
-
-def is_rules_heading(heading: str) -> bool:
-    """Return whether a heading is the repeated non-negotiable rules block."""
-    lowered: str = heading.lower()
-    return lowered.startswith("rules") or "non-negotiable" in lowered
 
 
 def load_schema() -> dict[str, Any]:
@@ -612,119 +662,6 @@ def _validate_identity(
         raise PacketError(f"base revision is not a git sha: {base_revision!r}")
     if attempt < 1:
         raise PacketError("attempt must be >= 1")
-
-
-def _scope_group(unit: str, role: str, title: str, sections: dict[str, str]) -> dict[str, Any]:
-    deliverable: str = section_named(
-        sections, "Deliverable", "Deliverables", "The measured problem", "The two halves"
-    )
-    roster: str = section_named(sections, "Roster")
-    acceptance_parts: list[str] = [part for part in (roster, deliverable) if part]
-    exclusions: list[str] = _closed_paths(sections)
-    if role == "critic":
-        exclusions.append("Actor Self Logic Review")
-        exclusions.append("Actor narrative")
-    requirement_ids: list[str] = [unit]
-    if roster:
-        requirement_ids.append("roster")
-    return {
-        "objective": title or unit,
-        "requirement_ids": requirement_ids,
-        "acceptance_criteria": "\n\n".join(acceptance_parts),
-        "exclusions": exclusions,
-    }
-
-
-def _context_group(brief_text: str, sections: dict[str, str]) -> dict[str, Any]:
-    files: list[str] = []
-    seen: set[str] = set()
-    for match in PATH_TOKEN.finditer(brief_text):
-        token: str = match.group(0)
-        if token in seen:
-            continue
-        seen.add(token)
-        files.append(token)
-    traps: list[str] = []
-    if "HALT" in brief_text:
-        traps.append("HALT with evidence rather than inventing a missing decision")
-    if section_named(sections, "Durability"):
-        traps.append("Commit early; lanes live under $HOME/repark-lanes/lanes/")
-    decisions: list[str] = []
-    if "Cargo.toml" in brief_text or "never change dependencies" in brief_text.lower():
-        decisions.append("Do not change Cargo.toml, Cargo.lock, or other dependency files")
-    return {
-        "relevant_files": files[:40],
-        "callers": [],
-        "interfaces": [],
-        "dependency_decisions": decisions,
-        "known_traps": traps,
-    }
-
-
-def _verification_group(brief_text: str, sections: dict[str, str]) -> dict[str, Any]:
-    gates: str = section_named(sections, "Gates before hand-back", "Gates")
-    commands: list[str] = [item.strip() for item in gates.split("&&") if item.strip()]
-    if not commands and gates:
-        commands = [gates]
-    oracles: list[str] = []
-    if "PySpark" in brief_text or "live oracle" in brief_text.lower():
-        oracles.append("live PySpark 4.1.2")
-    destinations: list[str] = ["task/ledgers/staging/", "handback.json"]
-    if "ledger" in brief_text.lower():
-        destinations.append("unit ledger")
-    return {
-        "commands": commands,
-        "behavioral_cases": section_named(sections, "Red-first", "Red first"),
-        "oracle_requirements": oracles,
-        "evidence_destinations": destinations,
-    }
-
-
-def _permissions_group(role: str, sections: dict[str, str]) -> dict[str, Any]:
-    authorized: list[str] = [
-        "Read the named sources",
-        "Edit only the writable paths in this packet",
-        "Run the listed verification commands",
-    ]
-    if role == "actor":
-        authorized.append("Commit with the bound identity and trailer")
-    else:
-        authorized.append("File findings and a coverage attestation")
-    return {
-        "authorized_actions": authorized,
-        "ownership_boundaries": _closed_paths(sections),
-        "resource_limits": [
-            "Three cargo builders is the box cap",
-            "One Spark JVM beside at most one other",
-        ],
-        "escalation_conditions": [
-            "Ambiguity that changes the outcome is a HALT",
-            "A red gate is not worked around",
-        ],
-    }
-
-
-def _handoff_group(role: str, sections: dict[str, str]) -> dict[str, Any]:
-    del sections
-    fields: tuple[str, ...] = CRITIC_HANDOFF if role == "critic" else ACTOR_HANDOFF
-    return {
-        "expected_output_fields": list(fields),
-        "unresolved_decisions": [],
-        "dependency_consumers": ["orchestrator launch wrapper"],
-    }
-
-
-def _closed_paths(sections: dict[str, str]) -> list[str]:
-    rules_text: str = ""
-    for heading, body in sections.items():
-        if is_rules_heading(heading):
-            rules_text = body
-            break
-    found: list[str] = []
-    for token in CLOSED_TOKENS:
-        if token in rules_text:
-            found.append(token)
-    return found
 
 
 def _slash_list(values: list[Any]) -> str:

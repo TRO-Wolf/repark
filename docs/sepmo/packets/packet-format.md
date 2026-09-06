@@ -30,22 +30,40 @@ edit of v1 packets.
 
 The stable prefix states these constraints, verbatim:
 
-- comment ban
+- comment ban for Python `#`, Rust `//` `///` `//!`, TOML/YAML/shell `#`, with
+  the forced `/// # Errors` exception and the fork ASF / `deny(missing_docs)`
+  exception; never delete a pre-existing comment; `pins: <unit>/C-NNN`; the
+  pre-commit `git diff --cached | grep` self-check
 - identity / Authored-By trailer binding
 - push / `gh` / `aws` / `--no-verify` / `.github/` prohibitions
 - no edits to `$HOME/.claude/`; wrapper patches under
   `docs/sepmo/telemetry/wrapper-patches/`
 - no home paths in the tree
+- never change dependencies or `Cargo.lock` unless the packet names a
+  sanctioned writer (`make bump-fork-pin`)
 - cargo cap
-- live-oracle provisioning
-- size ceilings (ratchet down; new Python under 1000 lines)
+- release module (`maturin develop --release`, `__debug_assertions__` False,
+  quiet box)
+- live-oracle provisioning (`--extra record` as `make parity-live`, ivy
+  redirect, `PYSPARK_SUBMIT_ARGS`, `JAVA_HOME`, ANSI/UTC, JVM wait)
+- size ceilings (ratchet down; new Python under 1000 lines; cap-table mirror
+  in `test_cap_1_source_file_line_cap.py`)
 - do not change what any gate requires
-- `map.md` lockstep
+- `map.md` lockstep; no amends
 - frozen ledgers in `completed/` and `archive/`
 
 The adapter-specific Authored-By trailer lives in the dynamic identity block so
 the prefix stays identical across adapters. The prefix tells the worker to use
 the trailer named there.
+
+`check` does not prove that the dynamic section agrees with the prefix. A
+worker could still write a dynamic sentence that contradicts a stable rule.
+`check` reds only the phrase scan for prefix-negating sentences
+(`trailers are allowed`, `you may push`, `comments are fine`, `--no-verify`
+without `never`). It also requires the rendered trailer to equal the adapter
+`AUTHORED_BY` entry and refuses any other trailer form. It re-renders the
+dynamic section from the JSON sidecar fields and requires that text (and the
+prefix hash) to match the markdown.
 
 ## Source identity and refresh
 
@@ -142,7 +160,8 @@ exclusions (efficiency brief F-5).
 | `dependency_consumers` | string[] | Who reads the hand-back |
 
 Actor keys include `status`, `commits`, `gates`, `notes`. Critic keys include
-`findings`, `coverage_attestation`, `dispositions`, `evidence`.
+`findings`, `coverage_attestation`, `dispositions`, `evidence`. Brief-declared
+hand-back keys (for example ex25 `covered` / `stayed`) are kept.
 
 ## Assembler commands
 
@@ -156,7 +175,17 @@ python3 scripts/sepmo_packet.py diff <packet-a> <packet-b>
 
 `build` writes `<unit>-<role>.md` and `<unit>-<role>.json`. `check` validates
 the sidecar against this schema, requires the markdown prefix to equal the
-assembler prefix, and requires every constraint string to appear in that
-prefix. `diff` prints a unified diff of `dynamic_markdown` only.
+assembler prefix (byte identity and prefix hash), requires every constraint
+string to appear in that prefix, re-renders the dynamic section from the
+sidecar fields, requires the rendered trailer to match the adapter
+`AUTHORED_BY` entry, requires every `commands[]` entry to parse as a shell
+command (`bash -n`, no backticks or prose), and reds prefix-negating phrases
+in the dynamic section. `diff` prints a unified diff of `dynamic_markdown`
+only.
+
+Safety boundaries in the brief are preserved: `build` extracts `Writable:` /
+`Closed:` / `never touch` / `untouched` lists verbatim and fails when a
+boundary clause names a path the lists did not keep. It does not synthesize a
+dependency rule the brief did not state.
 
 pins: sepmo-e2/C-001, C-002

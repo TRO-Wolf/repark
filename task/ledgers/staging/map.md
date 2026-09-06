@@ -6,13 +6,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [sepmo-e2-ledger.md](sepmo-e2-ledger.md) —
-  **SEPMO-E2 (2026-09-06), in flight:** compact role packets. Packet format v1
-  (eight field groups, stable prefix then dynamic, source identity, version),
-  assembler `scripts/sepmo_packet.py` (`build` / `check` / `diff`), three
-  converted campaign briefs as fixtures, constraint-preservation tests, and a
-  baseline table against E-0 cached/uncached ratios with no token-savings
-  claim. Adoption proposal names each wrapper's `prompt.md`. `risk_tier:
-  standard`. Branch `sepmo/e2-compact-packets`.
+  **SEPMO-E2 (2026-09-06), in flight, round 2:** compact role packets. Packet
+  format v1 (eight field groups, stable prefix then dynamic, source identity,
+  version), assembler `scripts/sepmo_packet.py` plus
+  `scripts/sepmo_packet_extract.py` (`build` / `check` / `diff`), three
+  converted campaign briefs as fixtures plus two prefix-only briefs,
+  constraint-preservation tests (trailer, re-render, `bash -n`, boundary
+  lists, prefix-negating phrases), and a baseline table against E-0
+  cached/uncached ratios with no token-savings claim. Adoption proposal names
+  `--brief` / `--followup`. `risk_tier: standard`. Branch
+  `sepmo/e2-compact-packets`.
   pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage

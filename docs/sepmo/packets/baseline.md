@@ -23,16 +23,16 @@ PERF-ICE-SCAN-1. Word counts use whitespace split (`str.split`), matching
 
 | Brief | Original bytes | Original words | Prefix bytes | Prefix words | Dynamic bytes | Dynamic words | Packet bytes | Packet words |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| ex25 | 5774 | 598 | 1505 | 232 | 5426 | 538 | 6942 | 772 |
-| cdf1 | 8004 | 952 | 1505 | 232 | 6291 | 695 | 7807 | 929 |
-| icescan | 8864 | 1155 | 1505 | 232 | 4932 | 539 | 6448 | 773 |
+| ex25 | 5774 | 598 | 2756 | 413 | 5423 | 523 | 8190 | 938 |
+| cdf1 | 8004 | 952 | 2756 | 413 | 5878 | 659 | 8645 | 1074 |
+| icescan | 8864 | 1155 | 2756 | 413 | 4451 | 487 | 7218 | 902 |
 
-The prefix is byte-identical across the three (1505 bytes, 232 words). The
-packet total is not always smaller than the brief: ex25 grows 5774 → 6942
-bytes because the structured dynamic section still carries the deliverable
-and the prefix is added. icescan shrinks 8864 → 6448 bytes because the
-repeated rules block is not copied into the dynamic section. Size reduction
-is not the claim.
+The prefix is byte-identical across the three (2756 bytes, 413 words; also
+proven across five briefs including ex26 and types1). The packet total is
+not always smaller than the brief: ex25 grows 5774 → 8190 bytes because the
+structured dynamic section still carries the deliverable and the prefix is
+added. icescan shrinks 8864 → 7218 bytes because the repeated rules block is
+not copied into the dynamic section. Size reduction is not the claim.
 
 ## E-0 cached / uncached input (Muse actor runs)
 
@@ -51,9 +51,11 @@ Grok on this machine (inventory §2, unit
 `tokens_cached=10007936` (36.3× uncached; 97% of `total_tokens=10352603`).
 Cache reads dominate that adapter too.
 
-What E-2 can claim: the three packets share one 1505-byte prefix; `check`
-detects a dropped stable rule; `diff` shows only the dynamic section. What
-E-2 cannot claim: a change in billed tokens, cache-hit rate, or elapsed
-time. Those need a packet-fed run measured by `scripts/sepmo_usage.py`.
+What E-2 can claim: the packets share one 2756-byte prefix; `check`
+detects a dropped stable rule, a forged trailer, a JSON/markdown
+disagreement, prefix-negating dynamic phrases, and a dropped boundary path;
+`diff` shows only the dynamic section. What E-2 cannot claim: a change in
+billed tokens, cache-hit rate, or elapsed time. Those need a packet-fed run
+measured by `scripts/sepmo_usage.py`.
 
 pins: sepmo-e2/C-006

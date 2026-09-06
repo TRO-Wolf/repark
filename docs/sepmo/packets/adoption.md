@@ -6,34 +6,42 @@ does not edit wrappers.
 **Retires:** freeze when a wrapper change lands or E-7 records the decision to
 decline it.
 
-The assembler already emits Markdown with the stable prefix first. Each wrapper
-already takes a prompt file. The change is to write the packet Markdown to that
-file instead of the 4–8 KB prose brief, and to keep the JSON sidecar next to it
-for `sepmo_packet.py check`. No wrapper body is patched here.
+The assembler already emits Markdown with the stable prefix first. The write
+point is the file each wrapper takes as `--brief` (and `--followup` on
+resume). `$run/prompt.md` is not that write point for any adapter: Grok copies
+it as an archive, and Muse / OpenCode generate it. No wrapper body is patched
+here. The Muse persona-prepend change lives under
+[../telemetry/wrapper-patches/packet-brief-input.md](../telemetry/wrapper-patches/packet-brief-input.md).
 
 ## Muse Spark
 
-`muse-worker.sh` launches `muse exec --json --prompt-file <run-dir>/prompt.md`.
-The file the wrapper already reads is `prompt.md` in the run directory
-(`/tmp/muse-worker/<lane>/<utc>/prompt.md`). After an accepted E-4 pilot, the
-orchestrator would write the packet Markdown to that `prompt.md` (stable prefix
-first) and copy the JSON sidecar to `packet.json` in the same directory for
-mechanical `check`, not as model input.
+`muse-worker.sh` takes `--brief FILE` and `--followup FILE` (resume). That
+file is the orchestrator write point. The wrapper then **generates**
+`$run/prompt.md` by concatenating the persona, the brief, and a HANDBACK
+block, and launches `muse exec --json --prompt-file <run-dir>/prompt.md`. A
+packet written to `$run/prompt.md` is overwritten. The persona currently
+precedes the brief, so it sits ahead of the stable prefix (contrary to
+[packet-format.md](packet-format.md)). After an accepted E-4 pilot, write the
+packet Markdown to `--brief` / `--followup` and apply the wrapper patch so
+the prefix stays first. Place `packet.json` beside the brief.
 
 ## Grok
 
-`grok-worker.sh` launches `grok --prompt-file <run-dir>/prompt.md`. The file
-the wrapper already reads is `prompt.md` in the run directory
-(`/tmp/grok-worker/<lane>/<utc>/prompt.md`). The orchestrator would write the
-packet Markdown to that same `prompt.md` and place `packet.json` beside it.
+`grok-worker.sh` takes `--brief FILE` and `--followup FILE`. The prompt it
+passes to `grok --prompt-file` is `prompt=${followup:-$brief}`. `$run/prompt.md`
+is an archive copy (`cp "$prompt" "$run/prompt.md"`), not the input. Write the
+packet Markdown to the `--brief` / `--followup` file and place `packet.json`
+beside it.
 
 ## GLM / opencode (kilo)
 
-`oc-worker.sh` launches `opencode run --dir <clone> --agent worker|critic
---format json --auto <prompt>`. The prompt text is the contents of
-`<run-dir>/prompt.md` (`/tmp/oc-worker/<lane>/<utc>/prompt.md`). The
-orchestrator would fill that `prompt.md` from the packet Markdown. The sidecar
-would be `packet.json` in the same run directory.
+`oc-worker.sh` takes `--brief FILE` and `--followup FILE`. It **generates**
+`$run/prompt.md` from the brief plus a HANDBACK block, then launches
+`opencode run --dir <clone> --agent worker|critic --format json --auto` with
+that generated text. A packet written to `$run/prompt.md` is overwritten. The
+persona lives in `config.json` agent prompt, not in the brief file. Write the
+packet to `--brief` / `--followup`. The sidecar would be `packet.json` next
+to the brief.
 
 ## Opus / Claude sub-agents
 

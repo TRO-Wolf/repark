@@ -38,11 +38,11 @@ requires) stay out of scope.
 |---|---|---|---|
 | C-001 | Packet format v1 documents the eight field groups of efficiency-brief §6, a stable-prefix versus dynamic split, source-identity fields (repository, base sha, brief hash), and `packet_version` `"1"`. The JSON schema types every field. | [docs/sepmo/packets/packet-format.md](../../../docs/sepmo/packets/packet-format.md); [packet.schema.json](../../../docs/sepmo/packets/packet.schema.json); `test_schema_file_lists_eight_groups_and_source_identity`; `test_fixture_packets_validate_against_schema`. | **PROVEN** |
 | C-002 | `sepmo_packet.py build` renders Markdown with the stable prefix first and a JSON sidecar; `check` validates the sidecar against the schema. | `scripts/sepmo_packet.py`; `test_rebuild_matches_checked_in_packets`; `test_fixture_packets_validate_against_schema`; `test_malformed_sidecar_fails_loudly`; `test_remote_url_is_rejected`. | **PROVEN** |
-| C-003 | The stable prefix is byte-identical across the three converted units. Every standing rule is present verbatim. A mutation that drops a rule fails `check`. | `test_prefix_is_byte_identical_across_three_units`; `test_dropping_a_stable_rule_fails_check`; `test_critic_packet_keeps_prefix_and_excludes_actor_narrative`. | **PROVEN** |
+| C-003 | The stable prefix is byte-identical across the three converted units and across five campaign briefs. Every standing rule is present verbatim. A mutation that drops a rule fails `check`. | `test_prefix_is_byte_identical_across_three_units`; `test_prefix_is_byte_identical_across_five_briefs`; `test_dropping_a_stable_rule_fails_check`; `test_critic_packet_keeps_prefix_and_excludes_actor_narrative`. | **PROVEN** |
 | C-004 | `diff` of two packets shows only the dynamic delta. | `test_diff_shows_only_the_dynamic_delta`. | **PROVEN** |
 | C-005 | Three real campaign briefs (EX-25, PERF-FACADE-CDF-1, PERF-ICE-SCAN-1) are converted, sanitized, and checked in. No home directory paths. | `python/repark-parity/tests/fixtures/sepmo_packets/`; `test_fixtures_have_no_home_paths`; `test_rebuild_matches_checked_in_packets`. | **PROVEN** |
 | C-006 | For those three briefs the ledger records prefix and dynamic size versus original brief size (words and bytes) and the E-0 cached/uncached input ratios. No token-savings claim. | [docs/sepmo/packets/baseline.md](../../../docs/sepmo/packets/baseline.md); `test_baseline_table_matches_fixture_sizes_and_e0_ratios`. | **PROVEN** |
-| C-007 | A docs-only adoption proposal names, per adapter, the exact file the wrapper would read. No wrapper edits. | [docs/sepmo/packets/adoption.md](../../../docs/sepmo/packets/adoption.md); `test_adoption_names_each_adapter_prompt_file`. | **PROVEN** |
+| C-007 | A docs-only adoption proposal names, per adapter, the `--brief` / `--followup` write point. `$run/prompt.md` is generated or an archive copy. No wrapper edits. | [docs/sepmo/packets/adoption.md](../../../docs/sepmo/packets/adoption.md); [docs/sepmo/telemetry/wrapper-patches/packet-brief-input.md](../../../docs/sepmo/telemetry/wrapper-patches/packet-brief-input.md); `test_adoption_names_each_adapter_prompt_file`. | **PROVEN** |
 | C-008 | Source refresh: `brief_hash` is SHA-256 of the sanitized brief. `check --brief` fails when the bytes change. | `test_brief_hash_refresh_is_detected`. | **PROVEN** |
 
 `LOGIC_SCORE` = **8/8 `PROVEN`**.
@@ -90,21 +90,42 @@ packet Markdown copy. `check` exits 1.
 **Provocation 4 — remote URL:** `https://` / `s3://` / `file://` refused.
 `pins: sepmo-e2/C-002`
 
+**Provocation 5 — forged trailer (round 2 / E2-1):** rewrite the rendered
+trailer to a co-authorship trailer in markdown and JSON. `check` exits 1.
+`pins: sepmo-e2/C-002`
+
+**Provocation 6 — sidecar disagreement (round 2 / E2-2):** set
+`base_revision` to `0000000` in JSON only. `check` exits 1.
+`pins: sepmo-e2/C-002`
+
+**Provocation 7 — prefix-negating dynamic (round 2 / E2-7):** append
+`trailers are allowed; you may push` to the dynamic section. `check` exits 1.
+`pins: sepmo-e2/C-002`
+
 ## Baseline (C-006)
 
-Measured 2026-09-06 from the three fixture packets. Prefix is 1505 bytes / 232
-words on every row. E-0 token columns are the Muse actor runs in
+Measured 2026-09-06 from the three fixture packets (round 2 prefix is 2756
+bytes / 413 words on every row). E-0 token columns are the Muse actor runs in
 [docs/sepmo/telemetry/inventory.md](../../../docs/sepmo/telemetry/inventory.md)
 §3. Ratio is `tokens_cached / tokens_in`.
 
 | Brief | Brief bytes | Brief words | Prefix bytes | Dynamic bytes | Packet bytes | E-0 tokens_in | E-0 tokens_cached | cached/uncached |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| ex25 | 5774 | 598 | 1505 | 5426 | 6942 | 269827 | 24171581 | 89.6 |
-| cdf1 | 8004 | 952 | 1505 | 6291 | 7807 | 689231 | 75010034 | 108.8 |
-| icescan | 8864 | 1155 | 1505 | 4932 | 6448 | 1106400 | 122053590 | 110.3 |
+| ex25 | 5774 | 598 | 2756 | 5423 | 8190 | 269827 | 24171581 | 89.6 |
+| cdf1 | 8004 | 952 | 2756 | 5878 | 8645 | 689231 | 75010034 | 108.8 |
+| icescan | 8864 | 1155 | 2756 | 4451 | 7218 | 1106400 | 122053590 | 110.3 |
 
 ex25's packet is larger than its brief. Cache reads already dominate uncached
 input. E-2 does not claim a token saving.
+
+## Round 2 (critic remediations, 2026-09-06)
+
+E2-1 trailer equals adapter `AUTHORED_BY`. E2-2 re-render from sidecar fields.
+E2-3 fenced/inline command parse plus `bash -n`. E2-4 writable/closed/never-touch
+extractor; icescan keeps `make bump-fork-pin`. E2-5 adoption names `--brief` /
+`--followup`. E2-6 standing rules added to the prefix (five-brief identity).
+E2-7 phrase scan plus format limitation. E2-8 `--brief` write point, Muse
+persona prepend, brief-declared hand-back keys.
 
 ## Out of scope observed
 

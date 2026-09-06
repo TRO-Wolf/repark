@@ -13,7 +13,8 @@ outcome is recorded.
 
 - [packet-format.md](packet-format.md) — packet format v1: eight field groups,
   stable prefix versus dynamic section, source-identity and refresh, assembler
-  commands.
+  commands, trailer/re-render/`bash -n` checks, and the dynamic-versus-prefix
+  phrase-scan limit.
   pins: sepmo-e2/C-001, C-002
 - [packet.schema.json](packet.schema.json) — machine schema for the JSON
   sidecar. `additionalProperties` is false. `packet_version` is `"1"`.
@@ -21,8 +22,9 @@ outcome is recorded.
 - [baseline.md](baseline.md) — three converted briefs versus prefix and
   dynamic size, plus E-0 cached/uncached ratios. No token-savings claim.
   pins: sepmo-e2/C-006
-- [adoption.md](adoption.md) — how each adapter would read a packet. Names the
-  exact prompt file. No wrapper edits.
+- [adoption.md](adoption.md) — how each adapter would read a packet. Names
+  `--brief` / `--followup` as the write point; `$run/prompt.md` is generated
+  or an archive copy. No wrapper edits.
   pins: sepmo-e2/C-007
 
 ## I want to...
@@ -46,5 +48,7 @@ outcome is recorded.
 |---|---|
 | `check` says the prefix is not byte-identical | The markdown must start with the assembler `STABLE_PREFIX` |
 | `check` reports a missing stable rule | A mutation dropped a constraint; restore the prefix |
+| `check` reports a trailer finding | The rendered trailer must equal the adapter `AUTHORED_BY` entry |
+| `check` reports a re-render mismatch | Sidecar fields and markdown dynamic section disagree |
 | Packet contains `/home/` | Sanitizer missed a path; `build` must rewrite it to `$HOME` |
 | Token savings claimed from this directory | Invalid — [baseline.md](baseline.md) forbids it until E-4 |
