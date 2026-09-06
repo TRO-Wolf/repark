@@ -3,7 +3,7 @@
 **Date:** 2026-09-06 · **Branch:** `fix/rdf-schema-evo-1` · **Base:** `origin/main` `1883968b` ·
 **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
-**Registry:** `RDF-SCHEMA-EVO-1` **BACKLOG** (flips on the pin bump, §8).
+**Registry:** `RDF-SCHEMA-EVO-1` **FIXED** at RP-15 (`85db42f2`, fork `#272`, merged 2026-09-06; pins green on the bumped pin — §8).
 
 **Retires:** this ledger moves to `../completed/` when the pin-bump unit lands.
 
@@ -132,6 +132,11 @@ self-heals on the pin (C-007).
 - **Fork branch:** `fix/rdf-schema-evo-1` (owner's iceberg-rust fork).
 - **Fork commit:** `8ef7ef5b` — `[fork] fix: F-RDF-EVO-1 — rewrite_data_files projects
   old-file batches to the current schema (row R135)`.
+- **Merged as:** fork `#272`, squash `85db42f2` on the fork's `main` (2026-09-06); fork critic PASS
+  (10/10 pins, 7 red under the batch revert, 12 attack shapes with no lost value). RePark pin bump
+  RP-15 `8bc325a3` → `85db42f2` by the orchestrator (`make bump-fork-pin`), rows in
+  `docs/fork-sync.md` and the root `map.md`; the eleven pins re-run green on the bumped native
+  (see §10).
 - **What it changes:** `crates/iceberg/src/maintenance/rewrite_data_files_write.rs` re-points
   each compaction read task at the current schema with the full current projection, so the
   Arrow reader evolves every file's batches before the splitter and writer see them;

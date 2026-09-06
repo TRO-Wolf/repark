@@ -2795,9 +2795,9 @@ the pin rather than obeying it.
   precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
   **Contents are unaffected.**
 
-### RDF-SCHEMA-EVO-1 — `rewrite_data_files` after schema evolution reads old files under the old schema and refuses
+### RDF-SCHEMA-EVO-1 — `rewrite_data_files` after schema evolution reads old files under the old schema and refuses — **FIXED 2026-09-06 (RP-15)**
 
-- **repark** — **BACKLOG.** Owner defect (2026-09-06, S3 Tables,
+- **repark** — **FIXED 2026-09-06 at fork pin RP-15 (`85db42f2`, fork `#272`)**; the pins below are green on it. Owner defect (2026-09-06, S3 Tables,
   `s3tables.testing_ns.repark_mor_testing_table`): after `ADD COLUMN` (7 → 8 columns) and
   `ADD PARTITION FIELD`, `CALL s3tables.system.rewrite_data_files` raised `DataInvalid,
   context: { batch_columns: 7, expected_columns: 8 } => Partition source batch width does not
@@ -2810,7 +2810,7 @@ the pin rather than obeying it.
   The fix is fork-side (`fix/rdf-schema-evo-1`, `8ef7ef5b`: tasks re-pointed at the current
   schema with the full current projection; old partition tuples widened int→long /
   float→double at manifest commit); the pins below are red on `8bc325a3` and green on the
-  local fork. This row flips when the orchestrator bumps the pin after the fork PR merges.
+  local fork; the pin bump RP-15 (`85db42f2`) carried the fix into the workspace on 2026-09-06.
 - **Apache Spark** — the same shapes on live PySpark 4.1.2 + Iceberg 1.11.0 (`local[2]`, ANSI
   on) all succeed: owner add+spec 6 files → 3 (buckets 0:3, 3:2, 2:1), add-only unpartitioned
   6 → 1, partitioned add-only 6 → 1, drop 6 → 3, rename 6 → 3, non-partition promotion 6 →
