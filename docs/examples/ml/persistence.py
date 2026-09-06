@@ -1,10 +1,11 @@
-"""Pipeline and PipelineModel read/write round-trips through a temp dir.
+"""Pipeline and PipelineModel repark-ml round-trips through a temp dir.
 
 pins: ex-27-ml/C-006
 """
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -39,7 +40,7 @@ def collect_predictions(model: ml.Transformer, frame: object) -> list[tuple[floa
 
 
 def main() -> None:
-    """Save and load a fitted OLS pipeline; transform answers stay Spark-equal."""
+    """Save and load a fitted OLS pipeline in repark-ml format; rows round-trip."""
     expect("Pipeline.issubclass.MLWritable", issubclass(ml.Pipeline, ml.MLWritable), True)
     expect("Pipeline.issubclass.MLReadable", issubclass(ml.Pipeline, ml.MLReadable), True)
     expect("PipelineModel.issubclass.MLWritable", issubclass(ml.PipelineModel, ml.MLWritable), True)
@@ -65,6 +66,8 @@ def main() -> None:
 
         model_path = str(Path(scratch.name) / "model")
         model.write().overwrite().save(model_path)
+        meta = json.loads((Path(model_path) / "metadata.json").read_text(encoding="utf-8"))
+        expect("saved.format", meta.get("format"), "repark-ml")
         loaded_model = ml.PipelineModel.load(model_path)
         expect("loaded.isinstance.PipelineModel", isinstance(loaded_model, ml.PipelineModel), True)
         restored = collect_predictions(loaded_model, frame)

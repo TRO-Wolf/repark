@@ -1,4 +1,4 @@
-"""Params, converters, and the shared column mixins read the Spark-docs way.
+"""Params, converters, and mixins read off concrete stages.
 
 pins: ex-27-ml/C-003
 """
@@ -6,7 +6,7 @@ pins: ex-27-ml/C-003
 from __future__ import annotations
 
 from repark.spark import ml
-from repark.spark.ml.feature import Tokenizer, VectorAssembler
+from repark.spark.ml.feature import OneHotEncoder, Tokenizer, VectorAssembler
 from repark.spark.ml.regression import LinearRegression
 
 COVERS: list[str] = [
@@ -34,46 +34,6 @@ class Toy(ml.Params):
             typeConverter=ml.TypeConverters.toInt,
         )
         self._setDefault(maxIter=10)
-
-
-class InputStage(ml.HasInputCol, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class OutputStage(ml.HasOutputCol, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class InputColsStage(ml.HasInputCols, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class OutputColsStage(ml.HasOutputCols, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class HandleStage(ml.HasHandleInvalid, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class FeaturesStage(ml.HasFeaturesCol, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class LabelStage(ml.HasLabelCol, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
-
-
-class PredictionStage(ml.HasPredictionCol, ml.Params):
-    def __init__(self) -> None:
-        super().__init__()
 
 
 def expect(label: str, got: object, wanted: object) -> None:
@@ -120,35 +80,13 @@ def main() -> None:
     expect("Tokenizer.isinstance.HasInputCol", isinstance(tokenizer, ml.HasInputCol), True)
     expect("Tokenizer.isinstance.HasOutputCol", isinstance(tokenizer, ml.HasOutputCol), True)
     expect(
-        "Tokenizer.getInputCol.eq.uid", tokenizer.getInputCol() == tokenizer.uid + "__input", True
+        "Tokenizer.getOutputCol.default.eq.uid",
+        tokenizer.getOutputCol() == tokenizer.uid + "__output",
+        True,
     )
     tokenizer.setInputCol("text").setOutputCol("words")
     expect("Tokenizer.setInputCol", tokenizer.getInputCol(), "text")
     expect("Tokenizer.setOutputCol", tokenizer.getOutputCol(), "words")
-
-    inp = InputStage()
-    expect("HasInputCol.default.eq.uid", inp.getInputCol() == inp.uid + "__input", True)
-    inp.setInputCol("tokens")
-    expect("HasInputCol.set", inp.getInputCol(), "tokens")
-    out = OutputStage()
-    expect("HasOutputCol.default.eq.uid", out.getOutputCol() == out.uid + "__output", True)
-    out.setOutputCol("tokens_out")
-    expect("HasOutputCol.set", out.getOutputCol(), "tokens_out")
-
-    input_cols = InputColsStage()
-    input_cols.setInputCols(["a", "b"])
-    expect("HasInputCols.set", input_cols.getInputCols(), ["a", "b"])
-    output_cols = OutputColsStage()
-    output_cols.setOutputCols(["c", "d"])
-    expect("HasOutputCols.set", output_cols.getOutputCols(), ["c", "d"])
-
-    handle = HandleStage()
-    expect("HasHandleInvalid.default", handle.getHandleInvalid(), "error")
-    handle.setHandleInvalid("skip")
-    expect("HasHandleInvalid.set", handle.getHandleInvalid(), "skip")
-    expect("HasFeaturesCol.default", FeaturesStage().getFeaturesCol(), "features")
-    expect("HasLabelCol.default", LabelStage().getLabelCol(), "label")
-    expect("HasPredictionCol.default", PredictionStage().getPredictionCol(), "prediction")
 
     assembler = VectorAssembler()
     expect("VectorAssembler.isinstance.HasInputCols", isinstance(assembler, ml.HasInputCols), True)
@@ -160,6 +98,12 @@ def main() -> None:
     expect("VectorAssembler.getHandleInvalid", assembler.getHandleInvalid(), "error")
     assembler.setInputCols(["x", "y"]).setOutputCol("features")
     expect("VectorAssembler.setInputCols", assembler.getInputCols(), ["x", "y"])
+    expect("VectorAssembler.setOutputCol", assembler.getOutputCol(), "features")
+
+    encoder = OneHotEncoder()
+    expect("OneHotEncoder.isinstance.HasOutputCols", isinstance(encoder, ml.HasOutputCols), True)
+    encoder.setInputCols(["a", "b"]).setOutputCols(["c", "d"])
+    expect("OneHotEncoder.setOutputCols", encoder.getOutputCols(), ["c", "d"])
 
     regression = LinearRegression()
     expect(

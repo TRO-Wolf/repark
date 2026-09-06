@@ -84,8 +84,10 @@ file is empty.
   arms measured Spark-equal on live PySpark 4.1.2; `repark_type_to_arrow` /
   `struct_type_from_arrow` are repark extensions taught beside the mapped types).
 - [ml/](ml/map.md) — `ml.*` examples (EX-27: all 28 roster names; Vector.size,
-  VectorUDT.typeName/sqlType, HasInputCol inheritance, and ParamGridBuilder.baseOn
-  pairs stay as §7 EX-ML-1..4 on covered names).
+  VectorUDT typeName/sqlType/serialize, HasInputCol inheritance and Tokenizer
+  unset inputCol, ParamGridBuilder.baseOn pairs/tuples, mixin setters, empty
+  Pipeline.getStages, Spark-shaped UnaryTransformer, persistence format, and
+  DenseVector.dot/squared_distance stay as §7 EX-ML-1..9 on covered names).
 
 ## I want to...
 

@@ -1,14 +1,14 @@
 # map — scripts/
 
-EX-27 ml (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 164 → 136 —
-the 28 `ml.*` roster names, taught by five new examples under `docs/examples/ml/`,
-every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC) for the
-JVM-free cells and on the unique OLS solution Spark's normal equations produce
-for the four-row `y = 2 + 3x` fixture. Four new §7 rows (EX-ML-1..4) pin the
-diverged arms of covered names, with four tests in
-`python/repark/tests/test_examples_ml.py`. Red-first: 28 has-no-example findings
-with the files held out (exit 1), and a wrong-toArray control in `vectors.py`
-failed the execute leg by name (exit 1).
+EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
+`BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
+examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
+live PySpark 4.1.2 (ANSI on, UTC), including session-level OLS / Pipeline /
+CrossValidator / persistence / UnaryTransformer. Nine §7 rows (EX-ML-1..9) pin
+the diverged arms of covered names, with nine tests in
+`python/repark/tests/test_examples_ml.py`. Mixins are taught only through
+concrete stages; UnaryTransformer is plan-built `_transform`; persistence is
+the repark-ml round-trip.
 pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
 EX-26 io-session (2026-09-06): `check_example_coverage.py` `BACKLOG_BASELINE` 193 → 164 —

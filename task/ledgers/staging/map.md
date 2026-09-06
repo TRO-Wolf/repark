@@ -6,15 +6,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
-  **EX-27 (2026-09-05), in flight:** the v1.1 example backfill's `ml.*` family —
-  the 28-name roster at base `282607f5` (= `origin/main` at dispatch); all 28
-  names covered by five new `docs/examples/ml/` files (backlog 164 → 136;
-  `BACKLOG_BASELINE` 164 → 136), JVM-free cells measured on live PySpark 4.1.2,
-  fitted OLS outputs the unique `y = 2 + 3x` solution; four new §7 rows
-  (EX-ML-1..4) pin the diverged arms of covered names, with four tests in
-  `test_examples_ml.py`. Red-first: 28 has-no-example findings with the files
-  held out (exit 1), and a wrong-toArray control in `vectors.py` failed the
-  execute leg by name (exit 1). `risk_tier: standard`. Branch `docs/ex-27-ml`.
+  **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
+  backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names
+  covered by five `docs/examples/ml/` files (backlog 164 → 136). Round 2
+  re-measured every oracle cell on live PySpark 4.1.2, including the
+  session-level cells round 1 printed as "equal" without collecting. Nine §7
+  rows (EX-ML-1..9) pin the diverged arms, with nine tests in
+  `test_examples_ml.py`. Mixins are taught only through concrete stages.
+  `risk_tier: standard`. Branch `docs/ex-27-ml`.
   pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage

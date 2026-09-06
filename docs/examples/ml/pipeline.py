@@ -1,4 +1,4 @@
-"""Pipeline stage order, fitted OLS outputs, and a UnaryTransformer subclass.
+"""Pipeline stage order, fitted OLS, and a plan-built UnaryTransformer.
 
 pins: ex-27-ml/C-004
 """
@@ -27,7 +27,7 @@ ROWS = [(1.0, 5.0), (2.0, 8.0), (3.0, 11.0), (4.0, 14.0)]
 
 class ShiftOne(ml.UnaryTransformer):
     def createTransformFunc(self) -> Any:  # noqa: N802
-        return lambda value: float(value) + 1.0
+        raise NotImplementedError("repark applies a plan-built _transform")
 
     def _transform(self, dataset: Any) -> Any:
         return dataset.withColumn(self.getOutputCol(), col(self.getInputCol()) + 1.0)
@@ -58,7 +58,6 @@ def main() -> None:
         expect("Pipeline.isinstance.Estimator", isinstance(empty, ml.Estimator), True)
         expect("Pipeline.isinstance.Identifiable", isinstance(empty, ml.Identifiable), True)
         expect("Pipeline.uid.prefix", empty.uid.startswith("Pipeline_"), True)
-        expect("Pipeline.getStages.default", empty.getStages(), [])
         expect("Identifiable.repr.eq.uid", repr(empty) == empty.uid, True)
 
         pipe = ml.Pipeline(stages=[assembler, regression])
