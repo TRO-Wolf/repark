@@ -5950,6 +5950,71 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
   that row's pin — repark's `catalog.registerFunction` return — is unaffected.
 
+### EX-ML-1 — `Vector.size` is a method; Spark exposes a property
+
+- **repark** — `Vectors.dense(1.0, 0.0, 3.0).size` is a bound method;
+  `.size()` answers `3`. The same call on `Vectors.sparse(5, [1, 3], [1.0, 2.0])`
+  answers `5`. `int(dense.size)` raises `TypeError`.
+- **Apache Spark** — `.size` is an `int` property (`3` / `5`); `.size()` raises
+  `TypeError: 'int' object is not callable`.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free `pyspark.ml.linalg`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_size_is_a_method`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The examples keep
+  `toArray`, indexing, and `numNonzeros`, where the engines agree; the size arm is pinned,
+  not taught.
+
+### EX-ML-2 — `VectorUDT.typeName` is `vector`; Spark answers `vectorudt`
+
+- **repark** — `VectorUDT().typeName()` answers `vector`; `sqlType()` is
+  `struct<type:int,size:int,indices:array<int>,values:array<double>>`;
+  `jsonValue()` is `{"type": "vector", "class": "repark.spark.ml.linalg.VectorUDT"}`.
+  `simpleString()` answers `vector` on both engines.
+- **Apache Spark** — `typeName()` answers `vectorudt`; `sqlType()` uses
+  `tinyint` for the `type` field
+  (`struct<type:tinyint,size:int,indices:array<int>,values:array<double>>`);
+  `jsonValue()` is a UDT descriptor with
+  `class=org.apache.spark.ml.linalg.VectorUDT` and
+  `pyClass=pyspark.ml.linalg.VectorUDT`.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free `VectorUDT`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The example keeps
+  `simpleString` and `repr`, where the engines agree; the typeName / sqlType / jsonValue
+  arms are pinned, not taught.
+
+### EX-ML-3 — `HasInputCol` is not a `Params` subclass; Spark's mixin is
+
+- **repark** — `issubclass(HasInputCol, Params)` is `False`. `HasInputCol()` raises
+  `PySparkTypeError: Param parent must be Identifiable, got HasInputCol`. A
+  subclass with `Params` in the MRO (`class InputStage(HasInputCol, Params)`)
+  works and defaults `inputCol` to `uid + "__input"`.
+- **Apache Spark** — `HasInputCol` extends `Params`; `HasInputCol()` constructs
+  and prints a uid (`HasInputCol_<12hex>`). The same `HasInputCol, Params`
+  subclass then KeyErrors on `getInputCol` because the class-level Param dummy
+  does not match the instance map.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free
+  `pyspark.ml.param.shared`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_has_input_col_is_not_params`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The example
+  covers the mixins by subclassing with `Params` in the MRO and by reading them off
+  Tokenizer / VectorAssembler / LinearRegression, where get/set answers match Spark's
+  documented defaults; the standalone inheritance arm is pinned, not taught.
+
+### EX-ML-4 — `ParamGridBuilder.baseOn(param, value)` works; Spark 4.1.2 wants a dict or tuples
+
+- **repark** — `ParamGridBuilder().baseOn(estimator.maxIter, 20).build()` answers
+  one map with `maxIter=20`. The dict spelling `baseOn({estimator.maxIter: 20})`
+  answers the same cell on both engines.
+- **Apache Spark** — `baseOn(param, 20)` raises
+  `TypeError: cannot unpack non-iterable Param object`. Spark 4.1.2 accepts a
+  Param map dict or `(param, value)` tuples:
+  `baseOn({param: 20})` and `baseOn((param, 20))` both answer `20`.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free
+  `pyspark.ml.tuning.ParamGridBuilder`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_param_grid_base_on_pairs`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The example
+  keeps the dict spelling, where the engines agree; the alternating-pair arm is
+  pinned, not taught.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without

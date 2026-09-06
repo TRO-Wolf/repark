@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
+  **EX-27 (2026-09-05), in flight:** the v1.1 example backfill's `ml.*` family —
+  the 28-name roster at base `282607f5` (= `origin/main` at dispatch); all 28
+  names covered by five new `docs/examples/ml/` files (backlog 164 → 136;
+  `BACKLOG_BASELINE` 164 → 136), JVM-free cells measured on live PySpark 4.1.2,
+  fitted OLS outputs the unique `y = 2 + 3x` solution; four new §7 rows
+  (EX-ML-1..4) pin the diverged arms of covered names, with four tests in
+  `test_examples_ml.py`. Red-first: 28 has-no-example findings with the files
+  held out (exit 1), and a wrong-toArray control in `vectors.py` failed the
+  execute leg by name (exit 1). `risk_tier: standard`. Branch `docs/ex-27-ml`.
+  pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the

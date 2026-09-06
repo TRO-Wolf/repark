@@ -83,9 +83,9 @@ file is empty.
 - [types/](types/map.md) — `types.*` examples (EX-22: all 28 names; construction and display
   arms measured Spark-equal on live PySpark 4.1.2; `repark_type_to_arrow` /
   `struct_type_from_arrow` are repark extensions taught beside the mapped types).
-- `ml/` — the remaining EX-1 family. It is an
-  inventory family with no example yet; the backfill creates the directory (and its
-  `map.md`) with the first example it lands there.
+- [ml/](ml/map.md) — `ml.*` examples (EX-27: all 28 roster names; Vector.size,
+  VectorUDT.typeName/sqlType, HasInputCol inheritance, and ParamGridBuilder.baseOn
+  pairs stay as §7 EX-ML-1..4 on covered names).
 
 ## I want to...
 
