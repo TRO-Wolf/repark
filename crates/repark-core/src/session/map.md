@@ -92,7 +92,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   applies `RuntimeEnvBuilder::with_temp_file_path`. `max_temp_directory_size` residual.
   **R3:** RAM-relative default `clamp(0.6 × cgroup-or-MemTotal, MIN, 8 GiB)` at `build()`
   only; `builder_default_installs_eight_gib_fair_spill_pool` asserts Finite / floor / cap /
-  equals helper.
+  equals helper. **H3-SPILL-RESIDUE-1 (2026-09-06):** the installed pool is now wrapped in
+  [`RefusalRecordingPool`](../pool_refusals.rs) so a refusal is observable from outside
+  DataFusion; the wrapper delegates `Display`, so every refusal message still names `fair(`.
+  The opt-out arm (`pool_bytes = None`) installs no wrapper and therefore no containment.
+  `swap_fair_spill_pool` carries the SAME log onto the new pool, because the facade forwards a
+  builder `datafusion.runtime.memory_limit` as a runtime SET right after `getOrCreate()` — a
+  fresh log there would have disarmed the containment on every bounded facade session, and did
+  until it was measured.
+  pins: h3-spill-residue-1/C-002
 - `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
   rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
   two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding

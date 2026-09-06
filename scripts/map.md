@@ -216,6 +216,13 @@ TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709→1700 — the year arm moves t
 `src/spark_year_pad.rs`; mirrored in `test_cap_1_source_file_line_cap.py`.
 pins: types-1/C-006
 
+H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/dataframe.rs`
+1127→1126 — arming the Arrow reader's pool-refusal containment is one builder call
+(`.with_refusals(...)`) rather than a fourth constructor argument, and the lookup itself
+(`refusal_log`) lives in `arrow_export.rs`, so the binding surface came out a line shorter than
+it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
+with it in the same commit. pins: h3-spill-residue-1/C-002
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing
