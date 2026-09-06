@@ -427,8 +427,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
   The CSV-infer live leg also pins JSON inference staying `string` on both engines.
   The 60-deep half of the boundary pin asserts all 61 relax flags, not just readability.
+  Round 3 (2026-09-06): CSV `inferSchema` timestamps localize in the session zone
+  (UTC and `America/New_York`, DataFrame and SQL doors, DST gap cell
+  `2020-03-08 02:30:00` → 07:30Z measured); `nullValue`+`inferSchema` promotes
+  timestamps; a non-null struct COLUMN (Arrow required field, not a constructor)
+  CAST is non-null; JSON without `inferTimestamp` stays `string` on both engines
+  (the CSV cast also runs on the JSON path and is a no-op on Utf8).
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.

@@ -253,13 +253,23 @@ def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
     return not stripped.startswith(b"[")
 
 
+def _csv_string_column_has_clock(frame: DataFrame, name: str) -> bool:
+    """True when a non-null string cell contains ``:`` (a clock, not a date-only day)."""
+
+    from repark.spark import functions as F  # noqa: N812
+
+    marker = frame.select(F.max(F.col(name).cast("string").contains(":")).alias("has_clock"))
+    values = marker.to_arrow().column(0).to_pylist()
+    return bool(values) and values[0] is True
+
+
 def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     """Spark-like type promotion on an all-string CSV frame after nullValue application.
 
 
 
-    Tries bigint → double → boolean per column via engine CAST; keeps string on failure.
-
+    Tries bigint → double → boolean → timestamp per column via engine CAST; keeps string
+    on failure. Timestamp requires a ``:`` so a date-only cell is not promoted to midnight.
     Validates each trial by materializing so a late bad value rejects the type.
 
     """
@@ -271,7 +281,7 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     if not columns:
         return frame
 
-    candidates = ("bigint", "double", "boolean")
+    candidates = ("bigint", "double", "boolean", "timestamp")
 
     selects: list[Any] = []
 
@@ -279,6 +289,9 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
         promoted: Any | None = None
 
         for type_name in candidates:
+            if type_name == "timestamp" and not _csv_string_column_has_clock(frame, name):
+                continue
+
             trial = frame.select(F.col(name).cast(type_name).alias(name))
 
             try:
@@ -305,14 +318,17 @@ def _cast_inferred_naive_timestamps(frame: DataFrame) -> DataFrame:
 
     Spark infers timestamps as ``timestamp`` on every text source; the engine infers
     tz-naive Arrow, which the facade otherwise reports ``timestamp_ntz`` (correct for
-    parquet/NTZ sources). Runs only past the user-schema and no-infer returns, so an
-    explicit user schema never reaches it.
+    parquet/NTZ sources). CAST goes through string so the session zone localizes the
+    wall clock the way CAST(str AS TIMESTAMP) does. Runs only past the user-schema
+    and no-infer returns, so an explicit user schema never reaches it.
     """
 
     from repark.spark import functions as F  # noqa: N812
 
     selects = [
-        F.col(name).cast("timestamp").alias(name) if dtype == "timestamp_ntz" else F.col(name)
+        F.col(name).cast("string").cast("timestamp").alias(name)
+        if dtype == "timestamp_ntz"
+        else F.col(name)
         for name, dtype in frame.dtypes
     ]
     if not selects:
