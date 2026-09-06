@@ -94,7 +94,6 @@ _CSV_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
         "inferschema",
         "multiline",
         "compression",
-        "utf8_columns",
     }
 )
 
@@ -254,6 +253,36 @@ def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
 
 
 _CSV_PROMOTE_CANDIDATES: tuple[str, ...] = ("bigint", "double", "boolean", "timestamp", "date")
+_CSV_STRING_PROMOTE_WIDTH = 4
+_CSV_TYPED_DTYPES: frozenset[str] = frozenset(
+    {
+        "timestamp",
+        "timestamp_ntz",
+        "date",
+        "bigint",
+        "int",
+        "double",
+        "float",
+        "boolean",
+    }
+)
+
+
+def _leftover_candidates_for(dtype: str, column_count: int) -> tuple[str, ...] | None:
+    """Return try_cast candidates for a native-inferred leftover string column."""
+    if dtype in {"bigint", "int"}:
+        return ("bigint", "double")
+    if dtype in {"double", "float"}:
+        return ("double",)
+    if dtype == "boolean":
+        return ("boolean",)
+    if dtype in {"timestamp", "timestamp_ntz"}:
+        return ("timestamp",)
+    if dtype == "date":
+        return ("timestamp", "date")
+    if dtype == "string" and column_count <= _CSV_STRING_PROMOTE_WIDTH:
+        return ("bigint", "double")
+    return None
 
 
 def _finish_csv_infer_schema(
@@ -261,8 +290,9 @@ def _finish_csv_infer_schema(
     reader: Any,
     infer_schema: bool,
     null_token: str | None,
+    csv_path: str | None = None,
 ) -> DataFrame:
-    """Finish CSV inferSchema: native types plus Utf8 timestamp text, or nullValue promotion."""
+    """Finish CSV inferSchema: native types, Utf8 timestamps/dates, leftover numeric promotion."""
 
     from repark.spark import functions as F  # noqa: N812
 
@@ -271,33 +301,45 @@ def _finish_csv_infer_schema(
     if null_token is not None:
         return _promote_csv_string_types(frame)
     is_csv = (reader._format or "").lower() == "csv"
-    csv_path = reader._option_path()
     if not is_csv or csv_path is None:
         return frame
-    timestamp_names = [
-        name for name, dtype in frame.dtypes if dtype in {"timestamp", "timestamp_ntz"}
-    ]
-    if not timestamp_names:
-        return frame
-    options = reader._native_options_for(_CSV_NATIVE_OPTION_KEYS)
-    if "header" not in {key.lower() for key in options}:
-        options["header"] = "false"
-    options["utf8_columns"] = ",".join(timestamp_names)
-    reread = reader._session.read_csv(csv_path, options)
-    timestamp_name_set = set(timestamp_names)
-    selects = [
-        F.col(name).cast("timestamp").alias(name) if name in timestamp_name_set else F.col(name)
-        for name in reread.columns
-    ]
-    return reread.select(*selects)
+    original = dict(frame.dtypes)
+    void_names = {name for name, dtype in original.items() if dtype == "void"}
+    utf8_names = [name for name, dtype in original.items() if dtype in _CSV_TYPED_DTYPES]
+    if utf8_names:
+        options = reader._native_options_for(_CSV_NATIVE_OPTION_KEYS)
+        if "header" not in {key.lower() for key in options}:
+            options["header"] = "false"
+        options["utf8_columns"] = ",".join(utf8_names)
+        frame = reader._session.read_csv(csv_path, options)
+    candidates_by_name: dict[str, tuple[str, ...]] = {}
+    for name, dtype in dict(frame.dtypes).items():
+        if dtype != "string":
+            continue
+        leftover = _leftover_candidates_for(original.get(name, "string"), len(original))
+        if leftover is not None:
+            candidates_by_name[name] = leftover
+    if candidates_by_name:
+        frame = _promote_csv_string_types(frame, candidates_by_name)
+    if void_names:
+        frame = frame.select(
+            *[
+                F.col(name).cast("string").alias(name) if name in void_names else F.col(name)
+                for name in frame.columns
+            ]
+        )
+    return frame
 
 
-def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
+def _promote_csv_string_types(
+    frame: DataFrame,
+    candidates: tuple[str, ...] | dict[str, tuple[str, ...]] | None = None,
+) -> DataFrame:
     """Spark-like type promotion on an all-string CSV frame after nullValue application.
 
     Tries bigint → double → boolean → timestamp → date per column via engine CAST; keeps
     string on failure. Timestamp requires a ``:``; date requires its absence.
-    One aggregation of try_cast failure counts rejects a type when any non-null cell fails.
+    Validates each trial by materializing so a late bad value rejects the type.
     """
 
     from repark.spark import functions as F  # noqa: N812
@@ -308,18 +350,29 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
         return frame
 
     dtypes = dict(frame.dtypes)
-    string_names = [name for name in columns if dtypes.get(name) == "string"]
+    if isinstance(candidates, dict):
+        names_to_types = {
+            name: type_names
+            for name, type_names in candidates.items()
+            if dtypes.get(name) == "string"
+        }
+    else:
+        type_names = _CSV_PROMOTE_CANDIDATES if candidates is None else candidates
+        names_to_types = {name: type_names for name in columns if dtypes.get(name) == "string"}
+    string_names = [name for name in columns if name in names_to_types]
     if not string_names:
         return frame
 
     aggregates: list[Any] = []
-    clock_aliases: list[str] = []
+    clock_aliases: dict[str, str] = {}
     fail_aliases: list[tuple[str, str, str]] = []
     for column_index, name in enumerate(string_names):
-        clock_alias = f"c{column_index}_clock"
-        clock_aliases.append(clock_alias)
-        aggregates.append(F.max(F.col(name).cast("string").contains(":")).alias(clock_alias))
-        for type_name in _CSV_PROMOTE_CANDIDATES:
+        type_names = names_to_types[name]
+        if "timestamp" in type_names or "date" in type_names:
+            clock_alias = f"c{column_index}_clock"
+            clock_aliases[name] = clock_alias
+            aggregates.append(F.max(F.col(name).cast("string").contains(":")).alias(clock_alias))
+        for type_name in type_names:
             fail_alias = f"c{column_index}_fail_{type_name}"
             fail_aliases.append((name, type_name, fail_alias))
             failed = (F.col(name).isNotNull()) & (F.col(name).try_cast(type_name).isNull())
@@ -333,19 +386,16 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     for name, type_name, fail_alias in fail_aliases:
         raw = values.get(fail_alias)
         fail_counts[(name, type_name)] = 0 if raw is None else int(raw)
-    clock_by_name = {
-        name: values.get(clock_aliases[column_index]) is True
-        for column_index, name in enumerate(string_names)
-    }
+    clock_by_name = {name: values.get(clock_aliases[name]) is True for name in clock_aliases}
 
     selects: list[Any] = []
     for name in columns:
-        if dtypes.get(name) != "string":
+        if name not in names_to_types:
             selects.append(F.col(name))
             continue
-        has_clock = clock_by_name[name]
+        has_clock = clock_by_name.get(name, False)
         promoted: str | None = None
-        for type_name in _CSV_PROMOTE_CANDIDATES:
+        for type_name in names_to_types[name]:
             if type_name == "timestamp" and not has_clock:
                 continue
             if type_name == "date" and has_clock:

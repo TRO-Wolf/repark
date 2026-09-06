@@ -34,9 +34,14 @@ def _session(zone: str = "UTC") -> Any:
 
 
 def _read_inferred(
-    session: Any, path: Path, *, null_value: str | None = None, infer_schema: bool = True
+    session: Any,
+    path: Path,
+    *,
+    null_value: str | None = None,
+    infer_schema: bool = True,
+    header: bool = True,
 ) -> Any:
-    reader = session.read.option("header", True).option("inferSchema", infer_schema)
+    reader = session.read.option("header", header).option("inferSchema", infer_schema)
     if null_value is not None:
         reader = reader.option("nullValue", null_value)
     return reader.csv(str(path))
@@ -76,19 +81,43 @@ def _hooked_collect(frame: DataFrame) -> Any:
     return hook._original_collect(frame)
 
 
+_TO_ARROW_ATTR = "to_arrow"
+_COLLECT_ATTR = "collect"
+
+
 def _plan_time_materializations(session: Any, path: Path, **read_kwargs: Any) -> dict[str, int]:
     global _MATERIALIZE_HOOK
     counter = _MaterializeCounter()
     _MATERIALIZE_HOOK = counter
-    DataFrame.to_arrow = _hooked_to_arrow  # type: ignore[method-assign]
-    DataFrame.collect = _hooked_collect  # type: ignore[method-assign]
+    setattr(DataFrame, _TO_ARROW_ATTR, _hooked_to_arrow)
+    setattr(DataFrame, _COLLECT_ATTR, _hooked_collect)
     try:
         _ = _read_inferred(session, path, **read_kwargs)
     finally:
-        DataFrame.to_arrow = counter._original_to_arrow  # type: ignore[method-assign]
-        DataFrame.collect = counter._original_collect  # type: ignore[method-assign]
+        setattr(DataFrame, _TO_ARROW_ATTR, counter._original_to_arrow)
+        setattr(DataFrame, _COLLECT_ATTR, counter._original_collect)
         _MATERIALIZE_HOOK = None
     return {"to_arrow": counter.to_arrow, "collect": counter.collect}
+
+
+def _write_repeated(path: Path, header: str, body: str, last: str, rows: int = 1001) -> Path:
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(header + "\n")
+        for _ in range(rows - 1):
+            handle.write(body + "\n")
+        handle.write(last + "\n")
+    return path
+
+
+def _assert_both_doors(
+    session: Any, frame: Any, dtypes: list[tuple[str, str]], rows: list[dict[str, Any]]
+) -> None:
+    frame.createOrReplaceTempView("csv_inferred")
+    sql_frame = session.sql("SELECT * FROM csv_inferred")
+    assert frame.dtypes == dtypes
+    assert sql_frame.dtypes == dtypes
+    assert frame.to_arrow().to_pylist() == rows
+    assert sql_frame.to_arrow().to_pylist() == rows
 
 
 def _write_bench_csv(path: Path, rows: int = _BENCH_ROWS) -> Path:
@@ -124,9 +153,14 @@ def test_infer_schema_trial_path_does_not_materialize_per_column(tmp_path: Path)
     session = _session()
     try:
         counts = _plan_time_materializations(session, path)
-        assert counts == {"to_arrow": 0, "collect": 0}
+        assert counts["collect"] == 0
+        assert counts["to_arrow"] <= 1
         false_counts = _plan_time_materializations(session, path, infer_schema=False)
         assert false_counts == {"to_arrow": 0, "collect": 0}
+        ints = _write_text(tmp_path / "ints.csv", "id,v\n1,1\n2,2\n")
+        int_counts = _plan_time_materializations(session, ints)
+        assert int_counts["collect"] == 0
+        assert int_counts["to_arrow"] <= 1
         null_path = _write_text(tmp_path / "na.csv", "id,ts\nA,2020-06-01 12:00:00\nB,NA\n")
         null_counts = _plan_time_materializations(session, null_path, null_value="NA")
         assert null_counts["collect"] == 0
@@ -299,5 +333,262 @@ def test_live_infer_schema_shapes_match_oracle(tmp_path: Path, spark_engine: lp.
                 if repark_field[1] != spark_field[1]:
                     assert (repark_field[1], spark_field[1]) == ("bigint", "int")
             assert repark_rows == spark_rows == sql_rows
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize(
+    ("name", "header", "body", "last", "dtypes", "last_row"),
+    [
+        (
+            "late_double_1001",
+            "id,v",
+            "1,1",
+            "1,1.5",
+            [("id", "bigint"), ("v", "double")],
+            {"id": 1, "v": 1.5},
+        ),
+        (
+            "late_bad_int_1001",
+            "id,v",
+            "1,1",
+            "1,abc",
+            [("id", "bigint"), ("v", "string")],
+            {"id": 1, "v": "abc"},
+        ),
+        (
+            "late_true_in_int_1001",
+            "id,v",
+            "1,1",
+            "1,true",
+            [("id", "bigint"), ("v", "string")],
+            {"id": 1, "v": "true"},
+        ),
+        (
+            "late_na_in_int_1001",
+            "id,v",
+            "1,1",
+            "1,NA",
+            [("id", "bigint"), ("v", "string")],
+            {"id": 1, "v": "NA"},
+        ),
+        (
+            "late_bad_double_1001",
+            "id,v",
+            "1,1.5",
+            "1,abc",
+            [("id", "bigint"), ("v", "string")],
+            {"id": 1, "v": "abc"},
+        ),
+        (
+            "late_bad_date_1001",
+            "id,d",
+            "A,2020-06-01",
+            "A,not-a-date",
+            [("id", "string"), ("d", "string")],
+            {"id": "A", "d": "not-a-date"},
+        ),
+        (
+            "late_slash_date_1001",
+            "id,d",
+            "A,2020-06-01",
+            "A,12/31/2020",
+            [("id", "string"), ("d", "string")],
+            {"id": "A", "d": "12/31/2020"},
+        ),
+        (
+            "late_usdate_in_ts_1001",
+            "id,ts",
+            "A,2020-06-01 12:00:00",
+            "A,12/31/2020",
+            [("id", "string"), ("ts", "string")],
+            {"id": "A", "ts": "12/31/2020"},
+        ),
+        (
+            "late_ts_in_date_1001",
+            "id,d",
+            "A,2020-06-01",
+            "A,2020-06-01 12:00:00",
+            [("id", "string"), ("d", "timestamp")],
+            {"id": "A", "d": _CSV_NOON_UTC},
+        ),
+    ],
+)
+def test_late_type_conflict_past_sample_is_spark_equal(
+    tmp_path: Path,
+    name: str,
+    header: str,
+    body: str,
+    last: str,
+    dtypes: list[tuple[str, str]],
+    last_row: dict[str, Any],
+) -> None:
+    path = _write_repeated(tmp_path / f"{name}.csv", header, body, last)
+    session = _session()
+    try:
+        frame = _read_inferred(session, path)
+        frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        assert frame.dtypes == dtypes
+        assert sql_frame.dtypes == dtypes
+        assert frame.to_arrow().to_pylist()[-1] == last_row
+        assert sql_frame.to_arrow().to_pylist()[-1] == last_row
+    finally:
+        session.stop()
+
+
+def test_date_bad_day_stays_string(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "bad_day.csv", "id,d\nA,2020-06-01\nB,2020-13-45\n")
+    session = _session()
+    try:
+        _assert_both_doors(
+            session,
+            _read_inferred(session, path),
+            [("id", "string"), ("d", "string")],
+            [{"id": "A", "d": "2020-06-01"}, {"id": "B", "d": "2020-13-45"}],
+        )
+    finally:
+        session.stop()
+
+
+def test_header_false_offset_timestamp_keeps_instant_in_new_york(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "hfalse.csv", "1,2020-06-01T12:00:00+02:00,2.5\n")
+    session = _session("America/New_York")
+    try:
+        frame = _read_inferred(session, path, header=False)
+        frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        assert frame.columns == ["_c0", "_c1", "_c2"]
+        assert sql_frame.columns == ["_c0", "_c1", "_c2"]
+        assert frame.dtypes == [("_c0", "bigint"), ("_c1", "timestamp"), ("_c2", "double")]
+        assert sql_frame.dtypes == frame.dtypes
+        assert frame.to_arrow().to_pylist()[0]["_c1"] == _CSV_OFFSET_INSTANT
+        assert sql_frame.to_arrow().to_pylist()[0]["_c1"] == _CSV_OFFSET_INSTANT
+    finally:
+        session.stop()
+
+
+def test_numeric_grammar_tokens_follow_spark(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        inf_path = _write_text(tmp_path / "inf.csv", "v\nInf\n-Inf\nNaN\n")
+        inf_frame = _read_inferred(session, inf_path)
+        assert inf_frame.dtypes == [("v", "double")]
+        inf_rows = inf_frame.to_arrow().to_pylist()
+        assert inf_rows[0]["v"] == float("inf")
+        assert inf_rows[1]["v"] == float("-inf")
+        assert inf_rows[2]["v"] != inf_rows[2]["v"]
+        infy = _write_text(tmp_path / "infy.csv", "v,x\nInfinity,1.5\n")
+        infy_frame = _read_inferred(session, infy)
+        assert infy_frame.dtypes == [("v", "double"), ("x", "double")]
+        plus = _write_text(tmp_path / "plus.csv", "v\n+5\n")
+        plus_frame = _read_inferred(session, plus)
+        assert plus_frame.dtypes == [("v", "bigint")]
+        assert plus_frame.to_arrow().to_pylist() == [{"v": 5}]
+        long_path = _write_text(tmp_path / "long.csv", "v\n1.5\n12345678901234567890123\n")
+        long_frame = _read_inferred(session, long_path)
+        assert long_frame.dtypes == [("v", "double")]
+    finally:
+        session.stop()
+
+
+def test_utf8_columns_user_option_does_not_force_string(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "u.csv", "v\n2\n")
+    session = _session()
+    try:
+        frame = (
+            session.read.option("utf8_columns", "v")
+            .option("header", True)
+            .option("inferSchema", True)
+            .csv(str(path))
+        )
+        assert frame.dtypes == [("v", "bigint")]
+        assert frame.to_arrow().to_pylist() == [{"v": 2}]
+    finally:
+        session.stop()
+
+
+def test_csv_path_argument_is_not_stored_on_the_reader(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "p.csv", "v\n1\n")
+    session = _session()
+    try:
+        reader = session.read.option("header", True).option("inferSchema", True)
+        _ = reader.csv(str(path))
+        with pytest.raises(Exception, match="path") as raised:
+            reader.load()
+        assert raised.value is not None
+    finally:
+        session.stop()
+
+
+def test_empty_csv_columns_are_string_not_void(tmp_path: Path) -> None:
+    session = _session()
+    try:
+        empty = _write_text(tmp_path / "empty.csv", "1,\n2,\n")
+        empty_frame = _read_inferred(session, empty, header=False)
+        assert empty_frame.dtypes == [("_c0", "bigint"), ("_c1", "string")]
+        header_only = _write_text(tmp_path / "hdr.csv", "a,b\n")
+        header_frame = _read_inferred(session, header_only)
+        assert header_frame.dtypes == [("a", "string"), ("b", "string")]
+    finally:
+        session.stop()
+
+
+def test_twenty_digit_integer_infers_double_not_decimal(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "wide.csv", "v\n12345678901234567890\n")
+    session = _session()
+    try:
+        frame = _read_inferred(session, path)
+        assert frame.dtypes == [("v", "double")]
+        late = _write_repeated(tmp_path / "late_wide.csv", "id,v", "1,1", "1,12345678901234567890")
+        late_frame = _read_inferred(session, late)
+        assert late_frame.dtypes == [("id", "bigint"), ("v", "double")]
+    finally:
+        session.stop()
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_late_and_grammar_shapes_match_oracle(tmp_path: Path, spark_engine: lp.Engine) -> None:
+    session = _session()
+    try:
+        late_path = _write_repeated(tmp_path / "live_late.csv", "id,v", "1,1", "1,1.5")
+        repark_late = _read_inferred(session, late_path)
+        spark_late = _read_inferred(spark_engine.session, late_path)
+        assert repark_late.dtypes[1][1] == "double"
+        assert spark_late.dtypes[1][1] == "double"
+        assert (
+            repark_late.to_arrow().to_pylist()[-1]
+            == spark_engine.arrow_of(spark_late).to_pylist()[-1]
+        )
+        ts_path = _write_repeated(
+            tmp_path / "live_ts_date.csv",
+            "id,d",
+            "A,2020-06-01",
+            "A,2020-06-01 12:00:00",
+        )
+        repark_ts = _read_inferred(session, ts_path)
+        spark_ts = _read_inferred(spark_engine.session, ts_path)
+        assert repark_ts.dtypes[1][1] == "timestamp"
+        assert spark_ts.dtypes[1][1] == "timestamp"
+        assert (
+            repark_ts.to_arrow().to_pylist()[-1] == spark_engine.arrow_of(spark_ts).to_pylist()[-1]
+        )
+        hpath = _write_text(tmp_path / "live_hfalse.csv", "1,2020-06-01T12:00:00+02:00,2.5\n")
+        repark_h = _read_inferred(session, hpath, header=False)
+        spark_h = _read_inferred(spark_engine.session, hpath, header=False)
+        assert repark_h.columns == ["_c0", "_c1", "_c2"]
+        assert (
+            repark_h.to_arrow().to_pylist()[0]["_c1"]
+            == spark_engine.arrow_of(spark_h).to_pylist()[0]["_c1"]
+        )
+        inf_path = _write_text(tmp_path / "live_inf.csv", "v\nInf\n-Inf\n")
+        repark_inf = _read_inferred(session, inf_path)
+        spark_inf = _read_inferred(spark_engine.session, inf_path)
+        assert repark_inf.dtypes == spark_inf.dtypes
+        wide = _write_text(tmp_path / "live_wide.csv", "v\n12345678901234567890\n")
+        repark_wide = _read_inferred(session, wide)
+        spark_wide = _read_inferred(spark_engine.session, wide)
+        assert repark_wide.dtypes[0][1] == "double"
+        assert spark_wide.dtypes[0][1].startswith("decimal")
     finally:
         session.stop()

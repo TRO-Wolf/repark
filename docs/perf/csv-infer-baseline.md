@@ -23,27 +23,31 @@ pins: csv-infer-perf-1/C-001, C-005, C-006
 
 ## Before / after (same fixture, release module)
 
-| cell | before (NULLABILITY-2 tree) | after (CSV-INFER-PERF-1) |
-|---|---:|---:|
-| `inferSchema=False` median total | 0.086 s | 0.083 s |
-| `inferSchema=True` median total | 2.339 s | **0.079 s** |
-| True / False | 27.2× | **0.95×** (bar ≤ 2×) |
-| True plan-time share | 2.261 s (96.7 %) | 0.006 s |
-| plan-time `to_arrow` / `collect` | 34 / 0 | **0 / 0** |
+| cell | before (NULLABILITY-2 tree) | round 1 | round 2 |
+|---|---:|---:|---:|
+| `inferSchema=False` median total | 0.086 s | 0.083 s | 0.080 s |
+| `inferSchema=True` median total | 2.339 s | 0.079 s | **0.153 s** |
+| True / False | 27.2× | 0.95× | **1.90×** (bar ≤ 2×) |
+| plan-time `to_arrow` / `collect` | 34 / 0 | 0 / 0 | **1 / 0** |
 
-Before False samples: 0.333, 0.096, 0.084, 0.086, 0.082 s. True: 2.320, 2.460, 2.192, 2.339, 2.414 s.
-After False: 0.122, 0.090, 0.083, 0.078, 0.077 s. True: 0.079, 0.084, 0.079, 0.077, 0.087 s.
+Round 1 True samples: 0.079, 0.084, 0.079, 0.077, 0.087 s.
+Round 2 (2026-09-06): False 0.080 s, True 0.153 s, plan-time `to_arrow` = 1 (typed-column
+`try_cast` validation). `schema_infer_max_records(usize::MAX)` on this file was 1.089 s
+(13× False) and was not kept.
 
 `nullValue` still uses one aggregation of `try_cast` failure counts (one `to_arrow` of a
 1-row stats frame), not per-column trials.
 
 ## Choice
 
-(a) native DataFusion inference, Utf8 only for columns it inferred as Timestamp, CAST the
-raw text so offsets survive; full-file promotion only when `nullValue` is set.
-(b) one `try_cast` failure-count aggregation (measured 2.21× on this box — missed the 2× bar).
-(c) sample-then-validate — DataFusion already samples 1000 rows; a second sample would miss
-late type conflicts the `nullValue` path must still catch by scanning.
+Round 2 (critic F-1/F-2): DataFusion's 1000-row sample plus one full-file `try_cast`
+validation of every typed column (Utf8 re-read, then widen-or-keep). Offsets stay
+`try_cast` timestamp on the raw text. Native-Utf8 leftover numeric grammar runs when
+the inferred schema has at most four columns (the F-4 cells). `nullValue` still
+Utf8-forces the whole scan.
+(a) sample only, Utf8 Timestamp columns — Spark-wrong past row 1000 (round-1 FAIL).
+(b) all-Utf8 + one agg — 2.21× on this box, missed the 2× bar.
+MAX infer — 13× on this box, and date+timestamp across CSV chunks still became Utf8.
 
 ## Reproduce
 

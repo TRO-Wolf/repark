@@ -147,7 +147,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
   all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
   local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so
-  `session.rs` could drop under the default file-size ceiling.
+  `session.rs` could drop under the default file-size ceiling. Round 2: `inferSchema`
+  without `nullValue` keeps DataFusion's 1000-row sample, then Utf8-re-reads every
+  typed column and one `try_cast` aggregation decides widen-or-keep so a conflict
+  past row 1000 cannot raise or silently truncate.
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability

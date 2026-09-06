@@ -343,7 +343,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
-  and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`).
+  and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
+  (internal `utf8_columns` no longer in the public native-key set) and re-hashed
+  `_promote_csv_string_types` (optional leftover-candidate list; last docstring line restored).
   pins: csv-infer-perf-1/C-002, C-005
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
@@ -505,12 +507,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
-  plan-time `to_arrow`/`collect` stay 0 on inferSchema without `nullValue` and ≤ 1 with
-  `nullValue`; wall pin `inferSchema=True` ≤ 2× `False` on a 300k × 8 CSV (release only);
+  plan-time `to_arrow`/`collect` stay 0 on an int-only inferSchema and ≤ 1 when leftover
+  strings or `nullValue` need one `try_cast` aggregation; wall pin `inferSchema=True` ≤ 2×
+  `False` on a 300k × 8 CSV (release only);
   11 Spark-equal shapes the prior suite lacked (int-then-double, late-bad-int, 007,
   NA-without-nullValue, bool, string, offset, Z, date, `nullValue` date/timestamp) on the
   DataFrame door and the temp-view SQL door; live leg vs PySpark 4.1.2 (007 width stays
   EX-IO-3 bigint vs int with equal rows). `csv.\`path\`` is not a door.
+  **Round 2:** 1001-row late-conflict class pins (int→double, late-bad int/double/date,
+  late `true`/`NA`, slash-date, US-date-in-ts, clock-in-date) on both doors; `date_bad_day`;
+  `header=False` × offset × `America/New_York`; `Inf`/`NaN`/`Infinity`/`+5`/23-digit;
+  `utf8_columns` ignored; `csv(path)` does not store `path` for a later `load()`;
+  empty columns are `string` not `void`; 20-digit integers stay `double` (Spark `decimal`).
   pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the

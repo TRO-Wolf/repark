@@ -100,7 +100,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/reader.py": (
-        1026,
+        1022,
         "DataFrameReader formats and option handling narrowly exceed the default.",
         "Split format-specific readers from shared option validation.",
     ),

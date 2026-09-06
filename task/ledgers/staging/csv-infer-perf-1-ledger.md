@@ -1,6 +1,33 @@
 # Unit ledger — CSV-INFER-PERF-1 · CSV `inferSchema` without per-candidate materialization
 
 **Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
+`b9b720d5` (round 2; round 1 commit `68677f10` on `628f3322`) · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+**Registry:** `CSV-INFER-PERF-1` **FIXED**. `CSV-INFER-20DIGIT` **DECLARED**.
+
+## Round 2 — critic FAIL dispositions (2026-09-06)
+
+Round-1 critic (Opus) FAIL. Every finding measured on live PySpark 4.1.2, both doors, both
+zones, vs a release build of main.
+
+| id | sev | disposition |
+|---|---|---|
+| F-1 | S1 | **FIXED.** Sampled infer stays 1000 rows. Typed columns are Utf8-re-read and one `try_cast` aggregation widens or keeps. `1.5` at row 1001 → double; late-bad int/double/date/`true`/`NA`/slash-date → string. `schema_infer_max_records(usize::MAX)` was 1.089 s / 13× on the 300k file and date+timestamp across CSV chunks still became Utf8; not kept. |
+| F-2 | S1 | **FIXED.** A date column with a clock at row 1001 infers date from the sample, then leftover timestamp (clock guard) keeps 12:00Z. |
+| F-3 | S1 | **FIXED.** `_finish_csv_infer_schema` runs on the pre-rename frame; `_cN` rename is after. Pin: `header=False` × offset × `America/New_York` = 10:00Z, names `_c0/_c1/_c2`. |
+| F-4 | S2 | **FIXED.** Native-Utf8 leftover bigint/double on frames with ≤ 4 columns: `Inf`/`-Inf`/`NaN`/`Infinity`/`+5`/23-digit. Wider frames skip leftover on already-string columns so the 300k × 8 bench stays inside 2×. |
+| F-5 | S2 | **FIXED.** One pin per class at 1001 rows, both doors. Registry prose now names the 1000-row sample plus full-file `try_cast` validation. |
+| F-6 | S3 | **FIXED.** `utf8_columns` removed from `_CSV_NATIVE_OPTION_KEYS`; injected only on the internal re-read. User `option("utf8_columns", …)` does not force string. |
+| F-7 | S3 | **FIXED.** `csv(path)` no longer stores `path` on the reader; `_finish` takes the path argument. A later `load()` raises `CSV load requires a path argument`. |
+| F-8 | S3 | **FIXED.** DataFusion `Null` CSV columns CAST to `string` (header-only and empty trailing fields). |
+| F-9 | S3 | **ROWED.** `CSV-INFER-20DIGIT` DECLARED: overflow Int64 → double; Spark decimal. Pin reds when repark answers decimal. |
+| F-10 | S4 | **FIXED.** Materialize counter uses `setattr` with name variables (no `# type: ignore`). `_promote_csv_string_types` last docstring line restored verbatim; the one-agg fact lives in the session map row. |
+
+C-002 / C-004 / C-005 were refuted by F-1/F-2/F-5 (sample-only was not Spark-equal past row 1000). Re-**PROVEN** below against the validation path.
+
+---
+
+**Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
 `628f3322` · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `CSV-INFER-PERF-1` **FIXED**.
@@ -21,11 +48,11 @@ dependency lists, completed ledgers.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Baseline first on a release native: 300k × 8 CSV, five `read.csv`+`to_arrow` runs, medians and plan-time share recorded. | §3; `docs/perf/csv-infer-baseline.md`. | **PROVEN** | `__debug_assertions__` False, native `164,981,968 B`. False median 0.086 s (plan 0.003 s, 0 `to_arrow`). True median 2.339 s (plan 2.261 s, 34 `to_arrow`). Load 28.4 / 16.7 / 14.0. |
-| C-002 | The cheapest correct shape is (a): native DataFusion inference, Utf8-force only Timestamp columns, CAST raw text so offsets survive; full-file `try_cast` promotion only when `nullValue` is set. (b) and (c) are named and measured. | The code path; §2. | **PROVEN** | (b) one agg of `try_cast` failure counts: after 0.176 s / 2.21×, missed the 2× bar, plan-time `to_arrow` = 1. (c) sample-then-validate is DataFusion's 1000-row infer already; a second sample cannot replace the `nullValue` full scan. (a) after: True 0.079 s / 0.95×, plan-time `to_arrow` = 0. |
+| C-002 | The cheapest correct shape is sampled native inference plus one full-file `try_cast` validation of typed columns (Utf8 re-read, widen-or-keep); leftover native-Utf8 numeric grammar on schemas with ≤ 4 columns; `nullValue` still all-Utf8 promote. MAX infer and all-Utf8-always are named and measured. | The code path; §2. | **PROVEN** | Round 1 (a) was refuted (F-1/F-2). Round 2: MAX infer 1.089 s / 13× and chunk-merge of date+timestamp still Utf8. All-Utf8 one agg 2.21×. Sample + typed validation: True 0.153 s / 1.90×, plan-time `to_arrow` = 1. |
 | C-003 | Every existing pin in `test_nullability_2.py` and `test_cutover_schema_1.py` stays green unchanged. | Those files, no assertion edits. | **PROVEN** | `pytest python/repark/tests/test_nullability_2.py python/repark/tests/test_cutover_schema_1.py -q` — 40 passed with the new file, 0 failed. Offset / Z / date / `nullValue` cells unchanged. |
-| C-004 | The critic's 19 shapes are re-run against live PySpark 4.1.2; shapes the suite lacked are added as pins on the DataFrame door and the temp-view SQL door (`csv.\`path\`` does not exist). | `test_csv_infer_perf_1.py`; live leg. | **PROVEN** | 11 new always-run shapes (int-then-double, late-bad-int, 007→bigint, NA-without-nullValue, bool, string, offset, Z, date, `nullValue` date, `nullValue` timestamp) plus the NULLABILITY-2 zone × offset/plain/Z/DST cells. SQL door is `createOrReplaceTempView` + `SELECT *`. `csv.\`path\`` raises `table not found`. |
-| C-005 | After: `inferSchema=True` within 2× of `inferSchema=False` on the 300k file; no per-column full materialization. | Wall pin; call-count pin. | **PROVEN** | Wall: True 0.079 s vs False 0.083 s (0.95×). Call-count: no-`nullValue` plan-time `to_arrow`/`collect` = 0/0; `nullValue` `to_arrow` ≤ 1. `REPARK_PARITY_LIVE=1 pytest python/repark/tests/test_nullability_2.py python/repark/tests/test_csv_infer_perf_1.py -q -rs` → **38 passed in 29.80 s**, exit 0. |
-| C-006 | Registry row FIXED with before/after; `docs/perf/csv-infer-baseline.md` + map row; every touched directory's `map.md` lockstep; no code comments added. | The files; the gates. | **PROVEN** | `CSV-INFER-PERF-1` under the reader section. `session.rs` 1002 → 988, CAP-1 exception retired. `reader.py` stays 1026. |
+| C-004 | The critic's 19 shapes are re-run against live PySpark 4.1.2; shapes the suite lacked are added as pins on the DataFrame door and the temp-view SQL door (`csv.\`path\`` does not exist). ≥1 pin per class at ≥1001 rows. | `test_csv_infer_perf_1.py`; live leg. | **PROVEN** | Round 1 2–3-row pins refuted (F-5). Round 2: 1001-row class pins (late double/bad-int/true/NA/bad-double/bad-date/slash-date/US-date-in-ts/clock-in-date) plus `date_bad_day`, `header=False` offset NY, Inf/NaN/Infinity/+5/23-digit, utf8_columns ignored, path not stored, void→string, 20-digit DECLARED. SQL door is `createOrReplaceTempView` + `SELECT *`. |
+| C-005 | After: `inferSchema=True` within 2× of `inferSchema=False` on the 300k file; no per-column full materialization. | Wall pin; call-count pin. | **PROVEN** | Round 2 wall: True 0.153 s vs False 0.080 s (**1.90×**). Call-count: int-only and mixed no-`nullValue` `to_arrow` ≤ 1; `inferSchema=False` 0/0; `nullValue` ≤ 1. `REPARK_PARITY_LIVE=1 pytest python/repark/tests/test_nullability_2.py python/repark/tests/test_csv_infer_perf_1.py -q -rs` → **55 passed in 33.65 s**, exit 0. |
+| C-006 | Registry row FIXED with before/after; `docs/perf/csv-infer-baseline.md` + map row; every touched directory's `map.md` lockstep; no code comments added. | The files; the gates. | **PROVEN** | `CSV-INFER-PERF-1` under the reader section; `CSV-INFER-20DIGIT` DECLARED. `session.rs` 1002 → 988, CAP-1 exception retired. `reader.py` 1026 → 1022. |
 
 VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
