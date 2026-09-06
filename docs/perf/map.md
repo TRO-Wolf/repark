@@ -29,7 +29,11 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pair measured back to back on one quieter host, never overwriting the earlier tables.
   Two runs from different hours are not one table — each carries its own noise floor and
   its own 1-minute load, and a cost is read against the floor of the run it came from.
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06)** appends a third note: the live `read.parquet`
+  path now matches Spark on the void-list shapes; the bench `createDataFrame` path and
+  the numbered tables are untouched.
   pins: perf-dynflatten-1-measure/C-003, C-004
+  pins: dynflatten-listnull-1/C-005
 
 - [iceberg-write-baseline.md](iceberg-write-baseline.md) — **PERF-ICE-WRITEPATH-1
   (2026-09-05):** the `iceberg_write/1000000/{ctas,ctas_partitioned8,df_write_parquet_zstd}`
