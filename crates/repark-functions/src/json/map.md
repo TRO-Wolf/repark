@@ -48,6 +48,9 @@ round-trip destroys.
   around twenty of them and a silent ignore would be a wrong answer. Registry row
   `FNP10-JSON-OPTIONS-1`. pins: fnp-9-collections-json/C-005, C-008
 
+Each kernel file carries its own `#[cfg(test)] mod tests` running the measured Spark cells
+through a `SessionContext`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md) · Registry: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)

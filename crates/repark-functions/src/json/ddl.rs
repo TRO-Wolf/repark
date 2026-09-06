@@ -160,9 +160,7 @@ impl Cursor<'_> {
                 self.take_symbol('<')?;
                 let element = self.read_type()?;
                 self.take_symbol('>')?;
-                Ok(DataType::List(Arc::new(Field::new(
-                    "element", element, true,
-                ))))
+                Ok(DataType::List(Arc::new(Field::new("item", element, true))))
             }
             "MAP" => {
                 self.take_symbol('<')?;

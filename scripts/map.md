@@ -252,6 +252,12 @@ TYPES-1 round 4 (2026-09-05): `dataframe/core.py` 6305→6303 — one import joi
 the INCREASE; the ceiling ratchets DOWN again, no approval needed.
 pins: types-1/C-008
 
+FNP-9/10 (2026-09-05): `check_lib_py.py` `functions_expr.py` 2259→2257 — `arrays_zip` and
+`schema_of_json` trade a six-line refusal each for a shorter real wrapper; ratchets DOWN.
+The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
+instead of growing `functions.py`, which stays at its exact 1985.
+pins: fnp-9-collections-json/C-001
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

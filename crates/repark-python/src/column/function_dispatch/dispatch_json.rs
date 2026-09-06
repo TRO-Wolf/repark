@@ -1,4 +1,3 @@
-use datafusion::functions_nested::map::map as nested_map;
 use datafusion::logical_expr::Expr;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -58,22 +57,7 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "arrays_zip" => repark_functions::expr_fn::arrays_zip(exprs.clone()),
         "map_concat" => repark_functions::expr_fn::map_concat(exprs.clone()),
-        "create_map" => {
-            if !exprs.len().is_multiple_of(2) {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects an even number of key/value args, got {}",
-                    exprs.len()
-                )));
-            }
-            let keys = exprs.iter().step_by(2).cloned().collect::<Vec<Expr>>();
-            let values = exprs
-                .iter()
-                .skip(1)
-                .step_by(2)
-                .cloned()
-                .collect::<Vec<Expr>>();
-            nested_map(keys, values)
-        }
+        "create_map" => repark_functions::expr_fn::create_map(exprs.clone()),
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar: unsupported function {other:?}"

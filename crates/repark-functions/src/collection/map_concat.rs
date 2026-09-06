@@ -7,6 +7,7 @@ use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::concat;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::logical_expr::type_coercion::binary::comparison_coercion;
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
@@ -58,25 +59,64 @@ fn empty_map_type() -> DataType {
     )
 }
 
-fn single_map_type(arg_types: &[DataType]) -> Result<DataType> {
-    let mut answer: Option<&DataType> = None;
-    for found in arg_types {
-        match found {
-            DataType::Null => {}
-            DataType::Map(_, _) => match answer {
-                None => answer = Some(found),
-                Some(existing) if existing == found => {}
-                Some(existing) => {
-                    return exec_err!(
-                        "'map_concat' requires every argument to be the same MAP type; got \
-                         {existing} and {found}"
-                    );
-                }
-            },
-            other => return exec_err!("'map_concat' requires MAP arguments, got {other}"),
-        }
+fn entry_pair(found: &DataType) -> Result<(DataType, DataType, bool)> {
+    let DataType::Map(entries, sorted) = found else {
+        return exec_err!("'map_concat' requires MAP arguments, got {found}");
+    };
+    let DataType::Struct(pair) = entries.data_type() else {
+        return exec_err!("'map_concat' requires a MAP entry struct, got {found}");
+    };
+    Ok((
+        pair[0].data_type().clone(),
+        pair[1].data_type().clone(),
+        *sorted,
+    ))
+}
+
+fn widen(left: &DataType, right: &DataType) -> Result<DataType> {
+    if left == right {
+        return Ok(left.clone());
     }
-    Ok(answer.cloned().unwrap_or_else(empty_map_type))
+    comparison_coercion(left, right).ok_or_else(|| {
+        datafusion::error::DataFusionError::Plan(format!(
+            "'map_concat' cannot reconcile the map component types {left} and {right}"
+        ))
+    })
+}
+
+fn single_map_type(arg_types: &[DataType]) -> Result<DataType> {
+    let mut answer: Option<(DataType, DataType, bool)> = None;
+    for found in arg_types {
+        if matches!(found, DataType::Null) {
+            return exec_err!(
+                "[DATATYPE_MISMATCH.MAP_CONCAT_DIFF_TYPES] `map_concat` requires MAP arguments \
+                 of the same type; an untyped NULL is not one"
+            );
+        }
+        let (key, value, sorted) = entry_pair(found)?;
+        answer = Some(match answer {
+            None => (key, value, sorted),
+            Some((carried_key, carried_value, carried_sorted)) => (
+                widen(&carried_key, &key)?,
+                widen(&carried_value, &value)?,
+                carried_sorted && sorted,
+            ),
+        });
+    }
+    let Some((key, value, sorted)) = answer else {
+        return Ok(empty_map_type());
+    };
+    Ok(DataType::Map(
+        Arc::new(Field::new(
+            "entries",
+            DataType::Struct(Fields::from(vec![
+                Field::new("keys", key, false),
+                Field::new("values", value, true),
+            ])),
+            false,
+        )),
+        sorted,
+    ))
 }
 
 fn duplicate_key(key: &ScalarValue) -> datafusion::error::DataFusionError {
@@ -150,8 +190,8 @@ impl ScalarUDFImpl for SparkMapConcat {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        single_map_type(arg_types)?;
-        Ok(arg_types.to_vec())
+        let common = single_map_type(arg_types)?;
+        Ok(vec![common; arg_types.len()])
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -240,5 +280,52 @@ impl ScalarUDFImpl for SparkMapConcat {
             refuse_duplicates(row_entries.column(0))?;
         }
         Ok(ColumnarValue::Array(Arc::new(built)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::RecordBatch;
+    use datafusion::common::ScalarValue;
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn shown(sql: &str) -> String {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        ScalarValue::try_from_array(batches[0].column(0), 0)
+            .expect("scalar")
+            .to_string()
+    }
+
+    #[test]
+    fn map_concat_unions_and_nulls_the_row_for_a_null_argument() {
+        assert_eq!(
+            shown("SELECT map_concat(map(['a'], [1]), map(['b'], [2]))"),
+            "[{a:1,b:2}]"
+        );
+        assert_eq!(shown("SELECT map_concat(map(['a'], [1]))"), "[{a:1}]");
+        let untyped = run("SELECT map_concat(map(['a'], [1]), NULL)")
+            .expect_err("an untyped NULL argument must refuse the way Spark refuses it");
+        assert!(
+            untyped.to_string().contains("MAP_CONCAT_DIFF_TYPES"),
+            "{untyped}"
+        );
+    }
+
+    #[test]
+    fn map_concat_refuses_a_duplicate_key_across_arguments() {
+        let error = run("SELECT map_concat(map(['a'], [1]), map(['a'], [2]))")
+            .expect_err("a duplicate key must raise");
+        assert!(error.to_string().contains("Duplicate map key"), "{error}");
+        assert!(error.to_string().contains("mapKeyDedupPolicy"), "{error}");
     }
 }

@@ -192,7 +192,7 @@ struct SparkJsonObjectKeys {
 json_shim_traits!(SparkJsonObjectKeys, "json_object_keys");
 
 fn keys_element_field() -> FieldRef {
-    Arc::new(Field::new("element", DataType::Utf8, false))
+    Arc::new(Field::new("item", DataType::Utf8, true))
 }
 
 impl ScalarUDFImpl for SparkJsonObjectKeys {
@@ -242,5 +242,104 @@ impl ScalarUDFImpl for SparkJsonObjectKeys {
             }
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::{Array, AsArray, RecordBatch};
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn text(sql: &str) -> Option<String> {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        let column = batches[0].column(0);
+        if column.as_ref().is_null(0) {
+            return None;
+        }
+        Some(
+            datafusion::common::ScalarValue::try_from_array(column, 0)
+                .expect("scalar")
+                .to_string(),
+        )
+    }
+
+    #[test]
+    fn get_json_object_answers_sparks_cells() {
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":1}', '$.a')"#).as_deref(),
+            Some("1")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":1.50}', '$.a')"#).as_deref(),
+            Some("1.5")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":1e3}', '$.a')"#).as_deref(),
+            Some("1000.0")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":{"b": 2}}', '$.a')"#).as_deref(),
+            Some(r#"{"b":2}"#)
+        );
+        assert_eq!(text(r#"SELECT get_json_object('{"a":1}', 'a')"#), None);
+        assert_eq!(text(r#"SELECT get_json_object('{bad', '$.a')"#), None);
+        assert_eq!(text(r#"SELECT get_json_object('{"b":null}', '$.b')"#), None);
+    }
+
+    #[test]
+    fn get_json_object_wildcards_follow_sparks_collect_rule() {
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[1]}', '$.a[*]')"#).as_deref(),
+            Some("1")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[1,2,3]}', '$.a[*]')"#).as_deref(),
+            Some("[1,2,3]")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[]}', '$.a[*]')"#),
+            None
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[1,[2,3]]}', '$.a[*][*]')"#).as_deref(),
+            Some("[1,2,3]")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[{"b":[1,2]},{"b":[3]}]}', '$.a[*].b[*]')"#)
+                .as_deref(),
+            Some("[[1,2],[3]]")
+        );
+        assert_eq!(
+            text(r#"SELECT get_json_object('{"a":[1,2]}', '$.a[*][0]')"#),
+            None
+        );
+    }
+
+    #[test]
+    fn json_array_length_and_object_keys_answer_null_off_shape() {
+        assert_eq!(
+            text("SELECT json_array_length('[1,2,3]')").as_deref(),
+            Some("3")
+        );
+        assert_eq!(
+            text("SELECT json_array_length('[[1,2],3]')").as_deref(),
+            Some("2")
+        );
+        assert_eq!(text(r#"SELECT json_array_length('{"a":1}')"#), None);
+        assert_eq!(text("SELECT json_array_length('[1,')"), None);
+        let batches = run(r#"SELECT json_object_keys('{"a":1,"a":2}')"#).expect("keys");
+        let keys = batches[0].column(0).as_list::<i32>().value(0);
+        assert_eq!(keys.len(), 2);
+        assert_eq!(text(r#"SELECT json_object_keys('[1,2]')"#), None);
     }
 }

@@ -36,7 +36,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   unsupported operations fail explicitly.
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
-- `functions_collections.py` — array, map, sequence, and collection wrappers.
+- `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
+  (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
+  pins: fnp-9-collections-json/C-006
   **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
   Live co-collect `test_live_fn_fix_1_arrays`.
   pins: fn-fix-1-registry-rows/C-002
@@ -45,7 +47,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Installed onto `functions.py` after `__all__` so the sql.functions re-export sees them.
   Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
   pins: fnp-15-16/C-001, C-008, C-009, C-010, C-011, C-014, C-016
-- `functions_expr.py` — shared expression builders and scalar lowering.
+- `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10
+  (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
+  pins: fnp-9-collections-json/C-003, C-006
+- `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
+  `json_array_length`, `json_object_keys`, `to_json`, `from_json`) and the six loud refusals
+  this unit did not build. Its `install_into` also re-exports the collection constructors from
+  `functions_collections`, so the whole FNP-9/10 surface reaches `functions.py` through the
+  existing installer chain instead of growing that module past its exact size baseline.
+  pins: fnp-9-collections-json/C-001, C-007
   FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
   docstring is one line.
   SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`).

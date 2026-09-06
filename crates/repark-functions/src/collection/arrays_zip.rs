@@ -54,24 +54,21 @@ fn element_type(data_type: &DataType, position: usize) -> Result<DataType> {
     }
 }
 
-fn is_plain_identifier(name: &str) -> bool {
-    !name.is_empty()
-        && !name.starts_with(|found: char| found.is_ascii_digit())
-        && name
-            .chars()
-            .all(|found| found.is_alphanumeric() || found == '_')
+fn declared_fields(return_field: &FieldRef) -> Option<Fields> {
+    let DataType::List(item) = return_field.data_type() else {
+        return None;
+    };
+    match item.data_type() {
+        DataType::Struct(fields) => Some(fields.clone()),
+        _ => None,
+    }
 }
 
 fn zip_fields(arg_fields: &[FieldRef]) -> Result<Fields> {
     let mut fields: Vec<Arc<Field>> = Vec::with_capacity(arg_fields.len());
     for (position, field) in arg_fields.iter().enumerate() {
         let element = element_type(field.data_type(), position + 1)?;
-        let name = if is_plain_identifier(field.name()) {
-            field.name().clone()
-        } else {
-            position.to_string()
-        };
-        fields.push(Arc::new(Field::new(name, element, true)));
+        fields.push(Arc::new(Field::new(position.to_string(), element, true)));
     }
     Ok(Fields::from(fields))
 }
@@ -138,7 +135,10 @@ impl ScalarUDFImpl for SparkArraysZip {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let fields = zip_fields(&args.arg_fields)?;
+        let fields = match declared_fields(&args.return_field) {
+            Some(declared) => declared,
+            None => zip_fields(&args.arg_fields)?,
+        };
         if args.args.is_empty() {
             let structs = StructArray::new_empty_fields(0, None);
             return Ok(ColumnarValue::Array(Arc::new(ListArray::try_new(
@@ -207,5 +207,33 @@ impl ScalarUDFImpl for SparkArraysZip {
             Arc::new(structs),
             nulls,
         )?)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<datafusion::arrow::array::RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    #[test]
+    fn zip_names_stay_stable_through_the_optimizer() {
+        for sql in [
+            "SELECT arrays_zip(array(1,2), array('a','b')) AS r",
+            "SELECT arrays_zip(array(1)) AS r",
+            "SELECT arrays_zip(array(1), CAST(NULL AS ARRAY<STRING>)) AS r",
+            "SELECT arrays_zip(a, b) AS r FROM (SELECT array(1,2) AS a, array('x','y') AS b)",
+        ] {
+            let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+            assert_eq!(batches[0].num_rows(), 1, "{sql}");
+        }
     }
 }

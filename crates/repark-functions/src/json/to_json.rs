@@ -130,13 +130,13 @@ fn write_scalar(array: &dyn Array, row: usize, out: &mut String, zone: Tz) -> bo
         DataType::Int64 => out.push_str(&array.as_primitive::<Int64Type>().value(row).to_string()),
         DataType::UInt8 => out.push_str(&array.as_primitive::<UInt8Type>().value(row).to_string()),
         DataType::UInt16 => {
-            out.push_str(&array.as_primitive::<UInt16Type>().value(row).to_string())
+            out.push_str(&array.as_primitive::<UInt16Type>().value(row).to_string());
         }
         DataType::UInt32 => {
-            out.push_str(&array.as_primitive::<UInt32Type>().value(row).to_string())
+            out.push_str(&array.as_primitive::<UInt32Type>().value(row).to_string());
         }
         DataType::UInt64 => {
-            out.push_str(&array.as_primitive::<UInt64Type>().value(row).to_string())
+            out.push_str(&array.as_primitive::<UInt64Type>().value(row).to_string());
         }
         DataType::Float32 => {
             let value = array.as_primitive::<Float32Type>().value(row);
@@ -380,5 +380,78 @@ impl ScalarUDFImpl for SparkToJson {
             builder.append_value(&rendered);
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::RecordBatch;
+    use datafusion::common::ScalarValue;
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn shown(sql: &str) -> String {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        ScalarValue::try_from_array(batches[0].column(0), 0)
+            .expect("scalar")
+            .to_string()
+    }
+
+    #[test]
+    fn to_json_omits_null_struct_fields_and_keeps_null_map_values() {
+        assert_eq!(
+            shown("SELECT to_json(named_struct('a', CAST(NULL AS INT), 'b', 'x'))"),
+            r#"{"b":"x"}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(map(['a'], [CAST(NULL AS INT)]))"),
+            r#"{"a":null}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(named_struct('a', 1, 'b', 'x'))"),
+            r#"{"a":1,"b":"x"}"#
+        );
+    }
+
+    #[test]
+    fn to_json_spells_numbers_and_text_the_way_java_does() {
+        assert_eq!(
+            shown("SELECT to_json(named_struct('d', CAST(1e20 AS DOUBLE)))"),
+            r#"{"d":1.0E20}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(named_struct('d', CAST(3 AS DOUBLE)))"),
+            r#"{"d":3.0}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(named_struct('d', CAST(0.1 AS DOUBLE)))"),
+            r#"{"d":0.1}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(named_struct('n', CAST('NaN' AS DOUBLE)))"),
+            r#"{"n":"NaN"}"#
+        );
+        assert_eq!(
+            shown("SELECT to_json(named_struct('q', 'a\"b'))"),
+            "{\"q\":\"a\\\\\"b\"}".replace("\\\\", "\\").as_str()
+        );
+    }
+
+    #[test]
+    fn to_json_refuses_a_scalar_argument() {
+        let error = run("SELECT to_json(1)").expect_err("scalar argument must refuse");
+        assert!(
+            error.to_string().contains("STRUCT, ARRAY, or MAP"),
+            "{error}"
+        );
     }
 }

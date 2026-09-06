@@ -25,6 +25,7 @@ mod array_position;
 mod array_sort;
 mod arrays_overlap;
 mod arrays_zip;
+mod create_map;
 mod flatten;
 mod map_concat;
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
@@ -105,6 +106,11 @@ pub fn arrays_zip_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn map_concat_udf() -> Arc<ScalarUDF> {
     map_concat::map_concat_udf()
+}
+
+#[must_use]
+pub fn create_map_udf() -> Arc<ScalarUDF> {
+    create_map::create_map_udf()
 }
 
 /// Spark `element_at` UDF instance (1-based array / map-by-key).

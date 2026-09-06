@@ -129,7 +129,7 @@ impl ScalarUDFImpl for SparkArrayInsert {
                 arg_types.len()
             );
         };
-        if !matches!(position, DataType::Int8 | DataType::Int16 | DataType::Int32) {
+        if !position.is_integer() {
             return exec_err!(
                 "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] the second parameter of \
                  `array_insert` requires the \"INT\" type, got {position}"
@@ -225,5 +225,80 @@ impl ScalarUDFImpl for SparkArrayInsert {
             joined,
             nulls,
         )?)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::RecordBatch;
+    use datafusion::common::ScalarValue;
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn shown(sql: &str) -> String {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        ScalarValue::try_from_array(batches[0].column(0), 0)
+            .expect("scalar")
+            .to_string()
+    }
+
+    #[test]
+    fn array_insert_places_and_pads_the_way_spark_does() {
+        assert_eq!(shown("SELECT array_insert(array(1,2), 1, 9)"), "[9, 1, 2]");
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2), 5, 9)"),
+            "[1, 2, , , 9]"
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2,3), -1, 9)"),
+            "[1, 2, 3, 9]"
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2,3), -2, 9)"),
+            "[1, 2, 9, 3]"
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2,3), -4, 9)"),
+            "[9, 1, 2, 3]"
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2,3), -5, 9)"),
+            "[9, , 1, 2, 3]"
+        );
+        assert_eq!(shown("SELECT array_insert(array(1,2), 3, 9)"), "[1, 2, 9]");
+    }
+
+    #[test]
+    fn array_insert_refuses_index_zero() {
+        let error = run("SELECT array_insert(array(1,2), 0, 9)").expect_err("index 0 must raise");
+        assert!(
+            error.to_string().contains("INVALID_INDEX_OF_ZERO"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn array_insert_nulls_the_row_for_a_null_array_or_index() {
+        assert_eq!(
+            shown("SELECT array_insert(CAST(NULL AS ARRAY<INT>), 1, 9)"),
+            ""
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2), CAST(NULL AS INT), 9)"),
+            ""
+        );
+        assert_eq!(
+            shown("SELECT array_insert(array(1,2), 1, CAST(NULL AS INT))"),
+            "[, 1, 2]"
+        );
     }
 }

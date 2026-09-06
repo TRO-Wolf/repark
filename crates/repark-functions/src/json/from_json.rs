@@ -235,3 +235,88 @@ fn fill_corrupt_column(
         nulls,
     )?))
 }
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::RecordBatch;
+    use datafusion::common::ScalarValue;
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn shown(sql: &str) -> String {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        ScalarValue::try_from_array(batches[0].column(0), 0)
+            .expect("scalar")
+            .to_string()
+    }
+
+    #[test]
+    fn from_json_is_permissive_by_default() {
+        assert_eq!(shown(r#"SELECT from_json('{"a":1}', 'a INT')"#), "{a:1}");
+        assert_eq!(shown(r#"SELECT from_json('{bad', 'a INT')"#), "{a:}");
+        assert_eq!(shown(r#"SELECT from_json('{"z":1}', 'a INT')"#), "{a:}");
+        assert_eq!(shown(r#"SELECT from_json('{"a":"x"}', 'a INT')"#), "{a:}");
+        assert_eq!(shown(r#"SELECT from_json('{"a":1.7}', 'a INT')"#), "{a:}");
+        assert_eq!(
+            shown(r#"SELECT from_json('{"a":99999999999}', 'a INT')"#),
+            "{a:}"
+        );
+        assert_eq!(shown(r#"SELECT from_json('{"a":1}', 'a STRING')"#), "{a:1}");
+    }
+
+    #[test]
+    fn from_json_fills_the_corrupt_record_column() {
+        assert_eq!(
+            shown(r#"SELECT from_json('{bad', 'a INT, _corrupt_record STRING')"#),
+            "{a:,_corrupt_record:{bad}"
+        );
+    }
+
+    #[test]
+    fn from_json_failfast_raises_and_an_unknown_option_refuses() {
+        let failfast = run(r#"SELECT from_json('{bad', 'a INT', map(['mode'], ['FAILFAST']))"#)
+            .expect_err("FAILFAST must raise");
+        assert!(
+            failfast.to_string().contains("MALFORMED_RECORD_IN_PARSING"),
+            "{failfast}"
+        );
+        let dropped = run(r#"SELECT from_json('{bad', 'a INT', map(['mode'], ['DROPMALFORMED']))"#)
+            .expect_err("DROPMALFORMED must raise");
+        assert!(
+            dropped.to_string().contains("PARSE_MODE_UNSUPPORTED"),
+            "{dropped}"
+        );
+        let unknown = run(r#"SELECT from_json('{"a":1}', 'a INT', map(['zzz'], ['1']))"#)
+            .expect_err("an unsupported option must refuse");
+        assert!(
+            unknown.to_string().contains("not supported by repark"),
+            "{unknown}"
+        );
+    }
+
+    #[test]
+    fn from_json_reads_nested_and_container_schemas() {
+        assert_eq!(
+            shown(r#"SELECT from_json('{"a":{"b":[1,2]}}', 'a STRUCT<b: ARRAY<INT>>')"#),
+            "{a:{b:[1, 2]}}"
+        );
+        assert_eq!(
+            shown(r#"SELECT from_json('[{"a":1},{"a":2}]', 'ARRAY<STRUCT<a: INT>>')"#),
+            "[{a: 1}, {a: 2}]"
+        );
+        assert_eq!(
+            shown(r#"SELECT from_json('{"a":1}', 'STRUCT<a: INT>')"#),
+            "{a:1}"
+        );
+        assert_eq!(shown(r#"SELECT from_json('{"a":1}', 'a int')"#), "{a:1}");
+    }
+}

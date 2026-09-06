@@ -694,3 +694,8 @@ pub fn arrays_zip(args: Vec<Expr>) -> Expr {
 pub fn map_concat(args: Vec<Expr>) -> Expr {
     call(crate::collection::map_concat_udf(), args)
 }
+
+#[must_use]
+pub fn create_map(args: Vec<Expr>) -> Expr {
+    call(crate::collection::create_map_udf(), args)
+}

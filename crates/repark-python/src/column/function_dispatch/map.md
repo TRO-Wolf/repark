@@ -11,9 +11,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
 
 - `dispatch_json.rs` — **FNP-9/10 (2026-09-05):** the collections and JSON arms —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
-  `from_json`, `array_insert`, `arrays_zip`, `map_concat`, and `create_map`. `create_map` lowers
-  the facade's alternating key/value arguments to DataFusion's `map(keys, values)`, the same
-  shape the Spark door already builds for `map(...)`, so the facade still makes one engine call.
+  `from_json`, `array_insert`, `arrays_zip`, `map_concat`, and `create_map`. `create_map` calls
+  the Spark-named `create_map` kernel, because DataFusion's `map(make_array, make_array)`
+  lowering cannot mix a scalar key with a column value.
   pins: fnp-9-collections-json/C-006, C-007
 
 ## Pointers

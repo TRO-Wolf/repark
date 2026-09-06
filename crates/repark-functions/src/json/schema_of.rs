@@ -195,3 +195,67 @@ impl ScalarUDFImpl for SparkSchemaOfJson {
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use datafusion::arrow::array::RecordBatch;
+    use datafusion::common::ScalarValue;
+    use datafusion::prelude::SessionContext;
+
+    fn run(sql: &str) -> datafusion::common::Result<Vec<RecordBatch>> {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    fn shown(sql: &str) -> String {
+        let batches = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        ScalarValue::try_from_array(batches[0].column(0), 0)
+            .expect("scalar")
+            .to_string()
+    }
+
+    #[test]
+    fn schema_of_json_sorts_fields_and_widens_like_spark() {
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('{"b":1,"a":2}')"#),
+            "STRUCT<a: BIGINT, b: BIGINT>"
+        );
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('{"a":[1,2.5]}')"#),
+            "STRUCT<a: ARRAY<DOUBLE>>"
+        );
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('{"a":[1,"x"]}')"#),
+            "STRUCT<a: ARRAY<STRING>>"
+        );
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('{"a":[1,null]}')"#),
+            "STRUCT<a: ARRAY<BIGINT>>"
+        );
+        assert_eq!(shown("SELECT schema_of_json('[null]')"), "ARRAY<STRING>");
+        assert_eq!(shown("SELECT schema_of_json('null')"), "STRING");
+        assert_eq!(shown("SELECT schema_of_json('{}')"), "STRUCT<>");
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('[{"b":1},{"a":2}]')"#),
+            "ARRAY<STRUCT<a: BIGINT, b: BIGINT>>"
+        );
+        assert_eq!(
+            shown(r#"SELECT schema_of_json('{"a":123456789012345678901234567890}')"#),
+            "STRUCT<a: DECIMAL(30,0)>"
+        );
+    }
+
+    #[test]
+    fn schema_of_json_raises_on_a_malformed_document() {
+        let error = run("SELECT schema_of_json('{bad')").expect_err("malformed must raise");
+        assert!(
+            error.to_string().contains("MALFORMED_RECORD_IN_PARSING"),
+            "{error}"
+        );
+    }
+}
