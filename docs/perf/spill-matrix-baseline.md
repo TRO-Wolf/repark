@@ -396,7 +396,9 @@ per module on a loaded box (load1 10-26 throughout):
 | `collect/100000` | 93.8, 94.4, 94.5, 95.9, 98.1 | 96.5, 98.3, 98.6, 98.6, 98.7 | 94.5 | 98.6 |
 
 The distributions overlap on both cells; the `collect/100000` gap (+4.1 ms) is inside the
-harness's own declared floor for that cell, which measured 3.07-6.18 ms across these runs. The
+harness's own declared floor for that cell, which measured 3.07-6.18 ms across these runs. A
+sixth run after round 2's allow-list gate landed on 1035.7 / 99.7 ms at load1 12.9, inside both
+after-ranges — the gate is one `slice::contains` on a path that already caught a panic. The
 in-run control `collect_old/1000000` — the pure-Python converter, which this change does not
 touch — moved 4906.9 vs 4916.7 between the two modules, so the box was the same on both sides.
 The pool still does not bound this path: it is un-accounted, not unreported.

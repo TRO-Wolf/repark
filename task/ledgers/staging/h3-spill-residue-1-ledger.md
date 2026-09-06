@@ -93,15 +93,15 @@ until the log was carried. The mutation is a re-run of a measured failure.
 | Gate | Exit |
 |---|---|
 | `make ci` | 0 (prerequisite of `verify`, run in the same tree) |
-| `make verify` | 0 — 2,685 Rust tests |
+| `make verify` | 0 — 2,685 Rust tests (round 1); **0 — 2,687** (round 2) |
 | `make check-python-conventions` | 0 |
 | `make rust-panic-ban` | 0 |
-| `.venv/bin/python -m pytest python/repark/tests -q -x` | 0 (5,025 passed, 236 skipped, 178 s) |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (574 passed) |
-| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 0 (59 passed, 1 skipped) |
-| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (22 passed, 38 s) |
-| `make check-map-sync` | 0 (192 maps) |
-| `make check-ledger-grammar` | 0 (55 live ledgers, 240 clauses) |
+| `.venv/bin/python -m pytest python/repark/tests -q -x` | 0 (5,025 / 236 skipped, round 1); **0 (5,029 / 236 skipped, 232 s)** (round 2) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (574, round 1); **0 (599)** (round 2, after the merge with main) |
+| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 0 (59 passed, 1 skipped) — both rounds |
+| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (22 passed, 38 s round 1; **34 s round 2**) |
+| `make check-map-sync` | 0 (192 maps round 1; **217** round 2) |
+| `make check-ledger-grammar` | 0 (55 live ledgers round 1; **57 / 255 clauses** round 2) |
 | `make check-ledgers` | 0 |
 | `make check-docs-compaction` | 0 |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
