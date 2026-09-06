@@ -60,7 +60,10 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
         return Transformed::new(nonnull, true, TreeNodeRecursion::Stop);
     }
     if let Expr::ScalarFunction(function) = &expr
-        && matches!(function.func.name(), "named_struct" | "map" | "make_array")
+        && matches!(
+            function.func.name(),
+            "named_struct" | "struct" | "map" | "make_array"
+        )
         && datafusion_nullable(&expr, schema) == Some(true)
     {
         return Transformed::new(
@@ -357,6 +360,7 @@ mod tests {
         for sql in [
             "SELECT STRUCT(1 AS a) AS v",
             "SELECT STRUCT(NULL AS a) AS v",
+            "SELECT struct(1, 'a') AS v",
             "SELECT MAP('a', 1) AS v",
             "SELECT make_array(1, 2) AS v",
             "SELECT CAST(STRUCT(1 AS a) AS STRUCT<a: BIGINT>) AS v",
