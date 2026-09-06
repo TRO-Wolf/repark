@@ -29,6 +29,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- `test_sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06):** usage collector pins: Muse / Grok /
+  OpenCode / Claude fixture shapes, missing-data stays null, malformed input fails, index
+  table shape, schema field roster, inventory adapter+strata claims, and live reconciliation
+  of three Muse run dirs when `/tmp/muse-worker` is present.
+  pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [fixtures/](fixtures/map.md) — sanitized collector run dirs (no home paths).
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,

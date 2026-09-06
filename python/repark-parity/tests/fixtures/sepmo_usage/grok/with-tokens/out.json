@@ -1,0 +1,13 @@
+{
+  "sessionId": "sess-tokens",
+  "stopReason": "end_turn",
+  "num_turns": 2,
+  "total_cost_usd": 0.005,
+  "num_tool_calls": 3,
+  "usage": {
+    "input_tokens": 1000,
+    "output_tokens": 200,
+    "cache_read_tokens": 50,
+    "reasoning_tokens": 80
+  }
+}

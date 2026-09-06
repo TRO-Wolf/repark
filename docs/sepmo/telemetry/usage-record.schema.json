@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repark.dev/sepmo/telemetry/usage-record.schema.json",
+  "title": "SEPMO worker usage record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unit",
+    "lane",
+    "adapter",
+    "model",
+    "effort",
+    "role",
+    "started_utc",
+    "finished_utc",
+    "wall_s",
+    "steps",
+    "tool_calls",
+    "tokens_in",
+    "tokens_out",
+    "tokens_cached",
+    "tokens_reasoning",
+    "cost_usd",
+    "exit",
+    "commits",
+    "missing_reason",
+    "units",
+    "source"
+  ],
+  "properties": {
+    "unit": { "type": ["string", "null"] },
+    "lane": { "type": ["string", "null"] },
+    "adapter": {
+      "type": ["string", "null"],
+      "enum": ["muse", "opencode", "grok", "claude", null]
+    },
+    "model": { "type": ["string", "null"] },
+    "effort": { "type": ["string", "null"] },
+    "role": { "type": ["string", "null"] },
+    "started_utc": { "type": ["string", "null"], "format": "date-time" },
+    "finished_utc": { "type": ["string", "null"], "format": "date-time" },
+    "wall_s": { "type": ["number", "null"], "minimum": 0 },
+    "steps": { "type": ["integer", "null"], "minimum": 0 },
+    "tool_calls": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_in": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_out": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_cached": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_reasoning": { "type": ["integer", "null"], "minimum": 0 },
+    "cost_usd": { "type": ["number", "null"], "minimum": 0 },
+    "exit": { "type": ["integer", "null"] },
+    "commits": { "type": ["integer", "null"], "minimum": 0 },
+    "missing_reason": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "units": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "source": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

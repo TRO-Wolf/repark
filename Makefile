@@ -215,6 +215,10 @@ census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate on
 	@# SSOT: docs/port/census.md; the classic cohort runs via the additive --classic flag (F1).
 	@./scripts/run_census.sh
 
+.PHONY: sepmo-usage
+sepmo-usage: ## Collect SEPMO worker usage records (not a CI gate). ARGS='collect <dir>' or ARGS='index <dir>'
+	$(PYTHON) scripts/sepmo_usage.py $(ARGS)
+
 .PHONY: check-lib-py
 check-lib-py: ## Python source ceiling + facade no-stub guard
 	@# Exact baselines + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.

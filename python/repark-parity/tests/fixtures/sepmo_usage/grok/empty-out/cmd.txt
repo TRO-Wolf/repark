@@ -1,0 +1,1 @@
+grok --cwd workspace --model grok-4.6 --reasoning-effort high --prompt-file prompt.md --agent sepmo-actor --output-format json

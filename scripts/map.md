@@ -302,6 +302,12 @@ repark-parity slice.
 
 ## Contents
 
+- `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06):** local-only usage collector.
+  `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
+  table (or `--jsonl`). Null, never zero, when an adapter does not report a field. No
+  network. Invocation: `python3 scripts/sepmo_usage.py collect <run-dir>` or
+  `make sepmo-usage ARGS='collect <run-dir>'` (not a CI gate).
+  pins: sepmo-e0-e1/C-004, C-005, C-006
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
@@ -671,6 +677,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
+| Collect SEPMO worker usage | `python3 scripts/sepmo_usage.py collect <run-dir>` / `index <dir>` (`make sepmo-usage`) |
 
 ## Pointers
 
