@@ -3193,11 +3193,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and NULL padding at both ends), `arrays_zip` (NULL fill, positional field names), the
   `sequence` divergence the unit filed rather than built, and the five names it left absent —
   that pin reds the day the multi-column generator seam lands and they are exported.
+  **Round 2 (2026-09-06):** twelve more pins answer the round-1 critic — the `[*]` style machine
+  (15 shapes), FAILFAST and `_corrupt_record` on a bad RECORD (11 cells), the empty-document NULL
+  row, DECIMAL HALF_UP and precision overflow, container shape-nulling, last-key-wins,
+  Java number spelling into STRING, single-quoted documents, backtick-quoted schema names,
+  empty-struct pruning, `array_insert` type widening, the leading-zero / non-finite / null-root /
+  non-STRING-argument rules, the non-finite and timestamp decode forms, and the `sequence` pin
+  the registry had cited but nobody had written.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
-- `test_parity_live.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
+- `test_parity_live_fnp9.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
   fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
-  4.1.2 under `REPARK_PARITY_LIVE=1`. Every pin in the unit's file was inverted under at least
+  4.1.2 under `REPARK_PARITY_LIVE=1`. **Round 2 (2026-09-06):** thirteen more answer cells and
+  three more raising cells, and the `schema_of_json('{bad')` leg now asserts the condition Spark
+  actually carries (a Jackson `JsonParseException`) instead of accepting any exception. The leg
+  moved into its own file when `test_parity_live.py` reached its 1000-line ceiling; it shares
+  `conftest.py`'s session-scoped `spark_engine`, so it still co-collects and co-runs with
+  `test_live_disclosure_still_diverges` in one JVM. Every pin in the unit's file was inverted under at least
   one mutation before the unit closed; the knobs and their counts are in the unit ledger.
   pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, C-006, C-009
 

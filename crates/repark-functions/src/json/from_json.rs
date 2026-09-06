@@ -11,7 +11,7 @@ use datafusion::logical_expr::{
 };
 
 use super::ddl::parse_schema;
-use super::decode::{DecodeContext, build_array};
+use super::decode::{DecodeContext, build_root};
 use super::reader::{JsonValue, parse_json};
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
@@ -93,13 +93,32 @@ fn schema_from_argument(value: &ColumnarValue) -> Result<DataType> {
     parse_schema(spec)
 }
 
-fn corrupt_index(target: &DataType, name: &str) -> Option<usize> {
+fn corrupt_index(target: &DataType, name: &str) -> Result<Option<usize>> {
     let DataType::Struct(fields) = target else {
-        return None;
+        return Ok(None);
     };
-    fields
-        .iter()
-        .position(|field| field.name() == name && field.data_type() == &DataType::Utf8)
+    match fields.iter().position(|field| field.name() == name) {
+        Some(index) if fields[index].data_type() == &DataType::Utf8 => Ok(Some(index)),
+        Some(index) => exec_err!(
+            "[INVALID_CORRUPT_RECORD_TYPE] The column `{name}` for corrupt records must have \
+             the nullable STRING type, but got {}",
+            fields[index].data_type()
+        ),
+        None => Ok(None),
+    }
+}
+
+fn refuse_unsupported_schema(target: &DataType) -> Result<()> {
+    if matches!(
+        target,
+        DataType::Struct(_) | DataType::List(_) | DataType::Map(_, _)
+    ) {
+        return Ok(());
+    }
+    exec_err!(
+        "[DATATYPE_MISMATCH.INVALID_JSON_SCHEMA] Input schema {target} must be a struct, an \
+         array or a map"
+    )
 }
 
 #[derive(Debug)]
@@ -164,6 +183,7 @@ impl ScalarUDFImpl for SparkFromJson {
             );
         };
         let target = schema_from_argument(schema_argument)?;
+        refuse_unsupported_schema(&target)?;
         let options = read_options(match args.args.get(2) {
             Some(ColumnarValue::Scalar(scalar)) => Some(scalar),
             Some(ColumnarValue::Array(_)) => {
@@ -171,22 +191,42 @@ impl ScalarUDFImpl for SparkFromJson {
             }
             None => None,
         })?;
+        let corrupt = corrupt_index(&target, &options.corrupt_column)?;
         let arrays = ColumnarValue::values_to_arrays(&args.args[..1])?;
         let documents = arrays[0].as_string::<i32>();
         let zone =
             parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
         let context = DecodeContext { zone };
         let mut parsed: Vec<Option<JsonValue<'_>>> = Vec::with_capacity(documents.len());
-        let mut malformed: HashMap<usize, &str> = HashMap::new();
+        let mut sources: Vec<Option<&str>> = Vec::with_capacity(documents.len());
+        let mut unparsed: Vec<bool> = Vec::with_capacity(documents.len());
         for row in 0..documents.len() {
             if documents.is_null(row) {
                 parsed.push(None);
+                sources.push(None);
+                unparsed.push(false);
                 continue;
             }
             let text = documents.value(row);
-            if let Some(value) = parse_json(text) {
-                parsed.push(Some(value));
-            } else {
+            if text.trim().is_empty() {
+                parsed.push(None);
+                sources.push(None);
+                unparsed.push(false);
+                continue;
+            }
+            sources.push(Some(text));
+            let value = parse_json(text);
+            unparsed.push(value.is_none());
+            parsed.push(Some(value.unwrap_or_else(|| JsonValue::Object(Vec::new()))));
+        }
+        let rows: Vec<Option<&JsonValue<'_>>> = parsed.iter().map(Option::as_ref).collect();
+        let decoded = build_root(&target, &rows, &context)?;
+        let mut malformed: HashMap<usize, &str> = HashMap::new();
+        for (row, source) in sources.iter().enumerate() {
+            let Some(text) = source else {
+                continue;
+            };
+            if unparsed[row] || decoded.bad[row] {
                 if options.fail_fast {
                     return exec_err!(
                         "[MALFORMED_RECORD_IN_PARSING.WITHOUT_SUGGESTION] `from_json` in \
@@ -194,12 +234,9 @@ impl ScalarUDFImpl for SparkFromJson {
                     );
                 }
                 malformed.insert(row, text);
-                parsed.push(Some(JsonValue::Object(Vec::new())));
             }
         }
-        let rows: Vec<Option<&JsonValue<'_>>> = parsed.iter().map(Option::as_ref).collect();
-        let built = build_array(&target, &rows, &context)?;
-        let repaired = fill_corrupt_column(built, &target, &options.corrupt_column, &malformed)?;
+        let repaired = fill_corrupt_column(decoded.array, &target, corrupt, &malformed)?;
         Ok(ColumnarValue::Array(repaired))
     }
 }
@@ -207,10 +244,10 @@ impl ScalarUDFImpl for SparkFromJson {
 fn fill_corrupt_column(
     built: ArrayRef,
     target: &DataType,
-    column_name: &str,
+    corrupt: Option<usize>,
     malformed: &HashMap<usize, &str>,
 ) -> Result<ArrayRef> {
-    let Some(index) = corrupt_index(target, column_name) else {
+    let Some(index) = corrupt else {
         return Ok(built);
     };
     let DataType::Struct(fields) = target else {

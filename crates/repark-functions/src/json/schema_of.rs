@@ -33,6 +33,7 @@ fn infer(value: &JsonValue<'_>) -> Inferred {
         JsonValue::Null => Inferred::Unknown,
         JsonValue::Bool(_) => Inferred::Boolean,
         JsonValue::Number(raw) => infer_number(raw),
+        JsonValue::NonFinite(_) => Inferred::Double,
         JsonValue::Text(_) => Inferred::Text,
         JsonValue::Array(items) => {
             let element = items.iter().fold(Inferred::Unknown, |carried, item| {
@@ -43,14 +44,10 @@ fn infer(value: &JsonValue<'_>) -> Inferred {
         JsonValue::Object(entries) => {
             let mut fields: Vec<(String, Inferred)> = Vec::with_capacity(entries.len());
             for (key, item) in entries {
-                let found = infer(item);
-                if let Some(slot) = fields.iter_mut().find(|(name, _)| name == key.as_ref()) {
-                    slot.1 = merge(slot.1.clone(), found);
-                } else {
-                    fields.push((key.to_string(), found));
-                }
+                fields.push((key.to_string(), infer(item)));
             }
             fields.sort_by(|left, right| left.0.cmp(&right.0));
+            fields.retain(|(_, kind)| !is_empty_struct(kind));
             Inferred::Struct(fields)
         }
     }
@@ -67,6 +64,23 @@ fn infer_number(raw: &str) -> Inferred {
     match u8::try_from(digits) {
         Ok(precision) if precision <= 38 => Inferred::Decimal(precision),
         _ => Inferred::Double,
+    }
+}
+
+fn is_empty_struct(found: &Inferred) -> bool {
+    matches!(found, Inferred::Struct(fields) if fields.is_empty())
+}
+
+fn quote_field_name(name: &str) -> String {
+    let plain = !name.is_empty()
+        && !name.starts_with(|found: char| found.is_ascii_digit())
+        && name
+            .chars()
+            .all(|found| found.is_ascii_alphanumeric() || found == '_');
+    if plain {
+        name.to_string()
+    } else {
+        format!("`{}`", name.replace('`', "``"))
     }
 }
 
@@ -113,7 +127,7 @@ fn render(found: &Inferred) -> String {
         Inferred::Struct(fields) => {
             let body = fields
                 .iter()
-                .map(|(name, kind)| format!("{name}: {}", render(kind)))
+                .map(|(name, kind)| format!("{}: {}", quote_field_name(name), render(kind)))
                 .collect::<Vec<_>>()
                 .join(", ");
             format!("STRUCT<{body}>")
@@ -182,6 +196,10 @@ impl ScalarUDFImpl for SparkSchemaOfJson {
                 return exec_err!(
                     "'schema_of_json' requires a non-NULL foldable JSON string argument"
                 );
+            }
+            if documents.value(row).trim().is_empty() {
+                builder.append_value("STRING");
+                continue;
             }
             let Some(value) = parse_json(documents.value(row)) else {
                 return exec_err!(

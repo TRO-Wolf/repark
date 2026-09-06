@@ -24,8 +24,13 @@ needed.
   pins: fn-fix-1-registry-rows/C-002
 - `array_insert.rs` — **FNP-9 (2026-09-05):** Spark `array_insert(array, position, value)`. A
   positive position is 1-based; a negative one counts back from the end so `-1` appends. A
-  position past either end pads with NULLs. Position `0` raises `INVALID_INDEX_OF_ZERO`, and a
-  BIGINT position is refused the way Spark refuses it. pins: fnp-9-collections-json/C-006
+  position past either end pads with NULLs. Position `0` raises `INVALID_INDEX_OF_ZERO`.
+  **Round 2 (2026-09-06, finding F11):** the element and value types widen through the TIGHTEST
+  common type — numeric with numeric, text with text — so a DOUBLE inserted into an INT array
+  widens the array instead of truncating the value, and a BOOLEAN or STRING against an INT array
+  raises `ARRAY_FUNCTION_DIFF_TYPES` the way Spark raises it. DataFusion's `comparison_coercion`
+  alone is too loose here: it accepts string-with-numeric, which Spark refuses.
+  pins: fnp-9-collections-json/C-006
 - `arrays_zip.rs` — **FNP-9 (2026-09-05):** Spark `arrays_zip`. Zips to the LONGEST array and
   NULL-fills the rest; the struct field takes its 0-based position — NOT the child column name
   Spark uses for an attribute child. A UDF's return field must be a pure function of the

@@ -29,6 +29,22 @@ pub fn json_object_keys_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkJsonObjectKeys::new()))
 }
 
+fn refuse_non_string(name: &str, arg_types: &[DataType]) -> Result<()> {
+    for (position, data_type) in arg_types.iter().enumerate() {
+        if !matches!(
+            data_type,
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null
+        ) {
+            return exec_err!(
+                "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] the {} parameter of `{name}` requires \
+                 the \"STRING\" type, got {data_type}",
+                position + 1
+            );
+        }
+    }
+    Ok(())
+}
+
 fn text_column(array: &ArrayRef, name: &str, position: usize) -> Result<StringArray> {
     match array.data_type() {
         DataType::Utf8 => {
@@ -101,6 +117,7 @@ impl ScalarUDFImpl for SparkGetJsonObject {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         if arg_types.len() == 2 {
+            refuse_non_string("get_json_object", arg_types)?;
             Ok(vec![DataType::Utf8; 2])
         } else {
             exec_err!(
@@ -121,8 +138,7 @@ impl ScalarUDFImpl for SparkGetJsonObject {
             }
             let answer = parse_path(paths.value(row))
                 .and_then(|steps| {
-                    parse_json(documents.value(row))
-                        .and_then(|value| evaluate_path(&value, &steps, true))
+                    parse_json(documents.value(row)).and_then(|value| evaluate_path(&value, &steps))
                 })
                 .map(|found| found.plain.unwrap_or(found.json));
             match answer {
@@ -154,6 +170,7 @@ impl ScalarUDFImpl for SparkJsonArrayLength {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         if arg_types.len() == 1 {
+            refuse_non_string("json_array_length", arg_types)?;
             Ok(vec![DataType::Utf8])
         } else {
             exec_err!(
@@ -212,6 +229,7 @@ impl ScalarUDFImpl for SparkJsonObjectKeys {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         if arg_types.len() == 1 {
+            refuse_non_string("json_object_keys", arg_types)?;
             Ok(vec![DataType::Utf8])
         } else {
             exec_err!(

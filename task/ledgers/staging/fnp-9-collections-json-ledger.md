@@ -15,6 +15,44 @@ The campaign charter is [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md); the 
 from the campaign charter: C-001 (Rust-owned expression per name), C-002 (no Python row compute),
 C-007/C-009 (nothing silently absent), C-010 (no raised ceiling).
 
+## Round 2 — the critic's twelve wrong answers, and what each one cost
+
+Round 1 was **FAIL**: three S1 and nine S2 wrong answers measured on live PySpark 4.1.2, every
+one of them inside a clause this ledger had marked `PROVEN`. That is the finding behind the
+finding — the gates were green, the mutation knobs were red, and the unit still shipped a
+`from_json` whose FAILFAST mode could not see a bad *record*, a decimal decoder that truncated
+where Spark rounds, and a `[*]` machine that was fitted to twenty measured cells and wrong on
+the twenty-first. The lesson is recorded plainly: **a rule derived by fitting a model to the
+cells you happened to measure is not the rule.** Round 2 re-derived the JSONPath evaluator from
+Spark's own three-style state machine and re-measured 102 cells rather than 20.
+
+| id | sev | disposition | evidence |
+|---|---|---|---|
+| F1 | S1 | **FIXED** — `decode.rs` carries a per-row bad-record flag through every container; `from_json.rs` raises under FAILFAST on a bad record, not only an unparsable document | `test_from_json_failfast_raises_on_a_bad_record_not_only_a_bad_document` (6 shapes: wrong-typed leaf, fractional int, bad array element, decimal overflow, nested struct field, root array) |
+| F2 | S1 | **FIXED** — `decimal_units` scales the token TEXT, rounds HALF_UP at the declared scale, refuses a value wider than the precision, and accepts the string form | `test_from_json_decimal_rounds_half_up_and_nulls_on_overflow` (6 cells incl. `1.505`→`1.51`, `-1.505`→`-1.51`, bare `DECIMAL`→`4`, overflow→NULL, `"2.50"`→`2.50`) |
+| F3 | S1 | **FIXED** — `path.rs` re-derived as Spark's Raw / New / Flatten style machine: a top-level wildcard unwraps a single match, an index-then-wildcard switches to always-array, `[*][*]` flattens | `test_get_json_object_wildcard_style_machine` (15 shapes) plus the 20 round-1 cells, all re-measured |
+| F4 | S2 | **FIXED** — `_corrupt_record` fills from the same bad-record flag | `test_from_json_corrupt_record_takes_a_bad_record_too` (6 cells: leaf, array, decimal, binary, date, nested struct) |
+| F5 | S2 | **FIXED** — an empty or whitespace document is a NULL row, never a corrupt record, and never raises under FAILFAST | `test_from_json_empty_document_is_a_null_row_not_a_corrupt_record` |
+| F6 | S2 | **FIXED** — a wrong-shaped array, struct or map NULLs the whole field (partial results stay struct-field-only), and a root object wraps for an `ARRAY<STRUCT>` schema | `test_from_json_shape_mismatch_nulls_the_container` (7 cells) |
+| F7 | S2 | **FIXED** — `object_field` takes the LAST match | `test_from_json_duplicate_key_takes_the_last` |
+| F8 | S2 | **FIXED** — `build_text` routes a number through `json_number_text` | `test_from_json_string_target_spells_numbers_the_java_way` |
+| F9 | S2 | **FIXED** — the reader accepts single-quoted strings and keys | `test_json_family_accepts_single_quoted_documents` (4 names) |
+| F10 | S2 | **FIXED** — `schema_of_json` backtick-quotes a non-identifier name and doubles an embedded backtick; `ddl.rs` parses the escape back | `test_schema_of_json_quotes_a_non_identifier_field_name` (5 names, each round-tripped through `from_json`) |
+| F11 | S2 | **FIXED** — `array_insert` widens element and value through the TIGHTEST common type and refuses when there is none | `test_array_insert_widens_the_element_and_value_types` |
+| F12 | S2 | **FIXED** — the pin the registry cited now exists | `test_sequence_descending_answers_empty` |
+| F13 | S3 | **ROWED** — §7 `FNP10-JAVA-DOUBLE-TEXT-1`; four JDK-legacy spellings, pinned | `test_to_json_double_text_diverges_on_the_jdk_legacy_spellings` |
+| F14 | S3 | **FIXED** — `write_escaped` emits upper-case `\uXXXX` | covered by the `to_json` control-character cell in the round-2 verification sweep |
+| F15 | S3 | **FIXED** — empty structs pruned, duplicate keys kept, `NaN` inferred DOUBLE, an empty document infers STRING | `test_schema_of_json_prunes_empty_structs_and_keeps_duplicates` (6 cells) |
+| F16 | S3 | **FIXED** — a leading zero is malformed, a non-finite renders quoted, `-0` renders `0`, a null root renders `null`, and a non-STRING argument is refused | `test_get_json_object_number_and_argument_rules` |
+| F17 | S3 | **FIXED except INTERVAL** — NaN/Infinity literals and strings decode, epoch-int and minute-precision timestamps parse, a raw TAB inside a string is malformed, `NOT NULL` / `COMMENT` modifiers are accepted, `_corrupt_record INT` and a scalar root schema and a non-STRING map key are refused by condition name. `INTERVAL DAY` is §7 `FNP10-FROM-JSON-DDL-1` | `test_from_json_non_finite_and_timestamp_forms`, `test_from_json_refuses_a_non_container_schema_and_a_typed_corrupt_column`, `test_from_json_refuses_an_interval_ddl_field` |
+| F18 | S3 | **FIXED** — the vacuous decimal pin now asserts `Decimal("1.50")` and the parametrized bypass is gone; a Spark-spelling `map_concat` door pin was added | `test_from_json_leaf_and_container_cells`, `test_map_concat_answers_sparks_own_map_spelling_on_the_sql_door` |
+| F19 | S4 | **TRUED UP** — the ceiling is stated once and measured; the mutation table's item count is corrected; the live leg asserts a condition name instead of accepting any exception | this section, the Gates table, and `test_parity_live.py` |
+| F20 | S4 | **NOTED** — `F.array_insert(F.array(lit…), …)` and `F.arrays_zip(F.array(lit…), …)` answer nullable where Spark is non-nullable; the root cause is `F.array(lit…)`'s own nullability, which the SQL-door literals do not share. A NULLABILITY-2 class question over the facade's array constructor, not these kernels; not touched | measured by the round-1 critic and re-confirmed in round 2 |
+
+**102 cells re-measured on live Spark 4.1.2 after the fixes; 101 agree.** The one that does not is
+`sequence` on the SQL door, which repark does not resolve at all — the filed
+`FNP9-SEQUENCE-1` divergence, now with the pin the registry always cited.
+
 ## C-001 — the roster, measured first
 
 Every name below was measured on live PySpark 4.1.2 and on repark (release module,
@@ -85,14 +123,14 @@ Three adjacent cells were measured and are **filed, not fixed**, each with its r
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | The roster above is the exact set this unit takes, each name measured on live PySpark 4.1.2 and on repark before any code was written; every BUILT name reaches `repark.spark.functions` and its `__all__`, and no size ceiling is raised to get it there. | The roster table, the oracle below, `test_every_built_name_is_exported_from_the_facade`, and `functions.py` held at its exact 1985 by `check_lib_py.py`. | **PROVEN** |
-| C-002 | `get_json_object`, `json_array_length` and `json_object_keys` answer Spark 4.1.2 on both Spark-facade doors — value, Arrow type and nullability — including the number spelling, the string-leaf quoting rule, and the whole `[*]` collect rule. | `test_fnp_9_collections_json.py` (44 path-grammar and wildcard cells) + `json/scalars.rs` tests. | **PROVEN** |
-| C-003 | `schema_of_json` answers Spark's DDL string, non-nullable, with fields sorted, the null/decimal/widening rules, and a raise on a malformed document. | 14 inference cells on both doors + `json/schema_of.rs` tests. | **PROVEN** |
-| C-004 | `to_json` renders STRUCT / ARRAY / MAP Spark-equally: a NULL struct field is omitted, a NULL map value is written, doubles take `Double.toString`, NaN and Infinity are JSON strings, binary is base64, timestamps use the session zone, decimals keep their scale. | `test_to_json_*` + `json/to_json.rs` tests. | **PROVEN** |
-| C-005 | `from_json` parses a DDL or `DataType` schema PERMISSIVEly: a missing field, a JSON null, a wrong-shaped value and a malformed document are all NULL; `_corrupt_record` takes the raw text; FAILFAST raises; DROPMALFORMED refuses as Spark's does. | 16 leaf/container cells, the corrupt-record and option tests + `json/from_json.rs` tests. | **PROVEN** |
-| C-006 | `create_map`, `map_concat`, `array_insert` and `arrays_zip` answer Spark on both doors, including `INVALID_INDEX_OF_ZERO`, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`, `MAP_CONCAT_DIFF_TYPES`, the `-1`-appends rule, NULL padding at both ends, and NULL fill to the longest array. | `test_create_map_*` / `test_map_concat_*` / `test_array_insert_*` / `test_arrays_zip_*` + the four collection kernels' Rust tests. | **PROVEN** |
+| C-002 | `get_json_object`, `json_array_length` and `json_object_keys` answer Spark 4.1.2 on both Spark-facade doors — value, Arrow type and nullability — including the number spelling, the string-leaf quoting rule, and the whole `[*]` collect rule. | `test_fnp_9_collections_json.py` (44 path-grammar and wildcard cells, plus the 15 round-2 style-machine cells) + `json/scalars.rs` tests.  Round 1 was refuted here (F3): the `[*]` rule had been fitted to 20 measured cells and was wrong on six more. Round 2 re-derived it from Spark's Raw/New/Flatten machine and re-measured 35 cells; F16's number and argument rules landed with it. | **PROVEN** |
+| C-003 | `schema_of_json` answers Spark's DDL string, non-nullable, with fields sorted, a non-identifier name backtick-quoted, empty structs pruned, duplicate keys kept, the null/decimal/widening rules, an empty document inferring STRING, and a raise on a malformed one. | 14 inference cells on both doors, the round-2 quoting and pruning tests + `json/schema_of.rs` tests.  Narrowed at round 2: F10 and F15 were inside this clause, and repark's own output did not round-trip through its own DDL parser. | **PROVEN** |
+| C-004 | `to_json` renders STRUCT / ARRAY / MAP Spark-equally: a NULL struct field is omitted, a NULL map value is written, NaN and Infinity are JSON strings, binary is base64, timestamps use the session zone, decimals keep their scale, and a double takes `Double.toString` **except the four JDK-legacy spellings §7 `FNP10-JAVA-DOUBLE-TEXT-1` names**. | `test_to_json_*` + `json/to_json.rs` tests + `test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`.  Narrowed at round 2: the round-1 clause claimed `Double.toString` outright, and F13 measured four values where JDK 17 is not the shortest repr. The clause now states the exception and pins it. | **PROVEN** |
+| C-005 | `from_json` parses a DDL or `DataType` schema PERMISSIVEly: a missing field, a JSON null, a wrong-shaped value and a malformed document are all NULL; a bad RECORD (not only a bad document) fills `_corrupt_record` and raises under FAILFAST; an empty document is a NULL row; a wrong-shaped container NULLs the field; a duplicate key is last-wins; DECIMAL rounds HALF_UP and NULLs on overflow. | 16 leaf/container cells, the round-2 FAILFAST / corrupt-record / empty / shape / duplicate / decimal tests + `json/from_json.rs` tests.  Round 1 was refuted here: F1, F2, F4, F5, F6, F7, F8 and F17 were all inside this clause. | **PROVEN** |
+| C-006 | `create_map`, `map_concat`, `array_insert` and `arrays_zip` answer Spark on both doors, including `INVALID_INDEX_OF_ZERO`, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`, `MAP_CONCAT_DIFF_TYPES`, the `-1`-appends rule, NULL padding at both ends, NULL fill to the longest array, and `array_insert` widening element and value through the tightest common type. | `test_create_map_*` / `test_map_concat_*` / `test_array_insert_*` / `test_arrays_zip_*` + the four collection kernels' Rust tests.  Narrowed at round 2: F11 measured `array_insert` truncating a DOUBLE into an INT array; the widening rule and its refusal are now pinned, and F18's Spark-spelling `map_concat` door pin was added. | **PROVEN** |
 | C-007 | No name this unit did not build silently half-answers: each is absent or refuses, carries a §7 row naming its seam, and carries a pin that reds when the seam closes. | `test_fnp9_multi_column_and_by_name_names_stay_absent`, `test_json_tuple_still_refuses_on_the_facade`, §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`. | **PROVEN** |
 | C-008 | Every divergence this unit measured is filed as a §7 row with a pin, and no row claims parity it does not have. | §7 `FNP9-ARRAYS-ZIP-NAMES-1`, `FNP9-SEQUENCE-1`, `FNP10-JSON-OPTIONS-1`, `FNP10-JSON-SCHEMA-COLUMN-1`, `FNP9-ARRAY-INSERT-BIGINT-1`; `EX-FN-1` retired, `EX-FN-16` narrowed, `EX-FN-2` superseded in place. | **PROVEN** |
-| C-009 | Every new pin is invertible and the gates are green on real exit codes. | The mutation table below; `make ci`, `make verify`, the facade and parity suites, the dbt suite, and the live tier under `REPARK_PARITY_LIVE=1`. | **PROVEN** |
+| C-009 | Every new pin is invertible and the gates are green on real exit codes. | The mutation table below; `make ci`, `make verify`, the facade and parity suites, the dbt suite, and the live tier under `REPARK_PARITY_LIVE=1`.  Round-1 caveat recorded: ten green knobs did not stop twelve wrong answers shipping, because a knob only inverts the cells a pin already has. The round-2 answer is more measured cells (102, not 20), not more knobs. | **PROVEN** |
 
 ## Red-first
 
@@ -228,11 +266,13 @@ is quoted only where it differs. Spark `void` is Arrow `null`.
 
 ## Mutation
 
-Ten knobs, each applied to the shipped source, measured, and reverted. The Python column is
-`python/repark/tests/test_fnp_9_collections_json.py` at 93 items (the two option pins came after
-the run and are counted in the Rust column only); the Rust column is
+**Round 1.** Ten knobs, each applied to the shipped source, measured, and reverted. The Python
+column is `python/repark/tests/test_fnp_9_collections_json.py` **at 93 items when the run was
+made** — the two option pins landed after it, taking the file to 94 (F19 corrected the round-1
+claim of 93 against a 94-item file); the Rust column is
 `cargo test -p repark-functions -- json:: collection::` at 42 items. **10 of 10 knobs red on both
-suites.**
+suites** — and, as the round-1 critic proved, that was not enough: a knob only inverts a cell some
+pin already asserts, so ten red knobs sat happily on top of twelve wrong answers.
 
 | Knob | Python red of 93 | Rust red of 42 |
 |---|---|---|
@@ -247,13 +287,50 @@ suites.**
 | `java_double_text`: always the plain decimal branch, never `d.dddEn` | 1 | 1 |
 | `from_json`: an unknown option is ignored the way Spark ignores it | 1 | 1 |
 
-The `arrays_zip` row is the one the mutation run earned its keep on. Measured first, it was
-**0 red of 42** on the Rust suite: `arrays_zip.rs` had tests for the field names and for schema
-stability but none that read a padded NULL back. The test
+The `arrays_zip` row is the one the round-1 mutation run earned its keep on. Measured first, it
+was **0 red of 42** on the Rust suite: `arrays_zip.rs` had tests for the field names and for
+schema stability but none that read a padded NULL back. The test
 (`zip_pads_the_short_argument_to_the_longest`) exists because the knob found its absence, not the
 other way round.
 
-## Gates (real exit codes, 2026-09-06)
+**Round 2.** Fifteen knobs, one per fix, measured against
+`test_fnp_9_collections_json.py` at 127 items.
+
+| Knob | What it breaks | Red of 127 |
+|---|---|---|
+| `R2-K1` | from_json: FAILFAST and the corrupt column see only an unparsable document | 2 |
+| `R2-K2` | decimal truncates instead of rounding HALF_UP | 1 |
+| `R2-K3` | decimal skips the precision check | 2 |
+| `R2-K4` | the top-level wildcard never unwraps a single match | 8 |
+| `R2-K5` | an index before a wildcard does not switch style | 2 |
+| `R2-K6` | object_field takes the first key instead of the last | 1 |
+| `R2-K7` | a wrong-shaped struct keeps its partial fields | 1 |
+| `R2-K8` | an empty document is a corrupt record instead of a NULL row | 1 |
+| `R2-K9` | build_text writes the raw number token | 1 |
+| `R2-K10` | the reader rejects single-quoted strings | 1 |
+| `R2-K11` | schema_of_json never quotes a field name | 1 |
+| `R2-K12` | schema_of_json keeps an empty struct field | 1 |
+| `R2-K13` | array_insert casts the value to the element type | 1 |
+| `R2-K14` | a leading zero is accepted as a number | 1 |
+| `R2-K15` | get_json_object accepts a non-STRING argument | 1 |
+
+**15 of 15 knobs red.**
+
+`R2-K10` is worth its own sentence, because the first version of it was **0 red of 127** and that
+was the knob's fault, not the pins'. It flipped the single-quote arm in `read_value`, which routes
+a VALUE — but the document the pin uses, `{'a':1}`, has its single quotes around a KEY, and keys
+go through `read_text` directly. The mutation did not break the behaviour the pin asserts, so a
+green run said nothing. Re-cut against `read_text`'s own quote check it reds. A knob that passes
+is either a missing pin or a knob that does not bite; telling the two apart is the work.
+
+The distinction that matters between the two runs: round 1's knobs asked *"does some pin notice
+if I break this?"* and every answer was yes. They could not ask *"is the thing I am protecting
+right?"* — only Spark can answer that, and only for a cell someone thought to measure. Round 2's
+102-cell re-measurement is the check that actually failed in round 1, and it is now a standing
+one: the live leg re-derives sixteen of those cells from Spark on every `REPARK_PARITY_LIVE=1`
+run.
+
+## Gates (real exit codes, round 2, 2026-09-06)
 
 | Command | Result |
 |---|---|
@@ -261,17 +338,25 @@ other way round.
 | `make verify` | 0 (48 Rust test binaries, all ok) |
 | `make check-python-conventions` | 0 |
 | `make rust-panic-ban` | 0 |
-| `make check-example-coverage` (and `--require-execute`) | 0 — 921 public names, 756 covered, 163 backlog, 204 examples |
-| `.venv/bin/python -m pytest python/repark/tests -q -x` | 5155 passed, 227 skipped |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 574 passed |
-| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 59 passed, 1 skipped |
-| `REPARK_PARITY_LIVE=1 … test_parity_live.py test_fnp_9_collections_json.py` | 214 passed |
-| `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | 0 |
+| `make check-example-coverage` | 0 |
+| `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | 0 / 0 / 0 / 0 |
+| `check_docstring_presence.py` | 0 |
+| `.venv/bin/python -m pytest python/repark/tests -q -x` | 5289 passed, 234 skipped |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 624 passed |
+| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 0 — 59 passed, 1 skipped |
+| `REPARK_PARITY_LIVE=1` on `test_parity_live_fnp9.py`, `test_parity_live.py`, `test_fnp_9_collections_json.py` | 244 passed |
 | `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
 | `typos .` | 0 |
+| both example scripts run | 0 |
 
-Three pins outside this unit's file moved because the surface they described moved, and each is
-named here rather than left to a reviewer's diff:
+Round 2 moved one file for a ceiling, not for a rewrite: `test_parity_live.py` reached 1024 of its
+1000-line default when the FNP-9/10 leg grew, so the leg moved to
+`test_parity_live_fnp9.py`, which shares `conftest.py`'s session-scoped `spark_engine` and
+therefore still co-collects and co-runs with `test_live_disclosure_still_diverges` in one JVM.
+No ceiling was raised.
+
+Three pins outside this unit's file moved in round 1 because the surface they described moved,
+and each is named here rather than left to a reviewer's diff:
 `test_fn_batch2.py::test_batch2_loud_unsupported` loses its `arrays_zip` refusal arm (no §7 row
 named `arrays_zip` under `R-FN-BATCH2` — the disclosure lived in the refusal string, now gone);
 `test_functions_split_identity.py::test_functions_all_matches_pre_split_inventory` gains the
@@ -293,11 +378,11 @@ No worktree was created and no other lane's artifacts were touched.
 | Kernels | `crates/repark-functions/src/json/` (7 files) and `crates/repark-functions/src/collection/{array_insert,arrays_zip,create_map,map_concat}.rs` |
 | Dispatch | `crates/repark-functions/src/expr_fn.rs`, `crates/repark-python/src/column/function_dispatch/dispatch_json.rs` |
 | Facade | `python/repark/src/repark/spark/functions_json.py`, `functions_collections.py`, `functions_expr.py`, and the three unchanged-length lines at the foot of `functions.py` |
-| Pins | `python/repark/tests/test_fnp_9_collections_json.py` (93 items) + the kernels' own Rust tests |
-| Live leg | `test_parity_live.py::test_live_fnp9_collections_json`, co-collected beside `test_live_disclosure_still_diverges` |
-| Registry | §7 `FNP9-ARRAYS-ZIP-NAMES-1` (retires `EX-FN-1`), `FNP9-GENERATORS-1` (supersedes `EX-FN-2`), `FNP9-BYNAME-1`, `FNP9-SEQUENCE-1`, `FNP10-JSON-OPTIONS-1`, `FNP10-JSON-SCHEMA-COLUMN-1`, `FNP9-ARRAY-INSERT-BIGINT-1`; `EX-FN-16` narrowed to `schema_of_csv` |
+| Pins | `python/repark/tests/test_fnp_9_collections_json.py` (**127 items** after round 2) + the kernels' own Rust tests (43 items) |
+| Live leg | `test_parity_live.py::test_live_fnp9_collections_json` — 28 answer cells and 7 raising cells after round 2 — co-collected beside `test_live_disclosure_still_diverges` |
+| Registry | §7 `FNP9-ARRAYS-ZIP-NAMES-1` (retires `EX-FN-1`), `FNP9-GENERATORS-1` (supersedes `EX-FN-2`), `FNP9-BYNAME-1`, `FNP9-SEQUENCE-1`, `FNP10-JSON-OPTIONS-1`, `FNP10-JSON-SCHEMA-COLUMN-1`, `FNP9-ARRAY-INSERT-BIGINT-1`, and the round-2 pair `FNP10-JAVA-DOUBLE-TEXT-1` and `FNP10-FROM-JSON-DDL-1`; `EX-FN-16` narrowed to `schema_of_csv` |
 | Examples | `docs/examples/functions/json_family.py`, `docs/examples/functions/map_build.py`; `BACKLOG_BASELINE` 164 → 163 as `F.schema_of_json` leaves the backlog |
-| Ceilings | `check_lib_py.py` `functions_expr.py` 2259 → 2256 (ratchets DOWN), mirrored in `test_cap_1_source_file_line_cap.py`; `functions.py` held at 1985 and `column/mod.rs` at 1053, which is why the new facade surface is a new module and the new dispatch arms are a child module |
+| Ceilings | one number, measured after the round-2 merge: `check_lib_py.py` `functions_expr.py` **2259 → 2255** (ratchets DOWN), mirrored in `test_cap_1_source_file_line_cap.py`; `functions.py` held at its exact baseline and `column/mod.rs` at 1053, which is why the new facade surface is a new module and the new dispatch arms are a child module. Round 1 stated 2256 in Delivery and 2257 in AT-8 — F19 |
 | Maps | lockstep on every touched directory |
 
 ## Out of scope, observed
@@ -314,9 +399,17 @@ No worktree was created and no other lane's artifacts were touched.
 - A `Row` from repark iterates its FIELD NAMES where PySpark's iterates its values
   (`tuple(row["parsed"])`). Noticed while writing `json_family.py`; a DataFrame-surface question,
   not a function one.
-- `from_json` supports only STRING map keys and refuses any other key type loudly. Spark parses
-  a JSON object's keys into the declared key type, so `MAP<INT, STRING>` works there. A loud
-  refusal on a rare shape, recorded rather than built.
+- `from_json` supports only STRING map keys. **Corrected round 2:** Spark refuses a non-STRING
+  map key too, with `[DATATYPE_MISMATCH.INVALID_JSON_MAP_KEY_TYPE]`; repark now raises the same
+  condition name, so this is parity, not a divergence. The round-1 note that Spark "works there"
+  was wrong and is left here with its correction rather than deleted.
+- **F20, noted not fixed.** `F.array_insert(F.array(F.lit(1), F.lit(2)), 1, …)` and
+  `F.arrays_zip(F.array(F.lit(1)), …)` answer a NULLABLE array where Spark answers non-nullable.
+  The SQL-door literals agree with Spark, so the root cause is the facade's own
+  `F.array(lit …)` nullability, not these kernels — a NULLABILITY-2 class question over the
+  array constructor. Measured by the round-1 critic, re-confirmed in round 2, not touched: fixing
+  the constructor's nullability moves every array-returning facade name at once and belongs to
+  the unit that owns that class.
 
 ## Docstrings replaced (forced, nothing stripped silently)
 
@@ -380,7 +473,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_parity_live.py]
     - id: AT-8
       status: ATTACKED
-      evidence: No ceiling was raised. functions_expr.py ratchets 2259 to 2257; functions.py and column/mod.rs stay at their exact baselines, which is why the new facade surface lands in a new module and the new dispatch arms land in a child module.
+      evidence: No ceiling was raised. functions_expr.py ratchets 2259 to 2255 (one number, stated once, measured after the round-2 merge); functions.py and column/mod.rs stay at their exact baselines, which is why the new facade surface lands in a new module and the new dispatch arms land in a child module.
       artifacts: [scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
     - id: AT-9
       status: N/A

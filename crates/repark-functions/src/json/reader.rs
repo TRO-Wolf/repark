@@ -5,6 +5,7 @@ use std::fmt::Write;
 pub(crate) enum JsonValue<'a> {
     Null,
     Bool(bool),
+    NonFinite(f64),
     Number(&'a str),
     Text(Cow<'a, str>),
     Array(Vec<JsonValue<'a>>),
@@ -65,10 +66,19 @@ impl<'a> JsonReader<'a> {
         match self.peek()? {
             b'{' => self.read_object(),
             b'[' => self.read_array(),
-            b'"' => self.read_text().map(JsonValue::Text),
+            b'"' | b'\'' => self.read_text().map(JsonValue::Text),
             b't' => self.read_literal("true").map(|()| JsonValue::Bool(true)),
             b'f' => self.read_literal("false").map(|()| JsonValue::Bool(false)),
             b'n' => self.read_literal("null").map(|()| JsonValue::Null),
+            b'N' => self
+                .read_literal("NaN")
+                .map(|()| JsonValue::NonFinite(f64::NAN)),
+            b'I' => self
+                .read_literal("Infinity")
+                .map(|()| JsonValue::NonFinite(f64::INFINITY)),
+            b'-' if self.input[self.position..].starts_with("-Infinity") => self
+                .read_literal("-Infinity")
+                .map(|()| JsonValue::NonFinite(f64::NEG_INFINITY)),
             _ => self.read_number(),
         }
     }
@@ -87,8 +97,12 @@ impl<'a> JsonReader<'a> {
         if self.peek() == Some(b'-') {
             self.position += 1;
         }
+        let integral_start = self.position;
         let digits_before = self.read_digits();
         if digits_before == 0 {
+            return None;
+        }
+        if digits_before > 1 && self.input.as_bytes()[integral_start] == b'0' {
             return None;
         }
         if self.peek() == Some(b'.') {
@@ -118,22 +132,29 @@ impl<'a> JsonReader<'a> {
     }
 
     fn read_text(&mut self) -> Option<Cow<'a, str>> {
-        self.expect(b'"')?;
+        let quote = self.peek()?;
+        if quote != b'"' && quote != b'\'' {
+            return None;
+        }
+        self.position += 1;
         let start = self.position;
         loop {
             let byte = self.peek()?;
             match byte {
-                b'"' => {
+                found if found == quote => {
                     let plain = self.input.get(start..self.position)?;
                     self.position += 1;
                     return Some(Cow::Borrowed(plain));
                 }
                 b'\\' => {
                     let mut owned = String::from(self.input.get(start..self.position)?);
-                    self.read_text_tail(&mut owned)?;
+                    self.read_text_tail(&mut owned, quote)?;
                     return Some(Cow::Owned(owned));
                 }
                 _ => {
+                    if byte < 0x20 {
+                        return None;
+                    }
                     self.position += utf8_width(byte);
                     if self.position > self.input.len() {
                         return None;
@@ -143,11 +164,11 @@ impl<'a> JsonReader<'a> {
         }
     }
 
-    fn read_text_tail(&mut self, owned: &mut String) -> Option<()> {
+    fn read_text_tail(&mut self, owned: &mut String, quote: u8) -> Option<()> {
         loop {
             let byte = self.peek()?;
             match byte {
-                b'"' => {
+                found if found == quote => {
                     self.position += 1;
                     return Some(());
                 }
@@ -156,6 +177,9 @@ impl<'a> JsonReader<'a> {
                     owned.push_str(&self.read_escape()?);
                 }
                 _ => {
+                    if byte < 0x20 {
+                        return None;
+                    }
                     let width = utf8_width(byte);
                     let chunk = self.input.get(self.position..self.position + width)?;
                     owned.push_str(chunk);
@@ -278,13 +302,20 @@ fn utf8_width(byte: u8) -> usize {
 
 pub(crate) fn json_number_text(raw: &str) -> String {
     if raw.contains(['.', 'e', 'E']) {
-        match raw.parse::<f64>() {
-            Ok(value) => java_double_text(value),
+        return match raw.parse::<f64>() {
+            Ok(value) if value.is_finite() => java_double_text(value),
+            Ok(value) => {
+                let mut quoted = String::new();
+                write_escaped(&java_double_text(value), &mut quoted);
+                quoted
+            }
             Err(_) => raw.to_string(),
-        }
-    } else {
-        raw.to_string()
+        };
     }
+    if raw == "-0" {
+        return "0".to_string();
+    }
+    raw.to_string()
 }
 
 pub(crate) fn java_double_text(value: f64) -> String {
@@ -356,6 +387,7 @@ pub(crate) fn write_compact(value: &JsonValue<'_>, out: &mut String) {
         JsonValue::Bool(true) => out.push_str("true"),
         JsonValue::Bool(false) => out.push_str("false"),
         JsonValue::Number(raw) => out.push_str(&json_number_text(raw)),
+        JsonValue::NonFinite(value) => write_escaped(&java_double_text(*value), out),
         JsonValue::Text(text) => write_escaped(text, out),
         JsonValue::Array(items) => {
             out.push('[');
@@ -394,7 +426,7 @@ pub(crate) fn write_escaped(text: &str, out: &mut String) {
             '\u{8}' => out.push_str("\\b"),
             '\u{c}' => out.push_str("\\f"),
             control if control < ' ' => {
-                let _ = write!(out, "\\u{:04x}", control as u32);
+                let _ = write!(out, "\\u{:04X}", control as u32);
             }
             other => out.push(other),
         }

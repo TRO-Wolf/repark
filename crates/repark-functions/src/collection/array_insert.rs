@@ -6,6 +6,7 @@ use datafusion::arrow::buffer::{NullBuffer, OffsetBuffer};
 use datafusion::arrow::compute::{concat, take};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{Result, exec_err};
+use datafusion::logical_expr::type_coercion::binary::comparison_coercion;
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
@@ -41,6 +42,26 @@ impl Hash for SparkArrayInsert {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name().hash(state);
     }
+}
+
+fn is_text(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn tightest_common(left: &DataType, right: &DataType) -> Option<DataType> {
+    if left == right {
+        return Some(left.clone());
+    }
+    if left.is_numeric() && right.is_numeric() {
+        return comparison_coercion(left, right);
+    }
+    if is_text(left) && is_text(right) {
+        return comparison_coercion(left, right);
+    }
+    None
 }
 
 fn element_type(data_type: &DataType) -> Result<DataType> {
@@ -138,8 +159,16 @@ impl ScalarUDFImpl for SparkArrayInsert {
         let element = element_type(array)?;
         let widened = if element == DataType::Null {
             value.clone()
-        } else {
+        } else if value == &DataType::Null || value == &element {
             element
+        } else {
+            tightest_common(&element, value).ok_or_else(|| {
+                datafusion::error::DataFusionError::Plan(format!(
+                    "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] `array_insert` requires the \
+                     array element type and the inserted value type to share a common type, but \
+                     got {element} and {value}"
+                ))
+            })?
         };
         Ok(vec![
             DataType::List(Arc::new(Field::new("item", widened.clone(), true))),

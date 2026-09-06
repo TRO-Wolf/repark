@@ -31,6 +31,7 @@ pub(crate) fn parse_schema(spec: &str) -> Result<DataType> {
 enum Token {
     Word(String),
     Quoted(String),
+    Text(String),
     Number(String),
     Symbol(char),
 }
@@ -46,14 +47,22 @@ fn tokenize(spec: &str) -> Result<Vec<Token>> {
         } else if found == '`' {
             let mut name = String::new();
             index += 1;
-            while index < bytes.len() && bytes[index] != '`' {
+            loop {
+                if index >= bytes.len() {
+                    return exec_err!("[PARSE_SYNTAX_ERROR] unterminated identifier in {spec:?}");
+                }
+                if bytes[index] == '`' {
+                    if bytes.get(index + 1) == Some(&'`') {
+                        name.push('`');
+                        index += 2;
+                        continue;
+                    }
+                    index += 1;
+                    break;
+                }
                 name.push(bytes[index]);
                 index += 1;
             }
-            if index >= bytes.len() {
-                return exec_err!("[PARSE_SYNTAX_ERROR] unterminated identifier in {spec:?}");
-            }
-            index += 1;
             tokens.push(Token::Quoted(name));
         } else if found.is_ascii_digit() {
             let mut digits = String::new();
@@ -69,6 +78,19 @@ fn tokenize(spec: &str) -> Result<Vec<Token>> {
                 index += 1;
             }
             tokens.push(Token::Word(word));
+        } else if found == '\'' || found == '"' {
+            let quote = found;
+            let mut text = String::new();
+            index += 1;
+            while index < bytes.len() && bytes[index] != quote {
+                text.push(bytes[index]);
+                index += 1;
+            }
+            if index >= bytes.len() {
+                return exec_err!("[PARSE_SYNTAX_ERROR] unterminated string in {spec:?}");
+            }
+            index += 1;
+            tokens.push(Token::Text(text));
         } else if matches!(found, '<' | '>' | ',' | ':' | '(' | ')') {
             tokens.push(Token::Symbol(found));
             index += 1;
@@ -125,6 +147,30 @@ impl Cursor<'_> {
         }
     }
 
+    fn skip_field_modifiers(&mut self) {
+        loop {
+            let Some(Token::Word(word)) = self.peek() else {
+                return;
+            };
+            match word.to_ascii_uppercase().as_str() {
+                "NOT" => {
+                    self.position += 1;
+                    if matches!(self.peek(), Some(Token::Word(next)) if next.eq_ignore_ascii_case("NULL"))
+                    {
+                        self.position += 1;
+                    }
+                }
+                "COMMENT" => {
+                    self.position += 1;
+                    if matches!(self.peek(), Some(Token::Text(_))) {
+                        self.position += 1;
+                    }
+                }
+                _ => return,
+            }
+        }
+    }
+
     fn read_field_list(&mut self, bracketed: bool) -> Result<Fields> {
         let mut fields: Vec<Arc<Field>> = Vec::new();
         loop {
@@ -136,6 +182,7 @@ impl Cursor<'_> {
                 self.position += 1;
             }
             let data_type = self.read_type()?;
+            self.skip_field_modifiers();
             fields.push(Arc::new(Field::new(name, data_type, true)));
             if matches!(self.peek(), Some(Token::Symbol(','))) {
                 self.position += 1;

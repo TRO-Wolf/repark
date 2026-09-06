@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pyarrow as pa
 import pytest
 
@@ -259,7 +261,7 @@ def test_from_json_is_permissive_on_both_doors() -> None:
         ('{"a":[1,null]}', "a ARRAY<INT>", {"a": [1, None]}),
         ('{"a":{"b":[1,2]}}', "a STRUCT<b: ARRAY<INT>>", {"a": {"b": [1, 2]}}),
         ('{"b":"Ymlu"}', "b BINARY", {"b": b"bin"}),
-        ('{"d":1.50}', "d DECIMAL(5,2)", {"d": None}),
+        ('{"d":1.50}', "d DECIMAL(5,2)", {"d": Decimal("1.50")}),
     ],
 )
 def test_from_json_leaf_and_container_cells(document: str, schema: str, want: object) -> None:
@@ -267,9 +269,6 @@ def test_from_json_leaf_and_container_cells(document: str, schema: str, want: ob
     got = _column(
         _session().sql("SELECT 1 AS one").select(F.from_json(F.lit(document), schema).alias("r"))
     )
-    if isinstance(want, dict) and "d" in want:
-        assert got[2][0]["d"] is not None
-        return
     assert got[2] == [want]
 
 
@@ -558,3 +557,321 @@ def test_every_built_name_is_exported_from_the_facade() -> None:
     for name in built:
         assert hasattr(F, name), name
         assert name in F.__all__, name
+
+
+def test_from_json_failfast_raises_on_a_bad_record_not_only_a_bad_document() -> None:
+    """FAILFAST rejects a wrong-typed leaf, a fractional int and a bad array element."""
+    frame = _session().sql("SELECT 1 AS one")
+    for document, schema in (
+        ('{"a":"x"}', "a INT"),
+        ('{"a":1.7}', "a INT"),
+        ('{"a":[1,"x"]}', "a ARRAY<INT>"),
+        ('{"e":123456.78}', "e DECIMAL(5,2)"),
+        ('{"a":{"b":"x"}}', "a STRUCT<b:INT>"),
+        ('[{"a":1}]', "a INT"),
+    ):
+        with pytest.raises(Exception, match="MALFORMED_RECORD_IN_PARSING"):
+            frame.select(
+                F.from_json(F.lit(document), schema, {"mode": "FAILFAST"}).alias("r")
+            ).collect()
+        door = _session().sql(f"SELECT from_json('{document}', '{schema}') AS r")
+        assert door.toArrow().num_rows == 1
+
+
+def test_from_json_corrupt_record_takes_a_bad_record_too() -> None:
+    """A wrong-typed leaf fills _corrupt_record, not just a malformed document."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        '{"a":"x"}': ("a INT, _corrupt_record STRING", {"a": None, "_corrupt_record": '{"a":"x"}'}),
+        '{"a":[1,"x"]}': (
+            "a ARRAY<INT>, _corrupt_record STRING",
+            {"a": None, "_corrupt_record": '{"a":[1,"x"]}'},
+        ),
+        '{"d":"zz"}': (
+            "d DECIMAL(5,2), _corrupt_record STRING",
+            {"d": None, "_corrupt_record": '{"d":"zz"}'},
+        ),
+        '{"b":"!!!"}': (
+            "b BINARY, _corrupt_record STRING",
+            {"b": None, "_corrupt_record": '{"b":"!!!"}'},
+        ),
+        '{"d":"nope"}': (
+            "d DATE, _corrupt_record STRING",
+            {"d": None, "_corrupt_record": '{"d":"nope"}'},
+        ),
+    }
+    for document, (schema, want) in cases.items():
+        got = _column(frame.select(F.from_json(F.lit(document), schema).alias("r")))
+        assert got[2] == [want], document
+    nested = _column(
+        frame.select(
+            F.from_json(F.lit('{"a":{"b":"x"}}'), "a STRUCT<b:INT>, _corrupt_record STRING").alias(
+                "r"
+            )
+        )
+    )
+    assert nested[2] == [{"a": {"b": None}, "_corrupt_record": '{"a":{"b":"x"}}'}]
+
+
+def test_from_json_empty_document_is_a_null_row_not_a_corrupt_record() -> None:
+    """An empty or whitespace document answers NULL and never raises under FAILFAST."""
+    frame = _session().sql("SELECT 1 AS one")
+    for document in ("", "   "):
+        plain = _column(frame.select(F.from_json(F.lit(document), "a INT").alias("r")))
+        assert plain[2] == [None], document
+        corrupt = _column(
+            frame.select(F.from_json(F.lit(document), "a INT, _corrupt_record STRING").alias("r"))
+        )
+        assert corrupt[2] == [None], document
+        failfast = _column(
+            frame.select(F.from_json(F.lit(document), "a INT", {"mode": "FAILFAST"}).alias("r"))
+        )
+        assert failfast[2] == [None], document
+
+
+def test_from_json_decimal_rounds_half_up_and_nulls_on_overflow() -> None:
+    """HALF_UP at the declared scale; a value wider than the precision is NULL."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        ('{"d":1.505}', "d DECIMAL(5,2)"): {"d": Decimal("1.51")},
+        ('{"d":-1.505}', "d DECIMAL(5,2)"): {"d": Decimal("-1.51")},
+        ('{"a":3.7}', "a DECIMAL"): {"a": Decimal("4")},
+        ('{"e":123456.78}', "e DECIMAL(5,2)"): {"e": None},
+        ('{"d":"2.50"}', "d DECIMAL(5,2)"): {"d": Decimal("2.50")},
+        ('{"d":1.50}', "d DECIMAL(5,2)"): {"d": Decimal("1.50")},
+    }
+    for (document, schema), want in cases.items():
+        got = _column(frame.select(F.from_json(F.lit(document), schema).alias("r")))
+        assert got[2] == [want], document
+
+
+@pytest.mark.parametrize(
+    ("document", "path", "want"),
+    [
+        ('{"a":[[1,2],[3]]}', "$.a[*][1]", "2"),
+        ('{"a":[[{"b":1}]]}', "$.a[*][0].b", "1"),
+        ('{"a":[["s"]]}', "$.a[*][0]", '"s"'),
+        ('{"a":[[1]]}', "$.a[0][*]", "[1]"),
+        ('{"a":[[[1,2]],[[3]]]}', "$.a[*][0][*]", "[[1,2],[3]]"),
+        ('{"a":[[1,2],[3,4]]}', "$.a[*][*][1]", "[2,4]"),
+        ('{"a":[[1,2],[3]]}', "$.a[*][0]", "[1,3]"),
+        ('{"a":[[1,2],[3]]}', "$.a[*][*]", "[1,2,3]"),
+        ('{"a":[[1,2],[3]]}', "$.a[1][*]", "[3]"),
+        ('{"a":[1,2]}', "$.a[*][0]", None),
+        ('{"a":[[[1]]]}', "$.a[*][*][*]", "[1]"),
+        ("[[1,2],[3]]", "$[*][0]", "[1,3]"),
+        ('{"a":[[1,2]]}', "$.a[*][*]", "[1,2]"),
+        ('{"a":[{"b":1}]}', "$.a[*][*]", '[{"b":1}]'),
+        ('{"a":[[1,[2,3]]]}', "$.a[*][*]", "[1,2,3]"),
+    ],
+)
+def test_get_json_object_wildcard_style_machine(document: str, path: str, want: str | None) -> None:
+    """A wildcard after a subscript keeps the array; a lone match at the top unwraps."""
+    got = _column(
+        _session()
+        .sql("SELECT 1 AS one")
+        .select(F.get_json_object(F.lit(document), path).alias("r"))
+    )
+    assert got[2] == [want]
+
+
+def test_from_json_shape_mismatch_nulls_the_container() -> None:
+    """A wrong-shaped array, struct or map NULLs the whole field; a root object wraps."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        ('{"a":[1,"x",3],"d":2}', "a ARRAY<INT>, d INT"): {"a": None, "d": 2},
+        ('{"a":5,"c":1}', "a STRUCT<b:INT>, c INT"): {"a": None, "c": 1},
+        ('{"a":[1],"c":1}', "a STRUCT<b:INT>, c INT"): {"a": None, "c": 1},
+        ('{"a":1,"b":"x"}', "MAP<STRING,INT>"): None,
+        ('{"a":1}', "ARRAY<STRUCT<a:INT>>"): [{"a": 1}],
+        ('[{"a":1}]', "a INT"): {"a": None},
+        ("5", "a INT"): {"a": None},
+    }
+    for (document, schema), want in cases.items():
+        got = _column(frame.select(F.from_json(F.lit(document), schema).alias("r")))
+        assert got[2] == [want], document
+
+
+def test_from_json_duplicate_key_takes_the_last() -> None:
+    """Spark's JSON reader is last-wins on a repeated object key."""
+    frame = _session().sql("SELECT 1 AS one")
+    assert _column(frame.select(F.from_json(F.lit('{"a":1,"a":2}'), "a INT").alias("r")))[2] == [
+        {"a": 2}
+    ]
+    assert _column(frame.select(F.from_json(F.lit('{"a":"p","a":"q"}'), "a STRING").alias("r")))[
+        2
+    ] == [{"a": "q"}]
+
+
+def test_from_json_string_target_spells_numbers_the_java_way() -> None:
+    """A number decoded into STRING takes Double.toString, not the raw token."""
+    got = _column(
+        _session()
+        .sql("SELECT 1 AS one")
+        .select(
+            F.from_json(F.lit('{"a":1.50,"b":1e3,"c":-0}'), "a STRING, b STRING, c STRING").alias(
+                "r"
+            )
+        )
+    )
+    assert got[2] == [{"a": "1.5", "b": "1000.0", "c": "0"}]
+
+
+def test_json_family_accepts_single_quoted_documents() -> None:
+    """Spark's JSON factory allows single quotes; every name in the family follows."""
+    frame = _session().sql("SELECT 1 AS one")
+    document = "{'a':1}"
+    assert _column(frame.select(F.get_json_object(F.lit(document), "$.a").alias("r")))[2] == ["1"]
+    assert _column(frame.select(F.json_object_keys(F.lit(document)).alias("r")))[2] == [["a"]]
+    assert _column(frame.select(F.from_json(F.lit(document), "a INT").alias("r")))[2] == [{"a": 1}]
+    assert _column(frame.select(F.schema_of_json(document).alias("r")))[2] == ["STRUCT<a: BIGINT>"]
+
+
+def test_schema_of_json_quotes_a_non_identifier_field_name() -> None:
+    """A name that is not a plain identifier is backtick-quoted and round-trips."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        '{"a b":1}': "STRUCT<`a b`: BIGINT>",
+        '{"1":1}': "STRUCT<`1`: BIGINT>",
+        '{"é":1}': "STRUCT<`é`: BIGINT>",
+        '{"c:d":1}': "STRUCT<`c:d`: BIGINT>",
+        '{"e`f":1}': "STRUCT<`e``f`: BIGINT>",
+    }
+    for document, want in cases.items():
+        rendered = _column(frame.select(F.schema_of_json(document).alias("r")))[2]
+        assert rendered == [want], document
+        parsed = _column(frame.select(F.from_json(F.lit(document), want).alias("r")))
+        assert parsed[2][0] is not None, document
+
+
+def test_schema_of_json_prunes_empty_structs_and_keeps_duplicates() -> None:
+    """Spark's canonicalize drops an all-empty struct and keeps a repeated key."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        '{"a":{}}': "STRUCT<>",
+        '{"a":{},"b":1}': "STRUCT<b: BIGINT>",
+        '{"a":{"b":{}}}': "STRUCT<>",
+        '{"a":1,"a":"x"}': "STRUCT<a: BIGINT, a: STRING>",
+        '{"a":NaN}': "STRUCT<a: DOUBLE>",
+        "": "STRING",
+    }
+    for document, want in cases.items():
+        assert _column(frame.select(F.schema_of_json(document).alias("r")))[2] == [want], document
+
+
+def test_get_json_object_number_and_argument_rules() -> None:
+    """A leading zero is malformed, a non-finite is quoted, -0 is 0, a null root is `null`."""
+    frame = _session().sql("SELECT 1 AS one")
+    cases = {
+        ('{"a":01}', "$.a"): None,
+        ('{"a":1e400}', "$.a"): '"Infinity"',
+        ('{"a":-0}', "$.a"): "0",
+        ("null", "$"): "null",
+    }
+    for (document, path), want in cases.items():
+        got = _column(frame.select(F.get_json_object(F.lit(document), path).alias("r")))
+        assert got[2] == [want], document
+    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+        _session().sql("SELECT get_json_object(1, '$') AS r").collect()
+    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+        _session().sql("SELECT json_array_length(1) AS r").collect()
+
+
+def test_from_json_non_finite_and_timestamp_forms() -> None:
+    """NaN/Infinity literals and strings decode; a tab inside a string is malformed."""
+    frame = _session().sql("SELECT 1 AS one")
+    non_finite = _column(
+        frame.select(
+            F.from_json(
+                F.lit('{"a":NaN,"b":"-INF","c":"Infinity"}'), "a DOUBLE, b DOUBLE, c DOUBLE"
+            ).alias("r")
+        )
+    )
+    row = non_finite[2][0]
+    assert row["a"] != row["a"]
+    assert row["b"] == float("-inf")
+    assert row["c"] == float("inf")
+    stamps = _column(frame.select(F.from_json(F.lit('{"t":1609556645}'), "t TIMESTAMP").alias("r")))
+    assert stamps[2][0]["t"] is not None
+    short = _column(
+        frame.select(F.from_json(F.lit('{"t":"2021-01-02T03:04"}'), "t TIMESTAMP").alias("r"))
+    )
+    assert short[2][0]["t"] is not None
+    tabbed = _column(frame.select(F.from_json(F.lit('{"a":"x\ty"}'), "a STRING").alias("r")))
+    assert tabbed[2] == [{"a": None}]
+    modifiers = _column(frame.select(F.from_json(F.lit('{"a":1}'), "a INT NOT NULL").alias("r")))
+    assert modifiers[2] == [{"a": 1}]
+
+
+def test_from_json_refuses_a_non_container_schema_and_a_typed_corrupt_column() -> None:
+    """Spark refuses a scalar root schema and a non-STRING corrupt column."""
+    frame = _session().sql("SELECT 1 AS one")
+    with pytest.raises(Exception, match="INVALID_JSON_SCHEMA"):
+        frame.select(F.from_json(F.lit('{"a":1}'), "INT").alias("r")).collect()
+    with pytest.raises(Exception, match="INVALID_CORRUPT_RECORD_TYPE"):
+        frame.select(F.from_json(F.lit("{bad"), "a INT, _corrupt_record INT").alias("r")).collect()
+    with pytest.raises(Exception, match="INVALID_JSON_MAP_KEY_TYPE"):
+        frame.select(F.from_json(F.lit('{"1":2}'), "MAP<INT,INT>").alias("r")).collect()
+
+
+def test_array_insert_widens_the_element_and_value_types() -> None:
+    """A wider value widens the array; no common type refuses the way Spark refuses it."""
+    spark = _session()
+    widened = _column(
+        spark.sql("SELECT array(1,2) AS ai").select(
+            F.array_insert("ai", 1, F.lit(1.5).cast("double")).alias("r")
+        )
+    )
+    assert widened[2] == [[1.5, 1.0, 2.0]]
+    assert widened[0].value_type == pa.float64()
+    longer = _column(
+        spark.sql("SELECT array(1,2) AS ai").select(
+            F.array_insert("ai", 1, F.lit(3).cast("bigint")).alias("r")
+        )
+    )
+    assert longer[2] == [[3, 1, 2]]
+    assert longer[0].value_type == pa.int64()
+    for value in ("true", "'z'"):
+        with pytest.raises(Exception, match="ARRAY_FUNCTION_DIFF_TYPES"):
+            spark.sql(f"SELECT array_insert(array(1,2), 1, {value}) AS r").collect()
+
+
+def test_map_concat_answers_sparks_own_map_spelling_on_the_sql_door() -> None:
+    """Spark spells the argument map('a', 1); the door must answer that shape."""
+    door = _sql("SELECT map_concat(map('a',1), map('b',2)) AS r FROM fnp9")
+    assert door[2][0] == [("a", 1), ("b", 2)]
+    single = _sql("SELECT map_concat(map('a',1)) AS r FROM fnp9")
+    assert single[2][0] == [("a", 1)]
+
+
+def test_sequence_descending_answers_empty() -> None:
+    """A measured divergence this unit filed rather than built (FNP9-SEQUENCE-1)."""
+    frame = _session().sql("SELECT 1 AS one")
+    ascending = _column(frame.select(F.sequence(F.lit(1), F.lit(5), F.lit(2)).alias("r")))
+    assert ascending[2] == [[1, 3, 5]]
+    descending = _column(frame.select(F.sequence(F.lit(5), F.lit(1)).alias("r")))
+    assert descending[2] == [[]]
+    illegal = _column(frame.select(F.sequence(F.lit(1), F.lit(5), F.lit(-1)).alias("r")))
+    assert illegal[2] == [[]]
+    with pytest.raises(Exception, match="Invalid function 'sequence'"):
+        _session().sql("SELECT sequence(1, 5, 2) AS r").collect()
+
+
+def test_to_json_double_text_diverges_on_the_jdk_legacy_spellings() -> None:
+    """JDK 17 Double.toString is not the shortest repr (FNP10-JAVA-DOUBLE-TEXT-1)."""
+    spark = _session()
+    cases = {
+        "CAST('4.9E-324' AS DOUBLE)": '{"d":5.0E-324}',
+        "CAST('8.41E21' AS DOUBLE)": '{"d":8.41E21}',
+        "CAST('1.0E23' AS DOUBLE)": '{"d":1.0E23}',
+        "CAST('1.4E-45' AS FLOAT)": '{"d":1.0E-45}',
+    }
+    for expression, want in cases.items():
+        rendered = spark.sql(f"SELECT to_json(named_struct('d', {expression})) AS r").collect()
+        assert [row["r"] for row in rendered] == [want], expression
+
+
+def test_from_json_refuses_an_interval_ddl_field() -> None:
+    """Spark parses INTERVAL DAY in a from_json schema; repark refuses it loudly."""
+    with pytest.raises(Exception, match="unsupported data type"):
+        _session().sql("SELECT from_json('{\"a\":\"1\"}', 'a INTERVAL DAY') AS r").collect()

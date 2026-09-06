@@ -6238,6 +6238,37 @@ field NAME.
   of whose surface is a silent `[]` should be closed once rather than twice. The pin codifies
   today's behaviour; the fix unit updates the pin rather than obeys it.
 
+### FNP10-JAVA-DOUBLE-TEXT-1 — four `Double.toString` spellings where the JDK is not shortest
+
+- **repark** — `to_json` and `get_json_object` render a double through the shortest decimal that
+  round-trips: `4.9E-324` renders `5.0E-324`, `8.41E21` renders `8.41E21`, `1.0E23` renders
+  `1.0E23`, and a FLOAT `1.4E-45` renders `1.0E-45`.
+- **Apache Spark** — JDK 17's `FloatingDecimal` is NOT the shortest repr and answers
+  `4.9E-324`, `8.409999999999999E21`, `9.999999999999999E22` and `1.4E-45` for the same four
+  values. Every other measured double agrees, including `1.0E20`, `3.0`, `0.1`, `1.0E-7`,
+  NaN and Infinity. *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  FNP-9/10 round 2.)*
+- **Pin** —
+  `python/repark/tests/test_fnp_9_collections_json.py::test_to_json_double_text_diverges_on_the_jdk_legacy_spellings`
+- **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F13). Closing
+  it means porting `FloatingDecimal.toJavaFormatString` — the pre-JDK-19 dragon variant, which
+  emits an extra digit for a specific class of values — not tuning a format string. The four
+  cells are pinned so the divergence is a stated limit rather than a surprise, and the C-004
+  clause that once claimed "doubles take `Double.toString`" is narrowed to say which values it
+  covers.
+
+### FNP10-FROM-JSON-DDL-1 — `from_json` refuses an INTERVAL field in its schema
+
+- **repark** — `from_json('{"a":"1"}', 'a INTERVAL DAY')` raises
+  `[PARSE_SYNTAX_ERROR] unsupported data type "INTERVAL"`. `NOT NULL` and `COMMENT '…'` field
+  modifiers are accepted and ignored, as Spark accepts them.
+- **Apache Spark** — the same call answers a one-day interval. *(oracle: live PySpark 4.1.2,
+  ANSI on, UTC session zone, 2026-09-06, FNP-9/10 round 2.)*
+- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_refuses_an_interval_ddl_field`
+- **Rationale** — BACKLOG, filed 2026-09-06 by the FNP-9/10 round-1 critic (finding F17). An
+  interval-typed JSON field needs the temporal family FNP-11 owns; refusing loudly is the honest
+  answer until then, and the refusal names the type it could not build.
+
 ### FNP10-JSON-OPTIONS-1 — the JSON names honour two options and refuse the rest
 
 - **repark** — `from_json(col, schema, options)` reads `mode` (PERMISSIVE, the default, and
