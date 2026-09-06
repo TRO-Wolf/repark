@@ -314,22 +314,26 @@ repark-parity slice.
 
 ## Contents
 
-- `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 2):** compact worker packet
+- `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix
-  rule, the adapter trailer, a re-render of the dynamic section, `bash -n` on
-  each gate command, and prefix-negating phrases; `diff` prints the dynamic
-  section only. Field extractors live in `sepmo_packet_extract.py` (so the assembler
-  stays under the default Python ceiling). The banned-trailer literals the checker scans for
-  are assembled at runtime, so the tree never carries them (the pre-push hook forbids them). Fixtures under
+  rule, sidecar `authority.constraints == STABLE_RULES` (order and text), the
+  adapter trailer, a re-render of the dynamic section, `bash -n` on each gate
+  command, and prefix-negating phrases; `diff` prints the dynamic section only.
+  Field extractors live in `sepmo_packet_extract.py` (so the assembler stays
+  under the default Python ceiling). The banned-trailer literals the checker
+  scans for are assembled at runtime, so the tree never carries them (the
+  pre-push hook forbids them). Fixtures under
   `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
   Invocation: `python3 scripts/sepmo_packet.py build …` or
   `make sepmo-packet ARGS='check <packet>'`.
   pins: sepmo-e2/C-002, C-003, C-004, C-008
-- `sepmo_packet_extract.py` — **SEPMO-E2 (2026-09-06, round 2):** brief field
+- `sepmo_packet_extract.py` — **SEPMO-E2 (2026-09-06, round 3):** brief field
   extractors for the packet assembler: fenced/inline gate commands, writable /
-  closed / never-touch lists, brief-declared hand-back keys, trailer and
-  prefix-negation scans. Loaded as a sibling of `sepmo_packet.py`.
+  closed / never-touch lists, a PATH_TOKEN plus bare-directory scan of boundary
+  spans that fails `build` when a path is not captured, brief-declared
+  hand-back keys, trailer and prefix-negation scans. Loaded as a sibling of
+  `sepmo_packet.py`.
   pins: sepmo-e2/C-002
 - `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
   `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory

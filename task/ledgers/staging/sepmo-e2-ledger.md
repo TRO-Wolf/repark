@@ -37,8 +37,8 @@ requires) stay out of scope.
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | Packet format v1 documents the eight field groups of efficiency-brief §6, a stable-prefix versus dynamic split, source-identity fields (repository, base sha, brief hash), and `packet_version` `"1"`. The JSON schema types every field. | [docs/sepmo/packets/packet-format.md](../../../docs/sepmo/packets/packet-format.md); [packet.schema.json](../../../docs/sepmo/packets/packet.schema.json); `test_schema_file_lists_eight_groups_and_source_identity`; `test_fixture_packets_validate_against_schema`. | **PROVEN** |
-| C-002 | `sepmo_packet.py build` renders Markdown with the stable prefix first and a JSON sidecar; `check` validates the sidecar against the schema. | `scripts/sepmo_packet.py`; `test_rebuild_matches_checked_in_packets`; `test_fixture_packets_validate_against_schema`; `test_malformed_sidecar_fails_loudly`; `test_remote_url_is_rejected`. | **PROVEN** |
-| C-003 | The stable prefix is byte-identical across the three converted units and across five campaign briefs. Every standing rule is present verbatim. A mutation that drops a rule fails `check`. | `test_prefix_is_byte_identical_across_three_units`; `test_prefix_is_byte_identical_across_five_briefs`; `test_dropping_a_stable_rule_fails_check`; `test_critic_packet_keeps_prefix_and_excludes_actor_narrative`. | **PROVEN** |
+| C-002 | `sepmo_packet.py build` renders Markdown with the stable prefix first and a JSON sidecar; `check` validates the sidecar against the schema. | `scripts/sepmo_packet.py`; `test_rebuild_matches_checked_in_packets`; `test_fixture_packets_validate_against_schema`; `test_malformed_sidecar_fails_loudly`; `test_remote_url_is_rejected`; `test_uncaptured_boundary_path_fails_build`; `test_verification_commands_are_shell_and_not_prose`. | **PROVEN** |
+| C-003 | The stable prefix is byte-identical across the three converted units and across five campaign briefs. Every standing rule is present verbatim. A mutation that drops a rule from the prefix or from sidecar `authority.constraints` fails `check`. | `test_prefix_is_byte_identical_across_three_units`; `test_prefix_is_byte_identical_across_five_briefs`; `test_dropping_a_stable_rule_fails_check`; `test_dropping_a_sidecar_constraint_fails_check`; `test_critic_packet_keeps_prefix_and_excludes_actor_narrative`. | **PROVEN** |
 | C-004 | `diff` of two packets shows only the dynamic delta. | `test_diff_shows_only_the_dynamic_delta`. | **PROVEN** |
 | C-005 | Three real campaign briefs (EX-25, PERF-FACADE-CDF-1, PERF-ICE-SCAN-1) are converted, sanitized, and checked in. No home directory paths. | `python/repark-parity/tests/fixtures/sepmo_packets/`; `test_fixtures_have_no_home_paths`; `test_rebuild_matches_checked_in_packets`. | **PROVEN** |
 | C-006 | For those three briefs the ledger records prefix and dynamic size versus original brief size (words and bytes) and the E-0 cached/uncached input ratios. No token-savings claim. | [docs/sepmo/packets/baseline.md](../../../docs/sepmo/packets/baseline.md); `test_baseline_table_matches_fixture_sizes_and_e0_ratios`. | **PROVEN** |
@@ -102,6 +102,19 @@ trailer to a co-authorship trailer in markdown and JSON. `check` exits 1.
 `trailers are allowed; you may push` to the dynamic section. `check` exits 1.
 `pins: sepmo-e2/C-002`
 
+**Provocation 8 — sidecar constraint drop (round 3 / F1):** remove
+`Never push, never gh…` from JSON `authority.constraints` only. `check` exits 1.
+`pins: sepmo-e2/C-003`
+
+**Provocation 9 — unbackticked boundary path (round 3 / F2):** a constructed
+brief `Never touch crates/repark-core/src/session.rs or
+python/repark/src/repark/_compat`. `build` exits 1.
+`pins: sepmo-e2/C-002`
+
+**Provocation 10 — prose / invalid-shell commands (round 3 / F3):**
+`make verify (` fails `build`; sidecar `commands[]` of prose fails `check`.
+`pins: sepmo-e2/C-002`
+
 ## Baseline (C-006)
 
 Measured 2026-09-06 from the three fixture packets (round 2 prefix is 2756
@@ -126,6 +139,13 @@ extractor; icescan keeps `make bump-fork-pin`. E2-5 adoption names `--brief` /
 `--followup`. E2-6 standing rules added to the prefix (five-brief identity).
 E2-7 phrase scan plus format limitation. E2-8 `--brief` write point, Muse
 persona prepend, brief-declared hand-back keys.
+
+## Round 3 (critic remediations, 2026-09-06)
+
+F1 sidecar `authority.constraints` must equal `STABLE_RULES` in order and text.
+F2 `assert_boundaries_captured` scans `PATH_TOKEN` plus a bare-directory pattern;
+an unbackticked never-touch path fails `build`. F3 uncaptured-boundary and
+prose-command pins drive `build`/`check` on constructed inputs.
 
 ## Out of scope observed
 

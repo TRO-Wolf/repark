@@ -191,6 +191,31 @@ def test_prefix_is_byte_identical_across_five_briefs() -> None:
     assert len(set(prefixes)) == 1
 
 
+def test_dropping_a_sidecar_constraint_fails_check(tmp_path: Path) -> None:
+    """Dropping a rule from authority.constraints fails check.
+
+    pins: sepmo-e2/C-003
+    """
+    module = _load()
+    source_md = _FIXTURES / "ex25-actor.md"
+    source_json = _FIXTURES / "ex25-actor.json"
+    mutated_md = tmp_path / "ex25-actor.md"
+    mutated_json = tmp_path / "ex25-actor.json"
+    shutil.copy(source_md, mutated_md)
+    payload = json.loads(source_json.read_text(encoding="utf-8"))
+    dropped = next(rule for rule in module.STABLE_RULES if rule.startswith("Never push, never"))
+    payload["authority"]["constraints"] = [
+        item for item in payload["authority"]["constraints"] if item != dropped
+    ]
+    mutated_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    packet, markdown = module.load_packet_files(mutated_md)
+    findings = module.check_packet(packet, markdown)
+    joined = " ".join(findings)
+    assert findings, "dropped sidecar constraint must be detected"
+    assert "authority.constraints" in joined
+    assert module.main(["check", str(mutated_md)]) == 1
+
+
 def test_dropping_a_stable_rule_fails_check(tmp_path: Path) -> None:
     """A mutation that drops a stable rule is detected.
 
@@ -423,6 +448,16 @@ def test_malformed_sidecar_fails_loudly(tmp_path: Path) -> None:
     assert module.main(["check", str(markdown)]) == 1
 
 
+def _write_constructed_brief(path: Path, rules: str, gates: str) -> None:
+    """Write a minimal campaign brief for assembler mutation pins."""
+    path.write_text(
+        "# constructed packet brief\n\n"
+        f"## Rules (non-negotiable)\n{rules}\n\n"
+        f"## Gates before hand-back\n{gates}\n",
+        encoding="utf-8",
+    )
+
+
 def _skill_script(skill: str, script: str) -> Path | None:
     roots = [
         Path.home() / ".agents" / "skills",
@@ -486,8 +521,8 @@ def test_sidecar_base_revision_mismatch_fails_check(tmp_path: Path) -> None:
     assert module.main(["check", str(mutated_md)]) == 1
 
 
-def test_verification_commands_are_shell_and_not_prose() -> None:
-    """Every commands[] entry is a shell command: bash -n, no backticks.
+def test_verification_commands_are_shell_and_not_prose(tmp_path: Path) -> None:
+    """Prose or invalid shell in commands[] fails build and check.
 
     pins: sepmo-e2/C-002
     """
@@ -503,6 +538,54 @@ def test_verification_commands_are_shell_and_not_prose() -> None:
         joined = " ".join(commands)
         assert "RePark lane" not in joined
         assert "Hand back" not in joined
+    invalid_brief = tmp_path / "invalid-gates.md"
+    _write_constructed_brief(
+        invalid_brief,
+        rules="Never push, never `gh`.",
+        gates="`make verify (`",
+    )
+    with pytest.raises(module.PacketError, match="bash -n"):
+        module.build_packet(
+            "e2cmd",
+            "actor",
+            "abc1234",
+            invalid_brief.read_text(encoding="utf-8"),
+            "muse",
+        )
+    assert (
+        module.main(
+            [
+                "build",
+                "--unit",
+                "e2cmd",
+                "--role",
+                "actor",
+                "--base",
+                "abc1234",
+                "--brief",
+                str(invalid_brief),
+                "--adapter",
+                "muse",
+                "--out-dir",
+                str(tmp_path / "invalid-out"),
+            ]
+        )
+        == 1
+    )
+    source_json = _FIXTURES / "ex25-actor.json"
+    mutated_md = tmp_path / "ex25-actor.md"
+    mutated_json = tmp_path / "ex25-actor.json"
+    payload = json.loads(source_json.read_text(encoding="utf-8"))
+    payload["verification"]["commands"] = ["Hand back the JSON", "not a shell command"]
+    payload["dynamic_markdown"] = module.render_dynamic(payload)
+    mutated_md.write_text(module.render_markdown(payload), encoding="utf-8")
+    mutated_json.write_text(module.dump_json(payload), encoding="utf-8")
+    packet, markdown = module.load_packet_files(mutated_md)
+    findings = module.check_packet(packet, markdown)
+    joined_findings = " ".join(findings)
+    assert findings, "prose verification commands must fail check"
+    assert "prose" in joined_findings or "shell command" in joined_findings
+    assert module.main(["check", str(mutated_md)]) == 1
 
 
 def test_icescan_preserves_cargo_lock_exception() -> None:
@@ -562,22 +645,48 @@ def test_prefix_negating_dynamic_fails_check(tmp_path: Path) -> None:
     assert module.main(["check", str(mutated_md)]) == 1
 
 
-def test_uncaptured_boundary_path_fails_build() -> None:
-    """A never-touch path missing from the captured lists fails loudly.
+def test_uncaptured_boundary_path_fails_build(tmp_path: Path) -> None:
+    """An unbackticked never-touch path fails build loudly.
 
     pins: sepmo-e2/C-002
     """
     module = _load()
+    brief = tmp_path / "uncaptured.md"
+    _write_constructed_brief(
+        brief,
+        rules=(
+            "Never touch crates/repark-core/src/session.rs or python/repark/src/repark/_compat."
+        ),
+        gates="`make ci`",
+    )
     with pytest.raises(module.PacketError, match="boundary path not captured"):
-        module.assert_boundaries_captured(
-            writable_clause="",
-            closed_clause="",
-            touch_spans=["`orphan/secret.py`"],
-            untouched_spans=[],
-            decisions=[],
-            writable=[],
-            closed=[],
+        module.build_packet(
+            "e2bound",
+            "actor",
+            "abc1234",
+            brief.read_text(encoding="utf-8"),
+            "muse",
         )
+    assert (
+        module.main(
+            [
+                "build",
+                "--unit",
+                "e2bound",
+                "--role",
+                "actor",
+                "--base",
+                "abc1234",
+                "--brief",
+                str(brief),
+                "--adapter",
+                "muse",
+                "--out-dir",
+                str(tmp_path / "uncaptured-out"),
+            ]
+        )
+        == 1
+    )
 
 
 def test_packet_format_states_dynamic_prefix_limit() -> None:

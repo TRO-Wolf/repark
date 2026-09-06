@@ -29,6 +29,7 @@ BARE_PATH: re.Pattern[str] = re.compile(
     r"\b(?:STATUS\.md|Cargo\.lock|Cargo\.toml|pyproject\.toml|"
     r"briefs/next-sequence\.md|BACKLOG_BASELINE|\.github/)\b"
 )
+BARE_DIRECTORY: re.Pattern[str] = re.compile(r"(?:[A-Za-z0-9_.-]+/){2,}[A-Za-z0-9_.-]+/?")
 WRITABLE_LABEL: re.Pattern[str] = re.compile(r"(?i)\bwritable\s*:")
 CLOSED_LABEL: re.Pattern[str] = re.compile(r"(?i)\bclosed\s*:")
 NEVER_TOUCH: re.Pattern[str] = re.compile(r"(?i)never touch\s+")
@@ -250,7 +251,8 @@ def assert_boundaries_captured(
     for clause in decisions:
         checks.append((clause, decisions + writable + closed))
     for span, bucket in checks:
-        for path in _paths_in(span):
+        scanned: list[str] = _unique(_paths_in(span) + _scan_boundary_paths(span))
+        for path in scanned:
             if not _is_captured(path, bucket):
                 raise PacketError(f"boundary path not captured: {path!r} in {span!r}")
 
@@ -456,6 +458,15 @@ def _paths_in(text: str) -> list[str]:
     for match in BARE_PATH.findall(text):
         found.append(match)
     return _unique(found)
+
+
+def _scan_boundary_paths(text: str) -> list[str]:
+    found: list[str] = []
+    for match in PATH_TOKEN.finditer(text):
+        found.append(match.group(0))
+    for match in BARE_DIRECTORY.finditer(text):
+        found.append(match.group(0))
+    return found
 
 
 def _is_pathish(token: str) -> bool:

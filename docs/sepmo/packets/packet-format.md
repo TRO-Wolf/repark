@@ -63,7 +63,9 @@ worker could still write a dynamic sentence that contradicts a stable rule.
 without `never`). It also requires the rendered trailer to equal the adapter
 `AUTHORED_BY` entry and refuses any other trailer form. It re-renders the
 dynamic section from the JSON sidecar fields and requires that text (and the
-prefix hash) to match the markdown.
+prefix hash) to match the markdown. Sidecar `authority.constraints` must equal
+the assembler `STABLE_RULES` tuple in order and text; dropping a rule from the
+JSON list fails `check` even when the markdown prefix is unchanged.
 
 ## Source identity and refresh
 
@@ -107,7 +109,7 @@ See the table above. Required on every packet.
 | `contract` | string | Engineering contract (`AGENTS.md`) |
 | `binding_version` | string | Bound SEPMO spine version |
 | `source_references` | string[] | Paths the worker may open for the full rule |
-| `constraints` | string[] | Verbatim stable-prefix rules; `check` requires each |
+| `constraints` | string[] | Verbatim stable-prefix rules. `check` requires `list(constraints) == list(STABLE_RULES)` in order and text. |
 
 Markdown does not restate the constraint sentences. It points at the prefix.
 

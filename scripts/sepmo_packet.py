@@ -277,6 +277,7 @@ def check_packet(
     if str(packet.get("dynamic_markdown") or "") != dynamic_of(markdown).lstrip("\n"):
         findings.append("JSON dynamic_markdown does not match the markdown dynamic section")
     findings.extend(check_constraints(prefix))
+    findings.extend(check_authority_constraints(packet))
     if sha256_text(prefix) != sha256_text(STABLE_PREFIX):
         findings.append("prefix hash mismatch")
     findings.extend(_check_rerender(packet, markdown))
@@ -306,6 +307,14 @@ def check_constraints(prefix: str) -> list[str]:
         if rule not in prefix:
             findings.append(f"missing stable rule: {rule}")
     return findings
+
+
+def check_authority_constraints(packet: dict[str, Any]) -> list[str]:
+    """Return a finding when sidecar constraints are not STABLE_RULES."""
+    actual: Any = packet.get("authority", {}).get("constraints")
+    if list(actual or []) != list(STABLE_RULES):
+        return ["authority.constraints does not match STABLE_RULES in order and text"]
+    return []
 
 
 def _check_rerender(packet: dict[str, Any], markdown: str) -> list[str]:

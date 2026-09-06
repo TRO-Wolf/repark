@@ -29,14 +29,16 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
-- `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 2):** compact worker The forged-trailer probe assembles its literal at runtime for the same reason.
+- `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,
-  constraint preservation (dropped rule, forged trailer, JSON/markdown
-  disagreement, prefix-negating dynamic, uncaptured boundary path), `bash -n`
-  on commands, icescan Cargo.lock exception, ex25 `covered`/`stayed` hand-back
-  keys, dynamic-only `diff`, no home paths, source-hash refresh, baseline sizes
-  versus E-0 cached/uncached ratios, and adoption `--brief` / `--followup`
-  names checked against wrapper text when present.
+  constraint preservation (dropped prefix rule, dropped sidecar
+  `authority.constraints` rule, forged trailer assembled at runtime,
+  JSON/markdown disagreement, prefix-negating dynamic, uncaptured unbackticked
+  boundary path through `build`), prose or invalid-shell `commands[]` through
+  `build`/`check`, icescan Cargo.lock exception, ex25 `covered`/`stayed`
+  hand-back keys, dynamic-only `diff`, no home paths, source-hash refresh,
+  baseline sizes versus E-0 cached/uncached ratios, and adoption `--brief` /
+  `--followup` names checked against wrapper text when present.
   pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** usage collector pins: Muse /
   Grok / OpenCode / Claude fixture shapes, Muse session-store join (both `msp-view-v1` and
