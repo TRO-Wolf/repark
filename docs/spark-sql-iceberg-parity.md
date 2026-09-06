@@ -6010,7 +6010,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `jsonValue()` is a UDT descriptor with
   `class=org.apache.spark.ml.linalg.VectorUDT` and
   `pyClass=pyspark.ml.linalg.VectorUDT`. `serialize(dense)` answers
-  `[1, None, None, [1.0, 0.0, 3.0]]`; `deserialize` is present.
+  `(1, None, None, [1.0, 0.0, 3.0])`; `deserialize` is present.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free `VectorUDT`.)*
 - **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, deepened
@@ -6110,7 +6110,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   transform rows equal the pre-save rows. `PipelineModel.load` of a Spark-saved
   tree raises `IllegalArgumentException: missing metadata.json under <path>`.
 - **Apache Spark** — `PipelineModel.write().save` writes `metadata/part-*` plus
-  `stages/N_*/{metadata,data}/*.parquet` (no `metadata.json`). Spark's
+  `stages/N_*/metadata/part-*.txt` plus `data/part-*.snappy.parquet` for stages that carry fitted data (`VectorAssembler` has `metadata/` only)`` (no `metadata.json`). Spark's
   `PipelineModel.load` of a repark-saved tree raises
   `AnalysisException: [PATH_NOT_FOUND] Path does not exist: file:<path>/metadata`.
   *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2; cross-load measured

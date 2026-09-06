@@ -119,7 +119,7 @@ rows are re-verdicted here.
 | `ml.ParamGridBuilder` | `addGrid` length 2; dict `baseOn` 20; empty length 1; `baseOn(param, 20)` TypeError; `baseOn((param, 20))` 20 | dict/grid equal (pairs + tuple EX-ML-4) | `ml/tuning.py` |
 | `ml.CrossValidator` | default `numFolds=3`, `parallelism=1` | equal | `ml/tuning.py` |
 | `ml.CrossValidatorModel` | `bestModel` intercept `1.9999999999999942`, coef `3.0000000000000018`; transform matches labels at 1e-6 | equal | `ml/tuning.py` |
-| `ml.MLWritable` | write+overwrite+save; Spark tree is `metadata/part-*` + `stages/N_*/{metadata,data}/*.parquet` | write API equal; layout EX-ML-8 | `ml/persistence.py` |
+| `ml.MLWritable` | write+overwrite+save; Spark tree is `metadata/part-*` + `stages/N_*/metadata/part-*.txt (+ data/part-*.snappy.parquet for fitted stages)` | write API equal; layout EX-ML-8 | `ml/persistence.py` |
 | `ml.MLReadable` | Spark round-trip transform equal; Spark `PipelineModel.load(<repark>)` → `AnalysisException: [PATH_NOT_FOUND] …/metadata`; repark `PipelineModel.load(<spark>)` → `IllegalArgumentException: missing metadata.json` | repark-ml round-trip; layout EX-ML-8 | `ml/persistence.py` |
 
 ## Round 2 (2026-09-06) — what round 1 did not measure
