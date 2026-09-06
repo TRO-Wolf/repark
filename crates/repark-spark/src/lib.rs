@@ -1,6 +1,7 @@
 //! repark-spark — the Spark SQL door.
 
 mod alter;
+mod alter_write_order;
 mod call;
 mod call_args;
 mod catalog_ops;

@@ -716,15 +716,6 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
     if !trimmed.starts_with("ALTER") || !trimmed.contains("TABLE") {
         return None;
     }
-    // WRITE ORDERED / DISTRIBUTED BY stay OUT (sort-order evolution, not partition-spec).
-    if trimmed.contains("WRITE ORDERED BY") || trimmed.contains("WRITE DISTRIBUTED BY") {
-        return Some(Err(DataFusionError::NotImplemented(
-            "ALTER TABLE WRITE ORDERED BY / WRITE DISTRIBUTED BY is not supported yet — \
-             sort-order evolution is out of I7 READY (partition-spec evolution is ADD/DROP/\
-             REPLACE PARTITION FIELD)"
-                .into(),
-        )));
-    }
     // Standalone MOVE without FIRST/AFTER on ADD (charter OUT).
     if trimmed.contains("ALTER COLUMN")
         && (trimmed.contains(" FIRST") || trimmed.contains(" AFTER "))

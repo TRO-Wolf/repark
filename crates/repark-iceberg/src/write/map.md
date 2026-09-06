@@ -327,6 +327,13 @@ repark-core's error map.
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
   `UpdateSchema`), partition-spec evolution (`apply_partition_spec_changes` /
   `PartitionSpecChange` → fork `UpdatePartitionSpec`). Return `iceberg::Result`.
+- `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
+  write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
+  `write.distribution-mode` property set: column names resolve case-insensitively against the
+  table schema (an unknown column is a loud `DataInvalid` and commits nothing), an empty field
+  list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
+  and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

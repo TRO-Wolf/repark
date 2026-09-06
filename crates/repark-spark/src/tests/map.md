@@ -14,6 +14,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
+  `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
+  spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new
+  order, the malformed shapes refusing, case-insensitive matching, identical-order id reuse,
+  and the transform-sort fork-ceiling refusal.
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
   upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
