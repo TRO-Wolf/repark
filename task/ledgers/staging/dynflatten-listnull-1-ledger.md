@@ -228,3 +228,18 @@ the bench loads repark via `createDataFrame`, not `read.parquet`. Gate-scale
 row-set pins `test_dynflatten_null_mask.py` stayed green on all eleven shapes
 (including `struct_d3` / `struct_d6`). No wall-clock pin: this unit does not
 change the flatten kernel.
+
+## Round 2 (2026-09-06, orchestrator after the critic)
+
+The critic PASSED the unit and filed one S2: §7's gate counts were measured at 15693229, before
+`origin/main` was merged in, and two `test_perf_ice_catalog_io_1` legs redded in the critic's
+clone. Re-measured on the merged tip with a release module rebuilt on that tip
+(`__debug_assertions__` False): `test_perf_ice_catalog_io_1.py` 33 passed / 2 skipped and the
+facade suite 5069 passed / 226 skipped, 0 failed — the two reds were a native module built
+before main's #392 (the default-on manifest cache) arrived, not a defect of this diff or of
+main. Parity on the tip: 599 passed (the earlier 574 predates the SEPMO pins main gained). The
+`cross_validator` live-shape leg passes outside the Grok sandbox; the §7 dbt row stands as the
+disclosed sandbox failure, and the orchestrator measured `make py-test-dbt` 59 passed / 1 skipped.
+Advisory F2: the `LargeList` / `FixedSizeList` / `ListView` / `LargeListView` arms in
+`spark_nullable.rs` mirror `relax_data_type` and are unreachable from DataFusion's parquet
+inference today (it yields only `List`); recorded in the crate map rather than pinned.
