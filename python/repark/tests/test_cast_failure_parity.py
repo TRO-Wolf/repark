@@ -423,13 +423,11 @@ ROWS: list[CastRow] = [
         family="timestamp_to_int",
         sql="SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n",
         spark=_one_row([("n", _I32, True)], {"n": 1577836800}),
-        repark=_one_row([("n", _I32, False)], {"n": 1577836800}),
+        repark=None,
         note=(
-            "DISCLOSURE (was a repark-raises split until 2026-08-12): the TZ-5 cast unit fixed "
-            "the timestamp→numeric scaling and un-refused the INT path, so repark now returns "
-            "Spark's unix seconds 1577836800 as int32 — the residual divergence is NULLABILITY "
-            "only (repark propagates the literal's non-null; Spark types the CAST nullable). "
-            "Same class as the G12 eqNullSafe nullability disclosures. The name predates the "
+            "The TZ-5 cast unit fixed the timestamp→numeric scaling and un-refused the INT "
+            "path; NULLABILITY-2 (2026-09-05) closed the nullability residual — unix seconds "
+            "1577836800 as nullable int32 on both engines. The name predates the "
             "flip; the rename ships alone per relocation discipline."
         ),
     ),
@@ -732,7 +730,7 @@ def test_content_disclosure_classifier_converged_arm(
     """CP-1: content disclosure landing ON the recorded Spark output → CONVERGED guidance."""
     import test_cast_failure_parity as cast_mod
 
-    row = next(row for row in ROWS if row.name == "timestamp_to_int_nullability")
+    row = _SYNTHETIC_CONTENT_DISCLOSURE
     assert row.kind == "content" and row.repark is not None and row.spark is not None
     golden = row.spark
 
@@ -754,7 +752,7 @@ def test_content_disclosure_classifier_regression_arm(
     """CP-1: content disclosure landing on NEITHER half → regression guidance."""
     import test_cast_failure_parity as cast_mod
 
-    row = next(row for row in ROWS if row.name == "timestamp_to_int_nullability")
+    row = _SYNTHETIC_CONTENT_DISCLOSURE
     wrong = _one_row([("n", _I32, False)], {"n": 99})
 
     def _fake_wrong(_session: Any, _row: CastRow) -> pa.Table:
@@ -771,6 +769,16 @@ def test_content_disclosure_classifier_regression_arm(
 
 # Synthetic exemplar: the classifier arm must stay proven even with no real row exercising it;
 # it never joins ROWS so the budget pins see only real rows.
+_SYNTHETIC_CONTENT_DISCLOSURE = CastRow(
+    name="synthetic_content_disclosure_exemplar",
+    kind="content",
+    entry="sql",
+    family="synthetic",
+    sql="SELECT 1 AS n",
+    spark=_one_row([("n", _I32, True)], {"n": 1577836800}),
+    repark=_one_row([("n", _I32, False)], {"n": 1577836800}),
+    note="synthetic CP-1 exemplar for the content classifier arms; not in ROWS.",
+)
 _SYNTHETIC_SPARK_RAISES_SPLIT = CastRow(
     name="synthetic_spark_raises_split_exemplar",
     kind="split",

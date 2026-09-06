@@ -186,22 +186,25 @@ def test_coalesce_with_int_stays_wide_on_repark() -> None:
 
 
 def test_narrowed_literal_in_array_struct_map() -> None:
-    """pins: types-1/C-001 — array/struct/map of narrowed literals carry INT, both doors."""
+    """pins: types-1/C-001 — array/struct/map of narrowed literals carry INT, both doors.
+
+    Flags converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal).
+    """
     session = _session()
     frame = _seed(session)
     array = "SELECT array(1, 2) AS r"
     assert _door_type(session, array) == ("list<element: int32>", False)
     assert session.sql(array).toArrow().column("r").to_pylist() == [[1, 2]]
     facade_array = frame.select(F.array(F.lit(1), F.lit(2)).alias("r"))
-    assert _frame_type(facade_array) == ("list<item: int32>", True)
+    assert _frame_type(facade_array) == ("list<item: int32>", False)
     assert facade_array.toArrow().column("r").to_pylist() == [[1, 2], [1, 2], [1, 2]]
     struct = "SELECT struct(1, 'a') AS r"
-    assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", True)
+    assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", False)
     assert session.sql(struct).toArrow().column("r").to_pylist() == [{"c0": 1, "c1": "a"}]
     facade_struct = frame.select(F.struct(F.lit(1), F.lit("a")).alias("r"))
-    assert _frame_type(facade_struct) == ("struct<1: int32, a: string>", True)
+    assert _frame_type(facade_struct) == ("struct<1: int32, a: string>", False)
     mapping = "SELECT map(1, 'a') AS r"
-    assert _door_type(session, mapping) == ("map<int32, string>", True)
+    assert _door_type(session, mapping) == ("map<int32, string>", False)
     assert session.sql(mapping).toArrow().column("r").to_pylist() == [[(1, "a")]]
 
 
