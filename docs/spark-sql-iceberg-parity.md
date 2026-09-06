@@ -4876,29 +4876,54 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   back, same bed, control paired**: no overhead on the unordered path (the control ratios
   overlap on both cells), and the declared order costs +71 ms best-median (+5.4%) on the 1e6
   overwrite (measured pre-merge; the merged tree routes the stream cells to 8 files —
-  baseline §9 and §10). Pins:
+  baseline §9 and §10). Round 2 (2026-09-06): dotted nested names (`WRITE ORDERED BY (st.a)`)
+  resolve to the nested field id and sort on the nested value with parent-null masking,
+  Spark-equal on v2 and v3 (live pin); transform orders stay refused, rowed in
+  `WRITE-ORDER-TRANSFORM-1`. Pins:
   `crates/repark-spark/src/tests/alter_write_order.rs` (the five forms plus
   the bare `DISTRIBUTED BY PARTITION ORDERED BY` spelling Spark also accepts, the `UNORDERED`
   reset, bad-column and malformed-shape refusals committing nothing, case-insensitive matching,
-  identical-order id reuse, the transform-sort fork-ceiling refusal),
+  identical-order id reuse, the transform-sort fork-ceiling refusal, the dotted nested-name
+  resolution),
   `crates/repark-iceberg/src/write/distribution/tests.rs` (the `none`/`hash`/`range` layouts, the
   unknown-mode planning error, cross-batch sorting, monotone committed files on both funnel
-  entries), and `python/repark/tests/test_write_order_dist_1.py` (every `metadata.json`
-  transition on v2 and v3, the refusals, the gating counts, monotone overwrite/MERGE files, the
-  replace shape; live: the same five statements leave equal metadata on both engines, and the
-  same DDL + overwrite commits the same row set per value). All ten always-run pins fail on the
+  entries) and `distribution/sort_order_tests.rs` (the nested sort, the transform refusal),
+  and `python/repark/tests/test_write_order_dist_1.py` (every `metadata.json`
+  transition on v2 and v3, the refusals, the transform refusal, the gating counts, monotone
+  overwrite/MERGE files, the dotted DDL and nested-monotone files, the
+  replace shape; live: the same five statements leave equal metadata on both engines, the
+  same DDL + overwrite commits the same row set per value, and the dotted order leaves equal
+  metadata on v2 and v3). All ten round-1 always-run pins fail on the
   base native and pass on the branch. Numbers and commands:
   `docs/perf/iceberg-write-baseline.md` §10.
 
+- **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
+  accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
+  order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,
+  `write.distribution-mode = range`, identically on v2 and v3 (live Spark 4.1.2). RePark's DDL
+  refuses loud — `transform \`bucket(…)\` is not supported yet — the fork's sort-order action
+  only models identity sort fields` — and commits nothing, and a write into a transform-ordered
+  table refuses loud on the same ceiling (`uses transform \`bucket[4]\` on source id 1, only
+  identity sort fields are supported`, measured on a Spark-registered bucket-order table whose
+  2,000 rows read back before the refused overwrite). The fork's `ReplaceSortOrderAction`
+  hardcodes `Transform::Identity` and `TableCommit`'s builder is `pub(crate)`, so no RePark-side
+  commit path can land a transform sort field — support needs fork work plus DDL parse and
+  per-writer sort on the transformed value. BACKLOG, stated here rather than silent.
+  Red-when-fixed pins (they assert today's refusal and red once the behavior lands): the DDL
+  refusal (`crates/repark-spark/src/tests/alter_write_order.rs` and
+  `python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_refuses_without_committing`)
+  and the write-path refusal
+  (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
 - **WRITE-RANGE-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1). On a partitioned table
   `write.distribution-mode = range` takes the hash shape plus per-file sort (pinned in
-  `WRITE-ORDER-DIST-1`); the unbuilt half is global cross-file ranging — key ranges
-  partitioned across files so one file's keys end where the next file's begin. An unpartitioned
-  table with a declared order commits files that are each monotone but whose key ranges
-  overlap, where Spark's range exchange shuffle-sorts across the table. BACKLOG: the range
-  shuffle is a unit of its own, and this unit's `range` is the hash shape plus the per-writer
-  sort, stated here rather than silent. *(oracle: documented — Spark's range-mode exchange; the
-  unpartitioned range layout was not live-measured.)*
+  `WRITE-ORDER-DIST-1`); the unbuilt half is an explicit global range shuffle — key ranges
+  partitioned across files by contract. What is measured (round-1 critic, live Spark 4.1.2 and
+  RePark): an unpartitioned ordered overwrite on the stream path lands 3 contiguous gapless
+  ranges, not the monotone-but-overlapping files this row first claimed — and a CTAS never
+  carries an order (a replace resets the default to 0, pinned in `WRITE-ORDER-DIST-1` C-010),
+  so the CTAS half of the residual never materializes. BACKLOG: the range shuffle stays a unit
+  of its own, and this unit's `range` is the hash shape plus the per-writer sort, stated here
+  rather than silent.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task

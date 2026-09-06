@@ -3,7 +3,7 @@
 **Date:** 2026-09-06 · **Branch:** `feat/write-order-dist-1` · **Base:** `origin/main` `1883968b` (v1.1.0) ·
 **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
-**Registry:** `V3-COV-5` **FIXED**; `RDF-SORT-1`, `WRITE-DISTRIBUTION-1` gain a dated sentence; new row `WRITE-ORDER-DIST-1` **FIXED**; new row `WRITE-RANGE-1` BACKLOG (global cross-file ranging).
+**Registry:** `V3-COV-5` **FIXED**; `RDF-SORT-1`, `WRITE-DISTRIBUTION-1` gain a dated sentence; new row `WRITE-ORDER-DIST-1` **FIXED**; new row `WRITE-RANGE-1` BACKLOG (global cross-file ranging). Round 2: new row `WRITE-ORDER-TRANSFORM-1` BACKLOG (transform sort fields), `WRITE-RANGE-1` reworded to the measured shape, dotted nested names built into `WRITE-ORDER-DIST-1`.
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
@@ -29,13 +29,82 @@ pin; `STATUS.md`; `briefs/next-sequence.md`.
 
 **Writable paths:** `crates/repark-spark/src/{alter.rs,alter_write_order.rs,lib.rs,router.rs,map.md}`,
 `crates/repark-spark/src/tests/{alter.rs,alter_write_order.rs,mod.rs,map.md}`,
-`crates/repark-iceberg/src/write/{sort_order.rs,distribution.rs,append.rs,merge/mod.rs,mod.rs,map.md,merge/map.md}`,
+`crates/repark-iceberg/src/write/{sort_order.rs,distribution.rs,distribution/{router.rs,tests.rs,sort_order_tests.rs,map.md},append.rs,merge/mod.rs,mod.rs,map.md,merge/map.md}`,
 `scripts/{check_rust_file_size.py,map.md}` (ratchet-down rows only),
 `python/repark/tests/{test_write_order_dist_1.py,_v3_statement_coverage_golden.py,_v3_statement_coverage_repark.py,map.md}`,
 `python/repark-parity/{tests/test_cap_1_source_file_line_cap.py,tests/map.md,bench/writepath/probe_cell.py,bench/writepath/map.md}`,
 `docs/{map.md,spark-sql-iceberg-parity.md}`, `docs/perf/{iceberg-write-baseline.md,map.md}`,
 this ledger and its `staging/map.md` row. Closed: `Cargo.toml`, `Cargo.lock`, every
 dependency, `.github/`, every other ledger.
+
+## 0. Round 2 — critic findings F1–F4 (2026-09-06)
+
+Critic round 1 (`$HOME/repark-lanes/briefs/writeorder-critic/report-r1.md`) passed the unit
+with nine findings, highest S3; F1–F4 are this round's scope (F5–F9 need no action — F5
+records a keeping-falsehood exception, F6 is an orchestrator note, F7–F9 are observations).
+Main moved (RDF-SCHEMA-EVO-1 #408, fork pin RP-15 `8bc325a` → `85db42f`), so the round opens
+with `git merge origin/main` (clean, map/registry unions; `Cargo.toml`/`Cargo.lock` take
+main's side per brief order — the unit makes no dependency move of its own) and a
+release-native rebuild from the merged tip, rebuilt again after the F2 code lands; every
+number below is measured on the merged tip's native. Dispositions:
+
+- F1 (S3, transform orders) — ROWED as registry divergence `WRITE-ORDER-TRANSFORM-1`
+  BACKLOG. Spark 4.1.2 accepts `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` on v2 and
+  v3 (order 1, default 1, `range`; cells in `/tmp/wor2-out/spark-cells.json`). RePark's DDL
+  refuses loud and commits nothing, and a write into a Spark-registered bucket-order table
+  refuses loud (`only identity sort fields are supported`; the table's 2,000 rows read back
+  before the refused overwrite). Full support needs fork work — the pinned
+  `ReplaceSortOrderAction` hardcodes `Transform::Identity` and `TableCommit`'s builder is
+  `pub(crate)`, so no RePark-side commit path can land a transform sort field — plus DDL
+  parse and per-writer sort on the transformed value. Red-when-fixed pins on both paths: DDL
+  (the pre-existing Rust refusal pin plus facade
+  `test_write_order_transform_sort_refuses_without_committing`) and write
+  (`transform_sort_order_refuses_the_write_loud`, a bucket-ordered table committed through
+  `TableCreation`).
+- F2 (S3, dotted nested field) — BUILT. `WRITE ORDERED BY (st.a)` parses dotted names,
+  resolves the nested field id through struct types (case-insensitive, exact-case canonical
+  for the fork), and sorts on the nested value through a struct-field expression with
+  parent-null masking. Pinned at Rust (DDL resolution to source id 3 + refusal shapes;
+  nested sort across batch boundaries including a null struct) and facade (DDL metadata on
+  v2 and v3 with source id 6, nested-monotone overwrite files, live Spark-equal metadata on
+  v2 and v3).
+- F3 (S3, M1 record) — RECORD CORRECTED (§6, AT-7): the predicate half reds the two funnel
+  sort pins, not three — the direct-helper sort tests bypass the predicate and stay green;
+  the helper-gut variant (M2b) reds all four sort-behavior pins plus the transform refusal.
+  Re-measured on the round-2 tree (25 distribution tests): R2 2 failed/23 passed, M1 5
+  failed/20 passed, M2b 5 failed/20 passed.
+- F4 (S4, `WRITE-RANGE-1`) — REWORDED to the measured shape and the "not live-measured"
+  hedge dropped: the round-1 critic measured an unpartitioned ordered overwrite on the
+  stream path as 3 contiguous gapless ranges (report-r1.md "Unpartitioned ordered overwrite:
+  3 files, contiguous gapless ranges (F4)"), and a CTAS never carries an order (the C-010
+  replace reset). The residual is the unbuilt explicit range shuffle, not overlapping files.
+
+Round-2 gates:
+
+| gate | exit | result |
+|---|---|---|
+| `make verify` | 0 | `ci` plus the Rust workspace suite: 48 ok result lines, 0 failed |
+| `.venv/bin/python -m pytest python/repark/tests/test_write_order_dist_1.py python/repark/tests/test_write_distribution_1.py python/repark/tests/test_write_distribution_2.py python/repark/tests/test_perf_ice_writepath_1.py -q` | 0 | 26 passed, 8 skipped (the live legs) on the round-2 release native |
+| `.venv/bin/python -m pytest python/repark/tests/test_mw7_scale_smoke.py -q -k copy_on_write` | 0 | 1 passed |
+| `REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_write_order_dist_1.py -q -rs` | 0 | 16 passed in 20.30 s, Spark 4.1.2, one JVM, reaped at exit |
+| `REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_write_distribution_2.py -q` | 0 | 5 passed, one JVM, reaped at exit (merge safety) |
+| `make py-test-facade` | 0 | 5,348 passed, 257 skipped in 698.54 s (the DEBUG native was replaced with the release native afterwards and the pins re-read green: 13 passed, 3 skipped) |
+| `make py-test-dbt` | 0 | 59 passed, 1 skipped in 33.75 s |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 | 624 passed in 28.61 s |
+| `make check-map-sync check-ledger-grammar check-ledgers check-docs-compaction check-rust-file-size check-lib-py` | 0 | 224 maps; 69 live ledgers/351 clauses/933 pins; 265 ledgers/769 links; clean; 427 + 568 files |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 | clean |
+| `uvx typos@1.47.2 .` | 0 | clean |
+| `git diff origin/main -- Cargo.toml Cargo.lock` | — | empty (the round-2 merge takes main's RP-15 pin; the unit moves nothing) |
+| `.venv/bin/python -m pytest python/repark-parity/tests/test_cap_1_source_file_line_cap.py -q` | 0 | 23 passed |
+| `git merge-base --is-ancestor origin/main HEAD` | 0 | the merge holds |
+
+Disk at round-2 hand-back: 883 GB free before the facade run. The lane keeps `target/`
+(debug plus release natives), `.ivy2/` (the ivy redirect), and `/tmp/wor2-out/` (the round-2
+oracle cells, struct seed, and Spark/RePark probe warehouses — outside the repo, never
+staged). No JVM or pytest this round started is left running; `pgrep -c cargo` read 0
+before the merge and before the facade run. pyspark 4.1.2 for the live legs came from
+`/tmp/sparkenv` via
+`PYTHONPATH` (py4j + pyspark only — nothing in the lane `.venv` was re-provisioned).
 
 ## Plan
 
@@ -97,7 +166,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_write_order_dist_1.py]
     - id: AT-7
       status: ATTACKED
-      evidence: The base native reds all ten always-run facade pins; the unwired gate reds the none pin alone; the unwired sort predicate reds the three sort pins. Section 6.
+      evidence: The round-1 base native reds the ten round-1 always-run facade pins; the unwired gate reds the two none pins; the unwired sort predicate reds the two funnel sort pins while the direct-helper sort tests stay green (they bypass the predicate); the helper-gut variant reds all four sort-behavior pins plus the transform refusal. The two round-2 acceptance pins red on base by the R1 record (base refuses every WRITE form); the transform-refusal pin is green on base (the blanket refusal matches) and red-when-fixed. Section 6.
       artifacts: [task/ledgers/staging/write-order-dist-1-ledger.md]
     - id: AT-8
       status: ATTACKED
@@ -118,12 +187,13 @@ COVERAGE_ATTESTATION:
 | # | provocation | pins that redden |
 |---|---|---|
 | R1 | the base release native (`origin/main` `1883968b`, own worktree + venv) under the ten always-run facade pins | all ten: the five DDL transitions, the bad-column/malformed refusals (wrong refusal, needle missing), the `none` gating count, the sorted overwrite/MERGE legs, the replace shape — `10 failed, 1 skipped in 11.26s`; the same file on the branch reads `10 passed, 1 skipped` |
-| R2 | `distribution_is_none` forced to `Ok(false)` (the gate unwired, hash unconditional) | `none_distribution_mode_skips_the_hash_rule` alone: 8 files where 32 are expected; the other thirteen distribution pins stay green |
-| M1 | `default_sort_is_declared` forced to `false` on top of R2 (no writer ever sorts) | the three sort pins — `declared_sort_order_sorts_batches_across_batch_boundaries`, `written_files_are_sorted_by_the_declared_order`, `unpartitioned_sorted_write_keeps_sorted_files` — plus the R2 pin still red: 4 failed, 10 passed |
+| R2 | `distribution_is_none` none-arm forced to `Ok(false)` (the gate unwired, hash unconditional; the unknown-mode error arm stays intact) | the two none pins — `none_distribution_mode_skips_the_hash_rule` (8 files where 32 are expected) and `none_distribution_mode_deals_stream_batches_round_robin`: 2 failed, 23 passed on the round-2 tree (the round-1 "alone … thirteen stay green" predates the merge's round-robin pin) |
+| M1 | `default_sort_is_declared` forced to `false` on top of R2 (no writer ever sorts) | the predicate half reds the two funnel sort pins — `written_files_are_sorted_by_the_declared_order`, `unpartitioned_sorted_write_keeps_sorted_files` — plus the R2 pair still red, plus `transform_sort_order_refuses_the_write_loud` via its setup assert: 5 failed, 20 passed on the round-2 tree. The direct-helper sort tests (`declared_sort_order_sorts_batches_across_batch_boundaries`, `nested_sort_field_sorts_on_the_nested_value`) stay green — they drive `sort_batches_by_default_order`, which reads the order, not the predicate (the round-1 "three sort pins … 4 failed" corrected 2026-09-06, F3) |
+| M2b | `sort_batches_by_default_order` gutted to return its input unsorted | all four sort-behavior pins — the direct-helper pair and the funnel pair — plus the transform refusal (no error is raised): 5 failed, 20 passed |
 | — | the C-010 first draft asserted sorted files after DDL + CTAS replace | red on the branch itself (`AssertionError` on `part=0`, 15,000 rows unsorted) — the pin bit, the premise was wrong, and the oracle settled it (§8 addendum); the corrected shape pins green |
 | — | the old `alter_unsupported_forms_refuse_loud` WRITE blocks | reddened `make verify` (`816 passed; 1 failed`) until retired — the previous contract's pins caught exactly the behavior this unit changes |
 
-None is committed: R2/M1 were uncommitted edits, verified red, then restored with `git checkout`.
+None is committed: R2/M1/M2b were uncommitted edits, verified red, then restored (round-1 via `git checkout`, round-2 via a backup copy diffed clean afterwards).
 
 ## 7. Design, and the alternatives
 
