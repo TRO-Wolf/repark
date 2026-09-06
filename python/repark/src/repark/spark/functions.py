@@ -1980,6 +1980,6 @@ __all__ = [
     "zeroifnull",
 ]
 # fmt: off
-from repark.spark import functions_lambda as _fl, functions_try as _ft  # noqa: E402, I001
-from repark.spark.functions_declared import install_into as _id  # noqa: E402
-_id(globals(),__all__) or _fl.install_into(globals(),__all__) or _ft.install_into(globals(),__all__)
+from repark.spark import functions_declared as _fd, functions_json as _fj  # noqa: E402, I001
+from repark.spark import functions_lambda as _fl, functions_try as _ft  # noqa: E402
+_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj)]

@@ -21,10 +21,12 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_arrays_zip_refuses() -> None:
-    """arrays_zip refuses; Spark zips element-wise with NULL fill (EX-FN-1)."""
-    with pytest.raises(UnsupportedOperationException, match="arrays_zip"):
-        F.arrays_zip("a", "b")
+def test_arrays_zip_names_its_fields_by_position(spark: ReparkSession) -> None:
+    """arrays_zip zips with NULL fill; the field names are positional (FNP9-ARRAYS-ZIP-NAMES-1)."""
+    frame = spark.createDataFrame([([1, 2], ["x"])], "a ARRAY<INT>, b ARRAY<STRING>")
+    table = frame.select(F.arrays_zip("a", "b").alias("v")).toArrow()
+    assert table.column("v").to_pylist() == [[{"0": 1, "1": "x"}, {"0": 2, "1": None}]]
+    assert [field.name for field in table.schema.field("v").type.value_type] == ["0", "1"]
 
 
 def test_posexplode_pair_refuses() -> None:
@@ -129,12 +131,10 @@ def test_replace_dollar_arm_answers_backslash(spark: ReparkSession) -> None:
     assert [row["v"] for row in rows] == ["\\" * 3]
 
 
-def test_schema_of_pair_refuses() -> None:
-    """schema_of_csv and schema_of_json refuse; Spark infers the structs (EX-FN-16)."""
+def test_schema_of_csv_refuses() -> None:
+    """schema_of_csv refuses; Spark infers the struct (EX-FN-16)."""
     with pytest.raises(UnsupportedOperationException, match="schema_of_csv"):
         F.schema_of_csv("line")
-    with pytest.raises(UnsupportedOperationException, match="schema_of_json"):
-        F.schema_of_json("line")
 
 
 def test_sentences_refuses() -> None:

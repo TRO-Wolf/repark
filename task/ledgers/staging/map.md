@@ -276,6 +276,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `EX-SES-1`..`EX-SES-5`, pins in
   `python/repark/tests/test_examples_window_catalog.py`. `risk_tier: standard`. Branch
   `docs/ex-21-catalog-session`. pins: ex-21-catalog-session/C-001
+- [fnp-9-collections-json-ledger.md](fnp-9-collections-json-ledger.md) — **FNP-9/10
+  (2026-09-05), in flight:** the collections and JSON function families. Ten names built
+  Spark-equal on both Spark-facade doors (`get_json_object`, `json_array_length`,
+  `json_object_keys`, `to_json`, `from_json`, `schema_of_json`, `create_map`, `map_concat`,
+  `array_insert`, `arrays_zip`); seven §7 rows file what the unit measured and did not build,
+  each with a pin that reds when the seam closes. Six unbuilt names share ONE seam — Spark's
+  multi-column generators (`posexplode`, `posexplode_outer`, `inline`, `inline_outer`, `stack`,
+  facade `json_tuple`) need a plan shape the facade select path does not have, so the seam is
+  filed once instead of six one-column impostors. The JSON reader is hand-written so
+  `Cargo.lock` stays untouched, and it is the better fit anyway — Spark keeps an integer token
+  verbatim and re-renders the rest through `Double.toString`.
+  Branch `feat/fnp-9-collections-json`.
+  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009
 - [fn-regexp-extract-1-ledger.md](fn-regexp-extract-1-ledger.md) — **FN-REGEXP-EXTRACT-1
   (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (the last
   regexp kernel; closes the R-FN-BATCH1 gap the FN-FIX-2-CTRL-1 control exposed).

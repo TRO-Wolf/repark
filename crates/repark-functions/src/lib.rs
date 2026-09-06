@@ -24,6 +24,7 @@ pub mod higher_order;
 pub mod instant_ts;
 pub mod integer_spark;
 mod java_regex;
+pub mod json;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
@@ -99,6 +100,9 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in collection::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    for udf in json::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in url::functions() {
