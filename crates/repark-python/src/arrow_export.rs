@@ -17,6 +17,17 @@ use crate::fence::{fence_stream_poll, fenced_panic_detail};
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
+const CONTAINABLE_PANIC_PAYLOADS: &[&str] = &[
+    "partition not used yet",
+    "at least one spill reader should exist",
+    "at least one receiver should exist",
+    "right_data must be present",
+    "left_stream must be set after spill future resolves",
+    "left_schema must be set",
+    "right bitmap should be available",
+    "without Active spill state",
+];
+
 const REFUSAL_CONTAINMENT_NOTE: &str = concat!(
     "REPARK: the bounded memory pool refused this plan; the engine did not survive that ",
     "refusal, so repark reports the refusal itself."
@@ -67,6 +78,12 @@ impl StreamingBatchReader {
         let Some(detail) = fenced_panic_detail(&error).map(ToOwned::to_owned) else {
             return error;
         };
+        if !CONTAINABLE_PANIC_PAYLOADS
+            .iter()
+            .any(|payload| detail.contains(payload))
+        {
+            return error;
+        }
         let Some(log) = self.refusals.as_ref() else {
             return error;
         };
@@ -468,10 +485,14 @@ mod tests {
         probe_reader(stream, refusals)
     }
 
-    fn fenced_panic() -> ArrowError {
-        crate::fence::fence_stream_poll("Probe.poll", || panic!("partition not used yet"))
+    fn fenced_panic_with(payload: &'static str) -> ArrowError {
+        crate::fence::fence_stream_poll("Probe.poll", || panic!("{payload}"))
             .expect("a fenced panic yields one item")
             .expect_err("the item is the Err arm")
+    }
+
+    fn fenced_panic() -> ArrowError {
+        fenced_panic_with("partition not used yet")
     }
 
     fn refuse_once(log: &Arc<PoolRefusalLog>) {
@@ -513,6 +534,42 @@ mod tests {
             message.contains(REFUSAL_CONTAINMENT_NOTE),
             "the containment is disclosed: {message}"
         );
+    }
+
+    #[test]
+    fn an_unrelated_panic_after_a_pool_refusal_stays_the_bug_report() {
+        let log = Arc::new(PoolRefusalLog::default());
+        let reader = empty_reader(Some(Arc::clone(&log)));
+        refuse_once(&log);
+        let injected = fenced_panic_with("index out of bounds: the len is 3 but the index is 7");
+        let message = reader.as_pool_refusal(injected).to_string();
+        assert!(
+            message.contains("a Rust panic was caught"),
+            "a panic the pool refusal cannot explain is still a bug report: {message}"
+        );
+        assert!(
+            !message.contains("fair("),
+            "an unrelated panic is never dressed up as a pool refusal: {message}"
+        );
+    }
+
+    #[test]
+    fn every_allow_listed_payload_is_contained_after_a_refusal() {
+        for payload in CONTAINABLE_PANIC_PAYLOADS {
+            let log = Arc::new(PoolRefusalLog::default());
+            let reader = empty_reader(Some(Arc::clone(&log)));
+            refuse_once(&log);
+            let framed = crate::fence::fence_stream_poll("Probe.poll", || {
+                panic!("some frame: {payload} at some line")
+            })
+            .expect("a fenced panic yields one item")
+            .expect_err("the item is the Err arm");
+            let message = reader.as_pool_refusal(framed).to_string();
+            assert!(
+                message.contains("fair(") && !message.contains("a Rust panic was caught"),
+                "allow-listed payload {payload:?} must be contained: {message}"
+            );
+        }
     }
 
     #[test]
