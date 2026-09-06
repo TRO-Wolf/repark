@@ -6,8 +6,8 @@ use chrono::{DateTime, Days, Months, NaiveDate, TimeDelta};
 use datafusion::arrow::array::{Array, ArrayRef, Date32Array, Float64Array, PrimitiveArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
-    DataType, Date32Type, Int64Type, IntervalDayTimeType, IntervalMonthDayNanoType, IntervalUnit,
-    IntervalYearMonthType, TimeUnit, TimestampMicrosecondType,
+    DataType, Date32Type, Int32Type, Int64Type, IntervalDayTimeType, IntervalMonthDayNanoType,
+    IntervalUnit, IntervalYearMonthType, TimeUnit, TimestampMicrosecondType,
 };
 use datafusion::arrow::datatypes::{IntervalDayTime, IntervalMonthDayNano};
 use datafusion::common::{Result, exec_err};
@@ -227,8 +227,11 @@ fn numeric_f64(array: &dyn Array, row: usize) -> Result<Option<f64>> {
         #[allow(clippy::cast_precision_loss)]
         return Ok(Some(ints.value(row) as f64));
     }
+    if let Some(ints) = array.as_any().downcast_ref::<PrimitiveArray<Int32Type>>() {
+        return Ok(Some(f64::from(ints.value(row))));
+    }
     exec_err!(
-        "try_divide interval divisor expected Float64 or Int64, got {}",
+        "try_divide interval divisor expected Float64, Int64 or Int32, got {}",
         array.data_type()
     )
 }

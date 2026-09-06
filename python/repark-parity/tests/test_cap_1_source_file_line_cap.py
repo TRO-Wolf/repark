@@ -27,7 +27,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/session/tests/session.rs", 1412),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
     ("crates/repark-functions/src/analyzer.rs", 1142),
-    ("crates/repark-functions/src/datetime.rs", 1704),
+    ("crates/repark-functions/src/datetime.rs", 1700),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1630),
     ("crates/repark-iceberg/src/write/append.rs", 1884),
@@ -91,7 +91,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_ta.py", 1020),
     ("python/repark/tests/test_tpch_compare_unit.py", 1551),
     ("python/repark/tests/test_udf.py", 1170),
-    ("python/repark/tests/test_window_parity.py", 1481),
+    ("python/repark/tests/test_window_parity.py", 1422),
 )
 
 

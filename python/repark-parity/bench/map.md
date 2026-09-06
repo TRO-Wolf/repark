@@ -52,6 +52,10 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   `degraded` / `clean_error` / `abort` / `wrong`. One subprocess per cell under an
   address-space cap; peak RSS polled from `/proc`; the answer compared against the unbounded
   run. See [spill/map.md](spill/map.md). pins: h3-spill-1/C-001, C-002
+- [icescan/](icescan/map.md) — **PERF-ICE-SCAN-1** read cells: bed generator plus the
+  §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
+  See [icescan/map.md](icescan/map.md).
+  pins: perf-ice-scan-1/C-009
 - `map.md` — this file.
 
 ## I want to…

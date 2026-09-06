@@ -238,11 +238,11 @@ def test_explode_reserved_and_mixed_case_array_ident(spark: ReparkSession) -> No
     reserved = frame.select(frame.id, F.explode(frame["order"]).alias("e")).orderBy("id", "e")
     reserved_table = reserved.to_arrow()
     assert [(r["id"], r["e"]) for r in reserved_table.to_pylist()] == [(1, 10), (1, 20)]
-    assert reserved_table.schema.field("e").type == pa.int64()
+    assert reserved_table.schema.field("e").type == pa.int32()
 
     mixed = frame.select(frame.id, F.explode(frame["MyArr"]).alias("e")).to_arrow()
     assert [(r["id"], r["e"]) for r in mixed.to_pylist()] == [(1, 1)]
-    assert mixed.schema.field("e").type == pa.int64()
+    assert mixed.schema.field("e").type == pa.int32()
 
 
 def test_explode_hostile_column_name_is_identifier_not_injection(frame: object) -> None:
@@ -308,8 +308,8 @@ def test_explode_compound_mixed_case_sibling(spark: ReparkSession) -> None:
     )
     table = out.to_arrow()
     assert [(r["x"], r["e"]) for r in table.to_pylist()] == [(7, 10), (7, 20)]
-    assert table.schema.field("x").type == pa.int64()
-    assert table.schema.field("e").type == pa.int64()
+    assert table.schema.field("x").type == pa.int32()
+    assert table.schema.field("e").type == pa.int32()
 
 
 def test_explode_outer_nested_list_element_type(spark: ReparkSession) -> None:
@@ -390,7 +390,7 @@ def test_explode_array_of_struct_allowed(spark: ReparkSession) -> None:
     rows = out.to_pylist()
     assert rows == [{"e": {"x": 10}}, {"e": {"x": 20}}]
     assert pa.types.is_struct(out.schema.field("e").type)
-    assert out.schema.field("e").type.field("x").type == pa.int64()
+    assert out.schema.field("e").type.field("x").type == pa.int32()
 
 
 def test_explode_outer_coalesce_preserves_element_type(spark: ReparkSession) -> None:

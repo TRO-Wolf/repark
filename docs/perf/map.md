@@ -65,6 +65,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   Earlier tables untouched.
   pins: perf-ice-catalog-io-2/C-006
 
+- [iceberg-scan-baseline.md](iceberg-scan-baseline.md) — **PERF-ICE-SCAN-1
+  (2026-09-05):** the `count_star`, `count_id`, `sum_all` and `string_len` cells at 1e6 and
+  1e7 before (pinned fork) and after (temporary F-27 path override), each against its own
+  re-measured parquet floor. `count(*)` folds: 86.5 → 2.0 ms at 1e6 (parquet 1.8 ms),
+  686 → 2.5 ms at 1e7. Full scans go N=1 → N=8 but MISS the 1.5×-of-parquet target
+  honestly (1.8×/2.2× at 1e6, 2.4×/3.6× at 1e7); §3 decomposes the residue into ~1 ms
+  planning, ~10 ms fixed per query, ~2× per-byte, and a `count(col)` statistics-pushdown
+  gap. The DV leg stays unfolded and answers 990,000 in 4.6 ms.
+  pins: perf-ice-scan-1/C-008, C-011
+
 - [facade-boundary-baseline.md](facade-boundary-baseline.md) — **PERF-FACADE-1
   (2026-09-04):** the `collect()` and `withColumn`-chain cells, produced by the tracked runner
   [python/repark-parity/bench/facade/](../../python/repark-parity/bench/facade/map.md)

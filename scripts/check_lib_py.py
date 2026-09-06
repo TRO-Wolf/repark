@@ -190,7 +190,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar UDF execution from registration and refusal cases.",
     ),
     "python/repark/tests/test_window_parity.py": (
-        1481,
+        1422,
         "Window parity frames and functions share one module.",
         "Split frame semantics from ranking and analytic function families.",
     ),
