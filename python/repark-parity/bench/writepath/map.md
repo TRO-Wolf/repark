@@ -15,7 +15,8 @@ directory is the answer. Every probe refuses to run against a debug module.
 - [probe_cell.py](probe_cell.py) — one cell in one process with a fresh temp warehouse:
   `ctas`, `ctas_partitioned8` or `df_write_parquet_zstd`, one warm-up then N timed statements
   against a fresh table each, printing a JSON row with samples, median, min, spread, the 1-minute
-  load at start and end, and the resulting data-file count.
+  load at start and end, the resulting data-file count and, since WRITE-DISTRIBUTION-1
+  (2026-09-06), the process's RSS peak (`max_rss_kb`).
 - [run_cells.sh](run_cells.sh) — three passes of the three cells for one build label, then the
   minimum, the per-pass medians and the floor (the spread of the pass medians).
 - [probe_grouping.py](probe_grouping.py) — the round-3 refutation: N v3 CTAS over eight UNEQUAL

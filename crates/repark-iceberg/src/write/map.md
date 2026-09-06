@@ -242,6 +242,32 @@ repark-core's error map.
   ([../../../../docs/fork-sync.md](../../../../docs/fork-sync.md)), so the fork half is measured
   through a temporary, never-committed path override.
   pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011
+- `distribution.rs` — **WRITE-DISTRIBUTION-1 (2026-09-06):** the hash distribution rule before a
+  partitioned write, Spark's Iceberg default `write.distribution-mode = hash`. `hash_distribution`
+  wraps the CTAS node's input in DataFusion's `RepartitionExec` under `Partitioning::Hash` over one
+  `PartitionTransformExpr` per partition field, so every row of one partition value reaches exactly
+  one writer and the commit holds one data file per value present — 8 where the node alone wrote
+  64 at `shuffle.partitions = 8`. The key is the TRANSFORM value, computed the way the writer's
+  own `PartitionValueCalculator` computes it: the source column cast to the Iceberg field's Arrow
+  type, then the fork's `create_transform_function` — so `bucket(4, id)` keys on the bucket, not
+  on `id`, and a NULL is one value. The hash is DataFusion's seeded `REPARTITION_RANDOM_STATE`, so
+  the row-to-writer map is a function of the data, not the shared counter of the round-robin
+  PERF-ICE-WRITEPATH-1 rejected. The rule is skipped when the table is unpartitioned or there is
+  one writer: the unpartitioned CTAS keeps one file per input partition, by decision — Spark's 2
+  at 8 partitions is its scan split count, not a distribution rule, and a coalesce below the
+  partition count is the writers-below-partitions shape measured at 738 ms against 547 ms with
+  unbounded buffering. Buffering here is bounded in practice because every output partition is
+  consumed concurrently by its own writer task (RSS peak 760–785 → 842–861 MB on the 1e6
+  partitioned cell). What the rule changes on the partitioned path: a data file's row order
+  follows the channel interleaving of the input partitions, so a row's `_row_id` is not
+  reproducible across runs; the manifest still ascends by partition value and `_row_id` still
+  tiles it. A partition source column the input plan lacks is a planning error, not a silent
+  skip. In-module pins: one value → one writer; the same layout across two runs; input partitions
+  without rows and an empty input; NULL partition values; `bucket(4, id)` + `day(ts)` keyed on the
+  transform (mutation: hashing the raw source column reds this pin alone); an unpartitioned table
+  bypasses the rule; a plan lacking a partition source column errors. Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md) §8.
+  pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
@@ -391,6 +417,7 @@ repark-core's error map.
 | Stage + commit full-table INSERT OVERWRITE | `overwrite.rs` |
 | Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
+| Send one partition value to one writer before a CTAS write (Spark's `hash` distribution) | `distribution.rs` (`hash_distribution`) |
 | Parquet compression codec (table property) | `writer_props.rs` |
 | Parquet statistics properties for a position-delete file | `writer_props.rs` (`position_delete_writer_properties_for`) |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
@@ -412,6 +439,7 @@ repark-core's error map.
 | `append` rows land in one partition | fanout must pass EACH split group's own `PartitionKey` to `FanoutWriter::write`; inspect `DataFile.partition` in committed manifests |
 | UNSET errors "present in both removal and update set" | a key was both set and removed in one action — the router only passes disjoint keys |
 | Streaming CTAS OOMs / collects the whole SELECT | must use the `_from_stream` writers over `execute_stream()`, never `collect()` |
+| A partitioned CTAS writes writers × values data files | `hash_distribution` must wrap the input when the spec is partitioned and `writers > 1`; check `IcebergPartitionWriteExec`'s child is a `RepartitionExec` with `Partitioning::Hash` |
 | Parallel write left partial files after a failed MERGE | abort flag must skip `finish()`/`close()` |
 | Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (`merge/abort.rs`); never re-derive from manifests; never delete `affected` |
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
