@@ -45,6 +45,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-12 (2026-09-05):** `79119643` (F-26 `#267` DV container close `known_partitions`; F-CATIO `#268` one load per planning round + shared `ObjectCache`, default off — RePark wires it in a follow-up unit).
   **RP-13 (2026-09-05):** `2ed39cb0` (F-28 `#269` Arrow-kernel partition splitter; F-CATIO-KEY `#270` the shared manifest cache stores the raw parse — `PERF-CATALOG-LINEAGE-CACHE-1` FIXED; the default-ON flip is the next unit; F-27 rides RP-14).
   **RP-14 (2026-09-06):** `8bc325a3` (F-27 `#271` count(*) folds from exact scan statistics, empty projections read no column bytes, small tables split for parallel scans — the PERF-ICE-SCAN-1 pins un-skip).
+  **RP-15 (2026-09-06):** `85db42f2` (F-RDF-EVO-1 `#272` compaction reads old files through the current schema — `RDF-SCHEMA-EVO-1` FIXED, the owner's post-`ADD COLUMN` `rewrite_data_files` refusal).
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
