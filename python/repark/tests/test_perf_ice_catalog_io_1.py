@@ -26,6 +26,10 @@ _MANY_ROWS = 480
 _RSS_TABLES = 500
 _RSS_ROWS_EACH = 4
 _RSS_BUDGET_MB = 64.0
+_THRASH_TABLES = 256
+_THRASH_BUDGET = "131072"
+_WEIGHT_TABLES = 256
+_WEIGHT_BUDGET = "280000"
 _RSS_DRIVER = (
     "import resource\n"
     "import sys\n"
@@ -397,6 +401,58 @@ def test_a_tiny_byte_budget_still_answers_across_many_tables(tmp_path: Path) -> 
 
     for index in range(8):
         assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.b{index}") == 4
+
+
+def test_a_sub_megabyte_byte_budget_churns_cold_tables_while_hot_tables_hit(
+    tmp_path: Path,
+) -> None:
+    spark = _session("manifest_thrash", tmp_path, **{_MANIFEST_KEY: _THRASH_BUDGET})
+    _range_view(spark, _RSS_ROWS_EACH)
+    for index in range(_THRASH_TABLES):
+        spark.sql(f"CREATE TABLE ice.ns.r{index} AS SELECT * FROM src").to_arrow()
+    for index in range(_THRASH_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+    for index in range(1, _THRASH_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+
+    removed = _delete_manifests(tmp_path / "manifest_thrash")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    hits = 0
+    misses = 0
+    for index in range(_THRASH_TABLES):
+        try:
+            frame = spark.sql(f"SELECT count(id) AS c FROM ice.ns.r{index}").to_arrow()
+        except Exception as error:
+            assert "manifest" in str(error), f"a miss must name the manifest: {error}"
+            misses += 1
+        else:
+            assert frame.column("c")[0].as_py() == _RSS_ROWS_EACH
+            hits += 1
+    assert misses > 0, "a 128 KiB budget over 256 tables must evict"
+    assert hits > 0, "the hottest entries must survive a 128 KiB budget"
+
+
+def test_a_budget_sized_to_the_charged_weight_retains_every_table(
+    tmp_path: Path,
+) -> None:
+    """PERF-CATALOG-CACHE-WEIGHT-1 BACKLOG: true weights evict the coldest table and red this."""
+    spark = _session("manifest_weight", tmp_path, **{_MANIFEST_KEY: _WEIGHT_BUDGET})
+    _range_view(spark, _RSS_ROWS_EACH)
+    for index in range(_WEIGHT_TABLES):
+        spark.sql(f"CREATE TABLE ice.ns.r{index} AS SELECT * FROM src").to_arrow()
+    for index in range(_WEIGHT_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+    for index in range(1, _WEIGHT_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+
+    removed = _delete_manifests(tmp_path / "manifest_weight")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    assert _scalar(spark, "SELECT count(id) AS c FROM ice.ns.r0") == _RSS_ROWS_EACH
+    assert (
+        _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{_WEIGHT_TABLES - 1}") == _RSS_ROWS_EACH
+    )
 
 
 def test_time_travel_reads_the_pinned_snapshot_with_the_cache_on(
