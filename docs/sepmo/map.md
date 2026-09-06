@@ -30,5 +30,5 @@ outcome is recorded.
 
 | Symptom | First check |
 |---|---|
-| A usage field is null | [telemetry/inventory.md](telemetry/inventory.md) §2 — many adapter fields are unavailable |
+| A usage field is null | [telemetry/inventory.md](telemetry/inventory.md) §2 — Muse cost and Claude remain unavailable |
 | Collector rejects a run dir | `cmd.txt` missing, or the event stream is malformed; see [telemetry/map.md](telemetry/map.md) |

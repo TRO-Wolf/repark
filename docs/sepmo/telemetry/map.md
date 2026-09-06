@@ -11,8 +11,8 @@ This file closes when the SEPMO efficiency pilot records its E-7 outcome.
 ## Contents
 
 - [inventory.md](inventory.md) — capability and telemetry inventory for Muse,
-  opencode/kilo, Grok, and Claude sub-agents; frozen 2026-09-05/06 Muse baseline;
-  pilot-strata mapping.
+  opencode/kilo, Grok, and Claude sub-agents; frozen 2026-09-05/06 Muse baseline
+  with session-store token columns; pilot-strata mapping.
   pins: sepmo-e0-e1/C-001, C-002, C-003
 - [usage-record.schema.json](usage-record.schema.json) — normalized record
   emitted by `scripts/sepmo_usage.py collect`. Every payload field is nullable;
@@ -41,6 +41,6 @@ This file closes when the SEPMO efficiency pilot records its E-7 outcome.
 
 | Symptom | First check |
 |---|---|
-| Tokens are null on a Muse record | Expected — [inventory.md](inventory.md) Muse row |
+| Tokens are null on a Muse record | Session store not joined — [inventory.md](inventory.md) Muse row |
 | OpenCode tokens missing | No `out.ndjson` in the run dir; sqlite is documented, not opened |
-| Grok tokens missing | `out.json` empty or has no `usage` object — [inventory.md](inventory.md) Grok row |
+| Grok tokens_cached is null | Look for `usage.cache_read_input_tokens`, not `cache_read_tokens` |

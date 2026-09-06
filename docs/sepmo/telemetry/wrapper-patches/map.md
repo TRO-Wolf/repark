@@ -10,10 +10,10 @@ This directory closes with the parent telemetry campaign.
 
 ## Contents
 
-- [muse-usage-sidecar.md](muse-usage-sidecar.md) — write `usage.json` and wall
-  time into the Muse run dir (still no model tokens; the CLI does not emit them).
-- [grok-usage-fields.md](grok-usage-fields.md) — persist any `usage` / token keys
-  from `--output-format json` next to the existing `total_cost_usd` / `num_turns`.
+- [muse-usage-sidecar.md](muse-usage-sidecar.md) — wall-time sidecar only.
+  Tokens already live in the session store; cost is still absent.
+- [grok-usage-fields.md](grok-usage-fields.md) — persist the live `usage` keys
+  (`cache_read_input_tokens`, `cache_creation_input_tokens`, `modelUsage`).
 - [oc-usage-tokens.md](oc-usage-tokens.md) — add token sums from `step-finish`
   events to the OpenCode `runs.tsv` row.
 

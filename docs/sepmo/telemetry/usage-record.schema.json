@@ -19,10 +19,12 @@
     "tokens_in",
     "tokens_out",
     "tokens_cached",
+    "tokens_cache_write",
     "tokens_reasoning",
     "cost_usd",
     "exit",
     "commits",
+    "truncated",
     "missing_reason",
     "units",
     "source"
@@ -45,10 +47,12 @@
     "tokens_in": { "type": ["integer", "null"], "minimum": 0 },
     "tokens_out": { "type": ["integer", "null"], "minimum": 0 },
     "tokens_cached": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_cache_write": { "type": ["integer", "null"], "minimum": 0 },
     "tokens_reasoning": { "type": ["integer", "null"], "minimum": 0 },
     "cost_usd": { "type": ["number", "null"], "minimum": 0 },
     "exit": { "type": ["integer", "null"] },
     "commits": { "type": ["integer", "null"], "minimum": 0 },
+    "truncated": { "type": ["boolean", "null"] },
     "missing_reason": {
       "type": "object",
       "additionalProperties": { "type": "string" }

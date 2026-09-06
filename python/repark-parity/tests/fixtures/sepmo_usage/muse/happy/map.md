@@ -2,7 +2,7 @@
 
 ## Purpose
 
-One successful Muse round. Tokens must stay null.
+One successful Muse round with no session store. Tokens stay null.
 
 ## Contents
 

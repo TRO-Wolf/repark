@@ -6,10 +6,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
-  **SEPMO-E0E1 (2026-09-06), in flight:** telemetry inventory (E-0) and usage collector
-  (E-1) for the SEPMO efficiency brief. Four adapters measured (Muse, opencode/kilo, Grok,
-  Claude). Muse `out.jsonl` has no model tokens. OpenCode sqlite has token and cost columns.
-  Grok reports `num_turns` and `total_cost_usd`. Claude transcripts are not accessible.
+  **SEPMO-E0E1 (2026-09-06), in flight, round 2:** telemetry inventory (E-0) and usage
+  collector (E-1). Muse tokens come from the session store (`runs.tsv` join); cost is
+  still absent. Grok live keys include `cache_read_input_tokens` and `modelUsage`.
+  OpenCode sqlite has token and cost columns. Claude transcripts are not accessible.
   Collector is `scripts/sepmo_usage.py`. `risk_tier: standard`. Branch
   `sepmo/e0-e1-usage-collector`.
   pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

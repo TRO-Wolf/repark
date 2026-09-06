@@ -2,11 +2,12 @@
 
 ## Purpose
 
-Muse Spark run-dir shape: `out.jsonl` with task and tool events, no model tokens.
+Muse Spark run-dir shapes: run-dir events, and a session-store join for tokens.
 
 ## Contents
 
-- [happy/](happy/map.md) — three tools, three started tasks, two commits.
+- [happy/](happy/map.md) — three tools, three started tasks, two commits; no session store.
+- [with-tokens/](with-tokens/map.md) — `runs.tsv` join to a sanitized session excerpt.
 
 ## Pointers
 
