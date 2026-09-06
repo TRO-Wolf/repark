@@ -272,7 +272,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_prepare_nested_cell": ("fe9a531e3994ae6480ad877931fd4d3b8d4542f66c1e3b31a2a324f564c754b6"),
     "_promote_csv_string_types": (
-        "a9d6b9c3b3f1672d874075558dc2c1f189267dbd8d7ee63d69e2f48983f243b1"
+        "07e763001d3d7ccb35d13c137e04d5186b5776b3730685946144bac7027ff84d"
     ),
     "_python_scalar_merge_kind": (
         "85a1a39e3f8170786cc246e35c3f263c32ec17365fa570d056fd62c330f93d3f"
