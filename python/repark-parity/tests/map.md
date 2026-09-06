@@ -138,6 +138,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
   second escape rule. pins: h3-spill-1/C-001
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables.
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001

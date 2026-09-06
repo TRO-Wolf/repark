@@ -46,8 +46,13 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   §8: the hash distribution rule's before/after pair on one box with the same native swapped, the
   partitioned cell 64 → 8 files and 3.44× → 1.96× of the control, its RSS peak, and the live
   Spark layout; §6 gains the shipped row.
+  **WRITE-DISTRIBUTION-2 (2026-09-06)** appends §9: the stream-paths pair (overwrite 32 → 8
+  files, 8.59× → 7.38× of the control; merge 32 → 8; INSERT INTO and append stay at 64, fork),
+  the live Spark 8-file bed for all four statements, and the F-4 `_row_id`-map counts in §8;
+  §6 gains the stream rows.
   pins: perf-ice-writepath-1/C-009, C-010
   pins: write-distribution-1/C-007
+  pins: write-distribution-2/C-003
 - [iceberg-catalog-io-baseline.md](iceberg-catalog-io-baseline.md) — **PERF-ICE-CATALOG-IO-1
   (2026-09-05):** the `strace -f -e trace=openat` census per statement, measured on both knob
   settings, and the `t_many` / `t_many_merged` cells. `metadata.json` READS fall from 2 (SELECT)

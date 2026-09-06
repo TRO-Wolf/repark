@@ -223,6 +223,12 @@ H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/da
 it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
 with it in the same commit. pins: h3-spill-residue-1/C-002
 
+WRITE-DISTRIBUTION-2 (2026-09-06): `check_rust_file_size.py` `write/append.rs`
+1884→1883 — the round-robin dispatcher index is gone with the routed send, so the funnel came
+out a line shorter than it went in. A ratchet DOWN; the duplicate table in
+`test_cap_1_source_file_line_cap.py` moved with it in the same commit.
+pins: write-distribution-2/C-001
+
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for
 the Iceberg-cache wiring, which is that row's recorded seam ("extract one existing

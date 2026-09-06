@@ -15,7 +15,8 @@ The generator is checked in; the data it makes never is (PROJECT.md, torture-dat
 
 - `measure.py` — the driver. Pydantic v2 records (`ScanTiming`, `FileCensus`, `Checkpoint`,
   `MaintenanceStep`, `LegResult`, `RunResult`), the polars seed and per-MERGE source
-  frames, the census over `files` / `manifests` / `snapshots`, the timed scan battery, the
+  frames, the census over `files` / `manifests` / `snapshots` (counts plus the live
+  data-file paths), the timed scan battery, the
   five-procedure maintenance sequence, and `run_scale_measurement` which drives one leg per
   write mode in ONE process (peak RSS is process-wide). **MW-9:** MOR CTAS sets
   `write.delete.granularity = 'partition'` so the recorded arithmetic stays the MW-7

@@ -149,6 +149,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   V3-8: `table_carries_merge_lineage` and `scratch_schema_for_table` widen to `pub(crate)`
   so `write::predicate_dml` reuses the same scratch shape for its COW rewrite; the module is
   `pub(crate) mod`. pins: v3-8-subquery-where-lineage/C-002
+  **WRITE-DISTRIBUTION-2 (2026-09-06):** MERGE inserts into a partitioned non-lineage table now
+  commit one file per partition value — `write_new_data_files_from_stream` still selects this
+  serial writer for V3 lineage tables and the shared partitioned stream funnel otherwise, and
+  the funnel routes one value to one writer. Row semantics and `_row_id` carry are unchanged.
+  pins: write-distribution-2/C-004, C-007
 - `cow_scratch.rs` — COW rewrite scratch tables (file-scoped target, affected-path
   MemTable, drop guard) extracted so `mod.rs` ratchets down. Scratch providers
   register on `datafusion.public` so a session default Iceberg catalog cannot
