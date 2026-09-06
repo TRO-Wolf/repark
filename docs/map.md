@@ -23,6 +23,10 @@ repo.
 - [cutover/](cutover/map.md) — **the production cutover record** (inventory, acceptance checks,
   rollback, canary plan, the owner's rulings of 2026-09-04). Filed by the orchestrating session;
   every measurement it cites lives in the divergence registry.
+- [sepmo/](sepmo/map.md) — **SEPMO efficiency-pilot telemetry** (E-0 inventory, usage-record
+  schema, proposed worker-wrapper patches). Campaign class; collector is
+  `scripts/sepmo_usage.py`.
+  pins: sepmo-e0-e1/C-001
 - [perf/](perf/map.md) — committed performance baselines (machine and profile
   stated). **PERF-DYNFLATTEN-1:** [perf/dynamic-flatten-baseline.md](perf/dynamic-flatten-baseline.md).
   pins: perf-dynflatten-1-measure/C-004
