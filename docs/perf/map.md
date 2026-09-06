@@ -117,7 +117,9 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   sketch (1e7 wall 2.95 → 0.15 s, peak 2507.8 → 650.0 MB against a 188 MB
   `count(id)` floor; warm-1e6 wall 0.02 s beats the 1.5× bar), the sublinear
   residual attributed to transient batches (inferred), and the accuracy-knob
-  cells pointed at the unit ledger §4, not restated.
+  cells pointed at the unit ledger §4, not restated. Like the aggregate
+  baseline's by-partkey cells, the harness is a throwaway script — only the
+  committed wall probe and the Rust state pins re-derive mechanically.
   pins: perf-approxpct-1/C-004
 
 ## Pointers
