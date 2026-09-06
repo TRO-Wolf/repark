@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-28-scalar-remainder-ledger.md](ex-28-scalar-remainder-ledger.md) —
+  **EX-28 (2026-09-06), in flight:** the v1.1 example backfill's `F.*` scalar
+  remainder — the 34-name roster at base `57f21b9b`; seven names covered by
+  extending three `docs/examples/functions/` files (backlog 136 → 129).
+  Twenty-seven stay with existing EX-FN / BL-17 / FNP-15 / FNP-16 rows; two
+  new §7 rows (EX-FN-20, EX-FN-21) pin `try_to_timestamp` and the
+  `unix_timestamp` format arm. Every asserted value measured on live
+  PySpark 4.1.2 (ANSI on, UTC). `risk_tier: standard`. Branch
+  `docs/ex-28-scalar-remainder`.
+  pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
 - [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
   **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
   backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names

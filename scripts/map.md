@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
+`BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
+names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
+Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC). Twenty-seven
+roster names stay on the backlog with existing EX-FN / BL-17 / FNP-15 / FNP-16
+rows; two new §7 rows (EX-FN-20 `try_to_timestamp`, EX-FN-21 `unix_timestamp`
+format arm) are pinned by `python/repark/tests/test_examples_functions_b.py`.
+Red-first: 7 has-no-example findings with the new COVERS names stripped
+(exit 1), and a wrong-epoch control in `dates_more.py` failed the execute
+leg by name (exit 1).
+pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
+
 EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
 examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
