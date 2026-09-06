@@ -44,9 +44,17 @@
     "wall_s": { "type": ["number", "null"], "minimum": 0 },
     "steps": { "type": ["integer", "null"], "minimum": 0 },
     "tool_calls": { "type": ["integer", "null"], "minimum": 0 },
-    "tokens_in": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_in": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Uncached input tokens. Muse: session-store input_tokens minus cached_tokens. Grok: usage.input_tokens is already uncached. OpenCode: step-finish tokens_input (sqlite tokens_input is already uncached)."
+    },
     "tokens_out": { "type": ["integer", "null"], "minimum": 0 },
-    "tokens_cached": { "type": ["integer", "null"], "minimum": 0 },
+    "tokens_cached": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Cached input tokens, not included in tokens_in. Muse: session-store cached_tokens. Grok: usage.cache_read_input_tokens. OpenCode: step-finish cache read (sqlite tokens_cache_read)."
+    },
     "tokens_cache_write": { "type": ["integer", "null"], "minimum": 0 },
     "tokens_reasoning": { "type": ["integer", "null"], "minimum": 0 },
     "cost_usd": { "type": ["number", "null"], "minimum": 0 },

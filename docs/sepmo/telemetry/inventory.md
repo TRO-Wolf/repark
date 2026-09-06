@@ -3,6 +3,10 @@
 **Opened:** 2026-09-06. **Class:** campaign. **State:** live for the SEPMO
 efficiency pilot. **Round 2 (2026-09-06):** Muse tokens are read from the
 session store; Grok live usage keys are confirmed on this unit's `out.json`.
+**Round 3 (2026-09-06):** a minority of unparsed JSONL lines, or `exit` present
+with no `run.terminal.completed`, is a degraded record (`truncated: true`);
+majority-bad JSONL still fails loudly. `tokens_in` is uncached per adapter
+(schema descriptions).
 
 **Retires:** freeze and archive this file when E-7 records the pilot outcome, or
 when a successor inventory supersedes it. Link the successor from the archived
@@ -87,9 +91,12 @@ the tool's output size for truncation, not billed model usage.
 `runs.tsv` columns (wrapper): lane, stamp, rc, `muse`, model, session uuid,
 tool-call count, terminal, `hb=yes|no`.
 
-A truncated `out.jsonl` (last line cut mid-string, no
-`run.terminal.completed`) is a loud collect failure. In-flight JSONL whose
-every line still parses is collected with `exit` null.
+A minority of unparsed JSONL lines, or an `exit` file with no
+`run.terminal.completed` event, yields a degraded record (`truncated: true`,
+`missing_reason` on `steps`/`tool_calls`). Prefix counts stay on the record.
+Session-store tokens stay valid. Majority-bad JSONL still fails
+loudly. In-flight JSONL whose every line still parses is collected with
+`exit` null.
 
 ### opencode / kilo (GLM)
 

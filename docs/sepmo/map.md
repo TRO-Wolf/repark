@@ -31,4 +31,4 @@ outcome is recorded.
 | Symptom | First check |
 |---|---|
 | A usage field is null | [telemetry/inventory.md](telemetry/inventory.md) §2 — Muse cost and Claude remain unavailable |
-| Collector rejects a run dir | `cmd.txt` missing, or the event stream is malformed; see [telemetry/map.md](telemetry/map.md) |
+| Collector rejects a run dir | `cmd.txt` missing, majority-bad JSONL, or a `://` URI; minority truncated JSONL is a degraded record; see [telemetry/map.md](telemetry/map.md) |

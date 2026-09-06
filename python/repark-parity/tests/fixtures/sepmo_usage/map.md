@@ -11,7 +11,7 @@ adapter or one failure class. No home paths, no secrets, no live token dumps.
 - [grok/](grok/map.md) — Grok `out.json` shapes (cost-only, live usage keys, empty).
 - [opencode/](opencode/map.md) — OpenCode NDJSON with step-finish tokens.
 - [claude/](claude/map.md) — Claude marker with no transcript.
-- [malformed/](malformed/map.md) — truncated JSON / JSONL that must fail loudly.
+- [malformed/](malformed/map.md) — majority-bad JSON/JSONL (loud failure) and a minority truncated JSONL (degraded record).
 
 ## Pointers
 

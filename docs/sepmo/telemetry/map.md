@@ -17,7 +17,8 @@ This file closes when the SEPMO efficiency pilot records its E-7 outcome.
 - [usage-record.schema.json](usage-record.schema.json) — normalized record
   emitted by `scripts/sepmo_usage.py collect`. Every payload field is nullable;
   `missing_reason` names why a field is absent; `units` states the unit of each
-  numeric field.
+  numeric field. `tokens_in` / `tokens_cached` descriptions state the uncached
+  convention per adapter.
   pins: sepmo-e0-e1/C-004
 - [wrapper-patches/](wrapper-patches/map.md) — proposed patches for the
   out-of-repo worker wrappers. The orchestrator applies them; this unit does not
@@ -44,3 +45,4 @@ This file closes when the SEPMO efficiency pilot records its E-7 outcome.
 | Tokens are null on a Muse record | Session store not joined — [inventory.md](inventory.md) Muse row |
 | OpenCode tokens missing | No `out.ndjson` in the run dir; sqlite is documented, not opened |
 | Grok tokens_cached is null | Look for `usage.cache_read_input_tokens`, not `cache_read_tokens` |
+| `index /tmp/muse-worker` exits 1 | Minority truncated JSONL must be a degraded record, not a raise |

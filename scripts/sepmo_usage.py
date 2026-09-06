@@ -53,6 +53,7 @@ FLAG_VALUE: re.Pattern[str] = re.compile(
     r"--(model|reasoning-effort|agent|role|variant|cli)\s+(\S+)"
 )
 SESSION_ID_SAFE: re.Pattern[str] = re.compile(r"^[A-Za-z0-9._-]+$")
+REMOTE_SCHEME: re.Pattern[str] = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]+:/")
 USAGE_KEYS: dict[str, tuple[str, ...]] = {
     "tokens_in": ("tokens_in", "input_tokens", "prompt_tokens", "input", "inputTokens"),
     "tokens_out": ("tokens_out", "output_tokens", "completion_tokens", "output", "outputTokens"),
@@ -84,6 +85,7 @@ TOKEN_FIELDS: tuple[str, ...] = (
     "tokens_cache_write",
     "tokens_reasoning",
 )
+TRUNCATED_COUNT_FIELDS: tuple[str, ...] = ("steps", "tool_calls")
 MUSE_SESSIONS_ENV: str = "SEPMO_MUSE_SESSIONS_ROOT"
 MUSE_RUNS_TSV_ENV: str = "SEPMO_MUSE_RUNS_TSV"
 MUSE_NO_COST: str = "Muse session store and snapshots have no cost field; token counts only"
@@ -232,6 +234,8 @@ def validate_record(record: dict[str, Any]) -> list[str]:
                 findings.append("missing_reason values must be non-empty strings")
                 break
             if record.get(key) is not None:
+                if record.get("truncated") is True and key in TRUNCATED_COUNT_FIELDS:
+                    continue
                 findings.append(f"{key} is set but also listed in missing_reason")
     return findings
 
@@ -243,17 +247,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     collect_parser = subparsers.add_parser("collect", help="one run directory")
-    collect_parser.add_argument("run_dir", type=Path)
+    collect_parser.add_argument("run_dir")
     index_parser = subparsers.add_parser("index", help="a directory of run directories")
-    index_parser.add_argument("root", type=Path)
+    index_parser.add_argument("root")
     index_parser.add_argument("--jsonl", action="store_true")
     arguments: argparse.Namespace = parser.parse_args(argv)
     try:
         if arguments.command == "collect":
-            record: dict[str, Any] = collect_run(arguments.run_dir)
+            _reject_remote(arguments.run_dir)
+            record: dict[str, Any] = collect_run(Path(arguments.run_dir))
             sys.stdout.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
             return 0
-        rendered: str = index_runs(arguments.root, arguments.jsonl)
+        _reject_remote(arguments.root)
+        rendered: str = index_runs(Path(arguments.root), arguments.jsonl)
         sys.stdout.write(rendered)
         if not rendered.endswith("\n"):
             sys.stdout.write("\n")
@@ -266,9 +272,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
-def _reject_remote(path: Path) -> None:
-    text: str = str(path).strip().lower().replace("\\", "/")
-    if text.startswith(("http:/", "https:/", "ftp:/")):
+def _reject_remote(path: Path | str) -> None:
+    text: str = str(path).strip().replace("\\", "/")
+    if "://" in text or REMOTE_SCHEME.match(text):
         raise UsageError("refusing a remote path; collector is local-only")
 
 
@@ -310,6 +316,13 @@ def _blank_record(run_directory: Path) -> dict[str, Any]:
 def _mark(record: dict[str, Any], field_name: str, reason: str) -> None:
     record[field_name] = None
     record["missing_reason"][field_name] = reason
+
+
+def _flag_truncated(record: dict[str, Any], reason: str) -> None:
+    record["truncated"] = True
+    record["missing_reason"]["jsonl"] = reason
+    for field_name in TRUNCATED_COUNT_FIELDS:
+        record["missing_reason"][field_name] = reason
 
 
 def _set_if(record: dict[str, Any], field_name: str, value: Any) -> None:
@@ -410,10 +423,10 @@ def _parse_muse(record: dict[str, Any], run_directory: Path) -> list[str]:
     events, failed_count = _load_jsonl(jsonl_path)
     has_terminal: bool = _has_muse_terminal(events)
     if failed_count:
-        record["truncated"] = True
-        record["missing_reason"]["jsonl"] = f"{failed_count} JSONL line(s) did not parse"
-        if not has_terminal:
-            raise UsageError(f"truncated JSONL with no exit record: {jsonl_path}")
+        _flag_truncated(
+            record,
+            f"{failed_count} JSONL line(s) did not parse; counts are from the parsed prefix",
+        )
     started_tasks: set[str] = set()
     tool_calls: int = 0
     for event in events:
@@ -432,6 +445,14 @@ def _parse_muse(record: dict[str, Any], run_directory: Path) -> list[str]:
     record["tool_calls"] = tool_calls
     session_source: list[str] = _apply_muse_session_usage(record, run_directory, events)
     source.extend(session_source)
+    if not has_terminal and record.get("exit") is not None:
+        _flag_truncated(
+            record,
+            "exit file present but JSONL has no run.terminal.completed; "
+            "counts are from the parsed prefix",
+        )
+    if record.get("truncated") is True and record.get("tokens_in") is not None:
+        source.append("session-store tokens remain valid")
     _mark(record, "cost_usd", MUSE_NO_COST)
     return source
 

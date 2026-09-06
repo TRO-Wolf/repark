@@ -2,13 +2,14 @@
 
 ## Purpose
 
-Inputs the collector must reject with a non-zero exit.
+Inputs the collector must reject (majority-bad JSON/JSONL) or emit as a
+degraded record (minority truncated JSONL).
 
 ## Contents
 
-- [bad-json/](bad-json/map.md) — truncated Grok `out.json`.
-- [bad-jsonl/](bad-jsonl/map.md) — Muse JSONL that is not JSON.
-- [truncated-tail/](truncated-tail/map.md) — JSONL last line cut; no exit record.
+- [bad-json/](bad-json/map.md) — truncated Grok `out.json` (loud failure).
+- [bad-jsonl/](bad-jsonl/map.md) — Muse JSONL that is not JSON (majority-bad).
+- [truncated-tail/](truncated-tail/map.md) — JSONL last line cut; degraded record.
 
 ## Pointers
 

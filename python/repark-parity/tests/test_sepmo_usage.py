@@ -206,24 +206,85 @@ def test_malformed_muse_jsonl_fails_loudly() -> None:
         module.collect_run(_FIXTURES / "malformed" / "bad-jsonl")
 
 
-def test_truncated_muse_jsonl_fails_when_exit_record_absent() -> None:
-    """A cut last JSONL line with no run.terminal.completed is a loud failure.
+def test_truncated_muse_jsonl_emits_degraded_record() -> None:
+    """A minority of unparsed JSONL lines yields truncated counts, not a raise.
 
     pins: sepmo-e0-e1/C-006
     """
-    module = _load()
-    with pytest.raises(module.UsageError, match="truncated JSONL with no exit record"):
-        module.collect_run(_FIXTURES / "malformed" / "truncated-tail")
+    record = _collect(_FIXTURES / "malformed" / "truncated-tail")
+    assert record["truncated"] is True
+    assert record["steps"] == 1
+    assert record["tool_calls"] == 0
+    assert "steps" in record["missing_reason"]
+    assert "tool_calls" in record["missing_reason"]
+    assert "did not parse" in str(record["missing_reason"]["steps"])
 
 
-def test_remote_url_is_rejected_before_resolve() -> None:
-    """Collect refuses a remote URL on the raw argument, not after Path.resolve.
+def test_clean_cut_tail_with_exit_is_truncated() -> None:
+    """Exit present and no run.terminal.completed marks prefix counts truncated.
+
+    pins: sepmo-e0-e1/C-006
+    """
+    record = _collect(_FIXTURES / "muse" / "clean-cut-tail")
+    assert record["truncated"] is True
+    assert record["exit"] == 0
+    assert record["steps"] == 3
+    assert record["tool_calls"] == 3
+    assert "steps" in record["missing_reason"]
+    assert "tool_calls" in record["missing_reason"]
+    assert "run.terminal.completed" in str(record["missing_reason"]["steps"])
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "https://example.invalid/run",
+        "s3://bucket/run",
+        "gs://bucket/run",
+        "file:///etc",
+    ),
+)
+def test_remote_url_is_rejected_before_resolve(raw: str) -> None:
+    """Collect refuses any URI with :// on the raw argument, not after Path.resolve.
 
     pins: sepmo-e0-e1/C-006
     """
     module = _load()
     with pytest.raises(module.UsageError, match="refusing a remote path"):
-        module.collect_run(Path("https://example.invalid/run"))
+        module._reject_remote(raw)
+    with pytest.raises(module.UsageError, match="refusing a remote path"):
+        module.collect_run(Path(raw))
+    assert module.main(["collect", raw]) == 1
+
+
+def _muse_session_record(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    snapshot_dirname: str,
+    jsonl_text: str | None = None,
+) -> dict[str, object]:
+    fixture = _FIXTURES / "muse" / "with-tokens"
+    root = tmp_path / "muse-worker"
+    run_dir = root / "ex25" / "20260905T214117Z"
+    run_dir.mkdir(parents=True)
+    for name in ("cmd.txt", "prompt.md", "out.jsonl", "exit"):
+        (run_dir / name).write_bytes((fixture / name).read_bytes())
+    if jsonl_text is not None:
+        (run_dir / "out.jsonl").write_text(jsonl_text, encoding="utf-8")
+    (root / "runs.tsv").write_bytes((fixture / "runs.tsv").read_bytes())
+    sessions = tmp_path / "sessions"
+    monkeypatch.setenv("SEPMO_MUSE_SESSIONS_ROOT", str(sessions))
+    session_dir = sessions / "sess-muse-tokens"
+    session_dir.mkdir(parents=True)
+    (session_dir / "session.jsonl").write_bytes(
+        (fixture / "sessions" / "sess-muse-tokens" / "session.jsonl").read_bytes()
+    )
+    snap_dir = sessions / snapshot_dirname / "sess-muse-tokens"
+    snap_dir.mkdir(parents=True)
+    (snap_dir / "snapshot-1.json").write_bytes(
+        (fixture / "sessions" / "msp-view-v1" / "sess-muse-tokens" / "snapshot-1.json").read_bytes()
+    )
+    return _collect(run_dir)
 
 
 def test_muse_session_store_tokens_from_runs_tsv_join(
@@ -233,26 +294,7 @@ def test_muse_session_store_tokens_from_runs_tsv_join(
 
     pins: sepmo-e0-e1/C-004, C-007
     """
-    fixture = _FIXTURES / "muse" / "with-tokens"
-    root = tmp_path / "muse-worker"
-    run_dir = root / "ex25" / "20260905T214117Z"
-    run_dir.mkdir(parents=True)
-    for name in ("cmd.txt", "prompt.md", "out.jsonl", "exit"):
-        (run_dir / name).write_bytes((fixture / name).read_bytes())
-    (root / "runs.tsv").write_bytes((fixture / "runs.tsv").read_bytes())
-    sessions = tmp_path / "sessions"
-    monkeypatch.setenv("SEPMO_MUSE_SESSIONS_ROOT", str(sessions))
-    session_dir = sessions / "sess-muse-tokens"
-    session_dir.mkdir(parents=True)
-    (session_dir / "session.jsonl").write_bytes(
-        (fixture / "sessions" / "sess-muse-tokens" / "session.jsonl").read_bytes()
-    )
-    snap_dir = sessions / "msp-view-v1" / "sess-muse-tokens"
-    snap_dir.mkdir(parents=True)
-    (snap_dir / "snapshot-1.json").write_bytes(
-        (fixture / "sessions" / "msp-view-v1" / "sess-muse-tokens" / "snapshot-1.json").read_bytes()
-    )
-    record = _collect(run_dir)
+    record = _muse_session_record(tmp_path, monkeypatch, "msp-view-v1")
     assert record["adapter"] == "muse"
     assert record["steps"] == 2
     assert record["tool_calls"] == 2
@@ -266,6 +308,41 @@ def test_muse_session_store_tokens_from_runs_tsv_join(
     assert record["role"] is None
     assert "session.jsonl" in record["source"]
     assert any("matched" in str(item) for item in record["source"])
+
+
+def test_muse_snapshot_dot_dir_is_read(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Muse snapshot lookup reads the live `.msp-view-v1` directory name.
+
+    pins: sepmo-e0-e1/C-007
+    """
+    record = _muse_session_record(tmp_path, monkeypatch, ".msp-view-v1")
+    assert record["tokens_in"] == 170
+    assert record["tokens_out"] == 30
+    assert any("matched" in str(item) for item in record["source"])
+
+
+def test_exit_without_terminal_keeps_session_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A clean-cut JSONL still reports session-store tokens and marks counts truncated.
+
+    pins: sepmo-e0-e1/C-004, C-006
+    """
+    fixture_jsonl = (_FIXTURES / "muse" / "with-tokens" / "out.jsonl").read_text(encoding="utf-8")
+    cut = (
+        "\n".join(
+            line for line in fixture_jsonl.splitlines() if "run.terminal.completed" not in line
+        )
+        + "\n"
+    )
+    record = _muse_session_record(tmp_path, monkeypatch, ".msp-view-v1", jsonl_text=cut)
+    assert record["truncated"] is True
+    assert record["steps"] == 2
+    assert record["tool_calls"] == 2
+    assert record["tokens_in"] == 170
+    assert "tokens_in" not in record["missing_reason"]
+    assert "steps" in record["missing_reason"]
+    assert any("remain valid" in str(item) for item in record["source"])
 
 
 def test_index_writes_inventory_table_shape(tmp_path: Path) -> None:
@@ -287,6 +364,56 @@ def test_index_writes_inventory_table_shape(tmp_path: Path) -> None:
     parsed = [json.loads(line) for line in lines]
     adapters = {row["adapter"] for row in parsed}
     assert adapters == {"muse", "grok"}
+
+
+def test_index_includes_degraded_truncated_run(tmp_path: Path) -> None:
+    """Index over a tree with one truncated run still emits every row.
+
+    pins: sepmo-e0-e1/C-005
+    """
+    module = _load()
+    root = tmp_path / "runs"
+    shutil.copytree(_FIXTURES / "muse" / "happy", root / "ex25" / "20260905T214117Z")
+    shutil.copytree(
+        _FIXTURES / "malformed" / "truncated-tail",
+        root / "aggavgr3" / "20260905T170640Z",
+    )
+    jsonl = module.index_runs(root, as_jsonl=True)
+    rows = [json.loads(line) for line in jsonl.splitlines() if line.strip()]
+    assert len(rows) == 2
+    by_lane = {row["lane"]: row for row in rows}
+    assert by_lane["ex25"]["truncated"] is False
+    assert by_lane["aggavgr3"]["truncated"] is True
+    assert by_lane["aggavgr3"]["steps"] == 1
+    table = module.index_runs(root, as_jsonl=False)
+    assert "aggavgr3" in table
+    assert "ex25" in table
+
+
+def test_index_live_muse_worker_includes_inventory_stamps() -> None:
+    """Index of the frozen Muse tree exits 0 and lists every present lane.
+
+    pins: sepmo-e0-e1/C-002, C-005
+    """
+    if not _LIVE_ROOT.is_dir():
+        pytest.skip(f"frozen Muse baseline absent under {_LIVE_ROOT}")
+    lanes: list[str] = []
+    for lane_dir in _LIVE_ROOT.iterdir():
+        if not lane_dir.is_dir():
+            continue
+        for stamp_dir in lane_dir.iterdir():
+            if stamp_dir.is_dir() and (stamp_dir / "cmd.txt").is_file():
+                lanes.append(lane_dir.name)
+                break
+    if len(lanes) < 3:
+        pytest.skip(f"frozen Muse baseline absent under {_LIVE_ROOT}")
+    module = _load()
+    table = module.index_runs(_LIVE_ROOT, as_jsonl=False)
+    for lane in lanes:
+        assert f"| {lane} |" in table
+    for lane in ("aggavgr3", "catio2", "types1r2"):
+        if lane in lanes:
+            assert f"| {lane} |" in table
 
 
 def test_cli_collect_and_index_round_trip(tmp_path: Path) -> None:
@@ -319,6 +446,13 @@ def test_schema_file_lists_every_record_field() -> None:
     for field_name in module.RECORD_FIELDS:
         types = schema["properties"][field_name]["type"]
         assert "null" in types
+    tokens_in_doc = schema["properties"]["tokens_in"]["description"]
+    tokens_cached_doc = schema["properties"]["tokens_cached"]["description"]
+    assert "Uncached" in tokens_in_doc
+    assert "Muse" in tokens_in_doc and "Grok" in tokens_in_doc
+    assert "already uncached" in tokens_in_doc
+    assert "not included in tokens_in" in tokens_cached_doc
+    assert "Muse" in tokens_cached_doc and "Grok" in tokens_cached_doc
 
 
 def test_inventory_covers_four_adapters_and_pilot_strata() -> None:
@@ -386,6 +520,11 @@ def test_reconciles_three_live_muse_run_dirs_when_present() -> None:
         assert record["steps"] == expected_steps == len(raw_tasks)
         assert record["tool_calls"] == expected_tools == raw_tools
         assert record["cost_usd"] is None
+        if expected_exit == 143:
+            assert record["truncated"] is True
+            assert "steps" in record["missing_reason"]
+        else:
+            assert record["truncated"] is False
         started = (path / "cmd.txt").stat().st_mtime
         finished = (path / "exit").stat().st_mtime
         assert record["wall_s"] == pytest.approx(finished - started, abs=0.05)

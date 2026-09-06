@@ -29,12 +29,13 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
-- `test_sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 2):** usage collector pins: Muse /
-  Grok / OpenCode / Claude fixture shapes, Muse session-store join, live Grok usage keys,
-  truncated JSONL fails, remote URLs refused before resolve, missing-data stays null,
-  index table shape, schema field roster, inventory adapter+strata claims, and live
-  reconciliation of three Muse run dirs (steps/tools plus session-store tokens) when
-  `/tmp/muse-worker` is present.
+- `test_sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** usage collector pins: Muse /
+  Grok / OpenCode / Claude fixture shapes, Muse session-store join (both `msp-view-v1` and
+  `.msp-view-v1`), live Grok usage keys, minority truncated JSONL as a degraded record,
+  clean-cut tail with `exit` and no terminal, remote URLs with `://` refused before
+  resolve, missing-data stays null, index table shape including a degraded row, schema
+  field roster plus uncached-token descriptions, inventory adapter+strata claims, and live
+  reconciliation / live `index` of Muse run dirs when `/tmp/muse-worker` is present.
   pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fixtures/](fixtures/map.md) — sanitized collector run dirs (no home paths).
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift

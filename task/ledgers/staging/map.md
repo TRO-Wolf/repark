@@ -6,11 +6,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
-  **SEPMO-E0E1 (2026-09-06), in flight, round 2:** telemetry inventory (E-0) and usage
-  collector (E-1). Muse tokens come from the session store (`runs.tsv` join); cost is
-  still absent. Grok live keys include `cache_read_input_tokens` and `modelUsage`.
-  OpenCode sqlite has token and cost columns. Claude transcripts are not accessible.
-  Collector is `scripts/sepmo_usage.py`. `risk_tier: standard`. Branch
+  **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
+  collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
+  records; majority-bad still fails. Muse tokens come from the session store
+  (`runs.tsv` join, `.msp-view-v1` pinned); cost is still absent. Grok live keys
+  include `cache_read_input_tokens` and `modelUsage`. OpenCode sqlite has token
+  and cost columns. Claude transcripts are not accessible. Collector is
+  `scripts/sepmo_usage.py`. `risk_tier: standard`. Branch
   `sepmo/e0-e1-usage-collector`.
   pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —

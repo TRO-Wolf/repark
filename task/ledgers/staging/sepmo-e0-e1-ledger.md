@@ -34,13 +34,13 @@ under `docs/sepmo/telemetry/wrapper-patches/`.
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
 | C-001 | The inventory names each of Muse, opencode/kilo, Grok, and Claude with the exact command form, run-dir layout, and measured availability of input tokens, output tokens, cached input, cost, wall time, steps, tool calls, exit, model id, and effort; unavailable fields are stated per adapter. | [docs/sepmo/telemetry/inventory.md](../../../docs/sepmo/telemetry/inventory.md) §1–§2; `test_inventory_covers_four_adapters_and_pilot_strata`. Round 2: Muse tokens from the session store; cost still absent; Grok live keys confirmed. | **PROVEN** |
-| C-002 | A frozen baseline table covers the 2026-09-05/06 Muse run dirs (29 rows) with per-lane stamp, exit, wall seconds, steps, tool calls, hand-back, commits, and session-store token columns (uncached in / out / cached / reasoning). Cost stays null. | inventory.md §3; the three-row raw-evidence table; `test_inventory_covers_four_adapters_and_pilot_strata`. Round 2 re-verdict: round 1 claimed Muse emits no tokens; that was false. | **PROVEN** |
+| C-002 | A frozen baseline table covers the 2026-09-05/06 Muse run dirs (29 rows) with per-lane stamp, exit, wall seconds, steps, tool calls, hand-back, commits, and session-store token columns (uncached in / out / cached / reasoning). Cost stays null. | inventory.md §3; the three-row raw-evidence table; `test_inventory_covers_four_adapters_and_pilot_strata`; `test_index_live_muse_worker_includes_inventory_stamps`. Round 3: `index /tmp/muse-worker` is rc 0 and lists every present stamp, including the three minority-truncated rows. | **PROVEN** |
 | C-003 | Brief §12 task strata are mapped onto the lanes that actually ran (perf unit, fix unit, EX batch, critic round, remediation round). Muse `role` is null on the record; §4 is a human classification. Lane `ex26` is named as a lane, not as unit EX-26. | inventory.md §4; the same inventory test. Round 2 re-verdict: collector no longer stamps `worker` from the build-lane prompt. | **PROVEN** |
-| C-004 | `sepmo_usage.py collect <run-dir>` emits one JSON record whose fields match `usage-record.schema.json`; every payload field is nullable; `missing_reason` names why a field is absent; `units` states the unit of each numeric field. | schema file (includes `tokens_cache_write`, `truncated`); collector; `test_schema_file_lists_every_record_field` and the adapter fixture tests. Round 2: Grok fixture rebuilt on live keys; Muse session-store fixture. | **PROVEN** |
-| C-005 | `sepmo_usage.py index <dir>` writes the table the inventory shows (or `--jsonl` records). | `test_index_writes_inventory_table_shape`; `test_cli_collect_and_index_round_trip`. | **PROVEN** |
-| C-006 | Validation fails loudly on malformed input; the collector opens no network path. | `test_malformed_grok_json_fails_loudly`; `test_malformed_muse_jsonl_fails_loudly`; `test_truncated_muse_jsonl_fails_when_exit_record_absent`; `test_missing_cmd_txt_fails_loudly`; `test_remote_url_is_rejected_before_resolve`. Round 2: remote check runs on the raw path; truncated JSONL with no exit record is UsageError. | **PROVEN** |
-| C-007 | Checked-in fixtures cover each adapter shape, missing-data behaviour (null, not zero), and unit correctness. | `python/repark-parity/tests/fixtures/sepmo_usage/`; the fixture tests in `test_sepmo_usage.py`. Round 2: sanitized Muse session excerpt; Grok live-key `out.json`; truncated-tail JSONL. | **PROVEN** |
-| C-008 | The collector's numbers for at least three real Muse run dirs agree with a second pass over the raw files, including session-store token totals. | inventory.md §3 raw-evidence table; `test_reconciles_three_live_muse_run_dirs_when_present` (skips only when `/tmp/muse-worker` is absent). | **PROVEN** |
+| C-004 | `sepmo_usage.py collect <run-dir>` emits one JSON record whose fields match `usage-record.schema.json`; every payload field is nullable; `missing_reason` names why a field is absent; `units` states the unit of each numeric field. | schema file (includes `tokens_cache_write`, `truncated`, and `description` on `tokens_in`/`tokens_cached` for the uncached convention); collector; `test_schema_file_lists_every_record_field` and the adapter fixture tests. Round 3: schema descriptions per adapter. | **PROVEN** |
+| C-005 | `sepmo_usage.py index <dir>` writes the table the inventory shows (or `--jsonl` records). | `test_index_writes_inventory_table_shape`; `test_cli_collect_and_index_round_trip`; `test_index_includes_degraded_truncated_run`; `test_index_live_muse_worker_includes_inventory_stamps`. Round 3: a tree with one degraded run still indexes; live `/tmp/muse-worker` is rc 0. | **PROVEN** |
+| C-006 | Validation fails loudly on malformed input; the collector opens no network path. | `test_malformed_grok_json_fails_loudly`; `test_malformed_muse_jsonl_fails_loudly`; `test_truncated_muse_jsonl_emits_degraded_record`; `test_clean_cut_tail_with_exit_is_truncated`; `test_missing_cmd_txt_fails_loudly`; `test_remote_url_is_rejected_before_resolve`. Round 3: minority truncated JSONL is a degraded record; majority-bad JSONL and a non-run directory still raise; any `://` URI is refused. | **PROVEN** |
+| C-007 | Checked-in fixtures cover each adapter shape, missing-data behaviour (null, not zero), and unit correctness. | `python/repark-parity/tests/fixtures/sepmo_usage/`; the fixture tests in `test_sepmo_usage.py`. Round 3: `muse/clean-cut-tail`; `.msp-view-v1` snapshot pin; `s3://`/`gs://`/`file://` refusal. | **PROVEN** |
+| C-008 | The collector's numbers for at least three real Muse run dirs agree with a second pass over the raw files, including session-store token totals. | inventory.md §3 raw-evidence table; `test_reconciles_three_live_muse_run_dirs_when_present` (skips only when `/tmp/muse-worker` is absent). Round 3: `icescanfr2` (exit 143, no terminal) stays count-equal and is `truncated: true`. | **PROVEN** |
 
 `LOGIC_SCORE` = **8/8 `PROVEN`**.
 
@@ -83,12 +83,14 @@ is an unclosed object. `collect` raises `UsageError` / CLI exit 1.
 `pins: sepmo-e0-e1/C-004, C-007`
 
 **Provocation 4 — truncated Muse JSONL tail:** last line cut mid-string, no
-`run.terminal.completed`. `collect` raises `UsageError` matching `truncated JSONL
-with no exit record`.
+`run.terminal.completed`. `collect` emits `truncated: true` with prefix counts
+and `missing_reason` on `steps`/`tool_calls` (does not raise). Majority-bad
+JSONL still raises.
 `pins: sepmo-e0-e1/C-006`
 
 **Provocation 5 — remote URL:** `collect_run(Path("https://example.invalid/run"))`
-raises before `Path.resolve` can turn it into a local path.
+and `s3://` / `gs://` / `file://` raise before `Path.resolve` can turn them
+into a local path.
 `pins: sepmo-e0-e1/C-006`
 
 ## Reconciled sample (C-008)
@@ -141,14 +143,14 @@ COVERAGE_ATTESTATION:
       justification: Collector is a single-process local file reader; no shared mutable engine state.
     - id: AT-5
       status: ATTACKED
-      evidence: No network; remote URL paths are refused before resolve; OpenCode sqlite is not opened so workspace paths and credentials stay out of the record.
+      evidence: No network; any argument containing :// is refused before resolve (http, s3, gs, file); OpenCode sqlite is not opened so workspace paths and credentials stay out of the record.
       artifacts: [scripts/sepmo_usage.py]
     - id: AT-6
       status: N/A
       justification: No product execution surface and no auth change.
     - id: AT-7
       status: ATTACKED
-      evidence: Majority-failed JSONL and truncated JSON are UsageError; CLI exits 1.
+      evidence: Majority-failed JSONL and truncated Grok JSON are UsageError; CLI exits 1. Minority truncated Muse JSONL is a degraded record.
       artifacts: [python/repark-parity/tests/test_sepmo_usage.py]
     - id: AT-8
       status: N/A
@@ -186,3 +188,15 @@ Critic FAIL: 2 S1, 3 S2, 2 S3. All seven findings addressed in this round.
 | F5 | S2 | Any unparsed JSONL line sets `truncated` and `missing_reason.jsonl`. Truncated Muse JSONL with no `run.terminal.completed` is `UsageError`. Fixture `malformed/truncated-tail`. |
 | F6 | S3 | Muse `role` is null unless argv names it. Inventory §4 is a human lane classification. |
 | F7 | S3 | §4 names lane `ex26`, not unit EX-26. |
+
+## Round 3 — critic remediations (2026-09-06)
+
+Critic FAIL: 1 S1, 1 S2, 3 S3. All five findings addressed in this round.
+
+| id | sev | disposition |
+|---|---|---|
+| R1 | S1 | Minority-unparsed JSONL no longer raises. Collect emits `truncated: true` with prefix `steps`/`tool_calls` and `missing_reason` on those fields. Majority-bad JSONL and a non-run directory still raise. `index /tmp/muse-worker` is rc 0 and includes `aggavgr3`/`catio2`/`types1r2`. Pin: `test_truncated_muse_jsonl_emits_degraded_record` plus `test_index_includes_degraded_truncated_run`. |
+| R2 | S2 | `exit` present and no `run.terminal.completed` sets `truncated: true` and `missing_reason` on `steps`/`tool_calls`. Session-store tokens stay set. Fixture `muse/clean-cut-tail`. Live `icescanfr2` pin. |
+| R3 | S3 | `_reject_remote` refuses any argument containing `://`. Pins `s3://`, `gs://`, `file://`. |
+| R4 | S3 | `usage-record.schema.json` `description` on `tokens_in` / `tokens_cached` states the uncached convention per adapter. |
+| R5 | S3 | `test_muse_snapshot_dot_dir_is_read` joins only `.msp-view-v1`. |
