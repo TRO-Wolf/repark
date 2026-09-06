@@ -3205,6 +3205,50 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `\p{L}`, non-ASCII/empty edges, lookbehind refusal; round 2: non-matching input answers
   `''` for any idx on both doors). pins: fn-regexp-extract-1/C-002, C-003
 
+- `test_fnp_9_collections_json.py` — **FNP-9/10 (2026-09-05):** the collections and JSON
+  families on both Spark-facade doors against the live PySpark 4.1.2 oracle — `get_json_object`
+  (number spelling, leaf quoting, the whole `[*]` collect rule including the double-wildcard
+  flatten), `json_array_length`, `json_object_keys`, `to_json` (a NULL struct field is omitted, a
+  NULL map value is written), `from_json` (PERMISSIVE, `_corrupt_record`, FAILFAST, the refused
+  option set), `schema_of_json`, `create_map`, `map_concat`, `array_insert` (the -1-appends rule
+  and NULL padding at both ends), `arrays_zip` (NULL fill, positional field names), the
+  `sequence` divergence the unit filed rather than built, and the five names it left absent —
+  that pin reds the day the multi-column generator seam lands and they are exported.
+  **Round 2 (2026-09-06):** twelve more pins answer the round-1 critic — the `[*]` style machine
+  (15 shapes), FAILFAST and `_corrupt_record` on a bad RECORD (11 cells), the empty-document NULL
+  row, DECIMAL HALF_UP and precision overflow, container shape-nulling, last-key-wins,
+  Java number spelling into STRING, single-quoted documents, backtick-quoted schema names,
+  empty-struct pruning, `array_insert` type widening, the leading-zero / non-finite / null-root /
+  non-STRING-argument rules, the non-finite and timestamp decode forms, and the `sequence` pin
+  the registry had cited but nobody had written.
+  pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+
+- `test_parity_live_fnp9.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
+  fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
+  4.1.2 under `REPARK_PARITY_LIVE=1`. **Round 2 (2026-09-06):** thirteen more answer cells and
+  three more raising cells, and the `schema_of_json('{bad')` leg now asserts the condition Spark
+  actually carries (a Jackson `JsonParseException`) instead of accepting any exception. The leg
+  moved into its own file when `test_parity_live.py` reached its 1000-line ceiling; it shares
+  `conftest.py`'s session-scoped `spark_engine`, so it still co-collects and co-runs with
+  `test_live_disclosure_still_diverges` in one JVM. Every pin in the unit's file was inverted under at least
+  one mutation before the unit closed; the knobs and their counts are in the unit ledger.
+  The module docstring is the one-line form the comment rule allows (within the line width); the file's purpose and
+  history live in this row.
+  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, C-006, C-009
+
+- `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
+  `test_arrays_zip_refuses` becomes `test_arrays_zip_names_its_fields_by_position` (EX-FN-1
+  retires into FNP9-ARRAYS-ZIP-NAMES-1) and `test_schema_of_pair_refuses` becomes
+  `test_schema_of_csv_refuses` (EX-FN-16 narrows — `schema_of_json` left that row when the
+  kernel landed). pins: fnp-9-collections-json/C-003, C-006
+- `test_functions_split_identity.py` — **FNP-9/10 (2026-09-05):** the installer chain appends
+  `functions_json.FNP9_NAMES` LAST, so the pre-split, declared-absent, higher-order and `try_*`
+  blocks keep their positions and the count moves 444 → 452.
+  pins: fnp-9-collections-json/C-001
+- `test_fn_batch2.py` — **FNP-9/10 (2026-09-05):** loses its `arrays_zip` refusal arm and the
+  now-unused import; no §7 row named `arrays_zip` under `R-FN-BATCH2`, because that disclosure
+  lived in the refusal string the kernel replaced. pins: fnp-9-collections-json/C-006
+
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,
   determinism per seed — and deliberately NOT on generated values, since no live Spark runs here

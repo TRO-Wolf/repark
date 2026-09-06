@@ -234,6 +234,7 @@ functions	F.array_compact
 functions	F.array_contains
 functions	F.array_distinct
 functions	F.array_except
+functions	F.array_insert
 functions	F.array_intersect
 functions	F.array_join
 functions	F.array_max
@@ -303,6 +304,7 @@ functions	F.count_if
 functions	F.covar_pop
 functions	F.covar_samp
 functions	F.crc32
+functions	F.create_map
 functions	F.csc
 functions	F.cume_dist
 functions	F.curdate
@@ -362,10 +364,12 @@ functions	F.forall
 functions	F.format_number
 functions	F.format_string
 functions	F.from_csv
+functions	F.from_json
 functions	F.from_unixtime
 functions	F.from_utc_timestamp
 functions	F.from_xml
 functions	F.get
+functions	F.get_json_object
 functions	F.getbit
 functions	F.greatest
 functions	F.grouping
@@ -391,6 +395,8 @@ functions	F.isnan
 functions	F.isnotnull
 functions	F.isnull
 functions	F.java_method
+functions	F.json_array_length
+functions	F.json_object_keys
 functions	F.json_tuple
 functions	F.kll_merge_agg_bigint
 functions	F.kll_merge_agg_double
@@ -441,6 +447,7 @@ functions	F.make_dt_interval
 functions	F.make_interval
 functions	F.make_timestamp
 functions	F.make_valid_utf8
+functions	F.map_concat
 functions	F.map_contains_key
 functions	F.map_entries
 functions	F.map_filter
@@ -589,6 +596,7 @@ functions	F.timestamp_millis
 functions	F.timestamp_seconds
 functions	F.to_csv
 functions	F.to_date
+functions	F.to_json
 functions	F.to_timestamp
 functions	F.to_unix_timestamp
 functions	F.to_utc_timestamp

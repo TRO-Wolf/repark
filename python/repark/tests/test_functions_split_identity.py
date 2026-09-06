@@ -379,6 +379,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     pins: fnp-7-try-inversions/C-013
     """
     from repark.spark.functions_declared import DECLARED_REFUSE_NAMES
+    from repark.spark.functions_json import FNP9_NAMES
     from repark.spark.functions_lambda import HIGHER_ORDER_EXPORTS
     from repark.spark.functions_try import TRY_EXPORTS
 
@@ -386,11 +387,13 @@ def test_functions_all_matches_pre_split_inventory() -> None:
     prefix = len(_PRE_SPLIT_ALL)
     declared = len(DECLARED_REFUSE_NAMES)
     higher = len(HIGHER_ORDER_EXPORTS)
+    tried = len(TRY_EXPORTS)
     assert exported[:prefix] == _PRE_SPLIT_ALL
     assert exported[prefix : prefix + declared] == DECLARED_REFUSE_NAMES
     assert exported[prefix + declared : prefix + declared + higher] == HIGHER_ORDER_EXPORTS
-    assert exported[prefix + declared + higher :] == TRY_EXPORTS
-    assert len(exported) == 360 + 62 + 10 + 12
+    assert exported[prefix + declared + higher : prefix + declared + higher + tried] == TRY_EXPORTS
+    assert exported[prefix + declared + higher + tried :] == FNP9_NAMES
+    assert len(exported) == 360 + 62 + 10 + 12 + 8
 
 
 def test_every_all_name_resolves() -> None:

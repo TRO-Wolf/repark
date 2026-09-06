@@ -356,3 +356,29 @@ def str_to_map(
     if keyValueDelim is None:
         lit_indices.add(2)
     return _scalar("str_to_map", text, pair, key_value, lit_indices=frozenset(lit_indices) or None)
+
+
+def create_map(*cols: Column | str) -> Column:
+    """Map from alternating key/value columns (PySpark ``functions.create_map``)."""
+    if len(cols) % 2 != 0:
+        raise PySparkValueError(
+            "create_map requires an even number of key/value arguments",
+            errorClass="WRONG_NUM_ARGS",
+        )
+    return _scalar("create_map", *cols, display=f"map({', '.join(_display_of(c) for c in cols)})")
+
+
+def map_concat(*cols: Column | str) -> Column:
+    """Union of maps (PySpark ``functions.map_concat``)."""
+    return _scalar("map_concat", *cols)
+
+
+def array_insert(arr: Column | str, pos: Column | int, value: Column | object) -> Column:
+    """Insert ``value`` at 1-based ``pos`` (PySpark ``functions.array_insert``)."""
+    inserted = value if isinstance(value, Column) else lit(value)
+    return _scalar("array_insert", arr, pos, inserted)
+
+
+def _display_of(value: Column | str) -> str:
+    """Spark display text for one ``create_map`` argument."""
+    return value.spark_wrap_display_part() if isinstance(value, Column) else value
