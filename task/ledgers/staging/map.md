@@ -330,8 +330,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
   `fix/cutover-schema-1`.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [nullability-2-ledger.md](nullability-2-ledger.md) —
-  **NULLABILITY-2 (2026-09-05), in flight:** the analyzer's remaining nullability
+- [nullability-2-ledger.md](../completed/nullability-2-ledger.md) —
+  **NULLABILITY-2 (2026-09-05), complete:** the analyzer's remaining nullability
   and cast residues, Spark-equal — generalized cast nullability, boolean→decimal,
   null-safe equal non-null, reader relax at every depth, tz-naive dtype mapping.
   Closes or narrows `CAST-NULL-1`, `CAST-BOOL-DEC-1`, `DEC-9` (remainder),

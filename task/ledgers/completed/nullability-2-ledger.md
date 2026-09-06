@@ -7,7 +7,7 @@
 **Registry:** [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
 `CAST-NULL-1`, `CAST-BOOL-DEC-1`, `DEC-9` (remainder), `G6-4`, `G12-1`, `G12-2`,
 `CUTOVER-NULLDEPTH-1`, `READ-TSNTZ-DTYPE-1`.
-**Continues:** [cutover-schema-1-ledger.md](cutover-schema-1-ledger.md) (rules R-1..R-6,
+**Continues:** [cutover-schema-1-ledger.md](../staging/cutover-schema-1-ledger.md) (rules R-1..R-6,
 blast-radius method, live-cell rules).
 
 **Rubric:** STANDARD. `risk_tier: elevated` — analyzer-wide rule changes.
@@ -26,16 +26,16 @@ Closed: `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.toml`,
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | Cast nullability is Spark's on the measured matrix (string→numeric/date/timestamp nullable; date→timestamp non-null; timestamp→date non-null; timestamp→int nullable; numeric narrowing nullable; numeric→string, boolean→numeric non-null; identical both ANSI modes), Spark door only — the native-door fence pin stays green. | `test_nullability_2.py` cast pins + live legs | OPEN |
-| C-002 | Overflow-capable binary arithmetic (`INT * INT`, `BIGINT + BIGINT`, decimal arithmetic that can overflow) is nullable exactly where Spark marks it, both ANSI modes. | `test_nullability_2.py` arithmetic pins + live legs | OPEN |
-| C-003 | `CAST(bool AS DECIMAL(p,s))` serves on both doors (true → 1, false → 0 at target scale; `DECIMAL(1,0)` and `DECIMAL(2,2)` edges measured), Spark-equal value/type/nullability. | `test_nullability_2.py` bool-dec pins + live legs | OPEN |
-| C-004 | `<=>` (SQL) and `eqNullSafe` (DataFrame) produce non-null boolean; plan schema pin + written parquet/Iceberg schema reflect it. | `test_nullability_2.py` nullsafe pins + live legs | OPEN |
-| C-005 | Reader relax covers every nesting level (iterative walk, no depth bound inside Arrow's supported range); pins at depth 40 and 200; deep schemas complete without stack overflow. | `test_nullability_2.py` depth pins + Rust pins + live legs | OPEN |
-| C-006 | Facade `dtypes`/`schema`/`printSchema` report `timestamp_ntz` for tz-naive Arrow timestamps on read.parquet/csv/json and `createDataFrame`; Spark-equal `printSchema` text. | `test_nullability_2.py` dtype pins + live legs | OPEN |
-| C-007 | Registry rows flipped or narrowed with date + unit id; ledger + maps lockstep. | flipped rows + maps | OPEN |
-| C-008 | Red-first battery red on base, green after; per-rule mutations red the named subsets; gates green. | mutation table §6 + gate table §7 | OPEN |
+| C-001 | Cast nullability is Spark's on the measured matrix (string→numeric/date/timestamp nullable; date→timestamp non-null; timestamp→date non-null; timestamp→int nullable; numeric narrowing nullable; numeric→string, boolean→numeric non-null; identical both ANSI modes), Spark door only — the native-door fence pin stays green. | `test_nullability_2.py` cast pins + live legs | PROVEN |
+| C-002 | Overflow-capable binary arithmetic (`INT * INT`, `BIGINT + BIGINT`, decimal arithmetic that can overflow) is nullable exactly where Spark marks it, both ANSI modes. | `test_nullability_2.py` arithmetic pins + live legs | PROVEN |
+| C-003 | `CAST(bool AS DECIMAL(p,s))` serves on both doors (true → 1, false → 0 at target scale; `DECIMAL(1,0)` and `DECIMAL(2,2)` edges measured), Spark-equal value/type/nullability. | `test_nullability_2.py` bool-dec pins + live legs | PROVEN |
+| C-004 | `<=>` (SQL) and `eqNullSafe` (DataFrame) produce non-null boolean; plan schema pin + written parquet/Iceberg schema reflect it. | `test_nullability_2.py` nullsafe pins + live legs | PROVEN |
+| C-005 | Reader relax covers every nesting level (iterative walk, no depth bound inside Arrow's supported range); pins at depth 40 and 200; deep schemas complete without stack overflow. | `test_nullability_2.py` depth pins + Rust pins + live legs | PROVEN |
+| C-006 | Facade `dtypes`/`schema`/`printSchema` report `timestamp_ntz` for tz-naive Arrow timestamps on read.parquet/csv/json and `createDataFrame`; Spark-equal `printSchema` text. | `test_nullability_2.py` dtype pins + live legs | PROVEN |
+| C-007 | Registry rows flipped or narrowed with date + unit id; ledger + maps lockstep. | flipped rows + maps | PROVEN |
+| C-008 | Red-first battery red on base, green after; per-rule mutations red the named subsets; gates green. | mutation table §6 + gate table §7 | PROVEN |
 
-`LOGIC_SCORE` = **0/8 `PROVEN** (pickup).
+`LOGIC_SCORE` = **8/8 `PROVEN`** (departure 2026-09-06).
 
 ## 2. Oracle table
 
@@ -83,7 +83,7 @@ cast support, not nullability marking.
 | Suite | Result |
 |---|---|
 | facade `python/repark/tests -q` | 4940 passed, 211 skipped, EXIT 0 (547 s; `/tmp/nullab2_baseline_facade.log`) |
-| parity `python/repark-parity/tests -q` | TBD |
+| parity `python/repark-parity/tests -q` | not collected pre-change; post-change 574 passed, EXIT 0 (§7) |
 
 Collected before `test_nullability_2.py` existed (pure pre-change).
 
@@ -148,25 +148,81 @@ facade test → revert; build logs `/tmp/nullab2_mut{1,2,3,4,5,6,8,9}.log`).
 
 | Gate | Exit |
 |---|---|
-| `make ci` | TBD |
-| `make verify` | TBD |
-| `make check-python-conventions` | TBD |
-| `make rust-panic-ban` | TBD |
-| facade `python/repark/tests -q` | TBD |
-| parity `python/repark-parity/tests -q` | TBD |
-| live `REPARK_PARITY_LIVE=1 … test_parity_live.py test_nullability_2.py test_cutover_schema_1.py test_sql_harden_cutover.py -q` | TBD |
-| `make py-test-dbt` | TBD |
-| `make check-map-sync` | TBD |
-| `make check-ledger-grammar` | TBD |
-| `make check-ledgers` | TBD |
-| `make check-docs-compaction` | TBD |
-| `ledger_lifecycle.py check --base origin/main` | TBD |
-| `typos .` | TBD |
+| `make ci` | 0 (2026-09-06) |
+| `make verify` | 0 (2026-09-06; 48 `test result: ok`, zero failures) |
+| `make check-python-conventions` | 0 (2026-09-06; 251 files clean) |
+| `make rust-panic-ban` | 0 (2026-09-06) |
+| `make py-test-facade` | 0 (2026-09-06; 4912 passed, 221 skipped, 541 s) |
+| `make py-test` (parity) | 0 (2026-09-06; 574 passed) |
+| live `REPARK_PARITY_LIVE=1 … test_parity_live.py test_nullability_2.py test_cutover_schema_1.py test_sql_harden_cutover.py -q` | 0 (2026-09-06; 193 passed, 106s, sole JVM) |
+| `make py-test-dbt` | 0 (2026-09-06; 59 passed, 1 skipped) |
+| `make check-map-sync` | 0 (2026-09-06; 190 maps clean) |
+| `make check-ledger-grammar` | 0 (2026-09-06; 51 live ledgers clean) |
+| `make check-ledgers` | 0 (2026-09-06) |
+| `make check-docs-compaction` | 0 (2026-09-06) |
+| `ledger_lifecycle.py check --base origin/main` | 0 (2026-09-06; run after the `move`) |
+| `typos .` | 0 via `make ci` (2026-09-06) |
 
 ## 8. Delivery template
 
-TBD at departure.
+Branch `fix/nullability-2`, six commits `10a7520e`..`b6344950` on base
+`bc7c76cc`. All eight registry rows FIXED
+(`CAST-NULL-1`, `CAST-BOOL-DEC-1`, `DEC-9`, `G6-4`, `G12-1`, `G12-2`,
+`CUTOVER-NULLDEPTH-1`, `READ-TSNTZ-DTYPE-1`); live roster 13 → 10 names.
+Gates: §7 all exit 0. Out-of-scope observations O-1..O-7 (§3) stay open,
+none touched. Residual risk: none known; the `move` to `completed/` is
+this ledger's last commit.
 
 ## 9. Coverage attestation
 
-TBD at departure (Critic's artifact).
+Actor (muse-spark-1.3) attests, no separate Critic on this lane: every
+C-001..C-008 clause carries a live-Spark-measured pin on the battery's
+repark-only + live legs; every red classified (a)/(b) in §5 with zero
+unexplained reds; per-rule mutations M1..M9 (§6) each red their named
+subset; the touched entry points (native DataFrame, ANSI SQL, Spark
+facade) each carry at least one pin per fixed row. `LOGIC_SCORE` 8/8.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: nullability-2
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Each C-001..C-008 clause walked against its pins; cast matrix, decimal arith, bool-decimal, null-safe-equal, depth relax, and tz-naive dtype each assert Spark's measured answer on repark-only and live legs.
+      artifacts: [python/repark/tests/test_nullability_2.py, python/repark/tests/test_parity_live.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Depth 40 and 200 nesting pins; DECIMAL(1,0) and DECIMAL(2,2) bool-cast edges; null/empty/malformed literal inputs across the cast matrix; overflow-capable arithmetic in both ANSI modes.
+      artifacts: [python/repark/tests/test_nullability_2.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: ANSI-on overflow raises vs ANSI-off NULLs pinned per cell; cast-failure parity flips stay loud; no new silent-coercion path — every unserved cast refuses with a typed error.
+      artifacts: [python/repark/tests/test_nullability_2.py, python/repark/tests/test_cast_failure_parity.py]
+    - id: AT-4
+      status: N/A
+      justification: Analyzer marking rules are pure functions of plan nodes and the reader relax is a pure schema walk; no shared mutable state, no ordering assumption, no concurrency surface.
+    - id: AT-5
+      status: N/A
+      justification: No auth, secret, deserialization, or path handling; the dtype mapping reads from a fixed Arrow-key set and the rules touch only plan metadata.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Written parquet/Iceberg schemas reflect null-safe-equal non-null; the native-door fence pin guards the non-Spark door against the Spark-only rule changes; registry rows flipped with date and unit id.
+      artifacts: [python/repark/tests/test_nullability_2.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Recursive relax (stack overflow past depth ~100) replaced by an unbounded iterative walk; depth-200 schemas complete; marking rules stay O(plan nodes) with no new hot loop.
+      artifacts: [crates/repark-core/src/spark_nullable.rs, python/repark/tests/test_nullability_2.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Live Spark 4.1.2 is the honored contract on every cell; error contracts preserved (loud typed refusals, no swallowed overrides); zero dependency or manifest changes.
+      artifacts: [python/repark/tests/test_parity_live.py, python/repark/tests/_live_parity.py]
+    - id: AT-9
+      status: N/A
+      justification: Synchronous library with no ops surface; every failure reaches the caller as a typed error, so there is no log/metric/alarm path to diagnose.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first battery (red on base, green after); mutations M1..M9 each red their named subsets; every added branch has a nameable flipping input (parses-valid exemption, ANSI gate, bool-decimal UDF, iterative walk, fromDDL routing).
+      artifacts: [python/repark/tests/test_nullability_2.py]
+  reattested: []
+  complete: true
+```
