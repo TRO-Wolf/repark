@@ -1,0 +1,1 @@
+muse exec --json --prompt-file prompt.md --model muse-spark-1.3 --reasoning-effort max --max-model-steps 50 --approval-mode never
