@@ -7,7 +7,7 @@ use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 use datafusion::arrow::array::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use futures::channel::mpsc;
-use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use iceberg::arrow::{FieldMatchMode, RecordBatchPartitionSplitter, schema_to_arrow_schema};
 use iceberg::spec::{DataFile, DataFileFormat};
 use iceberg::table::Table;
@@ -24,6 +24,7 @@ use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
 use crate::write::conform::{conform_batch, conform_batches, write_default_column_names};
+use crate::write::distribution::{route_partitioned_stream, send_routed};
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
 use crate::write::writer_props::writer_properties_for;
 use crate::write::{concurrency::WriteConcurrency, file_order::ascending_partition_order};
@@ -179,17 +180,16 @@ where
     }
 
     let aborted_for_dispatch = Arc::clone(&aborted);
+    let mut routed = route_partitioned_stream(table, max_concurrent, conformed)?;
     let dispatcher = async move {
-        let mut index = 0usize;
         loop {
-            match conformed.next().await {
+            match routed.next().await {
                 None => {
                     drop(senders);
                     return Ok::<(), DataFusionError>(());
                 }
-                Some(Ok(batch)) => {
-                    let slot = index % max_concurrent;
-                    if senders[slot].send(batch).await.is_err() {
+                Some(Ok(parts)) => {
+                    if !send_routed(&mut senders, parts).await {
                         aborted_for_dispatch.store(true, Ordering::SeqCst);
                         drop(senders);
                         return Err(DataFusionError::Execution(
@@ -197,7 +197,6 @@ where
                                 .into(),
                         ));
                     }
-                    index = index.wrapping_add(1);
                 }
                 Some(Err(error)) => {
                     aborted_for_dispatch.store(true, Ordering::SeqCst);

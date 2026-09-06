@@ -280,9 +280,10 @@ def test_census_matches_the_metadata_tables(tmp_path: Path) -> None:
         census = measure.file_census(spark, table)
 
         files = spark.sql(
-            f"SELECT content, file_size_in_bytes, record_count FROM {table}.files"
+            f"SELECT content, file_path, file_size_in_bytes, record_count FROM {table}.files"
         ).to_arrow()
         contents = files.column("content").to_pylist()
+        paths = files.column("file_path").to_pylist()
         sizes = files.column("file_size_in_bytes").to_pylist()
         records = files.column("record_count").to_pylist()
         expected_data = [index for index, value in enumerate(contents) if value == 0]
@@ -290,6 +291,7 @@ def test_census_matches_the_metadata_tables(tmp_path: Path) -> None:
 
         assert census.data_files == len(expected_data)
         assert census.data_bytes == sum(sizes[index] for index in expected_data)
+        assert census.data_file_paths == sorted(str(paths[index]) for index in expected_data)
         assert census.delete_files == len(expected_deletes)
         assert census.delete_bytes == sum(sizes[index] for index in expected_deletes)
         assert census.delete_records == sum(records[index] for index in expected_deletes)
@@ -341,7 +343,9 @@ def test_copy_on_write_leg_is_a_zero_delete_control(smoke_run: Any) -> None:
     assert leg.after_maintenance.census.delete_files == 0
     assert all(point.row_count == SMOKE_ROWS for point in leg.checkpoints)
     # The control must still be doing the work: COW rewrites data files on every MERGE.
-    assert leg.checkpoints[-1].census.data_files > leg.checkpoints[0].census.data_files
+    before = set(leg.checkpoints[0].census.data_file_paths)
+    after = set(leg.checkpoints[-1].census.data_file_paths)
+    assert after != before, f"the COW leg rewrote no data file across {SMOKE_MERGES} MERGEs"
 
 
 def test_compaction_reclaims_delete_files_and_data_files(smoke_run: Any) -> None:

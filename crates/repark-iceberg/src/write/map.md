@@ -136,9 +136,17 @@ repark-core's error map.
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
   staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
   `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
-  (registry `V3-ADOPT-1` FIXED). **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry
-  delegates to the distribution module's sorted drivers, so a declared default sort order sorts
-  every partitioned staged write at no behaviour change when no order is declared.
+  (registry `V3-ADOPT-1` FIXED).
+  **WRITE-DISTRIBUTION-2 (2026-09-06):** the concurrent dispatcher no longer deals whole
+  batches round-robin. It routes each batch through `distribution.rs::PartitionRouter`, which
+  splits the batch's rows by hash of the writer's partition values, and sends each part to its
+  slot's worker — one partition value lands in one writer on every partitioned stream write
+  (INSERT OVERWRITE, MERGE inserts, staged appends). The serial path and the unpartitioned
+  path are untouched by this unit.
+  pins: write-distribution-2/C-001
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry delegates to the distribution
+  module's sorted drivers, so a declared default sort order sorts every partitioned staged
+  write at no behaviour change when no order is declared.
   pins: write-order-dist-1/C-008
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
@@ -271,17 +279,34 @@ repark-core's error map.
   bypasses the rule; a plan lacking a partition source column errors. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
+  **WRITE-DISTRIBUTION-2 (2026-09-06):** the same rule on the stream write paths, which have no
+  physical plan to hang a `RepartitionExec` on — the input is a one-shot
+  `SendableRecordBatchStream`, and a repartition node would re-drive it once per output. So
+  `PartitionRouter` applies the rule in the dispatcher instead: it hashes each row's partition
+  values with the writer's own `PartitionValueCalculator` plus `create_hashes` under DataFusion's
+  seeded `REPARTITION_RANDOM_STATE`, splits the batch with `take`, and each part goes to its
+  slot's worker. Same key family as the plan node, same seed, one pass over the input, no spawn.
+  The MERGE serial lineage writer (V3 tables) already runs one writer and is untouched; plain
+  `INSERT INTO` never reaches this module (the fork's `TaskWriter` owns it — still 32 files
+  where Spark writes 8, an open fork ask). In-module pins: the stream path lands one value in
+  one writer; determinism across two runs; NULL values; a two-field spec; MERGE inserts through
+  the MERGE entry; `truncate(3, s)` over a view-typed string keys on the cast value (mutation:
+  dropping the cast fails with the fork's `Unsupported data type for truncate transform:
+  Utf8View`); a late failure into a partitioned table leaves no data file. Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md) §6–§8.
+  pins: write-distribution-2/C-001, C-002, C-004, C-005, C-006, C-008
   **WRITE-ORDER-DIST-1 (2026-09-06):** the rule reads `write.distribution-mode` — `none`
-  skips it (the CTAS falls back to writers × values), unset and `hash` keep one file per
-  value, `range` takes the hash shape plus the per-writer sort below, and anything else is a
-  planning error. When the table declares a default sort order, each writer sorts its own
-  stream through DataFusion's `SortExec` over an in-memory source before the funnel writes
-  it — `fanout_sorted_serial` / `fanout_sorted_stream` for the partitioned funnel,
-  `drive_unpartitioned` for the unpartitioned one — so CTAS, INSERT OVERWRITE, and MERGE
-  all commit monotone files with no new dependency and no spawned task. A sort field on a
-  non-identity transform refuses loud; only identity fields sort. In-module pins: the
-  `none`/`hash`/`range` layouts, the unknown-mode planning error, cross-batch sorting, the
-  identity return without an order, and monotone committed files on both funnel entries.
+  skips it (the CTAS falls back to writers × values and the stream dispatcher deals whole
+  batches round-robin), unset and `hash` keep one file per value, `range` takes the hash shape
+  plus the per-writer sort below, and anything else is a planning error. When the table declares
+  a default sort order, each writer sorts its own stream through DataFusion's `SortExec` over an
+  in-memory source before the funnel writes it — `fanout_sorted_serial` / `fanout_sorted_stream`
+  for the partitioned funnel, `drive_unpartitioned` for the unpartitioned one — so CTAS, INSERT
+  OVERWRITE, and MERGE all commit monotone files with no new dependency and no spawned task. A
+  sort field on a non-identity transform refuses loud; only identity fields sort. In-module pins:
+  the `none`/`hash`/`range` layouts, the unknown-mode planning error, cross-batch sorting, the
+  identity return without an order, monotone committed files on both funnel entries, and the
+  `none` round-robin stream layout.
   pins: write-order-dist-1/C-007, C-008, C-010
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec

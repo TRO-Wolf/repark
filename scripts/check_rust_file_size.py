@@ -41,11 +41,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Dynamic-flatten behavior and refusal scenarios share one test module.",
         "Split structural cases from list and refusal cases with an identity check.",
     ),
-    "crates/repark-core/src/session.rs": (
-        1002,
-        "The session root still combines construction, planning, and execution entry points.",
-        "Extract one existing responsibility when a charter already changes that region.",
-    ),
     "crates/repark-core/src/session/tests/session.rs": (
         1412,
         "Session behavior scenarios remain in one file-backed test module.",
@@ -77,7 +72,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split property, rename, and schema-evolution operation families.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1883,
+        1882,
         "Append planning, file writing, and commit assembly share one entry module.",
         "Extract writer preparation from transaction commit assembly.",
     ),

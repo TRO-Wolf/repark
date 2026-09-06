@@ -1,5 +1,11 @@
 # map — scripts/
 
+CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
+1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
+retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` dropped
+the matching `_RUST_BASELINES` row in the same commit. Round 2: `check_lib_py.py`
+`reader.py` 1026 → 1022 (path argument, no stored `path` option).
+pins: csv-infer-perf-1/C-006
 EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
 names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
@@ -223,6 +229,12 @@ H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/da
 it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
 with it in the same commit. pins: h3-spill-residue-1/C-002
 
+WRITE-DISTRIBUTION-2 (2026-09-06): `check_rust_file_size.py` `write/append.rs`
+1884→1883 — the round-robin dispatcher index is gone with the routed send, so the funnel came
+out a line shorter than it went in. A ratchet DOWN; the duplicate table in
+`test_cap_1_source_file_line_cap.py` moved with it in the same commit.
+pins: write-distribution-2/C-001
+
 WRITE-ORDER-DIST-1 (2026-09-06): `check_rust_file_size.py` `repark-spark/src/alter.rs`
 1830→1821 (the WRITE ORDERED/DISTRIBUTED refusal leaves for the new `alter_write_order.rs`
 module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/append.rs`
@@ -233,6 +245,10 @@ distribution module's sorted drivers). All three ratchet DOWN; the duplicate tab
 `WRITE DISTRIBUTED BY` refusal blocks leave `alter_unsupported_forms_refuse_loud`;
 the forms now execute and their pins live in `tests/alter_write_order.rs`.
 pins: write-order-dist-1/C-012
+
+WRITE-ORDER-DIST-1 merge with `origin/main` (2026-09-06): both units took one line out of
+`write/append.rs` on disjoint hunks, so the merged file is 1882, one below either side's
+1883 — the merge ratchets the exact ceiling 1883→1882 in both tables in the merge commit.
 
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for

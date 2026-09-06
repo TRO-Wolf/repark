@@ -342,6 +342,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
+  CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
+  and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
+  (internal `utf8_columns` no longer in the public native-key set) and re-hashed
+  `_promote_csv_string_types` (optional leftover-candidate list; last docstring line restored).
+  Round 5 re-hashed `_promote_csv_string_types` (boolean fail is Spark `true`/`false` tokens,
+  not Arrow `try_cast`).
+  pins: csv-infer-perf-1/C-002, C-005
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -501,6 +508,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
+  plan-time `to_arrow`/`collect` stay ≤ 1 on inferSchema (one `try_cast` aggregation)
+  and 0 when `inferSchema=False`; wall pin on a 300k × 8 CSV is a 0.5 s regression
+  guard (release only) — the 2× bar is measured in `docs/perf/csv-infer-baseline.md`
+  and is not met by skipping leftover grammar on wide frames;
+  11 Spark-equal shapes the prior suite lacked (int-then-double, late-bad-int, 007,
+  NA-without-nullValue, bool, string, offset, Z, date, `nullValue` date/timestamp) on the
+  DataFrame door and the temp-view SQL door; live leg vs PySpark 4.1.2 (007 width stays
+  EX-IO-3 bigint vs int with equal rows). `csv.\`path\`` is not a door.
+  **Round 2:** 1001-row late-conflict class pins (int→double, late-bad int/double/date,
+  late `true`/`NA`, slash-date, US-date-in-ts, clock-in-date) on both doors; `date_bad_day`;
+  `header=False` × offset × `America/New_York`; `Inf`/`NaN`/`Infinity`/`+5`/23-digit;
+  `utf8_columns` ignored; `csv(path)` does not store `path` for a later `load()`;
+  empty columns are `string` not `void`; 20-digit integers stay `double` (Spark `decimal`).
+  **Round 3:** leftover numeric grammar is width-independent (`Inf`/`+5`/23-digit at 3, 8,
+  and 12 columns, both doors); `multiLine` + `inferSchema` past 1000 records does not
+  raise; plan-time `to_arrow` stays ≤ 1 on an 8-column `Inf` file.
+  **Round 4:** quoted embedded newlines at 5/500/1001/5000 records plus late 1.5/`oops`,
+  both doors; `inferSchema=False` on the same files does not raise. Wall pin renamed
+  `test_infer_schema_true_stays_within_twice_false` →
+  `test_infer_schema_true_stays_under_half_second` (declared rename; 0.5 s regression
+  guard matching the assertion).
+  **Round 5:** boolean promotion accepts only `true`/`false` (case-insensitive);
+  `1` then `true` stays string at 5/400/1001/5000/20000 records, embedded and
+  single-line `multiLine`, both doors; `0`/`1`, `t`/`f`, `yes`/`no`, `TRUE`/`False`,
+  ` true` match Spark on both routes. Header embedded newline raises
+  (`CSV-INFER-HEADER-NEWLINE` DECLARED; pin reds when the first-record schema
+  read becomes record-aware).
+  pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.
@@ -663,7 +699,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   delete files grow exactly `partitions x merges` (one per `(spec, partition)` per commit —
   the fixture sets `write.delete.granularity = 'partition'`) while `COUNT(*)` holds; the
   copy-on-write leg writes zero delete files,
-  so it is a valid control; `rewrite_position_delete_files` folds the deletes to one per
+  so it is a valid control; the rewrite half of the control is the live data-file path
+  set changing across the MERGEs (since 2026-09-06; the old count-grows assertion
+  measured writer fan-out — 2 → 2 once one partition value reached one writer — not
+  the rewrite); `rewrite_position_delete_files` folds the deletes to one per
   partition and `rewrite_data_files` cuts the data files; `rewrite_manifests` drops the
   manifest count on both legs; the maintenance sequence is the charter's five procedures in
   order with orphan cleanup last and dry-run; every timing carries the answer it was
@@ -1915,6 +1954,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   deliberately NOT asserted here; `test_perf_ice_writepath_1.py` keeps it, unchanged. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
+- `test_write_distribution_2.py` — **WRITE-DISTRIBUTION-2** (2026-09-06): the hash distribution
+  rule on the partitioned stream write paths, through the facade over the WD1 seed shape at
+  `shuffle.partitions = 8` (the MERGE leg seeds 400,000 rows: at 120,000 the base funnel commits
+  8 and the pin would not bite). Always-run: `INSERT OVERWRITE` and `MERGE ... WHEN NOT MATCHED
+  THEN INSERT` each commit exactly eight data files, one per value, with the row count and
+  `sum(id)` proving the row set is unchanged (the funnel alone wrote 32, four per value); a CTAS
+  `PARTITIONED BY (truncate(3, s))` over the parquet seed commits one file per truncated prefix.
+  Live (`REPARK_PARITY_LIVE=1`): Spark 4.1.2 writes the same `(partition value, record_count)`
+  layout for the overwrite and merge seeds. Plain `INSERT INTO` and `saveAsTable(mode="append")`
+  are deliberately NOT asserted here: they execute inside the fork's `insert_into` and still
+  write 32 where Spark writes 8 (open fork ask, ledger C-009). Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §6–§8.
+  pins: write-distribution-2/C-001, C-002, C-003
 - `test_write_order_dist_1.py` — **WRITE-ORDER-DIST-1** (2026-09-06): the five `ALTER TABLE …
   WRITE …` forms and the writes they shape, through the facade over fixed 8-value seeds at
   `shuffle.partitions = 8` — an 8,000-row two-file seed for the DDL transitions, a 120,000-row

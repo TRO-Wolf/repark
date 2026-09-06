@@ -24,9 +24,8 @@ pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
 pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
-    csv_read_options_from_map, csv_utf8_schema_from_path, engine_err, iceberg_err,
-    json_read_options_from_map, object_store_s3, parse_table_identifier_segments,
-    resolve_s3_region_override,
+    engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
+    parse_table_identifier_segments, resolve_s3_region_override,
 };
 
 mod df_guards;
@@ -798,20 +797,7 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
-        let mut csv_options = csv_read_options_from_map(options)?;
-        // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.
-        let utf8_schema = if crate::read_options::csv_force_utf8_schema(options) {
-            csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
-        } else {
-            None
-        };
-        if let Some(ref schema) = utf8_schema {
-            csv_options = csv_options.schema(schema);
-        }
-        self.context()
-            .read_csv(path, csv_options)
-            .await
-            .map_err(engine_err)
+        crate::read_options::read_csv_path(self.context(), path, options).await
     }
 
     /// Read a JSON file or directory using Spark multiline semantics.
