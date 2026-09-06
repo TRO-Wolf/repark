@@ -1,0 +1,7 @@
+{
+  "sessionId": "sess-fixture",
+  "stopReason": "end_turn",
+  "num_turns": 4,
+  "total_cost_usd": 0.0123,
+  "text": "{\"status\":\"CONCLUDED\"}"
+}

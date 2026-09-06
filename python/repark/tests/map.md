@@ -33,6 +33,26 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_perf_approxpct_1.py](test_perf_approxpct_1.py) — **PERF-APPROXPCT-1 (2026-09-05):**
+  the sketch pins. The accuracy matrix (default/100/10/2 × scalar/array × NULLs ×
+  duplicate-heavy × skewed × int/float/decimal) against values recorded from live PySpark
+  4.1.2; scan-path cells run on one-partition `repartition(1)` views because multi-partition
+  merge trees differ legitimately between engines (the same UNION text answered 106.0 then
+  110.0 on consecutive runs); the 100-row frame answers Spark's default/acc10/acc2 sampled
+  columns. DataFrame-door, error-contract, type, and release-only wall-bar legs, plus live
+  legs that re-derive every golden. pins: perf-approxpct-1/C-002, C-003, C-004, C-005, C-006
+  **Round 2 (2026-09-06):** the wall pin asserts an N/accuracy band around the true median
+  (the exact 500000 held only where the debug skip hid it) under a 1.0 s bar;
+  `test_million_row_repeats_one_value` pins one value over 10 runs at default and acc100
+  plus the 2N/accuracy triangle bound against live Spark's 500082, and
+  `test_hundred_thousand_groups_repeat_bit_equal` pins 1e5 groups bit-equal across runs.
+  pins: perf-approxpct-1/C-004
+  **Round 3 (2026-09-06):** DataFrame-door non-integral accuracy is Spark's
+  `AnalysisException` class/message/params; SQL-door is AnalysisException with the
+  class in the message and `getErrorClass`/`getMessageParameters` None
+  (`FN-APPROXPCT-ACC-TYPE-1`, red-when-fixed);
+  `test_run_cells_help_exits_zero` pins argparse `--help`.
+  pins: perf-approxpct-1/C-002
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
@@ -55,11 +75,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `WIN-SLIDE-PCT-ACC-1` published under a live-oracle line that no live test had touched. The
   accuracy-knob test's last assertion was two constants and is now repark's own answer against
   Spark's. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007
+  **PERF-APPROXPCT-1 (2026-09-05):** the knob test now asserts Spark's accuracy-2 sketch
+  column — the knob is honored per frame, so `WIN-SLIDE-PCT-ACC-1` closes here.
 - **Round 4:** the bed loader in these tests uses `package.__dict__["__path__"]`, not an
   attribute assignment needing a `# type:` pragma.
 - [test_dynflatten_bed_gate.py](test_dynflatten_bed_gate.py) — **PERF-DYNFLATTEN-1
   (2026-09-04):** gate-scale bed parquet flattens on repark (struct_d3 /
   cartesian / null_typed_list). pins: perf-dynflatten-1-measure/C-001, C-002
+- [test_dynflatten_listnull.py](test_dynflatten_listnull.py) — **DYNFLATTEN-LISTNULL-1
+  (2026-09-06):** parquet `list<null>` (`int32` physical + Null logical) reads as
+  `list<int32>` on both DataFrame doors (`read.parquet` and `read_parquet`); default
+  `dynamicFlatten` keeps the column as nullable `int32` NULLs (one per parent);
+  `make_array()` / ARRAY<VOID> still drops under `drop_null_lists=True`. Live co-collect
+  is `test_parity_live_dynflatten.py`. Mutation: skip `promote_parquet_null_types` and
+  the read/flatten pins red. Registry row FIXED; bench `createDataFrame` load path still
+  drops ARRAY<VOID>; struct-only bed shapes unchanged.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_dynflatten_null_mask.py](test_dynflatten_null_mask.py) — **PERF-DYNFLATTEN-2
   (2026-09-04):** the before/after correctness pin, one row per bed shape. `ROWS` holds,
   per shape, the row count, the Arrow schema string (names, types, nullability) and the
@@ -100,10 +131,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the `createDataFrame` path the bench measures. 17 passed / 105 deselected, unchanged.
   **CUTOVER-SCHEMA-1 (2026-09-04):** the reader relax converged the row — repark `id` now
   nullable like Spark, so the pin asserts `True` on both sides. DYNFLATTEN-READNULL-1 FIXED.
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06):** the list shapes now compare the full frame, including
+  `user_properties` as nullable `int32` (Spark's parquet reader; repark promotes Null logical
+  type the same way). `struct_d3` was already equal.
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: perf-dynflatten-2-null-mask/C-004
   pins: perf-dynflatten-1-measure/C-002, C-003
   pins: cutover-schema-1/C-001
+  pins: dynflatten-listnull-1/C-004
 - [test_ctas_view_typed.py](test_ctas_view_typed.py) — **CTAS-VIEW-1 (2026-09-03):** parquet
   file → `read.format('parquet')` → `createOrReplaceTempView` → unpartitioned
   `CREATE TABLE … USING iceberg AS SELECT *` into the memory catalog; read-back equals
@@ -204,6 +239,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   interval display arm pin today's wrong values so the fixes red them. The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
   pins: ex-25-functions-a/C-009
+- [test_examples_ml.py](test_examples_ml.py) — **EX-27 (2026-09-05, round 2
+  2026-09-06):** the nine divergence pins for the ml example batch —
+  Vector.size as a method (EX-ML-1), VectorUDT typeName/`sqlType`/`jsonValue`/
+  serialize (EX-ML-2), HasInputCol not extending Params plus Tokenizer unset
+  inputCol (EX-ML-3), ParamGridBuilder.baseOn pairs and the tuple reverse arm
+  (EX-ML-4), mixin setters (EX-ML-5), empty Pipeline.getStages (EX-ML-6),
+  Spark-shaped UnaryTransformer (EX-ML-7), repark-ml persistence format
+  (EX-ML-8), and DenseVector.dot / squared_distance (EX-ML-9). The module
+  docstring names the row span `EX-ML-1`…`EX-ML-9`.
+  pins: ex-27-ml/C-007
 - [test_examples_io_session.py](test_examples_io_session.py) — **EX-26 (2026-09-06):**
   the thirteen divergence pins for the reader/writer/session example batch — the bare-load
   default (EX-IO-1), schema on parquet (EX-IO-2), the csv infer-schema width with agreeing
@@ -1216,12 +1261,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `small()` scale (64 rows / seed 42 — never the 1M CLI default), written to `tmp_path` and
   read back through the facade; the generator table is the oracle, assertions are Arrow
   value+type. **nested** (the held DS-1 pins, landed on #154): parquet keeps the capitalized
-  nested schema incl. `array<void>`; string-form / casefold / `F.col` / getitem
+  nested schema incl. parquet `user_properties` as `list<int32>`; string-form / casefold / `F.col` / getitem
   `explode('Legs')`; `explode_outer` keeps null+empty rows on the scalar-element lists
   (`Tags`/`Scores`) **and** on `array<struct>` `Legs` (DF-2 flipped the refuse pin
   in place); `dynamicFlatten` struct unnest with parent-path prefixes and full-depth
-  in-place column order (13 columns; row count is the outer-explode cartesian — see
-  `_nested_full_flatten_rows`) with the null-typed list dropped; the BUG-CANDIDATE that
+  in-place column order (14 columns; row count is the outer-explode cartesian — see
+  `_nested_full_flatten_rows`) with parquet `user_properties` kept as nullable int32
+  (DYNFLATTEN-LISTNULL-1); the BUG-CANDIDATE that
   pinned `count()` failing inside `push_down_leaf_projections` on that full-depth plan is
   FLIPPED IN PLACE (DEFECT-2, 2026-08-18): `test_nested_dynamic_flatten_count_action_is_green`
   now pins `count() == to_arrow().num_rows` plus a narrowing `select`. **schema_inference** POLICY:
@@ -1411,9 +1457,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: fn-fix-1-registry-rows/C-003
   **FN-APPROXPCT-1 FIXED 2026-09-03 (FN-FIX-1):**
   `test_approx_percentile_discrete_bigint_matches_spark`.
-  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
-  (repark `100.0` at accuracy 2; Spark `1.0`).
+  **FN-APPROXPCT-ACC-1:** `test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
+  (repark `1.0` at accuracy 2, Spark-equal since **PERF-APPROXPCT-1 (2026-09-05)**).
   pins: fn-fix-1-registry-rows/C-003
+  **Round 2 (2026-09-06):** bool/float/str accuracy pins fail with Spark's INTEGRAL
+  contract; numpy integer accuracy runs as the int on scalar and list forms.
+  pins: perf-approxpct-1/C-002
+  **Round 3 (2026-09-06):** those refusals are `AnalysisException` with Spark's
+  class, message and params (`sqlExpr`/`paramIndex`/`inputSql`/`inputType`/
+  `requiredType`), not `PySparkTypeError`.
+  pins: perf-approxpct-1/C-002
 - `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
 - `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
   (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
@@ -2737,6 +2790,53 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `*.avro` is unlinked) are the every-build guard.
   RP-13 (2026-09-05, pin `2ed39cb0`, F-CATIO-KEY) flipped the knob-on upgrade detector from the
   NULL-lineage answer to the assigned lineage; `PERF-CATALOG-LINEAGE-CACHE-1` is FIXED.
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip. Every IO-2 explicit-knob leg
+  now runs on the default session as its primary — the timing pin, the six staleness legs
+  (rewrite + expire, MERGE, DROP + re-CREATE, `register_table`, time-travel, branch) and
+  the lineage pin — with the explicit `0` as the off-control in both directions. The
+  default-off control is inverted into the primary sharing pin (a default session answers
+  after every `*.avro` is unlinked; red while the default is `0`, green after), the
+  explicit-knob sharing leg stays (explicit bytes still share), and the explicit-`0` leg
+  stays as the off-control. Two legs join: a two-session concurrency leg (session A
+  upgrades a v2 table to v3 while session B holds a warm pre-upgrade cache over the same
+  warehouse, then B reads assigned lineage — the fork fix's contract) and a 500-table
+  subprocess RSS leg (peak `ru_maxrss` default versus explicit `0`, within 64 MB).
+  Round 2 (critic remediation, same unit) joins two structural legs: a 128 KiB thrash pin
+  over 256 tables (after every manifest is deleted, cold tables miss and hot tables
+  hit — a token budget churns without benefit) and a charged-weight pin
+  (256 tables fit a 280000 budget at the fork's estimated weight, so the coldest table
+  still hits; true fork weights evict it and red the leg — registry
+  `PERF-CATALOG-CACHE-WEIGHT-1`). Renames
+  (the flip inverts their meaning):
+  `test_a_default_session_reopens_manifests_after_they_vanish` →
+  `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish`,
+  `test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows` →
+  `test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`.
+
+  | test | clause |
+  |---|---|
+  | `test_the_second_statement_on_a_many_manifest_table_is_under_the_target` | C-003 |
+  | `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish` | C-003 |
+  | `test_zero_manifest_bytes_makes_a_repeated_read_open_manifests_again` | C-003 |
+  | `test_an_explicit_session_answers_from_the_shared_cache_after_manifests_vanish` | C-001 |
+  | `test_after_rewrite_and_expire_the_next_read_needs_only_new_manifest_paths` | C-003 |
+  | `test_a_merge_after_a_commit_matches_the_committed_row` | C-003 |
+  | `test_a_dropped_and_recreated_table_answers_its_own_rows` | C-003 |
+  | `test_a_registered_table_stays_correct_across_a_commit` | C-003 |
+  | `test_time_travel_reads_the_pinned_snapshot_with_the_cache_on` | C-003 |
+  | `test_branch_reads_answer_with_the_cache_on` | C-003 |
+  | `test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-003 |
+  | `test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows` | C-003 |
+  | `test_a_warm_second_session_reads_assigned_lineage_after_the_first_session_upgrades` | C-004 |
+  | `test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget` | C-005 |
+  | `test_a_sub_megabyte_byte_budget_churns_cold_tables_while_hot_tables_hit` | C-005 |
+  | `test_a_budget_sized_to_the_charged_weight_retains_every_table` | C-005 |
+  | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
+  | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
+  | the four v3 upgrade/legacy tests (`test_v3_legacy_delete_merge.py` × 2, the `alter-set-format-version-3-mor` statement row, `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`) | C-002 |
+  | the re-measured `t_many` / `t_many_merged` cells | C-006 |
+
+  pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert

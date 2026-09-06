@@ -1,0 +1,8 @@
+{
+  "status": "CONCLUDED",
+  "summary": "fixture",
+  "questions": [],
+  "commits": ["cccccccccccccccccccccccccccccccccccccccc docs(fixture): oc"],
+  "gates": [],
+  "out_of_scope_observed": []
+}

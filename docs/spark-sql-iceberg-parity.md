@@ -1769,31 +1769,99 @@ the pin rather than obeying it.
 - **Pin** —
   `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
 - **Rationale** — FIXED. History: t-digest interpolation returned DOUBLE.
-  Residue: the accuracy knob is accepted and ignored (`FN-APPROXPCT-ACC-1`).
+  Residue closed 2026-09-05 (PERF-APPROXPCT-1): the accuracy knob reaches the
+  sketch (`FN-APPROXPCT-ACC-1`).
 
-### FN-APPROXPCT-ACC-1 — `percentile_approx` accuracy 2 is ignored; Spark's Greenwald-Khanna sketch collapses
+### FN-APPROXPCT-ACC-1 — `percentile_approx` accuracy 2 is honored; Spark's Greenwald-Khanna sketch collapses — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
-- **repark** — `percentile_approx(x, 0.5, 2)` over 1..200 is `100.0` (same as the
-  two-arg discrete p50). The third argument is accepted and ignored on the facade
-  (`del accuracy`) and on SQL.
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1), scope narrowed 2026-09-06.**
+  `percentile_approx(x, 0.5, 2)` over 1..200 is `1.0`, `percentile_approx(x, 0.5)`
+  and `…, 10000` are `100.0` — Spark-equal on single-partition inputs and bit-equal
+  on the pinned matrix; multi-partition merges are deterministic within the GK bound
+  (`FN-APPROXPCT-ORDER-1`). The third argument reaches the sketch on the facade and
+  on SQL (validated at plan time, out-of-range raises). Non-integral accuracy is
+  Spark-equal on the DataFrame door; the SQL door is `FN-APPROXPCT-ACC-TYPE-1`.
 - **Apache Spark** — `percentile_approx(x, 0.5, 2)` is `1.0` (Greenwald-Khanna at
   accuracy 2). `percentile_approx(x, 0.5)` and `…, 10000` are `100.0`.
   *(oracle: live PySpark 4.1.2, 2026-09-03.)*
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_sql_third_arg_does_not_change_discrete_p50`
-- **Rationale** — BACKLOG. Do not emulate the sketch. Spark's low-accuracy answers
-  are sketch artefacts; repark keeps the discrete data value.
+  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_sql_third_arg_moves_p50_to_the_sketch_answer`
+  and the Spark-measured matrix
+  `python/repark/tests/test_perf_approxpct_1.py::test_accuracy_matrix_matches_spark`.
+- **Rationale** — FIXED. History: the knob was accepted and ignored while the
+  kernel answered the discrete rank. Scope narrowed 2026-09-06 (round 2): the
+  "Spark's column exactly" claim holds on single-partition inputs and the pinned
+  matrix (`FN-APPROXPCT-ORDER-1`).
 
-### PERF-APPROXPCT-1 — `percentile_approx` holds the whole group; Spark's sketch bounds memory
+### FN-APPROXPCT-ORDER-1 — multi-partition `percentile_approx` merges are deterministic but not Spark's merge order
 
-- **repark** — the UDAF collects group values and picks the discrete rank
-  (`select_nth_unstable`). Memory is O(n) per group.
+- **repark** — `percentile_approx(id, 0.5)` over 1..1e6 answers `499971` on every
+  run at default accuracy (`501539` at accuracy 100): partial summaries stage and
+  fold once sorted by serialized bytes, so the answer is order-free given the
+  partial set. Spark's exact merge order is not reproducible from DataFusion's
+  partitioning, so the answer differs from Spark's within the GK bound.
+- **Apache Spark** — the same query answers `500082` on every run.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, `local[2]`, 2026-09-06;
+  BANNER spark=4.1.2 tz=UTC.)*
+- **Pin** —
+  `python/repark/tests/test_perf_approxpct_1.py::test_million_row_repeats_one_value`
+  (10 runs, 1 distinct value at default and acc100, plus the 2N/accuracy triangle
+  bound against Spark's 500082) and
+  `python/repark/tests/test_perf_approxpct_1.py::test_hundred_thousand_groups_repeat_bit_equal`.
+- **Rationale** — OPEN, filed 2026-09-06 from the PERF-APPROXPCT-1 round-2 review.
+  Not a refused shape: both engines answer within the GK rank budget (|499971 -
+  500082| = 111 against a 2N/accuracy budget of 200), but the merge trees differ
+  legitimately (DataFusion partials vs Spark's), so bit-equality is not claimed.
+  The three FIXED rows narrow to single-partition inputs and the pinned matrix.
+  No live-mirror: the DISCLOSURES table sits at its exact file-size ceiling, so an
+  entry needs unrelated churn; the repark side is pinned by always-run repeatability
+  pins and the Spark side rests on the recorded banner.
+
+### FN-APPROXPCT-ACC-TYPE-1 — SQL-door non-integral `accuracy` is AnalysisException without Spark's params
+
+- **repark** — SQL `percentile_approx(x, 0.5, TRUE)` / `1.5` / `'100'` raises
+  `AnalysisException` whose message carries
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`, `INTEGRAL`, SQLSTATE 42K09 and the
+  Spark type name (BOOLEAN / DECIMAL(2,1) / STRING). `getErrorClass()` and
+  `getMessageParameters()` are None: DataFusion `Plan` errors do not carry
+  Spark's `{sqlExpr, paramIndex, inputSql, inputType, requiredType}` map, and
+  `return_type` sees only `DataType`s. The DataFrame door is Spark-equal
+  (class, message and params) at construction.
+- **Apache Spark** — both doors raise `AnalysisException`
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` with params
+  `{sqlExpr, paramIndex: "third", inputSql, inputType, requiredType: "INTEGRAL"}`
+  and SQLSTATE 42K09. SQL `1.5` is DECIMAL(2,1); DataFrame `1.5` is DOUBLE.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, `local[2]`, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_perf_approxpct_1.py::test_sql_non_integral_accuracy_is_analysis_without_spark_params`
+  (red-when-fixed: `getErrorClass`/`getMessageParameters` stay None) and
+  `python/repark/tests/test_fn_batch4.py::test_percentile_approx_bool_accuracy_rejected`
+  (DataFrame door Spark-equal).
+- **Rationale** — OPEN, filed 2026-09-06 from the PERF-APPROXPCT-1 round-3 review.
+  Not a silent accept: the SQL door fails analysis with Spark's class in the
+  message. Structured params and the exact sqlExpr/inputSql wording need the
+  expression text at `return_type`, which DataFusion does not pass.
+
+### PERF-APPROXPCT-1 — `percentile_approx` bounds memory with Spark's sketch — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
+
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1), scope narrowed 2026-09-06.**
+  the UDAF runs Spark 4.1's Greenwald-Khanna `QuantileSummaries` (50 k head,
+  threshold 10000, `relativeError = 1/accuracy`): per-group state is 952656 B at
+  default accuracy (4776 B at acc 100, 72 B at acc 2 — O((1/eps) log(eps N)),
+  "kilobytes" only at accuracy 100 or below), and 1e7 rows peak at 752.9 MB in
+  0.14 s where the boxed group peaked at 2507.8 MB in 2.95 s.
 - **Apache Spark** — Greenwald-Khanna QuantileSummaries bound sketch memory by
   the accuracy knob.
 - **Pin** —
-  `python/repark/tests/test_fn_batch4.py::test_approx_percentile_discrete_bigint_matches_spark`
-- **Rationale** — BACKLOG. Discrete-value semantics stay; do not build the sketch
-  in FN-FIX-1.
+  `python/repark/tests/test_perf_approxpct_1.py::test_million_row_wall_stays_within_bar`
+  (Rust: `quantile_summaries::tests::million_row_state_stays_small`,
+  `inserts_compress_eagerly_before_any_query`, and
+  `state_size_follows_one_over_eps`).
+- **Rationale** — FIXED. History: the UDAF collected group values and picked the
+  discrete rank (`select_nth_unstable`), O(n) memory per group. Scope narrowed
+  2026-09-06 (round 2): state sizes measured (no "kilobytes" at default accuracy),
+  merges deterministic within the GK bound (`FN-APPROXPCT-ORDER-1`). Cells:
+  `docs/perf/approx-percentile-baseline.md`.
 
 ### FN-ISNAN-1 — `isnan(NULL)` is NULL where Spark is false — **FIXED 2026-09-03 (FN-FIX-1)**
 
@@ -4107,20 +4175,24 @@ Shared roster pin for every heading:
 - **Rationale** — FIXED. History: DataFusion 54.1 raised the sliding-accumulator `retract_batch`
   refusal. Per-aggregate design table and the retract probe: `task/ledgers/staging/win-slide-1-ledger.md`.
 
-### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame ignores the accuracy knob
+### WIN-SLIDE-PCT-ACC-1 — `percentile_approx` over a frame honors the accuracy knob — **FIXED 2026-09-05 (PERF-APPROXPCT-1)**
 
-- **repark** — `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
-  CURRENT ROW` on `x = 1..200` answers the same column as the two-argument discrete p50
-  (`1.0, 25.0, 50.0, 100.0, 150.0` at rows 1 / 50 / 100 / 150 / 200). The third argument is
-  accepted and ignored, per frame exactly as per group.
+- **repark** — **FIXED 2026-09-05 (PERF-APPROXPCT-1), scope narrowed 2026-09-06.**
+  `percentile_approx(x, 0.5, 2)` over `ORDER BY k ROWS BETWEEN 99 PRECEDING AND
+  CURRENT ROW` on `x = 1..200` answers `1.0, 1.0, 1.0, 51.0, 101.0` at rows 1 / 50 /
+  100 / 150 / 200 — Spark's sketch column exactly on the pinned frame matrix, per
+  frame as per group (`FN-APPROXPCT-ORDER-1` for multi-partition merges). The
+  default-accuracy column is unchanged (`1.0, 25.0, 50.0, 100.0, 150.0`).
 - **Apache Spark** — the Greenwald-Khanna sketch collapses at accuracy 2: the same column is
   `1.0, 1.0, 1.0, 51.0, 101.0`. The default-accuracy column agrees with repark.
   *(oracle: live PySpark 4.1.2, 2026-09-04.)*
 - **Pin** —
-  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_ignores_the_accuracy_knob`
-- **Rationale** — BACKLOG. The frame case of `FN-APPROXPCT-ACC-1`, filed rather than papered over.
-  Do not emulate the sketch: Spark's low-accuracy answers are sketch artefacts, and repark keeps
-  the discrete data value. `PERF-APPROXPCT-1` (sketch memory) stays out of scope.
+  `python/repark/tests/test_win_slide_1.py::test_percentile_approx_over_a_frame_honours_the_accuracy_knob`
+  and
+  `python/repark/tests/test_perf_approxpct_1.py::test_sliding_frame_honours_accuracy_per_frame`.
+- **Rationale** — FIXED. History: the frame case of `FN-APPROXPCT-ACC-1`, where the
+  knob was accepted and ignored. Scope narrowed 2026-09-06 (round 2): the exactness
+  claim holds on the pinned frame matrix (`FN-APPROXPCT-ORDER-1`).
 
 ### WIN-SLIDE-FLOAT-1 — a retracting sliding `sum` / `avg` loses a summand Spark's re-scan keeps
 
@@ -4277,17 +4349,26 @@ Shared roster pin for every heading:
 
 ### DYNFLATTEN-LISTNULL-1 — Spark keeps a null-typed list as `int32 user_properties`; repark drops it
 
-- **repark** — `dynamicFlatten(drop_null_lists=true)` drops `array<void>` `user_properties`.
-  After flatten, `list_struct_1` is `(id int64, Legs_leg_id int64, Legs_Name string)`;
-  `cartesian_two_lists` adds `Tags string`. Struct-only shapes match Spark.
-- **Apache Spark** — `explode_outer` on the same parquet infers `user_properties` as
-  nullable `int32` and keeps the column. Value columns otherwise match after that drop.
-  *(oracle: live — PySpark 4.1.2, 2026-09-04,
-  `test_live_dynflatten_matches_spark_explode[list_struct_1]`.)*
+- **repark** — **FIXED 2026-09-06 (DYNFLATTEN-LISTNULL-1).** `read.parquet` of a parquet
+  `list<null>` column (`optional int32 element (Null)` in the file footer) now reports
+  `array<int>` the way Spark does, so default `dynamicFlatten` keeps `user_properties` as
+  nullable `int32` NULLs (one row per parent; NULL and EMPTY lists both explode-outer to
+  NULL). `drop_null_lists=True` is unchanged and still drops an actual SQL / createDataFrame
+  `array<void>` (`make_array()`). Struct-only shapes still match. The bench's
+  `createDataFrame(ARRAY<VOID>)` load path still drops the column; the live pin is
+  `read.parquet` on both engines.
+- **Apache Spark** — parquet read infers `user_properties` as `array<int>` (`IntegerType`,
+  `containsNull=true`, column nullable); `explode_outer` yields nullable `int32` with one
+  NULL per parent. Measured PySpark 4.1.2, 2026-09-06, bed `list_struct_1` at 16 rows and a
+  three-row `list<null>` control (`None` / `[]` / `[None]`).
 - **Pin** —
-  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`
-- **Rationale** — BACKLOG, intent to FIX or DECLARE. Filed from PERF-DYNFLATTEN-1. Do not
-  close by dropping the column in the Spark oracle.
+  `python/repark/tests/test_parity_live_dynflatten.py::test_live_dynflatten_matches_spark_explode[list_struct_1]`;
+  always-run `python/repark/tests/test_dynflatten_listnull.py` (both DataFrame doors + the
+  `make_array()` drop control).
+- **Rationale** — FIXED. The promotion lives in `read_parquet_nullable` after the
+  nullability relax (`promote_parquet_null_types`), not in `drop_null_lists`. Spark's
+  answer is the parquet reader's INT32 default for a Null logical type, not explode.
+  Do not close by dropping the column in the Spark oracle.
 
 ### DYNFLATTEN-READNULL-1 — `read.parquet` keeps a parquet `required` column non-nullable; Spark widens it
 
@@ -4798,6 +4879,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unbounded-HashMap complaint never applied to it; RePark pins correctness under eviction
   (512 bytes over eight tables stay row-correct) rather than a byte counter it cannot
   observe (`ObjectCache` exposes no stats handle, and moka eviction runs async).
+  **IO-3 round 2 (2026-09-05):** the "measured bounded" claim above is withdrawn. The
+  32 MiB budget binds the fork's ESTIMATED manifest weight (768 B per manifest entry,
+  256 B per list entry), not resident bytes: lane measurement puts resident at ~7.5×
+  the charged weight (~7.5 KB per cached small manifest+list at 2,000–8,000 tables,
+  via read-phase VmRSS growth). No peak-RSS ratio is claimed — single-driver peak
+  deltas ride ±20 MB of allocator/phase noise (the explicit-`0` peak is non-monotonic
+  across table counts: 323.9 / 340.1 / 322.6 MB at 500 / 2,000 / 8,000). What the
+  500-table leg still proves is no retention outside the cache (both columns
+  row-correct; the default peak stays within the 64 MB bar); the weight bound itself
+  is unexercised (8 MB charged of 32 MB at 8,000 tables). The under-count is now
+  `PERF-CATALOG-CACHE-WEIGHT-1` / `F-CATIO-WEIGHT`. This row stays BACKLOG for the
+  metadata-cache LRU only (`F-CATIO-BOUND`).
+- **PERF-CATALOG-CACHE-WEIGHT-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-3 round 2.
+  **BACKLOG** behind a fork change. Fork ask **F-CATIO-WEIGHT**: the fork's
+  `estimate_manifest_weight` (`object_cache.rs:57`: entries × 768 B; lists 256 B) under-counts
+  resident bytes ~7.5× for small manifests. Lane-measured at pin `2ed39cb0`: read-phase
+  VmRSS growth over the CTAS-phase level is ~15 MB at 2,000 tables and 59 MB at 8,000
+  tables against 2.0 / 8.0 MB charged (~7.5 KB resident per cached manifest+list), and
+  the estimate sits below the objects' own file bytes (3,466 B manifest + 1,604 B list
+  per table) before any parsed-form overhead. So the 32 MiB default budgets estimated
+  weight, not resident bytes: a session filling the bound holds 617.5 MB resident
+  (602.9 MB peak) against 338.8 MB with the cache off — ~265–278 MB of entries above
+  a ~340–352 MB base, ~8× charged (the 32,768-table at-bound run). Red-when-fixed pin:
+  `test_a_budget_sized_to_the_charged_weight_retains_every_table` (256 tables fit a
+  280000 budget at charged weight, so the coldest table still hits after every manifest
+  is deleted; true weights evict it and the leg reds). Today's ratio is a documented
+  number, not an assertion — peak-RSS deltas ride ±20 MB of allocator/phase noise, so
+  no numeric pin could hold it. Tables:
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.3.
 - **PERF-ICE-MANIFEST-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 6; carried as
   BACKLOG through PERF-ICE-CATALOG-IO-1 (fork ask **F-CATIO-B**, landed at pin
   `79119643` via RP-12), and BACKLOG again through PERF-ICE-CATALOG-IO-2. Every
@@ -4806,27 +4916,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   the fork's shared manifest cache behind `repark.iceberg.manifestCacheBytes` — but the
   unit HALTED mid-flight on `PERF-CATALOG-LINEAGE-CACHE-1` (the shared cache serves
   wrong-context lineage on upgrade-boundary tables until fork ask `F-CATIO-KEY` lands)
-  and landed with the knob default OFF per the round-2 ruling, so main serves no wrong
-  answer and the win is measured but not served. Measured with the knob set explicitly
-  to 32 MiB: `t_many/count_id/stmt2` (193 manifests) falls from **115.81 ms to 10.95 ms**
-  (target ≤ 20; the point-query twin 124.75 → 14.75), and the one-manifest twin drops
-  14.37 → 10.49 — the repeated read opens no manifest-list and no manifest at all. The
-  follow-up is the default-ON flip after `F-CATIO-KEY` lands and the four upgrade-lineage
-  tests pass knob-on. Two things this row does NOT claim. (1) The
+  and landed with the knob default OFF per the round-2 ruling, so main served no wrong
+  answer and the win was measured but not served. **FIXED 2026-09-05
+  (PERF-ICE-CATALOG-IO-3):** RP-13 landed `F-CATIO-KEY` at pin `2ed39cb0` and this unit
+  flipped the default to 32 MiB, so every default session's memory catalog shares one
+  manifest cache. Measured on the default session (no knob set):
+  `t_many/count_id/stmt2` (193 manifests) falls from **123.47 ms to 11.27 ms**
+  (target ≤ 20; the point-query twin 125.16 → 14.67), and the one-manifest twin drops
+  15.52 → 10.33 — the repeated read opens no manifest-list and no manifest at all, and
+  the default column reproduces IO-2's explicit-knob column within 0.4 ms on every row.
+  Two things this row does NOT claim. (1) The
   commit side is untouched: the fork's transaction, maintenance and inspect paths load
-  manifests straight from `FileIO` (0 cached reads vs 166 direct loads in `transaction/`
-  at this pin), so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
+  manifests straight from `FileIO` (still bypassing at pin `2ed39cb0`),
+  so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
   build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell with the cache on (the Python legs
-  set the knob explicitly: MERGE after a commit, DROP + re-CREATE, `register_table`,
-  rewrite + expire, time-travel and branch reads), the two-door Rust battery green with
-  the cache off (the default), plus the funnel pin (a second door answers after every
-  manifest is deleted from disk, knob set explicitly). Pins:
+  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
+  reads), the two-door Rust battery green with the cache on (the default), the funnel pin
+  on the default session, the four upgrade-lineage tests green on default sessions, and a
+  two-session concurrency leg plus a 500-table RSS leg. Pins:
   `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
   `python/repark/tests/test_perf_ice_catalog_io_1.py`. Tables:
-  `docs/perf/iceberg-catalog-io-baseline.md` §5.
+  `docs/perf/iceberg-catalog-io-baseline.md` §6.
 - **PERF-CATALOG-COMMIT-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-2. **BACKLOG**
   behind a fork change. The fork's shared manifest cache covers the **scan** path only:
   `table.scan()` → `plan_files` → `PlanContext::get_manifest*` consult the table's
@@ -4845,7 +4958,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   that HALTED it). **FIXED 2026-09-05 (RP-13)** at pin `2ed39cb0` (fork F-CATIO-KEY `#270`: the
   shared cache stores the context-free parse and applies each caller's list-entry inheritance
   and `first_row_id` assignment per read); the knob-on detector below now asserts the assigned
-  lineage and is green. The default-ON flip is the follow-up unit. History: The fork's shared manifest cache keys by
+  lineage and is green. The default-ON flip landed as PERF-ICE-CATALOG-IO-3 (2026-09-05).
+  History: The fork's shared manifest cache keys by
   `(manifest_path, fallback_schema_id)`, but the cached `Manifest` is not a pure function of
   that key: `load_manifest_with_schema_fallback` runs `inherit_data` plus
   `assign_first_row_ids` with the CALLER's list entry's `first_row_id` range, and a `None`
@@ -4859,11 +4973,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   boundary, which is why only the shared cache trips it. Fork trigger **F-CATIO-KEY**: make
   the key carry the assignment input, or move assignment out of the cached object. No
   RePark-side fix exists (the key is built fork-side; RePark holds no observe/evict handle).
-  Until it lands, `PERF-ICE-MANIFEST-1` stays BACKLOG and the knob default stays
-  OFF: the four upgrade-lineage tests pass by default today and must pass knob-on before
+  Until the fix landed, `PERF-ICE-MANIFEST-1` stayed BACKLOG and the knob default stayed
+  OFF: the four upgrade-lineage tests passed by default and had to pass knob-on before
   the default-ON flip. Pins:
-  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_on_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
-  (was the wrong-answer detector; it redded on RP-13 as designed and now pins the fix),
+  `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_default_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
+  (was the wrong-answer detector as `test_with_the_knob_on_…`; it redded on RP-13 as designed,
+  IO-3 renamed it onto the default session, and now it pins the fix),
   `python/repark/tests/test_perf_ice_catalog_io_1.py::test_with_the_knob_off_an_upgraded_table_reads_assigned_lineage_for_carried_rows`
   (the same upgrade serves assigned lineage with the knob off).
 - **PERF-SCAN-3PASS-1** — surfaced 2026-09-03, RP-9 r2; PERF-SCAN-1 round 2 (2026-09-04)
@@ -6078,6 +6193,156 @@ field NAME.
   registration, SQL, and frame arms, where the engines agree; the return arm is pinned, not
   taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
   that row's pin — repark's `catalog.registerFunction` return — is unaffected.
+
+### EX-ML-1 — `Vector.size` is a method; Spark exposes a property
+
+- **repark** — `Vectors.dense(1.0, 0.0, 3.0).size` is a bound method;
+  `.size()` answers `3`. The same call on `Vectors.sparse(5, [1, 3], [1.0, 2.0])`
+  answers `5`. `int(dense.size)` raises `TypeError`.
+- **Apache Spark** — `.size` is an `int` property (`3` / `5`); `.size()` raises
+  `TypeError: 'int' object is not callable`.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free `pyspark.ml.linalg`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_size_is_a_method`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The examples keep
+  `toArray`, indexing, and `numNonzeros`, where the engines agree; the size arm is pinned,
+  not taught.
+
+### EX-ML-2 — `VectorUDT.typeName` is `vector`; Spark answers `vectorudt`
+
+- **repark** — `VectorUDT().typeName()` answers `vector`; `sqlType()` is
+  `struct<type:int,size:int,indices:array<int>,values:array<double>>`;
+  `jsonValue()` is `{"type": "vector", "class": "repark.spark.ml.linalg.VectorUDT"}`.
+  `hasattr(..., "serialize")` and `hasattr(..., "deserialize")` are `False`.
+  `simpleString()` answers `vector` and `repr` answers `VectorUDT()` on both engines.
+- **Apache Spark** — `typeName()` answers `vectorudt`; `sqlType()` uses
+  `tinyint` for the `type` field
+  (`struct<type:tinyint,size:int,indices:array<int>,values:array<double>>`);
+  `jsonValue()` is a UDT descriptor with
+  `class=org.apache.spark.ml.linalg.VectorUDT` and
+  `pyClass=pyspark.ml.linalg.VectorUDT`. `serialize(dense)` answers
+  `(1, None, None, [1.0, 0.0, 3.0])`; `deserialize` is present.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free `VectorUDT`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, deepened
+  2026-09-06. The example keeps `simpleString` and `repr`, the only equal arms;
+  typeName / sqlType / jsonValue / serialize / deserialize stay pinned.
+
+### EX-ML-3 — `HasInputCol` is not a `Params` subclass; Spark's mixin is
+
+- **repark** — `issubclass(HasInputCol, Params)` is `False`. `HasInputCol()` raises
+  `PySparkTypeError: Param parent must be Identifiable, got HasInputCol`.
+  `Tokenizer().getInputCol()` (unset) answers `uid + "__input"`;
+  `explainParams()` shows `inputCol: input column name. (default: uid__input)`.
+- **Apache Spark** — `HasInputCol` extends `Params`; `HasInputCol()` constructs
+  and prints a uid (`HasInputCol_<12hex>`). `Tokenizer().getInputCol()` (unset)
+  raises `KeyError: Param(parent='Tokenizer_…', name='inputCol', doc='input column name.')`;
+  `explainParams()` shows `inputCol: input column name. (undefined)`.
+  `Tokenizer().getOutputCol()` (unset) answers `uid + "__output"` on both engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_has_input_col_is_not_params`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, extended
+  2026-09-06 to the concrete Tokenizer arm. The example reads mixins off
+  Tokenizer / VectorAssembler / OneHotEncoder / LinearRegression after set, and
+  keeps the Spark-equal unset `outputCol` default; the unset `inputCol` default
+  and the standalone inheritance arm are pinned, not taught.
+
+### EX-ML-4 — `ParamGridBuilder.baseOn(param, value)` works; Spark 4.1.2 wants a dict or tuples
+
+- **repark** — `ParamGridBuilder().baseOn(estimator.maxIter, 20).build()` answers
+  one map with `maxIter=20`. The dict spelling `baseOn({estimator.maxIter: 20})`
+  answers the same cell on both engines. The tuple spelling
+  `baseOn((estimator.maxIter, 20))` raises
+  `IllegalArgumentException: ParamGridBuilder.baseOn expects a dict or even-length Param/value pairs`.
+- **Apache Spark** — `baseOn(param, 20)` raises
+  `TypeError: cannot unpack non-iterable Param object`. Spark 4.1.2 accepts a
+  Param map dict or `(param, value)` tuples:
+  `baseOn({param: 20})` and `baseOn((param, 20))` both answer `20`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
+  `pyspark.ml.tuning.ParamGridBuilder`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_param_grid_base_on_pairs`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, reverse
+  arm added 2026-09-06. The example keeps the dict spelling, where the engines
+  agree; both the alternating-pair arm and the tuple arm are pinned, not taught.
+
+### EX-ML-5 — shared mixins carry setters; Spark's mixins do not
+
+- **repark** — `hasattr(HasInputCol, "setInputCol")`,
+  `hasattr(HasOutputCol, "setOutputCol")`,
+  `hasattr(HasInputCols, "setInputCols")`,
+  `hasattr(HasOutputCols, "setOutputCols")`, and
+  `hasattr(HasHandleInvalid, "setHandleInvalid")` are all `True`.
+  A `HasHandleInvalid, Params` subclass answers `getHandleInvalid() == "error"`.
+- **Apache Spark** — the same five `hasattr` cells are `False`. A
+  `HasHandleInvalid, Params` subclass raises
+  `KeyError: Param(parent='HandleStage_…', name='handleInvalid', doc='how to handle invalid entries. …')`.
+  Concrete stages still expose the setters: `Tokenizer.setInputCol` and
+  `VectorAssembler.setInputCols` / `getHandleInvalid() == "error"` agree on both
+  engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_mixin_setters_present`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example teaches the mixins only through Tokenizer, VectorAssembler,
+  OneHotEncoder, and LinearRegression.
+
+### EX-ML-6 — empty `Pipeline.getStages()` answers `[]`; Spark KeyErrors
+
+- **repark** — `Pipeline().getStages()` answers `[]`.
+- **Apache Spark** — `Pipeline().getStages()` raises
+  `KeyError: Param(parent='Pipeline_…', name='stages', doc='a list of pipeline stages')`.
+  `Pipeline(stages=[VectorAssembler, LinearRegression]).getStages()` types agree
+  on both engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_empty_pipeline_get_stages_defaults_to_empty_list`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps the two-stage `getStages` arm, where the engines agree; the
+  unset default is pinned, not taught.
+
+### EX-ML-7 — a Spark-shaped `UnaryTransformer` raises; Spark applies the Python callable
+
+- **repark** — a subclass that implements `createTransformFunc`,
+  `outputDataType`, and `validateInputType` and does not override `_transform`
+  raises `IllegalArgumentException: <class> must implement _transform as a plan-built transform (repark does not apply Python row callables)`
+  on `transform`. A subclass that overrides `_transform` with a plan-built
+  `withColumn` answers `x+1` on the four-row fixture.
+- **Apache Spark** — the same Spark-shaped subclass with
+  `createTransformFunc = lambda value: float(value) + 1.0` transforms
+  `[(1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0)]`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_spark_shaped_unary_transformer_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example teaches the plan-built `_transform` shape repark supports.
+
+### EX-ML-8 — persistence format is `repark-ml`; Spark writes `metadata/part-*`
+
+- **repark** — `PipelineModel.write().save` writes `metadata.json` with
+  `"format": "repark-ml"` plus `stages/N_*/metadata.json` and
+  `stages/N_*/fitted/params.parquet`. A repark save round-trips: loaded
+  transform rows equal the pre-save rows. `PipelineModel.load` of a Spark-saved
+  tree raises `IllegalArgumentException: missing metadata.json under <path>`.
+- **Apache Spark** — `PipelineModel.write().save` writes `metadata/part-*` plus
+  `stages/N_*/metadata/part-*.txt` plus `data/part-*.snappy.parquet` for stages that carry fitted data (`VectorAssembler` has `metadata/` only) (no `metadata.json`). Spark's
+  `PipelineModel.load` of a repark-saved tree raises
+  `AnalysisException: [PATH_NOT_FOUND] Path does not exist: file:<path>/metadata`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2; cross-load measured
+  both directions.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_persistence_format_is_repark_ml`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps the repark-format round-trip; neither engine reads the
+  other's layout.
+
+### EX-ML-9 — `DenseVector` has no `dot` or `squared_distance`
+
+- **repark** — `hasattr(Vectors.dense(1.0, 0.0, 3.0), "dot")` and
+  `hasattr(..., "squared_distance")` are `False`.
+- **Apache Spark** — `dense.dot(Vectors.dense(1.0, 2.0, 1.0))` answers `4.0`;
+  `dense.squared_distance(Vectors.zeros(3))` answers `10.0`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
+  `pyspark.ml.linalg.DenseVector`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_dense_vector_lacks_dot_and_squared_distance`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps `toArray`, indexing, and `numNonzeros`, where the engines
+  agree; the missing methods are pinned, not taught. The API freeze closes
+  `python/repark/src` to this unit.
 
 ## 8. Drop-in disclosure rationale
 

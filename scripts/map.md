@@ -1,5 +1,16 @@
 # map — scripts/
 
+EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
+`BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
+examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on
+live PySpark 4.1.2 (ANSI on, UTC), including session-level OLS / Pipeline /
+CrossValidator / persistence / UnaryTransformer. Nine §7 rows (EX-ML-1..9) pin
+the diverged arms of covered names, with nine tests in
+`python/repark/tests/test_examples_ml.py`. Mixins are taught only through
+concrete stages; UnaryTransformer is plan-built `_transform`; persistence is
+the repark-ml round-trip.
+pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+
 EX-26 io-session (2026-09-06): `check_example_coverage.py` `BACKLOG_BASELINE` 193 → 164 —
 the 29 covered names of the 50-name reader/writer/session/DataFrame roster, taught by
 twelve new examples under `docs/examples/{io,session,dataframe}/`, every asserted value
@@ -206,6 +217,12 @@ split seam ("extract the remaining date or window method family"). A ratchet DOW
 baseline increase; the duplicate table in `test_cap_1_source_file_line_cap.py` moved with it.
 pins: win-slide-1/C-002
 
+PERF-APPROXPCT-1 (2026-09-05): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
+1053→1052 — the accuracy threading (optional third arg, scalar-helper import) is paid for by
+collapsing the list call construction and folding the percentage validation into a named
+closure. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
+with it in the same commit. pins: perf-approxpct-1/C-007
+
 FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
@@ -252,7 +269,7 @@ TYPES-1 round 4 (2026-09-05): `dataframe/core.py` 6305→6303 — one import joi
 the INCREASE; the ceiling ratchets DOWN again, no approval needed.
 pins: types-1/C-008
 
-FNP-9/10 (2026-09-06): `check_lib_py.py` `functions_expr.py` 2259→2256 — `arrays_zip` and
+FNP-9/10 (2026-09-06): `check_lib_py.py` `functions_expr.py` 2259→2256, then 2255 once merged over PERF-APPROXPCT-1 (its own one-line cut) — `arrays_zip` and
 `schema_of_json` trade a multi-line refusal each for a one-line real wrapper; ratchets DOWN.
 The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
 instead of growing `functions.py`, which stays at its exact 1985.
@@ -299,6 +316,8 @@ file-backed module.
 DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
 `check_lib_py.py` `writer_readwriter.py` 1117→1113.
   FN-REGEXP-EXTRACT-1 (2026-09-04): `functions_expr.py` ceiling 2261 → 2259 (ratchet down).
+  PERF-APPROXPCT-1 round 2 (2026-09-06): `functions_expr.py` ceiling 2259 → 2258
+  (accuracy check out to `_integral.py`, one shared Column return).
 
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
@@ -325,6 +344,39 @@ repark-parity slice.
 
 ## Contents
 
+- `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
+  assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
+  first) and a JSON sidecar; `check` validates the schema, every stable-prefix
+  rule, sidecar `authority.constraints == STABLE_RULES` (order and text), the
+  adapter trailer, a re-render of the dynamic section, `bash -n` on each gate
+  command, and prefix-negating phrases; `diff` prints the dynamic section only.
+  Field extractors live in `sepmo_packet_extract.py` (so the assembler stays
+  under the default Python ceiling). The banned-trailer literals the checker
+  scans for are assembled at runtime, so the tree never carries them (the
+  pre-push hook forbids them). Fixtures under
+  `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
+  Invocation: `python3 scripts/sepmo_packet.py build …` or
+  `make sepmo-packet ARGS='check <packet>'`.
+  pins: sepmo-e2/C-002, C-003, C-004, C-008
+- `sepmo_packet_extract.py` — **SEPMO-E2 (2026-09-06, round 3):** brief field
+  extractors for the packet assembler: fenced/inline gate commands, writable /
+  closed / never-touch lists, a PATH_TOKEN plus bare-directory scan of boundary
+  spans that fails `build` when a path is not captured, brief-declared
+  hand-back keys, trailer and prefix-negation scans. Loaded as a sibling of
+  `sepmo_packet.py`.
+  pins: sepmo-e2/C-002
+- `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
+  `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
+  table (or `--jsonl`). Muse tokens come from the session store via `runs.tsv` column 6
+  (env `SEPMO_MUSE_SESSIONS_ROOT` / `SEPMO_MUSE_RUNS_TSV` for tests). Grok reads
+  `cache_read_input_tokens` and `modelUsage`. A minority of unparsed JSONL lines, or an
+  `exit` file with no `run.terminal.completed`, emits a degraded record (`truncated: true`,
+  `missing_reason` on `steps`/`tool_calls`); session-store tokens stay valid. Majority-bad
+  JSONL and a non-run directory still fail loudly. Any argument containing `://` is refused
+  on the raw path. Null, never zero, when an adapter does not report a field. No network.
+  Invocation: `python3 scripts/sepmo_usage.py collect <run-dir>` or
+  `make sepmo-usage ARGS='collect <run-dir>'` (not a CI gate).
+  pins: sepmo-e0-e1/C-004, C-005, C-006
 - `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
@@ -694,6 +746,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
+| Collect SEPMO worker usage | `python3 scripts/sepmo_usage.py collect <run-dir>` / `index <dir>` (`make sepmo-usage`) |
+| Assemble a SEPMO compact worker packet | `python3 scripts/sepmo_packet.py build --unit <id> --role actor --base <sha> --brief <md> --out-dir <dir>` |
 
 ## Pointers
 

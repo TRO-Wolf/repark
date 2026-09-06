@@ -29,6 +29,26 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
+  packet pins: schema validity, prefix byte-identity across five briefs,
+  constraint preservation (dropped prefix rule, dropped sidecar
+  `authority.constraints` rule, forged trailer assembled at runtime,
+  JSON/markdown disagreement, prefix-negating dynamic, uncaptured unbackticked
+  boundary path through `build`), prose or invalid-shell `commands[]` through
+  `build`/`check`, icescan Cargo.lock exception, ex25 `covered`/`stayed`
+  hand-back keys, dynamic-only `diff`, no home paths, source-hash refresh,
+  baseline sizes versus E-0 cached/uncached ratios, and adoption `--brief` /
+  `--followup` names checked against wrapper text when present.
+  pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `test_sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** usage collector pins: Muse /
+  Grok / OpenCode / Claude fixture shapes, Muse session-store join (both `msp-view-v1` and
+  `.msp-view-v1`), live Grok usage keys, minority truncated JSONL as a degraded record,
+  clean-cut tail with `exit` and no terminal, remote URLs with `://` refused before
+  resolve, missing-data stays null, index table shape including a degraded row, schema
+  field roster plus uncached-token descriptions, inventory adapter+strata claims, and live
+  reconciliation / live `index` of Muse run dirs when `/tmp/muse-worker` is present.
+  pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [fixtures/](fixtures/map.md) — sanitized collector run dirs (no home paths).
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
@@ -122,8 +142,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
+  PERF-APPROXPCT-1 round 2 (2026-09-06): the `functions_expr.py` row ratchets 2259 → 2258 with the gate table.
   TYPES-1 (2026-09-05): `dataframe/core.py` 6303 → 6305 (increase — the two `__repark_rn` BIGINT casts) and `test_window_parity.py` 1481 → 1422 with the gate table. TYPES-1 round 4 (2026-09-05): `core.py` 6305 → 6303 with the gate table (one import joined absorbs the increase); `datetime.rs` 1704 → 1709 with the gate table (increase — the year-sign arm, no compressible lines, owner approval at merge). TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709 → 1700 with the gate table (the year arm moves to `spark_year_pad.rs`).
   pins: fn-fix-2-string-rows/C-002
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002

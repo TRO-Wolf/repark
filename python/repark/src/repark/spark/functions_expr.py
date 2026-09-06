@@ -17,6 +17,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark._idents import sql_string_literal
+from repark.spark._integral import checked_integral
 from repark.spark.column import Column, Scalar
 from repark.spark.functions import (
     _aggregate_argument,
@@ -1571,39 +1572,37 @@ def percentile_approx(
     accuracy: int | None = None,
 ) -> Column:
     """Discrete percentile of the column's type (PySpark ``functions.percentile_approx``)."""
-    del accuracy
+    checked = checked_integral("accuracy", accuracy, col, percentage)
+    tail = "" if checked is None else f", {checked}"
     column, part = _aggregate_argument(col)
     if isinstance(percentage, (list, tuple)):
         pcts = [float(item) for item in percentage]
         if any(item < 0.0 or item > 1.0 for item in pcts):
             raise IllegalArgumentException("percentile_approx percentages must be in [0, 1]")
-        agg_name = f"percentile_approx({part}, {list(pcts)})"
-        return Column(
-            column._inner.approx_percentile_list(pcts),
-            agg_name=agg_name,
-            sql_expr=(
-                f"percentile_approx({column.sql_expr_part()}, "
-                f"array({', '.join(str(item) for item in pcts)}))"
-            ),
-            spark_display=agg_name,
-            projection_name=agg_name,
-            partition_transform=column._partition_transform,
-        )
-    if isinstance(percentage, bool) or not isinstance(percentage, (int, float)):
-        raise PySparkTypeError(
-            f"percentile_approx percentage must be float or sequence of float, "
-            f"got {type(percentage).__name__}"
-        )
-    pct = float(percentage)
-    if not 0.0 <= pct <= 1.0:
-        raise IllegalArgumentException(f"percentile_approx percentage must be in [0, 1], got {pct}")
-    agg_name = f"percentile_approx({part}, {pct})"
+        inner = column._inner.approx_percentile_list(pcts, checked)
+        name = f"percentile_approx({part}, {list(pcts)}{tail})"
+        joined = ", ".join(str(item) for item in pcts)
+        text = f"percentile_approx({column.sql_expr_part()}, array({joined}){tail})"
+    else:
+        if isinstance(percentage, bool) or not isinstance(percentage, (int, float)):
+            raise PySparkTypeError(
+                f"percentile_approx percentage must be float or sequence of float, "
+                f"got {type(percentage).__name__}"
+            )
+        pct = float(percentage)
+        if not 0.0 <= pct <= 1.0:
+            raise IllegalArgumentException(
+                f"percentile_approx percentage must be in [0, 1], got {pct}"
+            )
+        inner = column._inner.approx_percentile_cont(pct, checked)
+        name = f"percentile_approx({part}, {pct}{tail})"
+        text = f"percentile_approx({column.sql_expr_part()}, {pct}{tail})"
     return Column(
-        column._inner.approx_percentile_cont(pct),
-        agg_name=agg_name,
-        sql_expr=f"percentile_approx({column.sql_expr_part()}, {pct})",
-        spark_display=agg_name,
-        projection_name=agg_name,
+        inner,
+        agg_name=name,
+        sql_expr=text,
+        spark_display=name,
+        projection_name=name,
         partition_transform=column._partition_transform,
     )
 

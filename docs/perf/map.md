@@ -29,7 +29,11 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pair measured back to back on one quieter host, never overwriting the earlier tables.
   Two runs from different hours are not one table — each carries its own noise floor and
   its own 1-minute load, and a cost is read against the floor of the run it came from.
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06)** appends a third note: the live `read.parquet`
+  path now matches Spark on the void-list shapes; the bench `createDataFrame` path and
+  the numbered tables are untouched.
   pins: perf-dynflatten-1-measure/C-003, C-004
+  pins: dynflatten-listnull-1/C-005
 
 - [iceberg-write-baseline.md](iceberg-write-baseline.md) — **PERF-ICE-WRITEPATH-1
   (2026-09-05):** the `iceberg_write/1000000/{ctas,ctas_partitioned8,df_write_parquet_zstd}`
@@ -64,6 +68,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   straight from `FileIO`, so DML saves read-side repeats only (filed `F-CATIO-COMMIT`).
   Earlier tables untouched.
   pins: perf-ice-catalog-io-2/C-006
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05)** appended §6, re-measuring on the default
+  session (no knob) against explicit `0` on one release module: `t_many/count_id/stmt2`
+  123.47 → 11.27 ms (target ≤ 20, within 0.4 ms of IO-2's explicit-knob column on every
+  row), the census reproduced cell for cell with no knob set, and 500 small tables at
+  332.2 vs 323.9 MB peak RSS (delta 8.3 MB, bar 64 MB). Earlier tables untouched.
+  Round 2 (same unit) extended §6.3 with the 2,000/8,000-table peak and VmRSS-growth
+  rows (the 32 MiB budget binds estimated weight, not resident bytes — a ~7.5×
+  under-count, registry `PERF-CATALOG-CACHE-WEIGHT-1`), added §6.4 with the token-budget
+  second-pass cells, and moved Commands to §6.5.
+  pins: perf-ice-catalog-io-3/C-006
 
 - [iceberg-scan-baseline.md](iceberg-scan-baseline.md) — **PERF-ICE-SCAN-1
   (2026-09-05):** the `count_star`, `count_id`, `sum_all` and `string_len` cells at 1e6 and
@@ -122,6 +136,19 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   evidence including every repeat and the JVM stderr lines:
   [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
   pins: h3-spill-1/C-002, C-003, C-004, C-005
+- [approx-percentile-baseline.md](approx-percentile-baseline.md) — **PERF-APPROXPCT-1
+  (2026-09-05):** the `percentile_approx` cells before/after the Greenwald-Khanna
+  sketch (1e7 wall 2.95 → 0.14 s, peak 2507.8 → 752.9 MB against a 188.6 MB
+  `count(id)` floor; warm-1e6 wall 0.03 s under the committed 1.0 s bar), the
+  sublinear residual attributed to transient batches (inferred), state sizes
+  (952656/4776/72 B at acc 10000/100/2), and the accuracy-knob cells pointed at
+  the unit ledger §4, not restated. **Round 2 (2026-09-06):** the after column is
+  re-derived through the tracked
+  [approxpct harness](../../python/repark-parity/bench/approxpct/map.md); the before
+  column stands recorded (no second release build of the pre-unit tree).
+  **Round 3 (2026-09-06):** the 1e7 attributable 462 → 564 MB is the deferred
+  canonical fold's cost, not a re-derivation of the same kernel.
+  pins: perf-approxpct-1/C-004
 
 ## Pointers
 

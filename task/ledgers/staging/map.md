@@ -5,6 +5,48 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
+  **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
+  backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names
+  covered by five `docs/examples/ml/` files (backlog 164 → 136). Round 2
+  re-measured every oracle cell on live PySpark 4.1.2, including the
+  session-level cells round 1 printed as "equal" without collecting. Nine §7
+  rows (EX-ML-1..9) pin the diverged arms, with nine tests in
+  `test_examples_ml.py`. Mixins are taught only through concrete stages.
+  `risk_tier: standard`. Branch `docs/ex-27-ml`.
+  pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
+  `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
+  `drop_null_lists=True` dropped `user_properties`. FIX: `promote_parquet_null_types`
+  in `read_parquet_nullable` maps Arrow `Null` to `Int32` after the nullability relax.
+  Default `drop_null_lists` stays True; SQL `make_array()` still drops. Live
+  `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
+  NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [sepmo-e2-ledger.md](sepmo-e2-ledger.md) —
+  **SEPMO-E2 (2026-09-06), in flight, round 3:** compact role packets. Packet
+  format v1 (eight field groups, stable prefix then dynamic, source identity,
+  version), assembler `scripts/sepmo_packet.py` plus
+  `scripts/sepmo_packet_extract.py` (`build` / `check` / `diff`), three
+  converted campaign briefs as fixtures plus two prefix-only briefs,
+  constraint-preservation tests (sidecar `STABLE_RULES` equality, trailer,
+  re-render, `bash -n` through `build`/`check`, unbackticked boundary paths
+  through `build`, prefix-negating phrases), and a baseline table against E-0
+  cached/uncached ratios with no token-savings claim. Adoption proposal names
+  `--brief` / `--followup`. `risk_tier: standard`. Branch
+  `sepmo/e2-compact-packets`.
+  pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
+  **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
+  collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
+  records; majority-bad still fails. Muse tokens come from the session store
+  (`runs.tsv` join, `.msp-view-v1` pinned); cost is still absent. Grok live keys
+  include `cache_read_input_tokens` and `modelUsage`. OpenCode sqlite has token
+  and cost columns. Claude transcripts are not accessible. Collector is
+  `scripts/sepmo_usage.py`. `risk_tier: standard`. Branch
+  `sepmo/e0-e1-usage-collector`.
+  pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the
@@ -67,6 +109,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   flip close the remainder. Filed `PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY` (fork-side,
   no RePark fix exists). `risk_tier: standard`. Branch `perf/ice-catalog-io-2`.
   pins: perf-ice-catalog-io-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [perf-ice-catalog-io-3-ledger.md](perf-ice-catalog-io-3-ledger.md) —
+  **PERF-ICE-CATALOG-IO-3 (2026-09-05), landed default-ON:** the flip IO-2's round-2
+  ruling named as the follow-up, on the fixed pin `2ed39cb0` (RP-13, `F-CATIO-KEY`).
+  `DEFAULT_MANIFEST_CACHE_BYTES` is 32 MiB; the four HALT tests, the staleness
+  battery and the lineage pins run on default sessions and are green; a two-session
+  concurrency leg and a 500-table subprocess RSS comparison (332.2 vs 323.9 MB, delta
+  8.3, bar 64) prove the fork-fix contract and the bound.
+  `t_many/count_id/stmt2` **123.47 → 11.27 ms** on the default session (target ≤ 20);
+  `PERF-ICE-MANIFEST-1` FIXED with the default-session number;
+  `PERF-CATALOG-CACHE-BOUND-1` narrowed with the measured RSS. Charter committed
+  red-first (the default pins redded on the base, then green after). 7 PROVEN, 0 OPEN.
+  `risk_tier: elevated`. Branch `perf/ice-catalog-io-3`.
+  pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
