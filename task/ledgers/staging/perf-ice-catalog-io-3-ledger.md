@@ -194,3 +194,5 @@ the 32 MiB default is NOT changed in-lane: the numbers go to the orchestrator, w
 picks the default (handback Q1). Lean: keep 32 MiB — the non-cache base is most of
 the total, the bound needs 32,768 small tables to fill, and `F-CATIO-WEIGHT` caps true
 retention when it lands; lowering now churns the number twice.
+
+**Orchestrator ruling (2026-09-06, on Q1):** keep the 32 MiB default. The at-bound cost is ~270 MB of resident cache above a ~340 MB session base, reached only by a session that touches 32,768 tables; the documented escape is `manifestCacheBytes = "0"`; `F-CATIO-WEIGHT` (PERF-CATALOG-CACHE-WEIGHT-1) is the fix for the 8× under-count and re-measures this cell when it lands. The registry row and `session-and-conf.md` carry the at-bound number so the ceiling is not overstated.
