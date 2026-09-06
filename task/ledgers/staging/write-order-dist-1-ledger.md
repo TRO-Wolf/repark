@@ -290,3 +290,51 @@ native + venv, built for the red-proof and the §9 before-column) was removed wi
 worktree remove --force` after the last measurement; the lane's `scratch/` (the 1e6 bed and
 the cell logs) and `.ivy2/` (the brief's ivy redirect) are untracked and never staged. No
 JVM or pytest this unit started is left running.
+
+## 11. Merge with WRITE-DISTRIBUTION-2 (`origin/main`, 2026-09-06)
+
+`git merge origin/main` lands WRITE-DISTRIBUTION-2 (#406) and CSV-INFER-PERF-1 (#405) under
+this branch's eleven commits. Nine files conflicted; each resolution keeps both units'
+behaviour, and the §10 header's corrected premise now holds: `test_write_distribution_2.py`
+and the WD-2 ledger exist on this tree and ran below.
+
+- `write/distribution.rs` (the only code conflict): union — the distribution-mode gate plus
+  staged-write sort stays, WD-2's `PartitionRouter` dispatcher stays, and the dispatcher now
+  honours `write.distribution-mode`: `none` deals whole batches round-robin (an `Either` arm
+  in `route_partitioned_stream`), `hash`/unset/`range` route; each stream worker sorts its
+  routed parts through the existing `fanout_sorted_stream` when a default sort order is
+  declared, as the CTAS path does. One new Rust pin
+  (`none_distribution_mode_deals_stream_batches_round_robin`) covers the merged behaviour;
+  every pin of both units moved verbatim (modulo the module-file dedent and rustfmt's reflow).
+- The eight doc/table conflicts: union — both sides' rows kept; our baseline section renumbers
+  §9 → §10 with a pre-merge caveat; the three sentences the other unit falsified (the Spark
+  paragraph's "hash rule is CTAS-only", the determinism paragraph's "whatever the writers
+  received", the map's "serial path untouched") are corrected; the cap table takes 1792 for
+  `merge/mod.rs` (the lower side, exact) and ratchets `append.rs` 1883 → 1882 (both sides
+  removed one disjoint line).
+- The union file is 1259 lines against the 1000 ceiling, so the merge commit moves the tests
+  to `write/distribution/tests.rs` and a follow-up commit extracts the dispatcher to
+  `write/distribution/router.rs`, each with its map row; no EXCEPTIONS row.
+
+| gate | exit | result |
+|---|---|---|
+| `make verify` | 0 | `ci` plus the Rust workspace suite, every crate green, on the merged tree |
+| `.venv/bin/python -m pytest python/repark/tests/test_write_order_dist_1.py python/repark/tests/test_write_distribution_1.py python/repark/tests/test_write_distribution_2.py python/repark/tests/test_perf_ice_writepath_1.py -q` | 0 | 23 passed, 7 skipped (the live legs) on the merged release native |
+| `.venv/bin/python -m pytest python/repark/tests/test_mw7_scale_smoke.py -q -k copy_on_write` | 0 | 1 passed (WD-2's path-set C-003 control) |
+| `REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_write_order_dist_1.py -q -rs` | 0 | 12 passed in 26.69 s, Spark 4.1.2, one JVM, reaped at exit |
+| `REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest python/repark/tests/test_write_distribution_2.py -q` | 0 | 5 passed in 23.70 s, Spark 4.1.2, one JVM, reaped at exit |
+| `make py-test-facade` | 0 | 5,334 passed, 256 skipped in 719.60 s (the DEBUG native was replaced with the release native afterwards and the pins re-read green) |
+| `make py-test-dbt` | 0 | 59 passed, 1 skipped in 39.49 s |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 | 624 passed in 30.15 s |
+| `make check-map-sync` | 0 | 224 maps clean |
+| `make check-ledger-grammar` | 0 | 68 live ledgers clean (342 clauses, 924 pinned clause ids, 3 exception rows) |
+| `make check-ledgers` | 0 | 264 ledgers in bins, 768 links resolve, frozen rule clean |
+| `make check-docs-compaction` | 0 | clean |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 | clean |
+| `uvx typos@1.47.2 .` | 0 | clean |
+| `git diff origin/main -- Cargo.toml Cargo.lock` | — | empty |
+| `git merge-base --is-ancestor origin/main HEAD` | 0 | the merge holds |
+
+Disk at merge hand-back: re-checked before the facade run; the lane keeps `target/` (debug
+plus release natives), `scratch/` and `.ivy2/`, all untracked or ignored and never staged. No
+JVM or pytest this merge started is left running.

@@ -8,6 +8,12 @@ holds the pieces split out of it.
 
 ## Contents
 
+- `router.rs` — the stream dispatcher rule (WRITE-DISTRIBUTION-2): `PartitionRouter` splits
+  each batch by hash of the writer's partition values and `send_routed` delivers each part to
+  its slot's worker. `route_partitioned_stream` honours `write.distribution-mode` — `none`
+  deals whole batches round-robin instead of routing (WRITE-ORDER-DIST-1 merge).
+  pins: write-distribution-2/C-001, C-004, C-005
+  pins: write-order-dist-1/C-007
 - `tests.rs` — the distribution unit battery, all three generations in one module:
   WRITE-DISTRIBUTION-1's plan-path layouts (one value → one writer, determinism, sparse and
   empty inputs, NULL values, `bucket(4, id)` + `day(ts)`, the unpartitioned bypass, the missing

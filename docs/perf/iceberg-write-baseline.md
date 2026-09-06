@@ -242,7 +242,8 @@ and **3 / 4 / 4** distinct id-to-`_row_id` maps — the grouping is a function o
 ## 9. WRITE-DISTRIBUTION-2 — the rule on the stream write paths (2026-09-06)
 
 `write/append.rs`'s concurrent dispatcher routes each batch by hash of the writer's partition
-values (`distribution.rs::PartitionRouter`) instead of dealing whole batches round-robin. Build
+values (`distribution/router.rs::PartitionRouter`) instead of dealing whole batches
+round-robin. Build
 **B5** is `perf/write-distribution-2` on the pinned fork; **B4'** is `origin/main` `b4933a99`
 with the base release native. Same 1e6 bed and probe method as §5 (one process per cell, a fresh
 table per statement, one warm-up then timed runs), measured sequentially — the base native
@@ -348,5 +349,5 @@ each writer sorts.
 file monotone in that order (pinned per file on CTAS, INSERT OVERWRITE, and MERGE). On the
 merged tree the row-to-file grouping on the partitioned paths is the §9 hash route — a
 function of the data, not the batch lottery this pair measured — while §7's
-`WRITE-GROUPING-CTAS-1` holds, and a row's `_row_id` is still not reproducible across runs. `WRITE-RANGE-1` files the
-unbuilt half: global cross-file ranging on unpartitioned tables.
+`WRITE-GROUPING-CTAS-1` holds, and a row's `_row_id` is still not reproducible across runs.
+`WRITE-RANGE-1` files the unbuilt half: global cross-file ranging on unpartitioned tables.

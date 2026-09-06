@@ -4795,7 +4795,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   value: at `spark.sql.shuffle.partitions = 8` over the 1e6 bed `INSERT OVERWRITE` wrote **32**
   files and `MERGE … WHEN NOT MATCHED THEN INSERT` wrote **32** where Spark writes **8** and
   **8**. The fix routes each batch by hash of the writer's partition values in the dispatcher
-  (`write/distribution.rs::PartitionRouter`: the writer's own `PartitionValueCalculator` plus
+  (`write/distribution/router.rs::PartitionRouter`: the writer's own `PartitionValueCalculator` plus
   `create_hashes` under DataFusion's seeded `REPARTITION_RANDOM_STATE`, one pass over the
   one-shot stream, no spawn) and sends each part to its slot's worker. A `RepartitionExec` cannot
   hang on these paths — the input is a one-shot `SendableRecordBatchStream` a node would
@@ -4815,7 +4815,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (dropping it fails with the fork's `Unsupported data type for truncate transform: Utf8View`),
   a late failure into a partitioned table leaves no data file, and §8 carries the measured
   `_row_id`-map counts (1 manifest sequence; 3 / 4 / 4 maps at 3 / 4 / 8 partitions). Pins:
-  `crates/repark-iceberg/src/write/distribution/tests.rs` (stream one value → one writer, determinism,
+  `crates/repark-iceberg/src/write/distribution/tests.rs`
+  (stream one value → one writer, determinism,
   NULL values, a two-field spec, MERGE inserts through the MERGE entry, the truncate cast, the
   partitioned abort) and `python/repark/tests/test_write_distribution_2.py` (overwrite and merge
   write 8 files with the row set proved; a `truncate(3, s)` CTAS writes one file per prefix;
@@ -4842,7 +4843,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   back, same bed, control paired**: no overhead on the unordered path (the control ratios
   overlap on both cells), and the declared order costs +71 ms best-median (+5.4%) on the 1e6
   overwrite (measured pre-merge; the merged tree routes the stream cells to 8 files —
-  baseline §9 and §10). Pins: `crates/repark-spark/src/tests/alter_write_order.rs` (the five forms plus
+  baseline §9 and §10). Pins:
+  `crates/repark-spark/src/tests/alter_write_order.rs` (the five forms plus
   the bare `DISTRIBUTED BY PARTITION ORDERED BY` spelling Spark also accepts, the `UNORDERED`
   reset, bad-column and malformed-shape refusals committing nothing, case-insensitive matching,
   identical-order id reuse, the transform-sort fork-ceiling refusal),

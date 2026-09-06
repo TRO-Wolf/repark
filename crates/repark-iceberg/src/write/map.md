@@ -138,7 +138,7 @@ repark-core's error map.
   `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
   (registry `V3-ADOPT-1` FIXED).
   **WRITE-DISTRIBUTION-2 (2026-09-06):** the concurrent dispatcher no longer deals whole
-  batches round-robin. It routes each batch through `distribution.rs::PartitionRouter`, which
+  batches round-robin. It routes each batch through `distribution/router.rs::PartitionRouter`, which
   splits the batch's rows by hash of the writer's partition values, and sends each part to its
   slot's worker — one partition value lands in one writer on every partitioned stream write
   (INSERT OVERWRITE, MERGE inserts, staged appends). The serial path and the unpartitioned
@@ -308,6 +308,7 @@ repark-core's error map.
   identity return without an order, monotone committed files on both funnel entries, and the
   `none` round-robin stream layout.
   pins: write-order-dist-1/C-007, C-008, C-010
+  See [distribution/map.md](distribution/map.md).
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
