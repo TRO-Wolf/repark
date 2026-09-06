@@ -48,6 +48,11 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   Spark layout; §6 gains the shipped row.
   pins: perf-ice-writepath-1/C-009, C-010
   pins: write-distribution-1/C-007
+  **WRITE-ORDER-DIST-1 (2026-09-06)** appends §9: the distribution-mode gate and the per-writer
+  sort cost — no overhead on the unordered pair (control ratios overlap), +71 ms best-median on
+  the 1e6 ordered overwrite, the new `insert_overwrite` / `insert_overwrite_ordered` cells, and
+  the live Spark row set per partition value.
+  pins: write-order-dist-1/C-008, C-011
 - [iceberg-catalog-io-baseline.md](iceberg-catalog-io-baseline.md) — **PERF-ICE-CATALOG-IO-1
   (2026-09-05):** the `strace -f -e trace=openat` census per statement, measured on both knob
   settings, and the `t_many` / `t_many_merged` cells. `metadata.json` READS fall from 2 (SELECT)

@@ -80,6 +80,10 @@ repo.
   (Spark `'bar'` vs repark refusal on every regexp kernel); `FN-REGEX-POSIX-1`
   Controls rewritten (extract answers, former refusal pin superseded); facade
   2-arg widening disclosed. pins: fn-regexp-extract-1/C-004
+  **WRITE-ORDER-DIST-1 (2026-09-06):** §7 `V3-COV-5` FIXED (the five `WRITE …` forms build
+  and the write path honors them); new rows `WRITE-ORDER-DIST-1` FIXED and `WRITE-RANGE-1`
+  BACKLOG; `RDF-SORT-1` and `WRITE-DISTRIBUTION-1` gain a dated sentence each.
+  pins: write-order-dist-1/C-001, C-007, C-008, C-010
   Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
   [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin

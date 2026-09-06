@@ -218,3 +218,68 @@ the data and two runs of one plan commit the same `(partition value, record coun
 channel, so the `_row_id` a given row receives is not reproducible run to run on the partitioned
 path; the manifest still ascends by partition value and `_row_id` still tiles it contiguously
 from zero (pinned through the v3 facade CTAS). The unpartitioned path keeps §7's claim unchanged.
+
+## 9. WRITE-ORDER-DIST-1 — the distribution-mode gate and the per-writer sort (2026-09-06)
+
+Two changes ride the write path: `hash_distribution` reads `write.distribution-mode` (`none`
+skips the rule), and each writer sorts its own stream through a `SortExec` when the table
+declares a default sort order. Build **B5** is `feat/write-order-dist-1` on the pinned fork;
+**B4'** is `origin/main` `1883968b` (v1.1.0, this unit's base), each with its own release native
+(a base worktree, `uv sync --locked`, `maturin develop --release`). Same bed, same method
+(§2–§3); the probe is this tree's `probe_cell.py`, run under both natives — the two new cells,
+`insert_overwrite` (timed overwrite onto a CTAS-built target) and `insert_overwrite_ordered`
+(the same target after `WRITE ORDERED BY (id)`), do not exist at base, so the ordered cell has
+no before column: base refuses the ALTER. The target build is an untimed `setup`, so the
+overwrite samples hold only the overwrite. Commands:
+
+```bash
+lane=$HOME/repark-lanes/lanes/oc-writeorder
+base=/tmp/wo-base-1883968b
+for pass in 1 2 3; do for cell in ctas_partitioned8 insert_overwrite insert_overwrite_ordered df_write_parquet_zstd; do
+  $lane/.venv/bin/python $lane/python/repark-parity/bench/writepath/probe_cell.py \
+    $lane/scratch/synth_1000000.parquet $cell 8 5 >> $lane/scratch/cells_after.jsonl
+done; done
+for pass in 1 2 3; do for cell in ctas_partitioned8 insert_overwrite df_write_parquet_zstd; do
+  $base/.venv/bin/python $lane/python/repark-parity/bench/writepath/probe_cell.py \
+    $lane/scratch/synth_1000000.parquet $cell 8 5 >> $lane/scratch/cells_before.jsonl
+done; done
+```
+
+| cell | B4' min | B4' pass medians | B5 min | B5 pass medians | files B4' / B5 |
+|---|---|---|---|---|---|
+| `ctas_partitioned8` | 407.70 | 476.30, 741.80, 459.96 | 517.22 | 686.40, 535.17, 567.67 | 8 / 8 |
+| `insert_overwrite` | 1205.23 | 1352.39, 1301.46, 2685.27 | 1225.54 | 1309.64, 1347.74, 1358.08 | 32 / 32 |
+| `insert_overwrite_ordered` | — | — (base refuses the DDL) | 1361.98 | 1380.76, 1459.82, 1572.61 | — / 32 |
+| `df_write_parquet_zstd` (control) | 90.95 | 105.57, 108.24, 134.76 | 92.98 | 108.24, 103.81, 102.28 | — |
+| 1-minute load per pass | | 8.12, 15.65, 20.28 | | 11.36, 9.59, 9.42 | |
+| RSS peak, overwrite cells (MB) | | 849, 887, 906 | | 894, 875, 942 / 1017, 1119, 972 | |
+
+**No overhead on the unordered path.** `ctas_partitioned8` swings 459.96 → 741.80 ms on the
+base tree alone as the box loads up (pass 3 before ran at load 20, and its control reads
+134.76 against 105–108 elsewhere); the after medians sit inside that spread, and the
+control-paired ratios overlap (3.41–6.85× before, 5.16–6.34× after). Best-median against
+best-median reads +16%, but the spread of pass medians on either tree — 282 ms before,
+151 ms after — swallows it; §8's floor rule applies. `insert_overwrite` agrees pass for
+pass outside the load-polluted before pass 3 (1352.39 / 1301.46 before against
+1309.64–1358.08 after; control ratios 12.0–12.8× before, 12.1–13.3× after). The gate is two
+in-memory metadata reads per write, and it measures as zero.
+
+**The declared order costs 71–136 ms on the 1e6 overwrite.** `insert_overwrite_ordered`
+against unordered on the same tree, same passes: best medians 1380.76 vs 1309.64 (+71.12,
++5.4%), min 1361.98 vs 1225.54 (+136.44, +11.1%). That is four writers sorting 250,000 rows
+each through `SortExec` before the funnel writes them. The third ordered median (1572.61)
+carries a 4.9 s contention outlier beside 1.5 s siblings — box noise, the same class as the
+before pass 3, not the branch. RSS peak on the overwrite pair reads 849–942 MB unordered
+against 972–1119 MB ordered; the peak covers the untimed CTAS setup in the same process, so
+it bounds the cell rather than isolating the sort.
+
+**Spark.** Live Spark 4.1.2 runs the same DDL + overwrite over the same seed and commits the
+same row set per partition value (`test_write_ordered_overwrite_row_set_matches_spark`); its
+8 files are its own shuffle layout, and RePark's 32 are the funnel's four writers times eight
+values — the hash rule is CTAS-only, unchanged by this unit.
+
+**Determinism, as it stands after this unit.** A declared default order makes each committed
+file monotone in that order (pinned per file on CTAS, INSERT OVERWRITE, and MERGE), but the
+row-to-file grouping is still whatever the writers received — §7's `WRITE-GROUPING-CTAS-1`
+holds, and a row's `_row_id` is still not reproducible across runs. `WRITE-RANGE-1` files the
+unbuilt half: global cross-file ranging on unpartitioned tables.
