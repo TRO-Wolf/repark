@@ -11,10 +11,14 @@ _Last updated: 2026-09-06._
 
 ## Release state
 
+**v1.1.1 shipped (2026-09-06)** — the first patch on v1.1.0: RDF-SCHEMA-EVO-1 (compaction after
+schema evolution, fork pin RP-15 `85db42f2`), WRITE-DISTRIBUTION-2 (one partition value, one writer
+on INSERT OVERWRITE and MERGE), CSV-INFER-PERF-1 (`inferSchema` CSV without per-candidate
+materialization). Version SSOT at the Cargo workspace (`1.1.1`).
 **v1.1.0 shipped (2026-09-06)** — the first minor on v1.0.0 (2026-09-03, the first stable tag;
 v1.0.1 the first patch, 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`,
 PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only (crates.io publishing
-structurally deferred, see docs/release.md), version SSOT at the Cargo workspace (`1.1.0`).
+structurally deferred, see docs/release.md).
 v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
@@ -315,6 +319,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.1.0 shipped 2026-09-06; the tag history is in [Release state](#release-state).
+**None.** v1.1.1 shipped 2026-09-06; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
