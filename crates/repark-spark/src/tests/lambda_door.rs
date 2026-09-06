@@ -241,6 +241,34 @@ async fn sql_door_transform_keys_duplicate_key_raises() {
 }
 
 #[tokio::test]
+async fn sql_door_lambda_results_keep_narrowed_int32() {
+    let (ctx, catalogs) = hof_ctx();
+    for sql in [
+        "SELECT transform(make_array(1, 2, 3), x -> x + 1) AS r",
+        "SELECT filter(make_array(1, 2, 3), x -> x > 1) AS r",
+        "SELECT zip_with(make_array(1, 2), make_array(3, 4), (x, y) -> x + y) AS r",
+    ] {
+        let batch = collect_one(&ctx, &catalogs, sql).await;
+        let field = batch.schema().field(0).clone();
+        let DataType::List(element) = field.data_type() else {
+            panic!("{sql} did not return a list: {}", field.data_type());
+        };
+        assert_eq!(element.data_type(), &DataType::Int32, "{sql}");
+    }
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> acc + x) AS r",
+    )
+    .await;
+    assert_eq!(
+        batch.schema().field(0).data_type(),
+        &DataType::Int32,
+        "aggregate over int32 must stay int32"
+    );
+}
+
+#[tokio::test]
 async fn queries_without_a_lambda_still_parse_with_the_session_dialect() {
     let (ctx, catalogs) = hof_ctx();
     let batch = collect_one(&ctx, &catalogs, "SELECT count(\"v\") AS r FROM t").await;

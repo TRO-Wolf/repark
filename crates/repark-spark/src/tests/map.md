@@ -19,7 +19,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   function (not the subquery keyword), `forall` on empty, `aggregate` with and without
   `finish`, `reduce`, `zip_with` null-padding, the four map names, the
   `DUPLICATED_MAP_KEY` raise, and the gate guard (`count("v")` stays the identifier count,
-  so lambda-free SQL still parses Generic).
+  so lambda-free SQL still parses Generic). The dtype test pins the early-`LambdaRebind`
+  seat: `transform`/`filter`/`zip_with` over `make_array` keep `Int32` elements and
+  `aggregate` stays `Int32` (the closing coercion must see rebound bindings, not bake
+  `BIGINT` casts from stale ones).
   pins: fnp-8/C-004
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an

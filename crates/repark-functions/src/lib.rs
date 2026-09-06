@@ -56,6 +56,7 @@ use std::sync::Arc;
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::{LogicalPlan, ScalarUDF};
 use datafusion::optimizer::AnalyzerRule;
+use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
 use datafusion::prelude::SessionContext;
 
 /// Return this crate's Spark date-function shims for inspection or registration.
@@ -147,6 +148,7 @@ pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
         Arc::new(spark_result_types::SparkIntegerLiteral),
+        Arc::new(lambda_rebind::LambdaRebind),
         Arc::new(decimal_precision::SparkDecimalPrecision),
         Arc::new(decimal_spark::SparkDecimalRewrite),
         Arc::new(spark_nullability::SparkNullability),
@@ -155,9 +157,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());
-    rules.push(Arc::new(
-        datafusion::optimizer::analyzer::type_coercion::TypeCoercion::new(),
-    ));
+    rules.push(Arc::new(TypeCoercion::new()));
     rules.push(Arc::new(lambda_rebind::LambdaRebind));
     rules
 }
