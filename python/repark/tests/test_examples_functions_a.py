@@ -28,9 +28,7 @@ def test_arrays_zip_names_its_fields_by_position(spark: ReparkSession) -> None:
     """
     frame = spark.createDataFrame([([1, 2], ["x"])], "a ARRAY<INT>, b ARRAY<STRING>")
     table = frame.select(F.arrays_zip("a", "b").alias("v")).toArrow()
-    assert table.column("v").to_pylist() == [
-        [{"0": 1, "1": "x"}, {"0": 2, "1": None}]
-    ]
+    assert table.column("v").to_pylist() == [[{"0": 1, "1": "x"}, {"0": 2, "1": None}]]
     assert [field.name for field in table.schema.field("v").type.value_type] == ["0", "1"]
 
 

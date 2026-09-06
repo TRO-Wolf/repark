@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn from_json_is_permissive_by_default() {
         assert_eq!(shown(r#"SELECT from_json('{"a":1}', 'a INT')"#), "{a:1}");
-        assert_eq!(shown(r#"SELECT from_json('{bad', 'a INT')"#), "{a:}");
+        assert_eq!(shown(r"SELECT from_json('{bad', 'a INT')"), "{a:}");
         assert_eq!(shown(r#"SELECT from_json('{"z":1}', 'a INT')"#), "{a:}");
         assert_eq!(shown(r#"SELECT from_json('{"a":"x"}', 'a INT')"#), "{a:}");
         assert_eq!(shown(r#"SELECT from_json('{"a":1.7}', 'a INT')"#), "{a:}");
@@ -276,20 +276,20 @@ mod tests {
     #[test]
     fn from_json_fills_the_corrupt_record_column() {
         assert_eq!(
-            shown(r#"SELECT from_json('{bad', 'a INT, _corrupt_record STRING')"#),
+            shown(r"SELECT from_json('{bad', 'a INT, _corrupt_record STRING')"),
             "{a:,_corrupt_record:{bad}"
         );
     }
 
     #[test]
     fn from_json_failfast_raises_and_an_unknown_option_refuses() {
-        let failfast = run(r#"SELECT from_json('{bad', 'a INT', map(['mode'], ['FAILFAST']))"#)
+        let failfast = run(r"SELECT from_json('{bad', 'a INT', map(['mode'], ['FAILFAST']))")
             .expect_err("FAILFAST must raise");
         assert!(
             failfast.to_string().contains("MALFORMED_RECORD_IN_PARSING"),
             "{failfast}"
         );
-        let dropped = run(r#"SELECT from_json('{bad', 'a INT', map(['mode'], ['DROPMALFORMED']))"#)
+        let dropped = run(r"SELECT from_json('{bad', 'a INT', map(['mode'], ['DROPMALFORMED']))")
             .expect_err("DROPMALFORMED must raise");
         assert!(
             dropped.to_string().contains("PARSE_MODE_UNSUPPORTED"),

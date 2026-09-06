@@ -340,6 +340,23 @@ def test_from_json_option_coverage_is_loud() -> None:
     assert permissive[2] == [{"a": None}]
 
 
+def test_to_json_and_schema_of_json_refuse_options() -> None:
+    """repark implements no JSON writer or inference option and says so (FNP10-JSON-OPTIONS-1).
+
+    pins: fnp-9-collections-json/C-003, C-004, C-008
+    """
+    with pytest.raises(UnsupportedOperationException, match="FNP10-JSON-OPTIONS-1"):
+        F.to_json(F.struct(F.lit(1).alias("a")), {"ignoreNullFields": "false"})
+    with pytest.raises(UnsupportedOperationException, match="FNP10-JSON-OPTIONS-1"):
+        F.schema_of_json('{"a":1}', {"primitivesAsString": "true"})
+    empty = _column(
+        _session()
+        .sql("SELECT 1 AS one")
+        .select(F.to_json(F.struct(F.lit(1).alias("a")), {}).alias("r"))
+    )
+    assert empty[2] == ['{"a":1}']
+
+
 def test_from_json_refuses_a_column_schema() -> None:
     """repark resolves the result type when the expression is built.
 
@@ -551,9 +568,7 @@ def test_arrays_zip_field_names_are_positional_not_the_column_name() -> None:
     assert [field.name for field in zipped_type.value_type] == ["0", "1"]
 
 
-@pytest.mark.parametrize(
-    "name", ["inline", "inline_outer", "stack", "call_udf", "call_function"]
-)
+@pytest.mark.parametrize("name", ["inline", "inline_outer", "stack", "call_udf", "call_function"])
 def test_fnp9_multi_column_and_by_name_names_stay_absent(name: str) -> None:
     """A name this unit did not build stays absent rather than half-answering.
 

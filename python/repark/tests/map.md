@@ -3055,8 +3055,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - `test_parity_live.py::test_live_fnp9_collections_json` — **FNP-9/10 (2026-09-05):** the
   fifteen answer cells and four raising cells this unit pinned, re-derived from live Spark
-  4.1.2 under `REPARK_PARITY_LIVE=1`. pins: fnp-9-collections-json/C-002, C-003, C-004, C-005,
-  C-006
+  4.1.2 under `REPARK_PARITY_LIVE=1`. Every pin in the unit's file was inverted under at least
+  one mutation before the unit closed; the knobs and their counts are in the unit ledger.
+  pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, C-006, C-009
 
 - `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
   `test_arrays_zip_refuses` becomes `test_arrays_zip_names_its_fields_by_position` (EX-FN-1

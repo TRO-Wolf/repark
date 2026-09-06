@@ -212,6 +212,7 @@ impl ScalarUDFImpl for SparkArraysZip {
 
 #[cfg(test)]
 mod tests {
+    use datafusion::arrow::array::{Array, AsArray};
     use datafusion::prelude::SessionContext;
 
     fn run(sql: &str) -> datafusion::common::Result<Vec<datafusion::arrow::array::RecordBatch>> {
@@ -222,6 +223,16 @@ mod tests {
             .build()
             .expect("runtime");
         runtime.block_on(async { ctx.sql(sql).await?.collect().await })
+    }
+
+    #[test]
+    fn zip_pads_the_short_argument_to_the_longest() {
+        let batches = run("SELECT arrays_zip(array(1,2,3), array('a')) AS r").expect("zip");
+        let rows = batches[0].column(0).as_list::<i32>().value(0);
+        assert_eq!(rows.len(), 3);
+        let entries = rows.as_struct();
+        assert_eq!(entries.column(1).null_count(), 2);
+        assert_eq!(entries.column(0).null_count(), 0);
     }
 
     #[test]

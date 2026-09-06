@@ -29,6 +29,17 @@ FNP9_NAMES: tuple[str, ...] = (
 )
 
 
+def _refuse_json_options(name: str, options: dict[str, str] | None) -> None:
+    """Refuse a non-empty JSON option mapping rather than ignoring it silently."""
+    if options:
+        raise UnsupportedOperationException(
+            f"{name} does not support JSON options yet: repark implements none of Spark's "
+            f"JSON writer or inference options, and ignoring {sorted(options)} would change "
+            "the answer silently. See docs/spark-sql-iceberg-parity.md "
+            "(FNP10-JSON-OPTIONS-1)."
+        )
+
+
 def get_json_object(col: Column | str, path: str) -> Column:
     """Extract one JSONPath value as a string (PySpark ``functions.get_json_object``).
 
@@ -74,12 +85,15 @@ def to_json(col: Column | str, options: dict[str, str] | None = None) -> Column:
 
     Args:
         col: the column to render, or a column name.
-        options: accepted and ignored, as Spark ignores an option it does not know.
+        options: refused when non-empty; repark implements none of Spark's JSON writer options.
 
     Returns:
         A ``STRING`` column; NULL where the input value is NULL.
+
+    Raises:
+        UnsupportedOperationException: ``options`` is non-empty.
     """
-    _ = options
+    _refuse_json_options("to_json", options)
     return _scalar("to_json", col)
 
 

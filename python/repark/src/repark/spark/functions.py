@@ -1982,4 +1982,4 @@ __all__ = [
 # fmt: off
 from repark.spark import functions_declared as _fd, functions_json as _fj  # noqa: E402, I001
 from repark.spark import functions_lambda as _fl, functions_try as _ft  # noqa: E402
-_x = [m.install_into(globals(), __all__) for m in (_fd, _fj, _fl, _ft)]
+_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj)]

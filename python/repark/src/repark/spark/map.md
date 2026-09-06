@@ -60,7 +60,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `call_function`) are deliberately NOT here: exporting a refusal would add five rows to an
   example backlog whose count only ratchets down. §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
   The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through
-  `repark.spark.types`.
+  `repark.spark.types`. `_refuse_json_options` is the one rule `from_json`, `to_json` and
+  `schema_of_json` share: repark implements no JSON option beyond `mode` and
+  `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
+  answer, so a non-empty mapping refuses instead of being ignored.
+  `install_into` runs LAST in `functions.py`'s installer chain, which
+  `test_functions_split_identity.py` pins by position.
   pins: fnp-9-collections-json/C-001, C-007
   FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
   docstring is one line.

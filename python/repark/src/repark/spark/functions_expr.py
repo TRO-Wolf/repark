@@ -458,7 +458,9 @@ def schema_of_json(json: Column | str, options: dict[str, str] | None = None) ->
 
     A bare ``str`` is the JSON document itself, not a column name, matching PySpark.
     """
-    _ = options
+    from repark.spark.functions_json import _refuse_json_options
+
+    _refuse_json_options("schema_of_json", options)
     _require_column_or_str(json, "json")
     document = json if isinstance(json, Column) else lit(json)
     return _scalar("schema_of_json", document)

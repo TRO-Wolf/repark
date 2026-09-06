@@ -45,7 +45,8 @@ round-trip destroys.
 - `from_json.rs` — the `from_json` UDF: result type from the foldable schema argument, options
   read from a foldable MAP. Only `mode` (PERMISSIVE / FAILFAST) and `columnNameOfCorruptRecord`
   are honoured; every other option is REFUSED rather than silently ignored, because Spark honours
-  around twenty of them and a silent ignore would be a wrong answer. Registry row
+  around twenty of them and a silent ignore would be a wrong answer. The facade applies the same
+  rule to `to_json` and `schema_of_json`, which implement no option at all. Registry row
   `FNP10-JSON-OPTIONS-1`. pins: fnp-9-collections-json/C-005, C-008
 
 Each kernel file carries its own `#[cfg(test)] mod tests` running the measured Spark cells

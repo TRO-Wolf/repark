@@ -6009,18 +6009,26 @@ field NAME.
   of whose surface is a silent `[]` should be closed once rather than twice. The pin codifies
   today's behaviour; the fix unit updates the pin rather than obeys it.
 
-### FNP10-JSON-OPTIONS-1 — `from_json` honours two options and refuses the rest
+### FNP10-JSON-OPTIONS-1 — the JSON names honour two options and refuse the rest
 
 - **repark** — `from_json(col, schema, options)` reads `mode` (PERMISSIVE, the default, and
   FAILFAST) and `columnNameOfCorruptRecord`. Any other key raises
   `'from_json' option "<key>" is not supported by repark`. `DROPMALFORMED` raises
-  `PARSE_MODE_UNSUPPORTED`, as Spark's does.
+  `PARSE_MODE_UNSUPPORTED`, as Spark's does. `to_json(col, options)` and
+  `schema_of_json(json, options)` implement NO option and refuse a non-empty mapping outright,
+  for the same reason.
 - **Apache Spark** — honours roughly twenty JSON options (`allowComments`,
   `allowUnquotedFieldNames`, `allowSingleQuotes`, `dateFormat`, `timestampFormat`, `locale`,
   `primitivesAsString`, `prefersDecimal`, `dropFieldIfAllNull`, …) and silently IGNORES a key it
-  does not know: `from_json('{"a":1}', 'a INT', map('zzz','1'))` answers `{a: 1}`.
+  does not know: `from_json('{"a":1}', 'a INT', map('zzz','1'))` answers `{a: 1}`. An option it
+  DOES know changes the answer, which is the point:
+  `to_json(named_struct('a', CAST(NULL AS INT)), map('ignoreNullFields','false'))` answers
+  `{"a":null}` where the default omits the field, and
+  `schema_of_json('{"a":1}', map('primitivesAsString','true'))` answers `STRUCT<a: STRING>` where
+  the default answers `STRUCT<a: BIGINT>`.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
 - **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_option_coverage_is_loud`
+  and `…::test_to_json_and_schema_of_json_refuse_options`
 - **Rationale** — BACKLOG, filed 2026-09-05. repark refuses where Spark ignores, on purpose: an
   option repark does not implement would otherwise change the answer silently, and a JSON parse
   is exactly where a silent wrong answer is hardest to notice. The cost is a loud refusal on an

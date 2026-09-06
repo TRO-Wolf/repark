@@ -292,7 +292,7 @@ mod tests {
             Some(r#"{"b":2}"#)
         );
         assert_eq!(text(r#"SELECT get_json_object('{"a":1}', 'a')"#), None);
-        assert_eq!(text(r#"SELECT get_json_object('{bad', '$.a')"#), None);
+        assert_eq!(text(r"SELECT get_json_object('{bad', '$.a')"), None);
         assert_eq!(text(r#"SELECT get_json_object('{"b":null}', '$.b')"#), None);
     }
 
@@ -340,6 +340,6 @@ mod tests {
         let batches = run(r#"SELECT json_object_keys('{"a":1,"a":2}')"#).expect("keys");
         let keys = batches[0].column(0).as_list::<i32>().value(0);
         assert_eq!(keys.len(), 2);
-        assert_eq!(text(r#"SELECT json_object_keys('[1,2]')"#), None);
+        assert_eq!(text(r"SELECT json_object_keys('[1,2]')"), None);
     }
 }

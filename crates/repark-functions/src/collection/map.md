@@ -32,7 +32,9 @@ needed.
   argument TYPES: naming from the argument field names made `optimize_projections` fail its own
   schema-stability invariant once the optimizer inlined a subquery or folded a literal, and
   pinning the names in `simplify` only moved the same failure onto the analyzer's schema.
-  Divergence `FNP9-ARRAYS-ZIP-NAMES-1`. pins: fnp-9-collections-json/C-006, C-008
+  Divergence `FNP9-ARRAYS-ZIP-NAMES-1`. The NULL-fill test exists because a mutation knob
+  found its absence: with the field-name tests alone, zipping to the SHORTEST array was
+  0 red of 42. pins: fnp-9-collections-json/C-006, C-008, C-009
 - `map_concat.rs` — **FNP-9 (2026-09-05):** Spark `map_concat`. A NULL map argument nulls the
   row and an untyped NULL raises `MAP_CONCAT_DIFF_TYPES`, both the way Spark answers them;
   a key repeated across the concatenated maps raises `DUPLICATED_MAP_KEY` with the text
