@@ -30,7 +30,9 @@ repo.
   pins: sepmo-e0-e1/C-001; sepmo-e2/C-001
 - [perf/](perf/map.md) — committed performance baselines (machine and profile
   stated). **PERF-DYNFLATTEN-1:** [perf/dynamic-flatten-baseline.md](perf/dynamic-flatten-baseline.md).
+  **CSV-INFER-PERF-1:** [perf/csv-infer-baseline.md](perf/csv-infer-baseline.md).
   pins: perf-dynflatten-1-measure/C-004
+  pins: csv-infer-perf-1/C-006
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.

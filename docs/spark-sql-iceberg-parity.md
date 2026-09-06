@@ -4489,6 +4489,68 @@ Shared roster pin for every heading:
   keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
   `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
+### CSV-INFER-PERF-1 — `inferSchema` CSV no longer materializes the frame per candidate cast — **FIXED 2026-09-06 (CSV-INFER-PERF-1)**
+
+- **repark** — **FIXED 2026-09-06 (CSV-INFER-PERF-1), round 5.** Local
+  `spark.read.csv(..., inferSchema=True)` keeps DataFusion's 1000-row sample, then
+  re-reads with an all-Utf8 schema from the first local record (no second infer) and
+  one `try_cast` aggregation decides widen-or-keep so a type conflict past row 1000
+  cannot raise or silently drop a clock. A `multiLine` first read is already that
+  infer-free schema, so quoted embedded newlines infer at any record count. Boolean
+  promotion accepts only `true`/`false` (case-insensitive, Spark `CSVInferSchema`);
+  `1`/`t`/`yes`/` true` stay string on both the `multiLine` route and the ordinary
+  route. Offset text is `try_cast` timestamp. Native-Utf8 leftover numeric grammar
+  (`Inf`/`NaN`/`Infinity`/`+5`/long digits) runs for every Utf8 column at every file
+  width. `nullValue` still Utf8-forces and promotes with one failure-count
+  aggregation. On a 300k × 8 CSV (release native): see
+  `docs/perf/csv-infer-baseline.md` (plan-time `to_arrow` 34 → **1**).
+- **Apache Spark** — `inferSchema` scans the whole file for types without a
+  Python-side per-column materialization of the frame.
+- **Pin** —
+  `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_trial_path_does_not_materialize_per_column`,
+  `...::test_infer_schema_true_stays_under_half_second`,
+  `...::test_infer_schema_shapes_match_spark_answers`,
+  `...::test_late_type_conflict_past_sample_is_spark_equal`,
+  `...::test_numeric_grammar_is_width_independent`,
+  `...::test_multiline_infer_schema_past_sample_does_not_raise`,
+  `...::test_multiline_quoted_newlines_infer_schema_at_any_count`,
+  `...::test_multiline_int_then_true_stays_string`,
+  `...::test_csv_boolean_literal_grammar_matches_spark`.
+- **Rationale** — FIXED. NULLABILITY-2 round 4 was Spark-equal and expensive. Round 1
+  trusted the 1000-row sample. Round 2 validated typed columns but gated leftover
+  grammar on width. Round 3 runs leftover grammar at every width and makes the
+  Utf8 re-read infer-free so `multiLine` past 1000 records cannot raise. Round 4
+  Utf8-forces the `multiLine` first read so quoted embedded newlines infer at
+  any record count. Round 5 restricts boolean candidacy to Spark's `true`/`false`
+  tokens so a late `true` against an int head stays string. Cells:
+  `docs/perf/csv-infer-baseline.md`.
+
+### CSV-INFER-HEADER-NEWLINE — embedded newline in the CSV header raises; Spark keeps the header — **DECLARED 2026-09-06**
+
+- **repark** — `id,"no\nte",v` raises `incorrect number of fields for line 1` from the
+  line-based first-record Utf8 schema read, with `inferSchema` True or False and
+  `multiLine=True`. Pre-existing on main.
+- **Apache Spark** — `multiLine=True` keeps the `no\nte` header and reads the row.
+  *(oracle: live PySpark 4.1.2.)*
+- **Pin** —
+  `python/repark/tests/test_csv_infer_perf_1.py::test_header_embedded_newline_raises_until_record_aware_scan`,
+  `...::test_live_late_and_grammar_shapes_match_oracle`.
+- **Rationale** — DECLARED. The first-record schema reader is line-based. A
+  record-aware header scan is a separate unit. The pin reds when repark answers
+  Spark's header.
+
+### CSV-INFER-20DIGIT — overflow Int64 infers as double; Spark answers decimal — **DECLARED 2026-09-06**
+
+- **repark** — `12345678901234567890` and `9223372036854775808` infer as `double`
+  (Arrow/DataFusion have no decimal CSV infer). A late 20-digit after 1000 ints
+  widens the column to `double` rather than raising.
+- **Apache Spark** — `decimal(20,0)` / `decimal(19,0)`. *(oracle: live PySpark 4.1.2.)*
+- **Pin** —
+  `python/repark/tests/test_csv_infer_perf_1.py::test_twenty_digit_integer_infers_double_not_decimal`,
+  `...::test_live_late_and_grammar_shapes_match_oracle`.
+- **Rationale** — DECLARED. Same family as EX-IO-3 (integer width). A decimal infer
+  path is a separate unit. The pin reds when repark answers Spark's decimal.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
