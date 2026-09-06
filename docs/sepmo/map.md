@@ -3,7 +3,7 @@
 ## Purpose
 
 SEPMO efficiency-pilot documents that live in the repository: telemetry
-inventory, the usage-record schema, and proposed worker-wrapper patches. Process
+inventory, compact worker packets, and proposed worker-wrapper patches. Process
 canon stays under [../../.agents/skills/sepmo/](../../.agents/skills/sepmo/map.md).
 This directory is campaign class. It closes when the efficiency pilot's E-7
 outcome is recorded.
@@ -12,6 +12,9 @@ outcome is recorded.
 
 - [telemetry/](telemetry/map.md) — E-0 inventory, the usage-record schema, and
   wrapper-patch proposals for the four worker adapters.
+- [packets/](packets/map.md) — E-2 compact worker packet format v1, schema,
+  baseline comparison, and wrapper-consumption proposal.
+  pins: sepmo-e2/C-001, C-006, C-007
 
 ## I want to...
 
@@ -20,6 +23,8 @@ outcome is recorded.
 | See which usage fields each worker actually reports | [telemetry/inventory.md](telemetry/inventory.md) |
 | Read the normalized usage-record schema | [telemetry/usage-record.schema.json](telemetry/usage-record.schema.json) |
 | Collect a run directory | [../../scripts/sepmo_usage.py](../../scripts/sepmo_usage.py) |
+| Read the compact worker packet format | [packets/packet-format.md](packets/packet-format.md) |
+| Build or check a packet | [../../scripts/sepmo_packet.py](../../scripts/sepmo_packet.py) |
 
 ## Pointers
 
