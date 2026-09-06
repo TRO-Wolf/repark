@@ -1,6 +1,6 @@
 """Divergence pins for the EX-26 reader/writer/session batch.
 
-Registry §7 rows EX-IO-1..9 and EX-SES-6.
+Registry §7 rows EX-IO-1..10 and EX-SES-6.
 """
 
 from __future__ import annotations
@@ -106,6 +106,42 @@ def test_missing_table_text(spark: ReparkSession) -> None:
     other = spark.createDataFrame([(9, "z")], "x INT, y STRING")
     with pytest.raises(AnalysisException, match="Error during planning"):
         other.write.insertInto("missing_t_ex26")
+
+
+def test_insert_arity_text(spark: ReparkSession) -> None:
+    """insertInto with the wrong width shares the type with Spark, not the text (EX-IO-8)."""
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], "id INT, name STRING")
+    frame.write.mode("overwrite").saveAsTable("t_ex26_arity")
+    wide = spark.createDataFrame([(9, "z", 1)], "x INT, y STRING, z INT")
+    with pytest.raises(AnalysisException, match="Column count doesn't match"):
+        wide.write.insertInto("t_ex26_arity")
+    narrow = spark.createDataFrame([(9,)], "x INT")
+    with pytest.raises(AnalysisException, match="Column count doesn't match"):
+        narrow.write.insertInto("t_ex26_arity")
+
+
+def test_writer_output_listing(spark: ReparkSession, tmp_path: Path) -> None:
+    """csv/json writes emit one data file with no _SUCCESS marker (EX-IO-10)."""
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], "id INT, name STRING")
+    csv_out = tmp_path / "listed_csv"
+    frame.write.mode("overwrite").csv(str(csv_out), header=True)
+    csv_names = sorted(path.name for path in csv_out.iterdir() if path.is_file())
+    assert len(csv_names) == 1 and csv_names[0].endswith(".csv")
+    assert "_SUCCESS" not in csv_names
+    json_out = tmp_path / "listed_json"
+    frame.write.mode("overwrite").json(str(json_out))
+    json_names = sorted(path.name for path in json_out.iterdir() if path.is_file())
+    assert len(json_names) == 1 and json_names[0].endswith(".json")
+    part_out = tmp_path / "listed_part"
+    frame.write.mode("overwrite").partitionBy("name").option("header", "false").csv(str(part_out))
+    assert sorted(path.name for path in part_out.iterdir() if path.is_dir()) == [
+        "name=a",
+        "name=b",
+    ]
+    assert [path.name for path in part_out.iterdir() if path.is_file()] == []
+    for leaf in ("name=a", "name=b"):
+        leaf_names = sorted(path.name for path in (part_out / leaf).iterdir() if path.is_file())
+        assert len(leaf_names) == 1 and leaf_names[0].endswith(".csv")
 
 
 def test_saveas_table_exists_text(spark: ReparkSession) -> None:

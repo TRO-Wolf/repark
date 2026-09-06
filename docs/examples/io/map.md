@@ -32,19 +32,21 @@ form: one module docstring, the `main()` one-liner, and bare helpers.
   pins: ex-26-io-session/C-004
 - [writer_csv.py](writer_csv.py) — `csv` explicit-header arms plus `format` /
   `option` / `options` / `save`, asserting file bytes and data-file counts
-  (EX-26). The header default is §7 `EX-IO-4`, the save default `EX-IO-5`.
+  (EX-26). The header default is §7 `EX-IO-4`, the save default `EX-IO-5`,
+  the output listing `EX-IO-10`.
   pins: ex-26-io-session/C-005
 - [writer_json.py](writer_json.py) — `json` shorthand and format spellings,
-  byte-identical to Spark (EX-26).
+  byte-identical to Spark (EX-26). The output listing is §7 `EX-IO-10`.
   pins: ex-26-io-session/C-006
 - [writer_partition.py](writer_partition.py) — `partitionBy` / `partition_by`
   hive layout: directory names and per-partition bytes (EX-26). The snake
-  spelling is repark-only (`hasattr` False on live PySpark 4.1.2).
+  spelling is repark-only (`hasattr` False on live PySpark 4.1.2); the
+  output listing is §7 `EX-IO-10`.
   pins: ex-26-io-session/C-007
 - [writer_tables.py](writer_tables.py) — `saveAsTable` / `save_as_table` and
   `insertInto` / `insert_into`, positional insert included (EX-26). The snake
   spellings are repark-only; non-iceberg table formats are §7 `EX-IO-6`, the
-  exists text `EX-IO-9`, the missing text `EX-IO-8`.
+  exists text `EX-IO-9`, the missing text `EX-IO-8`, the arity text `EX-IO-8`.
   pins: ex-26-io-session/C-008
 - [writerv2_create.py](writerv2_create.py) — `using`, `tableProperty` /
   `table_property`, `partitionedBy` / `partitioned_by`, `create` (EX-22).

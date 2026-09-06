@@ -5886,10 +5886,20 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Apache Spark** — raises `AnalysisException` with error class `[TABLE_OR_VIEW_NOT_FOUND]`
   (`The table or view \`<name>\` cannot be found. …`). *(oracle: live PySpark 4.1.2, ANSI on,
   UTC session zone, 2026-09-06, EX-26 batch, all three entry points measured.)*
-- **Pin** — `python/repark/tests/test_examples_io_session.py::test_missing_table_text`
+- **Arity arm (added 2026-09-06, round 2)** — `insertInto` with the wrong column count raises
+  `AnalysisException` on both engines with different texts. repark answers `Error during
+  planning: Column count doesn't match insert query!` for too many and too few alike. Spark
+  answers `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` (`Cannot write to
+  \`spark_catalog\`.\`default\`.\`t_ex26_r3\`, the reason is too many data columns: Table columns:
+  \`id\`, \`name\`. Data columns: \`x\`, \`y\`, \`z\`.`) and the `NOT_ENOUGH_DATA_COLUMNS` twin
+  (`Data columns: \`x\`.`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 round 2, both widths measured.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_missing_table_text` and
+  `…::test_insert_arity_text`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The examples keep the
-  agreeing arm — each entry point raises `AnalysisException` on a missing name; repark's message
-  text is pinned, not taught.
+  agreeing arm — each entry point raises `AnalysisException` on a missing name, and the arity
+  arm raises `AnalysisException` on both engines; repark's message texts are pinned, not
+  taught.
 
 ### EX-IO-9 — `saveAsTable` on an existing table shares the type with Spark, not the text
 
@@ -5903,6 +5913,25 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Pin** — `python/repark/tests/test_examples_io_session.py::test_saveas_table_exists_text`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
   create arm, where rows and dtypes agree; the exists text is pinned, not taught.
+
+### EX-IO-10 — writer output dirs: Spark writes `_SUCCESS`, checksums, and `part-*` names; repark writes one data file
+
+- **repark** — `csv`/`json` writes (the shorthand, `format(...).save`, and `partitionBy`)
+  emit exactly one data file per output dir (one per `name=` leaf when partitioned) with a
+  random name and no marker or checksum sidecars: csv `['weZUoWyiy84qKvcb_0.csv']`, json
+  `['CKpaZsfMlTvLvmSX_0.json']`, partitioned `['name=a/FFp4eSALY8DjS6Zh.csv',
+  'name=b/FFp4eSALY8DjS6Zh.csv']` on the EX-26 two-row frame.
+- **Apache Spark** — writes `part-00000-<uuid>-c000.<ext>` data files plus an empty `_SUCCESS`
+  marker and `.<name>.crc` checksums: csv `['._SUCCESS.crc',
+  '.part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv.crc', '_SUCCESS',
+  'part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv']`, json the same shape, and
+  partitioned `['_SUCCESS', '._SUCCESS.crc']` at the top with one
+  `part-00000-<uuid>.c000.csv` plus its checksum per leaf (the uuid varies per write).
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_writer_output_listing`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 round-2 measurement. The examples
+  keep the data-file bytes and counts, where the engines agree; the marker and naming shape is
+  pinned, not taught.
 
 ### EX-SES-6 — `spark.udf.register` answers the UDF object in repark, a plain function in Spark
 
