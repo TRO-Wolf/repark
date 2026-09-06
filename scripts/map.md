@@ -256,6 +256,11 @@ FNP-9/10 (2026-09-05): `check_lib_py.py` `functions_expr.py` 2259→2257 — `ar
 `schema_of_json` trade a six-line refusal each for a shorter real wrapper; ratchets DOWN.
 The unit's new facade surface lands in `functions_json.py` and `functions_collections.py`
 instead of growing `functions.py`, which stays at its exact 1985.
+`check_example_coverage.py` gains `functions_json.py` as a fourth installer source and
+`FNP9_NAMES` as an export binding, so the eight new `F.*` names enter the walk; both new
+example scripts cover them and `BACKLOG_BASELINE` ratchets 164→163 as `F.schema_of_json`
+leaves the backlog. `F.arrays_zip` stays on it — the kernel answers, but its struct field
+names diverge (§7 FNP9-ARRAYS-ZIP-NAMES-1).
 pins: fnp-9-collections-json/C-001
 
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`

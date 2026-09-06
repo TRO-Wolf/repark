@@ -68,6 +68,7 @@ FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_try.py",
     "python/repark/src/repark/spark/functions_lambda.py",
     "python/repark/src/repark/spark/functions_declared.py",
+    "python/repark/src/repark/spark/functions_json.py",
 )
 FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     {
@@ -77,6 +78,7 @@ FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
         "CSV_XML_XPATH_NAMES",
         "VARIANT_NAMES",
         "GEOSPATIAL_NAMES",
+        "FNP9_NAMES",
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})
@@ -92,7 +94,7 @@ FAMILIES: tuple[str, ...] = (
     "types",
     "window",
 )
-BACKLOG_BASELINE = 164
+BACKLOG_BASELINE = 163
 EXCEPTIONS_BASELINE = 2
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"

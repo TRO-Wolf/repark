@@ -3048,9 +3048,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   flatten), `json_array_length`, `json_object_keys`, `to_json` (a NULL struct field is omitted, a
   NULL map value is written), `from_json` (PERMISSIVE, `_corrupt_record`, FAILFAST, the refused
   option set), `schema_of_json`, `create_map`, `map_concat`, `array_insert` (the -1-appends rule
-  and NULL padding at both ends), `arrays_zip` (NULL fill, positional field names), and the six
-  loud refusals this unit did not build.
+  and NULL padding at both ends), `arrays_zip` (NULL fill, positional field names), the
+  `sequence` divergence the unit filed rather than built, and the five names it left absent —
+  that pin reds the day the multi-column generator seam lands and they are exported.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+
+- `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
+  `test_arrays_zip_refuses` becomes `test_arrays_zip_names_its_fields_by_position` (EX-FN-1
+  retires into FNP9-ARRAYS-ZIP-NAMES-1) and `test_schema_of_pair_refuses` becomes
+  `test_schema_of_csv_refuses` (EX-FN-16 narrows). pins: fnp-9-collections-json/C-003, C-006
 
 - `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
   Spark's docs state — length, character pool, range, the integer-vs-double return rule,

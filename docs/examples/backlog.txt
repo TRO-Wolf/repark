@@ -86,7 +86,6 @@ F.raise_error
 F.reflect
 F.replace
 F.schema_of_csv
-F.schema_of_json
 F.schema_of_variant
 F.schema_of_variant_agg
 F.schema_of_xml

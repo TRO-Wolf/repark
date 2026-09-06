@@ -5501,17 +5501,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
 
-### EX-FN-1 — `arrays_zip` refuses; Spark zips element-wise with NULL fill
+### FNP9-ARRAYS-ZIP-NAMES-1 — `arrays_zip` names its struct fields by position, never after the column
 
-- **repark** — `F.arrays_zip("a", "b")` raises `UnsupportedOperationException:
-  functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
-- **Apache Spark** — `arrays_zip([1, 2], ["x"])` answers `[{0: 1, 1: "x"}, {0: 2, 1:
-  None}]`; `arrays_zip([], ["y", "z"])` answers `[{0: None, 1: "y"}, {0: None, 1:
-  "z"}]`; a NULL array answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the zip kernel.
+**Retires EX-FN-1** (2026-09-05, "arrays_zip refuses"). FNP-9/10 built the kernel: values,
+element types, NULL fill and nullability are Spark-equal on both doors. What remains is the
+field NAME.
+
+- **repark** — `arrays_zip(ai, arrs)` answers `ARRAY<STRUCT<0: INT, 1: STRING>>`: the struct
+  fields carry the argument's 0-based position whatever the argument is.
+- **Apache Spark** — the same call answers `ARRAY<STRUCT<ai: INT, arrs: STRING>>`; Spark names a
+  field after the child when the child is an `Attribute`, and by position otherwise, so
+  `arrays_zip(array(1,2), array('a','b'))` is `STRUCT<0: INT, 1: STRING>` on both engines.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** —
+  `python/repark/tests/test_fnp_9_collections_json.py::test_arrays_zip_field_names_are_positional_not_the_column_name`
+  and `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_names_its_fields_by_position`
+  (EX-FN-1's flipped pin — the name answers now, only the field names differ, so `F.arrays_zip`
+  stays on the example backlog)
+- **Rationale** — BACKLOG, filed 2026-09-05. A DataFusion UDF's return field must be a pure
+  function of the argument TYPES. Naming from the argument field names is not: it was measured
+  RED against `optimize_projections`'s own schema-stability invariant once the optimizer inlined
+  a subquery (`arrays_zip(a, b) FROM (SELECT array(1,2) AS a …)`) or folded a literal argument,
+  and pinning the names in `simplify` moved the identical failure onto the analyzer's schema
+  instead of removing it. Positional naming is the only stable choice available inside the UDF;
+  closing this needs a name that survives optimization, not a better heuristic.
 
 ### EX-FN-2 — `posexplode` / `posexplode_outer` refuse; Spark emits position rows
 
@@ -5680,17 +5693,18 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
   teaching repark's plain-string spelling would teach code Spark analysis-refuses.
 
-### EX-FN-16 — `schema_of_csv` / `schema_of_json` refuse; Spark infers the structs
+### EX-FN-16 — `schema_of_csv` refuses; Spark infers the struct
 
-- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
-  supported yet (disclosed E1)`).
+- **repark** — `F.schema_of_csv("line")` raises `UnsupportedOperationException:
+  functions.schema_of_csv is not supported yet (disclosed E1)`.
 - **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
-  (likewise with an explicit `sep` option); `schema_of_json('{"a": 1, "b": "x"}')`
-  answers `"STRUCT<a: BIGINT, b: STRING>"`. Both take a foldable literal, not a column.
+  (likewise with an explicit `sep` option). It takes a foldable literal, not a column.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_pair_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
-  on the example backlog until the schema-inference kernels land.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_csv_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. **Narrowed 2026-09-05
+  (FNP-9/10):** `schema_of_json` left this row — the kernel landed and the name answers Spark's
+  DDL on both doors. `schema_of_csv` stays: its family is FNP-16's declared-by-cost CSV
+  sub-project, not a missing inference kernel.
 
 ### EX-FN-17 — `sentences` refuses; Spark nests words by sentence
 
@@ -5932,6 +5946,113 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 round-2 measurement. The examples
   keep the data-file bytes and counts, where the engines agree; the marker and naming shape is
   pinned, not taught.
+
+### FNP9-GENERATORS-1 — the multi-column generators refuse; Spark projects several columns
+
+- **repark** — `F.posexplode` and `F.posexplode_outer` raise `UnsupportedOperationException`
+  and `F.json_tuple` keeps its refusal; `F.inline`, `F.inline_outer` and `F.stack` are absent
+  (`AttributeError`). The Spark door refuses the same shape at parse altitude:
+  `SELECT posexplode(array(10,20)) AS (p, c)` answers `SELECT item with multiple aliases is not
+  supported`, and `inline` / `stack` are not routines there. `SELECT json_tuple(j, 'a', 'b')`
+  does answer, but as ONE `STRUCT<c0: STRING, c1: STRING>` column.
+- **Apache Spark** — `posexplode([10, 20])` projects two columns `(0, 10)`, `(1, 20)`;
+  `posexplode(map('a',1))` projects three; `inline(array(struct(1 AS a, 'x' AS b)))` projects
+  `a` and `b` named from the struct; `inline_outer` and `posexplode_outer` keep a NULL row for a
+  NULL or empty input; `stack(2, 1, 2, 3, 4)` projects `col0`/`col1` over two rows and NULL-fills
+  a short last row; `json_tuple('{"a":1,"b":2}', 'a', 'b')` projects TWO string columns.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** —
+  `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
+  and `…::test_json_tuple_still_refuses_on_the_facade`
+- **Rationale** — BACKLOG, filed 2026-09-05. One seam, not six gaps: the facade select path
+  carries at most one generator column and emits exactly one output column
+  (`dataframe/core.py` `_generator`), and the Spark door rejects a multi-alias select item. Every
+  one of these six names needs the same plan-shape change, so FNP-9/10 files the seam once rather
+  than shipping a one-column impostor of a generator. The three absent names stay absent rather
+  than becoming exported loud refusals: an exported `F.*` name with no example goes on
+  `docs/examples/backlog.txt`, whose count ratchets DOWN only, and a refusal example is not the
+  EX house form. The pin asserts the absence, so it reds the day the seam lands.
+  **Supersedes EX-FN-2** (`posexplode` / `posexplode_outer`), whose EX-25 pin stays and whose
+  mechanism is stated here.
+
+### FNP9-BYNAME-1 — `call_udf` / `call_function` refuse; Spark resolves the name at plan time
+
+- **repark** — both names are absent from the facade (`AttributeError`).
+- **Apache Spark** — `call_udf("name", col)` invokes a function registered through
+  `spark.udf.register`, and `call_function("name", col)` invokes any resolvable function,
+  built-in or registered. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** —
+  `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
+- **Rationale** — BACKLOG, filed 2026-09-05. A facade `Column` is built without a session:
+  `PyColumn.call_scalar` resolves a closed match table in Rust, not a session function registry,
+  so an arbitrary name has nothing to look itself up in. The same seam is why `F.expr("a + 1")`
+  refuses (EX-FN-4). A registered UDF is reachable today through `spark.sql`. Closing this needs
+  a session-bound Column resolution step, not a dispatch arm.
+
+### FNP9-SEQUENCE-1 — a descending `sequence` answers `[]`; Spark counts down or raises
+
+- **repark** — `F.sequence` routes to DataFusion's `generate_series`. Ascending is Spark-equal:
+  `sequence(1, 5, 2)` is `[1, 3, 5]` and `sequence(1, 3)` is `[1, 2, 3]`. Descending is not:
+  `sequence(5, 1)` answers `[]` and `sequence(1, 5, -1)` answers `[]`. The element type is
+  `BIGINT` and the array is nullable. The Spark door has no `sequence` at all
+  (`Invalid function 'sequence'`).
+- **Apache Spark** — `sequence(5, 1)` answers `[5, 4, 3, 2, 1]`; `sequence(1, 5, -1)` raises
+  `IllegalArgumentException: requirement failed: Illegal sequence boundaries: 1 to 5 by -1`;
+  the element type is `INT` and non-nullable; and
+  `sequence(DATE'2021-01-01', DATE'2021-01-05', INTERVAL 2 DAY)` answers three dates.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_sequence_descending_answers_empty`
+- **Rationale** — BACKLOG, filed 2026-09-05 by FNP-9/10, which measured the name while
+  chartering the collection family and did not build it. Two of the three gaps — the descending
+  count-down and the raise on an illegal step — are an integer kernel; the third is
+  DATE/TIMESTAMP ± INTERVAL stepping, which belongs to the FNP-11 time family, and a name half
+  of whose surface is a silent `[]` should be closed once rather than twice. The pin codifies
+  today's behaviour; the fix unit updates the pin rather than obeys it.
+
+### FNP10-JSON-OPTIONS-1 — `from_json` honours two options and refuses the rest
+
+- **repark** — `from_json(col, schema, options)` reads `mode` (PERMISSIVE, the default, and
+  FAILFAST) and `columnNameOfCorruptRecord`. Any other key raises
+  `'from_json' option "<key>" is not supported by repark`. `DROPMALFORMED` raises
+  `PARSE_MODE_UNSUPPORTED`, as Spark's does.
+- **Apache Spark** — honours roughly twenty JSON options (`allowComments`,
+  `allowUnquotedFieldNames`, `allowSingleQuotes`, `dateFormat`, `timestampFormat`, `locale`,
+  `primitivesAsString`, `prefersDecimal`, `dropFieldIfAllNull`, …) and silently IGNORES a key it
+  does not know: `from_json('{"a":1}', 'a INT', map('zzz','1'))` answers `{a: 1}`.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_option_coverage_is_loud`
+- **Rationale** — BACKLOG, filed 2026-09-05. repark refuses where Spark ignores, on purpose: an
+  option repark does not implement would otherwise change the answer silently, and a JSON parse
+  is exactly where a silent wrong answer is hardest to notice. The cost is a loud refusal on an
+  option name Spark itself does nothing with; the alternative is a wrong answer on the eighteen
+  it does honour.
+
+### FNP10-JSON-SCHEMA-COLUMN-1 — `from_json` refuses a Column schema; Spark folds one
+
+- **repark** — `F.from_json(col, F.schema_of_json(F.lit(...)))` raises
+  `UnsupportedOperationException` naming this row. A DDL string and a `DataType` both work.
+- **Apache Spark** — `from_json('{"a":1}', schema_of_json('{"a":1}'))` answers `{a: 1}`; the
+  schema argument is folded to a literal before the expression is typed. *(oracle: live PySpark
+  4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_from_json_refuses_a_column_schema`
+- **Rationale** — BACKLOG, filed 2026-09-05. `from_json`'s result TYPE comes from its schema
+  argument, and repark resolves a facade expression's type where it is built — before any
+  constant folding runs. Closing this needs the schema folded at Column-construction time, which
+  is the same session-bound seam as FNP9-BYNAME-1.
+
+### FNP9-ARRAY-INSERT-BIGINT-1 — `array_insert` accepts a BIGINT position; Spark refuses one
+
+- **repark** — `array_insert(array(1,2), CAST(2 AS BIGINT), 9)` answers `[1, 9, 2]`: the kernel
+  takes any integer position and narrows it to INT.
+- **Apache Spark** — the same call raises
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] … requires the "INT" type`; only INT and narrower
+  resolve. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, FNP-9/10 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_9_collections_json.py::test_array_insert_places_and_pads_on_both_doors`
+- **Rationale** — BACKLOG, filed 2026-09-05. repark's SQL-door integer literals are `Int64`, and
+  `SparkIntegerLiteral` narrows them in the analyzer — after UDF coercion has already run. A
+  kernel that refused `Int64` therefore refused the ordinary spelling
+  `array_insert(ai, 1, 9)`, which Spark answers. Accepting a wider position is the narrower
+  divergence of the two, and it is permissive rather than wrong.
 
 ### EX-SES-6 — `spark.udf.register` answers the UDF object in repark, a plain function in Spark
 

@@ -21,6 +21,15 @@ Examples construct the session as `repark = ReparkSession.builder…`; see
   `F.array_max` / `F.array_min`, `F.array_join`, and `F.shuffle` shape-checked.
 - [array_setops.py](array_setops.py) — the set algebra quartet: `F.array_distinct`,
   `F.array_union`, `F.array_intersect`, `F.array_except`.
+- [json_family.py](json_family.py) — the JSON names on one string column: `F.get_json_object`
+  (a field, an indexed element, a nested object), `F.json_array_length`, `F.json_object_keys`,
+  `F.from_json` against a DDL schema, `F.to_json`, and `F.schema_of_json`. A malformed document
+  and a NULL both answer NULL rather than raising. The file is NOT named `json.py`: a script in
+  this directory runs with the directory on `sys.path[0]`, so that name would shadow the
+  standard library's `json` for every other example here.
+- [map_build.py](map_build.py) — `F.create_map` per row, `F.map_concat` onto a constant map,
+  and `F.array_insert` at the front, at the back through `-1`, and past the end where Spark
+  pads with NULLs.
 - [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
   the outer spelling keeping the empty and NULL rows.
 - [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,

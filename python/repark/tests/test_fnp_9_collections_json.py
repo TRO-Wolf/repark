@@ -552,19 +552,16 @@ def test_arrays_zip_field_names_are_positional_not_the_column_name() -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["inline", "inline_outer", "stack", "call_udf", "call_function", "sequence"]
+    "name", ["inline", "inline_outer", "stack", "call_udf", "call_function"]
 )
-def test_fnp9_refusals_are_loud_and_name_their_registry_row(name: str) -> None:
-    """A name this unit did not build refuses instead of half-answering.
+def test_fnp9_multi_column_and_by_name_names_stay_absent(name: str) -> None:
+    """A name this unit did not build stays absent rather than half-answering.
 
+    This pin reds the day the seam lands and the name is exported.
     pins: fnp-9-collections-json/C-007
     """
-    function = getattr(F, name)
-    with pytest.raises(UnsupportedOperationException) as caught:
-        function("x")
-    message = str(caught.value)
-    assert "docs/spark-sql-iceberg-parity.md" in message
-    assert name in message
+    assert not hasattr(F, name)
+    assert name not in F.__all__
 
 
 def test_json_tuple_still_refuses_on_the_facade() -> None:

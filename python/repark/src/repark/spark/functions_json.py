@@ -7,70 +7,26 @@ so ``functions.py`` gains the whole surface without growing past its size baseli
 
 from __future__ import annotations
 
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any
 
 from repark.errors import UnsupportedOperationException
 from repark.spark.column import Column
 from repark.spark.functions import _scalar, lit
 from repark.spark.functions_collections import array_insert, create_map, map_concat
-from repark.spark.types import DataType
 
-REFUSED_MESSAGES: dict[str, str] = {
-    "inline": (
-        "inline is not supported yet: it is a multi-column generator, and the facade select "
-        "path carries one generator column that yields exactly one output column. See "
-        "docs/spark-sql-iceberg-parity.md (FNP9-GENERATORS-1)."
-    ),
-    "inline_outer": (
-        "inline_outer is not supported yet: it is inline with a NULL row for an empty or NULL "
-        "array, and shares inline's multi-column generator gap. See "
-        "docs/spark-sql-iceberg-parity.md (FNP9-GENERATORS-1)."
-    ),
-    "stack": (
-        "stack is not supported yet: it reshapes n values into n/k rows of k columns, which is "
-        "a multi-column generator the facade select path cannot express. See "
-        "docs/spark-sql-iceberg-parity.md (FNP9-GENERATORS-1)."
-    ),
-    "call_udf": (
-        "call_udf is not supported yet: it resolves a registered function by name, and a "
-        "facade Column is built without a session, so there is no function registry to look "
-        "the name up in. Call the registered function through spark.sql instead. See "
-        "docs/spark-sql-iceberg-parity.md (FNP9-BYNAME-1)."
-    ),
-    "call_function": (
-        "call_function is not supported yet: it resolves any function by name, and a facade "
-        "Column is built without a session, so there is no function registry to look the name "
-        "up in. Call the function through spark.sql instead. See "
-        "docs/spark-sql-iceberg-parity.md (FNP9-BYNAME-1)."
-    ),
-    "sequence": (
-        "sequence is not supported yet: Spark's generates DATE and TIMESTAMP ranges by INTERVAL "
-        "as well as integer ranges, and the temporal arm belongs to the FNP-11 time family. An "
-        "integer-only sequence would answer the common case and diverge silently on the rest. "
-        "See docs/spark-sql-iceberg-parity.md (FNP9-SEQUENCE-1)."
-    ),
-}
+if TYPE_CHECKING:
+    from repark.spark.types import DataType
 
 FNP9_NAMES: tuple[str, ...] = (
     "array_insert",
-    "call_function",
-    "call_udf",
     "create_map",
     "from_json",
     "get_json_object",
-    "inline",
-    "inline_outer",
     "json_array_length",
     "json_object_keys",
     "map_concat",
-    "sequence",
-    "stack",
     "to_json",
 )
-
-
-def _refuse(name: str) -> NoReturn:
-    raise UnsupportedOperationException(REFUSED_MESSAGES[name])
 
 
 def get_json_object(col: Column | str, path: str) -> Column:
@@ -164,42 +120,6 @@ def from_json(
             pairs.extend([lit(key), lit(value)])
         return _scalar("from_json", col, lit(text), create_map(*pairs))
     return _scalar("from_json", col, lit(text))
-
-
-def inline(*args: Any, **kwargs: Any) -> Column:
-    """Multi-column generator over an array of structs; refused.
-
-    pins: fnp-9-collections-json/C-007
-    """
-    _refuse("inline")
-
-
-def inline_outer(*args: Any, **kwargs: Any) -> Column:
-    """``inline`` keeping NULL and empty arrays; refused. pins: fnp-9-collections-json/C-007"""
-    _refuse("inline_outer")
-
-
-def stack(*args: Any, **kwargs: Any) -> Column:
-    """Reshape n values into rows of k columns; refused. pins: fnp-9-collections-json/C-007"""
-    _refuse("stack")
-
-
-def call_udf(*args: Any, **kwargs: Any) -> Column:
-    """Call a registered UDF by name; refused. pins: fnp-9-collections-json/C-007"""
-    _refuse("call_udf")
-
-
-def call_function(*args: Any, **kwargs: Any) -> Column:
-    """Call any function by name; refused. pins: fnp-9-collections-json/C-007"""
-    _refuse("call_function")
-
-
-def sequence(*args: Any, **kwargs: Any) -> Column:
-    """Generate a range array; refused pending the FNP-11 temporal arm.
-
-    pins: fnp-9-collections-json/C-007
-    """
-    _refuse("sequence")
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

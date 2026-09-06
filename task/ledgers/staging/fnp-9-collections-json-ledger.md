@@ -33,43 +33,52 @@ name outside it is scope creep (slate Invariant V).
 | `create_map` | no facade attribute; Spark's SQL spelling is `map(...)`, which the Spark door already serves | **BUILT** |
 | `map_concat` | absent both doors | **BUILT** |
 | `array_insert` | absent both doors | **BUILT** |
-| `arrays_zip` | SQL door answers DataFusion's kernel with field names `1`,`2` (Spark: `0`,`1` or the child names) and a nullable outer list (Spark: non-nullable); `F.arrays_zip` raises `… disclosed R-FN-BATCH2` | **BUILT** |
-| `posexplode` | `UnsupportedOperationException: posexplode is not supported yet (no first-class unnest-with-ordinality…)`; SQL door `SELECT item with multiple aliases is not supported` | **REFUSED**, §7 row, red-when-fixed pin |
-| `posexplode_outer` | same refusal | **REFUSED**, §7 row, red-when-fixed pin |
-| `inline` | absent both doors (`Invalid function 'inline'`) | **REFUSED**, §7 row, red-when-fixed pin |
-| `inline_outer` | absent both doors | **REFUSED**, §7 row, red-when-fixed pin |
-| `stack` | absent both doors | **REFUSED**, §7 row, red-when-fixed pin |
-| `json_tuple` | SQL door answers ONE `struct<c0,c1>` column where Spark projects TWO columns; `F.json_tuple` raises `… disclosed E1` | **REFUSED** on the facade, §7 row, red-when-fixed pin |
-| `call_udf` | no facade attribute | **REFUSED**, §7 row, red-when-fixed pin |
-| `call_function` | no facade attribute | **REFUSED**, §7 row, red-when-fixed pin |
-| `sequence` | absent both doors (`Invalid function 'sequence'`) | **REFUSED**, §7 row, red-when-fixed pin |
+| `arrays_zip` | SQL door answers DataFusion's kernel with field names `1`,`2` and a nullable outer list; `F.arrays_zip` raises `… disclosed R-FN-BATCH2` | **BUILT**, one narrowed divergence (`FNP9-ARRAYS-ZIP-NAMES-1`) |
+| `posexplode` | `UnsupportedOperationException: posexplode is not supported yet (no first-class unnest-with-ordinality…)`; SQL door `SELECT item with multiple aliases is not supported` | **NOT BUILT**, §7 `FNP9-GENERATORS-1` |
+| `posexplode_outer` | same refusal | **NOT BUILT**, §7 `FNP9-GENERATORS-1` |
+| `inline` | no facade attribute; SQL door `Invalid function 'inline'` | **NOT BUILT**, §7 `FNP9-GENERATORS-1`, absence pinned |
+| `inline_outer` | no facade attribute; absent on the SQL door | **NOT BUILT**, §7 `FNP9-GENERATORS-1`, absence pinned |
+| `stack` | no facade attribute; absent on the SQL door | **NOT BUILT**, §7 `FNP9-GENERATORS-1`, absence pinned |
+| `json_tuple` | SQL door answers ONE `struct<c0,c1>` column where Spark projects TWO; `F.json_tuple` raises `… disclosed E1` | **NOT BUILT**, §7 `FNP9-GENERATORS-1` |
+| `call_udf` | no facade attribute | **NOT BUILT**, §7 `FNP9-BYNAME-1`, absence pinned |
+| `call_function` | no facade attribute | **NOT BUILT**, §7 `FNP9-BYNAME-1`, absence pinned |
+| `sequence` | **corrected 2026-09-05:** `F.sequence` EXISTS and answers ascending ranges through `generate_series`; only the SQL door is absent | **NOT BUILT**, §7 `FNP9-SEQUENCE-1` records the descending and illegal-step divergence |
 
-Five refusals share **one** seam: Spark's `posexplode` / `posexplode_outer` / `inline` /
+**Roster correction (2026-09-05, same day, before any code shipped for it).** The first charter
+row for `sequence` read "absent both doors". That was measured on the SQL door only: `F.sequence`
+is exported and answers `sequence(1, 5, 2)` → `[1, 3, 5]` today, and `docs/examples/functions/`
+already teaches it. Chartering it as a refusal would have REGRESSED a working name — the first
+build of `functions_json.py` did exactly that and the example measurement caught it. `sequence`
+leaves the build set and gets a divergence row instead: descending (`sequence(5, 1)` → `[]` where
+Spark counts down) and an illegal step (`[]` where Spark raises) are both wrong answers today,
+and the fix belongs with FNP-11's DATE/TIMESTAMP ± INTERVAL arm so the name closes once.
+
+Six names share **one** seam: Spark's `posexplode` / `posexplode_outer` / `inline` /
 `inline_outer` / `stack` and the facade's `json_tuple` are **multi-column generators**. The facade
 select path carries at most one generator column and emits exactly one output column
 (`dataframe/core.py` `_generator`), and the Spark door refuses `SELECT gen(x) AS (a, b)` outright.
-Building any one of them is the same plan-shape change, and that change is a seam, not a kernel —
-so this unit files the seam once and refuses the six names loudly rather than shipping a
-one-column impostor. `call_udf` / `call_function` share a second seam: the facade `Column` is
-built without a session, so a by-name lookup cannot reach the session's function registry (the
-same seam that makes `F.expr("a + 1")` refuse, §7 `EX-FN-4`). `sequence` is refused because
-Spark's is a DATE/TIMESTAMP + INTERVAL generator as well as an integer one, and the temporal arm
-belongs to FNP-11; an integer-only `sequence` would answer Spark's common case and diverge
-silently on the rest.
+Building any one of them is the same plan-shape change, so this unit files the seam once and does
+not ship a one-column impostor. `call_udf` / `call_function` share a second seam: the facade
+`Column` is built without a session, so a by-name lookup cannot reach the session's function
+registry (the same seam that makes `F.expr("a + 1")` refuse, §7 `EX-FN-4`).
+
+**Why the five absent names stay absent rather than becoming loud named refusals.** A named
+refusal has to be exported, and an exported `F.*` name that no example covers goes on
+`docs/examples/backlog.txt`, whose count `scripts/check_example_coverage.py` ratchets DOWN only.
+Five new backlog rows against a baseline that may not grow is a red gate, and an example that
+demonstrates a refusal is not the EX house form (a refusing name stays on the backlog with a §7
+row — that is exactly what EX-25 did for `posexplode`). So the seam is filed in §7 and the
+absence is pinned instead: `test_fnp9_multi_column_and_by_name_names_stay_absent` reds the day
+the seam lands and the names are exported, which is the red-when-fixed obligation. The unit that
+builds the generators exports the names and writes their examples in the same change.
 
 Three adjacent cells were measured and are **filed, not fixed**, each with its reason:
 
 | Cell | Measured | Why not this unit |
 |---|---|---|
-| `element_at(array, oob)` under ANSI | Spark raises `INVALID_ARRAY_INDEX_IN_ELEMENT_AT`; repark answers NULL under ANSI on **and** off | `element_at_udf()` carries `try_element_at` as an **alias** — one kernel serves both names. Making `element_at` raise means splitting the alias, which is FNP-7a's delivered contract. |
-| `map_zip_with` nullability | values Spark-equal on the Column API (`a:1/10`, `b:2/N`, `c:N/30`); Spark's map is non-nullable, repark's nullable | NULLABILITY-2 class over the whole higher-order family, not one name. |
-| array-literal element type | `slice(array(1,2,3,4), -2, 2)` answers `[3,4]` on both, but repark's element type is `int64` where Spark's is `int32` | `SparkIntegerLiteral` (TYPES-1) narrows scalar `Int64` literals; it does not reach inside `array(…)`. A TYPES-1 residue over every array literal, not a collection-function defect. |
-
-## Proposition ledger
-
-| ID | Clause | Proof obligation | Verdict |
-|---|---|---|---|
-| C-001 | The roster above is the exact set this unit takes, each name measured on live PySpark 4.1.2 and on repark before any code was written. | The roster table + the oracle below. | **OPEN** |
+| `element_at(array, oob)` under ANSI | Spark raises `INVALID_ARRAY_INDEX_IN_ELEMENT_AT`; repark answers NULL under ANSI on **and** off | `element_at_udf()` carries `try_element_at` as an **alias** — one kernel serves both names. Making `element_at` raise means splitting the alias, which is FNP-7a's delivered contract. The divergence is already documented on `functions_collections.element_at`. |
+| `map_zip_with` nullability | values Spark-equal on the Column API (`a:1/10`, `b:2/N`, `c:N/30`); Spark's map is non-nullable, repark's nullable. The SQL-door lambda spelling does not parse, which is FNP-4b's deferred dialect, not a kernel gap | NULLABILITY-2 class over the whole higher-order family, not one name. |
+| array-literal element type | `slice(array(1,2,3,4), -2, 2)` answers `[3,4]` on both, but repark's element type is `int64` where Spark's is `int32` | `SparkIntegerLiteral` (TYPES-1) narrows scalar `Int64` literals; it does not reach inside `array(…)`. A TYPES-1 residue over every array literal, not a collection-function defect. It is also why `array_insert` accepts a BIGINT position (§7 `FNP9-ARRAY-INSERT-BIGINT-1`). |
 
 ## Oracle (live PySpark 4.1.2, 2026-09-05, zulu-17, `TZ=UTC`, `local[2]`, ANSI on and off)
 

@@ -51,10 +51,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
   pins: fnp-9-collections-json/C-003, C-006
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
-  `json_array_length`, `json_object_keys`, `to_json`, `from_json`) and the six loud refusals
-  this unit did not build. Its `install_into` also re-exports the collection constructors from
-  `functions_collections`, so the whole FNP-9/10 surface reaches `functions.py` through the
-  existing installer chain instead of growing that module past its exact size baseline.
+  `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
+  re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10
+  surface reaches `functions.py` through the existing installer chain instead of growing that
+  module past its exact size baseline. `FNP9_NAMES` is the export table
+  `scripts/check_example_coverage.py` reads, so a name added here is a name that needs an
+  example. The unit's unbuilt names (`inline`, `inline_outer`, `stack`, `call_udf`,
+  `call_function`) are deliberately NOT here: exporting a refusal would add five rows to an
+  example backlog whose count only ratchets down. §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
+  The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through
+  `repark.spark.types`.
   pins: fnp-9-collections-json/C-001, C-007
   FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
   docstring is one line.
