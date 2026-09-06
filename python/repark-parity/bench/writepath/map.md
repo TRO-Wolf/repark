@@ -20,6 +20,7 @@ directory is the answer. Every probe refuses to run against a debug module.
   it also runs `insert_overwrite` (timed overwrite onto a CTAS-built target) and
   `insert_overwrite_ordered` (the same target after `WRITE ORDERED BY (id)`); the target build
   is an untimed `setup`, so the samples hold only the overwrite.
+  pins: write-order-dist-1/C-011
 - [run_cells.sh](run_cells.sh) — three passes of the three cells for one build label, then the
   minimum, the per-pass medians and the floor (the spread of the pass medians).
 - [probe_grouping.py](probe_grouping.py) — the round-3 refutation: N v3 CTAS over eight UNEQUAL
