@@ -218,6 +218,11 @@ NULLABILITY-2 (2026-09-05): `check_lib_py.py` `dataframe/core.py` 6303→6302 �
 `TimestampType` import is gone (mirrored in the CAP-1 test).
 pins: nullability-2/C-006
 
+NULLABILITY-2 (2026-09-05): `check_lib_py.py` `tests/_live_parity.py` 1877→1778 — the
+three converged nullability disclosures and their six check functions are gone
+(mirrored in the CAP-1 test).
+pins: nullability-2/C-007
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

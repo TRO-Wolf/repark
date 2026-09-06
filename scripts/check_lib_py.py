@@ -120,7 +120,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split type declarations from parsing and conversion helpers.",
     ),
     "python/repark/tests/_live_parity.py": (
-        1877,
+        1778,
         "Live-mirror declarations and oracle helpers share one test support module.",
         "Split registry declarations from execution and comparison helpers.",
     ),

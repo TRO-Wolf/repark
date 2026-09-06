@@ -1875,7 +1875,8 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
   (flipped to an equality row) and
   `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
-- `live-mirror: cast_timestamp_to_int_nullability`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
 - **Rationale** — FIXED. X-1 originally queued this as raise-vs-value; #64 un-refused the
   INT path and the residual was nullability only (`task/tz5-cast-seconds-ledger.md` §10);
   the generalized cast rule wraps the timestamp operand in the nullable marker.
@@ -1891,7 +1892,8 @@ the pin rather than obeying it.
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
   (flipped to an equality row) and
   `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
-- `live-mirror: null_safe_eq_sql_nullability`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
 - **Rationale** — FIXED. VALUE already matched; the analyzer now wraps the operator in a
   non-null marker.
 
@@ -1905,7 +1907,8 @@ the pin rather than obeying it.
   `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
   (flipped to an equality row) and
   `python/repark/tests/test_nullability_2.py::test_null_safe_equal_is_non_null`
-- `live-mirror: null_safe_eq_df_nullability`
+  (the live legs re-derive the cell from the oracle; the divergence disclosure retired
+  with the fix).
 - **Rationale** — FIXED (gap G12 — DF door twin of G12-1, same analyzer rule).
 
 ### CAST-NULL-1 — non-decimal CAST nullability keeps or flips the child where Spark does the opposite

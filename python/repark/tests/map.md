@@ -2609,7 +2609,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
      `register_memory_catalog` + `with_cow_props=True`.
   `DISCLOSURES` = the load-bearing recorded divergences (exact-set pin in
   `test_parity_live.py`; 14 names after the 2026-08-12 L-1 landing-truth sweep — the original
-  four plus G6/G12/G7/G18/G4b live-mirrors). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
+  four plus G6/G12/G7/G18/G4b live-mirrors; 10 after NULLABILITY-2 retired the three
+  nullability mirrors on 2026-09-05). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.

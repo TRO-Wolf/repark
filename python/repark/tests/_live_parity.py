@@ -1524,78 +1524,6 @@ def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
 # test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days].
 
 
-def _disc_cast_timestamp_to_int_repark(engine: Engine) -> None:
-    """TZ-5 §10 form: value matches Spark; residual is nullability (literal non-null)."""
-    out = engine.arrow_of(
-        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
-    )
-    field = out.schema.field("n")
-    assert field.type == pa.int32()
-    assert field.nullable is False, "repark propagates the timestamp literal's non-null"
-    assert out.column("n").to_pylist() == [1577836800]
-
-
-def _disc_cast_timestamp_to_int_spark(engine: Engine) -> None:
-    # Live spark engine is UTC (build_spark_engine pins session.timeZone=UTC).
-    out = engine.arrow_of(
-        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
-    )
-    field = out.schema.field("n")
-    assert field.type == pa.int32()
-    assert field.nullable is True, "Spark types CAST(ts AS INT) nullable"
-    assert out.column("n").to_pylist() == [1577836800]
-
-
-def _disc_null_safe_eq_sql_repark(engine: Engine) -> None:
-    out = engine.arrow_of(
-        engine.session.sql(
-            "SELECT "
-            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
-            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
-        )
-    )
-    assert out.schema.field("nse").type == pa.bool_()
-    assert out.schema.field("nse").nullable is True, "repark <=> result is nullable bool"
-    assert out.column("nse").to_pylist() == [True]
-    assert out.column("eq").to_pylist() == [None]
-
-
-def _disc_null_safe_eq_sql_spark(engine: Engine) -> None:
-    out = engine.arrow_of(
-        engine.session.sql(
-            "SELECT "
-            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
-            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
-        )
-    )
-    assert out.schema.field("nse").type == pa.bool_()
-    assert out.schema.field("nse").nullable is False, "Spark <=> result is non-nullable bool"
-    assert out.column("nse").to_pylist() == [True]
-    assert out.column("eq").to_pylist() == [None]
-
-
-def _disc_null_safe_eq_df_repark(engine: Engine) -> None:
-    frame = engine.session.createDataFrame(
-        [(1, 1), (None, None), (1, None), (None, 1)],
-        ["a", "b"],
-    )
-    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
-    assert out.schema.field("nse").type == pa.bool_()
-    assert out.schema.field("nse").nullable is True
-    assert out.column("nse").to_pylist() == [True, True, False, False]
-
-
-def _disc_null_safe_eq_df_spark(engine: Engine) -> None:
-    frame = engine.session.createDataFrame(
-        [(1, 1), (None, None), (1, None), (None, 1)],
-        ["a", "b"],
-    )
-    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
-    assert out.schema.field("nse").type == pa.bool_()
-    assert out.schema.field("nse").nullable is False
-    assert out.column("nse").to_pylist() == [True, True, False, False]
-
-
 # Same VALUES recipe as test_float_agg_parity / the Rust G7 fixture (order matters).
 _G7_FIXTURE_VALUES_SQL = (
     "SELECT * FROM (VALUES "
@@ -1791,33 +1719,6 @@ DISCLOSURES: list[Disclosure] = [
         "triple-double-quoted field name that resolves to nothing; Spark filters normally. "
         "PRE-EXISTING (not an audit-G2 regression); the fix and its pin belong in a follow-up "
         "unit.",
-    ),
-    Disclosure(
-        "cast_timestamp_to_int_nullability",
-        _disc_cast_timestamp_to_int_repark,
-        _disc_cast_timestamp_to_int_spark,
-        "CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) under UTC: both engines yield unix "
-        "seconds 1577836800 as int32; Spark types the CAST nullable, repark propagates the "
-        "literal's non-null. X-1's raise-vs-value split is STALE after #64; this is the TZ-5 "
-        "§10 form. Corpus: "
-        "test_cast_failure_parity.py::test_cast_failure_row"
-        "[timestamp_to_int_nullability].",
-    ),
-    Disclosure(
-        "null_safe_eq_sql_nullability",
-        _disc_null_safe_eq_sql_repark,
-        _disc_null_safe_eq_sql_spark,
-        "SELECT (NULL <=> NULL): value TRUE on both engines; repark Arrow bool is nullable, "
-        "Spark's is non-nullable. Corpus: "
-        "test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq].",
-    ),
-    Disclosure(
-        "null_safe_eq_df_nullability",
-        _disc_null_safe_eq_df_repark,
-        _disc_null_safe_eq_df_spark,
-        "Column.eqNullSafe: values match Spark; result nullability diverges (repark nullable, "
-        "Spark not). Corpus: "
-        "test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select].",
     ),
     Disclosure(
         "sum_catastrophic_cancellation_fixture",

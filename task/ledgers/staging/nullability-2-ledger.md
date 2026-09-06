@@ -120,9 +120,29 @@ Commit D (tz-naive dtype mapping): 1 red, class (a).
 |---|---|---|
 | `test_cutover_schema_1.py::test_read_parquet_tz_naive_timestamp_reports_string_dtype` | (a) | DELETED — mapping fixed, superseded by `test_tz_naive_timestamp_dtype`. Cite `READ-TSNTZ-DTYPE-1`, FIXED. |
 
+Commit E (live-mirror retirements): 3 reds, all class (a) — the fixed rows' drift
+detectors firing on convergence, exactly their designed purpose.
+
+| Pin | Class | Disposition |
+|---|---|---|
+| `test_live_disclosure_still_diverges[cast_timestamp_to_int_nullability]` + `[null_safe_eq_sql_nullability]` + `[null_safe_eq_df_nullability]` | (a) | RETIRED — the 3 `Disclosure` entries, their 6 check functions, and the 3 registry `live-mirror:` bullets removed; roster exact-set 13 → 10. The battery's live legs now re-derive these cells as equalities. Cite `G6-4`, `G12-1`, `G12-2`, FIXED. |
+
 ## 6. Mutation table
 
-TBD — red-first battery + one knob per rule (cast, bool-dec, nullsafe, relax, dtype).
+9/9 knobs red the named battery subset (each: mutate → `make develop` → targeted
+facade test → revert; build logs `/tmp/nullab2_mut{1,2,3,4,5,6,8,9}.log`).
+
+| Knob | Mutation | Reds |
+|---|---|---|
+| M1 cast-nullable | `nullable_spark_cast` returns `None` | `test_cast_nullability_matches_spark` |
+| M2 cast-reverse | `nonnull_spark_cast` returns `None` | `test_cast_nullability_matches_spark` (date→ts cell) |
+| M3 null-safe-equal | NSE arm `&& false` | `test_null_safe_equal_is_non_null` + `..._written_schema` |
+| M4 decimal-arith | `!ansi_enabled` → `false` | `test_decimal_arithmetic_nullability_follows_ansi` |
+| M5 bool-decimal | rule uninstalled from the shared installer | `test_bool_to_decimal_served_on_both_doors` |
+| M6 relax bound | `order.truncate(33)` | `test_reader_relax_covers_depth_40` |
+| M7 dtype mapping | `timestamp_ntz` dropped from the key tuple | `test_tz_naive_timestamp_dtype` |
+| M8 UDF tightening | add/sub back to always-nullable | `test_decimal_arithmetic_nullability_follows_ansi` (ansi-on `(38,·)` cells) |
+| M9 validity gate | parses-valid exemption removed | `test_valid_literal_cast_to_date_or_ts_stays_nonnull` |
 
 ## 7. Gates
 
