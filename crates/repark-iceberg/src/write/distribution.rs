@@ -2,16 +2,19 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::RecordBatch;
-use datafusion::arrow::compute::cast;
+use datafusion::arrow::array::{RecordBatch, UInt32Array};
+use datafusion::arrow::compute::{cast, take_record_batch};
 use datafusion::arrow::datatypes::{DataType, Schema};
+use datafusion::common::hash_utils::create_hashes;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::ColumnarValue;
 use datafusion::physical_expr::expressions::Column;
 use datafusion::physical_expr::{Partitioning, PhysicalExpr};
 use datafusion::physical_plan::ExecutionPlan;
-use datafusion::physical_plan::repartition::RepartitionExec;
-use iceberg::arrow::type_to_arrow_type;
+use datafusion::physical_plan::repartition::{REPARTITION_RANDOM_STATE, RepartitionExec};
+use futures::channel::mpsc;
+use futures::{SinkExt, Stream, StreamExt};
+use iceberg::arrow::{PartitionValueCalculator, type_to_arrow_type};
 use iceberg::spec::Transform;
 use iceberg::table::Table;
 use iceberg::transform::create_transform_function;
@@ -143,6 +146,83 @@ pub(crate) fn hash_distribution(
     )?))
 }
 
+pub(crate) struct PartitionRouter {
+    calculator: PartitionValueCalculator,
+    slots: usize,
+}
+
+impl PartitionRouter {
+    pub(crate) fn try_new(table: &Table, slots: usize) -> Result<Self> {
+        let calculator = PartitionValueCalculator::try_new(
+            table.metadata().default_partition_spec(),
+            table.metadata().current_schema(),
+        )
+        .map_err(iceberg_err)?;
+        Ok(Self {
+            calculator,
+            slots: slots.max(1),
+        })
+    }
+
+    pub(crate) fn route(&self, batch: &RecordBatch) -> Result<Vec<(usize, RecordBatch)>> {
+        let values = self.calculator.calculate(batch).map_err(iceberg_err)?;
+        let mut hashes = vec![0u64; batch.num_rows()];
+        create_hashes(
+            &[values],
+            REPARTITION_RANDOM_STATE.random_state(),
+            &mut hashes,
+        )?;
+        let slots = u64::try_from(self.slots).map_err(|_| slot_count_error(self.slots))?;
+        let mut rows_per_slot: Vec<Vec<u32>> = vec![Vec::new(); self.slots];
+        for (row, hash) in hashes.iter().enumerate() {
+            let slot = usize::try_from(hash % slots).map_err(|_| slot_count_error(self.slots))?;
+            let row = u32::try_from(row).map_err(|_| {
+                DataFusionError::Execution(format!(
+                    "a batch of {} rows is too tall to route by partition value",
+                    batch.num_rows()
+                ))
+            })?;
+            rows_per_slot[slot].push(row);
+        }
+        let mut routed = Vec::with_capacity(self.slots);
+        for (slot, rows) in rows_per_slot.into_iter().enumerate() {
+            if rows.is_empty() {
+                continue;
+            }
+            routed.push((slot, take_record_batch(batch, &UInt32Array::from(rows))?));
+        }
+        Ok(routed)
+    }
+}
+
+fn slot_count_error(slots: usize) -> DataFusionError {
+    DataFusionError::Internal(format!("{slots} write workers cannot be addressed as u64"))
+}
+
+pub(crate) fn route_partitioned_stream<S>(
+    table: &Table,
+    slots: usize,
+    stream: S,
+) -> Result<impl Stream<Item = Result<Vec<(usize, RecordBatch)>>> + Unpin>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    let router = PartitionRouter::try_new(table, slots)?;
+    Ok(stream.map(move |item| item.and_then(|batch| router.route(&batch))))
+}
+
+pub(crate) async fn send_routed(
+    senders: &mut [mpsc::Sender<RecordBatch>],
+    parts: Vec<(usize, RecordBatch)>,
+) -> bool {
+    for (slot, part) in parts {
+        if senders[slot].send(part).await.is_err() {
+            return false;
+        }
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::{HashMap, HashSet};
@@ -157,7 +237,6 @@ mod tests {
     use datafusion::physical_plan::execution_plan::{Boundedness, EmissionType};
     use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
     use datafusion::physical_plan::{DisplayAs, DisplayFormatType, PlanProperties};
-    use futures::StreamExt;
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
     use iceberg::spec::{
@@ -168,7 +247,10 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
+    use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
     use crate::write::concurrency::WriteConcurrency;
+    use crate::write::merge::row_lineage::table_carries_merge_lineage;
+    use crate::write::merge::write_new_data_files_from_stream;
     use crate::write::partition_write::write_data_files_from_plan;
 
     const PARTITION_VALUES: i64 = 8;
@@ -179,11 +261,16 @@ mod tests {
     struct PartitionedSourceExec {
         schema: SchemaRef,
         rows_per_partition: Vec<usize>,
+        fail_partition: Option<usize>,
         plan_properties: Arc<PlanProperties>,
     }
 
     impl PartitionedSourceExec {
         fn new(rows_per_partition: Vec<usize>) -> Self {
+            Self::failing(rows_per_partition, None)
+        }
+
+        fn failing(rows_per_partition: Vec<usize>, fail_partition: Option<usize>) -> Self {
             let schema = source_schema();
             let plan_properties = Arc::new(PlanProperties::new(
                 EquivalenceProperties::new(Arc::clone(&schema)),
@@ -194,6 +281,7 @@ mod tests {
             Self {
                 schema,
                 rows_per_partition,
+                fail_partition,
                 plan_properties,
             }
         }
@@ -241,10 +329,15 @@ mod tests {
             _context: Arc<TaskContext>,
         ) -> Result<SendableRecordBatchStream> {
             let rows = self.rows_per_partition[partition];
-            let batch = source_batch(&self.schema, partition, rows);
+            let mut items = vec![source_batch(&self.schema, partition, rows)];
+            if self.fail_partition == Some(partition) {
+                items.push(Err(DataFusionError::Execution(
+                    "injected partition source failure".into(),
+                )));
+            }
             Ok(Box::pin(RecordBatchStreamAdapter::new(
                 Arc::clone(&self.schema),
-                futures::stream::iter(vec![batch]).boxed(),
+                futures::stream::iter(items).boxed(),
             )))
         }
     }
@@ -327,12 +420,22 @@ mod tests {
         name: &str,
         spec: Option<UnboundPartitionSpec>,
     ) -> Table {
+        create_table_with(catalog, name, spec, HashMap::new()).await
+    }
+
+    async fn create_table_with(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        spec: Option<UnboundPartitionSpec>,
+        properties: HashMap<String, String>,
+    ) -> Table {
         let namespace = NamespaceIdent::new("ns".into());
         let _ = catalog.create_namespace(&namespace, HashMap::new()).await;
         let creation = TableCreation::builder()
             .name(name.to_string())
             .schema(iceberg_schema())
             .partition_spec_opt(spec)
+            .properties(properties)
             .build();
         catalog
             .create_table(&namespace, creation)
@@ -497,5 +600,238 @@ mod tests {
         let narrow = ArrowSchema::new(vec![Field::new("id", DataType::Int64, false)]);
         let error = partition_value_exprs(&table, &narrow).expect_err("part is absent");
         assert!(error.to_string().contains("part"), "{error}");
+    }
+
+    async fn stream_write(table: &Table, rows_per_batch: Vec<usize>) -> Vec<DataFile> {
+        let schema = source_schema();
+        let batches = rows_per_batch
+            .into_iter()
+            .enumerate()
+            .map(|(index, rows)| source_batch(&schema, index, rows))
+            .collect::<Vec<_>>();
+        write_partitioned_data_files_from_stream_with_concurrency(
+            table,
+            futures::stream::iter(batches),
+            WriteConcurrency::new(4).expect("concurrency"),
+        )
+        .await
+        .expect("stream write succeeds")
+    }
+
+    fn warehouse_data_files(warehouse: &TempDir) -> Vec<std::path::PathBuf> {
+        let mut pending = vec![warehouse.path().to_path_buf()];
+        let mut found = Vec::new();
+        while let Some(directory) = pending.pop() {
+            let Ok(entries) = std::fs::read_dir(&directory) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    pending.push(path);
+                } else if path.extension().is_some_and(|ext| ext == "parquet") {
+                    found.push(path);
+                }
+            }
+        }
+        found.sort();
+        found
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn stream_path_lands_one_partition_value_in_one_writer() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "stream", Some(identity_spec(3, "part"))).await;
+        let files = stream_write(&table, vec![64, 64, 64, 64]).await;
+        assert_eq!(layout(&files), one_file_per_value(32));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn stream_path_distribution_is_deterministic_across_runs() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let mut runs = Vec::new();
+        for run in 0..2 {
+            let table = create_table(
+                &catalog,
+                &format!("srun{run}"),
+                Some(identity_spec(3, "part")),
+            )
+            .await;
+            runs.push(layout(&stream_write(&table, vec![40, 24, 64, 8]).await));
+        }
+        assert_eq!(runs[0], one_file_per_value(17));
+        assert_eq!(runs[0], runs[1]);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn stream_path_null_partition_values_share_one_writer() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "snull", Some(identity_spec(4, "label"))).await;
+        let files = layout(&stream_write(&table, vec![64, 64, 64, 64]).await);
+        assert_eq!(files.len(), 4, "{files:?}");
+        assert_eq!(files[0], (vec![None], 64), "{files:?}");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn stream_path_two_field_spec_keys_on_the_transform_value() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "sbucket", Some(bucket_and_day_spec())).await;
+        let files = layout(&stream_write(&table, vec![64, 64, 64, 64]).await);
+        let keys = files
+            .iter()
+            .map(|(key, _)| format!("{key:?}"))
+            .collect::<HashSet<_>>();
+        assert_eq!(keys.len(), files.len(), "{files:?}");
+        assert_eq!(files.len(), 8, "{files:?}");
+        assert_eq!(files.iter().map(|(_, rows)| rows).sum::<u64>(), 256);
+    }
+
+    #[test]
+    fn truncate_over_a_view_typed_string_keys_on_the_cast_value() {
+        use datafusion::arrow::array::StringViewArray;
+        use datafusion::physical_expr::expressions::Column;
+
+        let expr = PartitionTransformExpr {
+            source: Arc::new(Column::new("s", 0)),
+            transform: Transform::Truncate(3),
+            source_type: DataType::Utf8,
+            result_type: DataType::Utf8,
+        };
+        let schema: SchemaRef = Arc::new(ArrowSchema::new(vec![Field::new(
+            "s",
+            DataType::Utf8View,
+            false,
+        )]));
+        let batch = RecordBatch::try_new(
+            schema,
+            vec![Arc::new(StringViewArray::from(vec!["s00x1", "s01x22"]))],
+        )
+        .expect("view batch");
+        let ColumnarValue::Array(values) = expr.evaluate(&batch).expect("truncate evaluates")
+        else {
+            panic!("truncate of a string column yields an array");
+        };
+        let values = values
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("truncated Utf8");
+        assert_eq!(values.value(0), "s00");
+        assert_eq!(values.value(1), "s01");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn merge_inserts_into_a_partitioned_table_route_one_value_to_one_writer() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "mergestream", Some(identity_spec(3, "part"))).await;
+        assert!(
+            !table_carries_merge_lineage(&table),
+            "the pin covers the routed funnel, not the serial lineage writer"
+        );
+        let schema = source_schema();
+        let batches = [64, 64, 64, 64]
+            .into_iter()
+            .enumerate()
+            .map(|(index, rows)| source_batch(&schema, index, rows))
+            .collect::<Vec<_>>();
+        let write_schema = Arc::new(
+            iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
+                .expect("write schema"),
+        );
+        let files = write_new_data_files_from_stream(
+            &table,
+            &write_schema,
+            futures::stream::iter(batches),
+            WriteConcurrency::new(4).expect("concurrency"),
+        )
+        .await
+        .expect("merge stream write succeeds");
+        assert_eq!(layout(&files), one_file_per_value(32));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn the_router_sends_every_row_of_one_value_to_one_slot() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "router", Some(identity_spec(3, "part"))).await;
+        let router = PartitionRouter::try_new(&table, 4).expect("router");
+        let batch = source_batch(&source_schema(), 0, 64).expect("batch");
+        let first_pass = router.route(&batch).expect("route");
+        let mut slot_of_value: HashMap<i32, HashSet<usize>> = HashMap::new();
+        for (slot, part) in &first_pass {
+            let part_values = part
+                .column(2)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("part column");
+            for value in part_values.values() {
+                slot_of_value.entry(*value).or_default().insert(*slot);
+            }
+        }
+        assert_eq!(slot_of_value.len(), 8);
+        assert!(
+            slot_of_value.values().all(|slots| slots.len() == 1),
+            "{slot_of_value:?}"
+        );
+        let second_pass = router.route(&batch).expect("route again");
+        assert_eq!(
+            first_pass
+                .iter()
+                .map(|(slot, part)| (*slot, part.num_rows()))
+                .collect::<Vec<_>>(),
+            second_pass
+                .iter()
+                .map(|(slot, part)| (*slot, part.num_rows()))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            first_pass
+                .iter()
+                .map(|(_, part)| part.num_rows())
+                .sum::<usize>(),
+            64
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn a_late_failure_into_a_partitioned_table_leaves_no_data_file() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table_with(
+            &catalog,
+            "abort",
+            Some(identity_spec(3, "part")),
+            HashMap::from([(
+                "write.target-file-size-bytes".to_string(),
+                "65536".to_string(),
+            )]),
+        )
+        .await;
+        let error = write_data_files_from_plan(
+            &table,
+            Arc::new(PartitionedSourceExec::failing(
+                vec![20_000, 20_000, 20_000, 20_000],
+                Some(2),
+            )),
+            Arc::new(TaskContext::default()),
+            WriteConcurrency::new(4).expect("concurrency"),
+        )
+        .await
+        .expect_err("the injected partition failure must surface");
+        assert!(
+            error
+                .to_string()
+                .contains("injected partition source failure"),
+            "{error}"
+        );
+        assert!(
+            warehouse_data_files(&warehouse).is_empty(),
+            "a failed partitioned write leaves no data file behind: {:?}",
+            warehouse_data_files(&warehouse)
+        );
     }
 }

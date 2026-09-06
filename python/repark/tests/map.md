@@ -1910,6 +1910,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   deliberately NOT asserted here; `test_perf_ice_writepath_1.py` keeps it, unchanged. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
+- `test_write_distribution_2.py` — **WRITE-DISTRIBUTION-2** (2026-09-06): the hash distribution
+  rule on the partitioned stream write paths, through the facade over the WD1 seed shape at
+  `shuffle.partitions = 8`. Always-run: `INSERT OVERWRITE` and `MERGE ... WHEN NOT MATCHED THEN
+  INSERT` each commit exactly eight data files, one per value, with the row count and `sum(id)`
+  proving the row set is unchanged (the funnel alone wrote 32, four per value); a CTAS
+  `PARTITIONED BY (truncate(3, s))` over the parquet seed commits one file per truncated prefix.
+  Live (`REPARK_PARITY_LIVE=1`): Spark 4.1.2 writes the same `(partition value, record_count)`
+  layout for the overwrite and merge seeds. Plain `INSERT INTO` and `saveAsTable(mode="append")`
+  are deliberately NOT asserted here: they execute inside the fork's `insert_into` and still
+  write 32 where Spark writes 8 (open fork ask, ledger C-009). Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §6–§8.
+  pins: write-distribution-2/C-001, C-002, C-003
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the
