@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
+  **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
+  backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names
+  covered by five `docs/examples/ml/` files (backlog 164 → 136). Round 2
+  re-measured every oracle cell on live PySpark 4.1.2, including the
+  session-level cells round 1 printed as "equal" without collecting. Nine §7
+  rows (EX-ML-1..9) pin the diverged arms, with nine tests in
+  `test_examples_ml.py`. Mixins are taught only through concrete stages.
+  `risk_tier: standard`. Branch `docs/ex-27-ml`.
+  pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
