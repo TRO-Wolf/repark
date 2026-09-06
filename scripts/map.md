@@ -229,6 +229,9 @@ module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/ap
 1884→1883 and `write/merge/mod.rs` 1795→1792 (the funnel entries delegate to the
 distribution module's sorted drivers). All three ratchet DOWN; the duplicate table in
 `test_cap_1_source_file_line_cap.py` moves with them in the same commit.
+`repark-spark/src/tests/alter.rs` 1436→1397 — the `WRITE ORDERED BY` /
+`WRITE DISTRIBUTED BY` refusal blocks leave `alter_unsupported_forms_refuse_loud`;
+the forms now execute and their pins live in `tests/alter_write_order.rs`.
 pins: write-order-dist-1/C-012
 
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`

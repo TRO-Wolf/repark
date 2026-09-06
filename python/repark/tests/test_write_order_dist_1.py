@@ -1,8 +1,8 @@
 """WRITE-ORDER-DIST-1 — ALTER TABLE WRITE ORDERED/DISTRIBUTED BY and the writes they shape."""
 
-import glob
 import json
 import os
+from itertools import pairwise
 from pathlib import Path
 
 import pyarrow as pa
@@ -56,21 +56,19 @@ def _metadata(warehouse: Path, table: str) -> dict:
     directory = warehouse / "repark_ctas" / CATALOG / "w" / table / "metadata"
     hint = directory / "version-hint.text"
     if hint.exists():
-        with open(hint) as handle:
-            version = handle.read().strip()
-        candidates = sorted(glob.glob(str(directory / f"{version}*.metadata.json")))
+        version = hint.read_text().strip()
+        candidates = sorted(directory.glob(f"{version}*.metadata.json"))
         if candidates:
-            with open(candidates[-1]) as handle:
+            with candidates[-1].open() as handle:
                 return json.load(handle)
-    metas = sorted(glob.glob(str(directory / "*.metadata.json")))
-    with open(metas[-1]) as handle:
+    metas = sorted(directory.glob("*.metadata.json"))
+    with metas[-1].open() as handle:
         return json.load(handle)
 
 
 def _metadata_count(warehouse: Path, table: str) -> int:
-    return len(
-        glob.glob(str(warehouse / "repark_ctas" / CATALOG / "w" / table / "metadata" / "*.metadata.json"))
-    )
+    directory = warehouse / "repark_ctas" / CATALOG / "w" / table / "metadata"
+    return len(list(directory.glob("*.metadata.json")))
 
 
 def _write_state(warehouse: Path, table: str) -> tuple[list[dict], int, str | None]:
@@ -89,7 +87,7 @@ def _data_files(engine: ReparkSession, table: str) -> list:
 
 def _is_monotone(path: str, column: str) -> tuple[int, bool]:
     values = pq.read_table(path, columns=[column]).column(column).to_pylist()
-    return len(values), all(a <= b for a, b in zip(values, values[1:]))
+    return len(values), all(a <= b for a, b in pairwise(values))
 
 
 def _ctas(engine: ReparkSession, table: str, version: str, extra: str = "") -> None:
@@ -117,8 +115,18 @@ def test_write_ordered_by_sets_sort_order_and_range(tmp_path: Path) -> None:
             assert len(orders) == 2, (orders, default, dist)
             fields = orders[1]["fields"]
             assert fields == [
-                {"transform": "identity", "source-id": 1, "direction": "asc", "null-order": "nulls-first"},
-                {"transform": "identity", "source-id": 2, "direction": "desc", "null-order": "nulls-last"},
+                {
+                    "transform": "identity",
+                    "source-id": 1,
+                    "direction": "asc",
+                    "null-order": "nulls-first",
+                },
+                {
+                    "transform": "identity",
+                    "source-id": 2,
+                    "direction": "desc",
+                    "null-order": "nulls-last",
+                },
             ], fields
         finally:
             engine.stop()
@@ -138,7 +146,12 @@ def test_write_locally_ordered_by_leaves_distribution_untouched(tmp_path: Path) 
         assert dist is None, (orders, default, dist)
         assert default == 1, (orders, default, dist)
         assert orders[1]["fields"] == [
-            {"transform": "identity", "source-id": 1, "direction": "desc", "null-order": "nulls-last"}
+            {
+                "transform": "identity",
+                "source-id": 1,
+                "direction": "desc",
+                "null-order": "nulls-last",
+            }
         ], orders
     finally:
         engine.stop()
@@ -345,16 +358,17 @@ def test_write_order_metadata_matches_spark_after_same_statements(tmp_path: Path
             session.sql(f"ALTER TABLE {catalog}.w.t{index} {form}")
         spark_states = []
         for index in range(len(forms)):
-            metas = sorted(
-                glob.glob(str(tmp_path / "spark-wh" / "w" / f"t{index}" / "metadata" / "*.metadata.json"))
-            )
-            with open(metas[-1]) as handle:
+            directory = tmp_path / "spark-wh" / "w" / f"t{index}" / "metadata"
+            metas = sorted(directory.glob("*.metadata.json"))
+            with metas[-1].open() as handle:
                 meta = json.load(handle)
-            spark_states.append((
-                sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
-                meta.get("default-sort-order-id", -1),
-                meta.get("properties", {}).get("write.distribution-mode"),
-            ))
+            spark_states.append(
+                (
+                    sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
+                    meta.get("default-sort-order-id", -1),
+                    meta.get("properties", {}).get("write.distribution-mode"),
+                )
+            )
     finally:
         if owned:
             session.stop()

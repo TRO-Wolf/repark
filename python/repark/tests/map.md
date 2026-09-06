@@ -1916,13 +1916,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
 - `test_write_order_dist_1.py` — **WRITE-ORDER-DIST-1** (2026-09-06): the five `ALTER TABLE …
-  WRITE …` forms and the writes they shape, through the facade over a fixed 8-value seed at
-  `shuffle.partitions = 8`. Always-run: each form's `metadata.json` transition (sort orders,
-  default id, `write.distribution-mode` — `WRITE ORDERED BY` on v2 and v3), the bad-column and
-  malformed-shape refusals committing no metadata version, `none` CTAS writing writers × values
-  against `hash`'s one file per value, and monotone parquet per file after `WRITE ORDERED BY`
-  on INSERT OVERWRITE, MERGE, and CTAS replace. Live (`REPARK_PARITY_LIVE=1`): the same five
-  statements on both engines leave equal sort orders, default ids, and distribution properties.
+  WRITE …` forms and the writes they shape, through the facade over fixed 8-value seeds at
+  `shuffle.partitions = 8` — an 8,000-row two-file seed for the DDL transitions, a 120,000-row
+  four-file seed for the layout and sortedness pins. Always-run: each form's `metadata.json`
+  transition (sort orders, default id, `write.distribution-mode` — `WRITE ORDERED BY` on v2
+  and v3), the bad-column and malformed-shape refusals committing no metadata version, `none`
+  CTAS writing writers × values against `hash`'s one file per value, and monotone parquet per
+  file after `WRITE ORDERED BY` on INSERT OVERWRITE, MERGE, and CTAS replace. Live
+  (`REPARK_PARITY_LIVE=1`): the same five statements on both engines leave equal sort orders,
+  default ids, and distribution properties.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert

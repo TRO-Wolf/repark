@@ -176,6 +176,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   WRITE-ORDER-DIST-1 (2026-09-06) ratchets `repark-spark/src/alter.rs` 1830 → 1821,
   `repark-iceberg/src/write/append.rs` 1884 → 1883, and `write/merge/mod.rs` 1795 → 1792
   with the gate table (pins: write-order-dist-1/C-012).
+  The same unit ratchets `repark-spark/src/tests/alter.rs` 1436 → 1397 — the obsolete
+  WRITE-refusal blocks are deleted (pins: write-order-dist-1/C-001).
 - `test_live_v3_docs.py` — **LIVE-v3-M (2026-09-02; tree pins):** the live v3 legs are documented
   as **measured green** — registry `S3T-V3-1` is FIXED by measurement and carries run
   33635288918, its link, base `8c4bc55`, the `6 passed in 122.13s` line, the accepted branch and

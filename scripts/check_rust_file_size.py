@@ -142,7 +142,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract identifier resolution from metadata plan assembly.",
     ),
     "crates/repark-spark/src/tests/alter.rs": (
-        1436,
+        1397,
         "Spark ALTER behavior cases share one test module.",
         "Split property operations from schema-evolution operations.",
     ),
