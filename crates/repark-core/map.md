@@ -56,7 +56,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `Vec<CatalogSpec>` (glue / s3tables / memory) parser; dual-prefix conflict fail-loud (keys
   only, never values); S3 Tables ARN shape check; `CatalogSpec` hand-written `Debug` redacts
   secret-like prop values. Parsed at `build()`, registered by `register_configured_catalogs`.
-- `src/read_options.rs` — CSV/JSON Spark option-map helpers.
+- `src/read_options.rs` — CSV/JSON Spark option-map helpers; local-CSV Utf8 scan
+  for `nullValue` and `inferSchema`. pins: nullability-2/C-006
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
   `engine_err` (the single `DataFusionError → Error` classifier).
 - `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session

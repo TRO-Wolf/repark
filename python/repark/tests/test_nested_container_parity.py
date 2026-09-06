@@ -420,7 +420,7 @@ ROWS: list[NestedRow] = [
         _table(
             [
                 ("grp", pa.int64(), True),
-                ("items", pa.list_(pa.field("item", pa.int64(), nullable=True)), True),
+                ("items", pa.list_(pa.field("item", pa.int64(), nullable=True)), False),
             ],
             {
                 # Outer row order from repark at record time; comparator is order-insensitive.
@@ -429,8 +429,10 @@ ROWS: list[NestedRow] = [
             },
         ),
         "groupBy.agg(collect_list): outer rows unordered (G18 enabler). VALUES match under "
-        "the recorded seed; TYPE diverges — repark list<item: int64> nullable vs Spark "
-        "list<element: int64 not null> non-nullable field. "
+        "the recorded seed; the top-level flag converged non-null 2026-09-06 "
+        "(NULLABILITY-2 round 2: the empty-array branch is non-null like Spark). TYPE still "
+        "diverges on the value-field name and element flag — repark list<item: int64> "
+        "(nullable elements) vs Spark list<element: int64 not null>. "
         f"Flipped by {FIX_G18_LIST}.",
         entry_point="dataframe_api",
         df_recipe="collect_list",

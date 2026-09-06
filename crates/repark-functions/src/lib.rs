@@ -8,6 +8,7 @@ pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
 mod avg_groups;
+pub mod bool_decimal;
 pub mod cardinality;
 pub mod collection;
 pub mod count_if;
@@ -36,6 +37,7 @@ pub mod spark_isnan;
 pub mod spark_length;
 pub mod spark_log;
 pub mod spark_log1p;
+pub mod spark_nullability;
 pub mod spark_regexp;
 pub mod spark_regexp_match;
 pub mod spark_result_types;
@@ -134,6 +136,11 @@ pub fn register_all(ctx: &SessionContext) {
     integer_spark::register_spark_integer_planner(ctx);
 }
 
+pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
+    integer_spark::install_integer_overflow(ctx);
+    bool_decimal::install_bool_decimal_cast(ctx);
+}
+
 /// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
@@ -141,6 +148,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(spark_result_types::SparkIntegerLiteral),
         Arc::new(decimal_precision::SparkDecimalPrecision),
         Arc::new(decimal_spark::SparkDecimalRewrite),
+        Arc::new(spark_nullability::SparkNullability),
         Arc::new(integer_spark::SparkIntegerOverflow),
         Arc::new(analyzer::SparkExprSemantics),
     ];

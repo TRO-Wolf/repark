@@ -58,7 +58,7 @@ fn apply_session_knobs(
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
     let session = builder.build().map_err(to_py_err)?;
-    repark_functions::integer_spark::install_integer_overflow(session.context());
+    repark_functions::install_shared_analyzer_rules(session.context());
     let runtime = shared_runtime()?;
     py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;

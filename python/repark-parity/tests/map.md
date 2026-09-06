@@ -142,6 +142,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. NULLABILITY-2
+  (2026-09-05): `core.py` row 6303 → 6302 with the script baseline, then the
+  `_live_parity.py` row 1877 → 1778 with the script baseline when the three
+  converged nullability disclosures retire.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
@@ -278,7 +282,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   states the delivered spellings (incl. correlated DELETE IN and uncorrelated UPDATE IN) and the
   true remainder (C-003); the three STATUS bullets match the registry under the ceiling (C-004);
   every cited test resolves and DEC-9 stays BACKLOG (C-005); no row deleted and the maps are in
-  lockstep (C-006).
+  lockstep (C-006). NULLABILITY-2 (2026-09-05) flipped C-005 to the DEC-9 FIXED text
+  (test name kept per the G2 precedent).
   Cycle 2 (Critic): the DEC notes date by the fix's landing day (2026-08-14), and the TZ-8
   residual names only the pinned spellings (`date_sub` refuses too but is unpinned — not claimed).
   Departure: the `date_sub` window ends at the next heading; DEC rows are asserted by their
