@@ -96,6 +96,7 @@ class FileCensus(BaseModel):
 
     data_files: int
     data_bytes: int
+    data_file_paths: list[str]
     delete_files: int
     delete_bytes: int
     delete_records: int
@@ -292,23 +293,26 @@ def file_census(spark: ReparkSession, table: str) -> FileCensus:
     reader opens first, so the one metadata size a scan always pays.
     """
     files = spark.sql(
-        f"SELECT content, file_size_in_bytes, record_count FROM {table}.files"
+        f"SELECT content, file_path, file_size_in_bytes, record_count FROM {table}.files"
     ).to_arrow()
     contents = files.column("content").to_pylist()
+    paths = files.column("file_path").to_pylist()
     sizes = files.column("file_size_in_bytes").to_pylist()
     records = files.column("record_count").to_pylist()
 
     data_files = 0
     data_bytes = 0
+    data_file_paths: list[str] = []
     delete_files = 0
     delete_bytes = 0
     delete_records = 0
-    for content, size, record_count in zip(contents, sizes, records, strict=True):
+    for content, path, size, record_count in zip(contents, paths, sizes, records, strict=True):
         if content is None:
             continue
         if int(content) == DATA_CONTENT:
             data_files += 1
             data_bytes += int(size or 0)
+            data_file_paths.append(str(path))
         elif int(content) == POSITION_DELETE_CONTENT:
             delete_files += 1
             delete_bytes += int(size or 0)
@@ -319,6 +323,7 @@ def file_census(spark: ReparkSession, table: str) -> FileCensus:
     return FileCensus(
         data_files=data_files,
         data_bytes=data_bytes,
+        data_file_paths=sorted(data_file_paths),
         delete_files=delete_files,
         delete_bytes=delete_bytes,
         delete_records=delete_records,

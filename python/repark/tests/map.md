@@ -658,7 +658,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   delete files grow exactly `partitions x merges` (one per `(spec, partition)` per commit —
   the fixture sets `write.delete.granularity = 'partition'`) while `COUNT(*)` holds; the
   copy-on-write leg writes zero delete files,
-  so it is a valid control; `rewrite_position_delete_files` folds the deletes to one per
+  so it is a valid control; the rewrite half of the control is the live data-file path
+  set changing across the MERGEs (since 2026-09-06; the old count-grows assertion
+  measured writer fan-out — 2 → 2 once one partition value reached one writer — not
+  the rewrite); `rewrite_position_delete_files` folds the deletes to one per
   partition and `rewrite_data_files` cuts the data files; `rewrite_manifests` drops the
   manifest count on both legs; the maintenance sequence is the charter's five procedures in
   order with orphan cleanup last and dry-run; every timing carries the answer it was

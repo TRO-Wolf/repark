@@ -1,5 +1,52 @@
 # Unit ledger — WRITE-DISTRIBUTION-2 · the hash distribution rule on the stream write paths
 
+## Round 2 (2026-09-06) — the C-003 control measures the rewrite, not the fan-out
+
+The critic passed round 1; then CI's debug import-smoke job (`wheels.yml`, 4-CPU
+runner, debug native) failed one pin this unit's behaviour change invalidates:
+`python/repark/tests/test_mw7_scale_smoke.py::test_copy_on_write_leg_is_a_zero_delete_control`
+(MW-7 C-003). The old control asserted the copy-on-write leg's data-file count grows
+across the six MERGEs (`checkpoints[-1].census.data_files >
+checkpoints[0].census.data_files`); with one partition value routed to one writer the
+rewrite lands in the same number of files, so the count stands still while the rewrite
+still happens. The assertion measured the old fan-out, not the copy-on-write property —
+and it is parallelism-dependent: on this 64-CPU lane the release native reads 2 → 4 →
+4 (green) while under `taskset -c 0-3` it reads 2 → 2 → 2 (red), same tree, same seed.
+
+The replacement control is layout-independent: `FileCensus` gains the sorted live
+data-file paths (`data_file_paths`, read from the existing `{table}.files` query in
+`file_census`), and C-003 asserts the last checkpoint's path set differs from the
+first's. `delete_files == 0` and the row-count assertions are unchanged; the test name,
+its docstring, and the line-343 comment are byte-identical (the docstring's second
+paragraph — MOR-minus-COW bundles delete reads with MOR's fan-out — stays true, so no
+correction was needed). C-001's "agrees on every field" correspondence gains the paths
+assertion, since the docstring's "every" would otherwise lie about the new field.
+Inequality, not disjointness: disjointness needs every seed file touched across the six
+MERGEs, which a wider future layout could break while copy-on-write still works;
+inequality holds exactly when at least one data file was rewritten.
+
+Measured census on the COW leg at smoke scale (20,000 rows, 6 MERGEs, 2 partitions),
+release native under `taskset -c 0-3`:
+
+| merges_done | row_count | data_files | delete_files | manifests | snapshots |
+|---|---:|---:|---:|---:|---:|
+| 0 | 20,000 | 2 | 0 | 1 | 1 |
+| 3 | 20,000 | 2 | 0 | 2 | 4 |
+| 6 | 20,000 | 2 | 0 | 2 | 7 |
+
+Path sets at the three checkpoints hold 2 paths each; first-vs-last is disjoint and
+every interval differs — the rewrites the old pin denied are all there. The new
+assertion cannot pass vacuously: a bite-proof probe censused one COW table twice with
+no MERGE between (sets equal, so the control reds) and again after one MERGE (sets
+differ, greens). A rewrite always mints fresh UUID paths and drops the replaced files
+from the live set, so equal sets mean no rewrite; delete-only writes trip the
+unchanged `delete_files == 0` assertions, and empty-snapshot commits cannot move the
+path set. Audit classification (audit-repark-parity Step 0–2): a stale claim, not a
+product bug — the engine now matches Spark's one-file-per-value layout more closely
+(this ledger's C-001/C-003 live legs), and no oracle claim ever covered count growth,
+so no JVM run was needed; C-003's recorded obligation ("the leg still rewrites data
+files", MW-7 ledger) is preserved by the new mechanism.
+
 **Date:** 2026-09-06 · **Branch:** `perf/write-distribution-2` · **Base:** `origin/main` `b4933a99` ·
 **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
