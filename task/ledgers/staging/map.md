@@ -5,6 +5,25 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
+  **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
+  partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
+  the CTAS write node, `Partitioning::Hash` over one `PartitionTransformExpr` per partition field
+  (the fork's transform over the cast source column), so one partition value lands in one writer:
+  the partitioned 1e6 CTAS goes 64 → 8 data files (Spark's count) and 3.44× → 1.96× of the
+  parquet-sink control; the unpartitioned CTAS is untouched by decision. No dependency, no spawn.
+  `risk_tier: standard`. Branch `perf/write-distribution-1`.
+  pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ex-28-scalar-remainder-ledger.md](ex-28-scalar-remainder-ledger.md) —
+  **EX-28 (2026-09-06), in flight:** the v1.1 example backfill's `F.*` scalar
+  remainder — the 34-name roster at base `57f21b9b`; seven names covered by
+  extending three `docs/examples/functions/` files (backlog 136 → 129).
+  Twenty-seven stay with existing EX-FN / BL-17 / FNP-15 / FNP-16 rows; two
+  new §7 rows (EX-FN-20, EX-FN-21) pin `try_to_timestamp` and the
+  `unix_timestamp` format arm. Every asserted value measured on live
+  PySpark 4.1.2 (ANSI on, UTC). `risk_tier: standard`. Branch
+  `docs/ex-28-scalar-remainder`.
+  pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
 - [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
   **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
   backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names

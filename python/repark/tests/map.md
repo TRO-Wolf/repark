@@ -224,6 +224,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
+- [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
+  the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
+  refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
+  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
+  `EX-FN-20` and `EX-FN-21`.
+  pins: ex-28-scalar-remainder/C-006
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
   pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
@@ -1866,7 +1872,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Always-run: the CTAS writes one data file per plan partition (four), and
   `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
   takes it — still writes exactly one; and a partitioned CTAS's files ascend by partition value
-  (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  (V3-11) and, since WRITE-DISTRIBUTION-1 (2026-09-06), are exactly one per value — eight, where the
+  node alone wrote 32 over the four-file seed; the unpartitioned four-file count is the layout
+  that unit left untouched. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
   two writer shapes agree on every answer and on their layout (one writer one file, four-cap
   eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
   against the written table. The ordering pin seeds EIGHT UNEQUAL files
@@ -1889,6 +1897,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   work is injected. Numbers and commands:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
   pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
+  pins: write-distribution-1/C-006
+- `test_write_distribution_1.py` — **WRITE-DISTRIBUTION-1** (2026-09-06): the hash distribution
+  rule before a partitioned CTAS, through the facade over a fixed four-file seed at
+  `shuffle.partitions = 8`. Always-run: a v3 CTAS `PARTITIONED BY (part)` commits exactly eight
+  data files, one per value, each holding a quarter of the seed with `first_row_id` tiling them
+  (the node alone wrote 32, four per value); `PARTITIONED BY (bucket(4, id))` commits four (the key
+  is the transform value, not `id`); `PARTITIONED BY (label)` with a NULL in every seed file
+  commits one NULL file holding every NULL row. Live (`REPARK_PARITY_LIVE=1`): Spark 4.1.2 with
+  `iceberg-spark-runtime-4.1_2.13:1.11.0` at eight shuffle partitions writes the same layout —
+  partition value and record count per file — for the same seed. The unpartitioned layout is
+  deliberately NOT asserted here; `test_perf_ice_writepath_1.py` keeps it, unchanged. Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
+  pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the

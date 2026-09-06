@@ -1,4 +1,4 @@
-"""Demonstrate ``F.add_months`` at month ends and ``F.make_interval`` in date arithmetic."""
+"""Demonstrate month-end shifts, interval arithmetic, epoch seconds, and Spark's TIME refusal."""
 
 from __future__ import annotations
 
@@ -10,13 +10,16 @@ from repark.spark import ReparkSession
 COVERS: list[str] = [
     "F.add_months",
     "F.make_interval",
+    "F.unix_timestamp",
+    "F.to_unix_timestamp",
+    "F.try_to_time",
     "F.col",
     "F.lit",
 ]
 
 
 def main() -> None:
-    """Run the measured month-end and interval date-arithmetic arms."""
+    """Run the measured month-end, interval, epoch-seconds, and TIME-refusal arms."""
     repark = ReparkSession.builder.appName("ex-dates-more").master("local[1]").getOrCreate()
     try:
         month_starts = repark.createDataFrame(
@@ -83,6 +86,45 @@ def main() -> None:
         print(f"F.make_interval timestamp shift: {values!r}")
         if values != [datetime.datetime(2024, 1, 15, 14, 35, 11)]:
             raise SystemExit(f"F.make_interval timestamp shift {values!r} != [2024-01-15 14:35:11]")
+
+        stamps = repark.createDataFrame(
+            [("2024-06-15 12:00:00",), ("1970-01-01 00:00:00",), (None,)],
+            "s STRING",
+        )
+        rows = stamps.select(
+            F.unix_timestamp("s").alias("from_str"),
+            F.to_unix_timestamp("s").alias("alias"),
+            F.unix_timestamp(F.to_timestamp("s")).alias("from_ts"),
+        ).collect()
+        checked = (
+            ("from_str", [1718452800, 0, None]),
+            ("alias", [1718452800, 0, None]),
+            ("from_ts", [1718452800, 0, None]),
+        )
+        for name, expected in checked:
+            values = [row[name] for row in rows]
+            print(f"F.unix_timestamp {name}: {values!r}")
+            if values != expected:
+                raise SystemExit(f"F.unix_timestamp {name} {values!r} != {expected!r}")
+
+        now_rows = repark.range(3).select(F.unix_timestamp().alias("now")).collect()
+        now_values = [row["now"] for row in now_rows]
+        print(f"F.unix_timestamp(): {now_values!r}")
+        if len(now_values) != 3 or len(set(now_values)) != 1:
+            raise SystemExit(f"F.unix_timestamp() {now_values!r} is not one epoch across rows")
+        if not isinstance(now_values[0], int) or now_values[0] <= 1_700_000_000:
+            raise SystemExit(f"F.unix_timestamp() {now_values[0]!r} is not a current epoch int")
+
+        try:
+            repark.range(1).select(F.try_to_time(F.lit("12:34:56")).alias("v")).collect()
+        except Exception as error:
+            print(f"F.try_to_time raises: {error}")
+            if "UNSUPPORTED_TIME_TYPE" not in str(error):
+                raise SystemExit(
+                    f"F.try_to_time raised without UNSUPPORTED_TIME_TYPE: {error}"
+                ) from error
+        else:
+            raise SystemExit("F.try_to_time('12:34:56') did not raise")
     finally:
         repark.stop()
 

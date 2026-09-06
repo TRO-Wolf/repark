@@ -123,7 +123,11 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [translate.py](translate.py) — `F.translate` per-character map, including deleting characters with an empty map; `F.replace` stays on the backlog (facade-spelling class).
 - [search.py](search.py) — `F.position` both ways round and `F.find_in_set` membership in a comma list, not-found zeros and NULLs included.
 - [words.py](words.py) — `F.repeat` at 2, 0 and negative, `F.reverse`, `F.soundex` codes, and `F.quote` single-quote wrapping.
-- [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid UTF-8 trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD, `F.try_validate_utf8` answers NULL.
+- [utf8.py](utf8.py) — `F.bit_length` / `F.octet_length` byte counts and the invalid UTF-8
+  trio: `F.is_valid_utf8` tests, `F.make_valid_utf8` repairs with U+FFFD,
+  `F.try_validate_utf8` answers NULL, and `F.validate_utf8` passes valid bytes then
+  raises `INVALID_UTF8_STRING` on a lone 0xFF (EX-28).
+  pins: ex-28-scalar-remainder/C-002
 - [regex.py](regex.py) — the `F.regexp` / `F.rlike` / `F.regexp_like` match predicates, `F.regexp_count`, `F.regexp_replace`, `F.regexp_substr`, `F.regexp_instr`, and `F.regexp_extract_all` by capture-group index.
 - [like.py](like.py) — `F.like` wildcards (`%`, `_`) and the backslash escape, with `F.ilike` folding case on the same patterns.
 - [array_more.py](array_more.py) — `F.array_position` found/missing/NULL, `F.array_sort`
@@ -138,22 +142,29 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
   `F.replace` (EX-FN-15), `F.split` (EX-FN-18), `F.format_number` (EX-FN-5) and
   `F.sentences` (EX-FN-17) stay on the backlog.
   pins: ex-25-functions-a/C-003
-- [dates_more.py](dates_more.py) — `F.add_months` from month ends both directions, and
+- [dates_more.py](dates_more.py) — `F.add_months` from month ends both directions,
   `F.make_interval` shifting a date and a timestamp (the string-cast arm diverges,
-  EX-FN-19). `F.months_between` (EX-FN-11) and `F.make_timestamp` (EX-FN-10) stay on
-  the backlog.
+  EX-FN-19), `F.unix_timestamp` / `F.to_unix_timestamp` on the default pattern
+  (the format argument is EX-FN-21), and `F.try_to_time` matching Spark's
+  `UNSUPPORTED_TIME_TYPE`. `F.months_between` (EX-FN-11), `F.make_timestamp`
+  (EX-FN-10) and `F.try_to_timestamp` (EX-FN-20) stay on the backlog.
   pins: ex-25-functions-a/C-004
+  pins: ex-28-scalar-remainder/C-003
 - [stats.py](stats.py) — the `F.percentile_approx` / `F.approx_percentile` alias pair
   agreeing on the median and the extremes over 1..100 (the accuracy knob stays
   ignored, FN-APPROXPCT-ACC-1). `F.kurtosis` / `F.skewness` / `F.mode` stay on the
   backlog (EX-FN-9).
   pins: ex-25-functions-a/C-005
-- [session_misc.py](session_misc.py) — `F.current_user` / `F.session_user` as non-empty
-  strings, `F.randstr` lengths plain and seeded, and `F.isnan` with NULL answering
-  false. `F.monotonically_increasing_id` / `F.spark_partition_id` (EX-FN-12),
-  `F.input_file_name` (EX-FN-13), `F.raise_error` (EX-FN-14) and `F.expr` (EX-FN-4)
-  stay on the backlog.
+- [session_misc.py](session_misc.py) — `F.current_user` / `F.session_user` / `F.user`
+  as non-empty strings, `F.version` as a stable non-empty string, seeded `F.uniform`
+  matching Spark's XORShift draws on a single partition (Spark seeds each partition
+  with `seed + partitionIndex`, so the stream is partition-dependent; the example
+  runs `local[1]`), `F.randstr` lengths plain and seeded, and
+  `F.isnan` with NULL answering false. `F.monotonically_increasing_id` /
+  `F.spark_partition_id` (EX-FN-12), `F.input_file_name` (EX-FN-13),
+  `F.raise_error` (EX-FN-14) and `F.expr` (EX-FN-4) stay on the backlog.
   pins: ex-25-functions-a/C-006
+  pins: ex-28-scalar-remainder/C-004
 ## Pointers
 
 - Up: [../map.md](../map.md)
