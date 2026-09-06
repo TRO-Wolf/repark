@@ -523,6 +523,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Round 3:** leftover numeric grammar is width-independent (`Inf`/`+5`/23-digit at 3, 8,
   and 12 columns, both doors); `multiLine` + `inferSchema` past 1000 records does not
   raise; plan-time `to_arrow` stays ≤ 1 on an 8-column `Inf` file.
+  **Round 4:** quoted embedded newlines at 5/500/1001/5000 records plus late 1.5/`oops`,
+  both doors; `inferSchema=False` on the same files does not raise. Wall pin renamed
+  `test_infer_schema_true_stays_within_twice_false` →
+  `test_infer_schema_true_stays_under_half_second` (declared rename; 0.5 s regression
+  guard matching the assertion).
   pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the

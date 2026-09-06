@@ -115,6 +115,15 @@ def _plan_time_materializations(session: Any, path: Path, **read_kwargs: Any) ->
     return {"to_arrow": counter.to_arrow, "collect": counter.collect}
 
 
+def _write_quoted_newline_csv(path: Path, rows: int, last_v: str) -> Path:
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write("id,note,v\n")
+        for index in range(rows - 1):
+            handle.write(f'{index},"line1\nline2",1\n')
+        handle.write(f'{rows - 1},"line1\nline2",{last_v}\n')
+    return path
+
+
 def _write_repeated(path: Path, header: str, body: str, last: str, rows: int = 1001) -> Path:
     with path.open("w", encoding="utf-8") as handle:
         handle.write(header + "\n")
@@ -184,11 +193,15 @@ def test_infer_schema_trial_path_does_not_materialize_per_column(tmp_path: Path)
         wide_counts = _plan_time_materializations(session, wide_inf)
         assert wide_counts["collect"] == 0
         assert wide_counts["to_arrow"] <= 1
+        quoted = _write_quoted_newline_csv(tmp_path / "qn5.csv", 5, "1.5")
+        quoted_counts = _plan_time_materializations(session, quoted, multiline=True)
+        assert quoted_counts["collect"] == 0
+        assert quoted_counts["to_arrow"] <= 1
     finally:
         session.stop()
 
 
-def test_infer_schema_true_stays_within_twice_false(tmp_path: Path) -> None:
+def test_infer_schema_true_stays_under_half_second(tmp_path: Path) -> None:
     import repark._native as native
 
     if native.__debug_assertions__:
@@ -578,6 +591,43 @@ def test_multiline_infer_schema_past_sample_does_not_raise(tmp_path: Path) -> No
         session.stop()
 
 
+@pytest.mark.parametrize("rows", [5, 500, 1001, 5000])
+@pytest.mark.parametrize(
+    ("last_v", "v_dtype", "last_value"),
+    [
+        ("1", "bigint", 1),
+        ("1.5", "double", 1.5),
+        ("oops", "string", "oops"),
+    ],
+)
+def test_multiline_quoted_newlines_infer_schema_at_any_count(
+    tmp_path: Path,
+    rows: int,
+    last_v: str,
+    v_dtype: str,
+    last_value: Any,
+) -> None:
+    path = _write_quoted_newline_csv(tmp_path / f"qn_{rows}_{last_v}.csv", rows, last_v)
+    session = _session()
+    try:
+        frame = _read_inferred(session, path, multiline=True)
+        frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        expected = [("id", "bigint"), ("note", "string"), ("v", v_dtype)]
+        assert frame.dtypes == expected
+        assert sql_frame.dtypes == expected
+        assert len(frame.to_arrow()) == rows
+        last = frame.to_arrow().to_pylist()[-1]
+        assert last["v"] == last_value
+        assert last["note"] == "line1\nline2"
+        assert sql_frame.to_arrow().to_pylist()[-1] == last
+        false_frame = _read_inferred(session, path, infer_schema=False, multiline=True)
+        assert len(false_frame.to_arrow()) == rows
+        assert {dtype for _, dtype in false_frame.dtypes} == {"string"}
+    finally:
+        session.stop()
+
+
 def test_utf8_columns_user_option_does_not_force_string(tmp_path: Path) -> None:
     path = _write_text(tmp_path / "u.csv", "v\n2\n")
     session = _session()
@@ -690,6 +740,24 @@ def test_live_late_and_grammar_shapes_match_oracle(tmp_path: Path, spark_engine:
         assert spark_ml.dtypes[1][1] == "double"
         assert (
             repark_ml.to_arrow().to_pylist()[-1] == spark_engine.arrow_of(spark_ml).to_pylist()[-1]
+        )
+        quoted_late = _write_quoted_newline_csv(tmp_path / "live_qn_late.csv", 1001, "1.5")
+        repark_qn = _read_inferred(session, quoted_late, multiline=True)
+        spark_qn = _read_inferred(spark_engine.session, quoted_late, multiline=True)
+        assert repark_qn.dtypes[2][1] == "double"
+        assert spark_qn.dtypes[2][1] == "double"
+        assert repark_qn.to_arrow().to_pylist()[-1]["note"] == "line1\nline2"
+        assert (
+            repark_qn.to_arrow().to_pylist()[-1] == spark_engine.arrow_of(spark_qn).to_pylist()[-1]
+        )
+        quoted_oops = _write_quoted_newline_csv(tmp_path / "live_qn_oops.csv", 1001, "oops")
+        repark_oops = _read_inferred(session, quoted_oops, multiline=True)
+        spark_oops = _read_inferred(spark_engine.session, quoted_oops, multiline=True)
+        assert repark_oops.dtypes[2][1] == "string"
+        assert spark_oops.dtypes[2][1] == "string"
+        assert (
+            repark_oops.to_arrow().to_pylist()[-1]
+            == spark_engine.arrow_of(spark_oops).to_pylist()[-1]
         )
     finally:
         session.stop()

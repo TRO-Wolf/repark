@@ -305,6 +305,16 @@ def _finish_csv_infer_schema(
     original = dict(frame.dtypes)
     void_names = {name for name, dtype in original.items() if dtype == "void"}
     utf8_names = [name for name, dtype in original.items() if dtype in _CSV_TYPED_DTYPES]
+    if not utf8_names and reader._option_bool("multiline", default=False):
+        frame = _promote_csv_string_types(frame)
+        if void_names:
+            frame = frame.select(
+                *[
+                    F.col(name).cast("string").alias(name) if name in void_names else F.col(name)
+                    for name in frame.columns
+                ]
+            )
+        return frame
     if utf8_names:
         options = reader._native_options_for(_CSV_NATIVE_OPTION_KEYS)
         if "header" not in {key.lower() for key in options}:

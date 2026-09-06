@@ -4491,32 +4491,33 @@ Shared roster pin for every heading:
 
 ### CSV-INFER-PERF-1 — `inferSchema` CSV no longer materializes the frame per candidate cast — **FIXED 2026-09-06 (CSV-INFER-PERF-1)**
 
-- **repark** — **FIXED 2026-09-06 (CSV-INFER-PERF-1), round 3.** Local
+- **repark** — **FIXED 2026-09-06 (CSV-INFER-PERF-1), round 4.** Local
   `spark.read.csv(..., inferSchema=True)` keeps DataFusion's 1000-row sample, then
   re-reads with an all-Utf8 schema from the first local record (no second infer) and
   one `try_cast` aggregation decides widen-or-keep so a type conflict past row 1000
-  cannot raise or silently drop a clock. Offset text is `try_cast` timestamp.
-  Native-Utf8 leftover numeric grammar (`Inf`/`NaN`/`Infinity`/`+5`/long digits) runs
-  for every Utf8 column at every file width. `nullValue` still Utf8-forces and
-  promotes with one `try_cast` failure-count aggregation. On a 300k × 8 CSV (release
-  native): `inferSchema=False` 0.077 s; `inferSchema=True` **0.155 s** (**2.01×** of
-  False — the 2× bar is missed by box noise after leftover grammar is width-independent;
-  plan-time `to_arrow` 34 → **1**). 300k × 3 typed: 1.49×. 300k × 3 with a string
-  column: 1.91×.
+  cannot raise or silently drop a clock. A `multiLine` first read is already that
+  infer-free schema, so quoted embedded newlines infer at any record count. Offset
+  text is `try_cast` timestamp. Native-Utf8 leftover numeric grammar
+  (`Inf`/`NaN`/`Infinity`/`+5`/long digits) runs for every Utf8 column at every file
+  width. `nullValue` still Utf8-forces and promotes with one `try_cast` failure-count
+  aggregation. On a 300k × 8 CSV (release native): `inferSchema=False` 0.078 s;
+  `inferSchema=True` **0.153 s** (**1.96×**; plan-time `to_arrow` 34 → **1**).
 - **Apache Spark** — `inferSchema` scans the whole file for types without a
   Python-side per-column materialization of the frame.
 - **Pin** —
   `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_trial_path_does_not_materialize_per_column`,
-  `...::test_infer_schema_true_stays_within_twice_false`,
+  `...::test_infer_schema_true_stays_under_half_second`,
   `...::test_infer_schema_shapes_match_spark_answers`,
   `...::test_late_type_conflict_past_sample_is_spark_equal`,
   `...::test_numeric_grammar_is_width_independent`,
-  `...::test_multiline_infer_schema_past_sample_does_not_raise`.
+  `...::test_multiline_infer_schema_past_sample_does_not_raise`,
+  `...::test_multiline_quoted_newlines_infer_schema_at_any_count`.
 - **Rationale** — FIXED. NULLABILITY-2 round 4 was Spark-equal and expensive. Round 1
   trusted the 1000-row sample. Round 2 validated typed columns but gated leftover
   grammar on width. Round 3 runs leftover grammar at every width and makes the
-  Utf8 re-read infer-free so `multiLine` past 1000 records cannot raise. Cells:
-  `docs/perf/csv-infer-baseline.md`.
+  Utf8 re-read infer-free so `multiLine` past 1000 records cannot raise. Round 4
+  Utf8-forces the `multiLine` first read so quoted embedded newlines infer at
+  any record count. Cells: `docs/perf/csv-infer-baseline.md`.
 
 ### CSV-INFER-20DIGIT — overflow Int64 infers as double; Spark answers decimal — **DECLARED 2026-09-06**
 

@@ -1,6 +1,29 @@
 # Unit ledger — CSV-INFER-PERF-1 · CSV `inferSchema` without per-candidate materialization
 
 **Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
+`195d6bee` (round 4; round 3 `58e09f3e` + merge `195d6bee`) · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+**Registry:** `CSV-INFER-PERF-1` **FIXED**. `CSV-INFER-20DIGIT` **DECLARED**.
+
+## Round 4 — critic FAIL dispositions (2026-09-06)
+
+Round-3 critic (Muse Spark 1.3) FAIL. One S1: true quoted embedded newlines + `multiLine`
++ `inferSchema` at ≥400 records raised on DataFusion's sampled first read.
+
+| id | sev | disposition |
+|---|---|---|
+| R3-S1 | S1 | **FIXED.** A `multiLine` first read uses the infer-free all-Utf8 first-record schema, then the existing one-agg promotion. Pins: quoted `line1\\nline2` at 5/500/1001/5000 records, late 1.5 and late `oops`, both doors; `inferSchema=False` on the same files does not raise. |
+| R3-S4a | S4 | **RENAMED.** `test_infer_schema_true_stays_within_twice_false` → `test_infer_schema_true_stays_under_half_second`. Declared rename (same file); assertion was already `true_median < 0.5`. |
+
+Declared rename map (relocation discipline §2):
+
+| old | new |
+|---|---|
+| `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_true_stays_within_twice_false` | `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second` |
+
+---
+
+**Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
 `06febe20` (round 3; round 2 `270237fd` + orchestrator `8c21b86b`/`06febe20`) · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `CSV-INFER-PERF-1` **FIXED**. `CSV-INFER-20DIGIT` **DECLARED**.
@@ -72,7 +95,7 @@ dependency lists, completed ledgers.
 | C-002 | The cheapest correct shape is sampled native inference plus one full-file `try_cast` validation of typed columns (infer-free Utf8 re-read, widen-or-keep); leftover native-Utf8 numeric grammar at every width in that same aggregation; `nullValue` still all-Utf8 promote. | The code path; §2. | **PROVEN** | Round 2 width gate refuted (R2-S1a). Round 3: leftover at every width, one agg, `to_arrow` = 1. ×8 True 0.155 s / **2.01×**. MAX infer 13× not kept. |
 | C-003 | Every existing pin in `test_nullability_2.py` and `test_cutover_schema_1.py` stays green unchanged. | Those files, no assertion edits. | **PROVEN** | `pytest python/repark/tests/test_nullability_2.py python/repark/tests/test_cutover_schema_1.py -q` — 40 passed with the new file, 0 failed. Offset / Z / date / `nullValue` cells unchanged. |
 | C-004 | The critic's 19 shapes are re-run against live PySpark 4.1.2; shapes the suite lacked are added as pins on the DataFrame door and the temp-view SQL door (`csv.\`path\`` does not exist). ≥1 pin per class at ≥1001 rows. | `test_csv_infer_perf_1.py`; live leg. | **PROVEN** | Round 1 2–3-row pins refuted (F-5). Round 2: 1001-row class pins (late double/bad-int/true/NA/bad-double/bad-date/slash-date/US-date-in-ts/clock-in-date) plus `date_bad_day`, `header=False` offset NY, Inf/NaN/Infinity/+5/23-digit, utf8_columns ignored, path not stored, void→string, 20-digit DECLARED. SQL door is `createOrReplaceTempView` + `SELECT *`. |
-| C-005 | After: no per-column full materialization; 2× bar reported honestly at every measured width. | Wall pin; call-count pin; baseline. | **PROVEN** | Round 3: ×8 0.155/0.077 = **2.01×** (2× missed; leftover at every width). ×3 typed 1.49×; ×3 string 1.91×. Call-count ≤ 1 including 8-column `Inf`. Live `REPARK_PARITY_LIVE=1 pytest …test_nullability_2.py …test_csv_infer_perf_1.py` → **59 passed in 31.99 s**. |
+| C-005 | After: no per-column full materialization; 2× bar reported honestly at every measured width. | Wall pin; call-count pin; baseline. | **PROVEN** | Round 4: ×8 0.153/0.078 = **1.96×**. Call-count ≤ 1 including quoted-newline `multiLine`. Live → **71 passed in 32.93 s**. |
 | C-006 | Registry row FIXED with before/after; `docs/perf/csv-infer-baseline.md` + map row; every touched directory's `map.md` lockstep; no code comments added. | The files; the gates. | **PROVEN** | `CSV-INFER-PERF-1` under the reader section; `CSV-INFER-20DIGIT` DECLARED. `session.rs` 1002 → 988, CAP-1 exception retired. `reader.py` 1026 → 1022. |
 
 VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.

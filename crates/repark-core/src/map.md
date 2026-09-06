@@ -151,6 +151,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   without `nullValue` keeps DataFusion's 1000-row sample. Round 3: `utf8_columns`
   forces an all-Utf8 schema from the first local record (no second infer), so a
   `multiLine` re-read past 1000 records cannot raise on chunked record boundaries.
+  Round 4: a `multiLine` first read also uses that infer-free schema, so quoted
+  fields with embedded newlines infer at any record count.
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability

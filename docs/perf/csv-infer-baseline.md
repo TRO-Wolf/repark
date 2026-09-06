@@ -23,18 +23,18 @@ pins: csv-infer-perf-1/C-001, C-005, C-006
 
 ## Before / after (same fixture, release module)
 
-| cell | before (NULLABILITY-2 tree) | round 1 | round 2 | round 3 |
-|---|---:|---:|---:|---:|
-| `inferSchema=False` median total | 0.086 s | 0.083 s | 0.080 s | 0.077 s |
-| `inferSchema=True` median total | 2.339 s | 0.079 s | 0.153 s | **0.155 s** |
-| True / False | 27.2× | 0.95× | 1.90× | **2.01×** |
-| plan-time `to_arrow` / `collect` | 34 / 0 | 0 / 0 | 1 / 0 | **1 / 0** |
+| cell | before (NULLABILITY-2 tree) | round 1 | round 2 | round 3 | round 4 |
+|---|---:|---:|---:|---:|---:|
+| `inferSchema=False` median total | 0.086 s | 0.083 s | 0.080 s | 0.077 s | 0.078 s |
+| `inferSchema=True` median total | 2.339 s | 0.079 s | 0.153 s | 0.155 s | **0.153 s** |
+| True / False | 27.2× | 0.95× | 1.90× | 2.01× | **1.96×** |
+| plan-time `to_arrow` / `collect` | 34 / 0 | 0 / 0 | 1 / 0 | 1 / 0 | **1 / 0** |
 
 Round 3 (2026-09-06), same release native, five `read.csv`+`to_arrow` medians:
 
 | fixture | False | True | True/False | plan `to_arrow` |
 |---|---:|---:|---:|---:|
-| 300k × 8 (`i,d,nts,ots,dt,s,ni,b`, 28,630,418 B) | 0.077 s | 0.155 s | **2.01×** | 1 |
+| 300k × 8 (`i,d,nts,ots,dt,s,ni,b`, 28,630,418 B) | 0.078 s | 0.153 s | **1.96×** | 1 |
 | 300k × 3 typed (`i,d,nts`) | 0.097 s | 0.145 s | 1.49× | 1 |
 | 300k × 3 with string (`i,s,ni`) | 0.050 s | 0.096 s | 1.91× | 1 |
 
@@ -64,5 +64,5 @@ MAX infer — 13× on this box.
 ```
 cd python/repark && VIRTUAL_ENV=$PWD/../../.venv maturin develop --release
 # then the 300k fixture + five read.csv+to_arrow timings in
-# python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_true_stays_within_twice_false
+# python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second
 ```
