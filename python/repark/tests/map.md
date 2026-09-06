@@ -1912,9 +1912,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
 - `test_write_distribution_2.py` — **WRITE-DISTRIBUTION-2** (2026-09-06): the hash distribution
   rule on the partitioned stream write paths, through the facade over the WD1 seed shape at
-  `shuffle.partitions = 8`. Always-run: `INSERT OVERWRITE` and `MERGE ... WHEN NOT MATCHED THEN
-  INSERT` each commit exactly eight data files, one per value, with the row count and `sum(id)`
-  proving the row set is unchanged (the funnel alone wrote 32, four per value); a CTAS
+  `shuffle.partitions = 8` (the MERGE leg seeds 400,000 rows: at 120,000 the base funnel commits
+  8 and the pin would not bite). Always-run: `INSERT OVERWRITE` and `MERGE ... WHEN NOT MATCHED
+  THEN INSERT` each commit exactly eight data files, one per value, with the row count and
+  `sum(id)` proving the row set is unchanged (the funnel alone wrote 32, four per value); a CTAS
   `PARTITIONED BY (truncate(3, s))` over the parquet seed commits one file per truncated prefix.
   Live (`REPARK_PARITY_LIVE=1`): Spark 4.1.2 writes the same `(partition value, record_count)`
   layout for the overwrite and merge seeds. Plain `INSERT INTO` and `saveAsTable(mode="append")`

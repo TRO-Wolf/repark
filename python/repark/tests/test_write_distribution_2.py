@@ -19,6 +19,11 @@ PARTITION_VALUES = 8
 TRUNCATE_WIDTH = 3
 COLUMNS = "(id BIGINT, part INT, s STRING)"
 STATEMENTS = ("insert_overwrite", "merge_insert")
+MERGE_SEED_ROWS = 400_000
+
+
+def _seed_rows(statement: str) -> int:
+    return MERGE_SEED_ROWS if statement == "merge_insert" else SEED_ROWS
 
 
 def _rows(start: int, stop: int) -> pa.Table:
@@ -75,8 +80,9 @@ def _write_partitioned(engine: ReparkSession, statement: str) -> list[tuple[obje
     engine.sql(f"CREATE TABLE {table} {COLUMNS} USING iceberg PARTITIONED BY (part)")
     _write(engine, statement, table)
     rows = engine.sql(f"SELECT count(*) AS n, sum(id) AS s FROM {table}").to_arrow()
-    assert rows.column("n")[0].as_py() == SEED_ROWS
-    assert rows.column("s")[0].as_py() == SEED_ROWS * (SEED_ROWS - 1) // 2
+    total = _seed_rows(statement)
+    assert rows.column("n")[0].as_py() == total
+    assert rows.column("s")[0].as_py() == total * (total - 1) // 2
     return _layout(engine, table, "partition.part")
 
 
@@ -85,12 +91,12 @@ def test_stream_write_commits_one_data_file_per_partition_value(
     tmp_path: Path, statement: str
 ) -> None:
     """C-001: INSERT OVERWRITE and MERGE write Spark's eight files, one per value."""
-    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
+    source = _seed_files(tmp_path / "seed", _seed_rows(statement), SEED_FILES)
     engine = _session(f"writedist2-{statement}", tmp_path / "wh")
     try:
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
         layout = _write_partitioned(engine, statement)
-        per_value = SEED_ROWS // PARTITION_VALUES
+        per_value = _seed_rows(statement) // PARTITION_VALUES
         expected = [(value, per_value) for value in range(PARTITION_VALUES)]
         assert layout == expected, layout
     finally:
@@ -122,7 +128,7 @@ def test_stream_write_layout_matches_spark(tmp_path: Path, statement: str) -> No
     import _live_parity as live_parity
     from pyspark.sql import SparkSession
 
-    source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
+    source = _seed_files(tmp_path / "seed", _seed_rows(statement), SEED_FILES)
     engine = _session(f"writedist2-live-{statement}", tmp_path / "wh")
     try:
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
