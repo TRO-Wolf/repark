@@ -12,6 +12,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   300k × 8 True 2.339 s → 0.079 s (0.95× of False). `risk_tier: standard`.
   Branch `perf/csv-infer-perf-1`.
   pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [write-distribution-2-ledger.md](write-distribution-2-ledger.md) —
+  **WRITE-DISTRIBUTION-2 (2026-09-06), in flight:** the hash distribution rule on the
+  partitioned stream write paths — the funnel dispatcher routes each batch by hash of the
+  writer's partition values, so one value lands in one writer: `INSERT OVERWRITE` and MERGE
+  inserts go 32 → 8 data files (Spark's count) at 1e6. Plain `INSERT INTO` and
+  `saveAsTable(append)` stay at 64 — fork-owned, the halted question. Closes the WD1 review
+  gaps F-1 (mutation-proven cast pin), F-2 (partitioned abort pin) and F-4 (§8 counts). No
+  dependency, no spawn. `risk_tier: standard`. Branch `perf/write-distribution-2`.
+  pins: write-distribution-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under

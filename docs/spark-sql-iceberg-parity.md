@@ -4770,7 +4770,41 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (a partitioned CTAS at `shuffle.partitions = 8` writes 8 files with `first_row_id` tiling them,
   `bucket(4, id)` writes 4, NULL labels share one file; live: the same layout as Spark). The counts
   the old pins asserted (32 files over the four-file seed, 64 at 1e6) are quoted in the unit
-  ledger. Numbers and commands: `docs/perf/iceberg-write-baseline.md` §8.
+  ledger. Numbers and commands: `docs/perf/iceberg-write-baseline.md` §8. The stream write paths
+  this row left open are covered since 2026-09-06 by `WRITE-DISTRIBUTION-2`, except plain
+  `INSERT INTO`, which executes inside the fork.
+
+- **WRITE-DISTRIBUTION-2** — **FIXED 2026-09-06 (WRITE-DISTRIBUTION-2)**; surfaced 2026-09-06
+  (WRITE-DISTRIBUTION-1 critic). The hash distribution rule lived only under the CTAS node. The
+  partitioned stream funnel dealt whole batches round-robin, so every worker saw every partition
+  value: at `spark.sql.shuffle.partitions = 8` over the 1e6 bed `INSERT OVERWRITE` wrote **32**
+  files and `MERGE … WHEN NOT MATCHED THEN INSERT` wrote **32** where Spark writes **8** and
+  **8**. The fix routes each batch by hash of the writer's partition values in the dispatcher
+  (`write/distribution.rs::PartitionRouter`: the writer's own `PartitionValueCalculator` plus
+  `create_hashes` under DataFusion's seeded `REPARTITION_RANDOM_STATE`, one pass over the
+  one-shot stream, no spawn) and sends each part to its slot's worker. A `RepartitionExec` cannot
+  hang on these paths — the input is a one-shot `SendableRecordBatchStream` a node would
+  re-drive once per output — so the rule takes the dispatcher shape instead. **Measured
+  sequentially, base native then fixed native, 1e6 bed, three passes of five with the control in
+  the same passes, load 10–13 before and 6–16 after**: `insert_overwrite` **32 → 8** data files
+  (Spark's count) and **932.72 → 805.68 ms** best median (900.45 → 720.51 min), **8.59× → 7.38×**
+  of the `df.write.parquet(zstd)` control; `merge_insert` **32 → 8** files (892.42 → 796.63 ms
+  single pass); RSS peak on the overwrite cell 692–711 → 597–613 MB. The row set is invariant
+  (1,000,000 rows, `sum(id)` 499,999,500,000) and the MERGE, lineage and write-path suites stay
+  green unchanged. Live Spark 4.1.2 writes 8 files for every one of the four stream statements
+  over the same bed; the facade pins the overwrite and merge layouts against it. **Plain `INSERT
+  INTO` and `saveAsTable(mode="append")` still write 64** (32 on the four-file facade seed):
+  both execute inside the fork's `insert_into`, which RePark code never sees — an open fork ask,
+  the unit's halted question. The V3 serial lineage writer already runs one writer and is
+  untouched. Closes the three review gaps: the `truncate` cast carries a mutation-proven pin
+  (dropping it fails with the fork's `Unsupported data type for truncate transform: Utf8View`),
+  a late failure into a partitioned table leaves no data file, and §8 carries the measured
+  `_row_id`-map counts (1 manifest sequence; 3 / 4 / 4 maps at 3 / 4 / 8 partitions). Pins:
+  `crates/repark-iceberg/src/write/distribution.rs` (stream one value → one writer, determinism,
+  NULL values, a two-field spec, MERGE inserts through the MERGE entry, the truncate cast, the
+  partitioned abort) and `python/repark/tests/test_write_distribution_2.py` (overwrite and merge
+  write 8 files with the row set proved; a `truncate(3, s)` CTAS writes one file per prefix;
+  live: the same layouts as Spark). Numbers: `docs/perf/iceberg-write-baseline.md` §6 and §9.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
