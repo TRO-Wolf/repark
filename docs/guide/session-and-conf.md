@@ -299,16 +299,25 @@ Setting **both** on the same builder refuses too: same pool, ambiguous initial s
 |---|---|---|
 | `repark.iceberg.metadataCache` | `repark.iceberg.metadata_cache` | session-scoped metadata-document cache (default `true`) |
 | `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound, cleared at the statement door (default `512`) |
-| `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `0` = off; set bytes to opt in — `33554432` is the measured value) |
+| `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `33554432` = on; `0` disables) |
 
 All three are build-time and memory-catalog-only. A bad value fails loud inside
 `getOrCreate()`, naming both the key set and the canonical spelling. The manifest
-budget sizes the fork's shared `ObjectCache`: with the knob set, a repeated read opens
-no manifest-list and no manifest at all. The default is off because the shared cache
-serves wrong-context lineage on v2→v3 upgrade-boundary tables until the fork's cache
-key carries the assignment input (`PERF-CATALOG-LINEAGE-CACHE-1` / `F-CATIO-KEY`); the
-default-ON flip is a follow-up unit. Numbers and the commit-side scope live in
-[../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §5.
+budget sizes the fork's shared `ObjectCache`: on a default session a repeated read opens
+no manifest-list and no manifest at all. The default is on since PERF-ICE-CATALOG-IO-3
+(2026-09-05): RP-13 landed the fork key fix first (`F-CATIO-KEY` — the cache stores the
+context-free parse and applies each caller's lineage per read), so upgrade-boundary
+tables serve assigned lineage with the cache on. To turn the cache off, set the key to
+`"0"`. The 32 MiB is the fork's estimated manifest weight per memory catalog (one shared
+cache per catalog handle; the fork enforces it with moka `max_capacity`), not a
+resident-bytes ceiling — a cached small manifest+list measures several KB resident
+against ~1 KiB charged (the file bytes alone are ≥ 5× the charge), and a session that
+fills the whole 32 MiB budget (32,768 small tables) held about 617 MB resident against
+about 339 MB with the cache off. Size the budget to the working set: a budget far under it
+churns, so a second pass over 2,000 tables at 128 KiB costs what explicit `"0"` costs
+(8.1 s vs 8.2 s, against 5.6 s cached); below ~1 MiB prefer `"0"`. Numbers and the
+commit-side scope live in
+[../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §6.
 
 ## `repark.display.style` — a repark extra
 
