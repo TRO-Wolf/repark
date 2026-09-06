@@ -3211,6 +3211,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `conftest.py`'s session-scoped `spark_engine`, so it still co-collects and co-runs with
   `test_live_disclosure_still_diverges` in one JVM. Every pin in the unit's file was inverted under at least
   one mutation before the unit closed; the knobs and their counts are in the unit ledger.
+  The module docstring is the one-line form the comment rule allows; the file's purpose and
+  history live in this row.
   pins: fnp-9-collections-json/C-002, C-003, C-004, C-005, C-006, C-009
 
 - `test_examples_functions_a.py` — EX-25 §7 pins. **FNP-9/10 (2026-09-05):**
