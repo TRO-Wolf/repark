@@ -1,9 +1,4 @@
-"""Divergence pins for the EX-28 F.* scalar remainder.
-
-Registry §7 rows EX-FN-20 and EX-FN-21.
-
-pins: ex-28-scalar-remainder/C-006
-"""
+"""Divergence pins for the EX-28 F.* scalar remainder."""
 
 from __future__ import annotations
 

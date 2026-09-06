@@ -227,8 +227,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
   the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
   refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
-  BACKLOG ARM on a covered name). Both pin at call time. The module docstring
-  names the row span `EX-FN-20`…`EX-FN-21`.
+  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
+  `EX-FN-20` and `EX-FN-21`.
   pins: ex-28-scalar-remainder/C-006
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
