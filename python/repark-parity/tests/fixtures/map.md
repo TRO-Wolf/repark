@@ -11,6 +11,9 @@ inputs. No home-directory paths, no secrets.
 - [sepmo_usage/](sepmo_usage/map.md) — sanitized worker run directories for
   `test_sepmo_usage.py`.
   pins: sepmo-e0-e1/C-007
+- [sepmo_packets/](sepmo_packets/map.md) — sanitized campaign briefs and v1
+  packets for `test_sepmo_packet.py`.
+  pins: sepmo-e2/C-005
 
 ## Pointers
 

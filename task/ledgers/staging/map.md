@@ -5,6 +5,38 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ex-27-ml-ledger.md](ex-27-ml-ledger.md) —
+  **EX-27 (2026-09-05, round 2 2026-09-06), in flight:** the v1.1 example
+  backfill's `ml.*` family — the 28-name roster at base `282607f5`; all 28 names
+  covered by five `docs/examples/ml/` files (backlog 164 → 136). Round 2
+  re-measured every oracle cell on live PySpark 4.1.2, including the
+  session-level cells round 1 printed as "equal" without collecting. Nine §7
+  rows (EX-ML-1..9) pin the diverged arms, with nine tests in
+  `test_examples_ml.py`. Mixins are taught only through concrete stages.
+  `risk_tier: standard`. Branch `docs/ex-27-ml`.
+  pins: ex-27-ml/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
+  `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
+  `drop_null_lists=True` dropped `user_properties`. FIX: `promote_parquet_null_types`
+  in `read_parquet_nullable` maps Arrow `Null` to `Int32` after the nullability relax.
+  Default `drop_null_lists` stays True; SQL `make_array()` still drops. Live
+  `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
+  NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [sepmo-e2-ledger.md](sepmo-e2-ledger.md) —
+  **SEPMO-E2 (2026-09-06), in flight, round 3:** compact role packets. Packet
+  format v1 (eight field groups, stable prefix then dynamic, source identity,
+  version), assembler `scripts/sepmo_packet.py` plus
+  `scripts/sepmo_packet_extract.py` (`build` / `check` / `diff`), three
+  converted campaign briefs as fixtures plus two prefix-only briefs,
+  constraint-preservation tests (sidecar `STABLE_RULES` equality, trailer,
+  re-render, `bash -n` through `build`/`check`, unbackticked boundary paths
+  through `build`, prefix-negating phrases), and a baseline table against E-0
+  cached/uncached ratios with no token-savings claim. Adoption proposal names
+  `--brief` / `--followup`. `risk_tier: standard`. Branch
+  `sepmo/e2-compact-packets`.
+  pins: sepmo-e2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
   collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
