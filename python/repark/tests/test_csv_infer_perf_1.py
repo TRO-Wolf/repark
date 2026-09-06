@@ -628,6 +628,109 @@ def test_multiline_quoted_newlines_infer_schema_at_any_count(
         session.stop()
 
 
+@pytest.mark.parametrize("rows", [5, 400, 1001, 5000, 20000])
+@pytest.mark.parametrize("embedded", [True, False])
+def test_multiline_int_then_true_stays_string(tmp_path: Path, rows: int, embedded: bool) -> None:
+    if embedded:
+        path = _write_quoted_newline_csv(tmp_path / f"qn_true_{rows}.csv", rows, "true")
+        v_name = "v"
+        expected_last = "true"
+    else:
+        path = _write_repeated(tmp_path / f"ml_true_{rows}.csv", "id,v", "1,1", "1,true", rows=rows)
+        v_name = "v"
+        expected_last = "true"
+    session = _session()
+    try:
+        frame = _read_inferred(session, path, multiline=True)
+        frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        assert dict(frame.dtypes)[v_name] == "string"
+        assert dict(sql_frame.dtypes)[v_name] == "string"
+        assert frame.to_arrow().to_pylist()[-1][v_name] == expected_last
+        assert sql_frame.to_arrow().to_pylist()[-1][v_name] == expected_last
+        if embedded:
+            assert frame.to_arrow().to_pylist()[-1]["note"] == "line1\nline2"
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("multiline", [False, True])
+@pytest.mark.parametrize(
+    ("name", "text", "v_dtype", "rows"),
+    [
+        (
+            "zeros_ones",
+            "id,v\n1,0\n2,1\n3,0\n",
+            "bigint",
+            [{"id": 1, "v": 0}, {"id": 2, "v": 1}, {"id": 3, "v": 0}],
+        ),
+        (
+            "t_f",
+            "id,v\n1,t\n2,f\n",
+            "string",
+            [{"id": 1, "v": "t"}, {"id": 2, "v": "f"}],
+        ),
+        (
+            "yes_no",
+            "id,v\n1,yes\n2,no\n",
+            "string",
+            [{"id": 1, "v": "yes"}, {"id": 2, "v": "no"}],
+        ),
+        (
+            "TRUE_False",
+            "id,v\n1,TRUE\n2,False\n",
+            "boolean",
+            [{"id": 1, "v": True}, {"id": 2, "v": False}],
+        ),
+        (
+            "space_true",
+            "id,v\n1, true\n2,true\n",
+            "string",
+            [{"id": 1, "v": " true"}, {"id": 2, "v": "true"}],
+        ),
+        (
+            "ones_then_true",
+            "id,v\n1,1\n2,1\n3,true\n",
+            "string",
+            [{"id": 1, "v": "1"}, {"id": 2, "v": "1"}, {"id": 3, "v": "true"}],
+        ),
+    ],
+)
+def test_csv_boolean_literal_grammar_matches_spark(
+    tmp_path: Path,
+    multiline: bool,
+    name: str,
+    text: str,
+    v_dtype: str,
+    rows: list[dict[str, Any]],
+) -> None:
+    path = _write_text(tmp_path / f"bool_{name}_{int(multiline)}.csv", text)
+    session = _session()
+    try:
+        frame = _read_inferred(session, path, multiline=multiline)
+        frame.createOrReplaceTempView("csv_inferred")
+        sql_frame = session.sql("SELECT * FROM csv_inferred")
+        expected = [("id", "bigint"), ("v", v_dtype)]
+        assert frame.dtypes == expected
+        assert sql_frame.dtypes == expected
+        assert frame.to_arrow().to_pylist() == rows
+        assert sql_frame.to_arrow().to_pylist() == rows
+    finally:
+        session.stop()
+
+
+def test_header_embedded_newline_raises_until_record_aware_scan(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "hdr_nl.csv", 'id,"no\nte",v\n1,a,2\n')
+    session = _session()
+    try:
+        with pytest.raises(Exception, match="incorrect number of fields"):
+            _read_inferred(session, path, multiline=True).to_arrow()
+        with pytest.raises(Exception, match="incorrect number of fields"):
+            _read_inferred(session, path, infer_schema=False, multiline=True).to_arrow()
+    finally:
+        session.stop()
+
+
 def test_utf8_columns_user_option_does_not_force_string(tmp_path: Path) -> None:
     path = _write_text(tmp_path / "u.csv", "v\n2\n")
     session = _session()
@@ -759,5 +862,47 @@ def test_live_late_and_grammar_shapes_match_oracle(tmp_path: Path, spark_engine:
             repark_oops.to_arrow().to_pylist()[-1]
             == spark_engine.arrow_of(spark_oops).to_pylist()[-1]
         )
+        quoted_true = _write_quoted_newline_csv(tmp_path / "live_qn_true.csv", 1001, "true")
+        repark_true = _read_inferred(session, quoted_true, multiline=True)
+        spark_true = _read_inferred(spark_engine.session, quoted_true, multiline=True)
+        assert repark_true.dtypes[2][1] == "string"
+        assert spark_true.dtypes[2][1] == "string"
+        assert repark_true.to_arrow().to_pylist()[-1]["v"] == "true"
+        assert (
+            repark_true.to_arrow().to_pylist()[-1]
+            == spark_engine.arrow_of(spark_true).to_pylist()[-1]
+        )
+        ml_true = _write_repeated(tmp_path / "live_ml_true.csv", "id,v", "1,1", "1,true", rows=1001)
+        repark_ml_true = _read_inferred(session, ml_true, multiline=True)
+        spark_ml_true = _read_inferred(spark_engine.session, ml_true, multiline=True)
+        assert repark_ml_true.dtypes[1][1] == "string"
+        assert spark_ml_true.dtypes[1][1] == "string"
+        assert (
+            repark_ml_true.to_arrow().to_pylist()[-1]
+            == spark_engine.arrow_of(spark_ml_true).to_pylist()[-1]
+        )
+        grammar = [
+            ("zeros_ones", "id,v\n1,0\n2,1\n3,0\n", "bigint"),
+            ("t_f", "id,v\n1,t\n2,f\n", "string"),
+            ("yes_no", "id,v\n1,yes\n2,no\n", "string"),
+            ("TRUE_False", "id,v\n1,TRUE\n2,False\n", "boolean"),
+            ("space_true", "id,v\n1, true\n2,true\n", "string"),
+        ]
+        for name, text, v_dtype in grammar:
+            gpath = _write_text(tmp_path / f"live_bool_{name}.csv", text)
+            repark_g = _read_inferred(session, gpath, multiline=True)
+            spark_g = _read_inferred(spark_engine.session, gpath, multiline=True)
+            assert dict(repark_g.dtypes)["v"] == v_dtype
+            spark_v = spark_g.dtypes[1][1]
+            if v_dtype == "bigint":
+                assert spark_v in {"int", "bigint"}
+            else:
+                assert spark_v == v_dtype
+            assert repark_g.to_arrow().to_pylist() == spark_engine.arrow_of(spark_g).to_pylist()
+        header_nl = _write_text(tmp_path / "live_hdr_nl.csv", 'id,"no\nte",v\n1,a,2\n')
+        spark_hdr = _read_inferred(spark_engine.session, header_nl, multiline=True)
+        assert spark_hdr.columns == ["id", "no\nte", "v"]
+        with pytest.raises(Exception, match="incorrect number of fields"):
+            _read_inferred(session, header_nl, multiline=True).to_arrow()
     finally:
         session.stop()

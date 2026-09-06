@@ -1,6 +1,24 @@
 # Unit ledger — CSV-INFER-PERF-1 · CSV `inferSchema` without per-candidate materialization
 
 **Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
+`bdd55df0` (round 5; round 4 `bdd55df0`) · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+**Registry:** `CSV-INFER-PERF-1` **FIXED**. `CSV-INFER-20DIGIT` **DECLARED**. `CSV-INFER-HEADER-NEWLINE` **DECLARED**.
+
+## Round 5 — critic FAIL dispositions (2026-09-06)
+
+Round-4 critic (Muse Spark 1.3) FAIL. One S1: `multiLine` full-candidate promotion treated
+`"1"` as boolean (`try_cast`), so `1`…`true` inferred `boolean` all-true vs Spark `string`.
+
+| id | sev | disposition |
+|---|---|---|
+| R4-S1 | S1 | **FIXED.** Boolean candidacy in `_promote_csv_string_types` accepts only `true`/`false` (case-insensitive). Pins: int-then-true → string at 5/400/1001/5000/20000, embedded and single-line `multiLine`, both doors; `0`/`1`, `t`/`f`, `yes`/`no`, `TRUE`/`False`, ` true` on both routes. |
+| R4-S3a | S3 | **DECLARED.** `CSV-INFER-HEADER-NEWLINE`: `id,"no\\nte",v` raises from the line-based first-record schema read; Spark keeps `no\\nte`. Pin reds when repark answers Spark's header. Pre-existing on main. |
+| R4-S4a | S4 | **RESTATED.** `make py-test-facade` this run: **5321 passed, 252 skipped** (pyspark uninstalled by `uv sync` without `record`; critic's 5337/239 had pyspark). +23 vs round-4 5298 is the new boolean-grammar and header pins. |
+
+---
+
+**Date:** 2026-09-06 · **Branch:** `perf/csv-infer-perf-1` · **Base:** `origin/main`
 `195d6bee` (round 4; round 3 `58e09f3e` + merge `195d6bee`) · **Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `CSV-INFER-PERF-1` **FIXED**. `CSV-INFER-20DIGIT` **DECLARED**.
@@ -95,8 +113,8 @@ dependency lists, completed ledgers.
 | C-002 | The cheapest correct shape is sampled native inference plus one full-file `try_cast` validation of typed columns (infer-free Utf8 re-read, widen-or-keep); leftover native-Utf8 numeric grammar at every width in that same aggregation; `nullValue` still all-Utf8 promote. | The code path; §2. | **PROVEN** | Round 2 width gate refuted (R2-S1a). Round 3: leftover at every width, one agg, `to_arrow` = 1. ×8 True 0.155 s / **2.01×**. MAX infer 13× not kept. |
 | C-003 | Every existing pin in `test_nullability_2.py` and `test_cutover_schema_1.py` stays green unchanged. | Those files, no assertion edits. | **PROVEN** | `pytest python/repark/tests/test_nullability_2.py python/repark/tests/test_cutover_schema_1.py -q` — 40 passed with the new file, 0 failed. Offset / Z / date / `nullValue` cells unchanged. |
 | C-004 | The critic's 19 shapes are re-run against live PySpark 4.1.2; shapes the suite lacked are added as pins on the DataFrame door and the temp-view SQL door (`csv.\`path\`` does not exist). ≥1 pin per class at ≥1001 rows. | `test_csv_infer_perf_1.py`; live leg. | **PROVEN** | Round 1 2–3-row pins refuted (F-5). Round 2: 1001-row class pins (late double/bad-int/true/NA/bad-double/bad-date/slash-date/US-date-in-ts/clock-in-date) plus `date_bad_day`, `header=False` offset NY, Inf/NaN/Infinity/+5/23-digit, utf8_columns ignored, path not stored, void→string, 20-digit DECLARED. SQL door is `createOrReplaceTempView` + `SELECT *`. |
-| C-005 | After: no per-column full materialization; 2× bar reported honestly at every measured width. | Wall pin; call-count pin; baseline. | **PROVEN** | Round 4: ×8 0.153/0.078 = **1.96×**. Call-count ≤ 1 including quoted-newline `multiLine`. Live → **71 passed in 32.93 s**. |
-| C-006 | Registry row FIXED with before/after; `docs/perf/csv-infer-baseline.md` + map row; every touched directory's `map.md` lockstep; no code comments added. | The files; the gates. | **PROVEN** | `CSV-INFER-PERF-1` under the reader section; `CSV-INFER-20DIGIT` DECLARED. `session.rs` 1002 → 988, CAP-1 exception retired. `reader.py` 1026 → 1022. |
+| C-005 | After: no per-column full materialization; 2× bar reported honestly at every measured width. | Wall pin; call-count pin; baseline. | **PROVEN** | Round 5: ×8 0.279/0.157 = **1.78×**. Call-count ≤ 1. Boolean grammar is token-equal, not a second agg. Live → **94 passed in 37.55 s**. |
+| C-006 | Registry row FIXED with before/after; `docs/perf/csv-infer-baseline.md` + map row; every touched directory's `map.md` lockstep; no code comments added. | The files; the gates. | **PROVEN** | `CSV-INFER-PERF-1` under the reader section; `CSV-INFER-20DIGIT` and `CSV-INFER-HEADER-NEWLINE` DECLARED. `session.rs` 1002 → 988, CAP-1 exception retired. `reader.py` 1026 → 1022. |
 
 VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 

@@ -152,7 +152,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   forces an all-Utf8 schema from the first local record (no second infer), so a
   `multiLine` re-read past 1000 records cannot raise on chunked record boundaries.
   Round 4: a `multiLine` first read also uses that infer-free schema, so quoted
-  fields with embedded newlines infer at any record count.
+  fields with embedded newlines infer at any record count. Round 5: an embedded
+  newline inside the header still raises (line-based first-record read);
+  DECLARED `CSV-INFER-HEADER-NEWLINE`.
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability

@@ -384,7 +384,11 @@ def _promote_csv_string_types(
         for type_name in type_names:
             fail_alias = f"c{column_index}_fail_{type_name}"
             fail_aliases.append((name, type_name, fail_alias))
-            failed = (F.col(name).isNotNull()) & (F.col(name).try_cast(type_name).isNull())
+            if type_name == "boolean":
+                token = F.lower(F.col(name).cast("string"))
+                failed = (F.col(name).isNotNull()) & (token != "true") & (token != "false")
+            else:
+                failed = (F.col(name).isNotNull()) & (F.col(name).try_cast(type_name).isNull())
             aggregates.append(F.sum(F.when(failed, 1).otherwise(0)).alias(fail_alias))
 
     stats = frame.agg(*aggregates).to_arrow()

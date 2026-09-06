@@ -346,6 +346,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
   `_promote_csv_string_types` (optional leftover-candidate list; last docstring line restored).
+  Round 5 re-hashed `_promote_csv_string_types` (boolean fail is Spark `true`/`false` tokens,
+  not Arrow `try_cast`).
   pins: csv-infer-perf-1/C-002, C-005
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
@@ -528,6 +530,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_infer_schema_true_stays_within_twice_false` →
   `test_infer_schema_true_stays_under_half_second` (declared rename; 0.5 s regression
   guard matching the assertion).
+  **Round 5:** boolean promotion accepts only `true`/`false` (case-insensitive);
+  `1` then `true` stays string at 5/400/1001/5000/20000 records, embedded and
+  single-line `multiLine`, both doors; `0`/`1`, `t`/`f`, `yes`/`no`, `TRUE`/`False`,
+  ` true` match Spark on both routes. Header embedded newline raises
+  (`CSV-INFER-HEADER-NEWLINE` DECLARED; pin reds when the first-record schema
+  read becomes record-aware).
   pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
