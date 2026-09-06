@@ -2795,6 +2795,39 @@ the pin rather than obeying it.
   precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
   **Contents are unaffected.**
 
+### RDF-SCHEMA-EVO-1 — `rewrite_data_files` after schema evolution reads old files under the old schema and refuses
+
+- **repark** — **BACKLOG.** Owner defect (2026-09-06, S3 Tables,
+  `s3tables.testing_ns.repark_mor_testing_table`): after `ADD COLUMN` (7 → 8 columns) and
+  `ADD PARTITION FIELD`, `CALL s3tables.system.rewrite_data_files` raised `DataInvalid,
+  context: { batch_columns: 7, expected_columns: 8 } => Partition source batch width does not
+  match the table schema the partition calculator was built from`. Reproduced on a local
+  warehouse at fork pin `8bc325a3`: compaction plans its read tasks under the snapshot-pinned
+  old schema while the partition calculator and writer build on the current schema, so every
+  evolved shape with no later write refuses — add (+spec) 7v8, add-only 7v8, drop 7v6, rename
+  (`qty` vs `quantity`), INT→BIGINT promotion (parquet writer Int64-vs-Int32), v3 with a
+  deletion vector 9v10/4v5. A post-evolution write re-pins the snapshot schema and self-heals.
+  The fix is fork-side (`fix/rdf-schema-evo-1`, `8ef7ef5b`: tasks re-pointed at the current
+  schema with the full current projection; old partition tuples widened int→long /
+  float→double at manifest commit); the pins below are red on `8bc325a3` and green on the
+  local fork. This row flips when the orchestrator bumps the pin after the fork PR merges.
+- **Apache Spark** — the same shapes on live PySpark 4.1.2 + Iceberg 1.11.0 (`local[2]`, ANSI
+  on) all succeed: owner add+spec 6 files → 3 (buckets 0:3, 3:2, 2:1), add-only unpartitioned
+  6 → 1, partitioned add-only 6 → 1, drop 6 → 3, rename 6 → 3, non-partition promotion 6 →
+  1, partition-source promotion 6 → 1, v3 5 → 3 with the deleted row gone. Old rows carry
+  NULL for added columns; renames and promotions keep every value. `rewrite_manifests` and
+  `rewrite_position_delete_files` on the evolved table return Spark's zeros.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-06, re-run by the
+  pinning session; cells in `task/ledgers/staging/rdf-schema-evo-1-ledger.md` §7.)*
+- **Pin** —
+  `python/repark/tests/test_rdf_schema_evo_1.py` (11 pins: the seven red shapes, the
+  unpartitioned-add-only and post-evolution-write controls, the `rewrite_position_delete_files`
+  and `rewrite_manifests` characterizations).
+- **Rationale** — BACKLOG until the pin bump: no RePark production code changes in this unit.
+  The v3 pin records one standing fork semantic, not a regression: RePark rewrites the
+  fully-DV-deleted sixth file too (6/3/1 where Spark reports 5/3/0) and drops its DV in the
+  same commit (F-16); rows and the surviving file multiset equal Spark's.
+
 ### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
 
 - **repark** — `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table whose predicate matches

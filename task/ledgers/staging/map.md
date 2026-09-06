@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) —
+  **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
+  the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,
+  rename, INT→BIGINT promotion and v3-with-DV, each with no later write, and measured on
+  live PySpark 4.1.2. Eleven facade pins red on `8bc325a3`, green on fork
+  `fix/rdf-schema-evo-1` (`8ef7ef5b`); the registry row flips BACKLOG → FIXED when the
+  orchestrator bumps the pin. No RePark production code, no dependency move.
+  `risk_tier: standard`. Branch `fix/rdf-schema-evo-1`.
+  pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
