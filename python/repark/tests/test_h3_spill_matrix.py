@@ -257,7 +257,7 @@ try:
     out["outcome"] = "ok"
 except BaseException as error:
     out["outcome"] = "error"
-    out["message"] = (type(error).__name__ + ": " + str(error))[:400]
+    out["message"] = (type(error).__name__ + ": " + str(error))[:900]
 out["peak_rss_bytes"] = peak_rss_bytes()
 print(json.dumps(out))
 """
@@ -336,6 +336,7 @@ def test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_e
     assert "datafusion.runtime.memory_limit" in message, result
     assert "a Rust panic was caught" not in message, result
     assert "partition not used yet" not in message, result
+    assert "the bounded memory pool refused this plan" in message, result
     control = _run_worker("nested_loop_join", "1G", 1_000_000)
     assert control["outcome"] == "ok", control
 

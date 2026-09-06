@@ -17,7 +17,10 @@ use crate::fence::{fence_stream_poll, fenced_panic_detail};
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
-const REFUSAL_CONTAINMENT_NOTE: &str = "REPARK: the bounded memory pool refused this plan and the engine's spill fallback did not      survive the refusal; this is the refusal that caused it.";
+const REFUSAL_CONTAINMENT_NOTE: &str = concat!(
+    "REPARK: the bounded memory pool refused this plan; the engine did not survive that ",
+    "refusal, so repark reports the refusal itself."
+);
 
 #[derive(Debug)]
 struct ContainedPoolRefusal(String);

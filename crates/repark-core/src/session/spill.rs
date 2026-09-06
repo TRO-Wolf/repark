@@ -10,7 +10,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use repark_common::{Error, Result};
 
 use crate::engine_err;
-use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool};
+use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool, pool_refusal_log};
 
 /// Bytes in one GiB (the `memory_limit_gb` conversion unit).
 pub(crate) const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
@@ -210,9 +210,13 @@ pub(crate) fn maybe_apply_runtime_set(
 fn swap_fair_spill_pool(context: &SessionContext, pool_bytes: Option<usize>) -> Result<()> {
     let state_lock = context.state_ref();
     let mut state = state_lock.write();
+    let carried = pool_refusal_log(state.runtime_env().memory_pool.as_ref()).unwrap_or_default();
     let mut builder = RuntimeEnvBuilder::from_runtime_env(state.runtime_env());
     builder = match pool_bytes {
-        Some(bytes) => builder.with_memory_pool(Arc::new(FairSpillPool::new(bytes))),
+        Some(bytes) => builder.with_memory_pool(Arc::new(RefusalRecordingPool::new(
+            Arc::new(FairSpillPool::new(bytes)),
+            carried,
+        ))),
         None => builder.with_memory_pool(Arc::new(UnboundedMemoryPool::default())),
     };
     let runtime = builder.build().map_err(engine_err)?;

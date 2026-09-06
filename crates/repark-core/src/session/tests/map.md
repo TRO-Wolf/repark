@@ -18,7 +18,9 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 - `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** the wiring pins. A bounded
   `build()` installs a pool that still reports `MemoryLimit::Finite` and now carries a refusal
   log that starts at zero and counts the session's own refusal; `memory_limit_bytes(0)` installs
-  no log, so the containment cannot fire on an unbounded session.
+  no log, so the containment cannot fire on an unbounded session. Two more hold the SET path:
+  a runtime resize keeps the very same log (`Arc::ptr_eq`) and the new pool records into it,
+  and a runtime `= '0'` drops the log with the pool.
   pins: h3-spill-residue-1/C-002
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway

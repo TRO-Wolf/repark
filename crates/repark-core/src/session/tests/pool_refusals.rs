@@ -43,3 +43,53 @@ async fn an_unbounded_session_installs_no_refusal_log() {
         "opting out of the pool opts out of the containment"
     );
 }
+
+#[tokio::test]
+async fn a_runtime_pool_resize_keeps_the_refusal_log_alive() {
+    let session = ReparkSession::builder()
+        .memory_limit_bytes(64 * 1024 * 1024)
+        .build()
+        .expect("a 64 MiB pool builds");
+    let before = Arc::clone(&session.context().runtime_env().memory_pool);
+    let carried = pool_refusal_log(before.as_ref()).expect("the build-time pool carries a log");
+
+    session
+        .sql("SET datafusion.runtime.memory_limit = '8M'")
+        .await
+        .expect("the runtime resize applies");
+
+    let after: Arc<dyn MemoryPool> = Arc::clone(&session.context().runtime_env().memory_pool);
+    assert!(
+        matches!(after.memory_limit(), MemoryLimit::Finite(bytes) if bytes == 8 * 1024 * 1024),
+        "the swap installed the new size"
+    );
+    let survivor = pool_refusal_log(after.as_ref()).expect("the swapped pool still records");
+    assert!(
+        Arc::ptr_eq(&survivor, &carried),
+        "one log per session, carried across the swap — the facade forwards the builder key as a \
+         runtime SET, so a fresh log here would disarm the containment on every bounded session"
+    );
+
+    let reservation = MemoryConsumer::new("probe").register(&after);
+    reservation
+        .try_grow(64 * 1024 * 1024)
+        .expect_err("64 MiB does not fit an 8 MiB pool");
+    assert_eq!(carried.refusals(), 1, "the carried log sees the new pool");
+}
+
+#[tokio::test]
+async fn a_runtime_opt_out_drops_the_refusal_log_with_the_pool() {
+    let session = ReparkSession::builder()
+        .memory_limit_bytes(64 * 1024 * 1024)
+        .build()
+        .expect("a 64 MiB pool builds");
+    session
+        .sql("SET datafusion.runtime.memory_limit = '0'")
+        .await
+        .expect("the opt-out applies");
+    let after: Arc<dyn MemoryPool> = Arc::clone(&session.context().runtime_env().memory_pool);
+    assert!(
+        pool_refusal_log(after.as_ref()).is_none(),
+        "an unbounded pool has nothing to refuse"
+    );
+}
