@@ -60,6 +60,30 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`WRITE-GROUPING-CTAS-1`); a failed write into a fresh table deletes every data file it made. `risk_tier: elevated`. Branch `perf/ice-writepath-1`.
   pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011
+- [h3-spill-residue-1-ledger.md](h3-spill-residue-1-ledger.md) —
+  **H3-SPILL-RESIDUE-1 (2026-09-06), in flight:** the two Never-OOM failure shapes H3-SPILL-1
+  filed and did not fix. `collect()` under an `RLIMIT_AS` ceiling now raises `MemoryError`:
+  every CPython allocation on the row fast path goes through `Bound::from_owned_ptr_or_err`,
+  because pyo3's safe constructors reach `assume_owned` and panic on NULL **even where the
+  signature returns `PyResult`** — and that panic consumes the `MemoryError` on its way out, so
+  catching it later cannot recover it. A nested-loop join at a bounded pool now refuses with the
+  same typed exception every other operator gives: a bounded session's `FairSpillPool` is wrapped
+  in `RefusalRecordingPool`, and the Arrow reader reports a fenced panic that a recorded refusal
+  caused as that refusal. The DataFusion defect behind it is **upstream and still open** — 54.1's
+  `NestedLoopJoinExec` re-executes partition 0 of its build child on the OOM fallback path — and
+  the issue text is in the ledger; no dependency changed. Measured before and after on release
+  modules: the matrix's only `internal_error` cell is `clean_error` 3/3, the other 17 operators
+  at 8 MiB are identical cell for cell, and the `collect` happy path's two five-run distributions
+  overlap. **Round 2 (2026-09-06)** answered five critic findings, one of them S1: the containment
+  rule was unbounded — an injected `index out of bounds` panic after one refusal came back as a
+  pool refusal — so a fourth gate now requires the payload to be one DataFusion 54.1 can reach on
+  its refusal and spill-fallback paths, cited line by line. The scope claim was corrected rather
+  than the code: the refusal log is session-scoped, not per-stream, and cannot be per-stream. Two
+  more honest-limits disclosures landed: a contained refusal still prints 4 panic blocks to
+  stderr, and `toPandas()` under a 64 MiB address-space headroom aborts the process where
+  `collect()` raises `MemoryError`. Seven mutations, seven kills. `risk_tier: elevated`.
+  Branch `harden/h3-spill-residue-1`, PR #401.
+  pins: h3-spill-residue-1/C-001, C-002, C-003, C-004, C-005
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory

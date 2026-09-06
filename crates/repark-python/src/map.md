@@ -19,9 +19,9 @@ and hand execution, SQL, and ML semantics to the engine crates.
 |---|---|
 | [`lib.rs`](lib.rs) | Module registration, error conversion, and tracing setup. |
 | [`allocator.rs`](allocator.rs) | Optional mimalloc allocator for wheel builds. |
-| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). Round 3 (2026-09-05): `coerce_batch_views` casts any analyzed-vs-physical mismatch under safe Arrow cast options — a per-batch copy; non-string mismatches either widen losslessly or refuse loud (see the two coercion pins). The four `StreamingBatchReader` comments moved here verbatim from `dataframe.rs`. |
+| [`arrow_export.rs`](arrow_export.rs) | Arrow C Stream export boundary: coerces Utf8View to Utf8 so `collect`/`to_arrow` read Spark-equal string types (CUTOVER-SCHEMA-1, 2026-09-04). Round 3 (2026-09-05): `coerce_batch_views` casts any analyzed-vs-physical mismatch under safe Arrow cast options — a per-batch copy; non-string mismatches either widen losslessly or refuse loud (see the two coercion pins). The four `StreamingBatchReader` comments moved here verbatim from `dataframe.rs`. **H3-SPILL-RESIDUE-1 (2026-09-06):** the reader carries the session's `PoolRefusalLog` (`with_refusals`, fed by `refusal_log`) and the refusal count it read at open. `as_pool_refusal` replaces the internal-error report with the engine's own `Resources exhausted` text plus one disclosure line, and logs the contained panic detail at `warn` on `repark::spill`, behind **four** gates: the item is a fenced panic; its payload is on `CONTAINABLE_PANIC_PAYLOADS`; the session's pool recorded a refusal since the reader opened; and the session is bounded at all (an unbounded one installs no log). Each gate has its own pin, and the allow-list is pinned in both directions — the NLJ payload is contained, an injected `index out of bounds` after the same refusal is still the bug report. **Round 2 (2026-09-06)** added the allow-list after the critic showed the first three gates dressed an unrelated panic up as a pool refusal. Its entries are the panics DataFusion 54.1 can reach *on the pool-refusal and spill-fallback paths*, each read from the vendored source: `partition not used yet` (`repartition/mod.rs:1277`), `at least one spill reader should exist` (`:1333`) and `at least one receiver should exist` (`:1339`) — all three in the same `execute` body whose second call is the defect; and from `joins/nested_loop_join.rs`'s memory-limited fallback, `right_data must be present` (`:1441`, `:1446`, `:1695`, `:1936`, `:2458`), `left_stream must be set after spill future resolves` (`:1566`), `left_schema must be set` (`:1631`, `:1965`), `right bitmap should be available` (`:1795`) and `without Active spill state` (`:1531`, `:1919`). A payload NOT on the list is left as the bug report it is, which is the point. The list's own pin asserts it is non-empty before iterating — an empty list would otherwise make that loop vacuously green, which the M-6 mutation caught. The scope is the SESSION's pool, not this stream's allocations — `MemoryPool` has no per-stream identity, so a refusal another query on the same session caused would also arm the rewrite; the allow-list is what keeps that bounded. The disclosure line is a `concat!` rather than a `\`-continued literal: rustfmt folds the continuation onto one line and leaves the indent's spaces inside the string. pins: h3-spill-residue-1/C-002, C-004 |
 | [`exceptions.rs`](exceptions.rs) | PySpark-shaped exception types. |
-| [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. |
+| [`fence.rs`](fence.rs) | Panic fences for PyO3 methods and Arrow stream polls. `fenced_panic_detail` tells a fenced panic apart from an ordinary stream error by downcasting the Arrow external error, which is what lets `arrow_export.rs` rewrite only the panics. pins: h3-spill-residue-1/C-002 |
 | [`session.rs`](session.rs) | Shared runtime, session doors, readers, catalogs, and temp views.
   **NULLABILITY-2 (2026-09-05):** `finish_session` installs
   `repark_functions::install_shared_analyzer_rules` (integer overflow plus boolean-to-decimal
@@ -45,7 +45,15 @@ and hand execution, SQL, and ML semantics to the engine crates.
   facade or declined with `None`, so the facade's converter keeps decimals, dates, times,
   timestamps, intervals and nested values. It converts cells, never rows — the facade builds
   every `Row`, so `Row` semantics have one implementation.
-  pins: perf-facade-1/C-002 |
+  **H3-SPILL-RESIDUE-1 (2026-09-06):** every CPython allocation on this path now goes through
+  `owned`, which is `Bound::from_owned_ptr_or_err` — a NULL return becomes the `MemoryError`
+  CPython already set, never a panic. pyo3's safe constructors could not be used: `PyTuple::new`,
+  `PyList::new` and the scalar `IntoPyObject` impls all reach `assume_owned`, which panics on
+  NULL even where the signature returns `PyResult`. The list is now allocated once at its final
+  length and filled in place (`PyList_SetItem`), and each row tuple likewise, so the intermediate
+  `Vec<Bound<PyTuple>>` is gone.
+  pins: perf-facade-1/C-002
+  pins: h3-spill-residue-1/C-001 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
