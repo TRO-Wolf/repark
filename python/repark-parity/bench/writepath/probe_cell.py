@@ -1,5 +1,6 @@
 import json
 import os
+import resource
 import shutil
 import statistics
 import sys
@@ -66,6 +67,7 @@ payload = {
     "load1_start": round(load_start, 2),
     "load1_end": round(os.getloadavg()[0], 2),
     "files": files,
+    "max_rss_kb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
 }
 engine.stop()
 shutil.rmtree(root, ignore_errors=True)

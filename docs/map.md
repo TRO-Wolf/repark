@@ -62,14 +62,22 @@ repo.
   ten runs) and deterministic at 11 in Spark 4.1.2 + Iceberg 1.11.0 (10 of 10) — BACKLOG,
   follow-up unit V3-11, pinned by the invariant rather than a flapping value.
   pins: live-v3-aws-legs/C-004, C-005; live-v3-first-measurement/C-001
-  **H3-SPILL-1 (2026-09-05):** §7 `H3-SPILL-NLJ-1` and `H3-SPILL-COLLECT-1` BACKLOG — the two
+  **H3-SPILL-1 (2026-09-05):** §7 `H3-SPILL-NLJ-1` and `H3-SPILL-COLLECT-1` — the two
   failure-shape rows the 180-cell Never-OOM matrix found. Both are about *how* repark runs out of
-  memory, not about a value: a nested-loop join at a tight pool answers with a caught Rust panic
+  memory, not about a value: a nested-loop join at a tight pool answered with a caught Rust panic
   from DataFusion's `RepartitionExec` instead of a typed refusal, and `collect()` under an
-  address-space limit panics on a null `PyObject` instead of raising `MemoryError`. Neither is a
-  wrong answer and neither aborts the process, so both are pinned rather than fixed here; the
+  address-space limit panicked on a null `PyObject` instead of raising `MemoryError`. Neither is a
+  wrong answer and neither aborts the process, so both were pinned rather than fixed there; the
   measurement is [perf/spill-matrix-baseline.md](perf/spill-matrix-baseline.md).
-  pins: h3-spill-1/C-005, C-006
+  **H3-SPILL-RESIDUE-1 (2026-09-06):** both rows are now **FIXED**, and the matrix's only
+  `internal_error` cell is gone. `collect()` raises `MemoryError`; a nested-loop join at a bounded
+  pool refuses with the same typed exception every other operator gives. The DataFusion defect
+  behind the second one is still open upstream — repark reports the pool refusal that caused the
+  panic rather than patching a dependency, and only for the panic payloads that path can produce.
+  Round 2 (2026-09-06) also records what the fix does NOT do: the contained refusal still prints
+  the raw panic to stderr four times, because silencing it would need a process-wide panic hook
+  this library declines to install.
+  pins: h3-spill-1/C-005, C-006; h3-spill-residue-1/C-001, C-002, C-003
   **FN-REGEXP-EXTRACT-1 round 2 (2026-09-04):** §7 `FN-REGEX-LOOKAROUND-1` BACKLOG
   (Spark `'bar'` vs repark refusal on every regexp kernel); `FN-REGEX-POSIX-1`
   Controls rewritten (extract answers, former refusal pin superseded); facade

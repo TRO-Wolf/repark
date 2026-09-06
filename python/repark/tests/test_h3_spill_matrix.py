@@ -257,7 +257,7 @@ try:
     out["outcome"] = "ok"
 except BaseException as error:
     out["outcome"] = "error"
-    out["message"] = (type(error).__name__ + ": " + str(error))[:400]
+    out["message"] = (type(error).__name__ + ": " + str(error))[:900]
 out["peak_rss_bytes"] = peak_rss_bytes()
 print(json.dumps(out))
 """
@@ -324,20 +324,30 @@ def test_the_boundary_digest_is_order_independent_and_content_sensitive() -> Non
     assert four["rows_out"] == shifted["rows_out"], (four, shifted)
 
 
-def test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic() -> None:
+def test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception() -> None:
     result = _run_worker("nested_loop_join", "8M", 1_000_000)
     assert result["outcome"] == "error", result
-    assert "a Rust panic was caught" in result["message"], result
-    assert "partition not used yet" in result["message"], result
+    message = result["message"]
+    lowered = message.lower()
+    assert "memory" in lowered or "resources exhausted" in lowered, result
+    assert "fair(" in lowered, result
+    assert "greedy(" not in lowered, result
+    assert "repark.memory.limit.gb" in message, result
+    assert "datafusion.runtime.memory_limit" in message, result
+    assert "a Rust panic was caught" not in message, result
+    assert "partition not used yet" not in message, result
+    assert "the bounded memory pool refused this plan" in message, result
     control = _run_worker("nested_loop_join", "1G", 1_000_000)
     assert control["outcome"] == "ok", control
 
 
-def test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic() -> None:
+def test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error() -> None:
     result = _run_worker("collect_under_a_ceiling", "none", 4_000_000, 256 * 1024 * 1024)
     assert result["outcome"] == "error", result
-    assert "a Rust panic was caught" in result["message"], result
-    assert "PyObject pointer is null" in result["message"], result
+    message = result["message"]
+    assert message.startswith("MemoryError"), result
+    assert "a Rust panic was caught" not in message, result
+    assert "PyObject pointer is null" not in message, result
     control = _run_worker("collect_under_a_ceiling", "none", 4_000_000, 6 * 1024**3)
     assert control["outcome"] == "ok", control
     assert control["rows_out"] == 4_000_000

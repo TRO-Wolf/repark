@@ -117,7 +117,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract the remaining date or window method family.",
     ),
     "crates/repark-python/src/dataframe.rs": (
-        1127,
+        1126,
         "PyO3 DataFrame methods share one binding surface.",
         "Split action methods from plan-building methods without moving row work to Python.",
     ),

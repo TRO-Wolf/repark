@@ -224,6 +224,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `printSchema`'s stdout ending one newline short of Spark's capture (EX-DF-10; FIXED by DF-PRINTSCHEMA-1, the pin now asserts Spark's tail). The module
   docstring names the row span `EX-DF-7`…`EX-DF-10`.
   pins: ex-16-dataframe-b/C-001
+- [test_examples_functions_b.py](test_examples_functions_b.py) — **EX-28 (2026-09-06):**
+  the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
+  refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
+  BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
+  `EX-FN-20` and `EX-FN-21`.
+  pins: ex-28-scalar-remainder/C-006
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
   pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
@@ -1798,14 +1804,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the facade boundary is not pool-accounted and no pool makes it so — but it does answer the
   same, pinned by a boundary digest equal at 64 MiB and unbounded, and by that digest being
   equal at 1 and 4 target partitions while moving when one row is removed (the provocation
-  control: a constant digest reds the second pin, not the first). Two defect pins codify
-  today's behaviour so a fix reds them: `H3-SPILL-NLJ-1` (a nested-loop join at an 8 MiB pool
-  panics inside DataFusion's `RepartitionExec` instead of refusing; the 1 GiB control is green)
-  and `H3-SPILL-COLLECT-1` (`collect()` under an `RLIMIT_AS` ceiling set 256 MiB above the
-  session's own `VmSize` panics on a null `PyObject` instead of raising `MemoryError`; the
-  6 GiB-headroom control is green). The ceiling is host-relative on purpose — an absolute
-  `RLIMIT_AS` is a property of the box, not of the code.
+  control: a constant digest reds the second pin, not the first). Two former defect pins now
+  assert the Never-OOM answer, flipped by **H3-SPILL-RESIDUE-1** (2026-09-06): `H3-SPILL-NLJ-1`
+  — a nested-loop join at an 8 MiB pool refuses with the same typed exception every other
+  operator gives (`fair(` required, `greedy(`, the caught-panic marker and DataFusion's
+  `partition not used yet` payload all forbidden, both resize knobs named); the 1 GiB control
+  still answers. `H3-SPILL-COLLECT-1` — `collect()` under an `RLIMIT_AS` ceiling set 256 MiB
+  above the session's own `VmSize` raises `MemoryError` (the message starts with the type
+  name), never a caught panic; the 6 GiB-headroom control still returns all 4e6 rows. The
+  ceiling is host-relative on purpose — an absolute `RLIMIT_AS` is a property of the box, not
+  of the code. The subprocess worker keeps 900 characters of the message, not 400: the typed
+  refusal plus both REPARK remediation lines is longer than the bug report it replaced, and a
+  400-character truncation cut the resize knobs off the very assertion that names them.
   pins: h3-spill-1/C-003, C-004, C-005, C-006
+  pins: h3-spill-residue-1/C-001, C-002
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
@@ -1871,7 +1883,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Always-run: the CTAS writes one data file per plan partition (four), and
   `repark.write.max-concurrent-files = 1` — a builder `.config(...)`, which is where the session
   takes it — still writes exactly one; and a partitioned CTAS's files ascend by partition value
-  (V3-11) and cover all eight partitions. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
+  (V3-11) and, since WRITE-DISTRIBUTION-1 (2026-09-06), are exactly one per value — eight, where the
+  node alone wrote 32 over the four-file seed; the unpartitioned four-file count is the layout
+  that unit left untouched. Live (`REPARK_PARITY_LIVE=1`): at 1e6 rows over the analysis' seven-column bed the
   two writer shapes agree on every answer and on their layout (one writer one file, four-cap
   eight files, same rows and sums), and Spark's own CTAS of the same seed is compared row for row
   against the written table. The ordering pin seeds EIGHT UNEQUAL files
@@ -1894,6 +1908,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   work is injected. Numbers and commands:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
   pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
+  pins: write-distribution-1/C-006
+- `test_write_distribution_1.py` — **WRITE-DISTRIBUTION-1** (2026-09-06): the hash distribution
+  rule before a partitioned CTAS, through the facade over a fixed four-file seed at
+  `shuffle.partitions = 8`. Always-run: a v3 CTAS `PARTITIONED BY (part)` commits exactly eight
+  data files, one per value, each holding a quarter of the seed with `first_row_id` tiling them
+  (the node alone wrote 32, four per value); `PARTITIONED BY (bucket(4, id))` commits four (the key
+  is the transform value, not `id`); `PARTITIONED BY (label)` with a NULL in every seed file
+  commits one NULL file holding every NULL row. Live (`REPARK_PARITY_LIVE=1`): Spark 4.1.2 with
+  `iceberg-spark-runtime-4.1_2.13:1.11.0` at eight shuffle partitions writes the same layout —
+  partition value and record count per file — for the same seed. The unpartitioned layout is
+  deliberately NOT asserted here; `test_perf_ice_writepath_1.py` keeps it, unchanged. Numbers:
+  [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
+  pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
 - `test_perf_facade_logical_names.py` — **PERF-FACADE-WITHCOLUMN-1** (2026-09-04): 17 planned
   statements plus a 12-deep `withColumn` chain and eight DataFrame transforms assert
   `_native.logical_column_names` is byte-equal to the analyzer-backed `column_names` — the

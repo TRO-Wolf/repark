@@ -4691,21 +4691,42 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   delete everything that appeared since, which reclaims the failing writer's rolled files too.
   Only `remove_orphan_files` reclaims the stream path's today.
 
-- **WRITE-DISTRIBUTION-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). RePark has no
-  distribution rule before a write. Spark's Iceberg default is `write.distribution-mode = hash`,
-  which repartitions by partition value so one value goes to one task; for the same CTAS at
-  `spark.sql.shuffle.partitions = 8` Spark writes **2** unpartitioned and **8** partitioned data
-  files, where repark now writes **8** and **64** (average 328 KB) — 4x and 8x Spark's counts.
-  BACKLOG. Two alternatives were measured and rejected in this unit: capping the writers below the
-  partition count makes one writer drain several input partitions in sequence, which measured
-  738 ms against 547 ms on the partitioned 1e6 CTAS and is unbounded in memory (DataFusion's
-  repartition channels are unbounded per output partition and gate only when every channel is
-  non-empty, so the partitions a writer has not reached buffer whole); and a `RepartitionExec`
-  round-robin assigns batches to outputs from a shared counter, so the row-to-file mapping — and
-  with it `_row_id` — stops being reproducible, which is exactly the defect round 2 fixed. A real
-  fix is a hash-distribution rule that sends one partition value to one writer: deterministic AND
-  fewer files, and a unit of its own. The current counts are pinned by
-  `test_ctas_writes_one_data_file_per_plan_partition` and the partitioned facade pin.
+- **WRITE-DISTRIBUTION-1** — **FIXED 2026-09-06 (WRITE-DISTRIBUTION-1)**; surfaced 2026-09-05
+  (PERF-ICE-WRITEPATH-1 round 2). RePark had no distribution rule before a write. Spark's Iceberg
+  default is `write.distribution-mode = hash`, which repartitions by partition value so one value
+  goes to one task; for the same CTAS at `spark.sql.shuffle.partitions = 8` Spark writes **2**
+  unpartitioned and **8** partitioned data files, where repark wrote **8** and **64** (average
+  328 KB). Two alternatives were measured and rejected by PERF-ICE-WRITEPATH-1: capping the
+  writers below the partition count (738 ms against 547 ms on the partitioned 1e6 CTAS, and
+  unbounded in memory because DataFusion's repartition channels gate only when every channel is
+  non-empty) and a round-robin `RepartitionExec` (a shared counter, so the row-to-file map and
+  `_row_id` stop being reproducible). The fix is the third route:
+  `write/distribution.rs::hash_distribution` places DataFusion's `RepartitionExec` under the CTAS
+  write node with `Partitioning::Hash` over one `PartitionTransformExpr` per partition field — the
+  source column cast to the Iceberg field's Arrow type and run through the fork's transform
+  function, so the key is the partition value the writer itself computes (`bucket(4, id)` keys on
+  the bucket, a NULL is one value) and the hash is DataFusion's seeded `REPARTITION_RANDOM_STATE`,
+  a function of the data. **Measured on one box, base and branch back to back with the same
+  release native swapped, load 11–17**: `ctas_partitioned8` **64 → 8** data files (Spark's
+  count) and **361.16 → 204.91 ms** median (348.16 → 191.38 min), **3.44× → 1.96×** of the
+  `df.write.parquet(zstd)` control read in the same passes (104.96 / 104.6 ms); RSS peak
+  760–785 → 842–861 MB, the repartition channels' buffers at 1e6 rows. Live Spark 4.1.2 writes
+  the same eight-file layout — partition value and record count per file — for the facade pin's
+  seed. **The unpartitioned CTAS is untouched**, 8 files at 8 partitions against Spark's 2:
+  Spark's 2 is its scan split count, not a distribution rule, and coalescing below the partition
+  count is the shape measured at 738 ms with unbounded buffering; `ctas` read 134.07 ms after
+  against the 104.6 ms control (1.28×, PERF-ICE-WRITEPAR-1's ratio). What changed on the
+  partitioned path: a data file's row order follows the channel interleaving of the input
+  partitions, so the `_row_id` a given row receives is not reproducible run to run — the manifest
+  still ascends by partition value and `_row_id` still tiles it contiguously; Spark's shuffle read
+  order is not fixed either. Pins: `crates/repark-iceberg/src/write/distribution.rs` (one value →
+  one writer, the same layout across two runs, input partitions without rows and an empty input,
+  NULL values, `bucket(4, id)` + `day(ts)` keyed on the transform, the unpartitioned bypass, a
+  missing source column as a planning error) and `python/repark/tests/test_write_distribution_1.py`
+  (a partitioned CTAS at `shuffle.partitions = 8` writes 8 files with `first_row_id` tiling them,
+  `bucket(4, id)` writes 4, NULL labels share one file; live: the same layout as Spark). The counts
+  the old pins asserted (32 files over the four-file seed, 64 at 1e6) are quoted in the unit
+  ledger. Numbers and commands: `docs/perf/iceberg-write-baseline.md` §8.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
@@ -4745,7 +4766,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   included; against a table that already has one the sweep is narrowed to the attempt's own
   completed files. **Layout**: a CTAS writes one file per plan partition — 4 → 8
   unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
-  counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
+  counts and is filed as `WRITE-DISTRIBUTION-1` (the partitioned count is 8 since that row's
+  fix, 2026-09-06; the unpartitioned count stands). Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
   partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
   `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8
@@ -5950,45 +5972,97 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the date-arithmetic arms; this row records the display arm until the cast
   spells Spark's units.
 
-### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
+### EX-FN-20 — `try_to_timestamp` refuses; Spark answers the timestamp or NULL
+
+- **repark** — `F.try_to_timestamp("s")` raises `UnsupportedOperationException:
+  functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `"2024-06-15 12:00:00"` answers `2024-06-15T12:00:00`; `"not-a-timestamp"`
+  and NULL answer NULL. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_try_to_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-28 measurement. The name stays on the
+  example backlog until the engine grows the tolerant timestamp parse.
+
+### EX-FN-21 — `unix_timestamp` format argument refuses; Spark parses the pattern
+
+- **repark** — `F.unix_timestamp("s", "yyyy-MM-dd")` raises `UnsupportedOperationException:
+  functions.unix_timestamp format argument is not supported yet`. The no-format arms agree
+  with Spark and carry the example coverage: `"2024-06-15 12:00:00"` answers `1718452800`,
+  `"1970-01-01 00:00:00"` answers `0`, NULL answers NULL, and a timestamp column of the same
+  noon instant answers `1718452800`. Zero-argument `unix_timestamp()` is a current-epoch int,
+  stable across rows of one query.
+- **Apache Spark** — `unix_timestamp("2024-06-15", "yyyy-MM-dd")` answers `1718409600`;
+  `"1970-01-02"` answers `86400`; NULL answers NULL. The no-format arms agree with the repark
+  answers above. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-06, EX-28 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_unix_timestamp_format_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
+  covered by the no-format arms; this row records the format argument until the parser
+  accepts Spark's pattern.
+
+### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,
-  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` fails with
-  `PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next: partition not
-  used yet (a Rust panic was caught at the Python boundary; this is a bug — please report it)`.
-  The panic is DataFusion 54.1's own `expect("partition not used yet")` at
-  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
-  side (`ProjectionExec` over `RepartitionExec`): each output partition removes its channel from
-  the shared state, so a second `execute` of the same partition finds nothing, and something on
-  the pool-refusal path re-executes it. Reproducible three runs of three, and again at 64 MiB with
-  1e7 rows. The process survives (`panic = unwind`, caught by the boundary fence) and the session
-  stays usable; a 1 GiB pool on the same query is `ok`. **Every other operator measured at the
-  same 8 MiB pool — sort, hash aggregate, distinct, hash join, sort-merge join, window,
-  `array_agg`, TopK — returns a clean typed `Resources exhausted`.** This is the plan shape, not
-  the pool machinery.
+  a 64-row right side and `datafusion.runtime.memory_limit = '8M'` now raises the same typed
+  refusal **exception** every other operator gives: `PySparkException: Resources exhausted: Failed
+  to allocate additional 1024.2 KB for NestedLoopJoinLoad[2] with 7.0 MB already allocated for this
+  reservation - 1022.7 KB remain available for the total memory pool: fair(pool_size: 8.0 MB)`,
+  followed by the containment disclosure and the two resize knobs. A 1 GiB pool on the same query
+  is still `ok`, and the other 17 operators at the same 8 MiB pool are unchanged.
+  **The exception is clean; the console is not.** The panic still unwinds through DataFusion
+  before repark converts it, so Rust's default hook prints it first: **4 `thread
+  'tokio-rt-worker' … panicked at …/repartition/mod.rs:1277` blocks on stderr**, one per output
+  partition, 13 stderr lines in all (measured 2026-09-06). repark declines to install a process-
+  wide `std::panic::set_hook` to swallow them — it is an embedded library and the hook would
+  outrank the host application's own — so the noise is disclosed rather than hidden. It goes away
+  when the upstream defect does.
+  **The defect is still upstream and unfixed.** DataFusion 54.1's `NestedLoopJoinExec` executes
+  partition 0 of its build (left) child once in `execute` (`build_side_data.try_once`), and then,
+  when that in-memory load is refused by the pool, `initiate_fallback` executes **the same child
+  instance again** from partition 0 to spill it (`joins/nested_loop_join.rs`). `RepartitionExec`
+  removes each output partition's channel from its shared state on first `execute`, so the second
+  call finds nothing and hits `expect("partition not used yet")` at
+  `datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`. repark may not patch a
+  dependency, so it contains the consequence instead: a bounded session's `FairSpillPool` is
+  wrapped in `RefusalRecordingPool`, and when the Arrow export reader catches a fenced panic that
+  a recorded pool refusal preceded, it reports the refusal rather than a bug. **Four** gates keep
+  that narrow: the item is a fenced panic; its payload is one of the panics DataFusion 54.1 can
+  reach on its pool-refusal and spill-fallback paths (an allow-list cited line by line in
+  `crates/repark-python/src/map.md`); **the session's pool recorded a refusal since the reader
+  opened** — the log is session-scoped, not per-stream, because `MemoryPool` carries no stream
+  identity, and a successful spilling query records refusals too, so the allow-list is what keeps
+  the rule bounded; and the session is bounded at all. An unrelated fenced panic after a refusal
+  — an injected `index out of bounds`, say — is still reported as the bug it is, and that
+  direction is pinned.
 - **Apache Spark** — a `BroadcastNestedLoopJoin` under a bounded driver heap either completes or
   raises; it does not answer with an engine-internal panic. *(oracle: documented — the claim here
   is the failure shape, not a value. The measured Spark comparison cells on the same fixture are
   `sort` and `hash_join`, in the baseline's §5.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_turns_a_nested_loop_join_into_a_caught_panic`
-- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. The defect is upstream in DataFusion,
-  so this unit pins the behaviour rather than patching a dependency; the repark-side deliverable
-  is the reproducer the pin already is. It is the **only** Never-OOM contract failure in the
-  180-cell matrix: a bounded pool must answer with a typed refusal, never a panic.
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_nlj_1_a_tight_pool_refuses_a_nested_loop_join_with_the_typed_exception`
+  (the pin forbids the caught-panic marker AND DataFusion's own `partition not used yet` payload);
+  `crates/repark-python/src/arrow_export.rs` (five containment pins);
+  `crates/repark-core/src/pool_refusals.rs` and
+  `crates/repark-core/src/session/tests/pool_refusals.rs` (the pool wrapper and its wiring)
+- **Rationale** — FIXED 2026-09-06 by H3-SPILL-RESIDUE-1, repark-side containment of an upstream
+  defect; the upstream issue text is in
+  `task/ledgers/staging/h3-spill-residue-1-ledger.md`. Filed BACKLOG 2026-09-05 by H3-SPILL-1. It
+  was the **only** Never-OOM contract failure in the 180-cell matrix: a bounded pool must answer
+  with a typed refusal, never a panic.
+  pins: h3-spill-residue-1/C-002
 
-### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit panics instead of raising `MemoryError`
+### H3-SPILL-COLLECT-1 — `collect()` under an address-space limit raises `MemoryError` — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — with `RLIMIT_AS` set 256 MiB above the session's own `VmSize`, `collect()` over a
-  4e6-row five-column frame fails with `PySparkException: repark internal error in
-  collect_rows.rows_from_record_batch: PyObject pointer is null (a Rust panic was caught at the
-  Python boundary; this is a bug — please report it)`. A CPython allocation returned `NULL` and
-  the row fast path panicked rather than surfacing the `MemoryError` CPython had already set.
-  With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows, so the limit is the
-  cause, not the row count. The facade boundary takes no memory-pool reservation at all, so no
-  value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit` changes this: a 1e7-row
-  `collect()` is 4,393-4,471 MiB resident at every pool from unbounded down to 64 MiB, and returns
-  the identical content digest at each.
+  4e6-row five-column frame now raises `MemoryError` — CPython's own, with no message, exactly as
+  a failed allocation in pure Python would. Every CPython allocation on the row fast path
+  (`collect_rows.rows_from_record_batch`) is built through `Bound::from_owned_ptr_or_err`, so a
+  NULL return surfaces the error CPython already set instead of reaching pyo3's `panic_on_null`.
+  pyo3's safe constructors could not be used: `PyTuple::new`, `PyList::new` and the scalar
+  `IntoPyObject` impls all reach `assume_owned`, which panics on NULL even where the signature
+  returns `PyResult`. With 6 GiB of headroom the identical call is `ok` and returns all 4e6 rows,
+  so the limit is the cause, not the row count. The facade boundary still takes no memory-pool
+  reservation at all, so no value of `repark.memory.limit.gb` or `datafusion.runtime.memory_limit`
+  changes its footprint: a 1e7-row `collect()` is 4,393-4,471 MiB resident at every pool from
+  unbounded down to 64 MiB, and returns the identical content digest at each.
 - **Apache Spark** — `DataFrame.collect()` past the driver heap raises `OutOfMemoryError` (or
   `SparkException: Total size of serialized results … is bigger than spark.driver.maxResultSize`),
   a typed JVM error, not an engine-internal bug report. *(oracle: documented — the claim here is
@@ -5997,13 +6071,15 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   inferred from the driver-side `Job 0 cancelled because SparkContext was shut down` — and takes
   the SparkContext down, which is worse than repark's typed refusal on the same operator.)*
 - **Pin** —
-  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_a_caught_panic`
-- **Rationale** — BACKLOG, filed 2026-09-05 by H3-SPILL-1. Contained and repark-side: check the
-  pointer and raise `MemoryError`. It is the difference between "repark reports it is out of
-  memory" and "repark reports a bug", and a container memory limit is the ordinary way a user
-  meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
-  nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
-  Never-OOM claim.
+  `python/repark/tests/test_h3_spill_matrix.py::test_h3_spill_collect_1_an_address_space_ceiling_makes_collect_raise_memory_error`;
+  `crates/repark-python/src/collect_rows.rs` (the NULL-check unit pins, including the deliberate
+  `PyTuple_New(-1)` provocation)
+- **Rationale** — FIXED 2026-09-06 by H3-SPILL-RESIDUE-1. Filed BACKLOG 2026-09-05 by H3-SPILL-1.
+  It is the difference between "repark reports it is out of memory" and "repark reports a bug",
+  and a container memory limit is the ordinary way a user meets it. The baseline's §7 ranked it
+  second of the five moves that would advance the Never-OOM claim; the first (pool-accounting the
+  facade boundary) is still open.
+  pins: h3-spill-residue-1/C-001
 
 ### EX-IO-1 — bare `load()` defaults to parquet on Spark; repark raises
 

@@ -5,6 +5,17 @@ CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/sessio
 retired (file under the default 1000). `test_cap_1_source_file_line_cap.py` dropped
 the matching `_RUST_BASELINES` row in the same commit.
 pins: csv-infer-perf-1/C-006
+EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
+`BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
+names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
+Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC). Twenty-seven
+roster names stay on the backlog with existing EX-FN / BL-17 / FNP-15 / FNP-16
+rows; two new §7 rows (EX-FN-20 `try_to_timestamp`, EX-FN-21 `unix_timestamp`
+format arm) are pinned by `python/repark/tests/test_examples_functions_b.py`.
+Red-first: 7 has-no-example findings with the new COVERS names stripped
+(exit 1), and a wrong-epoch control in `dates_more.py` failed the execute
+leg by name (exit 1).
+pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
 
 EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
@@ -209,6 +220,13 @@ absorption proven impossible, owner approval at merge); mirrored in
 TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709→1700 — the year arm moves to
 `src/spark_year_pad.rs`; mirrored in `test_cap_1_source_file_line_cap.py`.
 pins: types-1/C-006
+
+H3-SPILL-RESIDUE-1 (2026-09-06): `check_rust_file_size.py` `repark-python/src/dataframe.rs`
+1127→1126 — arming the Arrow reader's pool-refusal containment is one builder call
+(`.with_refusals(...)`) rather than a fourth constructor argument, and the lookup itself
+(`refusal_log`) lives in `arrow_export.rs`, so the binding surface came out a line shorter than
+it went in. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
+with it in the same commit. pins: h3-spill-residue-1/C-002
 
 PERF-ICE-CATALOG-IO-1 (2026-09-05): `check_rust_file_size.py` `repark-core/src/session.rs`
 1039→1002 — `register_late_configured_catalogs` moved to `session/late_catalogs.rs` to pay for

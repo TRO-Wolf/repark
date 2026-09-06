@@ -405,11 +405,10 @@ impl PyDataFrame {
             let stream = py
                 .detach(|| self.runtime.block_on(self.df.clone().execute_stream()))
                 .map_err(datafusion_to_py_err)?;
-            let reader: Box<dyn RecordBatchReader + Send> = Box::new(StreamingBatchReader::new(
-                Arc::clone(&self.runtime),
-                stream,
-                schema,
-            ));
+            let reader: Box<dyn RecordBatchReader + Send> = Box::new(
+                StreamingBatchReader::new(Arc::clone(&self.runtime), stream, schema)
+                    .with_refusals(crate::arrow_export::refusal_log(&self.df)),
+            );
             let ffi_stream = FFI_ArrowArrayStream::new(reader);
 
             // pyo3 0.29 renamed the destructor helper; pass a static `CStr` name.

@@ -61,6 +61,15 @@ impl std::fmt::Display for FencedStreamPanic {
 
 impl std::error::Error for FencedStreamPanic {}
 
+pub(crate) fn fenced_panic_detail(error: &ArrowError) -> Option<&str> {
+    match error {
+        ArrowError::ExternalError(inner) => inner
+            .downcast_ref::<FencedStreamPanic>()
+            .map(|caught| caught.0.as_str()),
+        _ => None,
+    }
+}
+
 /// Run one Arrow-C-stream batch poll under the panic fence.
 pub(crate) fn fence_stream_poll(
     operation: &str,

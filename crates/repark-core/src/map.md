@@ -122,6 +122,18 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `MAX_ERROR_PEEL_DEPTH`), everything else → base `Error::DataFusion`. Postgres/excel folds are
   deferred with their crates. Also `resolve_s3_region_override` (dual-key S3 read-region
   override; identical values collapse, different values fail loud naming both keys).
+- `pool_refusals.rs` — **H3-SPILL-RESIDUE-1 (2026-09-06):** `PoolRefusalLog` (a refusal counter
+  plus the engine's own last refusal text), `RefusalRecordingPool` (a `MemoryPool` decorator that
+  delegates every method to the inner `FairSpillPool` — name, `Display`, `memory_limit`, both
+  grow paths — and records only the `try_grow` refusals), and `pool_refusal_log`, the accessor
+  that recovers the log from an `Arc<dyn MemoryPool>`. It exists because a bounded pool must
+  answer with a typed refusal: DataFusion 54.1's `NestedLoopJoinExec` re-executes partition 0 of
+  its build child on the OOM fallback path (`nested_loop_join.rs::initiate_fallback` after
+  `NestedLoopJoinExec::execute` already ran it), which `RepartitionExec` answers with
+  `expect("partition not used yet")`. repark cannot patch the dependency, so it reports the
+  refusal that caused the panic instead of a bug report. The decorator is the only way to see a
+  refusal from outside DataFusion — the pool trait has no hook.
+  pins: h3-spill-residue-1/C-002, C-003
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
