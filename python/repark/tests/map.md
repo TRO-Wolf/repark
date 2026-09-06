@@ -220,6 +220,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   interval display arm pin today's wrong values so the fixes red them. The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
   pins: ex-25-functions-a/C-009
+- [test_examples_io_session.py](test_examples_io_session.py) — **EX-26 (2026-09-06):**
+  the thirteen divergence pins for the reader/writer/session example batch — the bare-load
+  default (EX-IO-1), schema on parquet (EX-IO-2), the csv infer-schema width with agreeing
+  rows (EX-IO-3), the csv header default on both spellings (EX-IO-4), the save default
+  (EX-IO-5), non-iceberg `saveAsTable` formats (EX-IO-6), the deferred excel readers and
+  sheet-name pair (EX-IO-7), the missing-table text across three entry points plus the
+  insertInto arity arm (EX-IO-8), the saveAsTable exists text (EX-IO-9), the writer output
+  listing (EX-IO-10), and the `udf.register` return arm (EX-SES-6). The module
+  docstring names the row spans `EX-IO-1`…`EX-IO-10` and `EX-SES-6`.
+  pins: ex-26-io-session/C-015
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
@@ -1774,6 +1784,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   count against Spark on the same seeds. Numbers and commands:
   [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
   pins: perf-ice-scan-1/C-002, C-003, C-004, C-005, C-007, C-008, C-011, C-009
+  RP-14 (2026-09-06, pin `8bc325a3`, F-27) un-skipped the fork-gated pins: count(*) folds, the DV/residual/LIMIT
+  non-fold cells and the parallel-split row-set pins run on every build now.
 - `test_perf_ice_writepath_1.py` — **PERF-ICE-WRITEPAR-1** (2026-09-05): the CTAS write node
   through the facade, over a fixed four-file seed so the plan really has four partitions.
   Always-run: the CTAS writes one data file per plan partition (four), and

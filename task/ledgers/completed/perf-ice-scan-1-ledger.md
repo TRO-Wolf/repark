@@ -1,3 +1,5 @@
+> **Errata (2026-09-06, RP-14):** C-006 ("the fork lane is green on its own gates") was re-verdicted OPEN by the round-2 critic because the roster omitted the workspace `sqllogictest` crate the fork CI runs; fork round 3 updated the LIKE-pushdown goldens to the deterministic `N=2`/`N=3` (harness-pinned `target_partitions(4)`), added the N>1 LIMIT and sub-file read pins, and fork PR #271 was green on the whole workspace (14/14) before merging as `8bc325a3`. C-006 is PROVEN as of that merge; the RePark pins un-skipped on RP-14.
+
 # Unit ledger — PERF-ICE-SCAN-1 · Iceberg `count(*)` stops decoding every column, and small tables scan in parallel
 
 **Date:** 2026-09-05 · **Branch:** `perf/ice-scan-1` · **Base:** `origin/main` `8f40ce46` ·

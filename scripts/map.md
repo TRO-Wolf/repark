@@ -1,5 +1,17 @@
 # map — scripts/
 
+EX-26 io-session (2026-09-06): `check_example_coverage.py` `BACKLOG_BASELINE` 193 → 164 —
+the 29 covered names of the 50-name reader/writer/session/DataFrame roster, taught by
+twelve new examples under `docs/examples/{io,session,dataframe}/`, every asserted value
+measured on live PySpark 4.1.2 (ANSI on, UTC) or — for the repark-only names — on repark's
+documented answer. Seventeen roster names keep their prior stays rows
+(EX-DF/EX-CAT/EX-W2/EX-DF-19); the four excel names stay with the new §7 EX-IO-7 row, and
+eleven new rows (EX-IO-1..10, EX-SES-6) pin the diverged arms of covered names, with thirteen
+tests in `python/repark/tests/test_examples_io_session.py`. Red-first: 29 has-no-example
+findings with the files held out (exit 1), and a wrong-bytes control in `writer_csv.py`
+failed the execute leg by name (exit 1).
+pins: ex-26-io-session/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
+
 EX-25 functions-a (2026-09-05): `check_example_coverage.py` `BACKLOG_BASELINE` 213 → 193 —
 the 20 plainly supported names of the 45-name `F.*` long-tail (a) roster, covered by five
 new examples under `docs/examples/functions/` plus the `F.hours` arm in

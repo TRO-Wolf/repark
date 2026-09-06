@@ -16,6 +16,7 @@ COVERS: list[str] = [
 
 
 def main() -> None:
+    """Run the measured array search, order, overlap, flatten, and map-merge arms."""
     repark = ReparkSession.builder.appName("ex-array-more").master("local[1]").getOrCreate()
     try:
         arrays = repark.createDataFrame([([10, 20, 30],), ([5],), ([],), (None,)], "a ARRAY<INT>")

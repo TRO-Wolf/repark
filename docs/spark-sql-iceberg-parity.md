@@ -4810,7 +4810,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
-  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
   1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
   decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
   `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
@@ -4825,7 +4825,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
   (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
 - **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
-  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump, with residue. A sub-split-size
+  **FIXED 2026-09-06 (RP-14)** behind the RP-14 fork pin bump, with residue. A sub-split-size
   table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB
   split target. Fork trigger **F-27d**: re-split and re-pack to a session-derived target
   of `min(configured split size, max(total/T, 64 KiB))`, declining `_pos`/`_row_id`,
@@ -5415,7 +5415,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   and the UDF answers inside SQL with the same value.
 - **Apache Spark** — the deprecated alias answers the original callable `f` itself
   (`type(spark.catalog.registerFunction("fn", f)).__name__` is `'function'`); `spark.udf.register`
-  answers the `UserDefinedFunction`.
+  answers a plain wrapped function too (type name `'function'`, the `functools.wraps` wrapper —
+  corrected 2026-09-06 by EX-26, which re-measured this half on two JVM runs plus the installed
+  source; the EX-21 text misstated it as the `UserDefinedFunction`. See EX-SES-6.).
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-21 catalog/session batch, both lambdas
   registered and called through `spark.sql("SELECT fn(4)")` → `u4` on both engines.)*
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_register_function_returns_udf_object`
@@ -5829,6 +5831,170 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   meets it. Not fixed here because this unit is pins-only and the cell is neither a wrong answer
   nor a process abort; the baseline's §7 ranks it second of the five moves that would advance the
   Never-OOM claim.
+
+### EX-IO-1 — bare `load()` defaults to parquet on Spark; repark raises
+
+- **repark** — `spark.read.option("path", pq).load()` with no `format(...)` raises
+  `AnalysisException: DATA_SOURCE_NOT_FOUND: Failed to find the data source: (empty). Call
+  format(...) before load(...) (repark does not default empty format to parquet)`.
+- **Apache Spark** — reads the parquet directory and answers its rows (`[(1, 'a'), (2, 'b')]`
+  on the EX-26 two-row `id`/`name` frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session
+  zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_bare_load_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  `format(...).load(...)` arms, where the engines agree; the bare-load default is pinned, not
+  taught.
+
+### EX-IO-2 — `schema()` on a parquet read: Spark projects it; repark refuses
+
+- **repark** — `spark.read.schema("name STRING").parquet(pq)` raises
+  `AnalysisException: DataFrameReader.schema(...) is not applied on parquet reads yet (use
+  csv/json schema, or cast after read)`.
+- **Apache Spark** — applies the schema as a projection: dtypes `[('name', 'string')]` and
+  rows `[('a',), ('b',)]` on the same frame. *(oracle: live PySpark 4.1.2, ANSI on, UTC session
+  zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_schema_on_parquet_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The name stays
+  covered by the csv/json schema arms, where the engines agree; the parquet arm is pinned, not
+  taught.
+
+### EX-IO-3 — csv `inferSchema` widens ints to bigint; Spark answers int, rows agree
+
+- **repark** — `spark.read.csv(path, header=True, inferSchema=True)` answers dtypes
+  `[('id', 'bigint'), ('name', 'string')]` and rows `[(1, 'a'), (2, 'b'), (3, 'c')]` on the
+  EX-26 `id`/`name` letters file.
+- **Apache Spark** — answers dtypes `[('id', 'int'), ('name', 'string')]` and the same rows.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_infer_schema_width`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the default, header, null-value, and explicit-schema arms, where schema and rows agree; the
+  infer arm is pinned, not taught.
+
+### EX-IO-4 — csv writes carry a header by default; Spark writes none
+
+- **repark** — both the `csv(path)` shorthand and `format("csv").save(path)` write one data
+  file reading `"id,name\n1,a\n2,b\n"` with no header option set.
+- **Apache Spark** — both spellings write `"1,a\n2,b\n"`; the header appears only with
+  `header=true`, which answers `"id,name\n1,a\n2,b\n"` on both engines. *(oracle: live PySpark
+  4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 batch, both spellings measured.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_csv_header_default_true`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the explicit-header arms, where bytes agree; the default is pinned, not taught.
+
+### EX-IO-5 — `save()` with no format: Spark writes parquet; repark raises
+
+- **repark** — `frame.write.save(path)` with the default iceberg format raises
+  `AnalysisException: DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'); use
+  saveAsTable for Iceberg tables`.
+- **Apache Spark** — writes one `.snappy.parquet` part file (the
+  `spark.sql.sources.default` format). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone,
+  2026-09-06, EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_save_default_format_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  explicit-format arms, where bytes and layout agree; the default is pinned, not taught.
+
+### EX-IO-6 — `saveAsTable` outside iceberg refuses; Spark serves the format
+
+- **repark** — `frame.write.format("csv").saveAsTable(name)` raises
+  `PySparkValueError: repark.write supports only format('iceberg') for saveAsTable, got
+  'csv'`.
+- **Apache Spark** — creates the csv-backed table and answers its rows (`[(1, 'a'), (2, 'b')]`
+  on the EX-26 frame). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 batch.)*
+- **Pin** —
+  `python/repark/tests/test_examples_io_session.py::test_saveas_table_non_iceberg_refuses`
+- **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-26 measurement. The example keeps
+  the default-format arm, where rows and dtypes agree; other formats are pinned, not taught.
+
+### EX-IO-7 — the excel surface refuses; the engine connector is deferred past milestone one
+
+- **repark** — `spark.read.excel(path)` and `spark.read_excel(path)` raise
+  `UnsupportedOperationException: spark.read.excel (read_excel) is not available in this build:
+  the repark-excel / repark-postgres read connectors are scheduled post-milestone-one. See the
+  "Post-milestone-one (BACKLOG)" row in task/todo.md.`; `spark.read.sheet_names(path)` and
+  `spark.excel_sheet_names(path)` raise the same error naming `spark.read.sheet_names
+  (excel_sheet_names)`.
+- **Apache Spark** — has no excel reader at all: `hasattr` is False for `read.excel`,
+  `read.sheet_names`, `read_excel`, and `excel_sheet_names`, so no oracle values exist for
+  these four names. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-06, EX-26 batch, hasattr
+  probe.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_excel_reader_refuses` and
+  `…::test_excel_sheet_names_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. A refusal is documented
+  as a refusal, never as an example that swallows it; all four names stay on the example backlog
+  until the connector lands.
+
+### EX-IO-8 — missing-table reads share the exception type with Spark but not the text
+
+- **repark** — `spark.read.table(name)`, `spark.table(name)`, and
+  `frame.write.insertInto(name)` on a missing name raise `AnalysisException: Error during
+  planning: table 'spark_catalog.default.<name>' not found`.
+- **Apache Spark** — raises `AnalysisException` with error class `[TABLE_OR_VIEW_NOT_FOUND]`
+  (`The table or view \`<name>\` cannot be found. …`). *(oracle: live PySpark 4.1.2, ANSI on,
+  UTC session zone, 2026-09-06, EX-26 batch, all three entry points measured.)*
+- **Arity arm (added 2026-09-06, round 2)** — `insertInto` with the wrong column count raises
+  `AnalysisException` on both engines with different texts. repark answers `Error during
+  planning: Column count doesn't match insert query!` for too many and too few alike. Spark
+  answers `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` (`Cannot write to
+  \`spark_catalog\`.\`default\`.\`t_ex26_r3\`, the reason is too many data columns: Table columns:
+  \`id\`, \`name\`. Data columns: \`x\`, \`y\`, \`z\`.`) and the `NOT_ENOUGH_DATA_COLUMNS` twin
+  (`Data columns: \`x\`.`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 round 2, both widths measured.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_missing_table_text` and
+  `…::test_insert_arity_text`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The examples keep the
+  agreeing arm — each entry point raises `AnalysisException` on a missing name, and the arity
+  arm raises `AnalysisException` on both engines; repark's message texts are pinned, not
+  taught.
+
+### EX-IO-9 — `saveAsTable` on an existing table shares the type with Spark, not the text
+
+- **repark** — `frame.write.saveAsTable(name)` on an existing table raises
+  `AnalysisException: table '<name>' already exists; use mode('append'|'overwrite'|'ignore')
+  to write into an existing table`.
+- **Apache Spark** — raises `AnalysisException` with error class
+  `[TABLE_OR_VIEW_ALREADY_EXISTS]` (`Cannot create table or view … because it already
+  exists. …`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26
+  batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_saveas_table_exists_text`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  create arm, where rows and dtypes agree; the exists text is pinned, not taught.
+
+### EX-IO-10 — writer output dirs: Spark writes `_SUCCESS`, checksums, and `part-*` names; repark writes one data file
+
+- **repark** — `csv`/`json` writes (the shorthand, `format(...).save`, and `partitionBy`)
+  emit exactly one data file per output dir (one per `name=` leaf when partitioned) with a
+  random name and no marker or checksum sidecars: csv `['weZUoWyiy84qKvcb_0.csv']`, json
+  `['CKpaZsfMlTvLvmSX_0.json']`, partitioned `['name=a/FFp4eSALY8DjS6Zh.csv',
+  'name=b/FFp4eSALY8DjS6Zh.csv']` on the EX-26 two-row frame.
+- **Apache Spark** — writes `part-00000-<uuid>-c000.<ext>` data files plus an empty `_SUCCESS`
+  marker and `.<name>.crc` checksums: csv `['._SUCCESS.crc',
+  '.part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv.crc', '_SUCCESS',
+  'part-00000-9a613d0c-70b7-41bf-bf9d-4089efe2ef8f-c000.csv']`, json the same shape, and
+  partitioned `['_SUCCESS', '._SUCCESS.crc']` at the top with one
+  `part-00000-<uuid>.c000.csv` plus its checksum per leaf (the uuid varies per write).
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06, EX-26 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_writer_output_listing`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 round-2 measurement. The examples
+  keep the data-file bytes and counts, where the engines agree; the marker and naming shape is
+  pinned, not taught.
+
+### EX-SES-6 — `spark.udf.register` answers the UDF object in repark, a plain function in Spark
+
+- **repark** — `spark.udf.register("fn", f)` answers the registered `UserDefinedFunction`
+  object. The registered name itself behaves Spark-equal: `SELECT fn(4)` answers `[('u4',)]`
+  and the returned object answers on a frame (`[('u1',), ('u2',)]`).
+- **Apache Spark** — answers a plain wrapped function (`type(...).__name__` is `'function'`;
+  the object is the `functools.wraps` wrapper, neither the original lambda nor a
+  `UserDefinedFunction`); the SQL and frame values agree with repark's. Measured on two
+  independent JVM runs and confirmed in the installed 4.1.2 source (`register` returns
+  `udf_obj._wrapped()`). *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-06,
+  EX-26 batch.)*
+- **Pin** — `python/repark/tests/test_examples_io_session.py::test_udf_register_returns_udf_object`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. The example keeps the
+  registration, SQL, and frame arms, where the engines agree; the return arm is pinned, not
+  taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
+  that row's pin — repark's `catalog.registerFunction` return — is unaffected.
 
 ## 8. Drop-in disclosure rationale
 
