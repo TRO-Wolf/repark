@@ -217,6 +217,12 @@ split seam ("extract the remaining date or window method family"). A ratchet DOW
 baseline increase; the duplicate table in `test_cap_1_source_file_line_cap.py` moved with it.
 pins: win-slide-1/C-002
 
+PERF-APPROXPCT-1 (2026-09-05): `check_rust_file_size.py` `repark-python/src/column/mod.rs`
+1053→1052 — the accuracy threading (optional third arg, scalar-helper import) is paid for by
+collapsing the list call construction and folding the percentage validation into a named
+closure. A ratchet DOWN; the duplicate table in `test_cap_1_source_file_line_cap.py` moved
+with it in the same commit. pins: perf-approxpct-1/C-007
+
 FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.rs`
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
@@ -299,6 +305,8 @@ file-backed module.
 DML-B (2026-08-30): `check_rust_file_size.py` `insert_overwrite.rs` tests 1249→1233;
 `check_lib_py.py` `writer_readwriter.py` 1117→1113.
   FN-REGEXP-EXTRACT-1 (2026-09-04): `functions_expr.py` ceiling 2261 → 2259 (ratchet down).
+  PERF-APPROXPCT-1 round 2 (2026-09-06): `functions_expr.py` ceiling 2259 → 2258
+  (accuracy check out to `_integral.py`, one shared Column return).
 
 CC-4 (2026-08-30): remaining banner files; size-gate rows ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;

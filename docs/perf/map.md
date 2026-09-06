@@ -136,6 +136,19 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   evidence including every repeat and the JVM stderr lines:
   [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
   pins: h3-spill-1/C-002, C-003, C-004, C-005
+- [approx-percentile-baseline.md](approx-percentile-baseline.md) — **PERF-APPROXPCT-1
+  (2026-09-05):** the `percentile_approx` cells before/after the Greenwald-Khanna
+  sketch (1e7 wall 2.95 → 0.14 s, peak 2507.8 → 752.9 MB against a 188.6 MB
+  `count(id)` floor; warm-1e6 wall 0.03 s under the committed 1.0 s bar), the
+  sublinear residual attributed to transient batches (inferred), state sizes
+  (952656/4776/72 B at acc 10000/100/2), and the accuracy-knob cells pointed at
+  the unit ledger §4, not restated. **Round 2 (2026-09-06):** the after column is
+  re-derived through the tracked
+  [approxpct harness](../../python/repark-parity/bench/approxpct/map.md); the before
+  column stands recorded (no second release build of the pre-unit tree).
+  **Round 3 (2026-09-06):** the 1e7 attributable 462 → 564 MB is the deferred
+  canonical fold's cost, not a re-derivation of the same kernel.
+  pins: perf-approxpct-1/C-004
 
 ## Pointers
 

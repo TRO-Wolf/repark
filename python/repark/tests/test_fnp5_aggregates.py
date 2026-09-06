@@ -108,7 +108,7 @@ def test_grouping_marks_the_aggregated_level_of_a_cube() -> None:
 def test_approx_count_distinct_counts_and_accepts_the_ignored_rsd() -> None:
     """Spark's estimator is HLL++ and DataFusion's is HLL, so ``rsd`` has nothing to tune.
 
-    Accepted and ignored, like ``percentile_approx``'s accuracy argument. Pinned as a signature
+    Accepted and ignored: the estimate never sees the knob. Pinned as a signature
     contract, not as a promise that the estimate matches Spark's bit for bit.
     """
     frame = _session().createDataFrame([("a",), ("b",), ("a",)], "k string")

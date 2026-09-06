@@ -2,6 +2,8 @@
 //! Constructors resolve literals and standalone SQL expressions; `DataFrame` methods resolve
 //! expressions against their input schema.
 
+use crate::AnalysisException;
+use crate::fence::fenced;
 use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::count::count_udaf;
 use datafusion::functions_window::cume_dist::cume_dist_udwf;
@@ -19,10 +21,6 @@ use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
-use repark_functions::percentile_approx::percentile_approx_udaf;
-
-use crate::AnalysisException;
-use crate::fence::fenced;
 
 #[cfg(test)]
 mod door_parity_tests;
@@ -32,7 +30,8 @@ mod window;
 
 use expr_build::{
     TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
-    percentile_approx_list_expr, refuse_nested_higher_order, strip_outer_alias,
+    percentile_approx_list_expr, percentile_approx_scalar_expr, refuse_nested_higher_order,
+    strip_outer_alias,
 };
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
@@ -858,31 +857,31 @@ impl PyColumn {
         })
     }
 
-    pub fn approx_percentile_cont(&self, percentile: f64) -> PyResult<Self> {
+    pub fn approx_percentile_cont(&self, percentile: f64, accuracy: Option<i64>) -> PyResult<Self> {
         fenced!("Column.approx_percentile_cont", {
             if !(0.0..=1.0).contains(&percentile) {
                 return Err(PyValueError::new_err(format!(
                     "approx_percentile_cont percentile must be in [0, 1], got {percentile}"
                 )));
             }
-            let expr = percentile_approx_udaf().call(vec![self.expr.clone(), lit(percentile)]);
+            let expr = percentile_approx_scalar_expr(self.expr.clone(), percentile, accuracy);
             Ok(Self::from_expr(expr))
         })
     }
-    pub fn approx_percentile_list(&self, percentages: Vec<f64>) -> PyResult<Self> {
+    pub fn approx_percentile_list(
+        &self,
+        percentages: Vec<f64>,
+        accuracy: Option<i64>,
+    ) -> PyResult<Self> {
         fenced!("Column.approx_percentile_list", {
-            if percentages
-                .iter()
-                .any(|percentage| !(0.0..=1.0).contains(percentage))
-            {
+            let out_of_range = |percentage| !(0.0..=1.0).contains(percentage);
+            if percentages.iter().any(out_of_range) {
                 return Err(PyValueError::new_err(
                     "approx_percentile percentages must be in [0, 1]",
                 ));
             }
-            Ok(Self::from_expr(percentile_approx_list_expr(
-                self.expr.clone(),
-                percentages,
-            )))
+            let expr = percentile_approx_list_expr(self.expr.clone(), percentages, accuracy);
+            Ok(Self::from_expr(expr))
         })
     }
 

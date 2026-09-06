@@ -138,9 +138,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
   second escape rule. pins: h3-spill-1/C-001
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
   DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
   FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
+  PERF-APPROXPCT-1 round 2 (2026-09-06): the `functions_expr.py` row ratchets 2259 → 2258 with the gate table.
   TYPES-1 (2026-09-05): `dataframe/core.py` 6303 → 6305 (increase — the two `__repark_rn` BIGINT casts) and `test_window_parity.py` 1481 → 1422 with the gate table. TYPES-1 round 4 (2026-09-05): `core.py` 6305 → 6303 with the gate table (one import joined absorbs the increase); `datetime.rs` 1704 → 1709 with the gate table (increase — the year-sign arm, no compressible lines, owner approval at merge). TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709 → 1700 with the gate table (the year arm moves to `spark_year_pad.rs`).
   pins: fn-fix-2-string-rows/C-002
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261. pins: fn-fix-1-registry-rows/C-002
