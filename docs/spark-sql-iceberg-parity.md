@@ -4382,16 +4382,24 @@ Shared roster pin for every heading:
   `schema.simpleString()`, and `printSchema` (Spark-equal text), and `timestamp[us]`
   via Arrow; `createDataFrame` with a `TimestampNTZType` schema reports likewise.
   Tz-aware timestamps still report `timestamp`. `read.csv` with `inferSchema` casts
-  inferred tz-naive timestamps to instant `timestamp` (Spark-equal dtype, Arrow
-  `timestamp[us, tz=UTC]`, tz-aware values) since 2026-09-06 (NULLABILITY-2 round 2);
-  JSON inference stays `string` on both engines.
+  inferred tz-naive timestamps to instant `timestamp` through CAST(str AS TIMESTAMP),
+  so `spark.sql.session.timeZone` localizes the wall clock (UTC and
+  `America/New_York`; DST gap `2020-03-08 02:30:00` → 07:30Z measured). `nullValue`
+  plus `inferSchema` takes the same timestamp promotion. JSON reads also run that
+  cast (`reader.py` `_apply_reader_schema_semantics`); DataFusion infers Utf8, so
+  without `inferTimestamp` the cell stays `string` on both engines (measured
+  `{"ts": "2020-06-01 12:00:00"}`). Parquet/`createDataFrame` NTZ paths stay
+  `timestamp_ntz`.
 - **Apache Spark** — reports the same column `timestamp_ntz` via `dtypes` and the schema
-  string, and `timestamp[us]` via Arrow; infers CSV timestamps as `timestamp`.
-  *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06.)*
+  string, and `timestamp[us]` via Arrow; infers CSV timestamps as `timestamp` in the
+  session zone; JSON without `inferTimestamp` stays `string`.
+  *(oracle: live PySpark 4.1.2, UTC, 2026-09-05; CSV-infer legs 2026-09-06; session-zone
+  / nullValue / JSON-path legs 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_tz_naive_timestamp_dtype`,
-  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls), and
-  `...::test_csv_inferschema_timestamp_reports_timestamp`.
+  `...::test_csv_json_timestamp_reads_keep_string_dtype` (controls),
+  `...::test_csv_inferschema_timestamp_reports_timestamp`,
+  and `...::test_live_csv_inferschema_matches_oracle`.
 - **Rationale** — FIXED. The `schema` property routes the `timestamp`/`timestamp_ntz`
   keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
   `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).

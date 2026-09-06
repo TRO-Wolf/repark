@@ -1,3 +1,37 @@
+# Errata — round 3 (2026-09-06, grok-4.6, critic remediation)
+
+No verdict below changes: the clause table is untouched. What round 3
+corrects, serves, and records:
+
+- N2-R2-1 — SERVED. CSV `inferSchema` timestamps localize in
+  `spark.sql.session.timeZone`. DataFusion infers tz-naive `timestamp[s]`;
+  `cast("timestamp")` on that type stores 12:00Z under `America/New_York`.
+  CAST through string uses CAST(str AS TIMESTAMP), the same session-zone
+  entry point as zoneless `to_timestamp`. Pins: UTC (12:00Z) and
+  `America/New_York` (16:00Z), DataFrame and SQL doors, DST gap
+  `2020-03-08 02:30:00` → 07:30Z (Spark `unix_timestamp` 1583652600,
+  Arrow 07:30Z). Mutation: reverting to `cast("timestamp")` reds the NY
+  instant (12:00Z vs 16:00Z).
+- N2-R2-2 — SERVED. `nullValue` + `inferSchema` no longer returns before
+  the timestamp cast: promotion tries bigint → double → boolean →
+  timestamp (a `:` clock guard so date-only is not promoted to midnight).
+  Pin on both zones (timestamp + NULL row).
+- N2-R2-3 — PIN ADDED. Facade CAST whose child is a non-null COLUMN
+  (Arrow required struct registered as a MemTable, not a `STRUCT()`
+  constructor): `CAST(s AS STRUCT<a:BIGINT>)` is non-null, Spark-equal.
+  Mutation: reverting `decimal_cast.rs` Struct/List/Map arms reds the
+  Rust wrap pin (`complex_casts_of_nonnull_children_are_nonnull`) and
+  leaves the facade column pin green — DataFusion already marks CAST of
+  a non-null struct/list column non-null, the same reason constructor
+  CAST pins stayed green. The facade pin still guards the Spark-equal
+  column CAST; the arm remains the analyzer wrap the Rust pin holds.
+  Arms restored.
+- N2-R2-4 — DOCUMENTED. `_apply_reader_schema_semantics` is also the
+  JSON path (`reader.py` `_load_json`). The inferred-timestamp cast runs
+  there too; DataFusion infers Utf8, so without `inferTimestamp` the cell
+  stays `string` on both engines (measured `{"ts": "2020-06-01 12:00:00"}`).
+  Parquet/`createDataFrame` NTZ paths remain untouched.
+
 # Errata — round 2 addendum (2026-09-06): the L-1 re-run below counted the round-1
 battery (193 tests). With the 7 round-2 pins added to `test_nullability_2.py`,
 the same 4-file live selection finishes 200 passed, 86 s, exit 0, zero skips.
