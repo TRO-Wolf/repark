@@ -5,6 +5,13 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [write-order-dist-1-ledger.md](write-order-dist-1-ledger.md) —
+  **WRITE-ORDER-DIST-1 (2026-09-06), in flight:** `ALTER TABLE … WRITE ORDERED BY` /
+  `WRITE DISTRIBUTED BY` and the write properties they set. A pre-parse DDL module plus
+  a one-transaction sort-order/property primitive over the fork's `replace_sort_order`;
+  `write.distribution-mode` gating in `hash_distribution`; per-writer sorting in the two
+  funnel entries. `risk_tier: standard`. Branch `feat/write-order-dist-1`.
+  pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
