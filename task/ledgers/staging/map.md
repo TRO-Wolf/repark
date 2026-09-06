@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
+  `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
+  `drop_null_lists=True` dropped `user_properties`. FIX: `promote_parquet_null_types`
+  in `read_parquet_nullable` maps Arrow `Null` to `Int32` after the nullability relax.
+  Default `drop_null_lists` stays True; SQL `make_array()` still drops. Live
+  `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
+  NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [perf-ice-writepath-1-ledger.md](perf-ice-writepath-1-ledger.md) —
   **PERF-ICE-WRITEPATH-1 (2026-09-05), in flight:** the two write-path defects PERF-ANALYSIS-1
   ranked together, because both are read off the same CTAS pair. Fork half **F-28**: the

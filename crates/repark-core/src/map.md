@@ -144,6 +144,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a single TableScan, so EXPLAIN output is unchanged. The double infer costs one extra
   listing plus footer reads; S3 registration still happens first in `session.rs`.
   pins: cutover-schema-1/C-001, C-002
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06):** after the nullability relax, `promote_parquet_null_types`
+  maps Arrow `Null` (parquet physical INT32 + Null logical type) to `Int32`, recursive over
+  the same struct/list/map walk, depth-bound 32. Spark's parquet reader does this; DataFusion
+  keeps `Null`. CTAS still uses `relax_schema_to_nullable` only, so an actual SQL `VOID`
+  column does not become int32 on write. `drop_null_lists=True` still drops `List(Null)`
+  that never went through this reader.
+  pins: dynflatten-listnull-1/C-002, C-006
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
