@@ -16,7 +16,10 @@ directory is the answer. Every probe refuses to run against a debug module.
   `ctas`, `ctas_partitioned8` or `df_write_parquet_zstd`, one warm-up then N timed statements
   against a fresh table each, printing a JSON row with samples, median, min, spread, the 1-minute
   load at start and end, the resulting data-file count and, since WRITE-DISTRIBUTION-1
-  (2026-09-06), the process's RSS peak (`max_rss_kb`).
+  (2026-09-06), the process's RSS peak (`max_rss_kb`). Since WRITE-ORDER-DIST-1 (2026-09-06)
+  it also runs `insert_overwrite` (timed overwrite onto a CTAS-built target) and
+  `insert_overwrite_ordered` (the same target after `WRITE ORDERED BY (id)`); the target build
+  is an untimed `setup`, so the samples hold only the overwrite.
 - [run_cells.sh](run_cells.sh) — three passes of the three cells for one build label, then the
   minimum, the per-pass medians and the floor (the spread of the pass medians).
 - [probe_grouping.py](probe_grouping.py) — the round-3 refutation: N v3 CTAS over eight UNEQUAL
