@@ -6079,6 +6079,156 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   taught. This re-measure corrects EX-SES-1's Spark half-sentence (see the dated note there);
   that row's pin — repark's `catalog.registerFunction` return — is unaffected.
 
+### EX-ML-1 — `Vector.size` is a method; Spark exposes a property
+
+- **repark** — `Vectors.dense(1.0, 0.0, 3.0).size` is a bound method;
+  `.size()` answers `3`. The same call on `Vectors.sparse(5, [1, 3], [1.0, 2.0])`
+  answers `5`. `int(dense.size)` raises `TypeError`.
+- **Apache Spark** — `.size` is an `int` property (`3` / `5`); `.size()` raises
+  `TypeError: 'int' object is not callable`.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, EX-27 ml batch, JVM-free `pyspark.ml.linalg`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_size_is_a_method`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement. The examples keep
+  `toArray`, indexing, and `numNonzeros`, where the engines agree; the size arm is pinned,
+  not taught.
+
+### EX-ML-2 — `VectorUDT.typeName` is `vector`; Spark answers `vectorudt`
+
+- **repark** — `VectorUDT().typeName()` answers `vector`; `sqlType()` is
+  `struct<type:int,size:int,indices:array<int>,values:array<double>>`;
+  `jsonValue()` is `{"type": "vector", "class": "repark.spark.ml.linalg.VectorUDT"}`.
+  `hasattr(..., "serialize")` and `hasattr(..., "deserialize")` are `False`.
+  `simpleString()` answers `vector` and `repr` answers `VectorUDT()` on both engines.
+- **Apache Spark** — `typeName()` answers `vectorudt`; `sqlType()` uses
+  `tinyint` for the `type` field
+  (`struct<type:tinyint,size:int,indices:array<int>,values:array<double>>`);
+  `jsonValue()` is a UDT descriptor with
+  `class=org.apache.spark.ml.linalg.VectorUDT` and
+  `pyClass=pyspark.ml.linalg.VectorUDT`. `serialize(dense)` answers
+  `(1, None, None, [1.0, 0.0, 3.0])`; `deserialize` is present.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free `VectorUDT`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_vector_udt_typename_and_sql_type`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, deepened
+  2026-09-06. The example keeps `simpleString` and `repr`, the only equal arms;
+  typeName / sqlType / jsonValue / serialize / deserialize stay pinned.
+
+### EX-ML-3 — `HasInputCol` is not a `Params` subclass; Spark's mixin is
+
+- **repark** — `issubclass(HasInputCol, Params)` is `False`. `HasInputCol()` raises
+  `PySparkTypeError: Param parent must be Identifiable, got HasInputCol`.
+  `Tokenizer().getInputCol()` (unset) answers `uid + "__input"`;
+  `explainParams()` shows `inputCol: input column name. (default: uid__input)`.
+- **Apache Spark** — `HasInputCol` extends `Params`; `HasInputCol()` constructs
+  and prints a uid (`HasInputCol_<12hex>`). `Tokenizer().getInputCol()` (unset)
+  raises `KeyError: Param(parent='Tokenizer_…', name='inputCol', doc='input column name.')`;
+  `explainParams()` shows `inputCol: input column name. (undefined)`.
+  `Tokenizer().getOutputCol()` (unset) answers `uid + "__output"` on both engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_has_input_col_is_not_params`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, extended
+  2026-09-06 to the concrete Tokenizer arm. The example reads mixins off
+  Tokenizer / VectorAssembler / OneHotEncoder / LinearRegression after set, and
+  keeps the Spark-equal unset `outputCol` default; the unset `inputCol` default
+  and the standalone inheritance arm are pinned, not taught.
+
+### EX-ML-4 — `ParamGridBuilder.baseOn(param, value)` works; Spark 4.1.2 wants a dict or tuples
+
+- **repark** — `ParamGridBuilder().baseOn(estimator.maxIter, 20).build()` answers
+  one map with `maxIter=20`. The dict spelling `baseOn({estimator.maxIter: 20})`
+  answers the same cell on both engines. The tuple spelling
+  `baseOn((estimator.maxIter, 20))` raises
+  `IllegalArgumentException: ParamGridBuilder.baseOn expects a dict or even-length Param/value pairs`.
+- **Apache Spark** — `baseOn(param, 20)` raises
+  `TypeError: cannot unpack non-iterable Param object`. Spark 4.1.2 accepts a
+  Param map dict or `(param, value)` tuples:
+  `baseOn({param: 20})` and `baseOn((param, 20))` both answer `20`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
+  `pyspark.ml.tuning.ParamGridBuilder`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_param_grid_base_on_pairs`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-27 measurement, reverse
+  arm added 2026-09-06. The example keeps the dict spelling, where the engines
+  agree; both the alternating-pair arm and the tuple arm are pinned, not taught.
+
+### EX-ML-5 — shared mixins carry setters; Spark's mixins do not
+
+- **repark** — `hasattr(HasInputCol, "setInputCol")`,
+  `hasattr(HasOutputCol, "setOutputCol")`,
+  `hasattr(HasInputCols, "setInputCols")`,
+  `hasattr(HasOutputCols, "setOutputCols")`, and
+  `hasattr(HasHandleInvalid, "setHandleInvalid")` are all `True`.
+  A `HasHandleInvalid, Params` subclass answers `getHandleInvalid() == "error"`.
+- **Apache Spark** — the same five `hasattr` cells are `False`. A
+  `HasHandleInvalid, Params` subclass raises
+  `KeyError: Param(parent='HandleStage_…', name='handleInvalid', doc='how to handle invalid entries. …')`.
+  Concrete stages still expose the setters: `Tokenizer.setInputCol` and
+  `VectorAssembler.setInputCols` / `getHandleInvalid() == "error"` agree on both
+  engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_mixin_setters_present`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example teaches the mixins only through Tokenizer, VectorAssembler,
+  OneHotEncoder, and LinearRegression.
+
+### EX-ML-6 — empty `Pipeline.getStages()` answers `[]`; Spark KeyErrors
+
+- **repark** — `Pipeline().getStages()` answers `[]`.
+- **Apache Spark** — `Pipeline().getStages()` raises
+  `KeyError: Param(parent='Pipeline_…', name='stages', doc='a list of pipeline stages')`.
+  `Pipeline(stages=[VectorAssembler, LinearRegression]).getStages()` types agree
+  on both engines.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_empty_pipeline_get_stages_defaults_to_empty_list`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps the two-stage `getStages` arm, where the engines agree; the
+  unset default is pinned, not taught.
+
+### EX-ML-7 — a Spark-shaped `UnaryTransformer` raises; Spark applies the Python callable
+
+- **repark** — a subclass that implements `createTransformFunc`,
+  `outputDataType`, and `validateInputType` and does not override `_transform`
+  raises `IllegalArgumentException: <class> must implement _transform as a plan-built transform (repark does not apply Python row callables)`
+  on `transform`. A subclass that overrides `_transform` with a plan-built
+  `withColumn` answers `x+1` on the four-row fixture.
+- **Apache Spark** — the same Spark-shaped subclass with
+  `createTransformFunc = lambda value: float(value) + 1.0` transforms
+  `[(1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0)]`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_spark_shaped_unary_transformer_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example teaches the plan-built `_transform` shape repark supports.
+
+### EX-ML-8 — persistence format is `repark-ml`; Spark writes `metadata/part-*`
+
+- **repark** — `PipelineModel.write().save` writes `metadata.json` with
+  `"format": "repark-ml"` plus `stages/N_*/metadata.json` and
+  `stages/N_*/fitted/params.parquet`. A repark save round-trips: loaded
+  transform rows equal the pre-save rows. `PipelineModel.load` of a Spark-saved
+  tree raises `IllegalArgumentException: missing metadata.json under <path>`.
+- **Apache Spark** — `PipelineModel.write().save` writes `metadata/part-*` plus
+  `stages/N_*/metadata/part-*.txt` plus `data/part-*.snappy.parquet` for stages that carry fitted data (`VectorAssembler` has `metadata/` only) (no `metadata.json`). Spark's
+  `PipelineModel.load` of a repark-saved tree raises
+  `AnalysisException: [PATH_NOT_FOUND] Path does not exist: file:<path>/metadata`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2; cross-load measured
+  both directions.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_persistence_format_is_repark_ml`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps the repark-format round-trip; neither engine reads the
+  other's layout.
+
+### EX-ML-9 — `DenseVector` has no `dot` or `squared_distance`
+
+- **repark** — `hasattr(Vectors.dense(1.0, 0.0, 3.0), "dot")` and
+  `hasattr(..., "squared_distance")` are `False`.
+- **Apache Spark** — `dense.dot(Vectors.dense(1.0, 2.0, 1.0))` answers `4.0`;
+  `dense.squared_distance(Vectors.zeros(3))` answers `10.0`.
+  *(oracle: live PySpark 4.1.2, 2026-09-06, EX-27 round 2, JVM-free
+  `pyspark.ml.linalg.DenseVector`.)*
+- **Pin** — `python/repark/tests/test_examples_ml.py::test_dense_vector_lacks_dot_and_squared_distance`
+- **Rationale** — BACKLOG, filed 2026-09-06 from the EX-27 round-2 measurement.
+  The example keeps `toArray`, indexing, and `numNonzeros`, where the engines
+  agree; the missing methods are pinned, not taught. The API freeze closes
+  `python/repark/src` to this unit.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
