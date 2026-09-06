@@ -314,6 +314,14 @@ repark-parity slice.
 
 ## Contents
 
+- `sepmo_packet.py` — **SEPMO-E2 (2026-09-06):** compact worker packet assembler.
+  `build --unit --role --base --brief` writes Markdown (stable prefix first) and
+  a JSON sidecar; `check` validates the schema and every stable-prefix rule
+  verbatim; `diff` prints the dynamic section only. Fixtures under
+  `python/repark-parity/tests/fixtures/sepmo_packets/`. Not a CI gate.
+  Invocation: `python3 scripts/sepmo_packet.py build …` or
+  `make sepmo-packet ARGS='check <packet>'`.
+  pins: sepmo-e2/C-002, C-003, C-004, C-008
 - `sepmo_usage.py` — **SEPMO-E0E1 (2026-09-06, round 3):** local-only usage collector.
   `collect <run-dir>` emits one normalized JSON record; `index <dir>` writes the inventory
   table (or `--jsonl`). Muse tokens come from the session store via `runs.tsv` column 6
@@ -696,6 +704,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
 | Collect SEPMO worker usage | `python3 scripts/sepmo_usage.py collect <run-dir>` / `index <dir>` (`make sepmo-usage`) |
+| Assemble a SEPMO compact worker packet | `python3 scripts/sepmo_packet.py build --unit <id> --role actor --base <sha> --brief <md> --out-dir <dir>` |
 
 ## Pointers
 
