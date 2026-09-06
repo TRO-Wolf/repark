@@ -102,6 +102,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pins: perf-facade-cdf-1/C-001, C-005
 
 - [spill-matrix-baseline.md](spill-matrix-baseline.md) — **H3-SPILL-1 (2026-09-05):** the Round 3: the concurrency row names lane E (the ten `to_pandas` cells re-run alone).
+  **H3-SPILL-RESIDUE-1 (2026-09-06)** rewrote §6 and §7 and annotated §1/§2/§3: both defects
+  are fixed, the single `internal_error` cell is `clean_error` 3/3, the 8 MiB column was
+  re-run before and after to show the other 17 operators cell-for-cell identical, and the
+  `collect` happy path carries five facade-bench medians per module rather than one.
+  The 180-cell tables are NOT re-run — they stay the 2026-09-05 measurement, with the one
+  moved cell called out where it appears. pins: h3-spill-residue-1/C-001, C-002, C-003
   Never-OOM truth table. 18 operators x 5 pool sizes (unbounded / 8 GiB / 1 GiB / 256 MiB /
   64 MiB) x 2 scales (1e6 / 1e7 wide rows, so 1e7 exceeds 1 GiB) = **180 cells, each in a fresh
   subprocess on a release module**, classified `ok` / `spilled` / `degraded` / `clean_error` /

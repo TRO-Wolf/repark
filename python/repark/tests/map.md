@@ -1711,7 +1711,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   of the code. The subprocess worker keeps 900 characters of the message, not 400: the typed
   refusal plus both REPARK remediation lines is longer than the bug report it replaced, and a
   400-character truncation cut the resize knobs off the very assertion that names them.
-  pins: h3-spill-1/C-003, C-004, C-005, C-006; h3-spill-residue-1/C-001, C-002
+  pins: h3-spill-1/C-003, C-004, C-005, C-006
+  pins: h3-spill-residue-1/C-001, C-002
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

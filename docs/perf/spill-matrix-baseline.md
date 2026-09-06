@@ -12,8 +12,10 @@ outcome of all.
 returned a wrong answer.** A bounded pool either completed the query, spilled, degraded, or
 refused with a typed `PySparkException` naming the pool and the two knobs that resize it. One cell
 — `nested_loop_join` at a 64 MiB pool and 1e7 rows — turned a pool refusal into a Rust panic
-caught at the Python boundary; that is `H3-SPILL-NLJ-1` below, and it is the only failure of the
-Never-OOM contract this matrix found. The honest limit of the claim is different and larger: **the
+caught at the Python boundary; that is `H3-SPILL-NLJ-1` below, and it was the only failure of the
+Never-OOM contract this matrix found. **It is fixed** (H3-SPILL-RESIDUE-1, 2026-09-06): that cell
+and every other 8 MiB cell now answers with the typed refusal — see §6 and §7. The honest limit of
+the claim is different and larger: **the
 pool bounds only the operators that register with it.** Windows, `dynamicFlatten`, the Iceberg
 scan and the whole facade boundary (`collect`, `toPandas`) are not pool-accounted in DataFusion
 54.1, so their memory is whatever the data costs — 4.5 GiB resident for a 1e7-row `collect()`
@@ -96,17 +98,30 @@ can survive a full pool:
 
 | Class | Operators |
 |---|---|
-| Pool-accounted **and** spillable | `SortExec` (`ExternalSorter`), grouped `AggregateExec` (`row_hash`), `RepartitionExec`, `NestedLoopJoinExec` (fallback load path) |
+| Pool-accounted **and** spillable | `SortExec` (`ExternalSorter`), grouped `AggregateExec` (`row_hash`), `RepartitionExec`, `NestedLoopJoinExec` (fallback load path — **but the fallback is unsound in 54.1**: it re-executes partition 0 of a build child that `NestedLoopJoinExec::execute` already executed, which `RepartitionExec` answers with `expect("partition not used yet")`. So in practice a nested-loop join at a full pool refuses; it does not spill. See §6.) |
 | Pool-accounted, **not** spillable — refuses when the pool is full | `HashJoinExec` (build side), `SortMergeJoinExec` (buffered side spills, streamed side does not), `CrossJoinExec`, `SymmetricHashJoinExec`, `PiecewiseMergeJoinExec`, ungrouped `AggregateStream`, `SortPreservingMergeExec`, `TopK`, `BufferExec`, `RecursiveQueryExec` |
 | **Not pool-accounted at all** | `WindowAggExec`, `BoundedWindowAggExec`, `UnnestExec`, `CoalesceBatchesExec`, the repark Iceberg scan, the repark facade boundary (`collect`, `toPandas`) |
 
 The third row is the load-bearing one. A pool cannot bound what never asks it for anything.
+
+**What changed since (H3-SPILL-RESIDUE-1, 2026-09-06).** Two rows above are now qualified by
+measurement rather than by reading. The `NestedLoopJoinExec` entry moved from "spillable" to
+"spillable in intent only": its fallback is reached but cannot complete, and repark now reports
+the pool refusal that triggered it rather than the engine's panic. And the last row — the
+un-accounted facade boundary — is *still* un-accounted, but it no longer lies about it: a
+`collect()` that runs out of address space raises `MemoryError`. Un-accounted still means
+unbounded; it no longer means unreported.
 
 ## 3. The outcome matrix
 
 Legend: `ok` in memory · `spill n/MiB` spilled, n spill events · `degr N` partial aggregation
 skipped for N rows · `clean-err` typed `PySparkException` naming the pool · `PANIC` a Rust panic
 caught at the Python boundary. No cell was `abort` or `wrong`.
+
+**These tables are the 2026-09-05 H3-SPILL-1 measurement and are not re-run here.** Exactly one
+cell has moved since: `nested_loop_join` at 64 MiB / 1e7, the single `PANIC`, is now `clean-err`
+— re-measured 3/3 on 2026-09-06 by H3-SPILL-RESIDUE-1 (§6). Every other cell's claim stands as
+recorded, and the 8 MiB re-run in §6 shows the other 17 operators unchanged.
 
 ### 3.1 1 000 000 rows
 
@@ -143,7 +158,7 @@ caught at the Python boundary. No cell was `abort` or `wrong`.
 | `collect_list` | ok | ok | clean-err | clean-err | clean-err |
 | `hash_join` | ok | ok | spill 4/87M | clean-err | clean-err |
 | `sort_merge_join` | ok | ok | spill 24/536M | clean-err | clean-err |
-| `nested_loop_join` | ok | ok | ok | ok | PANIC |
+| `nested_loop_join` | ok | ok | ok | ok | PANIC → clean-err (fixed 2026-09-06) |
 | `window_unbounded` | ok | ok | spill 8/232M | spill 26/232M | clean-err |
 | `window_sliding_rows` | ok | ok | ok | ok | ok |
 | `window_range` | ok | ok | ok | ok | ok |
@@ -162,7 +177,7 @@ caught at the Python boundary. No cell was `abort` or `wrong`.
 | `spilled` | 16 | completed by spilling to disk |
 | `degraded` | 15 | completed after the partial aggregate gave up (`skipped_aggregation_rows`) |
 | `clean_error` | 27 | typed `PySparkException`, process healthy, remediation named |
-| `internal_error` | 1 | `nested_loop_join` 64 MiB / 1e7 — see `H3-SPILL-NLJ-1` |
+| `internal_error` | 1 → **0** | `nested_loop_join` 64 MiB / 1e7 — `H3-SPILL-NLJ-1`, FIXED 2026-09-06; the cell is now one of the `clean_error` 27 → 28 |
 | `abort` | **0** | — |
 | `wrong` | **0** | — |
 | total | 180 | |
@@ -267,47 +282,106 @@ and shuffle spill to disk when they exceed their execution-memory share
 (<https://spark.apache.org/docs/latest/tuning.html> "Memory Management Overview"), which the two
 measured rows above confirm.
 
-## 6. The defects this matrix found
+## 6. The defects this matrix found — and how they were closed
 
-### `H3-SPILL-NLJ-1` — a bounded pool turns a nested-loop join into a caught Rust panic
+Both were filed BACKLOG by H3-SPILL-1 (pins only) and **FIXED on 2026-09-06 by
+H3-SPILL-RESIDUE-1**. The registry rows are `H3-SPILL-NLJ-1` and `H3-SPILL-COLLECT-1` in
+[../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md).
+
+### `H3-SPILL-NLJ-1` — a bounded pool turned a nested-loop join into a caught Rust panic
 
 At 64 MiB / 1e7 (and reproducibly at 8 MiB / 1e6), `SELECT l.id, r.v FROM base l JOIN other r ON
-l.v < r.v` fails with
+l.v < r.v` failed with
 
     PySparkException: repark internal error in PyDataFrame.__arrow_c_stream__.next:
     partition not used yet (a Rust panic was caught at the Python boundary; this is a bug)
 
-The panic is DataFusion's own `expect("partition not used yet")` at
-`datafusion-physical-plan-54.1.0/src/repartition/mod.rs:1277`, reached from the join's **right**
-side (`ProjectionExec` over `RepartitionExec`): each output partition `remove`s its channel from
-the state map, so a second `execute` of the same partition finds nothing. Something on the
-pool-refusal path re-executes it. Three runs, three panics. Every other operator at the same 8 MiB
-pool returns a clean `ResourcesExhausted`, so this is the plan shape, not the pool machinery.
-The process survives (`panic = unwind`, caught by repark's boundary fence), the session stays
-usable and no wrong answer is produced — but a bounded pool must not answer with a panic.
+**The upstream cause, read from the vendored source.** `NestedLoopJoinExec::execute` loads its
+build (left) side once through `build_side_data.try_once(|| self.left.execute(0, ctx))`. When the
+pool refuses that load, `handle_buffering_left` calls `initiate_fallback`, which executes **the
+same child instance** from partition 0 a second time to spill it
+(`datafusion-physical-plan-54.1.0/src/joins/nested_loop_join.rs`). `RepartitionExec::execute`
+`remove`s each output partition's channel from its shared state on the first call, so the second
+finds nothing and hits `expect("partition not used yet")` at
+`.../src/repartition/mod.rs:1277`. The join's build side is `SinglePartition`-distributed, so a
+`RepartitionExec` is exactly what the enforcer puts there. Every other operator at the same pool
+returned a clean `ResourcesExhausted`, because none of them re-executes a child.
 
-### `H3-SPILL-COLLECT-1` — the facade boundary panics under an address-space limit
+**What repark did about it.** A dependency change is out of scope, so repark contains the
+consequence rather than reporting a bug. A bounded session's `FairSpillPool` is wrapped in
+`RefusalRecordingPool` ([../../crates/repark-core/src/pool_refusals.rs](../../crates/repark-core/src/pool_refusals.rs)),
+which delegates every method — including `Display`, so refusal text is byte-identical — and
+records the `try_grow` refusals. The Arrow export reader keeps the refusal count it opened with;
+when a poll comes back as a *fenced panic* AND the pool has refused since, it reports the
+engine's own refusal text plus one disclosure line instead of the internal error. Three gates
+keep it narrow: only a fenced panic, only after a refusal on that reader's own stream, and never
+on an unbounded session (which installs no log at all).
+
+**Measured, 2026-09-06, release module, one fresh subprocess per cell:**
+
+| cell | before | after |
+|---|---|---|
+| `nested_loop_join` 8 MiB / 1e6 | `internal_error` | `clean_error` |
+| `nested_loop_join` 64 MiB / 1e7, 3 runs | `internal_error` ×3 | `clean_error` ×3 |
+| the other 17 operators at 8 MiB / 1e6 | 12 `clean_error`, 1 `spilled`, 4 `ok` | identical, cell for cell |
+
+The answer it now gives at 8 MiB / 1e6:
+
+    PySparkException: Resources exhausted: Failed to allocate additional 1024.2 KB for
+    NestedLoopJoinLoad[2] with 7.0 MB already allocated for this reservation - 1022.7 KB remain
+    available for the total memory pool: fair(pool_size: 8.0 MB)
+    REPARK: the bounded memory pool refused this plan; the engine did not survive that refusal,
+    so repark reports the refusal itself.
+    REPARK: raise the FairSpillPool via SparkSession.builder.config('repark.memory.limit.gb', N)…
+
+**The upstream defect is still open.** The issue text to file against DataFusion is in
+`task/ledgers/staging/h3-spill-residue-1-ledger.md`; a fixed upstream would make the containment
+dead code, and its pins would say so.
+
+### `H3-SPILL-COLLECT-1` — the facade boundary panicked under an address-space limit
 
 Separately measured, because the matrix's own guard exposed it. `collect()` at 1e7 rows needs
-~4.5 GiB resident and far more virtual; run it under an `RLIMIT_AS` ceiling and it fails with
+~4.5 GiB resident and far more virtual; run it under an `RLIMIT_AS` ceiling and it failed with
 
     PySparkException: repark internal error in collect_rows.rows_from_record_batch:
     PyObject pointer is null (a Rust panic was caught at the Python boundary)
 
 — a CPython allocation returned NULL and the fast path panicked instead of surfacing
-`MemoryError`. With 6 GiB of headroom the identical call is `ok`. This is the realistic shape of
-Never-OOM in a container with a memory limit, and it is a repark-side panic, not a DataFusion one.
+`MemoryError`. **It now raises `MemoryError`** (measured 2026-09-06: `MemoryError` with no
+message, CPython's own, at `RLIMIT_AS` = `VmSize` + 256 MiB over a 4e6-row five-column frame;
+the 6 GiB-headroom control still returns all 4e6 rows). Every CPython allocation on the row fast
+path goes through `Bound::from_owned_ptr_or_err`. pyo3's safe constructors could not be used:
+`PyTuple::new`, `PyList::new` and the scalar `IntoPyObject` impls all reach `assume_owned`, which
+panics on NULL **even where the signature returns `PyResult`**.
+
+**The happy path is unchanged.** `make facade-bench CELLS=collect` on a release module, five runs
+per module on a loaded box (load1 10-26 throughout):
+
+| cell | before, 5 medians (ms) | after, 5 medians (ms) | before median | after median |
+|---|---|---|---:|---:|
+| `collect/1000000` | 990.4, 1007.3, 1019.7, 1040.4, 1040.4 | 1004.1, 1019.5, 1028.6, 1031.0, 1054.6 | 1019.7 | 1028.6 |
+| `collect/100000` | 93.8, 94.4, 94.5, 95.9, 98.1 | 96.5, 98.3, 98.6, 98.6, 98.7 | 94.5 | 98.6 |
+
+The distributions overlap on both cells; the `collect/100000` gap (+4.1 ms) is inside the
+harness's own declared floor for that cell, which measured 3.07-6.18 ms across these runs. The
+in-run control `collect_old/1000000` — the pure-Python converter, which this change does not
+touch — moved 4906.9 vs 4916.7 between the two modules, so the box was the same on both sides.
+The pool still does not bound this path: it is un-accounted, not unreported.
 
 ## 7. What would move the Never-OOM claim
 
-Not queued here — this unit is pins only — but measured and therefore rankable:
+Ranked by H3-SPILL-1 from the measurement; **items 2 and 3 are done** (H3-SPILL-RESIDUE-1,
+2026-09-06). The rest are still open and still not queued here.
 
 1. **Pool-account the facade boundary.** `collect` at 1e7 is ~4.5 GiB resident at *every* pool.
    A reservation around the row-materialization loop would turn the largest unbounded allocation
-   in the product into a typed refusal.
-2. **`H3-SPILL-COLLECT-1`** — check the pointer and raise `MemoryError`. Contained, and it is the
-   difference between "repark reports it is out of memory" and "repark reports a bug".
-3. **`H3-SPILL-NLJ-1`** — upstream; a repark-side reproducer is the deliverable.
+   in the product into a typed refusal. **Still open** — and now the highest-ranked item: after
+   H3-SPILL-COLLECT-1 the boundary reports honestly when the OS refuses it, but nothing bounds it.
+2. ~~**`H3-SPILL-COLLECT-1`** — check the pointer and raise `MemoryError`.~~ **DONE 2026-09-06.**
+   It was the difference between "repark reports it is out of memory" and "repark reports a bug".
+3. ~~**`H3-SPILL-NLJ-1`** — upstream; a repark-side reproducer is the deliverable.~~
+   **CONTAINED 2026-09-06** — the reproducer became a fix for the *shape*: repark reports the pool
+   refusal that caused the panic. The DataFusion defect itself is still open upstream.
 4. **Window operators take no reservation.** `window_unbounded` at 1e7 spills — but that is the
    `SortExec` beneath it, not the window. A window over one huge partition has no pool ceiling.
 5. **`collect_list` / `array_agg` has no spill path.** Both engines fail; repark fails better.
@@ -325,7 +399,20 @@ PYTHONPATH=python/repark-parity/bench .venv/bin/python -m spill.spark_cells \
   --cell sort --rows 10000000 --driver-memory 1g --scratch <dir> --json-out <file>
 ```
 
-pins: h3-spill-1/C-002, C-003, C-004, C-005
+The two §6 re-measurements (H3-SPILL-RESIDUE-1) are the same driver, narrowed:
+
+```
+PYTHONPATH=python/repark-parity/bench .venv/bin/python -m spill.measure \
+  --pools 8M --scales 1000000 --partitions 4 --repeats 1 \
+  --as-cap-bytes 34359738368 --rss-cap-bytes 8589934592 --cell-timeout-s 600 \
+  --scratch <dir> --json-out <file>
+PYTHONPATH=python/repark-parity/bench .venv/bin/python -m spill.measure \
+  --operators nested_loop_join --pools 64M --scales 10000000 --repeats 3 \
+  --partitions 4 --cell-timeout-s 900 --scratch <dir> --json-out <file>
+CELLS=collect PYTHON=.venv/bin/python make facade-bench
+```
+
+pins: h3-spill-1/C-002, C-003, C-004, C-005; h3-spill-residue-1/C-001, C-002, C-003
 
 ## 9. Appendix — every cell
 

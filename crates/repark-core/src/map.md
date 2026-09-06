@@ -133,7 +133,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `expect("partition not used yet")`. repark cannot patch the dependency, so it reports the
   refusal that caused the panic instead of a bug report. The decorator is the only way to see a
   refusal from outside DataFusion — the pool trait has no hook.
-  pins: h3-spill-residue-1/C-002
+  pins: h3-spill-residue-1/C-002, C-003
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
