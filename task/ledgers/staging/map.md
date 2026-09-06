@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
+  **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
+  `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
+  `drop_null_lists=True` dropped `user_properties`. FIX: `promote_parquet_null_types`
+  in `read_parquet_nullable` maps Arrow `Null` to `Int32` after the nullability relax.
+  Default `drop_null_lists` stays True; SQL `make_array()` still drops. Live
+  `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
+  NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
+  pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [sepmo-e2-ledger.md](sepmo-e2-ledger.md) —
   **SEPMO-E2 (2026-09-06), in flight, round 3:** compact role packets. Packet
   format v1 (eight field groups, stable prefix then dynamic, source identity,
