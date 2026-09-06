@@ -4489,6 +4489,24 @@ Shared roster pin for every heading:
   keys through `ReparkDataType.fromDDL` (behavior-identical for `timestamp`, exact for
   `timestamp_ntz`). Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
+### CSV-INFER-PERF-1 — `inferSchema` CSV no longer materializes the frame per candidate cast — **FIXED 2026-09-06 (CSV-INFER-PERF-1)**
+
+- **repark** — **FIXED 2026-09-06 (CSV-INFER-PERF-1).** Local `spark.read.csv(...,
+  inferSchema=True)` keeps DataFusion's native inference and Utf8-forces only the
+  columns inferred as Timestamp, then CAST(str AS TIMESTAMP) so offset-bearing cells
+  keep their instant. `nullValue` still Utf8-forces the scan and promotes with one
+  `try_cast` failure-count aggregation. On a 300k × 8 CSV (release native):
+  `inferSchema=False` 0.086 s → 0.083 s; `inferSchema=True` **2.339 s → 0.079 s**
+  (27.2× → 0.95× of False; plan-time `to_arrow` 34 → 0).
+- **Apache Spark** — `inferSchema` scans for types without a Python-side per-column
+  materialization of the frame.
+- **Pin** —
+  `python/repark/tests/test_csv_infer_perf_1.py::test_infer_schema_trial_path_does_not_materialize_per_column`,
+  `...::test_infer_schema_true_stays_within_twice_false`,
+  `...::test_infer_schema_shapes_match_spark_answers`.
+- **Rationale** — FIXED. NULLABILITY-2 round 4 was Spark-equal and expensive. Cells:
+  `docs/perf/csv-infer-baseline.md`.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

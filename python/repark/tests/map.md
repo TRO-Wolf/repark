@@ -336,6 +336,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
+  CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
+  and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`).
+  pins: csv-infer-perf-1/C-002, C-005
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -495,6 +498,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
   pins: nullability-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — **CSV-INFER-PERF-1 (2026-09-06):**
+  plan-time `to_arrow`/`collect` stay 0 on inferSchema without `nullValue` and ≤ 1 with
+  `nullValue`; wall pin `inferSchema=True` ≤ 2× `False` on a 300k × 8 CSV (release only);
+  11 Spark-equal shapes the prior suite lacked (int-then-double, late-bad-int, 007,
+  NA-without-nullValue, bool, string, offset, Z, date, `nullValue` date/timestamp) on the
+  DataFrame door and the temp-view SQL door; live leg vs PySpark 4.1.2 (007 width stays
+  EX-IO-3 bigint vs int with equal rows). `csv.\`path\`` is not a door.
+  pins: csv-infer-perf-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3
   statement-coverage matrix — 81 `_Program` rows (a v3 seed, the statement(s) under test, the
   probes compared) over every served statement class and all seven `CALL system.*` procedures.

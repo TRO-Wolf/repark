@@ -1,5 +1,11 @@
 # map — scripts/
 
+CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
+1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
+retired (file under the default 1000). `test_cap_1_source_file_line_cap.py` dropped
+the matching `_RUST_BASELINES` row in the same commit.
+pins: csv-infer-perf-1/C-006
+
 EX-27 ml (2026-09-05, round 2 2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 164 → 136 — the 28 `ml.*` roster names, taught by five
 examples under `docs/examples/ml/`. Round 2 re-measured every oracle cell on

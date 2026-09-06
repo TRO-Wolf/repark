@@ -535,6 +535,7 @@ class DataFrameReader:
         # Spark default header=false when unset — force it so DF does not default true.
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
+        self.option("path", path_str)
         frame = self._session.read_csv(path_str, native_options)
         infer = self._option_bool("inferschema", default=False)
         return self._apply_reader_schema_semantics(
@@ -823,8 +824,7 @@ class DataFrameReader:
 
         # inferSchema=true after nullValue Utf8 force: re-promote integer/double/boolean columns
         # via engine casts (Python only builds the plan — no row loops).
-        if null_token is not None or (self._format or "").lower() == "csv":
-            frame = _promote_csv_string_types(frame)
+        frame = _finish_csv_infer_schema(frame, self, infer_schema, null_token)
         return _cast_inferred_naive_timestamps(frame)
 
     def _option_str(self, key_lower: str) -> str | None:

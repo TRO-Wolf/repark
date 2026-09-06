@@ -1,9 +1,11 @@
 //! CSV/JSON read-option helpers for Spark-style option maps.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use datafusion::prelude::{CsvReadOptions, JsonReadOptions};
+use datafusion::prelude::{CsvReadOptions, DataFrame, JsonReadOptions, SessionContext};
 use repark_common::{Error, Result};
+
+use crate::engine_err;
 
 /// Build [`CsvReadOptions`] from a lowercased Spark option map.
 /// # Errors
@@ -146,9 +148,61 @@ pub(crate) fn name_looks_compressed(name: &str) -> bool {
 
 pub(crate) fn csv_force_utf8_schema(options: &HashMap<String, String>) -> bool {
     options.contains_key("nullvalue")
-        || options
-            .get("inferschema")
-            .is_some_and(|raw| matches!(parse_bool_option("inferSchema", raw), Ok(true)))
+}
+
+pub(crate) async fn read_csv_path(
+    context: &SessionContext,
+    path: &str,
+    options: &HashMap<String, String>,
+) -> Result<DataFrame> {
+    let mut csv_options = csv_read_options_from_map(options)?;
+    // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.
+    let utf8_schema = if csv_force_utf8_schema(options) {
+        csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
+    } else {
+        None
+    };
+    if let Some(ref schema) = utf8_schema {
+        csv_options = csv_options.schema(schema);
+    }
+    let frame = context
+        .read_csv(path, csv_options.clone())
+        .await
+        .map_err(engine_err)?;
+    match csv_utf8_column_schema(options, frame.schema().as_ref()) {
+        None => Ok(frame),
+        Some(schema) => context
+            .read_csv(path, csv_options.schema(&schema))
+            .await
+            .map_err(engine_err),
+    }
+}
+
+pub(crate) fn csv_utf8_column_schema(
+    options: &HashMap<String, String>,
+    inferred: &arrow::datatypes::Schema,
+) -> Option<arrow::datatypes::Schema> {
+    let raw = options.get("utf8_columns")?;
+    let names: HashSet<&str> = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .collect();
+    if names.is_empty() {
+        return None;
+    }
+    let fields: Vec<arrow::datatypes::Field> = inferred
+        .fields()
+        .iter()
+        .map(|field| {
+            if names.contains(field.name().as_str()) {
+                arrow::datatypes::Field::new(field.name(), arrow::datatypes::DataType::Utf8, true)
+            } else {
+                field.as_ref().clone()
+            }
+        })
+        .collect();
+    Some(arrow::datatypes::Schema::new(fields))
 }
 
 /// Build an all-Utf8 schema from the first local CSV record when `nullValue` is set.

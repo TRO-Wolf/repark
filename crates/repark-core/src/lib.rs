@@ -81,6 +81,4 @@ pub fn built_with_debug_assertions() -> bool {
 // v1's two `#[cfg(test)] pub(crate) use` companions live in `session.rs` — the module split
 pub(crate) use error_map::{iceberg_err, resolve_s3_region_override};
 pub(crate) use idents::parse_table_identifier_segments;
-pub(crate) use read_options::{
-    csv_read_options_from_map, csv_utf8_schema_from_path, json_read_options_from_map,
-};
+pub(crate) use read_options::json_read_options_from_map;

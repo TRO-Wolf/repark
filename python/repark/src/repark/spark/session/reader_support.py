@@ -8,8 +8,6 @@ from typing import Any
 
 from repark.spark.dataframe import DataFrame
 
-from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
-
 
 _UNSUPPORTED_SEMANTIC_READER_OPTIONS: frozenset[str] = frozenset(
     {
@@ -96,6 +94,7 @@ _CSV_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
         "inferschema",
         "multiline",
         "compression",
+        "utf8_columns",
     }
 )
 
@@ -254,14 +253,43 @@ def _json_multiline_empty_schema_is_mismatch(path_str: str) -> bool:
     return not stripped.startswith(b"[")
 
 
-def _csv_string_column_has_clock(frame: DataFrame, name: str) -> bool:
-    """True when a non-null string cell contains ``:`` (a clock, not a date-only day)."""
+_CSV_PROMOTE_CANDIDATES: tuple[str, ...] = ("bigint", "double", "boolean", "timestamp", "date")
+
+
+def _finish_csv_infer_schema(
+    frame: DataFrame,
+    reader: Any,
+    infer_schema: bool,
+    null_token: str | None,
+) -> DataFrame:
+    """Finish CSV inferSchema: native types plus Utf8 timestamp text, or nullValue promotion."""
 
     from repark.spark import functions as F  # noqa: N812
 
-    marker = frame.select(F.max(F.col(name).cast("string").contains(":")).alias("has_clock"))
-    values = marker.to_arrow().column(0).to_pylist()
-    return bool(values) and values[0] is True
+    if not infer_schema:
+        return frame
+    if null_token is not None:
+        return _promote_csv_string_types(frame)
+    is_csv = (reader._format or "").lower() == "csv"
+    csv_path = reader._option_path()
+    if not is_csv or csv_path is None:
+        return frame
+    timestamp_names = [
+        name for name, dtype in frame.dtypes if dtype in {"timestamp", "timestamp_ntz"}
+    ]
+    if not timestamp_names:
+        return frame
+    options = reader._native_options_for(_CSV_NATIVE_OPTION_KEYS)
+    if "header" not in {key.lower() for key in options}:
+        options["header"] = "false"
+    options["utf8_columns"] = ",".join(timestamp_names)
+    reread = reader._session.read_csv(csv_path, options)
+    timestamp_name_set = set(timestamp_names)
+    selects = [
+        F.col(name).cast("timestamp").alias(name) if name in timestamp_name_set else F.col(name)
+        for name in reread.columns
+    ]
+    return reread.select(*selects)
 
 
 def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
@@ -269,7 +297,7 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
 
     Tries bigint → double → boolean → timestamp → date per column via engine CAST; keeps
     string on failure. Timestamp requires a ``:``; date requires its absence.
-    Validates each trial by materializing so a late bad value rejects the type.
+    One aggregation of try_cast failure counts rejects a type when any non-null cell fails.
     """
 
     from repark.spark import functions as F  # noqa: N812
@@ -279,33 +307,52 @@ def _promote_csv_string_types(frame: DataFrame) -> DataFrame:
     if not columns:
         return frame
 
-    candidates = ("bigint", "double", "boolean", "timestamp", "date")
     dtypes = dict(frame.dtypes)
-    selects: list[Any] = []
+    string_names = [name for name in columns if dtypes.get(name) == "string"]
+    if not string_names:
+        return frame
 
+    aggregates: list[Any] = []
+    clock_aliases: list[str] = []
+    fail_aliases: list[tuple[str, str, str]] = []
+    for column_index, name in enumerate(string_names):
+        clock_alias = f"c{column_index}_clock"
+        clock_aliases.append(clock_alias)
+        aggregates.append(F.max(F.col(name).cast("string").contains(":")).alias(clock_alias))
+        for type_name in _CSV_PROMOTE_CANDIDATES:
+            fail_alias = f"c{column_index}_fail_{type_name}"
+            fail_aliases.append((name, type_name, fail_alias))
+            failed = (F.col(name).isNotNull()) & (F.col(name).try_cast(type_name).isNull())
+            aggregates.append(F.sum(F.when(failed, 1).otherwise(0)).alias(fail_alias))
+
+    stats = frame.agg(*aggregates).to_arrow()
+    values: dict[str, Any] = {
+        field.name: stats.column(field.name)[0].as_py() for field in stats.schema
+    }
+    fail_counts: dict[tuple[str, str], int] = {}
+    for name, type_name, fail_alias in fail_aliases:
+        raw = values.get(fail_alias)
+        fail_counts[(name, type_name)] = 0 if raw is None else int(raw)
+    clock_by_name = {
+        name: values.get(clock_aliases[column_index]) is True
+        for column_index, name in enumerate(string_names)
+    }
+
+    selects: list[Any] = []
     for name in columns:
         if dtypes.get(name) != "string":
             selects.append(F.col(name))
             continue
-
-        promoted: Any | None = None
-        has_clock = _csv_string_column_has_clock(frame, name)
-
-        for type_name in candidates:
+        has_clock = clock_by_name[name]
+        promoted: str | None = None
+        for type_name in _CSV_PROMOTE_CANDIDATES:
             if type_name == "timestamp" and not has_clock:
                 continue
             if type_name == "date" and has_clock:
                 continue
-
-            trial = frame.select(F.col(name).cast(type_name).alias(name))
-
-            try:
-                trial.to_arrow()
+            if fail_counts[(name, type_name)] == 0:
                 promoted = type_name
                 break
-            except (AnalysisException, PySparkException, RuntimeError, ValueError, TypeError):
-                continue
-
         if promoted is not None:
             selects.append(F.col(name).cast(promoted).alias(name))
         else:
