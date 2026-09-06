@@ -159,9 +159,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
-  `map_zip_with`) plus the FNP-4a `exists` alias of `array_any_match`. Registry both doors
+  `map_zip_with`) plus native `exists`. Registry both doors
   read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008, C-009, C-010, C-011, C-013, C-014
+  **FNP-8 (2026-09-06):** `exists` is a native kernel (the FNP-4a `array_any_match`
+  alias is gone); `aggregate` refuses init/merge width mismatches instead of coercing.
 - `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
   aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
   (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).

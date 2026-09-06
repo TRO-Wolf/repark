@@ -3238,12 +3238,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   right-side nullability, and mixed-width `aggregate` Int64 merge-output (SQL-door
   VALUES + `F.lit(0)`). pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-015
+  **FNP-8 (2026-09-06):** the merge is strict (inits cast to `bigint`), and over-long
+  lambdas pin DataFusion's binding text as the named divergence (an over-long merge
+  surfaces DataFusion's internal error; `reduce` shares the merge path).
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
   null-array edges, an outer column captured in the body, loud refusals for wrong arity and a
   non-Column return, and the four DataFrame entry points that resolve lambda variables. `join_on`
   is wired but deliberately unpinned — it resolves against the LEFT schema only, which the test
   docstring says rather than implies.
+  **FNP-8 (2026-09-06):** the arity refusal is Spark's
+  `WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION` over the eager 1–3 range; per-name counts
+  bind lazily.
 
 - `test_fnp5_aggregates.py` — **FNP-5 (2026-08-20):** the thirteen aggregates the facade could
   not reach. The nine `regr_*` are pinned against an EXACT fit (`y = 2x + 1`), so slope 2,

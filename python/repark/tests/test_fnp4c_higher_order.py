@@ -95,23 +95,29 @@ def test_aggregate_and_reduce_match_spark_null_and_empty() -> None:
     """pins: fnp-4c-higher-order-kernels/C-003, C-004"""
     frame = _arrays()
     coalesced = frame.select(
-        F.aggregate("a", F.lit(0), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias("r")
+        F.aggregate(
+            "a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))
+        ).alias("r")
     ).toArrow()
     assert coalesced.column("r").to_pylist() == [6, 4, 0, None]
     assert "int64" in str(coalesced.schema.field("r").type).lower()
-    raw = frame.select(F.aggregate("a", F.lit(0), lambda acc, x: acc + x).alias("r")).toArrow()
+    raw = frame.select(
+        F.aggregate("a", F.lit(0).cast("bigint"), lambda acc, x: acc + x).alias("r")
+    ).toArrow()
     assert raw.column("r").to_pylist() == [6, None, 0, None]
     finished = frame.select(
         F.aggregate(
             "a",
-            F.lit(0),
+            F.lit(0).cast("bigint"),
             lambda acc, x: acc + F.coalesce(x, F.lit(0)),
             lambda acc: acc * 10,
         ).alias("r")
     ).toArrow()
     assert finished.column("r").to_pylist() == [60, 40, 0, None]
     reduced = frame.select(
-        F.reduce("a", F.lit(0), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias("r")
+        F.reduce(
+            "a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))
+        ).alias("r")
     ).toArrow()
     assert reduced.column("r").to_pylist() == [6, 4, 0, None]
 
@@ -232,15 +238,6 @@ def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
     )
     cases = [
         (
-            lambda: frame.select(F.transform("a", lambda x, i, z: x)),
-            "expects 3 arguments, but got 1",
-        ),
-        (
-            lambda: frame.select(F.filter("a", lambda x, i, z: x > 0)),
-            "expects 3 arguments, but got 1",
-        ),
-        (lambda: frame.select(F.forall("a", lambda x, i: x > 0)), "expects 2 arguments, but got 1"),
-        (
             lambda: frame.select(F.aggregate("a", F.lit(0), lambda acc: acc)),
             "expects 1 arguments, but got 2",
         ),
@@ -270,8 +267,72 @@ def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
         ),
     ]
     for build, needle in cases:
-        with pytest.raises(AnalysisException, match=needle):
+        with pytest.raises(AnalysisException, match=needle) as exc_info:
             build().toArrow()
+        assert "NUM_ARGS_MISMATCH" in str(exc_info.value)
+
+
+def test_each_name_overlong_lambda_is_named_divergence() -> None:
+    """Over-long lambdas surface DataFusion's binding text, not Spark's arity class.
+
+    Named residual: the engine binds lambda parameters before the analyzer judges arity, on
+    both doors, so ``expects N arguments, but got M`` never gets its chance. The Column door
+    reaches DataFusion's expression binder, whose text names the function and the supported
+    count; the SQL door fails earlier in the SQL planner with sibling text (pinned in
+    ``lambda_door.rs``). The parenthesized parameter names between the two halves are the
+    door's canonical renames, so each case pins the head and the tail around them. The merge
+    lambda is the odd one: aggregate infers its type over several binder passes, and the
+    intermediate pass pops the lambda scope without the count guard, so an over-long merge
+    surfaces DataFusion's internal error instead of the plan-time text. ``reduce`` shares
+    the merge path, so the aggregate row covers both names.
+    """
+    frame = _arrays()
+    cases = [
+        (
+            lambda: frame.select(F.transform("a", lambda x, i, z: x)),
+            AnalysisException,
+            "transform lambda defined 3 params",
+            "but only 2 supported",
+        ),
+        (
+            lambda: frame.select(F.filter("a", lambda x, i, z: x > 0)),
+            AnalysisException,
+            "filter lambda defined 3 params",
+            "but only 2 supported",
+        ),
+        (
+            lambda: frame.select(F.forall("a", lambda x, i: x > 0)),
+            AnalysisException,
+            "forall lambda defined 2 params",
+            "but only 1 supported",
+        ),
+        (
+            lambda: frame.select(F.exists("a", lambda x, i: x > 0)),
+            AnalysisException,
+            "exists lambda defined 2 params",
+            "but only 1 supported",
+        ),
+        (
+            lambda: frame.select(F.aggregate("a", F.lit(0), lambda a, b, c: a)),
+            PySparkException,
+            "no empty value should be in the map",
+            "bug in DataFusion's code",
+        ),
+        (
+            lambda: frame.select(
+                F.aggregate("a", F.lit(0), lambda acc, x: acc + x, lambda a, b: a)
+            ),
+            AnalysisException,
+            "aggregate lambda defined 2 params",
+            "but only 1 supported",
+        ),
+    ]
+    for build, exc, head, tail in cases:
+        with pytest.raises(exc) as exc_info:
+            build().toArrow()
+        text = str(exc_info.value)
+        assert head in text and tail in text, text
+        assert "NUM_ARGS_MISMATCH" not in text
 
 
 def test_zip_with_result_is_nullable_when_the_right_array_is() -> None:

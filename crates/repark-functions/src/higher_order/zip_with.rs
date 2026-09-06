@@ -110,7 +110,7 @@ impl HigherOrderUDFImpl for SparkZipWith {
         let field = Arc::new(Field::new(
             Field::LIST_FIELD_DEFAULT_NAME,
             lambda.data_type().clone(),
-            lambda.is_nullable(),
+            true,
         ));
         let return_type = DataType::List(field);
         Ok(Arc::new(Field::new(

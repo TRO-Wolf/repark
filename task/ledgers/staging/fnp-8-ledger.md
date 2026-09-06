@@ -125,8 +125,4 @@ kept for the live legs and is git-excluded, as are `scratch/` and `handback.json
 
 (TBD.)
 
-```yaml
-COVERAGE_ATTESTATION:
-  pr_unit: fnp-8
-  complete: false
-```
+The `COVERAGE_ATTESTATION` block is filed here when no clause stays `OPEN`.

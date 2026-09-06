@@ -269,8 +269,469 @@ async fn sql_door_lambda_results_keep_narrowed_int32() {
 }
 
 #[tokio::test]
+async fn sql_door_short_lambdas_carry_sparks_arity_class() {
+    let (ctx, catalogs) = hof_ctx();
+    for (sql, expected) in [
+        (
+            "SELECT aggregate(make_array(1, 2, 3), 0, acc -> acc) AS r",
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            "SELECT zip_with(make_array(1, 2), make_array(3, 4), x -> x) AS r",
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            "SELECT transform_keys(map('a', 1), k -> k) AS r",
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            "SELECT transform_values(map('a', 1), v -> v) AS r",
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            "SELECT map_filter(map('a', 1), k -> true) AS r",
+            "expects 1 arguments, but got 2",
+        ),
+        (
+            "SELECT map_zip_with(map('a', 1), map('b', 2), (k, v) -> v) AS r",
+            "expects 2 arguments, but got 3",
+        ),
+        (
+            "SELECT map_zip_with(map('a', 1), map('b', 2), k -> k) AS r",
+            "expects 1 arguments, but got 3",
+        ),
+    ] {
+        let error = crate::execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a short lambda must refuse");
+        let text = error.to_string();
+        assert!(
+            text.contains("INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH")
+                && text.contains(expected),
+            "unexpected error for {sql}: {text}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn sql_door_aggregate_merge_must_match_the_init_type() {
+    let (ctx, catalogs) = hof_ctx();
+    for (sql, expected) in [
+        (
+            "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> 's') AS r",
+            "The third parameter requires the \"INT\" type",
+        ),
+        (
+            "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> CAST(acc AS BIGINT)) AS r",
+            "however the merge lambda has the type \"BIGINT\"",
+        ),
+        (
+            "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> CAST(acc AS INT)) AS r",
+            "The third parameter requires the \"BIGINT\" type",
+        ),
+    ] {
+        let error = crate::execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a mistyped merge must refuse");
+        let text = error.to_string();
+        assert!(
+            text.contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE") && text.contains(expected),
+            "unexpected error for {sql}: {text}"
+        );
+    }
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(1, 2, 3), NULL, (acc, x) -> acc) AS r",
+    )
+    .await;
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(batch.column(0).data_type(), &DataType::Null);
+}
+
+#[tokio::test]
+async fn sql_door_index_elements_are_non_nullable() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform(make_array(1, 2, 3), (x, i) -> i) AS r",
+    )
+    .await;
+    let field = batch.schema().field(0).clone();
+    let DataType::List(element) = field.data_type() else {
+        panic!("transform did not return a list: {}", field.data_type());
+    };
+    assert_eq!(element.data_type(), &DataType::Int32);
+    assert!(!element.is_nullable(), "the index is never null");
+}
+
+#[tokio::test]
 async fn queries_without_a_lambda_still_parse_with_the_session_dialect() {
     let (ctx, catalogs) = hof_ctx();
     let batch = collect_one(&ctx, &catalogs, "SELECT count(\"v\") AS r FROM t").await;
     assert_eq!(int_values(batch.column(0).as_ref()), vec![Some(2)]);
+}
+
+#[tokio::test]
+async fn sql_door_overlong_lambdas_divergence_df_plan_time_text() {
+    let (ctx, catalogs) = hof_ctx();
+    for (sql, expected) in [
+        (
+            "SELECT transform(make_array(1, 2), (x, i, z) -> x) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT filter(make_array(1, 2), (a, b, c) -> true) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT exists(make_array(1, 2), (x, i) -> x > 1) AS r",
+            "lambda defined 2 params but UDF support only 1",
+        ),
+        (
+            "SELECT forall(make_array(1, 2), (x, i) -> x > 1) AS r",
+            "lambda defined 2 params but UDF support only 1",
+        ),
+        (
+            "SELECT exists(make_array(1, 2), (a, b, c) -> true) AS r",
+            "lambda defined 3 params but UDF support only 1",
+        ),
+        (
+            "SELECT aggregate(make_array(1), 0, (a, b, c) -> a) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT aggregate(make_array(1), 0, (acc, x) -> acc + x, (a, b) -> a) AS r",
+            "lambda defined 2 params but UDF support only 1",
+        ),
+        (
+            "SELECT zip_with(make_array(1), make_array(2), (a, b, c) -> a) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT transform_keys(map('a', 1), (a, b, c) -> a) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT transform_values(map('a', 1), (a, b, c) -> a) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT map_filter(map('a', 1), (a, b, c) -> true) AS r",
+            "lambda defined 3 params but UDF support only 2",
+        ),
+        (
+            "SELECT map_zip_with(map('a', 1), map('b', 2), (a, b, c, d) -> a) AS r",
+            "lambda defined 4 params but UDF support only 3",
+        ),
+    ] {
+        let error = crate::execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("an overlong lambda must refuse");
+        let text = error.to_string();
+        assert!(
+            text.contains(expected) && !text.contains("INVALID_LAMBDA_FUNCTION_CALL"),
+            "unexpected error for {sql}: {text}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn sql_door_aggregate_fold_matches_the_oracle_rows() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> acc + x) AS r",
+    )
+    .await;
+    assert_eq!(int_values(batch.column(0).as_ref()), vec![Some(6)]);
+    assert_eq!(batch.column(0).data_type(), &DataType::Int64);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS INT), (acc, x) -> acc + coalesce(x, 0)) AS r",
+    )
+    .await;
+    assert_eq!(int_values(batch.column(0).as_ref()), vec![Some(6)]);
+    assert_eq!(batch.column(0).data_type(), &DataType::Int32);
+}
+
+#[tokio::test]
+async fn sql_door_aggregate_mixed_width_divergence_stuck_planner_cast() {
+    let (ctx, catalogs) = hof_ctx();
+    for sql in [
+        "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+        "SELECT aggregate(CAST(make_array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+    ] {
+        let error = crate::execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a width-mixed fold must refuse");
+        assert!(
+            error
+                .to_string()
+                .contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
+            "unexpected error for {sql}: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn sql_door_result_nullability_matches_the_oracle() {
+    let (ctx, catalogs) = hof_ctx();
+    let packed = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform(make_array(1, 2), (x, i) -> x) AS r",
+    )
+    .await;
+    let plain = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform(make_array(1, 2), x -> x) AS r",
+    )
+    .await;
+    let packed_schema = packed.schema();
+    let DataType::List(packed_element) = packed_schema.field(0).data_type() else {
+        panic!("transform did not return a list");
+    };
+    let plain_schema = plain.schema();
+    let DataType::List(plain_element) = plain_schema.field(0).data_type() else {
+        panic!("transform did not return a list");
+    };
+    assert_eq!(packed_element.data_type(), &DataType::Int32);
+    assert_eq!(
+        packed_element.is_nullable(),
+        plain_element.is_nullable(),
+        "packing keeps the element nullability it is given"
+    );
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT zip_with(make_array(1, 2), make_array(10, 20), (x, y) -> x + y) AS r",
+    )
+    .await;
+    let field = batch.schema().field(0).clone();
+    assert!(!field.is_nullable(), "zip over non-null arrays is non-null");
+    let DataType::List(element) = field.data_type() else {
+        panic!("zip_with did not return a list: {}", field.data_type());
+    };
+    assert!(
+        element.is_nullable(),
+        "zip pads, so its elements are nullable"
+    );
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(v, CAST(1 AS INT)), CAST(0 AS INT), (acc, x) -> acc + coalesce(x, CAST(0 AS INT))) AS r FROM t",
+    )
+    .await;
+    assert_eq!(
+        int_values(batch.column(0).as_ref()),
+        vec![Some(3), Some(1), Some(2)]
+    );
+    assert_eq!(batch.column(0).data_type(), &DataType::Int32);
+    assert!(
+        batch.schema().field(0).is_nullable(),
+        "aggregate stays nullable"
+    );
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT filter(make_array(1, 2, 3), x -> x > 1) AS r",
+    )
+    .await;
+    let field = batch.schema().field(0).clone();
+    assert!(
+        !field.is_nullable(),
+        "filter over non-null arrays is non-null"
+    );
+    let input = collect_one(&ctx, &catalogs, "SELECT make_array(1, 2, 3) AS r").await;
+    let DataType::List(element) = field.data_type() else {
+        panic!("filter did not return a list: {}", field.data_type());
+    };
+    let input_schema = input.schema();
+    let DataType::List(input_element) = input_schema.field(0).data_type() else {
+        panic!("make_array did not return a list");
+    };
+    assert_eq!(
+        element.is_nullable(),
+        input_element.is_nullable(),
+        "filter keeps its input elements"
+    );
+}
+
+#[tokio::test]
+async fn sql_door_map_result_nullability_matches_the_oracle() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform_keys(map('a', 1), (k, v) -> upper(k)) AS r",
+    )
+    .await;
+    let field = batch.schema().field(0).clone();
+    assert!(!field.is_nullable(), "map rewrites keep a non-null map");
+    let input = collect_one(&ctx, &catalogs, "SELECT map('a', 1) AS r").await;
+    let input_schema = input.schema();
+    let DataType::Map(entries, _) = field.data_type() else {
+        panic!("transform_keys did not return a map: {}", field.data_type());
+    };
+    let DataType::Struct(pair) = entries.data_type() else {
+        panic!("a map holds key/value entries: {}", entries.data_type());
+    };
+    let DataType::Map(input_entries, _) = input_schema.field(0).data_type() else {
+        panic!("map did not return a map");
+    };
+    let DataType::Struct(input_pair) = input_entries.data_type() else {
+        panic!("a map holds key/value entries");
+    };
+    assert_eq!(
+        pair[1].is_nullable(),
+        input_pair[1].is_nullable(),
+        "passed-through values keep theirs"
+    );
+}
+
+#[tokio::test]
+async fn sql_door_edge_rows_match_the_oracle() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT zip_with(make_array(1, 2, 3), make_array(10), (x, y) -> x + y) AS r",
+    )
+    .await;
+    assert_eq!(list_column(&batch), vec![Some(vec![Some(11), None, None])]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform(CAST(NULL AS ARRAY<INT>), x -> x + 1) AS r",
+    )
+    .await;
+    assert_eq!(list_column(&batch), vec![None]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT exists(CAST(make_array() AS ARRAY<INT>), x -> x > 1) AS r",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![Some(false)]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT exists(make_array(1, NULL, 3), x -> x > 5) AS r",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![None]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT forall(make_array(1, NULL, 3), x -> x > 0) AS r",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![None]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT exists(CAST(NULL AS ARRAY<INT>), x -> x > 1) AS e, forall(CAST(NULL AS ARRAY<INT>), x -> x > 1) AS f",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![None]);
+    let flags = batch
+        .column(1)
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .expect("boolean column");
+    assert!(flags.is_null(0));
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT map_filter(map('a', 1, 'b', NULL), (k, v) -> v IS NOT NULL) AS r",
+    )
+    .await;
+    let maps = batch.column(0).as_map();
+    assert_eq!(maps.keys().len(), 1);
+    assert_eq!(maps.keys().as_string::<i32>().value(0), "a");
+}
+
+#[tokio::test]
+async fn sql_door_null_lambda_keys_carry_sparks_null_map_key() {
+    let (ctx, catalogs) = hof_ctx();
+    let error = crate::execute(
+        &ctx,
+        &catalogs,
+        "SELECT transform_keys(map('a', 1), (k, v) -> NULL) AS r",
+    )
+    .await
+    .expect("a null key plans")
+    .collect()
+    .await
+    .expect_err("a null key must refuse");
+    assert!(
+        error.to_string().contains("[NULL_MAP_KEY]"),
+        "unexpected error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn sql_door_null_lambda_values_make_a_void_map() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform_values(map('a', 1), (k, v) -> NULL) AS r",
+    )
+    .await;
+    let field = batch.schema().field(0).clone();
+    let DataType::Map(entries, _) = field.data_type() else {
+        panic!(
+            "transform_values did not return a map: {}",
+            field.data_type()
+        );
+    };
+    let DataType::Struct(pair) = entries.data_type() else {
+        panic!("a map holds key/value entries: {}", entries.data_type());
+    };
+    assert_eq!(pair[1].data_type(), &DataType::Null);
+    let maps = batch.column(0).as_map();
+    assert_eq!(maps.keys().len(), 1);
+    assert_eq!(maps.values().data_type(), &DataType::Null);
+}
+
+#[tokio::test]
+async fn sql_door_higher_order_over_values_keeps_narrowed_int32() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT transform(make_array(a, b), x -> x + 1) AS r FROM (VALUES (1, 2), (3, 4)) AS t(a, b)",
+    )
+    .await;
+    assert_eq!(batch.num_rows(), 2);
+    let field = batch.schema().field(0).clone();
+    let DataType::List(element) = field.data_type() else {
+        panic!("transform did not return a list: {}", field.data_type());
+    };
+    assert_eq!(element.data_type(), &DataType::Int32);
+    assert_eq!(
+        list_column(&batch),
+        vec![Some(vec![Some(2), Some(3)]), Some(vec![Some(4), Some(5)])]
+    );
+}
+
+#[tokio::test]
+async fn sql_door_lambda_body_overflow_divergence_wraps() {
+    let (ctx, catalogs) = hof_ctx();
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT aggregate(make_array(2000000000, 2000000000), 0, (acc, x) -> acc + x) AS r",
+    )
+    .await;
+    assert_eq!(
+        int_values(batch.column(0).as_ref()),
+        vec![Some(-294_967_296)]
+    );
 }

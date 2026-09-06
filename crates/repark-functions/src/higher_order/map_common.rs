@@ -123,10 +123,10 @@ pub(crate) fn rebuild_map(
 }
 
 pub(crate) fn refuse_null_keys(keys: &dyn Array) -> Result<()> {
-    if keys.null_count() == 0 {
+    if keys.null_count() == 0 && !matches!(keys.data_type(), DataType::Null) {
         return Ok(());
     }
-    exec_err!("[NULL_MAP_KEY] Cannot use null as map key.")
+    exec_err!("[NULL_MAP_KEY] Cannot use null as map key. SQLSTATE: 2200E")
 }
 
 pub(crate) fn refuse_duplicate_keys(

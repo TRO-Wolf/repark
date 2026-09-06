@@ -22,7 +22,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   so lambda-free SQL still parses Generic). The dtype test pins the early-`LambdaRebind`
   seat: `transform`/`filter`/`zip_with` over `make_array` keep `Int32` elements and
   `aggregate` stays `Int32` (the closing coercion must see rebound bindings, not bake
-  `BIGINT` casts from stale ones).
+  `BIGINT` casts from stale ones). Short lambdas carry Spark's arity class, an
+  init/merge width mismatch carries `DATATYPE_MISMATCH`, the index is non-nullable,
+  over-long lambdas pin DataFusion's plan-time text as the named divergence, and the
+  oracle edge rows (null-key raise, void map, VALUES `Int32`, overflow wrap) close the
+  door.
   pins: fnp-8/C-004
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an

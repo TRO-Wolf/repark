@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from repark import _native
-from repark.errors import AnalysisException, PySparkValueError
+from repark.errors import PySparkValueError
 from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg
 
@@ -43,13 +43,8 @@ _LAMBDA_PARAMETER_KINDS = (
 )
 
 
-def _lambda_arity(
-    function: Callable[..., Column],
-    *,
-    allowed: tuple[int, ...],
-    spark_arity_error: bool = True,
-) -> int:
-    """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
+def _lambda_arity(function: Callable[..., Column]) -> int:
+    """How many parameters the callable takes; the analyzer judges whether Spark accepts it."""
     parameters = inspect.signature(function).parameters
     if any(parameter.kind not in _LAMBDA_PARAMETER_KINDS for parameter in parameters.values()):
         raise PySparkValueError(
@@ -58,33 +53,15 @@ def _lambda_arity(
             "POSITIONAL or POSITIONAL OR KEYWORD arguments."
         )
     arity = len(parameters)
-    if arity not in allowed:
-        if not spark_arity_error:
-            expected = " or ".join(str(count) for count in allowed)
-            raise PySparkValueError(
-                f"lambda takes {arity} parameters, but this function expects {expected}"
-            )
-        raise AnalysisException(
-            "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. "
-            f"A higher order function expects {arity} arguments, but got {allowed[0]}."
+    if arity < 1 or arity > 3:
+        name = getattr(function, "__name__", type(function).__name__)
+        raise PySparkValueError(
+            f"[WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION] Function `{name}` should take "
+            f"between 1 and 3 arguments, but the provided function takes {arity}.",
+            errorClass="WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION",
+            messageParameters={"func_name": name, "num_args": str(arity)},
         )
     return arity
-
-
-def _keep_lambda_params(body: Column, placeholders: list[Column]) -> Column:
-    """Keep every minted parameter in the body tree so DataFusion cannot drop it.
-
-    A two-parameter lambda that only mentions ``i`` still has to occupy both
-    slots the kernel declared as ``[element, index]``.
-    """
-    from repark.spark.functions_expr import struct
-
-    named_body = body.alias("__hof_body")
-    named_placeholders = [
-        placeholder.alias(f"__hof_p{index}") for index, placeholder in enumerate(placeholders)
-    ]
-    packed = struct(named_body, *named_placeholders)
-    return packed.getField("__hof_body")
 
 
 def _build_lambda(
@@ -111,19 +88,21 @@ def _build_lambda(
         _LAMBDA_DEPTH.reset(token)
     if not isinstance(body, Column):
         raise PySparkValueError(
-            f"a higher-order function lambda must return a Column, got {type(body).__name__}"
+            f"[HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN] Function `{function.__name__}` "
+            f"should return Column, got {type(body).__name__}.",
+            errorClass="HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN",
+            messageParameters={
+                "func_name": function.__name__,
+                "return_type": type(body).__name__,
+            },
         )
-    if arity >= 2:
-        body = _keep_lambda_params(body, placeholders)
     return plan_names, display_names, body
 
 
 def _higher_order(
     name: str,
     values: list[Column | str],
-    functions: list[tuple[Callable[..., Column], tuple[int, ...]]],
-    *,
-    spark_arity_error: bool = True,
+    functions: list[Callable[..., Column]],
 ) -> Column:
     """Build a higher-order call: value arguments first, then one lambda per callable.
 
@@ -131,13 +110,7 @@ def _higher_order(
     convention invented here.
     """
     value_columns = [_as_column_arg(value, as_lit=False) for value in values]
-    built = [
-        _build_lambda(
-            function,
-            _lambda_arity(function, allowed=allowed, spark_arity_error=spark_arity_error),
-        )
-        for function, allowed in functions
-    ]
+    built = [_build_lambda(function, _lambda_arity(function)) for function in functions]
 
     display_lambdas = [
         f"{', '.join(display)} -> {body.spark_wrap_display_part()}"
@@ -172,7 +145,7 @@ def exists(col: Column | str, f: Callable[[Column], Column]) -> Column:
     Three-valued: an element that makes ``f`` NULL neither confirms nor denies, so a NULL among
     otherwise-false elements yields NULL rather than false.
     """
-    return _higher_order("exists", [col], [(f, (1,))], spark_arity_error=False)
+    return _higher_order("exists", [col], [f])
 
 
 def transform(
@@ -183,7 +156,7 @@ def transform(
 
     ``f`` is unary ``(x)`` or binary ``(x, i)`` with a 0-based index.
     """
-    return _higher_order("transform", [col], [(f, (1, 2))])
+    return _higher_order("transform", [col], [f])
 
 
 def filter(
@@ -195,7 +168,7 @@ def filter(
     ``f`` is unary ``(x)`` or binary ``(x, i)`` with a 0-based index. A null
     predicate drops the element.
     """
-    return _higher_order("filter", [col], [(f, (1, 2))])
+    return _higher_order("filter", [col], [f])
 
 
 def forall(col: Column | str, f: Callable[[Column], Column]) -> Column:
@@ -204,7 +177,7 @@ def forall(col: Column | str, f: Callable[[Column], Column]) -> Column:
     Empty array is true. A null predicate among otherwise-true elements yields
     null. Any false element yields false.
     """
-    return _higher_order("forall", [col], [(f, (1,))])
+    return _higher_order("forall", [col], [f])
 
 
 def aggregate(
@@ -221,9 +194,9 @@ def aggregate(
         return _higher_order(
             "aggregate",
             [col, initialValue],
-            [(merge, (2,)), (finish, (1,))],
+            [merge, finish],
         )
-    return _higher_order("aggregate", [col, initialValue], [(merge, (2,))])
+    return _higher_order("aggregate", [col, initialValue], [merge])
 
 
 def reduce(
@@ -237,9 +210,9 @@ def reduce(
         return _higher_order(
             "reduce",
             [col, initialValue],
-            [(merge, (2,)), (finish, (1,))],
+            [merge, finish],
         )
-    return _higher_order("reduce", [col, initialValue], [(merge, (2,))])
+    return _higher_order("reduce", [col, initialValue], [merge])
 
 
 def zip_with(
@@ -248,22 +221,22 @@ def zip_with(
     f: Callable[[Column, Column], Column],
 ) -> Column:
     """Pair two arrays with ``f``, null-padding the shorter (PySpark ``functions.zip_with``)."""
-    return _higher_order("zip_with", [left, right], [(f, (2,))])
+    return _higher_order("zip_with", [left, right], [f])
 
 
 def transform_keys(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
     """Rewrite map keys with ``(k, v) -> new_key`` (PySpark ``functions.transform_keys``)."""
-    return _higher_order("transform_keys", [col], [(f, (2,))])
+    return _higher_order("transform_keys", [col], [f])
 
 
 def transform_values(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
     """Rewrite map values with ``(k, v) -> new_value`` (PySpark ``functions.transform_values``)."""
-    return _higher_order("transform_values", [col], [(f, (2,))])
+    return _higher_order("transform_values", [col], [f])
 
 
 def map_filter(col: Column | str, f: Callable[[Column, Column], Column]) -> Column:
     """Keep map entries whose ``(k, v)`` predicate is true (PySpark ``functions.map_filter``)."""
-    return _higher_order("map_filter", [col], [(f, (2,))])
+    return _higher_order("map_filter", [col], [f])
 
 
 def map_zip_with(
@@ -275,7 +248,7 @@ def map_zip_with(
 
     Key order is map1 keys, then map2-only keys. A missing side is null.
     """
-    return _higher_order("map_zip_with", [col1, col2], [(f, (3,))])
+    return _higher_order("map_zip_with", [col1, col2], [f])
 
 
 HIGHER_ORDER_EXPORTS: tuple[str, ...] = (
