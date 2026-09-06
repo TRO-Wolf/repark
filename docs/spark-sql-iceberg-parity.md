@@ -4673,21 +4673,42 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   delete everything that appeared since, which reclaims the failing writer's rolled files too.
   Only `remove_orphan_files` reclaims the stream path's today.
 
-- **WRITE-DISTRIBUTION-1** — surfaced 2026-09-05 (PERF-ICE-WRITEPATH-1 round 2). RePark has no
-  distribution rule before a write. Spark's Iceberg default is `write.distribution-mode = hash`,
-  which repartitions by partition value so one value goes to one task; for the same CTAS at
-  `spark.sql.shuffle.partitions = 8` Spark writes **2** unpartitioned and **8** partitioned data
-  files, where repark now writes **8** and **64** (average 328 KB) — 4x and 8x Spark's counts.
-  BACKLOG. Two alternatives were measured and rejected in this unit: capping the writers below the
-  partition count makes one writer drain several input partitions in sequence, which measured
-  738 ms against 547 ms on the partitioned 1e6 CTAS and is unbounded in memory (DataFusion's
-  repartition channels are unbounded per output partition and gate only when every channel is
-  non-empty, so the partitions a writer has not reached buffer whole); and a `RepartitionExec`
-  round-robin assigns batches to outputs from a shared counter, so the row-to-file mapping — and
-  with it `_row_id` — stops being reproducible, which is exactly the defect round 2 fixed. A real
-  fix is a hash-distribution rule that sends one partition value to one writer: deterministic AND
-  fewer files, and a unit of its own. The current counts are pinned by
-  `test_ctas_writes_one_data_file_per_plan_partition` and the partitioned facade pin.
+- **WRITE-DISTRIBUTION-1** — **FIXED 2026-09-06 (WRITE-DISTRIBUTION-1)**; surfaced 2026-09-05
+  (PERF-ICE-WRITEPATH-1 round 2). RePark had no distribution rule before a write. Spark's Iceberg
+  default is `write.distribution-mode = hash`, which repartitions by partition value so one value
+  goes to one task; for the same CTAS at `spark.sql.shuffle.partitions = 8` Spark writes **2**
+  unpartitioned and **8** partitioned data files, where repark wrote **8** and **64** (average
+  328 KB). Two alternatives were measured and rejected by PERF-ICE-WRITEPATH-1: capping the
+  writers below the partition count (738 ms against 547 ms on the partitioned 1e6 CTAS, and
+  unbounded in memory because DataFusion's repartition channels gate only when every channel is
+  non-empty) and a round-robin `RepartitionExec` (a shared counter, so the row-to-file map and
+  `_row_id` stop being reproducible). The fix is the third route:
+  `write/distribution.rs::hash_distribution` places DataFusion's `RepartitionExec` under the CTAS
+  write node with `Partitioning::Hash` over one `PartitionTransformExpr` per partition field — the
+  source column cast to the Iceberg field's Arrow type and run through the fork's transform
+  function, so the key is the partition value the writer itself computes (`bucket(4, id)` keys on
+  the bucket, a NULL is one value) and the hash is DataFusion's seeded `REPARTITION_RANDOM_STATE`,
+  a function of the data. **Measured on one box, base and branch back to back with the same
+  release native swapped, load 11–17**: `ctas_partitioned8` **64 → 8** data files (Spark's
+  count) and **361.16 → 204.91 ms** median (348.16 → 191.38 min), **3.44× → 1.96×** of the
+  `df.write.parquet(zstd)` control read in the same passes (104.96 / 104.6 ms); RSS peak
+  760–785 → 842–861 MB, the repartition channels' buffers at 1e6 rows. Live Spark 4.1.2 writes
+  the same eight-file layout — partition value and record count per file — for the facade pin's
+  seed. **The unpartitioned CTAS is untouched**, 8 files at 8 partitions against Spark's 2:
+  Spark's 2 is its scan split count, not a distribution rule, and coalescing below the partition
+  count is the shape measured at 738 ms with unbounded buffering; `ctas` read 134.07 ms after
+  against the 104.6 ms control (1.28×, PERF-ICE-WRITEPAR-1's ratio). What changed on the
+  partitioned path: a data file's row order follows the channel interleaving of the input
+  partitions, so the `_row_id` a given row receives is not reproducible run to run — the manifest
+  still ascends by partition value and `_row_id` still tiles it contiguously; Spark's shuffle read
+  order is not fixed either. Pins: `crates/repark-iceberg/src/write/distribution.rs` (one value →
+  one writer, the same layout across two runs, input partitions without rows and an empty input,
+  NULL values, `bucket(4, id)` + `day(ts)` keyed on the transform, the unpartitioned bypass, a
+  missing source column as a planning error) and `python/repark/tests/test_write_distribution_1.py`
+  (a partitioned CTAS at `shuffle.partitions = 8` writes 8 files with `first_row_id` tiling them,
+  `bucket(4, id)` writes 4, NULL labels share one file; live: the same layout as Spark). The counts
+  the old pins asserted (32 files over the four-file seed, 64 at 1e6) are quoted in the unit
+  ledger. Numbers and commands: `docs/perf/iceberg-write-baseline.md` §8.
 
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
@@ -4727,7 +4748,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   included; against a table that already has one the sweep is narrowed to the attempt's own
   completed files. **Layout**: a CTAS writes one file per plan partition — 4 → 8
   unpartitioned and 32 → 64 partitioned at `shuffle.partitions = 8`, which is 4× and 8× Spark's
-  counts and is filed as `WRITE-DISTRIBUTION-1`. Pins:
+  counts and is filed as `WRITE-DISTRIBUTION-1` (the partitioned count is 8 since that row's
+  fix, 2026-09-06; the unpartitioned count stands). Pins:
   `crates/repark-iceberg/src/write/partition_write.rs` (one writer and one data file per input
   partition; a late partition failure leaves no parquet file at a 64 KiB target file size) and
   `python/repark/tests/test_perf_ice_writepath_1.py` (five v3 CTAS over unequal files at 3, 4, 8

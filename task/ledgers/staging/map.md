@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
+  **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
+  partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
+  the CTAS write node, `Partitioning::Hash` over one `PartitionTransformExpr` per partition field
+  (the fork's transform over the cast source column), so one partition value lands in one writer:
+  the partitioned 1e6 CTAS goes 64 → 8 data files (Spark's count) and 3.44× → 1.96× of the
+  parquet-sink control; the unpartitioned CTAS is untouched by decision. No dependency, no spawn.
+  `risk_tier: standard`. Branch `perf/write-distribution-1`.
+  pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ex-28-scalar-remainder-ledger.md](ex-28-scalar-remainder-ledger.md) —
   **EX-28 (2026-09-06), in flight:** the v1.1 example backfill's `F.*` scalar
   remainder — the 34-name roster at base `57f21b9b`; seven names covered by

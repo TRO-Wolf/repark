@@ -21,6 +21,7 @@ use iceberg::table::Table;
 
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::distribution::hash_distribution;
 use crate::write::file_order::stable_commit_order;
 use crate::write::merge::write_data_files_from_stream_with_concurrency;
 
@@ -209,6 +210,7 @@ pub async fn write_data_files_from_plan(
     } else {
         (input, inputs)
     };
+    let input = hash_distribution(table, input, writers)?;
     let collected: FileCollector = Arc::new(Mutex::new(BTreeMap::new()));
     let exec = Arc::new(IcebergPartitionWriteExec::new(
         table.clone(),

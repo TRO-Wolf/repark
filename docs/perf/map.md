@@ -42,8 +42,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   carry the never-committed fork path override are quoted only in the pending fork row. Carries the build matrix, the fixture, the load at each cell and the commands, plus
   the isolated splitter measurement taken in the fork lane where no RePark rebuild is involved.
   Round 3 adds §7's determinism table — three attempts at the same claim, two refuted — and
-  moves the probes into the tracked bench tree.
+  moves the probes into the tracked bench tree. **WRITE-DISTRIBUTION-1 (2026-09-06)** appends
+  §8: the hash distribution rule's before/after pair on one box with the same native swapped, the
+  partitioned cell 64 → 8 files and 3.44× → 1.96× of the control, its RSS peak, and the live
+  Spark layout; §6 gains the shipped row.
   pins: perf-ice-writepath-1/C-009, C-010
+  pins: write-distribution-1/C-007
 - [iceberg-catalog-io-baseline.md](iceberg-catalog-io-baseline.md) — **PERF-ICE-CATALOG-IO-1
   (2026-09-05):** the `strace -f -e trace=openat` census per statement, measured on both knob
   settings, and the `t_many` / `t_many_merged` cells. `metadata.json` READS fall from 2 (SELECT)

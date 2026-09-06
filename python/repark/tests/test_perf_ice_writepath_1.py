@@ -242,8 +242,7 @@ def test_partitioned_ctas_files_ascend_by_partition_value(tmp_path: Path) -> Non
             f"SELECT partition.part AS p, record_count FROM {CATALOG}.w.part.files"
         ).to_arrow()
         values = [int(value.as_py()) for value in files.column("p")]
-        assert values == sorted(values), values
-        assert set(values) == set(range(8)), values
+        assert values == list(range(8)), values
         counts = engine.sql(f"SELECT count(*) AS n FROM {CATALOG}.w.part").to_arrow()
         assert counts.column("n")[0].as_py() == SEED_ROWS
     finally:
