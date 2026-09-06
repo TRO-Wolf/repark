@@ -204,6 +204,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   interval display arm pin today's wrong values so the fixes red them. The module
   docstring names the row span `EX-FN-1`…`EX-FN-19`.
   pins: ex-25-functions-a/C-009
+- [test_examples_io_session.py](test_examples_io_session.py) — **EX-26 (2026-09-06):**
+  the eleven divergence pins for the reader/writer/session example batch — the bare-load
+  default (EX-IO-1), schema on parquet (EX-IO-2), the csv infer-schema width with agreeing
+  rows (EX-IO-3), the csv header default on both spellings (EX-IO-4), the save default
+  (EX-IO-5), non-iceberg `saveAsTable` formats (EX-IO-6), the deferred excel readers and
+  sheet-name pair (EX-IO-7), the missing-table text across three entry points (EX-IO-8), the
+  saveAsTable exists text (EX-IO-9), and the `udf.register` return arm (EX-SES-6). The module
+  docstring names the row spans `EX-IO-1`…`EX-IO-9` and `EX-SES-6`.
+  pins: ex-26-io-session/C-015
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
