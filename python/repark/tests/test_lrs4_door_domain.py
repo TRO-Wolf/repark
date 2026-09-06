@@ -56,16 +56,3 @@ def test_log1_both_arities_null_on_non_positive_operands() -> None:
     assert door("log(10, -1)") is None
     assert door("log(0)") is None
     assert door("log(-1)") is None
-
-
-def test_unix1_sql_door_from_unixtime_is_a_timestamp() -> None:
-    """Spark's ``from_unixtime`` returns a STRING (``struct<r:string>``); the facade agrees, the
-    SQL door returns a timestamp.
-    """
-    frame = _frame()
-    door = _session().sql("SELECT from_unixtime(0) AS r FROM lrs4_probe").toArrow()
-    facade = frame.select(F.from_unixtime(F.lit(0)).alias("r")).toArrow()
-    assert str(facade.schema.field("r").type) == "string", "the facade already matches Spark"
-    assert str(door.schema.field("r").type).startswith("timestamp"), (
-        "the SQL door no longer returns a timestamp — close UNIX-1 and retire the row"
-    )

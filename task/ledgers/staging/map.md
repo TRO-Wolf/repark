@@ -115,6 +115,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   in the ledger's "Round 2 — review gaps" table. `risk_tier: elevated`. Branch
   `perf/ice-catalog-io-1`.
   pins: perf-ice-catalog-io-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [ex-25-functions-a-ledger.md](ex-25-functions-a-ledger.md) —
+  **EX-25 (2026-09-05), in flight:** the v1.1 example backfill's `F.*` long-tail (a) batch —
+  the 45-name roster at base `bc7c76cc` (= `origin/main` at dispatch); 20 names covered by five
+  new `docs/examples/functions/` files plus the `F.hours` arm in `partition_transforms.py`
+  (backlog 213 → 193; `BACKLOG_BASELINE` 213 → 193), every asserted value measured on live
+  PySpark 4.1.2 (ANSI on, UTC); the other 25 stay with nineteen new §7 rows (EX-FN-1..19;
+  `F.base64` keeps BL-17), pinned by twenty tests in `test_examples_functions_a.py`. No
+  `csv_json.py`: all four CSV/JSON names refuse. Red-first: 20 has-no-example findings with
+  the files held out (exit 1), and the wrong-median control in `stats.py` failed the execute
+  leg by name (exit 1). `risk_tier: standard`. Branch `docs/ex-25-functions-a`.
+  pins: ex-25-functions-a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ex-24-ta-b-ledger.md](ex-24-ta-b-ledger.md) —
   **EX-24 (2026-09-04), in flight:** the v1.1 example backfill's TA-kernels (b) batch — the
   remaining 45 `ta.*` backlog names at base `188499a6` (= `origin/main` at dispatch); all 45

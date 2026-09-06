@@ -204,6 +204,9 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **TYPES-1 (2026-09-05):** after eager analysis, plain-`INSERT` DML wraps narrowed `Int32`
+  sources into `BIGINT` targets (`conform_insert_narrowed_ints`); every other shape passes
+  through untouched. pins: types-1/C-001
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

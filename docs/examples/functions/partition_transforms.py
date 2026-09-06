@@ -11,7 +11,7 @@ import tempfile
 import repark.functions as F  # noqa: N812
 from repark.spark import ReparkSession
 
-COVERS: list[str] = ["F.years", "F.months", "F.days", "F.bucket", "F.col"]
+COVERS: list[str] = ["F.years", "F.months", "F.days", "F.hours", "F.bucket", "F.col"]
 
 
 def main() -> None:
@@ -100,6 +100,31 @@ def main() -> None:
             values = [tuple(row) for row in rows]
             if values != [(0,), (1,), (3,)]:
                 raise SystemExit(f"F.bucket partition values {values!r} != [(0,), (1,), (3,)]")
+
+            hours_frame = repark.createDataFrame(
+                [
+                    (datetime.datetime(2024, 1, 15, 10, 30, 5), 1),
+                    (datetime.datetime(2024, 1, 15, 14, 0, 0), 2),
+                ],
+                ["event_ts", "id"],
+            )
+            hours_frame.writeTo("local.lns.hours_t").partitionedBy(
+                F.hours(F.col("event_ts"))
+            ).create()
+            rows = repark.sql("SELECT * FROM local.lns.hours_t ORDER BY id").collect()
+            values = [tuple(row) for row in rows]
+            if values != [
+                (datetime.datetime(2024, 1, 15, 10, 30, 5), 1),
+                (datetime.datetime(2024, 1, 15, 14, 0, 0), 2),
+            ]:
+                raise SystemExit(f"F.hours partitioned rows {values!r} != the two stamped rows")
+            rows = repark.sql(
+                "SELECT partition.event_ts_hour AS hour_value FROM local.lns.hours_t.files"
+                " ORDER BY hour_value"
+            ).collect()
+            values = [tuple(row) for row in rows]
+            if values != [(473698,), (473702,)]:
+                raise SystemExit(f"F.hours partition values {values!r} != [(473698,), (473702,)]")
         finally:
             repark.stop()
 

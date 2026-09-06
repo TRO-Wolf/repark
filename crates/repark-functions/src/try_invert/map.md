@@ -18,6 +18,8 @@ pins: fnp-7-try-inversions/C-001, C-002, C-004, C-005, C-006, C-007, C-009, C-01
   Decimal reuses `decimal_spark::try_decimal_op` (ANSI-off overflow path). Coerce/result
   types for temporal overloads live here; invoke is `temporal.rs`.
 - `temporal.rs` — DATE/TIMESTAMP ± INTERVAL and INTERVAL / numeric (including `/0` → NULL).
+  **TYPES-1 (2026-09-05):** the interval divisor accepts narrowed `Int32`
+  (`Float64`/`Int64` before). pins: types-1/C-002
   DATE + HOUR/MINUTE/SECOND (nanos ≠ 0) promotes to timestamp; DATE + DAY/MONTH stays date.
   Interval-interval add/sub NULLs when the day-time duration exceeds i64 microseconds
   (Spark Duration max, 106751991 days). Interval `try_avg` is not here (FNP-11 refuse in

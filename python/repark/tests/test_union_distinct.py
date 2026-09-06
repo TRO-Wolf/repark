@@ -100,27 +100,22 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
 
 
 def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE (TY-3): U3 does not move this row to Spark's (11,1).
+    """DISCLOSED DIVERGENCE (TY-3): TYPES-1 converged the width to (11,1); nullability stays.
 
-    ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int64 -> ``DECIMAL(20,0) union
-    DECIMAL(2,1)`` -> ``decimal128(21, 1)`` **nullable**. Spark 4.1.2 treats the int as INT ->
-    ``DECIMAL(10,0) union DECIMAL(2,1)`` -> ``decimal128(11, 1)`` **non-null**.
+    ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int32 -> ``DECIMAL(10,0) union
+    DECIMAL(2,1)`` -> ``decimal128(11, 1)`` **nullable**. Spark 4.1.2 yields
+    ``decimal128(11, 1)`` **non-null**.
 
-    UNION set-op widening uses Spark ``forType(INT) = DECIMAL(10,0)``, not integer-literal
-    ``fromLiteral`` digits (which apply to ``+ - *`` only); applying fromLiteral here would
-    yield ``DECIMAL(1,0) union DECIMAL(2,1)`` -> ``(3,1)``, neither today's ``(21,1)`` nor
-    Spark's ``(11,1)``. The honest hook is DataFusion ``TypeCoercion`` / ``coerce_union``
-    (Int64 → DECIMAL(20,0)); a UNION-only ``forType(INT)`` rewrite cannot tell
-    ``VALUES (1)`` from a BIGINT column. Still DECLARED.
+    The width converged when integer literals narrowed to INT (Spark ``forType(INT)``);
+    the remaining gap is nullability only, which is out of scope here. Still DECLARED.
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")
     result = ints.union(dec).to_arrow()
 
-    # repark's ACTUAL output after U2 — still not Spark (21,1) nullable vs (11,1) non-null.
     repark_out = pa.table(
-        [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(21, 1))],
-        schema=pa.schema([pa.field("v", pa.decimal128(21, 1), nullable=True)]),
+        [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(11, 1))],
+        schema=pa.schema([pa.field("v", pa.decimal128(11, 1), nullable=True)]),
     )
     assert_frames_equal(result, repark_out)
 

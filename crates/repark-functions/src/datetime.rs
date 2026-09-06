@@ -453,7 +453,7 @@ pub(crate) fn localize_wall_micros_in_zone(wall_micros: i64, zone: Tz) -> Option
 }
 
 /// Return an instant's local datetime in `zone`; `None` means outside chrono's range.
-fn local_datetime_from_micros(micros: i64, zone: Tz) -> Option<NaiveDateTime> {
+pub(crate) fn local_datetime_from_micros(micros: i64, zone: Tz) -> Option<NaiveDateTime> {
     DateTime::from_timestamp_micros(micros)
         .map(|instant| instant.with_timezone(&zone).naive_local())
 }
@@ -578,11 +578,7 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
         )))
     };
     match letter {
-        'y' | 'u' => Ok(if count == 2 {
-            format!("{:02}", datetime.year().rem_euclid(100))
-        } else {
-            format!("{:0width$}", datetime.year(), width = count)
-        }),
+        'y' | 'u' => Ok(crate::spark_year_pad::format_year(datetime.year(), count)),
         'M' | 'L' => Ok(match count {
             1 => datetime.month().to_string(),
             2 => format!("{:02}", datetime.month()),
@@ -613,7 +609,7 @@ fn render_pattern_field(letter: char, count: usize, datetime: NaiveDateTime) -> 
 
 /// One token of a pre-compiled Java-style `date_format` pattern (PERF-02).
 #[derive(Clone, Debug)]
-enum JavaPatternToken {
+pub(crate) enum JavaPatternToken {
     /// Verbatim text (quoted runs + non-letter punctuation).
     Literal(String),
     /// A run of `count` identical ASCII pattern letters.
@@ -621,7 +617,7 @@ enum JavaPatternToken {
 }
 
 /// Compile a Java-style `date_format` pattern into tokens.
-fn compile_java_pattern(pattern: &str) -> Result<Vec<JavaPatternToken>> {
+pub(crate) fn compile_java_pattern(pattern: &str) -> Result<Vec<JavaPatternToken>> {
     let characters: Vec<char> = pattern.chars().collect();
     let mut tokens = Vec::new();
     let mut index = 0;
@@ -679,7 +675,7 @@ fn compile_java_pattern(pattern: &str) -> Result<Vec<JavaPatternToken>> {
 }
 
 /// Render a pre-compiled pattern against `datetime`.
-fn format_compiled_java_pattern(
+pub(crate) fn format_compiled_java_pattern(
     datetime: NaiveDateTime,
     tokens: &[JavaPatternToken],
 ) -> Result<String> {

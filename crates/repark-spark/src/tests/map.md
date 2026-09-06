@@ -322,6 +322,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
   `time_travel`, `metadata_tables` (**RP-5:** the two pins guard the fork behavior with the engine shim gone, pins: rp-5-fork-repin/C-003; **RP-1:** projection battery iterates
   `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
+  **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
+  the Iceberg/Arrow path — the CTAS guard reads its literal column as `Int32`.
+  pins: types-1/C-001.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
   and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,

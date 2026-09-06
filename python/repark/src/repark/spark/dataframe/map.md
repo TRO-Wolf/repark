@@ -15,6 +15,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `core.py` owns `DataFrame`, plan construction, joins, actions, schema/type conversion, cache,
   checkpoint, temp-view registration, declared sorting, `dynamicFlatten`, and public re-exports.
   DML-A: `mergeInto` `whenNotMatchedBySource` DELETE/UPDATE execute.
+  TYPES-1 (2026-09-05): `sample`/`randomSplit` hash arithmetic wraps `__repark_rn` in
+  `CAST(__repark_rn AS BIGINT)` (+2 lines, absorbed back in round 4).
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -91,6 +93,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - Origin or display regressions: inspect `_origin_map`, engine-name overlays, and `_spawn` paths.
 - File-size records: PYC-1 (2026-08-22) moved the UDF callbacks from `core.py` to
   `udf_bridge.py`. Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows;
-  `udf_bridge.py` stays below the source-size default.
+  `udf_bridge.py` stays below the source-size default. TYPES-1 round 4 (2026-09-05): `core.py`
+  6305→6303 — one import joined absorbs the round's increase (pins: types-1/C-008).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

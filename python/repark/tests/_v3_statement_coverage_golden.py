@@ -14,7 +14,7 @@ VERDICTS: dict[str, str] = {
     "create-v3-bucket-transform": "EQUAL",
     "create-v3-write-order": "REFUSED",
     "create-v3-properties": "DIVERGES",
-    "ctas-v3": "DIVERGES",
+    "ctas-v3": "EQUAL",
     "insert-into": "EQUAL",
     "insert-into-select": "EQUAL",
     "insert-overwrite-table": "EQUAL",

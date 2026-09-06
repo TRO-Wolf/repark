@@ -67,6 +67,9 @@ impl ExprPlanner for SparkIntegerExprPlanner {
         let Some(operator) = sql_operator(&expr.op) else {
             return Ok(PlannerResult::Original(expr));
         };
+        if integer_literal_i64(&expr.left).is_some() && integer_literal_i64(&expr.right).is_some() {
+            return Ok(PlannerResult::Original(expr));
+        }
         let (Ok(left_type), Ok(right_type)) =
             (expr.left.get_type(schema), expr.right.get_type(schema))
         else {
@@ -181,13 +184,19 @@ fn spark_integer_result_type(
     right_expr: &Expr,
     right_type: &DataType,
 ) -> Option<DataType> {
-    let left_width = operand_width(left_expr, left_type)?;
-    let right_width = operand_width(right_expr, right_type)?;
-    if !is_typed_integer_expr(left_expr, left_type)
-        && !is_typed_integer_expr(right_expr, right_type)
-    {
+    if !is_spark_integer_type(left_type) && !is_spark_integer_type(right_type) {
         return None;
     }
+    let both_literal =
+        integer_literal_i64(left_expr).is_some() && integer_literal_i64(right_expr).is_some();
+    let (left_width, right_width) = if both_literal {
+        (type_width(left_type)?, type_width(right_type)?)
+    } else {
+        (
+            operand_width(left_expr, left_type)?,
+            operand_width(right_expr, right_type)?,
+        )
+    };
     if contains_lambda_variable(left_expr) || contains_lambda_variable(right_expr) {
         return None;
     }
@@ -236,11 +245,16 @@ fn operand_width(expr: &Expr, data_type: &DataType) -> Option<IntegerWidth> {
     }
 }
 
-fn is_typed_integer_expr(expr: &Expr, data_type: &DataType) -> bool {
-    if integer_literal_i64(expr).is_some() {
-        return false;
-    }
+fn is_spark_integer_type(data_type: &DataType) -> bool {
     matches!(data_type, DataType::Int32 | DataType::Int64)
+}
+
+fn type_width(data_type: &DataType) -> Option<IntegerWidth> {
+    match data_type {
+        DataType::Int32 => Some(IntegerWidth::Int32),
+        DataType::Int64 => Some(IntegerWidth::Int64),
+        _ => None,
+    }
 }
 
 fn integer_literal_i64(expr: &Expr) -> Option<i64> {
@@ -619,26 +633,29 @@ mod tests {
 
     /// pins: f-y10-1-int-overflow/C-001, C-002
     #[tokio::test]
-    async fn untyped_one_plus_one_stays_int64_on_planner_session() {
+    async fn untyped_one_plus_one_is_int32() {
         let ctx = ctx();
         let batch = batch(&ctx, "SELECT 1 + 1 AS v").await;
-        assert_eq!(int64_cell(&batch), Some(2));
+        assert_eq!(int32_cell(&batch), Some(2));
     }
 
     /// pins: f-y10-1-int-overflow/C-001, C-002
     #[tokio::test]
-    async fn untyped_int_max_plus_one_widens_to_int64() {
+    async fn untyped_int_max_plus_one_raises_under_default_ansi() {
         let ctx = ctx();
-        let batch = batch(&ctx, "SELECT 2147483647 + 1 AS v").await;
-        assert_eq!(int64_cell(&batch), Some(2_147_483_648));
+        let error = collect_error(&ctx, "SELECT 2147483647 + 1 AS v").await;
+        assert!(
+            error.contains("ARITHMETIC_OVERFLOW"),
+            "INTMAX+1 must not widen, got {error}"
+        );
     }
 
     /// pins: f-y10-1-int-overflow/C-001, C-002
     #[tokio::test]
-    async fn untyped_int_max_plus_one_widens_when_ansi_false() {
+    async fn untyped_int_max_plus_one_wraps_when_ansi_false() {
         let ctx = ctx_legacy();
         let batch = batch(&ctx, "SELECT 2147483647 + 1 AS v").await;
-        assert_eq!(int64_cell(&batch), Some(2_147_483_648));
+        assert_eq!(int32_cell(&batch), Some(-2_147_483_648));
     }
 
     /// pins: f-y10-1-int-overflow/C-002

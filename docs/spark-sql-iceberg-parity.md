@@ -718,8 +718,8 @@ them, and the document is ordered by surface, never by date.
 
 ### TY-3 — an inline SQL decimal literal
 
-- **repark** — after U2, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is still Int64, so
-  `union(VALUES (1), VALUES (2.5))` yields `decimal128(21,1)` / nullable with `Decimal('1.0')`,
+- **repark** — `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is Int32, so
+  `union(VALUES (1), VALUES (2.5))` yields `decimal128(11,1)` / nullable with `Decimal('1.0')`,
   `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
@@ -738,6 +738,10 @@ them, and the document is ordered by surface, never by date.
   nor Spark's `(11,1)`. Observed type after U3 is still `decimal128(21,1)` **nullable**
   vs Spark `(11,1)` **non-null**. Residual is INT-literal-as-INT, not min-precision
   arithmetic.
+  **Dated 2026-09-05 (TYPES-1):** the width half converged — `VALUES (1)` is `Int32`, so
+  the union is `decimal128(11,1)` like Spark. The declaration is revisited and **kept**
+  on nullability only (**nullable** vs Spark **non-null**).
+  pins: types-1/C-002
 
 ### TY-4 — `createDataFrame` widens Arrow int32 to int64
 
@@ -770,6 +774,87 @@ them, and the document is ordered by surface, never by date.
 - **Rationale** — DECLARED until a schema-preserving create path exists. Values stay equal; only
   the container precision/scale widens. The pin asserts source and round-trip Arrow + polars
   dtypes so a silent preservation reds it.
+
+### TY-6 — SQL-text `UNION` of small integer literals answers BIGINT
+
+- **repark** — `SELECT * FROM (SELECT 1 AS r UNION ALL SELECT 2 AS r)` answers `int64` /
+  non-null. The plan-build union schema is computed before the TYPES-1 narrowing pass, so
+  the narrowed branches coerce back to the stale wide schema. Base behaves the same; TYPES-1
+  narrowed every other literal shape but left this one.
+- **Apache Spark** — answers `int32` / non-null with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe.)*
+- **Pin** — none yet; the TYPES-1 ledger §9 records both measured shapes.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Fixing it means re-deriving the
+  union schema after narrowing, which is a planner change beyond a type-widening unit.
+  pins: types-1/C-001
+
+### TY-7 — `COALESCE` of an INT and a narrowed literal answers BIGINT
+
+- **repark** — `SELECT COALESCE(CAST(NULL AS INT), 1)` answers `int64` / non-null.
+  DataFusion's own `TypeCoercion` runs before the TYPES-1 narrowing pass and unifies the
+  still-wide literal to BIGINT behind an explicit `CAST`; narrowing then shrinks the
+  literal inside the cast, and the closing coercion keeps the explicit wide type.
+- **Apache Spark** — answers `int32` / non-null with the same value. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_coalesce_with_int_stays_wide_on_repark`
+  and `::test_live_recoercion_shapes_match_the_oracle`
+  (pins the `(int64, int32)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Stripping DataFusion's
+  explicit casts would re-open the UNION division rewrite the §10 placement closed; the
+  placement keeps the wide answer on this shape.
+  pins: types-1/C-001
+
+### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
+
+- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int32` /
+  non-null with Spark's values, and is also accepted under a plain `GROUP BY i`
+  (all zeros) and with several arguments (bitmask). All three come from DataFusion's
+  `ResolveGroupingFunction`, which hardcodes the `CAST(... AS Int32)` expansion;
+  TYPES-1 narrowed no grouping shape.
+- **Apache Spark** — answers `int8` / non-null with the same values on the grouping-set
+  shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
+  `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
+  round-4 probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
+  `::test_grouping_under_plain_group_by_is_accepted`, and
+  `::test_live_grouping_sets_match_on_value_with_type_carve_out`
+  (pins the `(int32, int8)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Spark parity needs a repark
+  grouping layer (tinyint answer, grouping-set-context refusal, one-arg arity); a post-rule
+  recast would couple to DataFusion's internal `__grouping_id` expansion shape, and the
+  arity is already lost after expansion.
+  pins: types-1/C-004
+
+### TY-9 — `ntile` accepts a BIGINT bucket count
+
+- **repark** — `SELECT ntile(CAST(2 AS BIGINT)) OVER (ORDER BY i)` is accepted and
+  answers `int32` / non-null `[1, 1, 2]`. The signed window wrapper delegates its
+  signature to DataFusion's `ntile`, which takes every integer width; TYPES-1 changed
+  only the answer width. The facade shape does not exist: both `ntile` facades take a
+  plain integer, not a column.
+- **Apache Spark** — refuses with `DATATYPE_MISMATCH` (`ntile` requires INT). *(oracle:
+  live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared int/bigint/string
+  seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_ntile_with_bigint_argument_is_accepted`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Plan-time refusal needs
+  argument validation the window wrapper has no hook for; that machinery is its own unit.
+  pins: types-1/C-005
+
+### TY-10 — facade `decimal + lit(1)` skips literal min-precision
+
+- **repark** — `F.col("b").cast("decimal(10,2)") + F.lit(1)` answers `decimal128(13, 2)`,
+  the typed-INT width, while the SQL door's `CAST(b AS DECIMAL(10, 2)) + 1` answers
+  `decimal128(11, 2)`. The facade literal never presents the bare-literal shape the
+  min-precision arm matches, so the typed arm fires instead. Predates TYPES-1 (facade
+  literals were `Int32` before narrowing); TYPES-1 left the facade shape alone.
+- **Apache Spark** — answers `decimal128(11, 2)` on both doors with the same values.
+  *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared
+  int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`.
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Min-precision matching is
+  decimal-precision territory; widening the arm to facade literal shapes is its own unit.
+  pins: types-1/C-001
+
 ### TZ-2 — the session-timezone default is `UTC`
 
 - **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set
@@ -2139,27 +2224,31 @@ the pin rather than obeying it.
 - **Rationale** — DELIBERATE refusal, low priority to fix. The facade's only fallback is the
   Cartesian path, which returns an m×n result set — a wrong answer, not a narrower one.
 
-### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type
+### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `uint64` non-null (values match Spark).
+- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `int32` non-null (values match Spark).
 - **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[rank_with_ties]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). SQL door leaves DataFusion UInt64; DF-API
-  door already casts row_number to IntegerType.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[rank_with_ties]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1): `SignedWindow` UDF-registration wrappers
+  answer `Int32` for the rank family over the DataFusion kernels. pins: types-1/C-005
 
-### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order)
+### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order) — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `row_number() OVER (ORDER BY k, id)` → `uint64`.
+- **repark** — `row_number() OVER (ORDER BY k, id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[row_number_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Sibling of G5-RANK-TYPE-1.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[row_number_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Sibling of G5-RANK-TYPE-1. pins: types-1/C-005
 
-### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type
+### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — `ntile(4) OVER (ORDER BY id)` → `uint64`.
+- **repark** — `ntile(4) OVER (ORDER BY id)` → `int32`.
 - **Apache Spark** — `int32`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]`
-- **Rationale** — BACKLOG, intent to FIX (gap G5). Completes the ranking-family type class.
+- **Pin** — `python/repark/tests/test_types_1.py` rank pins; the window-parity row
+  `test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]` is an equality now.
+- **Rationale** — FIXED (2026-09-05, TYPES-1). Completes the ranking-family type class.
+  pins: types-1/C-005
 
 > **Temporal `RANGE` window frames — supported, with a corrected bare-offset envelope
 > (G5b / #62, 2026-08-11).** A `RANGE` frame bounded by an interval over a `TIMESTAMP` or
@@ -2341,26 +2430,23 @@ the pin rather than obeying it.
   guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
   permanently documents absence without a silent path.
 
-### BL-8 — SQL-door count-like aggregates return `UInt64`
+### BL-8 — SQL-door count-like aggregates return `UInt64` — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** casts a count-like aggregate to signed `bigint`
-  (`df.agg(F.regr_count("y", "x"))` → `int64`, `F.approx_count_distinct` likewise), taken from the
-  aggregate's own declared return type rather than a name list. The **SQL door** does not:
-  `SELECT regr_count(y, x)` and `SELECT approx_distinct(g)` hand back Arrow `UInt64`. So the two
-  doors reach the same kernel and disagree on the result type.
+- **repark** — both doors answer signed `bigint`: the **facade** casts from the aggregate's
+  declared return type, and the **SQL door** resolves `regr_count`/`approx_distinct` to
+  `SignedAggregate` UDF-registration wrappers over the DataFusion kernels (later registration
+  wins) and adds a native-`Int64` `count_if` UDAF — no analyzer rule, no plan CASTs
+  (`SELECT regr_count(y, x)`, `SELECT approx_distinct(g)`, `SELECT count_if(...)` → `int64`).
 - **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
   *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
   `approx_count_distinct` → `struct<r:bigint>`.)*
-- **Pin** — `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`,
-  whose `DOOR_RETURNS_UNSIGNED` set is a **ratchet**: the pin asserts the door still returns
-  unsigned, so closing this row turns it RED on purpose.
-- **Rationale** — BACKLOG, split deliberately. The facade is the surface the parity campaign is
-  about and it is now correct; correcting the door means moving the cast into the shared analyzer
-  layer, where the rewrite must be idempotent across re-analysis and must not rename an `Aggregate`
-  node's output field that a parent `Projection` refers to by name. That is an engine-semantics
-  unit. Recorded rather than left as a STATUS promise, because a `UInt64` column written to
-  Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
-  the gap is on disk, not just in a schema string.
+- **Pin** — `python/repark/tests/test_types_1.py` count-like pins;
+  `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`
+  (its `DOOR_RETURNS_UNSIGNED` set ratcheted to empty).
+- **Rationale** — FIXED (2026-09-05, TYPES-1). The sign conversion moved into
+  UDF-registration wrappers that preserve the inner kernels' names, aliases, signatures,
+  and `Aggregate` output field names.
+  pins: types-1/C-003
 
 ### RE-2 — a zero-width match at a mid-surrogate position
 
@@ -2632,33 +2718,26 @@ the pin rather than obeying it.
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.
 
-### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one
+### V3-COV-8 — CTAS derives a wider, required Iceberg column where Spark derives the literal's narrower, optional one — **FIXED 2026-09-05, TYPES-1**
 
-*(Nullability half closed 2026-09-04 by CUTOVER-SCHEMA-1; the BACKLOG below is width
-only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
+*(Nullability half closed 2026-09-04 by CUTOVER-SCHEMA-1; width half closed 2026-09-05 by
+TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 - **repark** — `CREATE TABLE t USING iceberg TBLPROPERTIES ('format-version' = '3') AS SELECT 1 AS
-  id, 'a' AS name` writes `{"name": "id", "required": false, "type": "long"}` and
-  `{"name": "name", "required": false, "type": "string"}` into the table metadata — wider but
-  **optional** since CUTOVER-SCHEMA-1 (2026-09-04). The rows round-trip and the format version
-  and partition spec are Spark-equal; the remaining divergence is the derived width.
+  id, 'a' AS name` writes `{"name": "id", "required": false, "type": "int"}` and
+  `{"name": "name", "required": false, "type": "string"}` into the table metadata — the
+  literal's own width and **optional**. The rows round-trip and the format version
+  and partition spec are Spark-equal.
 - **Apache Spark** — writes `{"name": "id", "required": false, "type": "int"}` and
   `{"name": "name", "required": false, "type": "string"}` for the same statement — the literal's
   own width and **optional**. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, re-measured on the
   raw metadata JSON 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[ctas-v3]`
-  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]`; the column-def
-  `[create-v3-flat]` control stores `id int` optional on BOTH engines, so this is the CTAS
-  derivation, not the type mapping.
-- **Rationale** — BACKLOG on width; the nullability half closed 2026-09-04 (CUTOVER-SCHEMA-1).
-  **Width:** DataFusion
-  types a bare integer literal as `Int64` where Spark types it `INT`, which is the same root as
-  `TY-4` / the `VALUES (1)` readings in `TY-3`'s neighbourhood — narrowing it inside CTAS alone
-  would make CTAS disagree with every other repark path. **Nullability:** closed — CTAS now
-  derives Iceberg requiredness from the relaxed query schema, so the committed columns are
-  optional throughout, while SE-1's tighten-derived refusal (`ctas.rs`, R-D) still refuses an
-  Iceberg CREATE whose output carries a non-nullable field from a tighten-derived source. The
-  `ctas-v3` pin is re-measured to optional; the verdict stays DIVERGES on width.
+  and `…::test_v3_statement_row_matches_the_live_spark_oracle[ctas-v3]` (verdict now EQUAL);
+  the column-def `[create-v3-flat]` control stores `id int` optional on BOTH engines.
+- **Rationale** — FIXED (nullability 2026-09-04 CUTOVER-SCHEMA-1; width 2026-09-05 TYPES-1).
+  Integer literals narrow to `INT` on every path, so the CTAS derivation agrees with Spark.
+  pins: types-1/C-001
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
@@ -2876,20 +2955,20 @@ only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
   `ceil(total / target)` sizing, which is fork work.
 
-### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
+### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 
-- **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
-  a TIMESTAMP value for the same call.
+- **repark** — both doors return a session-zone STRING (`'1970-01-01 00:00:00'` at UTC): the
+  SQL door overwrites DataFusion's `from_unixtime` with a Spark kernel (1- and 2-arg shapes).
+  Nullable on both doors, like Spark (even for non-null input).
 - **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
   *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
   session zone is not UTC; repark's default zone is UTC by registry row
   [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
   differs by that already-declared row, not by this one.)*
-- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
-- **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
-  A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
-  would have written a string. Not closed here because it changes what a working query
-  returns (the same class of break `LOG-1` needed a dated ruling to take).
+- **Pin** — `python/repark/tests/test_types_1.py` `from_unixtime` pins (the LRS-4 UNIX-1
+  divergence pin retired with the row).
+- **Rationale** — FIXED (2026-09-05, TYPES-1).
+  pins: types-1/C-006
 
 ### V3-LINEAGE-1 — `rewrite_data_files` carries row lineage through format-v3 compaction
 
@@ -3762,6 +3841,18 @@ only. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Rationale** — BACKLOG, filed 2026-09-03 from the EX-4 measurement. The name stays on the
   example backlog until the encoder emits Spark's padding; teaching the unpadded form would
   assert a silent wrong answer.
+
+### BL-18 — `approx_count_distinct` / `regr_count` derive nullable where Spark is non-null
+
+- **repark** — both answer `int64` with Spark's values (TYPES-1 fixed the `UInt64` half under
+  BL-8) but derive **nullable** from the wrapped DataFusion kernels.
+- **Apache Spark** — answers `int64` / **non-null** with the same values. *(oracle: live
+  PySpark 4.1.2, 2026-09-05, TYPES-1 close-out probe on the shared int/bigint/string seed.)*
+- **Pin** — `python/repark/tests/test_types_1.py::test_live_sketch_and_regression_counts_match_on_type_and_value`
+  (pins the `(True, False)` nullability pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1). Nullability derivation is
+  CUTOVER-SCHEMA-1's domain and out of TYPES-1's charter; the pin holds the divergence.
+  pins: types-1/C-003
 
 ### FN-INITCAP-1 — `initcap` starts a word at any non-alphanumeric — **FIXED 2026-09-04 (FN-FIX-2)**
 
@@ -4672,6 +4763,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
   Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
   bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump. `SELECT count(*)` over a plain
+  1e6-row Iceberg table cost 86.5 ms (analysis §7.4: 93 ms) because the empty projection
+  decoded every column (`get_arrow_projection_mask` turned `field_ids.is_empty()` into
+  `ProjectionMask::all()`) and no statistics fold existed. Fork trigger **F-27a/b**: an
+  empty projection reads row counts through `ProjectionMask::leaves(schema, [])` —
+  zero-column batches, delete vectors and positional deletes still filtering rows — and
+  `IcebergTableScan::statistics()` reports `Precision::Exact` from the frozen snapshot's
+  `total-records` summary when the planned tasks carry no residual and no deletes, so
+  DataFusion folds the count with no scan. Implemented and test-green in the fork lane
+  (`empty_projection_scan.rs`, `count_star_fold.rs`); measured through a temporary,
+  never-committed path override as **86.5 → 2.0 ms at 1e6** (parquet 1.8 ms) and
+  686 → 2.5 ms at 1e7, with the V3 MoR DV leg correctly unfolded at 4.6 ms answering
+  990,000 (`docs/perf/iceberg-scan-baseline.md` §2–§3). The RePark fold/non-fold pins
+  (`python/repark/tests/test_perf_ice_scan_1.py`) skip naming F-27 until the bump.
+- **PERF-ICE-SCANPART-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 5.
+  **FIXED-PENDING-PIN** behind the RP-14 fork pin bump, with residue. A sub-split-size
+  table scanned as ONE partition because `plan_partition_work` bin-packs to the 128 MiB
+  split target. Fork trigger **F-27d**: re-split and re-pack to a session-derived target
+  of `min(configured split size, max(total/T, 64 KiB))`, declining `_pos`/`_row_id`,
+  empty and file-prune-only projections so MERGE, identity-DELETE and lineage reads keep
+  their plans. Implemented and test-green in the fork lane (`bin_pack::split_tests`,
+  `parallel_small_scan.rs`); measured through a temporary, never-committed path override
+  as N=1 → N=8 with `sum_all` 89.5 → 36.2 ms at 1e6 and 596.5 → 161.9 ms at 1e7
+  (`docs/perf/iceberg-scan-baseline.md` §2). Residue, recorded not fixed: the 1.5×-of-
+  parquet target is missed (1.8×/2.2× at 1e6, 2.4×/3.6× at 1e7 — a fixed ~10 ms per
+  query plus ~2× per-byte overhead, decomposed in the baseline §3), and `count(col)`
+  still scans while the parquet leg folds from statistics. The RePark parallelism pins
+  skip naming F-27 until the bump.
   **NARROWED 2026-09-05** (PERF-ICE-CATALOG-IO-2): this row is the **metadata** cache only.
   The manifest cache this unit wires is already a byte-bounded moka cache fork-side
   (`max_capacity` on entry weight, TinyLFU admission, overweight entries rejected), so the
@@ -5388,6 +5508,236 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
   is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
   than obeys it.
+
+### EX-FN-1 — `arrays_zip` refuses; Spark zips element-wise with NULL fill
+
+- **repark** — `F.arrays_zip("a", "b")` raises `UnsupportedOperationException:
+  functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `arrays_zip([1, 2], ["x"])` answers `[{0: 1, 1: "x"}, {0: 2, 1:
+  None}]`; `arrays_zip([], ["y", "z"])` answers `[{0: None, 1: "y"}, {0: None, 1:
+  "z"}]`; a NULL array answers NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_arrays_zip_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the zip kernel.
+
+### EX-FN-2 — `posexplode` / `posexplode_outer` refuse; Spark emits position rows
+
+- **repark** — both spellings raise `UnsupportedOperationException` (`posexplode is not
+  supported yet (no first-class unnest-with-ordinality; ...)`; `posexplode_outer is not
+  supported yet (see posexplode; ...)`).
+- **Apache Spark** — `posexplode([10, 20])` answers `(0, 10), (1, 20)`; `posexplode_outer`
+  answers the same two rows and keeps the empty and NULL arrays as `(NULL, NULL)` rows.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_posexplode_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both spellings
+  stay on the example backlog until the engine grows unnest-with-ordinality.
+
+### EX-FN-3 — `encode` / `decode` refuse charset codecs; Spark encodes UTF-8 and US-ASCII
+
+- **repark** — `F.encode("s", "utf-8")` builds but planning raises `PySparkException:
+  There is no built-in encoding named 'utf-8', currently supported encodings are: base64,
+  base64pad, hex`. The same refusal covers `utf-16`, `US-ASCII`, and `decode` with any
+  charset: the names are binary codecs here, not charset codecs.
+- **Apache Spark** — `encode("AB", "utf-16")` answers `feff00410042` (BOM-prefixed);
+  `encode("AB", "US-ASCII")` answers `4142`; `decode(encode(s, "utf-8"), "utf-8")`
+  round-trips every row including empty and NULL. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_encode_decode_charset_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until a charset codec reaches the planner.
+
+### EX-FN-4 — column-referencing `expr` refuses; Spark binds the reference
+
+- **repark** — `F.expr("a + 1")` raises `AnalysisException: Schema error: No field named
+  a` at construction (the facade parses eagerly; the DataFrame-bound path is declared
+  missing on the facade). Column-free spellings are served: `expr("1 + 1")` answers 2
+  and `expr("make_date(2020, 1, 1)")` answers `2020-01-01`, both Spark-equal.
+- **Apache Spark** — `expr("a + 1")` over `(1,), (2,), (None,)` answers `[2, 3, None]`.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_expr_column_reference_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog: column references are the name's core use, and a literal-only
+  example would document the edge while the middle raises.
+
+### EX-FN-5 — `format_number` refuses; Spark renders grouped decimals
+
+- **repark** — `F.format_number("x", 2)` raises `UnsupportedOperationException:
+  functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `format_number(12332.12345, 2)` answers `"12,332.12"`;
+  `format_number(0.5, 2)` answers `"0.50"`; `format_number(-9876.543, 2)` answers
+  `"-9,876.54"`; at four decimals `"12,332.1234"`, `"0.5000"`, `"-9,876.5430"`; NULL
+  stays NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the grouping renderer.
+
+### EX-FN-6 — `from_csv` refuses; Spark parses the row struct
+
+- **repark** — `F.from_csv("line", "a INT, b STRING")` raises `UnsupportedOperationException:
+  functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)`.
+- **Apache Spark** — `"1,hello"` answers `(1, "hello")`; `"2,"` answers `(2, None)`; NULL
+  answers NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_from_csv_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the CSV parse kernel lands.
+
+### EX-FN-7 — `hash` refuses; Spark answers the Murmur3 ints
+
+- **repark** — `F.hash("n")` raises `UnsupportedOperationException: functions.hash is not
+  supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
+  is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the hash kernel.
+
+### EX-FN-8 — `json_tuple` refuses; Spark projects the string fields
+
+- **repark** — `F.json_tuple("line", "a", "b")` raises `UnsupportedOperationException:
+  functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)`.
+- **Apache Spark** — `'{"a": 1, "b": 2}'` answers `("1", "2")` (strings, not ints); malformed
+  JSON and NULL answer `(NULL, NULL)`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05,
+  EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_json_tuple_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the JSON tuple kernel lands.
+
+### EX-FN-9 — `kurtosis` / `skewness` / `mode` refuse; Spark aggregates them
+
+- **repark** — all three raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (engine gap; disclosed R-FN-BATCH4)`).
+- **Apache Spark** — over `[1, 2, 2, 3, 4, 5]` (NULL skipped): kurtosis is
+  `-1.1517159763313605`, skewness is `0.3053162697580512`, mode is `2`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_moment_aggregates_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. All three names
+  stay on the example backlog until the moment kernels land.
+
+### EX-FN-10 — `make_timestamp` refuses; Spark builds the timestamp
+
+- **repark** — `F.make_timestamp("y", "mo", "d", "h", "mi", "s")` raises
+  `UnsupportedOperationException: functions.make_timestamp is not supported yet (engine gap;
+  disclosed R-FN-BATCH3)`.
+- **Apache Spark** — `(2024, 1, 15, 10, 30, 5)` answers `2024-01-15T10:30:05`; February 30
+  raises `DATETIME_FIELD_OUT_OF_BOUNDS` under ANSI. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_timestamp_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the constructor.
+
+### EX-FN-11 — `months_between` refuses; Spark answers the month distance
+
+- **repark** — `F.months_between("e", "s")` raises `UnsupportedOperationException:
+  functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `(2017-11-01, 2017-08-01)` answers `3.0`; `(1997-02-28, 1997-10-28)`
+  answers `-8.0`; NULL answers NULL; `roundOff=false` agrees on whole months. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_months_between_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the month arithmetic.
+
+### EX-FN-12 — `monotonically_increasing_id` / `spark_partition_id` refuse
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (single-node ... disclosed; R-FN-BATCH4)`).
+- **Apache Spark** — `monotonically_increasing_id()` over a five-row single-partition frame
+  answers `0..4`; `spark_partition_id()` answers `0`. *(oracle: live PySpark 4.1.2, ANSI on,
+  2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_single_node_ids_refuse`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until single-node id semantics land.
+
+### EX-FN-13 — `input_file_name` refuses; Spark answers the read path
+
+- **repark** — `F.input_file_name()` raises `UnsupportedOperationException:
+  functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)`.
+- **Apache Spark** — reading a two-row CSV answers the `file:///.../letters.csv` URI.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_input_file_name_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the read path is tracked.
+
+### EX-FN-14 — `raise_error` refuses at build; Spark raises `USER_RAISED_EXCEPTION`
+
+- **repark** — `F.raise_error("boom")` raises `UnsupportedOperationException:
+  functions.raise_error evaluation is not supported yet (engine raise kernel deferred;
+  disclosed E1)` before any row runs.
+- **Apache Spark** — raises `[USER_RAISED_EXCEPTION] boom`, SQLSTATE `P0001`. *(oracle:
+  live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_raise_error_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the raise kernel lands.
+
+### EX-FN-15 — `replace` takes a plain-string search and `$1` answers a backslash
+
+- **repark** — `F.replace("s", "a", "X")` (plain Python strings) answers the literal
+  replace and agrees with Spark's values on plain arms (`"SpXrk SQL"`, `"XXX"`, `"X.c"`).
+  But the shared spelling means different things per engine: Spark's literal spelling
+  `F.replace("s", F.lit("a"), F.lit("X"))` raises `TypeError: decoding to str: need a
+  bytes-like object, Column found` here, a column search raises the same way, and `"$1"`
+  in the replacement answers one backslash per match (`"aaa"` becomes three backslashes).
+- **Apache Spark** — the search is `lit` or a column: plain arms agree with the repark
+  values above; `replace("aaa", lit("a"), lit("$1"))` answers `"$1$1$1"` (literal, no
+  group substitution); a column search is served (`("aaa", "a")` becomes `"XXX"`).
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_replace_lit_spelling_refuses`
+  and `::test_replace_dollar_arm_answers_backslash`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement (facade-spelling
+  class, as `translate.py`'s map row anticipated). The name stays on the example backlog:
+  teaching repark's plain-string spelling would teach code Spark analysis-refuses.
+
+### EX-FN-16 — `schema_of_csv` / `schema_of_json` refuse; Spark infers the structs
+
+- **repark** — both raise `UnsupportedOperationException` (`functions.<name> is not
+  supported yet (disclosed E1)`).
+- **Apache Spark** — `schema_of_csv("1,hello")` answers `"STRUCT<_c0: INT, _c1: STRING>"`
+  (likewise with an explicit `sep` option); `schema_of_json('{"a": 1, "b": "x"}')`
+  answers `"STRUCT<a: BIGINT, b: STRING>"`. Both take a foldable literal, not a column.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_schema_of_pair_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. Both names stay
+  on the example backlog until the schema-inference kernels land.
+
+### EX-FN-17 — `sentences` refuses; Spark nests words by sentence
+
+- **repark** — `F.sentences("s")` raises `UnsupportedOperationException: functions.sentences
+  is not supported yet (engine gap; disclosed R-FN-BATCH2)`.
+- **Apache Spark** — `"Hello world. How are you?"` answers `[["Hello", "world"], ["How",
+  "are", "you"]]`; `""` answers `[]`; NULL answers NULL. *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_sentences_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the sentence kernel lands.
+
+### EX-FN-18 — `split` refuses; Spark cuts on the pattern
+
+- **repark** — `F.split("s", ",")` raises `UnsupportedOperationException: functions.split is
+  not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **Apache Spark** — `"a,b,c"` answers `["a", "b", "c"]`; `"a,,c"` answers `["a", "", "c"]`;
+  `""` answers `[""]`; NULL answers NULL; `limit=2` answers `["a", "b,c"]`. *(oracle: live
+  PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
+  on the example backlog until the engine grows the split kernel.
+
+### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out
+
+- **repark** — `make_interval(1, 2, 1, 3, 4, 5, 6)` cast to string answers `"14 mons 10
+  days 4 hours 5 mins 6.000000000 secs"` (DataFusion's display). The date-arithmetic arms
+  agree with Spark and carry the example coverage: `2024-01-15` plus `(1y, 2mo, 3d)`
+  answers `2025-03-18`, and `2024-01-15T10:30:05` plus `(4h, 5m, 6s)` answers
+  `2024-01-15T14:35:11`.
+- **Apache Spark** — the same interval casts to `"1 years 2 months 10 days 4 hours 5
+  minutes 6 seconds"`; the date-arithmetic arms agree with the repark answers above.
+  Collecting the interval itself refuses on both engines (Spark:
+  `CalendarIntervalType.fromInternal is not implemented`). *(oracle: live PySpark 4.1.2,
+  ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_make_interval_string_form`
+- **Rationale** — BACKLOG ARM, filed 2026-09-05 from the EX-25 measurement. The name stays
+  covered by the date-arithmetic arms; this row records the display arm until the cast
+  spells Spark's units.
 
 ### H3-SPILL-NLJ-1 — a bounded pool turns a nested-loop join into a caught Rust panic
 
