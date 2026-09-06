@@ -4508,14 +4508,14 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "repark-common"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "repark-core"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "arrow",
  "async-trait",
@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "repark-functions"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "arrow",
  "chrono",
@@ -4549,7 +4549,7 @@ dependencies = [
 
 [[package]]
 name = "repark-iceberg"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "async-trait",
  "datafusion",
@@ -4570,14 +4570,14 @@ dependencies = [
 
 [[package]]
 name = "repark-ml"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "repark-python"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "arrow",
  "datafusion",
@@ -4597,7 +4597,7 @@ dependencies = [
 
 [[package]]
 name = "repark-spark"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4617,7 +4617,7 @@ dependencies = [
 
 [[package]]
 name = "repark-sql"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "async-trait",
  "datafusion",
@@ -4634,7 +4634,7 @@ dependencies = [
 
 [[package]]
 name = "repark-ta"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "criterion",
  "datafusion",
