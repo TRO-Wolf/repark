@@ -176,16 +176,25 @@ cell is faster on every pass, and the base tree itself read 361–555 ms on this
 
 ## 10. Gates
 
-| gate | result |
-|---|---|
-| `make verify` | see §11 |
-| `pytest test_perf_ice_writepath_1.py test_write_distribution_1.py -q` | 10 passed, 3 skipped (release native) |
-| `REPARK_PARITY_LIVE=1 pytest test_write_distribution_1.py test_perf_ice_writepath_1.py -q` | 13 passed, one JVM beside none, exited |
-| `make py-test-facade` / `make py-test-dbt` | see §11 |
-| `make check-map-sync` / `check-ledger-grammar` / `check-ledgers` / `check-docs-compaction` | see §11 |
-| `python3 scripts/ledger_lifecycle.py check --base origin/main` | see §11 |
-| `uvx typos@1.47.2 .` | see §11 |
+Every command in the brief, run on the lane after the unit's first commit `7c47a688`, real exits.
 
-## 11. Gate log
+| gate | exit | result |
+|---|---|---|
+| `make verify` | 0 | `ci` (fmt, workspace clippy, `rust-panic-ban`, the structure gates, py-lint, py-format, lock, toml, spell) plus the Rust workspace suite — `repark-iceberg` 411 tests, every crate and integration binary green |
+| `.venv/bin/python -m pytest python/repark/tests/test_perf_ice_writepath_1.py python/repark/tests/test_write_distribution_1.py -q` | 0 | 10 passed, 3 skipped (the live legs, without `REPARK_PARITY_LIVE`) on the release native |
+| the same two files under `REPARK_PARITY_LIVE=1` (Spark 4.1.2, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, ivy redirected into the lane) | 0 | 13 passed, 34 s, one JVM beside none, exited with the run |
+| `make py-test-facade` | 0 | 5,111 passed, 245 skipped in 662 s (the target's maturin step leaves a DEBUG native in the venv; the release native was restored afterwards and the always-run pins re-read 3 passed) |
+| `make py-test-dbt` | 0 | 59 passed, 1 skipped |
+| `make check-map-sync` | 0 | 221 maps clean |
+| `make check-ledger-grammar` | 0 | 61 live ledgers clean (287 clauses, 870 pinned clause ids) |
+| `make check-ledgers` | 0 | 257 ledgers in bins, 755 links resolve, frozen rule clean |
+| `make check-docs-compaction` | 0 | clean |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 | clean |
+| `uvx typos@1.47.2 .` | 0 | clean |
+| `git diff origin/main -- Cargo.toml Cargo.lock` | — | empty |
 
-Filled at hand-back, verbatim exits.
+Disk: 908 GB free at hand-back (838 GB at pickup); the lane's `target/` is 33 GB and `scratch/`
+342 MB (the 1e6 bed, the three cell logs, the two release natives kept for the swap), both
+excluded from git and left for the critic's re-measure. `.ivy2/` (182 MB, the brief's ivy
+redirect) is untracked at the lane root and never staged. No JVM or pytest this unit started is
+left running.
