@@ -10,6 +10,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use repark_common::{Error, Result};
 
 use crate::engine_err;
+use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool};
 
 /// Bytes in one GiB (the `memory_limit_gb` conversion unit).
 pub(crate) const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
@@ -98,7 +99,10 @@ pub(crate) fn with_memory_pool(
     pool_bytes: Option<usize>,
 ) -> RuntimeEnvBuilder {
     match pool_bytes {
-        Some(bytes) => runtime.with_memory_pool(Arc::new(FairSpillPool::new(bytes))),
+        Some(bytes) => runtime.with_memory_pool(Arc::new(RefusalRecordingPool::new(
+            Arc::new(FairSpillPool::new(bytes)),
+            Arc::new(PoolRefusalLog::default()),
+        ))),
         None => runtime,
     }
 }

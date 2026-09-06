@@ -6,20 +6,37 @@ use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
 use arrow::error::ArrowError;
 use datafusion::physical_plan::SendableRecordBatchStream;
+use datafusion::prelude::DataFrame;
 use futures::StreamExt;
 use pyo3::Python;
+use repark_core::PoolRefusalLog;
 use tokio::runtime::Runtime;
 
 use crate::dataframe::STREAM_POLL_NO_DETACH;
-use crate::fence::fence_stream_poll;
+use crate::fence::{fence_stream_poll, fenced_panic_detail};
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
+
+const REFUSAL_CONTAINMENT_NOTE: &str = "REPARK: the bounded memory pool refused this plan and the engine's spill fallback did not      survive the refusal; this is the refusal that caused it.";
+
+#[derive(Debug)]
+struct ContainedPoolRefusal(String);
+
+impl std::fmt::Display for ContainedPoolRefusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for ContainedPoolRefusal {}
 
 /// A synchronous reader that polls one DataFusion batch per Arrow C Stream callback.
 pub(crate) struct StreamingBatchReader {
     runtime: Arc<Runtime>,
     stream: SendableRecordBatchStream,
     schema: SchemaRef,
+    refusals: Option<Arc<PoolRefusalLog>>,
+    refusals_before: u64,
 }
 
 impl StreamingBatchReader {
@@ -32,7 +49,38 @@ impl StreamingBatchReader {
             runtime,
             stream,
             schema,
+            refusals: None,
+            refusals_before: 0,
         }
+    }
+
+    pub(crate) fn with_refusals(mut self, refusals: Option<Arc<PoolRefusalLog>>) -> Self {
+        self.refusals_before = refusals.as_ref().map_or(0, |log| log.refusals());
+        self.refusals = refusals;
+        self
+    }
+
+    fn as_pool_refusal(&self, error: ArrowError) -> ArrowError {
+        let Some(detail) = fenced_panic_detail(&error).map(ToOwned::to_owned) else {
+            return error;
+        };
+        let Some(log) = self.refusals.as_ref() else {
+            return error;
+        };
+        if log.refusals() <= self.refusals_before {
+            return error;
+        }
+        let Some(refusal) = log.last_refusal() else {
+            return error;
+        };
+        tracing::warn!(
+            target: "repark::spill",
+            detail = detail.as_str(),
+            "a bounded memory-pool refusal ended in an engine-internal failure"
+        );
+        ArrowError::ExternalError(Box::new(ContainedPoolRefusal(format!(
+            "{refusal}\n{REFUSAL_CONTAINMENT_NOTE}"
+        ))))
     }
 }
 
@@ -46,7 +94,7 @@ impl Iterator for StreamingBatchReader {
             runtime, stream, ..
         } = self;
         let schema = Arc::clone(&self.schema);
-        fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
+        let item = fence_stream_poll("PyDataFrame.__arrow_c_stream__.next", || {
             let no_detach = STREAM_POLL_NO_DETACH.with(Cell::get);
             let polled = if no_detach {
                 runtime.block_on(stream.next())
@@ -58,7 +106,11 @@ impl Iterator for StreamingBatchReader {
                     .map_err(|error| ArrowError::ExternalError(Box::new(error)))
                     .and_then(|batch| coerce_batch_views(&batch, &schema))
             })
-        })
+        });
+        match item {
+            Some(Err(error)) => Some(Err(self.as_pool_refusal(error))),
+            other => other,
+        }
     }
 }
 
@@ -67,6 +119,11 @@ impl RecordBatchReader for StreamingBatchReader {
     fn schema(&self) -> SchemaRef {
         Arc::clone(&self.schema)
     }
+}
+
+pub(crate) fn refusal_log(frame: &DataFrame) -> Option<Arc<PoolRefusalLog>> {
+    let runtime_env = frame.task_ctx().runtime_env();
+    repark_core::pool_refusal_log(runtime_env.memory_pool.as_ref())
 }
 
 pub(crate) fn coerced_export_schema(schema: &SchemaRef) -> SchemaRef {
@@ -370,5 +427,142 @@ mod tests {
             error.to_string().contains("not supported"),
             "loud cast refusal, got {error}"
         );
+    }
+
+    fn probe_schema() -> SchemaRef {
+        Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, true)]))
+    }
+
+    fn panic_item() -> Result<RecordBatch, datafusion::error::DataFusionError> {
+        panic!("partition not used yet")
+    }
+
+    fn probe_reader(
+        stream: SendableRecordBatchStream,
+        refusals: Option<Arc<PoolRefusalLog>>,
+    ) -> StreamingBatchReader {
+        let runtime = Arc::new(tokio::runtime::Runtime::new().expect("a tokio runtime builds"));
+        StreamingBatchReader::new(runtime, stream, probe_schema()).with_refusals(refusals)
+    }
+
+    fn empty_reader(refusals: Option<Arc<PoolRefusalLog>>) -> StreamingBatchReader {
+        let stream: SendableRecordBatchStream = Box::pin(
+            datafusion::physical_plan::stream::RecordBatchStreamAdapter::new(
+                probe_schema(),
+                futures::stream::empty(),
+            ),
+        );
+        probe_reader(stream, refusals)
+    }
+
+    fn panicking_reader(refusals: Option<Arc<PoolRefusalLog>>) -> StreamingBatchReader {
+        let stream: SendableRecordBatchStream = Box::pin(
+            datafusion::physical_plan::stream::RecordBatchStreamAdapter::new(
+                probe_schema(),
+                futures::stream::once(async { panic_item() }),
+            ),
+        );
+        probe_reader(stream, refusals)
+    }
+
+    fn fenced_panic() -> ArrowError {
+        crate::fence::fence_stream_poll("Probe.poll", || panic!("partition not used yet"))
+            .expect("a fenced panic yields one item")
+            .expect_err("the item is the Err arm")
+    }
+
+    fn refuse_once(log: &Arc<PoolRefusalLog>) {
+        use datafusion::execution::memory_pool::{FairSpillPool, MemoryConsumer, MemoryPool};
+
+        let pool: Arc<dyn MemoryPool> = Arc::new(repark_core::RefusalRecordingPool::new(
+            Arc::new(FairSpillPool::new(1024)),
+            Arc::clone(log),
+        ));
+        let reservation = MemoryConsumer::new("probe").register(&pool);
+        reservation
+            .try_grow(1024 * 1024)
+            .expect_err("a 1 KiB pool refuses a 1 MiB reservation");
+    }
+
+    #[test]
+    fn a_panic_that_follows_a_pool_refusal_is_reported_as_that_refusal() {
+        let log = Arc::new(PoolRefusalLog::default());
+        let reader = empty_reader(Some(Arc::clone(&log)));
+        refuse_once(&log);
+        let message = reader.as_pool_refusal(fenced_panic()).to_string();
+        assert!(
+            message.contains("fair("),
+            "the pool names itself: {message}"
+        );
+        assert!(
+            message.to_lowercase().contains("resources exhausted"),
+            "the typed refusal survives: {message}"
+        );
+        assert!(
+            !message.contains("a Rust panic was caught"),
+            "the internal-error framing is gone: {message}"
+        );
+        assert!(
+            !message.contains("partition not used yet"),
+            "the engine's own panic payload is not the user's message: {message}"
+        );
+        assert!(
+            message.contains(REFUSAL_CONTAINMENT_NOTE),
+            "the containment is disclosed: {message}"
+        );
+    }
+
+    #[test]
+    fn a_panic_with_no_pool_refusal_stays_the_internal_error() {
+        let reader = empty_reader(Some(Arc::new(PoolRefusalLog::default())));
+        let message = reader.as_pool_refusal(fenced_panic()).to_string();
+        assert!(
+            message.contains("a Rust panic was caught"),
+            "a panic the pool did not cause is still reported as one: {message}"
+        );
+    }
+
+    #[test]
+    fn an_unbounded_session_has_no_log_and_leaves_the_internal_error_alone() {
+        let reader = empty_reader(None);
+        let message = reader.as_pool_refusal(fenced_panic()).to_string();
+        assert!(
+            message.contains("a Rust panic was caught"),
+            "no pool, no rewrite: {message}"
+        );
+    }
+
+    #[test]
+    fn an_ordinary_stream_error_is_never_rewritten_as_a_refusal() {
+        let log = Arc::new(PoolRefusalLog::default());
+        let reader = empty_reader(Some(Arc::clone(&log)));
+        refuse_once(&log);
+        let ordinary = ArrowError::ExternalError(Box::new(
+            datafusion::error::DataFusionError::Execution("kaboom".to_string()),
+        ));
+        let message = reader.as_pool_refusal(ordinary).to_string();
+        assert!(
+            message.contains("kaboom"),
+            "only a fenced panic is rewritten: {message}"
+        );
+    }
+
+    #[test]
+    fn the_reader_delivers_the_typed_refusal_from_its_own_poll() {
+        Python::attach(|_python| {
+            let log = Arc::new(PoolRefusalLog::default());
+            let mut reader = panicking_reader(Some(Arc::clone(&log)));
+            refuse_once(&log);
+            let error = reader
+                .next()
+                .expect("the panicking poll yields one item")
+                .expect_err("the item is the Err arm");
+            let message = error.to_string();
+            assert!(message.contains("fair("), "{message}");
+            assert!(
+                !message.contains("a Rust panic was caught"),
+                "the reader itself contains the panic: {message}"
+            );
+        });
     }
 }
