@@ -161,7 +161,7 @@ where
 {
     let max_concurrent = concurrency.max_concurrent_files.max(1);
     if max_concurrent == 1 {
-        return fanout_conformed_stream_serial(table, &mut conformed).await;
+        return crate::write::distribution::fanout_sorted_serial(table, &mut conformed).await;
     }
 
     // P1-R1: abort flag so workers do not close fanouts after a source/sibling failure.
@@ -170,11 +170,10 @@ where
     let mut worker_futures = Vec::with_capacity(max_concurrent);
     for _ in 0..max_concurrent {
         let (tx, rx) = mpsc::channel::<RecordBatch>(1);
-        let table = table.clone();
         let aborted = Arc::clone(&aborted);
         worker_futures.push(async move {
-            let mut stream = rx.map(Ok::<RecordBatch, DataFusionError>);
-            fanout_conformed_stream_serial_with_abort(&table, &mut stream, &aborted).await
+            let stream = rx.map(Ok::<RecordBatch, DataFusionError>);
+            crate::write::distribution::fanout_sorted_stream(table, stream, aborted).await
         });
         senders.push(tx);
     }
@@ -230,7 +229,7 @@ where
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
-async fn fanout_conformed_stream_serial<S>(
+pub(crate) async fn fanout_conformed_stream_serial<S>(
     table: &Table,
     conformed: &mut S,
 ) -> Result<Vec<DataFile>>
@@ -243,7 +242,7 @@ where
 }
 
 /// Serial fanout that checks `aborted` between batches and after the stream ends.
-async fn fanout_conformed_stream_serial_with_abort<S>(
+pub(crate) async fn fanout_conformed_stream_serial_with_abort<S>(
     table: &Table,
     conformed: &mut S,
     aborted: &AtomicBool,

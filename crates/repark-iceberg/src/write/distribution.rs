@@ -1,22 +1,29 @@
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Schema};
+use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::execution::TaskContext;
 use datafusion::logical_expr::ColumnarValue;
 use datafusion::physical_expr::expressions::Column;
-use datafusion::physical_expr::{Partitioning, PhysicalExpr};
+use datafusion::physical_expr::{LexOrdering, Partitioning, PhysicalExpr, PhysicalSortExpr};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::repartition::RepartitionExec;
+use datafusion::physical_plan::sorts::sort::SortExec;
+use futures::{Stream, TryStreamExt};
 use iceberg::arrow::type_to_arrow_type;
-use iceberg::spec::Transform;
+use iceberg::spec::{DataFile, NullOrder, SortDirection, Transform};
 use iceberg::table::Table;
 use iceberg::transform::create_transform_function;
+use iceberg::writer::IcebergWriter;
 
 use crate::write::merge::iceberg_err;
+use crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY;
 
 #[derive(Debug, Eq)]
 pub(crate) struct PartitionTransformExpr {
@@ -136,11 +143,170 @@ pub(crate) fn hash_distribution(
     if writers <= 1 || table.metadata().default_partition_spec().is_unpartitioned() {
         return Ok(input);
     }
+    if distribution_is_none(table)? {
+        return Ok(input);
+    }
     let exprs = partition_value_exprs(table, input.schema().as_ref())?;
     Ok(Arc::new(RepartitionExec::try_new(
         input,
         Partitioning::Hash(exprs, writers),
     )?))
+}
+
+pub(crate) fn distribution_is_none(table: &Table) -> Result<bool> {
+    let mode = table
+        .metadata()
+        .properties()
+        .get(DISTRIBUTION_MODE_PROPERTY)
+        .map(|mode| mode.to_ascii_lowercase());
+    match mode.as_deref() {
+        None | Some("hash" | "range") => Ok(false),
+        Some("none") => Ok(true),
+        Some(other) => Err(DataFusionError::Plan(format!(
+            "write.distribution-mode '{other}' is not supported — use none, hash, or range"
+        ))),
+    }
+}
+
+pub(crate) fn default_sort_is_declared(table: &Table) -> bool {
+    !table.metadata().default_sort_order().is_unsorted()
+}
+
+pub(crate) async fn sort_batches_by_default_order(
+    table: &Table,
+    batches: Vec<RecordBatch>,
+) -> Result<Vec<RecordBatch>> {
+    let Some(first) = batches.first() else {
+        return Ok(Vec::new());
+    };
+    let schema = first.schema();
+    let Some(ordering) = default_sort_lex_ordering(table, schema.as_ref())? else {
+        return Ok(batches);
+    };
+    let memory = MemorySourceConfig::try_new_exec(&[batches], schema, None)?;
+    let sort = SortExec::new(ordering, memory);
+    let mut stream = sort.execute(0, Arc::new(TaskContext::default()))?;
+    let mut sorted = Vec::new();
+    while let Some(batch) = stream.try_next().await? {
+        sorted.push(batch);
+    }
+    Ok(sorted)
+}
+
+fn default_sort_lex_ordering(table: &Table, schema: &Schema) -> Result<Option<LexOrdering>> {
+    let iceberg_schema = table.metadata().current_schema();
+    let mut exprs = Vec::new();
+    for field in &table.metadata().default_sort_order().fields {
+        if field.transform != Transform::Identity {
+            return Err(DataFusionError::NotImplemented(format!(
+                "sorting by the table's default sort order uses transform `{}` on source id {}, \
+                 only identity sort fields are supported",
+                field.transform, field.source_id
+            )));
+        }
+        let source = iceberg_schema.field_by_id(field.source_id).ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "the table's default sort order names source field id {}, which the table \
+                     schema lacks",
+                field.source_id
+            ))
+        })?;
+        let index = schema.index_of(&source.name)?;
+        exprs.push(PhysicalSortExpr {
+            expr: Arc::new(Column::new(&source.name, index)),
+            options: datafusion::arrow::compute::SortOptions {
+                descending: field.direction == SortDirection::Descending,
+                nulls_first: field.null_order == NullOrder::First,
+            },
+        });
+    }
+    Ok(LexOrdering::new(exprs))
+}
+
+pub(crate) async fn fanout_sorted_serial<S>(
+    table: &Table,
+    conformed: &mut S,
+) -> Result<Vec<DataFile>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    if !default_sort_is_declared(table) {
+        return super::append::fanout_conformed_stream_serial(table, conformed).await;
+    }
+    let mut collected = Vec::new();
+    while let Some(batch) = conformed.try_next().await? {
+        collected.push(batch);
+    }
+    let sorted = sort_batches_by_default_order(table, collected).await?;
+    let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
+    super::append::fanout_conformed_stream_serial(table, &mut ordered).await
+}
+
+pub(crate) async fn fanout_sorted_stream<S>(
+    table: &Table,
+    stream: S,
+    aborted: Arc<AtomicBool>,
+) -> Result<Vec<DataFile>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    let mut stream = stream;
+    if !default_sort_is_declared(table) {
+        return super::append::fanout_conformed_stream_serial_with_abort(
+            table,
+            &mut stream,
+            &aborted,
+        )
+        .await;
+    }
+    let mut collected = Vec::new();
+    while let Some(batch) = stream.try_next().await? {
+        collected.push(batch);
+    }
+    let sorted = sort_batches_by_default_order(table, collected).await?;
+    let mut ordered = futures::stream::iter(sorted.into_iter().map(Ok::<_, DataFusionError>));
+    super::append::fanout_conformed_stream_serial_with_abort(table, &mut ordered, &aborted).await
+}
+
+pub(crate) async fn drive_unpartitioned<S, F, Fut, W>(
+    table: &Table,
+    stream: S,
+    max_concurrent: usize,
+    mut make_writer: F,
+) -> Result<Vec<DataFile>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<W>>,
+    W: IcebergWriter + Send + 'static,
+{
+    if !default_sort_is_declared(table) {
+        if max_concurrent == 1 {
+            let writer = make_writer().await?;
+            let sink = super::merge::ForkBatchWriter { inner: writer };
+            return super::merge::write_stream_into(sink, stream).await;
+        }
+        return super::merge::write_stream_into_parallel(max_concurrent, stream, make_writer).await;
+    }
+    let mut collected = Vec::new();
+    let mut stream = stream;
+    while let Some(batch) = stream.try_next().await? {
+        collected.push(batch);
+    }
+    let sorted = sort_batches_by_default_order(table, collected).await?;
+    if sorted.is_empty() {
+        return Ok(Vec::new());
+    }
+    let writers = max_concurrent.max(1).min(sorted.len());
+    let chunk = sorted.len().div_ceil(writers);
+    let mut files = Vec::new();
+    for part in sorted.chunks(chunk) {
+        let writer = make_writer().await?;
+        let sink = super::merge::ForkBatchWriter { inner: writer };
+        let batches = part.iter().cloned().map(Ok::<_, DataFusionError>);
+        files.extend(super::merge::write_stream_into(sink, futures::stream::iter(batches)).await?);
+    }
+    Ok(files)
 }
 
 #[cfg(test)]
@@ -327,12 +493,22 @@ mod tests {
         name: &str,
         spec: Option<UnboundPartitionSpec>,
     ) -> Table {
+        create_table_with(catalog, name, spec, HashMap::new()).await
+    }
+
+    async fn create_table_with(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        spec: Option<UnboundPartitionSpec>,
+        properties: HashMap<String, String>,
+    ) -> Table {
         let namespace = NamespaceIdent::new("ns".into());
         let _ = catalog.create_namespace(&namespace, HashMap::new()).await;
         let creation = TableCreation::builder()
             .name(name.to_string())
             .schema(iceberg_schema())
             .partition_spec_opt(spec)
+            .properties(properties)
             .build();
         catalog
             .create_table(&namespace, creation)
@@ -342,6 +518,48 @@ mod tests {
             .load_table(&TableIdent::new(namespace, name.into()))
             .await
             .expect("load table")
+    }
+
+    async fn declare_order(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        fields: Vec<crate::write::sort_order::WriteSortField>,
+    ) -> Table {
+        let ident = TableIdent::new(NamespaceIdent::new("ns".into()), name.into());
+        crate::write::sort_order::apply_write_order(catalog.as_ref(), &ident, &fields, None)
+            .await
+            .expect("declare sort order");
+        catalog.load_table(&ident).await.expect("reload table")
+    }
+
+    async fn file_ids(table: &Table, path: &str) -> Vec<i64> {
+        use datafusion::arrow::array::{Array, Int64Array};
+        use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+
+        let bytes = table
+            .file_io()
+            .new_input(path)
+            .expect("open data file")
+            .read()
+            .await
+            .expect("read data file");
+        let reader = ParquetRecordBatchReaderBuilder::try_new(bytes)
+            .expect("parquet reader")
+            .build()
+            .expect("build parquet reader");
+        let mut ids = Vec::new();
+        for batch in reader {
+            let batch = batch.expect("read data-file batch");
+            let column = batch
+                .column_by_name("id")
+                .expect("data file has an `id` column");
+            let values = column
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("`id` is Int64");
+            ids.extend(values.values().iter().copied());
+        }
+        ids
     }
 
     fn identity_spec(source_id: i32, name: &str) -> UnboundPartitionSpec {
@@ -497,5 +715,228 @@ mod tests {
         let narrow = ArrowSchema::new(vec![Field::new("id", DataType::Int64, false)]);
         let error = partition_value_exprs(&table, &narrow).expect_err("part is absent");
         assert!(error.to_string().contains("part"), "{error}");
+    }
+
+    fn distribution_properties(mode: &str) -> HashMap<String, String> {
+        HashMap::from([(
+            crate::write::sort_order::DISTRIBUTION_MODE_PROPERTY.to_string(),
+            mode.to_string(),
+        )])
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn none_distribution_mode_skips_the_hash_rule() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table_with(
+            &catalog,
+            "scattered",
+            Some(identity_spec(3, "part")),
+            distribution_properties("none"),
+        )
+        .await;
+        let files = write(&table, vec![64, 64, 64, 64]).await;
+        let expected = (0..PARTITION_VALUES)
+            .flat_map(|value| {
+                let value = i32::try_from(value).expect("value fits i32");
+                vec![
+                    (
+                        vec![Some(Literal::Primitive(PrimitiveLiteral::Int(value)))],
+                        8,
+                    );
+                    4
+                ]
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(files.len(), 32);
+        assert_eq!(layout(&files), expected);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn hash_and_range_distribution_modes_hash_by_partition_value() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        for mode in ["hash", "range"] {
+            let table = create_table_with(
+                &catalog,
+                &format!("grouped{mode}"),
+                Some(identity_spec(3, "part")),
+                distribution_properties(mode),
+            )
+            .await;
+            let files = write(&table, vec![64, 64, 64, 64]).await;
+            assert_eq!(layout(&files), one_file_per_value(32), "{mode}");
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn unknown_distribution_mode_is_a_planning_error() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table_with(
+            &catalog,
+            "sideways",
+            Some(identity_spec(3, "part")),
+            distribution_properties("sideways"),
+        )
+        .await;
+        let error = write_data_files_from_plan(
+            &table,
+            Arc::new(PartitionedSourceExec::new(vec![32, 32])),
+            Arc::new(TaskContext::default()),
+            WriteConcurrency::new(2).expect("concurrency"),
+        )
+        .await
+        .expect_err("an unknown distribution mode refuses");
+        assert!(
+            error.to_string().contains("write.distribution-mode"),
+            "{error}"
+        );
+    }
+
+    fn shuffled_full_batches() -> Vec<RecordBatch> {
+        let schema = source_schema();
+        [vec![3_i64, 1], vec![4, 0, 2]]
+            .into_iter()
+            .map(|ids| {
+                let rows = ids.len();
+                RecordBatch::try_new(
+                    Arc::clone(&schema),
+                    vec![
+                        Arc::new(Int64Array::from(ids)),
+                        Arc::new(TimestampMicrosecondArray::from(vec![0; rows])),
+                        Arc::new(Int32Array::from(vec![0; rows])),
+                        Arc::new(StringArray::from(vec![None::<&str>; rows])),
+                    ],
+                )
+                .expect("shuffled batch")
+            })
+            .collect()
+    }
+
+    fn batch_ids(batches: &[RecordBatch]) -> Vec<i64> {
+        use datafusion::arrow::array::Array;
+
+        let mut ids = Vec::new();
+        for batch in batches {
+            let column = batch
+                .column_by_name("id")
+                .expect("batch has an `id` column");
+            let values = column
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("`id` is Int64");
+            ids.extend(values.values().iter().copied());
+        }
+        ids
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn declared_sort_order_sorts_batches_across_batch_boundaries() {
+        use crate::write::sort_order::WriteSortField;
+        use iceberg::spec::{NullOrder, SortDirection};
+
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        create_table(&catalog, "ordered", None).await;
+        let table = declare_order(
+            &catalog,
+            "ordered",
+            vec![WriteSortField {
+                name: "id".to_string(),
+                direction: SortDirection::Ascending,
+                null_order: NullOrder::First,
+            }],
+        )
+        .await;
+        let sorted = sort_batches_by_default_order(&table, shuffled_full_batches())
+            .await
+            .expect("sort succeeds");
+        assert_eq!(batch_ids(&sorted), vec![0, 1, 2, 3, 4]);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn sort_batches_without_an_order_returns_its_input() {
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let table = create_table(&catalog, "plain", None).await;
+        let batches = shuffled_full_batches();
+        let returned = sort_batches_by_default_order(&table, batches)
+            .await
+            .expect("identity sort succeeds");
+        assert_eq!(batch_ids(&returned), vec![3, 1, 4, 0, 2]);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn written_files_are_sorted_by_the_declared_order() {
+        use crate::write::sort_order::WriteSortField;
+        use iceberg::spec::{NullOrder, SortDirection};
+
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        create_table(&catalog, "ordered", Some(identity_spec(3, "part"))).await;
+        let table = declare_order(
+            &catalog,
+            "ordered",
+            vec![WriteSortField {
+                name: "id".to_string(),
+                direction: SortDirection::Ascending,
+                null_order: NullOrder::First,
+            }],
+        )
+        .await;
+        let files = write(&table, vec![64, 64, 64, 64]).await;
+        assert_eq!(files.len(), 8);
+        for file in &files {
+            let ids = file_ids(&table, file.file_path()).await;
+            assert_eq!(ids.len(), 32);
+            assert!(
+                ids.windows(2).all(|pair| pair[0] <= pair[1]),
+                "file {} is not sorted: {ids:?}",
+                file.file_path()
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn unpartitioned_sorted_write_keeps_sorted_files() {
+        use crate::write::sort_order::WriteSortField;
+        use iceberg::spec::{NullOrder, SortDirection};
+
+        let warehouse = TempDir::new().expect("warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        create_table(&catalog, "ordered", None).await;
+        let table = declare_order(
+            &catalog,
+            "ordered",
+            vec![WriteSortField {
+                name: "id".to_string(),
+                direction: SortDirection::Descending,
+                null_order: NullOrder::Last,
+            }],
+        )
+        .await;
+        let batches = [shuffled_full_batches(), shuffled_full_batches()].concat();
+        let stream = futures::stream::iter(batches.into_iter().map(Ok::<_, DataFusionError>));
+        let files = crate::write::merge::write_data_files_from_stream_with_concurrency(
+            &table,
+            stream,
+            WriteConcurrency::new(2).expect("concurrency"),
+        )
+        .await
+        .expect("sorted write succeeds");
+        assert!(!files.is_empty());
+        let mut ids = Vec::new();
+        for file in &files {
+            let file_rows = file_ids(&table, file.file_path()).await;
+            assert!(
+                file_rows.windows(2).all(|pair| pair[0] >= pair[1]),
+                "file {} is not descending: {file_rows:?}",
+                file.file_path()
+            );
+            ids.extend(file_rows);
+        }
+        ids.sort_unstable();
+        assert_eq!(ids, vec![0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
     }
 }

@@ -136,7 +136,10 @@ repark-core's error map.
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
   staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
   `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
-  (registry `V3-ADOPT-1` FIXED).
+  (registry `V3-ADOPT-1` FIXED). **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry
+  delegates to the distribution module's sorted drivers, so a declared default sort order sorts
+  every partitioned staged write at no behaviour change when no order is declared.
+  pins: write-order-dist-1/C-008
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
   `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
   `commit_truncate_to` commits onto a named branch.
@@ -268,6 +271,18 @@ repark-core's error map.
   bypasses the rule; a plan lacking a partition source column errors. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
+  **WRITE-ORDER-DIST-1 (2026-09-06):** the rule reads `write.distribution-mode` — `none`
+  skips it (the CTAS falls back to writers × values), unset and `hash` keep one file per
+  value, `range` takes the hash shape plus the per-writer sort below, and anything else is a
+  planning error. When the table declares a default sort order, each writer sorts its own
+  stream through DataFusion's `SortExec` over an in-memory source before the funnel writes
+  it — `fanout_sorted_serial` / `fanout_sorted_stream` for the partitioned funnel,
+  `drive_unpartitioned` for the unpartitioned one — so CTAS, INSERT OVERWRITE, and MERGE
+  all commit monotone files with no new dependency and no spawned task. A sort field on a
+  non-identity transform refuses loud; only identity fields sort. In-module pins: the
+  `none`/`hash`/`range` layouts, the unknown-mode planning error, cross-batch sorting, the
+  identity return without an order, and monotone committed files on both funnel entries.
+  pins: write-order-dist-1/C-007, C-008, C-010
 - `partition_overwrite.rs` — **V3-COV (2026-09-03):** the module-private `StaticPartitionPlan`
   resolves the spec
   bindings and the `PARTITION (k=v)` map ONCE per commit and `stage_static_partition_overwrite_files`
