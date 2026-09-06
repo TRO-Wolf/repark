@@ -82,8 +82,8 @@ Each mutation applied alone, `cargo test` run, then reverted.
 | M-3 | `swap_fair_spill_pool` installs a fresh `PoolRefusalLog` instead of carrying the session's | `session::tests::pool_refusals::a_runtime_pool_resize_keeps_the_refusal_log_alive` (1 failed / 230) |
 | M-4 | `with_memory_pool` installs a bare `FairSpillPool` (no wrapper) | `a_bounded_session_installs_a_pool_whose_refusals_are_recorded` **and** `a_runtime_pool_resize_keeps_the_refusal_log_alive` (2 failed / 230) |
 | M-5 | the whole fix (the base module, built and measured twice today) | both Python pins — `…nlj_1…` and `…collect_1…` |
-| M-6 | `CONTAINABLE_PANIC_PAYLOADS` emptied (the round-1 three-gate rule) | `an_unrelated_panic_after_a_pool_refusal_stays_the_bug_report` **and** `a_panic_that_follows_a_pool_refusal_is_reported_as_that_refusal` and `every_allow_listed_payload_is_contained_after_a_refusal` and `the_reader_delivers_the_typed_refusal_from_its_own_poll` |
-| M-7 | `CONTAINABLE_PANIC_PAYLOADS` widened to `&[""]` (matches every payload — round 1's actual behaviour) | `an_unrelated_panic_after_a_pool_refusal_stays_the_bug_report` alone: the injected-payload pin is the one that reds, which is the finding restated as a test |
+| M-6 | `CONTAINABLE_PANIC_PAYLOADS` emptied (nothing is containable) | `a_panic_that_follows_a_pool_refusal_is_reported_as_that_refusal`, `every_allow_listed_payload_is_contained_after_a_refusal`, `the_reader_delivers_the_typed_refusal_from_its_own_poll` (3 failed / 59). **This mutation improved a pin:** on its first run the loop pin passed *vacuously* — an empty list means an empty loop — so the test now asserts the list is non-empty before iterating, and the mutation reds it. |
+| M-7 | `CONTAINABLE_PANIC_PAYLOADS` widened to `&[""]` — matches every payload, which is round 1's actual behaviour | `an_unrelated_panic_after_a_pool_refusal_stays_the_bug_report` **alone** (1 failed / 59): the injected-payload pin is exactly the one that reds, so F-1's finding is now a test rather than a claim |
 
 M-3 is not a hypothetical: it **was** the code, and the NLJ pin stayed red on a release module
 until the log was carried. The mutation is a re-run of a measured failure.
@@ -157,7 +157,7 @@ COVERAGE_ATTESTATION:
       justification: No dependency or lockfile change; Cargo.toml and Cargo.lock are byte-identical to the base.
     - id: AT-9
       status: ATTACKED
-      evidence: Seven mutations, each applied alone and reverted, each killed by a named test. Two of them were real defects in this unit's own implementation rather than hypotheticals - M-3 (a fresh refusal log on the runtime pool swap) and M-7 (an allow-list that matches everything, which is literally what round 1 shipped and what the critic broke).
+      evidence: Seven mutations, each applied alone and reverted, each killed by a named test. Two of them were real defects in this unit's own implementation rather than hypotheticals - M-3 (a fresh refusal log on the runtime pool swap) and M-7 (an allow-list that matches everything, which is literally what round 1 shipped and what the critic broke). M-6 also found a vacuous assertion in a round-2 pin and the pin was strengthened before the mutation was recorded as killed.
       artifacts: [crates/repark-core/src/session/spill.rs, crates/repark-core/src/session/tests/pool_refusals.rs]
     - id: AT-10
       status: ATTACKED

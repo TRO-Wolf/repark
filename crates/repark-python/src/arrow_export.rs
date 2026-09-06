@@ -555,6 +555,10 @@ mod tests {
 
     #[test]
     fn every_allow_listed_payload_is_contained_after_a_refusal() {
+        assert!(
+            !CONTAINABLE_PANIC_PAYLOADS.is_empty(),
+            "an empty allow-list would make this loop vacuous, so it is asserted first"
+        );
         for payload in CONTAINABLE_PANIC_PAYLOADS {
             let log = Arc::new(PoolRefusalLog::default());
             let reader = empty_reader(Some(Arc::clone(&log)));
