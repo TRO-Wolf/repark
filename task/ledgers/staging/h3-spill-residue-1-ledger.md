@@ -78,20 +78,23 @@ until the log was carried. The mutation is a re-run of a measured failure.
 
 | Gate | Exit |
 |---|---|
-| `make ci` | GATE_CI |
-| `make verify` | GATE_VERIFY |
-| `make check-python-conventions` | GATE_CONV |
-| `make rust-panic-ban` | GATE_PANIC |
-| `.venv/bin/python -m pytest python/repark/tests -q -x` | GATE_FACADE |
-| `.venv/bin/python -m pytest python/repark-parity/tests -q` | GATE_PARITY |
-| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | GATE_DBT |
-| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | GATE_MATRIX |
-| `make check-map-sync` | GATE_MAPSYNC |
-| `make check-ledger-grammar` | GATE_GRAMMAR |
-| `make check-ledgers` | GATE_LEDGERS |
-| `make check-docs-compaction` | GATE_COMPACTION |
-| `python3 scripts/ledger_lifecycle.py check --base origin/main` | GATE_LIFECYCLE |
-| `typos .` | GATE_TYPOS |
+| `make ci` | 0 (prerequisite of `verify`, run in the same tree) |
+| `make verify` | 0 — 2,685 Rust tests |
+| `make check-python-conventions` | 0 |
+| `make rust-panic-ban` | 0 |
+| `.venv/bin/python -m pytest python/repark/tests -q -x` | 0 (5,025 passed, 236 skipped, 178 s) |
+| `.venv/bin/python -m pytest python/repark-parity/tests -q` | 0 (574 passed) |
+| `VIRTUAL_ENV=$PWD/.venv make py-test-dbt` | 0 (59 passed, 1 skipped) |
+| `.venv/bin/python -m pytest python/repark/tests/test_h3_spill_matrix.py -q` | 0 (22 passed, 38 s) |
+| `make check-map-sync` | 0 (192 maps) |
+| `make check-ledger-grammar` | 0 (55 live ledgers, 240 clauses) |
+| `make check-ledgers` | 0 |
+| `make check-docs-compaction` | 0 |
+| `python3 scripts/ledger_lifecycle.py check --base origin/main` | 0 |
+| `typos .` | 0 |
+
+No JVM ran in this unit: the Spark comparison claims in the baseline are H3-SPILL-1's recorded
+measurements and are cited, not re-measured, so `parity-live` is not in this gate list.
 
 Every number in this ledger comes from a release module (`repark._native.__debug_assertions__`
 is `False`, asserted before each measurement); the mutation runs are `cargo test`, which asserts
