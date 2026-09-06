@@ -257,7 +257,7 @@ def test_status_carries_the_scale_line_the_gate_line_and_its_ceiling() -> None:
     assert "**V3-10 (2026-09-02):**" in status
     assert "**RDF-1 (2026-09-02):**" in status
     assert "**LOG1P-1 (2026-09-02):**" in status
-    assert "_Last updated: 2026-09-03._" in status
+    assert "_Last updated: 2026-09-06._" in status
     assert (_REPO / "STATUS.md").stat().st_size <= 25_000
 
 

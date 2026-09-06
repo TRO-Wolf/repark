@@ -139,6 +139,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
   second escape rule. pins: h3-spill-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
+- `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
+  moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
+  `functions_json.install_into`. pins: fnp-9-collections-json/C-001
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
+- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. NULLABILITY-2
   (2026-09-05): `core.py` row 6303 → 6302 with the script baseline, then the
   `_live_parity.py` row 1877 → 1778 with the script baseline when the three
@@ -191,7 +196,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   five pointers, so no row can quietly regrow its own copy of a claim that was false on all
   six.
   pins: rp-8-repin-f21-f22/C-004
-  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so
+  **RP-8 (2026-09-03):** `test_v1_gate_docs.py`'s fork-side meta-pin reads the consumed pin, so The STATUS stamp it pins moved to 2026-09-06 with the v1.1.0 release PR.
   it moves with the repin — the north star's "Fork side, at the consumed pin" heading and
   `Cargo.toml` both name `c1d6c9de`, and R114's dated cell names F-21 and F-22.
   pins: rp-8-repin-f21-f22/C-006

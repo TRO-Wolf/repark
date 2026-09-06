@@ -455,13 +455,13 @@ def schema_of_csv(csv: Column | str, options: dict[str, str] | None = None) -> C
 
 
 def schema_of_json(json: Column | str, options: dict[str, str] | None = None) -> Column:
-    """Infer JSON schema as DDL (PySpark ``functions.schema_of_json``). E1 type pre-check only."""
-    _ = options
-    _require_column_or_str(json, "json")
+    """Infer a JSON document's schema as a DDL string (PySpark ``functions.schema_of_json``)."""
+    from repark.spark.functions_json import _refuse_json_options
 
-    raise UnsupportedOperationException(
-        "functions.schema_of_json is not supported yet (disclosed E1)"
-    )
+    _refuse_json_options("schema_of_json", options)
+    _require_column_or_str(json, "json")
+    document = json if isinstance(json, Column) else lit(json)
+    return _scalar("schema_of_json", document)
 
 
 def schema_of_xml(xml: Column | str, options: dict[str, str] | None = None) -> Column:
@@ -1066,11 +1066,8 @@ def sentences(col: Column | str, language: Column | str | None = None) -> Column
 
 
 def arrays_zip(*cols: Column | str) -> Column:
-    """Unsupported because the engine has no ``arrays_zip`` function."""
-
-    raise UnsupportedOperationException(
-        "functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)"
-    )
+    """Zip arrays element-wise into an array of structs (PySpark ``functions.arrays_zip``)."""
+    return _scalar("arrays_zip", *cols)
 
 
 def map_from_arrays(col1: Column | str, col2: Column | str) -> Column:
