@@ -1,0 +1,9 @@
+{
+  "model": "zai/glm-5.3-flash",
+  "agent": {
+    "worker": {
+      "mode": "primary",
+      "maxSteps": 300
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "sessionId": "sess-tokens",
+  "requestId": "req-tokens",
+  "stopReason": "end_turn",
+  "num_turns": 49,
+  "total_cost_usd": 1.7826183,
+  "total_cost_usd_ticks": 17826183,
+  "text": "{\"status\":\"CONCLUDED\"}",
+  "thought": "",
+  "structuredOutput": {"status": "CONCLUDED"},
+  "usage": {
+    "input_tokens": 275354,
+    "cache_read_input_tokens": 10007936,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 69313,
+    "reasoning_tokens": 53150,
+    "total_tokens": 10352603
+  },
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 275354,
+      "outputTokens": 69313,
+      "cacheReadInputTokens": 10007936,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 49,
+      "costUSD": 1.7826183
+    }
+  }
+}
