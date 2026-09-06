@@ -98,10 +98,20 @@ _CAST_VALUE_ROWS: list[tuple[str, str, str, bool, Any]] = [
     ),
 ]
 
-_CAST_FLAG_ROWS: list[tuple[str, str, bool]] = [
-    ("str_bad_to_int_o2", "SELECT CAST('abc' AS INT) AS v", True),
-    ("ts_to_short_o2", "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS SMALLINT) AS v", True),
-    ("ts_to_byte_o2", "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS TINYINT) AS v", True),
+_CAST_FLAG_ROWS: list[tuple[str, str, bool, str]] = [
+    ("str_bad_to_int_o2", "SELECT CAST('abc' AS INT) AS v", True, "int"),
+    (
+        "ts_to_short_o2",
+        "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS SMALLINT) AS v",
+        True,
+        "int",
+    ),
+    (
+        "ts_to_byte_o2",
+        "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS TINYINT) AS v",
+        True,
+        "int",
+    ),
 ]
 
 _ARITH_ROWS: list[tuple[str, str, str, bool, bool, Any]] = [
@@ -231,6 +241,93 @@ _NSE_SQL_ROWS: list[tuple[str, str, Any]] = [
     ("nse_sql_mixed", "SELECT (1 <=> NULL) AS v", False),
 ]
 
+_COMPLEX_CAST_ROWS: list[tuple[str, str, str, bool, Any]] = [
+    (
+        "struct_ctor",
+        "SELECT STRUCT(1 AS a) AS v",
+        "struct<a: int32>",
+        False,
+        {"a": 1},
+    ),
+    (
+        "struct_nullfield",
+        "SELECT STRUCT(NULL AS a) AS v",
+        "struct<a: null>",
+        False,
+        {"a": None},
+    ),
+    (
+        "map_ctor",
+        "SELECT MAP('a', 1) AS v",
+        "map<string, int32>",
+        False,
+        [("a", 1)],
+    ),
+    (
+        "array_ctor",
+        "SELECT ARRAY(1, 2) AS v",
+        "list<element: int32>",
+        False,
+        [1, 2],
+    ),
+    (
+        "struct_ok",
+        "SELECT CAST(STRUCT(1 AS a) AS STRUCT<a:BIGINT>) AS v",
+        "struct<a: int64>",
+        False,
+        {"a": 1},
+    ),
+    (
+        "struct_fail",
+        "SELECT CAST(STRUCT('1' AS a) AS STRUCT<a:INT>) AS v",
+        "struct<a: int32>",
+        False,
+        {"a": 1},
+    ),
+    (
+        "struct_nullchild",
+        "SELECT CAST(CAST(NULL AS STRUCT<a:STRING>) AS STRUCT<a:INT>) AS v",
+        "struct<a: int32>",
+        True,
+        None,
+    ),
+    (
+        "nested_ok",
+        "SELECT CAST(STRUCT(STRUCT(1 AS b) AS a) AS STRUCT<a:STRUCT<b:BIGINT>>) AS v",
+        "struct<a: struct<b: int64>>",
+        False,
+        {"a": {"b": 1}},
+    ),
+    (
+        "nested_fail",
+        "SELECT CAST(STRUCT(STRUCT('1' AS b) AS a) AS STRUCT<a:STRUCT<b:INT>>) AS v",
+        "struct<a: struct<b: int32>>",
+        False,
+        {"a": {"b": 1}},
+    ),
+    (
+        "array_ok",
+        "SELECT CAST(ARRAY(CAST(1 AS BIGINT)) AS ARRAY<INT>) AS v",
+        "list<item: int32>",
+        False,
+        [1],
+    ),
+    (
+        "array_fail",
+        "SELECT CAST(ARRAY('1') AS ARRAY<INT>) AS v",
+        "list<item: int32>",
+        False,
+        [1],
+    ),
+    (
+        "array_nullchild",
+        "SELECT CAST(CAST(NULL AS ARRAY<STRING>) AS ARRAY<INT>) AS v",
+        "list<item: int32>",
+        True,
+        None,
+    ),
+]
+
 
 def _spark_session(ansi: str) -> Any:
     from repark import ReparkSession
@@ -258,11 +355,23 @@ def test_cast_nullability_matches_spark() -> None:
                     nullable,
                     [value],
                 )
-            for name, text, nullable in _CAST_FLAG_ROWS:
-                logical = session.sql(text).schema.fields[0]
+            for name, text, nullable, dtype in _CAST_FLAG_ROWS:
+                frame = session.sql(text)
+                logical = frame.schema.fields[0]
                 assert (name, logical.nullable) == (name, nullable)
+                assert (name, frame.dtypes) == (name, [("v", dtype)])
         finally:
             session.stop()
+
+
+def test_narrow_logical_widths_report_wide_per_logical_width_1() -> None:
+    session = _spark_session("true")
+    try:
+        assert session.sql("SELECT CAST(1 AS SMALLINT) AS v").dtypes == [("v", "int")]
+        assert session.sql("SELECT CAST(1 AS TINYINT) AS v").dtypes == [("v", "int")]
+        assert session.sql("SELECT CAST(1.5 AS FLOAT) AS v").dtypes == [("v", "double")]
+    finally:
+        session.stop()
 
 
 def test_valid_literal_cast_to_date_or_ts_stays_nonnull() -> None:
@@ -282,16 +391,68 @@ def test_valid_literal_cast_to_date_or_ts_stays_nonnull() -> None:
         session.stop()
 
 
+def test_complex_cast_nullability_matches_spark() -> None:
+    for ansi in ("true", "false"):
+        session = _spark_session(ansi)
+        try:
+            for name, text, arrow_type, nullable, value in _COMPLEX_CAST_ROWS:
+                frame = session.sql(text)
+                table = frame.to_arrow()
+                field = table.schema[0]
+                assert (name, frame.schema.fields[0].nullable) == (name, nullable)
+                assert (name, str(field.type), field.nullable, table.column(0).to_pylist()) == (
+                    name,
+                    arrow_type,
+                    nullable,
+                    [value],
+                )
+        finally:
+            session.stop()
+
+
+def test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1() -> None:
+    session = _spark_session("true")
+    try:
+        struct_field = session.sql("SELECT STRUCT(1 AS a) AS v").to_arrow().schema[0]
+        assert struct_field.type[0].nullable is True
+        map_field = session.sql("SELECT MAP('a', 1) AS v").to_arrow().schema[0]
+        assert map_field.type.item_field.nullable is True
+        array_field = session.sql("SELECT ARRAY(1, 2) AS v").to_arrow().schema[0]
+        assert array_field.type.value_field.nullable is True
+    finally:
+        session.stop()
+
+
+def test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1() -> None:
+    import repark
+    from repark import functions as repark_functions
+    from repark.spark.types import LongType, MapType, StringType
+
+    session = _spark_session("true")
+    try:
+        with pytest.raises(Exception, match="Expected"):
+            session.sql("SELECT CAST(MAP('a',1) AS MAP<STRING,BIGINT>) AS v").to_arrow()
+        frame = session.sql("SELECT MAP('a',1) AS m")
+        with pytest.raises(Exception, match="unknown cast type"):
+            frame.select(repark_functions.col("m").cast(MapType(StringType(), LongType())))
+    finally:
+        session.stop()
+    with pytest.raises(Exception, match="Expected"):
+        repark.sql("SELECT CAST(MAP('a',1) AS MAP<STRING,BIGINT>) AS v").to_arrow()
+
+
 def test_cast_nullability_native_door_keeps_datafusion() -> None:
     import repark
 
     table = repark.sql(
-        "SELECT CAST('1' AS INT) AS i, CAST(DATE '2020-01-01' AS TIMESTAMP) AS dt"
+        "SELECT CAST('1' AS INT) AS i, CAST(DATE '2020-01-01' AS TIMESTAMP) AS dt,"
+        " CAST(STRUCT(1 AS a) AS STRUCT<a:BIGINT>) AS st"
     ).to_arrow()
     cells = [[field.name, str(field.type), field.nullable] for field in table.schema]
     assert cells == [
         ["i", "int32", False],
         ["dt", "timestamp[ns]", False],
+        ["st", "struct<a: int64>", True],
     ]
 
 
@@ -551,6 +712,35 @@ def test_live_cast_matrix_matches_oracle(spark_engine: lp.Engine) -> None:
             assert repark_table.schema[0].nullable == spark_table.schema[0].nullable
     finally:
         session.stop()
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+def test_live_complex_cast_matches_oracle(spark_engine: lp.Engine) -> None:
+    for ansi in ("true", "false"):
+        session = _spark_session(ansi)
+        try:
+            with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", ansi),)):
+                for name, text, arrow_type, nullable, value in _COMPLEX_CAST_ROWS:
+                    repark_table = session.sql(text).to_arrow()
+                    spark_table = spark_engine.arrow_of(spark_engine.session.sql(text))
+                    repark_field = repark_table.schema[0]
+                    spark_field = spark_table.schema[0]
+                    if name.startswith("struct_") or name.startswith("nested"):
+                        if name not in ("struct_ctor", "struct_nullfield"):
+                            assert (name, str(repark_field.type)) == (
+                                name,
+                                str(spark_field.type),
+                            )
+                        assert str(repark_field.type) == arrow_type
+                    assert (name, repark_field.nullable) == (name, spark_field.nullable)
+                    assert repark_field.nullable == nullable
+                    assert (name, repark_table.column(0).to_pylist()) == (
+                        name,
+                        spark_table.column(0).to_pylist(),
+                    )
+                    assert repark_table.column(0).to_pylist() == [value]
+        finally:
+            session.stop()
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)

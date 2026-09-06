@@ -46,6 +46,9 @@ pub(crate) fn nonnull_spark_cast(cast: &Cast, schema: &DFSchema) -> Option<Expr>
     if !matches!(
         (child.data_type(), cast.field.data_type()),
         (DataType::Date32, DataType::Timestamp(_, _))
+            | (DataType::Struct(_), DataType::Struct(_))
+            | (DataType::List(_), DataType::List(_))
+            | (DataType::Map(_, _), DataType::Map(_, _))
     ) {
         return None;
     }

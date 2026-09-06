@@ -419,6 +419,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   40 plus the Arrow footer-depth refusal past it; tz-naive `timestamp_ntz` dtype
   on parquet and `createDataFrame`. Live legs re-derive every family from PySpark
   4.1.2 on the shared `spark_engine`.
+  Round 2 (2026-09-06): complex casts propagate the child flag with non-null
+  `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
+  the `MAP<…>` CAST spelling and constructor element flags stay pinned refusals;
+  CSV `inferSchema` timestamps report instant `timestamp`; the footer boundary pins
+  reads-at-60 / refuses-at-61; narrow logical widths pin today's wide labels.
   The module docstring is the pins-only one-liner; this row is the reason.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — **V3-COV (2026-09-03):** the v3

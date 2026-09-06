@@ -2004,22 +2004,29 @@ the pin rather than obeying it.
   parses-valid string literals; float→integral and timestamp→{int8, int16, int32}
   answer **nullable**; decimal→integral answers **nullable**;
   `CAST(DATE '2020-01-01' AS TIMESTAMP)` answers **non-null** — identically under ANSI
-  on and off. Values match Spark on every cell.
+  on and off. Complex casts propagate the child flag (STRUCT/ARRAY/MAP cast of a
+  non-null child answers **non-null**, even when an element conversion can fail —
+  the failure NULLs the element, ANSI-off, or raises, ANSI-on); `STRUCT()`/`MAP()`/
+  `ARRAY()` constructors answer **non-null**. Values match Spark on every cell.
 - **Apache Spark** — the same casts answer **nullable** throughout (including explicit
   valid-literal→date/timestamp casts), except date→timestamp which is **non-null** —
-  identically under ANSI on and off. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
-  2026-09-05.)*
+  identically under ANSI on and off; complex casts and constructors answer **non-null**
+  from non-null children. *(oracle: live PySpark 4.1.2, UTC, both ANSI modes,
+  2026-09-05; complex cells 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_cast_nullability_matches_spark`
   (the generalized matrix, both ANSI modes),
   `...::test_valid_literal_cast_to_date_or_ts_stays_nonnull` (the residue cells),
+  `...::test_complex_cast_nullability_matches_spark` (complex casts + constructors,
+  both ANSI modes, both doors),
   and `crates/repark-functions/src/spark_nullability.rs` (rule pins).
 - **Rationale** — BACKLOG, narrowed 2026-09-05 (NULLABILITY-2): every cell is
   Spark-equal except explicit valid-string-literal→date/timestamp casts, which stay
   non-null because DataFusion plans `DATE 'x'` / `TIMESTAMP 'x'` and the explicit
   spelling to byte-identical plans with no planner hook — the rule exempts
   parses-valid literals so typed literals stay non-null (Spark-equal) and sacrifices
-  the explicit valid-literal spelling. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
+  the explicit valid-literal spelling. Extended 2026-09-06 (NULLABILITY-2 round 2)
+  with the complex-cast propagation rule. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
 
 ### CAST-BOOL-DEC-1 — `BOOLEAN → DECIMAL` refuses where Spark answers `1.00`
 
@@ -2036,6 +2043,52 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. A both-doors analyzer rule rewrites the cast to a
   precision-carrying UDF that reads ANSI for the overflow edge; the UDF's return field
   marks overflow-exposed targets nullable. Filed 2026-09-05 (CUTOVER-SCHEMA-1 round 3).
+
+### COMPLEX-ELEM-NULL-1 — constructor element nullability does not propagate the child flag
+
+- **repark** — `STRUCT(1 AS a)` answers `struct<a: int32>` with a **nullable**
+  element; `MAP('a', 1)` answers `map<string, int32>` with a **nullable** value
+  field; `ARRAY(1, 2)` answers `list<element: int32>` with a **nullable** element.
+  (Top-level flags are Spark-equal since 2026-09-06, CAST-NULL-1.)
+- **Apache Spark** — the same constructors answer `struct<a: int32 not null>`,
+  `MapType(StringType(), IntegerType(), False)`, and `list<element: int32 not null>`:
+  elements are non-null exactly when their children are. Values match.
+  *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
+  (red when fixed).
+- **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
+  shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
+  (NULLABILITY-2 round 2).
+
+### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
+
+- **repark** — `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refuses on both doors with
+  `ParseException: Expected: (, found: <`; DataFrame `.cast(MapType(...))` refuses
+  with `unknown cast type 'map<string,long>'`. Stock sqlparser has no MAP type, so
+  there is no rewrite target — serving it is a cast-UDF plus token-rewrite feature.
+- **Apache Spark** — answers `{'a': 1}` at `map<string, int64>`, non-null.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1`
+  (red when fixed).
+- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
+
+### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
+
+- **repark** — `CAST(1 AS SMALLINT)` / `CAST(1 AS TINYINT)` report `int` and
+  `CAST(1.5 AS FLOAT)` reports `double` via `dtypes`/`schema`, while Arrow keeps the
+  narrow type (`int16`/`int8`/`float`). The engine's `arrow_type_key`
+  (`crates/repark-python/src/dataframe.rs`) collapses Int8/Int16→`int` and
+  Float32→`double`; the facade mapping already has `short`/`byte`/`float` branches
+  the engine never emits.
+- **Apache Spark** — reports `smallint` / `tinyint` / `float`. Nullability agrees;
+  only the width label diverges. *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
+- **Pin** —
+  `python/repark/tests/test_nullability_2.py::test_narrow_logical_widths_report_wide_per_logical_width_1`
+  plus the dtype asserts in `...::test_cast_nullability_matches_spark`
+  (`_CAST_FLAG_ROWS`, red when fixed).
+- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
 
 ### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
 
@@ -2122,14 +2175,16 @@ the pin rather than obeying it.
 
 ### G18-2 — `collect_list` list nullability and value-field name
 
-- **repark** — `groupBy.agg(collect_list)` exports `list<item: int64>` **nullable** (elements
-  nullable).
+- **repark** — `groupBy.agg(collect_list)` exports `list<item: int64>` **non-nullable**
+  (elements nullable) — the top-level flag converged 2026-09-06 (NULLABILITY-2 round 2:
+  the empty-array branch marks non-null like Spark).
 - **Apache Spark** — exports `list<element: int64 not null>` **non-nullable**. Values match
   under the G18 order-insensitive comparator. *(oracle: recorded.)*
 - **Pin** —
   `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[collect_list_grouped]`
 - `live-mirror: nested_collect_list_nullability`
-- **Rationale** — TYPE disclosure (field name + collect_list nullability). Same G10 follow-on.
+- **Rationale** — TYPE disclosure (field name + element flag; the top-level nullability
+  half converged 2026-09-06). Same G10 follow-on.
 
 ### G18-3 — array-of-struct list value-field name
 

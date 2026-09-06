@@ -248,6 +248,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   forms) wrap their output in the nullable marker iff ANSI is off. Output wraps
   run transform-down with marker-stop (never descend into a marker, stop after a
   wrap) so re-analysis is a no-op — the idempotency `Column.sql` relies on.
+  Round 2 (2026-09-06): same-kind complex casts (STRUCT/ARRAY/MAP) of non-null
+  children wrap too, and `named_struct`/`map`/`make_array` constructors mark
+  non-null — Spark's top-level propagation, measured both ANSI modes.
   pins: nullability-2/C-001, C-002, C-004
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
   rule, installed on BOTH doors via `install_shared_analyzer_rules` (the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts).

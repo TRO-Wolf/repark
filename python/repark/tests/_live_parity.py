@@ -1611,7 +1611,7 @@ def _disc_nested_collect_list_repark(engine: Engine) -> None:
     out = engine.arrow_of(_nested_collect_list_frame(engine))
     items = out.schema.field("items")
     value = _list_value_field(out, "items")
-    assert items.nullable is True
+    assert items.nullable is False
     assert value.name == "item"
     assert value.nullable is True
 
@@ -1752,8 +1752,8 @@ DISCLOSURES: list[Disclosure] = [
         "nested_collect_list_nullability",
         _disc_nested_collect_list_repark,
         _disc_nested_collect_list_spark,
-        "groupBy.agg(collect_list): values match under G18; repark list<item: int64> "
-        "nullable vs Spark list<element: int64 not null> non-nullable. Corpus: "
+        "groupBy.agg(collect_list): values match under G18; top-level flag converged "
+        "non-null 2026-09-06 (round 2); name + element flag still diverge. Corpus: "
         "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
         "[collect_list_grouped].",
     ),

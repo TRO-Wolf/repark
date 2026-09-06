@@ -59,6 +59,16 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Transforme
     {
         return Transformed::new(nonnull, true, TreeNodeRecursion::Stop);
     }
+    if let Expr::ScalarFunction(function) = &expr
+        && matches!(function.func.name(), "named_struct" | "map" | "make_array")
+        && datafusion_nullable(&expr, schema) == Some(true)
+    {
+        return Transformed::new(
+            Expr::ScalarFunction(ScalarFunction::new_udf(spark_nonnull_udf(), vec![expr])),
+            true,
+            TreeNodeRecursion::Stop,
+        );
+    }
     if let Expr::BinaryExpr(binary) = &expr
         && binary.op == Operator::IsNotDistinctFrom
         && datafusion_nullable(&expr, schema) == Some(true)
@@ -231,6 +241,71 @@ mod tests {
         );
     }
 
+    #[test]
+    fn complex_casts_of_nonnull_children_are_nonnull() {
+        use std::sync::Arc;
+
+        use datafusion::arrow::datatypes::{Field, Schema};
+        use datafusion::common::{Column, DFSchema};
+        use datafusion::logical_expr::Cast;
+
+        fn wrap_of(child_type: DataType, target: DataType, nullable: bool) -> Option<Expr> {
+            let schema =
+                DFSchema::try_from(Schema::new(vec![Field::new("c", child_type, nullable)]))
+                    .unwrap();
+            let cast = Cast::new(Box::new(Expr::Column(Column::from("c"))), target);
+            crate::decimal_cast::nonnull_spark_cast(&cast, &schema)
+        }
+
+        let struct_child =
+            DataType::Struct(vec![Arc::new(Field::new("a", DataType::Int32, true))].into());
+        let struct_target =
+            DataType::Struct(vec![Arc::new(Field::new("a", DataType::Int64, true))].into());
+        let list_child = DataType::List(Arc::new(Field::new("item", DataType::Int64, true)));
+        let list_target = DataType::List(Arc::new(Field::new("item", DataType::Int32, true)));
+        let map_child = DataType::Map(
+            Arc::new(Field::new(
+                "entries",
+                DataType::Struct(
+                    vec![
+                        Arc::new(Field::new("key", DataType::Utf8, false)),
+                        Arc::new(Field::new("value", DataType::Int32, true)),
+                    ]
+                    .into(),
+                ),
+                false,
+            )),
+            false,
+        );
+        let map_target = DataType::Map(
+            Arc::new(Field::new(
+                "entries",
+                DataType::Struct(
+                    vec![
+                        Arc::new(Field::new("key", DataType::Utf8, false)),
+                        Arc::new(Field::new("value", DataType::Int64, true)),
+                    ]
+                    .into(),
+                ),
+                false,
+            )),
+            false,
+        );
+        for (child_type, target) in [
+            (struct_child.clone(), struct_target.clone()),
+            (list_child.clone(), list_target.clone()),
+            (map_child.clone(), map_target.clone()),
+        ] {
+            let wrapped = wrap_of(child_type.clone(), target.clone(), false);
+            assert!(wrapped.is_some(), "{child_type:?} to {target:?}");
+        }
+        assert!(wrap_of(struct_child.clone(), DataType::Utf8, false).is_none());
+        assert!(wrap_of(DataType::Utf8, struct_child.clone(), false).is_none());
+        assert!(wrap_of(struct_child, struct_target, true).is_none());
+        assert!(wrap_of(list_child, list_target, true).is_none());
+        assert!(wrap_of(map_child, map_target, true).is_none());
+    }
+
     #[tokio::test]
     async fn null_safe_equal_is_nonnull() {
         let ctx = ctx_ansi(true);
@@ -274,6 +349,24 @@ mod tests {
             .await,
             vec![true]
         );
+    }
+
+    #[tokio::test]
+    async fn complex_constructors_and_casts_are_nonnull() {
+        let ctx = ctx_ansi(true);
+        for sql in [
+            "SELECT STRUCT(1 AS a) AS v",
+            "SELECT STRUCT(NULL AS a) AS v",
+            "SELECT MAP('a', 1) AS v",
+            "SELECT make_array(1, 2) AS v",
+            "SELECT CAST(STRUCT(1 AS a) AS STRUCT<a: BIGINT>) AS v",
+            "SELECT CAST(named_struct('a', '1') AS STRUCT<a: INT>) AS v",
+            "SELECT CAST(STRUCT(STRUCT(1 AS b) AS a) AS STRUCT<a: STRUCT<b: BIGINT>>) AS v",
+            "SELECT CAST(make_array(CAST(1 AS BIGINT)) AS ARRAY<INT>) AS v",
+            "SELECT CAST(make_array('1') AS ARRAY<INT>) AS v",
+        ] {
+            assert_eq!(flags(&ctx, sql).await, vec![false], "{sql}");
+        }
     }
 
     #[tokio::test]
