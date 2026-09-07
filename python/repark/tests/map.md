@@ -3277,6 +3277,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `transform` Arrow cells through Column RePark, SQL RePark, and live Spark. It names the
   per-door width and nested nullability against the measured Spark cell. A second live detector
   holds public `exists` value, type, and non-nullability against Spark.
+  **FNP-8-REVIEW (2026-09-07):** four more ANSI-on/off detectors — view-backed widths
+  (both doors, with the Column-view nullable disclosure leg), the three-door
+  left-shorter zip, zip element nullability, and the outer-variable nesting shape.
+  pins: fnp-8-review/C-001, C-002, C-003, C-004
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
