@@ -36,7 +36,7 @@ measuring. All numbers below are release with `__debug_assertions__` False.
 | C-002 | Every preserved shape answers identically on the `df.` and `df.stat.` doors: validation order with exact classes and parameters, empty probs/cols, flat single, dupes, NULL ignored, all-NULL/empty NaN, int/decimal/float, non-numeric engine error, nested float shape, ignored relativeError. | The value/contract pins in `test_dfcore_5_approx_quantile.py`. | **PROVEN** | 13 pins green; the nesting mutation reds 6 of them; 1e6 values identical before/after (§3). pins: dfcore-5/C-002 |
 | C-003 | Live PySpark 4.1.2 answers the audit values on both doors, and the all-NULL/empty divergence is pinned on both sides (repark NaN per probability, Spark `[]`). | The two live legs under `REPARK_PARITY_LIVE=1`. | **PROVEN** | 19 passed with the tier armed (2 live legs green); goldens in §4. pins: dfcore-5/C-003 |
 | C-004 | The three inherited gaps close: a crosstab pin with an absent pair asserting the `0` fill; a freqItems pin matching the full message; a sample pin matching the full fraction text. | The three gap pins in `test_dfcore_5_approx_quantile.py`. | **PROVEN** | Text mutations red both message pins; the crosstab pin reds on a moved cell (§5); the fill-drop stays green because the pivot already yields 0 (§6). pins: dfcore-5/C-004 |
-| C-005 | Registry row FIXED with before/after counts and medians; baseline section dated with numbers and commands; ledger, staging map, and every touched map in lockstep; `statistics.py` under the default ceiling; gates green. | The gates + §7. | **PROVEN** | `PERF-APPROXQUANTILE-1` FIXED; §"DataFrame.approxQuantile" appended; `statistics.py` 261→264, no row; battery 277 passed + 6 skipped; facade 5791 passed + 356 skipped. pins: dfcore-5/C-005 |
+| C-005 | Registry row FIXED with before/after counts and medians; baseline section dated with numbers and commands; ledger, staging map, and every touched map in lockstep; `statistics.py` under the default ceiling; gates green. | The gates + §7. | **PROVEN** | `PERF-APPROXQUANTILE-1` FIXED; §"DataFrame.approxQuantile" appended; `statistics.py` 261→264, no row; battery 277 passed + 6 skipped on the release module (274 + 9 on debug — the 3 release-only wall/repeatability pins skip by design); facade 5791 passed + 356 skipped. pins: dfcore-5/C-005 |
 
 VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
@@ -181,7 +181,7 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/perf/approx-percentile-baseline.md, python/repark/tests/test_dfcore_5_approx_quantile.py]
     - id: AT-8
       status: ATTACKED
-      evidence: Facade-only change in one leaf module; ceilings and maps current; the battery reports 277 passed + 6 skipped and the facade suite reports 5791 passed + 356 skipped.
+      evidence: Facade-only change in one leaf module; ceilings and maps current; the battery reports 277 passed + 6 skipped on the release module (274 + 9 on debug) and the facade suite reports 5791 passed + 356 skipped.
       artifacts: [python/repark/src/repark/spark/dataframe/statistics.py, python/repark/tests/test_dfcore_5_approx_quantile.py]
     - id: AT-9
       status: N/A
