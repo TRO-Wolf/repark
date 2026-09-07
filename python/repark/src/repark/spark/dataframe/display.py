@@ -1,0 +1,322 @@
+"""DataFrame display bodies behind the public show and repr wrappers."""
+
+from __future__ import annotations
+
+import logging
+import warnings
+from typing import TYPE_CHECKING, Any
+
+from repark.errors import PySparkTypeError
+from repark.spark.dataframe.plan_collapse import (
+    _display_type_labels_from_arrow,
+    _format_duckdb_show,
+    _format_eager_eval_table,
+    _format_polars_show,
+    _format_show_table,
+    _format_show_vertical,
+    _table_to_cell_rows,
+)
+
+if TYPE_CHECKING:
+    from repark.spark.dataframe.core import DataFrame
+
+logger = logging.getLogger(__name__)
+
+
+def _show(
+    frame: DataFrame,
+    n: int = 20,
+    truncate: bool | int = True,
+    vertical: bool = False,
+) -> None:
+    """Print up to ``n`` rows as a text table.
+
+    The Spark style limits before collecting. Polars and DuckDB styles show head and tail
+    rows and run an extra count. ``truncate`` controls cell width; ``vertical`` applies only
+    to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
+    """
+    frame._ensure_alive()
+    if frame._map_bridge is not None and not (
+        frame._persist_requested or frame._checkpoint_lazy or frame._cache_view is not None
+    ):
+        n, cap_m, vertical = _normalize_show_args(frame, n, truncate, vertical)
+        limit = max(0, n)
+        table = frame._consume_map_in_arrow_batches(max_output_rows=limit)
+        if vertical:
+            rendered = _format_show_vertical(
+                table, truncate_at=cap_m, n=limit, total_rows=table.num_rows
+            )
+        else:
+            rendered = _format_show_table(table, truncate_at=cap_m)
+        print(rendered)
+        return
+    frame._materialize_cache_if_needed()
+    n, cap, vertical = _normalize_show_args(frame, n, truncate, vertical)
+    style = _resolve_display_style(frame)
+    if style == "spark":
+        limit = max(0, n)
+        table = frame.limit(limit).to_arrow()
+        if vertical:
+            total_rows: int | None = None
+            if max(0, n) > 0 and table.num_rows >= max(0, n):
+                try:
+                    total_rows = frame.count()
+                except Exception:
+                    total_rows = None
+            rendered = _format_show_vertical(
+                table, truncate_at=cap, n=max(0, n), total_rows=total_rows
+            )
+        else:
+            rendered = _format_show_table(table, truncate_at=cap)
+        shown_rows = table.num_rows
+    else:
+        if vertical:
+            warnings.warn(
+                "DataFrame.show(vertical=True) is only rendered under repark.display.style="
+                "'spark'; styled polars/duckdb shows stay horizontal.",
+                UserWarning,
+                stacklevel=3,
+            )
+        rendered, shown_rows = _render_styled_show(frame, style, n=max(0, n), truncate_at=cap)
+    print(rendered)
+    logger.info("show(%s rows)", shown_rows)
+    logger.debug("show(%s rows):\n%s", shown_rows, rendered)
+
+
+def _repr(frame: DataFrame) -> str:
+    """Schema form by default; table show when ``spark.sql.repl.eagerEval.enabled``.
+
+    Conf keys ``spark.sql.repl.eagerEval.enabled`` (truthy),
+    ``.truncate`` (default 20), ``.maxNumRows`` (default 20) match Spark REPL shape
+    (Apache ``test_repr_behaviors``).
+    """
+    frame._ensure_alive()
+    if not _eager_eval_enabled(frame):
+        return frame.__str__()
+    max_rows, truncate_at = _eager_eval_limits(frame)
+    table = frame.limit(max_rows).to_arrow()
+    rendered = _format_eager_eval_table(table, truncate_at=truncate_at)
+    if table.num_rows >= max_rows:
+        try:
+            total = frame.count()
+        except Exception:
+            total = None
+        if total is not None and total > max_rows:
+            rendered = f"{rendered}\nonly showing top {max_rows} row" + (
+                "s" if max_rows != 1 else ""
+            )
+    return rendered
+
+
+def _repr_html(frame: DataFrame) -> str | None:
+    """HTML table when eager-eval is on; ``None`` otherwise (Jupyter / PySpark).
+
+    Cell text and header names are HTML-escaped (Spark
+    ``Dataset.html`` / ``StringEscapeUtils``) so ``<script>``, ``&``, and hostile column
+    names cannot inject markup. Truncate first (hard left-slice, same as ``__repr__``),
+    then escape — matches live Spark 4.1.2 ordering.
+    """
+    import html as html_module
+
+    frame._ensure_alive()
+    if not _eager_eval_enabled(frame):
+        return None
+    max_rows, truncate_at = _eager_eval_limits(frame)
+    table = frame.limit(max_rows).to_arrow()
+    names = list(table.column_names)
+    rows = _table_to_cell_rows(table, truncate_at=None, style="spark")
+    if truncate_at is not None and truncate_at > 0:
+        rows = [[cell[:truncate_at] for cell in row] for row in rows]
+    safe_names = [html_module.escape(name, quote=True) for name in names]
+    parts = [
+        "<table border='1'>",
+        "<tr>" + "".join(f"<th>{name}</th>" for name in safe_names) + "</tr>",
+    ]
+    for row in rows:
+        safe_cells = [html_module.escape(cell, quote=True) for cell in row]
+        parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in safe_cells) + "</tr>")
+    parts.append("</table>")
+    html = "\n".join(parts)
+    if table.num_rows >= max_rows:
+        try:
+            total = frame.count()
+        except Exception:
+            total = None
+        if total is not None and total > max_rows:
+            html = f"{html}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
+    return html
+
+
+def _eager_eval_enabled(frame: DataFrame) -> bool:
+    """``spark.sql.repl.eagerEval.enabled`` truthy (runtime conf or builder)."""
+    raw = _conf_lookup(frame, "spark.sql.repl.eagerEval.enabled")
+    if raw is None:
+        return False
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _eager_eval_limits(frame: DataFrame) -> tuple[int, int]:
+    """``(maxNumRows, truncate)`` with Spark defaults 20 / 20."""
+    max_raw = _conf_lookup(frame, "spark.sql.repl.eagerEval.maxNumRows")
+    trunc_raw = _conf_lookup(frame, "spark.sql.repl.eagerEval.truncate")
+    try:
+        max_rows = max(0, int(max_raw)) if max_raw is not None else 20
+    except (TypeError, ValueError):
+        max_rows = 20
+    try:
+        truncate_at = max(0, int(trunc_raw)) if trunc_raw is not None else 20
+    except (TypeError, ValueError):
+        truncate_at = 20
+    return max_rows, truncate_at
+
+
+def _conf_lookup(frame: DataFrame, key: str) -> str | None:
+    """Runtime conf then builder snapshot (case-sensitive Spark keys)."""
+    token = getattr(frame, "_alive_token", {}) or {}
+    store = token.get("runtime_conf")
+    if isinstance(store, dict) and key in store:
+        return str(store[key])
+    builder = token.get("builder_config") or {}
+    if key in builder and builder[key] is not None:
+        return str(builder[key])
+    return None
+
+
+def _normalize_show_args(
+    frame: DataFrame,
+    n: int,
+    truncate: bool | int | float | str,
+    vertical: bool,
+) -> tuple[int, int | None, bool]:
+    """Validate ``show`` arguments; return ``(n, truncate_cap, vertical)``.
+
+    Mirrors Spark 4.1.2 diagnostics used by Apache ``test_df_show`` (NOT_INT / NOT_BOOL).
+    Digit-only string ``truncate`` values (e.g. ``\"1\"``) are accepted as width caps.
+    """
+    if not isinstance(n, int) or isinstance(n, bool):
+        raise PySparkTypeError(
+            errorClass="NOT_INT",
+            messageParameters={"arg_name": "n", "arg_type": type(n).__name__},
+        )
+    if not isinstance(vertical, bool):
+        raise PySparkTypeError(
+            errorClass="NOT_BOOL",
+            messageParameters={
+                "arg_name": "vertical",
+                "arg_type": type(vertical).__name__,
+            },
+        )
+    if truncate is True:
+        return n, 20, vertical
+    if truncate is False:
+        return n, None, vertical
+    if isinstance(truncate, (int, float)) and not isinstance(truncate, bool):
+        width = int(truncate)
+        return n, (width if width > 0 else None), vertical
+    if isinstance(truncate, str) and truncate.isdigit():
+        width = int(truncate)
+        return n, (width if width > 0 else None), vertical
+    raise PySparkTypeError(
+        errorClass="NOT_BOOL",
+        messageParameters={
+            "arg_name": "truncate",
+            "arg_type": type(truncate).__name__,
+        },
+    )
+
+
+def _resolve_display_style(frame: DataFrame) -> str:
+    """Return the session display style (``spark`` / ``polars`` / ``duckdb``), default spark."""
+    style = frame._alive_token.get("display_style", "spark")
+    if isinstance(style, str) and style in {"spark", "polars", "duckdb"}:
+        return style
+    return "spark"
+
+
+def _preview_tail_rows(frame: DataFrame, n: int, *, total_rows: int) -> Any:
+    """Return the last ``n`` rows for display without collecting the full result."""
+    import pyarrow as pa
+
+    fetch = max(0, int(n))
+    total = max(0, int(total_rows))
+    if fetch == 0 or total == 0:
+        return frame.limit(0).to_arrow()
+    if total <= fetch:
+        return frame.limit(total).to_arrow()
+    skip = total - fetch
+    limited = frame._spawn(frame._plan().limit_with_skip(skip, fetch))
+    table = limited.to_arrow()
+    if not isinstance(table, pa.Table):
+        return pa.table(table)
+    return table
+
+
+def _render_styled_show(
+    frame: DataFrame,
+    style: str,
+    *,
+    n: int,
+    truncate_at: int | None,
+) -> tuple[str, int]:
+    """Render a styled preview and return its text and row count.
+
+    The renderer counts once, then collects only the head and tail windows.
+    """
+    total_rows = frame.count()
+    col_names = list(frame.columns)
+    if style == "polars":
+        edge = 5
+        if n <= 0:
+            head_n, tail_n, use_ellipsis = 0, 0, False
+        elif total_rows <= min(n, 10):
+            head_n, tail_n, use_ellipsis = total_rows, 0, False
+        elif total_rows <= 10:
+            head_n, tail_n, use_ellipsis = n, 0, False
+        else:
+            keep = min(n, 2 * edge)
+            head_n = min(edge, (keep + 1) // 2)
+            tail_n = min(edge, keep - head_n)
+            use_ellipsis = tail_n > 0
+    else:
+        if n <= 0:
+            head_n, tail_n, use_ellipsis = 0, 0, False
+        elif total_rows <= n:
+            head_n, tail_n, use_ellipsis = total_rows, 0, False
+        else:
+            head_n = n // 2
+            if head_n == 0:
+                head_n = 1
+            tail_n = n - head_n
+            use_ellipsis = tail_n > 0
+
+    head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
+    tail_table = frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+    type_labels = _display_type_labels_from_arrow(head_table, style=style)
+
+    head_rows = _table_to_cell_rows(head_table, truncate_at=truncate_at, style=style)
+    tail_rows = (
+        _table_to_cell_rows(tail_table, truncate_at=truncate_at, style=style)
+        if tail_table is not None
+        else []
+    )
+    shown = len(head_rows) + len(tail_rows)
+    if style == "polars":
+        rendered = _format_polars_show(
+            col_names,
+            type_labels,
+            head_rows,
+            tail_rows if use_ellipsis else [],
+            total_rows=total_rows,
+            show_ellipsis=use_ellipsis,
+        )
+    else:
+        rendered = _format_duckdb_show(
+            col_names,
+            type_labels,
+            head_rows,
+            tail_rows if use_ellipsis else [],
+            total_rows=total_rows,
+            shown_rows=shown,
+            show_ellipsis=use_ellipsis,
+        )
+    return rendered, shown

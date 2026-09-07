@@ -546,3 +546,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed thousand-row frame. `risk_tier: standard`.
   Branch `refactor/dfcore-4a`.
   pins: dfcore-4a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [dfcore-4b-ledger.md](dfcore-4b-ledger.md) —
+  **DFCORE-4b (2026-09-07), in flight:** display out of `core.py` — the ten
+  show/repr/HTML/eager bodies to `display.py`. Move-only: `core.py` 4819 →
+  4539, class loses exactly the six display leavers, package and core gain
+  exactly `display`, 6108 collected IDs preserved plus fourteen pin tests, ten
+  mutations red existing pins, show/repr/HTML goldens byte-identical with
+  `count()` tallies as the DFCORE-6 baseline. `risk_tier: standard`.
+  Branch `refactor/dfcore-4b`.
+  pins: dfcore-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Critic r1 FAIL on the moved warning's `stacklevel`; served (stacklevel 3, filename pin).

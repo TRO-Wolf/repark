@@ -356,6 +356,11 @@ sampling bodies move to `sampling.py`, which carries no row (mirrored in the
 CAP-1 test). Ratchets DOWN.
 pins: dfcore-4a/C-005
 
+DFCORE-4b (2026-09-07): `check_lib_py.py` `dataframe/core.py` 4819→4539 — the ten
+display bodies move to `display.py`, which carries no row (mirrored in the
+CAP-1 test). Ratchets DOWN.
+pins: dfcore-4b/C-005
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002
