@@ -89,6 +89,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   passthrough node; `source_element_nullable` chases multi-hop column lineage for the
   element wrap, with Union demanding every branch non-null. Nodes no spelling reaches
   (lateral view refuses loud) keep a defensive arm or a documented terminal.
+  The Join arm wraps only sides the join cannot pad (padded sides stay conservative,
+  since the wrapper asserts a non-null field and padded NULLs would crash Arrow);
+  the Values arm resolves every row and bails on any non-constructor cell.
   pins: fnp-8-review/C-009, C-010
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,

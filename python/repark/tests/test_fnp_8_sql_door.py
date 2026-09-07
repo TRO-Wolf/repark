@@ -400,6 +400,17 @@ def test_inline_lambda_body_literals_answer_int32(spark: ReparkSession) -> None:
     maps = spark.sql("SELECT map('a', 1, 'b', 2) AS m1")
     column_table = maps.select(_transform_values("", "", "m1", "").alias("r")).toArrow()
     _assert_map_value_int32(column_table, [[("a", 2), ("b", 3)]])
+    negative = spark.sql("SELECT transform(array(1, 2, 3), x -> x + -5) AS r").toArrow()
+    _assert_list_int32(negative, [[-4, -3, -2]])
+    assert not negative.schema.field("r").nullable
+    assert not negative.schema.field("r").type.value_field.nullable
+    wide = spark.sql(
+        "SELECT transform(array(1, 2, 3), x -> x + 3000000000) AS r"
+    ).toArrow()
+    assert wide.column("r").to_pylist() == [[3000000001, 3000000002, 3000000003]]
+    assert wide.schema.field("r").type.value_type == pa.int64()
+    assert not wide.schema.field("r").nullable
+    assert not wide.schema.field("r").type.value_field.nullable
 
 
 def test_zip_with_left_shorter_non_null_elements_answers_all_doors(
@@ -496,7 +507,12 @@ def test_join_fed_lambda_body_literals_answer_int32(spark: ReparkSession) -> Non
         " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
     )
     column_table = frame.select(_transform("a", "", "", "").alias("r")).toArrow()
-    for table in (left, right, crossed, column_table):
+    kept = spark.sql(
+        "SELECT transform(t1.a, x -> x + 1) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
+        " LEFT JOIN (SELECT 2 AS k) t2 ON t1.k = t2.k"
+    ).toArrow()
+    for table in (left, right, crossed, column_table, kept):
         _assert_list_int32(table, [[2, 3, 4]])
         assert not table.schema.field("r").nullable
         assert not table.schema.field("r").type.value_field.nullable
@@ -592,6 +608,35 @@ def test_aggregate_over_lineage_stays_int32(spark: ReparkSession) -> None:
         assert table.column("r").to_pylist() == [6]
         assert table.schema.field("r").type == pa.int32()
         assert table.schema.field("r").nullable
+
+
+def test_values_fed_hof_answers_int32(spark: ReparkSession) -> None:
+    """Pin Int32 widths with not-null elements for VALUES-fed HOFs."""
+    table = spark.sql(
+        "SELECT transform(a, x -> x + 1) AS r"
+        " FROM (VALUES (array(1, 2, 3)), (array(4, 5, 6))) AS t(a)"
+    ).toArrow()
+    assert sorted(table.column("r").to_pylist()) == [[2, 3, 4], [5, 6, 7]]
+    assert table.schema.field("r").type.value_type == pa.int32()
+    assert not table.schema.field("r").nullable
+    assert not table.schema.field("r").type.value_field.nullable
+
+
+def test_outer_join_padded_side_answers_nullable(spark: ReparkSession) -> None:
+    """Pin nullable answers for padded outer-join sides without crashing."""
+    padded = spark.sql(
+        "SELECT transform(t2.a, x -> x + 1) AS r FROM (SELECT 1 AS k) t1"
+        " LEFT JOIN (SELECT array(1, 2, 3) AS a, 2 AS k) t2 ON t1.k = t2.k"
+    ).toArrow()
+    assert padded.column("r").to_pylist() == [None]
+    assert padded.schema.field("r").nullable
+    full = spark.sql(
+        "SELECT transform(t1.a, x -> x + 1) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 2 AS k) t1"
+        " FULL JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
+    ).toArrow()
+    assert sorted(full.column("r").to_pylist(), key=str) == [None, [2, 3, 4]]
+    assert full.schema.field("r").nullable
 
 
 def test_lateral_view_stays_a_loud_refusal(spark: ReparkSession) -> None:

@@ -265,6 +265,16 @@ fn source_element_nullable(plan: &LogicalPlan, index: usize) -> Option<bool> {
             source_element_nullable(repartition.input.as_ref(), index)
         }
         LogicalPlan::Join(join) => {
+            let left_width = join.left.schema().fields().len();
+            let padded = match join.join_type {
+                JoinType::Left => index >= left_width,
+                JoinType::Right => index < left_width,
+                JoinType::Full => true,
+                _ => false,
+            };
+            if padded {
+                return None;
+            }
             let (input, position) = join_lineage(
                 join.left.as_ref(),
                 join.right.as_ref(),
@@ -304,6 +314,21 @@ fn source_element_nullable(plan: &LogicalPlan, index: usize) -> Option<bool> {
             } else {
                 None
             }
+        }
+        LogicalPlan::Values(values) => {
+            if values.values.is_empty() {
+                return None;
+            }
+            let mut nullable = false;
+            for row in &values.values {
+                match row.get(index) {
+                    Some(cell) if is_array_constructor(cell) => {
+                        nullable |= constructor_element_nullable(cell, values.schema.as_ref())?;
+                    }
+                    _ => return None,
+                }
+            }
+            Some(nullable)
         }
         _ => None,
     }

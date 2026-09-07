@@ -3809,6 +3809,10 @@ aggregate/window/passthrough nodes (including the constructor below the Window n
 which is the leg that bites the Window arm), `test_multihop_...` covers multi-hop
 view lineage
 with Spark-equal nullable table legs, `test_union_of_narrowed_...` is the union pin,
-`test_aggregate_over_lineage_...` locks aggregate immunity, and
-`test_lateral_view_...` pins the loud refusal that keeps Generate unreachable.
+`test_aggregate_over_lineage_...` locks aggregate immunity,
+`test_lateral_view_...` pins the loud refusal that keeps Generate unreachable,
+`test_values_fed_...` pins VALUES-fed widths, and `test_outer_join_padded_...`
+pins nullable padded-side answers without crashing (elements stay conservatively
+nullable there, measured against Spark in the ledger). The inline pin gained
+negative and out-of-i32 literal legs; the join pin gained the unpadded LEFT side.
 pins: fnp-8-review/C-009, C-010
