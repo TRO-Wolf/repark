@@ -961,7 +961,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   flat single, dupes, NULL ignored, all-NULL/empty NaN, int/decimal/float,
   non-numeric engine error, nested float shape, ignored relativeError); two
   live legs (audit values equal Spark; the all-NULL/empty divergence pinned on
-  both sides — repark NaN where Spark answers []); the three inherited gap pins
+  both sides — repark NaN where Spark answers [] — both under
+  `REPARK_PARITY_LIVE=1`); the three inherited gap pins
   (crosstab sparse 0, freqItems full text, sample fraction full text).
   pins: dfcore-5/C-001, C-002, C-003, C-004, C-005
 

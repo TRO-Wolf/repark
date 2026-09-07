@@ -169,14 +169,14 @@ def test_validation_order_and_error_contract(spark: ReparkSession) -> None:
     frame = _xy_frame(spark)
     for door in (frame.approxQuantile, frame.stat.approxQuantile):
         with pytest.raises(PySparkTypeError) as caught:
-            door("x", [0.5], "bad")  # type: ignore[arg-type]
+            door("x", [0.5], "bad")
         assert caught.value.getErrorClass() == "NOT_FLOAT_OR_INT"
         assert caught.value.getMessageParameters() == {
             "arg_name": "relativeError",
             "arg_type": "str",
         }
         with pytest.raises(PySparkTypeError) as caught_bool:
-            door("x", [0.5], True)  # type: ignore[arg-type]
+            door("x", [0.5], True)
         assert caught_bool.value.getErrorClass() == "NOT_FLOAT_OR_INT"
         with pytest.raises(PySparkValueError) as caught_negative:
             door("x", [0.5], -0.1)
@@ -189,14 +189,14 @@ def test_validation_order_and_error_contract(spark: ReparkSession) -> None:
             door("x", [0.5], float("nan"))
         assert caught_nan.value.getErrorClass() == "NEGATIVE_VALUE"
         with pytest.raises(PySparkTypeError) as caught_col:
-            door(123, [0.5], 0.0)  # type: ignore[arg-type]
+            door(123, [0.5], 0.0)
         assert caught_col.value.getErrorClass() == "NOT_LIST_OR_STR_OR_TUPLE"
         assert caught_col.value.getMessageParameters() == {
             "arg_name": "col",
             "arg_type": "int",
         }
         with pytest.raises(PySparkTypeError) as caught_item:
-            door(["x", 5], [0.5], 0.0)  # type: ignore[list-item]
+            door(["x", 5], [0.5], 0.0)
         assert caught_item.value.getErrorClass() == "DISALLOWED_TYPE_FOR_CONTAINER"
         assert caught_item.value.getMessageParameters() == {
             "arg_name": "col",
@@ -205,14 +205,14 @@ def test_validation_order_and_error_contract(spark: ReparkSession) -> None:
             "item_type": "int",
         }
         with pytest.raises(PySparkTypeError) as caught_probs:
-            door("x", "0.5", 0.0)  # type: ignore[arg-type]
+            door("x", "0.5", 0.0)
         assert caught_probs.value.getErrorClass() == "NOT_LIST_OR_TUPLE"
         assert caught_probs.value.getMessageParameters() == {
             "arg_name": "probabilities",
             "arg_type": "str",
         }
         with pytest.raises(PySparkTypeError) as caught_prob_item:
-            door("x", [0.5, "bad"], 0.0)  # type: ignore[list-item]
+            door("x", [0.5, "bad"], 0.0)
         assert caught_prob_item.value.getErrorClass() == "NOT_LIST_OF_FLOAT_OR_INT"
         assert caught_prob_item.value.getMessageParameters() == {
             "arg_name": "probabilities",
@@ -228,13 +228,13 @@ def test_validation_order_and_error_contract(spark: ReparkSession) -> None:
         with pytest.raises(PySparkValueError):
             door("x", [float("nan")], 0.0)
         with pytest.raises(PySparkTypeError) as caught_order:
-            door(123, "bad", "bad")  # type: ignore[arg-type]
+            door(123, "bad", "bad")
         assert caught_order.value.getErrorClass() == "NOT_FLOAT_OR_INT"
         with pytest.raises(PySparkTypeError) as caught_col_first:
-            door(123, "bad", 0.0)  # type: ignore[arg-type]
+            door(123, "bad", 0.0)
         assert caught_col_first.value.getErrorClass() == "NOT_LIST_OR_STR_OR_TUPLE"
         with pytest.raises(PySparkValueError) as caught_seq:
-            door("x", [1.5, "bad"], 0.0)  # type: ignore[list-item]
+            door("x", [1.5, "bad"], 0.0)
         assert caught_seq.value.getErrorClass() == "VALUE_OUT_OF_BOUND"
 
 
