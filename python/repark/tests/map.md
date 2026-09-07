@@ -3292,8 +3292,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-8-REVIEW (2026-09-07):** four more ANSI-on/off detectors — view-backed widths
   (both doors Spark-equal since round 2), the three-door
   left-shorter zip, zip element nullability, and the outer-variable nesting shape.
+  Round 2 adds two detectors: join-fed widths with immune aggregates, and multi-hop
+  nullability with union branches.
   The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
-  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and

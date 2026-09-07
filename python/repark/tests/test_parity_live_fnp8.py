@@ -318,6 +318,109 @@ def test_live_fnp8review_nested_outer_variable_matches_spark(
             assert middle.type.value_field.nullable
 
 
+def _seed_r2_views(repark_engine: lp.Engine, spark_engine: lp.Engine) -> None:
+    """Create the shared round-2 lineage views on both engines."""
+    spark_engine.session.sql(
+        "CREATE OR REPLACE TEMP VIEW fnp8rev_r2_live AS SELECT array(1, 2, 3) AS a"
+    )
+    repark_engine.session.sql("SELECT array(1, 2, 3) AS a").createOrReplaceTempView(
+        "fnp8rev_r2_live"
+    )
+    spark_engine.session.sql(
+        "CREATE OR REPLACE TEMP VIEW fnp8rev_r2_live_b AS SELECT array(4) AS a"
+    )
+    repark_engine.session.sql("SELECT array(4) AS a").createOrReplaceTempView(
+        "fnp8rev_r2_live_b"
+    )
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+@pytest.mark.parametrize("ansi_enabled", (True, False), ids=("ansi_on", "ansi_off"))
+def test_live_fnp8review_r2_join_lineage_matches_spark(
+    spark_engine: lp.Engine, ansi_enabled: bool
+) -> None:
+    """Pin join-fed HOF widths and immune aggregates against live Spark."""
+    value = "true" if ansi_enabled else "false"
+    repark_engine = lp.build_repark_engine((("spark.sql.ansi.enabled", value),))
+    join_queries = (
+        "SELECT transform(t1.a, x -> x + 1) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1 JOIN (SELECT 1 AS k) t2"
+        " ON t1.k = t2.k",
+        "SELECT transform(t2.a, x -> x + 1) AS r FROM (SELECT 1 AS k) t1"
+        " JOIN (SELECT array(1, 2, 3) AS a, 1 AS k) t2 ON t1.k = t2.k",
+        "SELECT transform(t1.a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a) t1"
+        " CROSS JOIN (SELECT 1 AS k) t2",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a, k"
+        " FROM (SELECT 1 AS k) s GROUP BY k, array(1, 2, 3))",
+    )
+    aggregate_query = (
+        "SELECT aggregate(t1.a, 0, (acc, x) -> acc + x) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
+        " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
+    )
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", value),)):
+        for query in join_queries:
+            spark_table = spark_engine.arrow_of(spark_engine.session.sql(query))
+            sql_table = repark_engine.arrow_of(repark_engine.session.sql(query))
+            for table in (spark_table, sql_table):
+                _assert_indexed_transform_cell(table, [[2, 3, 4]], False, False, True)
+        column_table = repark_engine.arrow_of(
+            repark_engine.session.sql(
+                "SELECT t1.a AS a FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
+                " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
+            ).select(
+                repark_engine.functions.transform(
+                    "a", lambda element: element + 1
+                ).alias("r")
+            )
+        )
+        _assert_indexed_transform_cell(column_table, [[2, 3, 4]], False, False, True)
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(aggregate_query))
+        sql_table = repark_engine.arrow_of(repark_engine.session.sql(aggregate_query))
+        for table in (spark_table, sql_table):
+            assert table.column("r").to_pylist() == [6]
+            assert table.schema.field("r").type == pa.int32()
+            assert table.schema.field("r").nullable
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+@pytest.mark.parametrize("ansi_enabled", (True, False), ids=("ansi_on", "ansi_off"))
+def test_live_fnp8review_r2_multihop_lineage_matches_spark(
+    spark_engine: lp.Engine, ansi_enabled: bool
+) -> None:
+    """Pin multi-hop HOF nullability and union branches against live Spark."""
+    value = "true" if ansi_enabled else "false"
+    repark_engine = lp.build_repark_engine((("spark.sql.ansi.enabled", value),))
+    with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", value),)):
+        _seed_r2_views(repark_engine, spark_engine)
+        queries = (
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_live)",
+            "WITH c1 AS (SELECT array(1, 2, 3) AS a), c2 AS (SELECT a FROM c1)"
+            " SELECT transform(a, x -> x + 1) AS r FROM c2",
+            "SELECT transform(a, x -> x + 1) AS r"
+            " FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, k"
+            " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) WHERE k = 1)",
+        )
+        for query in queries:
+            spark_table = spark_engine.arrow_of(spark_engine.session.sql(query))
+            sql_table = repark_engine.arrow_of(repark_engine.session.sql(query))
+            for table in (spark_table, sql_table):
+                _assert_indexed_transform_cell(table, [[2, 3, 4]], False, False, True)
+        union_query = (
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_live"
+            " UNION ALL SELECT a FROM fnp8rev_r2_live_b)"
+        )
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(union_query))
+        sql_table = repark_engine.arrow_of(repark_engine.session.sql(union_query))
+        for table in (spark_table, sql_table):
+            assert sorted(table.column("r").to_pylist()) == [[2, 3, 4], [5]]
+            field = table.schema.field("r")
+            assert field.type.value_type == pa.int32()
+            assert not field.nullable
+            assert not field.type.value_field.nullable
+
+
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 @pytest.mark.parametrize("ansi_enabled", (True, False), ids=("ansi_on", "ansi_off"))
 def test_live_fnp8_exists_public_nullability_matches_spark(
