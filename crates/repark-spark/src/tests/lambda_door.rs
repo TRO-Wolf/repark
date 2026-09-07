@@ -168,6 +168,20 @@ async fn sql_door_exists_and_forall_answer_three_valued() {
     )
     .await;
     assert_eq!(bool_column(&batch), vec![Some(true)]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT exists(make_array(1, NULL, 3), x -> x > 5) AS r",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![None]);
+    let batch = collect_one(
+        &ctx,
+        &catalogs,
+        "SELECT forall(make_array(1, NULL, 3), x -> x > 0) AS r",
+    )
+    .await;
+    assert_eq!(bool_column(&batch), vec![None]);
 }
 
 #[tokio::test]

@@ -20,12 +20,19 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
 - `exists.rs` — native Spark `exists`; three-valued nulls and output nullability follow the
   input array and predicate.
 - `forall.rs` — all-match rewrite of `exists`.
-- `hof_keep.rs` — `__hof_keep` marker UDF; keeps lambda variables in scope.
+- `hof_keep.rs` — `__hof_keep` marker UDF; keeps every minted lambda parameter in the body tree
+  so DataFusion cannot drop it: a two-parameter lambda that only mentions `i` still occupies both
+  slots the kernel declared as `[element, index]` (the reason the facade's former
+  `_keep_lambda_params` docstring carried; FNP-8 moved the packing here). `exists.rs` carries no
+  module comment (FNP-8-REVIEW, 2026-09-07: the one comment line #412 added, removed).
 - `aggregate.rs` — sequential fold; alias `reduce`. The merge-output type must
   equal the init type; `LambdaRebind` refuses a mismatch with Spark's
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` naming `aggregate`.
   pins: fnp-4c-higher-order-kernels/C-003
 - `zip_with.rs` — null-pad the shorter array.
+  **FNP-8-REVIEW (2026-09-07):** lambda parameters are nullable (either side can
+  pad nulls, F2) and the result element derives from the lambda's nullability
+  (F3). pins: fnp-8-review/C-002, C-003
 - `map_common.rs` — flatten/rebuild, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`.
 - `transform_keys.rs` / `transform_values.rs` / `map_filter.rs` / `map_zip_with.rs`.
 

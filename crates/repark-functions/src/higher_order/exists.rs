@@ -1,5 +1,3 @@
-//! Spark `exists` — three-valued any-match.
-
 use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::array::{Array, AsArray, BooleanArray, BooleanBuilder, new_null_array};
