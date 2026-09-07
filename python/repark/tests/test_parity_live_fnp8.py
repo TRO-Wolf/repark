@@ -207,12 +207,9 @@ def test_live_fnp8review_table_backed_width_matches_spark(
         for table in (spark_table, sql_table, column_table):
             _assert_indexed_transform_cell(table, [[11, 22, 3]], False, False, True)
         expected_map = [[["a", 2], ["b", 3]]]
-        spark_table = spark_engine.arrow_of(
-            spark_engine.session.sql("SELECT transform_values(m1, (k, v) -> v + 1) AS r FROM fnp8rev_live")
-        )
-        sql_table = repark_engine.arrow_of(
-            repark_engine.session.sql("SELECT transform_values(m1, (k, v) -> v + 1) AS r FROM fnp8rev_live")
-        )
+        values_query = "SELECT transform_values(m1, (k, v) -> v + 1) AS r FROM fnp8rev_live"
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(values_query))
+        sql_table = repark_engine.arrow_of(repark_engine.session.sql(values_query))
         column_table = repark_engine.arrow_of(
             repark_engine.session.sql("SELECT m1 FROM fnp8rev_live").select(
                 repark_engine.functions.transform_values(
@@ -235,19 +232,17 @@ def test_live_fnp8review_zip_left_shorter_matches_spark(
     expression = "zip_with(array(1), array(10, 20), (x, y) -> coalesce(x, 0) + y)"
     repark_engine = lp.build_repark_engine((("spark.sql.ansi.enabled", value),))
     with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", value),)):
-        spark_table = spark_engine.arrow_of(
-            spark_engine.session.sql(f"SELECT {expression} AS r")
-        )
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(f"SELECT {expression} AS r"))
         sql_table = repark_engine.arrow_of(repark_engine.session.sql(f"SELECT {expression} AS r"))
         column_table = repark_engine.arrow_of(
             repark_engine.session.sql("SELECT array(1) AS a, array(10, 20) AS b").select(
                 repark_engine.functions.zip_with(
                     "a",
                     "b",
-                    lambda left, right: repark_engine.functions.coalesce(
-                        left, repark_engine.functions.lit(0)
-                    )
-                    + right,
+                    lambda left, right: (
+                        repark_engine.functions.coalesce(left, repark_engine.functions.lit(0))
+                        + right
+                    ),
                 ).alias("r")
             )
         )
@@ -304,12 +299,8 @@ def test_live_fnp8review_nested_outer_variable_matches_spark(
     counterpart = "transform(array(array(1, NULL, 3)), a -> transform(a, b -> b + 1))"
     repark_engine = lp.build_repark_engine((("spark.sql.ansi.enabled", value),))
     with lp.spark_session_conf(spark_engine, (("spark.sql.ansi.enabled", value),)):
-        spark_table = spark_engine.arrow_of(
-            spark_engine.session.sql(f"SELECT {expression} AS r")
-        )
-        sql_table = repark_engine.arrow_of(
-            repark_engine.session.sql(f"SELECT {expression} AS r")
-        )
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(f"SELECT {expression} AS r"))
+        sql_table = repark_engine.arrow_of(repark_engine.session.sql(f"SELECT {expression} AS r"))
         for table in (spark_table, sql_table):
             assert table.column("r").to_pylist() == [[[2, 3], [4]]]
             outer = table.schema.field("r")
@@ -318,12 +309,8 @@ def test_live_fnp8review_nested_outer_variable_matches_spark(
             assert not middle.nullable
             assert middle.type.value_type == pa.int32()
             assert not middle.type.value_field.nullable
-        spark_table = spark_engine.arrow_of(
-            spark_engine.session.sql(f"SELECT {counterpart} AS r")
-        )
-        sql_table = repark_engine.arrow_of(
-            repark_engine.session.sql(f"SELECT {counterpart} AS r")
-        )
+        spark_table = spark_engine.arrow_of(spark_engine.session.sql(f"SELECT {counterpart} AS r"))
+        sql_table = repark_engine.arrow_of(repark_engine.session.sql(f"SELECT {counterpart} AS r"))
         for table in (spark_table, sql_table):
             assert table.column("r").to_pylist() == [[[2, None, 4]]]
             middle = table.schema.field("r").type.value_field

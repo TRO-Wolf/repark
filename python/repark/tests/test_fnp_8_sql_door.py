@@ -342,9 +342,7 @@ def _zip_nullproof(column_a: str, column_b: str) -> Column:
     )
 
 
-def _assert_list_int32(
-    table: pa.Table, expected_values: list[list[int | None] | None]
-) -> None:
+def _assert_list_int32(table: pa.Table, expected_values: list[list[int | None] | None]) -> None:
     """Pin list values with an Int32 element on the Arrow path."""
     assert table.column("r").to_pylist() == expected_values
     assert table.schema.field("r").type.value_type == pa.int32()
@@ -366,8 +364,7 @@ def test_table_backed_lambda_body_literals_answer_int32(spark: ReparkSession) ->
     _assert_list_int32(column_table, [[2, 3, 4]])
     assert column_table.schema.field("r").type.value_field.nullable
     sql_table = spark.sql(
-        "SELECT zip_with(a, b, (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
-        " FROM fnp8rev_width"
+        "SELECT zip_with(a, b, (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r FROM fnp8rev_width"
     ).toArrow()
     _assert_list_int32(sql_table, [[11, 22, 3]])
     assert not sql_table.schema.field("r").type.value_field.nullable
@@ -420,7 +417,9 @@ def test_zip_with_left_shorter_non_null_elements_answers_all_doors(
         ).alias("r")
     ).toArrow()
     expression_table = (
-        spark.sql("SELECT 1 AS sentinel").select(spark_functions.expr(expression).alias("r")).toArrow()
+        spark.sql("SELECT 1 AS sentinel")
+        .select(spark_functions.expr(expression).alias("r"))
+        .toArrow()
     )
     for table in (sql_table, column_table, expression_table):
         _assert_list_int32(table, [[11, 20]])
@@ -434,8 +433,7 @@ def test_zip_with_left_shorter_non_null_elements_answers_all_doors(
 def test_zip_with_element_nullability_follows_the_lambda(spark: ReparkSession) -> None:
     """Pin null-proof versus nullable zip elements on both doors."""
     nullproof_sql = spark.sql(
-        "SELECT zip_with(array(1, 2, 3), array(10),"
-        " (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
+        "SELECT zip_with(array(1, 2, 3), array(10), (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
     ).toArrow()
     assert nullproof_sql.column("r").to_pylist() == [[11, 2, 3]]
     assert nullproof_sql.schema.field("r").type.value_type == pa.int32()
@@ -458,7 +456,9 @@ def test_nested_transform_over_outer_variable_nullability(spark: ReparkSession) 
     expression = "transform(array(array(1, 2), array(3)), a -> transform(a, b -> b + 1))"
     sql_table = spark.sql(f"SELECT {expression} AS r").toArrow()
     expression_table = (
-        spark.sql("SELECT 1 AS sentinel").select(spark_functions.expr(expression).alias("r")).toArrow()
+        spark.sql("SELECT 1 AS sentinel")
+        .select(spark_functions.expr(expression).alias("r"))
+        .toArrow()
     )
     for table in (sql_table, expression_table):
         assert table.column("r").to_pylist() == [[[2, 3], [4]]]
