@@ -3771,3 +3771,5 @@ alike — a disclosed round-8 residual, deliberately unpinned.
 FNP-8 SQL-text error cells also execute column-free `F.expr`; `fnp8_repark_errors.json`
 records both paths against `fnp8_error_oracle.json`. The empty untyped map diagnostic
 keeps Spark collect separate from its Arrow export refusal.
+**FNP-8-REVIEW (2026-09-07):** the F-Y10-1 registry note cites the wrap pin and the
+idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007

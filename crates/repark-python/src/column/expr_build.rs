@@ -282,10 +282,8 @@ pub(super) fn refuse_nested_higher_order(
     if contains_higher_order(argument)? {
         return Err(crate::UnsupportedOperationException::new_err(format!(
             "{name}: a higher-order function nested inside another one's {position} is not \
-             supported. Spark evaluates it; repark cannot, because DataFusion 54.1 fails such a \
-             plan — at evaluation for a nested lambda body (through its own SQL planner too), and \
-             at lambda-variable resolution for a value argument. Compute the inner result in a \
-             separate column first."
+             supported through the Column door yet. The Spark SQL door serves nested lambdas; \
+             compute the inner result in a separate column first."
         )));
     }
     Ok(())

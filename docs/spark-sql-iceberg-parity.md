@@ -641,6 +641,10 @@ them, and the document is ordered by surface, never by date.
 > bodies stay on DataFusion coercion (no overflow raise there yet — arming desynchronized
 > the declared `LambdaVariable` field from the re-derived merge type). Pin:
 > `lambda_variable_operands_do_not_arm`.
+> FNP-8 holds the wrap shape: `sql_door_lambda_body_overflow_divergence_wraps` pins the
+> `-294967296` answer, and `test_fnp8_sql_text_error_dispositions` pins the idx-25 ANSI
+> raise Spark gives against the wrap repark answers (error-25) plus the idx-51 ANSI-off
+> wrap both engines share (error-51).
 >
 > **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
 > `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is

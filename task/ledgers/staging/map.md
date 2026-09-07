@@ -5,6 +5,11 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
+  **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
+  merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
+  PySpark 4.1.2, plus the no-regression held set. `risk_tier: standard`. Branch
+  `review/fnp-8-review`.
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,

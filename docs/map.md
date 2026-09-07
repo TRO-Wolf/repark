@@ -190,3 +190,5 @@ authoritative. Escalate to: [../map.md#debug](../map.md).
 
 FNP-8 (2026-09-07): the parity registry holds the measured HOF nullability, width,
 parser/binder, and SQL-arity residuals. Public Arrow and live-oracle pins are linked there.
+FNP-8-REVIEW (2026-09-07): the F-Y10-1 note cites the lambda-body overflow wrap pin and
+the idx-25/idx-51 error-oracle dispositions (F7).
