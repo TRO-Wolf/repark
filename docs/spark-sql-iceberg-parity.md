@@ -5761,6 +5761,25 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   as a refusal, never as an example that swallows it; the name stays on the example backlog until
   frequent-item discovery lands.
 
+### PERF-APPROXQUANTILE-1 — `approxQuantile` collects once per frame, not once per column × probability — **FIXED 2026-09-07 (DFCORE-5)**
+
+- **repark** — **FIXED 2026-09-07 (DFCORE-5).** `DataFrame.approxQuantile` /
+  `stat.approxQuantile` run one aggregation projecting the list form of
+  `percentile_approx` per column: 2 columns × 3 probabilities collect 6 → 1,
+  4 × 5 collect 20 → 1, single-column 3 → 1, empty shapes 0 → 0; 1e6-row wall
+  medians 0.155 → 0.052 s (2x3) and 0.572 → 0.087 s (4x5), 1x1 unchanged at
+  0.028 s. Values, shapes, error classes and the ignored `relativeError` are
+  unchanged: x = 1..1000 answers `[[250, 500, 750], [500, 1000, 1500]]` on both
+  doors, exactly as live Spark does.
+- **Apache Spark** — one job per `approxQuantile` call; the same frame answers
+  `[[250.0, 500.0, 750.0], [500.0, 1000.0, 1500.0]]`.
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-07, local[2].)*
+- **Pin** —
+  `python/repark/tests/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape`
+- **Rationale** — FIXED. History: the facade looped one `collect()` per column
+  per probability over the scalar `percentile_approx` form. Cells:
+  `docs/perf/approx-percentile-baseline.md` §"DataFrame.approxQuantile".
+
 ### EX-ROW-1 — a struct-valued Row field is a dict in repark; Spark keeps the nested Row
 
 - **repark** — `select(struct("g", "k").alias("s")).first().asDict()` answers
