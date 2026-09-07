@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, PySparkException, PySparkValueError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 
@@ -95,23 +95,29 @@ def test_aggregate_and_reduce_match_spark_null_and_empty() -> None:
     """pins: fnp-4c-higher-order-kernels/C-003, C-004"""
     frame = _arrays()
     coalesced = frame.select(
-        F.aggregate("a", F.lit(0), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias("r")
+        F.aggregate(
+            "a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))
+        ).alias("r")
     ).toArrow()
     assert coalesced.column("r").to_pylist() == [6, 4, 0, None]
     assert "int64" in str(coalesced.schema.field("r").type).lower()
-    raw = frame.select(F.aggregate("a", F.lit(0), lambda acc, x: acc + x).alias("r")).toArrow()
+    raw = frame.select(
+        F.aggregate("a", F.lit(0).cast("bigint"), lambda acc, x: acc + x).alias("r")
+    ).toArrow()
     assert raw.column("r").to_pylist() == [6, None, 0, None]
     finished = frame.select(
         F.aggregate(
             "a",
-            F.lit(0),
+            F.lit(0).cast("bigint"),
             lambda acc, x: acc + F.coalesce(x, F.lit(0)),
             lambda acc: acc * 10,
         ).alias("r")
     ).toArrow()
     assert finished.column("r").to_pylist() == [60, 40, 0, None]
     reduced = frame.select(
-        F.reduce("a", F.lit(0), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias("r")
+        F.reduce("a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias(
+            "r"
+        )
     ).toArrow()
     assert reduced.column("r").to_pylist() == [6, 4, 0, None]
 
@@ -232,15 +238,6 @@ def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
     )
     cases = [
         (
-            lambda: frame.select(F.transform("a", lambda x, i, z: x)),
-            "expects 3 arguments, but got 1",
-        ),
-        (
-            lambda: frame.select(F.filter("a", lambda x, i, z: x > 0)),
-            "expects 3 arguments, but got 1",
-        ),
-        (lambda: frame.select(F.forall("a", lambda x, i: x > 0)), "expects 2 arguments, but got 1"),
-        (
             lambda: frame.select(F.aggregate("a", F.lit(0), lambda acc: acc)),
             "expects 1 arguments, but got 2",
         ),
@@ -270,8 +267,46 @@ def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
         ),
     ]
     for build, needle in cases:
-        with pytest.raises(AnalysisException, match=needle):
+        with pytest.raises(AnalysisException, match=needle) as exc_info:
             build().toArrow()
+        assert "NUM_ARGS_MISMATCH" in str(exc_info.value)
+
+
+def test_each_name_overlong_lambda_preserves_spark_arity_error() -> None:
+    """Reject function-specific excess parameters with Spark's measured arity class."""
+    frame = _arrays()
+    cases = [
+        (lambda: F.transform("a", lambda x, i, z: x), 3, 1),
+        (lambda: F.filter("a", lambda x, i, z: x > 0), 3, 1),
+        (lambda: F.forall("a", lambda x, i: x > 0), 2, 1),
+        (lambda: F.exists("a", lambda x, i: x > 0), 2, 1),
+        (lambda: F.aggregate("a", F.lit(0), lambda a, b, c: a), 3, 2),
+        (lambda: F.reduce("a", F.lit(0), lambda a, b, c: a), 3, 2),
+        (lambda: F.aggregate("a", F.lit(0), lambda a, b: a, lambda a, b: a), 2, 1),
+        (lambda: F.reduce("a", F.lit(0), lambda a, b: a, lambda a, b: a), 2, 1),
+        (lambda: F.zip_with("a", "a", lambda a, b, c: a), 3, 2),
+        (lambda: F.transform_keys("m", lambda a, b, c: a), 3, 2),
+        (lambda: F.transform_values("m", lambda a, b, c: a), 3, 2),
+        (lambda: F.map_filter("m", lambda a, b, c: a), 3, 2),
+    ]
+    for build, actual, expected in cases:
+        with pytest.raises(AnalysisException) as exc_info:
+            frame.select(build()).toArrow()
+        message = str(exc_info.value)
+        assert "NUM_ARGS_MISMATCH" in message
+        assert f"expects {actual} arguments, but got {expected}" in message
+
+
+@pytest.mark.parametrize("arity", (0, 4))
+def test_lambda_outside_generic_range_preserves_value_error(arity: int) -> None:
+    """Reject callables outside Spark's generic parameter range before kernel binding."""
+    with pytest.raises(PySparkValueError) as caught:
+        if arity == 0:
+            F.transform("a", lambda: F.lit(1))
+        else:
+            F.map_zip_with("m", "m", lambda a, b, c, d: a)
+    assert "WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION" in str(caught.value)
+    assert f"provided function takes {arity}" in str(caught.value)
 
 
 def test_zip_with_result_is_nullable_when_the_right_array_is() -> None:

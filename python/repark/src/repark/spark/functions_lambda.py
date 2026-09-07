@@ -43,13 +43,8 @@ _LAMBDA_PARAMETER_KINDS = (
 )
 
 
-def _lambda_arity(
-    function: Callable[..., Column],
-    *,
-    allowed: tuple[int, ...],
-    spark_arity_error: bool = True,
-) -> int:
-    """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
+def _lambda_arity(function: Callable[..., Column], allowed: tuple[int, ...]) -> int:
+    """Validate callable parameters and return the supported argument count."""
     parameters = inspect.signature(function).parameters
     if any(parameter.kind not in _LAMBDA_PARAMETER_KINDS for parameter in parameters.values()):
         raise PySparkValueError(
@@ -58,33 +53,20 @@ def _lambda_arity(
             "POSITIONAL or POSITIONAL OR KEYWORD arguments."
         )
     arity = len(parameters)
+    if arity < 1 or arity > 3:
+        name = getattr(function, "__name__", type(function).__name__)
+        raise PySparkValueError(
+            f"[WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION] Function `{name}` should take "
+            f"between 1 and 3 arguments, but the provided function takes {arity}.",
+            errorClass="WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION",
+            messageParameters={"func_name": name, "num_args": str(arity)},
+        )
     if arity not in allowed:
-        if not spark_arity_error:
-            expected = " or ".join(str(count) for count in allowed)
-            raise PySparkValueError(
-                f"lambda takes {arity} parameters, but this function expects {expected}"
-            )
         raise AnalysisException(
             "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. "
             f"A higher order function expects {arity} arguments, but got {allowed[0]}."
         )
     return arity
-
-
-def _keep_lambda_params(body: Column, placeholders: list[Column]) -> Column:
-    """Keep every minted parameter in the body tree so DataFusion cannot drop it.
-
-    A two-parameter lambda that only mentions ``i`` still has to occupy both
-    slots the kernel declared as ``[element, index]``.
-    """
-    from repark.spark.functions_expr import struct
-
-    named_body = body.alias("__hof_body")
-    named_placeholders = [
-        placeholder.alias(f"__hof_p{index}") for index, placeholder in enumerate(placeholders)
-    ]
-    packed = struct(named_body, *named_placeholders)
-    return packed.getField("__hof_body")
 
 
 def _build_lambda(
@@ -110,11 +92,16 @@ def _build_lambda(
     finally:
         _LAMBDA_DEPTH.reset(token)
     if not isinstance(body, Column):
+        name = getattr(function, "__name__", type(function).__name__)
         raise PySparkValueError(
-            f"a higher-order function lambda must return a Column, got {type(body).__name__}"
+            f"[HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN] Function `{name}` "
+            f"should return Column, got {type(body).__name__}.",
+            errorClass="HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN",
+            messageParameters={
+                "func_name": name,
+                "return_type": type(body).__name__,
+            },
         )
-    if arity >= 2:
-        body = _keep_lambda_params(body, placeholders)
     return plan_names, display_names, body
 
 
@@ -122,8 +109,6 @@ def _higher_order(
     name: str,
     values: list[Column | str],
     functions: list[tuple[Callable[..., Column], tuple[int, ...]]],
-    *,
-    spark_arity_error: bool = True,
 ) -> Column:
     """Build a higher-order call: value arguments first, then one lambda per callable.
 
@@ -132,11 +117,7 @@ def _higher_order(
     """
     value_columns = [_as_column_arg(value, as_lit=False) for value in values]
     built = [
-        _build_lambda(
-            function,
-            _lambda_arity(function, allowed=allowed, spark_arity_error=spark_arity_error),
-        )
-        for function, allowed in functions
+        _build_lambda(function, _lambda_arity(function, allowed)) for function, allowed in functions
     ]
 
     display_lambdas = [
@@ -172,7 +153,7 @@ def exists(col: Column | str, f: Callable[[Column], Column]) -> Column:
     Three-valued: an element that makes ``f`` NULL neither confirms nor denies, so a NULL among
     otherwise-false elements yields NULL rather than false.
     """
-    return _higher_order("exists", [col], [(f, (1,))], spark_arity_error=False)
+    return _higher_order("exists", [col], [(f, (1,))])
 
 
 def transform(

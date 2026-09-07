@@ -75,6 +75,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `register_spark_decimal_planner` from `register_all` + the shared `shim_udf_boilerplate!`
   macro. Error conversion from `DataFusionError` happens one layer up in `repark-core` (this
   crate stays DataFusion-native). pins: types-1/C-007
+- `src/lambda_rebind.rs` — **FNP-8 (2026-09-07):**
+  `analyzer_rules_with_higher_order_preparation` inserts the scoped HOF rule immediately before
+  the first default `type_coercion` rule and refuses a vector without that insertion point.
+  pins: fnp-8/C-003, C-004
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.

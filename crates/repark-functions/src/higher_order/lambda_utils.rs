@@ -62,7 +62,7 @@ pub(crate) fn element_and_index_parameters(
 ) -> Result<LambdaParametersProgress> {
     let (list, _lambda) = value_lambda_pair(name, fields)?;
     let element = list_element_field(name, list)?;
-    let index = Arc::new(Field::new("index", DataType::Int32, true));
+    let index = Arc::new(Field::new("index", DataType::Int32, false));
     Ok(LambdaParametersProgress::Complete(vec![vec![
         element, index,
     ]]))

@@ -300,9 +300,9 @@ impl ReparkSessionBuilder {
         // DataFusion caches directory listings by path on the RuntimeEnv object-list cache.
         runtime = runtime.with_object_list_cache_limit(0);
         let runtime = runtime.build_arc().map_err(engine_err)?;
-
         // Avoid `SessionContext::new_with_config_rt`: DF-54.1 guard 2 replaces one optimizer rule.
-        let context = context_with_df_54_1_rule_guards(config, runtime);
+        let context =
+            context_with_df_54_1_rule_guards(config, runtime, ext.as_ref()).map_err(engine_err)?;
         // Capture the final build-time home and its provider identity once; calls re-check it.
         let temp_view_home = {
             let options = context.copied_config();

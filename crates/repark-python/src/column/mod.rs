@@ -16,7 +16,7 @@ use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment,
 use datafusion::logical_expr::{
     Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
 };
-use datafusion::prelude::{SessionContext, col};
+use datafusion::prelude::col;
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -219,7 +219,7 @@ impl PyColumn {
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
             repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
-            let context = SessionContext::new();
+            let context = expr_build::sql_context(sql).map_err(crate::datafusion_to_py_err)?;
             repark_functions::register_all(&context);
             for rule in repark_functions::analyzer_rules() {
                 context.add_analyzer_rule(rule);
@@ -923,7 +923,7 @@ mod expr_tests {
     fn expr_sql_substr_zero_matches_spark() {
         let column = PyColumn::sql("substr('hello', 0, 3)").expect("parse");
         // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
-        let context = SessionContext::new();
+        let context = datafusion::prelude::SessionContext::new();
         repark_functions::register_all(&context);
         for rule in repark_functions::analyzer_rules() {
             context.add_analyzer_rule(rule);
@@ -960,7 +960,7 @@ mod expr_tests {
         let length = PyColumn::from_expr(lit(3_i64));
         let column = PyColumn::call_scalar("substr", vec![string_col, start, length])
             .expect("call_scalar substr");
-        let context = SessionContext::new();
+        let context = datafusion::prelude::SessionContext::new();
         repark_functions::register_all(&context);
         for rule in repark_functions::analyzer_rules() {
             context.add_analyzer_rule(rule);
@@ -1016,7 +1016,7 @@ mod expr_tests {
 
         let column = PyColumn::sql("5/2").expect("parse");
         // Consumer context is a *different* SessionContext (mirrors F.expr → spark DF handoff).
-        let context = SessionContext::new();
+        let context = datafusion::prelude::SessionContext::new();
         repark_functions::register_all(&context);
         for rule in repark_functions::analyzer_rules() {
             context.add_analyzer_rule(rule);

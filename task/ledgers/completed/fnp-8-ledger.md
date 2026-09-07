@@ -1,0 +1,447 @@
+# Unit ledger — FNP-8 · the eleven Spark higher-order functions with Python lambdas, both doors
+
+**Retires:** this ledger moves to `../completed/` in the unit's last commit.
+This file closes when FNP-8 merges, or when the owner closes the slate row.
+
+**Unit:** FNP-8 · **Date:** 2026-09-06 · **Executor:** Muse Spark, Actor ·
+**Branch:** `feat/fnp-8` · **Base:** `e100f72d`
+**Model:** muse-spark-1.3
+**risk_tier:** standard.
+
+Spark is the oracle. Live PySpark 4.1.2, zulu-17, `TZ=UTC`, ANSI on and off, 2026-09-06.
+The campaign charter is [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md); the unit rows are
+the charter's C-003 (Column entry point with a Python lambda), C-004 (Spark SQL door and
+`F.expr` with `x -> y` syntax) and C-012 (both doors resolve the same kernel). The kernels
+and the Column-door lambda tracing are FNP-4c's delivered work; this unit's mechanism is the
+SQL-door executing parse, and its proof is the oracle-first differential matrix across both
+doors. Clauses discharged from the campaign charter: C-001 (Rust-owned expression per name),
+C-002 (no Python row compute), C-003/C-004 (this unit), C-010 (no raised ceiling), C-012
+(same kernel both doors).
+
+## C-001 — the roster, measured first
+
+Every name below was re-derived from `pyspark.sql.functions` 4.1.2 (`__all__` membership and
+signatures, 2026-09-06) and measured on repark (release module) **before** any code was
+written. The live-Spark column is transcribed into "Oracle" below once the JVM runs.
+
+| Name | PySpark 4.1.2 signature | repark Column door, before code | repark SQL door, before code |
+|---|---|---|---|
+| `transform` | `(col, f: 1- or 2-arg)` | answers (FNP-4c) | refuses: `No field named x` |
+| `filter` | `(col, f: 1- or 2-arg)` | answers (FNP-4c) | refuses: `No field named x` |
+| `exists` | `(col, f: 1-arg)` | answers (FNP-4c) | refuses: `ParserError` (`EXISTS` keyword under Generic) |
+| `forall` | `(col, f: 1-arg)` | answers (FNP-4c) | refuses: `No field named x` |
+| `aggregate` | `(col, initialValue, merge: 2-arg, finish: 1-arg = None)` | answers (FNP-4c) | refuses: `No field named acc` |
+| `reduce` | alias of `aggregate`, byte-identical signature | answers (FNP-4c) | refuses: `No field named acc` |
+| `zip_with` | `(left, right, f: 2-arg)` | answers (FNP-4c) | refuses: `No field named x` |
+| `transform_keys` | `(col, f: 2-arg)` | answers (FNP-4c) | refuses: `No field named k` |
+| `transform_values` | `(col, f: 2-arg)` | answers (FNP-4c) | refuses: `No field named k` |
+| `map_filter` | `(col, f: 2-arg)` | answers (FNP-4c) | refuses: `No field named k` |
+| `map_zip_with` | `(col1, col2, f: 3-arg)` | answers (FNP-4c) | refuses: `No field named k` |
+
+`F.expr` with a lambda, before code: a column-free spelling
+(`F.expr("transform(array(1,2), x -> x + 1)")`) refuses — the throwaway context parses Generic,
+so `->` is the JSON arrow, not a lambda. A column-referencing spelling refuses under the
+already-filed §7 `EX-FN-4` (no DataFrame-bound expr path), which this unit does not own.
+
+The before-code SQL-door refusal shape is the Generic-dialect misparse, not a loud valve:
+`x -> x + 1` parses as the JSON `->` operator applied to columns named `x`, and only the
+plan step refuses (`No field named x`). The fix keeps that exact behavior for every query
+without `->` and parses lambda queries the way Spark does.
+
+## Proposition ledger
+
+| ID | Clause | Proof obligation | Verdict |
+|---|---|---|---|
+| C-001 | The roster above is the exact set this unit takes, each name re-derived from `pyspark.sql.functions` 4.1.2 and measured on repark before any code was written and on live Spark after; every name reaches both doors and no size ceiling is raised to get it there. | The roster table, the oracle below, `test_fnp_8_sql_door.py`, and the unchanged ceiling tables in `check_lib_py.py` / `check_rust_file_size.py`. | **OPEN** |
+| C-002 | No facade function performs row-level computation in Python. | The census `PY_COMPUTE` bucket stays 2 (both the sanctioned UDF path); this unit adds no facade Python that touches rows. | **OPEN** |
+| C-003 | The eleven answer the oracle matrix through the Column entry point with a Python lambda — every arity Spark accepts, traced once at plan time, loud on an untraceable lambda. | FNP-4c's mechanism plus this unit's Column-door matrix cells in `test_fnp_8_sql_door.py`; the arity pins stay in `test_fnp4c_higher_order.py`. | **OPEN** |
+| C-004 | The same eleven answer through the Spark SQL door and column-free `F.expr` with `x -> y` / `(x, i) -> y` syntax, resolving the same kernel the Column door resolves. | The arrow-gated executing parse plus per-name SQL-door pins and the `by_name` same-table test. | **OPEN** |
+| C-005 | Every divergence this unit measured is filed as a §7 row with a pin, and no row claims parity it does not have. | §7 rows below; each carries its pin. | **OPEN** |
+| C-006 | Every new pin is invertible and the gates are green on real exit codes. | The mutation table below; `make ci`, `make verify`, the facade and parity suites, and the live tier under `REPARK_PARITY_LIVE=1`. | **OPEN** |
+
+## Red-first
+
+(TBD: the new pin files are red on the base — the SQL-door cells refuse per the roster table
+above — measured before the mechanism lands, not assumed.)
+
+## Oracle (live PySpark 4.1.2, 2026-09-06, zulu-17, `TZ=UTC`, `local[2]`, ANSI on and off)
+
+(TBD: recorded verbatim from `spark.sql(...).toArrow()` — value AND Arrow type AND
+nullability. ANSI off quoted only where it differs.)
+
+## Mechanism
+
+The Spark door already parses user SQL with `DatabricksDialect` at the routing pre-parse
+(`parse_single_normalized`) but re-parses with the session Generic dialect at the EXECUTING
+parse (`execute_passthrough` → `state.sql_to_statement(sql, &session_dialect)`), where `->`
+is the JSON arrow instead of a lambda. The session-wide flip is deferred FNP-4b's write-path
+change; this unit does not do it. Instead the executing parse takes `Dialect::Databricks`
+when — and only when — the SQL carries a `Token::Arrow` outside strings and comments, and
+the session dialect otherwise. No working query in the tree uses `->` (measured by search:
+only `kernel_eval.rs`, which is already Databricks), so the gate newly-enables only SQL that
+refuses today. The same gate arms the `PyColumn.sql` throwaway context, which runs no
+internal SQL. CTAS routes its SELECT through `execute_passthrough`, so it is covered by the
+same change.
+
+Two analyzer findings fell out of the first door tests, both fixed in the mechanism. First,
+SQL planning binds lambda parameters before analysis, so `SparkIntegerLiteral`'s narrowing
+of `make_array(1, 2, 3)` to `List<Int32>` left the bound `x` at `Int64` and the physical
+planner refused (`LambdaVariable field and schema field mismatch`). `LambdaRebind`, last in
+`analyzer_rules()`, re-resolves every binding from the current value types. Second, the
+physical planner remaps lambda bodies by referenced position, so an `(x, i)` body mentioning
+only `i` reads the element slot; the same rule packs such a body into the facade's own
+`named_struct` + `get_field("__hof_body")` shape (the exact expression
+`functions_lambda._keep_lambda_params` builds), which is why the rule skips unary and
+fully-referenced bodies — the Column door's plans stay byte-identical.
+
+## Design decisions taken inside the unit
+
+| Decision | Reason |
+|---|---|
+| The executing parse is arrow-gated, not session-flipped | The FNP-4b flip moves double-quoted identifiers and struct literals for every query and every internal statement; the gate moves only queries carrying `->`, all of which refuse today. |
+| `exists` needs no keyword rewrite | sqlparser 0.62 parses `exists(` as a function under `DatabricksDialect` unless `(SELECT` / `(WITH` follows (verified in the vendored source). |
+| `F.expr` with a column reference stays `EX-FN-4` | Column binding needs the DataFrame-bound expr path, a declared-BACKLOG seam this unit does not own; the lambda parsing lands and column-free spellings answer. |
+
+## Mutation
+
+(TBD: one knob per name, each red on the new pin files; plus the gate knob that forces the
+session dialect. Knobs applied to the shipped source, measured, reverted.)
+
+## Gates (real exit codes, 2026-09-06)
+
+(TBD.)
+
+## Disk (AGENTS.md "Resource discipline")
+
+Checked before the first build: **875 GB free of 1.8 TB** (50% used). The lane reuses the
+shared `target/` and the shared cargo registry; `.ivy2` (182 MB) is a copy of `~/.ivy2.5.2`
+kept for the live legs and is git-excluded, as are `scratch/` and `handback.json`.
+
+## Delivery
+
+(TBD.)
+
+## Resume plan (2026-09-06)
+
+The resumed unit first adds a dedicated committed matrix for the fifteen accepted callable forms.
+It measures Column, Spark SQL, and column-free `F.expr` separately. The live leg records Spark
+4.1.2 Arrow values, types, and nullability with ANSI on and off. The EX-FN-4 column-reference
+refusal remains a fence. The actor classifies any failing cell before changing production code.
+
+### 2026-09-07 architecture ruling and repair plan
+
+The orchestrator approved one extension hook that configures the existing analyzer-rule vector.
+The default hook returns the vector unchanged. The Spark hook inserts one HOF preparation rule
+immediately before DataFusion's first `TypeCoercion` rule and fails if that rule is absent. The
+same helper builds the `F.expr` throwaway context. No live `SessionState` is rebuilt.
+
+- [ ] Add the default identity hook and prove the no-extension analyzer list stays identical.
+- [ ] Add the HOF preparation rule for constructor element nullability and indexed `transform`
+  integer literals only.
+- [ ] Install the same rule order in the normal Spark session and `F.expr` context.
+- [ ] Add red-before and green-after public Arrow pins for indexed width and `exists` nullability.
+- [ ] Pin explicit `BIGINT`, aggregate overflow, nullable column arrays, empty arrays, NULL arrays,
+  non-HOF plans, and core guard order as unchanged fences.
+- [ ] Hand the exact diff to the orchestrator for serial builds, live checks, and full gates.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-FNP8-HOF-PREP-1
+  agent: Actor
+  action: implement the approved HOF-only pre-coercion analyzer preparation
+  charter_trace: C-003, C-004, C-005, C-006
+  preconditions:
+    - the two public schema defects reproduce: SATISFIED (`Public validation and unresolved findings`)
+    - default TypeCoercion runs before appended Spark rules: SATISFIED (`df_guards.rs`, `extension.rs`)
+    - the orchestrator approved the extension hook and HOF scope: SATISFIED (2026-09-07 ruling)
+  success_condition: public Column, Spark SQL, and column-free F.expr match measured Spark Arrow schemas while every named fence stays unchanged
+  step_risks: [explicit casts could narrow: HANDLED(explicit-cast fence), aggregate overflow could change: HANDLED(aggregate fences), non-HOF plans could change: HANDLED(identity pins), nullable input could become over-tight: HANDLED(schema-derived nullable pins)]
+  contingencies: [a public pin stays red: EXECUTABLE(additive test evidence and halt for redesign), a gate fails: EXECUTABLE(additive remediation inside the approved files)]
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: —
+```
+
+## Out of scope, observed
+
+(TBD.)
+
+## Resumed evidence (2026-09-07)
+
+The 15-form live Spark 4.1.2 matrix in `/tmp/codex-resume-412-forms-oracle-results.json` records
+values and Arrow schemas for ANSI on and off. All values match. The 8 indexed-transform shape
+cells are in `/tmp/codex-resume-412-oracle-results.json`.
+
+`exists(array(1,2,3), x -> x > 2)` became nullable on this branch while the base and Spark are
+non-nullable. `exists.rs` now derives output nullability from the array and predicate, with
+ANSI-on/off SQL-door pins.
+
+`transform(array(1,2,3), (x,i) -> x + i)` remains `list<int64>` through Spark SQL while Spark
+returns `list<int32>`. The analyzer contains an indistinguishable coercion `Cast(i AS Int64)`;
+an explicit `CAST(i AS BIGINT)` has the same IR. The invertible divergence pin is retained and
+the finding remains OPEN. No cast stripping or analyzer reordering is in this unit.
+
+The live indexed-transform detector executes both RePark doors and live Spark. It pins the
+observed per-shape type and nested-nullability table: populated non-null arrays give Column
+`Int32` with nullable elements, SQL `Int64` with nullable elements, and Spark non-null `Int32`
+elements. The NULL-element, empty, and NULL-array cells retain their measured distinctions.
+
+## Public validation and unresolved findings (2026-09-07)
+
+The resumed `make verify` completed with exit 0. Fresh public validation then exposed three
+failed assertions that Rust-only validation did not cover. The generic matrix wrongly asserted
+indexed-transform schema equality, the NULL-element Column golden wrongly claimed Int32, and
+the proposed `exists` result-field derivation did not close the public nullable-result defect.
+The diagnostic pins now assert the measured differences explicitly. This records defects; it
+does not accept them as owner-disposed behavior or establish the unit's parity claim.
+
+The dedicated Column/SQL/expression tests, inherited FNP-4c tests, and live Spark detectors
+then completed together: 51 passed, exit 0, Spark 4.1.2, UTC, both ANSI settings. In the
+NULL-element indexed-transform cell both RePark doors return Int64; Spark returns Int32.
+The public `exists` result remains nullable through both RePark doors, while Spark is non-null.
+`test_exists_public_nullability_divergence_is_pinned` and its live mirror hold that open finding.
+
+Registry findings for follow-up are indexed-transform width and nested nullability, public
+`exists` nullability, and the inherited nullability differences recorded by the 15-form oracle.
+The full shape matrix, error-contract inventory, and original PR review are incomplete.
+All six propositions remain OPEN. No commit, push, or delivery action has occurred.
+
+The `COVERAGE_ATTESTATION` block is filed here when no clause stays `OPEN`.
+
+### 2026-09-07 scoped implementation
+
+The resumed evidence above predates the architecture ruling and remains the red-first record. The
+approved repair does not strip the indistinguishable generated and explicit casts. Core now hands
+its guarded analyzer vector through a default identity extension hook. The Spark extension and the
+column-free expression context insert one HOF preparation rule immediately before the first
+default type-coercion rule and refuse a missing insertion point.
+
+The rule changes only a HOF argument that is logically a direct array constructor. It derives the
+constructor's outer and element nullability from expression fields, never collected values. It
+narrows direct constructor integer literals only for indexed `transform`, and narrows only a direct
+initial integer literal for `aggregate` or `reduce`. A constructor found through direct projection
+lineage contributes nullability only. Its already analyzed mixed-width element type remains an
+inherited divergence because provenance is no longer distinguishable from an explicit `BIGINT`.
+Explicit casts, non-HOF plans, and the post-analysis Spark rules remain unchanged.
+
+### 2026-09-07 repair measurements
+
+The first fresh native measurement proved the hook active for direct `make_array` but unchanged
+for the facade's distinct `array` UDF. The rule now recognizes exactly those two constructor names.
+The second measurement fixed indexed `transform` and `exists` across Column, SQL, and column-free
+expression paths, but exposed an induced aggregate finish mismatch: the prepared Int32 accumulator
+met an unprepared Int64 literal in `acc * 10`. The approved scope therefore reuses the same
+provisional integer normalization inside `aggregate` and `reduce` lambda bodies. It leaves every
+explicit cast node present and does not install an arithmetic overflow rewrite.
+
+The third 218-cell native matrix (`/tmp/sol-412-matrix-after-aggregate.json`) has 190 successful
+cells with Spark-equal values and 28 inherited parser/type refusals. It contains zero new errors.
+The 52-cell SQL error comparison (`/tmp/sol-412-error-comparison.json`) confirms every Spark-success
+cell now succeeds, including NULL-array initial 0 and typed-empty initial 42. The 15-cell indexed
+probe (`/tmp/sol-412-indexed-after.json`) records Int32 for SQL and column-free expressions on every
+shape. The Column path is Int32 except for the pre-analyzed nullable-element source, which retains
+the inherited Int64 width. Populated constructor elements are non-null; NULL-element, empty, and
+NULL-array element fields are nullable. Public `exists(array(1,2,3), x -> x > 2)` is non-nullable
+on all three RePark paths, matching Spark.
+
+The next focused run found one same-query source form outside the 218 cells:
+`aggregate(a, 0, ..., finish)` and `reduce(a, 0, ..., finish)` over a raw subquery constructor.
+That child was still provisional Int64 when the parent HOF prepared its Int32 initializer and body.
+The bounded repair defers early aggregate numeric preparation only when the HOF reads a Column
+traced to a raw Int64 `array`/`make_array` projection and the initializer is still a bare Int64
+literal. The existing late literal and binding passes then narrow the source, initializer, and body
+together. Typed inputs, inline constructors, prior-analyzed sources, and explicit casts do not meet
+the guard.
+
+The expanded final matrix (`/tmp/sol-412-matrix-final.json`) has 248 cells: 220 successful cells
+with Spark-equal values, 28 inherited struct-field and typed-MAP parser refusals, and zero new
+errors. It includes each of the fifteen forms through SQL over a referenced subquery column. The
+public tests pin NULL and empty aggregate inputs across Column, SQL, and column-free expression
+paths; an explicit `BIGINT` initializer and finish literal remain Int64. The Rust door tests use the
+actual pre-coercion rule vector and pin non-HOF structural identity, explicit indexed `BIGINT`, the
+existing aggregate overflow wrap, and the nullable-element Column width inheritance.
+
+### 2026-09-07 recorded and live evidence
+
+This entry supersedes the provisional measurements above. The earlier OPEN table and TBD
+sections remain as the append-only pickup record; they are not a claim of current delivery.
+The final implementation preserves Generic parsing for a JSON arrow outside a recognized HOF
+call. The AST regression pin disproves the original assumption that every arrow query refused.
+
+The permanent oracle fixtures record 90 Spark value/schema cells and 54 Spark error/result
+cells under both ANSI settings. RePark dispositions pin 248 value/schema/refusal cells and
+108 SQL/expression error/result cells. Schemas retain their complete Arrow field trees.
+The bare empty-map Spark case returns an empty mapping through collection but fails Arrow
+export with `A null type field may not be non-nullable`; it is not claimed as Arrow parity.
+The dedicated live run passed all 504 tests, exit 0, against Spark 4.1.2 and Zulu 17.
+Evidence: `/tmp/sol-412-live-complete.log`.
+
+Measured residuals have permanent detectors and registry rows `FNP8-NULLABILITY`, `FNP8-WIDTH`,
+`FNP8-PARSING`, and `FNP8-SQL-ARITY`. The existing lambda overflow limitation retains its
+`F-Y10-1` registry identity. Values that succeed agree with Spark; the registry identifies
+the remaining schema and refusal differences. This is not a blanket Spark-parity claim.
+
+Mutation checks changed the shipped source, rebuilt the native module where needed, ran the
+selected pins, and restored both source and module. Every mutant test command exited nonzero;
+every mutant and restoration build exited zero. Removing the parser selection failed 90 tests;
+removing output-name preservation failed two; bypassing Column arity validation failed one
+parameter-matrix test; removing parameter packing failed eight; removing HOF preparation failed
+40; forcing nullable `exists` results failed eight. Exact commands and exit codes are recorded
+in `/tmp/sol-412-mutation-results.json` and `/tmp/sol-412-class-mutation-results.json`.
+
+Disk checks before builds, mutations, and broad validation found 720 GB free on the 1.8 TB
+filesystem. The isolated checkout, shared build cache, native module, and oracle logs remain
+for final validation and review. No other task's files or artifacts were removed. No commit,
+push, merge, or AWS mutation has occurred.
+
+### 2026-09-07 frozen-source review evidence
+
+The independent Sol critic verified C-001's exact eleven exported functions and fifteen
+accepted callable forms. `exists` is explicitly exported; the other ten are installed through
+`HIGHER_ORDER_EXPORTS`. SQL session registration and the facade resolve the shared
+`higher_order::functions` / `by_name` table. Size-ceiling scripts are byte-identical to
+`origin/main`; the functions crate root remains at its 175-line ceiling.
+
+For C-002, the recorded census remains 345 entries with exactly two recursive `PY_COMPUTE`
+rows: the sanctioned `udf` and `pandas_udf` paths. The changed facade production file only
+constructs and validates plans; the critic found no row-level Python computation.
+
+The critic's last production finding was invalid-return diagnostics on callable objects and
+partials without `__name__`. The existing callable-name fallback now applies to that error
+path. The regression fixture uses callables that actually return a non-Column value, avoiding
+an earlier invalid fixture that raised during Column boolean conversion.
+
+Preflight attempt 4 passed lint, structure, documentation, and compilation, then failed two
+Rust expectations. The corrected filter expectation uses Spark's non-null element field.
+The aggregate empty-array oracle pin uses Spark's public `array()` spelling, matching the
+recorded/public Python oracle, rather than DataFusion's internal `make_array()` constructor.
+The nullable expectation is retained. These are test corrections, not relaxed gates.
+
+The aggregate Rust nullability failure persisted with public `array()`: an empty fold exports
+a non-null optimized physical batch field. The Python Arrow C Stream instead declares the
+analyzed logical schema, which is nullable and matches the live oracle. The Rust width test
+now checks its actual contract, values and integer type; the existing three-door Python pins
+retain exact public nullability assertions. No production behavior changed for this correction.
+
+### 2026-09-07 local readiness resolution
+
+This dated resolution supersedes the earlier provisional OPEN verdicts without rewriting
+the append-only record. The local evidence discharges the six proof obligations:
+
+- C-001: PROVEN by the eleven-name/fifteen-form roster, shared registry inspection, public
+  matrix, and unchanged size-ceiling scripts.
+- C-002: PROVEN by the unchanged two-entry sanctioned Python-compute census and facade review.
+- C-003: PROVEN for accepted forms and explicit residual dispositions by the Column oracle
+  matrix, callable error tests, and arity/packing mutation checks.
+- C-004: PROVEN for Spark SQL and column-free expressions by the shared kernel paths,
+  oracle matrix, parser AST fence, and parser/name-preservation mutation checks.
+- C-005: PROVEN by the four FNP8 registry rows and existing F-Y10-1/EX-FN-4 boundaries,
+  each with exact permanent detectors. This proves disclosure, not universal Spark equality.
+- C-006: PROVEN by seven mutation classes, the 504-test live run, and full preflight exit 0.
+
+`make preflight` completed with exit 0 on the frozen implementation. Its Rust runs passed
+2,830 tests with five ignores; the facade passed 5,744 with 354 skips; dbt passed 59 with
+one skip. The fast gates, dependency/advisory/license checks, Python vulnerability audit,
+and workflow checks passed. Transcript: `/tmp/sol-412-preflight-7.log`. The separate live
+run had no skips. The final callable-name mutation failed its regression test; restoring
+the source passed all eight seam tests (`/tmp/sol-412-callable-mutation.log` and
+`/tmp/sol-412-callable-restored.log`).
+
+The independent critic reviewed the original PR and the resumed delta. Its coverage
+attestation follows. Local readiness is established; delivery is not claimed. The ledger
+remains in staging until the owner-authorized final commit, and the remote PR is unchanged.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-8
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        The critic walked C-001 through C-006 against the full original PR and resumed delta.
+        The exact eleven-name export/registration roster, fifteen accepted callable forms,
+        Python-compute census, public entry points, named residuals, and mutation/gate obligations
+        each have checkable evidence.
+      artifacts: [task/ledgers/staging/fnp-8-ledger.md, python/repark/tests/test_fnp8_oracle_matrix.py, python/repark/tests/test_fnp_8_sql_door.py, task/fnp-0-census/facade-classification.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Recorded and live cells exercise null and empty arrays and maps, nullable predicates,
+        unequal and typed-empty zip inputs, nested array/map/struct values, capture and shadowing,
+        parameter positions, explicit BIGINT controls, malformed arities, aggregate type mismatches,
+        and both ANSI settings.
+      artifacts: [python/repark/tests/fnp8_spark_oracle.json, python/repark/tests/fnp8_error_oracle.json, python/repark/tests/test_fnp8_oracle_matrix.py, crates/repark-spark/src/tests/lambda_door.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        The review exercised parser refusal, missing analyzer insertion point, short and overlong
+        lambda arity, non-Column callable results, aggregate accumulator mismatches, ANSI overflow,
+        null map keys, and public Arrow-export failures. Exact RePark dispositions distinguish
+        successful results from loud failures.
+      artifacts: [python/repark/tests/fnp8_repark_errors.json, python/repark/tests/test_fnp4_lambda_seam.py, python/repark/tests/test_fnp4c_higher_order.py, crates/repark-spark/src/tests/lambda_door.rs, crates/repark-spark/src/extension/tests.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: >
+        The analyzer-hook order and default identity path were inspected and pinned. The change
+        adds no global mutable state, lock, asynchronous task, retry sequence, or shared runtime
+        mutation; session construction owns the rule vector before context creation.
+      artifacts: [crates/repark-core/src/extension.rs, crates/repark-core/src/extension/tests.rs, crates/repark-core/src/session/df_guards.rs, crates/repark-spark/src/extension/tests.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        The full production diff was checked for unsafe code, external I/O, credentials, path or
+        SQL interpolation, untrusted deserialization, and privilege-bearing actions. The delta is
+        confined to expression planning, metadata, pure Arrow evaluation, and facade validation;
+        no security-sensitive operation was added.
+      artifacts: [crates/repark-functions/src/lambda_rebind.rs, crates/repark-functions/src/higher_order/exists.rs, crates/repark-python/src/column/expr_build.rs, crates/repark-spark/src/normalize.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Public values and complete Arrow schemas were compared against recorded and live Spark
+        results across Column, SQL, column-free F.expr, and referenced-subquery SQL. Projection
+        names, explicit casts, nullable fields, integer widths, aggregate finish types, and all
+        measured residuals are either preserved, matched, or filed with exact pins.
+      artifacts: [python/repark/tests/fnp8_repark_dispositions.json, python/repark/tests/fnp8_spark_oracle.json, python/repark/tests/test_fnp8_oracle_matrix.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: N/A
+      justification: >
+        This bounded expression-planning unit adds no system-breaking resource or performance
+        surface. Its only runtime metadata cast and lambda scans remain proportional to the input
+        Arrow batch or expression tree.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        The review checked the DataFusion analyzer insertion contract, the identity default
+        SessionExtension hook, shared higher-order registry routing, Python callable/error
+        contracts, parser dialect fence, and unchanged file-size SSOT. The eleven facade names and
+        fifteen forms reach the intended shared Rust kernels without Python row computation.
+      artifacts: [crates/repark-functions/src/lambda_rebind.rs, crates/repark-functions/src/higher_order/mod.rs, crates/repark-python/src/column/mod.rs, python/repark/src/repark/spark/functions_lambda.py, scripts/check_lib_rs.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Every reviewed failure path remains loud and identifies its boundary: missing analyzer
+        insertion, lambda arity, non-Column result, accumulator type, overflow, parser/binder
+        refusal, or empty-map constructor refusal. Recorded error type and full RePark diagnostic
+        pins prevent silent degradation.
+      artifacts: [python/repark/tests/fnp8_error_oracle.json, python/repark/tests/fnp8_repark_errors.json, python/repark/tests/test_fnp8_oracle_matrix.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        The permanent corpus covers 248 RePark value/schema/refusal cells, 108 RePark SQL/F.expr
+        error/result cells, 90 live Spark value/schema cells, and 54 live Spark error/result cells.
+        Six source mutations independently killed parser selection, output-name preservation,
+        Column arity validation, parameter packing, HOF preparation, and exists nullability pins;
+        all mutated and restored native builds succeeded. This attestation is inserted only after
+        the final make preflight command exits zero on the frozen staged tree.
+      artifacts: [python/repark/tests/test_fnp8_oracle_matrix.py, python/repark/tests/test_fnp4c_higher_order.py, crates/repark-spark/src/tests/lambda_door.rs, /tmp/sol-412-mutation-results.json, /tmp/sol-412-class-mutation-results.json, /tmp/sol-412-live-complete.log, /tmp/sol-412-preflight-7.log]
+  reattested: [AT-1, AT-2, AT-3, AT-4, AT-5, AT-6, AT-8, AT-9, AT-10]
+  complete: true
+```
+
+### 2026-09-07 owner-authorized delivery preparation
+
+The owner authorized committing and pushing the verified repair to the existing PR #412.
+This final commit moves the ledger to completed; merge remains a separate owner action.
+The repository-provided hooks are installed in the isolated clone and run before commit.
+The completed ledger and PR supersede the local-readiness handoff above.

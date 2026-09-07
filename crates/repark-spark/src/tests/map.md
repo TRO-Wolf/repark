@@ -14,6 +14,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `lambda_door.rs` — **FNP-8 (2026-09-06):** the eleven higher-order names through
+  `crate::execute` with `x -> y` syntax — both `transform`/`filter` arities, `exists` as a
+  function (not the subquery keyword), `forall` on empty, `aggregate` with and without
+  `finish`, `reduce`, `zip_with` null-padding, the four map names, the
+  `DUPLICATED_MAP_KEY` raise, and the gate guard (`count("v")` stays the identifier count,
+  so lambda-free SQL still parses Generic). The dtype test pins the early-`LambdaRebind`
+  seat: `transform`/`filter`/`zip_with` over `make_array` keep `Int32` elements and
+  `aggregate` stays `Int32` (the closing coercion must see rebound bindings, not bake
+  `BIGINT` casts from stale ones). Short lambdas carry Spark's arity class, an
+  init/merge width mismatch carries `DATATYPE_MISMATCH`, the index is non-nullable,
+  over-long lambdas pin DataFusion's plan-time text as the named divergence, and the
+  oracle edge rows (null-key raise, void map, VALUES `Int32`, overflow wrap) close the
+  door. The resumed repair tests use the same pre-coercion preparation vector as a public Spark
+  session. They pin `exists` nullability, indexed-transform Arrow width and nested nullability,
+  NULL and empty aggregate inputs, explicit `BIGINT`, non-HOF structural identity, and the
+  inherited nullable-element Column width. Explicit lambda-body overflow keeps its existing wrap.
+  pins: fnp-8/C-004
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
   spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new
@@ -595,3 +612,7 @@ above.
 
 First checks: `cargo test -p repark-spark tests::<module>::`. Escalate to: [../map.md#debug](../map.md).
 
+The FNP-8 aggregate literal-width test inspects execution batches for values and integer types.
+Its optimized physical field is not the public Arrow schema. Public aggregate nullability is
+pinned through Column, SQL, and F.expr in `test_fnp_8_sql_door.py` and the recorded/live oracle
+matrix; those exports declare the analyzed logical schema.

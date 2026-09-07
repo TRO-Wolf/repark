@@ -2,12 +2,14 @@
 
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::execution::SessionStateBuilder;
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
     Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
 };
+use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -32,6 +34,21 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
         Expr::Alias(alias) => *alias.expr,
         other => other,
     }
+}
+
+pub(super) fn sql_context(sql: &str) -> datafusion::error::Result<SessionContext> {
+    let mut config = SessionConfig::new();
+    config.options_mut().sql_parser.dialect =
+        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Generic);
+    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
+        datafusion::optimizer::Analyzer::new().rules,
+    )?;
+    let state = SessionStateBuilder::new()
+        .with_config(config)
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    Ok(SessionContext::new_with_state(state))
 }
 
 /// Collapse nested `Alias` layers to one outer rename.

@@ -1,0 +1,466 @@
+{
+  "spark_version": "4.1.2",
+  "timezone": "UTC",
+  "results": [
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, acc -> acc) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, acc -> acc) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 36"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT zip_with(make_array(1, 2), make_array(3, 4), x -> x) AS r",
+      "spark_sql": "SELECT zip_with(array(1, 2), array(3, 4), x -> x) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 42"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT transform_keys(map('a', 1), k -> k) AS r",
+      "spark_sql": "SELECT transform_keys(map('a', 1), k -> k) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 35"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT transform_values(map('a', 1), v -> v) AS r",
+      "spark_sql": "SELECT transform_values(map('a', 1), v -> v) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 37"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_filter(map('a', 1), k -> true) AS r",
+      "spark_sql": "SELECT map_filter(map('a', 1), k -> true) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 31"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (k, v) -> v) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (k, v) -> v) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), k -> k) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), k -> k) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> 's') AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, (acc, x) -> 's') AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), 0, lambdafunction(s, namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"INT\" type, however \"lambdafunction(s, namedlambdavariable(), namedlambdavariable())\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> CAST(acc AS BIGINT)) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, (acc, x) -> CAST(acc AS BIGINT)) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), 0, lambdafunction(CAST(namedlambdavariable() AS BIGINT), namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"INT\" type, however \"lambdafunction(CAST(namedlambdavariable() AS BIGINT), namedlambdavariable(), namedlambdavariable())\" has the type \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> CAST(acc AS INT)) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> CAST(acc AS INT)) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), CAST(0 AS BIGINT), lambdafunction(CAST(namedlambdavariable() AS INT), namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however \"lambdafunction(CAST(namedlambdavariable() AS INT), namedlambdavariable(), namedlambdavariable())\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), NULL, (acc, x) -> acc) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), NULL, (acc, x) -> acc) AS r",
+      "ansi": "true",
+      "rows": [
+        {
+          "r": null
+        }
+      ],
+      "schema": "r: null"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform(make_array(1, 2), (x, i, z) -> x) AS r",
+      "spark_sql": "SELECT transform(array(1, 2), (x, i, z) -> x) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 30"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT filter(make_array(1, 2), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT filter(array(1, 2), (a, b, c) -> true) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT exists(make_array(1, 2), (x, i) -> x > 1) AS r",
+      "spark_sql": "SELECT exists(array(1, 2), (x, i) -> x > 1) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT forall(make_array(1, 2), (x, i) -> x > 1) AS r",
+      "spark_sql": "SELECT forall(array(1, 2), (x, i) -> x > 1) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT exists(make_array(1, 2), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT exists(array(1, 2), (a, b, c) -> true) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT aggregate(make_array(1), 0, (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT aggregate(array(1), 0, (a, b, c) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 30"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT aggregate(make_array(1), 0, (acc, x) -> acc + x, (a, b) -> a) AS r",
+      "spark_sql": "SELECT aggregate(array(1), 0, (acc, x) -> acc + x, (a, b) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 51"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT zip_with(make_array(1), make_array(2), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT zip_with(array(1), array(2), (a, b, c) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 36"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform_keys(map('a', 1), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT transform_keys(map('a', 1), (a, b, c) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 35"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform_values(map('a', 1), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT transform_values(map('a', 1), (a, b, c) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 37"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT map_filter(map('a', 1), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT map_filter(map('a', 1), (a, b, c) -> true) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 31"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (a, b, c, d) -> a) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (a, b, c, d) -> a) AS r",
+      "ansi": "true",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 4 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_aggregate_mixed_width_divergence_stuck_planner_cast",
+      "repark_sql": "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+      "ansi": "true",
+      "rows": [
+        {
+          "r": null
+        }
+      ],
+      "schema": "r: int32"
+    },
+    {
+      "group": "sql_door_aggregate_mixed_width_divergence_stuck_planner_cast",
+      "repark_sql": "SELECT aggregate(CAST(make_array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(CAST(array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+      "ansi": "true",
+      "rows": [
+        {
+          "r": 42
+        }
+      ],
+      "schema": "r: int32"
+    },
+    {
+      "group": "sql_door_lambda_body_overflow_divergence_wraps",
+      "repark_sql": "SELECT aggregate(make_array(2000000000, 2000000000), 0, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(array(2000000000, 2000000000), 0, (acc, x) -> acc + x) AS r",
+      "ansi": "true",
+      "error": "ArithmeticException",
+      "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, acc -> acc) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, acc -> acc) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 36"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT zip_with(make_array(1, 2), make_array(3, 4), x -> x) AS r",
+      "spark_sql": "SELECT zip_with(array(1, 2), array(3, 4), x -> x) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 42"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT transform_keys(map('a', 1), k -> k) AS r",
+      "spark_sql": "SELECT transform_keys(map('a', 1), k -> k) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 35"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT transform_values(map('a', 1), v -> v) AS r",
+      "spark_sql": "SELECT transform_values(map('a', 1), v -> v) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 37"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_filter(map('a', 1), k -> true) AS r",
+      "spark_sql": "SELECT map_filter(map('a', 1), k -> true) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 31"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (k, v) -> v) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (k, v) -> v) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_short_lambdas_carry_sparks_arity_class",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), k -> k) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), k -> k) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> 's') AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, (acc, x) -> 's') AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), 0, lambdafunction(s, namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"INT\" type, however \"lambdafunction(s, namedlambdavariable(), namedlambdavariable())\" has the type \"STRING\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), 0, (acc, x) -> CAST(acc AS BIGINT)) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), 0, (acc, x) -> CAST(acc AS BIGINT)) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), 0, lambdafunction(CAST(namedlambdavariable() AS BIGINT), namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"INT\" type, however \"lambdafunction(CAST(namedlambdavariable() AS BIGINT), namedlambdavariable(), namedlambdavariable())\" has the type \"BIGINT\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> CAST(acc AS INT)) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), CAST(0 AS BIGINT), (acc, x) -> CAST(acc AS INT)) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate(array(1, 2, 3), CAST(0 AS BIGINT), lambdafunction(CAST(namedlambdavariable() AS INT), namedlambdavariable(), namedlambdavariable()), lambdafunction(namedlambdavariable(), namedlambdavariable()))\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however \"lambdafunction(CAST(namedlambdavariable() AS INT), namedlambdavariable(), namedlambdavariable())\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+    },
+    {
+      "group": "sql_door_aggregate_merge_must_match_the_init_type",
+      "repark_sql": "SELECT aggregate(make_array(1, 2, 3), NULL, (acc, x) -> acc) AS r",
+      "spark_sql": "SELECT aggregate(array(1, 2, 3), NULL, (acc, x) -> acc) AS r",
+      "ansi": "false",
+      "rows": [
+        {
+          "r": null
+        }
+      ],
+      "schema": "r: null"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform(make_array(1, 2), (x, i, z) -> x) AS r",
+      "spark_sql": "SELECT transform(array(1, 2), (x, i, z) -> x) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 30"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT filter(make_array(1, 2), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT filter(array(1, 2), (a, b, c) -> true) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT exists(make_array(1, 2), (x, i) -> x > 1) AS r",
+      "spark_sql": "SELECT exists(array(1, 2), (x, i) -> x > 1) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT forall(make_array(1, 2), (x, i) -> x > 1) AS r",
+      "spark_sql": "SELECT forall(array(1, 2), (x, i) -> x > 1) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT exists(make_array(1, 2), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT exists(array(1, 2), (a, b, c) -> true) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 27"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT aggregate(make_array(1), 0, (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT aggregate(array(1), 0, (a, b, c) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 30"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT aggregate(make_array(1), 0, (acc, x) -> acc + x, (a, b) -> a) AS r",
+      "spark_sql": "SELECT aggregate(array(1), 0, (acc, x) -> acc + x, (a, b) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 1. SQLSTATE: 42K0D; line 1 pos 51"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT zip_with(make_array(1), make_array(2), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT zip_with(array(1), array(2), (a, b, c) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 36"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform_keys(map('a', 1), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT transform_keys(map('a', 1), (a, b, c) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 35"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT transform_values(map('a', 1), (a, b, c) -> a) AS r",
+      "spark_sql": "SELECT transform_values(map('a', 1), (a, b, c) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 37"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT map_filter(map('a', 1), (a, b, c) -> true) AS r",
+      "spark_sql": "SELECT map_filter(map('a', 1), (a, b, c) -> true) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 3 arguments, but got 2. SQLSTATE: 42K0D; line 1 pos 31"
+    },
+    {
+      "group": "sql_door_overlong_lambdas_divergence_df_plan_time_text",
+      "repark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (a, b, c, d) -> a) AS r",
+      "spark_sql": "SELECT map_zip_with(map('a', 1), map('b', 2), (a, b, c, d) -> a) AS r",
+      "ansi": "false",
+      "error": "AnalysisException",
+      "message": "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 4 arguments, but got 3. SQLSTATE: 42K0D; line 1 pos 46"
+    },
+    {
+      "group": "sql_door_aggregate_mixed_width_divergence_stuck_planner_cast",
+      "repark_sql": "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+      "ansi": "false",
+      "rows": [
+        {
+          "r": null
+        }
+      ],
+      "schema": "r: int32"
+    },
+    {
+      "group": "sql_door_aggregate_mixed_width_divergence_stuck_planner_cast",
+      "repark_sql": "SELECT aggregate(CAST(make_array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(CAST(array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+      "ansi": "false",
+      "rows": [
+        {
+          "r": 42
+        }
+      ],
+      "schema": "r: int32"
+    },
+    {
+      "group": "sql_door_lambda_body_overflow_divergence_wraps",
+      "repark_sql": "SELECT aggregate(make_array(2000000000, 2000000000), 0, (acc, x) -> acc + x) AS r",
+      "spark_sql": "SELECT aggregate(array(2000000000, 2000000000), 0, (acc, x) -> acc + x) AS r",
+      "ansi": "false",
+      "rows": [
+        {
+          "r": -294967296
+        }
+      ],
+      "schema": "r: int32"
+    },
+    {
+      "group": "empty_untyped_map",
+      "repark_sql": "SELECT transform_keys(map(), (k, v) -> k) AS r",
+      "spark_sql": "SELECT transform_keys(map(), (k, v) -> k) AS r",
+      "ansi": "true",
+      "error": "ValueError",
+      "message": "A null type field may not be non-nullable"
+    },
+    {
+      "group": "empty_untyped_map",
+      "repark_sql": "SELECT transform_keys(map(), (k, v) -> k) AS r",
+      "spark_sql": "SELECT transform_keys(map(), (k, v) -> k) AS r",
+      "ansi": "false",
+      "error": "ValueError",
+      "message": "A null type field may not be non-nullable"
+    }
+  ]
+}

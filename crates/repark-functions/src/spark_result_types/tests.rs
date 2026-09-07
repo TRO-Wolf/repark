@@ -41,7 +41,9 @@ async fn batch(ctx: &SessionContext, sql: &str) -> RecordBatch {
 }
 
 fn rewrite_once(expr: Expr) -> Expr {
-    super::narrow_expr(expr).expect("narrow").data
+    super::narrow_provisional_integer_literals(expr)
+        .expect("narrow")
+        .data
 }
 
 #[test]

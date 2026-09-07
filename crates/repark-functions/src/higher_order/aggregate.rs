@@ -149,20 +149,6 @@ impl HigherOrderUDFImpl for SparkAggregate {
         ]))
     }
 
-    fn coerce_values_for_lambdas(
-        &self,
-        fields: &[ValueOrLambda<DataType, DataType>],
-    ) -> Result<Option<Vec<DataType>>> {
-        let (array, initial, lambdas) = array_and_initial(self.name(), fields)?;
-        let Some(ValueOrLambda::Lambda(merge_output)) = lambdas.first() else {
-            return Ok(None);
-        };
-        if initial == merge_output {
-            return Ok(None);
-        }
-        Ok(Some(vec![array.clone(), merge_output.clone()]))
-    }
-
     fn return_field_from_args(&self, args: HigherOrderReturnFieldArgs) -> Result<Arc<Field>> {
         let (_array, _initial, lambdas) = array_and_initial(self.name(), args.arg_fields)?;
         let output = if lambdas.len() == 2 {

@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, Float64Array, Int32Array, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::optimizer::Analyzer;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 use repark_functions::ansi::{SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig};
@@ -14,6 +15,41 @@ use repark_functions::timestamp_type::{
 };
 
 use super::SparkExtension;
+
+#[test]
+fn analyzer_configuration_inserts_only_hof_preparation_before_type_coercion() {
+    let original = Analyzer::new().rules;
+    let original_names: Vec<String> = original
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect();
+    let configured = SparkExtension
+        .configure_analyzer_rules(original)
+        .expect("default analyzer contains type_coercion");
+    let configured_names: Vec<String> = configured
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect();
+    let position = configured_names
+        .iter()
+        .position(|name| name == "higher_order_preparation")
+        .expect("HOF preparation is installed");
+    assert_eq!(configured_names[position + 1], "type_coercion");
+    let without_preparation: Vec<String> = configured_names
+        .into_iter()
+        .filter(|name| name != "higher_order_preparation")
+        .collect();
+    assert_eq!(without_preparation, original_names);
+}
+
+#[test]
+fn analyzer_configuration_refuses_a_missing_type_coercion_rule() {
+    let error = SparkExtension
+        .configure_analyzer_rules(Vec::new())
+        .expect_err("missing insertion point must refuse")
+        .to_string();
+    assert!(error.contains("type_coercion"));
+}
 
 /// The hook's second argument, spelled once: the resolved zone `build()` hands `configure`.
 fn build_conf<'a>(

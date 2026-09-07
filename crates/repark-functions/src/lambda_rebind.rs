@@ -1,0 +1,562 @@
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
+
+use datafusion::arrow::compute::cast;
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
+use datafusion::common::{DFSchema, ExprSchema, ScalarValue, exec_err, plan_err};
+use datafusion::error::Result;
+use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, ScalarFunction};
+use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::{
+    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
+    ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+};
+use datafusion::optimizer::AnalyzerRule;
+
+use crate::decimal_cast::SPARK_NONNULL_NAME;
+use crate::spark_result_types::{
+    narrow_provisional_integer_literal, narrow_provisional_integer_literals,
+};
+
+const HOF_ARRAY_FIELD_NAME: &str = "__repark_hof_array_field__";
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "The error contract is documented in map.md under the owner comment ban."
+)]
+pub fn analyzer_rules_with_higher_order_preparation(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
+        return plan_err!(
+            "Spark higher-order preparation requires the default type_coercion analyzer rule"
+        );
+    };
+    rules.insert(position, Arc::new(HigherOrderPreparation));
+    Ok(rules)
+}
+
+#[derive(Debug, Default)]
+pub struct HigherOrderPreparation;
+
+impl AnalyzerRule for HigherOrderPreparation {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(prepare_plan).data()
+    }
+
+    fn name(&self) -> &'static str {
+        "higher_order_preparation"
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct LambdaRebind;
+
+impl AnalyzerRule for LambdaRebind {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        let packed = plan
+            .map_expressions(|expr| {
+                refuse_lambda_arity(&expr)?;
+                pack_unreferenced_params(expr)
+            })
+            .data()?;
+        let resolved = packed.resolve_lambda_variables().data()?;
+        let schema = resolved.schema().clone();
+        resolved
+            .map_expressions(|expr| {
+                check_aggregate_merge(&expr, schema.as_ref())?;
+                Ok(Transformed::no(expr))
+            })
+            .data()
+    }
+
+    fn name(&self) -> &'static str {
+        "lambda_rebind"
+    }
+}
+
+fn prepare_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let inputs: Vec<LogicalPlan> = plan.inputs().into_iter().cloned().collect();
+    let mut schema = DFSchema::empty();
+    for input in &inputs {
+        schema.merge(input.schema());
+    }
+    let name_preserver = NamePreserver::new(&plan);
+    let prepared = plan.map_expressions(|expr| {
+        let saved_name = name_preserver.save(&expr);
+        let transformed = expr.transform_down(|node| prepare_expr(node, &schema, &inputs))?;
+        Ok(transformed.update_data(|node| saved_name.restore(node)))
+    })?;
+    if !prepared.transformed {
+        return Ok(prepared);
+    }
+    let prepared = prepared.map_data(LogicalPlan::recompute_schema)?;
+    let resolved = prepared.data.resolve_lambda_variables()?;
+    Ok(Transformed::yes(resolved.data))
+}
+
+fn prepare_expr(
+    expr: Expr,
+    schema: &DFSchema,
+    inputs: &[LogicalPlan],
+) -> Result<Transformed<Expr>> {
+    let Expr::HigherOrderFunction(mut hof) = expr else {
+        return Ok(Transformed::no(expr));
+    };
+    let indexed = hof.func.name() == "transform"
+        && hof
+            .args
+            .iter()
+            .any(|arg| matches!(arg, Expr::Lambda(lambda) if lambda.params.len() >= 2));
+    let aggregate = hof.func.name() == "aggregate";
+    let defer_aggregate_numeric =
+        aggregate && should_defer_aggregate_numeric_preparation(&hof, inputs);
+    let mut changed = false;
+    if let Some(first) = hof.args.first_mut()
+        && let Some(element_nullable) = array_constructor_element_nullable(first, schema, inputs)
+    {
+        if indexed || aggregate && !defer_aggregate_numeric {
+            narrow_constructor_literals(first);
+        }
+        *first = array_field_call(first.clone(), element_nullable);
+        changed = true;
+    }
+    if aggregate
+        && !defer_aggregate_numeric
+        && let Some(initial) = hof.args.get_mut(1)
+    {
+        let narrowed = narrow_provisional_integer_literal(initial.clone());
+        changed |= narrowed.transformed;
+        *initial = narrowed.data;
+    }
+    if aggregate && !defer_aggregate_numeric {
+        for arg in &mut hof.args {
+            let Expr::Lambda(lambda) = arg else {
+                continue;
+            };
+            let narrowed =
+                narrow_provisional_integer_literals(std::mem::take(lambda.body.as_mut()))?;
+            changed |= narrowed.transformed;
+            *lambda.body = narrowed.data;
+        }
+    }
+    Ok(Transformed::new(
+        Expr::HigherOrderFunction(HigherOrderFunction::new(hof.func, hof.args)),
+        changed,
+        TreeNodeRecursion::Stop,
+    ))
+}
+
+fn should_defer_aggregate_numeric_preparation(
+    hof: &HigherOrderFunction,
+    inputs: &[LogicalPlan],
+) -> bool {
+    let Some(Expr::Column(column)) = hof.args.first() else {
+        return false;
+    };
+    if !matches!(
+        hof.args.get(1),
+        Some(Expr::Literal(ScalarValue::Int64(_), _))
+    ) {
+        return false;
+    }
+    inputs.iter().any(|input| {
+        let Some(index) = input.schema().index_of_column(column).ok() else {
+            return false;
+        };
+        let Some((source, source_schema)) = output_expression(input, index) else {
+            return false;
+        };
+        if has_nonnull_wrapper(source) || !is_array_constructor(source) {
+            return false;
+        }
+        let Some(field) = source.to_field(source_schema).ok().map(|(_, field)| field) else {
+            return false;
+        };
+        matches!(
+            field.data_type(),
+            DataType::List(element) | DataType::LargeList(element)
+                if element.data_type() == &DataType::Int64
+        )
+    })
+}
+
+fn array_constructor_element_nullable(
+    expr: &Expr,
+    schema: &DFSchema,
+    inputs: &[LogicalPlan],
+) -> Option<bool> {
+    if is_array_constructor(expr) {
+        return constructor_element_nullable(expr, schema);
+    }
+    let Expr::Column(column) = expr else {
+        return None;
+    };
+    inputs.iter().find_map(|input| {
+        let index = input.schema().index_of_column(column).ok()?;
+        let (source, source_schema) = output_expression(input, index)?;
+        if is_array_constructor(source) {
+            constructor_element_nullable(source, source_schema)
+        } else {
+            None
+        }
+    })
+}
+
+fn output_expression(mut plan: &LogicalPlan, index: usize) -> Option<(&Expr, &DFSchema)> {
+    loop {
+        match plan {
+            LogicalPlan::Projection(projection) => {
+                return projection
+                    .expr
+                    .get(index)
+                    .map(|expr| (expr, projection.input.schema().as_ref()));
+            }
+            LogicalPlan::SubqueryAlias(alias) => plan = alias.input.as_ref(),
+            LogicalPlan::Filter(filter) => plan = filter.input.as_ref(),
+            LogicalPlan::Sort(sort) => plan = sort.input.as_ref(),
+            _ => return None,
+        }
+    }
+}
+
+fn has_nonnull_wrapper(mut expr: &Expr) -> bool {
+    loop {
+        match expr {
+            Expr::Alias(alias) => expr = alias.expr.as_ref(),
+            Expr::ScalarFunction(function) => {
+                return function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1;
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn unwrap_nonnull(mut expr: &Expr) -> &Expr {
+    loop {
+        match expr {
+            Expr::Alias(alias) => expr = alias.expr.as_ref(),
+            Expr::ScalarFunction(function)
+                if function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1 =>
+            {
+                expr = &function.args[0];
+            }
+            _ => return expr,
+        }
+    }
+}
+
+fn is_array_constructor(expr: &Expr) -> bool {
+    matches!(
+        unwrap_nonnull(expr),
+        Expr::ScalarFunction(function) if is_array_constructor_name(function.func.name())
+    )
+}
+
+fn is_array_constructor_name(name: &str) -> bool {
+    matches!(name, "array" | "make_array")
+}
+
+fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> {
+    let Expr::ScalarFunction(function) = unwrap_nonnull(expr) else {
+        return None;
+    };
+    for arg in &function.args {
+        if arg.to_field(schema).ok()?.1.is_nullable() {
+            return Some(true);
+        }
+    }
+    Some(false)
+}
+
+fn narrow_constructor_literals(expr: &mut Expr) {
+    let target = match expr {
+        Expr::ScalarFunction(function) if is_array_constructor_name(function.func.name()) => {
+            function
+        }
+        Expr::ScalarFunction(function)
+            if function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1 =>
+        {
+            let Expr::ScalarFunction(inner) = &mut function.args[0] else {
+                return;
+            };
+            inner
+        }
+        _ => return,
+    };
+    for arg in &mut target.args {
+        let narrowed = narrow_provisional_integer_literal(arg.clone());
+        *arg = narrowed.data;
+    }
+}
+
+fn array_field_call(expr: Expr, element_nullable: bool) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(HofArrayField::new(element_nullable))),
+        vec![expr],
+    ))
+}
+
+#[derive(Debug)]
+struct HofArrayField {
+    signature: Signature,
+    element_nullable: bool,
+}
+
+impl HofArrayField {
+    fn new(element_nullable: bool) -> Self {
+        Self {
+            signature: Signature::user_defined(Volatility::Immutable),
+            element_nullable,
+        }
+    }
+}
+
+impl PartialEq for HofArrayField {
+    fn eq(&self, other: &Self) -> bool {
+        self.element_nullable == other.element_nullable
+    }
+}
+
+impl Eq for HofArrayField {}
+
+impl Hash for HofArrayField {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.element_nullable.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for HofArrayField {
+    crate::shim_udf_boilerplate!("__repark_hof_array_field__");
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        let Some(first) = arg_types.first() else {
+            return plan_err!("'{HOF_ARRAY_FIELD_NAME}' expects one argument");
+        };
+        array_type_with_element_nullability(first, self.element_nullable)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let Some(first) = args.arg_fields.first() else {
+            return plan_err!("'{HOF_ARRAY_FIELD_NAME}' expects one argument");
+        };
+        Ok(Arc::new(Field::new(
+            self.name(),
+            array_type_with_element_nullability(first.data_type(), self.element_nullable)?,
+            false,
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        Ok(arg_types.to_vec())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let Some(first) = args.args.first() else {
+            return exec_err!("'{HOF_ARRAY_FIELD_NAME}' expects one argument");
+        };
+        let array = first.to_array(args.number_rows)?;
+        Ok(ColumnarValue::Array(cast(&array, args.return_type())?))
+    }
+}
+
+fn array_type_with_element_nullability(data_type: &DataType, nullable: bool) -> Result<DataType> {
+    match data_type {
+        DataType::List(field) => Ok(DataType::List(Arc::new(
+            field.as_ref().clone().with_nullable(nullable),
+        ))),
+        DataType::LargeList(field) => Ok(DataType::LargeList(Arc::new(
+            field.as_ref().clone().with_nullable(nullable),
+        ))),
+        other => plan_err!("'{HOF_ARRAY_FIELD_NAME}' expected ARRAY, got {other}"),
+    }
+}
+
+fn refuse_lambda_arity(expr: &Expr) -> Result<()> {
+    expr.apply(|node| match node {
+        Expr::HigherOrderFunction(hof) => {
+            check_lambda_params(hof)?;
+            Ok(TreeNodeRecursion::Continue)
+        }
+        _ => Ok(TreeNodeRecursion::Continue),
+    })?;
+    Ok(())
+}
+
+fn check_lambda_params(hof: &HigherOrderFunction) -> Result<()> {
+    let mut lambdas = hof.args.iter().filter_map(|arg| match arg {
+        Expr::Lambda(lambda) => Some(lambda.params.len()),
+        _ => None,
+    });
+    match hof.func.name() {
+        "aggregate" => {
+            if let Some(merge) = lambdas.next()
+                && merge < 2
+            {
+                return arity_mismatch(merge, 2);
+            }
+        }
+        "zip_with" | "transform_keys" | "transform_values" | "map_filter" => {
+            if let Some(only) = lambdas.next()
+                && lambdas.next().is_none()
+                && only < 2
+            {
+                return arity_mismatch(only, 2);
+            }
+        }
+        "map_zip_with" => {
+            if let Some(only) = lambdas.next()
+                && lambdas.next().is_none()
+                && only < 3
+            {
+                return arity_mismatch(only, 3);
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn arity_mismatch(user: usize, expected: usize) -> Result<()> {
+    plan_err!(
+        "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A \
+         higher order function expects {user} arguments, but got {expected}."
+    )
+}
+
+fn check_aggregate_merge(expr: &Expr, schema: &dyn ExprSchema) -> Result<()> {
+    expr.apply(|node| match node {
+        Expr::HigherOrderFunction(hof) if hof.func.name() == "aggregate" => {
+            check_merge_types(hof, schema)?;
+            Ok(TreeNodeRecursion::Continue)
+        }
+        _ => Ok(TreeNodeRecursion::Continue),
+    })?;
+    Ok(())
+}
+
+fn check_merge_types(hof: &HigherOrderFunction, schema: &dyn ExprSchema) -> Result<()> {
+    let mut lambdas = hof.args.iter().filter_map(|arg| match arg {
+        Expr::Lambda(lambda) => Some(lambda),
+        _ => None,
+    });
+    let Some(merge) = lambdas.next() else {
+        return Ok(());
+    };
+    let Some(initial) = hof
+        .args
+        .get(1)
+        .filter(|arg| !matches!(arg, Expr::Lambda(_)))
+    else {
+        return Ok(());
+    };
+    let Ok((_, initial_field)) = initial.to_field(schema) else {
+        return Ok(());
+    };
+    let Ok((_, merge_field)) = merge.body.to_field(schema) else {
+        return Ok(());
+    };
+    if initial_field.data_type() == merge_field.data_type() {
+        return Ok(());
+    }
+    plan_err!(
+        "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type \
+         mismatch: The third parameter requires the \"{}\" type, however the merge lambda has \
+         the type \"{}\".",
+        spark_type_name(initial_field.data_type()),
+        spark_type_name(merge_field.data_type())
+    )
+}
+
+fn spark_type_name(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Null => String::from("VOID"),
+        DataType::Boolean => String::from("BOOLEAN"),
+        DataType::Int8 => String::from("TINYINT"),
+        DataType::Int16 => String::from("SMALLINT"),
+        DataType::Int32 => String::from("INT"),
+        DataType::Int64 => String::from("BIGINT"),
+        DataType::Float32 => String::from("FLOAT"),
+        DataType::Float64 => String::from("DOUBLE"),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => String::from("STRING"),
+        DataType::Binary | DataType::LargeBinary | DataType::BinaryView => String::from("BINARY"),
+        DataType::Date32 => String::from("DATE"),
+        DataType::Timestamp(_, _) => String::from("TIMESTAMP"),
+        DataType::Decimal128(precision, scale) | DataType::Decimal256(precision, scale) => {
+            format!("DECIMAL({precision},{scale})")
+        }
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::ListView(field)
+        | DataType::LargeListView(field)
+        | DataType::FixedSizeList(field, _) => {
+            format!("ARRAY<{}>", spark_type_name(field.data_type()))
+        }
+        DataType::Map(field, _) => match field.data_type() {
+            DataType::Struct(entries) if entries.len() == 2 => format!(
+                "MAP<{},{}>",
+                spark_type_name(entries[0].data_type()),
+                spark_type_name(entries[1].data_type())
+            ),
+            _ => String::from("MAP"),
+        },
+        DataType::Struct(fields) => {
+            let rendered: Vec<String> = fields
+                .iter()
+                .map(|field| format!("{}:{}", field.name(), spark_type_name(field.data_type())))
+                .collect();
+            format!("STRUCT<{}>", rendered.join(","))
+        }
+        DataType::Dictionary(_, values) => spark_type_name(values),
+        other => other.to_string(),
+    }
+}
+
+fn pack_unreferenced_params(expr: Expr) -> Result<Transformed<Expr>> {
+    expr.transform_down(|node| match node {
+        Expr::HigherOrderFunction(hof) => pack_hof(hof),
+        _ => Ok(Transformed::no(node)),
+    })
+}
+
+fn pack_hof(hof: HigherOrderFunction) -> Result<Transformed<Expr>> {
+    let mut changed = false;
+    let mut args = Vec::with_capacity(hof.args.len());
+    for arg in hof.args {
+        match arg {
+            Expr::Lambda(lambda) if lambda.params.len() >= 2 => {
+                let referenced = referenced_params(&lambda.body)?;
+                if lambda.params.iter().all(|name| referenced.contains(name)) {
+                    args.push(Expr::Lambda(lambda));
+                } else {
+                    let kept =
+                        crate::higher_order::hof_keep::keep_call(*lambda.body, &lambda.params);
+                    args.push(Expr::Lambda(Lambda::new(lambda.params, kept)));
+                    changed = true;
+                }
+            }
+            _ => args.push(arg),
+        }
+    }
+    Ok(Transformed::new(
+        Expr::HigherOrderFunction(HigherOrderFunction::new(hof.func, args)),
+        changed,
+        TreeNodeRecursion::Continue,
+    ))
+}
+
+fn referenced_params(body: &Expr) -> Result<HashSet<String>> {
+    let mut names = HashSet::new();
+    body.apply(|node| match node {
+        Expr::LambdaVariable(var) => {
+            names.insert(var.name.clone());
+            Ok(TreeNodeRecursion::Continue)
+        }
+        Expr::Lambda(_) => Ok(TreeNodeRecursion::Jump),
+        _ => Ok(TreeNodeRecursion::Continue),
+    })?;
+    Ok(names)
+}

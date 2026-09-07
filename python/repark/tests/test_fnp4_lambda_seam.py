@@ -11,10 +11,25 @@ three-valued logic; the other ten need kernels (FNP-4c). Ledger:
 
 from __future__ import annotations
 
+from functools import partial
+
 import pytest
 
 from repark.errors import PySparkValueError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+
+
+class _ReturnsBool:
+    """Return a non-Column result from a callable object."""
+
+    def __call__(self, _value: object) -> bool:
+        """Return an invalid higher-order function result."""
+        return True
+
+
+def _return_bool(_bound: object, _value: object) -> bool:
+    """Return an invalid higher-order function result."""
+    return True
 
 
 def _session():
@@ -93,16 +108,40 @@ def test_wrong_lambda_arity_is_refused_loudly() -> None:
     spark = _session()
     frame = spark.sql("SELECT array(1, 2, 3) AS a")
 
-    with pytest.raises(PySparkValueError, match="expects 1"):
-        frame.select(F.exists("a", lambda x, y: x > y))
+    with pytest.raises(
+        PySparkValueError,
+        match=r"\[WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION\] Function `<lambda>` "
+        r"should take between 1 and 3 arguments, but the provided function takes 0\.",
+    ):
+        frame.select(F.exists("a", lambda: F.lit(True)))
+    with pytest.raises(
+        PySparkValueError,
+        match=r"\[WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION\] Function `<lambda>` "
+        r"should take between 1 and 3 arguments, but the provided function takes 4\.",
+    ):
+        frame.select(F.map_zip_with("a", "a", lambda a, b, c, d: a))
 
 
 def test_a_lambda_returning_a_non_column_is_refused_loudly() -> None:
     spark = _session()
     frame = spark.sql("SELECT array(1, 2, 3) AS a")
 
-    with pytest.raises(PySparkValueError, match="must return a Column"):
+    with pytest.raises(
+        PySparkValueError,
+        match=r"\[HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN\] Function `<lambda>` "
+        r"should return Column, got bool\.",
+    ):
         frame.select(F.exists("a", lambda x: True))
+    for function, name in (
+        (_ReturnsBool(), "_ReturnsBool"),
+        (partial(_return_bool, None), "partial"),
+    ):
+        with pytest.raises(
+            PySparkValueError,
+            match=rf"\[HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN\] Function `{name}` "
+            r"should return Column, got bool\.",
+        ):
+            frame.select(F.exists("a", function))
 
 
 def test_lambda_survives_select_filter_with_column_and_order_by() -> None:

@@ -3263,12 +3263,30 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   right-side nullability, and mixed-width `aggregate` Int64 merge-output (SQL-door
   VALUES + `F.lit(0)`). pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004,
   C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-015
+  **FNP-8 (2026-09-06):** the merge is strict (inits cast to `bigint`), and over-long
+  lambdas pin DataFusion's binding text as the named divergence (an over-long merge
+  surfaces DataFusion's internal error; `reduce` shares the merge path).
+
+- `test_fnp_8_sql_door.py` — **FNP-8 (2026-09-07), in flight:** the fifteen accepted
+  higher-order callable forms through the Column door, Spark SQL, and column-free `F.expr`.
+  It fences the separately BACKLOGed EX-FN-4 column-reference refusal, pins Spark-equal public
+  `exists` nullability, and records indexed-transform width and nested nullability on four measured
+  shapes. Only a pre-analyzed nullable-element Column source keeps the inherited Int64 width. NULL
+  and empty aggregate inputs pin Int32 across all three paths; explicit `BIGINT` stays Int64.
+- `test_parity_live_fnp8.py` — **FNP-8 (2026-09-07), in flight:** ANSI-on/off indexed
+  `transform` Arrow cells through Column RePark, SQL RePark, and live Spark. It names the
+  per-door width and nested nullability against the measured Spark cell. A second live detector
+  holds public `exists` value, type, and non-nullability against Spark.
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
+  FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
   null-array edges, an outer column captured in the body, loud refusals for wrong arity and a
   non-Column return, and the four DataFrame entry points that resolve lambda variables. `join_on`
   is wired but deliberately unpinned — it resolves against the LEFT schema only, which the test
   docstring says rather than implies.
+  **FNP-8 (2026-09-06):** the arity refusal is Spark's
+  `WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION` over the eager 1–3 range; per-name counts
+  bind lazily.
 
 - `test_fnp5_aggregates.py` — **FNP-5 (2026-08-20):** the thirteen aggregates the facade could
   not reach. The nine `regr_*` are pinned against an EXACT fit (`y = 2x + 1`), so slope 2,
@@ -3741,3 +3759,15 @@ qualification unchanged). The under-`SET` pin's docstring states its SCOPE: it c
 spellings only, NOT the engine crates' own bare scratch registrations (`repark-iceberg` MERGE /
 identity DML, `__repark_tt_*`), which stay red under the same `SET` on BASE and on this tree
 alike — a disclosed round-8 residual, deliberately unpinned.
+
+- **FNP-8 (2026-09-07):** `test_fnp8_oracle_matrix.py` binds all fifteen accepted forms
+  and thirty boundary expressions to `fnp8_spark_oracle.json`, measured on Spark 4.1.2
+  in UTC with both ANSI settings. `fnp8_repark_dispositions.json` records each door
+  schema or explicit refusal; residual reasons live in the parity registry.
+  The live test remeasures the same goldens. pins: fnp-8/C-003, C-004, C-005, C-006
+  `fnp8_error_oracle.json` retains the live arity, accumulator, and overflow measurements
+  consumed by the same module; the SQL error pins remain in `lambda_door.rs`.
+
+FNP-8 SQL-text error cells also execute column-free `F.expr`; `fnp8_repark_errors.json`
+records both paths against `fnp8_error_oracle.json`. The empty untyped map diagnostic
+keeps Spark collect separate from its Arrow export refusal.

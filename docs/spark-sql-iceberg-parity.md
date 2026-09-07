@@ -1169,6 +1169,86 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
+
+- **repark** — the measured non-null `forall` result stays nullable. `transform_keys`,
+  `transform_values`, and `map_filter` retain nullable map values; `map_zip_with` retains
+  a nullable outer map. Nested captured/shadowed SQL transforms retain a nullable innermost
+  element, and the Column struct-field transform retains a nullable result element.
+- **Apache Spark** — those measured fields are non-null; values agree. The exact recursive
+  schemas are recorded in `python/repark/tests/fnp8_spark_oracle.json`.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
+- **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+  (`forms-forall`, `forms-transform_keys`, `forms-transform_values`, `forms-map_filter`,
+  `forms-map_zip_with`, `binding-map_third_slot`, `binding-capture`, `binding-shadow`,
+  `binding-struct` Column cells). The same module's `test_live_fnp8_recorded_oracle`
+  remeasures every Spark field.
+- **Rationale** — BACKLOG (2026-09-07). These metadata differences predate the resumed repair.
+  Public indexed-transform and `exists` metadata regressions are repaired in FNP-8; these
+  remaining fields require separate derivation work. Complete Arrow schemas use a dedicated
+  live detector because the shared row-value disclosure recipes do not retain this metadata.
+  pins: fnp-8/C-005
+
+### FNP8-WIDTH — remaining higher-order input and body paths retain wider integer types
+
+- **repark** — indexed transform over a previously analyzed `array(1, NULL, 3)` source column
+  returns Int64 elements. SQL over a referenced `array(1,2,3)` subquery also returns
+  Int64 elements. Direct inline SQL and column-free `F.expr` spellings return Int32.
+  `zip_with` with a typed empty/NULL first array and a literal second array returns Int64
+  through SQL and `F.expr`. A Column lambda calling `size` on nested arrays returns UInt64.
+- **Apache Spark** — all these measured results have Int32 elements, with equal values.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
+- **Pin** — `python/repark/tests/test_parity_live_fnp8.py` holds the indexed source distinction.
+  `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+  holds `forms-transform_index` `sql_columns`, `binding-zip_empty`, `binding-zip_null`,
+  and `binding-nested_array` Column cells;
+  `test_live_fnp8_recorded_oracle` remeasures Spark.
+- **Rationale** — BACKLOG (2026-09-07). These wider paths were present before the repair.
+  The HOF preparation does not rewrite unrelated source queries or arm every lambda-body
+  scalar rewrite. An explicit BIGINT cast remains meaningful.
+  pins: fnp-8/C-005
+
+### FNP8-PARSING — struct-field lambdas and typed-map casts retain loud SQL refusals
+
+- **repark** — `transform(array(named_struct('n',1)), x -> x.n + 1)` refuses with
+  `No field named x.n` through SQL and column-free `F.expr`; the Column `getField` spelling
+  answers. `CAST(map() AS MAP<STRING,INT>)` and `CAST(NULL AS MAP<STRING,INT>)` inside
+  `transform_keys`, `transform_values`, and `map_filter` refuse at the `<` token.
+  Bare `map()` in `transform_keys(map(), (k,v) -> k)` refuses because the constructor
+  requires at least one argument, before the null-key kernel validator runs.
+- **Apache Spark** — the struct transform returns the incremented fields, and the typed-map
+  expressions return empty maps or NULL maps. Exact values and schemas are recorded in
+  `python/repark/tests/fnp8_spark_oracle.json`. Bare `map()` collects as `{}`, but Spark
+  Arrow export refuses its NullType key (`A null type field may not be non-nullable`);
+  this collect diagnostic is not an Arrow-parity claim.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
+- **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
+  holds `binding-struct` SQL/expr and the six map `empty`/`null` SQL/expr cells, including
+  exception class and diagnostic. `test_live_fnp8_recorded_oracle` remeasures Spark.
+  `test_fnp8_sql_text_error_dispositions` and `test_live_fnp8_empty_map_collect_diagnostic`
+  hold the bare-map boundary.
+- **Rationale** — BACKLOG (2026-09-07). These are parser/binder capabilities outside the
+  executing-parse and type-preparation repair. Refusals remain explicit; they are not parity.
+  pins: fnp-8/C-005
+
+### FNP8-SQL-ARITY — excess SQL-text lambda parameters retain DataFusion diagnostics
+
+- **repark** — overlong SQL and column-free `F.expr` lambdas fail before the analyzer can emit Spark's argument-count
+  class. Most report DataFusion's supported parameter count; aggregate merge reports its
+  internal binding error. Column builders preserve Spark's function-specific count error
+  and its separate generic 1–3 parameter validation.
+- **Apache Spark** — overlong SQL lambdas report
+  `INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH`, including SQL lambdas with four parameters.
+  *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
+- **Pin** — `crates/repark-spark/src/tests/lambda_door.rs::sql_door_overlong_lambdas_divergence_df_plan_time_text`
+  and `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_sql_text_error_dispositions`.
+  `test_live_fnp8_sql_error_oracle` remeasures the shared Spark expression grammar.
+  Column counts are pinned in `python/repark/tests/test_fnp4c_higher_order.py`.
+- **Rationale** — BACKLOG (2026-09-07). Matching SQL errors needs validation before DataFusion
+  binds the lambda. The newly introduced Column regression was repaired; the newly enabled
+  SQL surface retains a measured, named diagnostic difference.
+  pins: fnp-8/C-005
+
 ### B-TZ-5 — the SQL `SET` door does not reach the `spark.*` conf namespace
 
 - **repark** — `SET spark.sql.shuffle.partitions = 2` refuses with `PySparkException: datafusion

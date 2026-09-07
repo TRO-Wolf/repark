@@ -48,6 +48,31 @@ scalars live under [`try_invert/`](try_invert/map.md).
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
+  the crate so HOF preparation can reuse it without changing global literal or overflow rules.
+- `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
+  twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
+  packs a multi-parameter lambda body that leaves a parameter unreferenced into the
+  facade's own `named_struct` + `get_field("__hof_body")` shape (the physical planner
+  remaps by referenced position, so an `(x, i)` body mentioning only `i` would read the
+  element slot), then re-resolves every binding from the current value types (the
+  narrowing rules run after SQL planning bound them). The early seat matters: the
+  closing `TypeCoercion` bakes casts from the bindings it sees (`CAST(x AS BIGINT)`,
+  `CAST(init AS BIGINT)`), so it must see rebound ones; the late seat repairs whatever
+  the later narrowers re-stale. Unary and fully-referenced bodies pass through
+  untouched, so the Column door's plans are byte-identical.
+  pins: fnp-8/C-004
+  **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
+  type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
+  direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
+  constructor element nullability from expression fields. Direct projection lineage refines
+  constructor nullability only; a nullable-element source keeps its inherited Int64 Column result.
+  A raw Int64 constructor subquery with a bare Int64 initializer defers early aggregate numeric
+  preparation so the existing late literal and binding passes narrow the source and fold together.
+  Explicit casts remain present. The same module owns
+  `analyzer_rules_with_higher_order_preparation`, which places this rule before the first default
+  `type_coercion` rule and refuses a vector without that insertion point.
+  pins: fnp-8/C-003, C-004, C-005, C-006
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each
@@ -147,9 +172,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `higher_order/` — FNP-4c Spark higher-order kernels (`transform`, `filter`, `forall`,
   `aggregate`/`reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`,
-  `map_zip_with`) plus the FNP-4a `exists` alias of `array_any_match`. Registry both doors
+  `map_zip_with`) plus native `exists`. Registry both doors
   read. pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008, C-009, C-010, C-011, C-013, C-014
+  **FNP-8 (2026-09-06):** `exists` is a native kernel (the FNP-4a `array_any_match`
+  alias is gone); `aggregate` refuses init/merge width mismatches instead of coercing.
 - `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
   aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
   (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).
@@ -339,12 +366,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (Spark-door natural `log`, dual-arity null-guard) + **LOG1P-1** `spark_log1p`
   (`log1p` / `expm1`) — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (`SparkIntegerLiteral` → `SparkDecimalPrecision` →
+  `analyzer_rules()` (`SparkIntegerLiteral` → `LambdaRebind` → `SparkDecimalPrecision` →
   `SparkDecimalRewrite` → `SparkIntegerOverflow` → Spark semantics +
   cardinality + instant_ts + a closing `TypeCoercion` — the narrowing runs after
   DataFusion's own coercion and re-opens mixes, so the closing pass shuts them before the
-  next rule (pins: types-1/C-007); the session installs them via the
-  Spark door's `SessionExtension`;
+  next rule (pins: types-1/C-007) + `LambdaRebind` twice — after the integer narrowing
+  and final (pins: fnp-8/C-004); the
+  session installs them via the Spark door's `SessionExtension`;
   error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `register_spark_integer_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's

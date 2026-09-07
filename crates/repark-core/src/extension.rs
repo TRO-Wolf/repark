@@ -1,7 +1,9 @@
 //! Build-time registration seam for SQL-door extensions.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 
 use crate::session_time_zone::SessionTimeZone;
@@ -27,6 +29,17 @@ pub trait SessionExtension: Send + Sync {
     ) -> datafusion::error::Result<SessionConfig> {
         let _ = session;
         Ok(config)
+    }
+
+    #[expect(
+        clippy::missing_errors_doc,
+        reason = "The error contract is documented in map.md under the owner comment ban."
+    )]
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        Ok(rules)
     }
 
     /// Register runtime objects on the freshly built [`SessionContext`].

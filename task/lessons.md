@@ -270,3 +270,9 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO preserve `Model:` provenance comments during comment compaction.** Remove
   `CodeQuality:` grade tags independently; model provenance and quality grades are different
   metadata classes.
+
+## 2026-09-07 — code-comment ban applies to all models
+
+- **DO apply the existing code-comment ban to every model, including OpenAI models.** The owner
+  extended the ban when resuming the parked Spark units. Preserve existing comments and required
+  documentation; put new rationale in Markdown.

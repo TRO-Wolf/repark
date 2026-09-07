@@ -38,6 +38,13 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [fn-fix-1-registry-rows-ledger.md](fn-fix-1-registry-rows-ledger.md) —
   **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
   pins: fn-fix-1-registry-rows/C-001
+- [fnp-8-ledger.md](fnp-8-ledger.md) —
+  **FNP-8 (2026-09-07), complete; PR #412 pending merge:** the eleven Spark higher-order functions with Python
+  lambdas on the Column door (FNP-4c's delivered mechanism) and with `x -> y` syntax on the
+  Spark SQL door and column-free `F.expr` (this unit's arrow-gated executing parse; the
+  session-wide FNP-4b flip stays deferred). Oracle-first differential matrix across both
+  doors against live PySpark 4.1.2.
+  `risk_tier: standard`. Branch `feat/fnp-8`.
 - [nullability-2-ledger.md](nullability-2-ledger.md) —
   **NULLABILITY-2 (2026-09-05), complete:** the analyzer's remaining nullability
   and cast residues, Spark-equal — eight registry rows FIXED, live roster 13 → 10.

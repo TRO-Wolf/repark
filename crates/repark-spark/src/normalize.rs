@@ -119,6 +119,42 @@ pub(crate) fn is_merge(tokens: &[Token]) -> bool {
         .unwrap_or(false)
 }
 
+#[must_use]
+pub fn dialect_for_executing_parse(
+    sql: &str,
+    session: datafusion::config::Dialect,
+) -> datafusion::config::Dialect {
+    if sql_has_lambda_arrow(sql) {
+        datafusion::config::Dialect::Databricks
+    } else {
+        session
+    }
+}
+
+fn sql_has_lambda_arrow(sql: &str) -> bool {
+    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
+        return false;
+    };
+    let mut scopes = Vec::new();
+    let mut previous: Option<&Token> = None;
+    for token in &tokens {
+        match token {
+            Token::Whitespace(_) => continue,
+            Token::LParen => scopes.push(matches!(previous, Some(Token::Word(word)) if [
+                "transform", "filter", "exists", "forall", "aggregate", "reduce",
+                "zip_with", "transform_keys", "transform_values", "map_filter", "map_zip_with",
+            ].iter().any(|name| word.value.eq_ignore_ascii_case(name)))),
+            Token::RParen => {
+                scopes.pop();
+            }
+            Token::Arrow if scopes.contains(&true) => return true,
+            _ => {}
+        }
+        previous = Some(token);
+    }
+    false
+}
+
 /// Parse one statement with Spark-isms normalized.
 /// # Errors
 /// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
@@ -854,4 +890,68 @@ fn session_defaults(ctx: &SessionContext) -> (String, String) {
         catalog.default_catalog.clone(),
         catalog.default_schema.clone(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use datafusion::config::Dialect;
+
+    use super::dialect_for_executing_parse;
+
+    #[test]
+    fn lambda_arrow_selects_databricks() {
+        for sql in [
+            "SELECT transform(a, x -> x + 1) FROM t",
+            "SELECT aggregate(a, 0, (acc, x) -> acc + x, acc -> acc * 10) FROM t",
+            "SELECT map_zip_with(m, n, (k, v1, v2) -> v1) FROM t",
+        ] {
+            assert_eq!(
+                dialect_for_executing_parse(sql, Dialect::Generic),
+                Dialect::Databricks,
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn arrow_forms_that_are_not_lambdas_keep_the_session_dialect() {
+        for sql in [
+            "SELECT 'a->b' AS s",
+            "SELECT 1 -- x -> y",
+            "SELECT a ->> 'b' FROM t",
+            "SELECT payload -> 'a' FROM t",
+            "SELECT \"a->b\" FROM t",
+            "SELECT 'unterminated",
+        ] {
+            assert_eq!(
+                dialect_for_executing_parse(sql, Dialect::Generic),
+                Dialect::Generic,
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn json_arrow_preserves_generic_ast() {
+        use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+        use datafusion::sql::sqlparser::parser::Parser;
+
+        let sql = "SELECT payload -> 'a' FROM t";
+        let baseline = Parser::parse_sql(&GenericDialect {}, sql);
+        let selected = dialect_for_executing_parse(sql, Dialect::Generic);
+        let actual = match selected {
+            Dialect::Databricks => Parser::parse_sql(&DatabricksDialect {}, sql),
+            _ => Parser::parse_sql(&GenericDialect {}, sql),
+        };
+        assert_eq!(actual, baseline);
+        assert_ne!(actual, Parser::parse_sql(&DatabricksDialect {}, sql));
+    }
+
+    #[test]
+    fn plain_sql_keeps_the_session_dialect() {
+        assert_eq!(
+            dialect_for_executing_parse("SELECT a + 1 FROM t", Dialect::Generic),
+            Dialect::Generic
+        );
+    }
 }

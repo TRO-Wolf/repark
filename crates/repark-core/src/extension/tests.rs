@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 
 use super::{SessionBuildConf, SessionExtension};
@@ -47,6 +48,17 @@ impl SessionExtension for RecordingExtension {
         Ok(config.with_batch_size(1234))
     }
 
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        self.events
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push("configure_analyzer_rules");
+        Ok(rules)
+    }
+
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         self.events
             .lock()
@@ -83,7 +95,7 @@ async fn build_runs_configure_then_register_at_the_v1_inline_positions() {
         *events
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner),
-        vec!["configure", "register"],
+        vec!["configure", "configure_analyzer_rules", "register"],
         "exactly one configure then exactly one register"
     );
     assert_eq!(
@@ -108,6 +120,21 @@ async fn build_runs_configure_then_register_at_the_v1_inline_positions() {
 #[tokio::test]
 async fn default_hooks_are_noops_and_build_succeeds_without_extension() {
     let session = ReparkSession::new().expect("no-extension build");
+    let installed: Vec<String> = session
+        .context()
+        .state()
+        .analyzer()
+        .rules
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect();
+    let mut expected: Vec<String> = datafusion::optimizer::Analyzer::new()
+        .rules
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect();
+    expected.push("sliding_frame_rescan".to_string());
+    assert_eq!(installed, expected);
     let frame = session
         .sql("SELECT 1 AS one")
         .await

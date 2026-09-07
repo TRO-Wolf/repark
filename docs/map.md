@@ -187,3 +187,6 @@ authoritative. Escalate to: [../map.md#debug](../map.md).
 |---|---|
 | A refusal message cites a `spark-sql-iceberg-parity.md` section you cannot find | The citing site and the registry drifted. The document is indexed in `repo-manifest.toml`, so it exists; re-read [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §1 for the section layout and fix whichever side is wrong |
 | A divergence is described in two places | One of them is wrong by construction — [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §6 states the boundary: STATUS holds state, the registry holds semantics |
+
+FNP-8 (2026-09-07): the parity registry holds the measured HOF nullability, width,
+parser/binder, and SQL-arity residuals. Public Arrow and live-oracle pins are linked there.

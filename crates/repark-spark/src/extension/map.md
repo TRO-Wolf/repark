@@ -25,6 +25,10 @@ function-registry + analyzer-rule installation + the composed
   `configure_defaults_ansi_enabled_true`, `configure_honors_ansi_enabled_false`,
   `configure_refuses_ansi_notabool`. **Q10:** `configure_defaults_timestamp_type_ltz`,
   `configure_honors_timestamp_type_ntz`, `configure_refuses_invalid_timestamp_type`.
+  **FNP-8 (2026-09-07):** `analyzer_configuration_inserts_only_hof_preparation_before_type_coercion`
+  pins the exact insertion and proves every other default rule remains ordered;
+  `analyzer_configuration_refuses_a_missing_type_coercion_rule` pins the loud failure.
+  pins: fnp-8/C-003, C-004
 
 ## Pointers
 

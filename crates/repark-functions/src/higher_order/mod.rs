@@ -1,8 +1,10 @@
 //! Spark higher-order function registry for both SQL and facade doors.
 
 mod aggregate;
+mod exists;
 mod filter;
 mod forall;
+pub(crate) mod hof_keep;
 mod lambda_utils;
 mod map_common;
 mod map_filter;
@@ -21,32 +23,14 @@ use datafusion::functions_nested::all_default_higher_order_functions;
 use datafusion::logical_expr::HigherOrderUDF;
 use datafusion::prelude::SessionContext;
 
-const SPARK_ALIASES: &[(&str, &[&str])] = &[("array_any_match", &["exists"])];
-
 /// Every higher-order function a repark session resolves, Spark spellings included.
 #[must_use]
 pub fn functions() -> Vec<Arc<HigherOrderUDF>> {
-    let mut functions: Vec<Arc<HigherOrderUDF>> = all_default_higher_order_functions()
-        .into_iter()
-        .map(|function| {
-            let aliases = SPARK_ALIASES
-                .iter()
-                .find(|(name, _)| *name == function.name())
-                .map(|(_, aliases)| *aliases);
-            match aliases {
-                None => function,
-                Some(aliases) => Arc::new(
-                    function
-                        .as_ref()
-                        .clone()
-                        .with_aliases(aliases.iter().copied()),
-                ),
-            }
-        })
-        .collect();
+    let mut functions: Vec<Arc<HigherOrderUDF>> = all_default_higher_order_functions();
     functions.extend([
         transform::transform_udf(),
         filter::filter_udf(),
+        exists::exists_udf(),
         forall::forall_udf(),
         aggregate::aggregate_udf(),
         zip_with::zip_with_udf(),
@@ -76,6 +60,7 @@ pub(crate) fn register(ctx: &SessionContext) {
     for function in functions() {
         ctx.register_higher_order_function(function);
     }
+    ctx.register_udf(hof_keep::hof_keep_udf().as_ref().clone());
 }
 
 #[cfg(test)]
@@ -83,9 +68,11 @@ mod tests {
     use super::{by_name, functions};
 
     #[test]
-    fn spark_exists_resolves_to_the_any_match_kernel() {
-        let function = by_name("exists").expect("exists is a Spark alias of array_any_match");
-        assert_eq!(function.name(), "array_any_match");
+    fn spark_exists_is_a_repark_kernel() {
+        let function = by_name("exists").expect("exists is registered");
+        assert_eq!(function.name(), "exists");
+        let native = by_name("array_any_match").expect("the ANSI spelling stays");
+        assert_eq!(native.name(), "array_any_match");
     }
 
     /// pins: fnp-4c-higher-order-kernels/C-013
