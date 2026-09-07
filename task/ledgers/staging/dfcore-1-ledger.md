@@ -1,6 +1,28 @@
 # Unit ledger — DFCORE-1 · leaf helpers out of `core.py`
 
 **Date:** 2026-09-07 · **Branch:** `refactor/dfcore-1` · **Base:** `origin/main`
+`f464a520` (round 2; round 1 `81e409ea`) · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+**Registry:** `DFCORE-1` **FIXED**.
+
+## Round 2 — full-suite order dependence + stale native (2026-09-07)
+
+The first full `make py-test-facade` run (which rebuilds the native module via
+`maturin develop`) surfaced two actor-side findings, both measured, neither a
+regression from the move.
+
+| id | sev | disposition |
+|---|---|---|
+| R2-S1 | S2 | **FIXED.** The pin's raw `dir()` asserts red in the full suite: `copyreg` memoizes `__slotnames__` on the class at the first pickle or copy of a frame, and the warnings machinery records `__warningregistry__` on the module — both order-dependent dunder state. The pin now asserts the non-dunder surface (dunders stay pinned explicitly where they are contract: `__module__`, `__slots__`, no instance `__dict__`, `__annotations__` absent). Mutation re-proven: dropping one core re-import reds 2 pin tests, restore greens all 6. |
+| R2-S2 | S3 | **RESTATED.** The 170 "pre-existing" gate-list failures were the lane venv's stale native module, not suite state: after the facade rebuild the same gate list reports **352 passed**. The round-1 before/after identity proof (identical failure IDs on both trees) stands as the move's no-regression evidence; the failures it compared are gone at the fresh native. |
+
+C-001 / C-002 / C-003 re-**PROVEN** below against the order-robust pin: 45-file
+pre-pin set **777 passed, 15 skipped**; gate list **352 passed**; collect-only
+6099 IDs still identical.
+
+---
+
+**Date:** 2026-09-07 · **Branch:** `refactor/dfcore-1` · **Base:** `origin/main`
 `f464a520` (PR #413, the plan) · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `DFCORE-1` **FIXED**.
