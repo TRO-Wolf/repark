@@ -39,93 +39,6 @@ from repark.spark.dataframe.udf_bridge import (
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
-
-def _arrow_map_pairs(value: Any) -> list[tuple[Any, Any]] | None:
-    """Normalize an Arrow ``to_pylist`` map cell to pairs, or ``None``.
-
-    Empty map is ``[]`` / ``{}`` from pylist; non-empty maps are pair-lists or (rarely) dicts.
-    Returns an empty list for empty maps; ``None`` when the value is not map-shaped.
-    """
-    if value is None:
-        return None
-    if isinstance(value, dict):
-        return list(value.items())
-    if isinstance(value, list):
-        if not value:
-            return []
-        if all(isinstance(item, tuple) and len(item) == 2 for item in value):
-            return list(value)
-    return None
-
-
-def _arrow_cell_to_spark_python(value: Any, arrow_type: Any) -> Any:
-    """Convert Arrow cells to Spark Python values using the declared schema.
-
-    Maps become dictionaries, including nested maps. Lists and structs recurse.
-    """
-    import pyarrow as pa
-
-    if value is None:
-        return None
-    if pa.types.is_map(arrow_type):
-        # Empty map is ``[]`` from to_pylist — must become ``{}`` (not empty array).
-        pairs = _arrow_map_pairs(value)
-        if pairs is None:
-            return value
-        key_type = arrow_type.key_type
-        item_type = arrow_type.item_type
-        return {
-            _arrow_cell_to_spark_python(key, key_type): _arrow_cell_to_spark_python(item, item_type)
-            for key, item in pairs
-        }
-    is_list_type = (
-        pa.types.is_list(arrow_type)
-        or pa.types.is_large_list(arrow_type)
-        or pa.types.is_fixed_size_list(arrow_type)
-    )
-    if is_list_type:
-        if not isinstance(value, list):
-            return value
-        element_type = arrow_type.value_type
-        return [_arrow_cell_to_spark_python(item, element_type) for item in value]
-    if pa.types.is_struct(arrow_type):
-        if not isinstance(value, dict):
-            return value
-        fields = list(arrow_type)
-        return {
-            field.name: _arrow_cell_to_spark_python(value.get(field.name), field.type)
-            for field in fields
-        }
-    if pa.types.is_timestamp(arrow_type) and getattr(value, "tzinfo", None) is not None:
-        from repark.spark.session.session_time_zone import collect_timestamp_as_session_wall
-
-        return collect_timestamp_as_session_wall(value)
-    return value
-
-
-def _refuse_calendar_interval_python_value(value: Any) -> None:
-    """Reject calendar intervals because Spark has no Python converter for them."""
-    if value is None:
-        return
-    type_name = type(value).__name__
-    if type_name in {"MonthDayNano", "MonthDayNanoInterval"}:
-        raise PySparkNotImplementedError(
-            errorClass="NOT_IMPLEMENTED",
-            messageParameters={
-                "feature": "Python conversion for calendar interval (make_interval / "
-                "CalendarIntervalType)"
-            },
-        )
-    if isinstance(value, dict):
-        for key, item in value.items():
-            _refuse_calendar_interval_python_value(key)
-            _refuse_calendar_interval_python_value(item)
-        return
-    if isinstance(value, (list, tuple)):
-        for item in value:
-            _refuse_calendar_interval_python_value(item)
-
-
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
@@ -161,95 +74,6 @@ _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
 # Engine `how` tokens whose output schema is the LEFT side alone. Semi/anti joins are filters
 # spelled as joins: the right side decides which left rows survive and contributes no columns.
 _SEMI_JOIN_HOWS = frozenset({"leftsemi", "leftanti"})
-
-# Mid-stream sort failures can surface through either DataFusion or PyArrow.
-# Substrings that mark a mid-stream engine memory / ExternalSorter failure (DataFusion
-# Resources exhausted + ExternalSorter / FairSpillPool messages). Case-insensitive match.
-_EXPORT_MEMORY_ERROR_MARKERS: tuple[str, ...] = (
-    "resources exhausted",
-    "externalsorter",
-    "externalsortermerge",
-    # Sort-preserving merge uses the same memory pool as ExternalSorter.
-    "sortpreservingmergeexec",
-    "sortpreservingmerge",
-    "not enough memory to continue external sort",
-    "memory pool",
-    "failed to allocate additional",
-    "datafusion.runtime.memory_limit",
-)
-# pyarrow sometimes wraps capsule failures with this noise instead of the engine message.
-_PYARROW_DYNAMIC_SOURCE_NOISE = "dynamically evaluated source"
-
-
-def _export_error_message_is_noise(message: str) -> bool:
-    """True when ``message`` is pyarrow capsule noise that hides the engine payload."""
-    lower = message.lower()
-    return _PYARROW_DYNAMIC_SOURCE_NOISE in lower and not any(
-        marker in lower for marker in _EXPORT_MEMORY_ERROR_MARKERS
-    )
-
-
-def _export_error_message(error: BaseException) -> str:
-    """Extract the best human message from a mid-stream Arrow/engine export failure.
-
-    Prefers the DataFusion payload over pyarrow's "Could not get source, probably due
-    dynamically evaluated source code" wrapper. Walks ``__cause__`` / ``__context__`` and
-    ``args`` so the operator sees the ExternalSorter / pool text, not the capsule noise.
-    """
-    candidates: list[str] = []
-    seen: set[int] = set()
-    current: BaseException | None = error
-    depth = 0
-    while current is not None and depth < 12:
-        identity = id(current)
-        if identity in seen:
-            break
-        seen.add(identity)
-        text = str(current).strip()
-        if text:
-            candidates.append(text)
-        for argument in getattr(current, "args", ()) or ():
-            if isinstance(argument, str) and argument.strip():
-                candidates.append(argument.strip())
-            elif isinstance(argument, BaseException):
-                nested = str(argument).strip()
-                if nested:
-                    candidates.append(nested)
-        nxt: BaseException | None = current.__cause__
-        if nxt is None and current.__context__ is not None:
-            nxt = current.__context__
-        current = nxt
-        depth += 1
-
-    if not candidates:
-        return repr(error)
-
-    useful = [message for message in candidates if not _export_error_message_is_noise(message)]
-    if not useful:
-        useful = candidates
-    # Prefer the longest non-noise candidate that still carries engine detail.
-    chosen = max(useful, key=len)
-    # Drop a leading "External error: " shell DataFusion adds on the Arrow boundary.
-    if chosen.startswith("External error: "):
-        chosen = chosen[len("External error: ") :]
-    return chosen
-
-
-def _export_engine_error(error: BaseException) -> PySparkException:
-    """Map a mid-stream Arrow export failure to ``PySparkException`` with useful context."""
-    message = _export_error_message(error)
-    lower = message.lower()
-    is_memory = any(marker in lower for marker in _EXPORT_MEMORY_ERROR_MARKERS)
-    if is_memory and "repark.memory.limit.gb" not in lower:
-        message = (
-            f"{message.rstrip()}\n"
-            "REPARK: raise the FairSpillPool via "
-            "SparkSession.builder.config('repark.memory.limit.gb', N).getOrCreate() "
-            "(build-time; RAM-relative, cap 8 GiB; 0 = unbounded) or "
-            "spark.conf.set('datafusion.runtime.memory_limit', 'NG') "
-            "(runtime; same pool — one truth, not two knobs)."
-        )
-    return PySparkException(message)
 
 
 def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
@@ -338,203 +162,6 @@ def _emit_join_side_columns(
             for (plan_id, field), nested_engine in side_frame._origin_map.items():
                 if nested_engine == source_engine:
                     origin_map[(plan_id, field)] = engine_out
-
-
-def _coerce_map_in_arrow_schema(schema: Any) -> tuple[StructType, Any]:
-    """Parse mapInArrow ``schema`` into ``(StructType, pyarrow.Schema)``.
-
-    Arrow widths match the session createDataFrame path (:func:`_sql_type_to_arrow`) so
-    ``SMALLINT``/``TINYINT``/``FLOAT`` stay int16/int8/float32 — not fail-open string or
-    float64.
-    """
-    import pyarrow as pa
-
-    from repark.spark.session import _parse_create_dataframe_schema, _sql_type_to_arrow
-    from repark.spark.types import struct_type_from_arrow
-
-    if schema is None:
-        raise PySparkTypeError("mapInArrow schema is required (StructType or DDL string)")
-    names, engine_types = _parse_create_dataframe_schema(schema)
-    if names is None or engine_types is None:
-        raise PySparkTypeError(
-            "mapInArrow schema must be a StructType or DDL string with types "
-            f"(got {type(schema).__name__})"
-        )
-    arrow_fields: list[pa.Field] = [
-        pa.field(name, _sql_type_to_arrow(sql_type), nullable=True)
-        for name, sql_type in zip(names, engine_types, strict=True)
-    ]
-    arrow_schema = pa.schema(arrow_fields)
-    return struct_type_from_arrow(arrow_schema), arrow_schema
-
-
-def _validate_map_in_arrow_batch(
-    batch: Any,
-    expected: Any,
-    declared: StructType,
-) -> None:
-    """Loud schema mismatch for a yielded RecordBatch vs declared mapInArrow schema."""
-    import pyarrow as pa
-
-    if not isinstance(batch, pa.RecordBatch):
-        raise PySparkTypeError(
-            f"mapInArrow expected pyarrow.RecordBatch, got {type(batch).__name__}"
-        )
-    got = batch.schema
-    if got.names != list(expected.names):
-        raise PySparkException(
-            "mapInArrow schema mismatch: field names "
-            f"expected {list(expected.names)}, got {got.names}"
-        )
-    for index, (want_field, got_field) in enumerate(zip(expected, got, strict=True)):
-        if want_field.type != got_field.type:
-            declared_field = declared.fields[index]
-            raise PySparkException(
-                "mapInArrow schema mismatch on field "
-                f"{want_field.name!r}: expected type {want_field.type} "
-                f"({declared_field.dataType.simpleString()}), got {got_field.type}"
-            )
-
-
-# Sentinel for applyInPandas single-pass group boundary scan (not a real group key).
-_APPLY_IN_PANDAS_KEY_MISSING: object = object()
-
-
-def _apply_in_pandas_scalar_key_equal(left: Any, right: Any) -> bool:
-    """Null- and NaN-safe equality for one group-key cell (Spark groups NaN with NaN)."""
-    import math
-
-    if left is None and right is None:
-        return True
-    if left is None or right is None:
-        return False
-    if (
-        isinstance(left, float)
-        and isinstance(right, float)
-        and math.isnan(left)
-        and math.isnan(right)
-    ):
-        return True
-    return bool(left == right)
-
-
-def _apply_in_pandas_keys_equal(left: tuple[Any, ...], right: tuple[Any, ...]) -> bool:
-    """Null- and NaN-safe equality for a multi-column group key tuple."""
-    if len(left) != len(right):
-        return False
-    return all(
-        _apply_in_pandas_scalar_key_equal(left_cell, right_cell)
-        for left_cell, right_cell in zip(left, right, strict=True)
-    )
-
-
-def _apply_in_pandas_row_key(batch: Any, key_names: list[str], row_index: int) -> tuple[Any, ...]:
-    """Build the group-key tuple for one row of a RecordBatch (``as_py`` cells)."""
-    return tuple(batch.column(name)[row_index].as_py() for name in key_names)
-
-
-def _apply_in_pandas_table_from_segments(segments: list[Any]) -> Any:
-    """Build one ``pyarrow.Table`` from group segments, promoting schemas across batch edges.
-
-    Engine streams share one schema, but hand-built / boundary-stitched segments can differ
-    when a string/binary column is all-null in one batch (Arrow ``null`` type) and concrete
-    in the next. ``Table.from_batches`` rejects that; ``concat_tables(..., promote)`` unifies
-    null→concrete so boundary-stitch stays O(group) without a facade re-group.
-    """
-    import pyarrow as pa
-
-    if not segments:
-        raise PySparkException("applyInPandas internal error: empty group segment list")
-    try:
-        return pa.Table.from_batches(segments)
-    except (pa.ArrowInvalid, pa.ArrowTypeError) as error:
-        tables = [pa.Table.from_batches([segment]) for segment in segments]
-        try:
-            return pa.concat_tables(tables, promote_options="default")
-        except (pa.ArrowInvalid, pa.ArrowTypeError, ValueError, TypeError) as promote_error:
-            raise PySparkException(
-                "applyInPandas failed stitching group segments across batch boundaries "
-                f"(incompatible schemas): {promote_error}"
-            ) from error
-
-
-def _validate_apply_in_pandas_result_columns(
-    out_pdf: Any,
-    expected_names: list[str],
-) -> None:
-    """Validate returned column names against the declared schema."""
-    got_names = [str(name) for name in out_pdf.columns]
-    # Spark: empty DataFrame() with no columns → empty group result (no mismatch).
-    if len(out_pdf) == 0 and len(got_names) == 0:
-        return
-    expected_set = set(expected_names)
-    got_set = set(got_names)
-    missing = [name for name in expected_names if name not in got_set]
-    unexpected = [name for name in got_names if name not in expected_set]
-    if not missing and not unexpected:
-        return
-    parts: list[str] = []
-    if missing:
-        parts.append(f"Missing: {', '.join(missing)}")
-    if unexpected:
-        parts.append(f"Unexpected: {', '.join(unexpected)}")
-    raise PySparkException(
-        "applyInPandas schema mismatch: column names of the returned data do not match "
-        f"specified schema. {'. '.join(parts)}."
-    )
-
-
-def _iter_apply_in_pandas_group_tables(
-    input_batches: Iterator[Any],
-    key_names: list[str],
-) -> Iterator[Any]:
-    """Yield one table per contiguous key group from a sorted batch stream.
-
-    The current group and one input batch remain buffered. Empty keys form one global group.
-    """
-    pending_segments: list[Any] = []
-    current_key: Any = _APPLY_IN_PANDAS_KEY_MISSING
-
-    if not key_names:
-        segments = [batch for batch in input_batches if batch.num_rows > 0]
-        if segments:
-            yield _apply_in_pandas_table_from_segments(segments)
-        return
-
-    for batch in input_batches:
-        if batch.num_rows == 0:
-            continue
-        missing = [name for name in key_names if name not in batch.schema.names]
-        if missing:
-            raise PySparkException(
-                "applyInPandas group key column(s) missing from streamed batch: "
-                f"{missing}; batch fields={list(batch.schema.names)}"
-            )
-        run_start = 0
-        run_key = _apply_in_pandas_row_key(batch, key_names, 0)
-        row_count = batch.num_rows
-        for row_index in range(1, row_count + 1):
-            if row_index < row_count:
-                next_key = _apply_in_pandas_row_key(batch, key_names, row_index)
-                if _apply_in_pandas_keys_equal(next_key, run_key):
-                    continue
-            segment = batch.slice(run_start, row_index - run_start)
-            if current_key is _APPLY_IN_PANDAS_KEY_MISSING:
-                current_key = run_key
-                pending_segments = [segment]
-            elif _apply_in_pandas_keys_equal(current_key, run_key):
-                # Boundary stitch: same group continues across the previous batch edge.
-                pending_segments.append(segment)
-            else:
-                yield _apply_in_pandas_table_from_segments(pending_segments)
-                current_key = run_key
-                pending_segments = [segment]
-            if row_index < row_count:
-                run_start = row_index
-                run_key = next_key
-
-    if pending_segments:
-        yield _apply_in_pandas_table_from_segments(pending_segments)
 
 
 def _by_name_casefold_map(columns: list[str], *, surface: str) -> dict[str, str]:
@@ -6290,6 +5917,31 @@ from repark.spark.dataframe.writer_readwriter import (  # noqa: E402
     _normalize_write_compression,
     _resolve_writer_table,
     _sql_option_escape,
+)
+from repark.spark.dataframe.rows_export import (  # noqa: E402
+    _arrow_cell_to_spark_python,
+    _arrow_map_pairs,
+    _refuse_calendar_interval_python_value,
+)
+from repark.spark.dataframe.export_errors import (  # noqa: E402
+    _EXPORT_MEMORY_ERROR_MARKERS,
+    _PYARROW_DYNAMIC_SOURCE_NOISE,
+    _export_engine_error,
+    _export_error_message,
+    _export_error_message_is_noise,
+)
+from repark.spark.dataframe.udf_schema import (  # noqa: E402
+    _coerce_map_in_arrow_schema,
+    _validate_map_in_arrow_batch,
+)
+from repark.spark.dataframe.grouped_udf import (  # noqa: E402
+    _APPLY_IN_PANDAS_KEY_MISSING,
+    _apply_in_pandas_keys_equal,
+    _apply_in_pandas_row_key,
+    _apply_in_pandas_scalar_key_equal,
+    _apply_in_pandas_table_from_segments,
+    _iter_apply_in_pandas_group_tables,
+    _validate_apply_in_pandas_result_columns,
 )
 
 __all__ = [
