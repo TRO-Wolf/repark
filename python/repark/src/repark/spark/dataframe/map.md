@@ -41,6 +41,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   locally because its `*statistics` parameter shadows the module binding. `core`
   binds the module, so the package and core surfaces gain exactly that one name.
   pins: dfcore-3/C-001, C-002, C-003, C-004, C-006
+  DFCORE-4a (2026-09-07): the three sampling bodies plus argument normalization
+  and seed coercion moved to `sampling.py` (5060 → 4819, mirrored in the CAP-1
+  test). The public methods stay as one-line wrappers; `_prepare_sample_args`
+  leaves the class and `_coerce_sample_seed` is re-imported by identity, so the
+  package and core surfaces gain exactly the one module name. The move took
+  `core`'s last module-scope `IllegalArgumentException` use with it, so the
+  now-redundant function-local re-import in staying code is gone (same object).
+  pins: dfcore-4a/C-001, C-002, C-003, C-004
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -110,6 +118,26 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   to one collect per frame. `crosstab` casts both strata to string for Spark's
   string-key pivot form, feeds `pivot` simple-name aggregate inputs, and fills absent
   pairs with 0. pins: dfcore-3/C-004, C-005
+- `sampling.py` owns the five sampling bodies behind the public wrappers (DFCORE-4a,
+  moved from `core.py`). `sample` resolves its three overloads in
+  `_prepare_sample_args`: a bool first positional takes the bool/fraction/seed form,
+  a float first positional is the fraction (PySpark quirk — the `seed=` keyword is
+  ignored on that form), else the keyword form; anything else refuses with
+  `NOT_BOOL_OR_FLOAT_OR_INT`. An omitted seed bakes in 42 so unseeded samples stay
+  action-stable; a bool or non-numeric seed refuses in `_coerce_sample_seed`.
+  Out-of-range fractions refuse with `IllegalArgumentException` (Spark's class).
+  Seeded draws use one deterministic LCG over ordered `row_number()`: the seed mixes
+  into the multiplier term because a pure offset left adjacent seeds identical, and
+  the ORDER BY uses unique engine field names on multi-name frames. Fraction 1.0 and
+  0.0 short-circuit to full and empty scans. `randomSplit` normalizes weights, scores
+  every row once into one shared uniform column so the parts partition the frame
+  (the last bucket stays open-ended), and answers `random()` when unseeded
+  (non-deterministic like Spark). `sampleBy` validates the fractions map (bool keys
+  refuse; NaN or out-of-range fractions refuse because engine `rand() < nan` is
+  true), drops absent strata, refuses bool seeds (Spark's seed is Long), and filters
+  each stratum against one shared `rand(seed)` column so the sequence advances once
+  per row. All three carry display names, engine names, and the origin map to each
+  child, which keeps the `_repr_html_` hook. pins: dfcore-4a/C-004
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -173,6 +201,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | Scalar and classic UDF projection | [`udf_projection.py`](udf_projection.py) |
 | Windowed UDF projection | [`udf_window_projection.py`](udf_window_projection.py) |
 | Statistics bodies | [`statistics.py`](statistics.py) |
+| Sampling bodies | [`sampling.py`](sampling.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -197,5 +226,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (pins: dfcore-2/C-006).
   DFCORE-3 (2026-09-07): `core.py` 5263→5060, `writer_readwriter.py` 1113→1111;
   `statistics.py` (261) stays below the source-size default (pins: dfcore-3/C-006).
+  DFCORE-4a (2026-09-07): `core.py` 5060→4819; `sampling.py` (288) stays below the
+  source-size default (pins: dfcore-4a/C-005).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

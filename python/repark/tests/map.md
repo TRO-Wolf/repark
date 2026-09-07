@@ -928,7 +928,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exactly `sampling`; `MOVED_SAMPLING_HELPERS` pins the three bodies as the new
   home's own frame-first functions, `_prepare_sample_args` verbatim, and
   `_coerce_sample_seed` re-imported by identity.
-  pins: dfcore-4a/C-001, C-002, C-003, C-004
+  pins: dfcore-4a/C-001, C-002, C-003, C-004, C-007, C-008
 - `test_dfcore_4a_*_determinism.py` — DFCORE-4a determinism pins, one file per
   sampling function (the row sets exceed the default ceiling as one file):
   `sample(0.3, seed=7)`, the `randomSplit([0.5, 0.5], seed=7)` left and right
