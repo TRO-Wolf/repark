@@ -918,6 +918,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   helper as its new home's own frame-first function. `test_pandas_udf.py`'s plan-time
   import pin now reads the moved helper's source (reference-only, line-count neutral).
   pins: dfcore-2/C-001, C-002, C-003, C-007, C-008
+  DFCORE-3 (2026-09-07): the class dir is unchanged (public statistics methods stay as
+  wrappers); core and the package each gain exactly `statistics`;
+  `MOVED_STATISTICS_HELPERS` pins the seven bodies as the new home's own frame-first
+  functions.
+  pins: dfcore-3/C-001, C-002, C-003
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes
