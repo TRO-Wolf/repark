@@ -121,10 +121,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   aliases stay unique; the facade overlays Spark-legal display names afterwards.
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
-  and treats out-of-range probabilities as value errors, not type errors. It still
-  collects once per probability; the old "scalar-only engine" note is obsolete —
-  `percentile_approx` already accepts a probability list and DFCORE-5 owns the batching
-  to one collect per frame. `crosstab` casts both strata to string for Spark's
+  and treats out-of-range probabilities as value errors, not type errors. DFCORE-5
+  (2026-09-07) batched the per-probability loop to one collect per frame: one
+  aggregation projects the list form of `percentile_approx` per column under
+  positional aliases and unpacks per column; empty probs/cols short-circuit with no
+  collect, a
+  NULL cell answers NaN per probability, and the engine reports the first failing
+  column so mixed good/bad errors keep their order.
+  pins: dfcore-3/C-004, C-005
+  pins: dfcore-5/C-001, C-002
+  `crosstab` casts both strata to string for Spark's
   string-key pivot form, feeds `pivot` simple-name aggregate inputs, and fills absent
   pairs with 0. pins: dfcore-3/C-004, C-005
 - `sampling.py` owns the five sampling bodies behind the public wrappers (DFCORE-4a,
@@ -264,5 +270,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   source-size default (pins: dfcore-4a/C-005).
   DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
   source-size default (pins: dfcore-4b/C-005).
+  DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;
+  stays below the source-size default (pins: dfcore-5/C-005).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
