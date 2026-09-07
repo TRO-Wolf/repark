@@ -49,6 +49,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `core`'s last module-scope `IllegalArgumentException` use with it, so the
   now-redundant function-local re-import in staying code is gone (same object).
   pins: dfcore-4a/C-001, C-002, C-003, C-004
+  DFCORE-4b (2026-09-07): the ten display bodies moved to `display.py`
+  (4819 → 4539, mirrored in the CAP-1 test). `show`, `__repr__`,
+  `_repr_html_`, and `_preview_tail_rows` stay as one-line wrappers; the six
+  private helpers leave the class, so the package and core surfaces gain
+  exactly the one module name. `printSchema` and `__str__` stay: they share no
+  helper with the moved code. The new binding shadows a join-side loop
+  variable, so that local is renamed `display_name` (ruff F402,
+  behavior-neutral, +2 lines for the wrapped f-string).
+  pins: dfcore-4b/C-001, C-002, C-003, C-004
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -138,6 +147,26 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   each stratum against one shared `rand(seed)` column so the sequence advances once
   per row. All three carry display names, engine names, and the origin map to each
   child, which keeps the `_repr_html_` hook. pins: dfcore-4a/C-004
+- `display.py` owns the ten display bodies behind the public wrappers (DFCORE-4b,
+  moved from `core.py`). Every display door still opens with `_ensure_alive`,
+  which validates the window, random, and stratified-sampling markers; the
+  narration above those calls was the audit-named removable and is gone.
+  `show` peeks `mapInArrow` bridges with a bounded materialize (no full IPC
+  table, no multiset count on the peek path). The Spark vertical door counts
+  only when the limit may have truncated. The INFO log keeps a row-count
+  breadcrumb; the rendered table stays DEBUG-only because row data is PII.
+  `truncate` validation refuses bool `n` (an int subclass would silently
+  shrink the window), accepts digit strings as width caps, and labels other
+  shapes NOT_BOOL per the live oracle. Eager `__repr__` / `_repr_html_` read
+  the three `eagerEval` conf keys (runtime then builder), pack Spark
+  showString form, and count only to decide the footer — DFCORE-6 owns
+  removing that count. Styled previews count once, then collect head and tail
+  windows only: polars shows all rows at ten or fewer with edges capped at
+  five and ellipsis only before a non-empty tail; duckdb keeps at least one
+  head row; the tail preview engine-skips and never lets a negative skip
+  reach the native `usize`. Type labels come from the head Arrow schema. The
+  module carries its own logger; record names move `core` → `display` while
+  message text and levels stay identical. pins: dfcore-4b/C-004
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -202,6 +231,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | Windowed UDF projection | [`udf_window_projection.py`](udf_window_projection.py) |
 | Statistics bodies | [`statistics.py`](statistics.py) |
 | Sampling bodies | [`sampling.py`](sampling.py) |
+| Display bodies | [`display.py`](display.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -228,5 +258,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `statistics.py` (261) stays below the source-size default (pins: dfcore-3/C-006).
   DFCORE-4a (2026-09-07): `core.py` 5060→4819; `sampling.py` (288) stays below the
   source-size default (pins: dfcore-4a/C-005).
+  DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
+  source-size default (pins: dfcore-4b/C-005).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
