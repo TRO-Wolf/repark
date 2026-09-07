@@ -168,3 +168,15 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_dfcore_1_exports.py, python/repark/tests/test_dfcore_4b_exports.py, python/repark/tests/test_dfcore_4b_show_goldens.py, python/repark/tests/test_dfcore_4b_eager_goldens.py]
   complete: true
 ```
+
+## Critic round 1 (2026-09-07, Muse Spark 1.3) — FAIL → served by the orchestrator
+
+- F1 (S2, SERVED): the styled-vertical `warnings.warn(..., stacklevel=2)` moved one frame
+  deeper behind the `show` wrapper, so the warning attributed to `core.py` instead of the
+  caller. `display.py` now carries `stacklevel=3`;
+  `test_dfcore_4b_show_goldens.py::test_show_styled_vertical_warning_attributes_to_caller`
+  pins the warning's `filename` to the caller (mutation `stacklevel=9` → 1 red). The
+  critic's own probe re-run on the tip records `dfcore4b-probe.py:28:True`, the pre-slice
+  value.
+- F2 (S4, noted): the vertical-branch `count()` is held only by the new goldens; DFCORE-6
+  adds a non-golden pin when it changes that path.

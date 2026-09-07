@@ -555,3 +555,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `count()` tallies as the DFCORE-6 baseline. `risk_tier: standard`.
   Branch `refactor/dfcore-4b`.
   pins: dfcore-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Critic r1 FAIL on the moved warning's `stacklevel`; served (stacklevel 3, filename pin).
