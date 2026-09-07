@@ -906,6 +906,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `task/y7-collation-refuse-ledger.md`.
 
 - `test_t0_df_regions_import_freeze.py` — r27 T0 Q7 import freeze pins (r27 T0 overload)
+- `test_dfcore_1_exports.py` — DFCORE-1 export snapshot pin: pre-slice `sorted(dir())`
+  of the package, core, and DataFrame, plus module/slots/no-instance-dict, alias
+  identities, and overload counts. pins: dfcore-1/C-001, C-002
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes
