@@ -929,12 +929,28 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   home's own frame-first functions, `_prepare_sample_args` verbatim, and
   `_coerce_sample_seed` re-imported by identity.
   pins: dfcore-4a/C-001, C-002, C-003, C-004, C-007, C-008
+  DFCORE-4b (2026-09-07): the class dir loses exactly the six display leavers
+  (`show`, `__repr__`, `_repr_html_`, and `_preview_tail_rows` stay as
+  wrappers); core and the package each gain exactly `display`; the ownership
+  test lives in the sibling `test_dfcore_4b_exports.py` (this pin is at the
+  default ceiling, so the gate's sanctioned out is a split).
+  pins: dfcore-4b/C-001, C-002, C-003, C-004, C-007, C-008
+- `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
+  pins the ten bodies as `display.py`'s own frame-first functions, the six
+  leavers as gone from the class, and the four wrappers as kept.
+  pins: dfcore-4b/C-004
 - `test_dfcore_4a_*_determinism.py` — DFCORE-4a determinism pins, one file per
   sampling function (the row sets exceed the default ceiling as one file):
   `sample(0.3, seed=7)`, the `randomSplit([0.5, 0.5], seed=7)` left and right
   parts, and `sampleBy`, each on a fixed 1,000-row frame, recorded on the
   pre-slice tree and asserted on the tip.
   pins: dfcore-4a/C-006
+- `test_dfcore_4b_*_goldens.py` — DFCORE-4b display goldens: `show` output at
+  every truncate/n/vertical/empty/unicode shape plus both styled formats, and
+  `repr`/`_repr_html_` at eager caps 1/2/20 over empty/exact/over-cap frames
+  and a `mapInArrow`-backed frame, recorded on the pre-slice tree and asserted
+  on the tip, with `count()` tallies as the DFCORE-6 baseline.
+  pins: dfcore-4b/C-006
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes
