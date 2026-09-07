@@ -1193,6 +1193,13 @@ the pin rather than obeying it.
   `python/repark/tests/test_fnp_8_sql_door.py::test_table_backed_lambda_body_literals_answer_int32`
   holds both doors Spark-equal (the round-1 nullable Column-view instance converged
   in round 2).
+  Round 3 (2026-09-07) names one more staying shape: a HOF over the PADDED side of an
+  outer join (FULL, LEFT-padded-right, RIGHT-padded-left, and the Column door over the
+  same) answers nullable elements where Spark derives `not null`; values agree. The
+  nullable element is deliberate: dropping the Join-arm padding guard hard-errors
+  (`Column 'r' is declared as non-nullable but contains null values`).
+  `python/repark/tests/test_fnp_8_sql_door.py::test_outer_join_padded_side_answers_nullable`
+  holds the disclosed shape.
 - **Rationale** — BACKLOG (2026-09-07). These metadata differences predate the resumed repair.
   Public indexed-transform and `exists` metadata regressions are repaired in FNP-8; these
   remaining fields require separate derivation work. Complete Arrow schemas use a dedicated

@@ -150,6 +150,7 @@ repo.
   [design/v1-0-api-freeze.json](design/v1-0-api-freeze.json) as the frozen-surface register.
   1.0.1 was the first patch (2026-09-04).
   pins: api-freeze/C-002
+  `FNP8-NULLABILITY` names the padded outer-join shape since FNP-8-REVIEW r3 (2026-09-07).
 
 ## I want to...
 

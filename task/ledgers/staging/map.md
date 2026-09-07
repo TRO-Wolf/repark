@@ -363,6 +363,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+  Critic r3 PASS (2026-09-07): padded outer-join side disclosed in `FNP8-NULLABILITY`; counts trued up.
 
 - [dbt-1-adapter-ledger.md](dbt-1-adapter-ledger.md) — **DBT-1 (2026-09-04), in flight:** a dbt
   path for RePark, so cutover step C6 can move gold off Spark/Glue

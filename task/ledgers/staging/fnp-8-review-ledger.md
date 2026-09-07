@@ -35,7 +35,7 @@ round's close.
 | C-007 | F7 the `F-Y10-1` note cites `sql_door_lambda_body_overflow_divergence_wraps` and the error-oracle idx 25/51 dispositions. | The extended note. | **PROVEN** | Note cites the wrap pin plus error-25 (ANSI raise vs wrap) and error-51 (shared wrap). |
 | C-008 | No regression of the critic's held set: the four pin files JVM-free, the live leg at 512 passed / 0 skipped, `make verify`, and the report's mutation knobs still red. | The gate commands with real exit codes; mutation table. | **PROVEN** | Round-2 close: JVM-free `429 passed, 93 skipped`; live `538 passed` (512 + 14 door + 12 live, 0 skipped); facade `5767 passed, 366 skipped`; `make verify` exit 0 with 2830 Rust passed; Rust `lambda_door` 25 passed; M1–M5 re-measured (2 / 1 / 6+1 / 3 / 4+61) and M6–M13 bite per arm (1 / 6 / 0-documented / probe / 1 / 1 / 1 / crash). |
 | C-009 | R2-F1 join-fed HOF width: a literal-fed `transform` through Join (both sides, cross), Aggregate group keys, Window, scalar subqueries, and every other plan node answers Int32 dtype-exact with Spark's not-null elements on the SQL door; the Column door and `aggregate` stay immune. | One pin per shape, dtype AND nullability exact; live oracle cells; red-first evidence. | **PROVEN** | Oracle `int32 not null` on every Spark-served shape (banner spark 4.1.2 tz UTC ansi true). Red: Int64 nullable through Join/Aggregate (the tracer had no arm) and through scalar subqueries. Fix: full plan-lineage arms in `source_feeds_bare_integer` plus scalar-subquery tracing; the multi-hop element walk wraps not-null. Pins green; union-over-literals stays Int64 (pre-existing UNION coercion, out of scope, values agree). The scalar-subquery shape is a repark superset: Spark refuses it (`UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY`), repark answers its deterministic value. |
-| C-010 | R2-F2 SQL-door multi-hop nullability: HOF over subquery-over-view, double CTE, DISTINCT/LIMIT/FILTER and every other multi-hop literal lineage answers Spark's not-null elements, or FNP8-NULLABILITY names each staying shape with a red-when-fixed pin. | Pins per shape; registry extension if any shape stays divergent. | **PROVEN** | Oracle `int32 not null` on all seven literal-lineage shapes (the critic's five plus CTE-over-view and FILTER). Red: nullable elements. The same multi-hop `source_element_nullable` walk serves every shape, so no registry extension was needed. CTE-over-parquet-table measures nullable/nullable on BOTH engines (table-ctrl), i.e. Spark-equal with no wrap. The round-1 Column-view nullable instance converged (pin, live leg, and NULLABILITY sentence updated). The walk also resolves VALUES rows (pinned Spark-equal) and wraps only join sides the join cannot pad: padded outer sides stay conservatively nullable (Spark: not-null elements, values agree, measured session 5) instead of crashing Arrow on a false non-null field. |
+| C-010 | R2-F2 SQL-door multi-hop nullability: HOF over subquery-over-view, double CTE, DISTINCT/LIMIT/FILTER and every other multi-hop literal lineage answers Spark's not-null elements, or FNP8-NULLABILITY names each staying shape with a red-when-fixed pin. | Pins per shape; registry extension if any shape stays divergent. | **PROVEN** | Oracle `int32 not null` on all seven literal-lineage shapes (the critic's five plus CTE-over-view and FILTER). Red: nullable elements. The same multi-hop `source_element_nullable` walk serves every literal-lineage shape; the one staying shape, the padded side of an outer join (critic r3 F1), is named in `FNP8-NULLABILITY` with `test_outer_join_padded_side_answers_nullable`. CTE-over-parquet-table measures nullable/nullable on BOTH engines (table-ctrl), i.e. Spark-equal with no wrap. The round-1 Column-view nullable instance converged (pin, live leg, and NULLABILITY sentence updated). The walk also resolves VALUES rows (pinned Spark-equal) and wraps only join sides the join cannot pad: padded outer sides stay conservatively nullable (Spark: not-null elements, values agree, measured session 5) instead of crashing Arrow on a false non-null field. |
 
 VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED.
 
@@ -98,7 +98,7 @@ narrow early. Rust `lambda_door` 25 passed; the four pin files 420 passed.
 |---|---|---|---|
 | M1 | F2 reverted (zip params non-nullable) | `test_fnp_8_sql_door.py -k "left_shorter or element_nullability"` | 2 failed: both zip pins crash (`Column 'x'` / `Column 'y' non-nullable`) |
 | M2 | F3 reverted (zip element `true`) | same selection | 1 failed: `test_zip_with_element_nullability_follows_the_lambda`; left-shorter stays green |
-| M3 | HOF preparation dropped | `test_fnp_8_sql_door.py` (40 tests) | 6 failed: indexed shapes, exists nullability, aggregate expr, F1 table pin, F4 pin |
+| M3 | HOF preparation dropped | `test_fnp_8_sql_door.py` (49 tests) | 13 failed (critic r3 re-measure at the tip; 6 on the 40-test file before `26fb9e70`): indexed shapes, exists nullability, aggregate expr, F1 table pin, F4 pin |
 | M4 | two-valued `exists` | `cargo test -p repark-spark --lib tests::lambda_door` | 3 failed: `exists_nullability`, `three_valued`, `edge_rows` (round-2 correction of the 4 claimed here — R2-F3; re-measured under R-B) |
 | M5 | parameter packing skipped | Rust `lambda_door` + the four pin files | 4 Rust + 61 Python failed (critic: 4 + 59) |
 
@@ -111,17 +111,17 @@ rebuilt clean; `git status` clean after each revert.
 
 | Knob | Mutant | Selection | Result |
 |---|---|---|---|
-| M6 | Join width arm dropped | 7 new door pins + `table_backed` | 1 failed: `test_join_fed_lambda_body_literals_answer_int32` |
-| M7 | nullability walk reverted to single-hop | same selection | 6 failed: all but `aggregate_over_lineage` and `lateral_view` |
+| M6 | Join width arm dropped | 9 new door pins + `table_backed` | 1 failed: `test_join_fed_lambda_body_literals_answer_int32` |
+| M7 | nullability walk reverted to single-hop | same selection | 7 failed (+ the VALUES pin, critic r3): all but `aggregate_over_lineage` and `lateral_view` |
 | M8 | Union width arm dropped (round-1 arm) | same selection | 0 failed: early-narrowed bodies converge for unions because each branch narrows late; kept as sound defense-in-depth, and the union pin bites the nullability Union arm via M7 |
 | M9 | Window width arm dropped | same selection + ctor-below-window probe | 0 pin red on the old legs; the probe bakes Int64, so the shape joined the pin as the biting leg |
 | M10 | Aggregate width arm dropped | same selection | 1 failed: `test_lineage_through_plan_nodes_keeps_int32` |
 | M11 | scalar-subquery arm dropped | same selection | 1 failed: `test_scalar_subquery_hof_answers_int32` |
 | K1 | zip params non-nullable | `test_fnp_8_sql_door.py -k "left_shorter or element_nullability"` | 2 failed, both zip pins |
 | K2 | zip element `true` | same selection | 1 failed: the element-nullability pin; left-shorter stays green |
-| K3 | pre-bind narrowing skipped | `test_fnp_8_sql_door.py` (47 tests) + Rust `lambda_door` | 6 Python failed (indexed x2, F1 table, F4, multihop, union) + 1 Rust failed (indexed width) |
-| K4 | bottom-up wrap dropped | `test_fnp_8_sql_door.py` (47 tests) | 3 failed: indexed nonnull, exists nullability, F4 (the critic's narrower selection counted the F4 leg only) |
-| R-A | Spark dialect forced to Generic | Rust `lambda_door` + the four pin files | 23 Rust + 361 Python failed (355 at R2 + 6 of the 7 new pins; full `--lib` adds the `lambda_arrow_selects_databricks` unit test for 24) |
+| K3 | pre-bind narrowing skipped | `test_fnp_8_sql_door.py` (49 tests) + Rust `lambda_door` | 6 Python failed (indexed x2, F1 table, F4, multihop, union) + 1 Rust failed (indexed width) |
+| K4 | bottom-up wrap dropped | `test_fnp_8_sql_door.py` (49 tests) | 4 failed (+ the `26fb9e70` negative leg asserting element nullability, critic r3): indexed nonnull, exists nullability, F4 (the critic's narrower selection counted the F4 leg only) |
+| R-A | Spark dialect forced to Generic | Rust `lambda_door` + the four pin files | 23 Rust + 363 Python failed (critic r3 re-measure; 361 before the two late pins) (355 at R2 + 6 of the 7 new pins; full `--lib` adds the `lambda_arrow_selects_databricks` unit test for 24) |
 | R-B | two-valued `exists` | `cargo test -p repark-spark --lib tests::lambda_door` | 3 failed: `exists_nullability`, `three_valued`, `edge_rows` |
 | R-C | parameter packing skipped | Rust `lambda_door` + the four pin files | 4 Rust + 61 Python failed |
 | R-D | early rebind seat dropped / both seats dropped | `cargo test -p repark-spark --lib tests::lambda_door` | early: 1 failed (VALUES test); both: 7 failed |
@@ -149,3 +149,10 @@ conservatively nullable on repark vs not-null elements on Spark (the padding
 guard's documented tradeoff); recursive CTEs over arrays refuse at plan time
 (pre-existing DataFusion limitation, HOF-independent); the scalar-subquery HOF
 is a repark superset (Spark refuses the shape, repark answers it).
+
+## Critic round 3 (2026-09-07, Muse Spark 1.3) — PASS
+
+All three round-2 findings SERVED. R3-F1 (S3): the padded outer-join side is now a named
+shape in `FNP8-NULLABILITY` and C-010's evidence no longer claims no extension was needed.
+R3-F2 (S4): the mutation rows above carry the critic's re-measured counts at the tip
+(the round-2 knob rows had been measured before `26fb9e70`).
