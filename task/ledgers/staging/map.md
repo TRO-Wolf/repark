@@ -556,3 +556,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `refactor/dfcore-4b`.
   pins: dfcore-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   Critic r1 FAIL on the moved warning's `stacklevel`; served (stacklevel 3, filename pin).
+- [dfcore-5-ledger.md](dfcore-5-ledger.md) —
+  **DFCORE-5 (2026-09-07), in flight:** `approxQuantile` in one collect per
+  frame — the per-probability loop becomes one aggregation over the list form
+  of `percentile_approx` (2x3 collects 6 → 1, 4x5 20 → 1, values identical),
+  validation, shapes, NaN rules and the ignored `relativeError` preserved on
+  both doors, audit values equal to live Spark, the all-NULL/empty divergence
+  pinned on both sides, and the three DFCORE-3/DFCORE-4a gap pins closed.
+  `risk_tier: standard`.
+  Branch `perf/dfcore-5`.
+  pins: dfcore-5/C-001, C-002, C-003, C-004, C-005

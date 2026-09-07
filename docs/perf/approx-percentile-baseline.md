@@ -63,3 +63,48 @@ CELL=python/repark-parity/bench/approxpct/run_cells.py
 .venv/bin/python $CELL 10000000 1  # fresh subprocess
 .venv/bin/python $CELL 10000000 1 --control
 ```
+
+## DataFrame.approxQuantile (DFCORE-5, 2026-09-07)
+
+`DataFrame.approxQuantile` / `stat.approxQuantile` ran one `collect()` per
+column per probability (six for the two-column three-probability shape,
+DFCORE-3's recorded baseline). DFCORE-5 lowers the call to one aggregation
+projecting the list form of `percentile_approx` per column, so every
+non-trivial shape collects once per frame. Values are identical before and
+after at 1e6 rows (the sketch is untouched); only the scan count changes.
+
+Machine/profile: this box (64 threads, 125 GB RAM, shared lane box), release
+module (`__debug_assertions__` False), one session per run, 1-minute load
+recorded beside each run. Frame: `range(1, 1000001)` with `x = id`,
+`y = id * 2` (`z = x + 1`, `w = y + 1` for the 4-column shape). Each wall cell
+is the median of five runs.
+
+| shape | before collects | after collects | before median | after median |
+|---|---|---:|---:|---:|
+| 2 cols x 3 probs | 6 | 1 | 0.155 s (load 8.4) | 0.052 s (load 6.5) |
+| 1 col x 1 prob | 1 | 1 | 0.028 s (load 8.4) | 0.028 s (load 6.5) |
+| 4 cols x 5 probs | 20 | 1 | 0.572 s (load 9.8) | 0.087 s (load 6.5) |
+| empty probs / empty cols | 0 | 0 | — | — |
+
+The before and after runs carry different loads (8.4-9.8 vs 6.5), so a wall
+ratio reads against its own run, never as a cross-run constant; the collect
+counts are exact and carry the committed pin. Wall is recorded, not gated —
+the 1.0 s bar pattern from the sketch section above is deliberately not
+repeated here.
+
+Values: after answers `[[250, 500, 750], [500, 1000, 1500]]` on x = 1..1000 /
+y = 2x on both doors, exactly as live PySpark 4.1.2 does (BANNER spark=4.1.2
+tz=UTC, 2026-09-07, local[2], ANSI on). At 1e6 rows the after answers equal
+the before answers exactly
+(2x3 `[[249924.0, 499971.0, 750030.0], [499848.0, 999942.0, 1500060.0]]`).
+
+Reproduce (from the repo root, release module):
+
+```
+cd python/repark && VIRTUAL_ENV=$PWD/../../.venv uvx maturin@1.14.1 develop --release
+.venv/bin/python -m pytest python/repark/tests/test_dfcore_5_approx_quantile.py::test_one_collect_per_frame_regardless_of_shape -q
+```
+
+The pin re-derives the collect counts mechanically. The wall medians come
+from throwaway bench scripts (five timed runs per shape over the frame
+above); they stand recorded, like the sketch section's before column.
