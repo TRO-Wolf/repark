@@ -540,8 +540,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [dfcore-4a-ledger.md](dfcore-4a-ledger.md) —
   **DFCORE-4a (2026-09-07), in flight:** sampling out of `core.py` — the three
   sampling bodies plus argument normalization and seed coercion to `sampling.py`.
-  Move-only: public methods stay as wrappers, class loses exactly
-  `_prepare_sample_args`, package and core gain exactly `sampling`, same-seed
-  determinism pinned on a fixed 1,000-row frame. `risk_tier: standard`.
+  Move-only: `core.py` 5060 → 4819, class loses exactly `_prepare_sample_args`,
+  package and core gain exactly `sampling`, 6103 collected IDs preserved plus five
+  pin tests, five mutations red existing pins, same-seed determinism pinned on a
+  fixed thousand-row frame. `risk_tier: standard`.
   Branch `refactor/dfcore-4a`.
   pins: dfcore-4a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
