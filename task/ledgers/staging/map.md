@@ -10,7 +10,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,
   mapInArrow schema checks to new `udf_schema.py`, grouped-UDF assembly to new
   `grouped_udf.py`. Move-only: `core.py` 6302 → 5954, `joins_columns.py` 1239 → 1238,
-  export surfaces pinned identical, 6099 collected IDs unchanged. `risk_tier: standard`.
+  export surfaces pinned identical, 6093 pre-existing collected IDs unchanged, 6 added. `risk_tier: standard`.
   Branch `refactor/dfcore-1`.
   pins: dfcore-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.

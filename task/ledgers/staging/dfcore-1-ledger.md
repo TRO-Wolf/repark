@@ -18,7 +18,7 @@ regression from the move.
 
 C-001 / C-002 / C-003 re-**PROVEN** below against the order-robust pin: 45-file
 pre-pin set **777 passed, 15 skipped**; gate list **352 passed**; collect-only
-6099 IDs still identical.
+6093 pre-existing IDs still identical; 6 added by the new pin.
 
 ---
 
@@ -51,7 +51,7 @@ under C-008, not repaired here).
 | C-005 | `_export_error_message_is_noise`, `_export_error_message`, `_export_engine_error` and both marker constants live in new `export_errors.py`; error classes, chaining, and the memory advice text unchanged. | The move; `test_t2_sort_memory.py` noise-strip pins; before/after failure-set diff. | **PROVEN** | Bodies byte-identical except stripped comments, whose reasons now live in `dataframe/map.md` (R-1); docstrings moved unchanged (R-2). `test_t2_sort_memory.py` imports still resolve through the package. |
 | C-006 | `_coerce_map_in_arrow_schema` and `_validate_map_in_arrow_batch` live in new `udf_schema.py`; the sentinel and six grouped-UDF helpers live in new `grouped_udf.py`; `joins_columns.py` imports them directly, not through `core`; empty groups, NaN keys, and batch-boundary stitching unchanged. | The move; `test_applyinpandas.py`, `test_pandas_udf.py`, `test_mapinarrow.py`; `udtf.py` package import; before/after failure-set diff. | **PROVEN** | Bodies byte-identical except stripped comments, whose reasons now live in `dataframe/map.md` (R-1); docstrings moved unchanged (R-2). `grouped_udf` arrives via a module import with qualified call sites: the canonical two-name from-import costs two lines the exact ceiling cannot spare (sibling ceilings never rise). |
 | C-007 | `core.py`'s exact ceiling reads the new count in `scripts/check_lib_py.py` and the CAP-1 test; no sibling ceiling rises; new files carry no row; the dataframe `map.md` exact-row sentence stays true. | `make check-lib-py`; the parity harness (holds CAP-1). | **PROVEN** | `core.py` 6302 → 5954; `joins_columns.py` 1239 → 1238 (downward ratchet, the sanctioned direction). `make check-lib-py` clean; parity harness **624 passed**. |
-| C-008 | Every collected test ID stays under its current ID (pure relocation); the pre-existing suite failures are byte-identical before and after. | `--collect-only` diff; gate-list failure-set diff on base vs changed tree. | **PROVEN** | Collect-only: 6099 IDs, empty diff. Gate list: `170 failed, 182 passed` on both trees with identical failure IDs (pre-existing `RecursionError` in `__getattr__`/`columns`, untouched by this slice). |
+| C-008 | Every collected test ID stays under its current ID (pure relocation); the pre-existing suite failures are byte-identical before and after. | `--collect-only` diff; gate-list failure-set diff on base vs changed tree. | **PROVEN** | Collect-only: 6093 pre-existing IDs byte-identical, 6 added by `test_dfcore_1_exports.py` (critic-measured). Orchestrator re-run of the brief's gate list on the tip, 2026-09-07: 383 passed, 0 failed. |
 
 VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
 

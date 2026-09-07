@@ -12,6 +12,10 @@ from typing import Any
 
 import repark.spark.dataframe as dataframe_package
 import repark.spark.dataframe.core as dataframe_core
+import repark.spark.dataframe.export_errors as export_errors
+import repark.spark.dataframe.grouped_udf as grouped_udf
+import repark.spark.dataframe.rows_export as rows_export
+import repark.spark.dataframe.udf_schema as udf_schema
 from repark.spark.dataframe import DataFrame
 
 EXPECTED_PACKAGE_EXPORTS: list[str] = [
@@ -793,3 +797,37 @@ def test_dataframe_dir_unchanged() -> None:
     expected_names = [name for name in EXPECTED_DATAFRAME_DIR if not name.startswith("__")]
     current_names = sorted(name for name in dir(DataFrame) if not name.startswith("__"))
     assert current_names == expected_names
+
+
+MOVED_HELPERS: dict[ModuleType, tuple[str, ...]] = {
+    rows_export: (
+        "_arrow_cell_to_spark_python",
+        "_arrow_map_pairs",
+        "_refuse_calendar_interval_python_value",
+    ),
+    export_errors: (
+        "_EXPORT_MEMORY_ERROR_MARKERS",
+        "_PYARROW_DYNAMIC_SOURCE_NOISE",
+        "_export_engine_error",
+        "_export_error_message",
+        "_export_error_message_is_noise",
+    ),
+    udf_schema: ("_coerce_map_in_arrow_schema", "_validate_map_in_arrow_batch"),
+    grouped_udf: (
+        "_APPLY_IN_PANDAS_KEY_MISSING",
+        "_apply_in_pandas_keys_equal",
+        "_apply_in_pandas_row_key",
+        "_apply_in_pandas_scalar_key_equal",
+        "_apply_in_pandas_table_from_segments",
+        "_iter_apply_in_pandas_group_tables",
+        "_validate_apply_in_pandas_result_columns",
+    ),
+}
+
+
+def test_moved_helpers_are_reexported_by_identity() -> None:
+    """Every moved helper on core and on the package is the leaf module's own object."""
+    for home, names in MOVED_HELPERS.items():
+        for name in names:
+            assert getattr(dataframe_core, name) is getattr(home, name), name
+            assert getattr(dataframe_package, name) is getattr(home, name), name

@@ -59,6 +59,18 @@ def test_applyinpandas_single_key_values(spark: SparkSession) -> None:
     )
 
 
+def test_applyinpandas_nan_keys_group_together(spark: SparkSession) -> None:
+    frame = spark.createDataFrame(
+        [(float("nan"), 1), (float("nan"), 2), (1.0, 5)],
+        "k DOUBLE, v INT",
+    )
+    out = frame.groupBy("k").applyInPandas(_sum_v, "k DOUBLE, total INT")
+    rows = sorted(_rows(out.to_arrow()), key=lambda row: row["total"])
+    assert [row["total"] for row in rows] == [3, 5]
+    assert rows[0]["k"] != rows[0]["k"]
+    assert rows[1]["k"] == 1.0
+
+
 def test_applyinpandas_multi_key_values(spark: SparkSession) -> None:
     frame = spark.createDataFrame(
         [
