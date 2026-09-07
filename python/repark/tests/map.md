@@ -3336,6 +3336,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `transform` Arrow cells through Column RePark, SQL RePark, and live Spark. It names the
   per-door width and nested nullability against the measured Spark cell. A second live detector
   holds public `exists` value, type, and non-nullability against Spark.
+  **FNP-8-REVIEW (2026-09-07):** four more ANSI-on/off detectors — view-backed widths
+  (both doors Spark-equal since round 2), the three-door
+  left-shorter zip, zip element nullability, and the outer-variable nesting shape.
+  Round 2 adds two detectors
+  (`test_live_fnp8review_r2_join_lineage_matches_spark`,
+  `test_live_fnp8review_r2_multihop_lineage_matches_spark`): join-fed widths
+  with immune aggregates, and multi-hop nullability with union branches.
+  The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
+  pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008, C-009, C-010
 - `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
   FNP-8 pins invalid-return errors for a function, a callable object, and `functools.partial`.
   `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
@@ -3830,3 +3839,28 @@ alike — a disclosed round-8 residual, deliberately unpinned.
 FNP-8 SQL-text error cells also execute column-free `F.expr`; `fnp8_repark_errors.json`
 records both paths against `fnp8_error_oracle.json`. The empty untyped map diagnostic
 keeps Spark collect separate from its Arrow export refusal.
+**FNP-8-REVIEW (2026-09-07):** the F-Y10-1 registry note cites the wrap pin and the
+idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007
+**FNP-8-REVIEW (2026-09-07):** `test_fnp_8_sql_door.py` pins table-backed and
+inline lambda-body widths (F1: `test_table_backed_...` / `test_inline_...`),
+the left-shorter zip on three doors (F2: `test_zip_with_left_shorter_...`),
+zip element nullability (F3: `test_zip_with_element_nullability_...`), and
+the outer-variable nesting shape (F4: `test_nested_transform_...`). The
+round-1 Column-view nullable-element instance converged in round 2 (multi-hop
+lineage); both legs are Spark-equal now (FNP8-NULLABILITY).
+pins: fnp-8-review/C-001, C-002, C-003, C-004
+**FNP-8-REVIEW round 2 (2026-09-07):** `test_join_fed_...` pins join-fed widths on
+both doors, `test_scalar_subquery_...` pins the scalar-subquery answer (repark serves
+past Spark's `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY` refusal — a superset, never
+cited as Spark-equal), `test_lineage_through_plan_nodes_...` covers
+aggregate/window/passthrough nodes (including the constructor below the Window node,
+which is the leg that bites the Window arm), `test_multihop_...` covers multi-hop
+view lineage
+with Spark-equal nullable table legs, `test_union_of_narrowed_...` is the union pin,
+`test_aggregate_over_lineage_...` locks aggregate immunity,
+`test_lateral_view_...` pins the loud refusal that keeps Generate unreachable,
+`test_values_fed_...` pins VALUES-fed widths, and `test_outer_join_padded_...`
+pins nullable padded-side answers without crashing (elements stay conservatively
+nullable there, measured against Spark in the ledger). The inline pin gained
+negative and out-of-i32 literal legs; the join pin gained the unpadded LEFT side.
+pins: fnp-8-review/C-009, C-010

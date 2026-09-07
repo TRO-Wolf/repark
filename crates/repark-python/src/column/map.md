@@ -60,6 +60,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   is a one-line swap. pins: fnp-8/C-004
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
   the same pre-coercion HOF preparation as a normal Spark session. pins: fnp-8/C-003, C-004
+  **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the
+  refusing side and the SQL door as serving nested lambdas (F5 reword).
+  pins: fnp-8-review/C-005
 - [`window.rs`](window.rs) owns Spark frame conversion and unordered-window policy.
   **WIN-SLIDE-1 (2026-09-04):** a `RANGE` offset is emitted as `ScalarValue::Utf8`, not `Int64`.
   DataFusion's window-frame coercion casts a `Utf8` bound to the ORDER BY key's type (that is the

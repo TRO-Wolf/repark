@@ -45,6 +45,11 @@ impl SparkZipWith {
     }
 }
 
+fn nullable_element_field(name: &str, list: &FieldRef) -> Result<FieldRef> {
+    let element = list_element_field(name, list)?;
+    Ok(Arc::new(element.as_ref().clone().with_nullable(true)))
+}
+
 fn coerce_list(name: &str, list: &DataType) -> Result<DataType> {
     match list {
         DataType::List(_) | DataType::LargeList(_) => Ok(list.clone()),
@@ -92,8 +97,8 @@ impl HigherOrderUDFImpl for SparkZipWith {
             return plan_err!("{} expects two lists followed by a lambda", self.name());
         };
         Ok(LambdaParametersProgress::Complete(vec![vec![
-            list_element_field(self.name(), left)?,
-            list_element_field(self.name(), right)?,
+            nullable_element_field(self.name(), left)?,
+            nullable_element_field(self.name(), right)?,
         ]]))
     }
 
@@ -110,7 +115,7 @@ impl HigherOrderUDFImpl for SparkZipWith {
         let field = Arc::new(Field::new(
             Field::LIST_FIELD_DEFAULT_NAME,
             lambda.data_type().clone(),
-            true,
+            lambda.is_nullable(),
         ));
         let return_type = DataType::List(field);
         Ok(Arc::new(Field::new(

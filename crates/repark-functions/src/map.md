@@ -73,6 +73,26 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `analyzer_rules_with_higher_order_preparation`, which places this rule before the first default
   `type_coercion` rule and refuses a vector without that insertion point.
   pins: fnp-8/C-003, C-004, C-005, C-006
+  **FNP-8-REVIEW (2026-09-07):** preparation narrows provisional integer literals in
+  every HOF body plus direct array/map constructor literals before the first bind, all
+  leading value args — except a column tracing to a still-provisional constructor,
+  where the late rules narrow value and body together (F1). Aggregate keeps its
+  deferral; `binding-zip_empty`/`binding-zip_null` converged to Spark Int32.
+  Direct array constructors are wrapped bottom-up so nested non-null elements bind
+  non-null (F4). The provisional skip also covers value-side columns fed by bare
+  literals (VALUES rows, double-nested subqueries), traced iteratively.
+  pins: fnp-8-review/C-001, C-004
+  **FNP-8-REVIEW round 2 (2026-09-07):** both lineage walks resolve through every plan
+  node a literal reaches. `source_feeds_bare_integer` maps Join (semi/anti/mark aware,
+  both sides plus cross), Aggregate group keys, Window input columns, Unnest
+  dependencies, scalar-subquery plans, the recursive-CTE static term, and every
+  passthrough node; `source_element_nullable` chases multi-hop column lineage for the
+  element wrap, with Union demanding every branch non-null. Nodes no spelling reaches
+  (lateral view refuses loud) keep a defensive arm or a documented terminal.
+  The Join arm wraps only sides the join cannot pad (padded sides stay conservative,
+  since the wrapper asserts a non-null field and padded NULLs would crash Arrow);
+  the Values arm resolves every row and bails on any non-constructor cell.
+  pins: fnp-8-review/C-009, C-010
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each

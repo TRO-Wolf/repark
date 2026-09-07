@@ -1,3 +1,27 @@
+# Errata — FNP-8-REVIEW (2026-09-07, orchestrator, after the repo-bound critic)
+
+No verdict below changes; the clause table is untouched. This unit merged as PR #412
+without the critic engine the SEPMO manifest binds; the review it never had ran
+afterwards as unit FNP-8-REVIEW (`../staging/fnp-8-review-ledger.md`, PR #416) — three
+Muse critic rounds over the merged diff and the remediation:
+
+- Round 1 FAIL (seven findings): a `zip_with` left-shorter non-null-element crash on all
+  three doors; Int64 literal width inside lambda bodies over table-backed inputs on the
+  SQL door; `zip_with` element nullability and nested outer-variable nullability; a stale
+  refusal message; an overclaiming Rust pin name; two missing `F-Y10-1` citations.
+- Round 2 FAIL (all seven served; three new): a literal-fed HOF through a JOIN still baked
+  Int64 (the lineage check had no Join/Aggregate/Generate arm); six multi-hop shapes kept
+  nullable elements; stale ledger counts.
+- Round 3 PASS (all three served; one S3 disclosed, one S4 trued up): the padded side of
+  an outer join stays nullable by design and is named in `FNP8-NULLABILITY`.
+
+What the review changed on this unit's claims: C-005 ("every divergence filed as a §7 row")
+was not true as merged — the four rows above did not name the width and nullability
+shapes the critic measured; they are named now, with pins, and the crash is fixed. The
+"Sol" review the resolution below cites is not the bound engine; the bound verdict is
+round 3's PASS. The one comment line this unit added (`exists.rs` module doc) is removed,
+and the reworded `_lambda_arity` docstring is restored.
+
 # Unit ledger — FNP-8 · the eleven Spark higher-order functions with Python lambdas, both doors
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit.

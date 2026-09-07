@@ -31,6 +31,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   NULL and empty aggregate inputs, explicit `BIGINT`, non-HOF structural identity, and the
   inherited nullable-element Column width. Explicit lambda-body overflow keeps its existing wrap.
   pins: fnp-8/C-004
+  **FNP-8-REVIEW (2026-09-07):** the exists/forall three-valued pin gains the
+  null-predicate legs (`exists`/`forall` over `make_array(1, NULL, 3)` answer NULL, F6).
+  pins: fnp-8-review/C-006
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
   spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new

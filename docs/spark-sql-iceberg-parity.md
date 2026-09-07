@@ -641,6 +641,10 @@ them, and the document is ordered by surface, never by date.
 > bodies stay on DataFusion coercion (no overflow raise there yet — arming desynchronized
 > the declared `LambdaVariable` field from the re-derived merge type). Pin:
 > `lambda_variable_operands_do_not_arm`.
+> FNP-8 holds the wrap shape: `sql_door_lambda_body_overflow_divergence_wraps` pins the
+> `-294967296` answer, and `test_fnp8_sql_text_error_dispositions` pins the idx-25 ANSI
+> raise Spark gives against the wrap repark answers (error-25) plus the idx-51 ANSI-off
+> wrap both engines share (error-51).
 >
 > **F-Y10-2 — routed, not invented as a DEC row (2026-08-13, Z-5).** ANSI float `/ 0` is IEEE
 > `+Inf` rather than a standard-SQL raise. Residual. The door-vs-door Inf-vs-NULL split is
@@ -1175,6 +1179,9 @@ the pin rather than obeying it.
   `transform_values`, and `map_filter` retain nullable map values; `map_zip_with` retains
   a nullable outer map. Nested captured/shadowed SQL transforms retain a nullable innermost
   element, and the Column struct-field transform retains a nullable result element.
+  The Column transform over a view answers Spark's non-null elements since FNP-8-REVIEW
+  round 2 (2026-09-07), when the lineage walk went multi-hop; the round-1 nullable
+  instance converged.
 - **Apache Spark** — those measured fields are non-null; values agree. The exact recursive
   schemas are recorded in `python/repark/tests/fnp8_spark_oracle.json`.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
@@ -1183,6 +1190,16 @@ the pin rather than obeying it.
   `forms-map_zip_with`, `binding-map_third_slot`, `binding-capture`, `binding-shadow`,
   `binding-struct` Column cells). The same module's `test_live_fnp8_recorded_oracle`
   remeasures every Spark field.
+  `python/repark/tests/test_fnp_8_sql_door.py::test_table_backed_lambda_body_literals_answer_int32`
+  holds both doors Spark-equal (the round-1 nullable Column-view instance converged
+  in round 2).
+  Round 3 (2026-09-07) names one more staying shape: a HOF over the PADDED side of an
+  outer join (FULL, LEFT-padded-right, RIGHT-padded-left, and the Column door over the
+  same) answers nullable elements where Spark derives `not null`; values agree. The
+  nullable element is deliberate: dropping the Join-arm padding guard hard-errors
+  (`Column 'r' is declared as non-nullable but contains null values`).
+  `python/repark/tests/test_fnp_8_sql_door.py::test_outer_join_padded_side_answers_nullable`
+  holds the disclosed shape.
 - **Rationale** — BACKLOG (2026-09-07). These metadata differences predate the resumed repair.
   Public indexed-transform and `exists` metadata regressions are repaired in FNP-8; these
   remaining fields require separate derivation work. Complete Arrow schemas use a dedicated
@@ -1194,14 +1211,14 @@ the pin rather than obeying it.
 - **repark** — indexed transform over a previously analyzed `array(1, NULL, 3)` source column
   returns Int64 elements. SQL over a referenced `array(1,2,3)` subquery also returns
   Int64 elements. Direct inline SQL and column-free `F.expr` spellings return Int32.
-  `zip_with` with a typed empty/NULL first array and a literal second array returns Int64
-  through SQL and `F.expr`. A Column lambda calling `size` on nested arrays returns UInt64.
+  A Column lambda calling `size` on nested arrays returns UInt64.
+  `zip_with` with a typed empty/NULL first array and a literal second array converged to
+  Int32 in FNP-8-REVIEW (2026-09-07); the matrix cells assert Spark equality now.
 - **Apache Spark** — all these measured results have Int32 elements, with equal values.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
 - **Pin** — `python/repark/tests/test_parity_live_fnp8.py` holds the indexed source distinction.
   `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
-  holds `forms-transform_index` `sql_columns`, `binding-zip_empty`, `binding-zip_null`,
-  and `binding-nested_array` Column cells;
+  holds `forms-transform_index` `sql_columns` and `binding-nested_array` Column cells;
   `test_live_fnp8_recorded_oracle` remeasures Spark.
 - **Rationale** — BACKLOG (2026-09-07). These wider paths were present before the repair.
   The HOF preparation does not rewrite unrelated source queries or arm every lambda-body

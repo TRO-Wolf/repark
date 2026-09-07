@@ -39,6 +39,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   **FN-FIX-1 (2026-09-03), complete:** ten filed function-parity divergences plus NaN ingest.
   pins: fn-fix-1-registry-rows/C-001
 - [fnp-8-ledger.md](fnp-8-ledger.md) —
+  Errata (2026-09-07) at its head: the after-the-fact critic (FNP-8-REVIEW, three rounds, PASS).
   **FNP-8 (2026-09-07), complete; PR #412 pending merge:** the eleven Spark higher-order functions with Python
   lambdas on the Column door (FNP-4c's delivered mechanism) and with `x -> y` syntax on the
   Spark SQL door and column-free `F.expr` (this unit's arrow-gated executing parse; the

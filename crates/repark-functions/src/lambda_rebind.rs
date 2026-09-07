@@ -6,7 +6,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, ExprSchema, ScalarValue, exec_err, plan_err};
+use datafusion::common::{DFSchema, ExprSchema, JoinType, ScalarValue, exec_err, plan_err};
 use datafusion::error::Result;
 use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
@@ -106,23 +106,54 @@ fn prepare_expr(
     let Expr::HigherOrderFunction(mut hof) = expr else {
         return Ok(Transformed::no(expr));
     };
-    let indexed = hof.func.name() == "transform"
-        && hof
-            .args
-            .iter()
-            .any(|arg| matches!(arg, Expr::Lambda(lambda) if lambda.params.len() >= 2));
     let aggregate = hof.func.name() == "aggregate";
     let defer_aggregate_numeric =
         aggregate && should_defer_aggregate_numeric_preparation(&hof, inputs);
     let mut changed = false;
-    if let Some(first) = hof.args.first_mut()
-        && let Some(element_nullable) = array_constructor_element_nullable(first, schema, inputs)
-    {
-        if indexed || aggregate && !defer_aggregate_numeric {
-            narrow_constructor_literals(first);
+    let value_count = hof
+        .args
+        .iter()
+        .take_while(|arg| !matches!(arg, Expr::Lambda(_)))
+        .count();
+    let traced_provisional = !aggregate
+        && (0..value_count).any(|position| {
+            hof.args
+                .get(position)
+                .is_some_and(|arg| traces_to_provisional_constructor(arg, inputs))
+        });
+    let narrow_numeric = if aggregate {
+        !defer_aggregate_numeric
+    } else {
+        !traced_provisional
+    };
+    for position in 0..value_count {
+        if aggregate && position == 1 {
+            continue;
         }
-        *first = array_field_call(first.clone(), element_nullable);
-        changed = true;
+        if narrow_numeric
+            && let Some(value) = hof.args.get_mut(position)
+            && (is_array_constructor(value) || is_map_constructor(value))
+        {
+            let narrowed = narrow_provisional_integer_literals(value.clone())?;
+            changed |= narrowed.transformed;
+            *value = narrowed.data;
+        }
+        let Some(element_nullable) = hof
+            .args
+            .get(position)
+            .and_then(|arg| array_constructor_element_nullable(arg, schema, inputs))
+        else {
+            continue;
+        };
+        if let Some(value) = hof.args.get_mut(position) {
+            if is_array_constructor(value) {
+                let wrapped = wrap_nested_constructors(value.clone(), schema)?;
+                *value = wrapped.data;
+            } else {
+                *value = array_field_call(value.clone(), element_nullable);
+            }
+            changed = true;
+        }
     }
     if aggregate
         && !defer_aggregate_numeric
@@ -132,7 +163,7 @@ fn prepare_expr(
         changed |= narrowed.transformed;
         *initial = narrowed.data;
     }
-    if aggregate && !defer_aggregate_numeric {
+    if narrow_numeric {
         for arg in &mut hof.args {
             let Expr::Lambda(lambda) = arg else {
                 continue;
@@ -192,18 +223,139 @@ fn array_constructor_element_nullable(
     if is_array_constructor(expr) {
         return constructor_element_nullable(expr, schema);
     }
+    if let Expr::ScalarSubquery(query) = expr {
+        return source_element_nullable(query.subquery.as_ref(), 0);
+    }
     let Expr::Column(column) = expr else {
         return None;
     };
     inputs.iter().find_map(|input| {
         let index = input.schema().index_of_column(column).ok()?;
-        let (source, source_schema) = output_expression(input, index)?;
-        if is_array_constructor(source) {
-            constructor_element_nullable(source, source_schema)
-        } else {
-            None
-        }
+        source_element_nullable(input, index)
     })
+}
+
+fn source_element_nullable(plan: &LogicalPlan, index: usize) -> Option<bool> {
+    match plan {
+        LogicalPlan::Projection(projection) => {
+            let mut source = projection.expr.get(index)?;
+            while let Expr::Alias(alias) = source {
+                source = alias.expr.as_ref();
+            }
+            if let Expr::Column(inner) = source {
+                let inner_index = projection.input.schema().index_of_column(inner).ok()?;
+                source_element_nullable(projection.input.as_ref(), inner_index)
+            } else if is_array_constructor(source) {
+                constructor_element_nullable(source, projection.input.schema().as_ref())
+            } else {
+                None
+            }
+        }
+        LogicalPlan::SubqueryAlias(alias) => source_element_nullable(alias.input.as_ref(), index),
+        LogicalPlan::Subquery(subquery) => {
+            source_element_nullable(subquery.subquery.as_ref(), index)
+        }
+        LogicalPlan::Filter(filter) => source_element_nullable(filter.input.as_ref(), index),
+        LogicalPlan::Sort(sort) => source_element_nullable(sort.input.as_ref(), index),
+        LogicalPlan::Distinct(distinct) => {
+            source_element_nullable(distinct.input().as_ref(), index)
+        }
+        LogicalPlan::Limit(limit) => source_element_nullable(limit.input.as_ref(), index),
+        LogicalPlan::Repartition(repartition) => {
+            source_element_nullable(repartition.input.as_ref(), index)
+        }
+        LogicalPlan::Join(join) => {
+            let left_width = join.left.schema().fields().len();
+            let padded = match join.join_type {
+                JoinType::Left => index >= left_width,
+                JoinType::Right => index < left_width,
+                JoinType::Full => true,
+                _ => false,
+            };
+            if padded {
+                return None;
+            }
+            let (input, position) = join_lineage(
+                join.left.as_ref(),
+                join.right.as_ref(),
+                join.join_type,
+                index,
+            )?;
+            source_element_nullable(input, position)
+        }
+        LogicalPlan::Union(union) => {
+            if union.inputs.is_empty() {
+                return None;
+            }
+            for input in &union.inputs {
+                if source_element_nullable(input.as_ref(), index) != Some(false) {
+                    return None;
+                }
+            }
+            Some(false)
+        }
+        LogicalPlan::Aggregate(aggregate) => {
+            let mut source = aggregate.group_expr.get(index)?;
+            while let Expr::Alias(alias) = source {
+                source = alias.expr.as_ref();
+            }
+            if let Expr::Column(inner) = source {
+                let inner_index = aggregate.input.schema().index_of_column(inner).ok()?;
+                source_element_nullable(aggregate.input.as_ref(), inner_index)
+            } else if is_array_constructor(source) {
+                constructor_element_nullable(source, aggregate.input.schema().as_ref())
+            } else {
+                None
+            }
+        }
+        LogicalPlan::Window(window) => {
+            if index < window.input.schema().fields().len() {
+                source_element_nullable(window.input.as_ref(), index)
+            } else {
+                None
+            }
+        }
+        LogicalPlan::Values(values) => {
+            if values.values.is_empty() {
+                return None;
+            }
+            let mut nullable = false;
+            for row in &values.values {
+                match row.get(index) {
+                    Some(cell) if is_array_constructor(cell) => {
+                        nullable |= constructor_element_nullable(cell, values.schema.as_ref())?;
+                    }
+                    _ => return None,
+                }
+            }
+            Some(nullable)
+        }
+        _ => None,
+    }
+}
+
+fn join_lineage<'a>(
+    left: &'a LogicalPlan,
+    right: &'a LogicalPlan,
+    join_type: JoinType,
+    position: usize,
+) -> Option<(&'a LogicalPlan, usize)> {
+    match join_type {
+        JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark => {
+            (position < left.schema().fields().len()).then_some((left, position))
+        }
+        JoinType::RightSemi | JoinType::RightAnti | JoinType::RightMark => {
+            (position < right.schema().fields().len()).then_some((right, position))
+        }
+        _ => {
+            let left_width = left.schema().fields().len();
+            if position < left_width {
+                Some((left, position))
+            } else {
+                Some((right, position - left_width))
+            }
+        }
+    }
 }
 
 fn output_expression(mut plan: &LogicalPlan, index: usize) -> Option<(&Expr, &DFSchema)> {
@@ -260,6 +412,146 @@ fn is_array_constructor_name(name: &str) -> bool {
     matches!(name, "array" | "make_array")
 }
 
+fn is_map_constructor(expr: &Expr) -> bool {
+    matches!(
+        unwrap_nonnull(expr),
+        Expr::ScalarFunction(function) if function.func.name() == "map"
+    )
+}
+
+fn contains_bare_integer(expr: &Expr) -> bool {
+    let mut found = false;
+    expr.apply(|node| match node {
+        Expr::Literal(ScalarValue::Int64(_), _) => {
+            found = true;
+            Ok(TreeNodeRecursion::Stop)
+        }
+        Expr::Cast(_) => Ok(TreeNodeRecursion::Jump),
+        _ => Ok(TreeNodeRecursion::Continue),
+    })
+    .is_ok()
+        && found
+}
+
+fn traces_to_provisional_constructor(expr: &Expr, inputs: &[LogicalPlan]) -> bool {
+    let mut provisional = false;
+    expr.apply(|node| match node {
+        Expr::Column(column) => {
+            if inputs.iter().any(|input| {
+                input
+                    .schema()
+                    .index_of_column(column)
+                    .ok()
+                    .is_some_and(|index| source_feeds_bare_integer(input, index))
+            }) {
+                provisional = true;
+                Ok(TreeNodeRecursion::Stop)
+            } else {
+                Ok(TreeNodeRecursion::Continue)
+            }
+        }
+        Expr::ScalarSubquery(query) => {
+            if source_feeds_bare_integer(query.subquery.as_ref(), 0) {
+                provisional = true;
+            }
+            Ok(TreeNodeRecursion::Stop)
+        }
+        _ => Ok(TreeNodeRecursion::Continue),
+    })
+    .is_ok()
+        && provisional
+}
+
+fn source_feeds_bare_integer(plan: &LogicalPlan, index: usize) -> bool {
+    let mut pending = vec![(plan, index)];
+    while let Some((current, position)) = pending.pop() {
+        match current {
+            LogicalPlan::Projection(projection) => {
+                let Some(mut source) = projection.expr.get(position) else {
+                    continue;
+                };
+                while let Expr::Alias(alias) = source {
+                    source = alias.expr.as_ref();
+                }
+                if let Expr::Column(inner) = source {
+                    if let Ok(inner_index) = projection.input.schema().index_of_column(inner) {
+                        pending.push((projection.input.as_ref(), inner_index));
+                    }
+                } else if (is_array_constructor(source) || is_map_constructor(source))
+                    && contains_bare_integer(source)
+                {
+                    return true;
+                }
+            }
+            LogicalPlan::SubqueryAlias(alias) => pending.push((alias.input.as_ref(), position)),
+            LogicalPlan::Subquery(subquery) => {
+                pending.push((subquery.subquery.as_ref(), position));
+            }
+            LogicalPlan::Filter(filter) => pending.push((filter.input.as_ref(), position)),
+            LogicalPlan::Sort(sort) => pending.push((sort.input.as_ref(), position)),
+            LogicalPlan::Distinct(distinct) => pending.push((distinct.input(), position)),
+            LogicalPlan::Limit(limit) => pending.push((limit.input.as_ref(), position)),
+            LogicalPlan::Repartition(repartition) => {
+                pending.push((repartition.input.as_ref(), position));
+            }
+            LogicalPlan::Join(join) => {
+                if let Some((input, index)) = join_lineage(
+                    join.left.as_ref(),
+                    join.right.as_ref(),
+                    join.join_type,
+                    position,
+                ) {
+                    pending.push((input, index));
+                }
+            }
+            LogicalPlan::Aggregate(aggregate) => {
+                if let Some(group) = aggregate.group_expr.get(position) {
+                    let mut source = group;
+                    while let Expr::Alias(alias) = source {
+                        source = alias.expr.as_ref();
+                    }
+                    if let Expr::Column(inner) = source {
+                        if let Ok(inner_index) = aggregate.input.schema().index_of_column(inner) {
+                            pending.push((aggregate.input.as_ref(), inner_index));
+                        }
+                    } else if (is_array_constructor(source) || is_map_constructor(source))
+                        && contains_bare_integer(source)
+                    {
+                        return true;
+                    }
+                }
+            }
+            LogicalPlan::Window(window) => {
+                if position < window.input.schema().fields().len() {
+                    pending.push((window.input.as_ref(), position));
+                }
+            }
+            LogicalPlan::Unnest(unnest) => {
+                if let Some(dependency) = unnest.dependency_indices.get(position) {
+                    pending.push((unnest.input.as_ref(), *dependency));
+                }
+            }
+            LogicalPlan::RecursiveQuery(recursive) => {
+                pending.push((recursive.static_term.as_ref(), position));
+            }
+            LogicalPlan::Values(values) => {
+                if values
+                    .values
+                    .iter()
+                    .any(|row| row.get(position).is_some_and(contains_bare_integer))
+                {
+                    return true;
+                }
+            }
+            LogicalPlan::Union(union) => {
+                pending.extend(union.inputs.iter().map(|input| (input.as_ref(), position)));
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> {
     let Expr::ScalarFunction(function) = unwrap_nonnull(expr) else {
         return None;
@@ -272,32 +564,23 @@ fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> 
     Some(false)
 }
 
-fn narrow_constructor_literals(expr: &mut Expr) {
-    let target = match expr {
-        Expr::ScalarFunction(function) if is_array_constructor_name(function.func.name()) => {
-            function
-        }
-        Expr::ScalarFunction(function)
-            if function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1 =>
-        {
-            let Expr::ScalarFunction(inner) = &mut function.args[0] else {
-                return;
-            };
-            inner
-        }
-        _ => return,
-    };
-    for arg in &mut target.args {
-        let narrowed = narrow_provisional_integer_literal(arg.clone());
-        *arg = narrowed.data;
-    }
-}
-
 fn array_field_call(expr: Expr, element_nullable: bool) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
         Arc::new(ScalarUDF::from(HofArrayField::new(element_nullable))),
         vec![expr],
     ))
+}
+
+fn wrap_nested_constructors(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    expr.transform_up(|node| {
+        if !is_array_constructor(&node) {
+            return Ok(Transformed::no(node));
+        }
+        let Some(nullable) = constructor_element_nullable(&node, schema) else {
+            return Ok(Transformed::no(node));
+        };
+        Ok(Transformed::yes(array_field_call(node, nullable)))
+    })
 }
 
 #[derive(Debug)]
