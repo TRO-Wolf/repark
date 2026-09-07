@@ -965,6 +965,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `REPARK_PARITY_LIVE=1`); the three inherited gap pins
   (crosstab sparse 0, freqItems full text, sample fraction full text).
   pins: dfcore-5/C-001, C-002, C-003, C-004, C-005
+- `test_dfcore_6_eager_preview.py` — DFCORE-6 eager-preview pins: full previews
+  show the footer without calling `count()` on the repr, HTML, and
+  vertical-show doors (plain, cached, and `mapInArrow`-backed frames); footer
+  presence at 0/N/N+1 rows for caps 1 and 20 on both eager doors; zero,
+  negative, and non-int caps plus truncate preserved; the bridge yields at
+  most `maxNumRows + 1` rows per preview; raising bridges fail every door with
+  the same error; a non-golden vertical truncation pin; styled shows keep
+  their one count.
+  pins: dfcore-6/C-001, C-002, C-003, C-004
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes
