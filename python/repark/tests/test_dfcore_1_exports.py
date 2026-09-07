@@ -15,6 +15,15 @@ module functions, but the public methods (``approxQuantile``, ``corr``,
 ``freqItems`` on ``DataFrameStatFunctions``) stay as one-line wrappers, so
 ``EXPECTED_DATAFRAME_DIR`` is unchanged; ``core`` and the package each gain
 exactly the one new module name ``statistics``.
+
+DFCORE-4a (2026-09-07) declared deltas, extended before the production edit: the
+three sampling bodies (``sample``, ``randomSplit``, ``sampleBy``) leave for
+``sampling.py`` as private frame-first module functions, but the public methods
+stay as one-line wrappers; the ``_prepare_sample_args`` static method leaves the
+class with no wrapper, so ``EXPECTED_DATAFRAME_DIR`` loses exactly that one
+name; the module-level ``_coerce_sample_seed`` moves to ``sampling.py`` and is
+re-imported by ``core`` so both surfaces keep it; ``core`` and the package each
+gain exactly the one new module name ``sampling``.
 """
 
 from __future__ import annotations
@@ -507,7 +516,6 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_plan",
     "_plan_id",
     "_prepare_for_plan",
-    "_prepare_sample_args",
     "_preview_tail_rows",
     "_quote_filter_sql_identifiers",
     "_raise_if_origin_not_emitted",
@@ -677,6 +685,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "export_errors",
     "grouped_udf",
     "rows_export",
+    "sampling",
     "statistics",
     "udf_projection",
     "udf_schema",
@@ -684,6 +693,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "sampling",
     "statistics",
     "udf_projection",
     "udf_window_projection",
@@ -712,9 +722,10 @@ def test_package_export_set_unchanged() -> None:
 
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the seven new submodule attributes (DFCORE-1's four plus DFCORE-2's
+    gain is the eight new submodule attributes (DFCORE-1's four plus DFCORE-2's
     ``udf_projection`` and ``udf_window_projection`` plus DFCORE-3's
-    ``statistics``), bound by the import system when core imports the new homes.
+    ``statistics`` plus DFCORE-4a's ``sampling``), bound by the import system
+    when core imports the new homes.
     """
     expected_surface = [
         name
@@ -743,9 +754,10 @@ def test_core_export_set_unchanged() -> None:
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. ``__annotations__``
     is separately asserted absent: the moved constants carried core's last annotated
-    module-level assignments with them. The only accepted gain is the three new
-    module bindings (DFCORE-2's two plus DFCORE-3's ``statistics``): ``select``
-    and the statistics wrappers delegate to the moved helpers through them.
+    module-level assignments with them. The only accepted gain is the four new
+    module bindings (DFCORE-2's two plus DFCORE-3's ``statistics`` plus DFCORE-4a's
+    ``sampling``): ``select`` and the statistics and sampling wrappers delegate to
+    the moved helpers through them.
     """
     expected_surface = [
         name
@@ -911,3 +923,44 @@ def test_moved_statistics_helpers_live_in_new_home() -> None:
         assert next(iter(inspect.signature(helper).parameters)) == "frame", name
     assert "statistics" in dir(dataframe_core)
     assert "statistics" in dir(dataframe_package)
+
+
+MOVED_SAMPLING_HELPERS: tuple[str, ...] = (
+    "_sample",
+    "_random_split",
+    "_sample_by",
+)
+
+
+def test_moved_sampling_helpers_live_in_new_home() -> None:
+    """DFCORE-4a: each moved sampling body is ``sampling``'s own module function.
+
+    The three method bodies take the frame as their first argument. The two
+    receiverless helpers move verbatim: ``_prepare_sample_args`` keeps its
+    parameter list (it leaves the class with no wrapper) and
+    ``_coerce_sample_seed`` is re-imported by ``core`` so both surfaces keep it
+    by identity. The leaf import stays function-local so the pin file never
+    binds the moved home at collection time.
+    """
+    import inspect
+
+    import repark.spark.dataframe.sampling as sampling
+
+    for name in MOVED_SAMPLING_HELPERS:
+        helper = getattr(sampling, name)
+        assert inspect.isfunction(helper), name
+        assert helper.__module__ == sampling.__name__, name
+        assert next(iter(inspect.signature(helper).parameters)) == "frame", name
+    normalizer = sampling._prepare_sample_args
+    assert inspect.isfunction(normalizer)
+    assert normalizer.__module__ == sampling.__name__
+    assert list(inspect.signature(normalizer).parameters) == [
+        "withReplacement",
+        "fraction",
+        "seed",
+    ]
+    assert "_prepare_sample_args" not in vars(DataFrame)
+    assert dataframe_core._coerce_sample_seed is sampling._coerce_sample_seed
+    assert dataframe_package._coerce_sample_seed is sampling._coerce_sample_seed
+    assert "sampling" in dir(dataframe_core)
+    assert "sampling" in dir(dataframe_package)
