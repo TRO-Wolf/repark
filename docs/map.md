@@ -192,4 +192,5 @@ FNP-8 (2026-09-07): the parity registry holds the measured HOF nullability, widt
 parser/binder, and SQL-arity residuals. Public Arrow and live-oracle pins are linked there.
 FNP-8-REVIEW (2026-09-07): the F-Y10-1 note cites the lambda-body overflow wrap pin and
 the idx-25/idx-51 dispositions (F7); FNP8-WIDTH narrows as the zip_empty/zip_null
-cells converge to Spark Int32 (F1).
+cells converge to Spark Int32 (F1); FNP8-NULLABILITY names the Column-view
+nullable-element instance (F4 slice).

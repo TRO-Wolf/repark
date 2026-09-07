@@ -78,7 +78,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   leading value args — except a column tracing to a still-provisional constructor,
   where the late rules narrow value and body together (F1). Aggregate keeps its
   deferral; `binding-zip_empty`/`binding-zip_null` converged to Spark Int32.
-  pins: fnp-8-review/C-001
+  Direct array constructors are wrapped bottom-up so nested non-null elements bind
+  non-null (F4). pins: fnp-8-review/C-001, C-004
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each

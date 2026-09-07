@@ -146,7 +146,13 @@ fn prepare_expr(
             continue;
         };
         if let Some(value) = hof.args.get_mut(position) {
-            *value = array_field_call(value.clone(), element_nullable);
+            if is_array_constructor(value) {
+                let wrapped = wrap_nested_constructors(value.clone(), schema)?;
+                changed |= wrapped.transformed;
+                *value = wrapped.data;
+            } else {
+                *value = array_field_call(value.clone(), element_nullable);
+            }
             changed = true;
         }
     }
@@ -340,6 +346,18 @@ fn array_field_call(expr: Expr, element_nullable: bool) -> Expr {
         Arc::new(ScalarUDF::from(HofArrayField::new(element_nullable))),
         vec![expr],
     ))
+}
+
+fn wrap_nested_constructors(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    expr.transform_up(|node| {
+        if !is_array_constructor(&node) {
+            return Ok(Transformed::no(node));
+        }
+        let Some(nullable) = constructor_element_nullable(&node, schema) else {
+            return Ok(Transformed::no(node));
+        };
+        Ok(Transformed::yes(array_field_call(node, nullable)))
+    })
 }
 
 #[derive(Debug)]

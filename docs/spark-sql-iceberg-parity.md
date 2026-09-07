@@ -1179,6 +1179,9 @@ the pin rather than obeying it.
   `transform_values`, and `map_filter` retain nullable map values; `map_zip_with` retains
   a nullable outer map. Nested captured/shadowed SQL transforms retain a nullable innermost
   element, and the Column struct-field transform retains a nullable result element.
+  The Column transform over a view retains a nullable result element (the extra select
+  projection puts the constructor past the single-hop lineage); the SQL door over the
+  same view answers Spark's non-null elements since FNP-8-REVIEW (2026-09-07).
 - **Apache Spark** — those measured fields are non-null; values agree. The exact recursive
   schemas are recorded in `python/repark/tests/fnp8_spark_oracle.json`.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
@@ -1187,6 +1190,8 @@ the pin rather than obeying it.
   `forms-map_zip_with`, `binding-map_third_slot`, `binding-capture`, `binding-shadow`,
   `binding-struct` Column cells). The same module's `test_live_fnp8_recorded_oracle`
   remeasures every Spark field.
+  `python/repark/tests/test_fnp_8_sql_door.py::test_table_backed_lambda_body_literals_answer_int32`
+  holds the Column-view instance (nullable) beside the Spark-equal SQL leg.
 - **Rationale** — BACKLOG (2026-09-07). These metadata differences predate the resumed repair.
   Public indexed-transform and `exists` metadata regressions are repaired in FNP-8; these
   remaining fields require separate derivation work. Complete Arrow schemas use a dedicated

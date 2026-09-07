@@ -3775,5 +3775,7 @@ keeps Spark collect separate from its Arrow export refusal.
 idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007
 **FNP-8-REVIEW (2026-09-07):** `test_fnp_8_sql_door.py` pins table-backed and
 inline lambda-body widths (F1), the left-shorter zip on three doors (F2), zip
-element nullability (F3), and the outer-variable nesting shape (F4).
+element nullability (F3), and the outer-variable nesting shape (F4). The
+table-backed pin also holds the Column-view nullable-element instance beside
+the Spark-equal SQL legs (FNP8-NULLABILITY).
 pins: fnp-8-review/C-001, C-002, C-003, C-004

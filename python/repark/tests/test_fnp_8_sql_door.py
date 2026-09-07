@@ -364,6 +364,7 @@ def test_table_backed_lambda_body_literals_answer_int32(spark: ReparkSession) ->
     assert not sql_table.schema.field("r").type.value_field.nullable
     column_table = frame.select(_transform("a", "", "", "").alias("r")).toArrow()
     _assert_list_int32(column_table, [[2, 3, 4]])
+    assert column_table.schema.field("r").type.value_field.nullable
     sql_table = spark.sql(
         "SELECT zip_with(a, b, (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
         " FROM fnp8rev_width"
@@ -372,6 +373,7 @@ def test_table_backed_lambda_body_literals_answer_int32(spark: ReparkSession) ->
     assert not sql_table.schema.field("r").type.value_field.nullable
     column_table = frame.select(_zip_nullproof("a", "b").alias("r")).toArrow()
     _assert_list_int32(column_table, [[11, 22, 3]])
+    assert not column_table.schema.field("r").type.value_field.nullable
     sql_table = spark.sql(
         "SELECT transform_values(m1, (k, v) -> v + 1) AS r FROM fnp8rev_width"
     ).toArrow()
