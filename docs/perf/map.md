@@ -175,6 +175,11 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   **Round 3 (2026-09-06):** the 1e7 attributable 462 → 564 MB is the deferred
   canonical fold's cost, not a re-derivation of the same kernel.
   pins: perf-approxpct-1/C-004
+  **DFCORE-5 (2026-09-07)** appends §"DataFrame.approxQuantile": the
+  `approxQuantile` before/after pair (2x3 collects 6 → 1, medians 0.155 →
+  0.052 s; 4x5 collects 20 → 1, medians 0.572 → 0.087 s; values identical),
+  recorded on one release module with per-run loads, wall not gated.
+  pins: dfcore-5/C-005
 - [csv-infer-baseline.md](csv-infer-baseline.md) — **CSV-INFER-PERF-1 (2026-09-06):**
   local CSV `inferSchema` before/after on a 300k × 8 file (True 2.339 s → 0.155 s,
   plan-time `to_arrow` 34 → 1, True/False **2.01×**). Leftover numeric grammar at

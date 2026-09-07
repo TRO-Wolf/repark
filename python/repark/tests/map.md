@@ -953,6 +953,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: dfcore-4b/C-006
   `test_show_styled_vertical_warning_attributes_to_caller` pins the warning's `filename`
   to the caller (critic r1 F1: the move added a wrapper frame; `stacklevel` 2 → 3).
+- `test_dfcore_5_approx_quantile.py` — DFCORE-5 one-collect `approxQuantile`
+  pins: the collect-count pin (2x3 6→1, 4x5 20→1, single 3→1, empties 0) via
+  an autospec `collect` mock carrying the real method as its side effect, so
+  values still flow; every preserved shape on both the `df.` and `df.stat.`
+  doors (validation order with exact classes and parameters, empty probs/cols,
+  flat single, dupes, NULL ignored, all-NULL/empty NaN, int/decimal/float,
+  non-numeric engine error, nested float shape, ignored relativeError); two
+  live legs (audit values equal Spark; the all-NULL/empty divergence pinned on
+  both sides — repark NaN where Spark answers [] — both under
+  `REPARK_PARITY_LIVE=1`); the three inherited gap pins
+  (crosstab sparse 0, freqItems full text, sample fraction full text).
+  pins: dfcore-5/C-001, C-002, C-003, C-004, C-005
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes

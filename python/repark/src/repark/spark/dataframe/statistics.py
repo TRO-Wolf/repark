@@ -168,14 +168,17 @@ def _approx_quantile(
                 },
             )
 
+    if not columns or not probs:
+        empty: list[list[float]] = [[] for _ in columns]
+        return empty[0] if single else empty
+    cells = frame.agg(
+        *[percentile_approx(name, probs).alias(f"_q{index}") for index, name in enumerate(columns)]
+    ).collect()
+    row = list(cells[0]) if cells else [None] * len(columns)
     results: list[list[float]] = []
-    for name in columns:
-        row_values: list[float] = []
-        for probability in probs:
-            cell = frame.agg(percentile_approx(name, float(probability)).alias("_q")).collect()
-            raw = cell[0][0] if cell else None
-            row_values.append(float("nan") if raw is None else float(raw))
-        results.append(row_values)
+    for raw in row:
+        values = raw if raw is not None else [None] * len(probs)
+        results.append([float("nan") if value is None else float(value) for value in values])
     return results[0] if single else results
 
 
