@@ -44,7 +44,7 @@ _LAMBDA_PARAMETER_KINDS = (
 
 
 def _lambda_arity(function: Callable[..., Column], allowed: tuple[int, ...]) -> int:
-    """Validate callable parameters and return the supported argument count."""
+    """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
     parameters = inspect.signature(function).parameters
     if any(parameter.kind not in _LAMBDA_PARAMETER_KINDS for parameter in parameters.values()):
         raise PySparkValueError(
