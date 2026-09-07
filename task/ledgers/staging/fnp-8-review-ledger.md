@@ -28,9 +28,53 @@ prepends its errata.
 | C-005 | F5 Column-door nested-HOF refusal names the Column door as the refusing side and the SQL door as serving nested lambdas. | The reworded refusal; existing refusal pins still green. | **PROVEN** | `expr_build.rs` refusal reworded; `test_nested_higher_order_is_refused_rather_than_silently_wrong` and `test_nested_higher_order_stays_refused` match the kept phrases. |
 | C-006 | F6 `sql_door_exists_and_forall_answer_three_valued` carries a null-predicate leg or is renamed. | The Rust pin with the added leg. | **PROVEN** | Null-predicate `exists`/`forall` legs added; `cargo test -p repark-spark lambda_door` green. |
 | C-007 | F7 the `F-Y10-1` note cites `sql_door_lambda_body_overflow_divergence_wraps` and the error-oracle idx 25/51 dispositions. | The extended note. | **PROVEN** | Note cites the wrap pin plus error-25 (ANSI raise vs wrap) and error-51 (shared wrap). |
-| C-008 | No regression of the critic's held set: the four pin files JVM-free, the live leg at 512 passed / 0 skipped, `make verify`, and the report's mutation knobs still red. | The gate commands with real exit codes; mutation table. | **OPEN** | TBD: final gate run. |
+| C-008 | No regression of the critic's held set: the four pin files JVM-free, the live leg at 512 passed / 0 skipped, `make verify`, and the report's mutation knobs still red. | The gate commands with real exit codes; mutation table. | **PROVEN** | JVM-free `420 passed, 93 skipped`; live `525 passed` (512 + 8 new live + 5 new door pins, 0 skipped); facade `5749 passed, 362 skipped`; `make verify` exit 0; Rust `lambda_door` 25 passed; M1–M5 all bite (2 / 1 / 6 / 4 / 4+61 reds). |
 
-VERDICT: 8 clauses, 7 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: fnp-8-review
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: All eight clauses walked against the critic report. F1-F4 fixed red-first against live PySpark 4.1.2 (banner spark 4.1.2 tz UTC ansi true); F5-F7 are the report's own wording asks; C-008 re-ran the held set unchanged. Counts read from the pytest summary lines.
+      artifacts: [python/repark/tests/test_fnp_8_sql_door.py, python/repark/tests/test_parity_live_fnp8.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Shorter-either-side zip, empty and NULL arrays, NULL elements, explicit BIGINT casts, out-of-i32 literals, negative literals, VALUES columns, subquery columns, unions, temp views, nested arrays and maps, both ANSI settings - every boundary the prep rule branches on has a pin that names its output.
+      artifacts: [python/repark/tests/test_fnp_8_sql_door.py, crates/repark-spark/src/tests/lambda_door.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The F2 Arrow crash now answers on all three doors. Refusals kept loud: the reworded Column-door nested refusal, EX-FN-4, Spark arity errors. The 110-cell error oracle and its dispositions stay green.
+      artifacts: [python/repark/tests/test_fnp_8_sql_door.py, python/repark/tests/test_fnp8_oracle_matrix.py]
+    - id: AT-4
+      status: N/A
+      justification: Pure analyzer rewriting plus UDF metadata derivation. No shared or mutable state, no locks, no async, no spawn. The provisional trace uses an explicit worklist, never recursion over plan depth.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, no deserialization, no path, credential or network surface. unsafe_code stays workspace-forbidden and this unit adds none.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every fixed shape pins values plus dtypes against the live oracle; the eight converged zip_empty/zip_null disposition cells were regenerated from measured output with row-equality asserted first, and FNP8-WIDTH/FNP8-NULLABILITY narrowed or extended to match. No silent drift.
+      artifacts: [python/repark/tests/fnp8_repark_dispositions.json, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: N/A
+      justification: Plan-time-only tree walks linear in HOF argument size, on queries that already analyze. No executor hot path touched, no new materialization, no unbounded growth. Not a system-breaking change.
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion 54.1 coalesce nullability (non-null when any argument is non-null) read from the vendored source before relying on it for F3. The LambdaRebind seat, the error taxonomy, and the refusal contracts are unchanged; the map() rewrite shape was read off the measured plan.
+      artifacts: [crates/repark-functions/src/higher_order/zip_with.rs, crates/repark-functions/src/lambda_rebind.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The Column-door nested-HOF refusal now names the refusing door and the serving door, pinned by the pre-existing refusal pins matching the kept phrases. Error-oracle dispositions pin every loud failure path.
+      artifacts: [crates/repark-python/src/column/expr_build.rs, python/repark/tests/test_fnp8_oracle_matrix.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Five new door pins ran 4 red / 1 green before any fix and went green slice by slice. Five mutations (M1-M5) red 2 / 1 / 6 / 4 / 4+61 selections; every added branch has a nameable input on which it flips the output. Mutation table above.
+      artifacts: [task/ledgers/staging/fnp-8-review-ledger.md]
+  complete: true
+```
 
 ## 2026-09-07 VALUES follow-up (C-001)
 
@@ -40,3 +84,18 @@ body bakes Int64. The provisional skip now traces value-side columns to bare
 literals (VALUES rows, constructor sources, double-nested subqueries,
 unions) with an iterative worklist; analyzed and base-table columns still
 narrow early. Rust `lambda_door` 25 passed; the four pin files 420 passed.
+
+## Mutation (2026-09-07, each reverted; tree clean after)
+
+| Knob | Mutant | Selection | Result |
+|---|---|---|---|
+| M1 | F2 reverted (zip params non-nullable) | `test_fnp_8_sql_door.py -k "left_shorter or element_nullability"` | 2 failed: both zip pins crash (`Column 'x'` / `Column 'y' non-nullable`) |
+| M2 | F3 reverted (zip element `true`) | same selection | 1 failed: `test_zip_with_element_nullability_follows_the_lambda`; left-shorter stays green |
+| M3 | HOF preparation dropped | `test_fnp_8_sql_door.py` (40 tests) | 6 failed: indexed shapes, exists nullability, aggregate expr, F1 table pin, F4 pin |
+| M4 | two-valued `exists` | `cargo test -p repark-spark --lib tests::lambda_door` | 4 failed (critic: 2; the F6 null-predicate legs add the other two) |
+| M5 | parameter packing skipped | Rust `lambda_door` + the four pin files | 4 Rust + 61 Python failed (critic: 4 + 59) |
+
+Red-first record: the five new door pins ran 4 red / 1 green (inline control)
+before any fix; F2/F3 went green after the zip slice, F1 after the prep
+slice, F4 after the wrapping slice. Every mutant and every restoration
+rebuilt clean; `git status` clean after each revert.
