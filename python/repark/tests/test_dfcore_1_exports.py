@@ -7,6 +7,14 @@ DFCORE-2 (2026-09-07) declared deltas, extended before the production edit: the
 four ``_select_with_*`` helpers leave the class, so ``EXPECTED_DATAFRAME_DIR``
 loses exactly those four names; ``core`` and the package each gain exactly the
 two new module names ``udf_projection`` and ``udf_window_projection``.
+
+DFCORE-3 (2026-09-07) declared deltas, extended before the production edit: the
+seven statistics bodies leave for ``statistics.py`` as private frame-first
+module functions, but the public methods (``approxQuantile``, ``corr``,
+``cov``, ``crosstab``, ``summary``, ``describe`` on ``DataFrame``;
+``freqItems`` on ``DataFrameStatFunctions``) stay as one-line wrappers, so
+``EXPECTED_DATAFRAME_DIR`` is unchanged; ``core`` and the package each gain
+exactly the one new module name ``statistics``.
 """
 
 from __future__ import annotations
@@ -669,12 +677,14 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "export_errors",
     "grouped_udf",
     "rows_export",
+    "statistics",
     "udf_projection",
     "udf_schema",
     "udf_window_projection",
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "statistics",
     "udf_projection",
     "udf_window_projection",
 }
@@ -702,9 +712,9 @@ def test_package_export_set_unchanged() -> None:
 
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the six new submodule attributes (DFCORE-1's four plus DFCORE-2's
-    ``udf_projection`` and ``udf_window_projection``), bound by the import system
-    when core imports the new homes.
+    gain is the seven new submodule attributes (DFCORE-1's four plus DFCORE-2's
+    ``udf_projection`` and ``udf_window_projection`` plus DFCORE-3's
+    ``statistics``), bound by the import system when core imports the new homes.
     """
     expected_surface = [
         name
@@ -733,8 +743,9 @@ def test_core_export_set_unchanged() -> None:
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. ``__annotations__``
     is separately asserted absent: the moved constants carried core's last annotated
-    module-level assignments with them. DFCORE-2's only accepted gain is the two
-    new module bindings: ``select`` delegates to the moved helpers through them.
+    module-level assignments with them. The only accepted gain is the three new
+    module bindings (DFCORE-2's two plus DFCORE-3's ``statistics``): ``select``
+    and the statistics wrappers delegate to the moved helpers through them.
     """
     expected_surface = [
         name
@@ -868,3 +879,35 @@ def test_moved_select_helpers_live_in_new_homes() -> None:
             assert helper.__module__ == home.__name__, name
             assert next(iter(inspect.signature(helper).parameters)) == "frame", name
             assert name not in vars(DataFrame), name
+
+
+MOVED_STATISTICS_HELPERS: tuple[str, ...] = (
+    "_approx_quantile",
+    "_corr",
+    "_cov",
+    "_crosstab",
+    "_describe",
+    "_freq_items",
+    "_summary",
+)
+
+
+def test_moved_statistics_helpers_live_in_new_home() -> None:
+    """DFCORE-3: each moved statistics body is ``statistics``' own module function.
+
+    The helpers take the frame as their first argument. Unlike DFCORE-2, the
+    public methods stay on the class as one-line wrappers, so the class dir is
+    unchanged; the leaf import stays function-local so the pin file never binds
+    the moved home at collection time.
+    """
+    import inspect
+
+    import repark.spark.dataframe.statistics as statistics
+
+    for name in MOVED_STATISTICS_HELPERS:
+        helper = getattr(statistics, name)
+        assert inspect.isfunction(helper), name
+        assert helper.__module__ == statistics.__name__, name
+        assert next(iter(inspect.signature(helper).parameters)) == "frame", name
+    assert "statistics" in dir(dataframe_core)
+    assert "statistics" in dir(dataframe_package)

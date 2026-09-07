@@ -346,6 +346,11 @@ UDF select rewrites move to `udf_projection.py` and `udf_window_projection.py`,
 which carry no row (mirrored in the CAP-1 test). Ratchets DOWN.
 pins: dfcore-2/C-006
 
+DFCORE-3 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5263→5060 and
+`dataframe/writer_readwriter.py` 1113→1111 — the seven statistics bodies move to
+`statistics.py`, which carries no row (mirrored in the CAP-1 test). Ratchets DOWN.
+pins: dfcore-3/C-006
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

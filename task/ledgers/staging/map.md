@@ -529,3 +529,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   preserved plus one pin test, four mutations red existing pins. `risk_tier: standard`.
   Branch `refactor/dfcore-2`.
   pins: dfcore-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [dfcore-3-ledger.md](dfcore-3-ledger.md) —
+  **DFCORE-3 (2026-09-07), in flight:** the statistics family out of `core.py` —
+  six bodies plus the `freqItems` refusal to `statistics.py`. Move-only: `core.py`
+  5263 → 5060, `writer_readwriter.py` 1113 → 1111, class dir frozen, package and
+  core gain exactly `statistics`, 6102 collected IDs preserved plus one pin test,
+  seven mutations red existing pins, collect count 6 == 6. `risk_tier: standard`.
+  Branch `refactor/dfcore-3`.
+  pins: dfcore-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
