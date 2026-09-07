@@ -106,23 +106,49 @@ fn prepare_expr(
     let Expr::HigherOrderFunction(mut hof) = expr else {
         return Ok(Transformed::no(expr));
     };
-    let indexed = hof.func.name() == "transform"
-        && hof
-            .args
-            .iter()
-            .any(|arg| matches!(arg, Expr::Lambda(lambda) if lambda.params.len() >= 2));
     let aggregate = hof.func.name() == "aggregate";
     let defer_aggregate_numeric =
         aggregate && should_defer_aggregate_numeric_preparation(&hof, inputs);
     let mut changed = false;
-    if let Some(first) = hof.args.first_mut()
-        && let Some(element_nullable) = array_constructor_element_nullable(first, schema, inputs)
-    {
-        if indexed || aggregate && !defer_aggregate_numeric {
-            narrow_constructor_literals(first);
+    let value_count = hof
+        .args
+        .iter()
+        .take_while(|arg| !matches!(arg, Expr::Lambda(_)))
+        .count();
+    let traced_provisional = !aggregate
+        && (0..value_count).any(|position| {
+            hof.args
+                .get(position)
+                .is_some_and(|arg| traces_to_provisional_constructor(arg, inputs))
+        });
+    let narrow_numeric = if aggregate {
+        !defer_aggregate_numeric
+    } else {
+        !traced_provisional
+    };
+    for position in 0..value_count {
+        if aggregate && position == 1 {
+            continue;
         }
-        *first = array_field_call(first.clone(), element_nullable);
-        changed = true;
+        if narrow_numeric
+            && let Some(value) = hof.args.get_mut(position)
+            && (is_array_constructor(value) || is_map_constructor(value))
+        {
+            let narrowed = narrow_provisional_integer_literals(value.clone())?;
+            changed |= narrowed.transformed;
+            *value = narrowed.data;
+        }
+        let Some(element_nullable) = hof
+            .args
+            .get(position)
+            .and_then(|arg| array_constructor_element_nullable(arg, schema, inputs))
+        else {
+            continue;
+        };
+        if let Some(value) = hof.args.get_mut(position) {
+            *value = array_field_call(value.clone(), element_nullable);
+            changed = true;
+        }
     }
     if aggregate
         && !defer_aggregate_numeric
@@ -132,7 +158,7 @@ fn prepare_expr(
         changed |= narrowed.transformed;
         *initial = narrowed.data;
     }
-    if aggregate && !defer_aggregate_numeric {
+    if narrow_numeric {
         for arg in &mut hof.args {
             let Expr::Lambda(lambda) = arg else {
                 continue;
@@ -260,6 +286,43 @@ fn is_array_constructor_name(name: &str) -> bool {
     matches!(name, "array" | "make_array")
 }
 
+fn is_map_constructor(expr: &Expr) -> bool {
+    matches!(
+        unwrap_nonnull(expr),
+        Expr::ScalarFunction(function) if function.func.name() == "map"
+    )
+}
+
+fn contains_bare_integer(expr: &Expr) -> bool {
+    let mut found = false;
+    expr.apply(|node| match node {
+        Expr::Literal(ScalarValue::Int64(_), _) => {
+            found = true;
+            Ok(TreeNodeRecursion::Stop)
+        }
+        Expr::Cast(_) => Ok(TreeNodeRecursion::Jump),
+        _ => Ok(TreeNodeRecursion::Continue),
+    })
+    .is_ok()
+        && found
+}
+
+fn traces_to_provisional_constructor(expr: &Expr, inputs: &[LogicalPlan]) -> bool {
+    let Expr::Column(column) = expr else {
+        return false;
+    };
+    inputs.iter().any(|input| {
+        let Ok(index) = input.schema().index_of_column(column) else {
+            return false;
+        };
+        let Some((source, _)) = output_expression(input, index) else {
+            return false;
+        };
+        (is_array_constructor(source) || is_map_constructor(source))
+            && contains_bare_integer(source)
+    })
+}
+
 fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> {
     let Expr::ScalarFunction(function) = unwrap_nonnull(expr) else {
         return None;
@@ -270,27 +333,6 @@ fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> 
         }
     }
     Some(false)
-}
-
-fn narrow_constructor_literals(expr: &mut Expr) {
-    let target = match expr {
-        Expr::ScalarFunction(function) if is_array_constructor_name(function.func.name()) => {
-            function
-        }
-        Expr::ScalarFunction(function)
-            if function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1 =>
-        {
-            let Expr::ScalarFunction(inner) = &mut function.args[0] else {
-                return;
-            };
-            inner
-        }
-        _ => return,
-    };
-    for arg in &mut target.args {
-        let narrowed = narrow_provisional_integer_literal(arg.clone());
-        *arg = narrowed.data;
-    }
 }
 
 fn array_field_call(expr: Expr, element_nullable: bool) -> Expr {

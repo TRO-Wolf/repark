@@ -1198,14 +1198,14 @@ the pin rather than obeying it.
 - **repark** — indexed transform over a previously analyzed `array(1, NULL, 3)` source column
   returns Int64 elements. SQL over a referenced `array(1,2,3)` subquery also returns
   Int64 elements. Direct inline SQL and column-free `F.expr` spellings return Int32.
-  `zip_with` with a typed empty/NULL first array and a literal second array returns Int64
-  through SQL and `F.expr`. A Column lambda calling `size` on nested arrays returns UInt64.
+  A Column lambda calling `size` on nested arrays returns UInt64.
+  `zip_with` with a typed empty/NULL first array and a literal second array converged to
+  Int32 in FNP-8-REVIEW (2026-09-07); the matrix cells assert Spark equality now.
 - **Apache Spark** — all these measured results have Int32 elements, with equal values.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
 - **Pin** — `python/repark/tests/test_parity_live_fnp8.py` holds the indexed source distinction.
   `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
-  holds `forms-transform_index` `sql_columns`, `binding-zip_empty`, `binding-zip_null`,
-  and `binding-nested_array` Column cells;
+  holds `forms-transform_index` `sql_columns` and `binding-nested_array` Column cells;
   `test_live_fnp8_recorded_oracle` remeasures Spark.
 - **Rationale** — BACKLOG (2026-09-07). These wider paths were present before the repair.
   The HOF preparation does not rewrite unrelated source queries or arm every lambda-body
