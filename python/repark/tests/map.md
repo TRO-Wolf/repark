@@ -949,7 +949,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   every truncate/n/vertical/empty/unicode shape plus both styled formats, and
   `repr`/`_repr_html_` at eager caps 1/2/20 over empty/exact/over-cap frames
   and a `mapInArrow`-backed frame, recorded on the pre-slice tree and asserted
-  on the tip, with `count()` tallies as the DFCORE-6 baseline.
+  on the tip. DFCORE-6 retired the footer `count()`: the tally tests pin zero
+  on every plain preview door while every golden string stays byte-identical.
   pins: dfcore-4b/C-006
   `test_show_styled_vertical_warning_attributes_to_caller` pins the warning's `filename`
   to the caller (critic r1 F1: the move added a wrapper frame; `stacklevel` 2 → 3).

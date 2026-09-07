@@ -2,9 +2,8 @@
 
 Every expected string below was recorded on the pre-slice tree; the move-only
 relocation of ``__repr__``, ``_repr_html_``, and the eager-eval conf reads into
-``display.py`` must reproduce each one byte-identically, with the same
-``count()`` tallies (the DFCORE-6 baseline: the preview still counts to decide
-the footer).
+``display.py`` must reproduce each one byte-identically. DFCORE-6 retired the
+footer ``count()``: the tally test pins zero on every preview door.
 """
 
 from __future__ import annotations
@@ -342,7 +341,7 @@ def test_eager_count_tallies(
     spark: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Previews count exactly as on the pre-slice tree (DFCORE-6 baseline)."""
+    """Previews never count; every footer reads the extra row (DFCORE-6)."""
     _enable_eager(spark, 2)
     base = spark.createDataFrame([(1,), (2,), (3,)], "x INT")
     frame = base.mapInArrow(_double_batches, "x INT")
@@ -356,15 +355,12 @@ def test_eager_count_tallies(
     monkeypatch.setattr(DataFrame, "count", counting)
     try:
         repr(_sized_frame(spark, 3))
-        assert len(calls) == 1
-        calls.clear()
+        assert calls == []
         repr(_sized_frame(spark, 2))
-        assert len(calls) == 1
-        calls.clear()
+        assert calls == []
         _sized_frame(spark, 3)._repr_html_()
-        assert len(calls) == 1
-        calls.clear()
+        assert calls == []
         repr(frame)
-        assert len(calls) == 1
+        assert calls == []
     finally:
         spark.conf.set("spark.sql.repl.eagerEval.enabled", "false")
