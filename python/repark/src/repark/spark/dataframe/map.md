@@ -29,6 +29,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   pins: nullability-2/C-006
   TYPES-1 (2026-09-05): `sample`/`randomSplit` hash arithmetic wraps `__repark_rn` in
   `CAST(__repark_rn AS BIGINT)` (+2 lines, absorbed back in round 4).
+  DFCORE-2 (2026-09-07): the four UDF select rewrites moved out — scalar and
+  classic to `udf_projection.py`, the window variants to `udf_window_projection.py`
+  (5954 → 5263, mirrored in the CAP-1 test). `select` keeps two one-line
+  delegations; `core` binds the two modules, so the package and core surfaces
+  gain exactly those two names and the class loses exactly the four methods.
+  pins: dfcore-2/C-001, C-002, C-003, C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -62,6 +68,28 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   boundary scan; it is never a real key. An empty returned frame with no columns is an empty
   group result, not a mismatch. A group that continues past a batch edge is stitched onto the
   pending segments, never closed. pins: dfcore-1/C-006
+- `udf_projection.py` owns the scalar pandas and classic UDF select rewrites (DFCORE-2,
+  moved from `core.py`). Windowed GROUPED_AGG markers never enter the scalar bridge; they
+  route to `udf_window_projection.py`. Partition-transform inputs are refused (they project
+  all-null dummies the UDF would silently read); generator and aggregate inputs are refused
+  (unnest or aggregate first). Stable bare refs rebind to the frame; compounds keep their
+  plan expression. The intermediate projection is plan-only: no UDF runs, no rows move.
+  Pass-through types come from the intermediate analyzed Arrow schema (metadata only, never
+  a `limit(0)` action); physical types stay as-is so zoned timestamps survive.
+  `return_type_sql` is revalidated at the bridge (markers can be mutated after
+  construction). Both map-bridge halves are patched with the built identity: `mapInArrow`
+  coercion drops timestamp timezones and collapses `timestamp_ntz` / `varchar(n)` /
+  `char(n)`. Classic UDFs run once per row: slower than `pandas_udf` by design.
+  pins: dfcore-2/C-004
+- `udf_window_projection.py` owns the windowed GROUPED_AGG select rewrites (DFCORE-2,
+  moved from `core.py`). One select's markers share partition keys, order keys, and frame
+  bounds; order is all-or-none. The unbounded path strips the window, aggregates per
+  partition, and joins back with `IS NOT DISTINCT FROM` so NULL keys match. Both sides
+  materialize first (bridge plans qualify keys and trip ambiguity). The final projection
+  follows caller order with last-wins duplicates, so `withColumn` overwrite keeps the
+  window result. The ordered path carries partition, order, and UDF inputs plus every
+  source column on the group frame, overwrites same-name sources, and projects caller
+  order last-wins. pins: dfcore-2/C-005
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -71,7 +99,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
-  `DataFrame` at module scope.
+  `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
+  projection rewrites moved out. pins: dfcore-2/C-005
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
@@ -118,6 +147,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | `mapInArrow` schema checks | [`udf_schema.py`](udf_schema.py) |
 | Grouped-UDF assembly | [`grouped_udf.py`](grouped_udf.py) |
 | UDF callbacks | [`udf_bridge.py`](udf_bridge.py) |
+| Scalar and classic UDF projection | [`udf_projection.py`](udf_projection.py) |
+| Windowed UDF projection | [`udf_window_projection.py`](udf_window_projection.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -137,5 +168,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   6305→6303 — one import joined absorbs the round's increase (pins: types-1/C-008).
   DFCORE-1 (2026-09-07): `core.py` 6302→5954, `joins_columns.py` 1239→1238; the three new leaf
   modules stay below the source-size default (pins: dfcore-1/C-007).
+  DFCORE-2 (2026-09-07): `core.py` 5954→5263; `udf_projection.py` (349) and
+  `udf_window_projection.py` (337) stay below the source-size default
+  (pins: dfcore-2/C-006).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

@@ -521,3 +521,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   path. Target `create/100000/tuples_count` ≤ 100 ms. `risk_tier: standard`. Branch
   `perf/facade-cdf-1`.
   pins: perf-facade-cdf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [dfcore-2-ledger.md](dfcore-2-ledger.md) —
+  **DFCORE-2 (2026-09-07), in flight:** the four UDF select rewrites out of `core.py` —
+  scalar and classic to `udf_projection.py`, the window variants to
+  `udf_window_projection.py`. Move-only: `core.py` 5954 → 5263, class loses exactly
+  the four methods, package and core gain exactly the two modules, 6101 collected IDs
+  preserved plus one pin test, four mutations red existing pins. `risk_tier: standard`.
+  Branch `refactor/dfcore-2`.
+  pins: dfcore-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

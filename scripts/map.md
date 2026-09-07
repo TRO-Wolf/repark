@@ -341,6 +341,11 @@ helpers above the class move to `rows_export.py` and three new leaf modules — 
 imports (mirrored in the CAP-1 test). Ratchets DOWN.
 pins: dfcore-1/C-007
 
+DFCORE-2 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5954→5263 — the four
+UDF select rewrites move to `udf_projection.py` and `udf_window_projection.py`,
+which carry no row (mirrored in the CAP-1 test). Ratchets DOWN.
+pins: dfcore-2/C-006
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

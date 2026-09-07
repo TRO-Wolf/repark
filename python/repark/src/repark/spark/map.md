@@ -125,7 +125,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_math.py` — mathematical and trigonometric wrappers.
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
-  contracts. Execution uses the DataFrame Arrow bridge.
+  contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
+  `pandas_udf` docstring cross-reference follows the scalar rewrite to its new home,
+  `dataframe/udf_projection.py` (line-count neutral; ceiling stays 1300).
+  pins: dfcore-2/C-004
 - `functions_url.py` — URL parsing and encoding wrappers.
 - `functions_window.py` — window function wrappers.
 - `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
