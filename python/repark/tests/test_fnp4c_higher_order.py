@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, PySparkException, PySparkValueError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 
@@ -115,9 +115,9 @@ def test_aggregate_and_reduce_match_spark_null_and_empty() -> None:
     ).toArrow()
     assert finished.column("r").to_pylist() == [60, 40, 0, None]
     reduced = frame.select(
-        F.reduce(
-            "a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))
-        ).alias("r")
+        F.reduce("a", F.lit(0).cast("bigint"), lambda acc, x: acc + F.coalesce(x, F.lit(0))).alias(
+            "r"
+        )
     ).toArrow()
     assert reduced.column("r").to_pylist() == [6, 4, 0, None]
 
@@ -272,67 +272,41 @@ def test_each_name_refuses_wrong_lambda_arity_like_spark() -> None:
         assert "NUM_ARGS_MISMATCH" in str(exc_info.value)
 
 
-def test_each_name_overlong_lambda_is_named_divergence() -> None:
-    """Over-long lambdas surface DataFusion's binding text, not Spark's arity class.
-
-    Named residual: the engine binds lambda parameters before the analyzer judges arity, on
-    both doors, so ``expects N arguments, but got M`` never gets its chance. The Column door
-    reaches DataFusion's expression binder, whose text names the function and the supported
-    count; the SQL door fails earlier in the SQL planner with sibling text (pinned in
-    ``lambda_door.rs``). The parenthesized parameter names between the two halves are the
-    door's canonical renames, so each case pins the head and the tail around them. The merge
-    lambda is the odd one: aggregate infers its type over several binder passes, and the
-    intermediate pass pops the lambda scope without the count guard, so an over-long merge
-    surfaces DataFusion's internal error instead of the plan-time text. ``reduce`` shares
-    the merge path, so the aggregate row covers both names.
-    """
+def test_each_name_overlong_lambda_preserves_spark_arity_error() -> None:
+    """Reject function-specific excess parameters with Spark's measured arity class."""
     frame = _arrays()
     cases = [
-        (
-            lambda: frame.select(F.transform("a", lambda x, i, z: x)),
-            AnalysisException,
-            "transform lambda defined 3 params",
-            "but only 2 supported",
-        ),
-        (
-            lambda: frame.select(F.filter("a", lambda x, i, z: x > 0)),
-            AnalysisException,
-            "filter lambda defined 3 params",
-            "but only 2 supported",
-        ),
-        (
-            lambda: frame.select(F.forall("a", lambda x, i: x > 0)),
-            AnalysisException,
-            "forall lambda defined 2 params",
-            "but only 1 supported",
-        ),
-        (
-            lambda: frame.select(F.exists("a", lambda x, i: x > 0)),
-            AnalysisException,
-            "exists lambda defined 2 params",
-            "but only 1 supported",
-        ),
-        (
-            lambda: frame.select(F.aggregate("a", F.lit(0), lambda a, b, c: a)),
-            PySparkException,
-            "no empty value should be in the map",
-            "bug in DataFusion's code",
-        ),
-        (
-            lambda: frame.select(
-                F.aggregate("a", F.lit(0), lambda acc, x: acc + x, lambda a, b: a)
-            ),
-            AnalysisException,
-            "aggregate lambda defined 2 params",
-            "but only 1 supported",
-        ),
+        (lambda: F.transform("a", lambda x, i, z: x), 3, 1),
+        (lambda: F.filter("a", lambda x, i, z: x > 0), 3, 1),
+        (lambda: F.forall("a", lambda x, i: x > 0), 2, 1),
+        (lambda: F.exists("a", lambda x, i: x > 0), 2, 1),
+        (lambda: F.aggregate("a", F.lit(0), lambda a, b, c: a), 3, 2),
+        (lambda: F.reduce("a", F.lit(0), lambda a, b, c: a), 3, 2),
+        (lambda: F.aggregate("a", F.lit(0), lambda a, b: a, lambda a, b: a), 2, 1),
+        (lambda: F.reduce("a", F.lit(0), lambda a, b: a, lambda a, b: a), 2, 1),
+        (lambda: F.zip_with("a", "a", lambda a, b, c: a), 3, 2),
+        (lambda: F.transform_keys("m", lambda a, b, c: a), 3, 2),
+        (lambda: F.transform_values("m", lambda a, b, c: a), 3, 2),
+        (lambda: F.map_filter("m", lambda a, b, c: a), 3, 2),
     ]
-    for build, exc, head, tail in cases:
-        with pytest.raises(exc) as exc_info:
-            build().toArrow()
-        text = str(exc_info.value)
-        assert head in text and tail in text, text
-        assert "NUM_ARGS_MISMATCH" not in text
+    for build, actual, expected in cases:
+        with pytest.raises(AnalysisException) as exc_info:
+            frame.select(build()).toArrow()
+        message = str(exc_info.value)
+        assert "NUM_ARGS_MISMATCH" in message
+        assert f"expects {actual} arguments, but got {expected}" in message
+
+
+@pytest.mark.parametrize("arity", (0, 4))
+def test_lambda_outside_generic_range_preserves_value_error(arity: int) -> None:
+    """Reject callables outside Spark's generic parameter range before kernel binding."""
+    with pytest.raises(PySparkValueError) as caught:
+        if arity == 0:
+            F.transform("a", lambda: F.lit(1))
+        else:
+            F.map_zip_with("m", "m", lambda a, b, c, d: a)
+    assert "WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION" in str(caught.value)
+    assert f"provided function takes {arity}" in str(caught.value)
 
 
 def test_zip_with_result_is_nullable_when_the_right_array_is() -> None:

@@ -50,7 +50,7 @@ pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
 pub mod validate;
-
+pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 use std::sync::Arc;
 
 use datafusion::execution::SessionState;

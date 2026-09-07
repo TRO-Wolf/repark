@@ -9,11 +9,17 @@ wire up (with `extension.rs` itself) when the session module wires.
 
 ## Contents
 
-- `tests.rs` — configure-then-register order pin + default-noop-hooks pin
+- `tests.rs` — configure-then-analyzer-rules-then-register order pin + default-noop-hooks pin
   (`#[cfg(test)] mod tests;` in `../extension.rs`). The order pin also asserts the H-1a split B
   addition: `configure` receives a `SessionBuildConf` carrying the RESOLVED
   `spark.sql.session.timeZone` beside the raw conf map, and the test sets a PADDED value so a
   door that re-parsed the map instead of taking the resolved one would be visible.
+  **FNP-8 (2026-09-07):** the no-extension pin compares the installed analyzer names with the
+  core guarded baseline, including the sliding-frame rescan rule. pins: fnp-8/C-003
+
+`SessionExtension::configure_analyzer_rules` returns a DataFusion error when a door cannot place
+its required analyzer rule in the core-owned vector. Session construction maps that error through
+the engine error boundary and stops before `SessionState` is built. pins: fnp-8/C-003
 
 ## Pointers
 

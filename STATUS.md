@@ -231,6 +231,7 @@ of state plus a link. A known **defect with its fix scheduled** is not a diverge
 row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
 moving it. Nothing is described in both places.
 
+- **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially

@@ -11,10 +11,25 @@ three-valued logic; the other ten need kernels (FNP-4c). Ledger:
 
 from __future__ import annotations
 
+from functools import partial
+
 import pytest
 
 from repark.errors import PySparkValueError
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+
+
+class _ReturnsBool:
+    """Return a non-Column result from a callable object."""
+
+    def __call__(self, _value: object) -> bool:
+        """Return an invalid higher-order function result."""
+        return True
+
+
+def _return_bool(_bound: object, _value: object) -> bool:
+    """Return an invalid higher-order function result."""
+    return True
 
 
 def _session():
@@ -117,6 +132,16 @@ def test_a_lambda_returning_a_non_column_is_refused_loudly() -> None:
         r"should return Column, got bool\.",
     ):
         frame.select(F.exists("a", lambda x: True))
+    for function, name in (
+        (_ReturnsBool(), "_ReturnsBool"),
+        (partial(_return_bool, None), "partial"),
+    ):
+        with pytest.raises(
+            PySparkValueError,
+            match=rf"\[HIGHER_ORDER_FUNCTION_SHOULD_RETURN_COLUMN\] Function `{name}` "
+            r"should return Column, got bool\.",
+        ):
+            frame.select(F.exists("a", function))
 
 
 def test_lambda_survives_select_filter_with_column_and_order_by() -> None:

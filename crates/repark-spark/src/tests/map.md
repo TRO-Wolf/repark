@@ -26,7 +26,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   init/merge width mismatch carries `DATATYPE_MISMATCH`, the index is non-nullable,
   over-long lambdas pin DataFusion's plan-time text as the named divergence, and the
   oracle edge rows (null-key raise, void map, VALUES `Int32`, overflow wrap) close the
-  door.
+  door. The resumed repair tests use the same pre-coercion preparation vector as a public Spark
+  session. They pin `exists` nullability, indexed-transform Arrow width and nested nullability,
+  NULL and empty aggregate inputs, explicit `BIGINT`, non-HOF structural identity, and the
+  inherited nullable-element Column width. Explicit lambda-body overflow keeps its existing wrap.
   pins: fnp-8/C-004
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
@@ -609,3 +612,7 @@ above.
 
 First checks: `cargo test -p repark-spark tests::<module>::`. Escalate to: [../map.md#debug](../map.md).
 
+The FNP-8 aggregate literal-width test inspects execution batches for values and integer types.
+Its optimized physical field is not the public Arrow schema. Public aggregate nullability is
+pinned through Column, SQL, and F.expr in `test_fnp_8_sql_door.py` and the recorded/live oracle
+matrix; those exports declare the analyzed logical schema.

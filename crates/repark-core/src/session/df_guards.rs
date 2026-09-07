@@ -7,8 +7,10 @@ use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewr
 use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::optimizer::{ApplyOrder, Optimizer, OptimizerConfig, OptimizerRule};
+use datafusion::optimizer::{AnalyzerRule, ApplyOrder, Optimizer, OptimizerConfig, OptimizerRule};
 use datafusion::prelude::{SessionConfig, SessionContext};
+
+use crate::extension::SessionExtension;
 
 mod window_rescan;
 
@@ -27,15 +29,23 @@ pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {
 pub(super) fn context_with_df_54_1_rule_guards(
     config: SessionConfig,
     runtime: Arc<RuntimeEnv>,
-) -> SessionContext {
+    extension: &dyn SessionExtension,
+) -> DataFusionResult<SessionContext> {
+    let analyzer_rules =
+        extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards())?;
     let state = SessionStateBuilder::new()
         .with_config(config)
         .with_runtime_env(runtime)
         .with_default_features()
         .with_optimizer_rules(unnest_safe_optimizer_rules())
-        .with_analyzer_rules(window_rescan::analyzer_rules_with_sliding_rescan())
+        .with_analyzer_rules(analyzer_rules)
         .build();
-    SessionContext::new_with_state(state)
+    Ok(SessionContext::new_with_state(state))
+}
+
+pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>>
+{
+    window_rescan::analyzer_rules_with_sliding_rescan()
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.

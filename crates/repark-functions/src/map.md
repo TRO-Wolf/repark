@@ -48,6 +48,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   for the physical planner), `SignedAggregate` casts `regr_count`/`approx_distinct` to
   `Int64`, `SignedWindow` casts the rank family to `Int32`.
   pins: types-1/C-001, C-003, C-005, C-007
+  **FNP-8 (2026-09-07):** exposes the existing single-node provisional-integer narrowing inside
+  the crate so HOF preparation can reuse it without changing global literal or overflow rules.
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
   twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it
   packs a multi-parameter lambda body that leaves a parameter unreferenced into the
@@ -60,6 +62,17 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the later narrowers re-stale. Unary and fully-referenced bodies pass through
   untouched, so the Column door's plans are byte-identical.
   pins: fnp-8/C-004
+  **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
+  type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
+  direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
+  constructor element nullability from expression fields. Direct projection lineage refines
+  constructor nullability only; a nullable-element source keeps its inherited Int64 Column result.
+  A raw Int64 constructor subquery with a bare Int64 initializer defers early aggregate numeric
+  preparation so the existing late literal and binding passes narrow the source and fold together.
+  Explicit casts remain present. The same module owns
+  `analyzer_rules_with_higher_order_preparation`, which places this rule before the first default
+  `type_coercion` rule and refuses a vector without that insertion point.
+  pins: fnp-8/C-003, C-004, C-005, C-006
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each

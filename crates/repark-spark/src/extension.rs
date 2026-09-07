@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
 use repark_ta::TaExtension;
@@ -51,6 +52,13 @@ impl SessionExtension for SparkExtension {
             config,
             session.session_time_zone.id(),
         ))
+    }
+
+    fn configure_analyzer_rules(
+        &self,
+        rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+        repark_functions::analyzer_rules_with_higher_order_preparation(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.

@@ -76,8 +76,11 @@ impl HigherOrderUDFImpl for SparkExists {
     fn return_field_from_args(&self, args: HigherOrderReturnFieldArgs) -> Result<Arc<Field>> {
         let (list, lambda) = value_lambda_pair(self.name(), args.arg_fields)?;
         require_boolean_lambda(self.name(), lambda)?;
-        let _ = list;
-        Ok(Arc::new(Field::new("", DataType::Boolean, true)))
+        Ok(Arc::new(Field::new(
+            "",
+            DataType::Boolean,
+            list.is_nullable() || lambda.is_nullable(),
+        )))
     }
 
     fn invoke_with_args(&self, args: HigherOrderFunctionArgs) -> Result<ColumnarValue> {

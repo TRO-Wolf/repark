@@ -1,0 +1,1302 @@
+[
+  {
+    "group": "forms",
+    "name": "transform",
+    "ansi": "true",
+    "expression": "transform(array(1,2,3), x -> x + 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3,
+          4
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "transform_index",
+    "ansi": "true",
+    "expression": "transform(array(1,2,3), (x,i) -> x + i)",
+    "rows": [
+      {
+        "r": [
+          1,
+          3,
+          5
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "filter",
+    "ansi": "true",
+    "expression": "filter(array(1,2,3), x -> x > 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "filter_index",
+    "ansi": "true",
+    "expression": "filter(array(1,2,3), (x,i) -> i % 2 = 0)",
+    "rows": [
+      {
+        "r": [
+          1,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "exists",
+    "ansi": "true",
+    "expression": "exists(array(1,2,3), x -> x > 2)",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "forall",
+    "ansi": "true",
+    "expression": "forall(array(1,2,3), x -> x > 0)",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "aggregate",
+    "ansi": "true",
+    "expression": "aggregate(array(1,2,3), 0, (acc,x) -> acc + x)",
+    "rows": [
+      {
+        "r": 6
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "aggregate_finish",
+    "ansi": "true",
+    "expression": "aggregate(array(1,2,3), 0, (acc,x) -> acc + x, acc -> acc * 10)",
+    "rows": [
+      {
+        "r": 60
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "reduce",
+    "ansi": "true",
+    "expression": "reduce(array(1,2,3), 0, (acc,x) -> acc + x)",
+    "rows": [
+      {
+        "r": 6
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "reduce_finish",
+    "ansi": "true",
+    "expression": "reduce(array(1,2,3), 0, (acc,x) -> acc + x, acc -> acc * 10)",
+    "rows": [
+      {
+        "r": 60
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "zip_with",
+    "ansi": "true",
+    "expression": "zip_with(array(1,2,3), array(10,20), (x,y) -> x + coalesce(y,0))",
+    "rows": [
+      {
+        "r": [
+          11,
+          22,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "transform_keys",
+    "ansi": "true",
+    "expression": "transform_keys(map('a',1,'b',2), (k,v) -> upper(k))",
+    "rows": [
+      {
+        "r": [
+          [
+            "A",
+            1
+          ],
+          [
+            "B",
+            2
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "transform_values",
+    "ansi": "true",
+    "expression": "transform_values(map('a',1,'b',2), (k,v) -> v + 1)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "map_filter",
+    "ansi": "true",
+    "expression": "map_filter(map('a',1,'b',2), (k,v) -> v > 1)",
+    "rows": [
+      {
+        "r": [
+          [
+            "b",
+            2
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "map_zip_with",
+    "ansi": "true",
+    "expression": "map_zip_with(map('a',1,'b',2), map('a',10,'c',3), (k,v1,v2) -> coalesce(v1,0) + coalesce(v2,0))",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            11
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "c",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "transform",
+    "ansi": "false",
+    "expression": "transform(array(1,2,3), x -> x + 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3,
+          4
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "transform_index",
+    "ansi": "false",
+    "expression": "transform(array(1,2,3), (x,i) -> x + i)",
+    "rows": [
+      {
+        "r": [
+          1,
+          3,
+          5
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "filter",
+    "ansi": "false",
+    "expression": "filter(array(1,2,3), x -> x > 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "filter_index",
+    "ansi": "false",
+    "expression": "filter(array(1,2,3), (x,i) -> i % 2 = 0)",
+    "rows": [
+      {
+        "r": [
+          1,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "exists",
+    "ansi": "false",
+    "expression": "exists(array(1,2,3), x -> x > 2)",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "forall",
+    "ansi": "false",
+    "expression": "forall(array(1,2,3), x -> x > 0)",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "aggregate",
+    "ansi": "false",
+    "expression": "aggregate(array(1,2,3), 0, (acc,x) -> acc + x)",
+    "rows": [
+      {
+        "r": 6
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "aggregate_finish",
+    "ansi": "false",
+    "expression": "aggregate(array(1,2,3), 0, (acc,x) -> acc + x, acc -> acc * 10)",
+    "rows": [
+      {
+        "r": 60
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "reduce",
+    "ansi": "false",
+    "expression": "reduce(array(1,2,3), 0, (acc,x) -> acc + x)",
+    "rows": [
+      {
+        "r": 6
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "reduce_finish",
+    "ansi": "false",
+    "expression": "reduce(array(1,2,3), 0, (acc,x) -> acc + x, acc -> acc * 10)",
+    "rows": [
+      {
+        "r": 60
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "forms",
+    "name": "zip_with",
+    "ansi": "false",
+    "expression": "zip_with(array(1,2,3), array(10,20), (x,y) -> x + coalesce(y,0))",
+    "rows": [
+      {
+        "r": [
+          11,
+          22,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "transform_keys",
+    "ansi": "false",
+    "expression": "transform_keys(map('a',1,'b',2), (k,v) -> upper(k))",
+    "rows": [
+      {
+        "r": [
+          [
+            "A",
+            1
+          ],
+          [
+            "B",
+            2
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "transform_values",
+    "ansi": "false",
+    "expression": "transform_values(map('a',1,'b',2), (k,v) -> v + 1)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "map_filter",
+    "ansi": "false",
+    "expression": "map_filter(map('a',1,'b',2), (k,v) -> v > 1)",
+    "rows": [
+      {
+        "r": [
+          [
+            "b",
+            2
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "forms",
+    "name": "map_zip_with",
+    "ansi": "false",
+    "expression": "map_zip_with(map('a',1,'b',2), map('a',10,'c',3), (k,v1,v2) -> coalesce(v1,0) + coalesce(v2,0))",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            11
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "c",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////wABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAcP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAZP///5j///8AAAANGAAAACAAAAAEAAAAAgAAAGAAAAAUAAAABwAAAGVudHJpZXMAlP///8j///8AAAACEAAAACAAAAAEAAAAAAAAAAUAAAB2YWx1ZQAAAAgADAAIAAcACAAAAAAAAAEgAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAFEAAAABgAAAAEAAAAAAAAAAMAAABrZXkABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "string",
+    "ansi": "true",
+    "expression": "transform(array('a',CAST(NULL AS STRING)), x -> upper(x))",
+    "rows": [
+      {
+        "r": [
+          "A",
+          null
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABgAAAAEAAAAAQAAACAAAAABAAAAcgAAAMj///8QABQACAAGAAcADAAAABAAEAAAAAAAAQUQAAAAHAAAAAQAAAAAAAAABwAAAGVsZW1lbnQABAAEAAQAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "struct",
+    "ansi": "true",
+    "expression": "transform(array(named_struct('n',1),named_struct('n',2)), x -> x.n + 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "nested_array",
+    "ansi": "true",
+    "expression": "transform(array(array(1,2),array(3)), x -> size(x))",
+    "rows": [
+      {
+        "r": [
+          2,
+          1
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "nested_map",
+    "ansi": "true",
+    "expression": "transform(array(map('a',1),map('b',2)), x -> element_at(x,'a'))",
+    "rows": [
+      {
+        "r": [
+          1,
+          null
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "index_only",
+    "ansi": "true",
+    "expression": "transform(array(10,20), (x,i) -> i)",
+    "rows": [
+      {
+        "r": [
+          0,
+          1
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "filter_slots",
+    "ansi": "true",
+    "expression": "filter(array(10,20), (x,i) -> true)",
+    "rows": [
+      {
+        "r": [
+          10,
+          20
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "map_third_slot",
+    "ansi": "true",
+    "expression": "map_zip_with(map('a',1),map('a',2,'b',3), (k,v1,v2) -> v2)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "capture",
+    "ansi": "true",
+    "expression": "transform(array(1,2), x -> transform(array(10,20), y -> x+y))",
+    "rows": [
+      {
+        "r": [
+          [
+            11,
+            21
+          ],
+          [
+            12,
+            22
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////9gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAAwUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAA1P///9D///8AAAAMFAAAACAAAAAEAAAAAQAAACgAAAAHAAAAZWxlbWVudAAEAAQABAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAAAhAAAAAgAAAABAAAAAAAAAAHAAAAZWxlbWVudAAIAAwACAAHAAgAAAAAAAABIAAAAAAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "shadow",
+    "ansi": "true",
+    "expression": "transform(array(1,2), x -> transform(array(10), x -> x+1))",
+    "rows": [
+      {
+        "r": [
+          [
+            11
+          ],
+          [
+            11
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////9gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAAwUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAA1P///9D///8AAAAMFAAAACAAAAAEAAAAAQAAACgAAAAHAAAAZWxlbWVudAAEAAQABAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAAAhAAAAAgAAAABAAAAAAAAAAHAAAAZWxlbWVudAAIAAwACAAHAAgAAAAAAAABIAAAAAAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "exists_null_predicate",
+    "ansi": "true",
+    "expression": "exists(array(1,CAST(NULL AS INT)), x -> x>5)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_null_predicate",
+    "ansi": "true",
+    "expression": "forall(array(1,CAST(NULL AS INT)), x -> x>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_empty",
+    "ansi": "true",
+    "expression": "forall(CAST(array() AS ARRAY<INT>), x -> CAST(NULL AS BOOLEAN))",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_null",
+    "ansi": "true",
+    "expression": "forall(CAST(NULL AS ARRAY<INT>), x -> x>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "zip_empty",
+    "ansi": "true",
+    "expression": "zip_with(CAST(array() AS ARRAY<INT>),array(1,2), (x,y) -> coalesce(x,0)+y)",
+    "rows": [
+      {
+        "r": [
+          1,
+          2
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "zip_null",
+    "ansi": "true",
+    "expression": "zip_with(CAST(NULL AS ARRAY<INT>),array(1,2), (x,y) -> x+y)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAQwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAGAAcADAAAABAAEAAAAAAAAQIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_empty",
+    "ansi": "true",
+    "expression": "transform_keys(CAST(map() AS MAP<STRING,INT>), (k,v) -> k)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_null",
+    "ansi": "true",
+    "expression": "transform_keys(CAST(NULL AS MAP<STRING,INT>), (k,v) -> k)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_null_value",
+    "ansi": "true",
+    "expression": "transform_keys(map('a',CAST(NULL AS INT)), (k,v) -> k)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            null
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_empty",
+    "ansi": "true",
+    "expression": "transform_values(CAST(map() AS MAP<STRING,INT>), (k,v) -> v)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_null",
+    "ansi": "true",
+    "expression": "transform_values(CAST(NULL AS MAP<STRING,INT>), (k,v) -> v)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_null_value",
+    "ansi": "true",
+    "expression": "transform_values(map('a',CAST(NULL AS INT)), (k,v) -> v)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            null
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_empty",
+    "ansi": "true",
+    "expression": "map_filter(CAST(map() AS MAP<STRING,INT>), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_null",
+    "ansi": "true",
+    "expression": "map_filter(CAST(NULL AS MAP<STRING,INT>), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_null_value",
+    "ansi": "true",
+    "expression": "map_filter(map('a',CAST(NULL AS INT)), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_empty_finish",
+    "ansi": "true",
+    "expression": "aggregate(CAST(array() AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 0
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_null_finish",
+    "ansi": "true",
+    "expression": "aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_some_null_finish",
+    "ansi": "true",
+    "expression": "aggregate(array(1,CAST(NULL AS INT),3), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 40
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_empty_finish",
+    "ansi": "true",
+    "expression": "reduce(CAST(array() AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 0
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_null_finish",
+    "ansi": "true",
+    "expression": "reduce(CAST(NULL AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_some_null_finish",
+    "ansi": "true",
+    "expression": "reduce(array(1,CAST(NULL AS INT),3), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 40
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "string",
+    "ansi": "false",
+    "expression": "transform(array('a',CAST(NULL AS STRING)), x -> upper(x))",
+    "rows": [
+      {
+        "r": [
+          "A",
+          null
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABgAAAAEAAAAAQAAACAAAAABAAAAcgAAAMj///8QABQACAAGAAcADAAAABAAEAAAAAAAAQUQAAAAHAAAAAQAAAAAAAAABwAAAGVsZW1lbnQABAAEAAQAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "struct",
+    "ansi": "false",
+    "expression": "transform(array(named_struct('n',1),named_struct('n',2)), x -> x.n + 1)",
+    "rows": [
+      {
+        "r": [
+          2,
+          3
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "nested_array",
+    "ansi": "false",
+    "expression": "transform(array(array(1,2),array(3)), x -> size(x))",
+    "rows": [
+      {
+        "r": [
+          2,
+          1
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "nested_map",
+    "ansi": "false",
+    "expression": "transform(array(map('a',1),map('b',2)), x -> element_at(x,'a'))",
+    "rows": [
+      {
+        "r": [
+          1,
+          null
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "index_only",
+    "ansi": "false",
+    "expression": "transform(array(10,20), (x,i) -> i)",
+    "rows": [
+      {
+        "r": [
+          0,
+          1
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "filter_slots",
+    "ansi": "false",
+    "expression": "filter(array(10,20), (x,i) -> true)",
+    "rows": [
+      {
+        "r": [
+          10,
+          20
+        ]
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAAwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAAAAcADAAAABAAEAAAAAAAAAIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "map_third_slot",
+    "ansi": "false",
+    "expression": "map_zip_with(map('a',1),map('a',2,'b',3), (k,v1,v2) -> v2)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            3
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "capture",
+    "ansi": "false",
+    "expression": "transform(array(1,2), x -> transform(array(10,20), y -> x+y))",
+    "rows": [
+      {
+        "r": [
+          [
+            11,
+            21
+          ],
+          [
+            12,
+            22
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////9gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAAwUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAA1P///9D///8AAAAMFAAAACAAAAAEAAAAAQAAACgAAAAHAAAAZWxlbWVudAAEAAQABAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAAAhAAAAAgAAAABAAAAAAAAAAHAAAAZWxlbWVudAAIAAwACAAHAAgAAAAAAAABIAAAAAAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "shadow",
+    "ansi": "false",
+    "expression": "transform(array(1,2), x -> transform(array(10), x -> x+1))",
+    "rows": [
+      {
+        "r": [
+          [
+            11
+          ],
+          [
+            11
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////9gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAAwUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAA1P///9D///8AAAAMFAAAACAAAAAEAAAAAQAAACgAAAAHAAAAZWxlbWVudAAEAAQABAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAAAhAAAAAgAAAABAAAAAAAAAAHAAAAZWxlbWVudAAIAAwACAAHAAgAAAAAAAABIAAAAAAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "exists_null_predicate",
+    "ansi": "false",
+    "expression": "exists(array(1,CAST(NULL AS INT)), x -> x>5)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_null_predicate",
+    "ansi": "false",
+    "expression": "forall(array(1,CAST(NULL AS INT)), x -> x>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_empty",
+    "ansi": "false",
+    "expression": "forall(CAST(array() AS ARRAY<INT>), x -> CAST(NULL AS BOOLEAN))",
+    "rows": [
+      {
+        "r": true
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "forall_null",
+    "ansi": "false",
+    "expression": "forall(CAST(NULL AS ARRAY<INT>), x -> x>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEGEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "zip_empty",
+    "ansi": "false",
+    "expression": "zip_with(CAST(array() AS ARRAY<INT>),array(1,2), (x,y) -> coalesce(x,0)+y)",
+    "rows": [
+      {
+        "r": [
+          1,
+          2
+        ]
+      }
+    ],
+    "schema_base64": "/////7gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgAAAAHAAwAAAAQABAAAAAAAAAMFAAAABwAAAAEAAAAAQAAACQAAAABAAAAcgAAAAQABAAEAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAACAAAAAEAAAAAAAAAAcAAABlbGVtZW50AAgADAAIAAcACAAAAAAAAAEgAAAA"
+  },
+  {
+    "group": "binding",
+    "name": "zip_null",
+    "ansi": "false",
+    "expression": "zip_with(CAST(NULL AS ARRAY<INT>),array(1,2), (x,y) -> x+y)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////6gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAA1P///wAAAQwUAAAAHAAAAAQAAAABAAAAJAAAAAEAAAByAAAABAAEAAQAAAAQABQACAAGAAcADAAAABAAEAAAAAAAAQIQAAAAIAAAAAQAAAAAAAAABwAAAGVsZW1lbnQACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_empty",
+    "ansi": "false",
+    "expression": "transform_keys(CAST(map() AS MAP<STRING,INT>), (k,v) -> k)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_null",
+    "ansi": "false",
+    "expression": "transform_keys(CAST(NULL AS MAP<STRING,INT>), (k,v) -> k)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_keys_null_value",
+    "ansi": "false",
+    "expression": "transform_keys(map('a',CAST(NULL AS INT)), (k,v) -> k)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            null
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_empty",
+    "ansi": "false",
+    "expression": "transform_values(CAST(map() AS MAP<STRING,INT>), (k,v) -> v)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_null",
+    "ansi": "false",
+    "expression": "transform_values(CAST(NULL AS MAP<STRING,INT>), (k,v) -> v)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "transform_values_null_value",
+    "ansi": "false",
+    "expression": "transform_values(map('a',CAST(NULL AS INT)), (k,v) -> v)",
+    "rows": [
+      {
+        "r": [
+          [
+            "a",
+            null
+          ]
+        ]
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_empty",
+    "ansi": "false",
+    "expression": "map_filter(CAST(map() AS MAP<STRING,INT>), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_null",
+    "ansi": "false",
+    "expression": "map_filter(CAST(NULL AS MAP<STRING,INT>), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAqP///wAAAREUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "map_filter_null_value",
+    "ansi": "false",
+    "expression": "map_filter(map('a',CAST(NULL AS INT)), (k,v) -> v>0)",
+    "rows": [
+      {
+        "r": []
+      }
+    ],
+    "schema_base64": "/////xABAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAEAAAAYP///wAAABEUAAAAGAAAAAQAAAABAAAAEAAAAAEAAAByAAAAVP///4j///8AAAANGAAAACAAAAAEAAAAAgAAAHAAAAAkAAAABwAAAGVudHJpZXMAhP///xAAFAAIAAYABwAMAAAAEAAQAAAAAAABAhAAAAAgAAAABAAAAAAAAAAFAAAAdmFsdWUAAAAIAAwACAAHAAgAAAAAAAABIAAAABAAFAAIAAAABwAMAAAAEAAQAAAAAAAABRAAAAAYAAAABAAAAAAAAAADAAAAa2V5AAQABAAEAAAAAAAAAA=="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_empty_finish",
+    "ansi": "false",
+    "expression": "aggregate(CAST(array() AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 0
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_null_finish",
+    "ansi": "false",
+    "expression": "aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "aggregate_some_null_finish",
+    "ansi": "false",
+    "expression": "aggregate(array(1,CAST(NULL AS INT),3), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 40
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_empty_finish",
+    "ansi": "false",
+    "expression": "reduce(CAST(array() AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 0
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_null_finish",
+    "ansi": "false",
+    "expression": "reduce(CAST(NULL AS ARRAY<INT>), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  {
+    "group": "binding",
+    "name": "reduce_some_null_finish",
+    "ansi": "false",
+    "expression": "reduce(array(1,CAST(NULL AS INT),3), 0, (acc,x) -> acc+coalesce(x,0), acc -> acc*10)",
+    "rows": [
+      {
+        "r": 40
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  }
+]

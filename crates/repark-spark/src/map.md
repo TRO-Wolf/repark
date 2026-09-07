@@ -175,6 +175,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `InsertStoreAssignment`, function registry, analyzer rules, and composed `TaExtension`. It also
   carries the session timezone and Spark decimal settings. Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
+  **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
+  before core's first default type-coercion rule. pins: fnp-8/C-003, C-004
+- **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
+  recognized higher-order calls. JSON arrows retain the session parser and its AST.
+  pins: fnp-8/C-004
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001

@@ -16,6 +16,9 @@ stay `Int64`, `count(*)`/`regr_count`/`ntile`/`rank()` keep their signed widths.
 - Every `SELECT`-literal / `VALUES` / CTAS integer in `Int32` range analyzes `Int32`.
 - `LIMIT` fetch/skip analyze `Int64` (physical-planner requirement).
 - `count(*)` and `count(1)` answer `Int64`; `ntile(2)` and `rank()` answer `Int32`.
+- FNP-8's HOF preparation reuses `narrow_provisional_integer_literals`; the direct rewrite
+  tests exercise that shared helper. Explicit casts retain their declared type.
+  pins: fnp-8/C-004, C-006
 
 ## Pointers
 

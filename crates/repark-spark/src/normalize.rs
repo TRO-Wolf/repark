@@ -135,7 +135,24 @@ fn sql_has_lambda_arrow(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
-    tokens.iter().any(|token| matches!(token, Token::Arrow))
+    let mut scopes = Vec::new();
+    let mut previous: Option<&Token> = None;
+    for token in &tokens {
+        match token {
+            Token::Whitespace(_) => continue,
+            Token::LParen => scopes.push(matches!(previous, Some(Token::Word(word)) if [
+                "transform", "filter", "exists", "forall", "aggregate", "reduce",
+                "zip_with", "transform_keys", "transform_values", "map_filter", "map_zip_with",
+            ].iter().any(|name| word.value.eq_ignore_ascii_case(name)))),
+            Token::RParen => {
+                scopes.pop();
+            }
+            Token::Arrow if scopes.contains(&true) => return true,
+            _ => {}
+        }
+        previous = Some(token);
+    }
+    false
 }
 
 /// Parse one statement with Spark-isms normalized.
@@ -902,6 +919,7 @@ mod tests {
             "SELECT 'a->b' AS s",
             "SELECT 1 -- x -> y",
             "SELECT a ->> 'b' FROM t",
+            "SELECT payload -> 'a' FROM t",
             "SELECT \"a->b\" FROM t",
             "SELECT 'unterminated",
         ] {
@@ -911,6 +929,22 @@ mod tests {
                 "{sql}"
             );
         }
+    }
+
+    #[test]
+    fn json_arrow_preserves_generic_ast() {
+        use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+        use datafusion::sql::sqlparser::parser::Parser;
+
+        let sql = "SELECT payload -> 'a' FROM t";
+        let baseline = Parser::parse_sql(&GenericDialect {}, sql);
+        let selected = dialect_for_executing_parse(sql, Dialect::Generic);
+        let actual = match selected {
+            Dialect::Databricks => Parser::parse_sql(&DatabricksDialect {}, sql),
+            _ => Parser::parse_sql(&GenericDialect {}, sql),
+        };
+        assert_eq!(actual, baseline);
+        assert_ne!(actual, Parser::parse_sql(&DatabricksDialect {}, sql));
     }
 
     #[test]

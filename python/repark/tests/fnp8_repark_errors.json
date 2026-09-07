@@ -1,0 +1,498 @@
+{
+  "0-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "0-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "1-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "1-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "2-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "2-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "3-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "3-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "4-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "4-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "5-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3."
+  },
+  "5-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3."
+  },
+  "6-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3."
+  },
+  "6-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3."
+  },
+  "7-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"STRING\"."
+  },
+  "7-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"STRING\"."
+  },
+  "8-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"BIGINT\"."
+  },
+  "8-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"BIGINT\"."
+  },
+  "9-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however the merge lambda has the type \"INT\"."
+  },
+  "9-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however the merge lambda has the type \"INT\"."
+  },
+  "10-sql": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEBEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  "10-expr": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEBEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  "11-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "11-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "12-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "12-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "13-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "13-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "14-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "14-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "15-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 1"
+  },
+  "15-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 1"
+  },
+  "16-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "16-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "17-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "17-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "18-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "18-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "19-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "19-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "20-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "20-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "21-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "21-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "22-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 4 params but UDF support only 3"
+  },
+  "22-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 4 params but UDF support only 3"
+  },
+  "23-sql": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "23-expr": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "24-sql": {
+    "rows": [
+      {
+        "r": 42
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "24-expr": {
+    "rows": [
+      {
+        "r": 42
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "25-sql": {
+    "rows": [
+      {
+        "r": -294967296
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "25-expr": {
+    "rows": [
+      {
+        "r": -294967296
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "26-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "26-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "27-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "27-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "28-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "28-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "29-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "29-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "30-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "30-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 2."
+  },
+  "31-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3."
+  },
+  "31-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 2 arguments, but got 3."
+  },
+  "32-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3."
+  },
+  "32-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function call. A higher order function expects 1 arguments, but got 3."
+  },
+  "33-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"STRING\"."
+  },
+  "33-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"STRING\"."
+  },
+  "34-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"BIGINT\"."
+  },
+  "34-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"INT\" type, however the merge lambda has the type \"BIGINT\"."
+  },
+  "35-sql": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however the merge lambda has the type \"INT\"."
+  },
+  "35-expr": {
+    "error_type": "AnalysisException",
+    "error": "lambda_rebind\ncaused by\nError during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"aggregate\" due to data type mismatch: The third parameter requires the \"BIGINT\" type, however the merge lambda has the type \"INT\"."
+  },
+  "36-sql": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEBEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  "36-expr": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3AAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAEBEAAAABgAAAAEAAAAAAAAAAEAAAByAAAABAAEAAQAAAAAAAAA"
+  },
+  "37-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "37-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "38-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "38-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "39-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "39-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "40-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "40-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "41-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 1"
+  },
+  "41-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 1"
+  },
+  "42-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "42-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "43-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "43-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 2 params but UDF support only 1"
+  },
+  "44-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "44-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "45-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "45-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "46-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "46-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "47-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "47-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 3 params but UDF support only 2"
+  },
+  "48-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 4 params but UDF support only 3"
+  },
+  "48-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: lambda defined 4 params but UDF support only 3"
+  },
+  "49-sql": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "49-expr": {
+    "rows": [
+      {
+        "r": null
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "50-sql": {
+    "rows": [
+      {
+        "r": 42
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "50-expr": {
+    "rows": [
+      {
+        "r": 42
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "51-sql": {
+    "rows": [
+      {
+        "r": -294967296
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "51-expr": {
+    "rows": [
+      {
+        "r": -294967296
+      }
+    ],
+    "schema_base64": "/////3gAAAAQAAAAAAAKAAwABgAFAAgACgAAAAABBAAMAAAACAAIAAAABAAIAAAABAAAAAEAAAAUAAAAEAAUAAgABgAHAAwAAAAQABAAAAAAAAECEAAAABwAAAAEAAAAAAAAAAEAAAByAAAACAAMAAgABwAIAAAAAAAAASAAAAA="
+  },
+  "52-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+  },
+  "52-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+  },
+  "53-sql": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+  },
+  "53-expr": {
+    "error_type": "AnalysisException",
+    "error": "Error during planning: Function 'map' expected at least one argument but received 0"
+  }
+}

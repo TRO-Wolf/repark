@@ -1,10 +1,28 @@
 use datafusion::arrow::array::{AsArray, BooleanArray};
+use datafusion::execution::SessionStateBuilder;
+use datafusion::optimizer::{Analyzer, AnalyzerRule};
 
 use super::super::*;
 use super::common::*;
 
 fn hof_ctx() -> (SessionContext, CatalogRegistry) {
-    let ctx = SessionContext::new();
+    hof_ctx_with_ansi(true)
+}
+
+fn hof_ctx_with_ansi(ansi_enabled: bool) -> (SessionContext, CatalogRegistry) {
+    let config = repark_functions::ansi::with_spark_ansi_config(
+        datafusion::prelude::SessionConfig::new(),
+        ansi_enabled,
+    );
+    let rules =
+        repark_functions::analyzer_rules_with_higher_order_preparation(Analyzer::new().rules)
+            .unwrap();
+    let state = SessionStateBuilder::new()
+        .with_config(config)
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    let ctx = SessionContext::new_with_state(state);
     repark_functions::register_all(&ctx);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
@@ -17,6 +35,20 @@ fn hof_ctx() -> (SessionContext, CatalogRegistry) {
     .unwrap();
     ctx.register_batch("t", batch).unwrap();
     (ctx, CatalogRegistry::new())
+}
+
+#[tokio::test]
+async fn higher_order_preparation_is_structural_identity_without_a_hof() {
+    let ctx = SessionContext::new();
+    let plan = ctx
+        .state()
+        .create_logical_plan("SELECT 1 + 2 AS r")
+        .await
+        .unwrap();
+    let prepared = repark_functions::lambda_rebind::HigherOrderPreparation
+        .analyze(plan.clone(), ctx.state().config_options())
+        .unwrap();
+    assert_eq!(prepared, plan);
 }
 
 async fn collect_one(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> RecordBatch {
@@ -269,6 +301,70 @@ async fn sql_door_lambda_results_keep_narrowed_int32() {
 }
 
 #[tokio::test]
+async fn sql_door_indexed_transform_matches_spark_width_and_nullability() {
+    for ansi_enabled in [true, false] {
+        let (ctx, catalogs) = hof_ctx_with_ansi(ansi_enabled);
+        let batch = collect_one(
+            &ctx,
+            &catalogs,
+            "SELECT transform(make_array(1, 2, 3), (x, i) -> x + i) AS r",
+        )
+        .await;
+        let schema = batch.schema();
+        let field = schema.field(0);
+        let DataType::List(element) = field.data_type() else {
+            panic!("expected list, got {}", field.data_type());
+        };
+        assert_eq!(element.data_type(), &DataType::Int32);
+        assert!(!field.is_nullable());
+        assert!(!element.is_nullable());
+        let batch = collect_one(
+            &ctx,
+            &catalogs,
+            "SELECT transform(make_array(1, 2, 3), (x, i) -> x + CAST(i AS BIGINT)) AS r",
+        )
+        .await;
+        let schema = batch.schema();
+        let field = schema.field(0);
+        let DataType::List(element) = field.data_type() else {
+            panic!("expected list, got {}", field.data_type());
+        };
+        assert_eq!(element.data_type(), &DataType::Int64);
+    }
+}
+
+#[tokio::test]
+async fn sql_door_exists_nullability_follows_array_and_predicate() {
+    for ansi_enabled in [true, false] {
+        let (ctx, catalogs) = hof_ctx_with_ansi(ansi_enabled);
+        let batch = collect_one(
+            &ctx,
+            &catalogs,
+            "SELECT exists(make_array(1, 2, 3), x -> x > 2) AS r",
+        )
+        .await;
+        assert_eq!(bool_column(&batch), vec![Some(true)]);
+        assert!(!batch.schema().field(0).is_nullable());
+        let batch = collect_one(
+            &ctx,
+            &catalogs,
+            "SELECT exists(make_array(1, 2, 3), x -> CAST(NULL AS BOOLEAN)) AS r",
+        )
+        .await;
+        assert_eq!(bool_column(&batch), vec![None]);
+        assert!(batch.schema().field(0).is_nullable());
+        let batch = collect_one(
+            &ctx,
+            &catalogs,
+            "SELECT exists(CAST(NULL AS ARRAY<INT>), x -> x > 2) AS r",
+        )
+        .await;
+        assert_eq!(bool_column(&batch), vec![None]);
+        assert!(batch.schema().field(0).is_nullable());
+    }
+}
+
+#[tokio::test]
 async fn sql_door_short_lambdas_carry_sparks_arity_class() {
     let (ctx, catalogs) = hof_ctx();
     for (sql, expected) in [
@@ -459,21 +555,21 @@ async fn sql_door_aggregate_fold_matches_the_oracle_rows() {
 }
 
 #[tokio::test]
-async fn sql_door_aggregate_mixed_width_divergence_stuck_planner_cast() {
+async fn sql_door_aggregate_provisional_initial_literals_match_spark_width() {
     let (ctx, catalogs) = hof_ctx();
-    for sql in [
-        "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
-        "SELECT aggregate(CAST(make_array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+    for (sql, expected) in [
+        (
+            "SELECT aggregate(CAST(NULL AS ARRAY<INT>), 0, (acc, x) -> acc + x) AS r",
+            None,
+        ),
+        (
+            "SELECT aggregate(CAST(array() AS ARRAY<INT>), 42, (acc, x) -> acc + x) AS r",
+            Some(42),
+        ),
     ] {
-        let error = crate::execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("a width-mixed fold must refuse");
-        assert!(
-            error
-                .to_string()
-                .contains("DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"),
-            "unexpected error for {sql}: {error}"
-        );
+        let batch = collect_one(&ctx, &catalogs, sql).await;
+        assert_eq!(int_values(batch.column(0).as_ref()), vec![expected]);
+        assert_eq!(batch.column(0).data_type(), &DataType::Int32);
     }
 }
 
@@ -547,18 +643,12 @@ async fn sql_door_result_nullability_matches_the_oracle() {
         !field.is_nullable(),
         "filter over non-null arrays is non-null"
     );
-    let input = collect_one(&ctx, &catalogs, "SELECT make_array(1, 2, 3) AS r").await;
     let DataType::List(element) = field.data_type() else {
         panic!("filter did not return a list: {}", field.data_type());
     };
-    let input_schema = input.schema();
-    let DataType::List(input_element) = input_schema.field(0).data_type() else {
-        panic!("make_array did not return a list");
-    };
-    assert_eq!(
-        element.is_nullable(),
-        input_element.is_nullable(),
-        "filter keeps its input elements"
+    assert!(
+        !element.is_nullable(),
+        "filter's Spark result elements are non-null"
     );
 }
 

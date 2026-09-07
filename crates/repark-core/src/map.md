@@ -233,12 +233,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   API (design §8, "do not clean up on the way past"; docs/testing.md "every behavior gets a test").
   Re-add it only with a test and a caller.
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
-  `SessionExtension` with two defaulted hooks (`configure` pre-assembly, `register`
-  post-context) at v1's inline registration positions; `NoopSessionExtension` is the
+  `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
+  `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
+  registration positions; `NoopSessionExtension` is the
   no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
   the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
   A door reads the resolved value instead of re-parsing the map, which is what keeps
   "resolved once, at construction" literally true rather than approximately true.
+  **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
+  it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
+  first default type-coercion pass. pins: fnp-8/C-003, C-004
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once

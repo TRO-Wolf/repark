@@ -116,9 +116,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   Spark 4.1.2 `NUM_ARGS_MISMATCH` puts the user arity in expects and the declared arity in got.
   pins: fnp-4c-higher-order-kernels/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012
-  **FNP-8 (2026-09-06):** Column-door arity is lazy — the eager check only enforces
-  Spark's 1–3 `WRONG_NUM_ARGS_FOR_HIGHER_ORDER_FUNCTION` range, and per-name counts
-  bind at plan time.
+  **FNP-8 (2026-09-07):** Column builders preserve function-specific
+  `NUM_ARGS_MISMATCH` errors after the generic 1–3 parameter check. Invalid-return errors name
+  functions, callable objects, and `functools.partial` instances without assuming `__name__`.
+  pins: fnp-8/C-003
 - `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
   pins: fnp-7-try-inversions/C-013, C-016
 - `functions_math.py` — mathematical and trigonometric wrappers.

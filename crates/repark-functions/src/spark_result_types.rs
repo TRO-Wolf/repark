@@ -48,7 +48,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = narrow_expr(expr)?;
+        let rewritten = narrow_provisional_integer_literals(expr)?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
@@ -60,7 +60,7 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
     for row in &values.values {
         let mut narrowed_row = Vec::with_capacity(row.len());
         for expr in row {
-            let narrowed = narrow_expr(expr.clone())?;
+            let narrowed = narrow_provisional_integer_literals(expr.clone())?;
             changed |= narrowed.transformed;
             narrowed_row.push(narrowed.data);
         }
@@ -73,11 +73,11 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
     Ok(Transformed::yes(rebuilt))
 }
 
-fn narrow_expr(expr: Expr) -> Result<Transformed<Expr>> {
-    expr.transform_up(|node| Ok(narrow_node(node)))
+pub(crate) fn narrow_provisional_integer_literals(expr: Expr) -> Result<Transformed<Expr>> {
+    expr.transform_up(|node| Ok(narrow_provisional_integer_literal(node)))
 }
 
-fn narrow_node(expr: Expr) -> Transformed<Expr> {
+pub(crate) fn narrow_provisional_integer_literal(expr: Expr) -> Transformed<Expr> {
     match expr {
         Expr::Literal(ScalarValue::Int64(Some(value)), meta) => {
             if let Ok(narrow) = i32::try_from(value) {

@@ -17,7 +17,8 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
   only invokes `variables[..params.len()]`).
 - `transform.rs` — Spark `transform`.
 - `filter.rs` — Spark `filter` (null predicate drops).
-- `exists.rs` — native Spark `exists` (nullable boolean, three-valued nulls).
+- `exists.rs` — native Spark `exists`; three-valued nulls and output nullability follow the
+  input array and predicate.
 - `forall.rs` — all-match rewrite of `exists`.
 - `hof_keep.rs` — `__hof_keep` marker UDF; keeps lambda variables in scope.
 - `aggregate.rs` — sequential fold; alias `reduce`. The merge-output type must
