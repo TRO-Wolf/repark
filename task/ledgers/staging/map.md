@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [dfcore-1-ledger.md](dfcore-1-ledger.md) —
+  **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
+  conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,
+  mapInArrow schema checks to new `udf_schema.py`, grouped-UDF assembly to new
+  `grouped_udf.py`. Move-only: `core.py` 6302 → 5954, `joins_columns.py` 1239 → 1238,
+  export surfaces pinned identical, 6099 collected IDs unchanged. `risk_tier: standard`.
+  Branch `refactor/dfcore-1`.
+  pins: dfcore-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,
