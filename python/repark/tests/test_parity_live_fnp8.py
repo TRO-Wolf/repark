@@ -329,9 +329,7 @@ def _seed_r2_views(repark_engine: lp.Engine, spark_engine: lp.Engine) -> None:
     spark_engine.session.sql(
         "CREATE OR REPLACE TEMP VIEW fnp8rev_r2_live_b AS SELECT array(4) AS a"
     )
-    repark_engine.session.sql("SELECT array(4) AS a").createOrReplaceTempView(
-        "fnp8rev_r2_live_b"
-    )
+    repark_engine.session.sql("SELECT array(4) AS a").createOrReplaceTempView("fnp8rev_r2_live_b")
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -368,11 +366,7 @@ def test_live_fnp8review_r2_join_lineage_matches_spark(
             repark_engine.session.sql(
                 "SELECT t1.a AS a FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
                 " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
-            ).select(
-                repark_engine.functions.transform(
-                    "a", lambda element: element + 1
-                ).alias("r")
-            )
+            ).select(repark_engine.functions.transform("a", lambda element: element + 1).alias("r"))
         )
         _assert_indexed_transform_cell(column_table, [[2, 3, 4]], False, False, True)
         spark_table = spark_engine.arrow_of(spark_engine.session.sql(aggregate_query))
@@ -397,8 +391,7 @@ def test_live_fnp8review_r2_multihop_lineage_matches_spark(
             "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_live)",
             "WITH c1 AS (SELECT array(1, 2, 3) AS a), c2 AS (SELECT a FROM c1)"
             " SELECT transform(a, x -> x + 1) AS r FROM c2",
-            "SELECT transform(a, x -> x + 1) AS r"
-            " FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
             "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, rn FROM (SELECT a,"
             " row_number() OVER (ORDER BY k) AS rn"
             " FROM (SELECT array(1, 2, 3) AS a, 1 AS k)))",

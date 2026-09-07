@@ -504,9 +504,7 @@ def test_join_fed_lambda_body_literals_answer_int32(spark: ReparkSession) -> Non
 
 def test_scalar_subquery_hof_answers_int32(spark: ReparkSession) -> None:
     """Pin the scalar-subquery HOF answer repark serves past Spark's refusal."""
-    table = spark.sql(
-        "SELECT transform((SELECT array(1, 2, 3) AS a), x -> x + 1) AS r"
-    ).toArrow()
+    table = spark.sql("SELECT transform((SELECT array(1, 2, 3) AS a), x -> x + 1) AS r").toArrow()
     _assert_list_int32(table, [[2, 3, 4]])
     assert not table.schema.field("r").nullable
     assert not table.schema.field("r").type.value_field.nullable
@@ -523,11 +521,9 @@ def test_lineage_through_plan_nodes_keeps_int32(spark: ReparkSession) -> None:
         " row_number() OVER (ORDER BY k) AS rn"
         " FROM (SELECT array(1, 2, 3) AS a, 1 AS k)))",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a)",
-        "WITH c AS (SELECT array(1, 2, 3) AS a)"
-        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "WITH c AS (SELECT array(1, 2, 3) AS a) SELECT transform(a, x -> x + 1) AS r FROM c",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
-        "SELECT transform(a, x -> x + 1) AS r"
-        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k ORDER BY k)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a, 1 AS k ORDER BY k)",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, k"
         " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) WHERE k = 1)",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT DISTINCT array(1, 2, 3) AS a)",
@@ -545,10 +541,8 @@ def test_multihop_lineage_keeps_not_null_elements(spark: ReparkSession) -> None:
     spark.sql("CREATE TABLE fnp8rev_r2_t USING PARQUET AS SELECT array(1, 2, 3) AS a")
     lineage_queries = (
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_v)",
-        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM"
-        " (SELECT a FROM fnp8rev_r2_v))",
-        "WITH c AS (SELECT a FROM fnp8rev_r2_v)"
-        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM (SELECT a FROM fnp8rev_r2_v))",
+        "WITH c AS (SELECT a FROM fnp8rev_r2_v) SELECT transform(a, x -> x + 1) AS r FROM c",
         "WITH c1 AS (SELECT array(1, 2, 3) AS a), c2 AS (SELECT a FROM c1)"
         " SELECT transform(a, x -> x + 1) AS r FROM c2",
     )
@@ -559,8 +553,7 @@ def test_multihop_lineage_keeps_not_null_elements(spark: ReparkSession) -> None:
         assert not table.schema.field("r").type.value_field.nullable
     table_queries = (
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_t)",
-        "WITH c AS (SELECT a FROM fnp8rev_r2_t)"
-        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "WITH c AS (SELECT a FROM fnp8rev_r2_t) SELECT transform(a, x -> x + 1) AS r FROM c",
         "SELECT transform(a, x -> x + 1) AS r FROM fnp8rev_r2_t",
     )
     for query in table_queries:
