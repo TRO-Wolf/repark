@@ -35,6 +35,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   delegations; `core` binds the two modules, so the package and core surfaces
   gain exactly those two names and the class loses exactly the four methods.
   pins: dfcore-2/C-001, C-002, C-003, C-006
+  DFCORE-3 (2026-09-07): the six statistics bodies moved to `statistics.py`
+  (5263 → 5060, mirrored in the CAP-1 test). The public methods stay as one-line
+  wrappers, so the class dir is unchanged; `summary`'s wrapper imports its helper
+  locally because its `*statistics` parameter shadows the module binding. `core`
+  binds the module, so the package and core surfaces gain exactly that one name.
+  pins: dfcore-3/C-001, C-002, C-003, C-004, C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -90,6 +96,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   window result. The ordered path carries partition, order, and UDF inputs plus every
   source column on the group frame, overwrites same-name sources, and projects caller
   order last-wins. pins: dfcore-2/C-005
+- `statistics.py` owns the seven statistics bodies behind the public wrappers (DFCORE-3,
+  moved from `core.py` and `DataFrameStatFunctions.freqItems`). `summary` builds one row
+  per statistic with SQL aggregations joined by UNION ALL; bare `summary()` refuses
+  because Spark percentile rows are an engine gap. Multi-name frames aggregate on unique
+  engine fields — a display name can be ambiguous or absent from the view schema. Engine
+  aliases stay unique; the facade overlays Spark-legal display names afterwards.
+  `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
+  negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
+  and treats out-of-range probabilities as value errors, not type errors. It still
+  collects once per probability; the old "scalar-only engine" note is obsolete —
+  `percentile_approx` already accepts a probability list and DFCORE-5 owns the batching
+  to one collect per frame. `crosstab` casts both strata to string for Spark's
+  string-key pivot form, feeds `pivot` simple-name aggregate inputs, and fills absent
+  pairs with 0. pins: dfcore-3/C-004, C-005
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -104,6 +124,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
   helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
+  DFCORE-3 (2026-09-07): `DataFrameStatFunctions.freqItems` delegates its refusal to
+  `statistics._freq_items` (1113 → 1111, mirrored in the CAP-1 test); the class keeps
+  the stat accessor shape. pins: dfcore-3/C-005, C-006
 - `__init__.py` preserves the package import surface, including private compatibility names.
 
 ## Durable contracts
@@ -149,6 +172,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | UDF callbacks | [`udf_bridge.py`](udf_bridge.py) |
 | Scalar and classic UDF projection | [`udf_projection.py`](udf_projection.py) |
 | Windowed UDF projection | [`udf_window_projection.py`](udf_window_projection.py) |
+| Statistics bodies | [`statistics.py`](statistics.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -171,5 +195,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DFCORE-2 (2026-09-07): `core.py` 5954→5263; `udf_projection.py` (349) and
   `udf_window_projection.py` (337) stay below the source-size default
   (pins: dfcore-2/C-006).
+  DFCORE-3 (2026-09-07): `core.py` 5263→5060, `writer_readwriter.py` 1113→1111;
+  `statistics.py` (261) stays below the source-size default (pins: dfcore-3/C-006).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
