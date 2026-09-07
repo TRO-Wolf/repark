@@ -519,6 +519,9 @@ def test_lineage_through_plan_nodes_keeps_int32(spark: ReparkSession) -> None:
         " FROM (SELECT 1 AS k) s GROUP BY k, array(1, 2, 3))",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a,"
         " row_number() OVER (ORDER BY k) AS rn FROM (SELECT 1 AS k) s)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, rn FROM (SELECT a,"
+        " row_number() OVER (ORDER BY k) AS rn"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k)))",
         "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a)",
         "WITH c AS (SELECT array(1, 2, 3) AS a)"
         " SELECT transform(a, x -> x + 1) AS r FROM c",

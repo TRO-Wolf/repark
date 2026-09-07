@@ -3804,7 +3804,9 @@ pins: fnp-8-review/C-001, C-002, C-003, C-004
 both doors, `test_scalar_subquery_...` pins the scalar-subquery answer (repark serves
 past Spark's `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY` refusal — a superset, never
 cited as Spark-equal), `test_lineage_through_plan_nodes_...` covers
-aggregate/window/passthrough nodes, `test_multihop_...` covers multi-hop view lineage
+aggregate/window/passthrough nodes (including the constructor below the Window node,
+which is the leg that bites the Window arm), `test_multihop_...` covers multi-hop
+view lineage
 with Spark-equal nullable table legs, `test_union_of_narrowed_...` is the union pin,
 `test_aggregate_over_lineage_...` locks aggregate immunity, and
 `test_lateral_view_...` pins the loud refusal that keeps Generate unreachable.

@@ -399,6 +399,9 @@ def test_live_fnp8review_r2_multihop_lineage_matches_spark(
             " SELECT transform(a, x -> x + 1) AS r FROM c2",
             "SELECT transform(a, x -> x + 1) AS r"
             " FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, rn FROM (SELECT a,"
+            " row_number() OVER (ORDER BY k) AS rn"
+            " FROM (SELECT array(1, 2, 3) AS a, 1 AS k)))",
             "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, k"
             " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) WHERE k = 1)",
         )
