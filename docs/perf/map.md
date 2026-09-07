@@ -186,6 +186,13 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   every width; `multiLine` re-read is infer-free. `nullValue` keeps one `try_cast`
   aggregation.
   pins: csv-infer-perf-1/C-001, C-005, C-006
+- [eager-preview-baseline.md](eager-preview-baseline.md) — **PERF-EAGER-PREVIEW-1
+  (2026-09-07):** the repr/HTML/vertical-show before/after pair on a 1e6-row
+  parquet read and a `mapInArrow`-backed frame (`count()` 1 → 0 on every plain
+  preview door; bridged eager doors 2,000,000 → 65,536 computed UDF rows and
+  0.821/0.845 → 0.031/0.031 s; bridged vertical show unchanged as the
+  control), recorded on one release module with per-run loads, wall not gated.
+  pins: dfcore-6/C-005
 
 ## Pointers
 

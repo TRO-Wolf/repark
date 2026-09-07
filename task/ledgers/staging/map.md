@@ -572,3 +572,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`.
   Branch `perf/dfcore-5`.
   pins: dfcore-5/C-001, C-002, C-003, C-004, C-005
+- [dfcore-6-ledger.md](dfcore-6-ledger.md) —
+  **DFCORE-6 (2026-09-07), in flight:** eager previews fetch N+1 and never
+  `count()` — repr, HTML, and vertical show read the footer from the extra
+  row (1 → 0 counts per door), bridged eager doors peek at most
+  `maxNumRows + 1` UDF rows (1e6-row preview 2,000,000 → 65,536 computed
+  rows, 0.821/0.845 → 0.031/0.031 s), footers and cap-edge shapes preserved,
+  every DFCORE-4b golden byte-identical, DFCORE-4b F2 closed by a non-golden
+  vertical pin. `risk_tier: standard`.
+  Branch `perf/dfcore-6`.
+  pins: dfcore-6/C-001, C-002, C-003, C-004, C-005
+  Critic r1 PASS (2026-09-07); the row-count assertion added to the repr footer pin.

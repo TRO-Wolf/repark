@@ -6868,6 +6868,26 @@ field NAME.
   agree; the missing methods are pinned, not taught. The API freeze closes
   `python/repark/src` to this unit.
 
+### PERF-EAGER-PREVIEW-1 — eager previews fetch N+1 rows and never `count()` — **FIXED 2026-09-07 (DFCORE-6)**
+
+- **repark** — **FIXED 2026-09-07 (DFCORE-6).** `repr`, `_repr_html_`, and
+  vertical `show` fetch one row past the cap, render the cap, and read the
+  "only showing top N rows" footer from the extra row: `count()` calls go
+  1 → 0 on every plain preview door. Eager doors on `mapInArrow`-backed
+  frames peek the bridge with the same bound instead of running the whole
+  UDF twice: a 1e6-row preview computes one batch (65,536 rows) instead of
+  2,000,000, with wall medians 0.821/0.845 → 0.031/0.031 s (repr/HTML);
+  plain-door medians 0.004 → 0.002 s. Footers, cap-edge shapes, truncate,
+  escaping, and styled totals are unchanged.
+- **Apache Spark** — the REPL prints the same "only showing top N rows"
+  footer; the text and the eager-cap packing were already pinned to the
+  Apache `test_repr_behaviors` shape and are unchanged by this unit.
+- **Pin** —
+  `python/repark/tests/test_dfcore_6_eager_preview.py::test_preview_doors_never_count`
+- **Rationale** — FIXED. History: a full preview ran a full `count()` only
+  to decide the footer, and the eager doors ran a bridged UDF over every
+  row twice. Cells: `docs/perf/eager-preview-baseline.md`.
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
