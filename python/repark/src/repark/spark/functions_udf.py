@@ -678,7 +678,7 @@ def pandas_udf(
         df.groupBy("k").agg(mean_udf("v").alias("m"))
 
     SCALAR / SCALAR_ITER implementation is a **facade projection rewrite** over the deferred
-    mapInArrow-style bridge (see :meth:`repark.dataframe.DataFrame._select_with_pandas_udfs`)
+    mapInArrow-style bridge (see :meth:`repark.dataframe.udf_projection._select_with_pandas_udfs`)
     — the UDF result is **not** a :class:`~repark.column.Column` expression in the SQL plan.
     Composition mid-expression is refused; materialize via select/withColumn first.
 

@@ -13,6 +13,7 @@ import warnings
 from collections.abc import Callable, Iterator
 from typing import Any, overload
 
+import repark.spark.dataframe.grouped_udf as grouped_udf
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -27,16 +28,14 @@ from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe.core import (
     DataFrame,
-    _coerce_map_in_arrow_schema,
     _global_agg_sql_parts,
     _is_numeric_type_key,
-    _iter_apply_in_pandas_group_tables,
     _null_safe_equi_join_sql,
     _parse_count_distinct_simple_names,
     _parse_list_element_sql_type,
     _reject_partition_transform,
-    _validate_apply_in_pandas_result_columns,
 )
+from repark.spark.dataframe.udf_schema import _coerce_map_in_arrow_schema
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -107,7 +106,7 @@ def _apply_in_pandas_arrow_batches(
     import pandas as pd
     import pyarrow as pa
 
-    for group_table in _iter_apply_in_pandas_group_tables(input_batches, key_names):
+    for group_table in grouped_udf._iter_apply_in_pandas_group_tables(input_batches, key_names):
         pdf = group_table.to_pandas()
         try:
             out_pdf = user_func(pdf)
@@ -128,7 +127,7 @@ def _apply_in_pandas_arrow_batches(
                 f"got {type(out_pdf).__name__}"
             )
         # Validate names before casting so empty wrong frames cannot hide mismatches.
-        _validate_apply_in_pandas_result_columns(out_pdf, expected_names)
+        grouped_udf._validate_apply_in_pandas_result_columns(out_pdf, expected_names)
         # Preserve the declared schema for Spark's accepted empty group result.
         if len(out_pdf) == 0 and len(out_pdf.columns) == 0:
             yield pa.RecordBatch.from_arrays(

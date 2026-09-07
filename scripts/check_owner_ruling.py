@@ -25,10 +25,10 @@ EXPECTED_RULING = (
     "that is where a reason, a design note or a `pins: <unit>/C-NNN` citation now lives — the\n"
     "directory's `map.md` (the ledger-grammar gate reads every tracked file under `crates/`,\n"
     "`python/`, `scripts/`, so a citation in a `map.md` there counts). Condensation is "
-    "**enforced**:\n"
-    "`make check-comment-density` (in `make ci`) holds every code file to a per-file comment "
-    "ceiling\n"
-    "seeded from the tree that only ratchets down, and a new file's ceiling is zero."
+    "held by review,\n"
+    "not by a gate: the `check-comment-density` ratchet was dropped before #247 merged; the "
+    "file-size\n"
+    "ratchets are the mechanical gates, and a new file carries no comments."
 )
 
 EXPECTED_BOUNDARY = (

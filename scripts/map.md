@@ -335,6 +335,17 @@ leaves the backlog. `F.arrays_zip` stays on it — the kernel answers, but its s
 names diverge (§7 FNP9-ARRAYS-ZIP-NAMES-1).
 pins: fnp-9-collections-json/C-001
 
+DFCORE-1 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 6302→5954 — the leaf
+helpers above the class move to `rows_export.py` and three new leaf modules — and
+`dataframe/joins_columns.py` 1239→1238 — the moved helpers arrive via direct leaf
+imports (mirrored in the CAP-1 test). Ratchets DOWN.
+pins: dfcore-1/C-007
+
+DFCORE-2 (2026-09-07): `check_lib_py.py` `dataframe/core.py` 5954→5263 — the four
+UDF select rewrites move to `udf_projection.py` and `udf_window_projection.py`,
+which carry no row (mirrored in the CAP-1 test). Ratchets DOWN.
+pins: dfcore-2/C-006
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002
@@ -504,6 +515,9 @@ repark-parity slice.
   complete ruling block in a regular file at the start of both `AGENTS.md` and `CLAUDE.md`,
   byte-for-byte, and the adjacent enforcement boundary in `AGENTS.md`. Each protected block must
   appear exactly once. It rejects symlink redirection and makes no model-attribution claim.
+  The expected text moved once (2026-09-07, owner-ruled): the adjustment's enforcement sentence
+  now says review holds condensation and the file-size ratchets are the gates, replacing the
+  `make check-comment-density` claim PR #247 had already retired.
   Dual-wired through `make check-owner-ruling` in `make ci` and a raw guard step in ci.yml.
   Provocations:
   `python/repark-parity/tests/test_pr_247_owner_ruling.py`.
