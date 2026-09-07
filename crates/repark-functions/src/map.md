@@ -82,6 +82,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   non-null (F4). The provisional skip also covers value-side columns fed by bare
   literals (VALUES rows, double-nested subqueries), traced iteratively.
   pins: fnp-8-review/C-001, C-004
+  **FNP-8-REVIEW round 2 (2026-09-07):** both lineage walks resolve through every plan
+  node a literal reaches. `source_feeds_bare_integer` maps Join (semi/anti/mark aware,
+  both sides plus cross), Aggregate group keys, Window input columns, Unnest
+  dependencies, scalar-subquery plans, the recursive-CTE static term, and every
+  passthrough node; `source_element_nullable` chases multi-hop column lineage for the
+  element wrap, with Union demanding every branch non-null. Nodes no spelling reaches
+  (lateral view refuses loud) keep a defensive arm or a documented terminal.
+  pins: fnp-8-review/C-009, C-010
 - `json.rs` (+ [`json/`](json/map.md)) — **FNP-10 (2026-09-05):** the Spark JSON family —
   `get_json_object`, `json_array_length`, `json_object_keys`, `schema_of_json`, `to_json`,
   `from_json`. Registered from `register_all`; no new dependency (see `json/map.md`). Each

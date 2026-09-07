@@ -79,6 +79,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `analyzer_rules_with_higher_order_preparation` inserts the scoped HOF rule immediately before
   the first default `type_coercion` rule and refuses a vector without that insertion point.
   pins: fnp-8/C-003, C-004
+  **FNP-8-REVIEW round 2 (2026-09-07):** both HOF lineage walks resolve through every
+  plan node a literal reaches; detail lives with the module in
+  [`src/map.md`](src/map.md). pins: fnp-8-review/C-009, C-010
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
   min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
   plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.

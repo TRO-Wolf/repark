@@ -177,7 +177,7 @@ def test_live_fnp8review_table_backed_width_matches_spark(
         for table, element_nullable in (
             (spark_table, False),
             (sql_table, False),
-            (column_table, True),
+            (column_table, False),
         ):
             _assert_indexed_transform_cell(table, [[2, 3, 4]], False, element_nullable, True)
         spark_table = spark_engine.arrow_of(

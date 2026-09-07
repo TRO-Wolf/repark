@@ -12,7 +12,12 @@ live PySpark 4.1.2, Zulu 17, `local[2]`, UTC, ANSI on) filed seven findings
 F1–F7 against squash-merge `7a8e94ce` and a held set the remediation must not
 regress. This unit fixes every finding red-first against the same live oracle.
 The frozen FNP-8 ledger in `../completed/` is read-only; the orchestrator
-prepends its errata.
+prepends its errata. **Round 2 (2026-09-07):** the round-2 critic report
+(`$HOME/repark-lanes/briefs/fnp8rev-critic/report-r2.md`, live PySpark 4.1.2,
+same basis) SERVED F1–F7 and filed R2-F1 (join-fed width, S2), R2-F2 (multi-hop
+nullability, S3), and R2-F3 (ledger accuracy, S4). C-009/C-010 carry the two
+behavior findings; C-008's counts and the attestation are trued up at the
+round's close.
 
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `.github/`,
 `Cargo.lock`, dependency lists, the fork pin, completed ledgers, code comments.
@@ -29,8 +34,10 @@ prepends its errata.
 | C-006 | F6 `sql_door_exists_and_forall_answer_three_valued` carries a null-predicate leg or is renamed. | The Rust pin with the added leg. | **PROVEN** | Null-predicate `exists`/`forall` legs added; `cargo test -p repark-spark lambda_door` green. |
 | C-007 | F7 the `F-Y10-1` note cites `sql_door_lambda_body_overflow_divergence_wraps` and the error-oracle idx 25/51 dispositions. | The extended note. | **PROVEN** | Note cites the wrap pin plus error-25 (ANSI raise vs wrap) and error-51 (shared wrap). |
 | C-008 | No regression of the critic's held set: the four pin files JVM-free, the live leg at 512 passed / 0 skipped, `make verify`, and the report's mutation knobs still red. | The gate commands with real exit codes; mutation table. | **PROVEN** | JVM-free `420 passed, 93 skipped`; live `525 passed` (512 + 8 new live + 5 new door pins, 0 skipped); facade `5749 passed, 362 skipped`; `make verify` exit 0; Rust `lambda_door` 25 passed; M1–M5 all bite (2 / 1 / 6 / 4 / 4+61 reds). |
+| C-009 | R2-F1 join-fed HOF width: a literal-fed `transform` through Join (both sides, cross), Aggregate group keys, Window, scalar subqueries, and every other plan node answers Int32 dtype-exact with Spark's not-null elements on the SQL door; the Column door and `aggregate` stay immune. | One pin per shape, dtype AND nullability exact; live oracle cells; red-first evidence. | **PROVEN** | Oracle `int32 not null` on every shape (banner spark 4.1.2 tz UTC ansi true). Red: Int64 nullable through Join/Aggregate (the tracer had no arm) and through scalar subqueries. Fix: full plan-lineage arms in `source_feeds_bare_integer` plus scalar-subquery tracing; the multi-hop element walk wraps not-null. Pins green; union-over-literals stays Int64 (pre-existing UNION coercion, out of scope, values agree). |
+| C-010 | R2-F2 SQL-door multi-hop nullability: HOF over subquery-over-view, double CTE, DISTINCT/LIMIT/FILTER and every other multi-hop literal lineage answers Spark's not-null elements, or FNP8-NULLABILITY names each staying shape with a red-when-fixed pin. | Pins per shape; registry extension if any shape stays divergent. | **PROVEN** | Oracle `int32 not null` on all five literal-lineage shapes. Red: nullable elements. The same multi-hop `source_element_nullable` walk serves every shape, so no registry extension was needed. CTE-over-parquet-table measures nullable/nullable on BOTH engines (table-ctrl), i.e. Spark-equal with no wrap. The round-1 Column-view nullable instance converged (pin, live leg, and NULLABILITY sentence updated). |
 
-VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED.
 
 ```yaml
 COVERAGE_ATTESTATION:

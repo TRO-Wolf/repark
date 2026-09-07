@@ -6,7 +6,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, ExprSchema, ScalarValue, exec_err, plan_err};
+use datafusion::common::{DFSchema, ExprSchema, JoinType, ScalarValue, exec_err, plan_err};
 use datafusion::error::Result;
 use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
@@ -223,18 +223,114 @@ fn array_constructor_element_nullable(
     if is_array_constructor(expr) {
         return constructor_element_nullable(expr, schema);
     }
+    if let Expr::ScalarSubquery(query) = expr {
+        return source_element_nullable(query.subquery.as_ref(), 0);
+    }
     let Expr::Column(column) = expr else {
         return None;
     };
     inputs.iter().find_map(|input| {
         let index = input.schema().index_of_column(column).ok()?;
-        let (source, source_schema) = output_expression(input, index)?;
-        if is_array_constructor(source) {
-            constructor_element_nullable(source, source_schema)
-        } else {
-            None
-        }
+        source_element_nullable(input, index)
     })
+}
+
+fn source_element_nullable(plan: &LogicalPlan, index: usize) -> Option<bool> {
+    match plan {
+        LogicalPlan::Projection(projection) => {
+            let mut source = projection.expr.get(index)?;
+            while let Expr::Alias(alias) = source {
+                source = alias.expr.as_ref();
+            }
+            if let Expr::Column(inner) = source {
+                let inner_index = projection.input.schema().index_of_column(inner).ok()?;
+                source_element_nullable(projection.input.as_ref(), inner_index)
+            } else if is_array_constructor(source) {
+                constructor_element_nullable(source, projection.input.schema().as_ref())
+            } else {
+                None
+            }
+        }
+        LogicalPlan::SubqueryAlias(alias) => source_element_nullable(alias.input.as_ref(), index),
+        LogicalPlan::Subquery(subquery) => {
+            source_element_nullable(subquery.subquery.as_ref(), index)
+        }
+        LogicalPlan::Filter(filter) => source_element_nullable(filter.input.as_ref(), index),
+        LogicalPlan::Sort(sort) => source_element_nullable(sort.input.as_ref(), index),
+        LogicalPlan::Distinct(distinct) => {
+            source_element_nullable(distinct.input().as_ref(), index)
+        }
+        LogicalPlan::Limit(limit) => source_element_nullable(limit.input.as_ref(), index),
+        LogicalPlan::Repartition(repartition) => {
+            source_element_nullable(repartition.input.as_ref(), index)
+        }
+        LogicalPlan::Join(join) => {
+            let (input, position) = join_lineage(
+                join.left.as_ref(),
+                join.right.as_ref(),
+                join.join_type,
+                index,
+            )?;
+            source_element_nullable(input, position)
+        }
+        LogicalPlan::Union(union) => {
+            if union.inputs.is_empty() {
+                return None;
+            }
+            for input in &union.inputs {
+                if source_element_nullable(input.as_ref(), index) != Some(false) {
+                    return None;
+                }
+            }
+            Some(false)
+        }
+        LogicalPlan::Aggregate(aggregate) => {
+            let mut source = aggregate.group_expr.get(index)?;
+            while let Expr::Alias(alias) = source {
+                source = alias.expr.as_ref();
+            }
+            if let Expr::Column(inner) = source {
+                let inner_index = aggregate.input.schema().index_of_column(inner).ok()?;
+                source_element_nullable(aggregate.input.as_ref(), inner_index)
+            } else if is_array_constructor(source) {
+                constructor_element_nullable(source, aggregate.input.schema().as_ref())
+            } else {
+                None
+            }
+        }
+        LogicalPlan::Window(window) => {
+            if index < window.input.schema().fields().len() {
+                source_element_nullable(window.input.as_ref(), index)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn join_lineage<'a>(
+    left: &'a LogicalPlan,
+    right: &'a LogicalPlan,
+    join_type: JoinType,
+    position: usize,
+) -> Option<(&'a LogicalPlan, usize)> {
+    match join_type {
+        JoinType::LeftSemi | JoinType::LeftAnti | JoinType::LeftMark => {
+            (position < left.schema().fields().len()).then_some((left, position))
+        }
+        JoinType::RightSemi | JoinType::RightAnti | JoinType::RightMark => {
+            (position < right.schema().fields().len()).then_some((right, position))
+        }
+        _ => {
+            let left_width = left.schema().fields().len();
+            if position < left_width {
+                Some((left, position))
+            } else {
+                Some((right, position - left_width))
+            }
+        }
+    }
 }
 
 fn output_expression(mut plan: &LogicalPlan, index: usize) -> Option<(&Expr, &DFSchema)> {
@@ -329,6 +425,12 @@ fn traces_to_provisional_constructor(expr: &Expr, inputs: &[LogicalPlan]) -> boo
                 Ok(TreeNodeRecursion::Continue)
             }
         }
+        Expr::ScalarSubquery(query) => {
+            if source_feeds_bare_integer(query.subquery.as_ref(), 0) {
+                provisional = true;
+            }
+            Ok(TreeNodeRecursion::Stop)
+        }
         _ => Ok(TreeNodeRecursion::Continue),
     })
     .is_ok()
@@ -357,10 +459,56 @@ fn source_feeds_bare_integer(plan: &LogicalPlan, index: usize) -> bool {
                 }
             }
             LogicalPlan::SubqueryAlias(alias) => pending.push((alias.input.as_ref(), position)),
+            LogicalPlan::Subquery(subquery) => {
+                pending.push((subquery.subquery.as_ref(), position));
+            }
             LogicalPlan::Filter(filter) => pending.push((filter.input.as_ref(), position)),
             LogicalPlan::Sort(sort) => pending.push((sort.input.as_ref(), position)),
             LogicalPlan::Distinct(distinct) => pending.push((distinct.input(), position)),
             LogicalPlan::Limit(limit) => pending.push((limit.input.as_ref(), position)),
+            LogicalPlan::Repartition(repartition) => {
+                pending.push((repartition.input.as_ref(), position));
+            }
+            LogicalPlan::Join(join) => {
+                if let Some((input, index)) = join_lineage(
+                    join.left.as_ref(),
+                    join.right.as_ref(),
+                    join.join_type,
+                    position,
+                ) {
+                    pending.push((input, index));
+                }
+            }
+            LogicalPlan::Aggregate(aggregate) => {
+                if let Some(group) = aggregate.group_expr.get(position) {
+                    let mut source = group;
+                    while let Expr::Alias(alias) = source {
+                        source = alias.expr.as_ref();
+                    }
+                    if let Expr::Column(inner) = source {
+                        if let Ok(inner_index) = aggregate.input.schema().index_of_column(inner) {
+                            pending.push((aggregate.input.as_ref(), inner_index));
+                        }
+                    } else if (is_array_constructor(source) || is_map_constructor(source))
+                        && contains_bare_integer(source)
+                    {
+                        return true;
+                    }
+                }
+            }
+            LogicalPlan::Window(window) => {
+                if position < window.input.schema().fields().len() {
+                    pending.push((window.input.as_ref(), position));
+                }
+            }
+            LogicalPlan::Unnest(unnest) => {
+                if let Some(dependency) = unnest.dependency_indices.get(position) {
+                    pending.push((unnest.input.as_ref(), *dependency));
+                }
+            }
+            LogicalPlan::RecursiveQuery(recursive) => {
+                pending.push((recursive.static_term.as_ref(), position));
+            }
             LogicalPlan::Values(values) => {
                 if values
                     .values

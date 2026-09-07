@@ -3290,7 +3290,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   per-door width and nested nullability against the measured Spark cell. A second live detector
   holds public `exists` value, type, and non-nullability against Spark.
   **FNP-8-REVIEW (2026-09-07):** four more ANSI-on/off detectors — view-backed widths
-  (both doors, with the Column-view nullable disclosure leg), the three-door
+  (both doors Spark-equal since round 2), the three-door
   left-shorter zip, zip element nullability, and the outer-variable nesting shape.
   The held-set re-run (four pin files, live leg, verify, mutations) is C-008.
   pins: fnp-8-review/C-001, C-002, C-003, C-004, C-008
@@ -3795,6 +3795,6 @@ inline lambda-body widths (F1: `test_table_backed_...` / `test_inline_...`),
 the left-shorter zip on three doors (F2: `test_zip_with_left_shorter_...`),
 zip element nullability (F3: `test_zip_with_element_nullability_...`), and
 the outer-variable nesting shape (F4: `test_nested_transform_...`). The
-table-backed pin also holds the Column-view nullable-element instance beside
-the Spark-equal SQL legs (FNP8-NULLABILITY).
+round-1 Column-view nullable-element instance converged in round 2 (multi-hop
+lineage); both legs are Spark-equal now (FNP8-NULLABILITY).
 pins: fnp-8-review/C-001, C-002, C-003, C-004
