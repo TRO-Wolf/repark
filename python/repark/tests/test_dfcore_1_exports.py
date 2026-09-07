@@ -7,6 +7,36 @@ DFCORE-2 (2026-09-07) declared deltas, extended before the production edit: the
 four ``_select_with_*`` helpers leave the class, so ``EXPECTED_DATAFRAME_DIR``
 loses exactly those four names; ``core`` and the package each gain exactly the
 two new module names ``udf_projection`` and ``udf_window_projection``.
+
+DFCORE-3 (2026-09-07) declared deltas, extended before the production edit: the
+seven statistics bodies leave for ``statistics.py`` as private frame-first
+module functions, but the public methods (``approxQuantile``, ``corr``,
+``cov``, ``crosstab``, ``summary``, ``describe`` on ``DataFrame``;
+``freqItems`` on ``DataFrameStatFunctions``) stay as one-line wrappers, so
+``EXPECTED_DATAFRAME_DIR`` is unchanged; ``core`` and the package each gain
+exactly the one new module name ``statistics``.
+
+DFCORE-4a (2026-09-07) declared deltas, extended before the production edit: the
+three sampling bodies (``sample``, ``randomSplit``, ``sampleBy``) leave for
+``sampling.py`` as private frame-first module functions, but the public methods
+stay as one-line wrappers; the ``_prepare_sample_args`` static method leaves the
+class with no wrapper, so ``EXPECTED_DATAFRAME_DIR`` loses exactly that one
+name; the module-level ``_coerce_sample_seed`` moves to ``sampling.py`` and is
+re-imported by ``core`` so both surfaces keep it; ``core`` and the package each
+gain exactly the one new module name ``sampling``.
+
+DFCORE-4b (2026-09-07) declared deltas, extended before the production edit: the
+ten display bodies (``show``, ``__repr__``, ``_repr_html_``,
+``_preview_tail_rows`` plus the six private helpers) leave for ``display.py``
+as private frame-first module functions; ``show``, ``__repr__``,
+``_repr_html_``, and ``_preview_tail_rows`` (called on the instance by the
+styled-show pins) stay as one-line wrappers, so ``EXPECTED_DATAFRAME_DIR``
+loses exactly the six leavers (``_conf_lookup``, ``_eager_eval_enabled``,
+``_eager_eval_limits``, ``_normalize_show_args``, ``_render_styled_show``,
+``_resolve_display_style``); ``core`` and the package each gain exactly the one
+new module name ``display``. The ownership test lives in the sibling
+``test_dfcore_4b_exports.py``: this file is at the default ceiling and the
+gate's sanctioned out is a split, not an exception row.
 """
 
 from __future__ import annotations
@@ -454,13 +484,10 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_checkpoint_lazy",
     "_collapse_base",
     "_column_of",
-    "_conf_lookup",
     "_consume_map_in_arrow_batches",
     "_cross_join_enabled",
     "_display_names",
     "_display_overlay_names",
-    "_eager_eval_enabled",
-    "_eager_eval_limits",
     "_engine_field_for_display",
     "_engine_names",
     "_ensure_alive",
@@ -491,7 +518,6 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_mia_temp_views",
     "_name_of",
     "_native_for_registration",
-    "_normalize_show_args",
     "_origin_map",
     "_origin_not_emitted",
     "_origin_plan_ids",
@@ -499,7 +525,6 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_plan",
     "_plan_id",
     "_prepare_for_plan",
-    "_prepare_sample_args",
     "_preview_tail_rows",
     "_quote_filter_sql_identifiers",
     "_raise_if_origin_not_emitted",
@@ -510,10 +535,8 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_register_arrow_stream_as_inner",
     "_register_ipc_bytes_as_inner",
     "_remember_unemitted_right_origins",
-    "_render_styled_show",
     "_repr_html_",
     "_require_non_negative_limit",
-    "_resolve_display_style",
     "_resolve_getitem_column_name",
     "_rows_from_arrow_table",
     "_select_global_aggregate_sql",
@@ -666,15 +689,21 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
 EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
+    "display",
     "export_errors",
     "grouped_udf",
     "rows_export",
+    "sampling",
+    "statistics",
     "udf_projection",
     "udf_schema",
     "udf_window_projection",
 }
 
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "display",
+    "sampling",
+    "statistics",
     "udf_projection",
     "udf_window_projection",
 }
@@ -702,9 +731,10 @@ def test_package_export_set_unchanged() -> None:
 
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the six new submodule attributes (DFCORE-1's four plus DFCORE-2's
-    ``udf_projection`` and ``udf_window_projection``), bound by the import system
-    when core imports the new homes.
+    gain is the nine new submodule attributes (DFCORE-1's four plus DFCORE-2's
+    ``udf_projection`` and ``udf_window_projection`` plus DFCORE-3's
+    ``statistics`` plus DFCORE-4a's ``sampling`` plus DFCORE-4b's ``display``),
+    bound by the import system when core imports the new homes.
     """
     expected_surface = [
         name
@@ -733,8 +763,10 @@ def test_core_export_set_unchanged() -> None:
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. ``__annotations__``
     is separately asserted absent: the moved constants carried core's last annotated
-    module-level assignments with them. DFCORE-2's only accepted gain is the two
-    new module bindings: ``select`` delegates to the moved helpers through them.
+    module-level assignments with them. The only accepted gain is the five new
+    module bindings (DFCORE-2's two plus DFCORE-3's ``statistics`` plus DFCORE-4a's
+    ``sampling`` plus DFCORE-4b's ``display``): ``select``, the statistics, the
+    sampling, and the display wrappers delegate to the moved helpers through them.
     """
     expected_surface = [
         name
@@ -868,3 +900,76 @@ def test_moved_select_helpers_live_in_new_homes() -> None:
             assert helper.__module__ == home.__name__, name
             assert next(iter(inspect.signature(helper).parameters)) == "frame", name
             assert name not in vars(DataFrame), name
+
+
+MOVED_STATISTICS_HELPERS: tuple[str, ...] = (
+    "_approx_quantile",
+    "_corr",
+    "_cov",
+    "_crosstab",
+    "_describe",
+    "_freq_items",
+    "_summary",
+)
+
+
+def test_moved_statistics_helpers_live_in_new_home() -> None:
+    """DFCORE-3: each moved statistics body is ``statistics``' own module function.
+
+    The helpers take the frame as their first argument. Unlike DFCORE-2, the
+    public methods stay on the class as one-line wrappers, so the class dir is
+    unchanged; the leaf import stays function-local so the pin file never binds
+    the moved home at collection time.
+    """
+    import inspect
+
+    import repark.spark.dataframe.statistics as statistics
+
+    for name in MOVED_STATISTICS_HELPERS:
+        helper = getattr(statistics, name)
+        assert inspect.isfunction(helper), name
+        assert helper.__module__ == statistics.__name__, name
+        assert next(iter(inspect.signature(helper).parameters)) == "frame", name
+    assert "statistics" in dir(dataframe_core)
+    assert "statistics" in dir(dataframe_package)
+
+
+MOVED_SAMPLING_HELPERS: tuple[str, ...] = (
+    "_sample",
+    "_random_split",
+    "_sample_by",
+)
+
+
+def test_moved_sampling_helpers_live_in_new_home() -> None:
+    """DFCORE-4a: each moved sampling body is ``sampling``'s own module function.
+
+    The three method bodies take the frame as their first argument. The two
+    receiverless helpers move verbatim: ``_prepare_sample_args`` keeps its
+    parameter list (it leaves the class with no wrapper) and
+    ``_coerce_sample_seed`` is re-imported by ``core`` so both surfaces keep it
+    by identity. The leaf import stays function-local so the pin file never
+    binds the moved home at collection time.
+    """
+    import inspect
+
+    import repark.spark.dataframe.sampling as sampling
+
+    for name in MOVED_SAMPLING_HELPERS:
+        helper = getattr(sampling, name)
+        assert inspect.isfunction(helper), name
+        assert helper.__module__ == sampling.__name__, name
+        assert next(iter(inspect.signature(helper).parameters)) == "frame", name
+    normalizer = sampling._prepare_sample_args
+    assert inspect.isfunction(normalizer)
+    assert normalizer.__module__ == sampling.__name__
+    assert list(inspect.signature(normalizer).parameters) == [
+        "withReplacement",
+        "fraction",
+        "seed",
+    ]
+    assert "_prepare_sample_args" not in vars(DataFrame)
+    assert dataframe_core._coerce_sample_seed is sampling._coerce_sample_seed
+    assert dataframe_package._coerce_sample_seed is sampling._coerce_sample_seed
+    assert "sampling" in dir(dataframe_core)
+    assert "sampling" in dir(dataframe_package)

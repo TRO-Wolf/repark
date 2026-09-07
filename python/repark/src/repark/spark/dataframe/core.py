@@ -84,13 +84,6 @@ def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
     names.clear()
 
 
-def _coerce_sample_seed(value: object, *, label: str) -> int:
-    """Coerce a ``sample()`` seed argument to int; bools and non-numerics refuse."""
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise TypeError(f"sample() {label} must be int, got {type(value).__name__}")
-    return int(value)
-
-
 def _quote_filter_ident_token(
     match: re.Match[str],
     *,
@@ -142,21 +135,23 @@ def _emit_join_side_columns(
         pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
     else:
         pairs = [(name, name) for name in side_frame.columns]
-    for display, source_engine in pairs:
-        if display_counts.get(display, 0) > 1:
+    for display_name, source_engine in pairs:
+        if display_counts.get(display_name, 0) > 1:
             # Ordinal = len(engine_names) so chained joins that already carry
             # Duplicate display names on one side use distinct engine fields.
-            engine_out = f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display}"
+            engine_out = (
+                f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display_name}"
+            )
         else:
-            engine_out = display
+            engine_out = display_name
         proj_parts.append(
             f"{side_alias}.{_quote_ident_sql(source_engine)} AS {_quote_ident_sql(engine_out)}"
         )
-        display_names.append(display)
+        display_names.append(display_name)
         engine_names.append(engine_out)
         # Direct binds from this side's plan_id (last-write if display dups —
         # bare joined["b"] stays AMBIGUOUS; parent origins use nested map).
-        origin_map[(side_frame._plan_id, display)] = engine_out
+        origin_map[(side_frame._plan_id, display_name)] = engine_out
         # Propagate nested origin map (chained joins / prior selects).
         if side_frame._origin_map is not None:
             for (plan_id, field), nested_engine in side_frame._origin_map.items():
@@ -258,8 +253,6 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
     or a value that does not fit ``u64`` (PyO3 ``Option<u64>`` boundary) so a bad conf fails
     at materialize time with a named key (not a silent ignore / raw OverflowError).
     """
-    from repark.errors import IllegalArgumentException
-
     raw = _cache_conf_lookup(alive_token, _CACHE_MAX_BYTES_KEY)
     if raw is None:
         return None
@@ -2610,24 +2603,7 @@ class DataFrame:
         ``.truncate`` (default 20), ``.maxNumRows`` (default 20) match Spark REPL shape
         (Apache ``test_repr_behaviors``).
         """
-        # Window, random, and stratified-sampling validation.
-        self._ensure_alive()
-        if not self._eager_eval_enabled():
-            return self.__str__()
-        max_rows, truncate_at = self._eager_eval_limits()
-        table = self.limit(max_rows).to_arrow()
-        # Spark Dataset.showString packing (no spaces around cells; right-align).
-        rendered = _format_eager_eval_table(table, truncate_at=truncate_at)
-        if table.num_rows >= max_rows:
-            try:
-                total = self.count()
-            except Exception:
-                total = None
-            if total is not None and total > max_rows:
-                rendered = f"{rendered}\nonly showing top {max_rows} row" + (
-                    "s" if max_rows != 1 else ""
-                )
-        return rendered
+        return display._repr(self)
 
     def _repr_html_(self) -> str | None:
         """HTML table when eager-eval is on; ``None`` otherwise (Jupyter / PySpark).
@@ -2637,68 +2613,7 @@ class DataFrame:
         names cannot inject markup. Truncate first (hard left-slice, same as ``__repr__``),
         then escape — matches live Spark 4.1.2 ordering.
         """
-        # Validate window, random, and stratified-sampling markers.
-        import html as html_module
-
-        self._ensure_alive()
-        if not self._eager_eval_enabled():
-            return None
-        max_rows, truncate_at = self._eager_eval_limits()
-        table = self.limit(max_rows).to_arrow()
-        names = list(table.column_names)
-        rows = _table_to_cell_rows(table, truncate_at=None, style="spark")
-        if truncate_at is not None and truncate_at > 0:
-            rows = [[cell[:truncate_at] for cell in row] for row in rows]
-        safe_names = [html_module.escape(name, quote=True) for name in names]
-        parts = [
-            "<table border='1'>",
-            "<tr>" + "".join(f"<th>{name}</th>" for name in safe_names) + "</tr>",
-        ]
-        for row in rows:
-            safe_cells = [html_module.escape(cell, quote=True) for cell in row]
-            parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in safe_cells) + "</tr>")
-        parts.append("</table>")
-        html = "\n".join(parts)
-        if table.num_rows >= max_rows:
-            try:
-                total = self.count()
-            except Exception:
-                total = None
-            if total is not None and total > max_rows:
-                html = f"{html}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
-        return html
-
-    def _eager_eval_enabled(self) -> bool:
-        """``spark.sql.repl.eagerEval.enabled`` truthy (runtime conf or builder)."""
-        raw = self._conf_lookup("spark.sql.repl.eagerEval.enabled")
-        if raw is None:
-            return False
-        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
-
-    def _eager_eval_limits(self) -> tuple[int, int]:
-        """``(maxNumRows, truncate)`` with Spark defaults 20 / 20."""
-        max_raw = self._conf_lookup("spark.sql.repl.eagerEval.maxNumRows")
-        trunc_raw = self._conf_lookup("spark.sql.repl.eagerEval.truncate")
-        try:
-            max_rows = max(0, int(max_raw)) if max_raw is not None else 20
-        except (TypeError, ValueError):
-            max_rows = 20
-        try:
-            truncate_at = max(0, int(trunc_raw)) if trunc_raw is not None else 20
-        except (TypeError, ValueError):
-            truncate_at = 20
-        return max_rows, truncate_at
-
-    def _conf_lookup(self, key: str) -> str | None:
-        """Runtime conf then builder snapshot (case-sensitive Spark keys)."""
-        token = getattr(self, "_alive_token", {}) or {}
-        store = token.get("runtime_conf")
-        if isinstance(store, dict) and key in store:
-            return str(store[key])
-        builder = token.get("builder_config") or {}
-        if key in builder and builder[key] is not None:
-            return str(builder[key])
-        return None
+        return display._repr_html(self)
 
     def toDF(  # noqa: N802 — PySpark method name
         self, *cols: str
@@ -2846,103 +2761,7 @@ class DataFrame:
         actions on the same sampled DataFrame return a stable multiset (Spark embeds a
         planning-time seed the same way).
         """
-        self._ensure_alive()
-        replacement_flag, fraction_value, plan_seed = self._prepare_sample_args(
-            withReplacement, fraction, seed
-        )
-        if replacement_flag:
-            raise UnsupportedOperationException(
-                "sample(withReplacement=True) is not supported; use withReplacement=False"
-            )
-        if fraction_value < 0.0 or fraction_value > 1.0:
-            # Live Spark raises IllegalArgumentException for out-of-range fraction.
-            raise IllegalArgumentException(
-                f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
-            )
-        view = scratch_view_name(self._session, "__repark_samp_")
-        # Register one plan-stable bridge snapshot.
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            if fraction_value >= 1.0:
-                planned = self._session.sql(f"SELECT * FROM {view}")
-            elif fraction_value <= 0.0:
-                planned = self._session.sql(f"SELECT * FROM {view} WHERE 1 = 0")
-            else:
-                # Deterministic LCG-ish sample on ordered row_number (engine RNG ≠ Spark).
-                # Mix seed into the multiplier term — a pure ``rn * A + seed`` offset left
-                # adjacent seeds producing identical keep-sets.
-                # ORDER BY must use unique engine field names on multi-name frames.
-                order_fields = (
-                    self._engine_names if self._engine_names is not None else self.columns
-                )
-                order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
-                order_clause = f"ORDER BY {order_sql}" if order_sql else ""
-                planned = self._session.sql(
-                    f"SELECT * EXCLUDE (__repark_rn) FROM ("
-                    f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
-                    f"* 1103515245 + 12345) % 1000000) "
-                    f"/ 1000000.0 < {fraction_value}"
-                )
-            child = self._spawn(planned)
-            if self._display_names is not None and self._engine_names is not None:
-                child._display_names = list(self._display_names)
-                child._engine_names = list(self._engine_names)
-                child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-            return child
-        finally:
-            self._session.drop_temp_view(view)
-
-    @staticmethod
-    def _prepare_sample_args(
-        withReplacement: bool | float | None,  # noqa: N803
-        fraction: float | None,
-        seed: int | None,
-    ) -> tuple[bool, float, int]:
-        """Resolve sample overloads (PySpark classic/connect sample-arg helper parity).
-
-        Default plan seed is ``42`` (not ``random.randint``) so unseeded samples are
-        action-stable on the same plan.
-        """
-        # Default plan-stable seed when the caller omits seed (Spark planning-time embed).
-        default_seed = 42
-
-        # sample(withReplacement=bool, fraction=float [, seed])
-        if (
-            isinstance(withReplacement, bool)
-            and isinstance(fraction, (int, float))
-            and not (isinstance(fraction, bool))
-        ):
-            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
-            return withReplacement, float(fraction), plan_seed
-
-        # sample(fraction=float [, seed=…])  — keyword fraction, optional seed kw
-        if (
-            withReplacement is None
-            and isinstance(fraction, (int, float))
-            and not isinstance(fraction, bool)
-        ):
-            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
-            return False, float(fraction), plan_seed
-
-        # sample(0.5 [, seed])  — first positional is fraction; second positional is seed.
-        # PySpark ignores the seed= keyword on this form (only the fraction-slot seed counts).
-        if isinstance(withReplacement, (int, float)) and not isinstance(withReplacement, bool):
-            if fraction is not None:
-                plan_seed = _coerce_sample_seed(fraction, label="seed")
-            else:
-                plan_seed = default_seed
-            return False, float(withReplacement), plan_seed
-
-        # Missing / wrong-type overloads (Apache test_sample).
-        argtypes = [type(arg).__name__ for arg in (withReplacement, fraction, seed)]
-        raise PySparkTypeError(
-            errorClass="NOT_BOOL_OR_FLOAT_OR_INT",
-            messageParameters={
-                "arg_name": ("withReplacement (optional), fraction (required) and seed (optional)"),
-                "arg_type": ", ".join(argtypes),
-            },
-        )
+        return sampling._sample(self, withReplacement, fraction, seed)
 
     def randomSplit(  # noqa: N802 — PySpark method name
         self,
@@ -2954,80 +2773,13 @@ class DataFrame:
         Weights are normalized like Spark. Engine RNG ≠ Spark — pin count-in-tolerance, disclose
         exact-row divergence.
         """
-        self._ensure_alive()
-        if not isinstance(weights, (list, tuple)) or not weights:
-            raise PySparkTypeError("randomSplit weights must be a non-empty list of floats")
-        weight_list = [float(weight) for weight in weights]
-        if any(weight < 0 for weight in weight_list):
-            raise PySparkValueError("weights must be non-negative")
-        total = sum(weight_list)
-        if total == 0:
-            raise PySparkValueError("weights must sum to a positive value")
-        normalized = [weight / total for weight in weight_list]
-        # Cumulative bounds on [0,1).
-        bounds: list[float] = []
-        running = 0.0
-        for weight in normalized:
-            running += weight
-            bounds.append(running)
-        view = scratch_view_name(self._session, "__repark_rsplit_")
-        # Register one plan-stable bridge snapshot.
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            # Order by unique engine fields on multi-name frames.
-            order_fields = self._engine_names if self._engine_names is not None else self.columns
-            order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
-            order_clause = f"ORDER BY {order_sql}" if order_sql else ""
-            if seed is None:
-                # Spark: unseeded randomSplit is non-deterministic.
-                bucket_sql = f"SELECT *, random() AS __repark_split_u FROM {view}"
-            else:
-                # Deterministic LCG on ordered row_number + seed (engine RNG ≠ Spark).
-                # Same seed mix as sample — pure ``rn * A + seed`` left adjacent seeds
-                # identical.
-                seed_expr = str(int(seed))
-                bucket_sql = (
-                    f"SELECT * EXCLUDE (__repark_rn), "
-                    f"(abs((CAST(__repark_rn AS BIGINT) + {seed_expr}) "
-                    f"* 1103515245 + 12345) % 1000000) "
-                    f"/ 1000000.0 AS __repark_split_u FROM ("
-                    f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f")"
-                )
-            scored_name = scratch_view_name(self._session, "__repark_rsplit_s_")
-            scored = self._session.sql(bucket_sql)
-            self._session.create_or_replace_temp_view(scored_name, scored)
-            try:
-                frames: list[DataFrame] = []
-                lower = 0.0
-                for index, upper in enumerate(bounds):
-                    if index == len(bounds) - 1:
-                        predicate = f"__repark_split_u >= {lower}"
-                    else:
-                        predicate = f"__repark_split_u >= {lower} AND __repark_split_u < {upper}"
-                    part = self._session.sql(
-                        f"SELECT * EXCLUDE (__repark_split_u) FROM {scored_name} WHERE {predicate}"
-                    )
-                    child = self._spawn(part)
-                    if self._display_names is not None and self._engine_names is not None:
-                        child._display_names = list(self._display_names)
-                        child._engine_names = list(self._engine_names)
-                        child._origin_map = (
-                            dict(self._origin_map) if self._origin_map is not None else None
-                        )
-                    frames.append(child)
-                    lower = upper
-                return frames
-            finally:
-                self._session.drop_temp_view(scored_name)
-        finally:
-            self._session.drop_temp_view(view)
+        return sampling._random_split(self, weights, seed)
 
     random_split = randomSplit
 
     def describe(self, *cols: str) -> DataFrame:
         """Basic stats (count/mean/stddev/min/max) as a DataFrame (PySpark ``describe``)."""
-        return self.summary("count", "mean", "stddev", "min", "max", _columns=cols or None)
+        return statistics._describe(self, *cols)
 
     def summary(self, *statistics: str, _columns: tuple[str, ...] | None = None) -> DataFrame:
         """Summary statistics as a DataFrame (PySpark ``DataFrame.summary``).
@@ -3035,72 +2787,9 @@ class DataFrame:
         Supports count/mean/stddev/min/max. Percentile stats (``25%``/``50%``/``75%``) raise
         loud unsupported (engine gap — disclosed).
         """
-        self._ensure_alive()
-        # Bare summary() omits Spark percentile rows — refuse rather than mislead.
-        if not statistics:
-            raise UnsupportedOperationException(
-                "DataFrame.summary() without statistics is not Spark-shaped "
-                "(engine lacks percentile rows); call summary('count','mean','stddev','min','max') "
-                "or describe()"
-            )
-        stats = list(statistics)
-        supported = {"count", "mean", "stddev", "min", "max"}
-        bad = [item for item in stats if item not in supported]
-        if bad:
-            raise UnsupportedOperationException(
-                f"summary statistics not supported yet: {bad} "
-                f"(supported: {sorted(supported)}; percentiles are an engine gap)"
-            )
-        # Multi-name frames must aggregate on unique engine fields (display "b" is
-        # ambiguous or missing in the view schema.
-        if _columns:
-            target_pairs: list[tuple[str, str]] = [(name, name) for name in _columns]
-            if self._display_names is not None and self._engine_names is not None:
-                target_pairs = []
-                want = set(_columns)
-                for display, engine in zip(self._display_names, self._engine_names, strict=True):
-                    if display in want:
-                        target_pairs.append((display, engine))
-        elif self._display_names is not None and self._engine_names is not None:
-            target_pairs = list(zip(self._display_names, self._engine_names, strict=True))
-        else:
-            target_pairs = [(name, name) for name in self.columns]
-        if not target_pairs:
-            raise AnalysisException("summary/describe on a zero-column frame is undefined")
-        # Build one row per statistic via SQL aggregations, UNION ALL.
-        view = scratch_view_name(self._session, "__repark_sum_")
-        # Register one plan-stable bridge snapshot.
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            pieces: list[str] = []
-            for stat in stats:
-                select_parts = [f"'{stat}' AS summary"]
-                for _display, engine in target_pairs:
-                    quoted_eng = _quote_ident_sql(engine)
-                    # Engine alias must stay unique; facade may overlay display names.
-                    quoted_as = quoted_eng
-                    if stat == "count":
-                        select_parts.append(f"CAST(count({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    elif stat == "mean":
-                        select_parts.append(f"CAST(avg({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    elif stat == "stddev":
-                        select_parts.append(f"CAST(stddev({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    elif stat == "min":
-                        select_parts.append(f"CAST(min({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    elif stat == "max":
-                        select_parts.append(f"CAST(max({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                pieces.append(f"SELECT {', '.join(select_parts)} FROM {view}")
-            sql = " UNION ALL ".join(pieces)
-            child = self._spawn(self._session.sql(sql))
-            # Overlay Spark-legal display names (summary + data displays).
-            if self._display_names is not None or any(
-                display != engine for display, engine in target_pairs
-            ):
-                child._display_names = ["summary"] + [display for display, _engine in target_pairs]
-                child._engine_names = ["summary"] + [engine for _display, engine in target_pairs]
-            return child
-        finally:
-            self._session.drop_temp_view(view)
+        from repark.spark.dataframe.statistics import _summary
+
+        return _summary(self, *statistics, _columns=_columns)
 
     def replace(
         self,
@@ -3781,133 +3470,15 @@ class DataFrame:
         ( FAIL-MISSING family). ``relativeError`` is validated (non-negative number) for API
         parity; the engine path is fixed-accuracy today (t-digest accuracy).
         """
-        from repark.errors import PySparkTypeError, PySparkValueError
-        from repark.spark.functions import percentile_approx
-
-        #: Spark requires relativeError >= 0; do not silently accept garbage.
-        if isinstance(relativeError, bool) or not isinstance(relativeError, (int, float)):
-            raise PySparkTypeError(
-                errorClass="NOT_FLOAT_OR_INT",
-                messageParameters={
-                    "arg_name": "relativeError",
-                    "arg_type": type(relativeError).__name__,
-                },
-            )
-        relative_error_value = float(relativeError)
-        #: NaN is not < 0 in IEEE — refuse explicitly (parity with sampleBy).
-        if relative_error_value != relative_error_value or relative_error_value < 0.0:
-            raise PySparkValueError(
-                errorClass="NEGATIVE_VALUE",
-                messageParameters={
-                    "arg_name": "relativeError",
-                    "arg_value": str(relativeError),
-                },
-            )
-        if not isinstance(col, (str, list, tuple)):
-            raise PySparkTypeError(
-                errorClass="NOT_LIST_OR_STR_OR_TUPLE",
-                messageParameters={"arg_name": "col", "arg_type": type(col).__name__},
-            )
-        single = isinstance(col, str)
-        columns: list[str] = [col] if single else list(col)
-        for name in columns:
-            if not isinstance(name, str):
-                raise PySparkTypeError(
-                    errorClass="DISALLOWED_TYPE_FOR_CONTAINER",
-                    messageParameters={
-                        "arg_name": "col",
-                        "arg_type": type(col).__name__,
-                        "allowed_types": "str",
-                        "item_type": type(name).__name__,
-                    },
-                )
-        if not isinstance(probabilities, (list, tuple)):
-            raise PySparkTypeError(
-                errorClass="NOT_LIST_OR_TUPLE",
-                messageParameters={
-                    "arg_name": "probabilities",
-                    "arg_type": type(probabilities).__name__,
-                },
-            )
-        probs = list(probabilities)
-        for probability in probs:
-            if not isinstance(probability, (float, int)) or isinstance(probability, bool):
-                raise PySparkTypeError(
-                    errorClass="NOT_LIST_OF_FLOAT_OR_INT",
-                    messageParameters={
-                        "arg_name": "probabilities",
-                        "arg_type": type(probability).__name__,
-                    },
-                )
-            probability_value = float(probability)
-            #: domain errors are ValueError-class, not TypeError.
-            if (
-                probability_value != probability_value
-                or probability_value < 0.0
-                or probability_value > 1.0
-            ):
-                raise PySparkValueError(
-                    errorClass="VALUE_OUT_OF_BOUND",
-                    messageParameters={
-                        "arg_name": "probabilities",
-                        "arg_value": str(probability),
-                    },
-                )
-
-        results: list[list[float]] = []
-        for name in columns:
-            # One collect per probability — engine approx_percentile_cont is scalar-only.
-            row_values: list[float] = []
-            for probability in probs:
-                cell = self.agg(percentile_approx(name, float(probability)).alias("_q")).collect()
-                raw = cell[0][0] if cell else None
-                row_values.append(float("nan") if raw is None else float(raw))
-            results.append(row_values)
-        return results[0] if single else results
+        return statistics._approx_quantile(self, col, probabilities, relativeError)
 
     def corr(self, col1: str, col2: str, method: str | None = None) -> float:
         """Pearson correlation of two columns (PySpark ``DataFrame.corr`` / ``stat.corr``)."""
-        from repark.errors import PySparkTypeError, PySparkValueError
-        from repark.spark.functions import corr as f_corr
-
-        if not isinstance(col1, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col1", "arg_type": type(col1).__name__},
-            )
-        if not isinstance(col2, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col2", "arg_type": type(col2).__name__},
-            )
-        resolved_method = method if method else "pearson"
-        if resolved_method != "pearson":
-            raise PySparkValueError(
-                errorClass="VALUE_NOT_PEARSON",
-                messageParameters={"arg_name": "method", "arg_value": str(resolved_method)},
-            )
-        rows = self.agg(f_corr(col1, col2).alias("_corr")).collect()
-        value = rows[0][0] if rows else None
-        return float("nan") if value is None else float(value)
+        return statistics._corr(self, col1, col2, method)
 
     def cov(self, col1: str, col2: str) -> float:
         """Sample covariance of two columns (PySpark ``DataFrame.cov`` / ``stat.cov``)."""
-        from repark.errors import PySparkTypeError
-        from repark.spark.functions import covar_samp
-
-        if not isinstance(col1, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col1", "arg_type": type(col1).__name__},
-            )
-        if not isinstance(col2, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col2", "arg_type": type(col2).__name__},
-            )
-        rows = self.agg(covar_samp(col1, col2).alias("_cov")).collect()
-        value = rows[0][0] if rows else None
-        return float("nan") if value is None else float(value)
+        return statistics._cov(self, col1, col2)
 
     def crosstab(self, col1: str, col2: str) -> DataFrame:
         """Pair-wise frequency table (PySpark ``DataFrame.crosstab`` / ``stat.crosstab``).
@@ -3915,29 +3486,7 @@ class DataFrame:
         First column is named ``{col1}_{col2}``; remaining columns are the distinct
         string forms of ``col2`` values with occurrence counts (missing pairs → 0).
         """
-        from repark.errors import PySparkTypeError
-        from repark.spark.functions import col
-
-        if not isinstance(col1, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col1", "arg_type": type(col1).__name__},
-            )
-        if not isinstance(col2, str):
-            raise PySparkTypeError(
-                errorClass="NOT_STR",
-                messageParameters={"arg_name": "col2", "arg_type": type(col2).__name__},
-            )
-        # Cast strata to string so pivot column names match Spark's string-key form.
-        left_name = f"{col1}_{col2}"
-        staged = self.select(
-            col(col1).cast("string").alias(left_name),
-            col(col2).cast("string").alias(col2),
-        )
-        # pivot requires simple-name aggregate inputs (not count(lit(1))).
-        pivoted = staged.groupBy(left_name).pivot(col2).count()
-        # Spark fills absent pairs with 0 (not null).
-        return pivoted.na.fill(0)
+        return statistics._crosstab(self, col1, col2)
 
     def sampleBy(  # noqa: N802 — PySpark camelCase
         self,
@@ -3955,78 +3504,7 @@ class DataFrame:
         Seeded counts match Spark single-partition layouts (Apache ``test_sampleby``
         band 35-36 at seed=0). Alias of ``stat.sampleBy``.
         """
-        # Validate window, random, and stratified-sampling markers.
-        from repark.errors import PySparkTypeError
-        from repark.spark.column import Column as ReparkColumn
-        from repark.spark.functions import col as f_col
-        from repark.spark.functions import lit, rand
-
-        if isinstance(col, str):
-            stratum = f_col(col)
-        elif isinstance(col, ReparkColumn):
-            stratum = col
-        else:
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_STR",
-                messageParameters={"arg_name": "col", "arg_type": type(col).__name__},
-            )
-        if not isinstance(fractions, dict):
-            raise PySparkTypeError(
-                errorClass="NOT_DICT",
-                messageParameters={"arg_name": "fractions", "arg_type": type(fractions).__name__},
-            )
-        normalized: dict[Any, float] = {}
-        for key, value in fractions.items():
-            if isinstance(key, bool) or not isinstance(key, (float, int, str)):
-                raise PySparkTypeError(
-                    errorClass="DISALLOWED_TYPE_FOR_CONTAINER",
-                    messageParameters={
-                        "arg_name": "fractions",
-                        "arg_type": type(fractions).__name__,
-                        "allowed_types": "float, int, str",
-                        "item_type": type(key).__name__,
-                    },
-                )
-            if isinstance(value, bool) or not isinstance(value, (float, int)):
-                raise PySparkTypeError(
-                    errorClass="DISALLOWED_TYPE_FOR_CONTAINER",
-                    messageParameters={
-                        "arg_name": "fractions",
-                        "arg_type": type(fractions).__name__,
-                        "allowed_types": "float, int",
-                        "item_type": type(value).__name__,
-                    },
-                )
-            fraction_value = float(value)
-            #: Spark sampleBy rejects fractions outside [0, 1] (incl. NaN).
-            # Engine ``rand() < nan`` is True — silent wrong sample without this guard.
-            if fraction_value != fraction_value or fraction_value < 0.0 or fraction_value > 1.0:
-                raise IllegalArgumentException(
-                    f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
-                )
-            normalized[key] = fraction_value
-        if not normalized:
-            return self.limit(0)
-        # Spark: val r = rand(seed); filter udf(stratum, r) => r < fractions.getOrElse(stratum, 0)
-        # One shared rand column so the XORShift sequence advances once per row.
-        #: Spark seed is Long — bool has no sampleBy overload (Py4J).
-        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
-            raise PySparkTypeError(
-                errorClass="NOT_INT",
-                messageParameters={
-                    "arg_name": "seed",
-                    "arg_type": type(seed).__name__,
-                },
-            )
-        effective_seed = 0 if seed is None else int(seed)
-        rng = rand(effective_seed)
-        predicate: Column | None = None
-        for key, fraction in normalized.items():
-            piece = (stratum == lit(key)) & (rng < lit(fraction))
-            predicate = piece if predicate is None else (predicate | piece)
-        if predicate is None:
-            return self.limit(0)
-        return self.filter(predicate)
+        return sampling._sample_by(self, col, fractions, seed)
 
     @property
     def stat(self) -> DataFrameStatFunctions:
@@ -4650,216 +4128,11 @@ class DataFrame:
         rows and run an extra count. ``truncate`` controls cell width; ``vertical`` applies only
         to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
         """
-        self._ensure_alive()
-        if self._map_bridge is not None and not (
-            self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
-        ):
-            # mapInArrow peek: re-run bridge but only materialize up to ``n`` output rows
-            # ( — avoid full IPC MemTable for a head peek).
-            n, cap_m, vertical = self._normalize_show_args(n, truncate, vertical)
-            limit = max(0, n)
-            table = self._consume_map_in_arrow_batches(max_output_rows=limit)
-            if vertical:
-                # Peek path does not count the full multiset (bounded materialize).
-                rendered = _format_show_vertical(
-                    table, truncate_at=cap_m, n=limit, total_rows=table.num_rows
-                )
-            else:
-                rendered = _format_show_table(table, truncate_at=cap_m)
-            print(rendered)
-            return
-        self._materialize_cache_if_needed()
-        n, cap, vertical = self._normalize_show_args(n, truncate, vertical)
-        style = self._resolve_display_style()
-        if style == "spark":
-            limit = max(0, n)
-            table = self.limit(limit).to_arrow()
-            if vertical:
-                # Render the Spark vertical layout.
-                # "only showing top N" needs a total count only when the limit may have truncated.
-                total_rows: int | None = None
-                if max(0, n) > 0 and table.num_rows >= max(0, n):
-                    try:
-                        total_rows = self.count()
-                    except Exception:
-                        total_rows = None
-                rendered = _format_show_vertical(
-                    table, truncate_at=cap, n=max(0, n), total_rows=total_rows
-                )
-            else:
-                rendered = _format_show_table(table, truncate_at=cap)
-            shown_rows = table.num_rows
-        else:
-            if vertical:
-                warnings.warn(
-                    "DataFrame.show(vertical=True) is only rendered under repark.display.style="
-                    "'spark'; styled polars/duckdb shows stay horizontal.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-            rendered, shown_rows = self._render_styled_show(style, n=max(0, n), truncate_at=cap)
-        print(rendered)
-        # SEC-008: keep only a row-count breadcrumb at INFO; the full rendered table can carry row
-        # data / PII, so it goes to DEBUG (opt-in), never INFO.
-        logger.info("show(%s rows)", shown_rows)
-        logger.debug("show(%s rows):\n%s", shown_rows, rendered)
-
-    def _normalize_show_args(
-        self,
-        n: int,
-        truncate: bool | int | float | str,
-        vertical: bool,
-    ) -> tuple[int, int | None, bool]:
-        """Validate ``show`` arguments; return ``(n, truncate_cap, vertical)``.
-
-        Mirrors Spark 4.1.2 diagnostics used by Apache ``test_df_show`` (NOT_INT / NOT_BOOL).
-        Digit-only string ``truncate`` values (e.g. ``\"1\"``) are accepted as width caps.
-        """
-        # bool is an int subclass: int(False)=0 / int(True)=1 would silently empty or shrink.
-        if not isinstance(n, int) or isinstance(n, bool):
-            raise PySparkTypeError(
-                errorClass="NOT_INT",
-                messageParameters={"arg_name": "n", "arg_type": type(n).__name__},
-            )
-        if not isinstance(vertical, bool):
-            raise PySparkTypeError(
-                errorClass="NOT_BOOL",
-                messageParameters={
-                    "arg_name": "vertical",
-                    "arg_type": type(vertical).__name__,
-                },
-            )
-        if truncate is True:
-            return n, 20, vertical
-        if truncate is False:
-            return n, None, vertical
-        if isinstance(truncate, (int, float)) and not isinstance(truncate, bool):
-            width = int(truncate)
-            return n, (width if width > 0 else None), vertical
-        if isinstance(truncate, str) and truncate.isdigit():
-            width = int(truncate)
-            return n, (width if width > 0 else None), vertical
-        # Spark labels non-bool non-int truncate as NOT_BOOL (live 4.1.2 oracle).
-        raise PySparkTypeError(
-            errorClass="NOT_BOOL",
-            messageParameters={
-                "arg_name": "truncate",
-                "arg_type": type(truncate).__name__,
-            },
-        )
-
-    def _resolve_display_style(self) -> str:
-        """Return the session display style (``spark`` / ``polars`` / ``duckdb``), default spark."""
-        style = self._alive_token.get("display_style", "spark")
-        if isinstance(style, str) and style in {"spark", "polars", "duckdb"}:
-            return style
-        return "spark"
+        return display._show(self, n, truncate, vertical)
 
     def _preview_tail_rows(self, n: int, *, total_rows: int) -> Any:
         """Return the last ``n`` rows for display without collecting the full result."""
-        import pyarrow as pa
-
-        fetch = max(0, int(n))
-        total = max(0, int(total_rows))
-        if fetch == 0 or total == 0:
-            return self.limit(0).to_arrow()
-        # total < fetch would make skip = total - fetch negative (native skip is usize).
-        # total == fetch is skip 0 — still use limit(total) so the short-frame path never
-        # depends on limit_with_skip for a full-window preview.
-        if total <= fetch:
-            return self.limit(total).to_arrow()
-        skip = total - fetch
-        limited = self._spawn(self._plan().limit_with_skip(skip, fetch))
-        table = limited.to_arrow()
-        if not isinstance(table, pa.Table):
-            return pa.table(table)
-        return table
-
-    def _render_styled_show(
-        self,
-        style: str,
-        *,
-        n: int,
-        truncate_at: int | None,
-    ) -> tuple[str, int]:
-        """Render a styled preview and return its text and row count.
-
-        The renderer counts once, then collects only the head and tail windows.
-        """
-        total_rows = self.count()
-        col_names = list(self.columns)
-        if style == "polars":
-            # Polars default look: all rows when ≤10; else first 5 + last 5. ``n`` caps the
-            # keep-set (show(0)/show(k) must not over-show) but never enlarges edges past 5.
-            edge = 5
-            if n <= 0:
-                head_n, tail_n, use_ellipsis = 0, 0, False
-            elif total_rows <= min(n, 10):
-                # Entire frame fits within both n and the polars "≤10 show all" window.
-                head_n, tail_n, use_ellipsis = total_rows, 0, False
-            elif total_rows <= 10:
-                # Frame ≤10 but n is smaller → first n rows only (no middle ellipsis).
-                head_n, tail_n, use_ellipsis = n, 0, False
-            else:
-                # total > 10: head + … + tail; edges ≤5; total shown ≤ min(n, 10).
-                keep = min(n, 2 * edge)
-                head_n = min(edge, (keep + 1) // 2)
-                tail_n = min(edge, keep - head_n)
-                # Ellipsis only when a non-empty tail follows (show(1) → head only, no bare …).
-                use_ellipsis = tail_n > 0
-        else:
-            # duckdb: show up to n rows; when total > n, head+tail of the window with middle dots.
-            # Prefer at least one head row so show(1) shows the first row, not only the last.
-            if n <= 0:
-                head_n, tail_n, use_ellipsis = 0, 0, False
-            elif total_rows <= n:
-                head_n, tail_n, use_ellipsis = total_rows, 0, False
-            else:
-                head_n = n // 2
-                if head_n == 0:
-                    head_n = 1
-                tail_n = n - head_n
-                #: show(1) → head_n=1, tail_n=0 — no middle · rows with empty tail.
-                use_ellipsis = tail_n > 0
-
-        head_table = self.limit(head_n).to_arrow() if head_n > 0 else self.limit(0).to_arrow()
-        # When head and tail would overlap (small frames already handled above), skip tail.
-        tail_table = self._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
-        # Precise Arrow types from the head schema (logical_schema_fields collapses i8/i16/).
-        type_labels = _display_type_labels_from_arrow(head_table, style=style)
-
-        head_rows = _table_to_cell_rows(head_table, truncate_at=truncate_at, style=style)
-        tail_rows = (
-            _table_to_cell_rows(tail_table, truncate_at=truncate_at, style=style)
-            if tail_table is not None
-            else []
-        )
-        shown = len(head_rows) + len(tail_rows)
-        if style == "polars":
-            rendered = _format_polars_show(
-                col_names,
-                type_labels,
-                head_rows,
-                tail_rows if use_ellipsis else [],
-                total_rows=total_rows,
-                show_ellipsis=use_ellipsis,
-            )
-        else:
-            # Always pass the keep-set size for the footer: when shown < total (including
-            # show(0) → 0), ``_format_duckdb_show`` emits ``(K shown)`` even without middle
-            # ellipsis dots. Passing ``total_rows`` on the non-ellipsis path hid show(0)
-            # truncation.
-            rendered = _format_duckdb_show(
-                col_names,
-                type_labels,
-                head_rows,
-                tail_rows if use_ellipsis else [],
-                total_rows=total_rows,
-                shown_rows=shown,
-                show_ellipsis=use_ellipsis,
-            )
-        # Log the keep-set size actually rendered (show(0) → 0), not total_rows.
-        return rendered, shown
+        return display._preview_tail_rows(self, n, total_rows=total_rows)
 
     # Arrow export errors use the facade exception taxonomy and display names stay positional.
 
@@ -5251,7 +4524,10 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
     _iter_apply_in_pandas_group_tables,
     _validate_apply_in_pandas_result_columns,
 )
-from repark.spark.dataframe import udf_projection, udf_window_projection  # noqa: E402
+from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
+from repark.spark.dataframe import sampling  # noqa: E402
+from repark.spark.dataframe import display  # noqa: E402
+from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 
 __all__ = [
     "DataFrame",

@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, overload
 
+import repark.spark.dataframe.statistics as statistics
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -1098,10 +1099,7 @@ class DataFrameStatFunctions:
 
     def freqItems(self, cols: list[str], support: float | None = None) -> DataFrame:  # noqa: N802
         """Reject frequent-item discovery because it is not implemented."""
-        del cols, support
-        raise UnsupportedOperationException(
-            "DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)"
-        )
+        return statistics._freq_items(self._dataframe, cols, support)
 
     def sampleBy(  # noqa: N802 — PySpark camelCase
         self,

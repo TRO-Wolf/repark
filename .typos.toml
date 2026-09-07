@@ -37,3 +37,9 @@ afe = "afe"
 formatt = "formatt" # DELIBERATE misspelling: the ANSI door's unknown-bare-key refusal fixture
 SELCT = "SELCT"     # DELIBERATE misspelling: the wrong-door sniff's "don't speculate" fixture
 limt = "limt"       # DELIBERATE misspelling: the pseudo-key-typo loud-refusal fixture (P3E B-1)
+
+[type.ledger]
+extend-glob = ["dfcore-4b-ledger.md", "*-dfcore-4b-ledger.md"]
+
+[type.ledger.extend-words]
+ba = "ba" # base commit ba77977a in the DFCORE-4b header (typos splits the short hash)

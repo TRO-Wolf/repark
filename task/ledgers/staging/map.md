@@ -534,3 +534,30 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   preserved plus one pin test, four mutations red existing pins. `risk_tier: standard`.
   Branch `refactor/dfcore-2`.
   pins: dfcore-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [dfcore-3-ledger.md](dfcore-3-ledger.md) —
+  **DFCORE-3 (2026-09-07), in flight:** the statistics family out of `core.py` —
+  six bodies plus the `freqItems` refusal to `statistics.py`. Move-only: `core.py`
+  5263 → 5060, `writer_readwriter.py` 1113 → 1111, class dir frozen, package and
+  core gain exactly `statistics`, 6102 collected IDs preserved plus one pin test,
+  seven mutations red existing pins, collect count 6 == 6. `risk_tier: standard`.
+  Branch `refactor/dfcore-3`.
+  pins: dfcore-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [dfcore-4a-ledger.md](dfcore-4a-ledger.md) —
+  **DFCORE-4a (2026-09-07), in flight:** sampling out of `core.py` — the three
+  sampling bodies plus argument normalization and seed coercion to `sampling.py`.
+  Move-only: `core.py` 5060 → 4819, class loses exactly `_prepare_sample_args`,
+  package and core gain exactly `sampling`, 6103 collected IDs preserved plus five
+  pin tests, five mutations red existing pins, same-seed determinism pinned on a
+  fixed thousand-row frame. `risk_tier: standard`.
+  Branch `refactor/dfcore-4a`.
+  pins: dfcore-4a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [dfcore-4b-ledger.md](dfcore-4b-ledger.md) —
+  **DFCORE-4b (2026-09-07), in flight:** display out of `core.py` — the ten
+  show/repr/HTML/eager bodies to `display.py`. Move-only: `core.py` 4819 →
+  4539, class loses exactly the six display leavers, package and core gain
+  exactly `display`, 6108 collected IDs preserved plus fourteen pin tests, ten
+  mutations red existing pins, show/repr/HTML goldens byte-identical with
+  `count()` tallies as the DFCORE-6 baseline. `risk_tier: standard`.
+  Branch `refactor/dfcore-4b`.
+  pins: dfcore-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Critic r1 FAIL on the moved warning's `stacklevel`; served (stacklevel 3, filename pin).

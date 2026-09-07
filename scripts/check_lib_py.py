@@ -60,7 +60,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        5263,
+        4539,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
@@ -75,7 +75,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transform families along their existing plan-node boundaries.",
     ),
     "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
-        1113,
+        1111,
         "DataFrameWriter and DataFrameReader facade methods share one region.",
         "Split writer and reader bindings into separate cohesive modules.",
     ),
