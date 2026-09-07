@@ -923,6 +923,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `MOVED_STATISTICS_HELPERS` pins the seven bodies as the new home's own frame-first
   functions.
   pins: dfcore-3/C-001, C-002, C-003, C-007, C-008
+  DFCORE-4a (2026-09-07): the class dir loses exactly `_prepare_sample_args`
+  (public sampling methods stay as wrappers); core and the package each gain
+  exactly `sampling`; `MOVED_SAMPLING_HELPERS` pins the three bodies as the new
+  home's own frame-first functions, `_prepare_sample_args` verbatim, and
+  `_coerce_sample_seed` re-imported by identity.
+  pins: dfcore-4a/C-001, C-002, C-003, C-004, C-007, C-008
+- `test_dfcore_4a_*_determinism.py` — DFCORE-4a determinism pins, one file per
+  sampling function (the row sets exceed the default ceiling as one file):
+  `sample(0.3, seed=7)`, the `randomSplit([0.5, 0.5], seed=7)` left and right
+  parts, and `sampleBy`, each on a fixed 1,000-row frame, recorded on the
+  pre-slice tree and asserted on the tip.
+  pins: dfcore-4a/C-006
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes

@@ -84,13 +84,6 @@ def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
     names.clear()
 
 
-def _coerce_sample_seed(value: object, *, label: str) -> int:
-    """Coerce a ``sample()`` seed argument to int; bools and non-numerics refuse."""
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise TypeError(f"sample() {label} must be int, got {type(value).__name__}")
-    return int(value)
-
-
 def _quote_filter_ident_token(
     match: re.Match[str],
     *,
@@ -258,8 +251,6 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
     or a value that does not fit ``u64`` (PyO3 ``Option<u64>`` boundary) so a bad conf fails
     at materialize time with a named key (not a silent ignore / raw OverflowError).
     """
-    from repark.errors import IllegalArgumentException
-
     raw = _cache_conf_lookup(alive_token, _CACHE_MAX_BYTES_KEY)
     if raw is None:
         return None
@@ -2846,103 +2837,7 @@ class DataFrame:
         actions on the same sampled DataFrame return a stable multiset (Spark embeds a
         planning-time seed the same way).
         """
-        self._ensure_alive()
-        replacement_flag, fraction_value, plan_seed = self._prepare_sample_args(
-            withReplacement, fraction, seed
-        )
-        if replacement_flag:
-            raise UnsupportedOperationException(
-                "sample(withReplacement=True) is not supported; use withReplacement=False"
-            )
-        if fraction_value < 0.0 or fraction_value > 1.0:
-            # Live Spark raises IllegalArgumentException for out-of-range fraction.
-            raise IllegalArgumentException(
-                f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
-            )
-        view = scratch_view_name(self._session, "__repark_samp_")
-        # Register one plan-stable bridge snapshot.
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            if fraction_value >= 1.0:
-                planned = self._session.sql(f"SELECT * FROM {view}")
-            elif fraction_value <= 0.0:
-                planned = self._session.sql(f"SELECT * FROM {view} WHERE 1 = 0")
-            else:
-                # Deterministic LCG-ish sample on ordered row_number (engine RNG ≠ Spark).
-                # Mix seed into the multiplier term — a pure ``rn * A + seed`` offset left
-                # adjacent seeds producing identical keep-sets.
-                # ORDER BY must use unique engine field names on multi-name frames.
-                order_fields = (
-                    self._engine_names if self._engine_names is not None else self.columns
-                )
-                order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
-                order_clause = f"ORDER BY {order_sql}" if order_sql else ""
-                planned = self._session.sql(
-                    f"SELECT * EXCLUDE (__repark_rn) FROM ("
-                    f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f") WHERE (abs((CAST(__repark_rn AS BIGINT) + {plan_seed}) "
-                    f"* 1103515245 + 12345) % 1000000) "
-                    f"/ 1000000.0 < {fraction_value}"
-                )
-            child = self._spawn(planned)
-            if self._display_names is not None and self._engine_names is not None:
-                child._display_names = list(self._display_names)
-                child._engine_names = list(self._engine_names)
-                child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-            return child
-        finally:
-            self._session.drop_temp_view(view)
-
-    @staticmethod
-    def _prepare_sample_args(
-        withReplacement: bool | float | None,  # noqa: N803
-        fraction: float | None,
-        seed: int | None,
-    ) -> tuple[bool, float, int]:
-        """Resolve sample overloads (PySpark classic/connect sample-arg helper parity).
-
-        Default plan seed is ``42`` (not ``random.randint``) so unseeded samples are
-        action-stable on the same plan.
-        """
-        # Default plan-stable seed when the caller omits seed (Spark planning-time embed).
-        default_seed = 42
-
-        # sample(withReplacement=bool, fraction=float [, seed])
-        if (
-            isinstance(withReplacement, bool)
-            and isinstance(fraction, (int, float))
-            and not (isinstance(fraction, bool))
-        ):
-            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
-            return withReplacement, float(fraction), plan_seed
-
-        # sample(fraction=float [, seed=…])  — keyword fraction, optional seed kw
-        if (
-            withReplacement is None
-            and isinstance(fraction, (int, float))
-            and not isinstance(fraction, bool)
-        ):
-            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
-            return False, float(fraction), plan_seed
-
-        # sample(0.5 [, seed])  — first positional is fraction; second positional is seed.
-        # PySpark ignores the seed= keyword on this form (only the fraction-slot seed counts).
-        if isinstance(withReplacement, (int, float)) and not isinstance(withReplacement, bool):
-            if fraction is not None:
-                plan_seed = _coerce_sample_seed(fraction, label="seed")
-            else:
-                plan_seed = default_seed
-            return False, float(withReplacement), plan_seed
-
-        # Missing / wrong-type overloads (Apache test_sample).
-        argtypes = [type(arg).__name__ for arg in (withReplacement, fraction, seed)]
-        raise PySparkTypeError(
-            errorClass="NOT_BOOL_OR_FLOAT_OR_INT",
-            messageParameters={
-                "arg_name": ("withReplacement (optional), fraction (required) and seed (optional)"),
-                "arg_type": ", ".join(argtypes),
-            },
-        )
+        return sampling._sample(self, withReplacement, fraction, seed)
 
     def randomSplit(  # noqa: N802 — PySpark method name
         self,
@@ -2954,74 +2849,7 @@ class DataFrame:
         Weights are normalized like Spark. Engine RNG ≠ Spark — pin count-in-tolerance, disclose
         exact-row divergence.
         """
-        self._ensure_alive()
-        if not isinstance(weights, (list, tuple)) or not weights:
-            raise PySparkTypeError("randomSplit weights must be a non-empty list of floats")
-        weight_list = [float(weight) for weight in weights]
-        if any(weight < 0 for weight in weight_list):
-            raise PySparkValueError("weights must be non-negative")
-        total = sum(weight_list)
-        if total == 0:
-            raise PySparkValueError("weights must sum to a positive value")
-        normalized = [weight / total for weight in weight_list]
-        # Cumulative bounds on [0,1).
-        bounds: list[float] = []
-        running = 0.0
-        for weight in normalized:
-            running += weight
-            bounds.append(running)
-        view = scratch_view_name(self._session, "__repark_rsplit_")
-        # Register one plan-stable bridge snapshot.
-        self._session.create_or_replace_temp_view(view, self._plan())
-        try:
-            # Order by unique engine fields on multi-name frames.
-            order_fields = self._engine_names if self._engine_names is not None else self.columns
-            order_sql = ", ".join(_quote_ident_sql(c) for c in order_fields)
-            order_clause = f"ORDER BY {order_sql}" if order_sql else ""
-            if seed is None:
-                # Spark: unseeded randomSplit is non-deterministic.
-                bucket_sql = f"SELECT *, random() AS __repark_split_u FROM {view}"
-            else:
-                # Deterministic LCG on ordered row_number + seed (engine RNG ≠ Spark).
-                # Same seed mix as sample — pure ``rn * A + seed`` left adjacent seeds
-                # identical.
-                seed_expr = str(int(seed))
-                bucket_sql = (
-                    f"SELECT * EXCLUDE (__repark_rn), "
-                    f"(abs((CAST(__repark_rn AS BIGINT) + {seed_expr}) "
-                    f"* 1103515245 + 12345) % 1000000) "
-                    f"/ 1000000.0 AS __repark_split_u FROM ("
-                    f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
-                    f")"
-                )
-            scored_name = scratch_view_name(self._session, "__repark_rsplit_s_")
-            scored = self._session.sql(bucket_sql)
-            self._session.create_or_replace_temp_view(scored_name, scored)
-            try:
-                frames: list[DataFrame] = []
-                lower = 0.0
-                for index, upper in enumerate(bounds):
-                    if index == len(bounds) - 1:
-                        predicate = f"__repark_split_u >= {lower}"
-                    else:
-                        predicate = f"__repark_split_u >= {lower} AND __repark_split_u < {upper}"
-                    part = self._session.sql(
-                        f"SELECT * EXCLUDE (__repark_split_u) FROM {scored_name} WHERE {predicate}"
-                    )
-                    child = self._spawn(part)
-                    if self._display_names is not None and self._engine_names is not None:
-                        child._display_names = list(self._display_names)
-                        child._engine_names = list(self._engine_names)
-                        child._origin_map = (
-                            dict(self._origin_map) if self._origin_map is not None else None
-                        )
-                    frames.append(child)
-                    lower = upper
-                return frames
-            finally:
-                self._session.drop_temp_view(scored_name)
-        finally:
-            self._session.drop_temp_view(view)
+        return sampling._random_split(self, weights, seed)
 
     random_split = randomSplit
 
@@ -3752,78 +3580,7 @@ class DataFrame:
         Seeded counts match Spark single-partition layouts (Apache ``test_sampleby``
         band 35-36 at seed=0). Alias of ``stat.sampleBy``.
         """
-        # Validate window, random, and stratified-sampling markers.
-        from repark.errors import PySparkTypeError
-        from repark.spark.column import Column as ReparkColumn
-        from repark.spark.functions import col as f_col
-        from repark.spark.functions import lit, rand
-
-        if isinstance(col, str):
-            stratum = f_col(col)
-        elif isinstance(col, ReparkColumn):
-            stratum = col
-        else:
-            raise PySparkTypeError(
-                errorClass="NOT_COLUMN_OR_STR",
-                messageParameters={"arg_name": "col", "arg_type": type(col).__name__},
-            )
-        if not isinstance(fractions, dict):
-            raise PySparkTypeError(
-                errorClass="NOT_DICT",
-                messageParameters={"arg_name": "fractions", "arg_type": type(fractions).__name__},
-            )
-        normalized: dict[Any, float] = {}
-        for key, value in fractions.items():
-            if isinstance(key, bool) or not isinstance(key, (float, int, str)):
-                raise PySparkTypeError(
-                    errorClass="DISALLOWED_TYPE_FOR_CONTAINER",
-                    messageParameters={
-                        "arg_name": "fractions",
-                        "arg_type": type(fractions).__name__,
-                        "allowed_types": "float, int, str",
-                        "item_type": type(key).__name__,
-                    },
-                )
-            if isinstance(value, bool) or not isinstance(value, (float, int)):
-                raise PySparkTypeError(
-                    errorClass="DISALLOWED_TYPE_FOR_CONTAINER",
-                    messageParameters={
-                        "arg_name": "fractions",
-                        "arg_type": type(fractions).__name__,
-                        "allowed_types": "float, int",
-                        "item_type": type(value).__name__,
-                    },
-                )
-            fraction_value = float(value)
-            #: Spark sampleBy rejects fractions outside [0, 1] (incl. NaN).
-            # Engine ``rand() < nan`` is True — silent wrong sample without this guard.
-            if fraction_value != fraction_value or fraction_value < 0.0 or fraction_value > 1.0:
-                raise IllegalArgumentException(
-                    f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
-                )
-            normalized[key] = fraction_value
-        if not normalized:
-            return self.limit(0)
-        # Spark: val r = rand(seed); filter udf(stratum, r) => r < fractions.getOrElse(stratum, 0)
-        # One shared rand column so the XORShift sequence advances once per row.
-        #: Spark seed is Long — bool has no sampleBy overload (Py4J).
-        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
-            raise PySparkTypeError(
-                errorClass="NOT_INT",
-                messageParameters={
-                    "arg_name": "seed",
-                    "arg_type": type(seed).__name__,
-                },
-            )
-        effective_seed = 0 if seed is None else int(seed)
-        rng = rand(effective_seed)
-        predicate: Column | None = None
-        for key, fraction in normalized.items():
-            piece = (stratum == lit(key)) & (rng < lit(fraction))
-            predicate = piece if predicate is None else (predicate | piece)
-        if predicate is None:
-            return self.limit(0)
-        return self.filter(predicate)
+        return sampling._sample_by(self, col, fractions, seed)
 
     @property
     def stat(self) -> DataFrameStatFunctions:
@@ -5049,6 +4806,8 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
     _validate_apply_in_pandas_result_columns,
 )
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
+from repark.spark.dataframe import sampling  # noqa: E402
+from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 
 __all__ = [
     "DataFrame",
