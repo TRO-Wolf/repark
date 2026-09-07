@@ -951,6 +951,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and a `mapInArrow`-backed frame, recorded on the pre-slice tree and asserted
   on the tip, with `count()` tallies as the DFCORE-6 baseline.
   pins: dfcore-4b/C-006
+  `test_show_styled_vertical_warning_attributes_to_caller` pins the warning's `filename`
+  to the caller (critic r1 F1: the move added a wrapper frame; `stacklevel` 2 → 3).
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes

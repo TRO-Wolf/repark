@@ -75,7 +75,7 @@ def _show(
                 "DataFrame.show(vertical=True) is only rendered under repark.display.style="
                 "'spark'; styled polars/duckdb shows stay horizontal.",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
         rendered, shown_rows = _render_styled_show(frame, style, n=max(0, n), truncate_at=cap)
     print(rendered)

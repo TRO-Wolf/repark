@@ -151,6 +151,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   moved from `core.py`). Every display door still opens with `_ensure_alive`,
   which validates the window, random, and stratified-sampling markers; the
   narration above those calls was the audit-named removable and is gone.
+  The styled-vertical warning carries `stacklevel=3` since the move put a wrapper frame
+  between the caller and the body (critic r1 F1, 2026-09-07); the pin asserts the caller's file.
   `show` peeks `mapInArrow` bridges with a bounded materialize (no full IPC
   table, no multiset count on the peek path). The Spark vertical door counts
   only when the limit may have truncated. The INFO log keeps a row-count

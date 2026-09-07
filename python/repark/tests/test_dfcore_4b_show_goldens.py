@@ -8,6 +8,7 @@ one byte-identically, with the same ``count()`` tallies.
 from __future__ import annotations
 
 import io
+import warnings
 from collections.abc import Iterator
 from contextlib import redirect_stdout
 
@@ -337,3 +338,18 @@ def test_show_count_tallies(
     calls.clear()
     _capture_show(frame, 2)
     assert calls == []
+
+
+def test_show_styled_vertical_warning_attributes_to_caller(spark: ReparkSession) -> None:
+    """The styled-vertical warning names the calling file, not the display module."""
+    ReparkSession.builder.config("repark.display.style", "polars").getOrCreate()
+    frame = spark.createDataFrame(_MIXED_ROWS, _MIXED_SCHEMA)
+    try:
+        with warnings.catch_warnings(record=True) as caught, redirect_stdout(io.StringIO()):
+            warnings.simplefilter("always", UserWarning)
+            frame.show(vertical=True)
+    finally:
+        ReparkSession.builder.config("repark.display.style", "spark").getOrCreate()
+    vertical = [item for item in caught if "stay horizontal" in str(item.message)]
+    assert len(vertical) == 1
+    assert vertical[0].filename == __file__
