@@ -139,6 +139,8 @@ def test_repr_footer_presence_matches_row_count(spark: ReparkSession) -> None:
                 bridged = plain.mapInArrow(_double_batches, "x INT")
                 for frame in (plain, bridged):
                     rendered = repr(frame)
+                    data_rows = [line for line in rendered.splitlines() if line.startswith("|")]
+                    assert len(data_rows) - 1 == min(size, max_rows)
                     if size > max_rows:
                         assert rendered.endswith(_footer_text(max_rows))
                     else:

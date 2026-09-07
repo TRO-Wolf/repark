@@ -975,6 +975,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the same error; a non-golden vertical truncation pin; styled shows keep
   their one count.
   pins: dfcore-6/C-001, C-002, C-003, C-004
+  Critic r1 F2 (2026-09-07): the repr footer pin also asserts the rendered data-row count.
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes

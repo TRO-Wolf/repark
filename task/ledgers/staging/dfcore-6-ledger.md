@@ -184,3 +184,12 @@ COVERAGE_ATTESTATION:
       evidence: Mutation score 3/3 with each mutant verified present and each restore verified by md5; the pre-fix red run proves the chartered pins fail without the fix.
       artifacts: [task/ledgers/staging/dfcore-6-ledger.md]
 ```
+
+## Critic round 1 (2026-09-07, Muse Spark 1.3) — PASS
+
+- F1 (S4, disclosed): the old `count()`-failure swallow went with the `count()`; a failing
+  scan fails the rows leg first on both trees, so only a patched `count` could observe it
+  (§5 already says so).
+- F2 (S4, served by the orchestrator): `test_repr_footer_presence_matches_row_count` now
+  asserts the rendered table holds exactly `min(size, max_rows)` data rows, so the
+  `slice(0, max_rows + 1)` mutation reds a unit pin and not only the DFCORE-4b goldens.

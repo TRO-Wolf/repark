@@ -582,3 +582,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   vertical pin. `risk_tier: standard`.
   Branch `perf/dfcore-6`.
   pins: dfcore-6/C-001, C-002, C-003, C-004, C-005
+  Critic r1 PASS (2026-09-07); the row-count assertion added to the repr footer pin.
