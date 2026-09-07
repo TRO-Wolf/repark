@@ -165,8 +165,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   five and ellipsis only before a non-empty tail; duckdb keeps at least one
   head row; the tail preview engine-skips and never lets a negative skip
   reach the native `usize`. Type labels come from the head Arrow schema. The
-  module carries its own logger; record names move `core` → `display` while
-  message text and levels stay identical. pins: dfcore-4b/C-004
+  styled renderer calls the tail preview through the frame (not module-local)
+  so the class-level collect spy keeps firing. The module carries its own
+  logger; record names move `core` → `display` while message text and levels
+  stay identical. pins: dfcore-4b/C-004
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import

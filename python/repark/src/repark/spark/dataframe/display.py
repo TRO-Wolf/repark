@@ -191,7 +191,7 @@ def _normalize_show_args(
     """Validate ``show`` arguments; return ``(n, truncate_cap, vertical)``.
 
     Mirrors Spark 4.1.2 diagnostics used by Apache ``test_df_show`` (NOT_INT / NOT_BOOL).
-    Digit-only string ``truncate`` values (e.g. ``"1"``) are accepted as width caps.
+    Digit-only string ``truncate`` values (e.g. ``\"1\"``) are accepted as width caps.
     """
     if not isinstance(n, int) or isinstance(n, bool):
         raise PySparkTypeError(
