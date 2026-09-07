@@ -913,6 +913,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   so raw sets vary with test order. Critic r1 F3 (2026-09-07): `MOVED_HELPERS` asserts each of
   the 17 moved names on core and on the package IS the leaf module's object, not a copy.
   pins: dfcore-1/C-001, C-002, C-003, C-008
+  DFCORE-2 (2026-09-07): the class dir loses exactly the four moved helpers; core and the
+  package each gain exactly the two new module names; `MOVED_SELECT_HELPERS` pins each
+  helper as its new home's own frame-first function. `test_pandas_udf.py`'s plan-time
+  import pin now reads the moved helper's source (reference-only, line-count neutral).
+  pins: dfcore-2/C-001, C-002, C-003, C-007, C-008
 
 - `test_declare_sorted.py` — **SE-1 PR-B:** the `declareSorted` door. Results bit-identical
   declared vs undeclared; the plan pin (tp=1 session) that the window `SortExec` really goes

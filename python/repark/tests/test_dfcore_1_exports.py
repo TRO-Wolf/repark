@@ -2,6 +2,11 @@
 
 The expected sets below were recorded on the pre-slice tree; the move-only
 relocation must leave every one of them byte-identical.
+
+DFCORE-2 (2026-09-07) declared deltas, extended before the production edit: the
+four ``_select_with_*`` helpers leave the class, so ``EXPECTED_DATAFRAME_DIR``
+loses exactly those four names; ``core`` and the package each gain exactly the
+two new module names ``udf_projection`` and ``udf_window_projection``.
 """
 
 from __future__ import annotations
@@ -15,7 +20,9 @@ import repark.spark.dataframe.core as dataframe_core
 import repark.spark.dataframe.export_errors as export_errors
 import repark.spark.dataframe.grouped_udf as grouped_udf
 import repark.spark.dataframe.rows_export as rows_export
+import repark.spark.dataframe.udf_projection as udf_projection
 import repark.spark.dataframe.udf_schema as udf_schema
+import repark.spark.dataframe.udf_window_projection as udf_window_projection
 from repark.spark.dataframe import DataFrame
 
 EXPECTED_PACKAGE_EXPORTS: list[str] = [
@@ -512,10 +519,6 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_select_global_aggregate_sql",
     "_select_via_qcol_sql",
     "_select_with_generator",
-    "_select_with_ordered_window_pandas_udfs",
-    "_select_with_pandas_udfs",
-    "_select_with_python_udfs",
-    "_select_with_window_pandas_udfs",
     "_session",
     "_sort_specs",
     "_source_view_name",
@@ -666,7 +669,14 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "export_errors",
     "grouped_udf",
     "rows_export",
+    "udf_projection",
     "udf_schema",
+    "udf_window_projection",
+}
+
+EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
+    "udf_projection",
+    "udf_window_projection",
 }
 
 
@@ -692,8 +702,9 @@ def test_package_export_set_unchanged() -> None:
 
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the four new submodule attributes, bound by the import system when core
-    re-exports from the new homes.
+    gain is the six new submodule attributes (DFCORE-1's four plus DFCORE-2's
+    ``udf_projection`` and ``udf_window_projection``), bound by the import system
+    when core imports the new homes.
     """
     expected_surface = [
         name
@@ -722,7 +733,8 @@ def test_core_export_set_unchanged() -> None:
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. ``__annotations__``
     is separately asserted absent: the moved constants carried core's last annotated
-    module-level assignments with them.
+    module-level assignments with them. DFCORE-2's only accepted gain is the two
+    new module bindings: ``select`` delegates to the moved helpers through them.
     """
     expected_surface = [
         name
@@ -736,7 +748,7 @@ def test_core_export_set_unchanged() -> None:
         for name in set(dir(dataframe_core)) - set(EXPECTED_CORE_EXPORTS)
         if not name.startswith("__")
     }
-    assert gained == set()
+    assert gained == EXPECTED_NEW_CORE_SUBMODULES
     lost = {
         name
         for name in set(EXPECTED_CORE_EXPORTS) - set(dir(dataframe_core))
@@ -831,3 +843,28 @@ def test_moved_helpers_are_reexported_by_identity() -> None:
         for name in names:
             assert getattr(dataframe_core, name) is getattr(home, name), name
             assert getattr(dataframe_package, name) is getattr(home, name), name
+
+
+MOVED_SELECT_HELPERS: dict[ModuleType, tuple[str, ...]] = {
+    udf_projection: ("_select_with_pandas_udfs", "_select_with_python_udfs"),
+    udf_window_projection: (
+        "_select_with_window_pandas_udfs",
+        "_select_with_ordered_window_pandas_udfs",
+    ),
+}
+
+
+def test_moved_select_helpers_live_in_new_homes() -> None:
+    """DFCORE-2: each moved select helper is its new home's own module function.
+
+    The helpers take the frame as their first argument; the class keeps no copy.
+    """
+    import inspect
+
+    for home, names in MOVED_SELECT_HELPERS.items():
+        for name in names:
+            helper = getattr(home, name)
+            assert inspect.isfunction(helper), name
+            assert helper.__module__ == home.__name__, name
+            assert next(iter(inspect.signature(helper).parameters)) == "frame", name
+            assert name not in vars(DataFrame), name

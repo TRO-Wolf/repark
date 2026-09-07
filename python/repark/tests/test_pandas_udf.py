@@ -250,9 +250,9 @@ def test_pandas_udf_bridge_defers_pandas_import() -> None:
     """
     import inspect
 
-    from repark.spark.dataframe import udf_bridge
+    from repark.spark.dataframe import udf_bridge, udf_projection
 
-    source = inspect.getsource(DataFrame._select_with_pandas_udfs)
+    source = inspect.getsource(udf_projection._select_with_pandas_udfs)
     assert "import pandas" not in source and '__import__("pandas")' not in source, (
         "pandas must not be imported at select/withColumn plan time"
     )
