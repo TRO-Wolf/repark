@@ -5,7 +5,93 @@ from __future__ import annotations
 import gc
 from typing import Any
 
+from repark.errors import PySparkNotImplementedError
 from repark.spark.row import Row
+
+
+def _arrow_map_pairs(value: Any) -> list[tuple[Any, Any]] | None:
+    """Normalize an Arrow ``to_pylist`` map cell to pairs, or ``None``.
+
+    Empty map is ``[]`` / ``{}`` from pylist; non-empty maps are pair-lists or (rarely) dicts.
+    Returns an empty list for empty maps; ``None`` when the value is not map-shaped.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return list(value.items())
+    if isinstance(value, list):
+        if not value:
+            return []
+        if all(isinstance(item, tuple) and len(item) == 2 for item in value):
+            return list(value)
+    return None
+
+
+def _arrow_cell_to_spark_python(value: Any, arrow_type: Any) -> Any:
+    """Convert Arrow cells to Spark Python values using the declared schema.
+
+    Maps become dictionaries, including nested maps. Lists and structs recurse.
+    """
+    import pyarrow as pa
+
+    if value is None:
+        return None
+    if pa.types.is_map(arrow_type):
+        pairs = _arrow_map_pairs(value)
+        if pairs is None:
+            return value
+        key_type = arrow_type.key_type
+        item_type = arrow_type.item_type
+        return {
+            _arrow_cell_to_spark_python(key, key_type): _arrow_cell_to_spark_python(item, item_type)
+            for key, item in pairs
+        }
+    is_list_type = (
+        pa.types.is_list(arrow_type)
+        or pa.types.is_large_list(arrow_type)
+        or pa.types.is_fixed_size_list(arrow_type)
+    )
+    if is_list_type:
+        if not isinstance(value, list):
+            return value
+        element_type = arrow_type.value_type
+        return [_arrow_cell_to_spark_python(item, element_type) for item in value]
+    if pa.types.is_struct(arrow_type):
+        if not isinstance(value, dict):
+            return value
+        fields = list(arrow_type)
+        return {
+            field.name: _arrow_cell_to_spark_python(value.get(field.name), field.type)
+            for field in fields
+        }
+    if pa.types.is_timestamp(arrow_type) and getattr(value, "tzinfo", None) is not None:
+        from repark.spark.session.session_time_zone import collect_timestamp_as_session_wall
+
+        return collect_timestamp_as_session_wall(value)
+    return value
+
+
+def _refuse_calendar_interval_python_value(value: Any) -> None:
+    """Reject calendar intervals because Spark has no Python converter for them."""
+    if value is None:
+        return
+    type_name = type(value).__name__
+    if type_name in {"MonthDayNano", "MonthDayNanoInterval"}:
+        raise PySparkNotImplementedError(
+            errorClass="NOT_IMPLEMENTED",
+            messageParameters={
+                "feature": "Python conversion for calendar interval (make_interval / "
+                "CalendarIntervalType)"
+            },
+        )
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _refuse_calendar_interval_python_value(key)
+            _refuse_calendar_interval_python_value(item)
+        return
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _refuse_calendar_interval_python_value(item)
 
 
 def arrow_type_needs_spark_python_convert(arrow_type: Any) -> bool:
@@ -70,11 +156,6 @@ def _native_cell_type(arrow_type: Any) -> bool:
 
 def rows_from_arrow_table_python(table: Any) -> list[Row]:
     """Convert an Arrow table or batch to ``Row`` objects entirely in Python."""
-    from repark.spark.dataframe.core import (
-        _arrow_cell_to_spark_python,
-        _refuse_calendar_interval_python_value,
-    )
-
     names = list(table.column_names)
     column_count = table.num_columns
     row_count = table.num_rows
@@ -113,8 +194,6 @@ def rows_from_arrow_table_python(table: Any) -> list[Row]:
 
 
 def _supplied_columns(table: Any, field_types: list[Any]) -> dict[int, list[Any]]:
-    from repark.spark.dataframe.core import _arrow_cell_to_spark_python
-
     supplied: dict[int, list[Any]] = {}
     for index, field_type in enumerate(field_types):
         if arrow_type_needs_spark_python_convert(field_type):

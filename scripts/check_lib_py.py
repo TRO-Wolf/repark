@@ -60,12 +60,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract a cohesive method family behind re-export bindings.",
     ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        6302,
+        5954,
         "The DataFrame facade still combines many plan-building method families.",
         "Extract one existing method region when a charter changes that responsibility.",
     ),
     "python/repark/src/repark/spark/dataframe/joins_columns.py": (
-        1239,
+        1238,
         "Join and column-selection helpers share one facade region.",
         "Split join planning from column projection helpers.",
     ),
