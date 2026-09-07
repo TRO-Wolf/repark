@@ -3798,3 +3798,12 @@ the outer-variable nesting shape (F4: `test_nested_transform_...`). The
 round-1 Column-view nullable-element instance converged in round 2 (multi-hop
 lineage); both legs are Spark-equal now (FNP8-NULLABILITY).
 pins: fnp-8-review/C-001, C-002, C-003, C-004
+**FNP-8-REVIEW round 2 (2026-09-07):** `test_join_fed_...` pins join-fed widths on
+both doors, `test_scalar_subquery_...` pins the scalar-subquery answer (repark serves
+past Spark's `UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY` refusal — a superset, never
+cited as Spark-equal), `test_lineage_through_plan_nodes_...` covers
+aggregate/window/passthrough nodes, `test_multihop_...` covers multi-hop view lineage
+with Spark-equal nullable table legs, `test_union_of_narrowed_...` is the union pin,
+`test_aggregate_over_lineage_...` locks aggregate immunity, and
+`test_lateral_view_...` pins the loud refusal that keeps Generate unreachable.
+pins: fnp-8-review/C-009, C-010

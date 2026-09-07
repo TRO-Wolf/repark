@@ -8,7 +8,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import functions as spark_functions
 from repark.spark.column import Column
 from repark.spark.dataframe.core import DataFrame
@@ -474,3 +474,134 @@ def test_nested_transform_over_outer_variable_nullability(spark: ReparkSession) 
     assert nullable.column("r").to_pylist() == [[[2, None, 4]]]
     assert nullable.schema.field("r").type.value_type.value_type == pa.int32()
     assert nullable.schema.field("r").type.value_type.value_field.nullable
+
+
+def test_join_fed_lambda_body_literals_answer_int32(spark: ReparkSession) -> None:
+    """Pin Int32 widths with not-null elements for join-fed HOFs on both doors."""
+    left = spark.sql(
+        "SELECT transform(t1.a, x -> x + 1) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1 JOIN (SELECT 1 AS k) t2"
+        " ON t1.k = t2.k"
+    ).toArrow()
+    right = spark.sql(
+        "SELECT transform(t2.a, x -> x + 1) AS r FROM (SELECT 1 AS k) t1"
+        " JOIN (SELECT array(1, 2, 3) AS a, 1 AS k) t2 ON t1.k = t2.k"
+    ).toArrow()
+    crossed = spark.sql(
+        "SELECT transform(t1.a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a) t1"
+        " CROSS JOIN (SELECT 1 AS k) t2"
+    ).toArrow()
+    frame = spark.sql(
+        "SELECT t1.a AS a FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
+        " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k"
+    )
+    column_table = frame.select(_transform("a", "", "", "").alias("r")).toArrow()
+    for table in (left, right, crossed, column_table):
+        _assert_list_int32(table, [[2, 3, 4]])
+        assert not table.schema.field("r").nullable
+        assert not table.schema.field("r").type.value_field.nullable
+
+
+def test_scalar_subquery_hof_answers_int32(spark: ReparkSession) -> None:
+    """Pin the scalar-subquery HOF answer repark serves past Spark's refusal."""
+    table = spark.sql(
+        "SELECT transform((SELECT array(1, 2, 3) AS a), x -> x + 1) AS r"
+    ).toArrow()
+    _assert_list_int32(table, [[2, 3, 4]])
+    assert not table.schema.field("r").nullable
+    assert not table.schema.field("r").type.value_field.nullable
+
+
+def test_lineage_through_plan_nodes_keeps_int32(spark: ReparkSession) -> None:
+    """Pin Int32 HOF widths through aggregate, window, and passthrough nodes."""
+    queries = (
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a, k"
+        " FROM (SELECT 1 AS k) s GROUP BY k, array(1, 2, 3))",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a,"
+        " row_number() OVER (ORDER BY k) AS rn FROM (SELECT 1 AS k) s)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a)",
+        "WITH c AS (SELECT array(1, 2, 3) AS a)"
+        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(1, 2, 3) AS a LIMIT 10)",
+        "SELECT transform(a, x -> x + 1) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k ORDER BY k)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a, k"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) WHERE k = 1)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT DISTINCT array(1, 2, 3) AS a)",
+    )
+    for query in queries:
+        table = spark.sql(query).toArrow()
+        _assert_list_int32(table, [[2, 3, 4]])
+        assert not table.schema.field("r").nullable
+        assert not table.schema.field("r").type.value_field.nullable
+
+
+def test_multihop_lineage_keeps_not_null_elements(spark: ReparkSession) -> None:
+    """Pin not-null HOF elements over multi-hop views and nullable tables."""
+    spark.sql("SELECT array(1, 2, 3) AS a").createOrReplaceTempView("fnp8rev_r2_v")
+    spark.sql("CREATE TABLE fnp8rev_r2_t USING PARQUET AS SELECT array(1, 2, 3) AS a")
+    lineage_queries = (
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_v)",
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM"
+        " (SELECT a FROM fnp8rev_r2_v))",
+        "WITH c AS (SELECT a FROM fnp8rev_r2_v)"
+        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "WITH c1 AS (SELECT array(1, 2, 3) AS a), c2 AS (SELECT a FROM c1)"
+        " SELECT transform(a, x -> x + 1) AS r FROM c2",
+    )
+    for query in lineage_queries:
+        table = spark.sql(query).toArrow()
+        _assert_list_int32(table, [[2, 3, 4]])
+        assert not table.schema.field("r").nullable
+        assert not table.schema.field("r").type.value_field.nullable
+    table_queries = (
+        "SELECT transform(a, x -> x + 1) AS r FROM (SELECT a FROM fnp8rev_r2_t)",
+        "WITH c AS (SELECT a FROM fnp8rev_r2_t)"
+        " SELECT transform(a, x -> x + 1) AS r FROM c",
+        "SELECT transform(a, x -> x + 1) AS r FROM fnp8rev_r2_t",
+    )
+    for query in table_queries:
+        table = spark.sql(query).toArrow()
+        _assert_list_int32(table, [[2, 3, 4]])
+        assert table.schema.field("r").nullable
+        assert table.schema.field("r").type.value_field.nullable
+
+
+def test_union_of_narrowed_branches_answers_int32(spark: ReparkSession) -> None:
+    """Pin Int32 HOF widths over a union of narrowed view branches."""
+    spark.sql("SELECT array(1, 2, 3) AS a").createOrReplaceTempView("fnp8rev_r2_v1")
+    spark.sql("SELECT array(4) AS a").createOrReplaceTempView("fnp8rev_r2_v2")
+    table = spark.sql(
+        "SELECT transform(a, x -> x + 1) AS r"
+        " FROM (SELECT a FROM fnp8rev_r2_v1 UNION ALL SELECT a FROM fnp8rev_r2_v2)"
+    ).toArrow()
+    assert sorted(table.column("r").to_pylist()) == [[2, 3, 4], [5]]
+    assert table.schema.field("r").type.value_type == pa.int32()
+    assert not table.schema.field("r").nullable
+    assert not table.schema.field("r").type.value_field.nullable
+
+
+def test_aggregate_over_lineage_stays_int32(spark: ReparkSession) -> None:
+    """Pin immune aggregate answers over join-fed and multi-hop literals."""
+    queries = (
+        "SELECT aggregate(t1.a, 0, (acc, x) -> acc + x) AS r"
+        " FROM (SELECT array(1, 2, 3) AS a, 1 AS k) t1"
+        " JOIN (SELECT 1 AS k) t2 ON t1.k = t2.k",
+        "SELECT aggregate(a, 0, (acc, x) -> acc + x) AS r"
+        " FROM (SELECT a FROM (SELECT array(1, 2, 3) AS a))",
+        "SELECT aggregate(array(1, 2, 3), 0, (acc, x) -> acc + x) AS r",
+    )
+    for query in queries:
+        table = spark.sql(query).toArrow()
+        assert table.column("r").to_pylist() == [6]
+        assert table.schema.field("r").type == pa.int32()
+        assert table.schema.field("r").nullable
+
+
+def test_lateral_view_stays_a_loud_refusal(spark: ReparkSession) -> None:
+    """Pin the loud lateral-view refusal that keeps Generate unreachable."""
+    with pytest.raises(UnsupportedOperationException, match="LATERAL VIEWS"):
+        spark.sql(
+            "SELECT transform(a, x -> x + 1) AS r FROM (SELECT array(array(1, 2)) AS arr)"
+            " LATERAL VIEW explode(arr) t AS a"
+        ).toArrow()
