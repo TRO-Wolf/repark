@@ -148,7 +148,6 @@ fn prepare_expr(
         if let Some(value) = hof.args.get_mut(position) {
             if is_array_constructor(value) {
                 let wrapped = wrap_nested_constructors(value.clone(), schema)?;
-                changed |= wrapped.transformed;
                 *value = wrapped.data;
             } else {
                 *value = array_field_call(value.clone(), element_nullable);
@@ -314,19 +313,70 @@ fn contains_bare_integer(expr: &Expr) -> bool {
 }
 
 fn traces_to_provisional_constructor(expr: &Expr, inputs: &[LogicalPlan]) -> bool {
-    let Expr::Column(column) = expr else {
-        return false;
-    };
-    inputs.iter().any(|input| {
-        let Ok(index) = input.schema().index_of_column(column) else {
-            return false;
-        };
-        let Some((source, _)) = output_expression(input, index) else {
-            return false;
-        };
-        (is_array_constructor(source) || is_map_constructor(source))
-            && contains_bare_integer(source)
+    let mut provisional = false;
+    expr.apply(|node| match node {
+        Expr::Column(column) => {
+            if inputs.iter().any(|input| {
+                input
+                    .schema()
+                    .index_of_column(column)
+                    .ok()
+                    .is_some_and(|index| source_feeds_bare_integer(input, index))
+            }) {
+                provisional = true;
+                Ok(TreeNodeRecursion::Stop)
+            } else {
+                Ok(TreeNodeRecursion::Continue)
+            }
+        }
+        _ => Ok(TreeNodeRecursion::Continue),
     })
+    .is_ok()
+        && provisional
+}
+
+fn source_feeds_bare_integer(plan: &LogicalPlan, index: usize) -> bool {
+    let mut pending = vec![(plan, index)];
+    while let Some((current, position)) = pending.pop() {
+        match current {
+            LogicalPlan::Projection(projection) => {
+                let Some(mut source) = projection.expr.get(position) else {
+                    continue;
+                };
+                while let Expr::Alias(alias) = source {
+                    source = alias.expr.as_ref();
+                }
+                if let Expr::Column(inner) = source {
+                    if let Ok(inner_index) = projection.input.schema().index_of_column(inner) {
+                        pending.push((projection.input.as_ref(), inner_index));
+                    }
+                } else if (is_array_constructor(source) || is_map_constructor(source))
+                    && contains_bare_integer(source)
+                {
+                    return true;
+                }
+            }
+            LogicalPlan::SubqueryAlias(alias) => pending.push((alias.input.as_ref(), position)),
+            LogicalPlan::Filter(filter) => pending.push((filter.input.as_ref(), position)),
+            LogicalPlan::Sort(sort) => pending.push((sort.input.as_ref(), position)),
+            LogicalPlan::Distinct(distinct) => pending.push((distinct.input(), position)),
+            LogicalPlan::Limit(limit) => pending.push((limit.input.as_ref(), position)),
+            LogicalPlan::Values(values) => {
+                if values
+                    .values
+                    .iter()
+                    .any(|row| row.get(position).is_some_and(contains_bare_integer))
+                {
+                    return true;
+                }
+            }
+            LogicalPlan::Union(union) => {
+                pending.extend(union.inputs.iter().map(|input| (input.as_ref(), position)));
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 fn constructor_element_nullable(expr: &Expr, schema: &DFSchema) -> Option<bool> {

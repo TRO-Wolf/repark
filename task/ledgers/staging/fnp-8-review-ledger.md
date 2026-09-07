@@ -31,3 +31,12 @@ prepends its errata.
 | C-008 | No regression of the critic's held set: the four pin files JVM-free, the live leg at 512 passed / 0 skipped, `make verify`, and the report's mutation knobs still red. | The gate commands with real exit codes; mutation table. | **OPEN** | TBD: final gate run. |
 
 VERDICT: 8 clauses, 7 PROVEN, 1 OPEN, 0 REJECTED.
+
+## 2026-09-07 VALUES follow-up (C-001)
+
+`sql_door_higher_order_over_values_keeps_narrowed_int32` redded after the F1
+slice: a direct constructor over provisional VALUES columns plus a narrowed
+body bakes Int64. The provisional skip now traces value-side columns to bare
+literals (VALUES rows, constructor sources, double-nested subqueries,
+unions) with an iterative worklist; analyzed and base-table columns still
+narrow early. Rust `lambda_door` 25 passed; the four pin files 420 passed.
