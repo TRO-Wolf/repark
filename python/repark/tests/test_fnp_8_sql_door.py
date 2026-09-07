@@ -404,9 +404,7 @@ def test_inline_lambda_body_literals_answer_int32(spark: ReparkSession) -> None:
     _assert_list_int32(negative, [[-4, -3, -2]])
     assert not negative.schema.field("r").nullable
     assert not negative.schema.field("r").type.value_field.nullable
-    wide = spark.sql(
-        "SELECT transform(array(1, 2, 3), x -> x + 3000000000) AS r"
-    ).toArrow()
+    wide = spark.sql("SELECT transform(array(1, 2, 3), x -> x + 3000000000) AS r").toArrow()
     assert wide.column("r").to_pylist() == [[3000000001, 3000000002, 3000000003]]
     assert wide.schema.field("r").type.value_type == pa.int64()
     assert not wide.schema.field("r").nullable
