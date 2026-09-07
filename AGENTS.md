@@ -16,9 +16,9 @@
 TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
 that is where a reason, a design note or a `pins: <unit>/C-NNN` citation now lives — the
 directory's `map.md` (the ledger-grammar gate reads every tracked file under `crates/`,
-`python/`, `scripts/`, so a citation in a `map.md` there counts). Condensation is **enforced**:
-`make check-comment-density` (in `make ci`) holds every code file to a per-file comment ceiling
-seeded from the tree that only ratchets down, and a new file's ceiling is zero.
+`python/`, `scripts/`, so a citation in a `map.md` there counts). Condensation is held by review,
+not by a gate: the `check-comment-density` ratchet was dropped before #247 merged; the file-size
+ratchets are the mechanical gates, and a new file carries no comments.
 
 Authorship is undetectable; review holds this rule. The gate preserves bytes. Required
 docstrings, Rust banners, and invariant comments remain. No sweep.

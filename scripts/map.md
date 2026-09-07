@@ -504,6 +504,9 @@ repark-parity slice.
   complete ruling block in a regular file at the start of both `AGENTS.md` and `CLAUDE.md`,
   byte-for-byte, and the adjacent enforcement boundary in `AGENTS.md`. Each protected block must
   appear exactly once. It rejects symlink redirection and makes no model-attribution claim.
+  The expected text moved once (2026-09-07, owner-ruled): the adjustment's enforcement sentence
+  now says review holds condensation and the file-size ratchets are the gates, replacing the
+  `make check-comment-density` claim PR #247 had already retired.
   Dual-wired through `make check-owner-ruling` in `make ci` and a raw guard step in ci.yml.
   Provocations:
   `python/repark-parity/tests/test_pr_247_owner_ruling.py`.
