@@ -30,6 +30,9 @@ pins: fnp-4c-higher-order-kernels/C-007, C-008, C-009, C-010, C-011, C-013, C-01
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` naming `aggregate`.
   pins: fnp-4c-higher-order-kernels/C-003
 - `zip_with.rs` — null-pad the shorter array.
+  **FNP-8-REVIEW (2026-09-07):** lambda parameters are nullable (either side can
+  pad nulls, F2) and the result element derives from the lambda's nullability
+  (F3). pins: fnp-8-review/C-002, C-003
 - `map_common.rs` — flatten/rebuild, `NULL_MAP_KEY`, `DUPLICATED_MAP_KEY`.
 - `transform_keys.rs` / `transform_values.rs` / `map_filter.rs` / `map_zip_with.rs`.
 

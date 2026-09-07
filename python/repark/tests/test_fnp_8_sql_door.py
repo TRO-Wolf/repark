@@ -320,3 +320,155 @@ def test_expr_column_reference_stays_the_ex_fn_4_refusal() -> None:
     """F.expr column references remain the separately declared EX-FN-4 backlog."""
     with pytest.raises(AnalysisException, match="No field named a"):
         spark_functions.expr("transform(a, x -> x + 1)")
+
+
+def _width_view_frame(spark: ReparkSession) -> DataFrame:
+    """Build the shared table-backed width frame behind a temp view."""
+    spark.sql(
+        "SELECT array(1, 2, 3) AS a, array(10, 20) AS b, map('a', 1, 'b', 2) AS m1"
+    ).createOrReplaceTempView("fnp8rev_width")
+    return spark.sql("SELECT a, b, m1 FROM fnp8rev_width")
+
+
+def _zip_nullproof(column_a: str, column_b: str) -> Column:
+    """Build a null-proof zip-with expression."""
+    return spark_functions.zip_with(
+        column_a,
+        column_b,
+        lambda left, right: (
+            spark_functions.coalesce(left, spark_functions.lit(0))
+            + spark_functions.coalesce(right, spark_functions.lit(0))
+        ),
+    )
+
+
+def _assert_list_int32(
+    table: pa.Table, expected_values: list[list[int | None] | None]
+) -> None:
+    """Pin list values with an Int32 element on the Arrow path."""
+    assert table.column("r").to_pylist() == expected_values
+    assert table.schema.field("r").type.value_type == pa.int32()
+
+
+def _assert_map_value_int32(table: pa.Table, expected_values: list[object]) -> None:
+    """Pin map values with an Int32 value field on the Arrow path."""
+    assert table.column("r").to_pylist() == expected_values
+    assert table.schema.field("r").type.item_type == pa.int32()
+
+
+def test_table_backed_lambda_body_literals_answer_int32(spark: ReparkSession) -> None:
+    """Pin Int32 lambda-body widths over a view on both doors."""
+    frame = _width_view_frame(spark)
+    sql_table = spark.sql("SELECT transform(a, x -> x + 1) AS r FROM fnp8rev_width").toArrow()
+    _assert_list_int32(sql_table, [[2, 3, 4]])
+    assert not sql_table.schema.field("r").type.value_field.nullable
+    column_table = frame.select(_transform("a", "", "", "").alias("r")).toArrow()
+    _assert_list_int32(column_table, [[2, 3, 4]])
+    sql_table = spark.sql(
+        "SELECT zip_with(a, b, (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
+        " FROM fnp8rev_width"
+    ).toArrow()
+    _assert_list_int32(sql_table, [[11, 22, 3]])
+    assert not sql_table.schema.field("r").type.value_field.nullable
+    column_table = frame.select(_zip_nullproof("a", "b").alias("r")).toArrow()
+    _assert_list_int32(column_table, [[11, 22, 3]])
+    sql_table = spark.sql(
+        "SELECT transform_values(m1, (k, v) -> v + 1) AS r FROM fnp8rev_width"
+    ).toArrow()
+    _assert_map_value_int32(sql_table, [[("a", 2), ("b", 3)]])
+    column_table = frame.select(_transform_values("", "", "m1", "").alias("r")).toArrow()
+    _assert_map_value_int32(column_table, [[("a", 2), ("b", 3)]])
+
+
+def test_inline_lambda_body_literals_answer_int32(spark: ReparkSession) -> None:
+    """Pin Int32 lambda-body widths over inline literals on both doors."""
+    sql_table = spark.sql("SELECT transform(array(1, 2, 3), x -> x + 1) AS r").toArrow()
+    _assert_list_int32(sql_table, [[2, 3, 4]])
+    inline = spark.sql("SELECT array(1, 2, 3) AS a, array(10, 20) AS b")
+    column_table = inline.select(_transform("a", "", "", "").alias("r")).toArrow()
+    _assert_list_int32(column_table, [[2, 3, 4]])
+    sql_table = spark.sql(
+        "SELECT zip_with(array(1, 2, 3), array(10, 20),"
+        " (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
+    ).toArrow()
+    _assert_list_int32(sql_table, [[11, 22, 3]])
+    column_table = inline.select(_zip_nullproof("a", "b").alias("r")).toArrow()
+    _assert_list_int32(column_table, [[11, 22, 3]])
+    sql_table = spark.sql(
+        "SELECT transform_values(map('a', 1, 'b', 2), (k, v) -> v + 1) AS r"
+    ).toArrow()
+    _assert_map_value_int32(sql_table, [[("a", 2), ("b", 3)]])
+    maps = spark.sql("SELECT map('a', 1, 'b', 2) AS m1")
+    column_table = maps.select(_transform_values("", "", "m1", "").alias("r")).toArrow()
+    _assert_map_value_int32(column_table, [[("a", 2), ("b", 3)]])
+
+
+def test_zip_with_left_shorter_non_null_elements_answers_all_doors(
+    spark: ReparkSession,
+) -> None:
+    """Pin the left-shorter non-null-element zip on SQL, Column, and F.expr."""
+    expression = "zip_with(array(1), array(10, 20), (x, y) -> coalesce(x, 0) + y)"
+    sql_table = spark.sql(f"SELECT {expression} AS r").toArrow()
+    frame = spark.sql("SELECT array(1) AS a, array(10, 20) AS b")
+    column_table = frame.select(
+        spark_functions.zip_with(
+            "a",
+            "b",
+            lambda left, right: spark_functions.coalesce(left, spark_functions.lit(0)) + right,
+        ).alias("r")
+    ).toArrow()
+    expression_table = (
+        spark.sql("SELECT 1 AS sentinel").select(spark_functions.expr(expression).alias("r")).toArrow()
+    )
+    for table in (sql_table, column_table, expression_table):
+        _assert_list_int32(table, [[11, 20]])
+        assert not table.schema.field("r").nullable
+    kept = spark.sql(
+        "SELECT zip_with(array(1, 2, 3), array(10), (x, y) -> x + coalesce(y, 0)) AS r"
+    ).toArrow()
+    _assert_list_int32(kept, [[11, 2, 3]])
+
+
+def test_zip_with_element_nullability_follows_the_lambda(spark: ReparkSession) -> None:
+    """Pin null-proof versus nullable zip elements on both doors."""
+    nullproof_sql = spark.sql(
+        "SELECT zip_with(array(1, 2, 3), array(10),"
+        " (x, y) -> coalesce(x, 0) + coalesce(y, 0)) AS r"
+    ).toArrow()
+    assert nullproof_sql.column("r").to_pylist() == [[11, 2, 3]]
+    assert nullproof_sql.schema.field("r").type.value_type == pa.int32()
+    assert not nullproof_sql.schema.field("r").type.value_field.nullable
+    frame = spark.sql("SELECT array(1, 2, 3) AS a, array(10) AS b")
+    nullproof_column = frame.select(_zip_nullproof("a", "b").alias("r")).toArrow()
+    assert nullproof_column.column("r").to_pylist() == [[11, 2, 3]]
+    assert nullproof_column.schema.field("r").type.value_type == pa.int32()
+    assert not nullproof_column.schema.field("r").type.value_field.nullable
+    nullable_sql = spark.sql(
+        "SELECT zip_with(array(1, 2, 3), array(10), (x, y) -> x + y) AS r"
+    ).toArrow()
+    assert nullable_sql.column("r").to_pylist() == [[11, None, None]]
+    assert nullable_sql.schema.field("r").type.value_type == pa.int32()
+    assert nullable_sql.schema.field("r").type.value_field.nullable
+
+
+def test_nested_transform_over_outer_variable_nullability(spark: ReparkSession) -> None:
+    """Pin innermost nullability for the outer-variable nesting shape."""
+    expression = "transform(array(array(1, 2), array(3)), a -> transform(a, b -> b + 1))"
+    sql_table = spark.sql(f"SELECT {expression} AS r").toArrow()
+    expression_table = (
+        spark.sql("SELECT 1 AS sentinel").select(spark_functions.expr(expression).alias("r")).toArrow()
+    )
+    for table in (sql_table, expression_table):
+        assert table.column("r").to_pylist() == [[[2, 3], [4]]]
+        outer = table.schema.field("r")
+        assert not outer.nullable
+        middle = outer.type.value_field
+        assert not middle.nullable
+        assert middle.type.value_type == pa.int32()
+        assert not middle.type.value_field.nullable
+    nullable = spark.sql(
+        "SELECT transform(array(array(1, NULL, 3)), a -> transform(a, b -> b + 1)) AS r"
+    ).toArrow()
+    assert nullable.column("r").to_pylist() == [[[2, None, 4]]]
+    assert nullable.schema.field("r").type.value_type.value_type == pa.int32()
+    assert nullable.schema.field("r").type.value_type.value_field.nullable

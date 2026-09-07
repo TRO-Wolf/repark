@@ -3773,3 +3773,7 @@ records both paths against `fnp8_error_oracle.json`. The empty untyped map diagn
 keeps Spark collect separate from its Arrow export refusal.
 **FNP-8-REVIEW (2026-09-07):** the F-Y10-1 registry note cites the wrap pin and the
 idx-25/idx-51 dispositions (F7). pins: fnp-8-review/C-007
+**FNP-8-REVIEW (2026-09-07):** `test_fnp_8_sql_door.py` pins table-backed and
+inline lambda-body widths (F1), the left-shorter zip on three doors (F2), zip
+element nullability (F3), and the outer-variable nesting shape (F4).
+pins: fnp-8-review/C-001, C-002, C-003, C-004
