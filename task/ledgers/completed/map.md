@@ -8,6 +8,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [frontier-worker-decision-plan-ledger.md](frontier-worker-decision-plan-ledger.md) — proposed frontier brief skills, worker qualification, and pilot decisions; documentation-only addendum to PR #423.
 - [capability-roadmap-planning-ledger.md](capability-roadmap-planning-ledger.md) — capability identifiers, release assembly, and historical roadmap reconciliation; planning-only unit.
 - [ctas-view-1-conform-stream-ledger.md](ctas-view-1-conform-stream-ledger.md) —
   **CTAS-VIEW-1 (2026-09-03), complete:** unpartitioned CTAS stream writer conforms Utf8View

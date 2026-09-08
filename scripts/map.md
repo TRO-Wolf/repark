@@ -1,5 +1,11 @@
 # map — scripts/
 
+Frontier worker decision-plan verification (2026-09-07): existing map/link and ledger guards,
+plus the source-contract and scoped-diff review recorded in the
+[unit ledger](../task/ledgers/completed/frontier-worker-decision-plan-ledger.md).
+These citations cover documentation evidence; no script behavior or runtime test changes.
+pins: frontier-worker-decision-plan/C-001, C-002, C-003, C-004
+
 Capability-roadmap planning verification (2026-09-07): existing map/link and ledger guards,
 plus the document-domain, policy-preservation, and scoped-diff checks recorded in the
 [unit ledger](../task/ledgers/completed/capability-roadmap-planning-ledger.md#documentation-review).
