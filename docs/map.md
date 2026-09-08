@@ -139,7 +139,8 @@ repo.
   ("answered 2026-09-02") rather than the open question — Glue reproduces the local v3 numbers,
   S3 Tables accepts `format-version = 3` at CREATE — and the run id itself stays out of §6.
   pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-002
-- [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
+- [release.md](release.md) — release engineering, compatibility policy, and capability-based
+  release assembly (planning revision 2026-09-07): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
   the cut-a-tag runbook is [../.agents/skills/publish-pypi/SKILL.md](../.agents/skills/publish-pypi/SKILL.md).

@@ -10,6 +10,9 @@ outcome is recorded.
 
 ## Contents
 
+- [frontier-worker-decision-plan-2026-09-07.md](frontier-worker-decision-plan-2026-09-07.md) —
+  proposed frontier brief preparation/review skills, worker qualification, Rust-first module
+  placement, and pilot decisions; awaiting owner review, with no contract or routing change.
 - [telemetry/](telemetry/map.md) — E-0 inventory, the usage-record schema, and
   wrapper-patch proposals for the four worker adapters.
 - [packets/](packets/map.md) — E-2 compact worker packet format v1, schema,

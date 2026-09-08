@@ -1,5 +1,23 @@
 # map — scripts/
 
+Rust-first placement-plan verification (2026-09-07): existing document and ledger guards,
+plus the boundary and scoped-diff review recorded in the
+[unit ledger](../task/ledgers/completed/rust-first-placement-plan-ledger.md).
+These citations cover documentation evidence; no script behavior or runtime test changes.
+pins: rust-first-placement-plan/C-001, C-002, C-003, C-004
+
+Frontier worker decision-plan verification (2026-09-07): existing map/link and ledger guards,
+plus the source-contract and scoped-diff review recorded in the
+[unit ledger](../task/ledgers/completed/frontier-worker-decision-plan-ledger.md).
+These citations cover documentation evidence; no script behavior or runtime test changes.
+pins: frontier-worker-decision-plan/C-001, C-002, C-003, C-004
+
+Capability-roadmap planning verification (2026-09-07): existing map/link and ledger guards,
+plus the document-domain, policy-preservation, and scoped-diff checks recorded in the
+[unit ledger](../task/ledgers/completed/capability-roadmap-planning-ledger.md#documentation-review).
+These citations cover documentation evidence; no script behavior or runtime test is changed.
+pins: capability-roadmap-planning/C-001, C-002, C-003, C-004, C-005
+
 CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
 1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
 retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` dropped
