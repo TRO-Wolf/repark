@@ -529,6 +529,8 @@ repark-parity slice.
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
+  `EXCEPTIONS` dropped the `sem-0-charter-ledger.md` row on 2026-09-07 when the archive step
+  filed that ledger.
 - `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
   `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the

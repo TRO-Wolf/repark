@@ -1,3 +1,13 @@
+Errata / integration update — 2026-09-07: `main` advanced to `f00ed9ea` after the
+addendum was pushed as `67bad456`. Its ledger archival conflicted only in the completed
+index. The merge preserves main's index plus this PR's two planning entries. The PR diff
+against the new main remains Markdown-only; all runtime, test, dependency, workflow, and
+authority files match main. `make verify` passed again (2,830 passed, 0 failed, 5 ignored),
+and map, ledger, grammar, and compaction guards passed. The full facade/dbt preflight was
+not repeated after this synchronization. The preflight and source-identity evidence below
+remains a record of the earlier revisions, not a claim about another full run. Disk was
+682 GiB free before the integration verification. No change to the proposed FW decisions.
+
 # Frontier worker decision plan — 2026-09-07
 
 Class: ledger. Retires from staging in this documentation unit's departure commit;

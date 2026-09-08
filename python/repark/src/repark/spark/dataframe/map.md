@@ -160,15 +160,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   The styled-vertical warning carries `stacklevel=3` since the move put a wrapper frame
   between the caller and the body (critic r1 F1, 2026-09-07); the pin asserts the caller's file.
   `show` peeks `mapInArrow` bridges with a bounded materialize (no full IPC
-  table, no multiset count on the peek path). The Spark vertical door counts
-  only when the limit may have truncated. The INFO log keeps a row-count
+  table, no multiset count on the peek path). DFCORE-6 (2026-09-07) extends
+  the same peek to eager `__repr__` / `_repr_html_`, which used to run the
+  whole bridge twice (once for the rows, once for the footer count). The
+  Spark vertical door fetches one row past the limit and reads the footer
+  from it instead of counting. The INFO log keeps a row-count
   breadcrumb; the rendered table stays DEBUG-only because row data is PII.
   `truncate` validation refuses bool `n` (an int subclass would silently
   shrink the window), accepts digit strings as width caps, and labels other
   shapes NOT_BOOL per the live oracle. Eager `__repr__` / `_repr_html_` read
   the three `eagerEval` conf keys (runtime then builder), pack Spark
-  showString form, and count only to decide the footer — DFCORE-6 owns
-  removing that count. Styled previews count once, then collect head and tail
+  showString form, fetching one row past the cap and reading the footer from
+  it — no `count()` on the plain preview paths since DFCORE-6 (2026-09-07).
+  The footer text, plural, and cap-edge shapes are unchanged. Styled previews
+  count once, then collect head and tail
   windows only: polars shows all rows at ten or fewer with edges capped at
   five and ellipsis only before a non-empty tail; duckdb keeps at least one
   head row; the tail preview engine-skips and never lets a negative skip
@@ -177,6 +182,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   so the class-level collect spy keeps firing. The module carries its own
   logger; record names move `core` → `display` while message text and levels
   stay identical. pins: dfcore-4b/C-004
+  pins: dfcore-6/C-001, C-002, C-003, C-004
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -272,5 +278,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   source-size default (pins: dfcore-4b/C-005).
   DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;
   stays below the source-size default (pins: dfcore-5/C-005).
+  DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
+  stays below the source-size default (pins: dfcore-6/C-005).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

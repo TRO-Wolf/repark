@@ -2,7 +2,8 @@
 
 Every expected string below was recorded on the pre-slice tree; the move-only
 relocation of ``show`` and its helpers into ``display.py`` must reproduce each
-one byte-identically, with the same ``count()`` tallies.
+one byte-identically. DFCORE-6 retired the vertical footer ``count()``: the
+tally test pins zero on both show doors.
 """
 
 from __future__ import annotations
@@ -323,7 +324,7 @@ def test_show_count_tallies(
     spark: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Vertical-full show counts once; plain show never counts (pre-slice tallies)."""
+    """Vertical-full and plain show never count; the footer reads the extra row."""
     frame = spark.createDataFrame([(1,), (2,), (3,)], "x INT")
     calls: list[str] = []
     original = DataFrame.count
@@ -334,8 +335,7 @@ def test_show_count_tallies(
 
     monkeypatch.setattr(DataFrame, "count", counting)
     _capture_show(frame, 2, vertical=True)
-    assert len(calls) == 1
-    calls.clear()
+    assert calls == []
     _capture_show(frame, 2)
     assert calls == []
 

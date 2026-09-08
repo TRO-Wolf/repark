@@ -36,9 +36,7 @@ def _show(
     to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
     """
     frame._ensure_alive()
-    if frame._map_bridge is not None and not (
-        frame._persist_requested or frame._checkpoint_lazy or frame._cache_view is not None
-    ):
+    if _use_bridge_peek(frame):
         n, cap_m, vertical = _normalize_show_args(frame, n, truncate, vertical)
         limit = max(0, n)
         table = frame._consume_map_in_arrow_batches(max_output_rows=limit)
@@ -55,17 +53,12 @@ def _show(
     style = _resolve_display_style(frame)
     if style == "spark":
         limit = max(0, n)
-        table = frame.limit(limit).to_arrow()
+        table = frame.limit((limit + 1) if vertical else limit).to_arrow()
         if vertical:
-            total_rows: int | None = None
-            if max(0, n) > 0 and table.num_rows >= max(0, n):
-                try:
-                    total_rows = frame.count()
-                except Exception:
-                    total_rows = None
-            rendered = _format_show_vertical(
-                table, truncate_at=cap, n=max(0, n), total_rows=total_rows
-            )
+            has_more = table.num_rows > limit
+            table = table.slice(0, limit)
+            total_rows = limit + 1 if has_more else None
+            rendered = _format_show_vertical(table, truncate_at=cap, n=limit, total_rows=total_rows)
         else:
             rendered = _format_show_table(table, truncate_at=cap)
         shown_rows = table.num_rows
@@ -94,17 +87,15 @@ def _repr(frame: DataFrame) -> str:
     if not _eager_eval_enabled(frame):
         return frame.__str__()
     max_rows, truncate_at = _eager_eval_limits(frame)
-    table = frame.limit(max_rows).to_arrow()
-    rendered = _format_eager_eval_table(table, truncate_at=truncate_at)
-    if table.num_rows >= max_rows:
-        try:
-            total = frame.count()
-        except Exception:
-            total = None
-        if total is not None and total > max_rows:
-            rendered = f"{rendered}\nonly showing top {max_rows} row" + (
-                "s" if max_rows != 1 else ""
-            )
+    if _use_bridge_peek(frame):
+        table = frame._consume_map_in_arrow_batches(max_output_rows=max_rows + 1)
+    else:
+        table = frame.limit(max_rows + 1).to_arrow()
+    has_more = table.num_rows > max_rows
+    shown = table.slice(0, max_rows)
+    rendered = _format_eager_eval_table(shown, truncate_at=truncate_at)
+    if has_more:
+        rendered = f"{rendered}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
     return rendered
 
 
@@ -122,9 +113,14 @@ def _repr_html(frame: DataFrame) -> str | None:
     if not _eager_eval_enabled(frame):
         return None
     max_rows, truncate_at = _eager_eval_limits(frame)
-    table = frame.limit(max_rows).to_arrow()
-    names = list(table.column_names)
-    rows = _table_to_cell_rows(table, truncate_at=None, style="spark")
+    if _use_bridge_peek(frame):
+        table = frame._consume_map_in_arrow_batches(max_output_rows=max_rows + 1)
+    else:
+        table = frame.limit(max_rows + 1).to_arrow()
+    has_more = table.num_rows > max_rows
+    shown = table.slice(0, max_rows)
+    names = list(shown.column_names)
+    rows = _table_to_cell_rows(shown, truncate_at=None, style="spark")
     if truncate_at is not None and truncate_at > 0:
         rows = [[cell[:truncate_at] for cell in row] for row in rows]
     safe_names = [html_module.escape(name, quote=True) for name in names]
@@ -137,14 +133,16 @@ def _repr_html(frame: DataFrame) -> str | None:
         parts.append("<tr>" + "".join(f"<td>{cell}</td>" for cell in safe_cells) + "</tr>")
     parts.append("</table>")
     html = "\n".join(parts)
-    if table.num_rows >= max_rows:
-        try:
-            total = frame.count()
-        except Exception:
-            total = None
-        if total is not None and total > max_rows:
-            html = f"{html}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
+    if has_more:
+        html = f"{html}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
     return html
+
+
+def _use_bridge_peek(frame: DataFrame) -> bool:
+    """Whether previews peek the mapInArrow bridge instead of the engine."""
+    return frame._map_bridge is not None and not (
+        frame._persist_requested or frame._checkpoint_lazy or frame._cache_view is not None
+    )
 
 
 def _eager_eval_enabled(frame: DataFrame) -> bool:

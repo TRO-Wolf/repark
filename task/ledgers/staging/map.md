@@ -5,19 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
-  **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
-  merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
-  PySpark 4.1.2, plus the no-regression held set. `risk_tier: standard`. Branch
-  `review/fnp-8-review`.
-- [dfcore-1-ledger.md](dfcore-1-ledger.md) —
-  **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
-  conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,
-  mapInArrow schema checks to new `udf_schema.py`, grouped-UDF assembly to new
-  `grouped_udf.py`. Move-only: `core.py` 6302 → 5954, `joins_columns.py` 1239 → 1238,
-  export surfaces pinned identical, 6093 pre-existing collected IDs unchanged, 6 added. `risk_tier: standard`.
-  Branch `refactor/dfcore-1`.
-  pins: dfcore-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,
@@ -512,7 +499,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `DYNFLATTEN-READNULL-1`. `risk_tier: standard`. Branch
   `fix/cutover-schema-1`.
   pins: cutover-schema-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [nullability-2-ledger.md](../completed/nullability-2-ledger.md) —
+- [nullability-2-ledger.md](../archive/2026-09/2026-09-06-nullability-2-ledger.md) —
   **NULLABILITY-2 (2026-09-05), complete:** the analyzer's remaining nullability
   and cast residues, Spark-equal — generalized cast nullability, boolean→decimal,
   null-safe equal non-null, reader relax at every depth, tz-naive dtype mapping.
@@ -527,7 +514,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   path. Target `create/100000/tuples_count` ≤ 100 ms. `risk_tier: standard`. Branch
   `perf/facade-cdf-1`.
   pins: perf-facade-cdf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [dfcore-2-ledger.md](dfcore-2-ledger.md) —
+- [dfcore-2-ledger.md](../completed/dfcore-2-ledger.md) —
   **DFCORE-2 (2026-09-07), in flight:** the four UDF select rewrites out of `core.py` —
   scalar and classic to `udf_projection.py`, the window variants to
   `udf_window_projection.py`. Move-only: `core.py` 5954 → 5263, class loses exactly
@@ -535,7 +522,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   preserved plus one pin test, four mutations red existing pins. `risk_tier: standard`.
   Branch `refactor/dfcore-2`.
   pins: dfcore-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [dfcore-3-ledger.md](dfcore-3-ledger.md) —
+- [dfcore-3-ledger.md](../completed/dfcore-3-ledger.md) —
   **DFCORE-3 (2026-09-07), in flight:** the statistics family out of `core.py` —
   six bodies plus the `freqItems` refusal to `statistics.py`. Move-only: `core.py`
   5263 → 5060, `writer_readwriter.py` 1113 → 1111, class dir frozen, package and
@@ -543,7 +530,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   seven mutations red existing pins, collect count 6 == 6. `risk_tier: standard`.
   Branch `refactor/dfcore-3`.
   pins: dfcore-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [dfcore-4a-ledger.md](dfcore-4a-ledger.md) —
+- [dfcore-4a-ledger.md](../completed/dfcore-4a-ledger.md) —
   **DFCORE-4a (2026-09-07), in flight:** sampling out of `core.py` — the three
   sampling bodies plus argument normalization and seed coercion to `sampling.py`.
   Move-only: `core.py` 5060 → 4819, class loses exactly `_prepare_sample_args`,
@@ -552,7 +539,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fixed thousand-row frame. `risk_tier: standard`.
   Branch `refactor/dfcore-4a`.
   pins: dfcore-4a/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [dfcore-4b-ledger.md](dfcore-4b-ledger.md) —
+- [dfcore-4b-ledger.md](../completed/dfcore-4b-ledger.md) —
   **DFCORE-4b (2026-09-07), in flight:** display out of `core.py` — the ten
   show/repr/HTML/eager bodies to `display.py`. Move-only: `core.py` 4819 →
   4539, class loses exactly the six display leavers, package and core gain
@@ -562,7 +549,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `refactor/dfcore-4b`.
   pins: dfcore-4b/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   Critic r1 FAIL on the moved warning's `stacklevel`; served (stacklevel 3, filename pin).
-- [dfcore-5-ledger.md](dfcore-5-ledger.md) —
+- [dfcore-5-ledger.md](../completed/dfcore-5-ledger.md) —
   **DFCORE-5 (2026-09-07), in flight:** `approxQuantile` in one collect per
   frame — the per-probability loop becomes one aggregation over the list form
   of `percentile_approx` (2x3 collects 6 → 1, 4x5 20 → 1, values identical),
@@ -572,3 +559,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`.
   Branch `perf/dfcore-5`.
   pins: dfcore-5/C-001, C-002, C-003, C-004, C-005
+- [dfcore-6-ledger.md](../completed/dfcore-6-ledger.md) —
+  **DFCORE-6 (2026-09-07), in flight:** eager previews fetch N+1 and never
+  `count()` — repr, HTML, and vertical show read the footer from the extra
+  row (1 → 0 counts per door), bridged eager doors peek at most
+  `maxNumRows + 1` UDF rows (1e6-row preview 2,000,000 → 65,536 computed
+  rows, 0.821/0.845 → 0.031/0.031 s), footers and cap-edge shapes preserved,
+  every DFCORE-4b golden byte-identical, DFCORE-4b F2 closed by a non-golden
+  vertical pin. `risk_tier: standard`.
+  Branch `perf/dfcore-6`.
+  pins: dfcore-6/C-001, C-002, C-003, C-004, C-005
+  Critic r1 PASS (2026-09-07); the row-count assertion added to the repr footer pin.

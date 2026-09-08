@@ -3,7 +3,7 @@
 # Unit ledger — PERF-ICE-SCAN-1 · Iceberg `count(*)` stops decoding every column, and small tables scan in parallel
 
 **Date:** 2026-09-05 · **Branch:** `perf/ice-scan-1` · **Base:** `origin/main` `8f40ce46` ·
-**Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md).
 **Path:** STANDARD. **Rubric:** STANDARD. `risk_tier: standard`.
 **Registry:** `PERF-ICE-COUNTSTAR-1` and `PERF-ICE-SCANPART-1` filed FIXED-PENDING-PIN with fork trigger **F-27**.
 **Fork half:** lane `$HOME/repark-lanes/lanes/icescan-fork`, branch `f-27-count-star-projection`, base fork `main` `16639b87c` (F-28).
@@ -17,7 +17,7 @@ the RePark half pins the behaviour behind skip-until-F-27 guards and measures it
 temporary path override.
 
 **Not in this unit:** the fork pin bump (the orchestrator's RP-14 step, own PR,
-[../../../docs/fork-sync.md](../../../docs/fork-sync.md)); the MERGE executor, the
+[../../../docs/fork-sync.md](../../../../docs/fork-sync.md)); the MERGE executor, the
 predicate-DML paths and every other scan consumer, which keep their plans byte-identical;
 `STATUS.md` and `briefs/next-sequence.md`.
 
