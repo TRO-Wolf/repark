@@ -305,7 +305,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
-  `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
+  `call`, and `call_orphan`, plus `session_functions` (SQL-DOOR-SESSION-FN-1: `user()` /
+  `current_user()` / `session_user()` answer the facade identity, `version()` answers the repark
+  string, expression/WHERE/FROM-`t` cells, bare-name column-or-error fences, the broken-call
+  original-error fence, case-insensitive and arity pins; SQL-DOOR-SESSION-FN-1 repair: all four
+  session scalars refuse inline, partitioned, named, and nested window use while `row_number()`
+  and quoted shadow columns remain valid; a lambda query pins the direct Databricks parse path;
+  nonempty and `DISTINCT` argument forms remain on the planner's existing refusal path rather
+  than receiving the window-expression class;
+  pins: sql-door-session-fn-1/C-002, C-003, C-004).
+  `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and
@@ -580,6 +589,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** the same leaf pins the session-user-call sniff
+  (`session_user_sniff_matches_parenthesised_user_calls`,
+  `session_user_sniff_ignores_bare_names_and_lookalikes`).
+  pins: sql-door-session-fn-1/C-003
 
 ## Mapping rule
 

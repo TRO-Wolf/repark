@@ -36,6 +36,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Native ANSI `repark.sql()` does not load this kernel.
 - `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
   pins: fn-fix-1-registry-rows/C-002
+- `session_functions.rs` — **SQL-DOOR-SESSION-FN-1 (2026-09-06):** Spark-door `user` /
+  `current_user` / `session_user` (nullary Immutable Utf8 answering the facade identity
+  `repark`) and `version` (nullary Immutable Utf8 answering `repark-<workspace>`,
+  overwriting DataFusion's `Apache DataFusion …` string the way `spark_log` overwrites
+  `LogFunc`); all four non-nullable. Registered from `register_all`, so the Spark door
+  serves them and the native door keeps DataFusion's `version()`. Kernel `#[cfg(test)]`
+  pins invoke values, arity refuse, and registration.
+  pins: sql-door-session-fn-1/C-002, C-004
 - `spark_initcap.rs` — **FN-FIX-2 (2026-09-04):** Spark `initcap`; a word starts only after
   SPACE (U+0020). `'a-b'` → `'A-b'`. pins: fn-fix-2-string-rows/C-001, C-002, C-004
 - `spark_chr.rs` — **FN-FIX-2 (2026-09-04):** Spark `chr` / `char`; `n % 256`, `''` when

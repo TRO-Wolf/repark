@@ -14,11 +14,11 @@ use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, Logi
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
-    DataType, Expr, NamedWindowExpr, OrderByExpr, OrderByKind, Query, SetExpr, Statement, VisitMut,
-    VisitorMut, WindowType,
+    DataType, Expr, FunctionArguments, NamedWindowExpr, OrderByExpr, OrderByKind, Query, SetExpr,
+    Statement, VisitMut, VisitorMut, WindowType,
 };
 
-use crate::{local_fs_ddl, window_range};
+use crate::{local_fs_ddl, normalize, window_range};
 use repark_core::CatalogRegistry;
 
 /// Plan + execute one passthrough statement with Spark's ORDER BY null-placement defaults.
@@ -34,7 +34,7 @@ pub(crate) async fn execute_passthrough(
     let dialect = crate::dialect_for_executing_parse(sql, session_dialect);
     // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
     crate::collation::refuse_type_position_collation_in_sql(sql)?;
-    let mut statement = state.sql_to_statement(sql, &dialect)?;
+    let mut statement = parse_with_session_user_fallback(&state, sql, dialect)?;
     let mut may_have_bare_range_bound = false;
     match &mut statement {
         DfStatement::Statement(inner) => {
@@ -47,6 +47,8 @@ pub(crate) async fn execute_passthrough(
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
+            restore_bare_session_user_columns(inner);
+            refuse_session_scalar_window_functions(inner)?;
             // SQP-1: rewrite `CAST` to `BYTEA`.
             rewrite_binary_casts(inner);
             // R1: DataFusion accepts only SingleQuotedString inside INTERVAL frame bounds.
@@ -83,6 +85,23 @@ pub(crate) async fn execute_passthrough(
     // Return materialized command results so later collection cannot re-run the write.
     let batches = dataframe.collect().await?;
     ctx.read_batches(batches)
+}
+
+fn parse_with_session_user_fallback(
+    state: &SessionState,
+    sql: &str,
+    dialect: Dialect,
+) -> Result<DfStatement> {
+    match state.sql_to_statement(sql, &dialect) {
+        Ok(statement) => Ok(statement),
+        Err(error) if normalize::sql_may_have_session_user_call(sql) => {
+            match state.sql_to_statement(sql, &Dialect::Databricks) {
+                Ok(retry) => Ok(retry),
+                Err(_) => Err(error),
+            }
+        }
+        Err(error) => Err(error),
+    }
 }
 
 async fn conform_insert_narrowed_ints(
@@ -228,15 +247,111 @@ async fn restate_range_frames_and_replan(
     dialect: &Dialect,
     rewrite: impl FnOnce(&mut Statement),
 ) -> Result<LogicalPlan> {
-    let mut restated = state.sql_to_statement(sql, dialect)?;
+    let mut restated = parse_with_session_user_fallback(state, sql, *dialect)?;
     if let DfStatement::Statement(inner) = &mut restated {
         apply_spark_order_by_defaults(inner);
+        restore_bare_session_user_columns(inner);
+        refuse_session_scalar_window_functions(inner)?;
         // Keep the BINARY→BYTEA rewrite in lockstep: this re-parse starts from the original SQL.
         rewrite_binary_casts(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
     state.statement_to_plan(restated).await
+}
+
+fn restore_bare_session_user_columns(statement: &mut Statement) {
+    struct BareSessionUserColumns;
+
+    impl VisitorMut for BareSessionUserColumns {
+        type Break = std::convert::Infallible;
+
+        fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+            if let Expr::Function(function) = expr
+                && function.args == FunctionArguments::None
+                && function
+                    .name
+                    .0
+                    .last()
+                    .and_then(|part| part.as_ident())
+                    .is_some_and(|ident| {
+                        ident.value.eq_ignore_ascii_case("user")
+                            || ident.value.eq_ignore_ascii_case("current_user")
+                            || ident.value.eq_ignore_ascii_case("session_user")
+                    })
+            {
+                let mut idents = Vec::with_capacity(function.name.0.len());
+                for part in &function.name.0 {
+                    let Some(ident) = part.as_ident() else {
+                        return ControlFlow::Continue(());
+                    };
+                    idents.push(ident.clone());
+                }
+                if idents.len() == 1 {
+                    let Some(only) = idents.pop() else {
+                        return ControlFlow::Continue(());
+                    };
+                    *expr = Expr::Identifier(only);
+                } else {
+                    *expr = Expr::CompoundIdentifier(idents);
+                }
+            }
+            ControlFlow::Continue(())
+        }
+    }
+
+    let mut visitor = BareSessionUserColumns;
+    let _ = statement.visit(&mut visitor);
+}
+
+fn refuse_session_scalar_window_functions(statement: &mut Statement) -> Result<()> {
+    struct SessionScalarWindowProbe {
+        function_name: Option<String>,
+    }
+
+    impl VisitorMut for SessionScalarWindowProbe {
+        type Break = ();
+
+        fn pre_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+            let Expr::Function(function) = expr else {
+                return ControlFlow::Continue(());
+            };
+            let Some(ident) = function.name.0.last().and_then(|part| part.as_ident()) else {
+                return ControlFlow::Continue(());
+            };
+            if function.name.0.len() == 1
+                && function.over.is_some()
+                && matches!(
+                    &function.args,
+                    FunctionArguments::List(args)
+                        if args.args.is_empty()
+                            && args.duplicate_treatment.is_none()
+                            && args.clauses.is_empty()
+                )
+                && matches!(
+                    ident.value.to_ascii_lowercase().as_str(),
+                    "user" | "current_user" | "session_user" | "version"
+                )
+            {
+                self.function_name = Some(ident.value.clone());
+                return ControlFlow::Break(());
+            }
+            ControlFlow::Continue(())
+        }
+    }
+
+    let mut probe = SessionScalarWindowProbe {
+        function_name: None,
+    };
+    if statement.visit(&mut probe).is_break()
+        && let Some(function_name) = probe.function_name
+    {
+        return Err(DataFusionError::Plan(format!(
+            "[UNSUPPORTED_EXPR_FOR_WINDOW] Expression \"{function_name}()\" not supported \
+             within a window function. SQLSTATE: 42P20"
+        )));
+    }
+    Ok(())
 }
 
 /// Inject Spark null-placement defaults into every ORDER BY whose placement is unspecified.
