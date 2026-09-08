@@ -6,9 +6,9 @@ family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-2 · **Date:** 2026-09-01 · **Model:** opus-5 (1M context), Actor ·
 **Branch:** `feat/ex-2-functions-math-bitwise` · **Base:** `dc74a40`
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md),
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md),
 batch roster row 1 (the campaign pilot). **Ruling:** owner, 2026-08-31,
-[release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
+[release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md)
 §"v0.7 — Full example documentation", and the 2026-08-31 ruling that each family
 PR carries its own charter ledger with one clause per batch.
 
@@ -147,7 +147,7 @@ against `math.expm1` at three magnitudes:
 exists not to do: `expm1` is in the API because `exp(x) - 1` cancels away its
 significant digits near zero. The behaviour is consistent with the design
 record — `expm1` is listed under `PY_COMPOSED` in
-[docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md)
+[docs/design/spark-function-parity.md](../../../../docs/design/spark-function-parity.md)
 §4.4, i.e. composed from existing expressions rather than given a kernel — so
 this is a recorded implementation choice with an unrecorded consequence, not a
 surprise regression. Spark's `expm1` is `java.lang.Math.expm1`, which is
@@ -187,11 +187,11 @@ examples is the four new files.
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-0-example-drift-gate-ledger.md](../archive/2026-09/2026-09-02-ex-0-example-drift-gate-ledger.md),
-  [ex-1-class-surfaces-ledger.md](../archive/2026-09/2026-09-02-ex-1-class-surfaces-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-0-example-drift-gate-ledger.md](2026-09-02-ex-0-example-drift-gate-ledger.md),
+  [ex-1-class-surfaces-ledger.md](2026-09-02-ex-1-class-surfaces-ledger.md)
 
 ## Blocker (RESOLVED by orchestrator ruling, 2026-09-01) — the EX-1 pins hardcode the pre-batch backlog count
 

@@ -4,7 +4,7 @@
 
 **Unit:** CTAS-VIEW-1 · **Date:** 2026-09-03 · **Model:** grok-4.6 ·
 **Branch:** `fix/ctas-view-1-conform-stream` · **Base:** `47f1a1d`
-**Registry:** [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) `CTAS-VIEW-1`.
+**Registry:** [docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) `CTAS-VIEW-1`.
 
 **Rubric:** STANDARD. `risk_tier: standard`.
 

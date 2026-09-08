@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-06._
+_Last updated: 2026-09-07._
 
 ## Release state
 
@@ -29,7 +29,10 @@ units — collect()/withColumn/createDataFrame in the binding (FACADE-1, FACADE-
 GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and manifest caches
 (CATALOG-IO-1..3, default ON), parallel CTAS writers with a hash distribution rule
 (WRITEPATH-1, WRITE-DISTRIBUTION-1), count(*) folds and parallel small-table scans (ICE-SCAN-1),
-and the dynamicFlatten null-mask extractor (DYNFLATTEN-2, LISTNULL-1). Release mechanics:
+and the dynamicFlatten null-mask extractor (DYNFLATTEN-2, LISTNULL-1). Post-1.1.1 `main`
+(2026-09-07) adds the DataFrame core decomposition slate (DFCORE-1…6: `core.py` 6,302 → 4,539
+lines behind an identical export surface; PERF-APPROXQUANTILE-1, PERF-EAGER-PREVIEW-1) and FNP-8
+with its after-the-fact review (FNP-8-REVIEW). Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities

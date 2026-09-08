@@ -7,7 +7,7 @@ family PR merges, or when the owner closes the slate row.
 **Unit:** EX-4 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of
 glm-5.3-flash) · **Branch:** `feat/ex-4-functions-strings-a` ·
 **Base:** `0a81b8e` as merged (dispatch base `d7e2c4a`)
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md).
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md).
 **Ruling:** owner, 2026-08-31, v0.7 example documentation.
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
@@ -141,10 +141,10 @@ is 632, this branch after the drop is 605 (632 − 27).
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) BL-17, FN-INITCAP-1, FN-CHR-1, FN-TRIM-CHARS-1
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) BL-17, FN-INITCAP-1, FN-CHR-1, FN-TRIM-CHARS-1
 
 ```yaml
 COVERAGE_ATTESTATION:

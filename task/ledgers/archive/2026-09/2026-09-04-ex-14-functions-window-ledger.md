@@ -3,7 +3,7 @@
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-14 merges, or when the owner closes the slate row.
 
 **Unit:** EX-14 · **Date:** 2026-09-03 · **Model:** glm-5.3-flash · **Branch:** `feat/ex-14-functions-window` · **Base:** `32c7f30`
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster row (9 names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md), batch roster row (9 names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
@@ -143,10 +143,10 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-11-functions-hash-url-random-ledger.md](ex-11-functions-hash-url-random-ledger.md), [ex-10-functions-null-cond-misc-ledger.md](ex-10-functions-null-cond-misc-ledger.md), [ex-9-functions-maps-structs-json-ledger.md](ex-9-functions-maps-structs-json-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-11-functions-hash-url-random-ledger.md](2026-09-04-ex-11-functions-hash-url-random-ledger.md), [ex-10-functions-null-cond-misc-ledger.md](2026-09-04-ex-10-functions-null-cond-misc-ledger.md), [ex-9-functions-maps-structs-json-ledger.md](2026-09-04-ex-9-functions-maps-structs-json-ledger.md)
 
 ## Parameter-level gap found in review
 

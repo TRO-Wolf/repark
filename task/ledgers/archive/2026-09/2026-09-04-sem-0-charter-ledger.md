@@ -4,7 +4,7 @@
 
 **Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `8c660f6` (`main`, post-#191) ·
 **Rows in scope:** `RE-1` — **CLOSED by SEM-1**, so its row is retired from the registry; and
-[`LOG-1`](../../../docs/spark-sql-iceberg-parity.md#log-1--sql-door-log-is-base-10-sparks-is-natural) —
+[`LOG-1`](../../../../docs/spark-sql-iceberg-parity.md#log-1--sql-door-log-is-base-10-sparks-is-natural) —
 **TABLED by the owner**, so its row stands
 
 The low-risk sweep found two ordinary calls on common functions that return a plausible wrong
@@ -14,7 +14,7 @@ invariant deliberately. **The gate was ruled on 2026-08-21** — see below; `RE-
 is tabled.
 
 Everything here was measured on `7d14a6f` against the live PySpark 4.1.2 oracle
-([design §7](../../../docs/design/low-risk-sweep.md)), not inferred from the registry rows.
+([design §7](../../../../docs/design/low-risk-sweep.md)), not inferred from the registry rows.
 
 ## The two units
 
@@ -51,7 +51,7 @@ and the STATUS line that names it.
 `F.regexp_instr(s, pattern, "0")` all accept the string. `regexp_instr` carries
 `lit_indices=frozenset({} if isinstance(idx, Column) else {2})`; `regexp_extract_all` carries none.
 It is a regression from the F-FNP6A-1 remediation, which stripped `lit_indices` entirely instead of
-narrowing `{1, 2}` to `{2}` — see [fnp-6a-regexp-ledger.md](../archive/2026-08/2026-08-21-fnp-6a-regexp-ledger.md) and the
+narrowing `{1, 2}` to `{2}` — see [fnp-6a-regexp-ledger.md](../2026-08/2026-08-21-fnp-6a-regexp-ledger.md) and the
 STATUS entry. Same function, same test pass, cheapest place to catch it.
 
 **Known residual, in or out by the owner's call:** repark's out-of-range message is a generic
@@ -94,7 +94,7 @@ and the dispatch arm has no two-argument case, so `F.log(2.0, col)` fails in Pyt
 Rust. Once `SparkLog` exists it is what both the door and the overload need.
 
 **Scope boundary:** the Spark facade's SQL door only. The native ANSI door (`repark.sql()`) is a
-separate contract per [ADR-0002](../../../docs/adr/0002-two-sql-doors.md), where base-10 `log` is
+separate contract per [ADR-0002](../../../../docs/adr/0002-two-sql-doors.md), where base-10 `log` is
 defensible; changing it needs its own decision and is **out**.
 
 ## Propositions
@@ -144,7 +144,7 @@ Delivery is one branch, one PR, matching the last two campaigns.
 
 **Owner ruling 2026-08-31 (gate pass):** both RE-1 and LOG-1 are fixed to Spark
 semantics. The 2026-08-21 tabling of LOG-1 is lifted. Delivery is
-[sem-1-spark-answer-parity-ledger.md](../archive/2026-09/2026-09-02-sem-1-spark-answer-parity-ledger.md). The
+[sem-1-spark-answer-parity-ledger.md](2026-09-02-sem-1-spark-answer-parity-ledger.md). The
 measured scope in §SEM-1 and §SEM-2 above stands.
 
 ## Unit roster, as ruled
