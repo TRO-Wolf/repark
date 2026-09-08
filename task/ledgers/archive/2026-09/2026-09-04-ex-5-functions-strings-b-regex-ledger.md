@@ -6,7 +6,7 @@ UTF-8 / regex family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-5 · **Date:** 2026-09-03 · **Model:** grok-4.6 (continuation of glm-5.3-flash) ·
 **Branch:** `feat/ex-5-functions-strings-regex` · **Base:** `58c8104` as merged (dispatch base `d7e2c4a`)
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md).
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md).
 **Ruling:** owner, 2026-08-31, v0.7 example documentation; one clause per batch.
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
@@ -206,7 +206,7 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-2-functions-math-bitwise-ledger.md](2026-09-04-ex-2-functions-math-bitwise-ledger.md)

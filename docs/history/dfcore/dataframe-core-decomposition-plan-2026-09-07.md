@@ -97,3 +97,23 @@ order above. Do not memoize analyzed schemas or resolved columns across operatio
 configuration, map bridges, origin overlays and the logical/analyzed schema distinction make a
 blanket cache unsafe, and the existing perf-facade pins already protect the one-logical-schema
 read in column binding.
+
+## 7. Outcome (closed 2026-09-07)
+
+Every unit landed the same day, each on a critic PASS from a fresh Muse Spark 1.3 session
+over a scratch clone, each squash verified tree-equal to the reviewed head.
+
+| Unit | PR | `core.py` after | Critic | Notes |
+|---|---|---|---|---|
+| DFCORE-1 | #414 | 5,954 | PASS | NaN-key pin and identity asserts folded in |
+| DFCORE-2 | #415 | 5,263 | PASS | |
+| DFCORE-3 | #417 | 5,060 | PASS | two pin gaps handed to DFCORE-5 |
+| DFCORE-4a | #418 | 4,819 | PASS | one pin gap handed to DFCORE-5 |
+| DFCORE-4b | #419 | 4,539 | FAIL → served | a moved `warnings.warn` needed `stacklevel` 3 behind the wrapper |
+| DFCORE-5 | #420 | 4,539 | PASS | `approxQuantile` 6 → 1 and 20 → 1 collects; the three pin gaps closed |
+| DFCORE-6 | #421 | 4,539 | PASS | eager previews never `count()`; bridged UDF rows 2,000,000 → 65,536 |
+
+`core.py` 6,302 → 4,539 lines behind an identical export surface (the snapshot pin held every
+slice). Lesson carried forward: any body moved behind a wrapper re-derives its warning and
+logger `stacklevel` and pins the caller's filename. This document is archived under
+`docs/history/dfcore/`; current state is STATUS.md.

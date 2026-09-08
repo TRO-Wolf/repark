@@ -59,6 +59,10 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
   ledgers ([task/port/](../../task/port/map.md)) stay live. The recorded census runs were evicted
   from the tree on 2026-08-23 and are reachable by SHA ([docs/port/census.md](../port/census.md) §7).
 
+- [dfcore/](dfcore/map.md) — the DataFrame core decomposition slate (2026-09-07, one day): the
+  plan with its evidence ledger, owner rulings and outcome table — `core.py` 6,302 → 4,539 lines over
+  five move slices and two perf units (DFCORE-1…6, PRs #414–#421), every one critic-reviewed.
+
 ## Debug
 
 | Symptom | First check |
@@ -67,4 +71,5 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 | A link into `task/p*-ledger.md` or `briefs/phase-*.md` does not resolve | Those moved here on 2026-08-09 (same basename) — see [port-v2/README.md](port-v2/README.md) "Where the ledgers used to live" |
 | A link into `briefs/frontdoor-campaign.md`, `docs/design/agent-agnostic-frontdoor.md` or `task/fd3-ledger.md` does not resolve | Those moved to [frontdoor/](frontdoor/map.md) on 2026-08-10 (same basename) |
 | A link into `task/h1*-ledger.md`, `task/g*-ledger.md`, `task/n2-merge-ledger.md`, or `task/g4-artifacts/` does not resolve | Those moved to [hardening-h1/](hardening-h1/map.md) on 2026-08-11 (same basename; mid-campaign) |
+| A ledger cites `task/roadmap/epic-term/dataframe-core-decomposition-plan-2026-09-07.md` | It moved to [dfcore/](dfcore/map.md) on 2026-09-07 when the slate closed (same basename) |
 | An archived claim contradicts today's behavior | The archive is dated; [STATUS.md](../../STATUS.md) wins |

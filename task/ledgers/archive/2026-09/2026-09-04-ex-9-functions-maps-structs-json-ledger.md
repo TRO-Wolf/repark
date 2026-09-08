@@ -8,7 +8,7 @@ owner closes the slate row.
 
 **Wall-clock / cost:** GLM leg: started 2026-09-03 00:36 UTC, died on transport errors twice; Muse Spark continuation: ~8 min, free tier
 
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md),
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md),
 batch roster row 9 (the map, struct and JSON family). **Ruling:** owner,
 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md)
 §"v0.7 — Full example documentation", and the 2026-08-31 ruling that each family
@@ -227,10 +227,10 @@ names, 4 files.
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-2-functions-math-bitwise-ledger.md](2026-09-04-ex-2-functions-math-bitwise-ledger.md)
 
 ```yaml
 COVERAGE_ATTESTATION:

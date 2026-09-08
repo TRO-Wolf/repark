@@ -65,7 +65,7 @@ accuracy rejection/acceptance pins.
 # Charter ledger — PERF-APPROXPCT-1 · the Greenwald-Khanna sketch behind `percentile_approx`
 
 **Date:** 2026-09-05 · **Branch:** `perf/approxpct-1` · **Base:** `origin/main`
-`bc7c76cc` · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`bc7c76cc` · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `PERF-APPROXPCT-1`, `FN-APPROXPCT-ACC-1`, `WIN-SLIDE-PCT-ACC-1`.
 

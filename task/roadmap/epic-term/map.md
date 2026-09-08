@@ -23,13 +23,8 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   and Iceberg unification. Records the owner's JVM-free production constraint, the recommended
   PostgreSQL-to-Iceberg first milestone, recovery and performance evidence, open decisions,
   and the pickup procedure. Implementation scope audit is pending.
-- [dataframe-core-decomposition-plan-2026-09-07.md](dataframe-core-decomposition-plan-2026-09-07.md)
-  — **the `core.py` decomposition slate (ruled 2026-09-07):** a re-measured evidence ledger
-  (6,302 lines, 166 methods, comments 8% of the file), three owner rulings (worker comment
-  rule lifted for these units only; docstrings out of scope; the stale density-gate sentence
-  corrected), the delegation shape, the DFCORE-1…6 unit table with acceptance per slice
-  (exact CAP-1 drops, an export-snapshot pin, the freeze test, the parity harness) and the two
-  perf units kept out of the moves.
+- **DataFrame core decomposition (2026-09-07) — closed the same day**, all seven units merged;
+  the plan is archived at [docs/history/dfcore/](../../../docs/history/dfcore/map.md).
 - [v1-0-iceberg-v3-northstar.md](v1-0-iceberg-v3-northstar.md) — **the v1.0 north star
   (owner-set 2026-08-23):** full production-grade Iceberg format-v3 — the four pillars, the
   acceptance matrix that gates the v1.0 tag, and the two-lane path (guarded RP-2 salvage — landed; fork

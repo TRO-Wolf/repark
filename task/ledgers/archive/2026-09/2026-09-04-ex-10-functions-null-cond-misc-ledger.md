@@ -6,9 +6,9 @@ family PR merges, or when the owner closes the slate row.
 
 **Unit:** EX-10 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (continuation of glm-5.3-flash) ·
 **Branch:** `feat/ex-10-functions-null-conditional` · **Base:** `84c1801` · **Wall-clock:** 2026-09-03 03:10–03:55 UTC · **Cost:** ~$0.40
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md),
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md),
 batch roster row EX-10. **Ruling:** owner, 2026-08-31,
-[release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md)
+[release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md)
 §"v0.7 — Full example documentation", and the 2026-08-31 ruling that each family
 PR carries its own charter ledger with one clause per batch.
 
@@ -211,10 +211,10 @@ Each example file as a script:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-2-functions-math-bitwise-ledger.md](2026-09-04-ex-2-functions-math-bitwise-ledger.md)
 
 ```yaml
 COVERAGE_ATTESTATION:

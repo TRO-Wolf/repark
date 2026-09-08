@@ -3,7 +3,7 @@
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-12 merges, or when the owner closes the slate row.
 
 **Unit:** EX-12 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (batch, continuation of glm-5.3-flash); glm-5.3-flash (remediation) · **Branch:** `feat/ex-12-functions-aggregates-a` · **Base:** `a0cd39e` (dispatch base `84c1801`)
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster aggregate (a) (30 names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md), batch roster aggregate (a) (30 names). **Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
 **Writable paths:** `docs/examples/functions/`, `docs/examples/backlog.txt`, the `BACKLOG_BASELINE` constant in `scripts/check_example_coverage.py`, lockstep `map.md` files, and this ledger with its `staging/map.md` row. Closed: `crates/`, `python/repark/src/`, every other `scripts/` line, `.github/`, `STATUS.md`, every other ledger, `briefs/next-sequence.md`.
@@ -152,9 +152,9 @@ Before: `69 covered; 842 backlog; 15 examples`. After: `96 covered (+27); 815 ba
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
 - Oracle harness: `python/repark/tests/_live_parity.py` (`build_spark_iceberg_engine`)
 
 ```yaml

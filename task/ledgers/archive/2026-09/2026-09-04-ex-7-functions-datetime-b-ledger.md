@@ -3,8 +3,8 @@
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (the orchestrator's departure move). This file closes when EX-7 merges, or when the owner closes the slate row.
 
 **Unit:** EX-7 · **Date:** 2026-09-03 · **Model:** muse-spark-1.2-contributor (batch, continuation of glm-5.3-flash); glm-5.3-flash (remediations 1–2) · **Branch:** `feat/ex-7-functions-datetime-b` · **Base:** `a0cd39e` (dispatch base `84c1801`)
-**Slate:** [briefs/example-backfill.md](../../../briefs/example-backfill.md), batch roster row batch b (28 names: unix-time, timestamp construction and partition transforms).
-**Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
+**Slate:** [briefs/example-backfill.md](../../../../briefs/example-backfill.md), batch roster row batch b (28 names: unix-time, timestamp construction and partition transforms).
+**Ruling:** owner, 2026-08-31, [release-roadmap-2026-08-29.md](../../../roadmap/epic-term/release-roadmap-2026-08-29.md) §"v0.7 — Full example documentation".
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
@@ -264,8 +264,8 @@ COVERAGE_ATTESTATION:
 
 ## Pointers
 
-- Up: [map.md](../staging/map.md)
-- Slate: [../../../briefs/example-backfill.md](../../../briefs/example-backfill.md)
-- Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
-- Sibling: [ex-2-functions-math-bitwise-ledger.md](ex-2-functions-math-bitwise-ledger.md)
+- Up: [map.md](../../staging/map.md)
+- Slate: [../../../briefs/example-backfill.md](../../../../briefs/example-backfill.md)
+- Gate: [../../../scripts/check_example_coverage.py](../../../../scripts/check_example_coverage.py)
+- Sibling: [ex-2-functions-math-bitwise-ledger.md](2026-09-04-ex-2-functions-math-bitwise-ledger.md)
 

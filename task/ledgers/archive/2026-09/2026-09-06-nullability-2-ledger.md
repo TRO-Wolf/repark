@@ -107,10 +107,10 @@ serves, and files:
 
 **Unit:** NULLABILITY-2 · **Date:** 2026-09-05 · **Model:** muse-spark-1.3 ·
 **Branch:** `fix/nullability-2` · **Base:** `main` `bc7c76cc`
-**Registry:** [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
+**Registry:** [docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
 `CAST-NULL-1`, `CAST-BOOL-DEC-1`, `DEC-9` (remainder), `G6-4`, `G12-1`, `G12-2`,
 `CUTOVER-NULLDEPTH-1`, `READ-TSNTZ-DTYPE-1`.
-**Continues:** [cutover-schema-1-ledger.md](../staging/cutover-schema-1-ledger.md) (rules R-1..R-6,
+**Continues:** [cutover-schema-1-ledger.md](../../staging/cutover-schema-1-ledger.md) (rules R-1..R-6,
 blast-radius method, live-cell rules).
 
 **Rubric:** STANDARD. `risk_tier: elevated` — analyzer-wide rule changes.

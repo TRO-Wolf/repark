@@ -1,7 +1,7 @@
 # Charter ledger — TYPES-1 · the SQL door's Arrow types follow Spark
 
 **Date:** 2026-09-05 · **Branch:** `fix/types-1` · **Base:** `origin/main`
-`6eaccd5e` · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`6eaccd5e` · **Model:** muse-spark-1.3 · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `V3-COV-8` (width half) BACKLOG → **FIXED**; `BL-8` BACKLOG → **FIXED**;
 `G5-RANK-TYPE-1/2/3` BACKLOG → **FIXED**; `UNIX-1` BACKLOG → **FIXED**; `TY-3` re-measured

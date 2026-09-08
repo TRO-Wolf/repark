@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-04 · **Branch:** `feat/rp-11-repin-f24` · **Base:** `origin/main`
 `467ce26` · **Model:** grok-4.6 · **Policy:**
-[../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
+[../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[../completed/rp-9-repin-f23-ledger.md](rp-9-repin-f23-ledger.md).
+[../completed/rp-9-repin-f23-ledger.md](2026-09-04-rp-9-repin-f23-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
