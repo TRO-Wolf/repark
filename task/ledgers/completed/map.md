@@ -27,6 +27,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
   PySpark 4.1.2, plus the no-regression held set. `risk_tier: standard`. Branch
   `review/fnp-8-review`.
+- [sql-door-session-fn-1-ledger.md](sql-door-session-fn-1-ledger.md) —
+  **SQL-DOOR-SESSION-FN-1 (2026-09-08), complete:** `user()`, `current_user()`,
+  `session_user()` and `version()` on the Spark SQL door — the parenthesised user calls
+  parse via a sniff-gated Databricks retry and answer the facade strings (`repark`;
+  `repark-<workspace>`). Zero-argument window use refuses with Spark's class and SQLSTATE;
+  bare forms keep column-or-error behavior and the native door remains unchanged.
+  `risk_tier: standard`. Branch `fix/sql-door-session-fn-1`.
+  pins: sql-door-session-fn-1/C-001, C-002, C-003, C-004, C-005
 
 ## Pointers
 - Up: [../map.md](../map.md)

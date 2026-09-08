@@ -29,6 +29,7 @@ pub mod lambda_rebind;
 pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
+pub mod session_functions;
 pub mod session_time_zone;
 pub mod spark_chr;
 pub mod spark_elt;
@@ -50,14 +51,12 @@ pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
 pub mod validate;
-pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
-use std::sync::Arc;
-
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::{LogicalPlan, ScalarUDF};
-use datafusion::optimizer::AnalyzerRule;
-use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
+use datafusion::optimizer::{AnalyzerRule, analyzer::type_coercion::TypeCoercion};
 use datafusion::prelude::SessionContext;
+pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
+use std::sync::Arc;
 
 /// Return this crate's Spark date-function shims for inspection or registration.
 #[must_use]
@@ -131,6 +130,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_elt::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    session_functions::register(ctx);
     validate::register(ctx);
     try_invert::register(ctx);
     higher_order::register(ctx);

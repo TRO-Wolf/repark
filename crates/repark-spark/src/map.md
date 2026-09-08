@@ -22,6 +22,11 @@ pins: rp-4-fork-repin/C-005, C-006
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
+- `spark_ast.rs` — Spark passthrough parsing, AST defaults, eager analysis, and the
+  SQL-DOOR-SESSION-FN-1 repair refusal for window use of `user()`, `current_user()`,
+  `session_user()`, and `version()` before DataFusion plans the expression. The refusal runs
+  after the Generic fallback and the direct Databricks lambda parse.
+  pins: sql-door-session-fn-1/C-001, C-004
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests).
@@ -199,6 +204,11 @@ pins: rp-4-fork-repin/C-005, C-006
   Spark door parses `x -> y` lambdas without the session-wide FNP-4b flip. Unit pins are
   inline in the module; door pins are [`tests/lambda_door.rs`](tests/map.md).
   pins: fnp-8/C-004
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** `sql_may_have_session_user_call` sniffs an
+  unquoted `user` / `current_user` / `session_user` word followed by `(` (whitespace and
+  comments skipped; quoted words, lookalike names, string literals, and bare uses stay
+  silent) to gate the passthrough's Databricks retry.
+  pins: sql-door-session-fn-1/C-003
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
@@ -232,6 +242,17 @@ pins: rp-4-fork-repin/C-005, C-006
   **FNP-8 (2026-09-06):** the EXECUTING parse takes `normalize::dialect_for_executing_parse`
   (Databricks when the SQL carries a lambda arrow, else the session dialect), so HOF calls
   with `x -> y` plan to the registered kernels. pins: fnp-8/C-004
+  **SQL-DOOR-SESSION-FN-1 (2026-09-06):** the executing parse is Generic, which reads
+  `user` / `current_user` / `session_user` as paren-less special functions and rejects the
+  `()` form before the function router runs (sqlparser 0.62
+  `parse_expr_prefix_by_reserved_word`, PostgreSql|Generic arm — the pinned parser cannot
+  change, so the fix sits here). On a Generic parse failure the passthrough retries with
+  the Databricks dialect when the `normalize` sniff fires, and returns the ORIGINAL error
+  when the retry also fails; the range-frame restate path shares the helper. A second
+  rewrite restores bare `user` / `current_user` / `session_user` no-paren function nodes to
+  (compound) identifiers, so registration of the new UDFs cannot flip a shadowing column
+  to the session string — bare uses keep today's column-or-error behavior exactly.
+  pins: sql-door-session-fn-1/C-003
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval

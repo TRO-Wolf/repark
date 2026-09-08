@@ -291,3 +291,44 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
             .unwrap_or_else(|err| panic!("the statement valve must NOT fire on {sql:?}: {err}"));
     }
 }
+
+#[test]
+fn session_user_sniff_matches_parenthesised_user_calls() {
+    for sql in [
+        "SELECT user()",
+        "SELECT current_user()",
+        "SELECT session_user()",
+        "SELECT USER()",
+        "SELECT Current_User ()",
+        "SELECT concat(user(), 'x')",
+        "SELECT id FROM t WHERE current_user() = 'x'",
+        "SELECT user /* trailing */ ()",
+        "SELECT session_user\n()",
+    ] {
+        assert!(
+            crate::normalize::sql_may_have_session_user_call(sql),
+            "the sniff must fire on {sql:?}"
+        );
+    }
+}
+
+#[test]
+fn session_user_sniff_ignores_bare_names_and_lookalikes() {
+    for sql in [
+        "SELECT user",
+        "SELECT current_user FROM t",
+        "SELECT users()",
+        "SELECT my_user()",
+        "SELECT 'user('",
+        "SELECT \"user\"()",
+        "SELECT t.user FROM t",
+        "SELECT version()",
+        "CREATE USER foo",
+        "SELECT 1",
+    ] {
+        assert!(
+            !crate::normalize::sql_may_have_session_user_call(sql),
+            "the sniff must NOT fire on {sql:?}"
+        );
+    }
+}

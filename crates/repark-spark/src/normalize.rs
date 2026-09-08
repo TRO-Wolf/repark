@@ -155,6 +155,31 @@ fn sql_has_lambda_arrow(sql: &str) -> bool {
     false
 }
 
+pub(crate) fn sql_may_have_session_user_call(sql: &str) -> bool {
+    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
+        return false;
+    };
+    let mut index = 0;
+    while index < tokens.len() {
+        if let Token::Word(word) = &tokens[index]
+            && word.quote_style.is_none()
+            && (word.value.eq_ignore_ascii_case("user")
+                || word.value.eq_ignore_ascii_case("current_user")
+                || word.value.eq_ignore_ascii_case("session_user"))
+        {
+            let mut next = index + 1;
+            while next < tokens.len() && matches!(tokens[next], Token::Whitespace(_)) {
+                next += 1;
+            }
+            if matches!(tokens.get(next), Some(Token::LParen)) {
+                return true;
+            }
+        }
+        index += 1;
+    }
+    false
+}
+
 /// Parse one statement with Spark-isms normalized.
 /// # Errors
 /// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
