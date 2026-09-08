@@ -1,28 +1,102 @@
-# Release roadmap — v0.6 through 3.0
+# Capability roadmap — engine, server, and shared operation
 
 **Set 2026-08-29 · the owner's ruling is the merge of the change that added this file.**
-**Retires:** a release section leaves for [../mid-term/](../mid-term/map.md) when an intake
-evaluates it into units (this bin holds direction, not unit lists); a section retires when its
-tag ships. The v1.0 section is a pointer — the v1.0 definition's single home stays
+**Class:** campaign. **Planning revision: 2026-09-07.** A capability section moves to
+[../mid-term/](../mid-term/map.md) when an intake evaluates it into units. Its campaign closes
+when its acceptance evidence is approved and its record is archived under
+[docs/history/](../../../docs/history/map.md). Publishing a package version alone does not
+close a capability. This file retires when its remaining capabilities are accepted or explicitly
+superseded. The format-v3 definition's single home stays
 [v1-0-iceberg-v3-northstar.md](v1-0-iceberg-v3-northstar.md).
 
-**The ruling.** The three major versions are three promises: **1.0 the format promise** (Iceberg
-v3 correct end to end), **2.0 the API promise** (frozen native door, semver, a server any driver
-can reach), **3.0 the trust promise** (a server safe to expose to people and systems you do not
-fully trust). The SQL door is the primary interface: every configured source — Iceberg catalog,
+**The direction.** The three capability groups are the **format foundation**, **server access
+and native API maturity**, and **shared operation with explicit trust boundaries**. Frozen API
+protection already applies under [the versioning policy](../../../docs/release.md#versioning-policy);
+server delivery does not start that protection. The SQL door is the primary interface:
+every configured source — Iceberg catalog,
 database, remote engine — is one name in one namespace, and `repark.sql()` queries across them
 with no per-source function. [PROJECT.md](../../../PROJECT.md) states intent and points here;
 [STATUS.md](../../../STATUS.md) stays the home of current state.
 
-Current shipped release when set: **v0.5.0** (2026-08-20). Shipped as of 2026-09-04: **v1.0.1** — [STATUS.md](../../../STATUS.md) Release state.
+Published versions and delivered subsets: [STATUS.md](../../../STATUS.md#release-state).
 
-**Numbering convention.** Each heading is a release tag. Inside the 1.x and 2.x sections the
-item number is the minor version (`1.x` item 3 = **v1.3**). Order within a section is
-priority order, not strict dependency order; dependencies are called out where they exist.
+## Capability identifiers and legacy labels
+
+**Owner-approved planning change, 2026-09-07:** plan by the capability IDs below. Assign package
+versions when assembling a concrete release under
+[release engineering](../../../docs/release.md#capability-milestones-and-release-assembly).
+One capability may span several releases; a release may carry accepted slices from several
+capabilities. Each slice still needs its own scope and evidence.
+
+The existing numbered headings, table rows, and cross-references below are retained as
+**legacy scope labels**, so existing briefs and design-card links still resolve. Prospective
+numbers in those sections no longer reserve tags, imply delivery dates, or certify completion.
+This interpretation supersedes the old heading-equals-tag rule and future tag assignments in
+the dated Q&A. Actual published tags and their history do not change. The architectural order,
+scope exclusions, and explicit dependencies remain; moving a capability is an intake decision.
+
+| Capability ID | Legacy label | Scope home below |
+|---|---|---|
+| CAP-DML | 0.6 | Iceberg DML remainder |
+| CAP-FORMAT-V3 | 1.0 | Format-v3 acceptance definition |
+| CAP-EXAMPLES | 1.1 | Executable examples and coverage gate |
+| CAP-DATASETS | 1.2 | Adversarial dataset suite |
+| CAP-MEMORY | 1.3 | Spill and memory-failure evidence |
+| CAP-CONFIG | 1.4 | Configuration and named sources |
+| CAP-FUNCTION-TA | 1.5 | Spark-function and technical-analysis fixes |
+| CAP-WINDOW-FLATTEN | 1.6 | Window and nested-data performance |
+| CAP-IO | 1.7 | Native I/O parity |
+| CAP-EXPRESSIONS | 1.8 | Native expressions and Polars oracle |
+| CAP-SPARK-PARITY | 1.9 | PySpark function and transformation parity |
+| CAP-CONNECTORS | 1.10 | Database access and federated statements |
+| CAP-DBT | 1.11 | dbt integration and profile support |
+| CAP-SPARK-CONNECT | 1.12 | Spark Connect and shared server core |
+| CAP-MULTI-WRITER | 1.13 | Multi-writer Iceberg and REST catalogs |
+| CAP-SERVER-ACCESS | Both 2.0 rows | Flight SQL and broader native API stabilization |
+| CAP-MAINTENANCE | 2.1 | Maintenance policy |
+| CAP-CHANGE-READS | 2.2 | Incremental reads and bounded micro-batch interface |
+| CAP-CDC | 2.3 | Native database change ingestion |
+| CAP-MATERIALIZED-VIEWS | 2.4 | Incremental materialized views and result cache |
+| CAP-FLEET | 2.5 | Fleet-parallel workloads |
+| CAP-ML | 2.6 | Out-of-core ML |
+| CAP-OBSERVABILITY | 2.7 | Query diagnostics, traces, and metrics |
+| CAP-DUCKDB-ORACLE | 2.8 | DuckDB function comparison leg |
+| CAP-SUBSTRAIT | 2.9 | Substrait input and Ibis integration |
+| CAP-SHARED-TRUST | 3.0 | Shared server authorization, isolation, audit, and deployment |
+| CAP-FORMAT-V4 | Conditional 3.0 or later | Spec-dependent candidate; no release commitment |
+
+Use these IDs in new intakes and worker briefs. Link the relevant scope section and current
+evidence rather than copying the roadmap into each brief. Historical design-card numbers remain
+lookup aids; an old version label is never evidence that work still needs implementation.
+
+## Reconcile before scheduling
+
+As of this planning review on 2026-09-07, the old slots no longer describe release contents.
+Resolve each affected capability against its existing evidence home:
+
+| Capability | Required pickup check | Evidence home |
+|---|---|---|
+| CAP-EXAMPLES | Distinguish the example gate and shipped examples from completion of the full backfill. | [STATUS: example campaign](../../../STATUS.md#active-workstreams) and [example inventory](../../../docs/examples/map.md) |
+| CAP-MEMORY | Consume the existing spill matrix; scope residual failures separately from the measurement task. | [Spill baseline](../../../docs/perf/spill-matrix-baseline.md) |
+| CAP-DBT | Distinguish the shipped in-repo adapter path from broader profile integration and separately scheduled acceptance. | [STATUS: release state and dbt workstream](../../../STATUS.md) |
+| CAP-SERVER-ACCESS | Preserve the existing freeze; enumerate only the additional API and protocol acceptance obligations. | [Versioning policy](../../../docs/release.md#versioning-policy) |
+
+The ordered execution queue remains [next-sequence.md](../../../briefs/next-sequence.md).
+Check a queued unit against merged evidence before starting it. This roadmap is not a second
+status tracker and does not mark an entire capability accepted because one subset shipped.
+
+The [Rust unification brief](rust-unification-implementation-brief-2026-09-04.md) remains a
+proposal for wider CDC and streaming contracts. Its old release references use the same mapping;
+this planning change does not approve those implementation decisions or change agent routing.
 
 ---
 
 ## Pre-1.0 — close the gaps that would otherwise float
+
+Historical baseline, recorded 2026-08-29 and renumbered 2026-09-03. The status words and fork
+pins in this section describe that baseline, not current work. Current RePark state is in
+[STATUS.md](../../../STATUS.md); fork capability status belongs only to the fork's
+`docs/parity/GAP_MATRIX.md` and `docs/ENGINE_CONTRACT.md` at the consumed pin.
 
 **Ruling 2026-09-03:** the owner cut v1.0.0 at the north-star gate ahead of the 0.x ladder.
 v0.7 → 1.1, v0.8 → 1.2, v0.9 → 1.3, v0.10 → 1.4; former 1.1–1.9 become 1.5–1.13.
@@ -66,9 +140,9 @@ Fork housekeeping surfaced by the same report (not a 0.6 gate): fork QC #242 nev
 ## v1.0 — Production-grade Iceberg format-v3 (the north star)
 
 Owner ruling 2026-08-23; charter and acceptance gate in
-`task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`. Deletion vectors, row lineage, the v3
-types, both AWS catalogs live. The remaining 1.1–1.4 items (was v0.7–v0.10) run in parallel
-with later 1.x work; they are simply what tags next.
+`task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`. That definition owns the acceptance gate
+and declared exclusions. The other engine capabilities may proceed in parallel where their
+dependencies permit; their legacy labels do not determine what tags next.
 
 ## 1.x — parity, connectors, and the first server
 
@@ -76,13 +150,13 @@ with later 1.x work; they are simply what tags next.
 
 Two deliverables, not one:
 
-1. **Backfill** — an executable worked example for every public name that exists at v1.1:
+1. **Backfill** — an executable worked example for every public name in the accepted example roster:
    every `F.*` function, every DataFrame method, every TA kernel, every reader/writer.
    Ships as repo artifacts and runnable notebooks.
 2. **The drift gate** — CI fails when a public name has no executable example.
 
-The gate is what keeps 1.1 from rotting: v1.7–v1.9 triple the public surface, and each of
-those releases ships its own examples as part of its done gate rather than re-doing 0.7.
+The gate keeps coverage current as I/O, expression, and Spark-parity work extends the surface.
+Each added surface ships its examples as part of its done gate.
 
 **Additions (proposed 2026-08-31; the ruling is this change's merge).**
 
@@ -138,10 +212,11 @@ Every dataset ≥ 1M rows; generators checked in, data never committed as blobs.
 
 ### v1.3 — Never-OOM truth (was v0.9)
 
-The spill-coverage spike PROJECT.md still marks "pending". Output is a spill-coverage matrix
-(which operators spill, which do not, how each fails past the pool), including the W-3 window
-row. Lands before v1.6 so the window perf work starts from measured facts. No product change
-beyond documentation and pins.
+The scope is a spill-coverage matrix: which operators spill, which do not, and how each fails
+past the pool, including the W-3 window row. Consume the
+[existing measurements](../../../docs/perf/spill-matrix-baseline.md) before planning new work.
+CAP-WINDOW-FLATTEN uses that evidence. Measurement and pins do not establish a universal
+process-memory guarantee; operator fixes require their own scoped units.
 
 ### v1.4 — `repark.toml`: one configuration file (was v0.10)
 
@@ -256,31 +331,31 @@ Semantics to pin in the charter:
 
 ---
 
-| Ver | Item | Notes and agreed scope |
+| Legacy slot | Item | Notes and agreed scope |
 |---|---|---|
 | **1.5** | FNP fixes + TA fixes and optimizations | (was 1.1) Continues the FNP campaign (FNP-15/16 next) and the golden-safe TA perf campaign. |
-| **1.6** | Window-function performance + a fully optimized, bug-free `dynamicFlatten` | (was 1.2) W-0…W-2 from the 2026-08-23 intake, measured against the v1.2 nested suite and the v1.3 spill matrix. |
+| **1.6** | Window-function performance + measured `dynamicFlatten` correctness and optimization | (was 1.2) W-0…W-2 from the 2026-08-23 intake, measured against the nested suite and spill matrix. Intake enumerates semantic cases and workload targets; no universal bug-free or optimal-speed claim. |
 | **1.7** | One-to-one **I/O parity with Polars** | (was 1.3) Excludes non-native Polars integrations (PyIceberg, Delta via `deltalake`), Hive metastore, Unity, HuggingFace. **Hive-partitioned directory reads are in** (DataFusion provides them). Absorbs two named differentiators — first-class Excel read/write and the smart-CSV / inference readers — name them explicitly in the charter. |
 | **1.8** | One-to-one **functions, expressions, transformations parity with Polars** | (was 1.4) With 1.7, this is the **native lazy door maturing** far past today (`scan_*` / `sink_*`, expression API). State that scope in the charter — it is the real size of the item. **The Polars leg of the cross-engine function matrix lands here as the proof** (ruled R-2). |
 | **1.9** | One-to-one **functions and transformations parity with PySpark** | (was 1.5) Mostly the FNP campaign continuing over the 2,509-pin cohort; closer than 1.8 and may ride alongside 1.5. |
 | **1.10** | **Postgres, SQL Server, Trino** integration — reads *and* writes | (was 1.6) **Acceptance includes a federated statement**: one `repark.sql()` joining an Iceberg table, a Postgres table and a Trino table, with `EXPLAIN` showing the pushdown boundary per source. Pure Rust, no JVM: `tokio-postgres`/`sqlx`, `tiberius` (TDS), Trino HTTP. **Read bar** = ConnectorX's design: partitioned parallel reads on a partition column straight into Arrow; acceptance is a benchmark of the same query vs ConnectorX and pandas+SQLAlchemy, within a stated factor of ConnectorX. **Writes**: bulk path default (`COPY … BINARY`, TDS bulk insert, batched Trino `INSERT`) with a per-call `bulk` / `row` flag; row mode is the fallback for types bulk cannot carry. Reference ConnectorX and ADBC. Connections come from v1.4. |
 | **1.11** | Full dbt support | (was 1.7) `dbt-repark` (sibling repo; M0–M2a merged, AWS gates owner-scheduled). Targets can read v1.4 profiles. |
 | **1.12** | **Spark Connect server** | (was 1.8) Unmodified `pyspark` clients via `spark.remote(...)` — zero import changes. Built owned, not Sail. This is a gRPC daemon with sessions, cancellation and per-query resource policy, so it **fires the ADR-0005 session-decomposition trigger here, not at 2.0**: build the server core once (session manager, cancellation, resource policy), Spark Connect is protocol #1, Flight SQL at 2.0 is protocol #2 on the same core. PROJECT.md's "no daemon" becomes "no daemon *required*". |
-| **1.13** | **Multi-writer Iceberg** + REST catalog first-class | (was 1.9) Lift the single-writer-per-table rule (OCC retry policy, serializable isolation done right); REST alongside Glue / S3 Tables. Correctly placed *before* the 2.0 freeze — standing-rule changes go before the API promise, not after. |
+| **1.13** | **Multi-writer Iceberg** + REST catalog first-class | (was 1.9) Lift the single-writer-per-table rule (OCC retry policy, serializable isolation done right); REST alongside Glue / S3 Tables. Review shared-writer and catalog assumptions before CAP-SERVER-ACCESS acceptance; existing frozen APIs remain protected throughout. |
 
 ---
 
 ## 2.x — the server release and the API promise
 
-The major version is the promise. 1.0 was the **format promise** (Iceberg v3 correct end to end);
-2.0 is the **API promise** (frozen native door, semver, a server any driver can reach). The 2.x
-line then does three things in order: keeps tables healthy under many writers, makes *change* a
-first-class thing to read and ingest, and builds the operability that 3.0's promise needs.
+This group broadens native API stability and server access, then adds maintenance policy,
+change reads, ingestion, and shared-operation prerequisites. Existing frozen APIs are already
+protected by the release policy. The legacy labels below describe capability order, not a
+requirement to wait for a particular package version.
 
-| Ver | Item | Notes |
+| Legacy slot | Item | Notes |
 |---|---|---|
 | **2.0** | **Arrow Flight SQL endpoint** — the headline | Protocol #2 on the 1.12 server core. Unlocks JDBC/ODBC drivers, BI tools, non-Python clients, a standalone `repark` binary/shell. |
-| **2.0** | **Stable public API + semver guarantees** | Freeze the native door, retire divergence-registry shims, publish the deprecation policy. **Shares the 2.0.0 tag with Flight SQL** (ruled R-1): the major version is the promise. |
+| **2.0** | **Broader native API stabilization** | Review remaining unfrozen surfaces and proposed shim retirements alongside Flight SQL. CAP-SERVER-ACCESS keeps these acceptance obligations together. Existing frozen rows and deprecation duties remain governed by `docs/release.md`; any breaking change follows that policy when a release is assembled. |
 | **2.1** | **Maintenance policy** — "set it and forget it" | Declarative `[<profile>.maintenance]` in `repark.toml`: compaction targets, snapshot retention, orphan sweeps, DV / position-delete compaction thresholds. Executed by the server on a schedule or by `CALL run_maintenance()`, always with a dry-run report. The procedures already exist (`expire_snapshots`, `rewrite_data_files`, `rewrite_manifests`, `remove_orphan_files`, `rewrite_position_delete_files`); this is the policy layer over them. **Placed first in 2.x** (owner, 2026-08-29): 1.13 multi-writer and 2.3 CDC both generate many small commits, and tables must stay healthy before those arrive. |
 | **2.2** | **Incremental & change-data reads** | `SELECT … FROM t CHANGES BETWEEN snapshot A AND B` (or `table$changes`), incremental append scans, and a micro-batch `readStream` / `writeStream` **subset** on the facade — Iceberg source and sink only, triggers `availableNow` and processing-time. v3 **row lineage** (1.0) makes change identification exact rather than diff-by-hash. Pure single-node. The biggest gap vs Spark for pipeline users after DML. **Not a streaming engine** — batch-over-snapshots, stated honestly in the docs. |
 | **2.3** | **CDC ingestion from the connectors** | Postgres logical replication (`pgoutput`) and SQL Server CDC tables → Iceberg `MERGE` with deletion vectors, declared as a sync in `repark.toml`. Builds on 1.10 connectors (was 1.6 before the 2026-09-03 renumber) + RP-2/RP-3 DV merge + 2.2 change semantics. Replaces a Debezium + Kafka + Spark stack with one process — squarely the "no JVM, one box" thesis. |
@@ -299,11 +374,13 @@ Flight SQL *is* the UI).
 
 ## 3.0 — the trust promise
 
-The server is safe to expose to people and systems you do not fully trust. Today's server
-(1.12 / 2.0) is one trusted user per process; 2.0 puts RePark in front of JDBC / ODBC / BI
-clients and nothing before 3.0 secures that. 3.0 is the release where a team or a BI fleet
-shares one RePark and nobody can read what they should not, exhaust memory for everyone else,
-or leave no trace. Single node, single format — unchanged.
+The target is a server safe to share between people and systems with different permissions.
+Its acceptance covers authorization, resource isolation, and an audit trail. Earlier server
+intakes must define their own deployment boundary and protection requirements; this later
+capability is not permission to expose an unprotected endpoint. The proposed baseline security
+and observability placement is discussed in the
+[Rust unification brief](rust-unification-implementation-brief-2026-09-04.md#4-relationship-to-the-existing-roadmap).
+Single node and single format remain the architectural scope.
 
 | Area | What ships |
 |---|---|
@@ -317,12 +394,15 @@ or leave no trace. Single node, single format — unchanged.
 one is refused at the column; neither can see the other's query history; the audit table shows
 both.
 
-**Iceberg format-v4** is the other candidate north star. It is spec-timed, so it is recorded as
-"3.0 *or* the first major after v4 finalizes," not committed now.
+**Iceberg format-v4** remains a spec-dependent candidate. Intake must establish the applicable
+specification and acceptance scope before any release allocation; no version is reserved.
 
 ---
 
 ## Decisions recorded (Q&A log)
+
+These are dated decisions. The 2026-09-07 planning revision above supersedes prospective
+package-number assignments; the remaining scope and architectural decisions still apply.
 
 | Date | Question | Ruling |
 |---|---|---|
@@ -343,6 +423,6 @@ both.
 
 ## Open rulings
 
-None as of 2026-08-29 — R-1..R-4 and the 2.x / 3.0 ordering are ruled and recorded in the Q&A
-log above. The merge of this file is the ruling; the three stale "blocked on F-5" lines named
-under v0.6 are corrected in the same change.
+The original R-1..R-4 decisions are recorded above. Future release numbers, dates, capability
+acceptance partitions, and worker assignments are resolved in their own intake or release
+assembly. This roadmap does not authorize implementation merely by naming a capability.

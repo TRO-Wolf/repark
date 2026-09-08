@@ -140,7 +140,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Know the current state (release / delivery / what's next) | [STATUS.md](STATUS.md) |
 | Learn to *use* repark (install, session, DataFrame, SQL doors) | [docs/guide/map.md](docs/guide/map.md) |
 | Find or add a gated public-API example | [docs/examples/map.md](docs/examples/map.md) |
-| Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
+| Understand the project intent and capability-roadmap entry point | [PROJECT.md](PROJECT.md) |
 | Follow the authoritative contributor contract | [AGENTS.md](AGENTS.md) |
 | Understand the architecture / crate DAG / runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Build / test / verify locally (setup, `make` targets, CI) | [DEVELOPMENT.md](DEVELOPMENT.md) |

@@ -3,9 +3,9 @@
 ## Purpose
 North-star tracks, shaped like [../../../PROJECT.md](../../../PROJECT.md) roadmap items: a
 direction, not a unit list. A track leaves for `../mid-term/` when an intake evaluates it.
-First track landed 2026-08-23 (the v1.0 north star); the release roadmap landed 2026-08-29 and
-is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 when v1.0.0 cut
-  2026-09-03) — PROJECT.md points here rather than restating it.
+The capability roadmap owns the planning identifiers and scope. Its historical version labels
+remain lookup aids for existing briefs; package versions are assigned during release assembly.
+PROJECT.md points here rather than restating the roadmap.
 
 ## Contents
 - [project-performance-and-unsafe-rust-brief-2026-09-04.md](project-performance-and-unsafe-rust-brief-2026-09-04.md) A 2026-09-06 reconciliation note at its head lists the slate units that landed after it was written.
@@ -58,21 +58,16 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   `B-MOR-3` FIXED 2026-09-03 (owner ruling: build). The v1.0 tag is what remains.
   pins: v1-gate-audit/C-001, C-002, C-004
   pins: v3-cov-statement-coverage/C-005
-- [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — **the release roadmap
-  (owner-set 2026-08-29):** every tag from v0.6 to 3.0 with the owner's rulings folded in.
-  Pre-1.0 is the shipped v0.6 DML remainder; 1.1–1.4 (was v0.7–v0.10) are example docs, the
-  torture suite, Never-OOM, and `repark.toml`; 1.5–1.13 (was 1.1–1.9) are parity, connectors,
-  dbt and the Spark Connect server;
-  2.x is Flight SQL + the API freeze, then maintenance policy, change-data reads, CDC ingestion,
-  MVs, observability, Substrait; 3.0 is the trust promise. Q&A log of every ruling at the end.
+- [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — capability IDs, legacy-label
+  mapping, scope and dependency decisions, and pickup evidence links. The 2026-09-07 planning
+  revision separates capability acceptance from package versions; original scope sections and
+  dated decisions remain addressable.
 - [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) — **the design plan
-  by crate (ruled 2026-08-29):** the release roadmap's *where* and *how* — one work card per
+  by crate (ruled 2026-08-29):** historical implementation cards — one work card per
   roadmap item naming the crate (NEW or UPDATE, tier, `ALLOWED_EDGES` rows), the reference
   implementation to read first, ordered steps, pins, the done condition and the hand-back
-  points, written for delegated sub-agents. §0 carries the tier map and the mechanical
-  new-crate checklist; §6 records the six placement rulings (D-5: 2.2's changelog is a
-  RePark-side snapshot diff over upstream-compatible primitives, so it survives a later
-  migration off the fork).
+  points, written for delegated sub-agents. Resolve its original labels through the capability
+  roadmap and revalidate assumptions against the current contract before dispatch.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -92,13 +92,36 @@ every row decided at its recommendation. The **frozen-surface register** is
 | A breaking change to a frozen row needs a major version | Removing or renaming a frozen name, or changing a frozen callable's required parameters. | A major version **and** a one-minor deprecation shim re-exporting the old spelling, the mechanism [design/python-facade.md](design/python-facade.md) §4 Q1 already records. | the same file — the removed name must leave it in the same change |
 | An unfrozen row may change at any minor with a changelog line | The five rows decided `NO` (B2, J2, K5, K7, M1) and every member named in a `YES except` decision. | None — pre-stable by decision, so a changelog line is the whole obligation. | `docs/design/v1-0-api-freeze.json`, rows with `frozen: false` and every row's `excepted` list |
 
+## Capability milestones and release assembly
+
+Planning decision, 2026-09-07: the
+[capability roadmap](../task/roadmap/epic-term/release-roadmap-2026-08-29.md#capability-identifiers-and-legacy-labels)
+uses stable capability IDs. Its historical version labels are lookup aids, not reserved releases.
+The roadmap owns capability scope and dependencies; this document owns package versioning.
+
+A capability may span several releases, and a release may include accepted slices from several
+capabilities. A shipped slice does not complete its parent capability. Scope, acceptance evidence,
+and remaining obligations stay with the existing campaign and unit ledgers; current delivery
+state stays in [STATUS.md](../STATUS.md). Do not create a parallel release backlog.
+
+At release assembly, identify the merged slices and their evidence, check their compatibility
+against the versioning policy above, and propose the appropriate version in the release PR.
+Features take a minor and fixes take a patch, subject to the frozen-surface and deprecation
+rules. A behavior-changing correction needs an explicit compatibility assessment; calling it a
+fix does not waive those rules. No future release number or calendar cadence is allocated by
+this planning change.
+
+The existing [release runbook](../.agents/skills/publish-pypi/SKILL.md) owns verification,
+merge, tag, publishing, and registry checks. Capability readiness does not bypass those gates
+or authorize a tag. After a release, reconcile delivered slices in STATUS and close a campaign
+only when its own acceptance and retirement event are satisfied.
+
 ## Open items
 
 - **Wheel matrix** — which platforms/architectures get prebuilt wheels beyond the manylinux
   x86_64 floor that ships today (macOS arm64, Windows, musllinux TBD).
-- **Cadence** — feature work cuts a minor, fixes cut a patch. The versioning rule that
-  governs what may change in either is "Versioning policy" above, written 2026-09-02.
-  1.0.1 was the first patch (2026-09-04).
+- **Calendar cadence** — no fixed interval is adopted as of 2026-09-07. Version selection
+  and release readiness follow "Capability milestones and release assembly" above.
 - **Signing / attestation** — PyPI attestations already come free with trusted publishing and
   are present on the shipped wheels; whether to add Sigstore signing for the crates and GitHub
   release artifacts is still open.

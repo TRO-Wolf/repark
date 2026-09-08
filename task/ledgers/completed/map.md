@@ -8,6 +8,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [capability-roadmap-planning-ledger.md](capability-roadmap-planning-ledger.md) — capability identifiers, release assembly, and historical roadmap reconciliation; planning-only unit.
 - [ctas-view-1-conform-stream-ledger.md](ctas-view-1-conform-stream-ledger.md) —
   **CTAS-VIEW-1 (2026-09-03), complete:** unpartitioned CTAS stream writer conforms Utf8View
   batches. Merged #341.
