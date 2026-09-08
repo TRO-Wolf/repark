@@ -8,6 +8,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [rust-first-placement-plan-ledger.md](rust-first-placement-plan-ledger.md) — proposed Rust-first module placement for worker briefs and capability intakes in PR #423.
 - [frontier-worker-decision-plan-ledger.md](frontier-worker-decision-plan-ledger.md) — proposed frontier brief skills, worker qualification, and pilot decisions; documentation-only addendum to PR #423.
 - [capability-roadmap-planning-ledger.md](capability-roadmap-planning-ledger.md) — capability identifiers, release assembly, and historical roadmap reconciliation; planning-only unit.
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —

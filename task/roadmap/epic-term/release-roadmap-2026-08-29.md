@@ -69,6 +69,20 @@ Use these IDs in new intakes and worker briefs. Link the relevant scope section 
 evidence rather than copying the roadmap into each brief. Historical design-card numbers remain
 lookup aids; an old version label is never evidence that work still needs implementation.
 
+## Rust-first placement at capability intake
+
+**Proposal for review, 2026-09-07:** evaluate each new production unit against the
+[Rust-first module placement decision (FW-8)](../../../docs/sepmo/frontier-worker-decision-plan-2026-09-07.md#rust-first-module-placement-proposal).
+That document owns the proposed rule, Python boundaries, exception rationale, and migration
+criteria. An intake should name the owning Rust component, the Python-facing surface, and any
+exception for review. Existing component placement stays in
+[AGENTS.md](../../../AGENTS.md#crate-map--where-a-change-will-go).
+
+Apply this decision across capability IDs. It adds no release number or blanket migration
+milestone. Candidate migrations enter the existing capability that owns their behavior, with
+an explicit benefit and compatibility evidence. FW-8 can be reviewed independently of the
+worker-model pilot. Current contributor rules remain authoritative pending deliberate adoption.
+
 ## Reconcile before scheduling
 
 As of this planning review on 2026-09-07, the old slots no longer describe release contents.

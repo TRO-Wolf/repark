@@ -67,7 +67,9 @@ design work, assign design work explicitly instead of disguising it as mechanica
 Input: the proposed brief, original requirements, pinned sources, and required evidence.
 The reviewer tries to find a worker implementation that satisfies the words while violating
 the intended behavior. It checks missing callers, wrong assumptions, ineffective tests,
-unsafe permissions, and work that cannot fit the proposed boundary.
+unsafe permissions, and work that cannot fit the proposed boundary. Under the proposed
+[Rust-first placement rule](#rust-first-module-placement-proposal), it also checks that shared
+engine behavior has a Rust owner and that Python-owned production logic has a concrete reason.
 
 Output: `READY`, `REVISE`, or `DECISION REQUIRED`, with concrete findings. `READY` means the
 brief can be executed within existing authorization; it does not supply that authorization.
@@ -78,6 +80,58 @@ Review the completed patch separately. Give that Critic the requirements, source
 verification artifacts before the Actor's explanation. A well-written brief can still encode
 the wrong premise. Patch review must challenge that premise, not only compliance with the plan.
 
+## Rust-first module placement proposal
+
+Added 2026-09-07, following the owner's direction that modules should use Rust wherever
+practical. **FW-8 remains a proposal for review**, separate from model qualification.
+The existing [Rust rule](../../AGENTS.md#delegated-agent-standing-rules) and
+[server-prep disciplines](../adr/0004-server-prep-disciplines.md) already establish the
+boundary. The proposed wording makes language placement explicit in every production unit:
+
+> Implement production functionality in Rust by default. If behavior can live behind
+> RePark's internal engine API without depending on Python object or framework semantics,
+> implement it in Rust. Keep Python as a thin API and integration layer. New Python-owned
+> production logic needs a documented architectural reason; convenience or agent familiarity
+> is not sufficient.
+
+Shared planning semantics, type and schema rules, algorithms, I/O, scheduling, and resource
+management belong with their Rust owner. Python can construct plans through the engine API;
+it must not become a second optimizer or execution engine. A Python class or module may remain
+as the public interface while its implementation delegates to Rust. File extension or line
+count alone does not determine where the behavior lives.
+
+| Boundary | Placement under the proposal |
+|---|---|
+| Reusable production behavior | The existing owning Rust component. Use DataFusion and Arrow capabilities where they already fit; follow the current crate dependency policy. |
+| Iceberg table-format behavior | The separate owned fork, under the existing ownership contract. RePark's adapter remains in its current home. |
+| Python-facing API | Thin argument conversion, plan construction, Python exception translation, and dispatch to the engine. Shared semantic validation stays in Rust. |
+| Python framework integration | Only the glue the framework requires, such as dbt adapter interfaces. Shared engine behavior remains reusable without that framework. |
+| User-supplied Python UDFs | Preserve the existing explicit exception and engine-driven Arrow-batch boundary; it does not permit new built-in Python compute fallbacks. |
+| Tests, examples, and development tools | Use the language appropriate to the test or tool. Public Python tests and Python repository tooling remain valid. |
+
+The brief preparer would record the Rust owner, thin Python surface, and any proposed Python
+exception in the existing source/ownership and dependency-decision fields. An exception needs
+the affected behavior, required Python dependency, why thin glue cannot suffice, and the review
+event that revisits it. Keep the durable reason in the owning directory's map and link it from
+the brief. An exception cannot relax an existing engineering prohibition.
+
+Language placement does not authorize migration of adjacent code. Existing Python modules
+remain until a scoped unit demonstrates a concrete benefit: shared semantics, server reuse,
+measured runtime or memory improvement, or a simpler maintained boundary. Preserve public
+signatures, values, types, nullability, ordering, and errors through the existing entry-point
+tests. Retire the old implementation in the same completed migration, or declare an explicit
+staged migration and removal event; avoid permanent duplicate behavior.
+
+Rust alone is not performance evidence. A migration must account for boundary crossings,
+copies, materialization, allocations, and Python-object access. Prefer engine expressions and
+Arrow batches over calls that cross the Python/Rust boundary once per row. Measure before and
+after when claiming speed or memory gains. Current unsafe, dependency, test, and API rules
+continue to apply. Do not create deferred crates or generic helper layers ahead of a real driver.
+
+If adopted, amend the authoritative rule in `AGENTS.md` deliberately. Architecture, roadmap,
+skills, and worker briefs should then point to that home. This planning document does not
+activate the amendment or authorize a repository-wide rewrite.
+
 ## Minimum worker brief
 
 Use these sections inside the existing packet groups. Detail should follow the task's risk.
@@ -87,6 +141,7 @@ Do not expand every small edit into a design document.
 |---|---|---|
 | Outcome and exclusions | One observable outcome, finite scope, and explicit adjacent work excluded. | A narrow change grows into an unreviewable refactor. |
 | Source and ownership | Revision, relevant paths and symbols, actual callers, interfaces, dependency direction, and authoritative rules. | The worker edits the wrong layer or follows a stale signature. |
+| Language placement | Rust owner, thin Python surface, and any exception rationale under [FW-8](#rust-first-module-placement-proposal). | Reusable engine behavior accumulates in a Python implementation that other interfaces cannot share. |
 | Behavioral contract | Values, types, nullability, ordering, errors, ownership, and atomicity where relevant. State which dimensions do not apply. | A patch passes a happy-path example while changing a public contract. |
 | Implementation steps | Ordered steps, existing abstractions to reuse, and pseudocode only for difficult logic. | Repeated discovery or an unnecessary framework consumes the worker budget. |
 | Acceptance matrix | Public entry points, edge classes, oracle source, required commands, and evidence that tests detect the defect. | Tests mirror the patch or exercise only a display path. |
@@ -183,6 +238,7 @@ not unresolved obligations in this documentation-only unit.
 | FW-5 | Brief-review depth | A focused check for small work; full adversarial brief review where semantics or boundaries are difficult. | Matched-task evidence that extra planning reduces downstream work. |
 | FW-6 | Pilot budget and success criteria | Approve them before selecting or running trials. | A written task set, thresholds, budget, and accounting method. |
 | FW-7 | Isolation and patch admission | Inspect runner enforcement and returned changes under existing authority. | Demonstrated scope enforcement or a documented restricted pilot that avoids unsupported isolation claims. |
+| FW-8 | Rust-first production module placement | Rust owns reusable production behavior; Python remains a thin API/integration layer with explicit architectural reasons for exceptions. | Review the boundary examples, migration criteria, and proposed AGENTS amendment; preserve Python ecosystem glue and existing contracts. |
 
 ## Follow-up sequence
 
@@ -191,6 +247,10 @@ their evidence. A first unit can add the smallest skill/template pair and valida
 representative briefs without changing worker routing. A separate approved pilot can measure
 brief quality. Adapter or packet changes follow only if those briefs expose a concrete gap.
 Routing adoption follows qualification and any required policy amendment.
+
+FW-8 can be decided independently of the model pilot. If accepted, a focused contract unit
+establishes the authoritative placement rule and its pointers. Migration candidates then enter
+the normal capability intake with a concrete driver, owner, compatibility evidence, and scope.
 
 Each unit retains the existing scope audit, Actor–Critic review, verification, and PR process.
 The final efficiency-pilot report records accepted and declined options, total measured cost,

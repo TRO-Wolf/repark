@@ -54,7 +54,8 @@ PROJECT.md points here rather than restating the roadmap.
   pins: v1-gate-audit/C-001, C-002, C-004
   pins: v3-cov-statement-coverage/C-005
 - [release-roadmap-2026-08-29.md](release-roadmap-2026-08-29.md) — capability IDs, legacy-label
-  mapping, scope and dependency decisions, and pickup evidence links. The 2026-09-07 planning
+  mapping, scope and dependency decisions, proposed Rust-first intake guidance, and pickup
+  evidence links. The 2026-09-07 planning
   revision separates capability acceptance from package versions; original scope sections and
   dated decisions remain addressable.
 - [roadmap-design-plan-2026-08-29.md](roadmap-design-plan-2026-08-29.md) — **the design plan

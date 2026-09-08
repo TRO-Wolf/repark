@@ -1,5 +1,11 @@
 # map — scripts/
 
+Rust-first placement-plan verification (2026-09-07): existing document and ledger guards,
+plus the boundary and scoped-diff review recorded in the
+[unit ledger](../task/ledgers/completed/rust-first-placement-plan-ledger.md).
+These citations cover documentation evidence; no script behavior or runtime test changes.
+pins: rust-first-placement-plan/C-001, C-002, C-003, C-004
+
 Frontier worker decision-plan verification (2026-09-07): existing map/link and ledger guards,
 plus the source-contract and scoped-diff review recorded in the
 [unit ledger](../task/ledgers/completed/frontier-worker-decision-plan-ledger.md).
