@@ -56,6 +56,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   check), and `EXCEPTIONS` is untouched. Step 2 (2026-09-09) flipped BALLISTA-AUDIT-0's
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
+- [preflight-parity-1-ledger.md](preflight-parity-1-ledger.md) —
+  **PREFLIGHT-PARITY-1 (2026-09-09), in flight:** the CAP-1 source-file mirror joins
+  `make preflight` as `make py-test-parity-cap` — the mirror file alone
+  (`test_cap_1_source_file_line_cap.py`), `py-test`'s isolated interpreter recipe verbatim,
+  measured 1.428 s against the 60 s budget, seated after `py-test-facade` before `audit`;
+  `verify` untouched. A size-gate ratchet that updates only `scripts/check_lib_py.py` now reds
+  the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
+  Branch `feat/preflight-parity-1`.
+  pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 
 ## Pointers

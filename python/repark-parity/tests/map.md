@@ -151,7 +151,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `verify` untouched, measured 1.4 s against the 60 s budget. Red-first: both pins failed on the
   base tree (no target; absent from the `preflight` line). `DEVELOPMENT.md`'s gate roster and the
   root map's `make preflight` enumeration name the new member; `AGENTS.md`'s roster sentence is
-  left to the owner via the PR body. pins: preflight-parity-1/C-001, C-002, C-003, C-004
+  left to the owner via the PR body. **Answered 2026-09-09 by ruling R-12:** `AGENTS.md`'s
+  roster sentence stays as it is and `DEVELOPMENT.md` plus the root `map.md` are the homes
+  that name new gate members — both already do, so the unit closes with no further edit and
+  its ledger moved to `completed/`. pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - `test_cap_1_source_file_line_cap.py` — SQL-DESCRIBE-1 (2026-09-09): `repark-python/src/dataframe.rs` row 1126 → 1084 with the script baseline; the DDL element spelling moved to `repark-spark`. pins: sql-describe-1/C-003
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through

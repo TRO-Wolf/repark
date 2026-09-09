@@ -298,15 +298,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (`WRITE-GROUPING-CTAS-1`); a failed write into a fresh table deletes every data file it made. `risk_tier: elevated`. Branch `perf/ice-writepath-1`.
   pins: perf-ice-writepath-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011
-- [preflight-parity-1-ledger.md](preflight-parity-1-ledger.md) —
-  **PREFLIGHT-PARITY-1 (2026-09-09), in flight:** the CAP-1 source-file mirror joins
-  `make preflight` as `make py-test-parity-cap` — the mirror file alone
-  (`test_cap_1_source_file_line_cap.py`), `py-test`'s isolated interpreter recipe verbatim,
-  measured 1.428 s against the 60 s budget, seated after `py-test-facade` before `audit`;
-  `verify` untouched. A size-gate ratchet that updates only `scripts/check_lib_py.py` now reds
-  the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
-  Branch `feat/preflight-parity-1`.
-  pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,
