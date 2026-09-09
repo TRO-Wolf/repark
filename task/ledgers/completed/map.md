@@ -38,6 +38,11 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [dfcore-4b-ledger.md](dfcore-4b-ledger.md) — Unit ledger — DFCORE-4b · display out of `core.py`
 - [dfcore-5-ledger.md](dfcore-5-ledger.md) — Charter ledger — DFCORE-5 · `approxQuantile` in one collect per frame
 - [dfcore-6-ledger.md](dfcore-6-ledger.md) — Charter ledger — DFCORE-6 · eager previews fetch N+1, never `count()`
+- [docs-links-1-ledger.md](docs-links-1-ledger.md) —
+  **DOCS-LINKS-1 step 1 (2026-09-09), in flight:** the gate LEDGER-READING-1 D-3 assumed —
+  `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
+  and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
+  (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
 - [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
   **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
@@ -51,6 +56,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   check), and `EXCEPTIONS` is untouched. Step 2 (2026-09-09) flipped BALLISTA-AUDIT-0's
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
+- [preflight-parity-1-ledger.md](preflight-parity-1-ledger.md) —
+  **PREFLIGHT-PARITY-1 (2026-09-09), in flight:** the CAP-1 source-file mirror joins
+  `make preflight` as `make py-test-parity-cap` — the mirror file alone
+  (`test_cap_1_source_file_line_cap.py`), `py-test`'s isolated interpreter recipe verbatim,
+  measured 1.428 s against the 60 s budget, seated after `py-test-facade` before `audit`;
+  `verify` untouched. A size-gate ratchet that updates only `scripts/check_lib_py.py` now reds
+  the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
+  Branch `feat/preflight-parity-1`.
+  pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 
 ## Pointers
