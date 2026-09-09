@@ -33,6 +33,22 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_eager_1.py](test_df_eager_1.py) — **DF-EAGER-1 (2026-09-09):** the red-first
+  `.eager()` / `.compute()` / `.lazy()` pins, red on the base tree (the marker-less run is
+  recorded in the ledger). Seven pins carry `xfail(strict=True, reason="DF-EAGER-1 step 2 …")`
+  via the module's single `_XFAIL_STEP_2` decorator — step 2 turns each green by deleting its
+  marker and `strict=True` reds the suite if a pin passes early; the two `test_guard_*` rows are
+  keep-green guards (Spark `collect()` returns Rows, `df.pl.collect()` returns a polars
+  DataFrame) and carry no marker. Value comparisons are order-insensitive (`sorted(...)`)
+  because the unordered two-row UNION ALL measurably answered `[2, 1]` on one run and `[1, 2]`
+  on another. Clause discharge: C-001 `test_eager_returns_new_frame_with_eager_shape_rows_and_columns`
+  + `test_eager_leaves_source_frame_unchanged` + `test_eager_frame_survives_csv_source_deletion`
+  + `test_eager_over_max_bytes_refuses_naming_eager` + `test_guard_spark_collect_still_returns_rows`;
+  C-002 `test_compute_is_eager`; C-003 `test_lazy_identities_per_d3`; C-004
+  `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` (the D-11 count-spy idiom
+  from `test_display_polars_default.py`); C-005 no new pin (existing `unpersist` behaviour,
+  `test_cache_persist.py` carries it); C-006 `test_guard_pl_collect_still_returns_polars_dataframe`.
+  pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
   step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +
