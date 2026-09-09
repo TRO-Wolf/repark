@@ -15,6 +15,8 @@ workspace = true
 # The error seed (v1 `repark-core`, renamed): `Error` / `ErrorClass` / `Result`, re-exported at
 # this crate's root so bindings and doors import one crate.
 repark-common.workspace = true
+serde.workspace = true
+toml.workspace = true
 # Catalog builders + provider registration (catalog half) and the write-knob ConfigExtension
 # installers `build()` threads (write half) — the v1 repark-catalog / repark-write surfaces.
 repark-iceberg.workspace = true
