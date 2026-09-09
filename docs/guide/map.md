@@ -30,7 +30,8 @@ illustrative. A claim with no verified basis does not go in.
   `spark.sql.session.timeZone` (TZ-2 / TZ-3), `spark.sql.ansi.enabled`, target partitions, batch
   size, the one-truth memory pool, the Iceberg catalog caches (`metadataCache` /
   `metadataCacheEntries` / `manifestCacheBytes`, all build-time, memory-catalog-only),
-  `repark.display.style`.
+  the four `repark.display.*` keys (polars default, `max_rows` / `max_cols` / `str_len`;
+  DISPLAY-POLARS-1 step 5, 2026-09-09 — every transcript executed; pins: display-polars-1/C-006).
 - [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; the
   `explain` sections (Spark headers over verbatim DataFusion plan text, the five modes, and
   which of them execute); select /

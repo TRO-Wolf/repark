@@ -1921,6 +1921,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (one token, line-neutral); the probe/edge numbers now read `max_rows`
   (`limit(max_rows + 1)`, edges `max_rows // 2`), unchanged at 11/5+5 under defaults.
   pins: display-polars-1/C-005
+  **DISPLAY-POLARS-1 step 5 (2026-09-09):** `docs/guide/session-and-conf.md`'s
+  `repark.display.style` section states the behaviors these pins verify (polars default,
+  the four keys, the env precedence, the probe-first count, the truncate mapping, the
+  styled repr), every transcript executed against this tree. pins: display-polars-1/C-006
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`

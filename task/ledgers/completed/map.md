@@ -38,6 +38,13 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [dfcore-4b-ledger.md](dfcore-4b-ledger.md) — Unit ledger — DFCORE-4b · display out of `core.py`
 - [dfcore-5-ledger.md](dfcore-5-ledger.md) — Charter ledger — DFCORE-5 · `approxQuantile` in one collect per frame
 - [dfcore-6-ledger.md](dfcore-6-ledger.md) — Charter ledger — DFCORE-6 · eager previews fetch N+1, never `count()`
+- [display-polars-1-ledger.md](display-polars-1-ledger.md) —
+  **DISPLAY-POLARS-1 step 1 (2026-09-09), in flight:** polars-style rendering becomes the
+  default. Step 1 only (D-1 + D-2): `_DEFAULT_DISPLAY_STYLE` flips to `polars`, resolved
+  through new `default_display_style()` (env `REPARK_DISPLAY_STYLE` first, refuse-loud via
+  `normalize_display_style`), and the facade suite pins `spark` via conftest so no existing
+  expectation moves. Clauses C-001…C-002 green. Branch `feat/display-polars-1`.
+  pins: display-polars-1/C-001, C-002
 - [docs-links-1-ledger.md](docs-links-1-ledger.md) —
   **DOCS-LINKS-1 step 1 (2026-09-09), in flight:** the gate LEDGER-READING-1 D-3 assumed —
   `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
