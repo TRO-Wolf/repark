@@ -2,7 +2,6 @@ use repark_common::{Error, Result};
 
 use super::EnvironmentLookup;
 
-#[allow(dead_code)]
 pub(crate) fn interpolate_table(
     table: &toml::Table,
     environment: EnvironmentLookup<'_>,
@@ -14,7 +13,6 @@ pub(crate) fn interpolate_table(
     Ok(interpolated)
 }
 
-#[allow(dead_code)]
 fn interpolate_value(
     path: &str,
     value: &toml::Value,
@@ -60,7 +58,6 @@ fn join_path(parent: &str, key: &str) -> String {
     }
 }
 
-#[allow(dead_code)]
 fn interpolate_string(
     path: &str,
     text: &str,

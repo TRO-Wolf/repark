@@ -1,6 +1,7 @@
 //! A session-centered DataFusion context with catalog, reader, temp-view, and SQL-door APIs.
 
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock, PoisonError, RwLock};
 
 use aws_config::{BehaviorVersion, SdkConfig};
@@ -17,7 +18,7 @@ use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::TempViewHome;
-use crate::time_travel::{self, TimeTravelSpec};
+use crate::time_travel::{self, TimeTravelOpts};
 // Test-only re-exports follow the production imports.
 #[cfg(test)]
 pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
@@ -42,64 +43,6 @@ pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
 pub(crate) use spill::{
     DEFAULT_MEMORY_LIMIT_BYTES, MIN_MEMORY_LIMIT_BYTES, default_memory_limit_bytes,
 };
-
-/// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
-#[derive(Debug, Clone, Default)]
-pub struct TimeTravelOpts {
-    /// Spark `snapshot-id` — pin to a concrete snapshot.
-    pub snapshot_id: Option<i64>,
-    /// Spark `as-of-timestamp` — epoch **milliseconds**.
-    pub as_of_timestamp_ms: Option<i64>,
-    /// Spark `branch` — pin to a branch ref.
-    pub branch: Option<String>,
-    /// Spark `tag` — pin to a tag ref.
-    pub tag: Option<String>,
-}
-
-impl TimeTravelOpts {
-    /// Convert to a [`TimeTravelSpec`], or `None` when no pin is set.
-    /// # Errors
-    /// Two or more pins set → [`Error::Analysis`] naming both option keys.
-    pub fn into_spec(self) -> Result<Option<TimeTravelSpec>> {
-        let mut set: Vec<(&str, TimeTravelSpec)> = Vec::new();
-        if let Some(snapshot_id) = self.snapshot_id {
-            set.push(("snapshot-id", TimeTravelSpec::SnapshotId(snapshot_id)));
-        }
-        if let Some(ms) = self.as_of_timestamp_ms {
-            set.push(("as-of-timestamp", TimeTravelSpec::TimestampMs(ms)));
-        }
-        // Trim branch/tag (SQL VERSION AS OF already trims via parse_version_value).
-        if let Some(branch) = self.branch {
-            let trimmed = branch.trim();
-            if trimmed.is_empty() {
-                return Err(Error::Analysis(
-                    "Iceberg reader option branch requires a non-empty branch name".to_string(),
-                ));
-            }
-            set.push(("branch", TimeTravelSpec::VersionRef(trimmed.to_string())));
-        }
-        if let Some(tag) = self.tag {
-            let trimmed = tag.trim();
-            if trimmed.is_empty() {
-                return Err(Error::Analysis(
-                    "Iceberg reader option tag requires a non-empty tag name".to_string(),
-                ));
-            }
-            set.push(("tag", TimeTravelSpec::VersionRef(trimmed.to_string())));
-        }
-        match set.len() {
-            0 => Ok(None),
-            1 => Ok(Some(set.remove(0).1)),
-            _ => {
-                let names: Vec<&str> = set.iter().map(|(name, _)| *name).collect();
-                Err(Error::Analysis(format!(
-                    "Iceberg time-travel reader options are mutually exclusive; got {}",
-                    names.join(" and ")
-                )))
-            }
-        }
-    }
-}
 
 /// The builder-config prefix that reaches DataFusion's own [`SessionConfig`] options.
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
@@ -146,6 +89,7 @@ pub struct ReparkSessionBuilder {
     extension: Option<Arc<dyn SessionExtension>>,
     /// The full Spark-style `.config(key, value)` map.
     config: HashMap<String, String>,
+    config_file: Option<PathBuf>,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -189,6 +133,12 @@ impl ReparkSessionBuilder {
         self
     }
 
+    #[must_use]
+    pub fn from_config_file(mut self, path: Option<impl Into<PathBuf>>) -> Self {
+        self.config_file = path.map(Into::into);
+        self
+    }
+
     /// Cap engine memory at `gb` gigabytes with a `FairSpillPool`.
     #[must_use]
     pub fn memory_limit_gb(mut self, gb: usize) -> Self {
@@ -220,7 +170,19 @@ impl ReparkSessionBuilder {
     /// Build the session synchronously.
     /// # Errors
     /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
-    pub fn build(self) -> Result<ReparkSession> {
+    pub fn build(mut self) -> Result<ReparkSession> {
+        let file = crate::config_file::load_for_build(self.config_file.clone())?;
+        let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
+        for (key, value) in file.pairs_for_map() {
+            self.config.entry(key).or_insert(value);
+        }
+        if self.memory_limit_bytes.is_none() {
+            self.memory_limit_bytes = file
+                .memory_limit_gb
+                .map(|gb| gb.saturating_mul(spill::BYTES_PER_GB));
+        }
+        self.batch_size = self.batch_size.or(file.batch_size);
+        self.target_partitions = self.target_partitions.or(file.target_partitions);
         if let Some(0) = self.batch_size {
             return Err(Error::Config("batch_size must be >= 1 (got 0)".to_string()));
         }
@@ -328,6 +290,7 @@ impl ReparkSessionBuilder {
             dialect,
             catalogs: Arc::new(RwLock::new(CatalogRegistry::with_cache_settings(caches))),
             catalog_specs: Arc::new(catalog_specs),
+            conf_dump: Arc::new(conf_dump),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
             session_time_zone: Arc::new(session_time_zone),
@@ -351,6 +314,7 @@ pub struct ReparkSession {
     postgres_catalog_names: Arc<RwLock<HashSet<String>>>,
     /// Catalogs from `spark.sql.catalog.<name>.*`, parsed at build and registered asynchronously.
     catalog_specs: Arc<Vec<CatalogSpec>>,
+    conf_dump: Arc<Vec<(String, String, String)>>,
     /// S3 buckets whose object store is already registered on the `RuntimeEnv`.
     registered_s3_buckets: Arc<Mutex<HashSet<String>>>,
     /// Optional explicit region for `s3`/`s3a` reads.
@@ -389,6 +353,11 @@ impl ReparkSession {
     #[must_use]
     pub fn session_time_zone(&self) -> &SessionTimeZone {
         &self.session_time_zone
+    }
+
+    #[must_use]
+    pub fn conf_dump(&self) -> Vec<(String, String, String)> {
+        self.conf_dump.to_vec()
     }
 
     /// Run a SQL string through the session-default [`SqlDialect`].

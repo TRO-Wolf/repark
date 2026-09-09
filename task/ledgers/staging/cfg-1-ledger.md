@@ -1,7 +1,7 @@
 # Unit ledger — CFG-1 step 1 · `repark.toml` discovery, profile merge, `${VAR}` interpolation
 
 **Unit:** CFG-1 step 1 (+ step 1b, R-14) · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` (step 1b: `feat/cfg-1-step1b`) · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2
+**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2; Muse Spark (muse-spark-1.3-contributor) — implementation, step 3
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** The CFG-1 seed commit left `config_file/{discovery,profile,interpolate}.rs` as empty
@@ -43,9 +43,18 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-015 | Redaction: `redact_config` masks every key `prop_key_is_secret` matches, an unmasked secret never appears in the redacted output, non-secret values stay verbatim, no key is dropped; `SourceSpec`'s `Debug` masks through the same function. | `a_dump_masks_every_key_the_secret_predicate_matches`, `a_source_spec_debug_masks_secret_props` | **PROVEN** | Red first (step 2 below); green in the step-2 run. The dump pin runs the C1-SEC-002 key matrix (13 secret spellings incl. hyphenated and camelCase) plus a non-secret `url`; the Debug pin asserts the password is absent, `***` present, the url verbatim. `redact.rs` calls `catalog_config::prop_key_is_secret` (widened to `pub(crate)` this step) — the predicate is not re-implemented. |
 | C-016 | Wrong shapes refuse loud naming the key path: a non-string catalog prop, a non-string database prop, a non-table catalog slot, a non-table database name slot. | `a_non_string_catalog_prop_refuses_naming_the_key_path`, `a_non_string_database_prop_refuses_naming_the_key_path`, `a_non_table_catalog_slot_refuses_naming_the_key_path`, `a_non_table_database_name_slot_refuses_naming_the_key_path` | **PROVEN** | Red first (step 2 below); green in the step-2 run. Paths asserted: `default.catalog.g.max_connections`, `prod.database.postgres.company_db.port`, `default.catalog.m`, `prod.database.postgres.company_db`. TOML scalars are never silently stringified. |
 | C-017 | Loud guards on catalog names: a block carrying no properties refuses, and a dotted catalog name refuses instead of silently re-splitting through the flat-key bridge. | `a_catalog_block_carrying_no_properties_refuses`, `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` | **PROVEN** | Red first (step 2 below); green in the step-2 run. An empty `[default.catalog.ghost]` refuses naming the path (flat config has no equivalent — a silent ignore would vanish the catalog); `[default.catalog."a.b"]` refuses naming `default.catalog.a.b` (flat keys would alias it to catalog `a`). |
+| C-018 | `[<profile>.display]` translates to `repark.display.*` pairs (`style`, `max_rows`, `max_cols`, `str_len`); string values verbatim, integers stringified; any other TOML shape refuses naming the key path. | `test_toml_display_table_sets_style` | **PROVEN** | Red first (step 3 below); green in the step-3 run (`47 passed; 0 failed`). `max_rows = 20` arrives as `"20"`; `max_rows = true` refuses naming `default.display.max_rows`. |
+| C-019 | `[<profile>.session]` knobs (`memory_limit_gb`, `batch_size`, `target_partitions`) land as typed builder fallbacks (explicit typed setters still win); integers or integer strings, else refuses naming the key path. | `test_toml_session_table_sets_builder_knobs` | **PROVEN** | Red first (step 3 below); green in the step-3 run. A file-built session reports `batch_size 4096` / `target_partitions 3` through the live engine config; `memory_limit_gb = 2` is asserted on the translation; `batch_size = "lots"` refuses naming `default.session.batch_size`. |
+| C-020 | `[<profile>.conf]` applies in sorted-key order (deterministic; see C-024 for why not file order); string values verbatim, integers stringified, other shapes refuse naming the key path. | `test_toml_conf_table_applies_in_order` | **PROVEN** | Red first (step 3 below); green in the step-3 run. `zebra/apple/mango` in file order apply as `apple/mango/zebra`; `port = 5432.5` refuses naming `default.conf.port`. |
+| C-021 | Precedence is builder `.config()` > `REPARK_ENV` profile > `[default]`, pinned as a parametrised table over one file plus varying builder maps. | `file_builder_precedence_is_builder_then_profile_then_default` | **PROVEN** | Red first (step 3 below); green in the step-3 run. Builder value wins with source `builder`; otherwise the profile value wins with `file:<path>#prod`; profile-absent keys keep the default value with `default`. |
+| C-022 | The dump renders `(key, redacted value, source)` with sources `builder`, `file:<path>#<profile>`, `default` — exactly the three precedence levels — and masks every secret key through `config_file::redact`. | `file_dump_reports_origin_and_masks_secrets` | **PROVEN** | Red first (step 3 below); green in the step-3 run. `password` renders `***` with source `default`; a profile-overridden nickname renders verbatim with `file:<path>#prod`; a builder-overridden one renders verbatim with `builder`. |
+| C-023 | Done condition: a session built from a file registers the same catalogs the equivalent `.config()` calls would — equal merged pairs modulo the source column, both registrations `Ok`, both probes agree. | `file_built_session_registers_the_same_catalogs_as_config_calls` | **PROVEN** | Red first (step 3 below); green in the step-3 run. Memory catalog `m` over a tempdir warehouse on both sides; the flat side uses the `repark.sql.catalog.*` spelling so the pair maps compare key-for-key. |
+| C-024 | D-1 says `[<profile>.conf]` keys apply "in file order"; this build's `toml::Table` is `BTreeMap`-backed (`preserve_order` off), so file order is not recoverable without a dependency-feature change. | (none — open wording question for the owner) | **OPEN** | Measured in step 2, ruled for this round by the orchestrator: apply in sorted-key order, deterministic and pinned (C-020). Ways out: enable `toml`'s `preserve_order` feature, or carry the order some other way. No dependency was touched. |
+| C-025 | A non-empty `[<profile>.database]` table refuses loud at load: the sources parse and validate (collisions included) but named-source registration is CFG-2's card, and a silent drop would vanish configured sources. | `database_sources_refuse_until_named_registration_lands` | **PROVEN** | Red first (step 3 below); green in the step-3 run. The refusal names `default.database.postgres.company_db` and the `CFG-2` card. |
 
 VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED (6 from step 1, C-007/C-008/C-009 from step 1b).
 VERDICT (step 2, 2026-09-09): 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED (C-010…C-017 appended this step).
+VERDICT (step 3, 2026-09-09): 25 clauses, 24 PROVEN, 1 OPEN, 0 REJECTED (C-018…C-025 appended this step; C-024 is the orchestrator-ruled D-1 wording question, carried OPEN).
 
 ## Red first
 
@@ -146,6 +155,37 @@ After implementing the two files the same command returns green:
 `test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`
 (25 inherited pins + 15 step-2 pins).
 
+## Red first — step 3 (wiring)
+
+The 7 step-3 pins were written into `config_file/tests.rs` first (before `wiring.rs`,
+`from_config_file`, or `conf_dump` existed) and run against the untouched step-2 tree.
+Red run: `cargo test -p repark-core config_file`, 2026-09-09 — a compile refusal, the same
+honest red class as steps 1–2: the pins name items that do not exist yet.
+
+```text
+error[E0432]: unresolved import `super::wiring`
+  --> crates/repark-core/src/config_file/tests.rs:13:12
+   |
+13 | use super::wiring::{FileConfig, conf_dump_rows, load_file_config};
+   |            ^^^^^^ could not find `wiring` in `super`
+
+error[E0599]: no method named `from_config_file` found for struct `ReparkSessionBuilder` in the current scope
+   --> crates/repark-core/src/config_file/tests.rs:834:10
+
+error[E0599]: no method named `from_config_file` found for struct `ReparkSessionBuilder` in the current scope
+   --> crates/repark-core/src/config_file/tests.rs:980:10
+
+error[E0599]: no method named `conf_dump` found for struct `session::ReparkSession` in the current scope
+    --> crates/repark-core/src/config_file/tests.rs:1002:65
+
+error: could not compile `repark-core` (lib test) due to 4 previous errors
+```
+
+After implementing `wiring.rs` plus the `session.rs` hook the same command returns green:
+`test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`
+(40 inherited pins + 7 step-3 pins). No pin was edited at any point; the battery was then
+split `tests.rs` → `tests/mod.rs` + `tests/wiring.rs` (identity move, same green after).
+
 ## Gates
 
 | Command | Result |
@@ -216,6 +256,13 @@ All pins live in `crates/repark-core/src/config_file/tests.rs`.
 | `a_non_table_database_name_slot_refuses_naming_the_key_path` (step 2) | C-016 |
 | `a_catalog_block_carrying_no_properties_refuses` (step 2) | C-017 |
 | `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` (step 2) | C-017 |
+| `test_toml_display_table_sets_style` (step 3) | C-018 |
+| `test_toml_session_table_sets_builder_knobs` (step 3) | C-019 |
+| `test_toml_conf_table_applies_in_order` (step 3) | C-020 |
+| `file_builder_precedence_is_builder_then_profile_then_default` (step 3) | C-021 |
+| `file_dump_reports_origin_and_masks_secrets` (step 3) | C-022 |
+| `file_built_session_registers_the_same_catalogs_as_config_calls` (step 3) | C-023 |
+| `database_sources_refuse_until_named_registration_lands` (step 3) | C-025 |
 
 ## Decisions
 
@@ -261,6 +308,19 @@ Choices step 2 took that the card and D-5 did not fix (read from the code, not i
 | `SourceSpec` visibility | `pub(crate)` in `config_file/sources.rs` with `#[allow(dead_code)]`, per ruling D-5 — the public API is frozen; step 3 decides what leaves the crate. |
 | `SourceSpec` Debug | Manual, masking secret props through `redact_value` — the C1-SEC-002 pattern `CatalogSpec`'s Debug already sets; equality (`PartialEq`/`Eq`) stays on raw values. |
 | Collision scope | Uniqueness is enforced over the union of both families per profile: cross-family and within-database collisions both refuse naming both key paths (two catalogs can only collide if TOML allowed duplicate headers, which it does not). |
+
+Choices step 3 took that the card and the round brief did not fix (read from the code, not invented):
+
+| Choice | What the code does |
+|---|---|
+| Dump source semantics | `builder` = the builder map carried the key (it wins); `file:<path>#<profile>` = the key survived from the SELECTED profile's table; `default` = the key survived from `[default]`. The three labels are exactly the three precedence levels — no engine-default rows are invented. |
+| `REPARK_ENV` empty or absent | Both select `[default]` alone. An unknown non-empty `REPARK_ENV` refuses (step-1 behaviour, unchanged). |
+| No file discovered | `REPARK_ENV` is ignored and the builder is untouched — a globally exported `REPARK_ENV` with no `repark.toml` anywhere is a no-op, never a refusal, so existing file-less `build()` calls cannot observe the new code path. |
+| Session knobs travel typed | The file's `session` knobs set the builder's typed fields only when unset; they do not also enter the config map, so the pre-existing dual-knob refusal cannot fire on file content alone and the dump never shows a knob row the engine did not honour. The `repark.*` knob-key pairs still exist on `FileConfig.pairs` for the facade fold. |
+| `display` / `conf` / catalog value shapes | Strings verbatim, integers stringified (`max_rows = 20` → `"20"`); every other TOML shape refuses naming the key path — the same no-silent-stringification rule step 2 set for catalog and database props. |
+| Database sources refuse | A non-empty `[<profile>.database]` table refuses loud naming every offending source path and the `CFG-2` card: the sources parse and validate (collisions included) but registration is CFG-2's seam, and a silent drop would vanish configured sources. |
+| `TimeTravelOpts` moves | `session.rs` needed 26 lines for the wiring inside the 1,000-line ceiling, so the 57-line `TimeTravelOpts` + `into_spec` moved verbatim to `time_travel.rs` next to the `TimeTravelSpec` it builds (the gate's sanctioned split at a cohesive boundary). Two-line delta from verbatim: the `Result` qualifies as `repark_common::Result` (the module's `Result` is DataFusion's) plus its import; `lib.rs` re-exports the same name from the new home. |
+| Test battery split | `tests.rs` (40 pins) → `tests/mod.rs` + `tests/wiring.rs` (7 step-3 pins) when the battery passed the 1,000-line ceiling — stage pins versus wiring pins, no pin moved or edited. |
 
 ## Notes for the orchestrator
 

@@ -9,6 +9,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::TableMetadata;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
+use repark_common::Error;
 
 use crate::catalog_state::CatalogRegistry;
 
@@ -30,6 +31,64 @@ pub enum TimeTravelSpec {
     VersionRef(String),
     /// Pin to the latest snapshot with `timestamp_ms <=` this epoch-ms value.
     TimestampMs(i64),
+}
+
+/// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
+#[derive(Debug, Clone, Default)]
+pub struct TimeTravelOpts {
+    /// Spark `snapshot-id` — pin to a concrete snapshot.
+    pub snapshot_id: Option<i64>,
+    /// Spark `as-of-timestamp` — epoch **milliseconds**.
+    pub as_of_timestamp_ms: Option<i64>,
+    /// Spark `branch` — pin to a branch ref.
+    pub branch: Option<String>,
+    /// Spark `tag` — pin to a tag ref.
+    pub tag: Option<String>,
+}
+
+impl TimeTravelOpts {
+    /// Convert to a [`TimeTravelSpec`], or `None` when no pin is set.
+    /// # Errors
+    /// Two or more pins set → [`Error::Analysis`] naming both option keys.
+    pub fn into_spec(self) -> repark_common::Result<Option<TimeTravelSpec>> {
+        let mut set: Vec<(&str, TimeTravelSpec)> = Vec::new();
+        if let Some(snapshot_id) = self.snapshot_id {
+            set.push(("snapshot-id", TimeTravelSpec::SnapshotId(snapshot_id)));
+        }
+        if let Some(ms) = self.as_of_timestamp_ms {
+            set.push(("as-of-timestamp", TimeTravelSpec::TimestampMs(ms)));
+        }
+        // Trim branch/tag (SQL VERSION AS OF already trims via parse_version_value).
+        if let Some(branch) = self.branch {
+            let trimmed = branch.trim();
+            if trimmed.is_empty() {
+                return Err(Error::Analysis(
+                    "Iceberg reader option branch requires a non-empty branch name".to_string(),
+                ));
+            }
+            set.push(("branch", TimeTravelSpec::VersionRef(trimmed.to_string())));
+        }
+        if let Some(tag) = self.tag {
+            let trimmed = tag.trim();
+            if trimmed.is_empty() {
+                return Err(Error::Analysis(
+                    "Iceberg reader option tag requires a non-empty tag name".to_string(),
+                ));
+            }
+            set.push(("tag", TimeTravelSpec::VersionRef(trimmed.to_string())));
+        }
+        match set.len() {
+            0 => Ok(None),
+            1 => Ok(Some(set.remove(0).1)),
+            _ => {
+                let names: Vec<&str> = set.iter().map(|(name, _)| *name).collect();
+                Err(Error::Analysis(format!(
+                    "Iceberg time-travel reader options are mutually exclusive; got {}",
+                    names.join(" and ")
+                )))
+            }
+        }
+    }
 }
 
 /// Resolve `spec` against `metadata` to a concrete snapshot id.
