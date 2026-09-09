@@ -377,7 +377,7 @@ def test_polars_style_uses_count(monkeypatch: pytest.MonkeyPatch) -> None:
             return original(self)  # type: ignore[arg-type]
 
         monkeypatch.setattr(dataframe_module.DataFrame, "count", counting_count)
-        frame = session.sql("SELECT 1 AS a")
+        frame = session.sql(_ORDERED_12_SQL)
         _capture_show(frame)
         assert calls["count"] == 1
     finally:
@@ -871,7 +871,7 @@ def test_styled_show_does_not_full_collect(
         _ensure_native_partial_collect_spies(frame)
         out = _capture_show(frame, truncate=False)
         assert out == _POLARS_12_GOLDEN
-        _assert_partial_collect_discipline(expected_skip=(7, 5), max_rows_per_export=5)
+        _assert_partial_collect_discipline(expected_skip=(7, 5), max_rows_per_export=11)
     finally:
         session.stop()
 
