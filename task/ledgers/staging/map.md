@@ -576,7 +576,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `perf/dfcore-6`.
   pins: dfcore-6/C-001, C-002, C-003, C-004, C-005
   Critic r1 PASS (2026-09-07); the row-count assertion added to the repr footer pin.
-- [sql-describe-1-ledger.md](sql-describe-1-ledger.md) —
+- [sql-describe-1-ledger.md](../completed/sql-describe-1-ledger.md) —
   **SQL-DESCRIBE-1 (2026-09-09), in flight:** `DESCRIBE [TABLE] [EXTENDED|FORMATTED]`
   on Iceberg tables — step 1 measured the live PySpark 4.1.2 oracle on one session:
   six captures plus schemas in the ledger's Oracle capture section, FORMATTED
