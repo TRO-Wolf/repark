@@ -964,6 +964,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   test lives in the sibling `test_dfcore_4b_exports.py` (this pin is at the
   default ceiling, so the gate's sanctioned out is a split).
   pins: dfcore-4b/C-001, C-002, C-003, C-004, C-007, C-008
+  DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the package gains exactly
+  `polars_cells` (the new speller home, bound when `plan_collapse` re-exports
+  the moved names); the set row grows by one member, the file's own new-home
+  pattern.
+  pins: display-polars-1/C-005
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.

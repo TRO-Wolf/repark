@@ -9,6 +9,7 @@ from typing import Any
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     _DISPLAY_INT_DEFAULTS,
+    _builder_display_int,
     _display_token_key,
     _normalize_display_int,
     _sync_display_int_into_builder_config,
@@ -242,7 +243,10 @@ class RuntimeConfig:
                 if default is not _CONF_GET_UNSET:
                     return default  # type: ignore[return-value]
                 return str(fallback)
-            return str(self._session._alive_token.get(_display_token_key(canonical), fallback))
+            token_value = self._session._alive_token.get(_display_token_key(canonical))
+            if isinstance(token_value, bool) or not isinstance(token_value, int):
+                return str(_builder_display_int(self._session._builder_config, canonical, fallback))
+            return str(token_value)
         if key in self._unset_keys():
             if default is not _CONF_GET_UNSET:
                 return default  # type: ignore[return-value]

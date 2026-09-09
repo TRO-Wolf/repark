@@ -704,6 +704,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "explain",
     "export_errors",
     "grouped_udf",
+    "polars_cells",
     "rows_export",
     "sampling",
     "statistics",

@@ -6,6 +6,7 @@ import logging
 import os
 
 import re
+from typing import Any
 
 from repark.errors import IllegalArgumentException
 from repark.spark._idents import sql_string_literal
@@ -319,6 +320,55 @@ def _builder_display_int(
     if raw is None:
         return fallback
     return _normalize_display_int(canonical, raw)
+
+
+def _canonicalize_display_key(
+    config: dict[str, str | None],
+    key: str,
+    value: str | None,
+) -> bool:
+    """Collapse a display key alias onto its canonical spelling, validating int values."""
+    lowered = key.lower()
+    if lowered == _DISPLAY_STYLE_KEY:
+        for existing in list(config):
+            if existing.lower() == _DISPLAY_STYLE_KEY:
+                del config[existing]
+        config[_DISPLAY_STYLE_KEY] = value
+        return True
+    for canonical in _DISPLAY_INT_DEFAULTS:
+        if lowered != canonical:
+            continue
+        parsed: str | None = (
+            None if value is None else str(_normalize_display_int(canonical, value))
+        )
+        for existing in list(config):
+            if existing.lower() == canonical:
+                del config[existing]
+        config[canonical] = parsed
+        return True
+    return False
+
+
+def _reuse_display_ints(
+    config: dict[str, str | None],
+    live: Any,
+    unset_keys: set[str],
+) -> None:
+    """Validate and apply present int display keys to a live session's token and maps."""
+    token = live._alive_token
+    for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
+        if not any(key.lower() == canonical for key in config):
+            continue
+        parsed = _builder_display_int(config, canonical, fallback)
+        token[_display_token_key(canonical)] = parsed
+        _sync_display_int_into_builder_config(live._builder_config, canonical, parsed)
+        store = token.get("runtime_conf")
+        if isinstance(store, dict):
+            for existing in list(store):
+                if existing.lower() == canonical:
+                    del store[existing]
+            store[canonical] = str(parsed)
+        unset_keys.discard(canonical)
 
 
 def _normalize_display_int(key: str, value: str | int | object) -> int:

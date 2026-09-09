@@ -235,19 +235,23 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   test). pins: dfcore-1/C-006, C-007
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
-  DISPLAY-POLARS-1 step 4 (2026-09-09): the polars cell path spells `null` /
-  lowercase bools / mixed-mode floats (shortest-expansion rules measured probe
-  by probe against polars 1.43.2 — fixed, six-decimal, shortest-sci, and
-  four-decimal-sci bands; the probe table lives in the unit ledger), nested
-  structs `{a,"b"}` and lists `["a", 1]` with double-quoted strings, and cuts
-  long cells at `str_len` characters plus `…` (spark/duckdb keep `...`).
-  Polars dtype labels are `decimal[p,s]`, unit-aware `datetime[ms|μs|ns]`
-  (with `, tz` when zoned), `time`, `struct[n]`, and `list[inner]`; other
-  styles keep their old labels. `_format_polars_show` hides columns past
-  `max_cols` behind a `…` column (first half, gap, second half). The nested
-  formatter recurses with a depth cap of 8 (nested Arrow types are genuinely
-  recursive; a flat walk would hide the shape; past the cap values fall back
-  to plain text). pins: display-polars-1/C-005
+  DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
+  control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
+  re-exports the spelling helpers; the spellings themselves live in
+  `polars_cells.py`. pins: display-polars-1/C-005
+- `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
+  the show doors: `null` / lowercase bools / mixed-mode floats
+  (shortest-expansion rules measured probe by probe against polars 1.43.2 —
+  fixed, six-decimal, shortest-sci, and four-decimal-sci bands; the probe table
+  lives in the unit ledger), nested structs `{a,"b"}` and lists `["a", 1]`
+  with double-quoted strings, `str_len` cuts at `str_len` characters plus `…`
+  (spark/duckdb keep `...`), `decimal[p,s]`, unit-aware `datetime[ms|μs|ns]`
+  (with `, tz` when zoned), `time`, `struct[n]`, `list[inner]`, and the
+  `max_cols` column gap. The nested formatter recurses with a depth cap of 8
+  (nested Arrow types are genuinely recursive; a flat walk would hide the
+  shape; past the cap values fall back to plain text). No plan logic here, so
+  the module never imports `plan_collapse` (import direction stays one-way).
+  pins: display-polars-1/C-005
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
