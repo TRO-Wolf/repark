@@ -64,6 +64,11 @@ after the red run.
 | step-4 red run: new pins on base tree | `5 failed, 7 passed` (all five red-first atoms fail as required) |
 | step-4: `test_display_polars_default.py` + `test_display_styles.py` | green: `56 passed` |
 | step-4 neighbors (`test_dfcore_6_eager_preview`, `test_dfcore_4b_show_goldens`, `test_t3_ux_polish`, `test_dfcore_1_exports`, `test_dfcore_4b_exports`, `test_production_file_size`, `test_session_config_knobs`, `test_session`, `test_builder_config_map`, `test_getorcreate_catalogs`) | green (one interim red, `test_show_styled_vertical_warning_attributes_to_caller`, repaired as stale-cache, not product: `107 passed` + `103 passed`) |
+| `make py-test-facade` | green: `5842 passed, 369 skipped, 7 xfailed` (all 7 xfails are base-tree `test_df_eager_1.py` red-first pins, verified zero xfail markers in the display files) |
+| parity suite (`python/repark-parity/tests`) | green: `639 passed` |
+| `make py-test-parity-cap` | green: `23 passed` (dual-table ratchet holds both sides) |
+| `make ci` | green, exit 0 (lib-py ratchets, ledger grammar, example coverage with the True-cap change, manifest, spell-check) |
+| `make verify` rust-test (`cargo test --locked --workspace`) | RED, pre-existing and unrelated: 2 `repark-iceberg` `dv_close` tests fail on a poisoned part-dv fixture lock under workspace-parallel runs, pass as `-p repark-iceberg --lib` (429/429) on both trees; the step-4 diff holds zero `.rs` files so the Rust binary is unchanged — same failure with or without this commit |
 
 ## Pins
 
