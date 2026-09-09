@@ -199,21 +199,13 @@ pub(crate) fn quote_namespace_name_if_needed(part: &str) -> String {
     format!("`{}`", part.replace('`', "``"))
 }
 
-/// A parsed Spark `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`.
 pub(crate) struct DescribeTable {
     pub(crate) catalog: String,
     pub(crate) namespace: String,
     pub(crate) table: String,
-    /// `EXTENDED` or `FORMATTED` was present — Spark renders both identically on v2 tables.
     pub(crate) extended: bool,
 }
 
-/// Recognise `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] <name>` for Iceberg tables.
-///
-/// Returns `None` for everything this path must not shadow: the
-/// `DESCRIBE {NAMESPACE|DATABASE|SCHEMA}` form, non-three-part names (temp views and
-/// DataFusion-native tables fall through unchanged), metadata-table suffixes, and trailing
-/// shapes the table grammar does not model.
 pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
@@ -246,16 +238,12 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
     }))
 }
 
-/// Whether `word` opens the namespace form this parser must leave to its own arm.
 fn is_namespace_head(word: &Word) -> bool {
     word.value.eq_ignore_ascii_case("namespace")
         || word.value.eq_ignore_ascii_case("database")
         || word.value.eq_ignore_ascii_case("schema")
 }
 
-/// DESCRIBE TABLE returns Spark's three-column `col_name` / `data_type` / `comment` frame.
-/// # Errors
-/// Returns a plan error when the catalog is unregistered or the table does not exist.
 pub(crate) async fn execute_describe_table(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -284,7 +272,6 @@ pub(crate) async fn execute_describe_table(
     ctx.read_batch(describe_table_batch(&describe, &table)?)
 }
 
-/// Build the `col_name` / `data_type` / `comment` batch for one Iceberg table.
 pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
     let rows = describe_table_rows(describe, table)?;
     let mut names = Vec::with_capacity(rows.len());
@@ -310,7 +297,6 @@ pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> R
     )?)
 }
 
-/// One `(col_name, data_type, comment)` row per section of Spark's DESCRIBE output.
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
@@ -382,22 +368,18 @@ fn describe_table_rows(
     Ok(rows)
 }
 
-/// A blank `('', '', '')` separator row between DESCRIBE sections.
 fn blank_describe_row() -> (String, String, Option<String>) {
     (String::new(), String::new(), Some(String::new()))
 }
 
-/// A `(# Header, '', '')` section-header row.
 fn section_describe_row(header: &str) -> (String, String, Option<String>) {
     (header.to_string(), String::new(), Some(String::new()))
 }
 
-/// A `(name, value, '')` detail row with an empty (non-null) comment.
 fn plain_describe_row(name: &str, value: &str) -> (String, String, Option<String>) {
     (name.to_string(), value.to_string(), Some(String::new()))
 }
 
-/// Render one partition field the way Spark's `Part N` rows spell it (`days(ts)`).
 fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> Result<String> {
     let source = schema.field_by_id(field.source_id).ok_or_else(|| {
         DataFusionError::Plan(format!(
@@ -418,7 +400,6 @@ fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> R
     })
 }
 
-/// Spell the `_partition` metadata column from the default spec's partition type.
 fn describe_partition_struct_type(
     schema: &IcebergSchema,
     spec: &Arc<iceberg::spec::PartitionSpec>,
@@ -429,14 +410,12 @@ fn describe_partition_struct_type(
     Ok(spark_ddl_type_name(&arrow_type))
 }
 
-/// The OS user Spark reports as the table owner.
 fn describe_table_owner() -> String {
     std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
         .unwrap_or_else(|_| "unknown".to_string())
 }
 
-/// Render `Table Properties` in Spark's bracketed key-ordered form with secret redaction.
 fn render_table_properties(metadata: &TableMetadata) -> String {
     let mut merged: HashMap<String, String> = metadata.properties().clone();
     merged.insert(
@@ -461,7 +440,6 @@ fn render_table_properties(metadata: &TableMetadata) -> String {
     format!("[{}]", rendered.join(","))
 }
 
-/// Render the `Statistics` row from the current snapshot summary, zeros when empty.
 fn describe_table_statistics(metadata: &TableMetadata) -> String {
     let Some(snapshot) = metadata.current_snapshot() else {
         return "0 bytes, 0 rows".to_string();

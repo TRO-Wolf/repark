@@ -307,9 +307,6 @@ async fn try_preparse_intercepts(
             Err(error) => Err(error),
         });
     }
-    // `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table` (SQL-DESCRIBE-1).
-    // Only shadows names under a registered catalog; temp views and DataFusion-native
-    // tables keep their existing fall-through.
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
         match parsed {
             Ok(describe_table) if catalogs.get(&describe_table.catalog).is_some() => {

@@ -1,5 +1,3 @@
-//! Spark DDL type spellings shared by the Spark door and the Python binding.
-
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 
 const SPARK_TYPE_NAME_MAX_DEPTH: usize = 32;
