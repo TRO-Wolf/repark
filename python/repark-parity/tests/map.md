@@ -356,7 +356,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   ledger's unpinned `PROVEN` clause passes rule B; the identical ledger without the marker reds
   with the standing rule-B message; the reading ledger without an attestation block still reds
   rule C. The new tests carry no inline pins, so the unit's clauses are cited on this line.
-  pins: ledger-reading-1/C-001, C-002, C-003
+  Step 2 (2026-09-09) added C-004, the real-tree flip of BALLISTA-AUDIT-0's twelve clauses;
+  no new test was written for it, so its citation rides this line with its evidence cell
+  holding the gate runs.
+  pins: ledger-reading-1/C-001, C-002, C-003, C-004
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
