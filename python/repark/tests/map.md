@@ -1819,13 +1819,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark.app.name`=`repark`; `Column.round` + windowed TA chain; H1 bare-join export naming
   overlay on collect/to_arrow/to_polars/to_pandas (display names, dups positional, no
   `__repark_*` leak); **F-T3-002** multi-name Row pickle round-trip via `from_ordered_fields`.
-- `test_display_polars_default.py` — **DISPLAY-POLARS-1 step 2** (2026-09-09): D-5 small-frame
+- `test_display_polars_default.py` — **DISPLAY-POLARS-1 steps 2+3** (2026-09-09): D-5 small-frame
   single fetch in the styled polars renderer (`_render_styled_show`): a 7-row frame renders
   whole through the probe fetch with `count()` never called and no tail fetch; a 12-row frame
   past the keep-set pays exactly one `count()` plus one tail fetch (spy on `DataFrame.count`;
-  shape and ellipsis assertions keep both pins non-vacuous). MUTATION: restore
+  shape and ellipsis assertions keep both pins non-vacuous). D-4 styled repr doors: `repr(df)`
+  under `polars` / `duckdb` equals the captured `show()` stdout byte-for-byte with eager-eval
+  unset (drift-proof: one renderer, two doors); `_repr_html_()` is `None` under both styled
+  modes with eager-eval on and off while the spark HTML table stays; `repr` under `spark` keeps
+  the exact schema form eager-off and the exact eager grid + HTML eager-on; the D-5 spy rides
+  through repr (7-row repr: zero `count()` calls, styled table rendered). MUTATION: restore
   count-before-probe → `test_small_frame_renders_without_count` reds; double-count or drop the
-  count on the large path → `test_large_frame_counts_once` reds.
+  count on the large path → `test_large_frame_counts_once` reds; give the styled repr a second
+  rendering path or drift it from show()'s defaults → either styled equality pin reds; keep the
+  eager-eval doors in charge under the styled modes →
+  `test_polars_repr_renders_table_without_eager_eval` / `test_styled_repr_html_is_none` red;
+  touch the spark repr branches → `test_spark_repr_unchanged` reds; count a small frame through
+  repr → `test_small_frame_repr_does_not_count` reds.
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`

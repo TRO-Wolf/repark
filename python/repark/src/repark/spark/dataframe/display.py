@@ -77,13 +77,12 @@ def _show(
 
 
 def _repr(frame: DataFrame) -> str:
-    """Schema form by default; table show when ``spark.sql.repl.eagerEval.enabled``.
-
-    Conf keys ``spark.sql.repl.eagerEval.enabled`` (truthy),
-    ``.truncate`` (default 20), ``.maxNumRows`` (default 20) match Spark REPL shape
-    (Apache ``test_repr_behaviors``).
-    """
+    """Schema form under spark without eager eval; the styled table under polars and duckdb."""
     frame._ensure_alive()
+    style = _resolve_display_style(frame)
+    if style != "spark":
+        rendered, _ = _render_styled_show(frame, style, n=20, truncate_at=20)
+        return rendered
     if not _eager_eval_enabled(frame):
         return frame.__str__()
     max_rows, truncate_at = _eager_eval_limits(frame)
@@ -100,16 +99,12 @@ def _repr(frame: DataFrame) -> str:
 
 
 def _repr_html(frame: DataFrame) -> str | None:
-    """HTML table when eager-eval is on; ``None`` otherwise (Jupyter / PySpark).
-
-    Cell text and header names are HTML-escaped (Spark
-    ``Dataset.html`` / ``StringEscapeUtils``) so ``<script>``, ``&``, and hostile column
-    names cannot inject markup. Truncate first (hard left-slice, same as ``__repr__``),
-    then escape — matches live Spark 4.1.2 ordering.
-    """
+    """HTML table under spark with eager eval; ``None`` under polars and duckdb."""
     import html as html_module
 
     frame._ensure_alive()
+    if _resolve_display_style(frame) != "spark":
+        return None
     if not _eager_eval_enabled(frame):
         return None
     max_rows, truncate_at = _eager_eval_limits(frame)
