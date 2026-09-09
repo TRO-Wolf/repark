@@ -8,6 +8,7 @@ This file closes when DF-EAGER-1 merges, or when the owner closes the slate row.
 `origin/main` at dispatch
 **Model:** GLM 5.3 Flash (zai/glm-5.3-flash)
 **risk_tier:** standard.
+**Step 2 actor:** Muse Spark (muse-spark-1.3-contributor) · 2026-09-09 · branch `feat/df-eager-1-step2`.
 
 Step 1 of the card's Steps table (red-first pins) is done; step 2 (implement D-1..D-6 in
 `core.py` + `polars.py`, the guide section, the maps) is open. Every red below was measured on
@@ -17,12 +18,12 @@ this clone 2026-09-09 through the built facade; nothing is guessed.
 
 | ID | Clause (card decision) | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | D-1: `eager()` materialises through the cache-view path and answers a **new** `repark.DataFrame` (same class, full Spark surface, never a polars object) whose `_eager_shape` is `(rows, cols)` read from the materialised table, leaves the source frame unchanged, and over `repark.cache.max_bytes` refuses naming `.eager()` and the key. | Pins `test_eager_returns_new_frame_with_eager_shape_rows_and_columns` (new frame + shape), `test_eager_leaves_source_frame_unchanged` (source plan and cache mark untouched), `test_eager_frame_survives_csv_source_deletion` (materialised: answers after the file is gone), `test_eager_over_max_bytes_refuses_naming_eager` (guard names `.eager()` and the key); guard `test_guard_spark_collect_still_returns_rows` holds the full-Spark-surface half. Recorded red: `PySparkAttributeError` on `eager` (below). | **OPEN** |
-| C-002 | D-2: `compute()` is an alias — the same function object as `eager()` (`DataFrame.compute is DataFrame.eager`). | Pin `test_compute_is_eager`. Recorded red: class-level `AttributeError` (below). | **OPEN** |
-| C-003 | D-3: `lazy()` on a non-eager frame returns `self`; on an eager frame returns a copy without `_eager_shape` over the same view, no re-execution, no drop. | Pin `test_lazy_identities_per_d3` (identity `is self` when lazy; `is not` + no `_eager_shape` + same answers with the eager frame intact when eager). Recorded red: `PySparkAttributeError` on `lazy` (below). The no-drop / view-answer halves are pinned observably; "over the same view (no re-execution)" stays the card's binding on step 2 — see Notes. | **OPEN** |
-| C-004 | D-4: `repr` of an eager frame uses `_eager_shape`, skips `count()` (head/tail fetches still run against the view) and prints the same table as the lazy frame. | Pin `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` — count spy per the D-11 ruling (`_install_count_spy`, the `test_display_polars_default.py` idiom), on a 12-row polars-style frame so the lazy door measurably pays exactly one `count()` and the eager door must pay zero with an identical table. Recorded red: `PySparkAttributeError` on `eager` (below). D-4's other half — `count()` on an eager frame returns `_eager_shape[0]` without a query — has no pin in this round's list; see Notes. | **OPEN** |
-| C-005 | D-5: an eager frame owns its view; `unpersist()` drops it (existing behaviour); no `__del__`; the session's `stop()` drops every view already. | No new pin this round — the card's step-1 list names none for D-5. Held at step 2 by `test_cache_persist.py`'s unpersist rows staying green plus the `test_lazy_identities_per_d3` no-drop assertions. See Notes. | **OPEN** |
-| C-006 | D-6: `PolarsFrame.eager()` wraps `self._frame.eager()`; `PolarsFrame.collect()` is not touched. | Guard `test_guard_pl_collect_still_returns_polars_dataframe` pins the untouched-`collect()` half. The `eager()` mirror half has no pin in this round's list; see Notes. | **OPEN** |
+| C-001 | D-1: `eager()` materialises through the cache-view path and answers a **new** `repark.DataFrame` (same class, full Spark surface, never a polars object) whose `_eager_shape` is `(rows, cols)` read from the materialised table, leaves the source frame unchanged, and over `repark.cache.max_bytes` refuses naming `.eager()` and the key. | Pins `test_eager_returns_new_frame_with_eager_shape_rows_and_columns` (new frame + shape), `test_eager_leaves_source_frame_unchanged` (source plan and cache mark untouched), `test_eager_frame_survives_csv_source_deletion` (materialised: answers after the file is gone), `test_eager_over_max_bytes_refuses_naming_eager` (guard names `.eager()` and the key); guard `test_guard_spark_collect_still_returns_rows` holds the full-Spark-surface half. Recorded red: `PySparkAttributeError` on `eager` (below). | **PROVEN** |
+| C-002 | D-2: `compute()` is an alias — the same function object as `eager()` (`DataFrame.compute is DataFrame.eager`). | Pin `test_compute_is_eager`. Recorded red: class-level `AttributeError` (below). | **PROVEN** |
+| C-003 | D-3: `lazy()` on a non-eager frame returns `self`; on an eager frame returns a copy without `_eager_shape` over the same view, no re-execution, no drop. | Pin `test_lazy_identities_per_d3` (identity `is self` when lazy; `is not` + no `_eager_shape` + same answers with the eager frame intact when eager). Recorded red: `PySparkAttributeError` on `lazy` (below). The no-drop / view-answer halves are pinned observably; "over the same view (no re-execution)" stays the card's binding on step 2 — see Notes. | **PROVEN** |
+| C-004 | D-4: `repr` of an eager frame uses `_eager_shape`, skips `count()` (head/tail fetches still run against the view) and prints the same table as the lazy frame. | Pin `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` — count spy per the D-11 ruling (`_install_count_spy`, the `test_display_polars_default.py` idiom), on a 12-row polars-style frame so the lazy door measurably pays exactly one `count()` and the eager door must pay zero with an identical table. Recorded red: `PySparkAttributeError` on `eager` (below). D-4's other half — `count()` on an eager frame returns `_eager_shape[0]` without a query — has no pin in this round's list; see Notes. | **PROVEN** |
+| C-005 | D-5: an eager frame owns its view; `unpersist()` drops it (existing behaviour); no `__del__`; the session's `stop()` drops every view already. | No new pin this round — the card's step-1 list names none for D-5. Held at step 2 by `test_cache_persist.py`'s unpersist rows staying green plus the `test_lazy_identities_per_d3` no-drop assertions. See Notes. | **PROVEN** |
+| C-006 | D-6: `PolarsFrame.eager()` wraps `self._frame.eager()`; `PolarsFrame.collect()` is not touched. | Guard `test_guard_pl_collect_still_returns_polars_dataframe` pins the untouched-`collect()` half. The `eager()` mirror half has no pin in this round's list; see Notes. | **PROVEN** |
 
 ## Gate 1 — the committed shape (markers on)
 
@@ -99,3 +100,49 @@ The clone carried a warm `.venv` and a same-day native module (`_native.abi3.so`
 (`make py-test-facade`) re-provisions exactly per the target (`uv sync --locked` + the four
 facade extras + `maturin develop`) and is recorded at the hand-back. Disk before the run:
 473G free.
+
+## Step 2 implementation (2026-09-09, Muse Spark)
+
+Step-1 red confirmed at pickup: `2 passed, 7 xfailed` on the markers-on suite, and a live
+probe showed `hasattr` false for `eager` / `compute` / `lazy` with no `_eager_shape` slot.
+
+Shape. New `python/repark/src/repark/spark/dataframe/eager.py` (93 lines) holds the three
+frame-first bodies (`_eager_materialize`, `_to_lazy`, `_count_rows`) plus the moved
+cache-guard trio, following the DFCORE-4a split pattern: public methods stay as one-line
+wrappers on the class, the leaf imports stay function-local, and `core.py` re-imports the
+moved names by identity. `core.py` 4525 → 4487 (baseline ratcheted down in the same commit);
+`display.py` +6 (`_styled_total_rows`); `polars.py` +4 (`PolarsFrame.eager`).
+
+HALT-tripwire measurement (card: HALT if the row count needs a separate query, i.e. a Rust
+return-value change). Measured: `materialize_as_cache_view` returns unit (`PyResult<()>` in
+`crates/repark-python/src/session.rs`); `PyDataFrame` exposes `count` (executes) and
+`column_names` (logical only) — no zero-execution row count exists on the Python side. The
+card's D-1 mechanism ("read from the materialised table (no separate count)") is therefore
+implemented as one MemTable scan via `to_arrow()` on the fresh view, taking `num_rows` /
+`num_columns` — no `COUNT(*)` query runs anywhere on the path. No Rust change was needed,
+so no HALT. `count()` and the styled `repr`/`show` totals on an eager frame reuse the shape
+with zero engine actions (pinned by the `_action_inner` spy and the D-11 count spy).
+
+Over-limit refusal reuses the guard call and wraps only its `IllegalArgumentException` to
+name `.eager()` beside the key (other engine failures pass through unchanged). `unpersist()`
+clears `_eager_shape` with the view so a shape never outlives its materialization; the lazy
+copy from D-3 carries no shape and no cache ownership, so dropping either side cannot strand
+the other beyond ordinary temp-view lifetime.
+
+Step-2 pins added beside the mirror (no new file): `test_eager_count_returns_shape_without_action`
+(D-4 count half, with a lazy-frame control proving the spy observes real actions) and
+`test_polars_frame_eager_wraps_spark_eager` (D-6 mirror half). No step-1 pin assertion was
+changed — only markers deleted.
+
+Gates (this round): `test_df_eager_1.py` 11 passed, zero markers; `make py-test-facade`
+exit 0, then the identical pytest rerun on the final tree: 5851 passed, 369 skipped;
+`make py-lint` green; `python3 scripts/check_lib_py.py` green (599 files, 32 exceptions,
+core row at 4487); `ruff format --check` clean on every touched file;
+`check_python_conventions`, `check_docstring_presence.sh`, `sync_map_md.py --check`, and
+`check_map_md.sh` all clean. `test_dfcore_1_exports.py` sits at exactly the 1000-line default ceiling
+after its declared delta — the next unit that touches it must split it (the file's own
+sanctioned out).
+
+Owed at unit close (not this step): the `COVERAGE_ATTESTATION` block (grammar rule C fires
+once no clause is `OPEN`) belongs to the review round, and the `STATUS.md` truth-up plus
+the guide section belong to step 3 and the departure edit.

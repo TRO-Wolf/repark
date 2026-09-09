@@ -137,7 +137,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: dml-a-merge-not-matched-by-source/C-002, C-003
 - `polars.py` — optional Polars-style facade. Imports Polars lazily and keeps join,
   sort, and null-placement semantics explicit. TYPES-1 round 4: `with_row_index` casts
-  `row_number` to BIGINT (pins: types-1/C-005).
+  `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):
+  `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
+  (pins: df-eager-1/C-006).
 - `row.py` — Spark-compatible Row construction, indexing, equality, nested conversion,
   display, and pickling.
 - `storage.py` — StorageLevel flags and the facade cache contract. Disk, off-heap,
