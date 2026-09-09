@@ -69,6 +69,12 @@ after the red run.
 | `make py-test-parity-cap` | green: `23 passed` (dual-table ratchet holds both sides) |
 | `make ci` | green, exit 0 (lib-py ratchets, ledger grammar, example coverage with the True-cap change, manifest, spell-check) |
 | `make verify` rust-test (`cargo test --locked --workspace`) | RED, pre-existing and unrelated: 2 `repark-iceberg` `dv_close` tests fail on a poisoned part-dv fixture lock under workspace-parallel runs, pass as `-p repark-iceberg --lib` (429/429) on both trees; the step-4 diff holds zero `.rs` files so the Rust binary is unchanged — same failure with or without this commit |
+| follow-up: display files at final content | green: `56 passed`, byte-identical to round 1 |
+| follow-up: `make py-test-facade` | green: `5842 passed, 369 skipped, 7 xfailed` (identical counts to round 1; xfails unchanged base-tree eager pins) |
+| follow-up: `make py-lint` | green (`ruff check .`, all checks passed) |
+| follow-up: `python3 scripts/check_lib_py.py` | green: `598 files clean` (new module counted, no-stub held, DOWN ratchets exact) |
+| follow-up: `make py-test-parity-cap` | green: `23 passed` |
+| follow-up neighbors (session/conf, eager preview, show goldens, ux polish, production size: 8 files) | green: `143 passed` |
 
 ## Pins
 
