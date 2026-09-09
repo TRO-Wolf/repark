@@ -71,9 +71,10 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
 - [ballista-audit-2026-09-08.md](ballista-audit-2026-09-08.md) — **the Ballista audit
   (Milestone 0 of the rust-unification brief, BALLISTA-AUDIT-0):** the smallest coherent
   upstream subset that can serve as RePark's owned distributed runtime, read at tag
-  `54.1.0` (`f4e66525`). Step 1 landed the Half A facts (line counts, dependencies,
-  protobuf inventory, extension-point grep, lifecycle file map); step 2 adds the
-  judgement and the §28 decision gate.
+  `54.1.0` (`f4e66525`). Steps 1–2 landed: Half A facts (line counts,
+  dependencies, protobuf inventory, extension-point grep, lifecycle file map)
+  plus Half B judgement (§26 A–H, §27, the §28 gate, appendix A6). Step 3
+  (read, ADR disposition line, PR) pending.
 
 ## Pointers
 - Up: [../map.md](../map.md)

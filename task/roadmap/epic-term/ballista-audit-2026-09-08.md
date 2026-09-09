@@ -11,48 +11,268 @@ Ballista-for-writes because the protobuf plan serialization cannot carry
 RePark's Iceberg write/commit nodes. The serialization chapter below (Half A
 facts now, disposition in step 3) says whether an extension codec changes that.
 The commit-coordinator boundary (executors produce files, one authority commits)
-is kept either way.
+is kept either way. Step 2 answered it in §26.D; step 3 records the
+one-line disposition.
 
 ## §26.A — Version pair and audit scope
 
-Step 2 fills this section.
+D-1 holds with no delta risk. Upstream root `Cargo.toml` line 37 declares
+`datafusion = "54"`; this workspace pins `datafusion = "54.1.0"`
+(`Cargo.toml` line 88). Appendix A2 shows every Ballista member resolves
+`datafusion` through the upstream workspace pin, so both trees build against
+the DF 54 family and the audited tag `54.1.0` (`f4e66525`) is the newest
+matching Ballista release, not a nearest-lower fallback.
+
+Scope is the seven member directories in appendixes A1–A5 plus the two
+appendix-A1 gaps closed in step 2 (appendix A6): the `python/` binding
+(`python/build.rs`, `python/src/lib.rs`, `python/src/utils.rs`,
+`python/src/cluster.rs`), which bears directly on the D-4 Python-API
+requirement, and `dev/msrvcheck`, which is release tooling. The scratch
+checkout at `upstream-ballista/` is git-excluded and never enters a commit;
+all counts below were produced by the commands shown, run at that checkout.
 
 ## §26.B — Crate and line inventory (facts in appendix A1)
 
-Step 2 fills this section.
+Complexity concentrates in two places. The scheduler is 30182 of 76209
+lines (40%), and over half of that sits in `scheduler/src/state`
+(16427 lines): the stage graph, stage, and task-manager files named in
+appendix A5. `execution_graph.rs` alone is 3020 lines, the largest file in
+the tree. The second mass is `ballista/core` (19233 lines), where the serde
+layer (5721) and the shuffle-heavy `execution_plans` (8153) dominate.
+
+The client is thin by design: 3838 lines, of which 3556 are `tests/`, so the
+shipped client surface is about 300 lines over `ballista-core`. The executor
+is mid-size (6090) with no `tests/` directory. Test weight is material:
+20110 `#[cfg(test)]` lines are 26% of the tree, and the scheduler holds 7508
+of them, which raises the cost of any future import of the scheduling core.
+
+`ballista-cli` (11073), `benchmarks` (3079), and `examples` (2714) are
+harness and demo code, not runtime. They enter no KEEP set; §26.F drops them
+outright. The runtime under judgement is therefore about 59k lines
+(client + core + executor + scheduler), with the scheduling state machine as
+the long pole.
 
 ## §26.C — Dependency inventory (facts in appendix A2)
 
-Step 2 fills this section. Per step D-8 the source is each crate's own
-`Cargo.toml`, not `cargo tree`, which needs registry network access.
+Per step D-8 the source is each crate's own `Cargo.toml`, not `cargo tree`,
+which needs registry network access. Three judgements follow from that table.
+
+First, the dependency story is clean at the engine layer. Every Ballista
+crate builds on the workspace-pinned DF 54 family (`datafusion`,
+`datafusion-proto`, `datafusion-proto-common`) plus `tonic`/`prost` transport
+and `object_store`. Nothing in the runtime core reaches outside the
+DataFusion/Arrow/tonic world except through the scheduler and executor
+binaries. A RePark dependency on `ballista-core` + client would therefore
+pull no foreign engine; the JVM-free constraint from the unification brief §1
+is satisfied by construction.
+
+Second, the scheduler and executor binaries pull an operational stack that a
+dependency also inherits: `axum` + `tower-http` (REST API), `prometheus`
+(metrics), `graphviz-rust` (plan display), the KEDA autoscaling proto
+(appendix A3), and `sysinfo` + full `tokio` on the executor. None of this is
+a veto, but it is the real cost of depending on the scheduler crate rather
+than only on core + client, and it is why §26.H scopes the subset narrowly.
+
+Third, two optional features map directly onto RePark requirements.
+`spark-compat` (core + scheduler, over `datafusion-spark` 54) is the
+Spark-function surface the Spark facade would meet; `substrait`
+(scheduler-only, optional) is a second plan interchange next to the protobuf
+path. Neither is needed for a first distributed-read pilot, so both stay off
+in §26.F; they are recorded here so a later unit can switch them on without
+re-auditing.
 
 ## §26.D — Serialization: protobuf files and extension codecs (facts in appendixes A3–A4)
 
-Step 2 fills this section.
+The plan path runs through the vendored `datafusion.proto` /
+`datafusion_common.proto` copies plus Ballista's own `ballista.proto`
+(883 lines: jobs, stages, tasks, shuffle locations). `BallistaCodec` in
+`ballista/core/src/serde/mod.rs` (lines 141–364) is generic over the
+DataFusion plan representation and carries the two hooks: default
+`BallistaLogicalExtensionCodec` (def line 185) and
+`BallistaPhysicalExtensionCodec` (def line 352, `impl
+PhysicalExtensionCodec` line 364). Measured behavior of each hook:
+
+- Physical: exactly five node types get Ballista encodings —
+  `ShuffleWriter`, `SortShuffleWriter`, `ShuffleReader`,
+  `UnresolvedShuffle`, `ChaosExec` (`try_decode` lines 365–551, `try_encode`
+  lines 553 onward). Any other `ExecutionPlan` hits the terminal `else` and
+  encoding FAILS. There is no additive registry; new node types travel only
+  inside a codec object supplied from outside.
+- Logical: only the cache node plus Parquet/CSV/JSON/Arrow/Avro file-format
+  codecs get Ballista encodings (lines 185–331); anything else falls through
+  to the DataFusion default codec.
+- Table providers are a pure passthrough to the DataFusion default codec
+  (lines 292–310). Ballista adds nothing here: a custom `TableProvider`
+  serializes across the cluster only if DataFusion's own codec knows it.
+
+The override plumbing is a single slot, not a chain. `SessionConfigExt`
+(`ballista/core/src/extension.rs`, `with_ballista_physical_extension_codec`
+and `with_ballista_logical_extension_codec`) stores one codec object; the
+getter returns the override or the Ballista default. The scheduler
+(`ballista/scheduler/src/config.rs` lines 261–263) and the executor
+(`ballista/executor/src/executor_process.rs` lines 183–185) each accept the
+same pair of overrides. A RePark codec must therefore be a delegating
+wrapper: handle RePark's nodes, delegate the five shuffle nodes (and the
+logical cache/file-format nodes) back to the Ballista defaults. The
+extension-point rows that prove each seat exists are appendix A4
+(`PhysicalExtensionCodec` 62 hits / 10 files, `LogicalExtensionCodec` 57 / 9,
+with the scheduler, executor, client-test, and example call sites listed).
+
+ADR-0004 disposition (the header's standing question). Mechanically, YES: a
+`PhysicalExtensionCodec` wrapper can carry RePark's Iceberg write/commit
+nodes across the scheduler–executor boundary, so the protobuf format is not
+a hard block. Architecturally, the ADR conclusion STANDS unchanged: do not
+build Ballista-for-writes. Exactly-once Iceberg publication — stable batch
+identity, ownership fencing, unknown-commit recovery, catalog-conflict
+handling, the invariants the unification brief demands in its §8 — cannot
+live inside distributed tasks no matter how they serialize. The
+commit-coordinator boundary is kept either way: executors may produce data
+files over the shuffle/result path, but the single commit authority stays
+coordinator-side, and no write/commit node is registered in the wrapper.
+Two further facts support keeping that boundary: table-provider passthrough
+means RePark's Iceberg provider would need DataFusion-level codec support on
+every executor, and per-executor catalog plus credential plumbing fights the
+ADR's session-owned-credentials discipline.
 
 ## §26.E — Lifecycle file map: submit to result (facts in appendix A5)
 
-Step 2 fills this section.
+The eight steps form one coherent pipeline with extension seats at both
+ends. Client submit is thin: `ballista/client` (three files, ~300 shipped
+lines) plus `core/src/planner.rs` (319) and `core/src/client.rs` (762).
+Scheduler accept-and-plan centers on `scheduler_server/grpc.rs` (1292),
+`scheduler_server/mod.rs` (1093), and `scheduler/src/planner.rs` (1934);
+per-session state enters through the `SessionProvider` hook
+(`scheduler_server/mod.rs` line 65), which is the seat a RePark session
+builder would occupy. The stage graph (`execution_graph.rs` 3020,
+`execution_stage.rs` 1333, `query_stage_scheduler.rs` 455) is the largest
+and least divisible scheduling mass; task dispatch is a single 1175-line
+file. Executor run spreads ~4700 lines across ten files, with the process
+entry (`executor_process.rs` 1158, carrying the codec and config overrides),
+the run loop (`executor.rs` 567, `execution_loop.rs` 380), and the plan
+execution seat (`execution_engine.rs` 519) as the files a RePark embedding
+would touch first. Shuffle write (~3360 lines, eight files) is outweighed by
+shuffle read (~3940, five files), and the 2430-line `shuffle_reader.rs`
+against the 828-line writer says read-path complexity — coalescing,
+broadcast, multi-stream partition handling — dominates the data plane.
+Results return over Arrow Flight (`flight_service.rs` 441, `collect.rs` 149).
+
+No step is missing and no step duplicates another: submit, plan, stage,
+dispatch, run, shuffle, and collect each own distinct files. The lifecycle
+therefore admits the smallest-subset reading in §26.F without carving any
+file in half, except the stage-graph cluster, which must be taken whole.
 
 ## §26.F — Module classification and crate-structure proposal
 
-Step 2 fills this section.
+Per D-4 nothing is rewritten or renamed, and a divergence appears only where
+a named RePark requirement drives it (streaming microbatch, Iceberg commit
+coordination, Python API). Verdicts:
+
+| Module | Verdict | Reason |
+|---|---|---|
+| `ballista/core` serde, shuffle `execution_plans`, `extension`, `config`, `planner`, `client`, `object_store`, `registry`, `utils` | KEEP (as dependency) | The read path: plan serialization, shuffle data plane, session/codec/config override seats, object-store registry. No RePark-owned change needed while writes stay coordinator-side. |
+| `ballista/client` | KEEP (as dependency) | Thin submit surface over core; the standalone feature (optional executor + scheduler seats) is the local-first embedding shape. |
+| `ballista/scheduler` state machine (`state/`, `scheduler_server/`, `planner.rs`, `task_manager.rs`) | KEEP (as dependency) | Whole-stage scheduling has no RePark counterpart; the `SessionProvider` and codec-override seats admit RePark sessions without forking. Taken whole, never carved. |
+| `ballista/executor` run loop, engine, Flight service | KEEP (as dependency) | Task execution plus the `execution_engine.rs` and `executor_process.rs` override seats. |
+| `ballista/scheduler` REST API (`api/`), KEDA proto + autoscaling hooks, `graphviz` display, `flight_proxy_service` | DROP | Operations/display surface with no RePark requirement behind it; pulled only if the scheduler crate is depended on, switched off where features allow. |
+| `ballista-cli`, `benchmarks`, `examples` | DROP | Harness and demo code; not runtime. |
+| `dev/msrvcheck` | DROP | Release tooling (71-line MSRV checker); no runtime content. |
+| `python/` (`pyballista`) | DROP as a crate, WRAP as a pattern | The crate itself is not taken: it couples `pyo3` + `datafusion-python` 54 to the full scheduler/executor path (appendix A6) and would lock RePark's binding to Ballista's release train, against the thin-adapter discipline. Its *pattern* — `PyScheduler`/`PyExecutor` lifecycle classes plus `create_ballista_data_frame` shipping a serialized plan blob to a remote session — is the shape a future RePark distribution switch copies. No divergence is proposed now because no distribution unit has opened. |
+| Streaming microbatch, Iceberg commit coordination | No upstream module taken; RePark-owned later | Upstream offers neither a microbatch trigger model (the unification brief §10.2 order starts with available-now batches and triggers) nor commit-coordination machinery (brief §8). When those units open they build RePark-side, coordinator-side, reusing only the KEEP transport above. |
+
+Crate-structure proposal. RePark depends on four upstream crates at the
+pinned tag — `ballista-core`, `ballista` (client), `ballista-scheduler`,
+`ballista-executor` — with `spark-compat` and `substrait` off and REST/KEDA
+surface uncalled. No upstream file is imported, vendored, or renamed. The
+only RePark-owned code this audit anticipates, and only when a distribution
+unit opens, is a thin embedding layer: a delegating codec wrapper (§26.D), a
+session builder occupying the `SessionProvider` seat, and a commit-coordinator
+client that keeps publication coordinator-side. That layer is a future unit's
+design, not this audit's deliverable.
 
 ## §26.G — Risks
 
-Step 2 fills this section.
+- R-1 Single-slot codec override. A RePark wrapper must re-delegate the five
+  shuffle node types to the Ballista defaults (§26.D); every upstream change
+  to those nodes silently bypasses a stale wrapper. Pinned-tag dependence
+  plus a round-trip serde test on upgrade contains it.
+- R-2 Vendored DataFusion protos. `datafusion.proto` (1529 lines) and
+  `datafusion_common.proto` (687) are copies, not references; a DataFusion
+  bump that changes plan serialization must move the Ballista tag in
+  lockstep. Today's DF 54 match makes this latent, not active.
+- R-3 Stage-graph mass. `execution_graph.rs` (3020) plus `execution_stage.rs`
+  (1333) is the largest indivisible block; any behavior change needed inside
+  it cannot be made through an override seat and would force a fork. The KEEP
+  verdict bets no such change is needed for distributed reads.
+- R-4 Table-provider passthrough. RePark's Iceberg provider gains nothing
+  from Ballista's serde (appendix A3, `serde/mod.rs` lines 292–310); scan
+  distribution needs a DataFusion-level provider codec on every executor, a
+  cost this audit records but does not design.
+- R-5 Session-owned credentials across processes. Per-executor catalog and
+  credential plumbing fights the ADR-0004 everything-through-Session
+  discipline; unread paths (S3, Glue) must resolve executor-side without
+  leaking ambient authority. Open until a distribution unit designs it.
+- R-6 No upstream commit coordination. Nothing in the tree corresponds to the
+  unification brief §8 invariants (batch identity, fencing, unknown-commit
+  recovery); that machinery is RePark-owned and coordinator-side whenever it
+  arrives. The risk is assuming the transport provides it.
+- R-7 Operational stack inheritance. Depending on the scheduler crate pulls
+  `axum`, `prometheus`, `graphviz-rust`, and KEDA hooks (§26.C) into RePark's
+  supply chain whether or not RePark calls them.
 
 ## §26.H — Dependency-versus-import recommendation
 
-Step 2 fills this section.
+RECOMMENDATION: depend, not import. RePark takes `ballista-core`,
+`ballista` (client), `ballista-scheduler`, and `ballista-executor` as
+version-pinned dependencies at tag `54.1.0`, and owns nothing upstream. The
+override seats (§26.D: single-slot codec wrappers; `SessionProvider`;
+`override_config_producer` / `override_session_builder`) admit every
+RePark behavior the audit found a requirement for without touching an
+upstream file, and the DF 54 version match (§26.A) removes the usual reason
+to fork. Importing would take ~59 runtime kilolines plus 20 kilolines of
+upstream tests — including the 3020-line stage graph and its 7508 lines of
+scheduler in-source tests — with no owner and no RePark requirement that
+justifies the maintenance. The one condition that reopens this verdict is
+measured, not speculative: a distribution unit proves that a needed behavior
+change falls inside the stage-graph block (R-3) where no override seat
+reaches. Until such a unit produces that evidence, the gate stays on
+depend.
 
 ## §27 — Findings and open questions
 
-Step 2 fills this section.
+Findings. F-1: the smallest coherent subset is core + client + scheduler +
+executor as pinned dependencies, with the REST/KEDA/display surface dropped
+and `spark-compat`/`substrait` left off (§26.F). F-2: the protobuf format
+does not block custom plan nodes, but the single-slot override forces a
+delegating wrapper, not an additive registration (§26.D). F-3: ADR-0004's
+Ballista-for-writes ban survives the extension-codec answer; the boundary
+moves from "cannot serialize" to "must not commit from tasks"
+(§26.D). F-4: scan distribution still needs a DataFusion-level provider
+codec plus executor-side credential plumbing, both unowned (R-4, R-5). F-5:
+`pyballista` is a pattern reference, not a crate to take (appendix A6).
+
+Open questions for the unit that first distributes a query. Q-1: how do
+executors resolve S3/Glue reads under session-owned credentials (R-5)? Q-2:
+is the scheduler REST API (`api/`) needed for operations, or does it stay
+dropped? Q-3: does the Spark facade need `spark-compat` on, or do RePark's
+own shims cover the distributed path? Q-4: what round-trip serde test guards
+the codec wrapper on each Ballista repin (R-1)? None of these blocks this
+audit; each names its owning future unit.
 
 ## §28 — Decision gate
 
-Step 2 fills the decision-gate table, one line of evidence per criterion.
+The owner's plan §26–§28 text is not in this repository, so the criteria
+below are derived from this card's Done condition and decisions D-1–D-4, one
+line of evidence per criterion.
+
+| Criterion | Verdict | Evidence |
+|---|---|---|
+| D-1 version pair identified | PASS | Tag `54.1.0` / `f4e66525`; upstream `datafusion = "54"` vs workspace `54.1.0` (§26.A). |
+| Sixteen audit outputs answered with paths and numbers | PASS | Appendixes A1–A6: 187 files / 76209 lines, per-crate deps, 4 protos, 6-symbol grep with file:line, 8-step lifecycle file map, python + tooling gap closed. |
+| Smallest coherent subset named | PASS | Four KEEP crates as pinned dependencies; DROP list with reasons (§26.F). |
+| Serialization question answered against ADR-0004 | PASS | Codec CAN carry write nodes; ADR ban STANDS; coordinator commits either way (§26.D). |
+| Commit-coordinator boundary kept | PASS | No write/commit node registered; §8-class machinery declared RePark-owned, coordinator-side (R-6, §26.F). |
+| Divergences only where a RePark requirement drives them | PASS | Only streaming microbatch, commit coordination, and Python API appear, all as future-owned work (§26.F). |
+| Dependency-vs-import recommendation | DEPEND | Override seats suffice; import cost ~59k + 20k test lines; reopen condition is measured evidence inside the stage-graph block (§26.H). |
 
 ## Appendix A1 — Line counts by crate and directory
 
@@ -313,3 +533,26 @@ Source: directory listing plus `wc -l` on the files below (run at
 Outliers for step 2: the stage graph file (`execution_graph.rs`, 3020 lines)
 is the largest single file in the tree, and the shuffle reader
 (`shuffle_reader.rs`, 2430 lines) outweighs the shuffle writer more than 2:1.
+
+## Appendix A6 — Python binding and dev tooling (step-2 gap closure)
+
+The appendix-A1 seven-directory walk omits five upstream `.rs` files. Four
+are Ballista's own Python binding; one is release tooling. Command (run at
+`upstream-ballista/`):
+
+```sh
+wc -l python/build.rs python/src/lib.rs python/src/utils.rs python/src/cluster.rs dev/msrvcheck/src/main.rs
+```
+
+| File | Lines | Role |
+|---|---|---:|
+| `python/build.rs` | 20 | PyO3 build config |
+| `python/src/lib.rs` | 98 | `_internal_ballista` module: `PyScheduler`/`PyExecutor` classes, `create_ballista_data_frame` (ships a serialized plan blob to a remote session) |
+| `python/src/utils.rs` | 62 | `to_pyerr`, future/blocking bridges |
+| `python/src/cluster.rs` | 317 | `PyScheduler`/`PyExecutor` lifecycle over `start_server` / `start_executor_process` |
+| `python/` total | 497 | Separate crate `pyballista` 54.1.0 (`python/Cargo.toml`): path-deps on all four Ballista crates plus `datafusion-python` 54, `pyo3` 0.28 (`abi3-py310`), `tokio`, `tonic` |
+| `dev/msrvcheck/src/main.rs` | 71 | MSRV-check release tooling; no runtime content, one sentence as charged |
+
+Judgement pointer: the binding's weight is not its 497 lines but its
+coupling — full scheduler/executor path deps plus `datafusion-python` — so
+§26.F takes its pattern and drops its crate.

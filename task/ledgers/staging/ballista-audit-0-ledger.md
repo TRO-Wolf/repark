@@ -1,15 +1,16 @@
-# Unit ledger — BALLISTA-AUDIT-0 step 1 · Half A facts
+# Unit ledger — BALLISTA-AUDIT-0 steps 1–2 · Half A facts, Half B judgement
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands (the
 orchestrator's departure move). This file closes when BALLISTA-AUDIT-0 merges.
 
-**Unit:** BALLISTA-AUDIT-0 step 1 · **Date:** 2026-09-08 · **Model:** muse-spark-1.3-contributor · **Branch:** `docs/ballista-audit-0`
+**Unit:** BALLISTA-AUDIT-0 steps 1–2 · **Date:** 2026-09-08 · **Model:** muse-spark-1.3-contributor · **Branch:** `docs/ballista-audit-0`
 **Document:** [../../roadmap/epic-term/ballista-audit-2026-09-08.md](../../roadmap/epic-term/ballista-audit-2026-09-08.md)
 **Upstream:** Apache DataFusion Ballista tag `54.1.0`, commit `f4e66525`, at `upstream-ballista/` (git-excluded, never committed).
 
-"Red first" does not apply to this docs-only measurement step: there is no pin
-against base-tree behaviour, only measured numbers from the pinned upstream
-checkout. Each clause below is OPEN until its appendix table lands, then green.
+"Red first" does not apply to this docs-only reading unit: there is no pin
+against base-tree behaviour, only measured numbers and read judgements from
+the pinned upstream checkout. Each clause below is OPEN until its document
+section lands, then green. Step-2 work below; **Model:** muse-spark-1.3-contributor.
 
 ## Clause table
 
@@ -28,3 +29,19 @@ five appendix tables are filled, §26 prose and the §28 decision gate stay for
 step 2. D-1 confirmed measured: `git log --oneline -1` → `f4e66525`,
 `git describe --tags` → `54.1.0`, root `Cargo.toml` line 37
 `datafusion = "54"` against this workspace's `datafusion = "54.1.0"`.
+
+## Step-2 clause table (Half B judgement, D-2/D-3/D-4)
+
+| Clause | Judgement item | Verdict | Evidence (document section + measured anchor) |
+|---|---|---|---|
+| C-006 | §26.A–C: version scope, inventory and dependency judgements | GREEN | Doc §26.A–C. Anchors: workspace `datafusion = "54.1.0"` vs upstream `datafusion = "54"`; scheduler 30182/76209 lines, `state/` 16427; `spark-compat`/`substrait` optional in member `Cargo.toml` files. |
+| C-007 | §26.D: serialization chapter + ADR-0004 answer | GREEN | Doc §26.D, ADR read at `docs/adr/0004-server-prep-disciplines.md`. Anchors: codec defs `serde/mod.rs:185,352,364`; five physical node types `try_decode` 365–551; table passthrough 292–310; single-slot overrides `extension.rs` + `scheduler/config.rs:261-263` + `executor_process.rs:183-185`. |
+| C-008 | §26.E: lifecycle judgement | GREEN | Doc §26.E. Anchors: `SessionProvider` hook `scheduler_server/mod.rs:65`; `shuffle_reader.rs` 2430 vs writer 828; appendix A5 file map. |
+| C-009 | §26.F + appendix A6: classification, crate structure, python gap | GREEN | Doc §26.F + A6. Anchors: `wc -l python/...` → 497 lines, `dev/msrvcheck` 71; `pyballista` coupling in `python/Cargo.toml` (`datafusion-python` 54, full path deps). |
+| C-010 | §26.G: risks R-1–R-7 | GREEN | Doc §26.G; each risk cites its measured anchor (single-slot override, vendored protos, 3020-line graph, passthrough, credential plumbing, §8 gap, ops stack). |
+| C-011 | §26.H + §28: depend recommendation + decision gate | GREEN | Doc §26.H + §28 table; seven criteria derived from the card (plan §26–§28 text not in repo), one evidence line each. |
+
+Step-2 notes: appendix numbers untouched (D-7 not triggered except the new
+A6 row, which carries its own command). Headings unchanged per N-3.
+`upstream-ballista/` never staged (excluded; moved aside for the commit only
+if hooks scan it, then restored at `f4e66525`).
