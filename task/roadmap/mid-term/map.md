@@ -13,6 +13,11 @@ declines it (a dated ruling in the intake, then the archive).
   pre-made decisions, one step per worker round, tier per step, red-first pin names, gates and
   hand-back conditions: SQL-DESCRIBE-1, DF-EXPLAIN-1, DISPLAY-POLARS-1, CFG-1, DF-EAGER-1,
   BALLISTA-AUDIT-0, PROFILES-1; plus the ADAPT-PART and DYNCFG-1 epic intakes and the sequence.
+- [cheap-tier-slate-2-2026-09-09.md](cheap-tier-slate-2-2026-09-09.md) — **slate 2 (owner-chartered
+  2026-09-09):** roadmap 2.1 maintenance policy (`[<profile>.maintenance]` + `CALL run_maintenance()`,
+  the ADAPT-PART AP-1 planner underneath), 1.2 torture-test dataset suite (eight generated families,
+  the secrets flag), 1.3 Never-OOM spill-coverage matrix (27 cells, three outcomes, subprocess-guarded);
+  four cards in slate 1's format with pre-made decisions, tiers per step and red-first pins.
 - [overnight-orchestrator-runbook-2026-09-08.md](overnight-orchestrator-runbook-2026-09-08.md) — **how a
   cheaper orchestrating session runs the slate unattended:** the four owner grants, the five
   reads, lane/brief/launch commands per launcher, the hand-back audit checklist, the gated

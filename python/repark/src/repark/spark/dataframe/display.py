@@ -243,7 +243,7 @@ def _normalize_show_args(
 
 
 def _resolve_display_style(frame: DataFrame) -> str:
-    """Return the session display style (``spark`` / ``polars`` / ``duckdb``), default spark."""
+    """Return the session display style (``spark`` / ``polars`` / ``duckdb``), default polars."""
     style = frame._alive_token.get("display_style", "spark")
     if isinstance(style, str) and style in {"spark", "polars", "duckdb"}:
         return style
