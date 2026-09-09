@@ -24,6 +24,14 @@ declines it (a dated ruling in the intake, then the archive).
   ruling (#428 draft), DISPLAY-POLARS-1 step 1 of 5 gated green; the six decisions taken under
   the G-2 grant, the two questions parked for the owner, the `JAVA_HOME` and CAP-1-mirror
   environment findings, and why GLM's dropped sockets moved the long rounds to Muse.
+- [overnight-report-2026-09-09-night2.md](overnight-report-2026-09-09-night2.md) — **what the
+  second unattended run did (morning of 2026-09-09, 05:26–09:00):** two units merged
+  (LEDGER-READING-1 #432, SQL-DESCRIBE-1 #428), PREFLIGHT-PARITY-1 open on green-pending CI
+  (#433), DISPLAY-POLARS-1 step 2 parked because D-5's probe reds the protected full-collect
+  pin (#434 draft); the six decisions taken under G-2, the five questions parked for the owner
+  (including that `make check-docs-links` does not exist), and five corrections the runbook's
+  §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
+  directory, and the CAP-1 map.md merge conflict every lane branch now hits.
 - [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
   handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5; RP-5 consumed F-6b/F-6c / F-8 / F-16r / F-0 follow-up):** the document handed to the owned `iceberg-rust` fork's orchestrator —
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
