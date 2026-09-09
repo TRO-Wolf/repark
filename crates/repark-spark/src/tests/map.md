@@ -581,6 +581,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
 
+- `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
+  [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
+  step-1 live capture (commented `bigint` column, `string`, `timestamp`, `days(ts)`,
+  `k=v`). Parser accepts the plain/extended/formatted spellings and leaves namespace forms,
+  one-part names, metadata suffixes, and trailing shapes alone; plain rows match the capture
+  verbatim; extended adds the metadata and detail sections (`FORMATTED` byte-identical);
+  missing tables raise `[TABLE_OR_VIEW_NOT_FOUND]`; temp views and unregistered catalogs fall
+  through; secrets redact in `Table Properties`.
+  pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
+
 ## Mapping rule
 
 1. Production-module alignment by name / primary assertion.

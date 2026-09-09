@@ -587,6 +587,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   on Iceberg tables — step 1 measured the live PySpark 4.1.2 oracle on one session:
   six captures plus schemas in the ledger's Oracle capture section, FORMATTED
   byte-identical to EXTENDED, plain identical to `DESCRIBE TABLE`, missing table raises
-  `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`. All clauses OPEN; no engine
-  edits, no `crates/` files. `risk_tier: standard`. Branch `feat/sql-describe-1`.
+  `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`. Step-1 clauses OPEN until step 3.
+  Step 2 (2026-09-09) added the D-3 shared spelling plus the parser and executor with
+  Rust pins green; Python facade pins land in step 3. `risk_tier: standard`.
+  Branch `feat/sql-describe-1`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

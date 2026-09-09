@@ -246,7 +246,10 @@ pins: rp-4-fork-repin/C-005, C-006
   [`../../../task/z4-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),
   [`../../../task/w4-z-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-w4-z-residuals-ledger.md).
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
-  (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction).
+  (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
+  SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
+  (live-Spark-4.1.2-pinned rows, `bigint` via `spark_type_names`, secret redaction shared
+  with the namespace path). pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS

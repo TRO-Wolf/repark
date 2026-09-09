@@ -318,3 +318,47 @@ the capture against live Spark 4.1.2 and it matched every row, every schema and 
 flag, including the two places where the measurement contradicts the card (`col_name` and
 `data_type` are `nullable=False`; there is an extra `Statistics` row). Every clause stays **OPEN**.
 Nothing of step 2 was written; the tree is clean at `8da0dbaa`.
+
+## Step 2 (I tier, 2026-09-09) — D-3 move, parser, executor
+
+**Model:** muse-spark-1.3-contributor. R-9 (owner ruling 2026-09-09) resolved the parked
+question: the DDL spelling moves into `repark-spark` as `spark_ddl_type_name`, `repark-python`
+calls it, `long` stays for `printSchema`.
+
+Red first: the step-2 pins in `crates/repark-spark/src/tests/describe_table.rs` were written
+before any implementation and run against the base tree. Red output (verbatim):
+
+```
+error[E0425]: cannot find function `try_parse_describe_table` in module `crate::describe_show`
+   --> crates/repark-spark/src/tests/describe_table.rs:137:35
+    |
+137 |             crate::describe_show::try_parse_describe_table(sql).is_none(),
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+Two commits: D-3 (`spark_type_names.rs`, the Python call site, `make verify` green) then the
+parser plus executor (`describe_show.rs`, the router arm, `tests/describe_table.rs`).
+
+## Step-2 clause table (Rust pins; the Python pins land in step 3)
+
+| ID | Clause | Rust pin | Verdict |
+|---|---|---|---|
+| S2-001 | D-1 intercept scope: plain `DESCRIBE t` on an Iceberg table takes the new path; temp views, DataFusion-native tables, metadata suffixes, and unregistered catalogs fall through unchanged. | `describe_table_plain_matches_step_one_capture_rows`, `describe_table_temp_view_falls_through_to_datafusion`, `describe_table_unregistered_catalog_falls_through_unchanged`, `describe_table_parser_leaves_non_table_forms_alone`, plus unchanged Z6 pin `describe_table_is_not_shadowed_by_the_namespace_intercept` | PROVEN |
+| S2-002 | D-2 output shape: three `string` columns, `comment` nullable, the other two not; rows in Spark's order against the step-1 capture. | `describe_table_plain_matches_step_one_capture_rows` (verbatim 6 rows), `describe_table_extended_emits_metadata_and_detail_sections` (22 rows) | PROVEN |
+| S2-003 | D-3 type spelling: `bigint` for `Long`, `timestamp` for Iceberg `timestamptz`, via the shared `spark_ddl_type_name`. | `spark_ddl_type_name_spells_describe_primitives`, `spark_ddl_type_name_spells_nested_types`, plus the unchanged Python `arrow_type_key_*` twins proving the move kept `printSchema` output identical | PROVEN |
+| S2-004 | D-4 missing table raises `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`. | `describe_table_missing_table_raises_table_or_view_not_found` (Plan variant, Spark condition, qualified name) | PROVEN |
+| S2-005 | D-5 `Table Properties` renders the bracketed key-ordered list with namespace-path redaction. | `describe_table_properties_redact_secrets`, `describe_table_extended_emits_metadata_and_detail_sections` (`k=v`, `current-snapshot-id=none`) | PROVEN |
+| S2-006 | D-6 `FORMATTED` is accepted as a synonym of `EXTENDED`. | `describe_table_formatted_is_byte_identical_to_extended`, `describe_table_parser_accepts_plain_and_extended_forms` | PROVEN |
+
+Step-1 clauses C-001…C-007 stay OPEN until step 3's facade pins are green.
+
+Measured deltas carried forward for step 3: `Owner` reads the OS user and `Location` the
+warehouse path (Rust pins assert presence, never literal values); `Table Properties` on an
+engine-created table carries the engine's stored properties plus a live
+`current-snapshot-id` (`none` when empty) — the live leg must compare against what this
+engine stores, not Spark's defaults, byte for byte; `Statistics` on a table with data reads
+`total-records` / `total-files-size` from the current snapshot summary, which no JVM-free
+Rust pin can check against Spark (empty-table `0 bytes, 0 rows` is pinned). Partition
+spellings beyond `days(ts)` (`years`/`months`/`hours`/`identity`/`bucket(n, col)`/
+`truncate(w, col)`) follow Spark's SQL function grammar but only `days(ts)` is measured;
+unpartitioned tables omit the `# Partitioning` section (unmeasured, Spark-standard).
