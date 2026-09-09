@@ -118,6 +118,17 @@ def test_malformed_allowlist_entry_fails_closed(repo: Path) -> None:
     assert "malformed" in result.stderr
 
 
+def test_stale_allowlist_entry_fails(repo: Path) -> None:
+    _write(repo, _ALLOWLIST, _HEADER + "README.md:3:GUIDE.md\n")
+    result = _run(repo)
+    assert result.returncode == 1
+    assert (
+        "scripts/docs_links_allowlist.txt: stale entry README.md:3:GUIDE.md — "
+        "the link is no longer broken; remove this row" in result.stderr
+    )
+    assert "docs-links: FAIL — 0 broken link(s), 1 stale allowlist entry" in result.stderr
+
+
 def test_real_tree_is_green_under_the_seeded_allowlist() -> None:
     result = subprocess.run(
         [sys.executable, str(_SCRIPT)], capture_output=True, text=True, check=False

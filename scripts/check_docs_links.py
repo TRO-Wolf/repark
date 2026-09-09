@@ -186,7 +186,7 @@ def scan_file(
 
 
 def run(repo: Path) -> int:
-    """Exit 0 with the counts of files and links checked, 1 with one line per broken link."""
+    """Exit 0 with the counts of files and links checked, 1 with one line per finding."""
     try:
         allowlist = load_allowlist(repo)
         tracked_list = tracked_paths(repo)
@@ -194,21 +194,34 @@ def run(repo: Path) -> int:
         documents = [path for path in tracked_list if path.endswith(".md")]
         anchors: dict[str, frozenset[str]] = {}
         broken: list[str] = []
+        matched: set[str] = set()
         checked = 0
         for relative in documents:
             findings, links = scan_file(repo, relative, tracked, tracked_list, anchors)
             checked += links
             for number, raw, reason in findings:
-                if f"{relative}:{number}:{raw}" in allowlist:
+                key = f"{relative}:{number}:{raw}"
+                if key in allowlist:
+                    matched.add(key)
                     continue
                 broken.append(f"{relative}:{number}: {raw} -> {reason}")
+        stale = [
+            f"{ALLOWLIST_PATH}: stale entry {entry} — the link is no longer broken; remove this row"
+            for entry in sorted(allowlist - matched)
+        ]
     except (subprocess.CalledProcessError, OSError, UnicodeDecodeError, ValueError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
-    if broken:
+    if broken or stale:
         for line in broken:
             print(line, file=sys.stderr)
-        print(f"docs-links: FAIL — {len(broken)} broken link(s)", file=sys.stderr)
+        for line in stale:
+            print(line, file=sys.stderr)
+        print(
+            f"docs-links: FAIL — {len(broken)} broken link(s), "
+            f"{len(stale)} stale allowlist entr{'y' if len(stale) == 1 else 'ies'}",
+            file=sys.stderr,
+        )
         return 1
     print(f"docs-links: {len(documents)} files, {checked} links checked — clean")
     return 0

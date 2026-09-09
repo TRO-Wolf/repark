@@ -1,5 +1,6 @@
 # docs-links allowlist — the D-3 baseline measured 2026-09-09 (DOCS-LINKS-1), one
-# path:line:link entry per line; entries only shrink, a fixed link takes its row away.
+# path:line:link entry per line; entries only shrink under the gate: an entry that matches
+# no finding in a run fails the gate itself, and a fixed link takes its row away.
 docs/guide/iceberg-guide.md:301:../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag
 python/repark/tests/map.md:1974:../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog
 python/repark/tests/map.md:2289:../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented

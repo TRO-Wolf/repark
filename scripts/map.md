@@ -581,9 +581,12 @@ repark-parity slice.
   2026-09-09). The D-3 baseline seeded `scripts/docs_links_allowlist.txt` with the 10
   pre-existing broken links (6 missing targets, 5 of them in immutable archive ledgers, and
   4 stale anchors into the divergence registry) — one `path:line:link` entry per line, a
-  `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), entries only
-  shrink. Not wired to the pre-commit hook or ci.yml (the card's Home named the Makefile
-  only). Proofs: `python/repark-parity/tests/test_dl_6_docs_links.py`.
+  `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), and the list
+  ratchets down under the gate (D-8, audit round 1, 2026-09-09): an entry that matched no
+  finding in the run is itself a failure (`stale entry … — the link is no longer broken;
+  remove this row`), so a fixed link takes its row away under gate pressure. Not wired to
+  the pre-commit hook or ci.yml (the card's Home named the Makefile only). Proofs:
+  `python/repark-parity/tests/test_dl_6_docs_links.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
