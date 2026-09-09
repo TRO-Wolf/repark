@@ -54,7 +54,11 @@ network.
   bare and two-part qualification, the temp-view home under
   `prefer_temp_view=True`, and the plain form.
 - [display_style.py](display_style.py) — `SparkSession.display_style`: the
-  `spark` default, the `polars` switch, and the `conf` mirror.
+  `polars` default, the `spark` switch, and the `conf` mirror. DISPLAY-POLARS-1 (2026-09-09):
+  the default flipped `spark` → `polars`, so this example's default assertion and the direction
+  of its switch flipped with it. Examples run outside pytest, so the suite's
+  `REPARK_DISPLAY_STYLE=spark` conftest pin does not reach them — this file states the real
+  default a user sees. pins: display-polars-1/C-001
 - [legacy_refusals.py](legacy_refusals.py) — `SparkSession.registerTempTable` /
   `SparkSession.pandas_api`: both refuse loud with
   `UnsupportedOperationException` naming the supported route; neither name

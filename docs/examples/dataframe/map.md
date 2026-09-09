@@ -58,7 +58,11 @@ one-liner.
   `selectExpr` / `select_expr` SQL projections.
 - [show_sort.py](show_sort.py) — `show` (cells and row counts, never the rendering), and
   `sort` plus `sortWithinPartitions` / `sort_within_partitions` (ascending, descending,
-  single-partition).
+  single-partition). DISPLAY-POLARS-1 (2026-09-09): the example is about sorting and its
+  assertions are about the spark grid's line shapes, so it now pins
+  `repark.display.style=spark` on its builder rather than track the flipped default. An
+  example that renders the polars look belongs with the guide rewrite, after the renderer
+  work settles. pins: display-polars-1/C-001
 - [storage_level.py](storage_level.py) — `storageLevel` / `storage_level`: NONE,
   MEMORY_AND_DISK_DESER under `cache`, NONE again after `unpersist`.
 - [subtract_summary.py](subtract_summary.py) — `subtract` (int, string, and NULL arms), and

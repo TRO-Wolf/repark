@@ -1667,6 +1667,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   JVM: a fixture imported into a second module would register a second definition and build a
   second session. `spark_iceberg_engine` stays in `test_parity_live.py` (single consumer).
   pins: perf-dynflatten-1-measure/C-002
+  **DISPLAY-POLARS-1 step 1 (2026-09-09):** pins `spark` at import via
+  `os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")`, before any session exists, so the
+  flipped `polars` default changes no existing expectation. pins: display-polars-1/C-002
 - `test_create_dataframe_materialize.py` — R-PERF-VALUES / R-PERF-ARROW-CDF / **P1a** /
   **P2a**: createDataFrame materializes once (list/Row/pandas/polars/schema=int32; second
   action cheap; count correct); structural pins prefer `register_arrow_stream_as_temp_view`
@@ -1860,6 +1863,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   C6-Q-002 pins red; exact/first CI wins dual-case → C7-Q-001 pins red; drop `total <= fetch`
   short-circuit → C7-Q-002 pin red; `cap=int(truncate)` for `0` → C6-L-001 pin red;
   `str(bool)` → boolean pin reds; collapsed logical types → narrow-type pin reds.
+  **DISPLAY-POLARS-1 step 1 (2026-09-09):** default flips to `polars`; the old default-golden
+  test splits into `test_default_style_polars_clean_env` (clean env → fresh session reports
+  `polars`) and `test_env_override_spark_restores_grid` (`REPARK_DISPLAY_STYLE=spark` →
+  byte-identical grid, expectation unchanged). pins: display-polars-1/C-002
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`

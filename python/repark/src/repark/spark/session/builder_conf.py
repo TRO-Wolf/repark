@@ -214,7 +214,7 @@ class RuntimeConfig:
             if self._display_style_is_unset():
                 if default is not _CONF_GET_UNSET:
                     return default  # type: ignore[return-value]
-                return _DEFAULT_DISPLAY_STYLE
+                return default_display_style()
             return str(self._session._alive_token.get("display_style", _DEFAULT_DISPLAY_STYLE))
         if key in self._unset_keys():
             if default is not _CONF_GET_UNSET:
@@ -245,7 +245,7 @@ class RuntimeConfig:
         """Remove a configuration property (runtime store + builder-fallback tombstone).
 
         ``repark.display.style`` also resets the live session style to the default
-        ``spark`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
+        ``polars`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
         """
         self._session._ensure_alive()
         # The zone always has a value (resolved at build), so there is nothing to unset;
@@ -264,11 +264,11 @@ class RuntimeConfig:
                 if existing.lower() == _DISPLAY_STYLE_KEY:
                     tombs.discard(existing)
             tombs.add(_DISPLAY_STYLE_KEY)
-            self._session._alive_token["display_style"] = _DEFAULT_DISPLAY_STYLE
+            self._session._alive_token["display_style"] = default_display_style()
             # Snapshot matches default so a later reuse without explicit style cannot
             # re-absorb a prior non-default from the builder map.
             _sync_display_style_into_builder_config(
-                self._session._builder_config, _DEFAULT_DISPLAY_STYLE
+                self._session._builder_config, default_display_style()
             )
             return
         self._store().pop(key, None)

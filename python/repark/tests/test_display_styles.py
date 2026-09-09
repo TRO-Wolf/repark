@@ -1,13 +1,11 @@
-"""R-DISPLAY: opt-in ``DataFrame.show()`` styles (``spark`` / ``polars`` / ``duckdb``).
+"""R-DISPLAY: ``DataFrame.show()`` styles (``spark`` / ``polars`` / ``duckdb``).
 
-Default stays PySpark-parity (byte-identical ASCII grid). Styles select via
-``repark.display.style`` builder config or the runtime ``session.display_style`` attribute.
-Head+tail styles call ``count()`` (extra scan, disclosed on ``show`` docstring), ``limit`` for
-the head, and ``_preview_tail_rows`` (engine-side skip+fetch) for the tail — never a full-table
-collect. ``n`` is a keep-set cap on every style: duckdb ``show(1)`` keeps the first row (not
-last-only); polars ``show(0)``/``show(k)`` must not over-show (edges never enlarge past 5).
+Default is ``polars`` (env ``REPARK_DISPLAY_STYLE`` outranks the constant; builder config and
+``session.display_style`` outrank both; the suite pins ``spark`` via conftest). Head+tail styles
+call ``count()`` (extra scan), ``limit`` for the head, and ``_preview_tail_rows`` for the tail —
+never a full-table collect; ``n`` caps every style.
 
-MUTATION: force default style to polars → ``test_default_show_byte_identical_spark_grid`` reds.
+MUTATION: force default style to spark → ``test_default_style_polars_clean_env`` reds.
 MUTATION: drop head+tail on polars → ``test_polars_style_head_tail_golden`` reds (rows 6/7 appear).
 MUTATION: full materialize+slice / skip limit_with_skip / root ``pa.table(self)`` /
   ``pa.table(self._inner)`` native stream → ``test_styled_show_does_not_full_collect`` +
@@ -49,8 +47,8 @@ from repark import ReparkSession
 from repark.errors import IllegalArgumentException, PySparkTypeError
 from repark.spark.dataframe import DataFrame
 from repark.spark.session import (
-    _DEFAULT_DISPLAY_STYLE,
     _DISPLAY_STYLE_KEY,
+    default_display_style,
     normalize_display_style,
 )
 
@@ -187,7 +185,7 @@ _DUCKDB_NULL_GOLDEN = """\
 
 @pytest.fixture
 def spark() -> Iterator[ReparkSession]:
-    """Fresh session per test (default spark display style)."""
+    """Fresh session per test (spark display style via the conftest env pin)."""
     session = ReparkSession.builder.getOrCreate()
     try:
         yield session
@@ -211,8 +209,13 @@ def _session_with_style(style: str) -> ReparkSession:
 # Config knob
 
 
-def test_default_display_style_is_spark(spark: ReparkSession) -> None:
-    assert spark.display_style == _DEFAULT_DISPLAY_STYLE == "spark"
+def test_default_style_polars_clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("REPARK_DISPLAY_STYLE", raising=False)
+    session = ReparkSession.builder.getOrCreate()
+    try:
+        assert session.display_style == default_display_style() == "polars"
+    finally:
+        session.stop()
 
 
 def test_builder_config_sets_display_style() -> None:
@@ -253,13 +256,12 @@ def test_display_style_key_is_repark_prefixed_not_spark() -> None:
 # Default spark style — byte-identical regression
 
 
-def test_default_show_byte_identical_spark_grid(spark: ReparkSession) -> None:
-    """Default ``df.show()`` must stay the PySpark-style ASCII grid (no shape header / no box)."""
-    frame = spark.sql("SELECT 1 AS a, 'x' AS b")
-    out = _capture_show(frame)
-    assert out == _SPARK_BASIC_GOLDEN
-    spark.display_style = "spark"
-    assert _capture_show(frame) == _SPARK_BASIC_GOLDEN
+def test_env_override_spark_restores_grid(
+    monkeypatch: pytest.MonkeyPatch, spark: ReparkSession
+) -> None:
+    monkeypatch.setenv("REPARK_DISPLAY_STYLE", "spark")
+    assert default_display_style() == "spark"
+    assert _capture_show(spark.sql("SELECT 1 AS a, 'x' AS b")) == _SPARK_BASIC_GOLDEN
 
 
 def test_default_show_truncate_and_n_unchanged(spark: ReparkSession) -> None:
@@ -383,11 +385,9 @@ def test_polars_style_uses_count(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_polars_style_honors_n_keep_set() -> None:
-    """``show(n)`` must not over-show under polars
-    (n caps; edges still never enlarge past 5).
-
-    MUTATION: ignore ``n`` again → ``show(0)`` still prints body rows / ``show(1)`` prints >1.
-    MUTATION: ``use_ellipsis=True`` with ``tail_n=0`` → ``show(1)`` bare ``…`` row (C8-Q-001 class).
+    """``show(n)`` must not over-show under polars (n caps; edges never enlarge past 5).
+    MUTATION: ignore ``n`` again → ``show(0)``/``show(1)`` over-show; ``use_ellipsis`` with
+    ``tail_n=0`` → bare ``…`` row (C8-Q-001 class).
     """
     session = _session_with_style("polars")
     try:

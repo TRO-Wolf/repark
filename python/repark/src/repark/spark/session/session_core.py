@@ -90,9 +90,9 @@ class ReparkSession:
 
     @property
     def display_style(self) -> str:
-        """Opt-in ``DataFrame.show()`` render style: ``spark`` (default), ``polars``, or ``duckdb``.
+        """``DataFrame.show()`` render style: ``polars`` (default), ``spark``, or ``duckdb``.
 
-        Default ``spark`` keeps PySpark-parity ASCII-grid output byte-identical. Set via
+        The ``spark`` style keeps PySpark-parity ASCII-grid output byte-identical. Set via
         ``ReparkSession.builder.config("repark.display.style", …)`` at build time,
         ``session.conf.set("repark.display.style", …)``, or assign this attribute at runtime
         (facade-only; not an engine knob). Values are case-insensitive.
@@ -2254,7 +2254,7 @@ class ReparkSession:
         getOrCreate = get_or_create  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
         def _resolve_display_style(self) -> str:
-            """Resolve ``repark.display.style`` (facade-only; default ``spark``).
+            """Resolve ``repark.display.style`` (facade-only; default ``polars`` via env override).
 
             Case-insensitive **last-write-wins** among all key aliases present in the builder map
             (deliberate). ``Builder.config`` normally collapses aliases to the canonical
@@ -2269,7 +2269,7 @@ class ReparkSession:
                     # Dict preserves insertion order: last matching alias wins.
                     raw = value
             if raw is None:
-                return _DEFAULT_DISPLAY_STYLE
+                return default_display_style()
             return normalize_display_style(raw)
 
         def _resolve_memory_limit_gb(self) -> int | None:
