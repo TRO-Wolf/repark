@@ -14,7 +14,8 @@ F-Y10-1 closed 2026-08-30.
 The workspace carries nine delivered crates: `crates/repark-common` (error seed + the
 surface-matrix registry), `crates/repark-iceberg` (catalog + write over the owned iceberg-rust
 fork, `[patch.crates-io]`-pinned), `crates/repark-core` (the `ReparkSession` engine API + the
-frozen `SqlDialect` / `SessionExtension` seams), `crates/repark-functions` (Spark-semantics
+frozen `SqlDialect` / `SessionExtension` seams, and since 2026-09-09 the `repark.toml` loader
+family `src/config_file/` seeded by CFG-1), `crates/repark-functions` (Spark-semantics
 scalar/aggregate function shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router +
 `SparkDialect` + `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional
 window-UDF layer, tier 3), `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` +

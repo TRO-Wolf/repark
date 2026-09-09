@@ -20,6 +20,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1,
+  seed commit 2026-09-09). The module owns `ConfigFile` (`#[serde(deny_unknown_fields)]`, so an
+  unknown top-level key refuses as `Error::Config`), the public `load()` entry that answers the
+  empty config until discovery lands in step 1, and the `parse()` reader over `toml`. The
+  workspace gained `serde` (derive) and `toml` in the same commit and this crate is their first
+  consumer; the stage files under `config_file/` are the empty placeholders step 1 and step 2
+  fill. The `#[allow(dead_code)]` attributes are the seed's own: nothing calls the loader until
+  the builder wiring of step 3, and the crate is built with warnings denied.
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects
