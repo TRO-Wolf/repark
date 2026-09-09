@@ -18,6 +18,12 @@ declines it (a dated ruling in the intake, then the archive).
   reads, lane/brief/launch commands per launcher, the hand-back audit checklist, the gated
   push/PR/merge chain, bounded decision authority, one night's order, stop conditions, the
   morning report, and the launch command the owner runs.
+- [overnight-report-2026-09-09.md](overnight-report-2026-09-09.md) — **what the first
+  unattended run of that runbook actually did (night of 2026-09-08/09):** two units merged
+  (BALLISTA-AUDIT-0 #426, DF-EXPLAIN-1 #427), SQL-DESCRIBE-1 parked on the D-3 type-spelling
+  ruling (#428 draft), DISPLAY-POLARS-1 step 1 of 5 gated green; the six decisions taken under
+  the G-2 grant, the two questions parked for the owner, the `JAVA_HOME` and CAP-1-mirror
+  environment findings, and why GLM's dropped sockets moved the long rounds to Muse.
 - [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
   handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5; RP-5 consumed F-6b/F-6c / F-8 / F-16r / F-0 follow-up):** the document handed to the owned `iceberg-rust` fork's orchestrator —
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
