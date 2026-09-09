@@ -414,6 +414,8 @@ def resolve_shuffle_partitions(config: dict[str, str | None]) -> int | None:
             _config_value_error(key, value, f"The value of {key} must be positive")
         )
     return value
+
+
 _DEFAULT_DISPLAY_MAX_ROWS = 10
 
 
