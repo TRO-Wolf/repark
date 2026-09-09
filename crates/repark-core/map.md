@@ -32,6 +32,11 @@ honestly"). SQL routing and session-build registration are seam-inverted
   S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
   runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
+- `src/config_file.rs` + [src/config_file/](src/config_file/map.md) — the `repark.toml` loader
+  (CFG-1, seed 2026-09-09): `ConfigFile`, the ruled `load()` entry, and the `toml` reader. The
+  crate's dependency list gains `serde` (derive) and `toml` in the same commit — the workspace's
+  first consumer of both. Empty stage files until steps 1–2; the directory map says which stage
+  each owns.
 - `src/session.rs` — `ReparkSession` + `ReparkSessionBuilder`: knob surface
   (`config`/`configs`, memory limit with the 1 MiB floor / RAM-relative `FairSpillPool`
   default `clamp(0.6 × cgroup-or-MemTotal, 1 MiB, 8 GiB)` — runtime SET of

@@ -3,6 +3,7 @@
 mod backend;
 mod catalog_config;
 mod catalog_state;
+mod config_file;
 mod dialect;
 mod dynamic_flatten;
 mod error_map;

@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [cfg-1-ledger.md](cfg-1-ledger.md) —
+  **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
+  `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
+  `~/.config/repark/repark.toml`, empty disables, named-but-missing refuses), `profile.rs`
+  (`[default]` + `[<profile>]` deep merge, unknown keys refuse with the key path),
+  `interpolate.rs` (missing variable refuses naming path and variable). All six clauses
+  PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
+  for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
+  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [csv-infer-perf-1-ledger.md](csv-infer-perf-1-ledger.md) —
   **CSV-INFER-PERF-1 (2026-09-06), in flight:** local CSV `inferSchema` no longer
   materializes the frame per candidate cast. Native DataFusion inference plus
