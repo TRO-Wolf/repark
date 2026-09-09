@@ -31,6 +31,9 @@ Nothing else in this file is required reading for a round.
 
 ### 1.1 The loop (orchestrator side)
 
+Exact commands for every line below, plus grants and stop rules for an unattended run:
+[overnight-orchestrator-runbook-2026-09-08.md](overnight-orchestrator-runbook-2026-09-08.md).
+
 1. **Seed commit first, when the card names one.** Dependency edits (`Cargo.toml`, `Cargo.lock`,
    `pyproject.toml`) are never a worker's; the orchestrator lands them on the unit branch before
    the first round.
