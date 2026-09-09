@@ -69,23 +69,15 @@ def capture_explain(frame: object) -> str:
 def join_plan(spark: SparkSession) -> str:
     from repark.spark.functions import col
 
-    left = (
-        spark.read.parquet(str(WORK / "left.parquet"))
-        .select(col("k"), col("v").alias("lv"))
-    )
-    right = (
-        spark.read.parquet(str(WORK / "right.parquet"))
-        .select(col("k"), col("v").alias("rw"))
-    )
+    left = spark.read.parquet(str(WORK / "left.parquet")).select(col("k"), col("v").alias("lv"))
+    right = spark.read.parquet(str(WORK / "right.parquet")).select(col("k"), col("v").alias("rw"))
     joined = left.join(right, "k").select(left["lv"], right["rw"])
     return capture_explain(joined)
 
 
 def agg_plan(spark: SparkSession) -> str:
     spark.read.parquet(str(WORK / "left.parquet")).createOrReplaceTempView("probe_agg_left")
-    return capture_explain(
-        spark.sql("SELECT g, sum(v) AS total FROM probe_agg_left GROUP BY g")
-    )
+    return capture_explain(spark.sql("SELECT g, sum(v) AS total FROM probe_agg_left GROUP BY g"))
 
 
 def scan_plan(spark: SparkSession) -> str:

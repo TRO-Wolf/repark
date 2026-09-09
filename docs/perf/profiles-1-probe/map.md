@@ -22,3 +22,8 @@ for the script-relative `WORK` directory.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+
+The two scripts were run by the measuring worker in their original layout; the copies here
+are `ruff format`ed (the repository's `py-lint` gate reads every tracked `*.py`, including these),
+which moved line breaks only. No statement, value or captured output changed.
+

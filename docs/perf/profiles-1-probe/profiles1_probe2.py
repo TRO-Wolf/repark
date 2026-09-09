@@ -19,7 +19,9 @@ def build_source_dir() -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for index in range(FILES):
         k = pa.array(range(index * ROWS, (index + 1) * ROWS), type=pa.int64())
-        v = pa.array([float(i) * 1.5 for i in range(index * ROWS, (index + 1) * ROWS)], type=pa.float64())
+        v = pa.array(
+            [float(i) * 1.5 for i in range(index * ROWS, (index + 1) * ROWS)], type=pa.float64()
+        )
         s = pa.array([f"s-{i}" for i in range(index * ROWS, (index + 1) * ROWS)], type=pa.string())
         pq.write_table(pa.table({"k": k, "v": v, "s": s}), directory / f"part_{index}.parquet")
     small = WORK / "small_src"
@@ -65,12 +67,18 @@ def main() -> None:
     cases: list[tuple[str, list[tuple[str, str]]]] = [
         ("baseline", []),
         ("pushdown_filters_false", [("datafusion.execution.parquet.pushdown_filters", "false")]),
-        ("repartition_file_scans_false", [("datafusion.optimizer.repartition_file_scans", "false")]),
+        (
+            "repartition_file_scans_false",
+            [("datafusion.optimizer.repartition_file_scans", "false")],
+        ),
         ("coalesce_batches_false", [("datafusion.execution.coalesce_batches", "false")]),
-        ("coalesce_batches_false_smallrp", [
-            ("datafusion.execution.coalesce_batches", "false"),
-            ("datafusion.execution.target_partitions", "1"),
-        ]),
+        (
+            "coalesce_batches_false_smallrp",
+            [
+                ("datafusion.execution.coalesce_batches", "false"),
+                ("datafusion.execution.target_partitions", "1"),
+            ],
+        ),
     ]
     for name, configs in cases:
         session = open_session(configs)
