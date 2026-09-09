@@ -67,7 +67,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
-  `py-test-facade` + audit + workflow lint (G14, 2026-08-12). Tool pins match the
+  `py-test-facade` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
+  2026-08-12; `py-test-dbt` joined with DBT-1, 2026-09-04; `py-test-parity-cap` with
+  PREFLIGHT-PARITY-1, 2026-09-09). Tool pins match the
   workflow pins. The tier-2 `parity-live` target is dual-wired with
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
