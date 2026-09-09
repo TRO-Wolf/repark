@@ -377,7 +377,7 @@ def test_polars_style_uses_count(monkeypatch: pytest.MonkeyPatch) -> None:
             return original(self)  # type: ignore[arg-type]
 
         monkeypatch.setattr(dataframe_module.DataFrame, "count", counting_count)
-        frame = session.sql("SELECT 1 AS a")
+        frame = session.sql(_ORDERED_12_SQL)
         _capture_show(frame)
         assert calls["count"] == 1
     finally:

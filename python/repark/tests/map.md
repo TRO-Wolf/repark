@@ -1819,6 +1819,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark.app.name`=`repark`; `Column.round` + windowed TA chain; H1 bare-join export naming
   overlay on collect/to_arrow/to_polars/to_pandas (display names, dups positional, no
   `__repark_*` leak); **F-T3-002** multi-name Row pickle round-trip via `from_ordered_fields`.
+- `test_display_polars_default.py` — **DISPLAY-POLARS-1 step 2** (2026-09-09): D-5 small-frame
+  single fetch in the styled polars renderer (`_render_styled_show`): a 7-row frame renders
+  whole through the probe fetch with `count()` never called and no tail fetch; a 12-row frame
+  past the keep-set pays exactly one `count()` plus one tail fetch (spy on `DataFrame.count`;
+  shape and ellipsis assertions keep both pins non-vacuous). MUTATION: restore
+  count-before-probe → `test_small_frame_renders_without_count` reds; double-count or drop the
+  count on the large path → `test_large_frame_counts_once` reds.
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`
