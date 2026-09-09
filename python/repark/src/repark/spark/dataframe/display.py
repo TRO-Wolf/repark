@@ -256,26 +256,31 @@ def _render_styled_show(
     n: int,
     truncate_at: int | None,
 ) -> tuple[str, int]:
-    """Render a styled preview and return its text and row count.
-
-    The renderer counts once, then collects only the head and tail windows.
-    """
-    total_rows = frame.count()
+    """Render a styled preview and return its text and row count."""
     col_names = list(frame.columns)
     if style == "polars":
         edge = 5
-        if n <= 0:
-            head_n, tail_n, use_ellipsis = 0, 0, False
-        elif total_rows <= min(n, 10):
-            head_n, tail_n, use_ellipsis = total_rows, 0, False
-        elif total_rows <= 10:
-            head_n, tail_n, use_ellipsis = n, 0, False
+        probe_limit = 2 * edge + 1
+        probe_table = frame.limit(probe_limit).to_arrow()
+        if probe_table.num_rows < probe_limit:
+            total_rows = probe_table.num_rows
+            head_table = probe_table.slice(0, max(n, 0))
+            tail_table = None
+            use_ellipsis = False
         else:
-            keep = min(n, 2 * edge)
-            head_n = min(edge, (keep + 1) // 2)
-            tail_n = min(edge, keep - head_n)
+            total_rows = frame.count()
+            head_n, tail_n = 0, 0
+            if n > 0:
+                keep = min(n, 2 * edge)
+                head_n = min(edge, (keep + 1) // 2)
+                tail_n = min(edge, keep - head_n)
             use_ellipsis = tail_n > 0
+            head_table = probe_table.slice(0, head_n)
+            tail_table = (
+                frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+            )
     else:
+        total_rows = frame.count()
         if n <= 0:
             head_n, tail_n, use_ellipsis = 0, 0, False
         elif total_rows <= n:
@@ -286,9 +291,8 @@ def _render_styled_show(
                 head_n = 1
             tail_n = n - head_n
             use_ellipsis = tail_n > 0
-
-    head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
-    tail_table = frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+        head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
+        tail_table = frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
     type_labels = _display_type_labels_from_arrow(head_table, style=style)
 
     head_rows = _table_to_cell_rows(head_table, truncate_at=truncate_at, style=style)

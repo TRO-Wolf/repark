@@ -1819,6 +1819,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark.app.name`=`repark`; `Column.round` + windowed TA chain; H1 bare-join export naming
   overlay on collect/to_arrow/to_polars/to_pandas (display names, dups positional, no
   `__repark_*` leak); **F-T3-002** multi-name Row pickle round-trip via `from_ordered_fields`.
+- `test_display_polars_default.py` — **DISPLAY-POLARS-1 step 2** (2026-09-09): D-5 small-frame
+  single fetch in the styled polars renderer (`_render_styled_show`): a 7-row frame renders
+  whole through the probe fetch with `count()` never called and no tail fetch; a 12-row frame
+  past the keep-set pays exactly one `count()` plus one tail fetch (spy on `DataFrame.count`;
+  shape and ellipsis assertions keep both pins non-vacuous). MUTATION: restore
+  count-before-probe → `test_small_frame_renders_without_count` reds; double-count or drop the
+  count on the large path → `test_large_frame_counts_once` reds.
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`
@@ -1867,6 +1874,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   test splits into `test_default_style_polars_clean_env` (clean env → fresh session reports
   `polars`) and `test_env_override_spark_restores_grid` (`REPARK_DISPLAY_STYLE=spark` →
   byte-identical grid, expectation unchanged). pins: display-polars-1/C-002
+  **DISPLAY-POLARS-1 step 2 (R-11, 2026-09-09):** the partial-collect pin's polars section
+  caps per-export rows at `2 * edge + 1` = 11, the D-5 probe export; the duckdb section keeps
+  its cap of 2 and the no-full-collect `< 12` tooth is unchanged. pins: display-polars-1/C-003
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`
