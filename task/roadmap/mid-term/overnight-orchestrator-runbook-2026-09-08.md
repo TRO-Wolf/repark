@@ -60,7 +60,16 @@ mkdir -p /tmp/oc-worker/$LANE
 ```
 
 (The first `sed` extracts the §1.2 preamble; the `awk` copies the whole card so the worker sees
-its Decisions; the last line names the step.) Read the brief once before launching.
+its Decisions; the last line names the step.) Then append the per-round fence, verbatim — a Muse
+round ignored the preamble's comment ban once, and repeating it here fixed that:
+
+```text
+Fence for this round: NO comments in code. Before you commit, run
+  git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?! noqa))'
+and it must print nothing; Rust `///` and `//!` count as comments. Facts go in map.md or the ledger.
+```
+
+Read the brief once before launching.
 
 Launch (GLM; every launcher runs under `systemd-run` because a round outlives the 10-minute
 Bash cap):
@@ -78,6 +87,10 @@ Muse (tier I steps): same wrapper around
 (the skill adds `--trust-workspace`; confirm `grep -c untrusted <run>/stderr.log` prints `0`).
 Grok (only under G-4): `~/.claude/skills/grok-worker/grok-worker.sh --lane $LANE --repo /tmp/oc-$LANE --brief … --role sepmo-actor --max-turns 300`.
 
+Run directories differ by launcher: `oc-worker` → `/tmp/oc-worker/<lane>/<stamp>/`, `muse-worker` →
+`/tmp/muse-worker/<lane>/<stamp>/`, `grok-worker` → `/tmp/grok-worker/<lane>/<stamp>/`; the wait
+loop and `handback.py` calls name the right one.
+
 Wait **in the foreground**. A headless `-p` session ends the moment it ends a turn, so a
 session that launches a lane and then "waits for the hand-back" by ending its turn has exited
 and left the worker orphaned (this happened on the first night, 2026-09-09, after 27 tool
@@ -91,7 +104,10 @@ until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 30; done
 
 Concurrency: at most **two** worker lanes at once. A fresh clone's first Python round runs
 `maturin develop`, so before launching any lane wait until no build is running:
-`while pgrep -f "cargo|maturin" >/dev/null; do sleep 30; done`. A live-Spark step (any
+`while pgrep -x cargo >/dev/null || pgrep -x maturin >/dev/null || pgrep -x rustc >/dev/null; do sleep 30; done`
+(`pgrep -f` would match your own shell's command line and never return). Put every launch
+sequence in a script file under `/tmp/oc-worker/<lane>/` and run the file; an inline compound
+command loses its newlines. A live-Spark step (any
 `REPARK_PARITY_LIVE=1` measurement) runs alone: no other lane open, `pgrep -f java` empty, and the
 brief exports `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (the default `java` is 11).
 
@@ -119,6 +135,11 @@ Audit checklist, in order; any `no` sends the round back with a follow-up brief:
 5. The card's gates re-run **by you** and pass: `cargo test -p <crate> <filter>` and `make verify`
    for Rust; `.venv/bin/python -m pytest python/repark/tests/<file>.py -q` for Python.
 6. Commit message ends with the model's `Authored-By:` line and carries no session URL.
+
+After any `git merge origin/main` in a lane, check `test ! -e .git/MERGE_HEAD` before the next
+step; a merge inside a `||` fallback can leave a conflict in progress silently. The one file that
+conflicts on every merge is `python/repark-parity/tests/map.md`, where each unit appends a CAP-1
+ratchet line: keep both rows.
 
 Follow-up brief = the preamble + "Findings from audit" list + "Do STEP n again" (or the next
 step). Resume the same session (`--followup F --resume <id>` from `runs.tsv`); after two
@@ -179,18 +200,17 @@ Must park the lane (leave the branch pushed, PR in draft, ledger clause `OPEN`, 
 
 ## 7. Order for one night
 
-Night 1 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0 and DISPLAY-POLARS-1 step 1 and
-parked SQL-DESCRIBE-1 at step 2. Night 2's order, two lanes at a time, each to its PR before
-the next opens; a lane whose card is fully merged is skipped:
+Runs 1 and 2 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0, SQL-DESCRIBE-1,
+LEDGER-READING-1, PREFLIGHT-PARITY-1 and DISPLAY-POLARS-1 step 1. Run 3's order, two lanes at a
+time, each to its PR before the next opens; a lane whose card is fully merged is skipped:
 
-1. SQL-DESCRIBE-1 steps 2–3 (Muse) on the existing branch `feat/sql-describe-1` (PR #428,
-   draft): clone that branch, not `main`; D-3 is ruled (R-9). Runs alone while it needs the JVM.
-2. LEDGER-READING-1 steps 1–2 (GLM) and PREFLIGHT-PARITY-1 (GLM): no natives beyond the
-   facade build, parallel-safe with each other.
-3. DISPLAY-POLARS-1 steps 2–3 (GLM) on a new branch from `main`.
-4. CFG-1: the seed commit under G-5, then steps 1–2 (GLM); step 3 (Muse) only if time remains.
+1. DISPLAY-POLARS-1 step 2 (GLM): resume draft PR #434 with R-11, then step 3 on a new branch
+   from `main` once #434 merges.
+2. DOCS-LINKS-1 (GLM) and the PREFLIGHT-PARITY-1 ledger close (GLM, one tiny round: C-005
+   PROVEN under R-12, `move` to `completed/`, PR).
+3. CFG-1: the seed commit under G-5, then steps 1–2 (GLM); step 3 (Muse) only if time remains.
+4. DF-EAGER-1 step 1 (GLM pins) after DISPLAY-POLARS-1 step 3 merges.
 5. PROFILES-1 step 0 (GLM probe, report only) and AP-0 (GLM script) when a slot is free.
-6. DF-EAGER-1 step 1 (GLM pins) after DISPLAY-POLARS-1 step 3 merges.
 
 ## 8. Stop conditions and the morning report
 
