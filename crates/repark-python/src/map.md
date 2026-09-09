@@ -36,7 +36,9 @@ and hand execution, SQL, and ML semantics to the engine crates.
   The Spark-door routing probe is `MERGE … OUTPUT` (TRUNCATE and `INSERT OVERWRITE … PARTITION` are live).
   pins: fnp-15-16/C-001; dml-c-truncate/C-004 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
-  `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself. |
+  `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.
+  Nested DDL element tokens come from `repark-spark::spark_ddl_type_name_at_depth`
+  (SQL-DESCRIBE-1 D-3); `long` stays local for `printSchema`. pins: sql-describe-1/C-003 |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
   `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
 | [`collect_rows.rs`](collect_rows.rs) | Arrow batch → Python value tuples for `collect`.

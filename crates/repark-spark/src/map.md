@@ -209,6 +209,11 @@ pins: rp-4-fork-repin/C-005, C-006
   CREATE/ALTER). `refuse_collation_in_sql` is `pub` for the Python binding (`F.expr`,
   `filter_sql`). Pins: [`tests/collation.rs`](tests/map.md). Ledger:
   [`../../../task/y7-collation-refuse-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
+- `spark_type_names.rs` — the single canonical Spark DDL type spelling
+  (`spark_ddl_type_name`, depth-bounded): `bigint` for 64-bit ints, the way `DESCRIBE`
+  prints them (SQL-DESCRIBE-1 D-3, owner ruling R-9). The Python binding calls it for
+  nested element tokens; `long` stays in `repark-python` for `printSchema`.
+  pins: sql-describe-1/C-003
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
