@@ -291,19 +291,29 @@ fn a_dollar_without_a_brace_is_left_alone() {
 }
 
 #[test]
-fn an_unterminated_reference_is_left_verbatim() {
+fn an_unterminated_reference_refuses_naming_the_path() {
     let table = string_fixture("${TOTAL");
     let environment = stub_environment(&[("TOTAL", "42")]);
-    let interpolated = interpolate_table(&table, &environment).expect("interpolation");
-    assert_eq!(string_of(&interpolated), "${TOTAL");
+    let error = interpolate_table(&table, &environment).expect_err("unterminated must refuse");
+    let message = error.to_string();
+    assert!(message.contains("unterminated"), "{message}");
+    assert!(message.contains("`value`"), "{message}");
 }
 
 #[test]
-fn a_double_dollar_is_not_an_escape() {
+fn a_double_dollar_renders_the_reference_verbatim() {
     let table = string_fixture("$${TOTAL}");
     let environment = stub_environment(&[("TOTAL", "42")]);
     let interpolated = interpolate_table(&table, &environment).expect("interpolation");
-    assert_eq!(string_of(&interpolated), "$42");
+    assert_eq!(string_of(&interpolated), "${TOTAL}");
+}
+
+#[test]
+fn a_double_dollar_alone_renders_a_single_dollar() {
+    let table = string_fixture("$$");
+    let environment = stub_environment(&[]);
+    let interpolated = interpolate_table(&table, &environment).expect("interpolation");
+    assert_eq!(string_of(&interpolated), "$");
 }
 
 #[test]
