@@ -45,3 +45,19 @@ disciplines adopted from day one keep server mode an *adapter* instead.
   thinness gate returns with the bindings in port phase 3).
 - **Guard:** a feature that "just needs a quick global" or "reads an env var at query time"
   contradicts this ADR; route it through `Session` or write a superseding ADR.
+
+## Disposition — the Ballista audit (2026-09-08)
+
+Decision 4's Ballista sentence rested on a premise that
+[the Ballista audit](../../task/roadmap/epic-term/ballista-audit-2026-09-08.md) measured at
+upstream tag `54.1.0` (`f4e66525`) and **corrected**: the protobuf format does not by itself
+refuse custom plan nodes. `BallistaPhysicalExtensionCodec` is a single override slot
+(`ballista/core/src/serde/mod.rs`), so an Iceberg write/commit node can travel — through a
+delegating wrapper, not an additive registration.
+
+**The ruling stands, on its other ground.** Writes stay coordinator-side because a commit must
+not issue from a task, not because a plan cannot be encoded: executors produce files, one
+authority commits. "Do not build Ballista-for-writes" is unchanged; only its stated reason
+narrows, from "cannot serialize" to "must not commit from tasks". The audit's §26.D and §27
+carry the evidence by file and line; its recommendation is to DEPEND on the four Ballista
+crates at a pinned tag rather than import them.
