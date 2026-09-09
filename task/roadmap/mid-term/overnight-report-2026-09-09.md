@@ -13,13 +13,14 @@ authority), G-3 stop 03:00 local, G-4 GLM and Muse.
 |---|---|---|---|---|---|
 | BALLISTA-AUDIT-0 | 1, 2, 3 (complete) | [#426](https://github.com/TRO-Wolf/repark/pull/426) | **MERGED** `22201c45`, tree-equal | 2 lost to GLM + 2 on Muse + 1 orchestrator | GLM → Muse |
 | DF-EXPLAIN-1 | 1, 2 (complete) | [#427](https://github.com/TRO-Wolf/repark/pull/427) | **MERGED** `5b83dc53`, tree-equal | 3 | GLM 5.3 Flash, ≈ $0.33 |
-| DISPLAY-POLARS-1 | 1 of 5 | see §"Open at stop" | step 1 gated green | 2 (1 halt, 1 build) | Muse Spark 1.3 |
+| DISPLAY-POLARS-1 | 1 of 5 | [#429](https://github.com/TRO-Wolf/repark/pull/429) | **MERGED** `d2b11e42`, tree-equal | 3 (1 halt, 1 build, 1 example fix) | Muse Spark 1.3 |
 | SQL-DESCRIBE-1 | 1 done, 2 halted | [#428](https://github.com/TRO-Wolf/repark/pull/428) (draft) | **PARKED** on one ruling | 1 lost to GLM + 2 on Muse | GLM → Muse |
 | CFG-1, DF-EAGER-1, PROFILES-1, AP-0 | not opened | — | — | — | — |
 
-**Merged: 2. Parked: 1. In flight at stop: 1.**
+**Merged: 3. Parked: 1.** DISPLAY-POLARS-1 has four steps left; its ledger stays in `staging/`
+with C-003 to C-006 OPEN, so the unit is correctly recorded as in flight even though step 1 merged.
 
-## The two merged units
+## The merged units
 
 **BALLISTA-AUDIT-0** — Milestone 0 of the Rust migration pilot (slate ruling R-5). Audited
 upstream `datafusion-ballista` at tag `54.1.0` / `f4e66525` (root `Cargo.toml` `datafusion = "54"`,
@@ -33,6 +34,11 @@ satisfy" RePark's Iceberg write/commit nodes. Measured: `BallistaPhysicalExtensi
 single override slot, so a write/commit node **can** travel, through a delegating wrapper. The
 ruling stands on its other ground — a commit must not issue from a task — and that is now a dated
 disposition in the ADR rather than a silent edit.
+
+**DISPLAY-POLARS-1 step 1** — the default display style flips to `polars` (owner ruling R-1/R-2's
+foundation), resolved through a new `default_display_style()` that reads `REPARK_DISPLAY_STYLE`
+first; the facade suite pins `spark` at conftest import so no existing expectation changes meaning
+(R-6), proven by the whole suite staying green (5820 passed) rather than by argument.
 
 **DF-EXPLAIN-1** — `explain()` printed `Row(plan_type='physical_plan', plan='…\n…')` with literal
 `\n`; it now prints the plan under Spark's section headers with DataFusion's text verbatim, and
