@@ -69,8 +69,7 @@ def _eager_materialize(frame: DataFrame) -> DataFrame:
         sibling._materialize_cache_if_needed()
     except IllegalArgumentException as error:
         raise IllegalArgumentException(f".eager() cannot materialize this plan: {error}") from error
-    table = sibling.to_arrow()
-    sibling._eager_shape = (table.num_rows, table.num_columns)
+    sibling._eager_shape = (sibling._action_inner().count(), len(sibling.columns))
     return sibling
 
 

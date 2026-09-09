@@ -227,11 +227,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
   the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
-  frame is untouched), then reads `_eager_shape` off one MemTable scan with no `COUNT`
-  query; the guard refusal is wrapped to name `.eager()`. `lazy()` answers `self` on lazy
-  frames and a shape-less view scan on eager ones (no re-execution, no drop). `count()`
-  answers a known shape with no query. `unpersist()` clears the shape with the view, so a
-  shape never outlives its materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
+  frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
+  and the column count from the schema — no Arrow copy crosses to Python (D-7 ruling
+  2026-09-09: the count runs over the view, not the source plan); the guard refusal is
+  wrapped to name `.eager()`. `lazy()` answers `self` on lazy frames and a shape-less view
+  scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
+  query. `unpersist()` clears the shape with the view, so a shape never outlives its
+  materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -353,7 +355,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   source-size default (pins: dfcore-4a/C-005).
   DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
   source-size default (pins: dfcore-4b/C-005).
-  DF-EAGER-1 step 2 (2026-09-09): `core.py` 4525→4487; `eager.py` (93), `display.py`
+  DF-EAGER-1 step 2 (2026-09-09): `core.py` 4525→4487; `eager.py` (92), `display.py`
   (+6 for the eager-shape total), and `polars.py` (+4 for the `eager` mirror) stay below
   the source-size default (pins: df-eager-1/C-001, C-002, C-003, C-004, C-006).
   DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;

@@ -106,7 +106,7 @@ facade extras + `maturin develop`) and is recorded at the hand-back. Disk before
 Step-1 red confirmed at pickup: `2 passed, 7 xfailed` on the markers-on suite, and a live
 probe showed `hasattr` false for `eager` / `compute` / `lazy` with no `_eager_shape` slot.
 
-Shape. New `python/repark/src/repark/spark/dataframe/eager.py` (93 lines) holds the three
+Shape. New `python/repark/src/repark/spark/dataframe/eager.py` (92 lines) holds the three
 frame-first bodies (`_eager_materialize`, `_to_lazy`, `_count_rows`) plus the moved
 cache-guard trio, following the DFCORE-4a split pattern: public methods stay as one-line
 wrappers on the class, the leaf imports stay function-local, and `core.py` re-imports the
@@ -117,11 +117,19 @@ HALT-tripwire measurement (card: HALT if the row count needs a separate query, i
 return-value change). Measured: `materialize_as_cache_view` returns unit (`PyResult<()>` in
 `crates/repark-python/src/session.rs`); `PyDataFrame` exposes `count` (executes) and
 `column_names` (logical only) — no zero-execution row count exists on the Python side. The
-card's D-1 mechanism ("read from the materialised table (no separate count)") is therefore
-implemented as one MemTable scan via `to_arrow()` on the fresh view, taking `num_rows` /
-`num_columns` — no `COUNT(*)` query runs anywhere on the path. No Rust change was needed,
-so no HALT. `count()` and the styled `repr`/`show` totals on an eager frame reuse the shape
-with zero engine actions (pinned by the `_action_inner` spy and the D-11 count spy).
+card's D-1 mechanism ("read from the materialised table (no separate count)") was first
+implemented as one MemTable scan via `to_arrow()` on the fresh view — then the audit
+finding (D-7 ruling 2026-09-09) measured that copy as O(n) extra memory for two integers
+and ordered the cheaper middle way. `_eager_shape` is now filled once, at `.eager()` time,
+as `(sibling._action_inner().count(), len(sibling.columns))`: the count runs over the
+already-built MemTable (O(1) memory, no Arrow copy crosses to Python) and the column count
+comes from the schema with no execution. D-1's "no separate count" bars an extra pass over
+the source plan; a count over the resident view is not that. No Rust change was needed, so
+no HALT. No pin needed a spy adjustment: the fill calls `_action_inner` directly (never the
+patched `DataFrame.count`), and every spy window in the pins opens after `.eager()` returns
+— all 11 pins stayed green untouched. `count()` and the styled `repr`/`show` totals on an
+eager frame reuse the shape with zero engine actions (pinned by the `_action_inner` spy and
+the D-11 count spy).
 
 Over-limit refusal reuses the guard call and wraps only its `IllegalArgumentException` to
 name `.eager()` beside the key (other engine failures pass through unchanged). `unpersist()`
@@ -139,10 +147,21 @@ exit 0, then the identical pytest rerun on the final tree: 5851 passed, 369 skip
 `make py-lint` green; `python3 scripts/check_lib_py.py` green (599 files, 32 exceptions,
 core row at 4487); `ruff format --check` clean on every touched file;
 `check_python_conventions`, `check_docstring_presence.sh`, `sync_map_md.py --check`, and
-`check_map_md.sh` all clean. `test_dfcore_1_exports.py` sits at exactly the 1000-line default ceiling
+`check_map_md.sh` all clean.
+
+Follow-up round (D-7 shape-read fix, same actor): `test_df_eager_1.py` 11 passed with no
+spy change; `make py-test-facade` exit 0 with the identical totals (5851 passed,
+369 skipped); `make py-lint`, `check_lib_py.py` (core row untouched at 4487), and
+`ruff format --check` all green. `test_dfcore_1_exports.py` sits at exactly the 1000-line default ceiling
 after its declared delta — the next unit that touches it must split it (the file's own
 sanctioned out).
 
 Owed at unit close (not this step): the `COVERAGE_ATTESTATION` block (grammar rule C fires
 once no clause is `OPEN`) belongs to the review round, and the `STATUS.md` truth-up plus
 the guide section belong to step 3 and the departure edit.
+
+## Residue
+
+| ID | Residue | Disposition |
+|---|---|---|
+| R-001 | `materialize_as_cache_view` returns unit today, so `.eager()` pays one MemTable count to learn the row count. If a later step teaches the call to return the collected row count, the fill becomes free — D-1's shape read with no query at all. | Open for a later step; the Rust change the card defers. |
