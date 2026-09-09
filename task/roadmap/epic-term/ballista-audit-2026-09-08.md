@@ -1,6 +1,6 @@
 # Ballista audit — Milestone 0 of the Rust migration pilot
 
-**Opened:** 2026-09-08. **Class:** campaign. **State:** proposal; step 1 (Half A, facts) landed, step 2 (Half B, judgement) pending.
+**Opened:** 2026-09-08. **Class:** campaign. **State:** landed (#426, 2026-09-09); Half A facts, Half B judgement and the ADR-0004 disposition are all in this document.
 **Audited upstream:** Apache DataFusion Ballista tag `54.1.0`, commit `f4e66525`
 (`docs: add 54.1.0 changelog and restore missing 54.x toctree entries (#2243)`),
 cloned at `upstream-ballista/` (git-excluded scratch copy, never vendored).
@@ -9,7 +9,7 @@ this workspace pins `datafusion = "54.1.0"`. Match, no delta risk.
 **Standing question:** `docs/adr/0004-server-prep-disciplines.md` rules out
 Ballista-for-writes because the protobuf plan serialization cannot carry
 RePark's Iceberg write/commit nodes. The serialization chapter below (Half A
-facts now, disposition in step 3) says whether an extension codec changes that.
+facts, then the disposition below) says whether an extension codec changes that.
 The commit-coordinator boundary (executors produce files, one authority commits)
 is kept either way. Step 2 answered it in §26.D; step 3 records the
 one-line disposition.

@@ -27,6 +27,8 @@ Nothing else in this file is required reading for a round.
 | R-7 | Work is packaged so a GLM-class worker does most of it; token cost is the binding constraint. | §1, every card's tier column |
 | R-9 | **DESCRIBE type spelling (2026-09-09):** Spark's two spellings are both right — `long` for `printSchema`, `bigint` for `DESCRIBE`; one DDL-spelling function in `repark-spark` serves DESCRIBE, CTAS and the Python surface. | SQL-DESCRIBE-1 D-3 |
 | R-10 | **Reading units and pins (2026-09-09):** a ledger whose header says `**Path:** READING` may mark clauses PROVEN on document evidence; the attestation block stays required. | LEDGER-READING-1 |
+| R-11 | **Display probe pin (2026-09-09):** D-5's 11-row probe is right; `test_styled_show_does_not_full_collect` re-pins `max_rows_per_export` to `2 * edge + 1 = 11` for the polars section (still forbids collect-then-slice); step 2 is polars-only, duckdb is settled in step 4. | DISPLAY-POLARS-1 D-5 |
+| R-12 | **Gate roster homes (2026-09-09):** `AGENTS.md`'s roster sentence stays as it is; `DEVELOPMENT.md` and the root `map.md` name new gate members. | PREFLIGHT-PARITY-1, DOCS-LINKS-1 |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -118,6 +120,8 @@ when**, **Hand back when**, **Rounds** (estimate).
 ---
 
 ### Card SQL-DESCRIBE-1 — `DESCRIBE [TABLE] [EXTENDED|FORMATTED] <iceberg table>`
+
+**Done 2026-09-09, merged #428** (`7db61bfa`): the owner's call prints Spark's rows; the DDL spelling lives in `crates/repark-spark/src/spark_type_names.rs` per R-9.
 
 **Bug.** `repark.sql("DESCRIBE TABLE EXTENDED cat.db.t")` raises
 `ParseException: Expected: end of statement, found: EXTENDED`. Cause, read on `f00ed9ea`:
@@ -286,7 +290,10 @@ section), maps.
   `limit(max_rows + 1)`; when fewer than `max_rows + 1` rows return, the frame is rendered whole
   with the exact shape and **no `count()` and no tail fetch**. Only a frame with more rows pays
   the count and the tail fetch. `show(n)` keeps its keep-set cap semantics from
-  `test_display_styles.py`.
+  `test_display_styles.py`. **R-11:** the protected pin `test_styled_show_does_not_full_collect`
+  re-pins its polars-section `max_rows_per_export` from 5 to `2 * edge + 1 = 11` (the probe
+  size; a 12-row collect still reds it); step 2 touches the polars style only, the duckdb style
+  keeps its current fetch pattern until step 4.
 - **D-6 Fidelity targets, measured against polars itself.** `polars>=1.0` is an optional extra
   of this package; the pins build the same Arrow table in polars and compare
   `str(pl.from_arrow(table))` to RePark's rendering byte-for-byte, skipping when polars is not
@@ -313,7 +320,7 @@ section), maps.
 | Step | Tier | Do |
 |---|---|---|
 | 1 | M | **Done 2026-09-09 (#429).** D-1 + D-2 only: `default_display_style()`, the env override, both conftests, the split pin. Whole facade suite must stay green (`make py-test-facade`), which proves R-6 holds. |
-| 2 | M | D-5: the small-frame single fetch in `_render_styled_show`; pins: a spy proves `count()` is not called for a 7-row frame and is called once for a 12-row frame; existing `test_styled_show_does_not_full_collect` stays green. |
+| 2 | M | **Resume draft PR #434 (branch `feat/display-polars-1-step2`)**, where GLM already implemented D-5 and halted on the pin; apply R-11 to the pin, re-run the file, flip the PR to ready. D-5: the small-frame single fetch in `_render_styled_show`; pins: a spy proves `count()` is not called for a 7-row frame and is called once for a 12-row frame; existing `test_styled_show_does_not_full_collect` stays green. |
 | 3 | M | D-4: `__repr__`/`_repr_html_` honour the style; pins for `repr(df)` under each style, eagerEval on and off. |
 | 4 | I | D-3, D-6, D-7, D-8: the keys, the renderer fidelity, the polars-oracle pins, residues filed. This step is I because the renderer edits cross `plan_collapse.py` and `core.py` and the residue calls need judgement. |
 | 5 | M | Docs: `session-and-conf.md` section rewritten (default polars, the four keys, the env override, the count note now "only past max_rows"); maps; ledger PROVEN. |
@@ -553,6 +560,8 @@ table row, and a reader can reproduce any row with one command from the doc.
 
 ### Card LEDGER-READING-1 — reading units may prove clauses on document evidence (R-10)
 
+**Done 2026-09-09, merged #432** (`e24f4c68`); the Ballista audit's twelve clauses are PROVEN. D-3 named `make check-docs-links`, which does not exist — DOCS-LINKS-1 builds it.
+
 **Why.** `scripts/check_ledger_grammar.py` rule B says every `PROVEN` clause in a staging ledger
 must be cited by a `pins: <unit>/C-NNN` in a test; a reading unit adds no test, so
 BALLISTA-AUDIT-0's twelve discharged clauses had to stay `OPEN`. The script already carries an
@@ -590,6 +599,8 @@ maps.
 
 ### Card PREFLIGHT-PARITY-1 — the parity mirror check joins `preflight`
 
+**Done 2026-09-09, merged #433** (`f8a9f1ac`) as `py-test-parity-cap`. Its C-005 closes under R-12 (`AGENTS.md` untouched, `DEVELOPMENT.md` + root `map.md` are the roster homes): one M step flips the clause and `move`s the ledger.
+
 **Why.** The CAP-1 source-file mirror test under `python/repark-parity` is not a `preflight`
 member, so a baseline ratchet passed `preflight` locally and failed CI on #427.
 
@@ -611,6 +622,39 @@ the owner whether the roster sentence should name the new member.
 | Step | Tier | Do |
 |---|---|---|
 | 1 | M | Locate the mirror test (`grep -rl "CAP-1\|cap_1" python/repark-parity`), the target, the roster line, `make preflight` green once alone, maps. |
+
+**Rounds.** 1 (M).
+
+---
+
+### Card DOCS-LINKS-1 — `make check-docs-links`, the gate LEDGER-READING-1 assumed
+
+**Why.** Reading ledgers now carry `docs: <path>#<anchor>` evidence cells and every `map.md`
+carries relative links, and nothing mechanical checks either. Run 2 found the gate named in
+LEDGER-READING-1 D-3 does not exist.
+
+**Home.** `scripts/check_docs_links.py` (new), `scripts/tests/test_check_docs_links.py` (new),
+`Makefile` (`check-docs-links` target, added to `preflight` beside `check-docs-compaction`),
+`DEVELOPMENT.md` gate roster, root `map.md` (R-12), `scripts/map.md`, `scripts/tests/map.md`.
+
+**Decisions.**
+
+- **D-1 Scope.** Every tracked `*.md` file. Checked: relative links (`[..](path)` and
+  `[..](path#anchor)`) resolve to a tracked file; `#anchor` matches a heading in the target
+  rendered the GitHub way (lower-case, spaces to `-`, punctuation dropped); `docs:` evidence cells
+  in `task/ledgers/**` follow the same rule. Not checked: `http(s)://` links, anchors into code.
+- **D-2 Output.** One line per broken link `path:line: <link> -> <reason>`; exit 1 on any; exit 0
+  prints the counts of files and links checked.
+- **D-3 Baseline.** Run it once on the tree first; if the tree already has broken links, the
+  script ships with an allowlist file `scripts/docs_links_allowlist.txt` seeded with them (one
+  per line) that only shrinks, the same ratchet shape the other gates use, and the broken links
+  are filed as a residue row in the ledger, not fixed in this card.
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | M | Red-first tests (fixture tree with one good link, one missing file, one bad anchor, one `docs:` cell); the script; the Makefile target; the baseline run and allowlist per D-3; roster lines; maps. `make preflight` green alone. |
 
 **Rounds.** 1 (M).
 
@@ -677,6 +721,8 @@ paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until t
 | 7 | PROFILES-1 | CFG-1 for the TOML form only | M×3, I | 4 | ≈ $0.02 + one I round |
 | 8 | AP-0 | — (script only) | M | 1 | ≈ $0.01 |
 | 9 | AP-1 → AP-3, DYNCFG-1 | AP-0 result; PROFILES-1 result | I | — | after the measurements |
+
+**Status 2026-09-09 after run 2:** 2 merged (#428), 10 merged (#432), 11 merged (#433); 3 step 2 parked at #434 (R-11 unparks it); new unit 12 DOCS-LINKS-1 (M, 1 round). Run-3 order is runbook §7.
 
 **Status 2026-09-09 morning:** 1 merged (#427), 6 merged (#426), 3 step 1 merged (#429), 2 parked at
 step 2 on R-9 (now ruled, PR #428 resumes). New units: 10 LEDGER-READING-1 (M, 2 rounds), 11
