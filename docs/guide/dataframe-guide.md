@@ -40,8 +40,26 @@ plan.orderBy("amount").collect()
 [Row(region='us', amount=20.0), Row(region='eu', amount=30.0)]
 ```
 
-`df.explain()` prints the logical and physical plans (DataFusion's, since DataFusion is the engine
-underneath). Two consequences of laziness that bite in practice:
+`df.explain()` prints the plan under Spark's section headers, with DataFusion's plan text (the
+engine underneath) verbatim:
+
+```python
+plan.explain()
+```
+
+```text
+== Physical Plan ==
+FilterExec: amount@1 > 15
+  DataSourceExec: partitions=1, partition_sizes=[1]
+```
+
+`explain(True)` prepends the `== Optimized Logical Plan ==` section; `explain(mode="formatted")`
+prints DataFusion's box-drawing tree rendering instead; `explain(mode="cost")` is the one mode
+that executes (`EXPLAIN ANALYZE`) and prints metrics; `mode="codegen"` appends one line saying
+generated code does not apply here. Unknown modes raise `PySparkValueError`. The plan-printing
+modes never execute the plan — `explain(True)` on a billion-row frame returns instantly.
+
+Two consequences of laziness that bite in practice:
 
 - **Row order is not defined without `orderBy`.** Nothing about a single-node engine makes it
   stable across operations.

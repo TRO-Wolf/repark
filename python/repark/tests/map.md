@@ -33,6 +33,19 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
+  `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
+  step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +
+  `test_explain_text_carries_the_physical_plan_header` +
+  `test_explain_text_spans_at_least_three_plan_lines`; C-002
+  `test_explain_extended_lists_logical_plan_before_physical` +
+  `test_explain_formatted_carries_datafusion_tree_glyphs` +
+  `test_explain_unknown_mode_raises_naming_the_five_modes`; C-003 the `_explain_text` string
+  pins as a group — the method sits beside `explain` with the same `(extended, mode)` shape —
+  with `test_explain_prints_plan_text_without_row_repr` the one smoke test through the print;
+  C-004 `test_explain_does_not_invoke_collect`; C-005 the formatted tree-glyph pin against the
+  measured `EXPLAIN FORMAT TREE` pass-through; C-006 the recorded red run.
+  pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_perf_approxpct_1.py](test_perf_approxpct_1.py) — **PERF-APPROXPCT-1 (2026-09-05):**
   the sketch pins. The accuracy matrix (default/100/10/2 × scalar/array × NULLs ×
   duplicate-heavy × skewed × int/float/decimal) against values recorded from live PySpark

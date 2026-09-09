@@ -37,6 +37,12 @@ loses exactly the six leavers (``_conf_lookup``, ``_eager_eval_enabled``,
 new module name ``display``. The ownership test lives in the sibling
 ``test_dfcore_4b_exports.py``: this file is at the default ceiling and the
 gate's sanctioned out is a split, not an exception row.
+
+DF-EXPLAIN-1 (2026-09-08): the explain rendering support splits out and
+``_explain_text`` joins the class (same ``(extended, mode)`` shape beside
+``explain``), so ``EXPECTED_DATAFRAME_DIR`` gains exactly ``_explain_text``;
+the package gains exactly the one new module name ``explain``, while ``core``
+gains the two private imports in its frozen surface and no module binding.
 """
 
 from __future__ import annotations
@@ -82,6 +88,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_APPLY_IN_PANDAS_KEY_MISSING",
     "_CACHE_MAX_BYTES_KEY",
     "_CACHE_VIEW_PREFIX",
+    "_EXPLAIN_SECTION_PLAN",
     "_EXPORT_MEMORY_ERROR_MARKERS",
     "_G2_RANGE_NUMERIC_DTYPES",
     "_PYARROW_DYNAMIC_SOURCE_NOISE",
@@ -170,6 +177,7 @@ EXPECTED_PACKAGE_EXPORTS: list[str] = [
     "_reject_aggregate_in_with_column",
     "_reject_non_numeric_range_order",
     "_reject_partition_transform",
+    "_render_explain_sections",
     "_reset_dropin_warnings_for_tests",
     "_reset_writer_v2_option_warnings_for_tests",
     "_resolve_cache_max_bytes",
@@ -242,6 +250,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_APPLY_IN_PANDAS_KEY_MISSING",
     "_CACHE_MAX_BYTES_KEY",
     "_CACHE_VIEW_PREFIX",
+    "_EXPLAIN_SECTION_PLAN",
     "_EXPORT_MEMORY_ERROR_MARKERS",
     "_G2_RANGE_NUMERIC_DTYPES",
     "_PYARROW_DYNAMIC_SOURCE_NOISE",
@@ -330,6 +339,7 @@ EXPECTED_CORE_EXPORTS: list[str] = [
     "_reject_aggregate_in_with_column",
     "_reject_non_numeric_range_order",
     "_reject_partition_transform",
+    "_render_explain_sections",
     "_reset_dropin_warnings_for_tests",
     "_reset_writer_v2_option_warnings_for_tests",
     "_resolve_cache_max_bytes",
@@ -494,6 +504,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_ensure_mia_view_cleanup",
     "_execute_map_in_arrow_bridge",
     "_execute_map_in_arrow_bridge_ipc",
+    "_explain_text",
     "_grouping_col_sql",
     "_grouping_sets_grouped",
     "_identity_child",
@@ -690,6 +701,7 @@ EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "display",
+    "explain",
     "export_errors",
     "grouped_udf",
     "rows_export",
@@ -731,9 +743,10 @@ def test_package_export_set_unchanged() -> None:
 
     Dunders are interpreter state (warning registries, import caches) and vary with
     test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the nine new submodule attributes (DFCORE-1's four plus DFCORE-2's
+    gain is the ten new submodule attributes (DFCORE-1's four plus DFCORE-2's
     ``udf_projection`` and ``udf_window_projection`` plus DFCORE-3's
-    ``statistics`` plus DFCORE-4a's ``sampling`` plus DFCORE-4b's ``display``),
+    ``statistics`` plus DFCORE-4a's ``sampling`` plus DFCORE-4b's ``display`` plus
+    DF-EXPLAIN-1's ``explain``),
     bound by the import system when core imports the new homes.
     """
     expected_surface = [
@@ -767,6 +780,9 @@ def test_core_export_set_unchanged() -> None:
     module bindings (DFCORE-2's two plus DFCORE-3's ``statistics`` plus DFCORE-4a's
     ``sampling`` plus DFCORE-4b's ``display``): ``select``, the statistics, the
     sampling, and the display wrappers delegate to the moved helpers through them.
+    DF-EXPLAIN-1 (2026-09-08) binds no module on ``core``: its two private names
+    import from ``explain.py`` into the frozen ``core``/package surfaces, and the
+    class gains exactly ``_explain_text``.
     """
     expected_surface = [
         name
