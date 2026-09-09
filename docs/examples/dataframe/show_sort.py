@@ -21,7 +21,12 @@ COVERS: list[str] = [
 
 def main() -> None:
     """Run the measured show, sort, and single-partition sortWithinPartitions answers."""
-    repark = ReparkSession.builder.appName("ex-df-show-sort").master("local[1]").getOrCreate()
+    repark = (
+        ReparkSession.builder.appName("ex-df-show-sort")
+        .master("local[1]")
+        .config("repark.display.style", "spark")
+        .getOrCreate()
+    )
     try:
         frame = repark.createDataFrame(
             [

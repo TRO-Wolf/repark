@@ -279,6 +279,7 @@ from repark.spark.session.session_configuration import (
     _looks_like_datafusion_conf_key,
     _refuse_dual_memory_pool_knobs,
     _refuse_runtime_memory_limit_gb,
+    default_display_style,
     logger,
     normalize_display_style,
 )

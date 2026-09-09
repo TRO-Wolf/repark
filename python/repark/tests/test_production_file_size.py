@@ -65,7 +65,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_DECIMAL_MAX_ABS": ("87cc55b915e549287365e7d222518eeb9999b6e436e1b6ab37bb9d4d6b8c3d51"),
     "_DECIMAL_PRECISION": ("0883a8680597fd4423d1e3b1e379d3d4f49b41ce6399073c2ca553a0e0bc455e"),
     "_DECIMAL_SCALE": ("53d2b87b578a676002af32004fc0aaf05a7048d0d1edc17ed2a7c8bf96474d73"),
-    "_DEFAULT_DISPLAY_STYLE": ("839025eb6f1fac45d1b72864dcdddd2ed22d1e5ec91322148e30f226927a7197"),
+    "_DEFAULT_DISPLAY_STYLE": ("fea6ee163405438e76331923a86ee416b9f900dc0ad57188bb20a7d102e6fd3b"),
     "_DELETE_FROM_PREFIX_RE": ("b6438951a20e526aaf712b1bbd8017d43295d4fd3fe447215ba6d61997a6d25e"),
     "_DISPLAY_STYLE_KEY": ("8fc28d05fed3c3132f5b39716acc4f797826de45a7385a8bbd8e1d1f5eedc2e0"),
     "_DISPLAY_STYLE_VALUES": ("3514b179fdbe6716d5638336c545fbcd73ed0ecab523288a7721b9a463d40d6d"),
@@ -408,6 +408,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_warn_unbounded_batch_once": (
         "3c0a7d26edc06b421c7910e87706b7efdf978ec603664a267d167d82b149d92b"
     ),
+    "default_display_style": ("43547a84b8832b0627850b825fc9bc1ef099cb546ad7f69d7a7710161b3aa78e"),
     "logger": ("fa49a10e7315bca551601a1c6c048afadc925fcc6a050e5bfcd74012a380f91e"),
     "normalize_display_style": ("8b1e207bfcb7f37f433f026942124dd695674b14369d7a18bf3dbcc6b311b9ec"),
     "resolve_table_name": ("6450b57013df334a7c72a8a0a0258b51b8fd6c6d665d65bda275241a2c2ea4c5"),
@@ -582,6 +583,7 @@ EXPECTED_OWNERS = {
     "_values_sql_with_typed_nulls": "create_dataframe_rows",
     "_warn_master_once": "session_state",
     "_warn_unbounded_batch_once": "session_state",
+    "default_display_style": "session_configuration",
     "logger": "session_configuration",
     "normalize_display_style": "session_configuration",
     "resolve_table_name": "catalog_resolution",
@@ -782,6 +784,7 @@ EXPECTED_RUNTIME_NAMES = (
     "annotations",
     "contextlib",
     "contextvars",
+    "default_display_style",
     "logger",
     "logging",
     "normalize_display_style",

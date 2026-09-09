@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 
 import _live_parity as lp
 import pytest
 
 from repark.spark.session import _reset_active_session_for_tests
+
+os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")
 
 
 @pytest.fixture(scope="session")
