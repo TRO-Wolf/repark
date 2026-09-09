@@ -102,12 +102,12 @@ def test_bad_docs_cell_reds(repo: Path) -> None:
 
 def test_allowlist_drops_its_entries_only(repo: Path) -> None:
     _write(repo, "README.md", _README + "[gone](MISSING.md)\n[other](GONE_TOO.md)\n")
-    _write(repo, _ALLOWLIST, _HEADER + "README.md:11:MISSING.md\n")
+    _write(repo, _ALLOWLIST, _HEADER + "README.md:MISSING.md\n")
     result = _run(repo)
     assert result.returncode == 1
     assert "MISSING.md" not in result.stderr
     assert "README.md:12: GONE_TOO.md -> does not exist" in result.stderr
-    _write(repo, _ALLOWLIST, _HEADER + "README.md:11:MISSING.md\nREADME.md:12:GONE_TOO.md\n")
+    _write(repo, _ALLOWLIST, _HEADER + "README.md:MISSING.md\nREADME.md:GONE_TOO.md\n")
     assert _run(repo).returncode == 0
 
 
@@ -119,14 +119,22 @@ def test_malformed_allowlist_entry_fails_closed(repo: Path) -> None:
 
 
 def test_stale_allowlist_entry_fails(repo: Path) -> None:
-    _write(repo, _ALLOWLIST, _HEADER + "README.md:3:GUIDE.md\n")
+    _write(repo, _ALLOWLIST, _HEADER + "README.md:GUIDE.md\n")
     result = _run(repo)
     assert result.returncode == 1
     assert (
-        "scripts/docs_links_allowlist.txt: stale entry README.md:3:GUIDE.md — "
+        "scripts/docs_links_allowlist.txt: stale entry README.md:GUIDE.md — "
         "the link is no longer broken; remove this row" in result.stderr
     )
     assert "docs-links: FAIL — 0 broken link(s), 1 stale allowlist entry" in result.stderr
+
+
+def test_allowlist_survives_a_line_shift(repo: Path) -> None:
+    _write(repo, "README.md", _README + "[gone](MISSING.md)\n")
+    _write(repo, _ALLOWLIST, _HEADER + "README.md:MISSING.md\n")
+    assert _run(repo).returncode == 0
+    _write(repo, "README.md", "preamble\n\n" + _README + "[gone](MISSING.md)\n")
+    assert _run(repo).returncode == 0
 
 
 def test_real_tree_is_green_under_the_seeded_allowlist() -> None:

@@ -580,11 +580,15 @@ repark-parity slice.
   on exit 0. Whole-tree run measured 0.82 s (692 files, 4478 links; 0.83/0.81 s on repeats,
   2026-09-09). The D-3 baseline seeded `scripts/docs_links_allowlist.txt` with the 10
   pre-existing broken links (6 missing targets, 5 of them in immutable archive ledgers, and
-  4 stale anchors into the divergence registry) — one `path:line:link` entry per line, a
-  `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), and the list
-  ratchets down under the gate (D-8, audit round 1, 2026-09-09): an entry that matched no
-  finding in the run is itself a failure (`stale entry … — the link is no longer broken;
-  remove this row`), so a fixed link takes its row away under gate pressure. Not wired to
+  4 stale anchors into the divergence registry) — one `path:link` entry per line (D-9, audit
+  round 2, 2026-09-09: the line number is not part of the key, so an unrelated edit that
+  shifts lines never reds the gate, and two identical broken links in one file collapse to
+  one entry), a `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), and
+  the list ratchets down under the gate (D-8, audit round 1, 2026-09-09): an entry that
+  matched no finding in the run is itself a failure (`stale entry … — the link is no longer
+  broken; remove this row`), so a fixed link takes its row away under gate pressure. The
+  baseline was re-measured on the merged tree at the D-9 reseed: the same 10 links, 9
+  entries after the collapse. Not wired to
   the pre-commit hook or ci.yml (the card's Home named the Makefile only). Proofs:
   `python/repark-parity/tests/test_dl_6_docs_links.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is

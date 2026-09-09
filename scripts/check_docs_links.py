@@ -25,7 +25,7 @@ CODE_SPAN_PATTERN = re.compile(r"`[^`]*`")
 FENCE_PATTERN = re.compile(r"^\s*(?:```|~~~)")
 HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
 DOCS_CELL_PATTERN = re.compile(r"(?<![\w./-])docs:\s*([^\s|`]+)")
-ALLOWLIST_ENTRY = re.compile(r"[^\s:]+:\d+:\S+")
+ALLOWLIST_ENTRY = re.compile(r"[^\s:]+:\S+")
 
 
 def tracked_paths(repo: Path) -> list[str]:
@@ -37,7 +37,7 @@ def tracked_paths(repo: Path) -> list[str]:
 
 
 def load_allowlist(repo: Path) -> frozenset[str]:
-    """The seeded path:line:link entries; blank lines and #-prefixed header lines are ignored."""
+    """The seeded path:link entries; blank lines and #-prefixed header lines are ignored."""
     path = repo / ALLOWLIST_PATH
     if not path.exists():
         return frozenset()
@@ -200,7 +200,7 @@ def run(repo: Path) -> int:
             findings, links = scan_file(repo, relative, tracked, tracked_list, anchors)
             checked += links
             for number, raw, reason in findings:
-                key = f"{relative}:{number}:{raw}"
+                key = f"{relative}:{raw}"
                 if key in allowlist:
                     matched.add(key)
                     continue
