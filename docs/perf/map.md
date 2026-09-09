@@ -194,6 +194,15 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   control), recorded on one release module with per-run loads, wall not gated.
   pins: dfcore-6/C-005
 
+- [profiles-1-passthrough-probe-2026-09-09.md](profiles-1-passthrough-probe-2026-09-09.md) — **PROFILES-1
+  step 0 (2026-09-09):** the `.config()` pass-through probe over the card's twenty
+  candidate knobs (twelve read, eight write) — one row per key with set / read-back /
+  engine-signal / verdict columns, plan and file-fact fragments quoted from the captured
+  output, the gating answer (yes: 11 PASSES THROUGH, 9 ACCEPTED BUT UNREAD, 0 REFUSED, 0
+  NOT MEASURED), and the reproduce commands. Runnable method kept beside it in
+  [profiles-1-probe/](profiles-1-probe/map.md). Step 0's record only; the unit's ledger
+  is born in step 1.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

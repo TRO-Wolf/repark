@@ -37,8 +37,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pinned it), `DBT-CTASCLAUSE-1`, `DBT-RELCOMMENT-1`, `DBT-COLCOMMENT-1`, `DBT-QUALIFY-1`.
   **Round 2 (Opus critic, FAIL on 7 S2 + 3 S3) is §10**; read §6 for the mutation table, which
   now carries a zero-red control and states which mutations are true no-ops rather than gaps.
-  `risk_tier: standard`. Branch `feat/dbt-1`.
+  `risk_tier: standard`.   Branch `feat/dbt-1`.
   pins: dbt-1-adapter/C-001, C-002, C-003, C-004, C-005
+- [df-eager-1-ledger.md](df-eager-1-ledger.md) —
+  **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
+  facade DataFrame. Step 1 only: the red-first pins in
+  [../../../python/repark/tests/test_df_eager_1.py](../../../python/repark/tests/test_df_eager_1.py)
+  — seven `xfail(strict=True)` pins red on the base tree (marker-less run recorded in the
+  ledger) plus two keep-green guards; step 2 builds D-1..D-6 in `core.py` + `polars.py`.
+  Clauses C-001…C-006 OPEN. Branch `feat/df-eager-1`.
+  pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [display-polars-1-ledger.md](display-polars-1-ledger.md) —
   **DISPLAY-POLARS-1 step 1 (2026-09-09), in flight:** polars-style rendering becomes the
   default. Step 1 only (D-1 + D-2): `_DEFAULT_DISPLAY_STYLE` flips to `polars`, resolved
