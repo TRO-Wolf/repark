@@ -286,3 +286,35 @@ No finding in this capture contradicts D-2's section families or D-6; the two de
 (non-nullable `col_name`/`data_type`, the extra `Statistics` row) extend the card, they do
 not block step 2.
 
+
+## PARKED at step 2 (orchestrator, 2026-09-09)
+
+Step 2 halted before writing any code, on the exact condition the card's "Hand back when" names:
+**D-3 points at an existing shared Iceberg-to-Spark DDL type spelling, and none exists** that
+`repark-spark` can use. What the worker found, searching from the home crate:
+
+- `crates/repark-spark/src/create_table.rs` `sql_type_to_iceberg` maps the **forward** direction,
+  SQL text to Iceberg types. There is no reverse.
+- The fork's `PrimitiveType` `Display` spells **`long`**, not `bigint`.
+- The only Spark-DDL-like spellings in Rust are private Arrow-based helpers in `repark-python`,
+  a crate `repark-spark` cannot depend on — and their top-level key also spells `Int64` as
+  **`long`**, which contradicts the step-1 live capture, where Spark's `DESCRIBE` reports
+  **`bigint`**.
+
+The card forbids writing a second spelling table, so the step stopped rather than inventing one.
+
+**The question for the owner.** Where should the single canonical Iceberg-to-Spark DDL spelling
+live so `repark-spark` can use it without creating a second table — promoted to a shared helper in
+the home crate, or re-homed from `repark-python` to somewhere `repark-spark` may depend on? And,
+because the two existing spellings disagree, which spelling is canonical: `DESCRIBE`'s measured
+`bigint`, or the `long` that the fork's `Display` and the `repark-python` helper both produce?
+
+The orchestrator did not rule this: a cross-crate decision about where a canonical, Spark-visible
+type spelling lives is outside the overnight decision grant (§6 of the runbook parks "any public
+name or signature" and anything touching crate structure).
+
+**State on this branch.** Step 1 is complete and independently verified — the orchestrator re-ran
+the capture against live Spark 4.1.2 and it matched every row, every schema and every nullability
+flag, including the two places where the measurement contradicts the card (`col_name` and
+`data_type` are `nullable=False`; there is an extra `Statistics` row). Every clause stays **OPEN**.
+Nothing of step 2 was written; the tree is clean at `8da0dbaa`.
