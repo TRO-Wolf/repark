@@ -159,6 +159,16 @@ exists — a `PROVEN` clause nobody pins is the "green pin that proves nothing" 
 form. The measured floor at arming (2026-08-23) is seeded per ledger in the script and ratchets
 down only. The citation is a binding, not a generator: no script derives a test from a clause.
 
+**Reading units.** A unit that adds no code proves its clauses on document evidence instead of
+tests. Its ledger header carries `**Path:** READING` (beside `LIGHT`, `STANDARD`, `HIGH`) within
+the first 40 lines, and the grammar gate exempts every clause of that ledger from the pin rule;
+the clause-table rule and the attestation rule still apply. Each clause names the document
+section that discharges it in its evidence cell, shaped `docs: <path>#<heading-anchor>` — the
+gate reads no further into the cell, and the anchor is `make check-docs-links`' job — and the
+attestation block names those sections instead of test artifacts. The marker is load-bearing:
+without it the gate reds every `PROVEN` clause, so a ledger carries it only while no test could
+pin a clause.
+
 ## Relocation discipline
 
 The port depends on this section: phases 1–3 move tests between repositories, and the acceptance

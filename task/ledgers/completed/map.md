@@ -8,6 +8,14 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
+  **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B
+  judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —
+  clauses C-001…C-012 PROVEN on document evidence under the grammar gate's
+  reading-unit rule (R-10; LEDGER-READING-1 step 2, 2026-09-09), §26 A–H +
+  §27 + §28 gate filled, appendix A6 closes the python/tooling gap; the ADR
+  disposition and the brief's Milestone 0 row landed in #426.
+  Branch `docs/ballista-audit-0`.
 - [df-explain-1-ledger.md](df-explain-1-ledger.md) —
   **DF-EXPLAIN-1 (2026-09-08), in flight:** `DataFrame.explain()` prints plan text, not
   `Row(...)` reprs. Step 1 done: the seven red-first pins in
@@ -35,6 +43,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
   PySpark 4.1.2, plus the no-regression held set. `risk_tier: standard`. Branch
   `review/fnp-8-review`.
+- [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
+  **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on
+  document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of
+  the `Path` header field is exempt from the grammar gate's rule B; rules A and C stay armed,
+  the reading evidence shape is `docs: <path>#<heading-anchor>` (a convention, not a gate
+  check), and `EXCEPTIONS` is untouched. Step 2 (2026-09-09) flipped BALLISTA-AUDIT-0's
+  twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
+  pins: ledger-reading-1/C-001, C-002, C-003, C-004
 
 ## Pointers
 - Up: [../map.md](../map.md)

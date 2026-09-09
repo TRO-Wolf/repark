@@ -520,7 +520,9 @@ repark-parity slice.
   `pins: <unit>/C-NNN[, C-MMM]` (`<unit>` = the ledger filename without `-ledger.md` and, in the
   archive, without its date prefix), read from every tracked file under `crates/`, `python/`,
   `scripts/` — every `PROVEN` clause in staging must be cited, every citation must resolve to a
-  clause in any bin (staging, completed, the archive); **(C)** the `COVERAGE_ATTESTATION:` block (ref 05's shape) is
+  clause in any bin (staging, completed, the archive); a staging ledger whose first 40 lines
+  carry the READING value of the `Path` header field is a reading unit and its clauses are
+  exempt from rule B while rules A and C stay armed (LEDGER-READING-1, 2026-09-09); **(C)** the `COVERAGE_ATTESTATION:` block (ref 05's shape) is
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
