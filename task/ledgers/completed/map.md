@@ -38,6 +38,11 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [dfcore-4b-ledger.md](dfcore-4b-ledger.md) — Unit ledger — DFCORE-4b · display out of `core.py`
 - [dfcore-5-ledger.md](dfcore-5-ledger.md) — Charter ledger — DFCORE-5 · `approxQuantile` in one collect per frame
 - [dfcore-6-ledger.md](dfcore-6-ledger.md) — Charter ledger — DFCORE-6 · eager previews fetch N+1, never `count()`
+- [docs-links-1-ledger.md](docs-links-1-ledger.md) —
+  **DOCS-LINKS-1 step 1 (2026-09-09), in flight:** the gate LEDGER-READING-1 D-3 assumed —
+  `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
+  and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
+  (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
 - [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
   **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live

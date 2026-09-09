@@ -316,6 +316,17 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   heading or FIXED-note opener, not by a bare id.
   C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
   archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
+- `test_dl_6_docs_links.py` — **DOCS-LINKS-1 (2026-09-09):** the markdown link gate on a
+  scratch tree: a clean fixture counts its files and links (relative links, one GitHub-style
+  anchor, one `docs:` evidence cell; externals, bare fragments, code spans and fenced blocks
+  out of scope); a missing target, an untracked-on-disk target, a bad anchor and a bad
+  `docs:` cell each red with the `path:line: <link> -> <reason>` line; an allowlist entry
+  (keyed `path:link` per D-9, so a line shift never reds the gate) drops exactly its own
+  finding while a stranger link stays red and a malformed entry fails closed (exit 2); a
+  stale allowlist entry that matched no finding reds the gate with its own line (D-8, audit
+  round 1); the real tree runs green under the seeded allowlist. The tests carry no inline
+  pins, so the unit's clauses are cited on this line.
+  pins: docs-links-1/C-001, C-002, C-003, C-004, C-005
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
