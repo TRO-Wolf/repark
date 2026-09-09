@@ -7,7 +7,7 @@ mod sources;
 mod tests;
 pub(crate) mod wiring;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use repark_common::{Error, Result};
@@ -43,6 +43,14 @@ pub fn load() -> Result<ConfigFile> {
         return Ok(ConfigFile::default());
     };
     read_and_parse(&path)
+}
+
+/// Read a `repark.toml` file's translated pairs without building a session.
+/// # Errors
+/// Discovery, the profile merge, interpolation, or translation fails.
+pub fn config_file_pairs(forced: Option<PathBuf>) -> Result<HashMap<String, String>> {
+    let file = wiring::load_for_build(forced)?;
+    Ok(file.pairs.into_iter().collect())
 }
 
 pub(crate) fn read_and_parse(path: &Path) -> Result<ConfigFile> {

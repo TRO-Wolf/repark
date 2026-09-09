@@ -46,6 +46,7 @@ pub use runtime::EngineRuntime;
 // --- Catalog configuration + engine-side registry (hoisted).
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
+pub use config_file::config_file_pairs;
 pub use namespace_create::refuse_contradictory_namespace_location;
 
 // === Time travel ===

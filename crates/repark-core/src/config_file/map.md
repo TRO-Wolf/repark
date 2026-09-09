@@ -56,7 +56,8 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `REPARK_CONFIG` disables, empty `REPARK_ENV` selects default) then `REPARK_ENV` profile,
   merge, interpolation, and translation of the effective table into flat pairs:
   `display.*` → `repark.display.*` (string or integer, else refuses), `session` knobs →
-  typed fallbacks plus `repark.*` knob-key pairs, `conf` verbatim in sorted-key order
+  typed fallbacks plus `repark.*` knob-key pairs, `conf` flattened with dot joins
+  (TOML nests dotted keys; a quoted-plus-nested collision refuses) in sorted-key order
   (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
   as sorted, ledger C-024 carries the D-1 wording), `catalog` blocks → the same
   `repark.sql.catalog.*` keys `parse_catalog_specs` reads. `profile_sources` still runs on
@@ -69,7 +70,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
-  pins); `wiring.rs` carries the 7 step-3 pins. Split from the single `tests.rs` when the
+  pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the
   battery passed the 1,000-line file ceiling — stage pins versus wiring pins, no pin moved
   or edited in the split. The environment arrives as a stub closure throughout, so no pin
   mutates the process environment (build-level pins use forced temp paths and assume the

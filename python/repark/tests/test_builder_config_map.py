@@ -15,10 +15,19 @@ Live precedence (verbatim):
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from repark import ReparkSession
 from repark.errors import IllegalArgumentException
+
+
+def _write_toml(directory: Path, text: str) -> str:
+    """Write ``text`` as repark.toml in ``directory`` and return its path."""
+    path = directory / "repark.toml"
+    path.write_text(text, encoding="utf-8")
+    return str(path)
 
 
 def test_config_map_sets_multiple_keys() -> None:
@@ -396,3 +405,49 @@ def test_config_starstar_dict_is_not_the_api() -> None:
     # ``**dict`` unpacking is NOT PySpark API — keyword args must be the named parameters.
     with pytest.raises(TypeError):
         ReparkSession.builder.config(**{"spark.app.name": "nope"})  # type: ignore[arg-type]
+
+
+def test_config_file_folds_pairs_through_config(tmp_path: Path) -> None:
+    """Builder.configFile forces a file whose pairs arrive via .config."""
+    path = _write_toml(
+        tmp_path,
+        '[default.conf]\ncustom.probe.key = "from-file"\n[default.display]\nstyle = "spark"\n',
+    )
+    builder = ReparkSession.builder.configFile(path)
+    assert builder._config_file == path
+    spark = builder.getOrCreate()
+    try:
+        assert spark.conf.get("custom.probe.key") == "from-file"
+        assert spark.display_style == "spark"
+    finally:
+        spark.stop()
+
+
+def test_builder_config_beats_config_file(tmp_path: Path) -> None:
+    """Explicit .config wins over the forced file."""
+    path = _write_toml(tmp_path, '[default.conf]\nshared.key = "from-file"\n')
+    spark = (
+        ReparkSession.builder.config("shared.key", "from-builder").configFile(path).getOrCreate()
+    )
+    try:
+        assert spark.conf.get("shared.key") == "from-builder"
+    finally:
+        spark.stop()
+
+
+def test_repark_config_env_discovers_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """REPARK_CONFIG names the discovered file at getOrCreate."""
+    path = _write_toml(tmp_path, '[default.conf]\ncustom.env.key = "from-env"\n')
+    monkeypatch.setenv("REPARK_CONFIG", path)
+    spark = ReparkSession.builder.getOrCreate()
+    try:
+        assert spark.conf.get("custom.env.key") == "from-env"
+    finally:
+        spark.stop()
+
+
+def test_config_file_missing_path_refuses(tmp_path: Path) -> None:
+    """A forced file that does not exist refuses naming it."""
+    missing = str(tmp_path / "absent.toml")
+    with pytest.raises(Exception, match="does not exist"):
+        ReparkSession.builder.configFile(missing).getOrCreate()

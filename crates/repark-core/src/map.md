@@ -34,9 +34,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `REPARK_ENV` profile, merge, interpolation, translation to flat pairs, the `(key, redacted
   value, source)` dump rows) and took the now-live `#[allow(dead_code)]` attributes off;
   the ones still unreachable (`load`, `redact_config`, the spec-field carriers) stay, and
-  the crate is built with warnings denied.
+  the crate is built with warnings denied. The facade round added the `config_file_pairs`
+  entry (translated pairs for the binding fold) and nested-`conf` dot-join flattening.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014,
-  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025, C-026, C-027
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects

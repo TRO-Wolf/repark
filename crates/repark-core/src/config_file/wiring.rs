@@ -158,8 +158,8 @@ fn translate_document(
         }
     }
     if let Some(conf) = profile.conf.as_ref() {
-        for (key, value) in conf {
-            note(key.clone(), plain_string(label, "conf", key, value)?);
+        for (key, value) in flatten_conf(label, conf)? {
+            note(key, value);
         }
     }
     if let Some(catalog) = profile.catalog.as_ref() {
@@ -192,6 +192,62 @@ fn plain_string(label: &str, section: &str, key: &str, value: &toml::Value) -> R
         _ => Err(Error::Config(format!(
             "key `{label}.{section}.{key}` must be a string"
         ))),
+    }
+}
+
+fn flatten_conf(label: &str, table: &toml::Table) -> Result<Vec<(String, String)>> {
+    let mut pairs = Vec::new();
+    flatten_conf_into(label, table, "", &mut pairs)?;
+    let mut seen = HashSet::new();
+    for (key, _) in &pairs {
+        if !seen.insert(key.clone()) {
+            return Err(Error::Config(format!(
+                "conf key `{label}.conf.{key}` is set twice (quoted and nested spellings collide)"
+            )));
+        }
+    }
+    Ok(pairs)
+}
+
+fn flatten_conf_into(
+    label: &str,
+    table: &toml::Table,
+    prefix: &str,
+    pairs: &mut Vec<(String, String)>,
+) -> Result<()> {
+    for (key, value) in table {
+        let dotted = if prefix.is_empty() {
+            key.clone()
+        } else {
+            format!("{prefix}.{key}")
+        };
+        match value {
+            toml::Value::String(text) => pairs.push((dotted, text.clone())),
+            toml::Value::Integer(number) => pairs.push((dotted, number.to_string())),
+            toml::Value::Table(inner) => flatten_conf_into(label, inner, &dotted, pairs)?,
+            _ => {
+                return Err(Error::Config(format!(
+                    "key `{label}.conf.{dotted}` must be a string"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn flatten_conf_keys(table: &toml::Table, prefix: &str, keys: &mut HashSet<String>) {
+    for (key, value) in table {
+        let dotted = if prefix.is_empty() {
+            key.clone()
+        } else {
+            format!("{prefix}.{key}")
+        };
+        match value {
+            toml::Value::Table(inner) => flatten_conf_keys(inner, &dotted, keys),
+            _ => {
+                keys.insert(dotted);
+            }
+        }
     }
 }
 
@@ -238,7 +294,7 @@ fn section_keys(table: &toml::Table) -> HashSet<String> {
         }
     }
     if let Some(conf) = table.get("conf").and_then(toml::Value::as_table) {
-        keys.extend(conf.keys().cloned());
+        flatten_conf_keys(conf, "", &mut keys);
     }
     if let Some(catalog) = table.get("catalog").and_then(toml::Value::as_table) {
         for (name, block) in catalog {

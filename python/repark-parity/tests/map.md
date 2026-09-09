@@ -145,6 +145,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4a (2026-09-07): `dataframe/core.py` row 5060 → 4819 with the script baseline; the new sampling module carries no row. pins: dfcore-4a/C-005
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4b (2026-09-07): `dataframe/core.py` row 4819 → 4539 with the script baseline; the new display module carries no row. pins: dfcore-4b/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EXPLAIN-1 (2026-09-08): `dataframe/core.py` row 4539 → 4536 with the script baseline; the new `explain.py` module carries no row. At DF-EXPLAIN-1 this mirror was not reached by `make preflight`; PREFLIGHT-PARITY-1 (2026-09-09) wires the file in alone as `make py-test-parity-cap`, so a ratchet that updates only `scripts/check_lib_py.py` now reds preflight — update both tables in the same commit. pins: df-explain-1/C-003
+- `test_cap_1_source_file_line_cap.py` — CFG-1 step 3 (2026-09-09): `session_core.py` row 2411 → 2306 (SAF-006 resolvers to `session_configuration.py`) and `repark-python/src/session.rs` row 1177 → 1198 (ruled `config_path` plus `config_file_pairs` on the unsplittable block, stated ledger reason) with the script baselines. pins: cfg-1/C-026, C-027
 - `test_preflight_parity_1_wiring.py` — **PREFLIGHT-PARITY-1 (2026-09-09):** the CAP-1 mirror
   joins `make preflight` as `make py-test-parity-cap` — the mirror file alone, `py-test`'s
   isolated `uv run --no-project` recipe verbatim, seated after `py-test-facade` before `audit`,

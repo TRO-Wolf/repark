@@ -107,6 +107,26 @@ fn test_toml_conf_table_applies_in_order() {
 }
 
 #[test]
+fn conf_nested_tables_flatten_with_dot_joins() {
+    let file = try_loaded_file(
+        "[default.conf]\nspark.sql.warehouse.dir = \"/nested/warehouse\"\n",
+        &[],
+    )
+    .expect("nested conf loads");
+    let pairs: HashMap<String, String> = file.pairs.into_iter().collect();
+    assert_eq!(
+        pairs.get("spark.sql.warehouse.dir").map(String::as_str),
+        Some("/nested/warehouse")
+    );
+    let error = try_loaded_file(
+        "[default.conf]\n\"a.b\" = \"1\"\n[default.conf.a]\nb = \"2\"\n",
+        &[],
+    )
+    .expect_err("colliding conf spellings must refuse");
+    assert!(error.to_string().contains("default.conf.a.b"), "{error}");
+}
+
+#[test]
 fn file_builder_precedence_is_builder_then_profile_then_default() {
     let file = try_loaded_file(
         "[default.conf]\nshared = \"from-default\"\ndefault_only = \"d\"\n[prod.conf]\nshared = \"from-prod\"\nprod_only = \"p\"\n",

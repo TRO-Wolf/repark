@@ -285,6 +285,14 @@ CUTOVER-SCHEMA-1 (2026-09-04): `check_rust_file_size.py`
 reader-relax and export-boundary extraction; both ratchet DOWN.
 pins: cutover-schema-1/C-001
 
+CFG-1 step 3 (2026-09-09): `check_lib_py.py` `session_core.py` 2411→2306 — the SAF-006
+resolvers move to `session_configuration.py` along the row's own split seam; a ratchet
+DOWN. `check_rust_file_size.py` `repark-python/src/session.rs` 1177→1198 — the ruled
+`config_path` argument plus the `config_file_pairs` static on the unsplittable
+`#[pymethods]` block, stated reason in the step ledger; the duplicate table in
+`test_cap_1_source_file_line_cap.py` moves with both in the same commit.
+pins: cfg-1/C-026, C-027
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002

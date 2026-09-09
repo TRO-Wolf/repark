@@ -167,10 +167,7 @@ impl ReparkSessionBuilder {
         self
     }
 
-    /// Build the session synchronously.
-    /// # Errors
-    /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
-    pub fn build(mut self) -> Result<ReparkSession> {
+    fn prepare_build_state(&mut self) -> Result<Vec<(String, String, String)>> {
         let file = crate::config_file::load_for_build(self.config_file.clone())?;
         let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
         for (key, value) in file.pairs_for_map() {
@@ -191,6 +188,14 @@ impl ReparkSessionBuilder {
                 "target_partitions must be >= 1 (got 0)".to_string(),
             ));
         }
+        Ok(conf_dump)
+    }
+
+    /// Build the session synchronously.
+    /// # Errors
+    /// Returns `Error::DataFusion` if the DataFusion runtime fails to build.
+    pub fn build(mut self) -> Result<ReparkSession> {
+        let conf_dump = self.prepare_build_state()?;
         let pool_bytes =
             spill::resolve_build_time_pool_bytes(self.memory_limit_bytes, &self.config)?;
 

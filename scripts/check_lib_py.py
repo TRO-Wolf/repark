@@ -105,7 +105,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split format-specific readers from shared option validation.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2411,
+        2306,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

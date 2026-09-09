@@ -1829,6 +1829,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   fall-through-to-kv),
   load-bearing shuffle=0 via map still raises `IllegalArgumentException`,
   `**dict` unpacking is NOT the API (`TypeError`). Positional kv regression kept green.
+  CFG-1 step 3 (2026-09-09): `Builder.config_file` / `Builder.configFile` force a file
+  whose pairs fold through `.config()`, `REPARK_CONFIG` discovery at `getOrCreate`,
+  builder-beats-file precedence, and the missing-path refusal.
+  pins: cfg-1/C-026, C-027
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

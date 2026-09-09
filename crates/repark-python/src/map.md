@@ -34,7 +34,11 @@ and hand execution, SQL, and ML semantics to the engine crates.
   has no `on_session_built` hook; Spark door gets them from `register_all`).
   pins: log1p-1-precise-kernels/C-002
   The Spark-door routing probe is `MERGE … OUTPUT` (TRUNCATE and `INSERT OVERWRITE … PARTITION` are live).
-  pins: fnp-15-16/C-001; dml-c-truncate/C-004 |
+  pins: fnp-15-16/C-001; dml-c-truncate/C-004
+  **CFG-1 step 3 (2026-09-09):** `PyReparkSession::new` takes `config_path` (forced file
+  into `from_config_file`) and the `config_file_pairs` static exposes the translated pairs
+  for the facade fold. Baseline 1177 → 1198, stated reason in the step ledger.
+  pins: cfg-1/C-026, C-027 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export.
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.
   Nested DDL element tokens come from `repark-spark::spark_ddl_type_name_at_depth`

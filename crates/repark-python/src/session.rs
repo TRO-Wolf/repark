@@ -108,21 +108,35 @@ impl PyReparkSession {
     /// # Errors
     /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build.
     #[new]
-    #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None))]
+    #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None, config_path=None))]
     pub fn new(
         py: Python<'_>,
         memory_limit_gb: Option<usize>,
         batch_size: Option<usize>,
         target_partitions: Option<usize>,
         config: Option<HashMap<String, String>>,
+        config_path: Option<String>,
     ) -> PyResult<Self> {
         fenced_span!("py.session", "PyReparkSession.__new__", {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
+            let builder = builder.from_config_file(config_path.map(std::path::PathBuf::from));
             let builder = builder
                 .with_sql_dialect(Arc::new(repark_spark::SparkDialect))
                 .with_extension(Arc::new(repark_spark::SparkExtension));
             finish_session(py, builder)
+        })
+    }
+
+    /// Read a `repark.toml` file's translated pairs without building a session.
+    /// # Errors
+    /// Returns `RuntimeError` if discovery, the profile merge, interpolation, or translation fails.
+    #[staticmethod]
+    #[pyo3(signature = (config_path=None))]
+    pub fn config_file_pairs(config_path: Option<String>) -> PyResult<HashMap<String, String>> {
+        fenced_span!("py.session", "PyReparkSession.config_file_pairs", {
+            repark_core::config_file_pairs(config_path.map(std::path::PathBuf::from))
+                .map_err(to_py_err)
         })
     }
 
@@ -828,7 +842,8 @@ mod tests {
     #[test]
     fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
 
             // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
             let frame = session
@@ -908,7 +923,8 @@ mod tests {
     #[test]
     fn read_excel_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             // `PyDataFrame` is not `Debug`; pattern-match the error arm instead of `expect_err`.
             let Err(error) = session.read_excel(py, "/tmp/never-opened.xlsx", None) else {
                 panic!(
@@ -943,7 +959,8 @@ mod tests {
     #[test]
     fn excel_sheet_names_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let error = session
                 .excel_sheet_names(py, "/tmp/never-opened.xlsx")
                 .expect_err("the excel reader is deferred post-milestone-one");
@@ -964,7 +981,8 @@ mod tests {
     #[test]
     fn read_postgres_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let Err(error) = session.read_postgres(
                 py,
                 "postgresql://user:sentinel-secret@host:5432/db",
@@ -1013,7 +1031,7 @@ mod tests {
         Python::attach(|py| {
             let session = Py::new(
                 py,
-                PyReparkSession::new(py, None, None, None, None).expect("session builds"),
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds"),
             )
             .expect("pyclass instantiates");
 
@@ -1056,8 +1074,10 @@ mod tests {
     fn sequential_sessions_share_one_tokio_runtime() {
         // Two sequential constructors must share one process-wide Tokio runtime.
         Python::attach(|py| {
-            let first = PyReparkSession::new(py, None, None, None, None).expect("first session");
-            let second = PyReparkSession::new(py, None, None, None, None).expect("second session");
+            let first =
+                PyReparkSession::new(py, None, None, None, None, None).expect("first session");
+            let second =
+                PyReparkSession::new(py, None, None, None, None, None).expect("second session");
             assert!(
                 Arc::ptr_eq(&first.runtime_arc(), &second.runtime_arc()),
                 "two PyReparkSession values must share the process-wide Tokio runtime Arc"
@@ -1152,7 +1172,8 @@ mod tests {
             .to_string();
 
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let frame = session.sql(py, "SELECT 1 AS n").expect("sql plans");
             assert_eq!(frame.count(py).expect("count"), 1);
             // py.read: span opens before the body fails (missing path) — family still recorded.
