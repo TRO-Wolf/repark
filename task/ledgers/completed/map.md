@@ -8,6 +8,14 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [df-explain-1-ledger.md](df-explain-1-ledger.md) —
+  **DF-EXPLAIN-1 (2026-09-08), in flight:** `DataFrame.explain()` prints plan text, not
+  `Row(...)` reprs. Step 1 done: the seven red-first pins in
+  `python/repark/tests/test_df_explain_1.py` run RED on base `f00ed9ea` (run recorded in the
+  ledger); D-4 measured — `EXPLAIN FORMAT TREE` passes the Spark door unchanged. Step 2 open:
+  implement D-1..D-3 in `core.py` (`_explain_text` + the method body) plus the guide
+  paragraph. `risk_tier: standard`. Branch `feat/df-explain-1`.
+  pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —
   **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,
