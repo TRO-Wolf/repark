@@ -248,3 +248,21 @@ Two orchestrator rulings were needed because the card's Home named the wrong mod
   belongs to step 5 with the guide rewrite, not here, because step 4 changes the renderer again.
   Verified locally under a clean environment: both examples exit 0 and all 209 examples execute
   green (`check_example_coverage.py --require-execute`).
+
+## Residue — DISPLAY-POLARS-1-S3-Q-001 (orchestrator ruling, 2026-09-09)
+
+**Measured, disclosed, not fixed here.** For an uncached `mapInArrow`-bridged frame under a
+styled display style, the two doors now disagree: `repr(df)` renders the styled table (paying
+D-5's count past the 11-row probe) while `df.show()` prints the Spark-grid peek, because `_show`
+checks `_use_bridge_peek` *before* it resolves the style, and step 3 left both `show()` and the
+peek path untouched as D-4d requires. The doors already disagreed for these frames before this
+step (schema form versus peek grid), so nothing regressed; what changed is that the disagreement
+is now visible as two different table renderings.
+
+**Ruling:** accept the divergence for DISPLAY-POLARS-1. The styled repr is the notebook door D-4
+targets and its count discipline is exactly D-5's for every frame the styled renderer serves.
+Reconciling `show()`'s peek-before-style hijack is a behaviour change to `show()` with its own
+pins, outside this card's fence ("do not touch `_render_styled_show`'s fetch logic") and outside
+steps 4 and 5. It is carried to the owner as a candidate for its own card, not folded into this
+unit; no pin here asserts the two doors agree for bridged frames.
+
