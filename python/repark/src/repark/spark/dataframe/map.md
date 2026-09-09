@@ -180,7 +180,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the three `eagerEval` conf keys (runtime then builder), pack Spark
   showString form, fetching one row past the cap and reading the footer from
   it — no `count()` on the plain preview paths since DFCORE-6 (2026-09-07).
-  The footer text, plural, and cap-edge shapes are unchanged. Styled previews
+  The footer text, plural, and cap-edge shapes are unchanged. DISPLAY-POLARS-1
+  step 3 (2026-09-09): `__repr__` and `_repr_html_` resolve the display style
+  first. Under `polars` / `duckdb` the repr is the `_render_styled_show` text
+  for show()'s own defaults (`n=20`, `truncate=True` → cap 20), returned
+  instead of printed regardless of the eagerEval keys, and `_repr_html_`
+  returns `None` so Jupyter shows the text repr; the peek path is not
+  consulted for the styled modes. Under `spark` both doors stay byte-identical
+  to before, peek branches included, and the spark HTML door still escapes
+  header and cell text (truncate first, then escape — Spark `Dataset.html`
+  ordering) so hostile column names cannot inject markup. A bridged frame's styled repr therefore
+  renders the styled table (paying the D-5 count past the 11-row probe) while
+  its `show()` still prints the peek grid — measured, disclosed in the unit
+  ledger, DISPLAY-POLARS-1-S3-Q-001. Styled previews
   collect head and tail windows only. R-11 (2026-09-09): the polars door
   probes `2 * edge + 1` = 11 rows first. A shorter probe renders the frame
   whole with no `count()` and no tail fetch. A full probe pays one count and
@@ -195,6 +207,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   logger; record names move `core` → `display` while message text and levels
   stay identical. pins: dfcore-4b/C-004
   pins: dfcore-6/C-001, C-002, C-003, C-004
+  pins: display-polars-1/C-004
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the

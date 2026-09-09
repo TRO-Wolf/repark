@@ -20,6 +20,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1,
+  step 1 landed 2026-09-09). The module owns `ConfigFile` (`profiles: BTreeMap<String,
+  Profile>` over the D-1 tables), the public `load()` entry (discovery, then the file read,
+  then `parse()`), and the `parse()` reader over `toml::Table`; unknown keys refuse as
+  `Error::Config` with the key path. Discovery, the profile merge and `${VAR}`
+  interpolation live in `config_file/{discovery,profile,interpolate}.rs`; `sources.rs` and
+  `redact.rs` stay placeholders for step 2. The `#[allow(dead_code)]` attributes are the
+  seed's own: nothing calls the loader until the builder wiring of step 3, and the crate is
+  built with warnings denied.
+  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects

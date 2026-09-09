@@ -2598,22 +2598,11 @@ class DataFrame:
         return f"DataFrame[{', '.join(parts)}]"
 
     def __repr__(self) -> str:
-        """Schema form by default; table show when ``spark.sql.repl.eagerEval.enabled``.
-
-        Conf keys ``spark.sql.repl.eagerEval.enabled`` (truthy),
-        ``.truncate`` (default 20), ``.maxNumRows`` (default 20) match Spark REPL shape
-        (Apache ``test_repr_behaviors``).
-        """
+        """Spark keeps its eager-eval repr; polars and duckdb always render the styled table."""
         return display._repr(self)
 
     def _repr_html_(self) -> str | None:
-        """HTML table when eager-eval is on; ``None`` otherwise (Jupyter / PySpark).
-
-        Cell text and header names are HTML-escaped (Spark
-        ``Dataset.html`` / ``StringEscapeUtils``) so ``<script>``, ``&``, and hostile column
-        names cannot inject markup. Truncate first (hard left-slice, same as ``__repr__``),
-        then escape — matches live Spark 4.1.2 ordering.
-        """
+        """HTML table under spark with eager eval; ``None`` under polars and duckdb."""
         return display._repr_html(self)
 
     def toDF(  # noqa: N802 — PySpark method name
