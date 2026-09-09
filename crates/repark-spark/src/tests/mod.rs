@@ -23,6 +23,7 @@ mod decimal;
 mod declared_refuse;
 mod delete_granularity;
 mod describe_show;
+mod describe_table;
 mod dml;
 mod float_agg;
 mod insert_overwrite;

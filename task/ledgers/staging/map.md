@@ -585,3 +585,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `perf/dfcore-6`.
   pins: dfcore-6/C-001, C-002, C-003, C-004, C-005
   Critic r1 PASS (2026-09-07); the row-count assertion added to the repr footer pin.
+- [sql-describe-1-ledger.md](../completed/sql-describe-1-ledger.md) —
+  **SQL-DESCRIBE-1 (2026-09-09), in flight:** `DESCRIBE [TABLE] [EXTENDED|FORMATTED]`
+  on Iceberg tables — step 1 measured the live PySpark 4.1.2 oracle on one session:
+  six captures plus schemas in the ledger's Oracle capture section, FORMATTED
+  byte-identical to EXTENDED, plain identical to `DESCRIBE TABLE`, missing table raises
+  `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`. Step 3 (2026-09-09) landed the
+  facade pins, the live leg (19 of 22 rows byte-identical; `Name`, `Location`, `Table
+  Properties` engine defaults differ by measurement), the DESC-1 registry row, and the
+  DBT-DESC-1 retirement; all clauses PROVEN with four residue rows. `risk_tier: standard`.
+  Branch `feat/sql-describe-1`.
+  pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

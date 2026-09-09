@@ -3895,3 +3895,14 @@ pins nullable padded-side answers without crashing (elements stay conservatively
 nullable there, measured against Spark in the ledger). The inline pin gained
 negative and out-of-i32 literal legs; the join pin gained the unpadded LEFT side.
 pins: fnp-8-review/C-009, C-010
+
+- `test_describe_table.py` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
+  [EXTENDED|FORMATTED]` facade pins on a memory-catalog table built like the step-1 live
+  capture (commented `bigint` column via `ADD COLUMN ... FIRST`, `string`, `timestamp`,
+  `days(ts)`, `k=v`). Eight offline pins (plain rows, extended sections, FORMATTED identity,
+  missing-table `AnalysisException`, temp-view fall-through, property redaction, Statistics
+  after a write, the owner `show(truncate=False)` call) plus the live leg, which re-measures
+  the capture on live
+  Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
+  and `Table Properties` engine defaults differ by construction).
+  pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

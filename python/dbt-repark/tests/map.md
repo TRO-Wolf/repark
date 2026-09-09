@@ -26,7 +26,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 - `conftest.py` — the two `sys.path` entries above.
 - `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
   `repark.sql()` on a memory catalog. Twelve served, sixteen refused with the exact message, plus
-  the two probes that show why `describe extended` is not the column source. This file is the
+  the facade-schema probe (the column source the adapter uses) and the `describe extended`
+  probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
+  purpose in that unit's ledger). This file is the
   design evidence for the route choice and the pin behind every registry row this unit filed.
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.

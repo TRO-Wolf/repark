@@ -307,6 +307,17 @@ async fn try_preparse_intercepts(
             Err(error) => Err(error),
         });
     }
+    if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
+        match parsed {
+            Ok(describe_table) if catalogs.get(&describe_table.catalog).is_some() => {
+                return Some(
+                    describe_show::execute_describe_table(ctx, catalogs, describe_table).await,
+                );
+            }
+            Ok(_) => {}
+            Err(error) => return Some(Err(error)),
+        }
+    }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
     if let Some(parsed) = describe_show::try_parse_show_namespaces(sql) {
         return Some(match parsed {
