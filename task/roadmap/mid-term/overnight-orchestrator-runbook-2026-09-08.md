@@ -111,9 +111,10 @@ command loses its newlines. A live-Spark step (any
 `REPARK_PARITY_LIVE=1` measurement) runs alone: no other lane open, `pgrep -f java` empty, and the
 brief exports `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (the default `java` is 11).
 
-Tier note from night 1: the GLM gateway dropped the socket on three long rounds and each lost its
-unwritten work. Rounds expected to exceed ~30 tool calls (measurements, multi-file Rust) go to
-Muse; every brief says *write the file as you go, commit when a section is complete*.
+Tier rule (R-15, after six dropped GLM rounds across runs 1–3): any round expected to produce a
+document or a ledger with measured evidence, and any round expected to exceed ~30 tool calls
+(measurements, multi-file Rust), runs on Muse; GLM keeps code-and-test rounds. Every brief says
+*write the file as you go, commit when a section is complete*.
 
 ## 4. Read the hand-back, audit, decide
 
@@ -200,17 +201,18 @@ Must park the lane (leave the branch pushed, PR in draft, ledger clause `OPEN`, 
 
 ## 7. Order for one night
 
-Runs 1 and 2 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0, SQL-DESCRIBE-1,
-LEDGER-READING-1, PREFLIGHT-PARITY-1 and DISPLAY-POLARS-1 step 1. Run 3's order, two lanes at a
-time, each to its PR before the next opens; a lane whose card is fully merged is skipped:
+Runs 1–3 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0, SQL-DESCRIBE-1, LEDGER-READING-1,
+PREFLIGHT-PARITY-1, DOCS-LINKS-1, DISPLAY-POLARS-1 steps 1–3, CFG-1 seed + step 1, DF-EAGER-1
+step 1 and PROFILES-1 step 0. Run 4's order, two lanes at a time, each to its PR before the next
+opens; a lane whose card is fully merged is skipped:
 
-1. DISPLAY-POLARS-1 step 2 (GLM): resume draft PR #434 with R-11, then step 3 on a new branch
-   from `main` once #434 merges.
-2. DOCS-LINKS-1 (GLM) and the PREFLIGHT-PARITY-1 ledger close (GLM, one tiny round: C-005
-   PROVEN under R-12, `move` to `completed/`, PR).
-3. CFG-1: the seed commit under G-5, then steps 1–2 (GLM); step 3 (Muse) only if time remains.
-4. DF-EAGER-1 step 1 (GLM pins) after DISPLAY-POLARS-1 step 3 merges.
-5. PROFILES-1 step 0 (GLM probe, report only) and AP-0 (GLM script) when a slot is free.
+1. DISPLAY-POLARS-1 step 4 (Muse: renderer fidelity, the four keys, polars-oracle pins) then
+   step 5 (GLM docs).
+2. CFG-1 step 1b (GLM, R-14) then step 2 (GLM); step 3 (Muse) and step 4 (GLM) if time remains.
+3. DF-EAGER-1 step 2 (Muse) then step 3 (GLM).
+4. DISPLAY-BRIDGE-1 (GLM) and AP-0 (GLM script) when a slot is free.
+5. PROFILES-1 step 1 (Muse: the bed script, release build) and step 2 (Muse: the sweep, the
+   measurements document); CONF-UNREAD-1 after step 2.
 
 ## 8. Stop conditions and the morning report
 

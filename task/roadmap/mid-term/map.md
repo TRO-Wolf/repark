@@ -32,6 +32,10 @@ declines it (a dated ruling in the intake, then the archive).
   (including that `make check-docs-links` does not exist), and five corrections the runbook's
   §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
   directory, and the CAP-1 map.md merge conflict every lane branch now hits.
+- [overnight-report-2026-09-09-run3.md](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09,
+  08:56–15:00 local): five merged (DISPLAY-POLARS-1 steps 2 and 3, DOCS-LINKS-1, the
+  PREFLIGHT-PARITY-1 close, CFG-1 seed + step 1), two open at the stop (PROFILES-1 step 0,
+  DF-EAGER-1 step 1), none parked. Eight §6 decisions, three questions for the owner.
 - [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
   handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5; RP-5 consumed F-6b/F-6c / F-8 / F-16r / F-0 follow-up):** the document handed to the owned `iceberg-rust` fork's orchestrator —
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
