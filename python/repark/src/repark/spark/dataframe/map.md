@@ -181,11 +181,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   showString form, fetching one row past the cap and reading the footer from
   it — no `count()` on the plain preview paths since DFCORE-6 (2026-09-07).
   The footer text, plural, and cap-edge shapes are unchanged. Styled previews
-  count once, then collect head and tail
-  windows only: polars shows all rows at ten or fewer with edges capped at
-  five and ellipsis only before a non-empty tail; duckdb keeps at least one
-  head row; the tail preview engine-skips and never lets a negative skip
-  reach the native `usize`. Type labels come from the head Arrow schema. The
+  collect head and tail windows only. R-11 (2026-09-09): the polars door
+  probes `2 * edge + 1` = 11 rows first. A shorter probe renders the frame
+  whole with no `count()` and no tail fetch. A full probe pays one count and
+  one tail fetch, and reuses the probe as its head window. Polars renders a
+  frame of ten or fewer rows whole, with edges capped at five and ellipsis
+  only before a non-empty tail. The duckdb door counts first, keeps at least
+  one head row, and keeps its fetch pattern until step 4; the tail preview
+  engine-skips and never lets a negative skip reach the native `usize`.
+  Type labels come from the head Arrow schema. The
   styled renderer calls the tail preview through the frame (not module-local)
   so the class-level collect spy keeps firing.   The module carries its own
   logger; record names move `core` → `display` while message text and levels

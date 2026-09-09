@@ -19,7 +19,7 @@ keys are steps 2–5 and untouched here.
 |---|---|---|---|
 | C-001 | D-1: `_DEFAULT_DISPLAY_STYLE` is `"polars"`, resolved through new `default_display_style()` which reads `REPARK_DISPLAY_STYLE` first (validated by `normalize_display_style`, invalid refuses loud naming the three styles) and then the constant; builder `.config("repark.display.style", …)` and `session.display_style` keep outranking both. | `test_default_style_polars_clean_env` + `test_env_override_spark_restores_grid` green; red run below; `Builder._resolve_display_style` falls back to `default_display_style()` while an explicit builder key still validates through `normalize_display_style` (existing builder/reuse pins green). `conf.unset` / unset-`conf.get` also fall back to `default_display_style()` (env-aware default, not the raw constant) — this repaired the one full-suite red, `test_conf_unset_display_style_resets_to_spark`, with the expectation untouched. | **PROVEN** |
 | C-002 | D-2: `python/repark/tests/conftest.py` pins `spark` via `os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")` at import; the old default-grid test is split into `test_env_override_spark_restores_grid` (env `spark` → byte-identical grid, expectation unchanged) and `test_default_style_polars_clean_env` (clean env → fresh session `display_style` is `polars`). `make py-test-facade` green proves R-6. | Conftest diff + both pins green + full facade suite green; red run below. | **PROVEN** |
-| C-003 | D-5: the styled renderer fetches `limit(max_rows + 1)` first and, when fewer than `max_rows + 1` rows return, renders the frame whole with no `count()` and no tail fetch; only a larger frame pays the count. | Step 2 implemented 2026-09-09 (polars branch; duckdb branch untouched — see step-2 record for scope + the protected-pin conflict). `test_small_frame_renders_without_count` red-first then green; `test_large_frame_counts_once` green (base-green by design: the old flow already counted exactly once); 43/44 of `test_display_styles.py` green. **Blocked:** `test_styled_show_does_not_full_collect` reds on `assert 11 <= 5` (`test_display_styles.py:855`) — the D-5 probe export vs `max_rows_per_export=5`. Ruling filed: DISPLAY-POLARS-1-S2-Q-001. | **OPEN** |
+| C-003 | D-5: the styled renderer fetches `limit(max_rows + 1)` first and, when fewer than `max_rows + 1` rows return, renders the frame whole with no `count()` and no tail fetch; only a larger frame pays the count. | Step 2 implemented 2026-09-09 (polars branch; duckdb branch untouched — see step-2 record for scope). `test_small_frame_renders_without_count` red-first then green (`assert [1] == []` at `test_display_polars_default.py:70` on base); `test_large_frame_counts_once` green (base-green by design: the old flow already counted exactly once). The protected-pin red (`test_styled_show_does_not_full_collect`, `assert 11 <= 5`, `test_display_styles.py:855`) was resolved by **R-11**, not by a code change: the pin's polars section re-pinned to `max_rows_per_export = 2 * edge + 1 = 11` (one token; the duckdb call keeps `=2`; the `assert all(row_count < 12 …)` full-collect tooth is byte-identical), so the pin still forbids collect-then-slice on the 12-row frame. Green under R-11: `46 passed in 1.33s` (test_display_styles.py + test_display_polars_default.py) and `5830 passed, 369 skipped, 45 warnings in 705.21s (0:11:45)` (`make py-test-facade`). | **PROVEN** |
 | C-004 | D-4: `__repr__` renders data with a count under `polars` and `duckdb` regardless of `spark.sql.repl.eagerEval.enabled`, `spark` keeps the existing eagerEval behaviour, and `_repr_html_` returns `None` under the two styled modes. | Step 3. | OPEN |
 | C-005 | D-3, D-6, D-7, D-8: the four `repark.display.*` keys, the renderer's measured fidelity against polars itself, `show(truncate=…)` mapping onto `str_len`, and any row polars' output cannot reproduce from Arrow alone filed as a disclosed residue. | Step 4 (tier I). | OPEN |
 | C-006 | D-1's documentation: `docs/guide/session-and-conf.md` states the polars default, the four keys, the environment override, and the narrowed count note. | Step 5. | OPEN |
@@ -45,6 +45,7 @@ after the red run.
 |---|---|---|
 | D-9 | `default_display_style()` defined beside `_DEFAULT_DISPLAY_STYLE` / `normalize_display_style` in `session_configuration.py`, re-exported through the existing `_funcs.py` path; no public signature moved. | Orchestrator ruling 2026-09-09; verified on this tree. |
 | D-10 | No parity conftest created: the only `conftest.py` files are `python/repark/tests/conftest.py` and `python/dbt-repark/tests/conftest.py`, and the only `display_style` occurrence under `python/repark-parity/` is a file path in `test_cap_1_source_file_line_cap.py`. Obligation replaced by a green parity-suite run under the flipped default. | Orchestrator ruling 2026-09-09; parity run below. |
+| R-11 | D-5's 11-row probe is right. The protected pin `test_styled_show_does_not_full_collect` re-pins its **polars section only** to `max_rows_per_export = 2 * edge + 1 = 11`; the duckdb section keeps `max_rows_per_export=2` untouched; the `assert all(row_count < 12 …)` line stays exactly as it is, so the pin still forbids collect-then-slice on the 12-row frame. Step 2 is polars-only; the duckdb style keeps its current fetch pattern until step 4. | Owner ruling R-11 (binding, 2026-09-09); resolves DISPLAY-POLARS-1-S2-Q-001, lean (a). |
 
 ## Gates
 
@@ -117,6 +118,16 @@ shape. Lean: (a) — the cap then reads "no export exceeds the probe size", stil
 full-collect+slice (11 < 12), keeps every tooth, keeps the probe visible to the spy, and is a
 one-token amendment the orchestrator sanctions; (b) would blind `rows_per_call` to the probe.
 
+**R-11 resolution (owner, 2026-09-09, this round):** the ruling took lean (a). The pin was
+resolved by **ruling, not by a code change**: the only source delta is the one-token re-pin
+`max_rows_per_export` 5 → 11 in `test_display_styles.py:874`'s polars call; the duckdb call and
+the `< 12` assertion are untouched, and the renderer stands as committed in 16a9346d. The same
+round cut `_render_styled_show`'s docstring back to its one-line summary under the comment ban
+and moved the probe/count explanation into
+`python/repark/src/repark/spark/dataframe/map.md` under the `display.py` entry. This paragraph
+supersedes the parked-round close below: the close lands as one commit on
+`feat/display-polars-1-step2`.
+
 **Step-2 gates measured:**
 
 | Command | Result |
@@ -126,6 +137,8 @@ one-token amendment the orchestrator sanctions; (b) would blind `rows_per_call` 
 | `python/repark/tests/test_display_styles.py` after the edit | `1 failed, 43 passed` — the one failure is the protected pin above |
 | neighbors (`test_dfcore_6_eager_preview`, `test_dfcore_4b_show_goldens`, `test_t3_ux_polish`, `test_dfcore_4b_exports`, `test_dfcore_1_exports`, `test_production_file_size`, new pins) | `53 passed` |
 | `make py-test-facade` | see final handback (run in flight at ledger-write time; result recorded in `handback.json`) |
+| R-11 round: `VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark/tests/test_display_styles.py python/repark/tests/test_display_polars_default.py -q` | green: `46 passed in 1.33s` |
+| R-11 round: `make py-test-facade` | green: `5830 passed, 369 skipped, 45 warnings in 705.21s (0:11:45)` |
 
 Nothing is committed: the brief's gate list cannot go green without a ruling on Q-001, and a
 commit whose tree reds a named gate would embed the red state. The working tree holds the

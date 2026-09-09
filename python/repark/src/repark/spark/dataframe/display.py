@@ -256,12 +256,7 @@ def _render_styled_show(
     n: int,
     truncate_at: int | None,
 ) -> tuple[str, int]:
-    """Render a styled preview and return its text and row count.
-
-    The polars style probes ``2 * edge + 1`` rows first: fewer rows render the frame whole
-    with no ``count()`` and no tail fetch, a larger frame pays one count and one tail fetch
-    and reuses the probe as its head window. The duckdb style counts first, as before.
-    """
+    """Render a styled preview and return its text and row count."""
     col_names = list(frame.columns)
     if style == "polars":
         edge = 5

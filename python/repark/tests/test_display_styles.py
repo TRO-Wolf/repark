@@ -871,7 +871,7 @@ def test_styled_show_does_not_full_collect(
         _ensure_native_partial_collect_spies(frame)
         out = _capture_show(frame, truncate=False)
         assert out == _POLARS_12_GOLDEN
-        _assert_partial_collect_discipline(expected_skip=(7, 5), max_rows_per_export=5)
+        _assert_partial_collect_discipline(expected_skip=(7, 5), max_rows_per_export=11)
     finally:
         session.stop()
 

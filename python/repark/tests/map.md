@@ -1874,6 +1874,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   test splits into `test_default_style_polars_clean_env` (clean env → fresh session reports
   `polars`) and `test_env_override_spark_restores_grid` (`REPARK_DISPLAY_STYLE=spark` →
   byte-identical grid, expectation unchanged). pins: display-polars-1/C-002
+  **DISPLAY-POLARS-1 step 2 (R-11, 2026-09-09):** the partial-collect pin's polars section
+  caps per-export rows at `2 * edge + 1` = 11, the D-5 probe export; the duckdb section keeps
+  its cap of 2 and the no-full-collect `< 12` tooth is unchanged. pins: display-polars-1/C-003
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`
