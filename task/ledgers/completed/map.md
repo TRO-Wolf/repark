@@ -8,12 +8,6 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
-  **BALLISTA-AUDIT-0 steps 1–2 (2026-09-08), in flight:** Half A facts plus Half B
-  judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —
-  clauses C-001…C-011 green, §26 A–H + §27 + §28 gate filled, appendix A6
-  closes the python/tooling gap. Step 3 (read, ADR line, PR) pending.
-  Branch `docs/ballista-audit-0`.
 - [dfcore-1-ledger.md](dfcore-1-ledger.md) —
   **DFCORE-1 (2026-09-07), in flight:** leaf helpers out of `core.py` — Arrow cell
   conversion to `rows_export.py`, export-error mapping to new `export_errors.py`,
