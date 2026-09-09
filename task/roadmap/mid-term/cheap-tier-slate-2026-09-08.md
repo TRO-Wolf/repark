@@ -33,6 +33,7 @@ Nothing else in this file is required reading for a round.
 | R-14 | **`repark.toml` `${}` edges (2026-09-09):** `$$` is the escape for a literal `$`; an unterminated `${` refuses loud naming the key path, like a missing variable. CFG-1 step 1b re-pins both before step 4 documents the file. | CFG-1 |
 | R-15 | **Document rounds go to Muse (2026-09-09):** any round expected to produce a document or a ledger with measured evidence runs on Muse; GLM keeps code-and-test rounds. | runbook §3 |
 | R-16 | **Silently accepted config keys (2026-09-09):** the nine `datafusion.*` keys the PROFILES-1 probe found accepted but unread are wired through or refused loud; card CONF-UNREAD-1 after PROFILES-1 step 2. | CONF-UNREAD-1 |
+| R-17 | **Muse tier (2026-09-09, 16:30):** every Muse round runs `muse-spark-1.3-contributor` at `--effort max` (the owner accepts that the contributor model sees project data); the launcher defaults carry it, briefs pass neither flag. | runbook §3, `~/.claude/skills/muse-worker/` |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -96,7 +97,7 @@ Hard rules (violations are rejected at audit):
 | Tier | Who | What it is trusted with |
 |---|---|---|
 | **M** (mechanical) | GLM 5.3 Flash via `oc-worker` | Precisely specified edits, sweeps, measurement scripts, test scaffolds, docs mirrors. Hands back on any decision. |
-| **I** (implementation) | Muse Spark 1.3 (`muse-worker`) or Grok 4.6 (`grok-worker`) | Multi-file edits under a fixed design; wiring across a crate boundary; Rust parsers and executors. |
+| **I** (implementation) | Muse Spark 1.3 contributor at max effort (`muse-worker`, R-17) or Grok 4.6 (`grok-worker`) | Multi-file edits under a fixed design; wiring across a crate boundary; Rust parsers and executors. |
 | **O** (orchestrator) | this session | Seed commits, audits, gates, push, PR, Slack, departure edit, any step marked O. |
 
 Each step names its tier. When a step is M and the worker hands back twice on the same
