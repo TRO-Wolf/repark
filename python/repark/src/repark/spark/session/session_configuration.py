@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 import re
 
@@ -229,7 +230,7 @@ _DISPLAY_STYLE_KEY = "repark.display.style"
 _DISPLAY_STYLE_VALUES: frozenset[str] = frozenset({"spark", "polars", "duckdb"})
 
 
-_DEFAULT_DISPLAY_STYLE = "spark"
+_DEFAULT_DISPLAY_STYLE = "polars"
 
 
 def normalize_display_style(value: str | object) -> str:
@@ -262,3 +263,11 @@ def normalize_display_style(value: str | object) -> str:
         )
 
     return normalized
+
+
+def default_display_style() -> str:
+    """Session default display style: env ``REPARK_DISPLAY_STYLE`` first, else ``polars``."""
+    override = os.environ.get("REPARK_DISPLAY_STYLE")
+    if override is None:
+        return _DEFAULT_DISPLAY_STYLE
+    return normalize_display_style(override)
