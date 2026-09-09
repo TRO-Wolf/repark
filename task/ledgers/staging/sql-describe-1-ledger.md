@@ -19,13 +19,91 @@ step 2 builds from. Every clause stays OPEN until step 3's pins are green; there
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | D-1 intercept scope is measurable: plain `DESCRIBE t` and `DESCRIBE TABLE t` captures exist side by side on the same Iceberg table. | Oracle capture blocks for both spellings. | OPEN |
-| C-002 | D-2 output shape is the measured Spark shape: three columns `col_name`, `data_type`, `comment`, rows in Spark's order, captured verbatim with schema. | Oracle capture blocks plus schema lines. | OPEN |
-| C-003 | D-3 type spelling is observed, not typed from memory: the capture shows how Spark spells `bigint`, `string`, `timestamp` in `DESCRIBE` rows. | Oracle capture `data_type` column values. | OPEN |
-| C-004 | D-4 missing-table behaviour is captured: the exception class and its full message on a missing table. | Oracle capture missing-table block. | OPEN |
-| C-005 | D-5 `Table Properties` rendering is observed: the capture shows how `k=v` renders under EXTENDED/FORMATTED. | Oracle capture extended block `Table Properties` row. | OPEN |
-| C-006 | D-6 `FORMATTED` versus `EXTENDED` is decided by measurement: byte-identical or exactly how they differ. | Oracle capture comparison lines. | OPEN |
-| C-007 | Step-1 deliverable is complete: six captures plus schemas, the D-2/D-6 reading, no engine edits, map lockstep. | This ledger plus `staging/map.md` row. | OPEN |
+| C-001 | D-1 intercept scope: plain and `TABLE` describes take the new path on Iceberg tables; views, native tables, metadata suffixes, unregistered catalogs fall through. | Step-3 `test_describe_temp_view_falls_through` plus step-2 parser/intercept pins. | PROVEN |
+| C-002 | D-2 output shape is the measured Spark shape, rows in Spark order, on the Arrow path. | Step-3 `test_describe_table_plain_matches_spark_rows` and `test_describe_table_extended_sections` plus the live leg. | PROVEN |
+| C-003 | D-3 type spelling `bigint`/`string`/`timestamp` via the shared `spark_ddl_type_name`. | Step-3 plain/extended pins plus step-2 `spark_ddl_type_name_*` unit pins. | PROVEN |
+| C-004 | D-4 missing table raises `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`. | Step-3 `test_describe_missing_table_analysis_exception`. | PROVEN |
+| C-005 | D-5 `Table Properties` renders the bracketed key-ordered list with redaction; engine-defaults delta is declared residue (R-001). | Step-3 `test_describe_table_properties_redacted` plus the live leg. | PROVEN |
+| C-006 | D-6 `FORMATTED` is byte-identical to `EXTENDED`. | Step-3 `test_describe_formatted_is_extended` plus the live leg. | PROVEN |
+| C-007 | Step-3 deliverable is complete: facade pins, live leg, DESC-1 registry row, map lockstep. | This ledger plus `tests/map.md`, `dbt-repark/tests/map.md`, `docs/spark-sql-iceberg-parity.md` DESC-1. | PROVEN |
+
+## Step 3 (M tier, 2026-09-09) — facade pins and the live leg
+
+**Model:** muse-spark-1.3-contributor. Fixture: memory catalog, the step-1 table rebuilt
+through the facade (`CREATE TABLE` without the comment, then `ALTER TABLE ... ADD COLUMN id
+BIGINT COMMENT ... FIRST`, since column-def `CREATE` accepts only NULL/NOT NULL options).
+
+Red first, two runs. The offline pins passed on first run against the step-2 engine; the
+strict live comparison failed exactly where the step-2 handback predicted (verbatim):
+
+```
+live rows=22 repark rows=22 mismatches=3
+row 15 live=('Name', 'local.dsns1.t1', '') repark=('Name', 'mem.dsns1.t1', '')
+row 17 live=('Location', '/tmp/tmpgxkla90g/spark-wh/dsns1/t1', '') repark=('Location', '/tmp/tmpgxkla90g/repark-wh/repark_ctas/mem/dsns1/t1', '')
+row 20 live=('Table Properties', '[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,write.parquet.compression-codec=zstd]', '') repark=('Table Properties', '[current-snapshot-id=none,k=v]', '')
+```
+
+The 19 other rows match byte for byte, including `Owner` on this box. The committed live
+leg asserts that shape with the three deltas handled per row. Second red: the engine change
+retired DBT-DESC-1's premise on purpose — `test_describe_extended_answers_arrow_type_spellings`
+failed with `['col_name', ...] != ['column_name', ...]`; the row and its pin now assert the
+Spark shape (same change, registry rules for retirement).
+
+## Residue rows (measurement wins; step-2 deltas discharged)
+
+| ID | Residue | Measurement |
+|---|---|---|
+| R-001 | `Table Properties` engine defaults. | Spark stamps `format`, `format-version`, `write.parquet.compression-codec` at `CREATE`; repark stores declared properties only. Declared on DESC-1 until engine `CREATE` stamps Spark defaults. |
+| R-002 | `Owner`/`Location` presence-only. | Both match byte for byte on this box (`john`, warehouse paths) but depend on user and path; pins assert presence and suffix, never literals. |
+| R-003 | `Statistics` on tables with data. | Empty-table `0 bytes, 0 rows` matches live; the snapshot-summary reading on non-empty tables is unmeasured against Spark. |
+| R-004 | Non-`days` partition spellings. | Only `days(ts)` measured; the remaining arms follow Spark SQL grammar unmeasured. |
+
+## Coverage attestation (step 3, 2026-09-09)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: sql-describe-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: D-1 through D-6 walked clause by clause against behavior. The live leg re-created the step-1 DDL on live Spark 4.1.2 and matched the ledger capture, then diffed repark row for row: 19 of 22 byte-identical with the Name, Location, and Table Properties deltas named per row.
+      artifacts: [python/repark/tests/test_describe_table.py, task/ledgers/staging/sql-describe-1-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Plain, TABLE, DESC, EXTENDED, and FORMATTED spellings exercised; bare EXTENDED with no name, namespace forms, one-part and four-part names, metadata suffixes, trailing tokens, unregistered catalogs, temp views, and missing tables each take their documented path.
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs, python/repark/tests/test_describe_table.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Missing tables fail loud with the Spark condition and qualified name; unregistered catalogs fall through to the DataFusion error instead of the table path; secret values never reach output on either tier. The operation is read-only, so no retry or cleanup path exists.
+      artifacts: [python/repark/tests/test_describe_table.py, crates/repark-spark/src/tests/describe_table.rs]
+    - id: AT-4
+      status: N/A
+      justification: Read-only statement with no shared mutable state, no lock, no spawn, and no ordering assumption; one catalog metadata load per call.
+    - id: AT-5
+      status: ATTACKED
+      evidence: Table Properties redaction reuses the namespace path key-OR-value predicate; both tiers assert the redacted marker and the absence of the plaintext secret alongside a visible plain property.
+      artifacts: [python/repark/tests/test_describe_table.py, crates/repark-spark/src/tests/describe_table.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The Arrow nullability contract is pinned value and type on the Arrow path; Z6 is unchanged; the dbt premise the engine change retired went red on purpose and its row and pin now assert the Spark shape in the same change.
+      artifacts: [python/repark/tests/test_describe_table.py, python/dbt-repark/tests/test_statement_surface.py]
+    - id: AT-7
+      status: N/A
+      justification: One metadata read per call over the schema, one partition spec, and one snapshot summary; no scan, no unbounded growth, DEBUG-scale output.
+    - id: AT-8
+      status: ATTACKED
+      evidence: No upstream behavior presumed: schema_to_arrow_schema output is spelled through the shared function and pinned by the capture timestamp row; the facade exception class is asserted by identity; the snapshot-summary Statistics reading is pinned after a write.
+      artifacts: [python/repark/tests/test_describe_table.py, task/ledgers/staging/sql-describe-1-ledger.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The missing-table failure names Spark's condition and the fully qualified table, so the diagnosis is in the message; no logging change ships with a read-only statement.
+      artifacts: [python/repark/tests/test_describe_table.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins first: the Rust pins failed to compile on the base tree, the strict live comparison failed with exactly the three predicted mismatches before the residue-aware assertions, and the retired dbt pin failed on the new shape. Every new branch has a pinning input: registered versus unregistered catalog, metadata suffix, plain versus extended, snapshot present versus absent, secret versus plain property.
+      artifacts: [python/repark/tests/test_describe_table.py, crates/repark-spark/src/tests/describe_table.rs, python/repark/tests/map.md]
+  complete: true
+```
 ## Oracle capture (live Spark 4.1.2, 2026-09-09 03:58 UTC)
 
 pyspark 4.1.2. One Spark session for the whole capture.
