@@ -47,13 +47,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ledger) plus two keep-green guards; step 2 builds D-1..D-6 in `core.py` + `polars.py`.
   Clauses C-001…C-006 OPEN. Branch `feat/df-eager-1`.
   pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [display-polars-1-ledger.md](display-polars-1-ledger.md) —
-  **DISPLAY-POLARS-1 step 1 (2026-09-09), in flight:** polars-style rendering becomes the
-  default. Step 1 only (D-1 + D-2): `_DEFAULT_DISPLAY_STYLE` flips to `polars`, resolved
-  through new `default_display_style()` (env `REPARK_DISPLAY_STYLE` first, refuse-loud via
-  `normalize_display_style`), and the facade suite pins `spark` via conftest so no existing
-  expectation moves. Clauses C-001…C-002 green. Branch `feat/display-polars-1`.
-  pins: display-polars-1/C-001, C-002
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and

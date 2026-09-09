@@ -321,11 +321,43 @@ commit-side scope live in
 
 ## `repark.display.style` — a repark extra
 
-`df.show()` defaults to a PySpark-shaped ASCII grid (`spark` style). Two other renderers are
-available for interactive work, via the conf key or `session.display_style`:
+`df.show()` defaults to the polars-style table (`polars` style): a `shape: (rows, cols)`
+line, a `---` dtype row, and — past `max_rows` — the first and last `max_rows // 2` rows
+with a `…` row between them. A fresh session already renders it, with no configuration:
+
+```python
+from repark.spark import ReparkSession
+spark = ReparkSession.builder.appName("demo").master("local[1]").getOrCreate()
+print(spark.display_style)
+for key in ("repark.display.style", "repark.display.max_rows", "repark.display.max_cols", "repark.display.str_len"):
+    print(key, "=", spark.conf.get(key))
+spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).show()
+```
+
+```text
+polars
+repark.display.style = polars
+repark.display.max_rows = 10
+repark.display.max_cols = 8
+repark.display.str_len = 30
+shape: (2, 2)
+┌─────┬──────┐
+│ id  ┆ name │
+│ --- ┆ ---  │
+│ i64 ┆ str  │
+╞═════╪══════╡
+│ 1   ┆ a    │
+│ 2   ┆ b    │
+└─────┴──────┘
+```
+
+The other two renderers are one `conf.set` away: the DuckDB-style box, and the
+PySpark-shaped ASCII grid (`spark` style) for output that must match PySpark byte for byte:
 
 ```python
 spark.conf.set("repark.display.style", "duckdb")
+spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).show()
+spark.conf.set("repark.display.style", "spark")
 spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).show()
 ```
 
@@ -341,24 +373,76 @@ spark.createDataFrame([(1, "a"), (2, "b")], ["id", "name"]).show()
 └─────────────────┘
 ```
 
+```text
++----+------+
+| id | name |
++----+------+
+| 1  | a    |
+| 2  | b    |
++----+------+
+```
+
+Four facade-local keys drive the rendering. They are read at render time, so a runtime
+`conf.set` takes effect on the live session and `conf.get` returns each one. `repark.toml`
+`[default.display]` carries the same snake_case names, so a file profile and a `conf.set`
+spell the same keys:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `repark.display.style` | `polars` | `spark`, `polars` or `duckdb`; also settable as `session.display_style`. |
+| `repark.display.max_rows` | `10` | Rows kept for a styled frame; edges are `max_rows // 2`, so 5 + 5 with a `…` row between them under the default. |
+| `repark.display.max_cols` | `8` | Wider frames keep the first half of the columns, a `…` column, then the last half (4 + 4 under the default). |
+| `repark.display.str_len` | `30` | Cell width under the styled modes: longer cells keep `str_len` characters plus `…`, measured against polars itself. |
+
+Precedence, highest first: `.config("repark.display.style", …)` on the builder and
+`session.display_style` (measured: a builder config of `duckdb` wins over
+`REPARK_DISPLAY_STYLE=spark`), then the `REPARK_DISPLAY_STYLE` environment variable
+(measured: `spark` there makes a fresh session report `spark`), then the built-in
+`polars`. An invalid value refuses loud: `REPARK_DISPLAY_STYLE=bogus` fails session
+creation with an `IllegalArgumentException` naming the three styles.
+
+Only a frame past `max_rows` pays a `count()`. The polars renderer first fetches
+`limit(max_rows + 1)` — 11 rows under the default — and a frame shorter than that renders
+whole from the probe, with no `count()` and no tail fetch (measured: a 7-row `show()`
+makes zero `count()` calls). Only a frame with more rows pays one `count()` plus the tail
+fetch (measured: a 12-row `show()` makes exactly one).
+
+`show(truncate=…)` maps onto `str_len` under the styled modes: `True` (the default) cuts
+cells at the session `str_len`, `False` keeps full cells, and an int cuts at that width:
+
 ```python
-spark.conf.set("repark.display.style", "polars")
+frame = spark.sql("SELECT 'abcdefghijklmnopqrstuvwxyz0123456789' AS s")
+frame.show()
+frame.show(truncate=10)
 ```
 
 ```text
-shape: (2, 2)
-┌─────┬──────┐
-│ id  ┆ name │
-│ --- ┆ ---  │
-│ i64 ┆ str  │
-╞═════╪══════╡
-│ 1   ┆ a    │
-│ 2   ┆ b    │
-└─────┴──────┘
+shape: (1, 1)
+┌─────────────────────────────────┐
+│ s                               │
+│ ---                             │
+│ str                             │
+╞═════════════════════════════════╡
+│ abcdefghijklmnopqrstuvwxyz0123… │
+└─────────────────────────────────┘
 ```
 
-Both head-and-tail styles call `count()` for their shape line — an extra full scan. `spark` is the
-default and does not.
+```text
+shape: (1, 1)
+┌─────────────┐
+│ s           │
+│ ---         │
+│ str         │
+╞═════════════╡
+│ abcdefghij… │
+└─────────────┘
+```
+
+`repr(df)` prints the same styled table `show()` prints under `polars` and `duckdb`
+(measured byte-identical on the same frame), regardless of
+`spark.sql.repl.eagerEval.enabled`. Under those two styles `_repr_html_` returns `None`,
+so a notebook shows the text table. Under `spark` the existing eagerEval behaviour is
+unchanged.
 
 ## Stopping
 
