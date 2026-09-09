@@ -122,6 +122,8 @@ numbers. Re-read the linked source when scheduling units.
 | Release 2.7 | Introduce the operational measurements needed by each earlier unit as that unit lands |
 | Release 3.0 | Full multi-user trust remains a larger milestone; remotely exposed servers need baseline authentication and transport protection when introduced |
 
+**Milestone 0 — the Ballista audit.** [ballista-audit-2026-09-08.md](ballista-audit-2026-09-08.md) is this brief's Milestone 0 under owner ruling R-5 of the 2026-09-08 slate: the upstream `datafusion-ballista` audit at tag `54.1.0` (`f4e66525`), its KEEP/MODIFY/WRAP/DROP classification, and its recommendation to **depend on** four Ballista crates at a pinned tag rather than import them. Its serialization chapter carries the ADR-0004 disposition recorded in that ADR.
+
 Three reconciliation items require attention at pickup:
 
 - On 2026-09-04 the ordered queue listed several units that STATUS described as landed. Check
