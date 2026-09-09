@@ -9,25 +9,34 @@ entry (`load`) and the document type; each file here owns one stage of the ruled
 
 ## Contents
 
-At the CFG-1 seed commit (step 0) every stage file below is an empty placeholder: the family
-exists so step 1 and step 2 add stages without touching the module wiring or the manifest, and
-`load()` answers the empty config until discovery lands. The stages, in the order the ruled
-design runs them:
+Step 1 (CFG-1) landed `discovery.rs`, `profile.rs` and `interpolate.rs`; `sources.rs` and
+`redact.rs` are still the seed's empty placeholders until step 2. The stages, in the order the
+ruled design runs them:
 
-- `discovery.rs` — which file is read: `$REPARK_CONFIG` → `./repark.toml` →
-  `~/.config/repark/repark.toml`, first hit wins; `REPARK_CONFIG` set but empty disables
-  discovery for one process (D-2). Step 1.
-- `profile.rs` — `[default]` plus `[<profile>]` selected by `REPARK_ENV`, deep-merged, with the
-  unknown-key path named in the refusal. Step 1.
-- `interpolate.rs` — `${ENV_VAR}` expansion; a missing variable refuses loud and names the key
-  path it sat under. Step 1.
+- `discovery.rs` — `discover(environment, current_directory, home)`: `$REPARK_CONFIG` →
+  `./repark.toml` → `~/.config/repark/repark.toml`, first hit wins; absent everywhere is
+  `Ok(None)`; `REPARK_CONFIG` set but empty disables discovery; a named-but-missing path
+  refuses naming it. Step 1.
+  pins: cfg-1/C-001, C-002, C-003
+- `profile.rs` — `profile_from_table` (typed `display` / `session` allowlists, free-form
+  `conf` / `catalog` / `database`, unknown keys refuse with the `name.table.key` path) and
+  `effective_table` (`[default]` deep-merged under the named profile; `None` selects default
+  alone; an unknown `REPARK_ENV` profile refuses naming it and the known list). Nothing here
+  reads the process `REPARK_ENV`; step 3 passes it in. Step 1.
+  pins: cfg-1/C-004, C-005
+- `interpolate.rs` — `${VAR}` expansion over the effective table's strings (nested tables and
+  arrays included, scalars untouched); a missing variable refuses naming the key path and the
+  variable; `$` without `{` and unterminated `${` stay verbatim; `$$` is not an escape. Step 1.
+  pins: cfg-1/C-006
 - `sources.rs` — the `[catalogs]` / `[sources]` tables to `CatalogSpec` / `SourceSpec`, whose
-  fixtures are `../catalog_config.rs`'s so the specs compare byte-identical. Step 2.
+  fixtures are `../catalog_config.rs`'s so the specs compare byte-identical. Still an empty
+  placeholder. Step 2.
 - `redact.rs` — the `conf_dump()` redaction and the `source` column (`builder`,
-  `file:<path>#<profile>`, `default`). Step 2.
-- `tests.rs` — the seed's three pins on the parent module: `load()` without a file is the empty
-  config, an empty document parses to it, and an unknown top-level key refuses as a
-  `repark config error` naming the key. The stage files carry their own tests as they land.
+  `file:<path>#<profile>`, `default`). Still an empty placeholder. Step 2.
+- `tests.rs` — all 24 step-1 pins in one file (the seed's three plus the discovery, merge
+  and interpolation pins); the environment arrives as a stub closure, so no pin mutates the
+  process environment.
+  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
 
 ## Pointers
 
