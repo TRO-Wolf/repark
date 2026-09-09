@@ -25,6 +25,8 @@ Nothing else in this file is required reading for a round.
 | R-5 | The Ballista audit runs **as Milestone 0 of the Rust migration pilot** (the rust-unification brief), not as a separate track. | BALLISTA-AUDIT-0 |
 | R-6 | Flipping the default display style may break `show()` parity pins; **test fixtures set `spark` explicitly**. | DISPLAY-POLARS-1 D-2 |
 | R-7 | Work is packaged so a GLM-class worker does most of it; token cost is the binding constraint. | §1, every card's tier column |
+| R-9 | **DESCRIBE type spelling (2026-09-09):** Spark's two spellings are both right — `long` for `printSchema`, `bigint` for `DESCRIBE`; one DDL-spelling function in `repark-spark` serves DESCRIBE, CTAS and the Python surface. | SQL-DESCRIBE-1 D-3 |
+| R-10 | **Reading units and pins (2026-09-09):** a ledger whose header says `**Path:** READING` may mark clauses PROVEN on document evidence; the attestation block stays required. | LEDGER-READING-1 |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -139,17 +141,26 @@ grammar has no `EXTENDED`.
   meaning for non-Iceberg names. Plain `DESCRIBE t` on an Iceberg table takes the new path too
   (Spark's shape, without the extended sections).
 - **D-2 Output shape is the measured Spark shape**, three `string` columns `col_name`,
-  `data_type`, `comment` (all nullable, as Spark reports them), rows in Spark's order. The exact
+  `data_type`, `comment` — **measured 2026-09-09 (PR #428 ledger): `col_name` and `data_type` are
+  `nullable=False`, `comment` nullable; the detailed section also carries a `Statistics` row;
+  `FORMATTED` output is byte-identical to `EXTENDED`** — rows in Spark's order. The exact
   rows for an Iceberg table under the DataSourceV2 path are **measured in step 1** on the Spark
   4.1.2 on this box, never typed from memory. Expected families, to be confirmed by the
   measurement: the columns; a blank row and `# Partitioning` with `Part 0…` rows when the
   table is partitioned; under EXTENDED/FORMATTED a blank row and `# Metadata Columns`, then a
   blank row and `# Detailed Table Information` with `Name`, `Type`, `Location`, `Provider`,
   `Owner`, `Table Properties`.
-- **D-3 Type spelling** is Spark DDL (`bigint`, `string`, `timestamp`, `decimal(p,s)`,
-  `struct<…>`), produced by the crate's existing Iceberg-to-Spark type spelling. Step 2 locates
-  it by reading how `printSchema`/CTAS spell types; if no shared function exists the worker
-  hands back rather than writing a second spelling table.
+- **D-3 Type spelling (owner ruling 2026-09-09, R-9).** Spark has two spellings and both are
+  right: `printSchema` prints `long` (Spark's `simpleString`) and `DESCRIBE` prints `bigint`
+  (the DDL / `catalogString`). Today both live in `crates/repark-python/src/dataframe.rs`
+  (`arrow_type_key_at_depth` → `long`; `spark_array_element_simple_string_at_depth` →
+  `bigint`), which `repark-spark` cannot reach. Step 2 moves the DDL spelling into a new module
+  `crates/repark-spark/src/spark_type_names.rs` as `pub fn spark_ddl_type_name(&ArrowDataType)
+  -> String` (every arm the Python function has today, byte-identical output), re-exported from
+  the crate root, and makes `repark-python` call it (`repark-python` already depends on
+  `repark-spark`); `long` stays where it is for `printSchema`. DESCRIBE converts the Iceberg
+  schema to Arrow with the iceberg crate's `schema_to_arrow_schema` and spells from Arrow; the
+  capture's `timestamp` for a `TIMESTAMP` column (Iceberg `timestamptz`) is the pin.
 - **D-4 Missing table** raises `AnalysisException` with Spark's `[TABLE_OR_VIEW_NOT_FOUND]`
   text, by class identity on the facade (same pattern as `test_describe_namespace.py` Z4).
 - **D-5 `Table Properties` value** renders Spark's bracketed comma list in key order, with
@@ -161,8 +172,8 @@ grammar has no `EXTENDED`.
 
 | Step | Tier | Do |
 |---|---|---|
-| 1 | M | Measurement. Under `REPARK_PARITY_LIVE=1` (see `python/repark/tests/_oracle_pins.py` for the harness), create in live Spark an Iceberg table with: a comment on one column, three types (`bigint`, `string`, `timestamp`), partition `days(ts)`, one table property `k=v`. Capture `DESCRIBE t`, `DESCRIBE TABLE t`, `DESC EXTENDED t`, `DESCRIBE TABLE FORMATTED t`, and a missing table, as `collect()` rows plus `.schema`. Write them verbatim into the ledger §"Oracle capture". No engine edits. |
-| 2 | I | Parser + executor. `try_parse_describe_table(sql) -> Option<Result<DescribeTable>>` in `describe_show.rs` (fields: catalog, namespace, table, extended); the router arm after the namespace arm; `execute_describe_table` loads the table through `catalog_handle(...)`, then builds the batch from `table.metadata()` (current schema, default partition spec, location, properties, current snapshot id, format version) to the step-1 shape. Rust tests: parser accepts the four forms, refuses `DESCRIBE EXTENDED` with no name, leaves `DESCRIBE NAMESPACE …` to the namespace parser, and a non-catalog name returns `None` from the intercept. |
+| 1 | M | **Done 2026-09-09 (PR #428 branch `feat/sql-describe-1`, ledger).** Measurement. Under `REPARK_PARITY_LIVE=1` and `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (the default `java` is 11) (see `python/repark/tests/_oracle_pins.py` for the harness), create in live Spark an Iceberg table with: a comment on one column, three types (`bigint`, `string`, `timestamp`), partition `days(ts)`, one table property `k=v`. Capture `DESCRIBE t`, `DESCRIBE TABLE t`, `DESC EXTENDED t`, `DESCRIBE TABLE FORMATTED t`, and a missing table, as `collect()` rows plus `.schema`. Write them verbatim into the ledger §"Oracle capture". No engine edits. |
+| 2 | I | On the existing branch `feat/sql-describe-1` (clone it, not `main`). First the D-3 move (`spark_type_names.rs`, the Python call site, `make verify` green, one commit), then parser + executor. `try_parse_describe_table(sql) -> Option<Result<DescribeTable>>` in `describe_show.rs` (fields: catalog, namespace, table, extended); the router arm after the namespace arm; `execute_describe_table` loads the table through `catalog_handle(...)`, then builds the batch from `table.metadata()` (current schema, default partition spec, location, properties, current snapshot id, format version) to the step-1 shape. Rust tests: parser accepts the four forms, refuses `DESCRIBE EXTENDED` with no name, leaves `DESCRIBE NAMESPACE …` to the namespace parser, and a non-catalog name returns `None` from the intercept. |
 | 3 | M | Facade pins `test_describe_table.py` (fixture: memory catalog, the same table as step 1), one test per D-row; live leg under `REPARK_PARITY_LIVE=1` compares rows to the capture. Parity doc row in `docs/spark-sql-iceberg-parity.md`; map lockstep; ledger clauses to PROVEN. |
 
 **Pins.** `test_describe_table_plain_matches_spark_rows`, `test_describe_table_extended_sections`,
@@ -173,14 +184,16 @@ grammar has no `EXTENDED`.
 **Done when.** The owner's call prints a table; every pin green; `make verify` and the facade
 file green; the Z6 pin unchanged.
 
-**Hand back when.** No shared type-spelling function (D-3); the measured Spark shape contradicts
-D-2's families; `catalog_handle` cannot load a table by the parsed identifier.
+**Hand back when.** `schema_to_arrow_schema` cannot express a type the table carries;
+`catalog_handle` cannot load a table by the parsed identifier.
 
 **Rounds.** 3 (M, I, M).
 
 ---
 
 ### Card DF-EXPLAIN-1 — `DataFrame.explain()` prints a plan, not `Row(...)`
+
+**Done 2026-09-09, merged #427** (`explain.py` beside `core.py`, rows via `toLocalIterator`; D-5 ruled by the orchestrator: the `core.py` exact baseline ratchets down, the helper lives in its own module).
 
 **Bug.** `explain()` (`python/repark/src/repark/spark/dataframe/core.py`, the method at the
 `def explain(` line) runs `EXPLAIN SELECT * FROM <scratch view>` and prints each result **Row
@@ -286,6 +299,10 @@ section), maps.
   disclosed residue row in the ledger, not a guessed rendering.
 - **D-7 `show(truncate=…)` maps onto `str_len`**: `True` → the session `str_len`, `False` →
   no cut, an int → that width. Existing `truncate` diagnostics pins stay.
+- **D-9 / D-10 (orchestrator rulings 2026-09-09; step 1 merged #429):** `default_display_style()`
+  lives in `session_configuration.py` beside `normalize_display_style`, re-exported through
+  `_funcs.py`; no parity `conftest.py` exists, so the parity suite's `spark` pin rides the facade
+  conftest only.
 - **D-8 The four keys** `repark.display.style|max_rows|max_cols|str_len` are facade-local
   (stored in the alive token beside `display_style`, read at render time so `conf.set` at
   runtime takes effect); `conf.get` returns them; `repark.toml` `[default.display]` (CFG-1)
@@ -295,7 +312,7 @@ section), maps.
 
 | Step | Tier | Do |
 |---|---|---|
-| 1 | M | D-1 + D-2 only: `default_display_style()`, the env override, both conftests, the split pin. Whole facade suite must stay green (`make py-test-facade`), which proves R-6 holds. |
+| 1 | M | **Done 2026-09-09 (#429).** D-1 + D-2 only: `default_display_style()`, the env override, both conftests, the split pin. Whole facade suite must stay green (`make py-test-facade`), which proves R-6 holds. |
 | 2 | M | D-5: the small-frame single fetch in `_render_styled_show`; pins: a spy proves `count()` is not called for a 7-row frame and is called once for a 12-row frame; existing `test_styled_show_does_not_full_collect` stays green. |
 | 3 | M | D-4: `__repr__`/`_repr_html_` honour the style; pins for `repr(df)` under each style, eagerEval on and off. |
 | 4 | I | D-3, D-6, D-7, D-8: the keys, the renderer fidelity, the polars-oracle pins, residues filed. This step is I because the renderer edits cross `plan_collapse.py` and `core.py` and the residue calls need judgement. |
@@ -345,8 +362,12 @@ profile > default. This card only splits it into rounds and adds the three table
 - **D-2 Discovery is automatic at `getOrCreate()`**; `Builder.configFile(path)` forces a file;
   `REPARK_CONFIG=""` (set but empty) disables discovery for one process. The dump shows a
   `source` column with `builder`, `file:<path>#<profile>`, or `default`.
-- **D-3 Seed commit (O):** `toml` and `serde` with `derive` join `[workspace.dependencies]`
-  pinned exactly, before round 1. Workers never touch the lockfile.
+- **D-3 Seed commit (O, or the overnight orchestrator under grant G-5):** in the root
+  `Cargo.toml` `[workspace.dependencies]`, `serde = { version = "1.0.229", features = ["derive"] }`
+  and `toml = "0.8.23"` (both already in the local registry cache); in
+  `crates/repark-core/Cargo.toml` `[dependencies]`, `serde.workspace = true` and
+  `toml.workspace = true`; `cargo build -p repark-core` refreshes `Cargo.lock`; `make verify`
+  green; one commit before round 1. Workers never touch the lockfile.
 - **D-4 Profiles for PROFILES-1** ride here as ordinary named profiles (`[read]`, `[write]`)
   chosen by `REPARK_ENV=read`; no special key.
 
@@ -426,6 +447,8 @@ guide, maps.
 ---
 
 ### Card BALLISTA-AUDIT-0 — Milestone 0 of the Rust migration pilot (R-5)
+
+**Done 2026-09-09, merged #426** at Ballista tag 54.1.0 / `f4e66525`: recommendation DEPEND on four Ballista crates, not import; ADR-0004's write ban stands on "no commit issues from a task" (the extension codec can carry write nodes). Its twelve clauses sit OPEN until LEDGER-READING-1 lands.
 
 **What.** The audit the owner's runtime plan names as its next action: inspect the current
 `apache/datafusion-ballista` and determine the smallest coherent subset that can serve as
@@ -528,6 +551,71 @@ table row, and a reader can reproduce any row with one command from the doc.
 
 ---
 
+### Card LEDGER-READING-1 — reading units may prove clauses on document evidence (R-10)
+
+**Why.** `scripts/check_ledger_grammar.py` rule B says every `PROVEN` clause in a staging ledger
+must be cited by a `pins: <unit>/C-NNN` in a test; a reading unit adds no test, so
+BALLISTA-AUDIT-0's twelve discharged clauses had to stay `OPEN`. The script already carries an
+`EXCEPTIONS` table for two charters; that table is per-file and ratchets down, so it is the wrong
+home for a class of units.
+
+**Home.** `scripts/check_ledger_grammar.py`, its test file (find it with
+`grep -rl check_ledger_grammar scripts python | grep -i test`; if none exists, create
+`scripts/tests/test_check_ledger_grammar.py` and list it in `scripts/tests/map.md`),
+`docs/testing.md` "Pinning a charter clause", `task/ledgers/staging/ballista-audit-0-ledger.md`,
+maps.
+
+**Decisions.**
+
+- **D-1 The marker** is the existing header field: `**Path:** READING` (beside `LIGHT`,
+  `STANDARD`, `HIGH`). A ledger whose first 40 lines carry it is exempt from rule B for every
+  clause; rule A (clause table shape) and rule C (`COVERAGE_ATTESTATION` block) still apply, and
+  the attestation block names the document sections that discharge each clause instead of tests.
+- **D-2 No new exception rows.** The `EXCEPTIONS` table is untouched.
+- **D-3 Evidence cell shape** for a reading clause: `docs: <path>#<heading-anchor>`; the script
+  does not validate the anchor (that is `make check-docs-links`' job), only the prefix.
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | M | Red-first test: a fixture ledger with `**Path:** READING` and one unpinned `PROVEN` clause passes; the same ledger without the marker fails with the existing rule-B message; a READING ledger with no attestation block fails rule C. Then the script change (one header regex, one branch), `docs/testing.md` paragraph, maps. |
+| 2 | M | Flip BALLISTA-AUDIT-0's twelve clauses to `PROVEN` with `docs:` evidence cells and add its attestation block (an `oc-worker --role critic` round writes the block; the actor pastes it). `make check-ledgers check-ledger-grammar` green. |
+
+**Done when.** Both gates green on the audit ledger; the two charters in `EXCEPTIONS` unchanged.
+
+**Rounds.** 2 (M, M).
+
+---
+
+### Card PREFLIGHT-PARITY-1 — the parity mirror check joins `preflight`
+
+**Why.** The CAP-1 source-file mirror test under `python/repark-parity` is not a `preflight`
+member, so a baseline ratchet passed `preflight` locally and failed CI on #427.
+
+**Home.** `Makefile` (`preflight` target and a new `py-test-parity-cap` target running only the
+CAP-1 mirror file), `DEVELOPMENT.md` gate roster, `python/repark-parity/map.md` if the file is
+renamed (it is not), maps. **Not** `AGENTS.md`: its gate roster sentence is policy and sits under a
+compaction ceiling; the card leaves it and the orchestrator files one line in the PR body asking
+the owner whether the roster sentence should name the new member.
+
+**Decisions.**
+
+- **D-1** The new target runs one file, the CAP-1 mirror test, with the same interpreter the
+  parity suite uses; it must finish under 60 s or hand back.
+- **D-2** `preflight` gains it after `py-test-facade`, before the audit; `verify` is untouched
+  (Rust-only by definition).
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | M | Locate the mirror test (`grep -rl "CAP-1\|cap_1" python/repark-parity`), the target, the roster line, `make preflight` green once alone, maps. |
+
+**Rounds.** 1 (M).
+
+---
+
 ## 3. Epic intakes (chartered as direction; the first unit of each is cut here)
 
 ### ADAPT-PART — adaptive partitioning for Iceberg
@@ -589,6 +677,10 @@ paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until t
 | 7 | PROFILES-1 | CFG-1 for the TOML form only | M×3, I | 4 | ≈ $0.02 + one I round |
 | 8 | AP-0 | — (script only) | M | 1 | ≈ $0.01 |
 | 9 | AP-1 → AP-3, DYNCFG-1 | AP-0 result; PROFILES-1 result | I | — | after the measurements |
+
+**Status 2026-09-09 morning:** 1 merged (#427), 6 merged (#426), 3 step 1 merged (#429), 2 parked at
+step 2 on R-9 (now ruled, PR #428 resumes). New units: 10 LEDGER-READING-1 (M, 2 rounds), 11
+PREFLIGHT-PARITY-1 (M, 1 round). Night-2 order is runbook §7.
 
 Units 1, 2 and 6 can run in parallel lanes today; 3 and 4 in parallel after 1–2 merge; 5 after
 3; 7 after 4. The binding cost is orchestrator tokens, not worker dollars: each round costs
