@@ -16,13 +16,15 @@ run-3 · **Previous runs:** [run 1](overnight-report-2026-09-09.md),
 | PREFLIGHT-PARITY-1 | ledger close | orchestrator | — | [#438](https://github.com/TRO-Wolf/repark/pull/438) | **merged** `b0106a99` |
 | DISPLAY-POLARS-1 | 3 | GLM | 1 | [#439](https://github.com/TRO-Wolf/repark/pull/439) | **merged** `2215315a` |
 | CFG-1 | seed (O) + 1 | orchestrator, then GLM → Muse | 3 | [#440](https://github.com/TRO-Wolf/repark/pull/440) | **merged** `774779e1` |
-| PROFILES-1 | 0 | GLM → Muse | 2 | [#441](https://github.com/TRO-Wolf/repark/pull/441) | open, green-pending |
-| DF-EAGER-1 | 1 | GLM | 1 | (opened at the stop) | open |
+| PROFILES-1 | 0 | GLM → Muse | 2 | [#441](https://github.com/TRO-Wolf/repark/pull/441) | **merged** `bb6a5369` |
+| DF-EAGER-1 | 1 | GLM | 1 | [#443](https://github.com/TRO-Wolf/repark/pull/443) | **merged** `cea653c8` |
 
-Five merged, two open at the stop time, none parked. Worker cost: GLM **$1.05** over ten rounds;
+**Seven merged, none parked, nothing left open at the stop.** Worker cost: GLM **$1.05** over ten rounds;
 Muse unmetered over two.
 
-Not reached, in §7 order: DISPLAY-POLARS-1 steps 4–5, CFG-1 steps 2–4, DF-EAGER-1 steps 2–3, AP-0.
+§7's run-3 order is **exhausted**: every unit it named reached a merge. Not started, and the
+natural next slate: DISPLAY-POLARS-1 steps 4 (tier I) and 5, CFG-1 steps 2–4, DF-EAGER-1 steps 2
+(tier I) and 3, PROFILES-1 steps 1–3, AP-0.
 
 ## What each merge changed
 
@@ -42,6 +44,12 @@ Not reached, in §7 order: DISPLAY-POLARS-1 steps 4–5, CFG-1 steps 2–4, DF-E
 - **CFG-1 seed + step 1** — `serde` and `toml` join the workspace; `repark.toml` discovery,
   `[default]` + `[<profile>]` merge under `REPARK_ENV`, and `${VAR}` interpolation land in
   `repark-core` behind 24 pins. No wiring yet.
+- **PROFILES-1 step 0** — the pass-through probe answers the card's gating question **yes**: 11
+  keys PASS THROUGH with quoted plan evidence, 9 are accepted-but-unread (execution-only, step-1
+  sweep material), 0 refused. No pass-through implementation step is needed before measurement.
+- **DF-EAGER-1 step 1** — nine pins for `.eager()` / `.compute()` / `.lazy()`, seven carrying
+  `xfail(strict=True)` so the red file rides in a green suite and step 2 turns each green by
+  deleting its marker. Recorded red: 7 failed, 2 passed.
 
 ## Decisions taken under §6
 
