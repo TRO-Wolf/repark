@@ -156,3 +156,54 @@ unterminated references, that is a ruling before step 4 documents the file;
 (c) `effective_table` with `profile_name: None` returns the default table even when the file
 carries only named profiles, and returns an empty table when `[default]` is absent — both
 fall out of the code, neither is pinned beyond the `None`-selects-default test.
+
+## Attestation (orchestrator, step 1)
+
+Step 1's six clauses are all PROVEN, so the block is written now rather than at the unit's
+departure; steps 2–4 append their own categories when they land.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: cfg-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every ruled behaviour is pinned in both directions, not only the happy path — each of the three discovery sources wins in its own fixture and loses in another, an empty REPARK_CONFIG disables discovery with a local file present, a named-but-missing path refuses, the profile merge is asserted on three axes (overlay wins, base-only key survives, sibling joins), and each refusal pin asserts the key path in the message rather than only the failure.
+      artifacts: [crates/repark-core/src/config_file/tests.rs]
+    - id: AT-2
+      status: N/A
+      justification: No numeric or performance claim is made; step 1 is a parser and a lookup order.
+    - id: AT-3
+      status: ATTACKED
+      evidence: The failure paths ARE the subject — a missing file, a missing variable, an unknown key at three depths, a non-table where a table is required, an absent profile named by REPARK_ENV — and each is pinned on its message content, not just its Err-ness.
+      artifacts: [crates/repark-core/src/config_file/tests.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Ordering is pinned where it is load-bearing: discovery is first-hit-wins across three sources, and the merge-then-interpolate order is pinned by the test that a missing variable in an UNSELECTED profile does not refuse. No shared state exists — discovery takes its environment as a parameter, so no pin mutates the process environment and the suite is parallel-safe.
+      artifacts: [crates/repark-core/src/config_file/discovery.rs, crates/repark-core/src/config_file/tests.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: The one privileged-ish action is reading a path from the environment, and it is bounded — a path named by REPARK_CONFIG that does not exist refuses instead of falling through to a different file, so a stale variable cannot silently load the wrong configuration. No secret is read, printed or logged in this step; redaction is step 2's file and is still a placeholder.
+      artifacts: [crates/repark-core/src/config_file/discovery.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The hole a config loader opens is silent acceptance, and it is closed at every level — serde's deny_unknown_fields at the document root plus typed allowlists for the display and session tables, each refusing with the full key path. A value in the wrong shape (a non-table where a table is required) refuses rather than being ignored.
+      artifacts: [crates/repark-core/src/config_file/profile.rs]
+    - id: AT-7
+      status: N/A
+      justification: No hot path and no resource behaviour; the loader reads one small file once at session construction, and is not wired into the builder until step 3.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The two new upstream dependencies are the orchestrator's seed commit, not the worker's, and are the versions the card names (serde 1.0.229, toml 0.8.23); Cargo.lock was refreshed by the build. The public surface is unchanged — the module is crate-private and its items carry allow(dead_code) precisely because nothing calls them until step 3.
+      artifacts: [Cargo.toml, crates/repark-core/Cargo.toml]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Diagnosability is the point of every refusal in this step: each message names the key path, and the missing-variable refusal names both the variable and the path it sat under. The pins assert those strings, so a wording regression is red.
+      artifacts: [crates/repark-core/src/config_file/interpolate.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The red was re-established honestly after the implementing session was lost — the four implementation files stashed with the pins left in place, and the recorded red is the compile refusal (E0432 x3) that the seed's placeholders produce, pasted verbatim. No test was edited to manufacture it.
+      artifacts: [crates/repark-core/src/config_file/tests.rs]
+  complete: true
+```
+
