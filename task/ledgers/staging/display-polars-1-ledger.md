@@ -88,3 +88,16 @@ Two orchestrator rulings were needed because the card's Home named the wrong mod
   a baseline table, not a rendering call. The drop was required to be *measured*, not assumed:
   the parity suite runs green under the flipped default (624 passed), which is the evidence that
   no parity expectation depended on the old default.
+
+- **D-11 (orchestrator, 2026-09-09):** flipping the default broke two *doc examples*, which
+  neither `make preflight` nor the facade suite can catch — `check_example_coverage.py` skips
+  execution when the native module is not importable, and examples run outside pytest, so D-2's
+  conftest pin does not reach them. CI's `build + import smoke` leg caught both.
+  `docs/examples/session/display_style.py` asserted the default was `spark`; it now documents the
+  polars default truthfully and switches to `spark` instead of away from it.
+  `docs/examples/dataframe/show_sort.py` asserts the spark grid's line shapes while demonstrating
+  `sort`, so it now pins `repark.display.style=spark` on its builder — the example is about
+  sorting, and its assertions are about that grid. An example that renders the *polars* look
+  belongs to step 5 with the guide rewrite, not here, because step 4 changes the renderer again.
+  Verified locally under a clean environment: both examples exit 0 and all 209 examples execute
+  green (`check_example_coverage.py --require-execute`).
