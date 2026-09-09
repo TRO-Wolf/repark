@@ -157,6 +157,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   that name new gate members — both already do, so the unit closes with no further edit and
   its ledger moved to `completed/`. pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 3 (2026-09-09): `dataframe/core.py` row 4536 → 4525 with the script baseline; the two `__repr__` / `_repr_html_` docstrings condensed to one line each, their contracts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: display-polars-1/C-004
+- `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
 - `test_cap_1_source_file_line_cap.py` — SQL-DESCRIBE-1 (2026-09-09): `repark-python/src/dataframe.rs` row 1126 → 1084 with the script baseline; the DDL element spelling moved to `repark-spark`. pins: sql-describe-1/C-003
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through

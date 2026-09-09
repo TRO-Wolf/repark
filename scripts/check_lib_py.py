@@ -70,7 +70,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split join planning from column projection helpers.",
     ),
     "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
-        1168,
+        1057,
         "Plan-collapse transforms share one planner support module.",
         "Split transform families along their existing plan-node boundaries.",
     ),
@@ -105,7 +105,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split format-specific readers from shared option validation.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2306,
+        2305,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

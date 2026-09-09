@@ -964,6 +964,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   test lives in the sibling `test_dfcore_4b_exports.py` (this pin is at the
   default ceiling, so the gate's sanctioned out is a split).
   pins: dfcore-4b/C-001, C-002, C-003, C-004, C-007, C-008
+  DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the package gains exactly
+  `polars_cells` (the new speller home, bound when `plan_collapse` re-exports
+  the moved names); the set row grows by one member, the file's own new-home
+  pattern.
+  pins: display-polars-1/C-005
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -1856,6 +1861,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_polars_repr_renders_table_without_eager_eval` / `test_styled_repr_html_is_none` red;
   touch the spark repr branches → `test_spark_repr_unchanged` reds; count a small frame through
   repr → `test_small_frame_repr_does_not_count` reds.
+  **DISPLAY-POLARS-1 step 4** (2026-09-09): D-3/D-6/D-7/D-8 — three polars-oracle
+  pins (`repr(frame) == str(pl.from_arrow(frame.to_arrow()))` on ints/strings/
+  nulls/nests, floats/bools/dates, and the 9-column gap frame, all with
+  `pytest.importorskip("polars")` and clean polars env); `test_str_len_cuts_with_ellipsis`
+  (default 30 under D-12, session cut, int width, `False` full); `test_display_keys_conf_get_set`
+  (defaults, max_rows 2+2 edges, max_cols 2+gap+2, set/unset round-trip, five bad
+  values plus bool refuse, builder invalid refuses). MUTATION: drop the float
+  speller → the floats oracle reds on the scientific row; drop the struct quotes
+  → the ints oracle reds on `{1,"x"}`; drop the column gap → the wide oracle reds.
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`
@@ -1907,6 +1921,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DISPLAY-POLARS-1 step 2 (R-11, 2026-09-09):** the partial-collect pin's polars section
   caps per-export rows at `2 * edge + 1` = 11, the D-5 probe export; the duckdb section keeps
   its cap of 2 and the no-full-collect `< 12` tooth is unchanged. pins: display-polars-1/C-003
+  **DISPLAY-POLARS-1 step 4 (2026-09-09):** the polars truncation pin cuts with `…`
+  (one token, line-neutral); the probe/edge numbers now read `max_rows`
+  (`limit(max_rows + 1)`, edges `max_rows // 2`), unchanged at 11/5+5 under defaults.
+  pins: display-polars-1/C-005
+  **DISPLAY-POLARS-1 step 5 (2026-09-09):** `docs/guide/session-and-conf.md`'s
+  `repark.display.style` section states the behaviors these pins verify (polars default,
+  the four keys, the env precedence, the probe-first count, the truncate mapping, the
+  styled repr), every transcript executed against this tree. pins: display-polars-1/C-006
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`

@@ -6,6 +6,7 @@ import logging
 import os
 
 import re
+from typing import Any
 
 from typing import TYPE_CHECKING
 
@@ -413,3 +414,125 @@ def resolve_shuffle_partitions(config: dict[str, str | None]) -> int | None:
             _config_value_error(key, value, f"The value of {key} must be positive")
         )
     return value
+_DEFAULT_DISPLAY_MAX_ROWS = 10
+
+
+_DEFAULT_DISPLAY_MAX_COLS = 8
+
+
+_DEFAULT_DISPLAY_STR_LEN = 30
+
+
+_DISPLAY_INT_DEFAULTS: dict[str, int] = {
+    "repark.display.max_rows": _DEFAULT_DISPLAY_MAX_ROWS,
+    "repark.display.max_cols": _DEFAULT_DISPLAY_MAX_COLS,
+    "repark.display.str_len": _DEFAULT_DISPLAY_STR_LEN,
+}
+
+
+def _display_token_key(canonical: str) -> str:
+    """Map a ``repark.display.*`` conf key to its alive-token field."""
+    return "display_" + canonical.rsplit(".", 1)[-1]
+
+
+def _sync_display_int_into_builder_config(
+    builder_config: dict[str, str | None],
+    canonical: str,
+    value: int,
+) -> None:
+    """Collapse case-variant aliases onto the canonical int display key."""
+    for existing in list(builder_config):
+        if existing.lower() == canonical:
+            del builder_config[existing]
+    builder_config[canonical] = str(value)
+
+
+def _builder_display_int(
+    builder_config: dict[str, str | None],
+    canonical: str,
+    fallback: int,
+) -> int:
+    """Resolve one int display key from a builder map (last case-insensitive hit wins)."""
+    raw: str | None = None
+    for key, value in builder_config.items():
+        if key.lower() == canonical:
+            raw = value
+    if raw is None:
+        return fallback
+    return _normalize_display_int(canonical, raw)
+
+
+def _canonicalize_display_key(
+    config: dict[str, str | None],
+    key: str,
+    value: str | None,
+) -> bool:
+    """Collapse a display key alias onto its canonical spelling, validating int values."""
+    lowered = key.lower()
+    if lowered == _DISPLAY_STYLE_KEY:
+        for existing in list(config):
+            if existing.lower() == _DISPLAY_STYLE_KEY:
+                del config[existing]
+        config[_DISPLAY_STYLE_KEY] = value
+        return True
+    for canonical in _DISPLAY_INT_DEFAULTS:
+        if lowered != canonical:
+            continue
+        parsed: str | None = (
+            None if value is None else str(_normalize_display_int(canonical, value))
+        )
+        for existing in list(config):
+            if existing.lower() == canonical:
+                del config[existing]
+        config[canonical] = parsed
+        return True
+    return False
+
+
+def _reuse_display_ints(
+    config: dict[str, str | None],
+    live: Any,
+    unset_keys: set[str],
+) -> None:
+    """Validate and apply present int display keys to a live session's token and maps."""
+    token = live._alive_token
+    for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
+        if not any(key.lower() == canonical for key in config):
+            continue
+        parsed = _builder_display_int(config, canonical, fallback)
+        token[_display_token_key(canonical)] = parsed
+        _sync_display_int_into_builder_config(live._builder_config, canonical, parsed)
+        store = token.get("runtime_conf")
+        if isinstance(store, dict):
+            for existing in list(store):
+                if existing.lower() == canonical:
+                    del store[existing]
+            store[canonical] = str(parsed)
+        unset_keys.discard(canonical)
+
+
+def _normalize_display_int(key: str, value: str | int | object) -> int:
+    """Validate a ``repark.display.max_rows|max_cols|str_len`` value as a positive int."""
+    if isinstance(value, bool):
+        raise IllegalArgumentException(
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f'"{key}" is invalid. '
+            f"The value of {key} must be a positive integer."
+        )
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str) and value.strip().isascii() and value.strip().isdigit():
+        parsed = int(value.strip())
+    else:
+        raise IllegalArgumentException(
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f'"{key}" is invalid. '
+            f"The value of {key} must be a positive integer."
+        )
+    if parsed < 1:
+        raise IllegalArgumentException(
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f'"{key}" is invalid. '
+            f"The value of {key} must be a positive integer."
+        )
+    return parsed

@@ -357,7 +357,7 @@ def test_polars_style_truncation() -> None:
     try:
         frame = session.sql("SELECT 'abcdefghijklmnopqrstuvwxyz' AS s")
         out = _capture_show(frame, truncate=10)
-        assert "..." in out
+        assert "…" in out
         assert "abcdefghijklmnopqrstuvwxyz" not in out
         assert out.startswith("shape: (1, 1)")
     finally:

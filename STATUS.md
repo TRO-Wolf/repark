@@ -32,7 +32,14 @@ GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and 
 and the dynamicFlatten null-mask extractor (DYNFLATTEN-2, LISTNULL-1). Post-1.1.1 `main`
 (2026-09-07) adds the DataFrame core decomposition slate (DFCORE-1…6: `core.py` 6,302 → 4,539
 lines behind an identical export surface; PERF-APPROXQUANTILE-1, PERF-EAGER-PREVIEW-1) and FNP-8
-with its after-the-fact review (FNP-8-REVIEW). Release mechanics:
+with its after-the-fact review (FNP-8-REVIEW). **DISPLAY-POLARS-1 (2026-09-09)** changes a
+user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
+not the PySpark ASCII grid. `repark.DataFrame` is unchanged — only the rendering is — and the grid
+is one setting away (`REPARK_DISPLAY_STYLE=spark`, `.config("repark.display.style", "spark")` or
+`session.display_style`); `max_rows` (10), `max_cols` (8) and `str_len` (30) join `style` as
+facade-local keys, and a styled frame shorter than `max_rows + 1` now renders with no `count()`.
+The keys and the precedence chain are documented in
+[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md). Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities

@@ -203,18 +203,18 @@ Must park the lane (leave the branch pushed, PR in draft, ledger clause `OPEN`, 
 
 ## 7. Order for one night
 
-Runs 1–3 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0, SQL-DESCRIBE-1, LEDGER-READING-1,
-PREFLIGHT-PARITY-1, DOCS-LINKS-1, DISPLAY-POLARS-1 steps 1–3, CFG-1 seed + step 1, DF-EAGER-1
-step 1 and PROFILES-1 step 0. Run 4's order, two lanes at a time, each to its PR before the next
-opens; a lane whose card is fully merged is skipped:
+Runs 1–4 (2026-09-08/09) worked slate 1. Run 5 onward works
+[cheap-tier-slate-2-2026-09-09.md](cheap-tier-slate-2-2026-09-09.md) (maintenance policy, torture
+suite, Never-OOM) after finishing slate 1's leftovers. Two lanes at a time, each to its PR before
+the next opens; a card whose steps are all merged is skipped:
 
-1. DISPLAY-POLARS-1 step 4 (Muse: renderer fidelity, the four keys, polars-oracle pins) then
-   step 5 (GLM docs).
-2. CFG-1 step 1b (GLM, R-14) then step 2 (GLM); step 3 (Muse) and step 4 (GLM) if time remains.
-3. DF-EAGER-1 step 2 (Muse) then step 3 (GLM).
-4. DISPLAY-BRIDGE-1 (GLM) and AP-0 (GLM script) when a slot is free.
-5. PROFILES-1 step 1 (Muse: the bed script, release build) and step 2 (Muse: the sweep, the
-   measurements document); CONF-UNREAD-1 after step 2.
+1. Slate-1 leftovers, one lane, in this order: DF-EAGER-1 steps 2–3, CFG-1 steps 3–4,
+   DISPLAY-BRIDGE-1, AP-0, PROFILES-1 steps 1–3 (Muse, release build, box alone), CONF-UNREAD-1.
+2. MAINT-POLICY-1 steps 1–4 (three Muse rounds then GLM) in the other lane from the start.
+3. TORTURE-1 steps 1–2 (GLM) when a lane frees, then steps 3–5 (Muse, Muse alone with the JVM,
+   GLM).
+4. NEVEROOM-1 step 1 (GLM); step 2 (Muse) only when no other lane is open; step 3 (GLM).
+5. AP-1 (Muse, GLM) once AP-0 is on `main`.
 
 ## 8. Stop conditions and the morning report
 
