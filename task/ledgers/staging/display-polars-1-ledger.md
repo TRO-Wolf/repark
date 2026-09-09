@@ -291,9 +291,17 @@ column gap on base), str_len (`conf.get` raised `Configuration property
 repark.display.str_len is not set`), keys (same `not set` raise). After the
 edits: `56 passed` for the two display files.
 
-**Size gates:** `plan_collapse.py` 1168→1357 and `session_core.py` 2411→2448
-(INCREASE, reason recorded in `scripts/map.md`, owner approval requested at
-merge; both mirrored in the CAP-1 test). All other touched files stay under
+**Size gates:** the first cut of step 4 raised `plan_collapse.py` to 1357 and
+`session_core.py` to 2448. `scripts/check_lib_py.py` is the size SSOT and its
+header rules that a baseline INCREASE needs explicit owner approval, so the
+orchestrator refused both at audit and sent the round back to absorb them. The
+follow-up commit does: the polars cell and type spellers move to the new
+`python/repark/src/repark/spark/dataframe/polars_cells.py` (325 lines, no
+exception row needed) and the display-key plumbing to
+`session/session_configuration.py` beside `default_display_style()`. Final:
+`plan_collapse.py` 1168→**1057** and `session_core.py` 2411→**2410**, both
+ratchets DOWN needing no approval, both mirrored in the CAP-1 test, with all 56
+display pins byte-identical across the move. All other touched files stay under
 their ceilings or line-neutral.
 
 **Stale-cache repair (not a product change):** one neighbor,
