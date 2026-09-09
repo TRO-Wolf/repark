@@ -5,12 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
-  **BALLISTA-AUDIT-0 steps 1–2 (2026-09-08), in flight:** Half A facts plus Half B
-  judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —
-  clauses C-001…C-011 green, §26 A–H + §27 + §28 gate filled, appendix A6
-  closes the python/tooling gap. Step 3 (read, ADR line, PR) pending.
-  Branch `docs/ballista-audit-0`.
 - [rdf-schema-evo-1-ledger.md](rdf-schema-evo-1-ledger.md) — §10 records the RP-15 bump and the RePark-side critic PASS.
   **RDF-SCHEMA-EVO-1 (2026-09-06), in flight:** `rewrite_data_files` after schema evolution —
   the owner's 7v8 refusal, reproduced on the pinned fork for add (+spec), add-only, drop,

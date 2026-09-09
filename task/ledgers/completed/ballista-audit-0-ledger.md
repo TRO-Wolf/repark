@@ -45,3 +45,9 @@ Step-2 notes: appendix numbers untouched (D-7 not triggered except the new
 A6 row, which carries its own command). Headings unchanged per N-3.
 `upstream-ballista/` never staged (excluded; moved aside for the commit only
 if hooks scan it, then restored at `f4e66525`).
+
+## Step-3 clause (orchestrator, tier O)
+
+| Clause | Item | Verdict | Evidence |
+|---|---|---|---|
+| C-012 | The ADR-0004 disposition is recorded, and the unification brief points at the audit as its Milestone 0 | GREEN | `docs/adr/0004-server-prep-disciplines.md` gains a "Disposition — the Ballista audit (2026-09-08)" section: the write ban STANDS, its stated reason narrows from "cannot serialize" to "must not commit from tasks", citing doc §26.D. `rust-unification-implementation-brief-2026-09-04.md` §4 gains the Milestone 0 row. Orchestrator re-ran `make check-docs-compaction` and `make check-ledgers` green, and reproduced two step-1 numbers (187 files / 76209 lines; 4 `.proto`) and five step-2 citations (`ballista.proto` 883 lines; `serde/mod.rs` 185/352/364; scheduler 30182; `execution_graph.rs` 3020) exactly against the pinned upstream. |
