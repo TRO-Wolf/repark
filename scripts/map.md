@@ -361,6 +361,12 @@ display bodies move to `display.py`, which carries no row (mirrored in the
 CAP-1 test). Ratchets DOWN.
 pins: dfcore-4b/C-005
 
+DF-EXPLAIN-1 (2026-09-08): `check_lib_py.py` `dataframe/core.py` 4539→4536 — the
+explain rendering support (the section headers, the codegen note, the mode map and
+`_render_explain_sections`) moves to `explain.py`, which carries no row, while `explain` and
+the new `_explain_text` stay on the class (mirrored in the CAP-1 test). Ratchets DOWN.
+pins: df-explain-1/C-003
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002
