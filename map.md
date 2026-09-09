@@ -69,7 +69,13 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
   `py-test-facade` + `py-test-parity-cap` + `py-test-dbt` + audit + workflow lint (G14,
   2026-08-12; `py-test-dbt` joined with DBT-1, 2026-09-04; `py-test-parity-cap` with
-  PREFLIGHT-PARITY-1, 2026-09-09). Tool pins match the
+  PREFLIGHT-PARITY-1, 2026-09-09). `check-docs-links` (DOCS-LINKS-1, 2026-09-09) joins `ci`
+  beside `check-docs-compaction`: every tracked `*.md`'s relative links resolve to tracked
+  files, `#anchors` match GitHub-style heading slugs, and `docs:` ledger evidence cells follow
+  the same rule; the measured baseline lives in `scripts/docs_links_allowlist.txt` (one
+  `path:link` entry per line — the line is not part of the key, so a line shift never reds
+  the gate — ratchet down only: a stale entry that matched no finding fails the gate).
+  Tool pins match the
   workflow pins. The tier-2 `parity-live` target is dual-wired with
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing

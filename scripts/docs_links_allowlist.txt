@@ -1,0 +1,15 @@
+# docs-links allowlist — seeded from the measured D-3 baseline (DOCS-LINKS-1, reseeding
+# under ruling D-9 on 2026-09-09), one path:link entry per line; entries only shrink under
+# the gate: an entry that matches no finding in a run fails the gate itself, and a fixed
+# link takes its row away. The key is path:link — line numbers are not part of the key, so
+# an unrelated edit that shifts lines never reds the gate; two identical broken links in
+# one file collapse to a single entry.
+docs/guide/iceberg-guide.md:../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag
+python/repark/tests/map.md:../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog
+python/repark/tests/map.md:../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented
+task/ledgers/archive/2026-08/2026-08-13-y3-getdatabase-ledger.md:../python/repark/src/repark/catalog.py
+task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_tests.rs
+task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:../crates/repark-iceberg/src/write/predicate_dml_update_tests.rs
+task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md:../../../../skills/sepmo/SKILL.md
+task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md:../../../../skills/sepmo/references/05-critic.md
+task/ledgers/archive/2026-09/2026-09-02-api-freeze-ledger.md:…

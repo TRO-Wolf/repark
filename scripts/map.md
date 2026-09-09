@@ -571,6 +571,31 @@ repark-parity slice.
   `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
   `python/repark-parity/tests/test_dl_5_contract_compaction.py`,
   `python/repark-parity/tests/test_proc_1_tiered_review.py`.
+- `check_docs_links.py` — the **markdown link gate** (DOCS-LINKS-1, 2026-09-09; `make
+  check-docs-links`, in `make ci` beside `check-docs-compaction`, so in `make preflight`
+  through `verify`). `sync_map_md.py` generalized from maps to the whole tree: over every
+  tracked `*.md` (`git ls-files`; code spans and fenced blocks hold documentation, not links;
+  `http(s)`/`mailto`, bare `#fragments` and absolute targets are out of scope): (1) every
+  inline relative link (`[t](p)`, `[t](p#anchor)`) resolves to a tracked file relative to the
+  linking file — a file by name, a directory by anything tracked beneath it; (2) a `#anchor`
+  on an `.md` target matches the GitHub-style heading slug (lower-case, spaces to `-`,
+  punctuation dropped, duplicate headings suffixed `-1`); (3) `docs:` evidence cells under
+  `task/ledgers/**` follow the same rule with repo-root-relative paths. One line per broken
+  link `path:line: <link> -> <reason>`, exit 1; the counts of files and links checked print
+  on exit 0. Whole-tree run measured 0.82 s (692 files, 4478 links; 0.83/0.81 s on repeats,
+  2026-09-09). The D-3 baseline seeded `scripts/docs_links_allowlist.txt` with the 10
+  pre-existing broken links (6 missing targets, 5 of them in immutable archive ledgers, and
+  4 stale anchors into the divergence registry) — one `path:link` entry per line (D-9, audit
+  round 2, 2026-09-09: the line number is not part of the key, so an unrelated edit that
+  shifts lines never reds the gate, and two identical broken links in one file collapse to
+  one entry), a `#`-prefixed header tolerated, a malformed entry fails closed (exit 2), and
+  the list ratchets down under the gate (D-8, audit round 1, 2026-09-09): an entry that
+  matched no finding in the run is itself a failure (`stale entry … — the link is no longer
+  broken; remove this row`), so a fixed link takes its row away under gate pressure. The
+  baseline was re-measured on the merged tree at the D-9 reseed: the same 10 links, 9
+  entries after the collapse. Not wired to
+  the pre-commit hook or ci.yml (the card's Home named the Makefile only). Proofs:
+  `python/repark-parity/tests/test_dl_6_docs_links.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
