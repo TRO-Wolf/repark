@@ -1,7 +1,7 @@
 # Unit ledger — CFG-1 step 1 · `repark.toml` discovery, profile merge, `${VAR}` interpolation
 
 **Unit:** CFG-1 step 1 (+ step 1b, R-14) · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` (step 1b: `feat/cfg-1-step1b`) · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14)
+**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** The CFG-1 seed commit left `config_file/{discovery,profile,interpolate}.rs` as empty
@@ -35,8 +35,17 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-007 | R-14: `$$` is the escape for a literal `$`; a lone `$$` renders one `$`, and `$${TOTAL}` renders the literal `${TOTAL}` verbatim with no environment lookup. | `a_double_dollar_renders_the_reference_verbatim`, `a_double_dollar_alone_renders_a_single_dollar` | **PROVEN** | Step 1b, 2026-09-09. Red first: both pins failed against the step-1 code (`$42` vs `${TOTAL}`, `$$` vs `$` — see Red first below); green after the `interpolate.rs` change. The verbatim pin runs with `TOTAL=42` in the environment and still gets `${TOTAL}`, so no lookup happens. |
 | C-008 | R-14: an unterminated `${` (no closing `}`) refuses loud naming the key path, the same `Error::Config` shape as the missing-variable refusal. | `an_unterminated_reference_refuses_naming_the_path` | **PROVEN** | Step 1b, 2026-09-09. Red first: the pin got the step-1 verbatim pass-through (`unterminated must refuse: {"value": String("${TOTAL")}`) instead of an error — see Red first below; green after the change. The refusal message is `unterminated \`${\` reference at key \`value\``, naming the key path. |
 | C-009 | `a_dollar_without_a_brace_is_left_alone` (`cost is $5 and ${TOTAL}` → `cost is $5 and 42`) survives R-14 unchanged. | `a_dollar_without_a_brace_is_left_alone` | **PROVEN** | The pin's text was not edited in step 1b and stayed green through both the red run (2026-09-09) and the final gates. |
+| C-010 | A `[<profile>.catalog.<name>]` block parses into the SAME `CatalogSpec` the equivalent `.config()` keys produce — `assert_eq!`-identical against the measured Glue block and against native `memory` / `postgres` blocks vs the flat path. | `a_toml_catalog_block_matches_the_equivalent_config_calls_byte_for_byte`, `native_type_catalog_blocks_match_the_flat_config_path` | **PROVEN** | Red first (step 2 below), green in the step-2 run: `40 passed; 0 failed`. The TOML block is joined into `repark.sql.catalog.<name>.<prop>` keys and parsed by `parse_catalog_specs` itself, so `io-impl` is dropped and `catalog-impl` consumed exactly as on the flat path; the `assert_eq!` covers name, kind and the full props map. |
+| C-011 | The Java-class spelling and the native `type` spelling of one catalog produce the same spec (`CatalogKind::Glue`, `CatalogKind::S3Tables`); the S3 Tables warehouse-ARN translation fires on both spellings. | `java_class_and_native_type_spellings_produce_the_same_spec` | **PROVEN** | Red first (step 2 below); green in the step-2 run. Pairs: `catalog-impl = "…GlueCatalog"` ↔ `type = "glue"`, and `catalog-impl = "…S3TablesCatalog"` ↔ `type = "s3tables"` with the ARN as `warehouse` on both sides so the prop sets match; `table_bucket_arn` is asserted present from the ARN translation. |
+| C-012 | `[<profile>.database.<kind>.<name>]` parses into the crate-private `SourceSpec` (`postgres \| sqlserver \| trino`), carrying name, kind and connection props as a `BTreeMap<String, String>`. | `database_tables_parse_into_source_specs` | **PROVEN** | Red first (step 2 below); green in the step-2 run. One profile with all three kinds; each source found with its `SourceKind` and props asserted; `catalogs` empty on the same profile. |
+| C-013 | An unknown database kind refuses loud naming the key path; any other spelling (including capitalization) refuses. | `an_unknown_database_kind_refuses_naming_the_key_path` | **PROVEN** | Red first (step 2 below); green in the step-2 run. `prod.database.hive` refuses and the message lists `postgres, sqlserver, trino`; `prod.database.Postgres` refuses the same way — exact-spelling match per ruling D-5. |
+| C-014 | Names are unique per profile across the catalog and database families; a collision refuses loud naming both key paths — cross-family and inside the database family. | `a_name_collision_across_the_families_refuses_naming_both_keys`, `a_name_collision_inside_the_database_family_refuses_naming_both_keys` | **PROVEN** | Red first (step 2 below); green in the step-2 run. The cross-family refusal names `default.catalog.acme` and `default.database.postgres.acme`; the within-family pin refuses `prod.database.postgres.acme` vs `prod.database.trino.acme`. |
+| C-015 | Redaction: `redact_config` masks every key `prop_key_is_secret` matches, an unmasked secret never appears in the redacted output, non-secret values stay verbatim, no key is dropped; `SourceSpec`'s `Debug` masks through the same function. | `a_dump_masks_every_key_the_secret_predicate_matches`, `a_source_spec_debug_masks_secret_props` | **PROVEN** | Red first (step 2 below); green in the step-2 run. The dump pin runs the C1-SEC-002 key matrix (13 secret spellings incl. hyphenated and camelCase) plus a non-secret `url`; the Debug pin asserts the password is absent, `***` present, the url verbatim. `redact.rs` calls `catalog_config::prop_key_is_secret` (widened to `pub(crate)` this step) — the predicate is not re-implemented. |
+| C-016 | Wrong shapes refuse loud naming the key path: a non-string catalog prop, a non-string database prop, a non-table catalog slot, a non-table database name slot. | `a_non_string_catalog_prop_refuses_naming_the_key_path`, `a_non_string_database_prop_refuses_naming_the_key_path`, `a_non_table_catalog_slot_refuses_naming_the_key_path`, `a_non_table_database_name_slot_refuses_naming_the_key_path` | **PROVEN** | Red first (step 2 below); green in the step-2 run. Paths asserted: `default.catalog.g.max_connections`, `prod.database.postgres.company_db.port`, `default.catalog.m`, `prod.database.postgres.company_db`. TOML scalars are never silently stringified. |
+| C-017 | Loud guards on catalog names: a block carrying no properties refuses, and a dotted catalog name refuses instead of silently re-splitting through the flat-key bridge. | `a_catalog_block_carrying_no_properties_refuses`, `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` | **PROVEN** | Red first (step 2 below); green in the step-2 run. An empty `[default.catalog.ghost]` refuses naming the path (flat config has no equivalent — a silent ignore would vanish the catalog); `[default.catalog."a.b"]` refuses naming `default.catalog.a.b` (flat keys would alias it to catalog `a`). |
 
 VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED (6 from step 1, C-007/C-008/C-009 from step 1b).
+VERDICT (step 2, 2026-09-09): 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED (C-010…C-017 appended this step).
 
 ## Red first
 
@@ -105,6 +114,38 @@ interpolation (`$42`), the bare `$$` stays doubled, and the unterminated referen
 through instead of refusing. `a_dollar_without_a_brace_is_left_alone` passed in the same run,
 unchanged.
 
+## Red first — step 2 (sources.rs + redact.rs)
+
+The 15 step-2 pins were written into `tests.rs` first and the run was taken against the
+seed's one-byte `sources.rs` / `redact.rs` placeholders; only then were the two files
+implemented. Red run: `cargo test -p repark-core config_file`, 2026-09-09 — a compile
+refusal, the same honest red class as step 1: the placeholders expose none of the names the
+pins import.
+
+```text
+error[E0432]: unresolved import `super::redact::redact_config`
+  --> crates/repark-core/src/config_file/tests.rs:11:5
+   |
+11 | use super::redact::redact_config;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `redact_config` in `config_file::redact`
+
+error[E0432]: unresolved imports `super::sources::SourceKind`, `super::sources::SourceSpec`, `super::sources::profile_sources`
+  --> crates/repark-core/src/config_file/tests.rs:12:22
+   |
+12 | use super::sources::{SourceKind, SourceSpec, profile_sources};
+   |                      ^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^^^ no `profile_sources` in `config_file::sources`
+   |                      |           |
+   |                      |           no `SourceSpec` in `config_file::sources`
+   |                      no `SourceKind` in `config_file::sources`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `repark-core` (lib test) due to 2 previous errors
+```
+
+After implementing the two files the same command returns green:
+`test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`
+(25 inherited pins + 15 step-2 pins).
+
 ## Gates
 
 | Command | Result |
@@ -121,6 +162,13 @@ tree change in this round outside the inherited diff is this ledger plus the two
 |---|---|
 | `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (24 step-1 pins, two renamed under R-14, one escape pin added) |
 | `make verify` | exit 0 — 48 × `test result: ok`, 0 FAILED; `All checks passed!` (ruff check); `809 files already formatted` (ruff format) |
+
+## Gates — step 2 (sources.rs + redact.rs)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (25 inherited pins + 15 step-2 pins) |
+| `make verify` | exit 0 — 48 × `test result: ok`, 0 FAILED; repark-core lib suite `277 passed` (the 40 `config_file` pins included); `All checks passed!` (ruff check); `809 files already formatted` (ruff format) |
 
 ## Pins
 
@@ -153,6 +201,21 @@ All pins live in `crates/repark-core/src/config_file/tests.rs`.
 | `a_double_dollar_alone_renders_a_single_dollar` (step 1b) | C-007 |
 | `an_empty_variable_name_refuses_naming_the_path` | C-006 |
 | `interpolation_reaches_array_elements` | C-006 |
+| `a_toml_catalog_block_matches_the_equivalent_config_calls_byte_for_byte` (step 2) | C-010 |
+| `native_type_catalog_blocks_match_the_flat_config_path` (step 2) | C-010 |
+| `java_class_and_native_type_spellings_produce_the_same_spec` (step 2) | C-011 |
+| `database_tables_parse_into_source_specs` (step 2) | C-012 |
+| `an_unknown_database_kind_refuses_naming_the_key_path` (step 2) | C-013 |
+| `a_name_collision_across_the_families_refuses_naming_both_keys` (step 2) | C-014 |
+| `a_name_collision_inside_the_database_family_refuses_naming_both_keys` (step 2) | C-014 |
+| `a_dump_masks_every_key_the_secret_predicate_matches` (step 2) | C-015 |
+| `a_source_spec_debug_masks_secret_props` (step 2) | C-015 |
+| `a_non_string_catalog_prop_refuses_naming_the_key_path` (step 2) | C-016 |
+| `a_non_string_database_prop_refuses_naming_the_key_path` (step 2) | C-016 |
+| `a_non_table_catalog_slot_refuses_naming_the_key_path` (step 2) | C-016 |
+| `a_non_table_database_name_slot_refuses_naming_the_key_path` (step 2) | C-016 |
+| `a_catalog_block_carrying_no_properties_refuses` (step 2) | C-017 |
+| `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` (step 2) | C-017 |
 
 ## Decisions
 
@@ -183,11 +246,30 @@ Choices the implementation took that D-5…D-10 did not fix (read from the code,
 | Reach | Interpolation walks nested tables (paths joined with `.`) and arrays (paths as `path[index]`); integer, float, boolean, and datetime values pass through untouched. |
 | Unselected profiles | Interpolation applies to the effective table after the merge, so a missing variable in a profile `REPARK_ENV` did not select never refuses (pinned). |
 
+Choices step 2 took that the card and D-5 did not fix (read from the code, not invented):
+
+| Choice | What the code does |
+|---|---|
+| Catalog bridge | Each `[<profile>.catalog.<name>]` block is joined into `repark.sql.catalog.<name>.<prop>` keys (the repark-native prefix, "accepted as a synonym for new code") and parsed by `parse_catalog_specs` itself — one code path for both sources, byte-identical specs by construction. |
+| Native `type = "rest"` | Refuses loud with `parse_catalog_specs`'s existing unrecognized-value error. `CatalogKind` has no `Rest` variant in this tree; the design plan gives `CatalogKind::Rest` to the REST-catalog card. No variant was invented. |
+| Database kinds | Exact-spelling match on `postgres / sqlserver / trino` per D-5's "any other spelling" — `Postgres` (capitalized) refuses; no case-folding, unlike the catalog `type` path's lowercase folding, which lives in `catalog_config.rs` and is not this step's code. |
+| Non-string props | A non-string TOML value inside a catalog or database block refuses naming the key path; no silent stringification of TOML scalars. |
+| Empty catalog block | `[<profile>.catalog.<name>]` with no properties refuses naming the path — flat config has no equivalent of an empty block, so a silent ignore would vanish the catalog without an error. |
+| Dotted catalog name | A quoted name containing `.` refuses: the flat-key bridge would silently re-split `a.b` into catalog `a`, prop `b.<prop>`. Database names carry no such bridge and are unrestricted. |
+| `SourceSpec` visibility | `pub(crate)` in `config_file/sources.rs` with `#[allow(dead_code)]`, per ruling D-5 — the public API is frozen; step 3 decides what leaves the crate. |
+| `SourceSpec` Debug | Manual, masking secret props through `redact_value` — the C1-SEC-002 pattern `CatalogSpec`'s Debug already sets; equality (`PartialEq`/`Eq`) stays on raw values. |
+| Collision scope | Uniqueness is enforced over the union of both families per profile: cross-family and within-database collisions both refuse naming both key paths (two catalogs can only collide if TOML allowed duplicate headers, which it does not). |
+
 ## Notes for the orchestrator
 
-**Still OPEN:** steps 2–4 of Card CFG-1. `sources.rs` and `redact.rs` are still the seed's
-one-line placeholders; `session.rs` has no `from_config_file`; there is no Python mirror and
-no `docs/guide/repark-toml.md`.
+**Still OPEN:** steps 3–4 of Card CFG-1 (updated 2026-09-09, step 2: `sources.rs` and
+`redact.rs` landed with their 15 pins — step 1's note that they were placeholders is
+superseded). `session.rs` has no `from_config_file`; there is no Python mirror and
+no `docs/guide/repark-toml.md`. For step 3: the dump's `source` column and the
+`conf_dump()` shape are still unwired (`redact_value`/`redact_config` are the pieces to
+call), and `profile_sources` expects the effective, interpolated `Profile` (via
+`profile_from_table` on `effective_table`'s output) so the merge-then-interpolate order the
+step-1 pins hold is preserved.
 
 **The card did not anticipate:** (a) the merge-then-interpolate order is now pinned —
 interpolation sees only the effective table, which silently scopes missing-variable refusals
@@ -212,41 +294,41 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every ruled behaviour is pinned in both directions, not only the happy path — each of the three discovery sources wins in its own fixture and loses in another, an empty REPARK_CONFIG disables discovery with a local file present, a named-but-missing path refuses, the profile merge is asserted on three axes (overlay wins, base-only key survives, sibling joins), and each refusal pin asserts the key path in the message rather than only the failure.
-      artifacts: [crates/repark-core/src/config_file/tests.rs]
+      evidence: Every ruled behaviour is pinned in both directions, not only the happy path — each of the three discovery sources wins in its own fixture and loses in another, an empty REPARK_CONFIG disables discovery with a local file present, a named-but-missing path refuses, the profile merge is asserted on three axes (overlay wins, base-only key survives, sibling joins), and each refusal pin asserts the key path in the message rather than only the failure. Step 2 (2026-09-09) keeps the discipline — the catalog byte-identity is pinned against the measured block under both spellings, all three database kinds are exercised, and every refusal names its key path.
+      artifacts: [crates/repark-core/src/config_file/tests.rs, crates/repark-core/src/config_file/sources.rs]
     - id: AT-2
       status: N/A
-      justification: No numeric or performance claim is made; step 1 is a parser and a lookup order.
+      justification: No numeric or performance claim is made; step 1 is a parser and a lookup order, and step 2's bridge and redaction add none.
     - id: AT-3
       status: ATTACKED
-      evidence: The failure paths ARE the subject — a missing file, a missing variable, an unknown key at three depths, a non-table where a table is required, an absent profile named by REPARK_ENV — and each is pinned on its message content, not just its Err-ness.
-      artifacts: [crates/repark-core/src/config_file/tests.rs]
+      evidence: The failure paths ARE the subject — a missing file, a missing variable, an unknown key at three depths, a non-table where a table is required, an absent profile named by REPARK_ENV — and each is pinned on its message content, not just its Err-ness. Step 2 (2026-09-09) adds the same class of pins for the source families — unknown kind, collision across families, non-string prop, non-table slot, empty catalog block, dotted catalog name — each asserting its key path.
+      artifacts: [crates/repark-core/src/config_file/tests.rs, crates/repark-core/src/config_file/sources.rs]
     - id: AT-4
       status: ATTACKED
-      evidence: Ordering is pinned where it is load-bearing: discovery is first-hit-wins across three sources, and the merge-then-interpolate order is pinned by the test that a missing variable in an UNSELECTED profile does not refuse. No shared state exists — discovery takes its environment as a parameter, so no pin mutates the process environment and the suite is parallel-safe.
+      evidence: Ordering is pinned where it is load-bearing: discovery is first-hit-wins across three sources, and the merge-then-interpolate order is pinned by the test that a missing variable in an UNSELECTED profile does not refuse. No shared state exists — discovery takes its environment as a parameter, so no pin mutates the process environment and the suite is parallel-safe. Step 2 adds no state: profile_sources reads a Profile and returns specs.
       artifacts: [crates/repark-core/src/config_file/discovery.rs, crates/repark-core/src/config_file/tests.rs]
     - id: AT-5
       status: ATTACKED
-      evidence: The one privileged-ish action is reading a path from the environment, and it is bounded — a path named by REPARK_CONFIG that does not exist refuses instead of falling through to a different file, so a stale variable cannot silently load the wrong configuration. No secret is read, printed or logged in this step; redaction is step 2's file and is still a placeholder.
-      artifacts: [crates/repark-core/src/config_file/discovery.rs]
+      evidence: The one privileged-ish action is reading a path from the environment, and it is bounded — a path named by REPARK_CONFIG that does not exist refuses instead of falling through to a different file, so a stale variable cannot silently load the wrong configuration. No secret is read, printed or logged in this step. Step 2 (2026-09-09) makes redaction real — redact_config over prop_key_is_secret masks the C1-SEC-002 key matrix (pinned: an unmasked secret never appears in the redacted output), and SourceSpec's Debug masks through the same function, so connection credentials do not leak through Debug either.
+      artifacts: [crates/repark-core/src/config_file/discovery.rs, crates/repark-core/src/config_file/redact.rs, crates/repark-core/src/config_file/sources.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: The hole a config loader opens is silent acceptance, and it is closed at every level — serde's deny_unknown_fields at the document root plus typed allowlists for the display and session tables, each refusing with the full key path. A value in the wrong shape (a non-table where a table is required) refuses rather than being ignored.
-      artifacts: [crates/repark-core/src/config_file/profile.rs]
+      evidence: The hole a config loader opens is silent acceptance, and it is closed at every level — serde's deny_unknown_fields at the document root plus typed allowlists for the display and session tables, each refusing with the full key path; a value in the wrong shape refuses rather than being ignored. Step 2 (2026-09-09) closes the new holes the same way — an empty catalog block, a dotted catalog name that the flat-key bridge would silently re-split, a non-string prop that would be silently stringified elsewhere, and an unknown database spelling all refuse naming the key path.
+      artifacts: [crates/repark-core/src/config_file/profile.rs, crates/repark-core/src/config_file/sources.rs]
     - id: AT-7
       status: N/A
       justification: No hot path and no resource behaviour; the loader reads one small file once at session construction, and is not wired into the builder until step 3.
     - id: AT-8
       status: ATTACKED
-      evidence: The two new upstream dependencies are the orchestrator's seed commit, not the worker's, and are the versions the card names (serde 1.0.229, toml 0.8.23); Cargo.lock was refreshed by the build. The public surface is unchanged — the module is crate-private and its items carry allow(dead_code) precisely because nothing calls them until step 3.
+      evidence: The two new upstream dependencies are the orchestrator's seed commit, not the worker's, and are the versions the card names (serde 1.0.229, toml 0.8.23); Cargo.lock was refreshed by the build. The public surface is unchanged — the module is crate-private and its items carry allow(dead_code) precisely because nothing calls them until step 3. Step 2 (2026-09-09) honours the freeze — SourceSpec is pub(crate) per ruling D-5, and the only edit outside the family is the authorized one-word widening of prop_key_is_secret to pub(crate).
       artifacts: [Cargo.toml, crates/repark-core/Cargo.toml]
     - id: AT-9
       status: ATTACKED
-      evidence: Diagnosability is the point of every refusal in this step: each message names the key path, and the missing-variable refusal names both the variable and the path it sat under. The pins assert those strings, so a wording regression is red.
-      artifacts: [crates/repark-core/src/config_file/interpolate.rs]
+      evidence: Diagnosability is the point of every refusal in this step: each message names the key path, and the missing-variable refusal names both the variable and the path it sat under. The pins assert those strings, so a wording regression is red. Step 2 (2026-09-09) follows suit — the collision refusal names BOTH colliding key paths, and the unknown-kind refusal lists the accepted spellings.
+      artifacts: [crates/repark-core/src/config_file/interpolate.rs, crates/repark-core/src/config_file/sources.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: The red was re-established honestly after the implementing session was lost — the four implementation files stashed with the pins left in place, and the recorded red is the compile refusal (E0432 x3) that the seed's placeholders produce, pasted verbatim. No test was edited to manufacture it.
+      evidence: The red was re-established honestly after the implementing session was lost — the four implementation files stashed with the pins left in place, and the recorded red is the compile refusal (E0432 x3) that the seed's placeholders produce, pasted verbatim. No test was edited to manufacture it. Step 2 (2026-09-09) ran its 15 new pins against the untouched empty placeholders first — the E0432 x2 compile refusal is recorded verbatim below the step-1b red — and only then implemented.
       artifacts: [crates/repark-core/src/config_file/tests.rs]
   complete: true
 ```

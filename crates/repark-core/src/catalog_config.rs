@@ -66,7 +66,7 @@ impl std::fmt::Debug for CatalogSpec {
 }
 
 /// Whether a catalog property key's **value** should be redacted in Debug output (C1-SEC-002).
-fn prop_key_is_secret(key: &str) -> bool {
+pub(crate) fn prop_key_is_secret(key: &str) -> bool {
     // Hyphens and dots become underscores so dotted and hyphenated keys share secret needles.
     let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
     // Underscores are stripped so camelCase and one-word keys share secret needles with snake_case.
