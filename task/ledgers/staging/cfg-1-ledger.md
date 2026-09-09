@@ -252,6 +252,15 @@ tree change in this round outside the inherited diff is this ledger plus the two
 | `.venv/bin/python docs/examples/session/config_file.py` | exit 0 — the new covering example runs end to end |
 | `make verify` | exit 0 — full gate green (clippy, panic-ban, DAG, lib-rs, file sizes, ruff, example coverage, ledgers, ledger grammar, docs, manifest, workspace tests) |
 
+## Gates — audit follow-up (ceiling DOWN ratchet)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-python` | exit 0 — lib `59 passed`, bindings `25 passed`, 0 FAILED (identical counts before and after the `drain_arrow_c_stream` move — the move is pure) |
+| `python3 scripts/check_rust_file_size.py` | exit 0 — `442 files clean (default ceiling 1000; 36 exceptions)`; `session.rs` row now 1128 |
+| `make verify` | exit 0 — full gate green |
+| `make py-test-parity-cap` | exit 0 — `23 passed` |
+
 ## Pins
 
 All pins live in `crates/repark-core/src/config_file/tests.rs`.
@@ -371,7 +380,7 @@ Choices step 3 took that the card and the round brief did not fix (read from the
 | Test battery split | `tests.rs` (40 pins) → `tests/mod.rs` + `tests/wiring.rs` (7 step-3 pins) when the battery passed the 1,000-line ceiling — stage pins versus wiring pins, no pin moved or edited. |
 | Facade fold placement | The fold lives in `session_configuration.py` as `fold_config_file_into_builder` and calls only the public `Builder.config` — the one choke point from the brief. Absent-keys-only (builder wins regardless of call order); `repark.display.style` aliases compare case-insensitively, every other key exactly. The pairs arrive unredacted from the native `config_file_pairs` static because they feed `.config()` like any other pairs; `getAll` redacts on read exactly as for builder-set secrets. |
 | Resolver move | `Builder._lookup_int` + the three `_resolve_*` knob resolvers moved to `session_configuration.py` (which already owns the key tuples) as config-dict functions, verbatim bodies. The sanctioned seam for the `session_core.py` ceiling: 2411 → 2306, ratcheted down in both baseline tables plus the CAP-1 mirror. `_resolve_display_style` stays on the Builder (pins call it directly). |
-| Baseline raise, stated reason | `crates/repark-python/src/session.rs` 1177 → 1198: the ruled `config_path` argument on `PyReparkSession::new` plus the `config_file_pairs` static the facade fold reads through — both land on the `#[pymethods]` block, which cannot split — plus the eight inline-test call sites that grew the sixth argument (some wrapped past 100 columns). Same count in both baseline tables plus the CAP-1 mirror; flagged for owner ratification at merge. |
+| Baseline DOWN, no approval needed | `crates/repark-python/src/session.rs` 1177 → 1128: the ruled `config_path` argument plus the `config_file_pairs` static are paid for by moving `drain_arrow_c_stream` (with its capsule-name constant and imports) verbatim to `arrow_export.rs` — the sibling module for exactly this, named in the audit. Move-only otherwise: the two `pyo3::types` method traits the prelude glob used to provide are now explicit imports. Same count in both baseline tables plus the CAP-1 mirror (this row replaces the raise recorded before the audit). |
 | Clippy repairs (no behavior change) | The true clippy recipe (`-A clippy::disallowed_methods`; my first local run omitted it and showed thousands of test-target false errors on a clean tree) found three real step-3 findings: `build()` over the 100-line function ceiling → the file-merge plus knob-validation preamble extracted to the private `prepare_build_state` helper (validation order and outcomes unchanged); `flatten_conf_into`'s `prefix: String` → `&str`; the externally reachable `config_file_pairs` (core) and the `config_file_pairs` binding static each carry the compiler-mandated three-line `# Errors` doc — the two places the round's no-comment fence yields to a deny-by-default gate, recorded here instead of hidden behind an allow (the fence grep for this slice shows only these six lines plus three re-anchored doc pairs). |
 
 ## Notes for the orchestrator

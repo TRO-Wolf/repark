@@ -122,7 +122,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split action methods from plan-building methods without moving row work to Python.",
     ),
     "crates/repark-python/src/session.rs": (
-        1198,
+        1128,
         "PyO3 session construction and query entry points share one module.",
         "Split configuration bindings from query and catalog bindings.",
     ),

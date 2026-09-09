@@ -1,19 +1,23 @@
 use std::cell::Cell;
+use std::ffi::CStr;
 use std::sync::Arc;
 
 use arrow::array::{Array, RecordBatch, RecordBatchReader};
 use arrow::compute::cast;
 use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
 use arrow::error::ArrowError;
+use arrow::ffi_stream::{ArrowArrayStreamReader, FFI_ArrowArrayStream};
 use datafusion::physical_plan::SendableRecordBatchStream;
 use datafusion::prelude::DataFrame;
 use futures::StreamExt;
-use pyo3::Python;
+use pyo3::types::{PyAnyMethods, PyCapsule, PyCapsuleMethods};
+use pyo3::{Bound, PyAny, PyResult, Python};
 use repark_core::PoolRefusalLog;
 use tokio::runtime::Runtime;
 
 use crate::dataframe::STREAM_POLL_NO_DETACH;
 use crate::fence::{fence_stream_poll, fenced_panic_detail};
+use crate::to_py_err;
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
@@ -259,6 +263,73 @@ fn coerce_type_views(data_type: &DataType, depth: usize) -> DataType {
         },
         _ => data_type.clone(),
     }
+}
+
+/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path.
+const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
+
+/// Resolve an Arrow C Stream capsule or exporter and drain non-empty batches.
+/// # Errors
+/// Returns `TypeError` for a missing exporter or non-capsule exporter result.
+pub(crate) fn drain_arrow_c_stream(
+    obj: &Bound<'_, PyAny>,
+) -> PyResult<(arrow::datatypes::SchemaRef, Vec<RecordBatch>)> {
+    // Keep the capsule alive for the import: `from_raw` moves the FFI stream and nulls release.
+    let capsule_obj: Bound<'_, PyAny> = if obj.is_instance_of::<PyCapsule>() {
+        obj.clone()
+    } else {
+        let exporter = obj.getattr("__arrow_c_stream__").map_err(|_| {
+            pyo3::exceptions::PyTypeError::new_err(
+                "register_arrow_stream_as_temp_view: object is not an Arrow C Stream exporter \
+                 (missing __arrow_c_stream__) and is not an arrow_array_stream PyCapsule",
+            )
+        })?;
+        // Call the optional-schema protocol without negotiation and preserve exporter errors.
+        exporter.call0()?
+    };
+    let capsule = capsule_obj.cast::<PyCapsule>().map_err(|error| {
+        pyo3::exceptions::PyTypeError::new_err(format!(
+            "register_arrow_stream_as_temp_view: expected arrow_array_stream PyCapsule: {error}"
+        ))
+    })?;
+
+    let pointer = capsule
+        .pointer_checked(Some(ARROW_STREAM_CAPSULE_NAME))
+        .map_err(|error| {
+            repark_core::Error::DataFusion(format!(
+                "register_arrow_stream_as_temp_view: invalid arrow_array_stream capsule: {error}"
+            ))
+        })
+        .map_err(to_py_err)?
+        .as_ptr()
+        .cast::<FFI_ArrowArrayStream>();
+
+    // SAFETY: `pointer_checked` verifies the capsule name and non-null pointer.
+    let ffi_stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
+    let mut reader = ArrowArrayStreamReader::try_new(ffi_stream)
+        .map_err(|error| {
+            repark_core::Error::DataFusion(format!(
+                "register_arrow_stream_as_temp_view: open Arrow C Stream failed: {error}"
+            ))
+        })
+        .map_err(to_py_err)?;
+
+    let schema = reader.schema();
+    let mut batches = Vec::new();
+    // Python-backed streams re-enter the interpreter on every `get_next`.
+    for batch_result in &mut reader {
+        let batch = batch_result
+            .map_err(|error| {
+                repark_core::Error::DataFusion(format!(
+                    "register_arrow_stream_as_temp_view: Arrow C Stream batch failed: {error}"
+                ))
+            })
+            .map_err(to_py_err)?;
+        if batch.num_rows() > 0 {
+            batches.push(batch);
+        }
+    }
+    Ok((schema, batches))
 }
 
 #[cfg(test)]
