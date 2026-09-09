@@ -30,6 +30,7 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
+from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
     _apply_ordered_window_pandas_udf,
     _map_in_pandas_arrow_batches,
@@ -3400,34 +3401,30 @@ class DataFrame:
 
     melt = unpivot
 
-    def explain(
-        self,
-        extended: bool | str | None = None,
-        mode: str | None = None,
-    ) -> None:
-        """Print the plan (PySpark ``DataFrame.explain``). Modes, not plan text, are oracle-pinned.
-
-        Disclosed: plan text diverges from Spark (DataFusion plans).
-
-        ``extended=True`` is **not** ``EXPLAIN ANALYZE`` (that executes the plan — and would
-        hang on e.g. ``range(10e10)``). Extended only requests a fuller plan print; ANALYZE is
-        reserved for ``mode`` values that explicitly request cost or analysis.
-        """
+    def _explain_text(self, extended: bool | str | None = None, mode: str | None = None) -> str:
+        """Build the plan text :meth:`explain` prints (Spark headers, DataFusion plan bodies)."""
+        if isinstance(extended, str) and mode is None:
+            extended, mode = None, extended
+        mode = "extended" if extended is True else "simple" if mode is None else str(mode)
+        lowered = mode.lower()
+        if lowered not in _EXPLAIN_SECTION_PLAN and "analyze" not in lowered:
+            supported = ", ".join(_EXPLAIN_SECTION_PLAN)
+            raise PySparkValueError(f"unsupported explain mode {mode!r}; modes: {supported}")
+        selected = lowered if lowered in _EXPLAIN_SECTION_PLAN else "cost"
+        sql, keys = _EXPLAIN_SECTION_PLAN[selected]
         self._ensure_alive()
         view = scratch_view_name(self._session, "__repark_explain_")
         self.create_or_replace_temp_view(view)
         try:
-            # Only modes that Spark documents as executing get ANALYZE. extended=True is print-only.
-            analyze = False
-            if mode is not None:
-                mode_upper = str(mode).upper()
-                analyze = mode_upper in {"COST"} or "ANALYZE" in mode_upper
-            prefix = "EXPLAIN ANALYZE" if analyze else "EXPLAIN"
-            plan = self._spawn(self._session.sql(f"{prefix} SELECT * FROM {view}"))
-            for row in plan.collect():
-                print(row)
+            plan = self._spawn(self._session.sql(f"{sql} SELECT * FROM {view}"))
+            rows = [(row["plan_type"], row["plan"]) for row in plan.toLocalIterator()]
         finally:
             self._session.drop_temp_view(view)
+        return _render_explain_sections(selected, keys, rows)
+
+    def explain(self, extended: bool | str | None = None, mode: str | None = None) -> None:
+        """Print the plan (PySpark ``DataFrame.explain``); plan text is DataFusion's (disclosed)."""
+        print(self._explain_text(extended, mode))
 
     def toJSON(self) -> DataFrame:  # noqa: N802 — PySpark camelCase
         """Unsupported: ``toJSON`` / engine ``to_json`` not wired (R- loud)."""

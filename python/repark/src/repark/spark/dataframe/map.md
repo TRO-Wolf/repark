@@ -54,10 +54,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `_repr_html_`, and `_preview_tail_rows` stay as one-line wrappers; the six
   private helpers leave the class, so the package and core surfaces gain
   exactly the one module name. `printSchema` and `__str__` stay: they share no
-  helper with the moved code. The new binding shadows a join-side loop
+  helper with the moved code.   The new binding shadows a join-side loop
   variable, so that local is renamed `display_name` (ruff F402,
   behavior-neutral, +2 lines for the wrapped f-string).
   pins: dfcore-4b/C-001, C-002, C-003, C-004
+  DF-EXPLAIN-1 (2026-09-08): `explain` renders Spark section headers over verbatim DataFusion
+  plan text through the new `_explain_text` (same `(extended, mode)` shape, returns `str`,
+  prints and returns `None`); rows come through `toLocalIterator`, which the spy pin holds out
+  of `DataFrame.collect`. The rendering support lives in `explain.py` per the D-5 ruling and
+  the exact baseline ratchets 4539 → 4536 in the same commit. The CAP-1 freeze pins absorb the
+  split: `EXPECTED_DATAFRAME_DIR` gains `_explain_text`, the package gains the `explain`
+  submodule, and the frozen core/package surfaces gain the two private imports.
+  pins: df-explain-1/C-003
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -179,10 +187,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   head row; the tail preview engine-skips and never lets a negative skip
   reach the native `usize`. Type labels come from the head Arrow schema. The
   styled renderer calls the tail preview through the frame (not module-local)
-  so the class-level collect spy keeps firing. The module carries its own
+  so the class-level collect spy keeps firing.   The module carries its own
   logger; record names move `core` → `display` while message text and levels
   stay identical. pins: dfcore-4b/C-004
   pins: dfcore-6/C-001, C-002, C-003, C-004
+- `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
+  section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
+  line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
+  `_render_explain_sections` helper. Plan text stays verbatim — the measured `logical_plan`
+  text does not end in a newline while the physical, tree, and metrics texts do, so the blank
+  line between sections is added conditionally. `formatted` takes every returned row under the
+  physical header (`EXPLAIN FORMAT TREE` measured one `physical_plan` row), and `cost` /
+  any mode containing `analyze` runs `EXPLAIN ANALYZE`, whose measured rows carry
+  `plan_type='Plan with Metrics'`. Unknown modes raise `PySparkValueError` naming the five
+  modes. pins: df-explain-1/C-001, C-002, C-004, C-005
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import

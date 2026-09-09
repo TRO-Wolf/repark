@@ -31,7 +31,9 @@ illustrative. A claim with no verified basis does not go in.
   size, the one-truth memory pool, the Iceberg catalog caches (`metadataCache` /
   `metadataCacheEntries` / `manifestCacheBytes`, all build-time, memory-catalog-only),
   `repark.display.style`.
-- [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; select /
+- [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; the
+  `explain` sections (Spark headers over verbatim DataFusion plan text, the five modes, and
+  which of them execute); select /
   filter / groupBy / joins (incl. the semi family and the conditionless refusal, G4-3) / window
   functions; the action table (`collect` / `to_arrow` / `to_arrow_batches` / `toPandas` /
   `to_polars` / `toLocalIterator`) with peak-memory cost; ingestion shapes and map-vs-struct dict
