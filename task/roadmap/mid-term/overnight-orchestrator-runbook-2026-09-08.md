@@ -14,6 +14,7 @@ and [../../../AGENTS.md](../../../AGENTS.md) wins on everything.
 | G-1 Squash-merge on green CI for PRs whose diff stays inside the card's Home files. | Open the PR, flip it ready, stop; the owner merges in the morning. |
 | G-2 Decision authority per §6 (bounded). | Park the unit on the first hand-back that needs a decision. |
 | G-3 A stop time (local) and a usage ceiling. | Stop at 03:00 local, or on the first rate-limit or usage-limit signal, whichever comes first. |
+| G-5 Seed commits: the orchestrator may make a card's step-0 dependency commit itself when the card spells the exact lines (CFG-1 D-3 does). | Park the card until the owner seeds it. |
 | G-4 Which launchers may run: `oc-worker` (GLM), `muse-worker` (Muse), `grok-worker` (Grok, only when the owner has lifted the quota pause). | GLM and Muse only. |
 
 The owner launches the session (§9). The session never launches another orchestrator.
@@ -88,9 +89,15 @@ is running or §7 has steps left and §8 has not fired:
 until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 30; done
 ```
 
-Concurrency: at most **two** worker lanes at once, and never two that build natives at the
-same time (`pgrep -f "cargo|maturin" | wc -l` must be below 3 before a launch); one JVM on the
-box (`pgrep -f java` empty before any live-Spark step).
+Concurrency: at most **two** worker lanes at once. A fresh clone's first Python round runs
+`maturin develop`, so before launching any lane wait until no build is running:
+`while pgrep -f "cargo|maturin" >/dev/null; do sleep 30; done`. A live-Spark step (any
+`REPARK_PARITY_LIVE=1` measurement) runs alone: no other lane open, `pgrep -f java` empty, and the
+brief exports `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (the default `java` is 11).
+
+Tier note from night 1: the GLM gateway dropped the socket on three long rounds and each lost its
+unwritten work. Rounds expected to exceed ~30 tool calls (measurements, multi-file Rust) go to
+Muse; every brief says *write the file as you go, commit when a section is complete*.
 
 ## 4. Read the hand-back, audit, decide
 
@@ -172,16 +179,18 @@ Must park the lane (leave the branch pushed, PR in draft, ledger clause `OPEN`, 
 
 ## 7. Order for one night
 
-Open lanes in this order, two at a time, each to its PR before the next opens:
+Night 1 (2026-09-08/09) closed DF-EXPLAIN-1, BALLISTA-AUDIT-0 and DISPLAY-POLARS-1 step 1 and
+parked SQL-DESCRIBE-1 at step 2. Night 2's order, two lanes at a time, each to its PR before
+the next opens; a lane whose card is fully merged is skipped:
 
-1. DF-EXPLAIN-1 (M, 1–2 rounds) and SQL-DESCRIBE-1 step 1 (M, measurement; needs the JVM, so it
-   runs while no other lane builds natives).
-2. BALLISTA-AUDIT-0 step 1 (M, no repo code; its clone is of upstream under `/tmp/oc-ballista`).
-3. DISPLAY-POLARS-1 steps 1–3 (M) after DF-EXPLAIN-1 merges.
-4. CFG-1 steps 1–2 (M) after the orchestrator's seed commit.
-
-Tier I steps (Muse) may run overnight only when G-4 names Muse; otherwise stop the card at its
-last M step and park.
+1. SQL-DESCRIBE-1 steps 2–3 (Muse) on the existing branch `feat/sql-describe-1` (PR #428,
+   draft): clone that branch, not `main`; D-3 is ruled (R-9). Runs alone while it needs the JVM.
+2. LEDGER-READING-1 steps 1–2 (GLM) and PREFLIGHT-PARITY-1 (GLM): no natives beyond the
+   facade build, parallel-safe with each other.
+3. DISPLAY-POLARS-1 steps 2–3 (GLM) on a new branch from `main`.
+4. CFG-1: the seed commit under G-5, then steps 1–2 (GLM); step 3 (Muse) only if time remains.
+5. PROFILES-1 step 0 (GLM probe, report only) and AP-0 (GLM script) when a slot is free.
+6. DF-EAGER-1 step 1 (GLM pins) after DISPLAY-POLARS-1 step 3 merges.
 
 ## 8. Stop conditions and the morning report
 
@@ -216,7 +225,7 @@ systemd-run --user --collect --quiet --unit="overnight-$(date -u +%Y%m%dT%H%M)" 
   -p WorkingDirectory=$HOME/CodeRepos/LocalRepark/repark \
   -p StandardOutput=append:/tmp/overnight.log -p StandardError=append:/tmp/overnight.log \
   -- claude -p --model opus --effort medium --max-turns 400 --dangerously-skip-permissions \
-     "Read /tmp/repark-main/task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. The slate it names is in the same directory. Grants tonight: G-1 yes, G-2 yes, G-3 stop 03:00 local, G-4 GLM and Muse. Start at §1. Never end a turn while a lane is running; wait in the foreground per §3."
+     "Read /tmp/repark-main/task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. The slate it names is in the same directory. Grants tonight: G-1 yes, G-2 yes, G-3 stop <time> local, G-4 GLM and Muse, G-5 yes. Start at §1. Never end a turn while a lane is running; wait in the foreground per §3."
 ```
 
 Effort: `medium` for GLM-only nights (the audits are checklist work); `high` when G-4 includes
