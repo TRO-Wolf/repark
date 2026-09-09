@@ -33,6 +33,15 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
+  `explain` pins — stdout carries plan text and no `Row(` repr, the `== Physical Plan ==`
+  header, a select+filter+withColumn plan of at least three lines, extended ordering the
+  optimized-logical header before the physical one, formatted carrying DataFusion's
+  box-drawing tree glyphs (`┌`, `└`), an unknown mode raising `PySparkValueError` naming the
+  five modes, and a spy holding `DataFrame.collect` out of `explain`. The string pins assert
+  `_explain_text(extended, mode)`; one smoke test goes through the print. Step-1 red on base
+  `f00ed9ea` is recorded in the ledger; step 2 implements D-1..D-3 in `core.py`.
+  pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_perf_approxpct_1.py](test_perf_approxpct_1.py) — **PERF-APPROXPCT-1 (2026-09-05):**
   the sketch pins. The accuracy matrix (default/100/10/2 × scalar/array × NULLs ×
   duplicate-heavy × skewed × int/float/decimal) against values recorded from live PySpark
