@@ -25,10 +25,10 @@ declines it (a dated ruling in the intake, then the archive).
   the G-2 grant, the two questions parked for the owner, the `JAVA_HOME` and CAP-1-mirror
   environment findings, and why GLM's dropped sockets moved the long rounds to Muse.
 - [overnight-report-2026-09-09-night2.md](overnight-report-2026-09-09-night2.md) — **what the
-  second unattended run did (morning of 2026-09-09, 05:26–09:00):** two units merged
-  (LEDGER-READING-1 #432, SQL-DESCRIBE-1 #428), PREFLIGHT-PARITY-1 open on green-pending CI
-  (#433), DISPLAY-POLARS-1 step 2 parked because D-5's probe reds the protected full-collect
-  pin (#434 draft); the six decisions taken under G-2, the five questions parked for the owner
+  second unattended run did (morning of 2026-09-09, 05:26–09:00):** three units merged
+  (LEDGER-READING-1 #432, SQL-DESCRIBE-1 #428, PREFLIGHT-PARITY-1 #433), DISPLAY-POLARS-1
+  step 2 parked because D-5's probe reds the protected full-collect pin (#434 draft); the
+  six decisions taken under G-2, the five questions parked for the owner
   (including that `make check-docs-links` does not exist), and five corrections the runbook's
   §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
   directory, and the CAP-1 map.md merge conflict every lane branch now hits.

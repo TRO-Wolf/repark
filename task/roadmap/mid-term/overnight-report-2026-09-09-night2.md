@@ -13,10 +13,10 @@ the night of 2026-09-08/09; this is the second run of the same calendar morning,
 |---|---|---|---|---|---|---|
 | LEDGER-READING-1 | 1–2 | GLM 5.3 Flash | 2 | done | [#432](https://github.com/TRO-Wolf/repark/pull/432) | **merged** `e24f4c68` |
 | SQL-DESCRIBE-1 | 2–3 | Muse Spark 1.3 | 3 (one a rejection) | done | [#428](https://github.com/TRO-Wolf/repark/pull/428) | **merged** `7db61bfa` |
-| PREFLIGHT-PARITY-1 | 1 | GLM 5.3 Flash | 1 | done | [#433](https://github.com/TRO-Wolf/repark/pull/433) | open, CI running at the stop time |
+| PREFLIGHT-PARITY-1 | 1 | GLM 5.3 Flash | 1 | done | [#433](https://github.com/TRO-Wolf/repark/pull/433) | **merged** `f8a9f1ac` |
 | DISPLAY-POLARS-1 | 2 | GLM 5.3 Flash | 1 | implemented, halted | [#434](https://github.com/TRO-Wolf/repark/pull/434) | **parked** — draft, owner ruling needed |
 
-Two merged, one open on green-pending CI, one parked. Worker cost: GLM $0.37 over four rounds;
+Three merged, one parked. Worker cost: GLM $0.37 over four rounds;
 Muse unmetered over three.
 
 Not reached before the stop time, in §7 order: DISPLAY-POLARS-1 step 3, CFG-1 (seed + steps 1–2),
@@ -31,7 +31,7 @@ PROFILES-1 step 0, AP-0, DF-EAGER-1 step 1.
 | 3 | SQL-DESCRIBE-1 step 3 ran on Muse rather than the card's M tier. | Night-1's lesson that long rounds lose work on the GLM gateway; the step carried a live-Spark measurement and the Muse session already held the step-1 capture. |
 | 4 | `python/dbt-repark/tests/test_statement_surface.py` was accepted in the SQL-DESCRIBE-1 diff although the card's Home does not name it. | The old pin asserted the *pre-fix* DataFusion shape (`column_name` / `Utf8`); the fix makes it red by construction. A forced consequence, not scope creep. Flagged in the PR body. |
 | 5 | PREFLIGHT-PARITY-1's ledger was **left in `staging/`** and its departure move reverted. | Its C-005 is an open owner question. §5's rule — if the departure edit is not certain, leave the ledger in staging and say so in the PR body. |
-| 6 | `make preflight` was not re-run by the orchestrator on the PREFLIGHT-PARITY-1 branch. | The worker ran it once, alone, from the commit tree, exit 0 in 14m18s; re-running a 14-minute gate would not have fit before the stop time. CI is the confirming run and the PR body says so. |
+| 6 | `make preflight` was not re-run by the orchestrator on the PREFLIGHT-PARITY-1 branch. | The worker ran it once, alone, from the commit tree, exit 0 in 14m18s; re-running a 14-minute gate would not have fit before the stop time. CI was the confirming run and it passed; the PR body says so. |
 
 ## Parked questions for the owner
 
@@ -47,7 +47,7 @@ PROFILES-1 step 0, AP-0, DF-EAGER-1 step 1.
 2. **DISPLAY-POLARS-1 step 2, scope (#434).** Does the D-5 probe extend to the `duckdb` style, or
    is step 2 polars-only? Recommended: polars-only now, duckdb settled in step 4 where
    `repark.display.max_rows` re-touches the keep-set semantics anyway.
-3. **PREFLIGHT-PARITY-1 C-005 (#433).** Should `AGENTS.md`'s gate-roster sentence name
+3. **PREFLIGHT-PARITY-1 C-005 (#433, merged).** Should `AGENTS.md`'s gate-roster sentence name
    `py-test-parity-cap`, or are `DEVELOPMENT.md` and the root `map.md` the right home? The card
    deliberately left `AGENTS.md` alone. One word closes the clause and the ledger moves.
 4. **`make check-docs-links` does not exist.** LEDGER-READING-1's D-3 and its step-2 gate list both
