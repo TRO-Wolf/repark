@@ -15,6 +15,9 @@ _STAGING = "task/ledgers/staging"
 _UNIT = "u9-demo-charter"
 _LEDGER = f"{_STAGING}/{_UNIT}-ledger.md"
 _TEST = "crates/demo/tests/pins.rs"
+_READING_UNIT = "u11-reading-charter"
+_READING_LEDGER = f"{_STAGING}/{_READING_UNIT}-ledger.md"
+_READING_MARKER_LINE = "**Path:** READING"
 
 _ROWS = """# Charter — U9
 
@@ -43,6 +46,16 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 """
+
+_READING_ROWS = f"""# Charter — U11
+
+{_READING_MARKER_LINE}
+
+| Clause | Proposition | Verdict | Evidence |
+|---|---|---|---|
+| C-001 | The document section exists. | docs: docs/design/session-api.md#the-session | PROVEN |
+"""
+_READING_TEXT = _READING_ROWS + _ATTESTATION
 
 
 def _exceptions() -> dict[str, tuple[int, bool]]:
@@ -131,6 +144,29 @@ def test_unpinned_proven_clause_and_dead_citation_go_red(repo: Path) -> None:
         f"1 PROVEN clause(s) with no `pins: {_UNIT}/C-NNN` citation (ceiling 0): C-002"
         in result.stderr
     )
+
+
+def test_reading_marker_exempts_rule_b(repo: Path) -> None:
+    _write(repo, _READING_LEDGER, _READING_TEXT)
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_reading_rule_b_applies_without_the_marker(repo: Path) -> None:
+    _write(repo, _READING_LEDGER, _READING_TEXT.replace(f"{_READING_MARKER_LINE}\n\n", ""))
+    result = _run(repo)
+    assert result.returncode == 1
+    assert (
+        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
+        in result.stderr
+    )
+
+
+def test_reading_rule_c_still_requires_the_attestation(repo: Path) -> None:
+    _write(repo, _READING_LEDGER, _READING_TEXT.replace(_ATTESTATION, ""))
+    result = _run(repo)
+    assert result.returncode == 1
+    assert f"{_READING_LEDGER}: no COVERAGE_ATTESTATION block" in result.stderr
 
 
 def test_archived_and_completed_clauses_can_be_cited(repo: Path) -> None:

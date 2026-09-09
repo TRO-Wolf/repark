@@ -351,6 +351,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red
   against the real tree. Each test cites the DL-2 clause it pins. The DL-1 file's archive-row
   tests likewise cite the DL-3 clauses (the condense rule).
+  **LEDGER-READING-1 (2026-09-09):** the same scratch tree gains a reading ledger — its
+  `Path` header field set to READING inside the first 40 lines — and three cases: the reading
+  ledger's unpinned `PROVEN` clause passes rule B; the identical ledger without the marker reds
+  with the standing rule-B message; the reading ledger without an attestation block still reds
+  rule C. The new tests carry no inline pins, so the unit's clauses are cited on this line.
+  pins: ledger-reading-1/C-001, C-002, C-003
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans

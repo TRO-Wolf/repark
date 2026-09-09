@@ -210,6 +210,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `collect()` raises `MemoryError`. Seven mutations, seven kills. `risk_tier: elevated`.
   Branch `harden/h3-spill-residue-1`, PR #401.
   pins: h3-spill-residue-1/C-001, C-002, C-003, C-004, C-005
+- [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
+  **LEDGER-READING-1 step 1 (2026-09-09), in flight:** reading units may prove clauses on
+  document evidence (R-10). A staging ledger whose first 40 lines carry the READING value of
+  the `Path` header field is exempt from the grammar gate's rule B; rules A and C stay armed,
+  the reading evidence shape is `docs: <path>#<heading-anchor>` (a convention, not a gate
+  check), and `EXCEPTIONS` is untouched. Step 2 flips BALLISTA-AUDIT-0's twelve clauses to
+  `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
+  pins: ledger-reading-1/C-001, C-002, C-003
 - [perf-agg-avg-1-ledger.md](perf-agg-avg-1-ledger.md) —
   **PERF-AGG-AVG-1 (2026-09-05), in flight:** the `GroupsAccumulator` for the Spark
   `avg` / `try_avg` UDAF (PERF-ANALYSIS-1 slate item 8, candidate 10) — Float64 and
