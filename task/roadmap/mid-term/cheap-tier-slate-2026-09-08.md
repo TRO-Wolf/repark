@@ -29,6 +29,10 @@ Nothing else in this file is required reading for a round.
 | R-10 | **Reading units and pins (2026-09-09):** a ledger whose header says `**Path:** READING` may mark clauses PROVEN on document evidence; the attestation block stays required. | LEDGER-READING-1 |
 | R-11 | **Display probe pin (2026-09-09):** D-5's 11-row probe is right; `test_styled_show_does_not_full_collect` re-pins `max_rows_per_export` to `2 * edge + 1 = 11` for the polars section (still forbids collect-then-slice); step 2 is polars-only, duckdb is settled in step 4. | DISPLAY-POLARS-1 D-5 |
 | R-12 | **Gate roster homes (2026-09-09):** `AGENTS.md`'s roster sentence stays as it is; `DEVELOPMENT.md` and the root `map.md` name new gate members. | PREFLIGHT-PARITY-1, DOCS-LINKS-1 |
+| R-13 | **Bridged frames (2026-09-09):** `show()` on an uncached `mapInArrow` frame renders with the resolved display style, the same renderer `repr` uses; its own card DISPLAY-BRIDGE-1. | DISPLAY-BRIDGE-1 |
+| R-14 | **`repark.toml` `${}` edges (2026-09-09):** `$$` is the escape for a literal `$`; an unterminated `${` refuses loud naming the key path, like a missing variable. CFG-1 step 1b re-pins both before step 4 documents the file. | CFG-1 |
+| R-15 | **Document rounds go to Muse (2026-09-09):** any round expected to produce a document or a ledger with measured evidence runs on Muse; GLM keeps code-and-test rounds. | runbook §3 |
+| R-16 | **Silently accepted config keys (2026-09-09):** the nine `datafusion.*` keys the PROFILES-1 probe found accepted but unread are wired through or refused loud; card CONF-UNREAD-1 after PROFILES-1 step 2. | CONF-UNREAD-1 |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -320,8 +324,8 @@ section), maps.
 | Step | Tier | Do |
 |---|---|---|
 | 1 | M | **Done 2026-09-09 (#429).** D-1 + D-2 only: `default_display_style()`, the env override, both conftests, the split pin. Whole facade suite must stay green (`make py-test-facade`), which proves R-6 holds. |
-| 2 | M | **Resume draft PR #434 (branch `feat/display-polars-1-step2`)**, where GLM already implemented D-5 and halted on the pin; apply R-11 to the pin, re-run the file, flip the PR to ready. D-5: the small-frame single fetch in `_render_styled_show`; pins: a spy proves `count()` is not called for a 7-row frame and is called once for a 12-row frame; existing `test_styled_show_does_not_full_collect` stays green. |
-| 3 | M | D-4: `__repr__`/`_repr_html_` honour the style; pins for `repr(df)` under each style, eagerEval on and off. |
+| 2 | M | **Done 2026-09-09 (#434).** Resume draft PR #434 (branch `feat/display-polars-1-step2`)**, where GLM already implemented D-5 and halted on the pin; apply R-11 to the pin, re-run the file, flip the PR to ready. D-5: the small-frame single fetch in `_render_styled_show`; pins: a spy proves `count()` is not called for a 7-row frame and is called once for a 12-row frame; existing `test_styled_show_does_not_full_collect` stays green. |
+| 3 | M | **Done 2026-09-09 (#439; residue DISPLAY-POLARS-1-S3-Q-001 → DISPLAY-BRIDGE-1).** D-4: `__repr__`/`_repr_html_` honour the style; pins for `repr(df)` under each style, eagerEval on and off. |
 | 4 | I | D-3, D-6, D-7, D-8: the keys, the renderer fidelity, the polars-oracle pins, residues filed. This step is I because the renderer edits cross `plan_collapse.py` and `core.py` and the residue calls need judgement. |
 | 5 | M | Docs: `session-and-conf.md` section rewritten (default polars, the four keys, the env override, the count note now "only past max_rows"); maps; ledger PROVEN. |
 
@@ -382,8 +386,9 @@ profile > default. This card only splits it into rounds and adds the three table
 
 | Step | Tier | Do |
 |---|---|---|
-| 0 | O | Seed commit: workspace deps; the empty module family with `pub fn load() -> Result<ConfigFile>` returning the empty config; `make verify`. |
-| 1 | M | `discovery.rs` + `profile.rs` + `interpolate.rs` with unit tests per ruled step 1–3 (tempdir fixtures; `REPARK_CONFIG` precedence; empty-string disable; deep merge; unknown top-level key path in the error; missing `${VAR}` names the key path). No wiring. |
+| 0 | O | **Done 2026-09-09 (#440, with step 1).** Seed commit: workspace deps; the empty module family with `pub fn load() -> Result<ConfigFile>` returning the empty config; `make verify`. |
+| 1 | M | **Done 2026-09-09 (#440).** `discovery.rs` + `profile.rs` + `interpolate.rs` with unit tests per ruled step 1–3 (tempdir fixtures; `REPARK_CONFIG` precedence; empty-string disable; deep merge; unknown top-level key path in the error; missing `${VAR}` names the key path). No wiring. |
+| 1b | M | **R-14:** in `interpolate.rs`, `$$` → literal `$` and an unterminated `${` refuses loud naming the key path; flip the two step-1 pins, add the escape pin (`$${TOTAL}` → `${TOTAL}` verbatim). |
 | 2 | M | `sources.rs` + `redact.rs` per ruled steps 4–5, tests reuse `catalog_config.rs` fixtures so specs compare byte-identical. |
 | 3 | I | Wiring: `from_config_file` in the builder, precedence merge before `build()`, the dump's `source` column, the Python `config_path` argument and `Builder.configFile`, D-1's three tables applied through the existing `.config()` path. |
 | 4 | M | `python/repark/src/repark/config.py` Pydantic mirror (typed construction only) and its tests; `docs/guide/repark-toml.md` with one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one database source, the display and session tables); maps; ledger. |
@@ -439,7 +444,7 @@ guide, maps.
 
 | Step | Tier | Do |
 |---|---|---|
-| 1 | M | Red-first pins (`test_df_eager_1.py`): `eager` returns a new frame with `_eager_shape` equal to `(count, len(columns))`; source unchanged; `compute is eager`; `lazy` identities per D-3; `repr` of an eager frame does not call `count` (spy) and prints the same table as the lazy one; a CSV read `eager()`ed then the file deleted still answers (materialised); over-limit refuses naming `.eager()`; Spark `collect()` still returns rows; `df.pl.collect()` still returns a polars DataFrame. |
+| 1 | M | **Done 2026-09-09 (#443).** Red-first pins (`test_df_eager_1.py`): `eager` returns a new frame with `_eager_shape` equal to `(count, len(columns))`; source unchanged; `compute is eager`; `lazy` identities per D-3; `repr` of an eager frame does not call `count` (spy) and prints the same table as the lazy one; a CSV read `eager()`ed then the file deleted still answers (materialised); over-limit refuses naming `.eager()`; Spark `collect()` still returns rows; `df.pl.collect()` still returns a polars DataFrame. |
 | 2 | I | Implement D-1…D-6 (reuse `_materialize_cache_if_needed`'s call; do not duplicate the guard). |
 | 3 | M | Guide section "Lazy and eager" with the polars/RePark pair table; maps; ledger. May chain from step 2. |
 
@@ -546,7 +551,7 @@ setting does not move a measurement by more than 5 % stays at the default and is
 
 | Step | Tier | Do |
 |---|---|---|
-| 0 | M | Pass-through probe: set each D-1 key through `.config()`, read it back through `conf_dump()` and through an `EXPLAIN` that would change (for example `prefer_hash_join=false` on a join). Report a table; no edits. |
+| 0 | M | **Done 2026-09-09 (#441; `docs/perf/profiles-1-passthrough-probe-2026-09-09.md`: 11 pass through, 9 accepted but unread, 0 refused → R-16).** Pass-through probe: set each D-1 key through `.config()`, read it back through `conf_dump()` and through an `EXPLAIN` that would change (for example `prefer_hash_join=false` on a join). Report a table; no edits. |
 | 1 | M | The bed script under the parity roster (datasets, queries, timing harness writing a CSV). |
 | 2 | M | The sweep; the measurements document with one table per knob. |
 | 3 | I | The two profiles, the docs, the "no effect" list, the ledger. |
@@ -660,6 +665,56 @@ LEDGER-READING-1 D-3 does not exist.
 
 ---
 
+### Card DISPLAY-BRIDGE-1 — a bridged frame's `show()` follows the display style (R-13)
+
+**Why.** `_show` checks `_use_bridge_peek` before it resolves the style, so for an uncached
+`mapInArrow` frame `repr(df)` renders the styled table and `df.show()` prints the Spark-grid
+peek (residue DISPLAY-POLARS-1-S3-Q-001, filed 2026-09-09).
+
+**Home.** `core.py` (`show`, the bridge-peek branch), `test_display_styles.py` or a new
+`test_display_bridge_1.py`, maps.
+
+**Decisions.**
+
+- **D-1** Under `spark` style the peek path is unchanged (byte-identical grid, existing pins).
+- **D-2** Under `polars` / `duckdb` the bridge branch hands its peeked table to the same styled
+  renderer `repr` uses; when the peek returned fewer rows than it asked for the shape is exact,
+  otherwise the renderer takes the count the way `repr` already does for bridged frames (one
+  bridge run). `show()` and `repr` on the same bridged frame must render identically.
+- **D-3** `vertical=True` under a styled style keeps its existing warning.
+
+**Steps.** One M round: red-first pins (`show()` equals `repr` for a bridged frame under each
+style; spark grid unchanged; small-peek shape exact), the branch reorder, the residue row flipped
+FIXED in the DISPLAY-POLARS-1 ledger, maps.
+
+**Rounds.** 1 (M).
+
+---
+
+### Card CONF-UNREAD-1 — accepted-but-unread config keys are wired or refused (R-16)
+
+**Why.** The PROFILES-1 probe (`docs/perf/profiles-1-passthrough-probe-2026-09-09.md`) found nine
+`datafusion.*` keys that `.config()` accepts and `conf_dump()` echoes but the engine never reads.
+A user who sets one believes it took effect.
+
+**Home.** Wherever the eleven passing keys are applied (find it: `grep -rn "datafusion\." crates/repark-core/src/session.rs crates/repark-python/src/session.rs`), the probe document (its table gains a column `after CONF-UNREAD-1`), `docs/guide/session-and-conf.md`, maps.
+
+**Decisions.**
+
+- **D-1** For each of the nine keys, read its DataFusion `ConfigOptions` path: if the option
+  exists in DataFusion 54.1.0 and reaches `SessionConfig` before the context is built, wire it
+  the same way the eleven are wired; if it does not exist or cannot take effect after build,
+  refuse loud at `.config()` time with the key name and the reason.
+- **D-2** The probe's own script is the pin: re-run it and every row must read `PASSES THROUGH`
+  or `REFUSED`; `ACCEPTED BUT UNREAD` must be zero.
+
+**Steps.** 1 (I, Muse): the wiring/refusals and the re-run; 2 (M): guide paragraph, probe table
+column, ledger.
+
+**Rounds.** 2 (I, M). After PROFILES-1 step 2 so the measurement is not re-baselined mid-flight.
+
+---
+
 ## 3. Epic intakes (chartered as direction; the first unit of each is cut here)
 
 ### ADAPT-PART — adaptive partitioning for Iceberg
@@ -721,6 +776,8 @@ paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until t
 | 7 | PROFILES-1 | CFG-1 for the TOML form only | M×3, I | 4 | ≈ $0.02 + one I round |
 | 8 | AP-0 | — (script only) | M | 1 | ≈ $0.01 |
 | 9 | AP-1 → AP-3, DYNCFG-1 | AP-0 result; PROFILES-1 result | I | — | after the measurements |
+
+**Status 2026-09-09 after run 3:** 3 steps 2–3 merged (#434, #439); 4 seed + step 1 merged (#440); 5 step 1 merged (#443); 7 step 0 merged (#441); 12 merged (#437); 11 ledger closed (#438). New: CFG-1 step 1b, cards 13 DISPLAY-BRIDGE-1 (M, 1) and 14 CONF-UNREAD-1 (I+M, 2). Run-4 order is runbook §7.
 
 **Status 2026-09-09 after run 2:** 2 merged (#428), 10 merged (#432), 11 merged (#433); 3 step 2 parked at #434 (R-11 unparks it); new unit 12 DOCS-LINKS-1 (M, 1 round). Run-3 order is runbook §7.
 
