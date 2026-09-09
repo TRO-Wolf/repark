@@ -71,11 +71,16 @@ fn interpolate_string(
     while let Some(position) = rest.find('$') {
         expanded.push_str(&rest[..position]);
         let tail = &rest[position + 1..];
+        if let Some(escaped) = tail.strip_prefix('$') {
+            expanded.push('$');
+            rest = escaped;
+            continue;
+        }
         if let Some(reference) = tail.strip_prefix('{') {
             let Some(end) = reference.find('}') else {
-                expanded.push_str("${");
-                rest = reference;
-                continue;
+                return Err(Error::Config(format!(
+                    "unterminated `${{` reference at key `{path}`"
+                )));
             };
             let variable = &reference[..end];
             if variable.is_empty() {

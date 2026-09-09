@@ -26,17 +26,19 @@ ruled design runs them:
   pins: cfg-1/C-004, C-005
 - `interpolate.rs` — `${VAR}` expansion over the effective table's strings (nested tables and
   arrays included, scalars untouched); a missing variable refuses naming the key path and the
-  variable; `$` without `{` and unterminated `${` stay verbatim; `$$` is not an escape. Step 1.
-  pins: cfg-1/C-006
+  variable; `$` without `{` stays verbatim; `$$` escapes a literal `$`, so `$${NAME}` renders
+  `${NAME}` with no environment lookup; an unterminated `${` refuses naming the key path.
+  Step 1; the two `$`-edge behaviours flipped by ruling R-14 in step 1b.
+  pins: cfg-1/C-006, C-007, C-008, C-009
 - `sources.rs` — the `[catalogs]` / `[sources]` tables to `CatalogSpec` / `SourceSpec`, whose
   fixtures are `../catalog_config.rs`'s so the specs compare byte-identical. Still an empty
   placeholder. Step 2.
 - `redact.rs` — the `conf_dump()` redaction and the `source` column (`builder`,
   `file:<path>#<profile>`, `default`). Still an empty placeholder. Step 2.
-- `tests.rs` — all 24 step-1 pins in one file (the seed's three plus the discovery, merge
-  and interpolation pins); the environment arrives as a stub closure, so no pin mutates the
-  process environment.
-  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `tests.rs` — all 25 pins in one file (the seed's three plus the discovery, merge and
+  interpolation pins; step 1b flipped the two `$`-edge pins under R-14 and added the escape
+  pin); the environment arrives as a stub closure, so no pin mutates the process environment.
+  pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## Pointers
 

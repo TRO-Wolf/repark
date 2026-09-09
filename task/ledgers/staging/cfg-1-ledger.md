@@ -1,7 +1,7 @@
 # Unit ledger — CFG-1 step 1 · `repark.toml` discovery, profile merge, `${VAR}` interpolation
 
-**Unit:** CFG-1 step 1 · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation
+**Unit:** CFG-1 step 1 (+ step 1b, R-14) · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` (step 1b: `feat/cfg-1-step1b`) · **Base:** `origin/main`
+**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14)
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** The CFG-1 seed commit left `config_file/{discovery,profile,interpolate}.rs` as empty
@@ -31,9 +31,12 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-003 | `REPARK_CONFIG` naming a missing file refuses, naming the path. | `repark_config_naming_a_missing_path_refuses_naming_the_path` | **PROVEN** | Green in the same run. The refusal is `Error::Config` and its message contains the missing path verbatim. |
 | C-004 | `[default]` plus `[<profile>]` selected by `REPARK_ENV`, deep-merged; `None` selects the default table alone; an unknown profile refuses naming it. | `profile_merge_deep_merges_the_profile_over_default`, `without_repark_env_the_default_table_stands_alone`, `repark_env_naming_an_absent_profile_refuses_naming_the_profile` | **PROVEN** | Green in the same run. The merge pin asserts the overlay value wins (`/prod/warehouse`), the base-only key survives (`style`), and the sibling key joins (`max_rows`); the refusal names `staging` and lists the known profiles. |
 | C-005 | Unknown keys refuse with the key path. | `an_unknown_top_level_key_refuses_as_a_config_error`, `an_unknown_key_inside_a_profile_refuses_with_the_key_path`, `an_unknown_display_key_refuses_with_the_key_path`, `an_unknown_session_key_refuses_with_the_key_path`, `a_non_table_display_or_session_refuses_naming_the_path` | **PROVEN** | Green in the same run. Paths asserted: `default.nonesuch`, `default.display.nonesuch`, `prod.session.nonesuch`, `default.display` / `prod.session` for non-table values, top-level `nonesuch` at the document root. |
-| C-006 | `${VAR}` interpolation expands string values; a missing variable refuses loud, naming the key path and the variable. | `interpolation_expands_variables_in_string_values_only`, `a_missing_variable_refuses_naming_the_path_and_the_variable`, `a_missing_variable_in_an_unselected_profile_does_not_refuse`, `a_dollar_without_a_brace_is_left_alone`, `an_unterminated_reference_is_left_verbatim`, `a_double_dollar_is_not_an_escape`, `an_empty_variable_name_refuses_naming_the_path`, `interpolation_reaches_array_elements` | **PROVEN** | Green in the same run. The missing-variable refusal names both `WAREHOUSE` and `conf.spark.sql.warehouse.dir`; non-string scalars pass through untouched; interpolation applies to the effective table, so an unselected profile's missing variable does not refuse. |
+| C-006 | `${VAR}` interpolation expands string values; a missing variable refuses loud, naming the key path and the variable. | `interpolation_expands_variables_in_string_values_only`, `a_missing_variable_refuses_naming_the_path_and_the_variable`, `a_missing_variable_in_an_unselected_profile_does_not_refuse`, `a_dollar_without_a_brace_is_left_alone`, `an_empty_variable_name_refuses_naming_the_path`, `interpolation_reaches_array_elements` (the two `$`-edge pins `an_unterminated_reference_is_left_verbatim` / `a_double_dollar_is_not_an_escape` moved to C-007/C-008 under R-14, 2026-09-09) | **PROVEN** | Green in the same run. The missing-variable refusal names both `WAREHOUSE` and `conf.spark.sql.warehouse.dir`; non-string scalars pass through untouched; interpolation applies to the effective table, so an unselected profile's missing variable does not refuse. |
+| C-007 | R-14: `$$` is the escape for a literal `$`; a lone `$$` renders one `$`, and `$${TOTAL}` renders the literal `${TOTAL}` verbatim with no environment lookup. | `a_double_dollar_renders_the_reference_verbatim`, `a_double_dollar_alone_renders_a_single_dollar` | **PROVEN** | Step 1b, 2026-09-09. Red first: both pins failed against the step-1 code (`$42` vs `${TOTAL}`, `$$` vs `$` — see Red first below); green after the `interpolate.rs` change. The verbatim pin runs with `TOTAL=42` in the environment and still gets `${TOTAL}`, so no lookup happens. |
+| C-008 | R-14: an unterminated `${` (no closing `}`) refuses loud naming the key path, the same `Error::Config` shape as the missing-variable refusal. | `an_unterminated_reference_refuses_naming_the_path` | **PROVEN** | Step 1b, 2026-09-09. Red first: the pin got the step-1 verbatim pass-through (`unterminated must refuse: {"value": String("${TOTAL")}`) instead of an error — see Red first below; green after the change. The refusal message is `unterminated \`${\` reference at key \`value\``, naming the key path. |
+| C-009 | `a_dollar_without_a_brace_is_left_alone` (`cost is $5 and ${TOTAL}` → `cost is $5 and 42`) survives R-14 unchanged. | `a_dollar_without_a_brace_is_left_alone` | **PROVEN** | The pin's text was not edited in step 1b and stayed green through both the red run (2026-09-09) and the final gates. |
 
-VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED (6 from step 1, C-007/C-008/C-009 from step 1b).
 
 ## Red first
 
@@ -71,6 +74,37 @@ error: could not compile `repark-core` (lib test) due to 3 previous errors
 After `git stash pop` the same command returns to green:
 `test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`.
 
+## Red first — step 1b (R-14)
+
+The two flipped pins and the new escape pin were written first and run against the untouched
+step-1 `interpolate.rs`; only then was the implementation changed. Red run:
+`cargo test -p repark-core config_file`, 2026-09-09 — `test result: FAILED. 22 passed; 3 failed`.
+
+```text
+---- config_file::tests::a_double_dollar_renders_the_reference_verbatim stdout ----
+assertion `left == right` failed
+  left: "$42"
+ right: "${TOTAL}"
+
+---- config_file::tests::a_double_dollar_alone_renders_a_single_dollar stdout ----
+assertion `left == right` failed
+  left: "$$"
+ right: "$"
+
+---- config_file::tests::an_unterminated_reference_refuses_naming_the_path stdout ----
+unterminated must refuse: {"value": String("${TOTAL")}
+
+failures:
+    config_file::tests::a_double_dollar_alone_renders_a_single_dollar
+    config_file::tests::a_double_dollar_renders_the_reference_verbatim
+    config_file::tests::an_unterminated_reference_refuses_naming_the_path
+```
+
+All three failures are the old step-1 behaviour asserting itself: the escape renders as an
+interpolation (`$42`), the bare `$$` stays doubled, and the unterminated reference passes
+through instead of refusing. `a_dollar_without_a_brace_is_left_alone` passed in the same run,
+unchanged.
+
 ## Gates
 
 | Command | Result |
@@ -80,6 +114,13 @@ After `git stash pop` the same command returns to green:
 
 The recording round fixed nothing: both gates were green on the inherited tree, and the only
 tree change in this round outside the inherited diff is this ledger plus the two map edits.
+
+## Gates — step 1b (R-14)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (24 step-1 pins, two renamed under R-14, one escape pin added) |
+| `make verify` | exit 0 — 48 × `test result: ok`, 0 FAILED; `All checks passed!` (ruff check); `809 files already formatted` (ruff format) |
 
 ## Pins
 
@@ -106,9 +147,10 @@ All pins live in `crates/repark-core/src/config_file/tests.rs`.
 | `interpolation_expands_variables_in_string_values_only` | C-006 |
 | `a_missing_variable_refuses_naming_the_path_and_the_variable` | C-006 |
 | `a_missing_variable_in_an_unselected_profile_does_not_refuse` | C-006 |
-| `a_dollar_without_a_brace_is_left_alone` | C-006 |
-| `an_unterminated_reference_is_left_verbatim` | C-006 |
-| `a_double_dollar_is_not_an_escape` | C-006 |
+| `a_dollar_without_a_brace_is_left_alone` | C-006, C-009 |
+| `an_unterminated_reference_refuses_naming_the_path` (step 1b; renamed from `an_unterminated_reference_is_left_verbatim`, flipped per R-14) | C-008 |
+| `a_double_dollar_renders_the_reference_verbatim` (step 1b; renamed from `a_double_dollar_is_not_an_escape`, flipped per R-14) | C-007 |
+| `a_double_dollar_alone_renders_a_single_dollar` (step 1b) | C-007 |
 | `an_empty_variable_name_refuses_naming_the_path` | C-006 |
 | `interpolation_reaches_array_elements` | C-006 |
 
@@ -135,8 +177,8 @@ Choices the implementation took that D-5…D-10 did not fix (read from the code,
 | Typed allowlists | `display` accepts exactly `max_cols, max_rows, str_len, style`; `session` accepts exactly `batch_size, memory_limit_gb, target_partitions`; anything else refuses naming `name.table.inner`. `conf`, `catalog`, `database` accept any key but must be tables. |
 | Non-table slot or top-level value | `[default] display = 3` refuses naming `default.display` (`must be a table`); a non-table top-level value refuses as an unknown top-level key naming the key. |
 | `$` without `{` | Left alone (`cost is $5` survives); only `${` opens a reference. |
-| Unterminated `${` | Left verbatim (`${TOTAL` survives), not a refusal. |
-| `$$` | Not an escape: the second `$` opens a reference, so `$${TOTAL}` with `TOTAL=42` yields `$42`. |
+| Unterminated `${` | Left verbatim (`${TOTAL` survives), not a refusal. Superseded 2026-09-09 by R-14 (step 1b): refuses naming the key path (C-008). |
+| `$$` | Not an escape: the second `$` opens a reference, so `$${TOTAL}` with `TOTAL=42` yields `$42`. Superseded 2026-09-09 by R-14 (step 1b): `$$` escapes a literal `$`, so `$${TOTAL}` yields `${TOTAL}` verbatim (C-007). |
 | Empty `${}` | Refuses naming the key path (`empty variable name at key \`<path>\``). |
 | Reach | Interpolation walks nested tables (paths joined with `.`) and arrays (paths as `path[index]`); integer, float, boolean, and datetime values pass through untouched. |
 | Unselected profiles | Interpolation applies to the effective table after the merge, so a missing variable in a profile `REPARK_ENV` did not select never refuses (pinned). |
@@ -152,7 +194,9 @@ interpolation sees only the effective table, which silently scopes missing-varia
 to the selected profile; step 3 should keep that order when it wires `REPARK_ENV` through;
 (b) the `$`-edge table (`$$` is not an escape, unterminated is verbatim) is implementation
 choice rather than ruled design — if the owner wants POSIX-style `$$` escape or a refusal on
-unterminated references, that is a ruling before step 4 documents the file;
+unterminated references, that is a ruling before step 4 documents the file
+**— now ruled: R-14 (2026-09-09, step 1b) adopts the POSIX-style `$$` escape and the
+unterminated refusal; the `$`-edge facts above and in the config_file map carry the flip;**
 (c) `effective_table` with `profile_name: None` returns the default table even when the file
 carries only named profiles, and returns an empty table when `[default]` is absent — both
 fall out of the code, neither is pinned beyond the `None`-selects-default test.
