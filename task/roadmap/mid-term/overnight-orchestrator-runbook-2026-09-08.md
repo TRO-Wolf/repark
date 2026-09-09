@@ -77,10 +77,15 @@ Muse (tier I steps): same wrapper around
 (the skill adds `--trust-workspace`; confirm `grep -c untrusted <run>/stderr.log` prints `0`).
 Grok (only under G-4): `~/.claude/skills/grok-worker/grok-worker.sh --lane $LANE --repo /tmp/oc-$LANE --brief … --role sepmo-actor --max-turns 300`.
 
-Wait with one background `until` loop on the run directory's `exit` file, not by polling:
+Wait **in the foreground**. A headless `-p` session ends the moment it ends a turn, so a
+session that launches a lane and then "waits for the hand-back" by ending its turn has exited
+and left the worker orphaned (this happened on the first night, 2026-09-09, after 27 tool
+calls). Run this as one Bash call with the maximum timeout (600000 ms) and repeat the call until
+the `exit` file exists; never use a background task to wait, and never end a turn while a lane
+is running or §7 has steps left and §8 has not fired:
 
 ```bash
-until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 20; done
+until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 30; done
 ```
 
 Concurrency: at most **two** worker lanes at once, and never two that build natives at the
@@ -211,7 +216,7 @@ systemd-run --user --collect --quiet --unit="overnight-$(date -u +%Y%m%dT%H%M)" 
   -p WorkingDirectory=$HOME/CodeRepos/LocalRepark/repark \
   -p StandardOutput=append:/tmp/overnight.log -p StandardError=append:/tmp/overnight.log \
   -- claude -p --model opus --effort medium --max-turns 400 --dangerously-skip-permissions \
-     "Read /tmp/repark-main/task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. The slate it names is in the same directory. Grants tonight: G-1 yes, G-2 yes, G-3 stop 03:00 local, G-4 GLM and Muse. Start at §1."
+     "Read /tmp/repark-main/task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. The slate it names is in the same directory. Grants tonight: G-1 yes, G-2 yes, G-3 stop 03:00 local, G-4 GLM and Muse. Start at §1. Never end a turn while a lane is running; wait in the foreground per §3."
 ```
 
 Effort: `medium` for GLM-only nights (the audits are checklist work); `high` when G-4 includes
