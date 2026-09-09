@@ -1,0 +1,12 @@
+# docs-links allowlist — the D-3 baseline measured 2026-09-09 (DOCS-LINKS-1), one
+# path:line:link entry per line; entries only shrink, a fixed link takes its row away.
+docs/guide/iceberg-guide.md:301:../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag
+python/repark/tests/map.md:1974:../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog
+python/repark/tests/map.md:2289:../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented
+python/repark/tests/map.md:2302:../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented
+task/ledgers/archive/2026-08/2026-08-13-y3-getdatabase-ledger.md:15:../python/repark/src/repark/catalog.py
+task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:64:../crates/repark-iceberg/src/write/predicate_dml_tests.rs
+task/ledgers/archive/2026-08/2026-08-15-occ2-conflict-batteries-ledger.md:66:../crates/repark-iceberg/src/write/predicate_dml_update_tests.rs
+task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md:5:../../../../skills/sepmo/SKILL.md
+task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md:6:../../../../skills/sepmo/references/05-critic.md
+task/ledgers/archive/2026-09/2026-09-02-api-freeze-ledger.md:23:…

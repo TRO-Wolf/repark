@@ -46,7 +46,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-example-coverage check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-docs-links check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface py-test
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -379,6 +379,10 @@ check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no 
 	@# The byte ceilings are the load-bearing half: raise CEILINGS only in the PR that needs it.
 	@# Measured 2026-08-25: n=5 median 0.05 s (pure text + one `git ls-files`) — in the hook too.
 	python3 scripts/check_docs_compaction.py
+
+.PHONY: check-docs-links
+check-docs-links: ## Markdown link gate over tracked *.md: relative links resolve, GitHub-style anchors match, docs: evidence cells follow the same rule (DOCS-LINKS-1)
+	python3 scripts/check_docs_links.py
 
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)

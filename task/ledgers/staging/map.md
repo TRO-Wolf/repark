@@ -37,6 +37,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `normalize_display_style`), and the facade suite pins `spark` via conftest so no existing
   expectation moves. Clauses C-001…C-002 green. Branch `feat/display-polars-1`.
   pins: display-polars-1/C-001, C-002
+- [docs-links-1-ledger.md](docs-links-1-ledger.md) —
+  **DOCS-LINKS-1 step 1 (2026-09-09), in flight:** the gate LEDGER-READING-1 D-3 assumed —
+  `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
+  and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
+  (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
