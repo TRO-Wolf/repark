@@ -460,6 +460,31 @@ perfectly good read.
   "no children exist" rather than "nested listing is unsupported". Loud refusal keeps that
   ambiguity from laundering into a false empty result.
 
+#### DESC-1 — `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` answers Spark rows on Iceberg tables
+
+- **repark** — `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] cat.ns.t` on an Iceberg table in a
+  registered catalog answers Spark's `col_name, data_type, comment` shape (`comment` nullable,
+  the other two not), the column rows with Iceberg docs as comments, `# Partitioning` with
+  `Part N` transform rows, and under `EXTENDED`/`FORMATTED` (byte-identical) the `# Metadata
+  Columns` and `# Detailed Table Information` blocks including the `Statistics` row. A missing
+  table raises `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`; temp views,
+  DataFusion-native tables, metadata-table suffixes, and unregistered catalogs fall through
+  unchanged. One measured residue: `Table Properties` carries the engine's stored properties
+  plus a live `current-snapshot-id`, while Spark stamps `format`, `format-version`, and
+  `write.parquet.compression-codec` defaults at `CREATE` — the 2026-09-09 live leg matches
+  19 of 22 rows byte for byte, differing only on `Name` (catalog), `Location` (path), and
+  `Table Properties` (those defaults).
+- **Apache Spark** — the same shape and sections on the DataSourceV2 path. *(oracle: live
+  PySpark 4.1.2, 2026-09-09, SQL-DESCRIBE-1 step-1 capture: commented `bigint` column,
+  `string`, `timestamp`, `days(ts)`, one `k=v` property.)*
+- **Pin** — `python/repark/tests/test_describe_table.py` (eight offline pins plus
+  `test_describe_table_live_matches_capture_and_repark`, which re-measures the capture live
+  and diffs repark against it row for row)
+- **Rationale** — FIXED 2026-09-09 (SQL-DESCRIBE-1): the `ParseException: Expected: end of
+  statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
+  engine-defaults delta stays DECLARED residue on this row until engine `CREATE` stamps
+  Spark's defaults.
+
 #### ST-1 — `SHOW TABLES IN …` is unimplemented
 
 - **repark** — `SHOW TABLES IN <catalog>.…` refuses loud with
@@ -530,23 +555,23 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   incremental is not on the cutover path. A later unit that wants dbt incremental needs the SQL
   temp-view form, or an adapter-side staging relation, and that is a design decision of its own.
 
-#### DBT-DESC-1 — `DESCRIBE EXTENDED` answers Arrow type spellings and no detail block
+#### DBT-DESC-1 — the adapter reads the facade schema, not `DESCRIBE EXTENDED`
 
-- **repark** — three-part `DESCRIBE [EXTENDED] cat.ns.t` runs and returns exactly
-  `column_name, data_type, is_nullable`, with **Arrow** type spellings (`Utf8`, `Int32`,
-  `Date32`). There is no `# Detailed Table Information` block, so no `Provider:`, `Type:`,
-  `Owner:` or `Statistics:` row. dbt-spark's `parse_describe_extended` yields no columns from
-  it. `dbt-repark` reads the facade schema instead, which answers Spark spellings (`string`,
-  `int`, `date`).
+- **repark** — three-part `DESCRIBE [EXTENDED] cat.ns.t` on an Iceberg table answers Spark's
+  `col_name, data_type, comment` shape with Spark type spellings and the `# Detailed Table
+  Information` block (SQL-DESCRIBE-1, 2026-09-09; see DESC-1). `dbt-repark` still reads the
+  facade schema instead, which answers the same Spark spellings (`string`, `int`, `date`)
+  without parsing text. (Before SQL-DESCRIBE-1 this form answered Arrow spellings with no
+  detail block; that premise reds on purpose in the SQL-DESCRIBE-1 ledger.)
 - **Apache Spark** — returns `col_name, data_type, comment`, Spark type spellings, and the
   detail block dbt parses for the relation's provider and type. *(oracle: documented — Spark's
   `DESCRIBE TABLE EXTENDED` output grammar; no value oracle is involved in the shape claim.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_describe_extended_answers_arrow_type_spellings`
+  `python/dbt-repark/tests/test_statement_surface.py::test_describe_extended_answers_spark_shape`
   and `::test_facade_schema_answers_spark_type_spellings`
 - **Rationale** — DECLARED. The facade `Catalog` and the frame schema are the supported metadata
-  surfaces (same reading as `ST-1`); widening `DESCRIBE` into a Spark-shaped text report would
-  make a formatting contract out of a diagnostic.
+  surfaces (same reading as `ST-1`); the adapter keeps reading them rather than parsing
+  `DESCRIBE` text, which is now Spark-shaped but still a diagnostic report, not a contract.
 
 #### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse through the same path
 

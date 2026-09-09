@@ -273,6 +273,13 @@ FN-FIX-2 (2026-09-04): `check_rust_file_size.py` `repark-functions/src/analyzer.
 1161→1142 after LIKE escape-at-end and overlay moved to `analyzer/`.
 pins: fn-fix-2-string-rows/C-002
 
+SQL-DESCRIBE-1 (2026-09-09): `check_rust_file_size.py`
+`repark-python/src/dataframe.rs` 1126→1084 — the DDL element spelling moved to
+`repark-spark/src/spark_type_names.rs` (owner ruling R-9), so the nested
+`simpleString` helper leaves the binding with its call sites. A ratchet DOWN; the
+duplicate table in `test_cap_1_source_file_line_cap.py` moves with it in the same
+commit. pins: sql-describe-1/C-003
+
 CUTOVER-SCHEMA-1 (2026-09-04): `check_rust_file_size.py`
 `repark-core/src/session.rs` 1040→1039 and `repark-python/src/dataframe.rs` 1171→1127 —
 reader-relax and export-boundary extraction; both ratchet DOWN.

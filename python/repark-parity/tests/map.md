@@ -145,6 +145,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4a (2026-09-07): `dataframe/core.py` row 5060 → 4819 with the script baseline; the new sampling module carries no row. pins: dfcore-4a/C-005
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4b (2026-09-07): `dataframe/core.py` row 4819 → 4539 with the script baseline; the new display module carries no row. pins: dfcore-4b/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EXPLAIN-1 (2026-09-08): `dataframe/core.py` row 4539 → 4536 with the script baseline; the new `explain.py` module carries no row. This mirror is not reached by `make preflight` (the parity suite is not one of its members), so a ratchet that updates only `scripts/check_lib_py.py` passes preflight and fails CI here — update both tables in the same commit. pins: df-explain-1/C-003
+- `test_cap_1_source_file_line_cap.py` — SQL-DESCRIBE-1 (2026-09-09): `repark-python/src/dataframe.rs` row 1126 → 1084 with the script baseline; the DDL element spelling moved to `repark-spark`. pins: sql-describe-1/C-003
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001

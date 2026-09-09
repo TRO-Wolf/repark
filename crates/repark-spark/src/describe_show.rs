@@ -10,12 +10,18 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-use iceberg::NamespaceIdent;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
+use iceberg::spec::{
+    PartitionField, Schema as IcebergSchema, TableMetadata, Transform, Type as IcebergType,
+};
+use iceberg::table::Table;
+use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use regex::RegexBuilder;
 
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, resolve_namespace};
+use crate::metadata_tables::is_metadata_table_name;
 use crate::namespace_ddl::consume_word;
+use crate::spark_type_names::spark_ddl_type_name;
 use repark_core::CatalogRegistry;
 
 /// A parsed Spark `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
@@ -191,6 +197,263 @@ pub(crate) fn quote_namespace_name_if_needed(part: &str) -> String {
         return part.to_string();
     }
     format!("`{}`", part.replace('`', "``"))
+}
+
+pub(crate) struct DescribeTable {
+    pub(crate) catalog: String,
+    pub(crate) namespace: String,
+    pub(crate) table: String,
+    pub(crate) extended: bool,
+}
+
+pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
+        return None;
+    }
+    if matches!(&parser.peek_token().token, Token::Word(word) if is_namespace_head(word)) {
+        return None;
+    }
+    let _ = parser.parse_keyword(Keyword::TABLE);
+    let extended =
+        parser.parse_keyword(Keyword::EXTENDED) || consume_word(&mut parser, "FORMATTED");
+    let name = parser.parse_object_name(false).ok()?;
+    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        return None;
+    }
+    let parts = name_parts(&name);
+    let [catalog, namespace, table] = parts.as_slice() else {
+        return None;
+    };
+    if is_metadata_table_name(table) {
+        return None;
+    }
+    Some(Ok(DescribeTable {
+        catalog: catalog.clone(),
+        namespace: namespace.clone(),
+        table: table.clone(),
+        extended,
+    }))
+}
+
+fn is_namespace_head(word: &Word) -> bool {
+    word.value.eq_ignore_ascii_case("namespace")
+        || word.value.eq_ignore_ascii_case("database")
+        || word.value.eq_ignore_ascii_case("schema")
+}
+
+pub(crate) async fn execute_describe_table(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    describe: DescribeTable,
+) -> Result<DataFrame> {
+    let handle = catalog_handle(catalogs, &describe.catalog)?;
+    let ident = TableIdent::new(
+        NamespaceIdent::new(describe.namespace.clone()),
+        describe.table.clone(),
+    );
+    let table = match handle.load_table(&ident).await {
+        Ok(table) => table,
+        Err(error) if error.kind() == ErrorKind::TableNotFound => {
+            return Err(DataFusionError::Plan(format!(
+                "[TABLE_OR_VIEW_NOT_FOUND] The table or view `{}`.`{}`.`{}` cannot be found. \
+                 Verify the spelling and correctness of the schema and catalog. \
+                 If you did not qualify the name with a schema, verify the current_schema() output, \
+                 or qualify the name with the correct schema and catalog. \
+                 To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
+                 SQLSTATE: 42P01",
+                describe.catalog, describe.namespace, describe.table
+            )));
+        }
+        Err(error) => return Err(iceberg_err(error)),
+    };
+    ctx.read_batch(describe_table_batch(&describe, &table)?)
+}
+
+pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
+    let rows = describe_table_rows(describe, table)?;
+    let mut names = Vec::with_capacity(rows.len());
+    let mut types = Vec::with_capacity(rows.len());
+    let mut comments = Vec::with_capacity(rows.len());
+    for (name, data_type, comment) in rows {
+        names.push(name);
+        types.push(data_type);
+        comments.push(comment);
+    }
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("col_name", DataType::Utf8, false),
+        Field::new("data_type", DataType::Utf8, false),
+        Field::new("comment", DataType::Utf8, true),
+    ]));
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringArray::from(names)),
+            Arc::new(StringArray::from(types)),
+            Arc::new(StringArray::from(comments)),
+        ],
+    )?)
+}
+
+fn describe_table_rows(
+    describe: &DescribeTable,
+    table: &Table,
+) -> Result<Vec<(String, String, Option<String>)>> {
+    let metadata = table.metadata();
+    let iceberg_schema = metadata.current_schema();
+    let arrow_schema =
+        iceberg::arrow::schema_to_arrow_schema(iceberg_schema).map_err(iceberg_err)?;
+    let mut rows = Vec::new();
+    for (iceberg_field, arrow_field) in iceberg_schema
+        .as_struct()
+        .fields()
+        .iter()
+        .zip(arrow_schema.fields())
+    {
+        rows.push((
+            arrow_field.name().clone(),
+            spark_ddl_type_name(arrow_field.data_type()),
+            iceberg_field.doc.clone(),
+        ));
+    }
+    let spec = metadata.default_partition_spec();
+    if !spec.fields().is_empty() {
+        rows.push(blank_describe_row());
+        rows.push(section_describe_row("# Partitioning"));
+        for (index, field) in spec.fields().iter().enumerate() {
+            rows.push((
+                format!("Part {index}"),
+                describe_partition_field(iceberg_schema, field)?,
+                Some(String::new()),
+            ));
+        }
+    }
+    if describe.extended {
+        rows.push(blank_describe_row());
+        rows.push(section_describe_row("# Metadata Columns"));
+        rows.push(plain_describe_row("_spec_id", "int"));
+        rows.push((
+            "_partition".to_string(),
+            describe_partition_struct_type(iceberg_schema, spec)?,
+            Some(String::new()),
+        ));
+        rows.push(plain_describe_row("_file", "string"));
+        rows.push(plain_describe_row("_pos", "bigint"));
+        rows.push(plain_describe_row("_deleted", "boolean"));
+        rows.push(blank_describe_row());
+        rows.push(section_describe_row("# Detailed Table Information"));
+        rows.push(plain_describe_row(
+            "Name",
+            &format!(
+                "{}.{}.{}",
+                describe.catalog, describe.namespace, describe.table
+            ),
+        ));
+        rows.push(plain_describe_row("Type", "MANAGED"));
+        rows.push(plain_describe_row("Location", metadata.location()));
+        rows.push(plain_describe_row("Provider", "iceberg"));
+        rows.push(plain_describe_row("Owner", &describe_table_owner()));
+        rows.push(plain_describe_row(
+            "Table Properties",
+            &render_table_properties(metadata),
+        ));
+        rows.push((
+            "Statistics".to_string(),
+            describe_table_statistics(metadata),
+            None,
+        ));
+    }
+    Ok(rows)
+}
+
+fn blank_describe_row() -> (String, String, Option<String>) {
+    (String::new(), String::new(), Some(String::new()))
+}
+
+fn section_describe_row(header: &str) -> (String, String, Option<String>) {
+    (header.to_string(), String::new(), Some(String::new()))
+}
+
+fn plain_describe_row(name: &str, value: &str) -> (String, String, Option<String>) {
+    (name.to_string(), value.to_string(), Some(String::new()))
+}
+
+fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> Result<String> {
+    let source = schema.field_by_id(field.source_id).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "partition field `{}` refers to unknown source id {}",
+            field.name, field.source_id
+        ))
+    })?;
+    Ok(match &field.transform {
+        Transform::Identity => source.name.clone(),
+        Transform::Year => format!("years({})", source.name),
+        Transform::Month => format!("months({})", source.name),
+        Transform::Day => format!("days({})", source.name),
+        Transform::Hour => format!("hours({})", source.name),
+        Transform::Bucket(width) => format!("bucket({width}, {})", source.name),
+        Transform::Truncate(width) => format!("truncate({width}, {})", source.name),
+        Transform::Void => format!("void({})", source.name),
+        Transform::Unknown => format!("unknown({})", source.name),
+    })
+}
+
+fn describe_partition_struct_type(
+    schema: &IcebergSchema,
+    spec: &Arc<iceberg::spec::PartitionSpec>,
+) -> Result<String> {
+    let partition_type = spec.partition_type(schema).map_err(iceberg_err)?;
+    let arrow_type = iceberg::arrow::type_to_arrow_type(&IcebergType::Struct(partition_type))
+        .map_err(iceberg_err)?;
+    Ok(spark_ddl_type_name(&arrow_type))
+}
+
+fn describe_table_owner() -> String {
+    std::env::var("USER")
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "unknown".to_string())
+}
+
+fn render_table_properties(metadata: &TableMetadata) -> String {
+    let mut merged: HashMap<String, String> = metadata.properties().clone();
+    merged.insert(
+        "current-snapshot-id".to_string(),
+        metadata
+            .current_snapshot_id()
+            .map_or_else(|| "none".to_string(), |id| id.to_string()),
+    );
+    let mut pairs: Vec<(&String, &String)> = merged.iter().collect();
+    pairs.sort_by(|left, right| left.0.cmp(right.0));
+    let rendered: Vec<String> = pairs
+        .iter()
+        .map(|(key, value)| {
+            let shown = if property_is_redacted(key, value) {
+                REDACTION_REPLACEMENT_TEXT
+            } else {
+                value.as_str()
+            };
+            format!("{key}={shown}")
+        })
+        .collect();
+    format!("[{}]", rendered.join(","))
+}
+
+fn describe_table_statistics(metadata: &TableMetadata) -> String {
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return "0 bytes, 0 rows".to_string();
+    };
+    let summary = &snapshot.summary().additional_properties;
+    let records = summary
+        .get("total-records")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0);
+    let bytes = summary
+        .get("total-files-size")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0);
+    format!("{bytes} bytes, {records} rows")
 }
 
 /// A parsed Spark `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.

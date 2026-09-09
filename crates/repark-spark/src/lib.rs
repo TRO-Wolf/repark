@@ -21,6 +21,7 @@ mod ref_ddl;
 mod router;
 mod spark_ast;
 mod spark_literals;
+mod spark_type_names;
 mod time_travel;
 mod truncate;
 mod window_range;
@@ -87,6 +88,7 @@ pub(crate) use normalize::{
     refuse_dml_subquery_predicate_in_statement, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, starts_with_branch_or_tag_ddl, starts_with_merge,
 };
+pub use spark_type_names::{spark_ddl_type_name, spark_ddl_type_name_at_depth};
 pub(crate) use truncate::execute_truncate;
 
 mod extension;
