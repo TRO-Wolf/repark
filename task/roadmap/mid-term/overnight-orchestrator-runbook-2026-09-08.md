@@ -200,19 +200,25 @@ Morning report, both places, before the session ends:
 
 ## 9. Launching the overnight session (owner runs this)
 
+From a plain shell, not inside a Claude session. The live checkout may sit on any branch with
+uncommitted work, so the documents are read from a fresh clone of `main` while the working
+directory stays the live checkout (that path is what loads the project memory and `CLAUDE.md`):
+
 ```bash
+git clone -q https://github.com/TRO-Wolf/repark.git /tmp/repark-main
 systemd-run --user --collect --quiet --unit="overnight-$(date -u +%Y%m%dT%H%M)" \
   --setenv=HOME=$HOME --setenv=PATH="$PATH" --setenv=USER=$USER \
   -p WorkingDirectory=$HOME/CodeRepos/LocalRepark/repark \
   -p StandardOutput=append:/tmp/overnight.log -p StandardError=append:/tmp/overnight.log \
-  -- claude -p --model opus --max-turns 400 --dangerously-skip-permissions \
-     "Read task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. Grants tonight: G-1 yes, G-2 yes, G-3 stop 03:00 local, G-4 GLM and Muse. Start at §1."
+  -- claude -p --model opus --effort medium --max-turns 400 --dangerously-skip-permissions \
+     "Read /tmp/repark-main/task/roadmap/mid-term/overnight-orchestrator-runbook-2026-09-08.md and run it. The slate it names is in the same directory. Grants tonight: G-1 yes, G-2 yes, G-3 stop 03:00 local, G-4 GLM and Muse. Start at §1."
 ```
 
-The working directory is the live checkout so the session loads the project memory and
-`CLAUDE.md`; §1 step 5 forbids it from committing there. The owner reads `/tmp/overnight.log`
-and the report in the morning. Cost is the session's own tokens: one audit per worker round is
-the unit of spend, so a night of eight rounds is about eight audits plus the reads in §1.
+Effort: `medium` for GLM-only nights (the audits are checklist work); `high` when G-4 includes
+Muse tier-I rounds, whose diffs are Rust parsers and wiring. §1 step 5 forbids the session from
+committing in the working directory. The owner reads `/tmp/overnight.log` and the report in the
+morning. Cost is the session's own tokens: one audit per worker round is the unit of spend, so a
+night of eight rounds is about eight audits plus the reads in §1.
 
 ## Pointers
 - Up: [map.md](map.md) · The cards: [cheap-tier-slate-2026-09-08.md](cheap-tier-slate-2026-09-08.md)
