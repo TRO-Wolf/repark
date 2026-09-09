@@ -2024,11 +2024,7 @@ class ReparkSession:
             from repark.spark.types import refuse_collation_session_key
 
             refuse_collation_session_key(key)
-            if key.lower() == _DISPLAY_STYLE_KEY:
-                for existing in list(self._config):
-                    if existing.lower() == _DISPLAY_STYLE_KEY:
-                        del self._config[existing]
-                self._config[_DISPLAY_STYLE_KEY] = value
+            if _sf._canonicalize_display_key(self._config, key, value):
                 return
             self._config[key] = value
 
@@ -2213,6 +2209,9 @@ class ReparkSession:
                     _sync_display_style_into_builder_config(
                         _sf._active_session._builder_config, display_style
                     )
+                _sf._reuse_display_ints(
+                    config, _sf._active_session, RuntimeConfig(_sf._active_session)._unset_keys()
+                )
                 return _sf._active_session
 
             # Native HashMap<String, String> cannot hold None; Spark keeps None in the facade

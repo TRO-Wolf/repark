@@ -379,6 +379,15 @@ the `__repr__` / `_repr_html_` wrapper docstrings condense to one line under the
 ban (the behaviour contract moved to `dataframe/map.md`). Ratchets DOWN.
 pins: display-polars-1/C-004
 
+DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `check_lib_py.py`
+`dataframe/plan_collapse.py` 1168→1057 and `session/session_core.py`
+2411→2410 — the polars spellers move to the new `dataframe/polars_cells.py`
+(325 lines, no row needed) and the display-key plumbing moves to
+`session/session_configuration.py` beside `default_display_style()`; both
+callers keep one-line calls plus import-backs. Ratchets DOWN; both mirrored in
+the CAP-1 test.
+pins: display-polars-1/C-005
+
 B-MOR-3 (2026-09-03): `check_rust_file_size.py` `repark-spark/src/tests/call.rs`
 1307→1303 — the live-DV refusal and its counter helper are deleted; ratchets DOWN.
 pins: b-mor-3-rewrite-position-deletes-v3/C-002

@@ -7,6 +7,13 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 from repark.spark.session import _funcs as _session_funcs
+from repark.spark.session.session_configuration import (
+    _DISPLAY_INT_DEFAULTS,
+    _builder_display_int,
+    _display_token_key,
+    _normalize_display_int,
+    _sync_display_int_into_builder_config,
+)
 from repark.spark.session.session_time_zone import warn_runtime_session_time_zone_not_applied
 from repark.spark.session.timestamp_type import TIMESTAMP_TYPE_KEY, parse_timestamp_type
 
@@ -187,6 +194,19 @@ class RuntimeConfig:
             self._session._alive_token["display_style"] = style
             _sync_display_style_into_builder_config(self._session._builder_config, style)
             return
+        for canonical in _DISPLAY_INT_DEFAULTS:
+            if key.lower() != canonical:
+                continue
+            parsed = _normalize_display_int(canonical, text)
+            self._unset_keys().discard(canonical)
+            store = self._store()
+            for existing in list(store):
+                if existing.lower() == canonical:
+                    del store[existing]
+            store[canonical] = str(parsed)
+            self._session._alive_token[_display_token_key(canonical)] = parsed
+            _sync_display_int_into_builder_config(self._session._builder_config, canonical, parsed)
+            return
         self._unset_keys().discard(key)
         self._store()[key] = text
 
@@ -216,6 +236,17 @@ class RuntimeConfig:
                     return default  # type: ignore[return-value]
                 return default_display_style()
             return str(self._session._alive_token.get("display_style", _DEFAULT_DISPLAY_STYLE))
+        for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
+            if key.lower() != canonical:
+                continue
+            if self._display_int_is_unset(canonical):
+                if default is not _CONF_GET_UNSET:
+                    return default  # type: ignore[return-value]
+                return str(fallback)
+            token_value = self._session._alive_token.get(_display_token_key(canonical))
+            if isinstance(token_value, bool) or not isinstance(token_value, int):
+                return str(_builder_display_int(self._session._builder_config, canonical, fallback))
+            return str(token_value)
         if key in self._unset_keys():
             if default is not _CONF_GET_UNSET:
                 return default  # type: ignore[return-value]
@@ -240,6 +271,10 @@ class RuntimeConfig:
     def _display_style_is_unset(self) -> bool:
         """True when ``repark.display.style`` was :meth:`unset` (case-insensitive tomb)."""
         return any(tomb.lower() == _DISPLAY_STYLE_KEY for tomb in self._unset_keys())
+
+    def _display_int_is_unset(self, canonical: str) -> bool:
+        """True when a ``repark.display.*`` int key was :meth:`unset` (case-insensitive tomb)."""
+        return any(tomb.lower() == canonical for tomb in self._unset_keys())
 
     def unset(self, key: str) -> None:
         """Remove a configuration property (runtime store + builder-fallback tombstone).
@@ -269,6 +304,23 @@ class RuntimeConfig:
             # re-absorb a prior non-default from the builder map.
             _sync_display_style_into_builder_config(
                 self._session._builder_config, default_display_style()
+            )
+            return
+        for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
+            if key.lower() != canonical:
+                continue
+            store = self._store()
+            for existing in list(store):
+                if existing.lower() == canonical:
+                    del store[existing]
+            tombs = self._unset_keys()
+            for existing in list(tombs):
+                if existing.lower() == canonical:
+                    tombs.discard(existing)
+            tombs.add(canonical)
+            self._session._alive_token[_display_token_key(canonical)] = fallback
+            _sync_display_int_into_builder_config(
+                self._session._builder_config, canonical, fallback
             )
             return
         self._store().pop(key, None)

@@ -23,6 +23,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _display_session_ints(frame: DataFrame) -> tuple[int, int, int]:
+    """Read ``(max_rows, max_cols, str_len)`` from the alive token, builder map, or defaults."""
+    from repark.spark.session.session_configuration import (
+        _DISPLAY_INT_DEFAULTS,
+        _builder_display_int,
+        _display_token_key,
+    )
+
+    token = getattr(frame, "_alive_token", {}) or {}
+    builder = token.get("builder_config")
+    if not isinstance(builder, dict):
+        builder = {}
+    resolved: list[int] = []
+    for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
+        raw = token.get(_display_token_key(canonical))
+        if isinstance(raw, bool) or not isinstance(raw, int):
+            raw = _builder_display_int(builder, canonical, fallback)
+        resolved.append(raw)
+    return (resolved[0], resolved[1], resolved[2])
+
+
 def _show(
     frame: DataFrame,
     n: int = 20,
@@ -51,6 +72,8 @@ def _show(
     frame._materialize_cache_if_needed()
     n, cap, vertical = _normalize_show_args(frame, n, truncate, vertical)
     style = _resolve_display_style(frame)
+    if style != "spark" and truncate is True:
+        cap = _display_session_ints(frame)[2]
     if style == "spark":
         limit = max(0, n)
         table = frame.limit((limit + 1) if vertical else limit).to_arrow()
@@ -81,7 +104,8 @@ def _repr(frame: DataFrame) -> str:
     frame._ensure_alive()
     style = _resolve_display_style(frame)
     if style != "spark":
-        rendered, _ = _render_styled_show(frame, style, n=20, truncate_at=20)
+        str_len = _display_session_ints(frame)[2]
+        rendered, _ = _render_styled_show(frame, style, n=20, truncate_at=str_len)
         return rendered
     if not _eager_eval_enabled(frame):
         return frame.__str__()
@@ -253,9 +277,10 @@ def _render_styled_show(
 ) -> tuple[str, int]:
     """Render a styled preview and return its text and row count."""
     col_names = list(frame.columns)
+    max_rows, max_cols, _ = _display_session_ints(frame)
     if style == "polars":
-        edge = 5
-        probe_limit = 2 * edge + 1
+        edge = max_rows // 2
+        probe_limit = max_rows + 1
         probe_table = frame.limit(probe_limit).to_arrow()
         if probe_table.num_rows < probe_limit:
             total_rows = probe_table.num_rows
@@ -266,7 +291,7 @@ def _render_styled_show(
             total_rows = frame.count()
             head_n, tail_n = 0, 0
             if n > 0:
-                keep = min(n, 2 * edge)
+                keep = min(n, max_rows)
                 head_n = min(edge, (keep + 1) // 2)
                 tail_n = min(edge, keep - head_n)
             use_ellipsis = tail_n > 0
@@ -305,6 +330,7 @@ def _render_styled_show(
             tail_rows if use_ellipsis else [],
             total_rows=total_rows,
             show_ellipsis=use_ellipsis,
+            max_cols=max_cols,
         )
     else:
         rendered = _format_duckdb_show(

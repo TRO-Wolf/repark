@@ -208,6 +208,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   stay identical. pins: dfcore-4b/C-004
   pins: dfcore-6/C-001, C-002, C-003, C-004
   pins: display-polars-1/C-004
+  DISPLAY-POLARS-1 step 4 (2026-09-09): `_display_session_ints` reads
+  `(max_rows, max_cols, str_len)` from the token (builder map, then defaults)
+  at render time. The polars probe is `limit(max_rows + 1)` with edges
+  `max_rows // 2`; a styled `show(truncate=True)` caps cells at the session
+  `str_len` (spark keeps its own 20), and the styled repr uses the same cap so
+  it stays byte-identical to `show()` defaults. The duckdb door keeps its
+  count-first fetch and its `n`-based keep-set; the protected
+  no-full-collect pin pins that shape, so unifying the doors needs its own
+  card. pins: display-polars-1/C-005
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -226,6 +235,23 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   test). pins: dfcore-1/C-006, C-007
 - `plan_collapse.py` owns plan simplification, window structural keys, show formatting, Arrow
   display/type conversion, SQL literal quoting, identifier rewrites, and writer safety helpers.
+  DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): the module keeps the show
+  control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
+  re-exports the spelling helpers; the spellings themselves live in
+  `polars_cells.py`. pins: display-polars-1/C-005
+- `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
+  the show doors: `null` / lowercase bools / mixed-mode floats
+  (shortest-expansion rules measured probe by probe against polars 1.43.2 —
+  fixed, six-decimal, shortest-sci, and four-decimal-sci bands; the probe table
+  lives in the unit ledger), nested structs `{a,"b"}` and lists `["a", 1]`
+  with double-quoted strings, `str_len` cuts at `str_len` characters plus `…`
+  (spark/duckdb keep `...`), `decimal[p,s]`, unit-aware `datetime[ms|μs|ns]`
+  (with `, tz` when zoned), `time`, `struct[n]`, `list[inner]`, and the
+  `max_cols` column gap. The nested formatter recurses with a depth cap of 8
+  (nested Arrow types are genuinely recursive; a flat walk would hide the
+  shape; past the cap values fall back to plain text). No plan logic here, so
+  the module never imports `plan_collapse` (import direction stays one-way).
+  pins: display-polars-1/C-005
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005

@@ -14,6 +14,13 @@ from repark.errors import AnalysisException
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._idents import sql_string_literal as _sql_string_literal
 from repark.spark.column import Column
+from repark.spark.dataframe.polars_cells import (
+    _arrow_pa_type_label,
+    _cell_text,
+    _polars_column_gap,
+    _style_type_label,
+    _table_to_cell_rows,
+)
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -366,135 +373,9 @@ def _format_show_vertical(
     return "\n".join(lines)
 
 
-def _cell_text(value: Any, *, style: str, truncate_at: int | None) -> str:
-    """Format one cell with the null, NaN, boolean, and truncation spellings for ``style``."""
-    if value is None:
-        text = "null" if style == "polars" else "NULL"
-    elif isinstance(value, bool):
-        text = "true" if value else "false"
-    elif isinstance(value, float) and value != value:
-        text = "NaN" if style == "polars" else "nan"
-    else:
-        text = str(value)
-    if truncate_at is not None and truncate_at > 0 and len(text) > truncate_at:
-        text = text[: max(0, truncate_at - 3)] + "..." if truncate_at >= 3 else text[:truncate_at]
-    return text
-
-
-def _table_to_cell_rows(
-    table: Any,
-    *,
-    truncate_at: int | None,
-    style: str,
-) -> list[list[str]]:
-    """Convert an Arrow table to string cell rows for a show style."""
-    names = list(table.column_names)
-    rows: list[list[str]] = []
-    for mapping in table.to_pylist():
-        rows.append(
-            [_cell_text(mapping.get(name), style=style, truncate_at=truncate_at) for name in names]
-        )
-    return rows
-
-
 def _display_type_labels_from_arrow(table: Any, *, style: str) -> list[str]:
     """Return display labels from precise Arrow fields, preserving narrow numeric types."""
     return [_arrow_pa_type_label(field.type, style=style) for field in table.schema]
-
-
-def _arrow_pa_type_label(arrow_type: Any, *, style: str) -> str:
-    """Map a ``pyarrow.DataType`` to a polars- or duckdb-style display label."""
-    import pyarrow.types as pat
-
-    if pat.is_int8(arrow_type):
-        return "i8" if style == "polars" else "int8"
-    if pat.is_int16(arrow_type):
-        return "i16" if style == "polars" else "int16"
-    if pat.is_int32(arrow_type):
-        return "i32" if style == "polars" else "int32"
-    if pat.is_int64(arrow_type):
-        return "i64" if style == "polars" else "int64"
-    if pat.is_uint8(arrow_type):
-        return "u8" if style == "polars" else "uint8"
-    if pat.is_uint16(arrow_type):
-        return "u16" if style == "polars" else "uint16"
-    if pat.is_uint32(arrow_type):
-        return "u32" if style == "polars" else "uint32"
-    if pat.is_uint64(arrow_type):
-        return "u64" if style == "polars" else "uint64"
-    if pat.is_float16(arrow_type) or pat.is_float32(arrow_type):
-        return "f32" if style == "polars" else "float"
-    if pat.is_float64(arrow_type):
-        return "f64" if style == "polars" else "double"
-    if pat.is_boolean(arrow_type):
-        return "bool" if style == "polars" else "boolean"
-    if (
-        pat.is_string(arrow_type)
-        or pat.is_large_string(arrow_type)
-        or getattr(pat, "is_string_view", lambda _t: False)(arrow_type)
-    ):
-        return "str" if style == "polars" else "varchar"
-    if pat.is_date(arrow_type):
-        return "date"
-    if pat.is_timestamp(arrow_type):
-        return "datetime[μs]" if style == "polars" else "timestamp"
-    if pat.is_decimal(arrow_type):
-        precision = arrow_type.precision
-        scale = arrow_type.scale
-        return f"decimal({precision},{scale})"
-    return _style_type_label(str(arrow_type), style=style)
-
-
-def _style_type_label(type_key: str, *, style: str) -> str:
-    """Map a logical type key (or Arrow type string) to a short polars/duckdb display label."""
-    key = type_key.lower()
-    if style == "polars":
-        if key in {"int8", "byte", "tinyint"}:
-            return "i8"
-        if key in {"int16", "short", "smallint"}:
-            return "i16"
-        if key in {"int", "integer", "int32"}:
-            return "i32"
-        if key in {"long", "bigint", "int64"}:
-            return "i64"
-        if key in {"double", "float64"}:
-            return "f64"
-        if key in {"float", "float32", "real"}:
-            return "f32"
-        if key in {"string", "varchar", "utf8", "large_string", "string_view"}:
-            return "str"
-        if key in {"boolean", "bool"}:
-            return "bool"
-        if key.startswith("decimal"):
-            return key
-        if key in {"date"}:
-            return "date"
-        if key.startswith("timestamp"):
-            return "datetime[μs]"
-        return key
-    if key in {"int8", "byte", "tinyint"}:
-        return "int8"
-    if key in {"int16", "short", "smallint"}:
-        return "int16"
-    if key in {"int", "integer", "int32"}:
-        return "int32"
-    if key in {"long", "bigint", "int64"}:
-        return "int64"
-    if key in {"double", "float64"}:
-        return "double"
-    if key in {"float", "float32", "real"}:
-        return "float"
-    if key in {"string", "varchar", "utf8", "large_string", "string_view"}:
-        return "varchar"
-    if key in {"boolean", "bool"}:
-        return "boolean"
-    if key.startswith("decimal"):
-        return key
-    if key in {"date"}:
-        return "date"
-    if key.startswith("timestamp"):
-        return "timestamp"
-    return key
 
 
 def _column_widths(
@@ -572,18 +453,26 @@ def _format_polars_show(
     *,
     total_rows: int,
     show_ellipsis: bool,
+    max_cols: int | None = None,
 ) -> str:
     """Render the Polars-style preview with shape, dtypes, and optional ellipsis."""
     if not names:
         return f"shape: ({total_rows}, 0)\n┌┐\n└┘"
+    column_count = len(names)
+    names, type_labels, head_rows, tail_rows, gap_at = _polars_column_gap(
+        names, type_labels, head_rows, tail_rows, max_cols
+    )
     widths = _column_widths(names, type_labels, head_rows, tail_rows)
     inner_widths = [width + 2 for width in widths]
+    dashes = ["---"] * len(names)
+    if gap_at is not None:
+        dashes[gap_at] = ""
 
     lines = [
-        f"shape: ({total_rows}, {len(names)})",
+        f"shape: ({total_rows}, {column_count})",
         _box_rule(inner_widths, "┌", "┬", "┐"),
         _polars_row_line(names, widths),
-        _polars_row_line(["---"] * len(names), widths),
+        _polars_row_line(dashes, widths),
         _polars_row_line(type_labels, widths),
         _box_rule(inner_widths, "╞", "╪", "╡", fill="═"),
     ]
