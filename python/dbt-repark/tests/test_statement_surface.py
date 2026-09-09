@@ -287,15 +287,16 @@ def test_refused_shapes_fail_loud(seeded_session: Any, shape: Shape) -> None:
     assert shape.refusal in str(caught.value)
 
 
-def test_describe_extended_answers_arrow_type_spellings(seeded_session: Any) -> None:
-    """Three-part DESCRIBE runs, but its columns are not Spark's describe-extended shape."""
+def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:
+    """Three-part DESCRIBE EXTENDED answers Spark shape since SQL-DESCRIBE-1."""
     described = seeded_session.sql(
         f"describe extended {CATALOG}.{NAMESPACE}.{STEM}_survey"
     ).to_arrow()
-    assert described.column_names == ["column_name", "data_type", "is_nullable"]
+    assert described.column_names == ["col_name", "data_type", "comment"]
     rows = described.to_pylist()
-    assert rows[0]["column_name"] == "survey_id"
-    assert rows[0]["data_type"] == "Utf8"
+    assert rows[0]["col_name"] == "survey_id"
+    assert rows[0]["data_type"] == "string"
+    assert any(row["col_name"] == "Provider" and row["data_type"] == "iceberg" for row in rows)
 
 
 def test_facade_schema_answers_spark_type_spellings(seeded_session: Any) -> None:

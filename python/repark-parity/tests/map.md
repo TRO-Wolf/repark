@@ -144,7 +144,15 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — DFCORE-3 (2026-09-07): `dataframe/core.py` row 5263 → 5060 and `dataframe/writer_readwriter.py` row 1113 → 1111 with the script baseline; the new statistics module carries no row. pins: dfcore-3/C-006
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4a (2026-09-07): `dataframe/core.py` row 5060 → 4819 with the script baseline; the new sampling module carries no row. pins: dfcore-4a/C-005
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4b (2026-09-07): `dataframe/core.py` row 4819 → 4539 with the script baseline; the new display module carries no row. pins: dfcore-4b/C-005
-- `test_cap_1_source_file_line_cap.py` — DF-EXPLAIN-1 (2026-09-08): `dataframe/core.py` row 4539 → 4536 with the script baseline; the new `explain.py` module carries no row. This mirror is not reached by `make preflight` (the parity suite is not one of its members), so a ratchet that updates only `scripts/check_lib_py.py` passes preflight and fails CI here — update both tables in the same commit. pins: df-explain-1/C-003
+- `test_cap_1_source_file_line_cap.py` — DF-EXPLAIN-1 (2026-09-08): `dataframe/core.py` row 4539 → 4536 with the script baseline; the new `explain.py` module carries no row. At DF-EXPLAIN-1 this mirror was not reached by `make preflight`; PREFLIGHT-PARITY-1 (2026-09-09) wires the file in alone as `make py-test-parity-cap`, so a ratchet that updates only `scripts/check_lib_py.py` now reds preflight — update both tables in the same commit. pins: df-explain-1/C-003
+- `test_preflight_parity_1_wiring.py` — **PREFLIGHT-PARITY-1 (2026-09-09):** the CAP-1 mirror
+  joins `make preflight` as `make py-test-parity-cap` — the mirror file alone, `py-test`'s
+  isolated `uv run --no-project` recipe verbatim, seated after `py-test-facade` before `audit`,
+  `verify` untouched, measured 1.4 s against the 60 s budget. Red-first: both pins failed on the
+  base tree (no target; absent from the `preflight` line). `DEVELOPMENT.md`'s gate roster and the
+  root map's `make preflight` enumeration name the new member; `AGENTS.md`'s roster sentence is
+  left to the owner via the PR body. pins: preflight-parity-1/C-001, C-002, C-003, C-004
+- `test_cap_1_source_file_line_cap.py` — SQL-DESCRIBE-1 (2026-09-09): `repark-python/src/dataframe.rs` row 1126 → 1084 with the script baseline; the DDL element spelling moved to `repark-spark`. pins: sql-describe-1/C-003
 - `test_ex_0_example_coverage.py` — **FNP-9/10 (2026-09-06):** the enumerated public surface
   moves 913 → 921 as the eight built `F.*` names join `functions.py`'s `__all__` through
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001
@@ -557,7 +565,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_sqp_1_record.py` is itself byte-frozen by `test_pr_245_revalidation_record.py`.
   `test_cap_1_source_file_line_cap.py` mirrors both size gates' exception tables and their row
   counts: regenerate the tuples in the commit that ratchets a gate, then run this suite
-  (`make py-test` — it is not in `preflight`).
+  (`make py-test` — the suite is not in `preflight`; its CAP-1 file is, as
+  `make py-test-parity-cap`, since PREFLIGHT-PARITY-1, 2026-09-09).
 | Symptom | First check |
 |---|---|
 | `test_datasets_manifest_types` reds | A schema field and its `manifest.json` row were edited one-sidedly; the failure names the family and class id |

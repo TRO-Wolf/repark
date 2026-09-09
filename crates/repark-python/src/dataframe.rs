@@ -189,7 +189,7 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
         ArrowDataType::List(field)
         | ArrowDataType::LargeList(field)
         | ArrowDataType::FixedSizeList(field, _) => {
-            let element = spark_array_element_simple_string_at_depth(field.data_type(), depth + 1);
+            let element = repark_spark::spark_ddl_type_name_at_depth(field.data_type(), depth + 1);
             format!("array<{element}>")
         }
         ArrowDataType::Map(entries, _) => {
@@ -198,9 +198,9 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
                 && fields.len() >= 2
             {
                 let key =
-                    spark_array_element_simple_string_at_depth(fields[0].data_type(), depth + 1);
+                    repark_spark::spark_ddl_type_name_at_depth(fields[0].data_type(), depth + 1);
                 let value =
-                    spark_array_element_simple_string_at_depth(fields[1].data_type(), depth + 1);
+                    repark_spark::spark_ddl_type_name_at_depth(fields[1].data_type(), depth + 1);
                 return format!("map<{key},{value}>");
             }
             format!("{data_type:?}")
@@ -211,55 +211,13 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
                 .iter()
                 .map(|field| {
                     let child =
-                        spark_array_element_simple_string_at_depth(field.data_type(), depth + 1);
+                        repark_spark::spark_ddl_type_name_at_depth(field.data_type(), depth + 1);
                     format!("{}:{child}", field.name())
                 })
                 .collect();
             format!("struct<{}>", parts.join(","))
         }
         other => format!("{other:?}"),
-    }
-}
-
-/// Spark `simpleString` element token for nested array and map keys; depth-bounded.
-fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
-    if depth >= ARROW_TYPE_KEY_MAX_DEPTH {
-        return ARROW_TYPE_KEY_DEPTH_FALLBACK.to_string();
-    }
-    match data_type {
-        ArrowDataType::Int8 => "tinyint".to_string(),
-        ArrowDataType::Int16 => "smallint".to_string(),
-        ArrowDataType::Int32
-        | ArrowDataType::UInt8
-        | ArrowDataType::UInt16
-        | ArrowDataType::UInt32 => "int".to_string(),
-        ArrowDataType::Int64 | ArrowDataType::UInt64 => "bigint".to_string(),
-        ArrowDataType::Float16 | ArrowDataType::Float32 => "float".to_string(),
-        ArrowDataType::Float64 => "double".to_string(),
-        ArrowDataType::Boolean => "boolean".to_string(),
-        ArrowDataType::Utf8 | ArrowDataType::LargeUtf8 | ArrowDataType::Utf8View => {
-            "string".to_string()
-        }
-        ArrowDataType::Binary | ArrowDataType::LargeBinary | ArrowDataType::BinaryView => {
-            "binary".to_string()
-        }
-        ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
-        ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),
-        ArrowDataType::Timestamp(_, Some(_)) => "timestamp".to_string(),
-        ArrowDataType::Decimal128(precision, scale)
-        | ArrowDataType::Decimal256(precision, scale) => {
-            format!("decimal({precision},{scale})")
-        }
-        ArrowDataType::List(field)
-        | ArrowDataType::LargeList(field)
-        | ArrowDataType::FixedSizeList(field, _) => {
-            format!(
-                "array<{}>",
-                spark_array_element_simple_string_at_depth(field.data_type(), depth + 1)
-            )
-        }
-        // Pass depth through mutual recursion so Map/List alternation cannot reset the bound.
-        other => arrow_type_key_at_depth(other, depth + 1),
     }
 }
 
