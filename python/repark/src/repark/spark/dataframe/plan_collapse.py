@@ -366,18 +366,156 @@ def _format_show_vertical(
     return "\n".join(lines)
 
 
-def _cell_text(value: Any, *, style: str, truncate_at: int | None) -> str:
+_POLARS_NESTED_DEPTH_CAP = 8
+
+
+def _polars_short_sci(negative: bool, int_part: str, int_digits: int) -> str:
+    """Spell an integer float in shortest scientific form (``5e8``, ``1.5e8``)."""
+    digits = int_part.lstrip("0").rstrip("0") or "0"
+    mantissa = digits[0] + ("." + digits[1:] if len(digits) > 1 else "")
+    sign = "-" if negative else ""
+    return f"{sign}{mantissa}e{int_digits - 1}"
+
+
+def _polars_padded_sci(value: float) -> str:
+    """Spell a float in four-decimal scientific form without padded exponents."""
+    mantissa, _, exponent = f"{value:.4e}".partition("e")
+    sign = "-" if exponent.startswith("-") else ""
+    trimmed = exponent.lstrip("+-").lstrip("0") or "0"
+    return f"{mantissa}e{sign}{trimmed}"
+
+
+def _polars_round_six(value: float) -> str:
+    """Round a float to six decimals, trimming spare zeros but keeping one."""
+    text = f"{value:.6f}".rstrip("0")
+    if text.endswith("."):
+        text += "0"
+    return text
+
+
+def _polars_float_text(value: float) -> str:
+    """Spell a float the way polars mixed mode spells it, from the shortest expansion."""
+    if value != value:
+        return "NaN"
+    if value == float("inf"):
+        return "inf"
+    if value == float("-inf"):
+        return "-inf"
+    from decimal import Decimal
+
+    fixed = format(Decimal(repr(value)), "f")
+    negative = fixed.startswith("-")
+    unsigned = fixed[1:] if negative else fixed
+    int_part, _, frac_part = unsigned.partition(".")
+    int_digits = len(int_part)
+    decimals = len(frac_part)
+    if not frac_part.strip("0"):
+        if int_digits <= 6:
+            return fixed
+        if int_digits <= 9:
+            return _polars_short_sci(negative, int_part, int_digits)
+        return _polars_padded_sci(value)
+    if int_digits >= 8:
+        return _polars_padded_sci(value)
+    if int_digits == 7:
+        if int_digits + decimals >= 9:
+            return _polars_padded_sci(value)
+        return fixed
+    if decimals <= 6:
+        return fixed
+    if decimals == 7:
+        if int_digits + decimals > 8:
+            return _polars_round_six(value)
+        return fixed
+    if abs(value) < 1e-06:
+        return _polars_padded_sci(value)
+    return _polars_round_six(value)
+
+
+def _polars_nested_text(value: Any, arrow_type: Any | None, *, truncate_at: int | None) -> str:
+    """Spell a struct or list cell the way polars spells it, recursing with a depth cap."""
+    return _polars_nested_at_depth(value, arrow_type, truncate_at=truncate_at, depth=0)
+
+
+def _polars_nested_at_depth(
+    value: Any,
+    arrow_type: Any | None,
+    *,
+    truncate_at: int | None,
+    depth: int,
+) -> str:
+    """Spell one nested value; past the depth cap values fall back to plain text."""
+    import pyarrow.types as pat
+
+    if value is None:
+        return "null"
+    if depth > _POLARS_NESTED_DEPTH_CAP:
+        return str(value)
+    if isinstance(value, str):
+        if truncate_at is not None and truncate_at > 0 and len(value) > truncate_at:
+            value = value[:truncate_at] + "…"
+        return '"' + value + '"'
+    if isinstance(value, dict) and arrow_type is not None and pat.is_struct(arrow_type):
+        parts = [
+            _polars_nested_at_depth(
+                value.get(field.name), field.type, truncate_at=truncate_at, depth=depth + 1
+            )
+            for field in arrow_type
+        ]
+        return "{" + ",".join(parts) + "}"
+    if (
+        isinstance(value, (list, tuple))
+        and arrow_type is not None
+        and (
+            pat.is_list(arrow_type)
+            or pat.is_large_list(arrow_type)
+            or pat.is_fixed_size_list(arrow_type)
+        )
+    ):
+        element_type: Any | None = arrow_type.value_field.type
+        items = [
+            _polars_nested_at_depth(item, element_type, truncate_at=truncate_at, depth=depth + 1)
+            for item in value
+        ]
+        if len(items) > 4:
+            return "[" + ", ".join(items[:2]) + ", … " + items[-1] + "]"
+        return "[" + ", ".join(items) + "]"
+    return _cell_text(value, style="polars", truncate_at=truncate_at)
+
+
+def _cell_text(
+    value: Any,
+    *,
+    style: str,
+    truncate_at: int | None,
+    arrow_type: Any | None = None,
+) -> str:
     """Format one cell with the null, NaN, boolean, and truncation spellings for ``style``."""
     if value is None:
         text = "null" if style == "polars" else "NULL"
     elif isinstance(value, bool):
         text = "true" if value else "false"
-    elif isinstance(value, float) and value != value:
-        text = "NaN" if style == "polars" else "nan"
+    elif isinstance(value, float):
+        if style == "polars":
+            text = _polars_float_text(value)
+        elif value != value:
+            text = "nan"
+        else:
+            text = str(value)
+    elif style == "polars" and arrow_type is not None and isinstance(value, (dict, list, tuple)):
+        text = _polars_nested_text(value, arrow_type, truncate_at=None)
+        if truncate_at is not None and truncate_at > 0 and len(text) > truncate_at:
+            text = text[:truncate_at] + "…"
+        return text
     else:
         text = str(value)
     if truncate_at is not None and truncate_at > 0 and len(text) > truncate_at:
-        text = text[: max(0, truncate_at - 3)] + "..." if truncate_at >= 3 else text[:truncate_at]
+        if style == "polars":
+            text = text[:truncate_at] + "…"
+        elif truncate_at >= 3:
+            text = text[: max(0, truncate_at - 3)] + "..."
+        else:
+            text = text[:truncate_at]
     return text
 
 
@@ -388,12 +526,25 @@ def _table_to_cell_rows(
     style: str,
 ) -> list[list[str]]:
     """Convert an Arrow table to string cell rows for a show style."""
+    import pyarrow as pa
+    import pyarrow.types as pat
+
     names = list(table.column_names)
+    column_types = [field.type for field in table.schema]
+    narrow_float = [
+        pat.is_float32(column_type) or pat.is_float16(column_type) for column_type in column_types
+    ]
     rows: list[list[str]] = []
     for mapping in table.to_pylist():
-        rows.append(
-            [_cell_text(mapping.get(name), style=style, truncate_at=truncate_at) for name in names]
-        )
+        cells: list[str] = []
+        for name, column_type, is_narrow in zip(names, column_types, narrow_float, strict=True):
+            raw = mapping.get(name)
+            if is_narrow and isinstance(raw, float):
+                raw = pa.scalar(raw, type=column_type).as_py()
+            cells.append(
+                _cell_text(raw, style=style, truncate_at=truncate_at, arrow_type=column_type)
+            )
+        rows.append(cells)
     return rows
 
 
@@ -437,11 +588,30 @@ def _arrow_pa_type_label(arrow_type: Any, *, style: str) -> str:
     if pat.is_date(arrow_type):
         return "date"
     if pat.is_timestamp(arrow_type):
-        return "datetime[μs]" if style == "polars" else "timestamp"
+        if style != "polars":
+            return "timestamp"
+        unit_labels = {"s": "ms", "ms": "ms", "us": "μs", "ns": "ns"}
+        unit = unit_labels.get(arrow_type.unit, arrow_type.unit)
+        if arrow_type.tz is not None:
+            return f"datetime[{unit}, {arrow_type.tz}]"
+        return f"datetime[{unit}]"
+    if (pat.is_time32(arrow_type) or pat.is_time64(arrow_type)) and style == "polars":
+        return "time"
     if pat.is_decimal(arrow_type):
         precision = arrow_type.precision
         scale = arrow_type.scale
+        if style == "polars":
+            return f"decimal[{precision},{scale}]"
         return f"decimal({precision},{scale})"
+    if style == "polars" and pat.is_struct(arrow_type):
+        return f"struct[{arrow_type.num_fields}]"
+    if style == "polars" and (
+        pat.is_list(arrow_type)
+        or pat.is_large_list(arrow_type)
+        or pat.is_fixed_size_list(arrow_type)
+    ):
+        inner = _arrow_pa_type_label(arrow_type.value_field.type, style=style)
+        return f"list[{inner}]"
     return _style_type_label(str(arrow_type), style=style)
 
 
@@ -572,18 +742,37 @@ def _format_polars_show(
     *,
     total_rows: int,
     show_ellipsis: bool,
+    max_cols: int | None = None,
 ) -> str:
     """Render the Polars-style preview with shape, dtypes, and optional ellipsis."""
     if not names:
         return f"shape: ({total_rows}, 0)\n┌┐\n└┘"
+    column_count = len(names)
+    gap_at: int | None = None
+    if max_cols is not None and column_count > max_cols:
+        head_cols = (max_cols + 1) // 2
+        tail_cols = max_cols - head_cols
+        keep = list(range(head_cols)) + list(range(column_count - tail_cols, column_count))
+        names = [names[index] for index in keep]
+        type_labels = [type_labels[index] for index in keep]
+        head_rows = [[row[index] for index in keep] for row in head_rows]
+        tail_rows = [[row[index] for index in keep] for row in tail_rows]
+        gap_at = head_cols
+        names.insert(gap_at, "…")
+        type_labels.insert(gap_at, "")
+        head_rows = [[*row[:gap_at], "…", *row[gap_at:]] for row in head_rows]
+        tail_rows = [[*row[:gap_at], "…", *row[gap_at:]] for row in tail_rows]
     widths = _column_widths(names, type_labels, head_rows, tail_rows)
     inner_widths = [width + 2 for width in widths]
+    dashes = ["---"] * len(names)
+    if gap_at is not None:
+        dashes[gap_at] = ""
 
     lines = [
-        f"shape: ({total_rows}, {len(names)})",
+        f"shape: ({total_rows}, {column_count})",
         _box_rule(inner_widths, "┌", "┬", "┐"),
         _polars_row_line(names, widths),
-        _polars_row_line(["---"] * len(names), widths),
+        _polars_row_line(dashes, widths),
         _polars_row_line(type_labels, widths),
         _box_rule(inner_widths, "╞", "╪", "╡", fill="═"),
     ]

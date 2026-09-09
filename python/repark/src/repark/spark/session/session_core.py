@@ -10,6 +10,12 @@ import repark.spark.session._funcs as _sf
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
+from repark.spark.session.session_configuration import (
+    _DISPLAY_INT_DEFAULTS,
+    _builder_display_int,
+    _display_token_key,
+    _sync_display_int_into_builder_config,
+)
 from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
     normalize_session_time_zone_config,
@@ -72,6 +78,12 @@ class ReparkSession:
         self._alive_token: dict[str, Any] = {
             "alive": True,
             "display_style": normalize_display_style(display_style),
+            **{
+                _display_token_key(canonical): _builder_display_int(
+                    dict(builder_config or {}), canonical, fallback
+                )
+                for canonical, fallback in _DISPLAY_INT_DEFAULTS.items()
+            },
             # Shared conf map for facade reads (pivotMaxValues, …) without a Python session handle.
             "builder_config": self._builder_config,
             "catalog_state": {
@@ -2030,6 +2042,13 @@ class ReparkSession:
                         del self._config[existing]
                 self._config[_DISPLAY_STYLE_KEY] = value
                 return
+            for canonical in _DISPLAY_INT_DEFAULTS:
+                if key.lower() == canonical:
+                    for existing in list(self._config):
+                        if existing.lower() == canonical:
+                            del self._config[existing]
+                    self._config[canonical] = value
+                    return
             self._config[key] = value
 
         def app_name(self, name: str) -> Self:
@@ -2109,6 +2128,10 @@ class ReparkSession:
             # Facade-only knob: resolve + validate before reuse so a typo still fails loud, and
             # apply on reuse (display style is runtime-mutable, not fixed at engine build).
             display_style = self._resolve_display_style()
+            display_ints = {
+                canonical: _builder_display_int(self._config, canonical, fallback)
+                for canonical, fallback in _DISPLAY_INT_DEFAULTS.items()
+            }
 
             if _sf._active_session is not None and _sf._active_session._inner is not None:
                 # PySpark parity on the notebook path: Spark instantiates catalogs lazily per
@@ -2186,6 +2209,7 @@ class ReparkSession:
                     # (facade-only, runtime-mutable) — excluded so a pure style delta does
                     # not false-warn (R-DISPLAY); engine knobs still warn as before.
                     and key.lower() != _DISPLAY_STYLE_KEY
+                    and key.lower() not in _DISPLAY_INT_DEFAULTS
                     # Static conf is deliberately not folded — exclude so
                     # the warn does not claim a failed apply for an intentional refuse.
                     and key not in _SQLCONF_STATIC_KEYS
@@ -2213,6 +2237,19 @@ class ReparkSession:
                     _sync_display_style_into_builder_config(
                         _sf._active_session._builder_config, display_style
                     )
+                for canonical, parsed in display_ints.items():
+                    if not any(key.lower() == canonical for key in self._config):
+                        continue
+                    live = _sf._active_session
+                    live._alive_token[_display_token_key(canonical)] = parsed
+                    _sync_display_int_into_builder_config(live._builder_config, canonical, parsed)
+                    store = live._alive_token.get("runtime_conf")
+                    if isinstance(store, dict):
+                        for existing in list(store):
+                            if existing.lower() == canonical:
+                                del store[existing]
+                        store[canonical] = str(parsed)
+                    RuntimeConfig(live)._unset_keys().discard(canonical)
                 return _sf._active_session
 
             # Native HashMap<String, String> cannot hold None; Spark keeps None in the facade

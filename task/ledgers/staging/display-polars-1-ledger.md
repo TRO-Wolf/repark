@@ -5,7 +5,7 @@ This file closes when DISPLAY-POLARS-1 merges, or when the owner closes the slat
 
 **Unit:** DISPLAY-POLARS-1 step 1 · **Date:** 2026-09-09 · **Executor:** Muse Spark (muse-spark-1.3-contributor), Actor ·
 **Branch:** `feat/display-polars-1` · **Card facts on:** `f00ed9ea`
-**Model:** Muse Spark (muse-spark-1.3-contributor) step 1 · GLM 5.3 Flash (zai/glm-5.3-flash) step 2 · GLM 5.3 Flash (zai/glm-5.3-flash) step 3
+**Model:** Muse Spark (muse-spark-1.3-contributor) step 1 · GLM 5.3 Flash (zai/glm-5.3-flash) step 2 · GLM 5.3 Flash (zai/glm-5.3-flash) step 3 · Muse Spark (muse-spark-1.3) step 4
 **risk_tier:** standard.
 
 Step 1 only: D-1 + D-2 under orchestrator rulings D-9 (`default_display_style()` lives in
@@ -21,7 +21,7 @@ keys are steps 2–5 and untouched here.
 | C-002 | D-2: `python/repark/tests/conftest.py` pins `spark` via `os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")` at import; the old default-grid test is split into `test_env_override_spark_restores_grid` (env `spark` → byte-identical grid, expectation unchanged) and `test_default_style_polars_clean_env` (clean env → fresh session `display_style` is `polars`). `make py-test-facade` green proves R-6. | Conftest diff + both pins green + full facade suite green; red run below. | **PROVEN** |
 | C-003 | D-5: the styled renderer fetches `limit(max_rows + 1)` first and, when fewer than `max_rows + 1` rows return, renders the frame whole with no `count()` and no tail fetch; only a larger frame pays the count. | Step 2 implemented 2026-09-09 (polars branch; duckdb branch untouched — see step-2 record for scope). `test_small_frame_renders_without_count` red-first then green (`assert [1] == []` at `test_display_polars_default.py:70` on base); `test_large_frame_counts_once` green (base-green by design: the old flow already counted exactly once). The protected-pin red (`test_styled_show_does_not_full_collect`, `assert 11 <= 5`, `test_display_styles.py:855`) was resolved by **R-11**, not by a code change: the pin's polars section re-pinned to `max_rows_per_export = 2 * edge + 1 = 11` (one token; the duckdb call keeps `=2`; the `assert all(row_count < 12 …)` full-collect tooth is byte-identical), so the pin still forbids collect-then-slice on the 12-row frame. Green under R-11: `46 passed in 1.33s` (test_display_styles.py + test_display_polars_default.py) and `5830 passed, 369 skipped, 45 warnings in 705.21s (0:11:45)` (`make py-test-facade`). | **PROVEN** |
 | C-004 | D-4: `__repr__` renders data with a count under `polars` and `duckdb` regardless of `spark.sql.repl.eagerEval.enabled`, `spark` keeps the existing eagerEval behaviour, and `_repr_html_` returns `None` under the two styled modes. | Step 3 implemented 2026-09-09 (`display.py` `_repr` / `_repr_html` bodies; `core.py` wrapper docstrings only). `_repr` resolves the display style first: under `polars`/`duckdb` it returns `_render_styled_show(frame, style, n=20, truncate_at=20)` — the same call show() makes with its own defaults (`n=20`, `truncate=True` → cap 20) — regardless of eagerEval; `_repr_html` returns `None` for the two styled modes before any eagerEval read. The spark branch (schema form, eager-eval grid/HTML, both bridge-peek branches) is untouched. Red first: `4 failed, 3 passed in 0.29s` — `test_polars_repr_renders_table_without_eager_eval` (`assert 'DataFrame[id: int]' == 'shape: (7, 1)...'`, line 139), `test_duckdb_repr_renders_table` (same schema-form atom, line 147), `test_styled_repr_html_is_none` (`assert "<table border='1'>…" is None` with eager-eval on under polars, line 171), `test_small_frame_repr_does_not_count` (`'DataFrame[id: int]'.startswith('shape: (7, 1)')` false, line 194); `test_spark_repr_unchanged` green on base by design (keep-green guard, no red atom exists for unchanged behaviour). Gates: `51 passed in 1.37s` (test_display_styles.py + test_display_polars_default.py) and `5835 passed, 369 skipped, 45 warnings in 700.13s (0:11:40)` (`make py-test-facade`). | **PROVEN** |
-| C-005 | D-3, D-6, D-7, D-8: the four `repark.display.*` keys, the renderer's measured fidelity against polars itself, `show(truncate=…)` mapping onto `str_len`, and any row polars' output cannot reproduce from Arrow alone filed as a disclosed residue. | Step 4 (tier I). | OPEN |
+| C-005 | D-3, D-6, D-7, D-8: the four `repark.display.*` keys, the renderer's measured fidelity against polars itself, `show(truncate=…)` mapping onto `str_len`, and any row polars' output cannot reproduce from Arrow alone filed as a disclosed residue. | Step 4 implemented 2026-09-09: three polars-oracle pins byte-equal against live polars 1.43.2 (`repr(frame) == str(pl.from_arrow(frame.to_arrow()))`), `test_str_len_cuts_with_ellipsis` and `test_display_keys_conf_get_set` green; red run `5 failed, 7 passed` on base; residues R-001…R-006 filed below; gates in the step-4 record. | **PROVEN** |
 | C-006 | D-1's documentation: `docs/guide/session-and-conf.md` states the polars default, the four keys, the environment override, and the narrowed count note. | Step 5. | OPEN |
 
 ## Red first
@@ -51,6 +51,7 @@ after the red run.
 | D-4c | `_repr_html_` returns `None` under `polars` and `duckdb` (Jupyter falls back to the text repr) with eager-eval both on and off; under `spark` its behaviour — escaped HTML table when eager-eval is on, `None` otherwise — is untouched. An HTML table for the styled modes is DISPLAY-POLARS-2, not this card. | Step-3 brief, binding orchestrator implementation ruling. |
 | D-4d | The bridge-peek path (`_use_bridge_peek`) keeps its current behaviour for `spark`. For the styled modes the styled repr does not consult the peek path — routing styled repr through `_render_styled_show` (D-4b's mechanism mandate, "no second rendering path") leaves the peek path unengaged, so it changes no rendering. Measured on the base tree, 12-row uncached bridged frame under `polars`: `show()` takes the peek before style resolution (spark grid, `count()` 0 calls, UDF 1 run) while `_render_styled_show(frame, "polars", n=20, truncate_at=20)` renders the polars table (`count()` 1 call, UDF 2 runs). Consequence, measured and disclosed: an uncached mapInArrow frame's repr under a styled mode renders the styled table and pays the D-5 count for frames past the probe, while its `show()` prints the peek grid — a pre-existing show-side peek-vs-style hijack (untouched, out of step-3 scope; `show()` was not modified). Filed as DISPLAY-POLARS-1-S3-Q-001 for an orchestrator ruling if a later step should reconcile the two doors for bridged frames. | Step-3 brief, binding orchestrator implementation ruling; measurements in the step-3 record. |
 | D-4e | Nothing in the styled repr calls `count()` on a frame the styled renderer would not have counted: repr reuses the same `_render_styled_show` call with the same default args as `show()`, so D-5's discipline rides along (7-row repr: zero counts — pinned by `test_small_frame_repr_does_not_count`). | Step-3 brief, binding orchestrator implementation ruling; the bridged-frame residue is D-4d's disclosure, not a new fetch path. |
+| D-12 | `repark.display.str_len` defaults to **30**, not the card's 32: polars 1.43.2 with a clean environment cuts strings longer than 30 to 30 characters plus `…` (measured over lengths 28–34 and a 60-char cell; `pl.Config(fmt_str_lengths=30)` renders byte-identical to the default while `=32` renders 32+`…`; polars' own `set_fmt_str_lengths` docstring example shows a 30-char cut). The card's 32 would break byte-identity under defaults and its own oracle pins. One-line flip if the owner overrules. | Actor-measured 2026-09-09 (probes `/tmp/polprobe*.py`); orchestrator to confirm at step 5, which owns the guide text. |
 
 ## Gates
 
@@ -60,6 +61,9 @@ after the red run.
 | `make py-test-facade` | green: `5820 passed, 368 skipped` (one interim red, `test_conf_unset_display_style_resets_to_spark`, repaired via the C-001 unset fix; no expectation touched) |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | green: `624 passed` |
 | targeted re-run at final content (`test_display_styles.py` + `test_production_file_size.py` + `test_t3_ux_polish.py`) | green: `69 passed` |
+| step-4 red run: new pins on base tree | `5 failed, 7 passed` (all five red-first atoms fail as required) |
+| step-4: `test_display_polars_default.py` + `test_display_styles.py` | green: `56 passed` |
+| step-4 neighbors (`test_dfcore_6_eager_preview`, `test_dfcore_4b_show_goldens`, `test_t3_ux_polish`, `test_dfcore_1_exports`, `test_dfcore_4b_exports`, `test_production_file_size`, `test_session_config_knobs`, `test_session`, `test_builder_config_map`, `test_getorcreate_catalogs`) | green (one interim red, `test_show_styled_vertical_warning_attributes_to_caller`, repaired as stale-cache, not product: `107 passed` + `103 passed`) |
 
 ## Pins
 
@@ -74,6 +78,11 @@ after the red run.
 | `test_spark_repr_unchanged` | `python/repark/tests/test_display_polars_default.py` (step 3) |
 | `test_styled_repr_html_is_none` | `python/repark/tests/test_display_polars_default.py` (step 3) |
 | `test_small_frame_repr_does_not_count` | `python/repark/tests/test_display_polars_default.py` (step 3) |
+| `test_polars_oracle_ints_strings_nulls` | `python/repark/tests/test_display_polars_default.py` (step 4) |
+| `test_polars_oracle_floats_bools_dates` | `python/repark/tests/test_display_polars_default.py` (step 4) |
+| `test_polars_oracle_wide_frame_col_ellipsis` | `python/repark/tests/test_display_polars_default.py` (step 4) |
+| `test_str_len_cuts_with_ellipsis` | `python/repark/tests/test_display_polars_default.py` (step 4) |
+| `test_display_keys_conf_get_set` | `python/repark/tests/test_display_polars_default.py` (step 4) |
 
 ## Notes for the orchestrator
 
@@ -217,6 +226,84 @@ Size gates: `display.py` 324 → 316 lines (stays under the source-size default,
 4536 → 4525 in the same commit (one-interim hook red: `lib-py` failed with
 `core.py shrank to 4525 lines below exact baseline 4536`; recorded in `scripts/map.md`).
 Ruff check + format clean on all three touched Python files.
+
+## Step 4 record — D-3, D-6, D-7, D-8 keys and renderer fidelity (2026-09-09)
+
+**Executor:** Muse Spark (muse-spark-1.3), Actor · **Branch:** `feat/display-polars-1-step4`.
+
+**Keys (D-8).** `_DISPLAY_INT_DEFAULTS` in `session_configuration.py` owns the
+three int keys and their defaults (max_rows 10, max_cols 8, str_len 30 under
+D-12); `_normalize_display_int` refuses bool, non-digit strings, and values < 1
+with `IllegalArgumentException` naming the key. `RuntimeConfig` set/get/unset
+mirror the style-key handling (canonical store, alive token, builder sync,
+canonical tomb; `get` reads the live token so runtime `conf.set` takes effect
+at render time). `ReparkSession.__init__` derives the token fields from the
+builder map (invalid refuses inside `getOrCreate`); `_set_config_entry`
+canonicalizes the keys case-insensitively; the reuse path validates before the
+short-circuit and applies present keys while excluding them from the unapplied
+warning exactly like the style key. The new names stay out of `_funcs.py`
+(direct sibling imports, the timezone/timestamp precedent), so the
+production-file-size hash/owner/runtime tables do not move. `repark.toml`
+needs no change: CFG-1's generic profile merge already carries a `display`
+table with these snake_case names (`style`, `max_rows` pinned in the Rust
+`profile_merge` tests), and the mapping is 1:1 by construction.
+
+**Renderer (D-3, D-6, D-7).** The polars probe is `limit(max_rows + 1)` with
+edges `max_rows // 2` and keep-set `min(n, max_rows)` (10/5+5 under defaults —
+existing goldens byte-identical). `show(truncate=True)` on a styled frame caps
+cells at the session `str_len`; spark keeps its own 20 and the styled repr uses
+the session cap so it stays byte-identical to `show()` defaults. Polars cells:
+`null`, lowercase bools, `NaN`, mixed-mode floats fitted probe-by-probe
+(~75 probes: fixed band, six-decimal rounding, shortest-sci for 7–9-digit
+integers, four-decimal-sci beyond, sub-1e-6 split), nested `{1,"x"}` structs
+and `["a", 1]` lists with double-quoted strings, `…` cuts at `str_len`
+characters. Polars labels: `decimal[p,s]`, unit-aware `datetime[ms|μs|ns]`
+(`s` displays as `ms`, measured), `time`, `struct[n]`, `list[inner]`.
+`_format_polars_show` hides columns past `max_cols` behind a `…` column
+(first `(m+1)//2`, gap, last `m-(m+1)//2`; header and body `…`, dashes and
+dtype rows blank). Spark and duckdb spellings, labels, truncation (`...`),
+and fetch discipline are byte-untouched. The duckdb door keeps count-first and
+its `n`-based keep-set: changing it would red the protected
+`test_styled_show_does_not_full_collect` (duckdb section pins
+`max_rows_per_export=2`, `skip=(10, 2)`), so unification needs its own card.
+
+**Sanctioned pin edit** (not the protected test): `test_polars_style_truncation`
+asserts `"..." in out` for a polars `truncate=10` cut — false by construction
+once the polars path cuts with `…`. One token `"..."` → `"…"` at
+`test_display_styles.py:360`, line-neutral (file stays exactly 1175 lines).
+
+**Red first** (five pins in `test_display_polars_default.py`, run on the base
+tree before the source edits): `5 failed, 7 passed` — oracle ints (struct
+`CAST` needed the angle-bracket spelling, then `{1,x}` vs `{1,"x"}` quote
+atom), oracle floats (scientific `1.2346e9` width atom), oracle wide (no
+column gap on base), str_len (`conf.get` raised `Configuration property
+repark.display.str_len is not set`), keys (same `not set` raise). After the
+edits: `56 passed` for the two display files.
+
+**Size gates:** `plan_collapse.py` 1168→1357 and `session_core.py` 2411→2448
+(INCREASE, reason recorded in `scripts/map.md`, owner approval requested at
+merge; both mirrored in the CAP-1 test). All other touched files stay under
+their ceilings or line-neutral.
+
+**Stale-cache repair (not a product change):** one neighbor,
+`test_show_styled_vertical_warning_attributes_to_caller`, failed on the base
+tree too — its pytest assertion-rewrite `.pyc` was compiled in the dead clone
+`/tmp/oc-describe1` (`co_filename` verified via `marshal`) and revalidates
+because the source is unchanged, so the warning attributed to the wrong path.
+The file is git-ignored regenerable cache; deleting the two `__pycache__`
+trees repairs it (`7 passed`). Recorded here so the facade gate is read
+correctly.
+
+## Step-4 residues (measured, disclosed, not fixed here)
+
+| ID | Residue | Measurement |
+|---|---|---|
+| R-001 | Timezone-aware timestamps: label matches (`datetime[μs, UTC]`) but the cell does not (`2026-01-02 03:04:05 UTC` vs `str()` `+00:00`). | `pa.timestamp("us", tz="UTC")` single-cell probe; the card names this exact case. The engine coerces SQL and row-built timestamps to `tz=UTC`, so no naive-timestamp oracle was reachable. |
+| R-002 | Nanosecond timestamps: label matches (`datetime[ns]`) but sub-microsecond digits cannot survive `to_pylist` (Python datetimes stop at microseconds). | `pa.timestamp("ns")` probe; `s` unit displays as `datetime[ms]` (measured, implemented). |
+| R-003 | List cells longer than 4 elements (`[1, 2, … 7]`) rest on one 7-element probe: first two, `…`, last one. Widths 5 and 6 unprobed. | Single probe; the oracle pins cap lists at 3 elements. |
+| R-004 | Struct inner strings are double-quoted without escape probing; inner strings are not pre-cut (the composite cut applies once outside). | `{1,"x"}` / `{null,1.5}` / `["a", "bb"]` probed; quote-bearing and >30-char inner strings unprobed. |
+| R-005 | Duckdb fetch discipline unchanged (count-first, `n` keep-set); `max_rows` does not cap duckdb. | Forced by the protected pin (duckdb `max_rows_per_export=2`); unification needs its own card. |
+| R-006 | Float corners outside the probe table: `float16` columns (quantized like `float32`, unpinned), `%.4e` exponents ≥ 100 (unprobed shape), exact-tie six-decimal rounding (Python and Rust both round the exact binary value correctly, so they agree by construction — unpinned). | Algorithm notes in `dataframe/map.md`; oracle pins cover the fixed, 6-decimal, shortest-sci, and padded-sci bands. |
 
 ## Unit state (orchestrator, 2026-09-09)
 
