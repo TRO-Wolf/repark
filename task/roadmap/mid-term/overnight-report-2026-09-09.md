@@ -48,6 +48,7 @@ the blank line between sections is conditional — a blind join would have silen
 | D-6 (ballista) | Resolved D-1's version pair myself (tag `54.1.0`, `f4e66525`) instead of spending a worker round on it. | A measurement the card specified the rule for. |
 | D-5 (df-explain-1) | `core.py` hit its **exact** file-size baseline (4555 vs 4539). Ruled the split: the rendering support moves to `explain.py` and the baseline ratchets **DOWN** 4539 → 4536 in the same commit. | The gate's own first-listed sanctioned out, needing no owner approval; option (b), a baseline amendment, explicitly does. Precedent: `display.py`, `sampling.py`, `statistics.py` all left `core.py` this way. |
 | D-9 (display-polars-1) | `default_display_style()` lives in `session_configuration.py`, not `session_core.py`. | The card's Home was wrong: `_DEFAULT_DISPLAY_STYLE` and `normalize_display_style` are both defined there; `session_core.py` only star-imports them. Verified before ruling. |
+| D-11 (display-polars-1) | The two doc examples the flip broke follow the new default: `display_style.py` documents the polars default truthfully, and `show_sort.py` pins `repark.display.style=spark` because its assertions are about the spark grid while it demonstrates `sort`. | Required follow-through of owner ruling R-1, not a new decision; verified by running all 209 examples green against a built native. |
 | D-10 (display-polars-1) | The parity half of D-2 is dropped — no parity `conftest.py` exists — **and the drop had to be measured**: the parity suite runs green under the flipped default (624 passed). | Dropping a card instruction on evidence, with the evidence required rather than assumed. |
 | Ledger verdicts (ballista) | A reading unit's clauses are recorded **OPEN**, not PROVEN. | See the parked question below — the contract, not a judgement call. |
 
@@ -71,7 +72,7 @@ exception list is ratchet-down-only, so widening it was not the orchestrator's c
 rulings: give reading units an `EXCEPTIONS` row (ceiling equal to their clause count, attestation
 required), or rule that a reading unit files evidence without a clause table at all.
 
-## Two environment findings worth keeping
+## Three environment findings worth keeping
 
 - **Live Spark needs `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`.** The box's default `java` is 11
   (class version 55); Spark 4.1.2 is built for 17+ and dies with `UnsupportedClassVersionError`,
@@ -81,6 +82,13 @@ required), or rule that a reading unit files evidence without a clause table at 
   file-size baseline, and the parity suite is not a preflight member — so a ratchet that edits only
   `scripts/check_lib_py.py` passes preflight green and fails the `Python` CI leg. It did exactly
   that on #427. Ratchet both tables in the same commit.
+- **Doc examples are not reached by any local gate that would notice a default change.**
+  `check_example_coverage.py` skips execution when the native module is not importable, so
+  `make preflight` prints "skipping example execution" and passes; and examples run outside
+  pytest, so a `conftest.py` pin cannot reach them. Flipping the display default broke two
+  examples and only CI's `build + import smoke` leg caught it. Any change to a user-visible
+  default should run `check_example_coverage.py --require-execute` against a built native before
+  the PR.
 
 ## On the workers
 
