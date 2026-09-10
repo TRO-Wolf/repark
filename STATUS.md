@@ -39,7 +39,10 @@ is one setting away (`REPARK_DISPLAY_STYLE=spark`, `.config("repark.display.styl
 `session.display_style`); `max_rows` (10), `max_cols` (8) and `str_len` (30) join `style` as
 facade-local keys, and a styled frame shorter than `max_rows + 1` now renders with no `count()`.
 The keys and the precedence chain are documented in
-[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md). Release mechanics:
+[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md); **DISPLAY-BRIDGE-1
+(2026-09-09)** closes the one place the flip had missed, so an uncached `mapInArrow` frame's
+`show()` renders with the resolved style and matches its own `repr` instead of falling back to the
+Spark grid. Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities

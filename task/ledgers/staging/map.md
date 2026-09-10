@@ -47,16 +47,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ledger) plus two keep-green guards; step 2 builds D-1..D-6 in `core.py` + `polars.py`.
   Clauses C-001…C-006 OPEN. Branch `feat/df-eager-1`.
   pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [display-bridge-1-ledger.md](display-bridge-1-ledger.md) —
-  **DISPLAY-BRIDGE-1 step 1 (2026-09-09), in flight:** a bridged frame's `show()` follows
-  the display style (R-13) — `_show` resolves the style before the bridge peek; under
-  `polars` / `duckdb` the peeked table renders through `_render_styled_show` (short peek →
-  exact shape, no count; full peek → one count), under `spark` the grid is byte-identical.
-  Closes DISPLAY-POLARS-1-S3-Q-001 (flipped FIXED in the completed display-polars-1
-  ledger). Three clauses, pins red-first in
-  [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/test_display_bridge_1.py).
-  `risk_tier: standard`. Branch `feat/display-bridge-1`.
-  pins: display-bridge-1/C-001, C-002, C-003
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
