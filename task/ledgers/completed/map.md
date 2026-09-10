@@ -103,6 +103,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
   Branch `feat/preflight-parity-1`.
   pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
+- [review-fix-10-ledger.md](review-fix-10-ledger.md) —
+  **REVIEW-FIX-10 (2026-09-10), in flight:** `is_reading` parses the `Path` header field —
+  the marker matches anywhere in the first 40 lines except inside backtick code spans, the
+  value is the leading identifier run compared to `READING` exactly (D-1 as amended by
+  R10-A/R10-B, recorded as D-1a). Four scratch-ledger pins, red first. `risk_tier: standard`.
+  Branch `fix/review-fix-10`.
+  pins: review-fix-10/C-001
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-7-ledger.md](review-fix-7-ledger.md) —
   **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —

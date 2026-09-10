@@ -5,13 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [review-fix-10-ledger.md](review-fix-10-ledger.md) —
-  **REVIEW-FIX-10 (2026-09-10), in flight:** `is_reading` parses the `Path` header field —
-  the marker matches anywhere in the first 40 lines except inside backtick code spans, the
-  value is the leading identifier run compared to `READING` exactly (D-1 as amended by
-  R10-A/R10-B, recorded as D-1a). Four scratch-ledger pins, red first. `risk_tier: standard`.
-  Branch `fix/review-fix-10`.
-  pins: review-fix-10/C-001
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus
