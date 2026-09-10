@@ -40,10 +40,10 @@ same relation. `collect()` and `df.pl.collect()` are unchanged.
 `count()` and the styled preview discharge a pending `localCheckpoint(eager=False)` with no count
 query. **FIX-5:** `DESCRIBE` completes one- and two-part names from the session defaults, a real
 `ice.sales.files` table describes, `Owner` is snapshotted at session build (ADR-0004), and
-`DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — a deliberate divergence from
-Spark, which prints `s3.access-key-id` in the clear. **FIX-7:** a `repark.toml` name that would
-break a TOML header refuses, a parse error carries its position but never the offending line, and
-a `glue` / `s3tables` / `rest` catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
+`DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — Spark prints
+`s3.access-key-id` in the clear and RePark deliberately does not. **FIX-7:** a `repark.toml` name
+that would break a TOML header refuses, a parse error carries its position but never the offending
+line, and a cloud catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
 `configFile`) warns once at session build.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
@@ -75,12 +75,12 @@ Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-
 differential harness). The published wheel is in [Release state](#release-state) above.
 
 **Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
-`fc3f48102`, exit 0 on all four cohorts — per-cohort counts in
+`fc3f48102`, exit 0 on all four cohorts — counts in
 [docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance", procedure and the
-DL-1 eviction of the evidence trees (reachable at `main` `b13b22c`) in
+DL-1 eviction of the evidence trees (at `main` `b13b22c`) in
 [docs/port/census.md](docs/port/census.md) §7. The baseline's
-[facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays in the tree because the
-deferred-ledger tests read it; acceptance inputs are [task/port/](task/port/).
+[facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays because the deferred-ledger
+tests read it; acceptance inputs are [task/port/](task/port/).
 
 ## Current milestone
 
@@ -106,7 +106,8 @@ What happens next, in order:
 4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is
    pinned at 888 names in
    [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy:
-   [docs/release.md](docs/release.md) "Versioning policy").
+   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the north-star gate
+   line V1-GATE wrote the same day.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three

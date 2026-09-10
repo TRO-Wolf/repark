@@ -1,5 +1,9 @@
 # map — python/repark-parity/tests
 
+REVIEW-FIX-5 (2026-09-10): CAP-1 mirror tuple ratcheted down with the code — catalog_config.rs
+1044→1028 after the seventeen `//` reasons moved to `crates/repark-core/src/map.md` under the
+owner's no-code-comments ruling (D-5). The exact-baseline gate row moved with it; no row raised.
+
 CC-4 (2026-08-30): CAP-1 mirror tuples ratchet down only
 (pins: cc-3-comment-condensation/C-009). analyzer.rs 1194→1161; datetime.rs 1783→1709;
 dynamic_flatten/tests.rs 1469→1443→1442; declared_sorted.rs 1381→1348.
