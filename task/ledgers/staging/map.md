@@ -698,3 +698,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   profile surviving the `to_toml()` round trip. Closes Q-3, Q-4, Q-5, Q-6.
   `risk_tier: standard`. Branch `fix/review-fix-1-2`.
   pins: review-fix-1/C-001, C-002, C-003
+- [review-fix-2-ledger.md](review-fix-2-ledger.md) —
+  **REVIEW-FIX-2 (2026-09-10), in flight:** CFG-1's own pins stop reading the
+  developer's `HOME` — the seed no-file pin drives stubbed discovery with `home: None`
+  and the C-023 control session builds from a forced empty file. Closes Q-1.
+  `risk_tier: standard`. Branch `fix/review-fix-1-2`.
+  pins: review-fix-2/C-001, C-002

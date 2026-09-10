@@ -25,9 +25,14 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   (position kept, source line never echoed); `wiring.rs` gains the five discovery-warning
   pins (CWD and home hits warn once naming path and catalog; `REPARK_CONFIG`, forced and
   local-only loads warn nothing).
+  **REVIEW-FIX-2 (2026-09-10):** the seed no-file pin in `mod.rs` drives `discover` /
+  `load_file_config` with `home: None` and a stub environment; the C-023 control
+  session in `wiring.rs` builds from a forced empty staged file. The suite passes
+  under a stub `HOME` carrying a visible `repark.toml`.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
   pins: maint-policy-1/C-020
   pins: review-fix-7/C-002, C-003
+  pins: review-fix-2/C-001, C-002
 
 ## Pointers
 

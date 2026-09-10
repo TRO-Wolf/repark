@@ -81,6 +81,9 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   through the unrecognized-value error until `CatalogKind::Rest` arrives.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
   pins: review-fix-7/C-003
+  **REVIEW-FIX-2 (2026-09-10):** the C-023 control session builds from a forced empty
+  staged file, so no discovered file can reach the control side on any machine.
+  pins: review-fix-2/C-002
 - `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
   `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
   naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
@@ -102,13 +105,18 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   battery passed the 1,000-line file ceiling — stage pins versus wiring pins, no pin moved
   or edited in the split. The environment arrives as a stub closure throughout, so no pin
   mutates the process environment (build-level pins use forced temp paths and assume the
-  ambient `REPARK_ENV` is unset, the same class of assumption as the seed's no-file pin).
+  ambient `REPARK_ENV` is unset).
   **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file policy resolves with its
   profile name, `REPARK_ENV` names a non-default stamp with and without a table, the
   file-built session carries the stamp on its registry).
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
   pins: maint-policy-1/C-020
+  **REVIEW-FIX-2 (2026-09-10):** the seed no-file pin drives `discover` /
+  `load_file_config` with `home: None` and a stub environment instead of the public
+  `load()`, so no pin reads the developer's `HOME`; the suite passes under a stub
+  `HOME` carrying a visible `repark.toml`.
+  pins: review-fix-2/C-001, C-002
 
 ## Pointers
 

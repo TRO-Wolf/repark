@@ -13,7 +13,8 @@ use super::maintenance::{MaintenancePolicy, parse_duration};
 use super::profile::effective_table;
 use super::redact::redact_config;
 use super::sources::{SourceKind, SourceSpec, profile_sources};
-use super::{ConfigFile, load, parse};
+use super::wiring::load_file_config;
+use super::{ConfigFile, parse};
 
 fn stub_environment(values: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> + use<> {
     let values: HashMap<String, String> = values
@@ -40,7 +41,13 @@ fn home_config_path(home: &Path) -> std::path::PathBuf {
 
 #[test]
 fn load_without_a_file_is_the_empty_config() {
-    assert_eq!(load().expect("empty config"), ConfigFile::default());
+    let work = TempDir::new().expect("work fixture");
+    let environment = stub_environment(&[]);
+    let discovered = discover(&environment, work.path(), None).expect("discovery");
+    assert_eq!(discovered, None);
+    let file = load_file_config(None, &environment, work.path(), None).expect("empty config");
+    assert!(file.provenance.is_none(), "{:?}", file.provenance);
+    assert!(file.pairs.is_empty(), "{:?}", file.pairs);
 }
 
 #[test]
