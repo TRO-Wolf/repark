@@ -23,6 +23,7 @@ members = [
   "crates/repark-sql",
   "crates/repark-ml",
   "crates/repark-python",
+  "crates/repark-distributed",
 ]
 
 [workspace.package]
@@ -119,6 +120,10 @@ iceberg-catalog-s3tables = "0.9.1"
 # S3 Tables catalogs use internally; consumed directly (with `opendal-s3`) for scheme-based
 # FileIO selection.
 iceberg-storage-opendal = "0.9.1"
+ballista = "=54.1.0"
+ballista-core = "=54.1.0"
+ballista-scheduler = "=54.1.0"
+ballista-executor = "=54.1.0"
 # Internal crates. Path-only + `default-features = false`.
 # `default-features = false` is the one-way door: retrofitting it after internal feature flags
 # proliferate is a workspace-wide breaking change (rust-lang/cargo#11329), so it lands now
@@ -134,6 +139,7 @@ repark-ta = { path = "crates/repark-ta", default-features = false }
 repark-spark = { path = "crates/repark-spark", default-features = false }
 repark-sql = { path = "crates/repark-sql", default-features = false }
 repark-ml = { path = "crates/repark-ml", default-features = false }
+repark-distributed = { path = "crates/repark-distributed", default-features = false }
 
 # -------------------------------------------------------------------------------------------
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose

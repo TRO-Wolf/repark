@@ -661,7 +661,8 @@ repark-parity slice.
 - `check_crate_dag.sh` + `check_crate_dag.py` — the crate **dependency-policy** guard. The `.sh`
   runs `cargo metadata --format-version 1 --no-deps --locked` and pipes it to the `.py`, which
   holds three tables and is the **SSOT** for all three: the **tier map** (`TIERS`), the crate
-  **roles** (`ROLES` — foundation / table service / engine / capability / door / bindings), and
+  **roles** (`ROLES` — foundation / table service / engine / capability / door / bindings /
+  runtime, the last added for `repark-distributed`), and
   the explicit **allowed-edge table** (`ALLOWED_EDGES`: every internal edge, the dependency
   KINDS it may take, and why it exists; F-Y10-1 added `repark-sql → repark-functions` `normal`).
   Prose points here and never restates them. Four rules,
