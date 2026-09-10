@@ -11,6 +11,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   cancel pins green; `cluster` feature builds with no cluster code. `risk_tier: standard`.
   Branch `feat/ballista-m1-a`.
   pins: ballista-m1-a/C-001, C-002, C-003, C-004
+- [ballista-m1-b-ledger.md](ballista-m1-b-ledger.md) —
+  **BALLISTA-M1-B step 2 (2026-09-10), in flight:** UDF-on-executor pin
+  (`repark_times_ten` through `ReparkSessionProvider`; vanilla session fails to resolve);
+  cancel mid-flight (`Cancelled`, no running tasks within 5 s); codec install pin
+  (`repark_ballista_codec()` is Ballista's defaults; two-executor shuffle completes).
+  C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
+  Branch `feat/ballista-m1-b`.
+  pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →

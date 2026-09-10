@@ -28,12 +28,24 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   session `SessionContext` in-process, reports `Completed`/`Failed` after the stream drains,
   and `cancel` sets `Cancelled` without a detached spawn. pins: ballista-m1-a/C-001, C-002,
   C-003, C-004
+- **BALLISTA-M1-B step 1.** `src/cluster.rs` is `ReparkClusterExecutor`: one in-process
+  scheduler plus N executors on ephemeral ports (constructor arguments). Session state comes
+  from `ReparkSessionProvider`; the codec seat is `repark_ballista_codec()`. The two-executor
+  pin is `tests/cluster_two_executors.rs`. pins: ballista-m1-b/C-001, C-002
+- **BALLISTA-M1-B step 2.** UDF-on-executor pin (`repark_times_ten` through the provider,
+  vanilla session fails to resolve the same plan); cancel mid-flight (`Cancelled`, no running
+  tasks within 5 s); codec install pin (`repark_ballista_codec()` matches Ballista defaults,
+  and the two-executor job shuffles through those codecs). C-004 (round-trip serde over the
+  five shuffle nodes) stays OPEN / PARKED: it needs `PhysicalExtensionCodec` from
+  `datafusion-proto`, which this unit may not add. The owner question on the wrapper lives in
+  [src/map.md](src/map.md). pins: ballista-m1-b/C-003, C-005, C-006
 
 ## Contents
 
 - `Cargo.toml` — the crate manifest: the two features and the optional Ballista dependencies.
 - `src/` — the crate source ([src/map.md](src/map.md)).
-- `tests/` — local-executor integration pins ([tests/map.md](tests/map.md)).
+- `tests/` — local-executor and cluster two-executor integration pins
+  ([tests/map.md](tests/map.md)).
 
 ## Pointers
 
