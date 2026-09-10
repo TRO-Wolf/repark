@@ -23,6 +23,7 @@ mod rewrite_data_files;
 mod rewrite_manifests;
 mod rewrite_where;
 mod run_maintenance;
+mod run_maintenance_apply;
 
 /// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[

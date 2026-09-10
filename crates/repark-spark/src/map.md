@@ -77,8 +77,9 @@ pins: rp-4-fork-repin/C-005, C-006
   file (`B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11));
   rewrite-data-files honors v2 `where` file-selection, refuses
   sort/`sort_order` (`RDF-SORT-1`), and on v3 drops in-scope DVs (`V3-DANGLE-1`
-  FIXED). **MAINT-POLICY-1 step 2 (2026-09-10):** `run_maintenance` (dry run only) plans the
-  five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides.
+  FIXED). **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
+  five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
+  and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).
   Details and test pointers:
   [call/map.md](call/map.md).
   pins: v3-5-dv-compaction/C-002, C-003, C-006

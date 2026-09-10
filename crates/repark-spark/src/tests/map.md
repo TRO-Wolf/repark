@@ -602,13 +602,19 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 The test modules follow production ownership. Archived ledgers remain available from the pointers
 above.
 
-- `run_maintenance.rs` — **MAINT-POLICY-1 step 2 (2026-09-10):** the dry-run door pins on a
+- `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** the dry-run door pins on a
   memory-catalog table with 20 small files and 3 snapshots (plus a merge-on-read table with
   live delete files for the gate): the five-step planned frame shape, the `dry_run` default,
   the delete-ratio gate both sides (exact equality admits), the file → table → inline
   override order, the D-6 refusal both halves, and the loud inline refusals (unknown key,
-  reserved key, negative integer, malformed duration, apply mode).
-  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
+  reserved key, negative integer, malformed duration). Step 3 retires the apply-mode
+  refusal and pins the apply path on the same fixtures: binpack to one file, expiry to
+  `retain_last`, aged-stray removal with the stray named in the JSON result, a zero target
+  size failing step 2 with `failed` + `skipped` rows and a readable table, gate-skipped
+  steps absent on apply exactly as on a dry run, and the session-build stamp end to end
+  (a `repark.toml` policy plans with no inline keys; the D-6 refusal names `default`).
+  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
+  C-017, C-018, C-019
 
 ## Pointers
 

@@ -284,6 +284,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `[<profile>.maintenance]` policy (`set_maintenance_policy` / `maintenance_policy`, profile
   name plus optional typed policy), the per-execute channel the `run_maintenance` dry run
   reads so it never touches the process environment at query time.
+  **MAINT-POLICY-1 step 3 (2026-09-10):** the builder stamps that channel from the loaded
+  `repark.toml` at `build()` (active profile name plus the resolved policy, `None` when the
+  profile carries no table); a build with no config file leaves the registry unstamped, so
+  existing sessions behave exactly as before.
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,

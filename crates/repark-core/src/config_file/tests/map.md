@@ -18,8 +18,11 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   dot-join flattening, the builder-profile-default precedence table, the redacted
   source-column dump, the byte-identical catalog done condition, the loud CFG-2 database
   refusal). Tempdir fixtures with stub environments throughout, so no pin mutates the
-  process environment.
+  process environment. **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
+  policy resolves with its profile name, `REPARK_ENV` names a non-default stamp with and
+  without a table, the file-built session carries the stamp on its registry).
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: maint-policy-1/C-020
 
 ## Pointers
 

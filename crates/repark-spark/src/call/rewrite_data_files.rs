@@ -7,6 +7,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::Catalog;
+use iceberg::expr::Predicate;
 use iceberg::maintenance::RewriteDataFiles;
 
 use super::rewrite_where::parse_rewrite_where;
@@ -50,22 +51,50 @@ pub(super) async fn execute_rewrite_data_files(
     }
 
     let table_arg = args.require_string("table", 0)?;
-    let ident = resolve_table_ident(catalog_name, &table_arg)?;
-    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-
     let remove_dangling_deletes = args
         .optional_bool("remove-dangling-deletes", None)?
         .unwrap_or(false);
     let where_predicate = match args.optional_string("where")? {
-        Some(where_sql) => Some(parse_rewrite_where(
-            where_sql.as_str(),
-            table.metadata().current_schema(),
-        )?),
+        Some(where_sql) => {
+            let ident = resolve_table_ident(catalog_name, &table_arg)?;
+            let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+            Some(parse_rewrite_where(
+                where_sql.as_str(),
+                table.metadata().current_schema(),
+            )?)
+        }
         None => None,
     };
+    run_rewrite(
+        ctx,
+        catalog,
+        catalog_name,
+        &table_arg,
+        remove_dangling_deletes,
+        where_predicate,
+        None,
+    )
+    .await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(super) async fn run_rewrite(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    table_arg: &str,
+    remove_dangling_deletes: bool,
+    where_predicate: Option<Predicate>,
+    target_file_size_bytes: Option<u64>,
+) -> Result<DataFrame> {
+    let ident = resolve_table_ident(catalog_name, table_arg)?;
+    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     let mut action = RewriteDataFiles::new(table).remove_dangling_deletes(remove_dangling_deletes);
     if let Some(predicate) = where_predicate {
         action = action.filter(predicate);
+    }
+    if let Some(size) = target_file_size_bytes {
+        action = action.target_file_size_bytes(size);
     }
     let result = action
         .execute(catalog.as_ref())

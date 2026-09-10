@@ -146,6 +146,86 @@ implementation then made all 22 pins green with no further test edits.
   `a_non_table_database_name_slot_refuses_naming_the_key_path`); only the
   maintenance-spelled instances lack a pin. Step 2 may pin them or leave them.
 
+## PROPOSITION LEDGER — MAINT-POLICY-1 step 3 (apply path + session-build stamp) — 2026-09-10
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-013 | `dry_run => false` binpacks the 20-file fixture down to the binpack expectation and keeps every row readable. | `apply_binpacks_to_expected_count` | **PROVEN** | Green in the step-3 run (`cargo test -p repark-spark run_maintenance`: `28 passed; 0 failed`, 2026-09-10). Policy `target_file_size_bytes = 67108864` alone plans steps 2 and 4; apply answers both `ran`; `data_files` measures 1; all 22 rows read back. Red first below. |
+| C-014 | `dry_run => false` expires snapshots down to `retain_last`. | `apply_expires_to_retain_last` | **PROVEN** | Green in the same run. Policy `snapshot_older_than = "0d"` + `snapshot_retain_last = 1` applies the expire step `ran`; `snapshots` measures 1; all 22 rows read back. `"0d"` is required because the fork only expires snapshots older than the cutoff (default `now - history.expire.max-snapshot-age-ms`, 5 days), so no positive-duration policy can expire fresh snapshots — measured fork semantics, not assumed. Red first below. |
+| C-015 | `dry_run => false` removes an aged stray file under the table location and names it in the step result. | `apply_removes_orphan` | **PROVEN** | Green in the same run. Stray `orphan-0.parquet` aged 10 days (the `set_modified` precedent from the orphan-call pins) with policy `orphan_older_than = "3d"`: the step answers `ran`, its JSON `result` contains the stray name, the path is gone from disk, and the 3 live rows read back. Red first below. |
+| C-016 | A failing step stops the chain: its row is `failed` with the error text, later rows are `skipped`, and the table stays readable. | `failed_step_stops_chain` | **PROVEN** | Green in the same run. Policy `target_file_size_bytes = 0` + `rewrite_manifests = true` plans steps 2, 3, 4; step 2 answers `failed` with the fork refusal naming `target-file-size-bytes`, steps 3–4 answer `skipped` with empty results, and the 3 rows read back. The zero size proves the policy value reaches the fork action (a dropped size would succeed). Red first below. |
+| C-017 | A gate-skipped step stays absent on apply exactly as on a dry run; `skipped` means chain-stopped only. | `apply_omits_gate_skipped_steps_like_dry_run` | **PROVEN** | Green in the same run. The 20-file fixture under the full policy plans ordinals `[2, 3, 4, 5]`; apply reports the identical ordinals, all `ran`, with no step-1 row. Decision rationale: D-3/D-4 reserve `skipped` for rows after a failure, so reusing it for gated-out steps would blur two meanings; no pin showed that hiding a failure. |
+| C-018 | A session built from a `repark.toml` with a `[default.maintenance]` table plans the policy values with no inline keys. | `a_repark_toml_policy_reaches_run_maintenance` | **PROVEN** | Green in the same run. `ReparkSession::builder().from_config_file(...).with_extension(SparkExtension).with_sql_dialect(SparkDialect)`, memory catalog plus namespace created through the public session API: the bare CALL plans the file's `536870912` size and `retain_last => 7`. Red first below. |
+| C-019 | A session built from a `repark.toml` whose profile has no `maintenance` table refuses naming that profile. | `the_d6_refusal_names_the_active_profile` | **PROVEN** | Green in the same run through the same session shape: the bare CALL refuses with `run_maintenance: no [default.maintenance] table and no inline keys`. This pin is a guard, not red-first: the unstamped tree already named `default`, so it passed before the fix too; the non-default profile naming is pinned at the `FileConfig` level (C-020) where the environment arrives as a stub closure. |
+| C-020 | The loaded file resolves into a `(profile, Option<MaintenancePolicy>)` build stamp, and the builder installs it on the registry. | `maintenance_table_resolves_into_file_config_with_profile_name` + `repask_env_profile_names_the_maintenance_stamp` + `file_built_session_stamps_the_registry_maintenance_policy` | **PROVEN** | Green in the step-3 run (`cargo test -p repark-core config_file`: `57 passed; 0 failed`, 2026-09-10). Default-profile values resolve with the `default` name; `REPARK_ENV=analytics` stamps `analytics` with and without a table (`None` policy); a file-built session exposes the stamp on `catalogs_snapshot().maintenance_policy()`. A build with no config file leaves the registry unstamped, so existing sessions behave as before (every pre-existing test exercises that path). Red first below. |
+
+VERDICT (step 3): 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Step-3 red first
+
+Pins written first against the step-2 tree (apply refusal live, no `maintenance` on
+`FileConfig`, no builder stamp). `cargo test -p repark-core config_file` failed to compile;
+`cargo test -p repark-spark run_maintenance` ran `23 passed; 6 failed`. No pin assertion was
+edited afterwards except provisional measurement values confirmed by the green run.
+
+```text
+error[E0609]: no field `maintenance` on type `FileConfig`
+   --> crates/repark-core/src/config_file/tests/wiring.rs:315:10
+    |
+    = note: available fields are: `provenance`, `pairs`, `origins`, `memory_limit_gb`,
+             `batch_size`, `target_partitions`
+
+thread 'tests::run_maintenance::apply_binpacks_to_expected_count' panicked at
+crates/repark-spark/src/tests/run_maintenance.rs:35:10:
+run_maintenance apply: NotImplemented("CALL run_maintenance dry_run => false is not supported
+in this build: the dry run is the only mode until the apply path lands")
+
+thread 'tests::run_maintenance::a_repark_toml_policy_reaches_run_maintenance' panicked at
+crates/repark-spark/src/tests/run_maintenance.rs:793:10:
+the file policy plans with no inline keys: Analysis("Error during planning:
+run_maintenance: no [default.maintenance] table and no inline keys for sales.t")
+```
+
+The six failing spark pins are the five apply/gate pins plus the session-policy pin; the
+D-6 session pin passed before and after (a no-behavior-change guard, C-019). Step 2's
+`run_maintenance_apply_refuses_until_step_3` is retired in this step, replaced by the five
+apply pins above.
+
+## Step-3 notes for the next round
+
+- No procedure needed SQL-text re-entry, so the card's HALT trigger never fired and no second
+  execution path was invented. Each apply step calls the same procedure body the `execute_call`
+  router dispatches to, with a programmatically built `CallArgs`: steps 1/3/4/5 through their
+  `execute_*` entries, step 2 through the shared `run_rewrite` core extracted from
+  `rewrite_data_files.rs` (the door passes `None` for the size after its v1 refusals; apply
+  passes the policy size). The door contract is unchanged: `options` stays refused and every
+  shipped rewrite pin passes untouched.
+- The dry-run rewrite rendering keeps Spark's options-map spelling while apply passes the
+  parsed size directly, which the card's step-2 notes explicitly allow ("makes that string
+  executable or revises the rendering and says so" — this is the former, scoped to the value,
+  with the spelling left as documentation). D-3's "the CALL as it would be issued" holds for
+  steps 1/3/4/5 bit-for-bit; for step 2 the size travels typed instead of through the refused
+  map. `StepAction` carries the plan-time cutoffs so apply reuses the rendered values rather
+  than recomputing `now`.
+- The orphan apply passes `dry_run => false` explicitly because that door defaults it true;
+  without it the sweep would only list.
+- `result` is the step's own frame rendered as JSON by a small local renderer. `serde_json`
+  is workspace-pinned but test-only for another crate, and `Cargo.toml` is frozen on this
+  card, so the renderer hand-rolls the procedure result types (booleans, integers, floats,
+  strings, nulls) and refuses loud on anything else rather than guessing its shape.
+  Non-finite floats refuse for the same reason.
+- One `Box::pin` at the apply call site keeps the router future under the 16 KiB
+  `large_futures` lint; without it three untouched `v3_subquery_dml` tests tripped the lint
+  because `execute_call`'s future grew.
+- `translate_document` keeps its length lint via the extracted `resolve_maintenance` helper.
+- The `audit-repark-parity` skill was considered and not triggered: `run_maintenance` is a new
+  unreleased procedure with no live-oracle pins, and no existing Spark-visible default or
+  error contract changed (the rewrite door keeps its refusal; the D-6 text is unchanged).
+- Measured on 2026-09-10: twenty small files binpack to exactly 1 file at a 64 MiB target;
+  the fork's expire honors `retain_last` only for snapshots older than the cutoff, hence the
+  `"0d"` fixture; a zero `target-file-size-bytes` fails in the fork before any commit, hence
+  the readable table after the stopped chain.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: maint-policy-1

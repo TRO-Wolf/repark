@@ -55,7 +55,11 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   home)` (forced path refuses naming it when absent, else automatic discovery; empty
   `REPARK_CONFIG` disables, empty `REPARK_ENV` selects default) then `REPARK_ENV` profile,
   merge, interpolation, and translation of the effective table into flat pairs:
-  `display.*` → `repark.display.*` (string or integer, else refuses), `session` knobs →
+  `display.*` → `repark.display.*` (string or integer, else refuses), `maintenance` →
+  the `(active-profile, Option<MaintenancePolicy>)` stamp `session.rs` installs on the
+  registry at build (MAINT-POLICY-1 step 3, 2026-09-10; a loaded file always names its
+  profile, `None` policy when the table is absent; no file leaves the build unstamped),
+  `session` knobs →
   typed fallbacks plus `repark.*` knob-key pairs, `conf` flattened with dot joins
   (TOML nests dotted keys; a quoted-plus-nested collision refuses) in sorted-key order
   (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
@@ -90,8 +94,12 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   or edited in the split. The environment arrives as a stub closure throughout, so no pin
   mutates the process environment (build-level pins use forced temp paths and assume the
   ambient `REPARK_ENV` is unset, the same class of assumption as the seed's no-file pin).
+  **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file policy resolves with its
+  profile name, `REPARK_ENV` names a non-default stamp with and without a table, the
+  file-built session carries the stamp on its registry).
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: maint-policy-1/C-020
 
 ## Pointers
 

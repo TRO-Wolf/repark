@@ -35,10 +35,27 @@ struct TableStats {
     delete_bytes: u64,
 }
 
-struct PlannedStep {
-    ordinal: i32,
-    procedure: &'static str,
-    arguments: String,
+pub(super) struct PlannedStep {
+    pub(super) ordinal: i32,
+    pub(super) procedure: &'static str,
+    pub(super) arguments: String,
+    pub(super) action: StepAction,
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum StepAction {
+    RewritePositionDeleteFiles,
+    RewriteDataFiles {
+        target_size: Option<u64>,
+    },
+    RewriteManifests,
+    ExpireSnapshots {
+        older_than: Option<i64>,
+        retain_last: Option<u64>,
+    },
+    RemoveOrphanFiles {
+        older_than: i64,
+    },
 }
 
 pub(super) async fn execute_run_maintenance(
@@ -66,13 +83,6 @@ pub(super) async fn execute_run_maintenance(
     }
     let table_arg = args.require_string("table", 0)?;
     let dry_run = args.optional_bool("dry_run", Some(1))?.unwrap_or(true);
-    if !dry_run {
-        return Err(DataFusionError::NotImplemented(
-            "CALL run_maintenance dry_run => false is not supported in this build: \
-             the dry run is the only mode until the apply path lands"
-                .to_string(),
-        ));
-    }
     let inline = InlineOverrides {
         target_file_size_bytes: optional_non_negative_u64(args, "target_file_size_bytes")?,
         snapshot_retain_last: optional_non_negative_u64(args, "snapshot_retain_last")?,
@@ -102,7 +112,17 @@ pub(super) async fn execute_run_maintenance(
     let effective = apply_inline(&base.unwrap_or_default(), &inline)?;
     let stats = table_stats(ctx, catalogs, catalog_name, &ident).await?;
     let steps = plan_steps(&effective, catalog_name, &table_arg, &stats, now_millis()?);
-    plan_dataframe(ctx, &steps)
+    if dry_run {
+        return plan_dataframe(ctx, &steps);
+    }
+    Box::pin(super::run_maintenance_apply::apply_steps(
+        ctx,
+        catalogs,
+        catalog_name,
+        &table_arg,
+        &steps,
+    ))
+    .await
 }
 
 fn optional_non_negative_u64(args: &CallArgs, name: &str) -> Result<Option<u64>> {
@@ -297,6 +317,7 @@ fn plan_steps(
             ordinal: 1,
             procedure: "rewrite_position_delete_files",
             arguments: call_text(catalog_name, "rewrite_position_delete_files", table_arg, ""),
+            action: StepAction::RewritePositionDeleteFiles,
         });
     }
     let rewrite_extras = policy.target_file_size_bytes.map_or(String::new(), |size| {
@@ -311,20 +332,24 @@ fn plan_steps(
             table_arg,
             &rewrite_extras,
         ),
+        action: StepAction::RewriteDataFiles {
+            target_size: policy.target_file_size_bytes,
+        },
     });
     if policy.rewrite_manifests == Some(true) {
         steps.push(PlannedStep {
             ordinal: 3,
             procedure: "rewrite_manifests",
             arguments: call_text(catalog_name, "rewrite_manifests", table_arg, ""),
+            action: StepAction::RewriteManifests,
         });
     }
+    let expire_older_than = policy
+        .snapshot_older_than
+        .map(|older_than| older_than_ms(now_ms, older_than));
     let mut expire_parts = Vec::new();
-    if let Some(older_than) = policy.snapshot_older_than {
-        expire_parts.push(format!(
-            ", older_than => {}",
-            older_than_ms(now_ms, older_than)
-        ));
+    if let Some(cutoff) = expire_older_than {
+        expire_parts.push(format!(", older_than => {cutoff}"));
     }
     if let Some(retain) = policy.snapshot_retain_last {
         expire_parts.push(format!(", retain_last => {retain}"));
@@ -338,8 +363,13 @@ fn plan_steps(
             table_arg,
             &expire_parts.concat(),
         ),
+        action: StepAction::ExpireSnapshots {
+            older_than: expire_older_than,
+            retain_last: policy.snapshot_retain_last,
+        },
     });
     if let Some(older_than) = policy.orphan_older_than {
+        let cutoff = older_than_ms(now_ms, older_than);
         steps.push(PlannedStep {
             ordinal: 5,
             procedure: "remove_orphan_files",
@@ -347,8 +377,9 @@ fn plan_steps(
                 catalog_name,
                 "remove_orphan_files",
                 table_arg,
-                &format!(", older_than => {}", older_than_ms(now_ms, older_than)),
+                &format!(", older_than => {cutoff}"),
             ),
+            action: StepAction::RemoveOrphanFiles { older_than: cutoff },
         });
     }
     steps
