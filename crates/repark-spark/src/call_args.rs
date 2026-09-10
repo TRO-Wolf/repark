@@ -141,6 +141,18 @@ impl CallArgs {
         Ok(None)
     }
 
+    pub(crate) fn optional_f64(&self, name: &str, position: Option<usize>) -> Result<Option<f64>> {
+        if let Some(expr) = self.named.get(name) {
+            return expr_as_f64(expr, name).map(Some);
+        }
+        if let Some(index) = position
+            && let Some(expr) = self.positional.get(index)
+        {
+            return expr_as_f64(expr, name).map(Some);
+        }
+        Ok(None)
+    }
+
     pub(crate) fn optional_i32(&self, name: &str, position: Option<usize>) -> Result<Option<i32>> {
         match self.optional_i64(name, position)? {
             None => Ok(None),
@@ -279,6 +291,32 @@ pub(crate) fn expr_as_timestamp_ms(expr: &Expr, arg_name: &str) -> Result<i64> {
         other => Err(DataFusionError::Plan(format!(
             "CALL argument `{arg_name}` must be a TIMESTAMP literal, string, or epoch-ms \
              integer, got {other}"
+        ))),
+    }
+}
+
+pub(crate) fn expr_as_f64(expr: &Expr, arg_name: &str) -> Result<f64> {
+    match expr {
+        Expr::Value(ValueWithSpan {
+            value: Value::Number(raw, _),
+            ..
+        }) => raw.parse::<f64>().map_err(|_| {
+            DataFusionError::Plan(format!("CALL argument `{arg_name}` is not a number: {raw}"))
+        }),
+        Expr::UnaryOp {
+            op: datafusion::sql::sqlparser::ast::UnaryOperator::Minus,
+            expr,
+        } => Ok(-expr_as_f64(expr, arg_name)?),
+        Expr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
+            ..
+        }) => text.trim().parse::<f64>().map_err(|_| {
+            DataFusionError::Plan(format!(
+                "CALL argument `{arg_name}` string is not a number: {text}"
+            ))
+        }),
+        other => Err(DataFusionError::Plan(format!(
+            "CALL argument `{arg_name}` must be a number, got {other}"
         ))),
     }
 }

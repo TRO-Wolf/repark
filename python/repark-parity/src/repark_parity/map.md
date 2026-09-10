@@ -16,7 +16,12 @@ The `repark_parity` package — the parity comparison core. See [../../map.md](.
   path accepts nested list/struct/map columns via total canonical row keys + map entry
   normalization; flat schemas keep the historical `sort_by` path (no golden re-record).
 - `sql.py` — dependency-free, quote-only SQL escaping for standalone parity benchmarks.
-- `__init__.py` — public exports. `py.typed` — typed marker.
+- `__init__.py` — public exports, plus a checkout-only `__path__` graft: when a `fixtures/`
+  directory exists beside `src/`, it joins the package path so `repark_parity.torture`
+  resolves to [../../fixtures/torture/map.md](../../fixtures/torture/map.md). The
+  wheel never ships `fixtures/`, so the graft is a no-op there; the card's module path and
+  `python -m repark_parity.torture` CLI spelling hold without a `pyproject.toml` edit.
+  `py.typed` — typed marker.
 
 ## Pointers
 

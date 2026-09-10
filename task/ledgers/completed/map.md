@@ -8,6 +8,17 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [ap-0-ledger.md](ap-0-ledger.md) —
+  **AP-0 (measure, 2026-09-10), in flight:** ADAPT-PART partition-candidate
+  measurement — three local Iceberg beds (futures CTAS unpartitioned, generated
+  uniform/skewed 400k-row beds, 206 files each) scored from `files`/`partitions`
+  manifest bounds at a 512 KiB target, one ranked P-2/P-3 table per bed in
+  [../../../docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../docs/perf/ap-0-partition-candidates-2026-09-10.md),
+  runnable method in
+  [../../../python/repark-parity/bench/adaptpart/map.md](../../../python/repark-parity/bench/adaptpart/map.md).
+  4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
+  O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
+  pins: ap-0/C-001, C-002, C-003, C-004
 - [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
   **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B
   judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —
@@ -68,6 +79,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
   and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
   (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
+- [facade-audit-0-ledger.md](facade-audit-0-ledger.md) — Unit ledger — FACADE-AUDIT-0 step 1 · Half A: the Rust-backed facade facts
 - [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
   **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
@@ -81,6 +93,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   check), and `EXCEPTIONS` is untouched. Step 2 (2026-09-09) flipped BALLISTA-AUDIT-0's
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
+- [maint-policy-1-ledger.md](maint-policy-1-ledger.md) — Unit ledger — MAINT-POLICY-1 step 1 · typed `[<profile>.maintenance]` policy
 - [preflight-parity-1-ledger.md](preflight-parity-1-ledger.md) —
   **PREFLIGHT-PARITY-1 (2026-09-09), in flight:** the CAP-1 source-file mirror joins
   `make preflight` as `make py-test-parity-cap` — the mirror file alone

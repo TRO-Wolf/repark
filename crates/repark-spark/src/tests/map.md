@@ -271,8 +271,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy
   and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
-  compacts v2.
+  compacts v2. **MAINT-POLICY-1 step 4 (2026-09-10):** a missing table plus a malformed
+  `remove-dangling-deletes` value reports the table, never the flag. The standing
+  `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: maint-policy-1/C-028, C-029
 - `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
   MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
@@ -601,6 +604,32 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 The test modules follow production ownership. Archived ledgers remain available from the pointers
 above.
+
+- `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** the dry-run door pins on a
+  memory-catalog table with 20 small files and 3 snapshots (plus a merge-on-read table with
+  live delete files for the gate): the five-step planned frame shape, the `dry_run` default,
+  the delete-ratio gate both sides (exact equality admits), the file → table → inline
+  override order, the D-6 refusal both halves, and the loud inline refusals (unknown key,
+  reserved key, negative integer, malformed duration). Step 3 retires the apply-mode
+  refusal and pins the apply path on the same fixtures: binpack to one file, expiry to
+  `retain_last`, aged-stray removal with the stray named in the JSON result, a zero target
+  size failing step 2 with `failed` + `skipped` rows and a readable table, gate-skipped
+  steps absent on apply exactly as on a dry run, and the session-build stamp end to end
+  (a `repark.toml` policy plans with no inline keys; the D-6 refusal names `default`).
+  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
+  C-017, C-018, C-019
+- `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** the plan door pins on memory-catalog
+  fixtures: a 90-day `ts` table in 9 ten-day files at total/90 target (`days(ts)` first at 0.0
+  over 90 partitions, best-first order, `unpartitioned` present, the D-1 frame shape with Arrow
+  types, the all-NULL `note` column excluded and named on the last row, stable per-candidate
+  `plan_id`s, the AP-0-R-001 caveat on every row), a 4-region table (`identity(region)` first at
+  0.0), a non-`main` branch refusing, and a spec-evolved table carrying the one-spec rewrite
+  note, plus the argument refusals (missing/zero/negative target, unknown key). In-module
+  unit tests pin the civil calendar, the grains, the band penalty, the 1/k split, the Spark
+  DDL labels, the bucket split, the pair cross-product, and the plan-id stability. Timestamp
+  fixture days are rendered as literals in Rust (`TIMESTAMP '…'` arms over `src`) because the
+  door exposes no SQL `date_add`.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 
 ## Pointers
 

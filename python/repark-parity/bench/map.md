@@ -56,11 +56,20 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
   See [icescan/map.md](icescan/map.md).
   pins: perf-ice-scan-1/C-009
+- [profiles/](profiles/map.md) — **PROFILES-1 step 1 (2026-09-10)** config-profile
+  measurement bed: three D-2 datasets, five reads + three writes, knob × value timing
+  harness writing one CSV row per cell, one-JVM guard, `--smoke` proof mode.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - [approxpct/](approxpct/map.md) — **PERF-APPROXPCT-1 round 2 (2026-09-06)** sketch
   cells: `run_cells.py ROWS ATTEMPTS [--control]` times the `percentile_approx(id,
   0.5)` wall/peak/answer rows (or the `count(id)` control) on a range scan, release
   module only. See [approxpct/map.md](approxpct/map.md).
   pins: perf-approxpct-1/C-004
+- [adaptpart/](adaptpart/map.md) — **AP-0 (measure, 2026-09-10)** adaptive-partitioning
+  candidate measurement: three local Iceberg beds scored from `files`/`partitions`
+  manifest bounds (P-2 candidates, P-3 target-band scores, one ranked table per bed).
+  See [adaptpart/map.md](adaptpart/map.md).
+  pins: ap-0/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…
@@ -89,6 +98,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |
+| Run the AP-0 partition-candidate measurement | `adaptpart/run_adaptpart.py --scratch <dir>` (fresh dir; rows need the defaults) |
 | Read TPC-H findings | `../../../task/tpch-report-2026-07-31.md` |
 | Read fuzzer long-pass census | `../../../task/d3-sql-fuzzer-ledger.md` |
 | Read write-bench findings (CTAS) | `../../../task/write-bench-report-2026-08-06.md` |

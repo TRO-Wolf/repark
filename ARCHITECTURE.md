@@ -9,7 +9,7 @@ change read [AGENTS.md](AGENTS.md).
 
 ## Component boundaries + dependency direction
 
-repark is one Cargo workspace of nine crates layered on Apache DataFusion + Arrow + the owned
+repark is one Cargo workspace of ten crates layered on Apache DataFusion + Arrow + the owned
 `iceberg-rust` fork. Dependencies point **one way, down the tiers** — no cycles, no door-to-door
 edge, bindings reach inward only.
 
@@ -19,6 +19,8 @@ edge, bindings reach inward only.
  tier 3  doors +             repark-spark ──┐   repark-sql        repark-functions  repark-ta  repark-ml
          semantic profiles   (Spark door)   │   (ANSI/Trino door)  (Spark fns)      (TA UDFs) (ML kernels)
          + capability leaves       │        │        │
+         + runtime           repark-distributed ──► repark-core (DistributedExecutor; `cluster` off by default)
+                                   │        │        │
  tier 2  engine / session          └────► repark-core ◄───────────┘
                                           (ReparkSession, ExecutionBackend, SqlDialect/SessionExtension seams)
                                                   │
@@ -28,6 +30,13 @@ edge, bindings reach inward only.
  tier 0  foundation                          repark-common
                                           (Error/Result seed + dialect-neutral SQL surface registry)
 ```
+
+`repark-distributed` is the tier-3 `runtime` crate: it owns the `DistributedExecutor` trait and
+the in-process `LocalDataFusionExecutor` that every M1 test runs first. Ballista (client, core,
+scheduler, executor at 54.1.0) sits behind `features = ["cluster"]`, off by default, so
+`make verify` and the wheel stay single-node. It depends on `repark-core`; nothing below tier 3
+depends on it; `repark-python` and the planned server crates may. Writes and commits stay
+coordinator-side ([docs/adr/0004-server-prep-disciplines.md](docs/adr/0004-server-prep-disciplines.md)).
 
 Rules that hold at every tier (the enforced ones point at their SSOT — prose never restates it):
 

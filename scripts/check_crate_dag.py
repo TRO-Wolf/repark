@@ -70,13 +70,14 @@ TIERS: dict[str, int] = {
     "repark-sql": 3,
     "repark-ml": 3,
     "repark-python": 4,
+    "repark-distributed": 3,
 }
 
 # The role vocabulary. The structural rules quantify over exactly these; `audit_policy`
 # rejects any ROLES value outside this set, because an unrecognized role matches no rule and
 # must fail loudly, never pass quietly.
 ROLE_NAMES: frozenset[str] = frozenset(
-    {"foundation", "table service", "engine", "capability", "door", "bindings"}
+    {"foundation", "table service", "engine", "capability", "door", "bindings", "runtime"}
 )
 
 # What each crate IS, architecturally — the vocabulary the structural rules quantify over. A
@@ -99,12 +100,19 @@ ROLES: dict[str, str] = {
     "repark-spark": "door",
     "repark-sql": "door",
     "repark-python": "bindings",
+    "repark-distributed": "runtime",
 }
 
 # The explicit edge table: (source, target) -> (permitted kinds, why the edge exists). EVERY
 # internal edge must appear here, so adding a dependency is a two-file change — the manifest
 # and this table. Rows whose endpoints both exist but whose edge is gone are reported as stale.
 ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
+    ("repark-distributed", "repark-core"): (
+        frozenset({"normal"}),
+        "the engine session and its Iceberg table providers: a distributed executor runs the "
+        "same physical plans the coordinator session builds, so the runtime crate reaches the "
+        "engine directly and nothing below tier 3 reaches back",
+    ),
     ("repark-core", "repark-common"): (
         frozenset({"normal"}),
         "the error seed (Error / ErrorClass / Result), re-exported at the engine root so doors "

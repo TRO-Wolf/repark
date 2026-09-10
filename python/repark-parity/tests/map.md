@@ -29,6 +29,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- [torture/](torture/map.md) — **TORTURE-1 step 1 (2026-09-10):** the both-door torture
+  suite (`nested` + `inference` families; DataFrame read and `spark.sql` over a temp view;
+  row counts, declared schemas, per-column inferred types, byte-identical CLI
+  determinism, the manifest reuse rule, and the CI-tier 60-second workload pin). The
+  `boolish` cell is `xfail(strict=True, reason="CSV-INFER-INT32-WIDTH")`. Needs the native
+  module: run through `make py-test-torture`. Ledger:
+  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/staging/torture-1-ledger.md).
+  pins: torture-1/C-001, C-002, C-003, C-004, C-006
 - `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,
   constraint preservation (dropped prefix rule, dropped sidecar
@@ -137,7 +145,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
-  second escape rule. pins: h3-spill-1/C-001
+  second escape rule. MAINT-POLICY-1 (2026-09-10): the inventory gains
+  `spark/session/session_maintenance.py` `sql_string_literal` 2 — the facade wrapper renders the
+  table name and any string override into the `CALL … run_maintenance(…)` text through the helper
+  rather than an f-string, so the one place a caller's value reaches SQL stays inside the audited
+  set. pins: h3-spill-1/C-001, maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline. pins: dfcore-1/C-007
 - `test_cap_1_source_file_line_cap.py` — DFCORE-2 (2026-09-07): `dataframe/core.py` row 5954 → 5263 with the script baseline; the two new UDF projection modules carry no row. pins: dfcore-2/C-006
@@ -156,6 +168,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   roster sentence stays as it is and `DEVELOPMENT.md` plus the root `map.md` are the homes
   that name new gate members — both already do, so the unit closes with no further edit and
   its ledger moved to `completed/`. pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
+- `test_profiles_bed.py` — **PROFILES-1 step 1 (2026-09-10):** engine-free bed pins:
+  three datasets (futures name, TPCH SF10, 200 Iceberg files, the shared dbgen
+  symbol), five reads + three writes (append 8 files, merge 10 %), CSV header /
+  median / row shape, the JVM guard both ways, smoke scale below full scale.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 3 (2026-09-09): `dataframe/core.py` row 4536 → 4525 with the script baseline; the two `__repr__` / `_repr_html_` docstrings condensed to one line each, their contracts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: display-polars-1/C-004
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EAGER-1 step 2 (2026-09-09): `dataframe/core.py` row 4525 → 4487 with the script baseline; `.eager()`/`.compute()`/`.lazy()` and the cache-guard trio live in the new `dataframe/eager.py`, so the row ratchets DOWN. pins: df-eager-1/C-001
@@ -166,6 +183,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `functions_json.install_into`. pins: fnp-9-collections-json/C-001
 - `test_ex_0_example_coverage.py` — **CFG-1 step 3 (2026-09-09):** the enumerated public surface moves 921 → 923 as `Builder.config_file` and its `configFile` camelCase twin join the session family; both are covered by `docs/examples/session/config_file.py`, so `check-example-coverage` stays clean. This pin lives in the parity suite, which `make preflight` does not run — a PR that adds a public name must run it before pushing. pins: cfg-1/C-026
 - `test_ex_0_example_coverage.py` — **CFG-1 step 4 (2026-09-10):** the surface stays 923 — the new `repark.config` mirror is not one of the enumerated doors (functions / class surfaces / module `__all__` / `repark.sql`), so no count moves and no covering example is owed. pins: cfg-1/C-031
+- `test_ex_0_example_coverage.py` — **MAINT-POLICY-1 audit fix (2026-09-10):** the enumerated public surface moves 926 → 927 as `SparkSession.run_maintenance` joins the session family declared in the class body; `docs/examples/session/run_maintenance.py` covers it, so `check-example-coverage` stays clean. pins: maint-policy-1/C-030
+- `test_cap_1_source_file_line_cap.py` — **MAINT-POLICY-1 audit fix (2026-09-10):** `session/session_core.py` row 2305 → 2304 with the script baseline; `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for the `run_maintenance` class-body declaration. pins: maint-policy-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. NULLABILITY-2

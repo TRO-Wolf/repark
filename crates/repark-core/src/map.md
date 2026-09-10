@@ -36,8 +36,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the ones still unreachable (`load`, `redact_config`, the spec-field carriers) stay, and
   the crate is built with warnings denied. The facade round added the `config_file_pairs`
   entry (translated pairs for the binding fold) and nested-`conf` dot-join flattening.
+  MAINT-POLICY-1 step 1 (2026-09-10) added `config_file/maintenance.rs` (the typed
+  `[<profile>.maintenance]` policy: `MaintenancePolicy` + `TablePolicy`, the D-2
+  duration parser, key-by-key table resolution, `adaptive_partitioning` reserved) and
+  the raw `maintenance` slot on `Profile`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014,
   C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025, C-026, C-027
+  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects
@@ -275,6 +280,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `CatalogCaches` (`with_cache_settings`, resolved once in `build()` from the conf map), so every
   catalog the session builds shares one metadata-location cache and one retained-entry bound.
   pins: perf-ice-catalog-io-1/C-002, C-004
+  **MAINT-POLICY-1 step 2 (2026-09-10):** the registry also carries the stamped
+  `[<profile>.maintenance]` policy (`set_maintenance_policy` / `maintenance_policy`, profile
+  name plus optional typed policy), the per-execute channel the `run_maintenance` dry run
+  reads so it never touches the process environment at query time.
+  **MAINT-POLICY-1 step 3 (2026-09-10):** the builder stamps that channel from the loaded
+  `repark.toml` at `build()` (active profile name plus the resolved policy, `None` when the
+  profile carries no table); a build with no config file leaves the registry unstamped, so
+  existing sessions behave exactly as before.
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,

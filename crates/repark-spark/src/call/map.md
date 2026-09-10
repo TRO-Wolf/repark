@@ -20,7 +20,15 @@ and measured-parity contract would grow `call.rs` beyond its exact
   strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 rewrite
   preserves lineage (`V3-LINEAGE-1` FIXED, RP-4 / fork #243) and drops
   in-scope Puffin DVs with a true `removed_delete_files_count` (`V3-DANGLE-1`
-  FIXED, V3-5). `options` stays refused.
+  FIXED, V3-5). `options` stays refused. **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
+  invocation is the shared `run_rewrite` core (door passes `None` for the size after its
+  refusals; the apply path passes the policy size). **MAINT-POLICY-1 step 4 (2026-09-10):**
+  the door loads the table once up front and passes the loaded table (or its ident) into
+  `run_rewrite`, so a `where` CALL loads once and a missing table reports before a
+  malformed `remove-dangling-deletes` value — the pre-step-3 precedence, pinned. The
+  eighth parameter (ident plus table) trips pedantic `too_many_arguments`, held by the
+  item-scoped allow on `run_rewrite`; bundling the action config into a struct was
+  rejected as heavier than the two-caller shared core it would serve.
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   pins: rp-4-fork-repin/C-003
   pins: v3-5-dv-compaction/C-002, C-004
@@ -28,6 +36,34 @@ and measured-parity contract would grow `call.rs` beyond its exact
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
   pins: maint-rewrite-data-files-options/C-007
+- `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `CALL
+  <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`.
+  Inline keys overlay the stamped file policy (per-table entry, then profile) through
+  step 1's `resolve`; no stamped policy and no inline keys refuse with the D-6 text.
+  `plan_steps` admits each D-4 step by its gate (delete ratio from `files WHERE content = 0`
+  against `delete_files` byte sums, `rewrite_manifests = true`, set cutoffs) with stable D-4
+  ordinals and renders each step's CALL string; the dry-run frame answers `step` Int32 plus
+  `procedure` / `arguments` / `status` / `result` Utf8, every `status` `planned`.
+  Each `PlannedStep` also carries its typed `StepAction` (the plan-time cutoffs, so apply
+  reuses the rendered values bit-for-bit); `dry_run => false` delegates to
+  `run_maintenance_apply.rs` behind one `Box::pin` (the apply future would push the router
+  future past the 16 KiB `large_futures` lint otherwise). In-module unit tests
+  pin the gates, the renderings, and the saturating cutoff math.
+  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
+- `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
+  planned step runs through the same procedure body the CALL door dispatches to (built
+  `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps
+  through their `execute_*` entries, the rewrite step through the shared `run_rewrite` core
+  with the policy's `target_file_size_bytes` (the door keeps its v1 options-map refusal, so
+  the dry-run options rendering stays Spark-spelling documentation while apply passes the
+  parsed size). The frame keeps the dry-run shape with `ran` / `failed` / `skipped`: the
+  first failure stops the chain, its row carries the error text, later rows are `skipped`
+  with empty results; gate-skipped steps stay absent exactly as on a dry run (`skipped`
+  means chain-stopped only). Each `result` is the step's own frame rendered as JSON by a
+  small local renderer (no JSON dependency: `Cargo.toml` is frozen this card); unknown
+  column types refuse loud rather than guessing. Orphan steps pass `dry_run => false`
+  explicitly (the door defaults it true).
+  pins: maint-policy-1/C-013, C-014, C-015, C-016, C-017
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary
@@ -41,6 +77,29 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
   agrees at every size measured.
+- `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** `CALL
+  <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
+  target positive). Statistics come from one `files WHERE content = 0` read
+  (`file_size_in_bytes` plus the `readable_metrics` bound pairs) and the `refs` table; no data
+  scan. P-2 per column: timestamp/date → `years`/`months`/`days`/`hours`; int/string →
+  `identity` when the bound-endpoint union holds at most 1000 values else `bucket(N)`; plus
+  `unpartitioned`; pairs cross the best single of the top three columns. P-3 scores each
+  projected value against the 0.25×–4× target band (a file spanning k values contributes 1/k to
+  each) and ranks by score, projected files, name. The scoring constants live in one place,
+  `plan_partitioning_score.rs`: band 0.25 and 4.0, distinct limit 1000, bucket widths
+  8/16/32/64/128. The frame answers D-1's
+  `candidate`/`score`/`projected_partitions`/`projected_files_at_target`/`ddl`/`calls`/`plan_id`
+  plus `notes`; `plan_id` hashes snapshot id plus candidate. Every row carries the AP-0-R-001
+  caveat (file counts derive from pre-rewrite bytes, 76–88 % high on the AP-0 beds); the last
+  row additionally names boundless columns; more than one partition spec in metadata adds the
+  one-spec rewrite note. A branch besides `main` refuses (P-5). Timestamps truncate in UTC
+  through a dependency-free civil calendar.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- `plan_partitioning_score.rs` — the pure P-2/P-3 engine behind the procedure above:
+  the civil calendar, the grains, the Spark DDL labels, the 1/k byte spread, the band
+  penalty, the single/pair scoring and the best-first ranking, plus the in-module unit tests
+  for each. No SQL, no catalog reads; the caller feeds it rated bound pairs.
+  pins: ap-1/C-001, C-009
 
 ## Pointers
 

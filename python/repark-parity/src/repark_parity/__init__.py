@@ -14,6 +14,12 @@ Two modes (see :mod:`repark_parity.compare` for the comparison core):
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from repark_parity.compare import FrameMismatchError, assert_frames_equal
 
 __all__ = ["FrameMismatchError", "assert_frames_equal"]
+
+_TORTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures"
+if _TORTURE_DIR.is_dir():
+    __path__.append(str(_TORTURE_DIR))
