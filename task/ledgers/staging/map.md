@@ -27,12 +27,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/ballista-m1-c`.
   pins: ballista-m1-c/C-001, C-003, C-004
 - [ballista-m1-d-ledger.md](ballista-m1-d-ledger.md) —
-  **BALLISTA-M1-D step 1 (2026-09-10), in flight:** Iceberg provider codec
-  (`IcebergScanSpec`) round-trip + session rebuild; two-executor 8-file memory-catalog
-  scan matches local on count/sum/filter and both executors ran a task. `IcebergTableScan`
-  does not serialize without `datafusion-proto` (same wall as M1-B C-004); file groups
-  do. S3/Glue executor credentials are residue. `risk_tier: standard`. Branch
-  `feat/ballista-m1-d`.
+  **BALLISTA-M1-D step 2 (2026-09-10), in flight:** Iceberg provider codec and
+  two-executor scan pins (step 1) plus the design-doc Iceberg section and success-list
+  line 17. Runtime abstraction is in place; Iceberg writes and the commit coordinator
+  are Milestone 3 (ADR-0004). Residues: S3/Glue credentials; `IcebergTableScan` rewrite
+  to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
+  Branch `feat/ballista-m1-d`.
   pins: ballista-m1-d/C-001, C-002, C-003
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and

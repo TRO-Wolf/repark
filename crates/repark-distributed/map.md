@@ -57,6 +57,12 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   filtered scan match local; both executors ran a task). `IcebergTableScan` itself does
   not serialize; file groups do. S3/Glue executor credentials stay residue (D-2).
   pins: ballista-m1-d/C-001, C-002, C-003
+- **BALLISTA-M1-D step 2.** Iceberg section and success-list line 17 in
+  [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md). The runtime
+  abstraction is in place. Iceberg writes and the commit coordinator are Milestone 3
+  (ADR-0004). The `IcebergTableScan` serde wall sits beside M1-B C-004: without
+  `datafusion-proto`, RePark plan nodes cannot cross to an executor.
+  pins: ballista-m1-d/C-001, C-002, C-003
 
 ## Contents
 

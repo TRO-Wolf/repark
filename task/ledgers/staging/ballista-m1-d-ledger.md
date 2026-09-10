@@ -1,21 +1,25 @@
-# Unit ledger — BALLISTA-M1-D · Iceberg reads through the executors (step 1)
+# Unit ledger — BALLISTA-M1-D · Iceberg reads through the executors (step 2)
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 This file closes when BALLISTA-M1-D merges, or when the owner closes the slate row.
 
-**Unit:** BALLISTA-M1-D step 1 · **Date:** 2026-09-10 · **Executor:** Grok (grok-4.6), Actor, step 1 ·
-**Branch:** `feat/ballista-m1-d` · **Base:** `feat/ballista-m1-d` with M1-A/B/C on the branch
+**Unit:** BALLISTA-M1-D step 2 · **Date:** 2026-09-10 · **Executor:** Grok (grok-4.6), Actor, step 2 ·
+**Branch:** `feat/ballista-m1-d` · **Base:** `316e6033`
 **Model:** grok-4.6
 **risk_tier:** standard.
 **Path:** STANDARD.
 
-Step 1 lands D-1 (`IcebergScanSpec` provider codec + round-trip) and D-3 (two-executor
-8-file Iceberg scan pins). D-2 is proven for the memory catalog through
-`ReparkSessionProvider`; the S3/Glue executor-credential leg is residue.
+Step 1 (`316e6033`) landed D-1 (`IcebergScanSpec` provider codec + round-trip), D-2
+(memory catalog through `ReparkSessionProvider`), and D-3 (two-executor 8-file Iceberg
+scan pins). Step 2 lands the Iceberg section and success-list line 17 in
+`docs/design/distributed-m1.md`. The runtime abstraction is in place. Iceberg writes
+and the commit coordinator are Milestone 3 (ADR-0004).
 
-**Not in this unit:** design-doc section (step 2), Iceberg writes, commit coordinator,
-`STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.toml`, `Cargo.lock`,
-`datafusion-proto`, `arrow_flight`, `aws`.
+**Not in this unit:** Iceberg writes, commit coordinator, `STATUS.md`,
+`briefs/next-sequence.md`, `.github/`, `Cargo.toml`, `Cargo.lock`,
+`datafusion-proto`, `arrow_flight`, `aws`. The ledger stays in `staging/` until merge
+(`ledger_lifecycle.py move` would compact the slate and STATUS, which this unit must
+not edit).
 
 ## Proposition ledger
 
@@ -83,6 +87,23 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 - **M1-C C-002** (deterministic executor-kill retry) stays OPEN; this step did not need `arrow_flight`.
 - **D-2 S3/Glue leg.** Memory catalog is the test bed. An executor resolving S3/Glue under session-owned credentials (audit R-5 / Q-1) is residue until the cutover credential design lands. This clone has no credentials and the launcher denies `aws`.
 - Bare `SELECT count(*)` on this 8-row table constant-folds from Iceberg stats (`PlaceholderRowExec`); the pin uses `WHERE id + 0 >= 0` so a scan remains.
+
+## Step 2 (2026-09-10) — design-doc close
+
+`docs/design/distributed-m1.md` now records:
+
+- Iceberg reads in "What Milestone 1 delivers" and a dedicated Iceberg section
+  (`IcebergScanSpec` round-trip, session-catalog rebuild, two-executor pins, file-group
+  rewrite, S3/Glue residue).
+- Success list line 17 **done** (`ballista-m1-d/C-003`), with the rewrite named.
+- Open question 4: `IcebergTableScan` cannot travel without `datafusion-proto`. Same wall
+  as M1-B C-004, third node type. The codec choice decides whether any RePark plan node
+  can cross to an executor.
+- Next milestone: Iceberg writes and the commit coordinator (Milestone 3 / ADR-0004).
+  The runtime abstraction (seam, local + cluster, session provider, codec seat, Iceberg
+  reads) is in place.
+
+No product-code change this step. Clauses C-001, C-002, C-003 stay **PROVEN**.
 
 ## Coverage attestation (Actor, step 1)
 

@@ -55,3 +55,5 @@ adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- M1 record: [../../../docs/design/distributed-m1.md](../../../docs/design/distributed-m1.md)
+  (Iceberg reads, success list line 17, open question 4).

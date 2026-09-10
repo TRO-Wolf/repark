@@ -49,3 +49,4 @@ forbids inline `#[cfg(test)]` modules, so the pins live here.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- M1 record: [../../../docs/design/distributed-m1.md](../../../docs/design/distributed-m1.md)
