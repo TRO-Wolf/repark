@@ -66,6 +66,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   split: `EXPECTED_DATAFRAME_DIR` gains `_explain_text`, the package gains the `explain`
   submodule, and the frozen core/package surfaces gain the two private imports.
   pins: df-explain-1/C-003
+  DF-EAGER-1 step 2 (2026-09-09): `eager` / `lazy` stay as one-line wrappers with the
+  `compute` = `eager` alias; the cache-guard trio (`_CACHE_MAX_BYTES_KEY`,
+  `_cache_conf_lookup`, `_resolve_cache_max_bytes`) moves to `eager.py`, re-imported by
+  `core` by identity, so the frozen core/package surfaces keep every name and the package
+  gains exactly the `eager` submodule. The exact baseline ratchets 4525 → 4487 in the same
+  commit. pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -221,6 +227,17 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   count-first fetch and its `n`-based keep-set; the protected
   no-full-collect pin pins that shape, so unifying the doors needs its own
   card. pins: display-polars-1/C-005
+- `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
+  step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
+  the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes
+  the plan through the existing cache-view call on an `_identity_child` sibling (the source
+  frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
+  and the column count from the schema — no Arrow copy crosses to Python (D-7 ruling
+  2026-09-09: the count runs over the view, not the source plan); the guard refusal is
+  wrapped to name `.eager()`. `lazy()` answers `self` on lazy frames and a shape-less view
+  scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
+  query. `unpersist()` clears the shape with the view, so a shape never outlives its
+  materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the
@@ -313,6 +330,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | Statistics bodies | [`statistics.py`](statistics.py) |
 | Sampling bodies | [`sampling.py`](sampling.py) |
 | Display bodies | [`display.py`](display.py) |
+| Eager materialization bodies | [`eager.py`](eager.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -341,6 +359,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   source-size default (pins: dfcore-4a/C-005).
   DFCORE-4b (2026-09-07): `core.py` 4819→4539; `display.py` (322) stays below the
   source-size default (pins: dfcore-4b/C-005).
+  DF-EAGER-1 step 2 (2026-09-09): `core.py` 4525→4487; `eager.py` (92), `display.py`
+  (+6 for the eager-shape total), and `polars.py` (+4 for the `eager` mirror) stay below
+  the source-size default (pins: df-eager-1/C-001, C-002, C-003, C-004, C-006).
   DFCORE-5 (2026-09-07): `statistics.py` 261→264, no new module, no ceiling row;
   stays below the source-size default (pins: dfcore-5/C-005).
   DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
