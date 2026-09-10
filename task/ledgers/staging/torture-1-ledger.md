@@ -286,3 +286,27 @@ Out-of-scope observations (recorded, not acted on): the nested CSV leg (step 1) 
 repark's `CAST(date AS STRING)` refuses for dates beyond year 9999 (`Failed to convert
 106751990 to temporal for Date32`, measured during probing) — unfiled, no pin, a candidate
 for the live-measurement round.
+
+## Orchestrator addendum — the three step-2 registry rows are now measured (2026-09-10)
+
+Step 2 filed `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1` and `DATE-INTERVAL-NSBOUND-1` with
+their Spark halves honestly labelled unmeasured, because the round was forbidden to start a JVM
+while another lane was building. The orchestrator ran the live oracle on the audit
+(PySpark 4.1.2, `zulu-17-amd64`, `local[1]`, ANSI on, the same three fixtures at 10k rows) and
+rewrote all three Spark halves from belief to measurement.
+
+| Row | Claim as filed | Measured | Outcome |
+|---|---|---|---|
+| `CSV-INFER-HEADER-CASE` | Spark keeps capitalised headers verbatim and completes | `struct<Order Total:string,Qty:int,…>`, `count() = 10000` | **confirmed** |
+| `SUM-DEC-I128WRAP-1` | Spark raises on the decimal `SUM` overflow | `ARITHMETIC_OVERFLOW` / SQLSTATE 22003 on both decimal columns, for `SUM` itself | **confirmed** |
+| `DATE-INTERVAL-NSBOUND-1` | Spark **promotes to timestamp** and completes | `day + INTERVAL 1 DAY` has type **`date`**; 10,000 rows; `max` `+294247-01-10` → `+294247-01-11` | **narrowed** |
+
+The third is why the measurement was worth taking. Spark does **not** promote a day-only interval
+to a timestamp, so the "promotion window ends a thousandfold early" reading was wrong and the
+prescribed fix ("do the arithmetic at microsecond width") would have chased the wrong width. The
+defect that survives is repark computing day arithmetic through nanoseconds; the fix is **day
+width**. The row and its rationale now say so.
+
+One trap recorded for the next live round: collecting the Spark answer into Python raises
+`ValueError: year 294247 is out of range` from `datetime`. That is a Python limit, not a Spark
+refusal — cast to `STRING` before collecting or the oracle reads backwards.
