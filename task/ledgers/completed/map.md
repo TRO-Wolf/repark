@@ -79,6 +79,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `make check-docs-links` checks every tracked `*.md`'s relative links, GitHub-style anchors
   and `docs:` evidence cells; the measured 10-link baseline is the allowlist residue
   (`scripts/docs_links_allowlist.txt`). Clauses C-001…C-003 green. Branch `feat/docs-links-1`.
+- [facade-audit-0-ledger.md](facade-audit-0-ledger.md) — Unit ledger — FACADE-AUDIT-0 step 1 · Half A: the Rust-backed facade facts
 - [fnp-8-review-ledger.md](fnp-8-review-ledger.md) —
   **FNP-8-REVIEW (2026-09-07), in flight:** remediation round 1 for FNP-8 (PR #412,
   merged unreviewed) — the round-1 critic's F1–F7, each red-first against live
