@@ -5,14 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [review-fix-12-ledger.md](review-fix-12-ledger.md) —
-  **REVIEW-FIX-12 step 1 (2026-09-10), in flight:** the docs-links gate measures what it
-  claims — rendered-text slugs, final-slug duplicates, table-cell-only `docs:` cells, the
-  unclosed-fence finding, the absolute-target skip, same-file anchors (which caught the
-  stale V3-COV-8 fragment at `docs/spark-sql-iceberg-parity.md:3053`, repaired in the same
-  commit), and the three-space fence rule. `risk_tier: standard`. Branch
-  `fix/review-fix-12`.
-  pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus
