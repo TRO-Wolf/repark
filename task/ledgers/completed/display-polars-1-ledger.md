@@ -1,3 +1,11 @@
+> **Errata (2026-09-09, orchestrator).** Residue **DISPLAY-POLARS-1-S3-Q-001 is FIXED** by
+> DISPLAY-BRIDGE-1: `_show` now resolves the display style before the bridge peek, so under
+> `polars` / `duckdb` an uncached `mapInArrow` frame's `show()` renders through
+> `_render_styled_show` and agrees with its own `repr`. Pins:
+> [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/test_display_bridge_1.py).
+> Record: [display-bridge-1-ledger.md](display-bridge-1-ledger.md). The residue section below
+> stands unedited as the history of the question while it was open.
+
 # Unit ledger — DISPLAY-POLARS-1 step 1 · default display style flips to polars
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit.
