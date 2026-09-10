@@ -6,6 +6,8 @@ Integration pins for the local DataFusion executor (BALLISTA-M1-A step 1), the i
 cluster executor (BALLISTA-M1-B), multi-stage cluster shapes (BALLISTA-M1-C step 1), and
 Iceberg reads through the executors (BALLISTA-M1-D step 1). The crate-root `lib.rs` gate
 forbids inline `#[cfg(test)]` modules, so the pins live here.
+cluster executor (BALLISTA-M1-B), and multi-stage cluster shapes (BALLISTA-M1-C step 1).
+The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins live here.
 
 ## Contents
 

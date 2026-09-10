@@ -1,6 +1,7 @@
 # Distributed Milestone 1 — what it delivers
 
 **Opened:** 2026-09-10. **Class:** campaign. **State:** in flight on `feat/ballista-m1-d`.
+**Opened:** 2026-09-10. **Class:** campaign. **State:** in flight on `feat/ballista-m1-c`.
 **Retires:** this file closes when Ballista Milestone 1 is accepted (M1-D merged) or the owner
 closes the slate row. Archive with the campaign to `docs/history/` at that event.
 
@@ -77,6 +78,10 @@ commits; do not build Ballista-for-writes. A later unit that wants RePark plan n
 `datafusion-proto` and make the codec wrapper a real delegating `PhysicalExtensionCodec`.
 Until then every RePark-owned node is rewritten or it stays on the coordinator.
 
+What this milestone does **not** deliver: Iceberg scans on the executors (M1-D), Iceberg writes
+or a commit coordinator (Milestone 3 / ADR-0004), a remote (not in-process) cluster form, and
+deterministic task retry (see open questions).
+
 ## Owner's plan §12 success list
 
 The owner's plan §12 text is not in this repository (the audit recorded the same for §26–§28).
@@ -102,6 +107,7 @@ not pinned does not read as done.
 | 15 | `Completed` carries per-stage rows, shuffle bytes, wall time; shuffle bytes > 0 on the two-stage shape | done | ballista-m1-c/C-003 |
 | 16 | Shuffle data under the session spill dir is removed on complete or cancel | **narrowed** | ballista-m1-c/C-004 — session spill dir has no shuffle files; Ballista standalone work_dir is not that dir |
 | 17 | Iceberg memory-catalog scan on two executors equals local | **done** | ballista-m1-d/C-003 — `IcebergTableScan` rewritten to parquet file groups; see open question 4 |
+| 17 | Iceberg memory-catalog scan on two executors equals local | **missing** | BALLISTA-M1-D, not started |
 
 ## Open questions this unit family produced
 
