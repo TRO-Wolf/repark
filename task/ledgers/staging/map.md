@@ -19,6 +19,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
   Branch `feat/ballista-m1-b`.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
+- [ballista-m1-c-ledger.md](ballista-m1-c-ledger.md) —
+  **BALLISTA-M1-C step 1 (2026-09-10), in flight:** three multi-stage cluster shapes equal
+  the local executor on the same physical plan (hash aggregate over 4 partitions; hash join
+  of two tables; sort-merge join with `prefer_hash_join=false`). Rows sorted before compare.
+  D-2 retry, D-3 metrics, D-4 spill cleanup stay OPEN for step 2. `risk_tier: standard`.
+  Branch `feat/ballista-m1-c`.
+  pins: ballista-m1-c/C-001
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
