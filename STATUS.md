@@ -41,7 +41,10 @@ same relation. `collect()` and `df.pl.collect()` are unchanged.
 query. **FIX-5:** `DESCRIBE` completes one- and two-part names from the session defaults, a real
 `ice.sales.files` table describes, `Owner` is snapshotted at session build (ADR-0004), and
 `DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — Spark prints
-`s3.access-key-id` in the clear and RePark deliberately does not. **FIX-7:** a `repark.toml` name
+`s3.access-key-id` in the clear and RePark deliberately does not. **FIX-1/FIX-2:** the Python config mirror refuses exactly what
+the engine loader refuses (a non-ASCII digit string is not a number) and names both key paths on a
+duplicate; the loader's own pins no longer read the developer's `HOME`. **FIX-7:** a `repark.toml`
+name
 that would break a TOML header refuses, a parse error carries its position but never the offending
 line, and a cloud catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
 `configFile`) warns once at session build.
@@ -54,18 +57,16 @@ five-step chain one commit per step. No scheduler. Keys, order, result frame:
 **Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: `repark-distributed`
 (tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind the
 off-by-default `cluster` feature, an in-process Ballista scheduler with multi-stage queries and
-per-executor Iceberg reads. Two clauses stay OPEN on the `datafusion-proto` wall, Milestone 2's
+per-executor Iceberg reads. Two clauses stay OPEN on the `datafusion-proto` wall — Milestone 2's
 first unit per
 [review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9;
-design [docs/design/distributed-m1.md](docs/design/distributed-m1.md).
-Release mechanics:
+design [docs/design/distributed-m1.md](docs/design/distributed-m1.md). Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
 **Milestone one — the private-v1 → public-v2 port — is COMPLETE and merged to `main`
-(2026-08-08)** (PRs #16, #18–#23). The full record — the four phase briefs, the seventeen unit
-ledgers, the retrospectives — is archived at
+(2026-08-08)** (PRs #16, #18–#23); the full record is archived at
 [docs/history/port-v2/](docs/history/port-v2/README.md).
 
 **Nine crates are delivered** (workspace SSOT: root `Cargo.toml`; navigation:
@@ -195,14 +196,13 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
 - **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at
   [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) —
   design: [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
-  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31):**
+  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31, #30):**
   preserve-null Unnest removes redundant projections; adjacent candidates stay
-  measurement-gated. #30 merged.
-  **H3-SPILL-1 (2026-09-05):** the Never-OOM truth table is measured — 18 operators × 5 pools
-  × 2 scales = 180 cells, 0 aborts, 0 wrong answers, two failure shapes filed
-  (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool bounds only the operators that register
-  with it: [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md).
-  **Next:** the two filed shapes.
+  measurement-gated.
+  **H3-SPILL-1 (2026-09-05):** the Never-OOM truth table is measured — 180 cells, 0 aborts, 0
+  wrong answers, two failure shapes filed (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool
+  bounds only the operators that register with it:
+  [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md). **Next:** those two.
   **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
   **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
@@ -229,8 +229,7 @@ Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
 **Closed campaigns** — each record is in [docs/history/](docs/history/map.md); the rows below are
 written by `scripts/ledger_lifecycle.py compact` when a workstream's marker says `state=closed`:
 <!-- closed-campaigns -->
-- **Agent-Agnostic Front-Door campaign** — closed 2026-08-10 (five units merged 2026-08-09, the two
-  remaining acceptance items discharged at close-out); record:
+- **Agent-Agnostic Front-Door campaign** — closed 2026-08-10; record:
   [docs/history/frontdoor/README.md](docs/history/frontdoor/README.md); metrics:
   [task/metrics.md](task/metrics.md)
 - **Python convention conformance (PYC)** — closed 2026-08-22 by #216; record: [docs/history/pyc/status-record.md](docs/history/pyc/status-record.md)
@@ -251,8 +250,8 @@ of* as a **divergence** — DECLARED (a permanent difference) or BACKLOG (a diff
 close) — its semantics move to the divergence registry,
 [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md), and this file keeps one line
 of state plus a link. A known **defect with its fix scheduled** is not a divergence and gets no
-row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
-moving it. Nothing is described in both places.
+row: it stays here until the fix lands, and the fixing unit deletes the entry rather than moving
+it. Nothing is described in both places.
 
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry

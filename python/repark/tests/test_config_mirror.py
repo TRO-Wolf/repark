@@ -138,6 +138,49 @@ def test_spaced_profile_name_renders_one_quoted_header() -> None:
     assert parsed["analytics east"]["conf"] == {"a": "b"}
 
 
+def test_non_int_knob_types_refuse() -> None:
+    with pytest.raises(ValidationError):
+        SessionConfig.model_validate({"batch_size": 1.5})
+    with pytest.raises(ValidationError):
+        SessionConfig.model_validate({"batch_size": [4096]})
+
+
+def test_knob_digit_rule_is_ascii() -> None:
+    with pytest.raises(ValidationError):
+        SessionConfig.model_validate({"batch_size": "٠١٢"})
+    with pytest.raises(ValidationError):
+        SessionConfig.model_validate({"batch_size": "²"})
+    assert SessionConfig.model_validate({"batch_size": "4096"}).batch_size == "4096"
+    assert SessionConfig.model_validate({"batch_size": " 4096 "}).batch_size == " 4096 "
+
+
+def test_name_collision_inside_database_family_refuses_naming_both() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        ProfileConfig.model_validate(
+            {
+                "database": {
+                    "postgres": {"acme": {"host": "h"}},
+                    "trino": {"acme": {"host": "h"}},
+                }
+            }
+        )
+    message = str(excinfo.value)
+    assert "database.postgres.acme" in message
+    assert "database.trino.acme" in message
+
+
+def test_empty_overlay_profile_survives_round_trip() -> None:
+    built = ReparkConfig(
+        profiles={
+            "default": ProfileConfig(conf={"a": "b"}),
+            "prod": ProfileConfig(),
+        }
+    )
+    parsed = tomllib.loads(built.to_toml())
+    assert parsed["prod"] == {}
+    assert parsed["default"]["conf"] == {"a": "b"}
+
+
 def test_rendered_database_source_refuses_at_load_until_cfg_2(tmp_path: Path) -> None:
     built = ReparkConfig(
         profiles={

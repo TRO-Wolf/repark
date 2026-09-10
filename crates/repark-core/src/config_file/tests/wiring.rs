@@ -297,7 +297,9 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
         .register_configured_catalogs()
         .await
         .expect("file catalogs register");
+    let (_empty_directory, empty_path) = staged_file("");
     let from_calls = ReparkSessionBuilder::default()
+        .from_config_file(Some(empty_path))
         .config("repark.sql.catalog.m.type", "memory")
         .config("repark.sql.catalog.m.warehouse", warehouse_text)
         .build()

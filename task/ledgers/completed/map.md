@@ -103,6 +103,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   the pre-PR gate locally instead of failing CI's Python job (#427). `risk_tier: standard`.
   Branch `feat/preflight-parity-1`.
   pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
+- [review-fix-1-ledger.md](review-fix-1-ledger.md) — Unit ledger — REVIEW-FIX-1 · the CFG-1 mirror agrees with the loader
 - [review-fix-10-ledger.md](review-fix-10-ledger.md) —
   **REVIEW-FIX-10 (2026-09-10), in flight:** `is_reading` parses the `Path` header field —
   the marker matches anywhere in the first 40 lines except inside backtick code spans, the
@@ -118,6 +119,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   commit), and the three-space fence rule. `risk_tier: standard`. Branch
   `fix/review-fix-12`.
   pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
+- [review-fix-2-ledger.md](review-fix-2-ledger.md) — Unit ledger — REVIEW-FIX-2 · CFG-1's own pins stop reading the developer's HOME
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-5-ledger.md](review-fix-5-ledger.md) — Unit ledger — REVIEW-FIX-5 step 1 · DESCRIBE metadata-name intercept, Owner, short names, redaction
 - [review-fix-7-ledger.md](review-fix-7-ledger.md) —

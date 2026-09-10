@@ -1874,6 +1874,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **REVIEW-FIX-7 step 1 (2026-09-10):** the D-1 pins — header-breaking profile, catalog
   and source names refuse, and a spaced profile name renders one quoted header reading
   back as one profile. pins: review-fix-7/C-001
+  **REVIEW-FIX-1 (2026-09-10):** the loader-agreement pins — float/list knobs and
+  non-ASCII digit strings refuse while `"4096"` and `" 4096 "` pass, a
+  `postgres.acme`/`trino.acme` pair refuses naming both key paths, and an empty
+  `prod` overlay round-trips through `to_toml()` and `tomllib.loads`.
+  pins: review-fix-1/C-001, C-002, C-003
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
