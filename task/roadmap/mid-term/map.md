@@ -7,8 +7,8 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
 - [cheap-tier-slate-2026-09-08.md](cheap-tier-slate-2026-09-08.md) — **the 2026-09-08 owner slate,
-  cut for mechanical-tier workers:** eight owner rulings (5+5 polars edges, lazy `repr` renders
-  data, `repark.toml` pulled ahead of 1.2/1.3, the Ballista audit joins the Rust migration pilot,
+  cut for mechanical-tier workers:** the owner rulings (5+5 polars edges, lazy `repr` shows the
+  schema — R-22 of 2026-09-10 superseding R-2's data render, card DISPLAY-LAZY-1 — `repark.toml` pulled ahead of 1.2/1.3, the Ballista audit joins the Rust migration pilot,
   fixtures pin `spark` style, the object stays a RePark DataFrame) and seven work cards with
   pre-made decisions, one step per worker round, tier per step, red-first pin names, gates and
   hand-back conditions: SQL-DESCRIBE-1, DF-EXPLAIN-1, DISPLAY-POLARS-1, CFG-1, DF-EAGER-1,
@@ -89,6 +89,18 @@ declines it (a dated ruling in the intake, then the archive).
   verdict (correctness production-grade, operability wired, evidence missing), the ranked gaps,
   and the post-#218 units — the Glue dispatch, MW-4b (S3 Tables leg, owner-gated), MW-5…MW-9,
   DML-A/B/C. Track C points at the fork handoff.
+
+- [review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md) — **the REVIEW-1 critic
+  sweep (2026-09-10):** twenty-four Grok critic rounds over the units merged since 2026-09-08, with
+  51 numbered findings (39 CONFIRMED, eleven of them re-run by the orchestrator), fifteen fix cards
+  (REVIEW-FIX-1…15, none opened) and eight owner questions. Read it before opening any fix work on
+  CFG-1, DISPLAY-POLARS-1, DF-EAGER-1, DF-EXPLAIN-1, SQL-DESCRIBE-1, PROFILES-1, DOCS-LINKS-1,
+  LEDGER-READING-1 or BALLISTA-AUDIT-0. D-1 and D-2 coverage is complete; the card closes when this document reaches `main`.
+- [overnight-report-2026-09-10-b.md](overnight-report-2026-09-10-b.md) — **run 5b (2026-09-10):**
+  the second orchestrating session of the day, running the Grok lane (Ballista Milestone 1 A→D and
+  the REVIEW-1 sweep) and FACADE-AUDIT-0 on Muse beside run 5. Six units merged — FACADE-AUDIT-0 and the whole of
+  Ballista Milestone 1 (A, B, C, D) — the decisions taken under G-2 and the process notes the runbook
+  should absorb.
 
 ## Pointers
 - Up: [../map.md](../map.md)
