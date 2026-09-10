@@ -33,9 +33,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   harness: the subprocess-per-cell runner with an address-space cap, the in-engine
   `range()` generators sized to the limit multiple, the `EXPLAIN ANALYZE` spill-bytes
   probe reused from `bench/spill/`, the three-outcome classifier (`spilled` /
-  `completed` / `refused`, with `KILLED` failing the matrix), and the generator/capacity
-  pins. Needs the native module: run through `make py-test-spill-matrix`. The CI-tier
-  cell, the worker subprocess entry and the ledger join in the step's second commit.
+  `completed` / `refused`, with `KILLED` failing the matrix), the worker subprocess
+  entry, and the one CI-tier cell (`sort` at 2× the 64 MB limit, measured `spilled`).
+  Needs the native module: run through `make py-test-spill-matrix`.
 - [torture/](torture/map.md) — **TORTURE-1 step 1 (2026-09-10):** the both-door torture
   suite (`nested` + `inference` families; DataFrame read and `spark.sql` over a temp view;
   row counts, declared schemas, per-column inferred types, byte-identical CLI

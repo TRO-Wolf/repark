@@ -78,8 +78,16 @@ is True), and D-3's release-build idle-box rules belong to step 2.
   (`range()` + `md5` + `repeat('x', n)` payload, no files),
   `input_arrow_bytes`, and `memory_limit_string`.
 - `matrix_cells.py` — the roster: `CI_LIMIT_BYTES` (64 MB, D-5),
-  `CI_PARTITIONS`, `CI_CELL_TIMEOUT_S`, and `CI_CELLS` (the one step-1
-  cell: `sort` at 2×, ordered by the payload itself).
+  `CI_PARTITIONS`, `CI_CELL_TIMEOUT_S`, `CI_CELLS` (the one step-1
+  cell: `sort` at 2×, ordered by the payload itself), `worker_argv` and
+  `json_out_path`.
+- `matrix_worker.py` — the worker subprocess entry: builds the 64 MB-pool
+  session, registers the sized range input, applies the address-space cap
+  (`RLIMIT_AS = VmSize_at_apply + 3 × limit`, verified by read-back),
+  executes the cell once through `EXPLAIN ANALYZE`, and writes the result
+  JSON (`completed` with the spill totals, or `refused` when the caught
+  error passes `is_loud_refusal`); anything else exits non-zero with no
+  result JSON, which the parent folds to `KILLED`.
 - `test_classifier_pins.py` — the card's step-1 classifier pins:
   `test_classifier_three_outcomes_only` and
   `test_killed_subprocess_fails_matrix` (signal-kill, non-zero exit, and a
@@ -89,10 +97,13 @@ is True), and D-3's release-build idle-box rules belong to step 2.
 - `test_generator_sizing.py` — the generator pins: 2× the CI limit sizes
   1e6 rows of 134 Arrow bytes (89-char repeat), and the capacity-string
   rendering the engine's parser requires.
+- `test_ci_tier_cell.py` — the one CI-tier cell end to end:
+  `test_ci_tier_sort_cell_end_to_end` asserts the measured `spilled`
+  outcome, a zero exit, positive spill bytes and count, and the cap
+  arithmetic `rlimit_as_bytes == vm_size_at_cap + 3 × CI_LIMIT_BYTES`.
 - `map.md` — this file.
 
-Step 2 adds `matrix_worker.py` (the worker subprocess entry), the CI-tier
-end-to-end pin, the full-tier roster and its D-3 rules; step 3 adds the CI
+Step 2 adds the full-tier roster and its D-3 rules; step 3 adds the CI
 golden CSV and its comparison pins. The Makefile target
 `py-test-spill-matrix` is deliberately absent from `preflight`.
 

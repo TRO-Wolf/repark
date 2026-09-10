@@ -212,6 +212,10 @@ py-test-torture: ## Torture-suite doors at the $(TORTURE_TIER) tier (native modu
 	PYTHONPATH=python/repark-parity/src \
 		.venv/bin/python -m pytest python/repark-parity/tests/torture -q
 
+.PHONY: py-test-spill-matrix
+py-test-spill-matrix: ## Spill-coverage matrix, CI tier (one cell: sort at 2x the 64 MB limit) — never a preflight member; see python/repark-parity/tests/spill/map.md
+	.venv/bin/python -m pytest python/repark-parity/tests/spill -q
+
 .PHONY: py-test-parity-cap
 py-test-parity-cap: ## CAP-1 source-file mirror alone (test_cap_1_source_file_line_cap.py); preflight member — see python/repark-parity/tests/map.md
 	PYTHONPATH=python/repark-parity/src \
