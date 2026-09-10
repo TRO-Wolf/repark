@@ -5,12 +5,20 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from _support import family_output
 
-from repark import ReparkSession
-from repark.spark.session import _reset_active_session_for_tests
-from repark_parity.torture import FAMILIES, FamilyOutput
-from repark_parity.torture.tiers import CI_TIER, FULL_ROOT, tier_from_env, tier_rows
+pytest.importorskip(
+    "repark",
+    reason="the torture suite reads through the product; run it with the native module built, "
+    "via `make py-test-torture`. The isolated parity job (`make py-test`, ci.yml) has no native "
+    "build, so it collects nothing here.",
+)
+
+from _support import family_output  # noqa: E402
+
+from repark import ReparkSession  # noqa: E402
+from repark.spark.session import _reset_active_session_for_tests  # noqa: E402
+from repark_parity.torture import FAMILIES, FamilyOutput  # noqa: E402
+from repark_parity.torture.tiers import CI_TIER, FULL_ROOT, tier_from_env, tier_rows  # noqa: E402
 
 SEED = 7
 

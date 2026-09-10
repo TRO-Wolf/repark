@@ -49,3 +49,17 @@ The suite needs the native module (the doors are repark's), so run it through
 - Up: [../map.md](../map.md)
 - Ledger: [../../../../task/ledgers/staging/torture-1-ledger.md](../../../../task/ledgers/staging/torture-1-ledger.md)
 - Registry: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md) `CSV-INFER-INT32-WIDTH`
+
+## Why this directory skips itself in the isolated parity job
+
+`ci.yml`'s python step (and `make py-test`) runs `pytest python/repark-parity/tests -q` in an
+isolated env with **no native build**, so `repark` is not importable there. Every cell in this
+directory reads *through the product*, so `conftest.py` opens with `pytest.importorskip("repark")`:
+the directory skips itself in that job and runs in full under `make py-test-torture`, which
+requires the native module. Without the guard the isolated job fails at collection with
+`ModuleNotFoundError: No module named 'repark'` — which is exactly what it did on the first push
+of TORTURE-1 step 1.
+
+The guard is in `conftest.py`, not in the Makefile: `make py-test` states that it mirrors the
+`ci.yml` python step, and adding an `--ignore` there would have made the local target green while
+CI stayed red.
