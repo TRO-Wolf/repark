@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
+  **BALLISTA-M1-A step 1 (2026-09-10), in flight:** `DistributedExecutor` +
+  `LocalDataFusionExecutor` in `crates/repark-distributed`; range-sum, status, and
+  cancel pins green; `cluster` feature builds with no cluster code. `risk_tier: standard`.
+  Branch `feat/ballista-m1-a`.
+  pins: ballista-m1-a/C-001, C-002, C-003, C-004
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
