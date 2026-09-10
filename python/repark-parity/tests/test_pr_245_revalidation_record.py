@@ -69,6 +69,7 @@ _SQL_LITERAL_CALLS = {
     "python/repark/src/repark/spark/ml/feature/_transformers.py": {"sql_string_literal": 7},
     "python/repark/src/repark/spark/session/create_dataframe_values.py": {"sql_string_literal": 1},
     "python/repark/src/repark/spark/session/session_configuration.py": {"sql_string_literal": 1},
+    "python/repark/src/repark/spark/session/session_maintenance.py": {"sql_string_literal": 2},
 }
 
 
