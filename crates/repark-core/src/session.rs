@@ -171,6 +171,9 @@ impl ReparkSessionBuilder {
 
     fn prepare_build_state(&mut self) -> Result<Vec<(String, String, String)>> {
         let file = crate::config_file::load_for_build(self.config_file.clone())?;
+        for warning in &file.warnings {
+            eprintln!("{warning}");
+        }
         let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
         self.maintenance.clone_from(&file.maintenance);
         for (key, value) in file.pairs_for_map() {

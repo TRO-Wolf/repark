@@ -4,7 +4,7 @@ use repark_common::{Error, Result};
 
 use super::EnvironmentLookup;
 
-const CONFIG_VARIABLE: &str = "REPARK_CONFIG";
+pub(crate) const CONFIG_VARIABLE: &str = "REPARK_CONFIG";
 const FILE_NAME: &str = "repark.toml";
 
 pub(crate) fn discover(

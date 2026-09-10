@@ -1871,6 +1871,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the file values, and a rendered database source refuses at load naming CFG-2. The guide
   (`docs/guide/repark-toml.md`) quotes only outputs this file and the step-3 pins ran.
   pins: cfg-1/C-028, C-029, C-030
+  **REVIEW-FIX-7 step 1 (2026-09-10):** the D-1 pins — header-breaking profile, catalog
+  and source names refuse, and a spaced profile name renders one quoted header reading
+  back as one profile. pins: review-fix-7/C-001
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

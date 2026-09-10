@@ -15,8 +15,10 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
 - `discovery.rs` — `discover(environment, current_directory, home)`: `$REPARK_CONFIG` →
   `./repark.toml` → `~/.config/repark/repark.toml`, first hit wins; absent everywhere is
   `Ok(None)`; `REPARK_CONFIG` set but empty disables discovery; a named-but-missing path
-  refuses naming it. Step 1.
-  pins: cfg-1/C-001, C-002, C-003
+  refuses naming it. Step 1. **REVIEW-FIX-7 step 1 (2026-09-10):** `CONFIG_VARIABLE` is
+  `pub(crate)` so the wiring can tell an explicitly named file (trusted) from a
+  directory-search hit (warned). pins: cfg-1/C-001, C-002, C-003
+  pins: review-fix-7/C-003
 - `profile.rs` — `profile_from_table` (typed `display` / `session` allowlists, free-form
   `conf` / `catalog` / `database`, unknown keys refuse with the `name.table.key` path) and
   `effective_table` (`[default]` deep-merged under the named profile; `None` selects default
@@ -71,7 +73,14 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   renders `(key, redacted value, source)` with `builder`, `file:<path>#<profile>`, or
   `default` — the three precedence levels, nothing else. `load_for_build` is the thin
   process-environment wrapper `session.rs` calls. Step 3.
+  **REVIEW-FIX-7 step 1 (2026-09-10):** `FileConfig` carries `warnings`; a load is
+  trusted when the forced path or a non-empty `REPARK_CONFIG` named the file, and an
+  untrusted load whose effective profile names a `glue` / `s3tables` / `rest` catalog
+  (or a Glue/S3Tables `catalog-impl`) records exactly one warning naming the path and
+  the catalogs, which the builder prints at session build. `rest` still refuses first
+  through the unrecognized-value error until `CatalogKind::Rest` arrives.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: review-fix-7/C-003
 - `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
   `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
   naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet

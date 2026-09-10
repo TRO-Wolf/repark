@@ -892,3 +892,16 @@ warehouse = "/tmp/wh"
     let error = profile_sources("default", &profile).expect_err("dotted name must refuse");
     assert!(error.to_string().contains("default.catalog.a.b"), "{error}");
 }
+
+#[test]
+fn a_parse_error_carries_position_but_never_the_source_line() {
+    let error =
+        parse("[default]\naws_access_key_id = AKIA_PROBE\n").expect_err("invalid toml must refuse");
+    let message = error.to_string();
+    assert!(!message.contains("AKIA_PROBE"), "{message}");
+    assert!(
+        !message.contains("aws_access_key_id = AKIA_PROBE"),
+        "{message}"
+    );
+    assert!(message.contains("line 2"), "{message}");
+}

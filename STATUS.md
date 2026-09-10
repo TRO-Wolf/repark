@@ -21,10 +21,9 @@ v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
 for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling
-2026-09-03). 1.1.0 is additive (WIN-SLIDE-1, DBT-1, the FNP and type-correction units, the CATALOG-IO,
-WRITEPATH, WRITE-DISTRIBUTION, ICE-SCAN and DYNFLATTEN performance units — the roll-call is the
-v1.1.0 tag's release notes). Post-1.1.1 `main` adds the DataFrame core decomposition (DFCORE-1…6,
-`core.py` 6,302 → 4,539 lines, identical export surface) and FNP-8 with its review. **DISPLAY-POLARS-1 (2026-09-09)** changes a
+2026-09-03). 1.1.0 is additive — the roll-call is the v1.1.0 tag's release notes. Post-1.1.1
+`main` adds the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines, identical
+export surface) and FNP-8 with its review. **DISPLAY-POLARS-1 (2026-09-09)** changes a
 user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
 not the PySpark ASCII grid. `repark.DataFrame` is unchanged — only the rendering is — and the grid
 is one setting away (`REPARK_DISPLAY_STYLE=spark`). DISPLAY-BRIDGE-1 (2026-09-10) closes the last
@@ -37,6 +36,10 @@ facade-local keys and the precedence chain:
 the same relation. Spark's `collect()` and `df.pl.collect()` are unchanged. **REVIEW-FIX-4 (2026-09-10)**: `.lazy()` no longer
 interpolates the cache view into SQL, and `count()` and the styled preview discharge a pending
 `localCheckpoint(eager=False)` on the next action, still without a count query.
+**REVIEW-FIX-7 (2026-09-10)** hardens `repark.toml`: a name that would break a TOML header
+refuses, a parse error carries its position but never the offending line, and a `glue` /
+`s3tables` / `rest` catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
+`configFile`) warns once at session build naming the file and the catalog.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
 build, and the procedure that spends it —
@@ -45,10 +48,10 @@ mirrored as `session.run_maintenance(...)`; **`dry_run` defaults to true**, `fal
 five-step chain one commit per step. No scheduler; `adaptive_partitioning` is reserved for
 ADAPT-PART. Keys, order, result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
 **Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: `repark-distributed`
-(tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind
-the off-by-default `cluster` feature, an in-process Ballista scheduler, multi-stage queries with
-per-stage metrics and Iceberg reads on each executor. Two clauses stay OPEN on the
-`datafusion-proto` wall, Milestone 2's first unit per
+(tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind the
+off-by-default `cluster` feature, an in-process Ballista scheduler, multi-stage queries with
+per-stage metrics and Iceberg reads per executor. Two clauses stay OPEN on the `datafusion-proto`
+wall, Milestone 2's first unit per
 [review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9;
 design [docs/design/distributed-m1.md](docs/design/distributed-m1.md).
 Release mechanics:
@@ -86,30 +89,27 @@ share is fixed there and re-ported rather than patched only here.
 
 What happens next, in order:
 
-1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10).** Record:
-   [docs/history/frontdoor/](docs/history/frontdoor/README.md); metrics:
-   [task/metrics.md](task/metrics.md).
+1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10):**
+   [docs/history/frontdoor/](docs/history/frontdoor/README.md), [task/metrics.md](task/metrics.md).
 2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in
-   [Active workstreams](#active-workstreams). Wave landing records (Y/Z/W/V/S, 2026-08-13/14)
-   are the `z5` / `w5` / `v5` / `s5` increment ledgers indexed in
+   [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records (2026-08-13/14) are the
+   increment ledgers indexed in
    [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
 3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
    **single-writer-per-table**, with each rollback story. **Filed 2026-09-04:**
-   [docs/cutover/inventory.md](docs/cutover/inventory.md); the four owner rulings of the same day
-   are its §7 (match Spark on nullability → `CUTOVER-SCHEMA-1`; queue `DBT-1`; shadow namespace
-   and retention; the daily diff as an Airflow task). Carried from
-   [docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover".
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). API review
-   answered 2026-09-02 (`R0 yes`, every row decided at its recommendation); freeze pinned — 888
-   names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json), policy in
-   [docs/release.md](docs/release.md) "Versioning policy"; v1.0.0 cut 2026-09-03 on the
+   [docs/cutover/inventory.md](docs/cutover/inventory.md), whose §7 carries the four owner
+   rulings of the same day (nullability → `CUTOVER-SCHEMA-1`; queue `DBT-1`; shadow namespace
+   and retention; the daily diff as an Airflow task).
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze
+   is pinned at 888 names in
+   [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy:
+   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut 2026-09-03 on the
    north-star gate line V1-GATE wrote the same day.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
 stale always-PASS Apache smoke pins are known-FAIL meta pins). Pre-scrub content stays reachable
-in published history by explicit decision:
-[p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md).
+in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit decision.
 
 ## Active workstreams
 
