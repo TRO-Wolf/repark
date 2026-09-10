@@ -16,6 +16,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   §27 + §28 gate filled, appendix A6 closes the python/tooling gap; the ADR
   disposition and the brief's Milestone 0 row landed in #426.
   Branch `docs/ballista-audit-0`.
+- [df-eager-1-ledger.md](df-eager-1-ledger.md) —
+  **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
+  facade DataFrame. Step 1 only: the red-first pins in
+  [../../../python/repark/tests/test_df_eager_1.py](../../../python/repark/tests/test_df_eager_1.py)
+  — seven `xfail(strict=True)` pins red on the base tree (marker-less run recorded in the
+  ledger) plus two keep-green guards; step 2 builds D-1..D-6 in `core.py` + `polars.py`.
+  Clauses C-001…C-006 OPEN. Branch `feat/df-eager-1`.
+  pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [df-explain-1-ledger.md](df-explain-1-ledger.md) —
   **DF-EXPLAIN-1 (2026-09-08), in flight:** `DataFrame.explain()` prints plan text, not
   `Row(...)` reprs. Step 1 done: the seven red-first pins in

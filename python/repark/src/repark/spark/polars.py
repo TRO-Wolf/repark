@@ -115,6 +115,10 @@ class PolarsFrame:
         """No-op (plans are already lazy); returns self."""
         return self
 
+    def eager(self) -> PolarsFrame:
+        """Materialize through the cache view and wrap the eager frame."""
+        return PolarsFrame(self._frame.eager())
+
     def select(self, *exprs: Column | str) -> PolarsFrame:
         """Project ``exprs`` (Columns or column names) into a new lazy frame."""
         return PolarsFrame(self._frame.select(*exprs))
