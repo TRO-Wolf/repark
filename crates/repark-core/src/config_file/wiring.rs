@@ -8,7 +8,7 @@ use super::interpolate::interpolate_table;
 use super::maintenance::MaintenancePolicy;
 use super::profile::{DEFAULT_PROFILE_NAME, effective_table, profile_as_table, profile_from_table};
 use super::redact::redact_value;
-use super::sources::{CATALOG_KEY_PREFIX, profile_sources};
+use super::sources::{CATALOG_KEY_PREFIX, ProfileSources, profile_sources};
 use super::{ConfigFile, EnvironmentLookup, Profile, read_and_parse};
 
 pub(crate) const ENV_PROFILE_VARIABLE: &str = "REPARK_ENV";
@@ -34,6 +34,7 @@ pub(crate) struct FileConfig {
     pub batch_size: Option<usize>,
     pub target_partitions: Option<usize>,
     pub maintenance: Option<(String, Option<MaintenancePolicy>)>,
+    pub warnings: Vec<String>,
 }
 
 impl FileConfig {
@@ -60,6 +61,7 @@ pub(crate) fn load_file_config(
     current_directory: &Path,
     home: Option<&Path>,
 ) -> Result<FileConfig> {
+    let forced_path = forced.is_some();
     let discovered = match forced {
         Some(path) => {
             if !path.exists() {
@@ -75,9 +77,89 @@ pub(crate) fn load_file_config(
     let Some(path) = discovered else {
         return Ok(FileConfig::default());
     };
+    let trusted = forced_path
+        || environment(super::discovery::CONFIG_VARIABLE).is_some_and(|value| !value.is_empty());
     let document = read_and_parse(&path)?;
     let profile_name = environment(ENV_PROFILE_VARIABLE).filter(|name| !name.is_empty());
-    translate_document(&path, &document, profile_name.as_deref(), environment)
+    translate_document(
+        &path,
+        &document,
+        profile_name.as_deref(),
+        environment,
+        trusted,
+    )
+}
+
+fn cloud_catalog_warning(path: &Path, catalog: &toml::Table) -> Option<String> {
+    let mut cloud: Vec<String> = Vec::new();
+    for (name, block) in catalog {
+        let toml::Value::Table(props) = block else {
+            continue;
+        };
+        let cloud_type = props
+            .get("type")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|kind| {
+                matches!(
+                    kind.trim().to_ascii_lowercase().as_str(),
+                    "glue" | "s3tables" | "rest"
+                )
+            });
+        let cloud_impl = props
+            .get("catalog-impl")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|class| {
+                let class = class.trim();
+                class.ends_with("GlueCatalog") || class.ends_with("S3TablesCatalog")
+            });
+        if cloud_type || cloud_impl {
+            cloud.push(name.clone());
+        }
+    }
+    if cloud.is_empty() {
+        return None;
+    }
+    cloud.sort();
+    Some(format!(
+        "config file `{}` names cloud catalogs ({}) but was found by directory search, \
+         not by REPARK_CONFIG or configFile; building with ambient credentials",
+        path.display(),
+        cloud.join(", ")
+    ))
+}
+
+fn refuse_pending_sources(label: &str, sources: &ProfileSources) -> Result<()> {
+    if sources.sources.is_empty() {
+        return Ok(());
+    }
+    let names: Vec<String> = sources
+        .sources
+        .iter()
+        .map(|source| {
+            format!(
+                "{label}.database.{}.{}",
+                source.kind.spelling(),
+                source.name
+            )
+        })
+        .collect();
+    Err(Error::Config(format!(
+        "database sources ({}) are parsed but named-source registration arrives with \
+         CFG-2 — drop the `[<profile>.database]` tables until that card lands",
+        names.join(", ")
+    )))
+}
+
+fn discovery_warnings(path: &Path, profile: &Profile, trusted: bool) -> Vec<String> {
+    if trusted {
+        return Vec::new();
+    }
+    profile
+        .catalog
+        .as_ref()
+        .and_then(|catalog| cloud_catalog_warning(path, catalog))
+        .into_iter()
+        .collect()
 }
 
 fn translate_document(
@@ -85,30 +167,14 @@ fn translate_document(
     document: &ConfigFile,
     profile_name: Option<&str>,
     environment: EnvironmentLookup<'_>,
+    trusted: bool,
 ) -> Result<FileConfig> {
     let effective = effective_table(document, profile_name)?;
     let interpolated = interpolate_table(&effective, environment)?;
     let label = profile_name.unwrap_or(DEFAULT_PROFILE_NAME);
     let profile = profile_from_table(label, &interpolated)?;
     let sources = profile_sources(label, &profile)?;
-    if !sources.sources.is_empty() {
-        let names: Vec<String> = sources
-            .sources
-            .iter()
-            .map(|source| {
-                format!(
-                    "{label}.database.{}.{}",
-                    source.kind.spelling(),
-                    source.name
-                )
-            })
-            .collect();
-        return Err(Error::Config(format!(
-            "database sources ({}) are parsed but named-source registration arrives with \
-             CFG-2 — drop the `[<profile>.database]` tables until that card lands",
-            names.join(", ")
-        )));
-    }
+    refuse_pending_sources(label, &sources)?;
     let mut pairs = Vec::new();
     let mut origins = HashMap::new();
     let selected_keys = match profile_name {
@@ -177,6 +243,7 @@ fn translate_document(
             }
         }
     }
+    let warnings = discovery_warnings(path, &profile, trusted);
     Ok(FileConfig {
         provenance: Some((path.to_path_buf(), label.to_string())),
         pairs,
@@ -185,6 +252,7 @@ fn translate_document(
         batch_size,
         target_partitions,
         maintenance: Some((label.to_string(), resolve_maintenance(label, &profile)?)),
+        warnings,
     })
 }
 

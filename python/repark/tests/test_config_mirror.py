@@ -7,7 +7,13 @@ import pytest
 from pydantic import ValidationError
 
 from repark import ReparkSession
-from repark.config import DisplayConfig, ProfileConfig, ReparkConfig, SessionConfig
+from repark.config import (
+    DatabaseSource,
+    DisplayConfig,
+    ProfileConfig,
+    ReparkConfig,
+    SessionConfig,
+)
 
 
 def test_unknown_display_key_refuses() -> None:
@@ -101,6 +107,35 @@ def test_rendered_file_builds_session_with_file_values(tmp_path: Path) -> None:
         assert spark.display_style == "spark"
     finally:
         spark.stop()
+
+
+def test_profile_name_with_header_break_refuses() -> None:
+    with pytest.raises(ValidationError):
+        ReparkConfig(profiles={"]\n[default.catalog.stolen]": ProfileConfig(conf={"a": "b"})})
+
+
+def test_catalog_name_with_header_break_refuses() -> None:
+    with pytest.raises(ValidationError):
+        ProfileConfig(catalog={'evil"]\n[default.catalog.stolen]': {"type": "memory"}})
+
+
+def test_source_name_with_newline_refuses() -> None:
+    with pytest.raises(ValidationError):
+        ProfileConfig(database={"postgres": {"evil\nname": DatabaseSource(host="h")}})
+
+
+def test_profile_name_with_quote_refuses() -> None:
+    with pytest.raises(ValidationError):
+        ReparkConfig(profiles={'evil"name': ProfileConfig(conf={"a": "b"})})
+
+
+def test_spaced_profile_name_renders_one_quoted_header() -> None:
+    built = ReparkConfig(profiles={"analytics east": ProfileConfig(conf={"a": "b"})})
+    text = built.to_toml()
+    assert '"analytics east"' in text
+    parsed = tomllib.loads(text)
+    assert list(parsed) == ["analytics east"]
+    assert parsed["analytics east"]["conf"] == {"a": "b"}
 
 
 def test_rendered_database_source_refuses_at_load_until_cfg_2(tmp_path: Path) -> None:

@@ -21,8 +21,13 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   process environment. **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
   policy resolves with its profile name, `REPARK_ENV` names a non-default stamp with and
   without a table, the file-built session carries the stamp on its registry).
+  **REVIEW-FIX-7 step 1 (2026-09-10):** `mod.rs` gains the parse-error sanitization pin
+  (position kept, source line never echoed); `wiring.rs` gains the five discovery-warning
+  pins (CWD and home hits warn once naming path and catalog; `REPARK_CONFIG`, forced and
+  local-only loads warn nothing).
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
   pins: maint-policy-1/C-020
+  pins: review-fix-7/C-002, C-003
 
 ## Pointers
 

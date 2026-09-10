@@ -20,6 +20,10 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   booleans refused in every table — and renders dotted conf keys bare so the loader's
   flattening reads them back. Never the parser: no discovery, profile merge, interpolation,
   or source translation lives here. pins: cfg-1/C-028, C-029
+  **REVIEW-FIX-7 step 1 (2026-09-10):** header-injection close — profile, catalog and
+  source names carrying `]`, `.`, a quote or a newline refuse at construction, and every
+  rendered header segment is quoted with `_toml_text`, so a hostile profile name cannot
+  open a second table. pins: review-fix-7/C-001
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).

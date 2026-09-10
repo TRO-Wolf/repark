@@ -22,6 +22,12 @@ def _toml_text(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _refuse_header_name(name: str, what: str) -> None:
+    for mark in ("]", ".", '"', "'", "\n", "\r"):
+        if mark in name:
+            raise ValueError(f"{what} {name!r} must not contain {mark!r}")
+
+
 def _toml_key(key: str) -> str:
     if _BARE_KEY.fullmatch(key) is not None:
         return key
@@ -193,10 +199,12 @@ class ProfileConfig(BaseModel):
 
     @model_validator(mode="after")
     def check_names(self) -> Self:
-        """Refuse dotted catalog names and cross-family name collisions."""
+        """Refuse header-breaking catalog and source names plus name collisions."""
         for name in self.catalog:
-            if "." in name:
-                raise ValueError(f"catalog name {name!r} must not contain `.`")
+            _refuse_header_name(name, "catalog name")
+        for names in self.database.values():
+            for name in names:
+                _refuse_header_name(name, "database source name")
         source_names: set[str] = set()
         for names in self.database.values():
             source_names.update(names)
@@ -208,25 +216,25 @@ class ProfileConfig(BaseModel):
     def render_lines(self, name: str) -> list[str]:
         """Render this profile section with fully qualified TOML headers."""
         lines: list[str] = []
+        root = _toml_text(name)
         if self.display is not None:
-            lines.extend(self.display.render_lines(f"[{name}.display]"))
+            lines.extend(self.display.render_lines(f"[{root}.{_toml_text('display')}]"))
         if self.session is not None:
-            lines.extend(self.session.render_lines(f"[{name}.session]"))
+            lines.extend(self.session.render_lines(f"[{root}.{_toml_text('session')}]"))
         if self.conf:
-            lines.append(f"[{name}.conf]")
+            lines.append(f"[{root}.{_toml_text('conf')}]")
             for key in self.conf:
                 lines.append(f"{_toml_conf_key(key)} = {_render_scalar(self.conf[key])}")
         for catalog_name in sorted(self.catalog):
-            lines.extend(
-                self.catalog[catalog_name].render_lines(f"[{name}.catalog.{catalog_name}]")
-            )
+            header = f"[{root}.{_toml_text('catalog')}.{_toml_text(catalog_name)}]"
+            lines.extend(self.catalog[catalog_name].render_lines(header))
         for kind in sorted(self.database):
             for source_name in sorted(self.database[kind]):
-                lines.extend(
-                    self.database[kind][source_name].render_lines(
-                        f"[{name}.database.{kind}.{source_name}]"
-                    )
+                header = (
+                    f"[{root}.{_toml_text('database')}.{_toml_text(kind)}."
+                    f"{_toml_text(source_name)}]"
                 )
+                lines.extend(self.database[kind][source_name].render_lines(header))
         return lines
 
 
@@ -236,6 +244,15 @@ class ReparkConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     profiles: dict[str, ProfileConfig] = Field(default_factory=dict)
+
+    @field_validator("profiles", mode="before")
+    @classmethod
+    def check_profile_names(cls, value: object) -> object:
+        """Refuse header-breaking profile names before any header renders them."""
+        if isinstance(value, dict):
+            for name in value:
+                _refuse_header_name(name, "profile name")
+        return value
 
     def to_toml(self) -> str:
         """Render the file text a user could write as repark.toml."""

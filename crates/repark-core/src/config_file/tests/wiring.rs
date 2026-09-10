@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use tempfile::TempDir;
 
 use super::super::wiring::{FileConfig, conf_dump_rows, load_file_config};
-use super::{stub_environment, write_file};
+use super::{home_config_path, stub_environment, write_file};
 use crate::session::ReparkSessionBuilder;
 
 fn try_loaded_file(text: &str, variables: &[(&str, &str)]) -> crate::Result<FileConfig> {
@@ -19,6 +19,79 @@ fn staged_file(text: &str) -> (TempDir, std::path::PathBuf) {
     let path = directory.path().join("repark.toml");
     write_file(&path, text);
     (directory, path)
+}
+
+fn discovered_file(
+    text: &str,
+    variables: &[(&str, &str)],
+    home: Option<&std::path::Path>,
+) -> (TempDir, crate::Result<FileConfig>) {
+    let directory = TempDir::new().expect("config fixture directory");
+    write_file(&directory.path().join("repark.toml"), text);
+    let environment = stub_environment(variables);
+    let loaded = load_file_config(None, &environment, directory.path(), home);
+    (directory, loaded)
+}
+
+const GLUE_FIXTURE: &str =
+    "[default.catalog.orders]\ntype = \"glue\"\nwarehouse = \"s3://bucket/wh\"\n";
+
+#[test]
+fn discovered_glue_catalog_warns_once_naming_path_and_catalog() {
+    let (directory, loaded) = discovered_file(GLUE_FIXTURE, &[], None);
+    let file = loaded.expect("fixture loads");
+    assert_eq!(file.warnings.len(), 1, "{:?}", file.warnings);
+    let warning = &file.warnings[0];
+    assert!(warning.contains("orders"), "{warning}");
+    let path_text = directory
+        .path()
+        .join("repark.toml")
+        .to_str()
+        .expect("utf8 path")
+        .to_string();
+    assert!(warning.contains(path_text.as_str()), "{warning}");
+}
+
+#[test]
+fn home_discovered_glue_catalog_warns_once() {
+    let home = TempDir::new().expect("home fixture");
+    let work = TempDir::new().expect("work fixture");
+    write_file(&home_config_path(home.path()), GLUE_FIXTURE);
+    let environment = stub_environment(&[]);
+    let file = load_file_config(None, &environment, work.path(), Some(home.path()))
+        .expect("fixture loads");
+    assert_eq!(file.warnings.len(), 1, "{:?}", file.warnings);
+    assert!(file.warnings[0].contains("orders"), "{}", file.warnings[0]);
+}
+
+#[test]
+fn repark_config_named_glue_catalog_warns_nothing() {
+    let (_directory, path) = staged_file(GLUE_FIXTURE);
+    let work = TempDir::new().expect("work fixture");
+    let path_text = path.to_str().expect("utf8 path").to_string();
+    let environment = stub_environment(&[("REPARK_CONFIG", path_text.as_str())]);
+    let file = load_file_config(None, &environment, work.path(), None).expect("fixture loads");
+    assert!(file.warnings.is_empty(), "{:?}", file.warnings);
+}
+
+#[test]
+fn forced_glue_catalog_warns_nothing() {
+    let (directory, path) = staged_file(GLUE_FIXTURE);
+    let environment = stub_environment(&[]);
+    let file =
+        load_file_config(Some(path), &environment, directory.path(), None).expect("fixture loads");
+    assert!(file.warnings.is_empty(), "{:?}", file.warnings);
+}
+
+#[test]
+fn discovered_memory_catalog_warns_nothing() {
+    let (_directory, loaded) = discovered_file(
+        "[default.catalog.local]\ntype = \"memory\"\nwarehouse = \"/tmp/wh\"\n",
+        &[],
+        None,
+    );
+    let file = loaded.expect("fixture loads");
+    assert!(file.warnings.is_empty(), "{:?}", file.warnings);
 }
 
 #[test]

@@ -62,9 +62,26 @@ pub(crate) fn read_and_parse(path: &Path) -> Result<ConfigFile> {
 }
 
 pub(crate) fn parse(text: &str) -> Result<ConfigFile> {
-    let document =
-        toml::from_str::<toml::Table>(text).map_err(|error| Error::Config(error.to_string()))?;
+    let document = toml::from_str::<toml::Table>(text).map_err(|error| {
+        Error::Config(match error.span() {
+            Some(span) => {
+                let (line, column) = line_column(text, span.start);
+                format!(
+                    "TOML parse error at line {line}, column {column}: {}",
+                    error.message()
+                )
+            }
+            None => format!("TOML parse error: {}", error.message()),
+        })
+    })?;
     ConfigFile::from_document(document)
+}
+
+fn line_column(text: &str, offset: usize) -> (usize, usize) {
+    let offset = text.floor_char_boundary(offset.min(text.len()));
+    let line = text[..offset].matches('\n').count() + 1;
+    let line_start = text[..offset].rfind('\n').map_or(0, |index| index + 1);
+    (line, offset - line_start + 1)
 }
 
 impl ConfigFile {

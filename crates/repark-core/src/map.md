@@ -43,6 +43,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014,
   C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025, C-026, C-027
   pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
+  `message()` plus the locally computed line and column, never the echoed source line.
+  pins: review-fix-7/C-002
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects
@@ -70,6 +73,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   conf key > default; CFG-1 step 3: `from_config_file(path?)` forces a file (`None` keeps
   automatic discovery), `build()` resolves the file first and merges its pairs UNDER the
   builder map (builder wins per key) with the file's `session` knobs as typed fallbacks,
+  printing the file's discovery warnings (REVIEW-FIX-7 step 1, 2026-09-10:
+  pins: review-fix-7/C-003),
   and the session keeps the redacted `(key, value, source)` `conf_dump()`), attaches the
   write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
