@@ -457,6 +457,47 @@ every `CONFIRMED` finding has a fix card or a filed question, and the findings d
 
 ---
 
+### Card FACADE-AUDIT-0 — the Rust-backed facade audit (owner, 2026-09-10)
+
+**Facts on `2fad813`.** The Python facade is ~52k lines (`core.py` 4,487; ML transformers 2,717;
+`session_core.py` 2,305; `functions_expr.py` 2,255; `functions.py` 1,985; `types.py` 1,834;
+`ta.py` 1,818; `column.py` 1,589) over **two** pyo3 classes (`PyReparkSession`, `PyDataFrame`,
+54 methods). Arrow crosses the boundary as IPC bytes; 23 modules import pyarrow
+(`create_dataframe_inference.py` 101 references, `types.py` 43, `core.py` 37); a `Column` is a
+Python object that renders SQL text for the engine to re-parse. Three moves to Rust already
+happened piecemeal: `dynamicFlatten` (DF1), `collect()` rows (PERF-FACADE-1), column-wise
+`createDataFrame` (PERF-FACADE-CDF-1). The target shape is py-polars': Rust owns DataFrame,
+Expr, Series-equivalents and DataType; Python is a docstring-and-typing wrapper; pyarrow is
+optional; Arrow crosses zero-copy through the C Data Interface at the edges.
+
+**Home.** `task/roadmap/epic-term/facade-audit-<date>.md` (new, a READING ledger), maps.
+
+**Decisions.**
+
+- **D-1 Two halves.** Half A (M, GLM): per module under `python/repark/src/repark/`, a row with
+  lines, pyo3 calls, pyarrow references, and a class `delegate` (argument checks + one binding
+  call), `logic` (work in Python), or `pyarrow` (transforms Arrow tables in Python), from grep
+  and a short AST walk; the IPC crossing sites; every place a `Column` renders SQL. Half B
+  (I, Muse): weigh the `logic`/`pyarrow` modules by the perf report's measured walls
+  (`docs/perf/`, PERF-ANALYSIS-1) and the API freeze (`docs/design/v1-0-api-freeze.json`: names
+  never change; `isinstance` on `Column`, `Row`, the type classes must keep working), then
+  write the sequence with a pin list per unit.
+- **D-2 The candidate sequence the audit confirms or reorders:** FACADE-1 the Arrow C Stream
+  boundary (`__arrow_c_stream__` capsules both ways, pyarrow optional, pinned against pyarrow,
+  polars and pandas consumers); FACADE-2 `Column` as a pyo3 class over a DataFusion `Expr`
+  with Spark display strings rendered in Rust, the two functions modules thinned to builders;
+  FACADE-3 `createDataFrame` inference in Rust (rows/tuples/dicts to Arrow with Spark's
+  inference rules); FACADE-4 type conversions (Arrow schema ↔ Spark types ↔ DDL) in Rust with
+  the Python classes kept; FACADE-5 the display renderer in Rust.
+- **D-3 Out of scope for the sequence:** ML transformers and the library-wrapping parts of
+  `ta.py`; any public name; pickling behaviour changes without a pin.
+
+**Steps.** 1 (M) Half A tables; 2 (I) Half B judgement + the sequence; 3 (O) map lockstep, PR.
+
+**Rounds.** 2 (M, I).
+
+---
+
 ## 2. Sequence
 
 | # | Unit | Depends on | Tiers | Rounds |
@@ -468,6 +509,7 @@ every `CONFIRMED` finding has a fix card or a filed question, and the findings d
 | 4 | AP-1 | AP-0 merged | I, M | 2 |
 | 5 | BALLISTA-M1-A → D | seed (G-5); D after B | Grok | 8 |
 | 6 | REVIEW-1 | — (read-only) | Grok critic | ~22 short |
+| 7 | FACADE-AUDIT-0 | — (reading unit) | M, I | 2 |
 
 The Grok lane (5, then 6 interleaved) runs as a **third** lane: M1 builds only its own crate behind a feature flag, REVIEW-1 builds nothing. Lanes 1 and 2 run together (2's first two steps are GLM and build natives once; 1's steps are
 Muse on Rust). NEVEROOM-1 step 2 runs alone on the box. AP-1 opens when AP-0 is on `main`.
