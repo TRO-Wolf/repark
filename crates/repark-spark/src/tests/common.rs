@@ -61,6 +61,34 @@ pub(super) async fn setup_with_sql_settings(
     ansi_enabled: bool,
     settings: repark_functions::cardinality::ReparkSqlSettings,
 ) -> (SessionContext, CatalogRegistry) {
+    setup_with_owner_and_settings(wh, ansi_enabled, settings, session_owner_snapshot()).await
+}
+
+pub(super) async fn setup_with_owner(
+    wh: &TempDir,
+    owner: &str,
+) -> (SessionContext, CatalogRegistry) {
+    setup_with_owner_and_settings(
+        wh,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings::default(),
+        owner.to_string(),
+    )
+    .await
+}
+
+fn session_owner_snapshot() -> String {
+    std::env::var("USER")
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "unknown".to_string())
+}
+
+async fn setup_with_owner_and_settings(
+    wh: &TempDir,
+    ansi_enabled: bool,
+    settings: repark_functions::cardinality::ReparkSqlSettings,
+    owner: String,
+) -> (SessionContext, CatalogRegistry) {
     let warehouse = wh.path().to_str().unwrap().to_string();
     let catalog: Arc<dyn Catalog> = Arc::new(
         MemoryCatalogBuilder::default()
@@ -82,6 +110,7 @@ pub(super) async fn setup_with_sql_settings(
         settings,
     );
     let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
+    let config = config.with_option_extension(crate::describe_show::DescribeOwnerConfig { owner });
     let ctx = SessionContext::new_with_config(config);
     // Production wiring: repark-session installs the Spark analyzer rules on every context.
     repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);

@@ -176,6 +176,25 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   latter is absent). Fail-loud `Error::Config` naming the exact key. Registration policy: Glue
   `RequireExplicitLocation`; S3 Tables `ServiceManagedLocation`; memory keeps the temp
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
+  **REVIEW-FIX-5 (2026-09-10):** `prop_key_is_secret` is `pub` (re-exported at the crate
+  root) so `DESCRIBE TABLE EXTENDED` redacts through the same predicate; no second
+  predicate exists. pins: review-fix-5/C-004
+  **REVIEW-FIX-5 D-5 (2026-09-10):** the file carries no `//` comments; the moved reasons
+  live here. `prop_key_is_secret` folds hyphens and dots to underscores so dotted and
+  hyphenated keys share needles, then strips underscores so camelCase and one-word keys
+  share them with snake_case; the substring cover reaches `aws_secret_access_key`,
+  `s3.access-key-id` and `session_token`, `user_info`/`userinfo` catch the Kafka/JDBC
+  `user:password` blob, and the trailing `_key` arm carves out `bucket`/`arn` names (a bare
+  `.key` needle is unreachable after the fold). `CatalogSpec` `Debug` sorts keys so output
+  is deterministic under `HashMap` order. `parse_catalog_specs` normalises both prefixes
+  into one keyspace before building; a cross-spelling value conflict names both keys and
+  never interpolates values (props can carry credentials). The `split_once('.')` arms are
+  the bare kind value, `<name>.<prop>`, and the double-dot empty-name refusal. `io-impl`
+  is dropped because iceberg-rust `FileIO` is not pluggable by Java class name. The
+  C1-SEC-002 matrix additionally pins hyphenated OpenDAL/Spark spellings (C2-SEC-002),
+  camelCase and one-word spellings, `privateKey` plus OAuth `bearer`, and the
+  `basic.auth.user.info` blob; the kind matrix pins the `repark.sql.catalog.m = memory`
+  synonym of the bare Spark spelling.
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
   all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
   local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so

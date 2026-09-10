@@ -43,7 +43,6 @@ pub struct CatalogSpec {
 
 impl std::fmt::Debug for CatalogSpec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Sort keys so Debug is deterministic regardless of HashMap iteration order.
         let mut props: Vec<(&str, &str)> = self
             .props
             .iter()
@@ -66,12 +65,10 @@ impl std::fmt::Debug for CatalogSpec {
 }
 
 /// Whether a catalog property key's **value** should be redacted in Debug output (C1-SEC-002).
-pub(crate) fn prop_key_is_secret(key: &str) -> bool {
-    // Hyphens and dots become underscores so dotted and hyphenated keys share secret needles.
+#[must_use]
+pub fn prop_key_is_secret(key: &str) -> bool {
     let lower = key.to_ascii_lowercase().replace(['-', '.'], "_");
-    // Underscores are stripped so camelCase and one-word keys share secret needles with snake_case.
     let compact = lower.replace('_', "");
-    // Substring match covers `aws_secret_access_key`, `s3.access-key-id`, `session_token`, etc.
     lower.contains("aws_secret")
         || lower.contains("secret")
         || lower.contains("password")
@@ -85,11 +82,9 @@ pub(crate) fn prop_key_is_secret(key: &str) -> bool {
         || compact.contains("privatekey")
         || compact == "bearer"
         || compact.ends_with("bearer")
-        // Kafka / Spark JDBC often embed `user:password` under this key.
         || lower.contains("user_info")
         || compact.contains("userinfo")
         || lower == "key"
-        // `.key` needle is unreachable after the dot→underscore fold above.
         || lower.ends_with("_key") && !lower.contains("bucket") && !lower.contains("arn")
 }
 
@@ -112,7 +107,6 @@ pub fn parse_catalog_specs<S: BuildHasher>(
 ) -> Result<Vec<CatalogSpec>> {
     let mut blocks: BTreeMap<String, Block> = BTreeMap::new();
 
-    // Normalize `spark.sql.catalog.*` and `repark.sql.catalog.*` into one keyspace before building.
     let mut normalized: BTreeMap<&str, (&String, &String)> = BTreeMap::new();
     for (key, value) in config {
         let Some(rest) = key
@@ -123,7 +117,6 @@ pub fn parse_catalog_specs<S: BuildHasher>(
         };
         if let Some((prior_key, prior_value)) = normalized.get(rest) {
             if *prior_value != value {
-                // Name keys only — never interpolate raw values (props can carry credentials).
                 return Err(Error::Config(format!(
                     "conflicting catalog config: `{prior_key}` and `{key}` set different \
                      values for the same property"
@@ -136,7 +129,6 @@ pub fn parse_catalog_specs<S: BuildHasher>(
 
     for (rest, (source_key, value)) in normalized {
         match rest.split_once('.') {
-            // `spark.sql.catalog.<name>` — Spark catalog class / short kind.
             None => {
                 if rest.is_empty() {
                     return Err(Error::Config(format!(
@@ -149,12 +141,10 @@ pub fn parse_catalog_specs<S: BuildHasher>(
                     block.kind_from_type = Some(kind);
                 }
             }
-            // `spark.sql.catalog.<name>.<prop>` — a catalog property.
             Some((name, prop)) if !name.is_empty() => {
                 let block = blocks.entry(name.to_string()).or_default();
                 apply_prop(block, name, prop, value)?;
             }
-            // Empty catalog name: `spark.sql.catalog..warehouse` (double-dot) etc.
             Some((_, _)) => {
                 return Err(Error::Config(format!(
                     "catalog config key `{source_key}` has an empty catalog name — expected \
@@ -202,7 +192,6 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
                 ))
             })?);
         }
-        // iceberg-rust FileIO is not pluggable by Java class name — the Spark io-impl is inert.
         "io-impl" => {}
         _ => {
             block.props.insert(prop.to_string(), value.to_string());
@@ -808,17 +797,13 @@ mod tests {
                 ("session_token".to_string(), secret.to_string()),
                 ("access_key_id".to_string(), secret.to_string()),
                 ("token".to_string(), secret.to_string()),
-                // C2-SEC-002: hyphenated OpenDAL / Spark spellings must redact too.
                 ("s3.access-key-id".to_string(), secret.to_string()),
                 ("s3.secret-access-key".to_string(), secret.to_string()),
                 ("credential".to_string(), secret.to_string()),
-                // camelCase / one-word spellings must redact too.
                 ("accessKey".to_string(), secret.to_string()),
                 ("apikey".to_string(), secret.to_string()),
-                // camelCase privateKey + bearer (OAuth) must redact too.
                 ("privateKey".to_string(), secret.to_string()),
                 ("bearer".to_string(), secret.to_string()),
-                // Kafka/JDBC user:password blob key.
                 ("basic.auth.user.info".to_string(), secret.to_string()),
             ]),
         };
@@ -899,7 +884,6 @@ mod tests {
             parse_catalog_specs(&bare_memory).unwrap()[0].kind,
             CatalogKind::Memory
         );
-        // repark-prefix synonym of bare `=memory`.
         let repark_bare_memory = HashMap::from([
             ("repark.sql.catalog.m".to_string(), "memory".to_string()),
             (
