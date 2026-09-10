@@ -75,6 +75,7 @@ dataframe	DataFrame.colRegex
 dataframe	DataFrame.col_regex
 dataframe	DataFrame.collect
 dataframe	DataFrame.columns
+dataframe	DataFrame.compute
 dataframe	DataFrame.corr
 dataframe	DataFrame.count
 dataframe	DataFrame.cov
@@ -101,6 +102,7 @@ dataframe	DataFrame.dropna
 dataframe	DataFrame.dtypes
 dataframe	DataFrame.dynamicFlatten
 dataframe	DataFrame.dynamic_flatten
+dataframe	DataFrame.eager
 dataframe	DataFrame.exceptAll
 dataframe	DataFrame.except_all
 dataframe	DataFrame.explain
@@ -123,6 +125,7 @@ dataframe	DataFrame.is_cached
 dataframe	DataFrame.is_empty
 dataframe	DataFrame.is_streaming
 dataframe	DataFrame.join
+dataframe	DataFrame.lazy
 dataframe	DataFrame.limit
 dataframe	DataFrame.localCheckpoint
 dataframe	DataFrame.mapInArrow

@@ -152,13 +152,81 @@ core row at 4487); `ruff format --check` clean on every touched file;
 Follow-up round (D-7 shape-read fix, same actor): `test_df_eager_1.py` 11 passed with no
 spy change; `make py-test-facade` exit 0 with the identical totals (5851 passed,
 369 skipped); `make py-lint`, `check_lib_py.py` (core row untouched at 4487), and
-`ruff format --check` all green. `test_dfcore_1_exports.py` sits at exactly the 1000-line default ceiling
+`ruff format --check` all green.
+
+Step-3 gates (same actor): `test_df_eager_1.py` 11 passed; `make check-example-coverage`
+green (924 names, 794 covered, 210 examples); `make check-docs-links` clean (701 files,
+4532 links); `python3 scripts/check_ledger_grammar.py` clean; `make py-test-facade` exit 0
+(5851 passed, 369 skipped); `make py-lint` green; `check_lib_py.py` green (599 files).
+No size baseline raised or ratcheted this round. `test_dfcore_1_exports.py` sits at exactly the 1000-line default ceiling
 after its declared delta — the next unit that touches it must split it (the file's own
 sanctioned out).
 
-Owed at unit close (not this step): the `COVERAGE_ATTESTATION` block (grammar rule C fires
-once no clause is `OPEN`) belongs to the review round, and the `STATUS.md` truth-up plus
-the guide section belong to step 3 and the departure edit.
+Step-3 close (this round) files the attestation below. The `STATUS.md` truth-up stays
+with the departure edit, and the ledger stays in `staging/`.
+
+## Step 3 (2026-09-09, Muse Spark)
+
+Guide: `docs/guide/dataframe-guide.md` gained the "Lazy and eager" section after "The lazy
+model" — the `df.lazy()` / `lf.eager()` pair table plus one subsection per card bullet, every
+code block a transcript run on this clone (ordered three-row frame; the over-limit message
+pasted verbatim including its measured 312-byte size).
+
+Example: new `docs/examples/dataframe/lazy_and_eager.py` (corpus form, executed clean with
+`.venv/bin/python`) covers `DataFrame.eager`, `DataFrame.compute`, `DataFrame.lazy`; the
+three rows joined `docs/examples/inventory.txt` in sorted position and the file joined
+`docs/examples/dataframe/map.md`. `make check-example-coverage` is green again
+(dataframe=153, 210 examples).
+
+Mutation probe (AT-10 evidence, throwaway edit, reverted): deleting the `_count_rows`
+shape shortcut fails exactly `test_eager_count_returns_shape_without_action` (1 failed,
+10 passed); the revert returns 11 passed. The working tree after the revert is byte-identical.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: df-eager-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every card decision walked against behavior, not paraphrase — D-1 (new frame plus shape, source untouched, CSV deletion proves materialization, over-limit names .eager()), D-2 (class-level identity, not a wrapper), D-3 (is-self on lazy, shape-less answering copy on eager), D-4 (identical repr table with zero count calls, plus the count shortcut), D-5 (existing unpersist rows green), D-6 (polars collect guard plus the eager mirror) — eleven pins in python/repark/tests/test_df_eager_1.py, seven of them red-first.
+      artifacts: [python/repark/tests/test_df_eager_1.py, python/repark/src/repark/spark/dataframe/eager.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries exercised — two-row and three-row frames, the 12-row probe-overflow frame (lazy pays exactly one count, eager zero), the CSV-backed frame answering after the file is gone, max_bytes=1 refusing a 312-byte materialize, unordered plans compared order-insensitively after the suite measured both orders. No pin covers an empty-frame eager() or a bridge-frame eager(); neither shape is reachable through a distinct code path (both flow the same materialize call), so both stay unpinned by decision, not by miss.
+      artifacts: [python/repark/tests/test_df_eager_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The over-limit refusal raises IllegalArgumentException naming .eager() and the key with the measured sizes, chained to the original error; only that class is wrapped, engine failures pass through unchanged. A refused materialize commits no view and no lineage (the cache path's existing guarantee, unchanged). No retry, timeout, or crash-mid-operation surface exists on this single-node synchronous path.
+      artifacts: [python/repark/tests/test_df_eager_1.py, python/repark/src/repark/spark/dataframe/eager.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The source frame is provably untouched (is_cached False, same answers after eager()), each eager() mints a fresh view so two eager frames never share ownership, the D-3 copy carries no shape and no cache ownership, and unpersist() clears shape with view so a shape never outlives its materialization. No threads, no shared mutable frame state; the alive token is shared read-mostly session state, unchanged by this unit.
+      artifacts: [python/repark/tests/test_df_eager_1.py, python/repark/src/repark/spark/dataframe/eager.py]
+    - id: AT-5
+      status: N/A
+      justification: Materialization touches no privilege boundary — no auth, no credential, no secret, no network, no path traversal (view names are session-generated scratch names), no deserialization of untrusted input.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The eager frame answers byte-identical rows to the lazy plan on every pin (collect/compare, CSV deletion, lazy-copy agreement), keeps display and engine identity through _identity_child, and leaves both surfaces' meanings unchanged (Spark collect still rows, pl.collect still a real polars frame). The known forward-compat item is disclosed residue R-001, not an absorbed divergence.
+      artifacts: [python/repark/tests/test_df_eager_1.py, docs/examples/dataframe/lazy_and_eager.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The system-breaking shape on this path was a full Arrow copy to learn two integers, and it is gone: the D-7 audit finding replaced to_arrow() with one MemTable count plus schema columns, so .eager() holds exactly one resident copy. No other unbounded growth on the path — the view itself is the requested materialization, guarded by repark.cache.max_bytes.
+      artifacts: [python/repark/src/repark/spark/dataframe/eager.py, docs/guide/dataframe-guide.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: compute-is-eager is a same-object identity pin, not a behavioral alias; the over-limit error keeps its IllegalArgumentException class through the wrap; the dfcore export snapshots absorbed the surface change with declared deltas (class dir plus three, slots plus one, package plus eager); the three new public names carry covering-example rows and check-example-coverage is green.
+      artifacts: [python/repark/tests/test_dfcore_1_exports.py, python/repark/tests/test_df_eager_1.py, docs/examples/dataframe/lazy_and_eager.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The refusal message carries the entry point, the key, and both sizes verbatim (pasted into the ledger and the guide); every red-first run pasted its failing atom into this ledger; the stored shape is introspectable as _eager_shape. No new log lines were added — failures arrive as raised errors with the measured values inline.
+      artifacts: [task/ledgers/staging/df-eager-1-ledger.md, docs/guide/dataframe-guide.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first every round that added behavior — step 1 (7 failed, recorded), step 2 (7 unmarked plus 2 new pins, all green), follow-up (mechanism swap, all green untouched). Branch liveness by live mutation: deleting the _count_rows shortcut fails exactly the shortcut pin and nothing else; the revert returns 11 green. The over-limit wrap branch flips on max_bytes set versus unset; the lazy self-versus-copy branch flips on eager versus lazy input.
+      artifacts: [python/repark/tests/test_df_eager_1.py]
+  complete: true
+```
 
 ## Residue
 
