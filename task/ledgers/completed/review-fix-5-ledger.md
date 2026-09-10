@@ -81,3 +81,48 @@ target green; `cargo test -p repark-core` `294 + 37 + 8 passed; 0 failed`.
   py/toml/sh/yml. The brief's literal grep additionally matches `#[tokio::test]` /
   `#[must_use]` attribute lines; those are attributes, not comments, and the same lines
   already open every existing test in the file.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: review-fix-5
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: All six clauses walked pin by pin. C-001 red with the DataFusion EXTENDED parse error on ice.sales.files, green with Spark rows; C-002 red with both sessions reporting the ambient user, green with distinct per-session owners; C-003 red with the desc_demo parse error reproducing the reTest measurement, green with one-, two- and extended spellings equal to the three-part rows; C-004 red with s3.access-key-id in the clear, green redacted with k=v clear; C-005 the comment sweep plus the 1044 to 1028 ratchet; C-006 red with a production session reporting unknown, green reporting the resolved owner. Red outputs pasted in the clause cells.
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs, crates/repark-spark/src/describe_show.rs, crates/repark-core/src/session_owner.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: One-, two-, three- and four-part names exercised (four-part stays out, pinned); a real table named files; temp views and unregistered catalogs still fall through; missing tables refuse loud; secret-shaped versus non-secret table properties asserted both directions (redacted present, plaintext absent, k=v clear).
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Missing tables raise TABLE_OR_VIEW_NOT_FOUND naming catalog, namespace and table; unregistered catalogs and temp views fall through to DataFusion unchanged; the whole path is read-only so there is no partial-failure state to clean up.
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs, crates/repark-spark/src/router.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The two-session Owner pin is the state attack: two sessions in one process resolve distinct owners, which a query-path environment read could never produce. The card's env-mutation choreography was rejected because set_var is unsafe on this toolchain and races parallel tests; the extension installs once at build and reads never write.
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs, crates/repark-core/src/session_owner.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: Table Properties go through the shared prop_key_is_secret with no second predicate; the pin asserts the redaction marker present, the AKIAEXAMPLE plaintext absent, and the non-secret property clear. The query path performs no environment read (grep-verified: std::env appears only in the build-time snapshot).
+      artifacts: [crates/repark-spark/src/describe_show.rs, crates/repark-core/src/session_owner.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Full spark lib (920) and core lib (294) suites green with no existing pin weakened: the namespace redaction truth table is untouched, the pre-existing secret_token pin greens under the new predicate, and the facade assertions (Owner non-empty, exact Table Properties string) hold by reading since pytest cannot run in this clone. The one retired refusal (one-part leaves-alone) moved to an end-to-end equivalent, not deleted.
+      artifacts: [crates/repark-spark/src/tests/describe_table.rs, crates/repark-core/src/catalog_config.rs]
+    - id: AT-7
+      status: N/A
+      justification: Read-only metadata rendering over one loaded table; no data scan, no loop, no allocation that scales with table size. Routine performance, not a system-breaking defect class.
+    - id: AT-8
+      status: ATTACKED
+      evidence: No new crate edge (crate-DAG gate green); the DataFusion extension API follows the vendored source and the in-repo with_repark_sql_config precedent; the macro's non_exhaustive forced cross-crate construction through the installer rather than a struct literal. Error contracts unchanged: same Plan variants, same fall-through for unregistered catalogs.
+      artifacts: [crates/repark-core/src/session_owner.rs, crates/repark-core/src/lib.rs, crates/repark-core/src/session.rs]
+    - id: AT-9
+      status: N/A
+      justification: No log or metric surface in the path; every refusal carries its own diagnosis (TABLE_OR_VIEW_NOT_FOUND names the qualified table; fall-throughs surface the downstream error unchanged).
+    - id: AT-10
+      status: ATTACKED
+      evidence: Six of six clauses carry red-first pins with the failing output pasted in the ledger. Adequacy was attacked by the suite itself: the D-3 change red-caught the stale one-part leaves-alone entry, which was narrowed (not deleted) with temp-view fall-through still pinned end to end; the new short-name parser pin and the production-session pin each fail for exactly one reason on the base tree.
+      artifacts: [task/ledgers/completed/review-fix-5-ledger.md, crates/repark-spark/src/tests/describe_table.rs]
+```
