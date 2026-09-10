@@ -46,6 +46,16 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [dfcore-4b-ledger.md](dfcore-4b-ledger.md) — Unit ledger — DFCORE-4b · display out of `core.py`
 - [dfcore-5-ledger.md](dfcore-5-ledger.md) — Charter ledger — DFCORE-5 · `approxQuantile` in one collect per frame
 - [dfcore-6-ledger.md](dfcore-6-ledger.md) — Charter ledger — DFCORE-6 · eager previews fetch N+1, never `count()`
+- [display-bridge-1-ledger.md](display-bridge-1-ledger.md) —
+  **DISPLAY-BRIDGE-1 step 1 (2026-09-09), in flight:** a bridged frame's `show()` follows
+  the display style (R-13) — `_show` resolves the style before the bridge peek; under
+  `polars` / `duckdb` the peeked table renders through `_render_styled_show` (short peek →
+  exact shape, no count; full peek → one count), under `spark` the grid is byte-identical.
+  Closes DISPLAY-POLARS-1-S3-Q-001 (flipped FIXED in the completed display-polars-1
+  ledger). Three clauses, pins red-first in
+  [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/test_display_bridge_1.py).
+  `risk_tier: standard`. Branch `feat/display-bridge-1`.
+  pins: display-bridge-1/C-001, C-002, C-003
 - [display-polars-1-ledger.md](display-polars-1-ledger.md) —
   **DISPLAY-POLARS-1 step 1 (2026-09-09), in flight:** polars-style rendering becomes the
   default. Step 1 only (D-1 + D-2): `_DEFAULT_DISPLAY_STYLE` flips to `polars`, resolved
