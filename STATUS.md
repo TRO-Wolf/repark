@@ -39,13 +39,15 @@ is one setting away (`REPARK_DISPLAY_STYLE=spark`, `.config("repark.display.styl
 `session.display_style`); `max_rows` (10), `max_cols` (8) and `str_len` (30) join `style` as
 facade-local keys, and a styled frame shorter than `max_rows + 1` now renders with no `count()`.
 The keys and the precedence chain are documented in
-[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
-**DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (the same function object) and
-`.lazy()`: `.eager()` materialises through the existing cache-view path and returns a **new
-`repark.DataFrame`** — same class, full Spark surface, never a polars object — whose row and column
-counts are read once and then answered by `count()`, `repr` and `show()` with no engine action;
-`.lazy()` returns the frame back to a plan over the same view without re-executing. The Spark
-`collect()` and `df.pl.collect()` keep their own meanings. Release mechanics:
+[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md); **DISPLAY-BRIDGE-1
+(2026-09-09)** closes the one place the flip had missed, so an uncached `mapInArrow` frame's
+`show()` renders with the resolved style and matches its own `repr` instead of falling back to the
+Spark grid. **DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (the same function
+object) and `.lazy()`: `.eager()` materialises through the existing cache-view path and returns a
+**new `repark.DataFrame`** — same class, full Spark surface, never a polars object — whose row and
+column counts are read once and then answered by `count()`, `repr` and `show()` with no engine
+action; `.lazy()` returns the frame back to a plan over the same view without re-executing. The
+Spark `collect()` and `df.pl.collect()` keep their own meanings. Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
