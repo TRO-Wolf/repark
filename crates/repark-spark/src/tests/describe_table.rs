@@ -456,6 +456,66 @@ async fn describe_table_owner_is_the_session_resolved_user() {
 }
 
 #[tokio::test]
+async fn describe_table_owner_resolves_in_a_production_built_session() {
+    let warehouse = TempDir::new().unwrap();
+    let warehouse_path = warehouse.path().to_str().unwrap().to_string();
+    let session = repark_core::ReparkSession::builder()
+        .build()
+        .expect("a production session builds");
+    session
+        .register_memory_catalog("ice", &warehouse_path)
+        .await
+        .expect("the production session registers ice");
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse_path}/sales"))]),
+        )
+        .await
+        .expect("the production session creates sales");
+    let catalogs = session.catalogs_snapshot();
+    let location = format!("{warehouse_path}/sales/prod_owner");
+    std::fs::create_dir_all(&location).expect("the fixture directory builds");
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
+            1,
+            "id",
+            Type::Primitive(PrimitiveType::Long),
+        ))])
+        .build()
+        .expect("the fixture schema builds");
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("prod_owner".to_string())
+                .location(location)
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .expect("the production catalog creates the table");
+
+    let rows = describe_rows(
+        session.context(),
+        &catalogs,
+        "DESCRIBE TABLE EXTENDED ice.sales.prod_owner",
+    )
+    .await;
+    let owner = rows
+        .iter()
+        .find(|(name, _, _)| name == "Owner")
+        .expect("extended output carries Owner");
+    assert_eq!(
+        owner.1,
+        repark_core::session_owner_snapshot(),
+        "a production-built session resolves the owner at build, never unknown"
+    );
+}
+
+#[tokio::test]
 async fn describe_table_short_names_complete_from_session_defaults() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

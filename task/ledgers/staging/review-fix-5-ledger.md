@@ -27,8 +27,9 @@ residue below, not as a clause), any dependency file, `STATUS.md`,
 | C-004 | D-4: the table-property rows `DESCRIBE TABLE EXTENDED` prints go through `prop_key_is_secret`, the same predicate the config redaction uses, with no second predicate; a secret-shaped property renders redacted, a non-secret property renders in the clear; the Spark delta (`s3.access-key-id` prints in the clear under Spark) is recorded as a deliberate divergence. | `describe_table_extended_redacts_through_prop_key_is_secret` | **PROVEN** | Red 2026-09-10 (same run): Table Properties rendered `[current-snapshot-id=none,k=v,s3.access-key-id=AKIAEXAMPLE]` — the access key in the clear, reproducing Q-30. Note on the card wording: `DESCRIBE NAMESPACE EXTENDED` in this tree uses Spark's `Utils.redact` predicate (its truth table is pinned byte-for-byte to live Spark, e.g. `ACCESS-KEY` and `access_key` print in the clear), so "the SAME predicate NAMESPACE already uses" is read as the repo-shared secret predicate `prop_key_is_secret` (repark-core, also mirrored by the facade `_secrets.py`), which RF-6 names. Green after `render_table_properties` calls the shared predicate (`pub` widened one token in `repark-core`, re-exported at its root; no new edge): `s3.access-key-id=AKIAEXAMPLE` renders `*********(redacted)` with the plaintext absent, `k=v` stays in the clear. The pre-existing `secret_token` pin still greens under the new predicate. |
 
 | C-005 | D-5: `catalog_config.rs` carries no `//` comments; the seventeen moved reasons live on the `catalog_config.rs` row of `crates/repark-core/src/map.md`, and the size baseline ratchets down to the new exact count with no other row touched. | `check-rust-file-size` green at 1028 plus `grep -n "^\s*//"` showing only `///`/`//!` doc lines | **PROVEN** | `make verify` exit 0 (2026-09-10); `catalog_config.rs` is 1028 lines against the ratcheted 1028 baseline, no other EXCEPTIONS row touched; the `//` sweep shows only required doc comments. |
+| C-006 | R5-C: a production session built through `ReparkSessionBuilder` (not the test helper) reports the resolved owner, not `unknown`, in the `Owner` row of `DESCRIBE TABLE EXTENDED`; the struct keeps its name and prefix in `repark-core`, re-exported at the root, with no new crate edge. | `describe_table_owner_resolves_in_a_production_built_session` | **PROVEN** | Red 2026-09-10 against the install-free tree: `assertion left == right failed: a production-built session resolves the owner at build, never unknown / left: "unknown" / right: "john"`. Green with the `ReparkSessionBuilder` install: the production session's `Owner` row equals `session_owner_snapshot()`, and the untouched two-session pin still proves the no-env-on-the-query-path half. The `#[non_exhaustive]` extension forced one design point: cross-crate construction goes through the `with_session_owner` installer mirroring `with_repark_sql_config`. `make verify` exit 0 (2026-09-10, second round): spark lib 920, core lib 294, zero failures. |
 
-VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Green
 
@@ -43,10 +44,6 @@ target green; `cargo test -p repark-core` `294 + 37 + 8 passed; 0 failed`.
 
 ## Residue
 
-- Production-session Owner wiring: `repark-core` `ReparkSessionBuilder` and the PyO3
-  session build do not install the `DescribeOwnerConfig` extension yet, so a production
-  session reports `Owner` as `unknown` instead of the process user. The facade pins only
-  assert non-empty, so nothing regresses; wiring the real builders is a follow-up card.
 - `R-DESCRIBE-TWO-PART` stays in the registry: RF-2 retires it "when it lands", and it has
   not landed for the dbt session. Completion reads the engine
   `datafusion.catalog.default_catalog`, and facade current-catalog is facade-only by

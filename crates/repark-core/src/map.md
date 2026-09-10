@@ -109,6 +109,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   named internal services is **deferred and driver-gated** —
   [../../../docs/adr/0005-defer-session-decomposition.md](../../../docs/adr/0005-defer-session-decomposition.md)
   names the triggers, so do not split it opportunistically.
+  **REVIEW-FIX-5 C-006 (2026-09-10):** `build()` installs `DescribeOwnerConfig` once via
+  `with_session_owner` with the owner snapshotted from the process environment at build;
+  the query path never reads the environment. `catalogs_snapshot` is `pub` so doors
+  outside this crate can route over the session's registry.
+  pins: review-fix-5/C-006
+- `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
+  (`repark.describe` prefix, `owner`, default `unknown`), the build-time
+  `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the
+  `with_session_owner` installer mirroring `with_repark_sql_config`. Moved here from the
+  Spark door (R5-C) because only this crate builds the session; the Spark door imports
+  the type and the test session build reuses the snapshot. No `//` comments; the reasons
+  live on this row.
+  pins: review-fix-5/C-002, C-006
 - `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in

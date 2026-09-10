@@ -690,4 +690,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   extension (D-2), and redacts Table Properties through `prop_key_is_secret` with the Spark
   `s3.access-key-id` delta recorded as deliberate (D-4). `risk_tier: standard`.
   Branch `fix/review-fix-5`.
-  pins: review-fix-5/C-001, C-002, C-003, C-004, C-005
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-005, C-006

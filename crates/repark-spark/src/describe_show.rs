@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
-use datafusion::common::config::ConfigExtension;
-use datafusion::common::extensions_options;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
@@ -23,17 +21,7 @@ use regex::RegexBuilder;
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, resolve_namespace};
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
-use repark_core::{CatalogRegistry, prop_key_is_secret};
-
-extensions_options! {
-    pub struct DescribeOwnerConfig {
-        pub owner: String, default = "unknown".to_string()
-    }
-}
-
-impl ConfigExtension for DescribeOwnerConfig {
-    const PREFIX: &'static str = "repark.describe";
-}
+use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
 
 /// A parsed Spark `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
 pub(crate) struct DescribeNamespace {

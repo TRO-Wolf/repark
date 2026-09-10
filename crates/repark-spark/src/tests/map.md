@@ -597,10 +597,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   complete from the session defaults in the router) and no longer filters a three-part table
   named like a metadata table, while four-part metadata paths still stay out; a real
   `ice.sales.files` table describes; `Owner` equals the per-session owner across two sessions
-  in one process; short names return the three-part rows; `s3.access-key-id` redacts while
+  in one process and the resolved owner in a production-built session; short names return
+  the three-part rows; `s3.access-key-id` redacts while
   `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
   refusal; temp-view fall-through stays pinned end to end).
-  pins: review-fix-5/C-001, C-002, C-003, C-004
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
 
 ## Mapping rule
 

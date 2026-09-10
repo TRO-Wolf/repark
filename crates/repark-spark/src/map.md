@@ -269,14 +269,13 @@ pins: rp-4-fork-repin/C-005, C-006
   four-or-more-part metadata path still stays out; the router completes missing parts from
   the engine `datafusion.catalog.default_catalog` / `default_schema` (the same rule `SELECT`
   resolves by) before the registered-catalog check. `Owner` comes from the
-  `DescribeOwnerConfig` session extension installed at session build (`unknown` when
-  absent) — no environment read on the query path. Table Properties redacts
+  `repark_core::DescribeOwnerConfig` session extension, installed once by
+  `ReparkSessionBuilder` (`unknown` when absent) — no environment read on the
+  query path. Table Properties redacts
   through `repark_core::prop_key_is_secret` (widened to `pub` for this call; no second
   predicate): **deliberate Spark delta** — Spark prints `s3.access-key-id` in the clear and
-  RePark redacts it; printing a credential is the worse divergence (RF-6). Production
-  `ReparkSession`/PyO3 builders do not install the extension yet (`Owner` reads `unknown`
-  there; facade pins only need non-empty) — see the unit ledger residue.
-  pins: review-fix-5/C-001, C-002, C-003, C-004
+  RePark redacts it; printing a credential is the worse divergence (RF-6).
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS
