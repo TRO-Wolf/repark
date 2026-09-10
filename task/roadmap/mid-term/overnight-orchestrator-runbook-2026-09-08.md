@@ -15,7 +15,7 @@ and [../../../AGENTS.md](../../../AGENTS.md) wins on everything.
 | G-2 Decision authority per §6 (bounded). | Park the unit on the first hand-back that needs a decision. |
 | G-3 A stop time (local) and a usage ceiling. | Stop at 03:00 local, or on the first rate-limit or usage-limit signal, whichever comes first. |
 | G-5 Seed commits: the orchestrator may make a card's step-0 dependency commit itself when the card spells the exact lines (CFG-1 D-3 does). | Park the card until the owner seeds it. |
-| G-4 Which launchers may run: `oc-worker` (GLM), `muse-worker` (Muse), `grok-worker` (Grok, only when the owner has lifted the quota pause). | GLM and Muse only. |
+| G-4 Which launchers may run: `oc-worker` (GLM), `muse-worker` (Muse), `grok-worker` (Grok — granted 2026-09-09 evening with ~82 % weekly quota left, for slate 2's Ballista and REVIEW-1 cards). | GLM and Muse only. |
 
 The owner launches the session (§9). The session never launches another orchestrator.
 
@@ -85,9 +85,19 @@ systemd-run --user --collect --quiet --unit="oc-$LANE-$(date -u +%H%M%S)" \
 Muse (tier I steps): same wrapper around
 `~/.claude/skills/muse-worker/muse-worker.sh --lane $LANE --repo /tmp/oc-$LANE --brief … --role worker --max-steps 400`
 (no `--model` or `--effort` flag: the launcher's defaults are `muse-spark-1.3-contributor` at
-`--effort max`, the owner's ruling of 2026-09-09; a brief never lowers them)
+`--effort xhigh` — the contributor model's ceiling; it rejects `max` — per the owner's 2026-09-09
+ruling; a brief never lowers them)
 (the skill adds `--trust-workspace`; confirm `grep -c untrusted <run>/stderr.log` prints `0`).
-Grok (only under G-4): `~/.claude/skills/grok-worker/grok-worker.sh --lane $LANE --repo /tmp/oc-$LANE --brief … --role sepmo-actor --max-turns 300`.
+Grok (under G-4): actor `~/.claude/skills/grok-worker/grok-worker.sh --lane $LANE --repo /tmp/grok-$LANE --brief … --role sepmo-actor --max-turns 300`;
+critic `… --role critic-quality|critic-logic|critic-security --sandbox read-only --max-turns 120`
+on a fresh clone of `main`. The launcher refuses `~/CodeRepos` and denies push/gh/aws. Run dirs
+land in `/tmp/grok-worker/<lane>/<stamp>/`; read them with `python3 ~/.claude/skills/grok-worker/handback.py <run>`.
+**Two Grok patterns to check on every hand-back:** (1) the turn-1 stall — `num_turns` 1 with a
+placeholder summary: resume the same session with a proceed mandate ("never end a turn to report
+progress; CONCLUDED is valid only with commits/report present"), and after two stalls launch a
+fresh session; (2) fabrication — a `CONCLUDED` JSON naming commits with `num_turns` 1 and an
+untouched lane: discard it, relaunch. A critic's report goes to a file the brief names, never
+only into the JSON (long JSON text is truncated).
 
 Run directories differ by launcher: `oc-worker` → `/tmp/oc-worker/<lane>/<stamp>/`, `muse-worker` →
 `/tmp/muse-worker/<lane>/<stamp>/`, `grok-worker` → `/tmp/grok-worker/<lane>/<stamp>/`; the wait
@@ -104,7 +114,9 @@ is running or §7 has steps left and §8 has not fired:
 until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 30; done
 ```
 
-Concurrency: at most **two** worker lanes at once. A fresh clone's first Python round runs
+Concurrency: at most **two** worker lanes at once, plus a **third** lane when it is a Grok
+round on `repark-distributed` (its own crate, feature-gated) or a read-only Grok critic; the
+builder cap (no more than two concurrent cargo builds) and the one-JVM rule still bind. A fresh clone's first Python round runs
 `maturin develop`, so before launching any lane wait until no build is running:
 `while pgrep -x cargo >/dev/null || pgrep -x maturin >/dev/null || pgrep -x rustc >/dev/null; do sleep 30; done`
 (`pgrep -f` would match your own shell's command line and never return). Put every launch
@@ -215,6 +227,9 @@ the next opens; a card whose steps are all merged is skipped:
    GLM).
 4. NEVEROOM-1 step 1 (GLM); step 2 (Muse) only when no other lane is open; step 3 (GLM).
 5. AP-1 (Muse, GLM) once AP-0 is on `main`.
+6. **Grok lane**, third, from the start: the BALLISTA-M1-A seed (G-5), then M1-A steps 1–2,
+   M1-B, M1-C, M1-D; between Ballista rounds, REVIEW-1 critic rounds two at a time over the
+   merged units, reproductions re-run by you, fix cards appended.
 
 ## 8. Stop conditions and the morning report
 

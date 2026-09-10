@@ -24,6 +24,7 @@ sections left open.
 | S2-3 | Slate-1 leftovers (DF-EAGER-1 steps 2–3, CFG-1 steps 3–4, DISPLAY-BRIDGE-1, PROFILES-1 steps 1–3, CONF-UNREAD-1, AP-0) finish first, one lane, before slate 2 opens its second lane. | runbook §7 |
 | S2-4 | No scheduler in this slate: `CALL run_maintenance()` is the only trigger; the server (roadmap 1.12) adds the schedule later. | MAINT-POLICY-1 D-5 |
 | S2-5 | Torture data is generated, never committed: the CI tier is 10k rows per family, the full tier ≥ 1M rows on this box only. | TORTURE-1 D-1 |
+| S2-7 | **Grok lane (2026-09-09 evening, "hit it"):** Grok 4.6 (`grok-worker`, ~82 % weekly quota left) takes two groups as a third lane: Ballista Milestone 1 as actor on the isolated `repark-distributed` crate, and a read-only critic sweep over the units merged since 2026-09-08. Grok launches go through `systemd-run`; every fast hand-back is checked for the turn-1 stall and the fabrication pattern (`num_turns`, `git log origin/main..HEAD`). | §1 BALLISTA-M1-A…D, REVIEW-1; runbook G-4, §7 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -276,6 +277,186 @@ the ledger says so).
 
 **Rounds.** 3 (M, I, M).
 
+### Card BALLISTA-M1-A — the `repark-distributed` crate and the local executor (Grok lane)
+
+**Ground.** [../epic-term/ballista-audit-2026-09-08.md](../epic-term/ballista-audit-2026-09-08.md)
+§26.F–§26.H: depend on `ballista-core`, `ballista` (client), `ballista-scheduler`,
+`ballista-executor` at tag `54.1.0` (DataFusion 54 matches the workspace pin); override seats are
+the single-slot codec wrapper, `SessionProvider`, `override_config_producer` /
+`override_session_builder`; writes and commits stay coordinator-side (ADR-0004 disposition).
+Nothing upstream is vendored.
+
+**Home.** NEW `crates/repark-distributed/` (`Cargo.toml`, `src/lib.rs`, `src/executor.rs`,
+`src/local.rs`, `src/map.md`), `Cargo.toml` (workspace members + the four pinned deps, seed under
+G-5), `repo-manifest.toml` (a `[components.repark-distributed]` row, `layer = "runtime"`,
+`status = "delivered"` when the crate lands), `scripts/check_crate_dag.py` (`ROLES` + one
+`ALLOWED_EDGES` row `("repark-distributed", "repark-core")` with the reason), `ARCHITECTURE.md`
+(one paragraph, the crate DAG figure), `crates/map.md`, docs pointers.
+
+**Decisions.**
+
+- **D-1 Placement.** `repark-distributed` is tier 3, role `runtime`: it depends on `repark-core`
+  (the session, the Iceberg provider) and `repark-common`; nothing below tier 3 may depend on
+  it; `repark-python` and the planned `repark-server*` crates may. This is a crate-DAG ruling
+  the orchestrator records in the ledger; the owner sees it in the PR body.
+- **D-2 Feature flag.** Everything Ballista sits behind `features = ["cluster"]` (off by
+  default) so the workspace's default build, `make verify` and the wheel are untouched; `local`
+  always builds.
+- **D-3 The trait**, from the owner's plan §20, in `src/executor.rs`:
+  `DistributedExecutor { async fn execute(&self, plan: Arc<dyn ExecutionPlan>) -> Result<JobHandle>;
+  async fn status(&self, job: JobId) -> Result<JobStatus>; async fn cancel(&self, job: JobId) -> Result<()> }`
+  with `JobHandle { id, stream() -> SendableRecordBatchStream }` and
+  `JobStatus { Queued | Running { completed_stages, total_stages } | Completed | Failed(String) | Cancelled }`.
+- **D-4 `LocalDataFusionExecutor`** runs the plan on the session's `SessionContext` in-process;
+  `status` reports `Completed`/`Failed` after the stream drains; `cancel` aborts the task.
+  It is the reference implementation every M1 test runs against first.
+- **D-5 Seed commit (G-5):** workspace members gain the crate; `[workspace.dependencies]` gains
+  `ballista-core = "=54.1.0"`, `ballista = "=54.1.0"`, `ballista-scheduler = "=54.1.0"`,
+  `ballista-executor = "=54.1.0"`; `cargo fetch` must succeed on this box (network is available
+  to the orchestrator; workers do not touch the lockfile). If the tag is not on crates.io the
+  seed pins the git rev `f4e66525` instead and the ledger says so.
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 0 | O (G-5) | The seed: crate skeleton with an empty `lib.rs`, manifest row, DAG rows, workspace deps; `make verify` green; `cargo build -p repark-distributed --features cluster` green. |
+| 1 | Grok | `executor.rs` (D-3), `local.rs` (D-4), red-first tests: a `range(1000)` sum through the local executor equals the direct answer; `status` transitions; `cancel` on a long `range` returns within 1 s and the status is `Cancelled`; the `cluster` feature compiles with the four crates linked and no code yet. |
+| 2 | Grok | `ARCHITECTURE.md` paragraph + figure row, `crates/map.md`, the crate `map.md` with D-1 and D-2 as its design note, ledger. May chain from step 1. |
+
+**Rounds.** 2 Grok after the seed.
+
+---
+
+### Card BALLISTA-M1-B — the cluster executor: scheduler plus two executors in one process (Grok lane)
+
+**Home.** `crates/repark-distributed/src/cluster.rs` (new), `src/session_provider.rs` (new),
+`src/codec.rs` (new), `tests/cluster_two_executors.rs` (new, `#[cfg(feature = "cluster")]`),
+maps.
+
+**Decisions.**
+
+- **D-1** `ReparkClusterExecutor` embeds Ballista's standalone shape (audit §26.F: the client
+  crate's standalone feature): one scheduler and N executors started in-process on ephemeral
+  ports; `N` and the scheduler bind address are constructor arguments; a later unit adds the
+  remote form, same trait.
+- **D-2** The `SessionProvider` seat is filled by a RePark session builder so every executor
+  builds its `SessionState` from the same RePark configuration (analyzer rules, UDFs, the
+  Spark-door settings) as the coordinator; the test proves a RePark UDF resolves on an executor.
+- **D-3** The codec seat is a delegating wrapper (audit R-1): it forwards the five Ballista
+  shuffle node types to the Ballista defaults and registers no RePark write or commit node; a
+  round-trip serde test over every default node is the pin that survives an upgrade.
+- **D-4** No Iceberg yet: the test data is an in-memory table registered through the session
+  provider on every executor.
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | Grok | `cluster.rs` + `session_provider.rs` + `codec.rs`; the two-executor test: submit a `SELECT sum(x) FROM t` plan, assert the answer, assert both executors ran at least one task (from the scheduler's job metrics), assert `status` walks Queued → Running → Completed. |
+| 2 | Grok | D-2's UDF-on-executor pin, D-3's round-trip pin, the cancel path (a long query cancelled mid-flight: status `Cancelled`, no executor left running a task after 5 s), maps, ledger. |
+
+**Rounds.** 2 Grok.
+
+---
+
+### Card BALLISTA-M1-C — multi-stage queries, shuffle, retry, metrics (Grok lane)
+
+**Home.** `crates/repark-distributed/tests/multi_stage.rs` (new), `src/cluster.rs` (retry and
+metrics surface), `docs/design/distributed-m1.md` (new: what M1 delivers, the success list from
+the owner's plan §12 with a check per line), maps.
+
+**Decisions.**
+
+- **D-1** Three shapes, each asserted equal to the local executor's answer on the same plan:
+  hash aggregate over 4 partitions (two stages), a hash join of two tables (three stages), a
+  sort-merge join with `prefer_hash_join = false` (a repartition on both sides).
+- **D-2** Retry: kill one executor's task mid-shuffle (Ballista's own fault-injection hook, or
+  stopping one executor between stages); the job completes on the remaining executor and the
+  status carries the retried stage count.
+- **D-3** Metrics: `JobStatus::Completed` carries per-stage rows, bytes shuffled, and wall time,
+  read from the scheduler's metrics; the test asserts shuffle bytes > 0 on the two-stage shape.
+- **D-4** Shuffle data lands under the session's spill temp dir and is removed when the job
+  completes or is cancelled; the test checks the directory.
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | Grok | D-1's three shapes against the local answers. |
+| 2 | Grok | D-2 retry, D-3 metrics, D-4 cleanup; the design doc with the §12 success list checked line by line, maps, ledger. |
+
+**Rounds.** 2 Grok.
+
+---
+
+### Card BALLISTA-M1-D — Iceberg reads through the executors (Grok lane)
+
+**Home.** `crates/repark-distributed/src/iceberg_provider.rs` (new: the DataFusion-level
+provider codec the audit's R-4 records), `tests/iceberg_scan.rs` (new), `docs/design/distributed-m1.md`
+(a section), maps.
+
+**Decisions.**
+
+- **D-1** Reads only. The Iceberg `TableProvider` from `repark-core` is serialised as
+  `(catalog config, table identifier, snapshot id, projection, filters)` and rebuilt on each
+  executor through the session provider; scans distribute by file group. Writes are out of
+  scope and the doc says the commit coordinator is a later unit (ADR-0004).
+- **D-2** Credentials (audit R-5): the executor resolves the catalog through the same session
+  configuration the coordinator used, never ambient authority; the memory catalog is the test
+  bed and an S3 leg is a disclosed residue until the cutover credential design lands.
+- **D-3** The pin: a memory-catalog Iceberg table with 8 files scanned by two executors answers
+  the same `count(*)`, `sum`, and a filtered scan as the local executor, and each executor
+  opened at least one file (from the scan metrics).
+
+**Steps.**
+
+| Step | Tier | Do |
+|---|---|---|
+| 1 | Grok | The provider codec and its round-trip test; the two-executor Iceberg scan pins. |
+| 2 | Grok | The design-doc section (what M1 delivers, what the next milestone owns: the runtime abstraction is now in place, Iceberg writes and the commit coordinator are Milestone 3), maps, ledger. |
+
+**Rounds.** 2 Grok. **Blocked by** M1-B.
+
+---
+
+### Card REVIEW-1 — the Grok critic sweep over the merges since 2026-09-08 (Grok lane, read-only)
+
+**Why.** Twenty-plus units merged in 24 hours under orchestrator audits; the SEPMO Critic stage
+did not run on them. Grok is the proven critic tier and critics never run on Opus.
+
+**Home.** `/tmp/grok-worker/review1/findings/<unit>.md` (one file per reviewed unit, written by
+the critic; the orchestrator copies the ones with findings into
+`task/roadmap/mid-term/review-1-findings-<date>.md`), a fix card per confirmed finding appended to
+this slate by the orchestrator, maps.
+
+**Decisions.**
+
+- **D-1 Scope**: every PR merged to `main` from #426 through the newest at launch, grouped by
+  unit (SQL-DESCRIBE-1, DF-EXPLAIN-1, DISPLAY-POLARS-1, CFG-1, DF-EAGER-1, LEDGER-READING-1,
+  PREFLIGHT-PARITY-1, DOCS-LINKS-1, PROFILES-1, BALLISTA-AUDIT-0 as a document).
+- **D-2 Roles**: one `critic-quality` and one `critic-logic` round per unit on a **fresh clone
+  of `main`** under `--sandbox read-only`; `critic-security` once over CFG-1 (secrets,
+  interpolation) and SQL-DESCRIBE-1 (property redaction). Each round reads the unit's ledger and
+  its diff (`git log --grep`, `git show`), runs the unit's own pins, and attacks the claims:
+  pins that were never red, oracle assertions that pin a divergence as parity, comments in code,
+  map lockstep, public names outside the freeze, silent behaviour changes to `show()`/`repr`.
+- **D-3 Output contract**: the findings file, not the JSON, carries the report (the grok
+  truncation gotcha); the JSON summary is one line per finding with severity and file:line. A
+  finding is `CONFIRMED` only with a reproduction command that the orchestrator re-runs.
+- **D-4 No edits**: the critic never patches; confirmed findings become fix cards for GLM or
+  Muse, and a finding that contradicts an owner ruling is filed as a question, not a fix.
+
+**Steps.** One Grok round per unit and role (about 22 rounds, ~$0.10–0.40 each from the CC-3
+history); the orchestrator batches them two at a time between its other lanes, re-runs every
+reproduction, and appends the fix cards.
+
+**Done when.** Every unit in D-1 has its quality and logic files, the two security files exist,
+every `CONFIRMED` finding has a fix card or a filed question, and the findings document is on
+`main`.
+
+---
+
 ## 2. Sequence
 
 | # | Unit | Depends on | Tiers | Rounds |
@@ -285,8 +466,10 @@ the ledger says so).
 | 2 | TORTURE-1 | — | M, M, I, I, M | 5 |
 | 3 | NEVEROOM-1 | — (box alone for step 2) | M, I, M | 3 |
 | 4 | AP-1 | AP-0 merged | I, M | 2 |
+| 5 | BALLISTA-M1-A → D | seed (G-5); D after B | Grok | 8 |
+| 6 | REVIEW-1 | — (read-only) | Grok critic | ~22 short |
 
-Lanes 1 and 2 run together (2's first two steps are GLM and build natives once; 1's steps are
+The Grok lane (5, then 6 interleaved) runs as a **third** lane: M1 builds only its own crate behind a feature flag, REVIEW-1 builds nothing. Lanes 1 and 2 run together (2's first two steps are GLM and build natives once; 1's steps are
 Muse on Rust). NEVEROOM-1 step 2 runs alone on the box. AP-1 opens when AP-0 is on `main`.
 
 ## Pointers
