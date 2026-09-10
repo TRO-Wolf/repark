@@ -54,7 +54,7 @@ def test_ex_0_enumerator_emits_five_families_and_repark_sql() -> None:
     assert "F.xpath" in names
     assert "F.unwrap_udt" in names
     assert "F.from_json" in names
-    assert len(rows) == 921
+    assert len(rows) == 924
 
 
 def test_ex_0_uncovered_name_is_red() -> None:
