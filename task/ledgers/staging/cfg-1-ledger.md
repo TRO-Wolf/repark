@@ -1,7 +1,7 @@
 # Unit ledger — CFG-1 step 1 · `repark.toml` discovery, profile merge, `${VAR}` interpolation
 
 **Unit:** CFG-1 step 1 (+ step 1b, R-14) · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` (step 1b: `feat/cfg-1-step1b`) · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2; Muse Spark (muse-spark-1.3-contributor) — implementation, step 3
+**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2; Muse Spark (muse-spark-1.3-contributor) — implementation, step 3 and step 4
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** The CFG-1 seed commit left `config_file/{discovery,profile,interpolate}.rs` as empty
@@ -53,11 +53,16 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-025 | A non-empty `[<profile>.database]` table refuses loud at load: the sources parse and validate (collisions included) but named-source registration is CFG-2's card, and a silent drop would vanish configured sources. | `database_sources_refuse_until_named_registration_lands` | **PROVEN** | Red first (step 3 below); green in the step-3 run. The refusal names `default.database.postgres.company_db` and the `CFG-2` card. |
 | C-026 | `Builder.configFile(path)` forces a file and automatic discovery (`REPARK_CONFIG` → CWD → home) runs at `getOrCreate` without it; the file's translated pairs fold through the existing `.config()` choke point with builder keys winning, so display, session-knob, and `conf` values reach the knob resolvers and `conf.get`. | `test_config_file_folds_pairs_through_config`, `test_repark_config_env_discovers_file` | **PROVEN** | Red first (Python, below: `'Builder' object has no attribute 'configFile'`); green after `make develop` (counts in Gates). The fold asserts `custom.probe.key` in `conf.get` and `display_style == "spark"` from the file; the discovery pin sets `REPARK_CONFIG` by monkeypatch and reads the file value back. |
 | C-027 | The forced path reaches the engine through `PyReparkSession::new(config_path=...)`; end to end, an explicit `.config()` beats the file, and a forced-but-missing path refuses naming it. | `test_builder_config_beats_config_file`, `test_config_file_missing_path_refuses`, `config_path_names_the_forced_file_and_missing_refuses` (binding) | **PROVEN** | Red first (Python, below); green after `make develop` (counts in Gates). The missing-path refusal matches `does not exist` from the engine's forced-path check; the binding pin also asserts undiscoverable `config_file_pairs(None)` comes back empty. |
+| C-028 | The `repark.config` mirror validates typed construction the way the loader parses: unknown `display` / `session` keys refuse, session knobs keep non-negative integers and digit strings, booleans refuse in every table, database kinds outside `postgres / sqlserver / trino` refuse, dotted catalog names / empty catalog blocks / cross-family name collisions refuse. | `test_unknown_display_key_refuses`, `test_unknown_session_key_refuses`, `test_session_digit_string_accepted`, `test_session_negative_knob_refuses`, `test_boolean_values_refuse`, `test_unknown_database_kind_refuses`, `test_catalog_name_with_dot_refuses`, `test_empty_catalog_block_refuses`, `test_name_collision_across_families_refuses` | **PROVEN** | Red first (step 4, below: `ModuleNotFoundError: No module named 'repark.config'`); green after `config.py` landed: `12 passed` (`.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q`, 2026-09-10). The mirror never parses: no discovery, merge, interpolation, or translation code exists in the module. |
+| C-029 | The mirror renders TOML the loader accepts: the text parses back to the same tables (dotted conf keys nest and flatten at load), a rendered file builds a session answering the file's conf value and display style, and a rendered database source refuses at load naming `CFG-2`. | `test_rendered_toml_parses_to_same_tables`, `test_rendered_file_builds_session_with_file_values`, `test_rendered_database_source_refuses_at_load_until_cfg_2` | **PROVEN** | Red first (step 4, below); green in the same `12 passed` run. The session pin reads `example.probe.key` and `display_style` off a live session built from `save()` output; the refusal pin matches `CFG-2` from the engine's database-table check. |
+| C-030 | `docs/guide/repark-toml.md` carries one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one database source, the display and session tables), states the database-load refusal and the sorted-`conf`-key order plainly, and quotes only blocks and errors that ran in this clone. | Step-3 pins for discovery/precedence/fold (`test_repark_config_env_discovers_file`, `test_builder_config_beats_config_file`, `test_config_file_folds_pairs_through_config`) plus the C-029 render/refusal pins for the quoted outputs | **PROVEN** | Every quoted transcript re-ran in this clone (probe outputs in Gates — step 4): the mirror render, the `cfg-1` / `polars` build, `from-env` / `from-local` discovery, the empty-disable `Configuration property probe.key is not set.`, the four `repark config error` refusals verbatim, the `'${TOTAL}'` escape with `TOTAL=42`, and the `***` / `plain` / `s3cr3t` redaction triple. The guide is linked from `docs/guide/map.md` (Contents + I-want rows) with a pointer in `session-and-conf.md`. |
+| C-031 | `config.py` adds no enumerated public name: the surface stays 923, no size baseline moves, and the parity suite plus `check-example-coverage` stay green with no covering example owed. | The `len(rows) == 923` pin in `test_ex_0_enumerator_emits_five_families_and_repark_sql` | **PROVEN** | The enumerator walks only the function/class/module doors plus `repark.sql` — `repark/config.py` is none of them — so the count pin holds without a bump (parity-suite output in Gates — step 4). `config.py` (253 lines) and the test file carry no baseline row; `check_lib_py` is clean. |
 
 VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED (6 from step 1, C-007/C-008/C-009 from step 1b).
 VERDICT (step 2, 2026-09-09): 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED (C-010…C-017 appended this step).
 VERDICT (step 3, 2026-09-09): 25 clauses, 24 PROVEN, 1 OPEN, 0 REJECTED (C-018…C-025 appended this step; C-024 is the orchestrator-ruled D-1 wording question, carried OPEN).
 VERDICT (step 3 facade, 2026-09-09): 27 clauses, 26 PROVEN, 1 OPEN, 0 REJECTED (C-026, C-027 appended with the Python slice; C-024 still the only OPEN).
+VERDICT (step 4, 2026-09-10): 31 clauses, 30 PROVEN, 1 OPEN, 0 REJECTED (C-028…C-031 appended with the mirror + guide slice; C-024 still the only OPEN — the owner's file-order question, untouched by this step).
 
 ## Red first
 
@@ -215,6 +220,25 @@ FAILED python/repark/tests/test_builder_config_map.py::test_config_file_missing_
 
 No pin was edited at any point; green came from the implementation plus `make develop`.
 
+## Red first — step 4 (mirror)
+
+The 11 step-4 pins were written into `test_config_mirror.py` first (before
+`repark/config.py` existed) and run against the untouched step-3 tree. Red run:
+`.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q`, 2026-09-10 —
+a collection refusal: the module under test does not exist yet.
+
+```text
+E   ModuleNotFoundError: No module named 'repark.config'
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.18s
+```
+
+After implementing `config.py` the same command returns green (`12 passed` — the
+boolean-refusal pin arrived with the bool-coercion fix, see Choices step 4). No pin was
+edited except the two `prod`/`default` conf-shape assertions, which moved from the flat
+quoted-key form to the nested form when the renderer switched dotted conf keys from quoted
+to bare (the loader flattens both to the same key; the session pin proves the flat read).
+
 ## Gates
 
 | Command | Result |
@@ -260,6 +284,40 @@ tree change in this round outside the inherited diff is this ledger plus the two
 | `python3 scripts/check_rust_file_size.py` | exit 0 — `442 files clean (default ceiling 1000; 36 exceptions)`; `session.rs` row now 1128 |
 | `make verify` | exit 0 — full gate green |
 | `make py-test-parity-cap` | exit 0 — `23 passed` |
+
+## Gates — step 4 (mirror + guide)
+
+| Command | Result |
+|---|---|
+| `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` | exit 0 — `12 passed` (11 red-first pins + the boolean-refusal pin) |
+| `make py-test-facade` | exit 0 — `5858 passed, 369 skipped, 7 xfailed` in 702s (maturin develop + full facade suite) |
+| `make py-lint` | exit 0 — `All checks passed!` (uvx ruff@0.15.22 check) |
+| `python3 scripts/check_lib_py.py` | exit 0 — `600 files clean (default ceiling 1000; 32 exceptions; facade no-stub held)` |
+| `make check-docs-links` | exit 0 after `git add` — `703 files, 4541 links checked — clean` (pre-add red was only `repark-toml.md -> exists but is not tracked` ×3) |
+| `python3 scripts/check_ledger_grammar.py` | exit 0 — `65 live ledgers clean (419 clauses, 1066 pinned clause ids, 2 exception rows)` |
+| `make check-example-coverage` | exit 0 — `923 public names; 793 covered; 128 backlog; 2 exceptions; 210 examples` (count unmoved, C-031) |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | `638 passed`, 1 failed (`test_dl_6_docs_links`, the same untracked-file red — green on rerun after `git add`: `35 passed` with `test_ex_0_example_coverage.py`, 923 pin holds) |
+
+Probe outputs quoted in `docs/guide/repark-toml.md` (all ran 2026-09-10 in this clone):
+
+```text
+cfg-1
+polars
+probe: from-env
+probe: from-local
+Exception: Configuration property probe.key is not set.
+IllegalArgumentException repark config error: missing environment variable `NO_SUCH_VAR_DEFINED_ANYWHERE` for key `conf.key`
+IllegalArgumentException repark config error: unterminated `${` reference at key `conf.key`
+IllegalArgumentException repark config error: unknown profile `staging` named by REPARK_ENV; the config file carries profiles: default, other
+IllegalArgumentException repark config error: database sources (default.database.postgres.company_db) are parsed but named-source registration arrives with CFG-2 — drop the `[<profile>.database]` tables until that card lands
+'${TOTAL}'
+***
+plain
+s3cr3t
+shared: from-builder
+shared: from-prod
+default.only: d
+```
 
 ## Pins
 
@@ -320,6 +378,18 @@ All pins live in `crates/repark-core/src/config_file/tests.rs`.
 | `test_builder_config_beats_config_file` (step 3 facade) | C-027 |
 | `test_config_file_missing_path_refuses` (step 3 facade) | C-027 |
 | `config_path_names_the_forced_file_and_missing_refuses` (step 3 binding) | C-027 |
+| `test_unknown_display_key_refuses` (step 4) | C-028 |
+| `test_unknown_session_key_refuses` (step 4) | C-028 |
+| `test_session_digit_string_accepted` (step 4) | C-028 |
+| `test_session_negative_knob_refuses` (step 4) | C-028 |
+| `test_boolean_values_refuse` (step 4) | C-028 |
+| `test_unknown_database_kind_refuses` (step 4) | C-028 |
+| `test_catalog_name_with_dot_refuses` (step 4) | C-028 |
+| `test_empty_catalog_block_refuses` (step 4) | C-028 |
+| `test_name_collision_across_families_refuses` (step 4) | C-028 |
+| `test_rendered_toml_parses_to_same_tables` (step 4) | C-029 |
+| `test_rendered_file_builds_session_with_file_values` (step 4) | C-029 |
+| `test_rendered_database_source_refuses_at_load_until_cfg_2` (step 4) | C-029, C-030 |
 
 ## Decisions
 
@@ -383,6 +453,18 @@ Choices step 3 took that the card and the round brief did not fix (read from the
 | Resolver move | `Builder._lookup_int` + the three `_resolve_*` knob resolvers moved to `session_configuration.py` (which already owns the key tuples) as config-dict functions, verbatim bodies. The sanctioned seam for the `session_core.py` ceiling: 2411 → 2306, ratcheted down in both baseline tables plus the CAP-1 mirror. `_resolve_display_style` stays on the Builder (pins call it directly). |
 | Baseline DOWN, no approval needed | `crates/repark-python/src/session.rs` 1177 → 1128: the ruled `config_path` argument plus the `config_file_pairs` static are paid for by moving `drain_arrow_c_stream` (with its capsule-name constant and imports) verbatim to `arrow_export.rs` — the sibling module for exactly this, named in the audit. Move-only otherwise: the two `pyo3::types` method traits the prelude glob used to provide are now explicit imports. Same count in both baseline tables plus the CAP-1 mirror (this row replaces the raise recorded before the audit). |
 | Clippy repairs (no behavior change) | The true clippy recipe (`-A clippy::disallowed_methods`; my first local run omitted it and showed thousands of test-target false errors on a clean tree) found three real step-3 findings: `build()` over the 100-line function ceiling → the file-merge plus knob-validation preamble extracted to the private `prepare_build_state` helper (validation order and outcomes unchanged); `flatten_conf_into`'s `prefix: String` → `&str`; the externally reachable `config_file_pairs` (core) and the `config_file_pairs` binding static each carry the compiler-mandated three-line `# Errors` doc — the two places the round's no-comment fence yields to a deny-by-default gate, recorded here instead of hidden behind an allow (the fence grep for this slice shows only these six lines plus three re-anchored doc pairs). |
+
+Choices step 4 took that the card and the round brief did not fix (read from the code, not invented):
+
+| Choice | What the code does |
+|---|---|
+| Mirror validates parse-level shapes only | `config.py` refuses unknown display/session keys, non-integer knobs, booleans, unknown database kinds, dotted catalog names, empty catalog blocks, and cross-family collisions — every refusal the loader makes at parse. Engine-build refusals (unknown profile at `REPARK_ENV`, missing `${VAR}`, the CFG-2 database gate) stay engine-side; the mirror renders them without comment and the loader refuses. |
+| Booleans refuse before coercion | Pydantic lax mode would silently coerce `True` to `1`/`"True"`; the loader refuses every TOML boolean. `mode="before"` validators plus `StrictStr` on `CatalogBlock.type` refuse booleans first, so the mirror never renders a value the loader would refuse. |
+| Dotted conf keys render bare | `"spark.sql.x"` renders as `spark.sql.x = "v"` (nested TOML, flattened back by the loader to the same key) rather than quoted — the same spelling the repo's own example writes. Catalog, database, and property keys keep strict bare-or-quoted rendering, where a dot would be structural. |
+| `conf` is the flattened dotted form | The mirror takes `{"spark.sql.x": "v"}` and does not accept nested dicts — nested TOML tables flatten with dot joins at load, so both spellings reach the same key, and one form keeps the model honest. |
+| Style is a string, not an enum | `DisplayConfig.style` accepts any string; the session validates the `spark` / `polars` / `duckdb` vocabulary at build. The mirror refuses shapes, never engine vocabularies it does not own. |
+| No new enumerated surface | `repark/config.py` is not one of the example-coverage doors, so its public names move no count and owe no covering example — verified by the unchanged `923` pin, not by reading the gate. |
+| Guide shows memory catalogs running | A `type = "glue"` block was measured attempting a live AWS connection at session build, so every runnable guide transcript uses `type = "memory"`; the database table appears in the complete file with its load refusal quoted verbatim. |
 
 ## Notes for the orchestrator
 
