@@ -193,10 +193,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   consulted for the styled modes. Under `spark` both doors stay byte-identical
   to before, peek branches included, and the spark HTML door still escapes
   header and cell text (truncate first, then escape — Spark `Dataset.html`
-  ordering) so hostile column names cannot inject markup. A bridged frame's styled repr therefore
-  renders the styled table (paying the D-5 count past the 11-row probe) while
-  its `show()` still prints the peek grid — measured, disclosed in the unit
-  ledger, DISPLAY-POLARS-1-S3-Q-001. Styled previews
+  ordering) so hostile column names cannot inject markup. DISPLAY-BRIDGE-1 (2026-09-09):
+  `_show` resolves the display style before the bridge peek, so an uncached
+  `mapInArrow` frame's `show()` follows the style. Under `spark` the peek path is
+  byte-identical to before. Under `polars` / `duckdb` the branch peeks the bridge once
+  (`_consume_map_in_arrow_batches(max_output_rows=n)`) and hands the peeked table to
+  `_render_styled_show` via its `peeked` argument: a short peek (fewer rows returned than
+  asked) fixes the shape exactly with no `count()`, a full peek pays one `count()` the way
+  the styled repr already does, the head window and (when the peek holds the whole frame)
+  the tail window slice off the peeked table, and `show()` and `repr` render a bridged
+  frame identically — DISPLAY-POLARS-1-S3-Q-001 closed. The styled-vertical warning moved
+  above the style dispatch (one warn site, same message and `stacklevel=3`), so it fires on
+  the styled bridge path too.
+  pins: display-bridge-1/C-001, C-002, C-003
+  Styled previews
   collect head and tail windows only. R-11 (2026-09-09): the polars door
   probes `2 * edge + 1` = 11 rows first. A shorter probe renders the frame
   whole with no `count()` and no tail fetch. A full probe pays one count and

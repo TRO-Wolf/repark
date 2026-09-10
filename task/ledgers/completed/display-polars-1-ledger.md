@@ -378,6 +378,13 @@ Two orchestrator rulings were needed because the card's Home named the wrong mod
 
 ## Residue — DISPLAY-POLARS-1-S3-Q-001 (orchestrator ruling, 2026-09-09)
 
+**Status: FIXED by DISPLAY-BRIDGE-1 (2026-09-09).** `_show` now resolves the display style
+before the bridge peek; under `polars` / `duckdb` the peeked table renders through
+`_render_styled_show` and the two doors agree for bridged frames — pins in
+[../../python/repark/tests/test_display_bridge_1.py](../../python/repark/tests/test_display_bridge_1.py),
+record in `task/ledgers/staging/display-bridge-1-ledger.md`. The measurement and ruling below
+stand as the history of the residue while it was open.
+
 **Measured, disclosed, not fixed here.** For an uncached `mapInArrow`-bridged frame under a
 styled display style, the two doors now disagree: `repr(df)` renders the styled table (paying
 D-5's count past the 11-row probe) while `df.show()` prints the Spark-grid peek, because `_show`

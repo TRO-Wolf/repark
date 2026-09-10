@@ -57,21 +57,32 @@ def _show(
     to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
     """
     frame._ensure_alive()
-    if _use_bridge_peek(frame):
-        n, cap_m, vertical = _normalize_show_args(frame, n, truncate, vertical)
-        limit = max(0, n)
-        table = frame._consume_map_in_arrow_batches(max_output_rows=limit)
-        if vertical:
-            rendered = _format_show_vertical(
-                table, truncate_at=cap_m, n=limit, total_rows=table.num_rows
-            )
-        else:
-            rendered = _format_show_table(table, truncate_at=cap_m)
-        print(rendered)
-        return
-    frame._materialize_cache_if_needed()
-    n, cap, vertical = _normalize_show_args(frame, n, truncate, vertical)
     style = _resolve_display_style(frame)
+    peeked: tuple[Any, int] | None = None
+    if _use_bridge_peek(frame):
+        n, cap, vertical = _normalize_show_args(frame, n, truncate, vertical)
+        limit = max(0, n)
+        if style == "spark":
+            table = frame._consume_map_in_arrow_batches(max_output_rows=limit)
+            if vertical:
+                rendered = _format_show_vertical(
+                    table, truncate_at=cap, n=limit, total_rows=table.num_rows
+                )
+            else:
+                rendered = _format_show_table(table, truncate_at=cap)
+            print(rendered)
+            return
+        peeked = (frame._consume_map_in_arrow_batches(max_output_rows=limit), limit)
+    else:
+        frame._materialize_cache_if_needed()
+        n, cap, vertical = _normalize_show_args(frame, n, truncate, vertical)
+    if style != "spark" and vertical:
+        warnings.warn(
+            "DataFrame.show(vertical=True) is only rendered under repark.display.style="
+            "'spark'; styled polars/duckdb shows stay horizontal.",
+            UserWarning,
+            stacklevel=3,
+        )
     if style != "spark" and truncate is True:
         cap = _display_session_ints(frame)[2]
     if style == "spark":
@@ -86,14 +97,9 @@ def _show(
             rendered = _format_show_table(table, truncate_at=cap)
         shown_rows = table.num_rows
     else:
-        if vertical:
-            warnings.warn(
-                "DataFrame.show(vertical=True) is only rendered under repark.display.style="
-                "'spark'; styled polars/duckdb shows stay horizontal.",
-                UserWarning,
-                stacklevel=3,
-            )
-        rendered, shown_rows = _render_styled_show(frame, style, n=max(0, n), truncate_at=cap)
+        rendered, shown_rows = _render_styled_show(
+            frame, style, n=max(0, n), truncate_at=cap, peeked=peeked
+        )
     print(rendered)
     logger.info("show(%s rows)", shown_rows)
     logger.debug("show(%s rows):\n%s", shown_rows, rendered)
@@ -274,45 +280,87 @@ def _render_styled_show(
     *,
     n: int,
     truncate_at: int | None,
+    peeked: tuple[Any, int] | None = None,
 ) -> tuple[str, int]:
     """Render a styled preview and return its text and row count."""
     col_names = list(frame.columns)
     max_rows, max_cols, _ = _display_session_ints(frame)
-    if style == "polars":
-        edge = max_rows // 2
-        probe_limit = max_rows + 1
-        probe_table = frame.limit(probe_limit).to_arrow()
-        if probe_table.num_rows < probe_limit:
-            total_rows = probe_table.num_rows
-            head_table = probe_table.slice(0, max(n, 0))
-            tail_table = None
-            use_ellipsis = False
+    if peeked is None:
+        if style == "polars":
+            edge = max_rows // 2
+            probe_limit = max_rows + 1
+            probe_table = frame.limit(probe_limit).to_arrow()
+            if probe_table.num_rows < probe_limit:
+                total_rows = probe_table.num_rows
+                head_table = probe_table.slice(0, max(n, 0))
+                tail_table = None
+                use_ellipsis = False
+            else:
+                total_rows = frame.count()
+                head_n, tail_n = 0, 0
+                if n > 0:
+                    keep = min(n, max_rows)
+                    head_n = min(edge, (keep + 1) // 2)
+                    tail_n = min(edge, keep - head_n)
+                use_ellipsis = tail_n > 0
+                head_table = probe_table.slice(0, head_n)
+                tail_table = (
+                    frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+                )
         else:
             total_rows = frame.count()
-            head_n, tail_n = 0, 0
-            if n > 0:
-                keep = min(n, max_rows)
-                head_n = min(edge, (keep + 1) // 2)
-                tail_n = min(edge, keep - head_n)
-            use_ellipsis = tail_n > 0
-            head_table = probe_table.slice(0, head_n)
+            if n <= 0:
+                head_n, tail_n, use_ellipsis = 0, 0, False
+            elif total_rows <= n:
+                head_n, tail_n, use_ellipsis = total_rows, 0, False
+            else:
+                head_n = n // 2
+                if head_n == 0:
+                    head_n = 1
+                tail_n = n - head_n
+                use_ellipsis = tail_n > 0
+            head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
             tail_table = (
                 frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
             )
     else:
-        total_rows = frame.count()
-        if n <= 0:
-            head_n, tail_n, use_ellipsis = 0, 0, False
-        elif total_rows <= n:
-            head_n, tail_n, use_ellipsis = total_rows, 0, False
+        peek_table, peek_limit = peeked
+        total_rows = peek_table.num_rows if peek_table.num_rows < peek_limit else frame.count()
+        if style == "polars":
+            if total_rows <= max_rows:
+                head_table = peek_table.slice(0, max(n, 0))
+                tail_table = None
+                use_ellipsis = False
+            else:
+                edge = max_rows // 2
+                head_n, tail_n = 0, 0
+                if n > 0:
+                    keep = min(n, max_rows)
+                    head_n = min(edge, (keep + 1) // 2)
+                    tail_n = min(edge, keep - head_n)
+                use_ellipsis = tail_n > 0
+                head_table = peek_table.slice(0, head_n)
+                if tail_n > 0 and peek_table.num_rows < peek_limit:
+                    tail_table = peek_table.slice(peek_table.num_rows - tail_n, tail_n)
+                elif tail_n > 0:
+                    tail_table = frame._preview_tail_rows(tail_n, total_rows=total_rows)
+                else:
+                    tail_table = None
         else:
-            head_n = n // 2
-            if head_n == 0:
-                head_n = 1
-            tail_n = n - head_n
-            use_ellipsis = tail_n > 0
-        head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
-        tail_table = frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+            if n <= 0:
+                head_n, tail_n, use_ellipsis = 0, 0, False
+            elif total_rows <= n:
+                head_n, tail_n, use_ellipsis = total_rows, 0, False
+            else:
+                head_n = n // 2
+                if head_n == 0:
+                    head_n = 1
+                tail_n = n - head_n
+                use_ellipsis = tail_n > 0
+            head_table = peek_table.slice(0, head_n)
+            tail_table = (
+                frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+            )
     type_labels = _display_type_labels_from_arrow(head_table, style=style)
 
     head_rows = _table_to_cell_rows(head_table, truncate_at=truncate_at, style=style)
