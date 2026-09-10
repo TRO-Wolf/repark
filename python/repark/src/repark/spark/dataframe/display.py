@@ -258,6 +258,7 @@ def _resolve_display_style(frame: DataFrame) -> str:
 
 def _styled_total_rows(frame: DataFrame) -> int:
     """Total rows for a styled preview, reusing a known eager shape."""
+    frame._materialize_cache_if_needed()
     shape = frame._eager_shape
     return shape[0] if shape is not None else frame.count()
 

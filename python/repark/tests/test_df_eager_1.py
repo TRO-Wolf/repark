@@ -10,6 +10,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import IllegalArgumentException
+from repark.spark._temp_views import local_view_name
 from repark.spark.dataframe.core import DataFrame
 from repark.spark.session import _DISPLAY_STYLE_KEY
 
@@ -181,3 +182,59 @@ def test_guard_pl_collect_still_returns_polars_dataframe(spark: ReparkSession) -
     out = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").pl.collect()
     assert isinstance(out, polars.DataFrame)
     assert sorted(out["id"].to_list()) == [1, 2]
+
+
+def test_checkpointed_eager_lazy_collects_own_rows(spark: ReparkSession) -> None:
+    """lazy() on a checkpointed eager frame answers a shape-less copy with the same rows."""
+    eager = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").eager().localCheckpoint()
+    lazy_back = eager.lazy()
+    assert lazy_back is not eager
+    assert lazy_back._eager_shape is None
+    assert sorted(row.id for row in lazy_back.collect()) == [1, 2]
+    assert lazy_back.count() == 2
+
+
+def test_checkpointed_eager_lazy_ignores_none_view(spark: ReparkSession) -> None:
+    """lazy() on a checkpointed eager frame never reads a temp view named none."""
+    eager = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").eager()
+    spark.sql("SELECT 99 AS id").createOrReplaceTempView("none")
+    lazy_back = eager.localCheckpoint().lazy()
+    assert sorted(row.id for row in lazy_back.collect()) == [1, 2]
+
+
+def test_lazy_checkpoint_count_discharges_without_action(
+    spark: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """count() after localCheckpoint(eager=False) discharges the checkpoint with no action."""
+    calls = _install_action_spy(monkeypatch)
+    eager = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").eager()
+    old_view = eager._cache_view
+    assert old_view is not None
+    eager.localCheckpoint(eager=False)
+    assert eager._checkpoint_lazy is True
+    calls.clear()
+    assert eager.count() == 2
+    assert calls == []
+    assert eager._checkpoint_lazy is False
+    assert eager._cache_view is None
+    assert local_view_name(old_view) not in spark.list_temp_view_names()
+
+
+def test_lazy_checkpoint_styled_repr_discharges_without_count_query(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """repr after localCheckpoint(eager=False) discharges the checkpoint with no count call."""
+    calls = _install_count_spy(monkeypatch)
+    eager = polars_session.sql(_ORDERED_12_SQL).eager()
+    eager.localCheckpoint(eager=False)
+    assert eager._checkpoint_lazy is True
+    calls.clear()
+    rendered = repr(eager)
+    assert calls == []
+    assert eager._checkpoint_lazy is False
+    assert eager._cache_view is None
+    assert eager.count() == 12
+    assert "12" in rendered
+    assert sorted(row.id for row in eager.collect()) == list(range(1, 13))

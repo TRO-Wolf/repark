@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-07._
+_Last updated: 2026-09-10._
 
 ## Release state
 
@@ -34,7 +34,9 @@ facade-local keys and the precedence chain:
 **DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (one function object) and
 `.lazy()`: `.eager()` materialises through the cache-view path into a **new `repark.DataFrame`**
 (same class, never a polars object) whose shape is read once; `.lazy()` returns to a plan over
-the same view. Spark's `collect()` and `df.pl.collect()` are unchanged.
+the same relation. Spark's `collect()` and `df.pl.collect()` are unchanged. **REVIEW-FIX-4 (2026-09-10)**: `.lazy()` no longer
+interpolates the cache view into SQL, and `count()` and the styled preview discharge a pending
+`localCheckpoint(eager=False)` on the next action, still without a count query.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
 build, and the procedure that spends it —
@@ -55,25 +57,23 @@ Release mechanics:
 ## Delivered capabilities
 
 **Milestone one — the private-v1 → public-v2 port — is COMPLETE and merged to `main`
-(2026-08-08)** (PRs #16, #18–#23). Four phases delivered 2026-08-06/08: bootstrap (governance,
-testing contract, mechanical gates, tier-1 CI), engine core, the two SQL doors, and the Python
-facade + parity harness. The full record — phase briefs, the seventeen unit ledgers, the
-retrospectives — is archived at [docs/history/port-v2/](docs/history/port-v2/README.md).
+(2026-08-08)** (PRs #16, #18–#23). The full record — the four phase briefs, the seventeen unit
+ledgers, the retrospectives — is archived at
+[docs/history/port-v2/](docs/history/port-v2/README.md).
 
 **Nine crates are delivered** (workspace SSOT: root `Cargo.toml`; navigation:
-[crates/map.md](crates/map.md)): `repark-common`, `repark-core`, `repark-iceberg`,
-`repark-functions`, `repark-spark`, `repark-sql`, `repark-ta`, `repark-ml`, `repark-python`. The
+[crates/map.md](crates/map.md)): `repark-common`, `-core`, `-iceberg`, `-functions`, `-spark`,
+`-sql`, `-ta`, `-ml`, `-python`. The
 Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-parity` (the
 differential harness). The published wheel is in [Release state](#release-state) above.
 
 **Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
-`fc3f48102`, exit 0 on all four cohorts. The per-cohort counts are
-[docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance"; the procedure and
-the DL-1 eviction of the evidence trees (reachable at `main` `b13b22c`) are
-[docs/port/census.md](docs/port/census.md) §7; the baseline's
+`fc3f48102`, exit 0 on all four cohorts — per-cohort counts in
+[docs/history/port-v2/](docs/history/port-v2/README.md) "Result at acceptance", procedure and the
+DL-1 eviction of the evidence trees (reachable at `main` `b13b22c`) in
+[docs/port/census.md](docs/port/census.md) §7. The baseline's
 [facade cohort](task/census/baseline-fc3f48102/facade/map.md) stays in the tree because the
-deferred-ledger tests read it, and the deferred and added acceptance inputs are
-[task/port/](task/port/).
+deferred-ledger tests read it; acceptance inputs are [task/port/](task/port/).
 
 ## Current milestone
 

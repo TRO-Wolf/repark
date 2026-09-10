@@ -51,6 +51,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_guard_pl_collect_still_returns_polars_dataframe` +
   `test_polars_frame_eager_wraps_spark_eager`.
   pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
+  REVIEW-FIX-4 (2026-09-10): the eager frame's checkpoint paths. `lazy()` on a
+  checkpointed eager frame answers a shape-less copy over the same inner plan
+  with no `_cache_view` interpolation, so a temp view named `none` stays
+  unreachable; `count()` and the styled row count run the pending-checkpoint
+  materialize first while keeping the no-count-query ban, so
+  `localCheckpoint(eager=False)` discharges on the next action. Clause
+  discharge: C-001 `test_checkpointed_eager_lazy_collects_own_rows`; C-002
+  `test_lazy_checkpoint_count_discharges_without_action` +
+  `test_lazy_checkpoint_styled_repr_discharges_without_count_query`; C-003
+  `test_checkpointed_eager_lazy_ignores_none_view`.
+  pins: review-fix-4/C-001, C-002, C-003
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
   step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +

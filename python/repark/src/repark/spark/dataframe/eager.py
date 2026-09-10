@@ -78,14 +78,13 @@ def _to_lazy(frame: DataFrame) -> DataFrame:
     frame._ensure_alive()
     if frame._eager_shape is None:
         return frame
-    child = frame._spawn_preserving_identity(frame._inner)
-    child._inner = frame._session.sql(f"SELECT * FROM {frame._cache_view}")
-    return child
+    return frame._spawn_preserving_identity(frame._inner)
 
 
 def _count_rows(frame: DataFrame) -> int:
     """Return the row count, reusing a known eager shape instead of querying."""
     frame._ensure_alive()
+    frame._materialize_cache_if_needed()
     shape = frame._eager_shape
     if shape is not None:
         return shape[0]
