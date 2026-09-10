@@ -56,3 +56,27 @@ def nested_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
 def inference_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
     """The inference family's generated files at the active tier."""
     return _family_output("inference", tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def extreme_types_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
+    """The extreme_types family's generated files at the active tier."""
+    return _family_output("extreme_types", tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def smartcsv_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
+    """The smartcsv family's generated files at the active tier."""
+    return _family_output("smartcsv", tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def temporal_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
+    """The temporal family's generated files at the active tier."""
+    return _family_output("temporal", tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def decimal_overflow_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
+    """The decimal_overflow family's generated files at the active tier."""
+    return _family_output("decimal_overflow", tmp_path_factory)
