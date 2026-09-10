@@ -35,19 +35,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - [test_df_eager_1.py](test_df_eager_1.py) — **DF-EAGER-1 (2026-09-09):** the red-first
   `.eager()` / `.compute()` / `.lazy()` pins, red on the base tree (the marker-less run is
-  recorded in the ledger). Seven pins carry `xfail(strict=True, reason="DF-EAGER-1 step 2 …")`
-  via the module's single `_XFAIL_STEP_2` decorator — step 2 turns each green by deleting its
-  marker and `strict=True` reds the suite if a pin passes early; the two `test_guard_*` rows are
+  recorded in the ledger). Step 2 (2026-09-09) deleted every `_XFAIL_STEP_2` marker and the
+  definition: all eleven tests green with zero markers. The two `test_guard_*` rows are
   keep-green guards (Spark `collect()` returns Rows, `df.pl.collect()` returns a polars
-  DataFrame) and carry no marker. Value comparisons are order-insensitive (`sorted(...)`)
+  DataFrame). Value comparisons are order-insensitive (`sorted(...)`)
   because the unordered two-row UNION ALL measurably answered `[2, 1]` on one run and `[1, 2]`
   on another. Clause discharge: C-001 `test_eager_returns_new_frame_with_eager_shape_rows_and_columns`
   + `test_eager_leaves_source_frame_unchanged` + `test_eager_frame_survives_csv_source_deletion`
   + `test_eager_over_max_bytes_refuses_naming_eager` + `test_guard_spark_collect_still_returns_rows`;
   C-002 `test_compute_is_eager`; C-003 `test_lazy_identities_per_d3`; C-004
   `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` (the D-11 count-spy idiom
-  from `test_display_polars_default.py`); C-005 no new pin (existing `unpersist` behaviour,
-  `test_cache_persist.py` carries it); C-006 `test_guard_pl_collect_still_returns_polars_dataframe`.
+  from `test_display_polars_default.py`) + `test_eager_count_returns_shape_without_action`
+  (the `_action_inner` spy: no engine action on an eager `count()`); C-005 no new pin
+  (existing `unpersist` behaviour, `test_cache_persist.py` carries it); C-006
+  `test_guard_pl_collect_still_returns_polars_dataframe` +
+  `test_polars_frame_eager_wraps_spark_eager`.
   pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
@@ -969,6 +971,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the moved names); the set row grows by one member, the file's own new-home
   pattern.
   pins: display-polars-1/C-005
+  DF-EAGER-1 step 2 (2026-09-09): the class dir gains exactly `eager`, `lazy`,
+  and the `compute` alias plus the `_eager_shape` slot; the package gains exactly
+  `eager`; the cache-guard trio moves to `eager.py` re-imported by identity.
+  pins: df-eager-1/C-001, C-002, C-003, C-004
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -1838,6 +1844,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   whose pairs fold through `.config()`, `REPARK_CONFIG` discovery at `getOrCreate`,
   builder-beats-file precedence, and the missing-path refusal.
   pins: cfg-1/C-026, C-027
+- `test_config_mirror.py` — **CFG-1 step 4 (2026-09-10):** the `repark.config` mirror pins —
+  unknown display/session keys refuse, session knobs keep non-negative integers and digit
+  strings while booleans refuse in every table, database kinds outside the three spellings
+  refuse, dotted catalog names / empty catalog blocks / cross-family collisions refuse, the
+  rendered text parses back to the same tables, a rendered file builds a session answering
+  the file values, and a rendered database source refuses at load naming CFG-2. The guide
+  (`docs/guide/repark-toml.md`) quotes only outputs this file and the step-3 pins ran.
+  pins: cfg-1/C-028, C-029, C-030
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default

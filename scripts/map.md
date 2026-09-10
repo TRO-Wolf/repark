@@ -383,6 +383,11 @@ explain rendering support (the section headers, the codegen note, the mode map a
 the new `_explain_text` stay on the class (mirrored in the CAP-1 test). Ratchets DOWN.
 pins: df-explain-1/C-003
 
+DF-EAGER-1 step 2 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4525→4487 —
+the cache-guard trio moves to `eager.py`, which carries no row, while `eager` / `lazy`
+stay on the class as one-line wrappers with the `compute` alias. Ratchets DOWN.
+pins: df-eager-1/C-001, C-002, C-003
+
 DISPLAY-POLARS-1 step 3 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4536→4525 —
 the `__repr__` / `_repr_html_` wrapper docstrings condense to one line under the comment
 ban (the behaviour contract moved to `dataframe/map.md`). Ratchets DOWN.

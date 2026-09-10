@@ -13,11 +13,6 @@ from repark.errors import IllegalArgumentException
 from repark.spark.dataframe.core import DataFrame
 from repark.spark.session import _DISPLAY_STYLE_KEY
 
-_XFAIL_STEP_2 = pytest.mark.xfail(
-    strict=True,
-    reason="DF-EAGER-1 step 2 implements .eager()/.compute()/.lazy()",
-)
-
 _ORDERED_12_SQL = (
     "SELECT id FROM (VALUES (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12)) "
     "AS t(id) ORDER BY id"
@@ -53,7 +48,21 @@ def _install_count_spy(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     return calls
 
 
-@_XFAIL_STEP_2
+def _install_action_spy(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Patch ``DataFrame._action_inner`` to append one entry per call and return the call log."""
+    from repark import dataframe as dataframe_module
+
+    calls: list[int] = []
+    original = dataframe_module.DataFrame._action_inner
+
+    def counting_action(frame_arg: Any) -> Any:
+        calls.append(1)
+        return original(frame_arg)
+
+    monkeypatch.setattr(dataframe_module.DataFrame, "_action_inner", counting_action)
+    return calls
+
+
 def test_eager_returns_new_frame_with_eager_shape_rows_and_columns(
     spark: ReparkSession,
 ) -> None:
@@ -65,7 +74,6 @@ def test_eager_returns_new_frame_with_eager_shape_rows_and_columns(
     assert eager._eager_shape == (rows, len(frame.columns))
 
 
-@_XFAIL_STEP_2
 def test_eager_leaves_source_frame_unchanged(spark: ReparkSession) -> None:
     """eager() answers a new frame and leaves the source plan and cache mark untouched."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2")
@@ -76,13 +84,11 @@ def test_eager_leaves_source_frame_unchanged(spark: ReparkSession) -> None:
     assert sorted(row.id for row in frame.collect()) == [1, 2]
 
 
-@_XFAIL_STEP_2
 def test_compute_is_eager() -> None:
     """compute() is the same function object as eager() on the DataFrame class."""
     assert DataFrame.compute is DataFrame.eager
 
 
-@_XFAIL_STEP_2
 def test_lazy_identities_per_d3(spark: ReparkSession) -> None:
     """lazy() answers self on a lazy frame and a shape-less copy on an eager frame."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2")
@@ -96,7 +102,6 @@ def test_lazy_identities_per_d3(spark: ReparkSession) -> None:
     assert eager.count() == rows
 
 
-@_XFAIL_STEP_2
 def test_repr_of_eager_frame_skips_count_and_matches_lazy_table(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
@@ -112,7 +117,6 @@ def test_repr_of_eager_frame_skips_count_and_matches_lazy_table(
     assert calls == []
 
 
-@_XFAIL_STEP_2
 def test_eager_frame_survives_csv_source_deletion(
     spark: ReparkSession,
     tmp_path: Path,
@@ -127,7 +131,6 @@ def test_eager_frame_survives_csv_source_deletion(
     assert sorted(row.id for row in eager.collect()) == [1, 2]
 
 
-@_XFAIL_STEP_2
 def test_eager_over_max_bytes_refuses_naming_eager(spark: ReparkSession) -> None:
     """The max_bytes guard refuses eager() naming .eager() and repark.cache.max_bytes."""
     spark.conf.set("repark.cache.max_bytes", "1")
@@ -137,6 +140,32 @@ def test_eager_over_max_bytes_refuses_naming_eager(spark: ReparkSession) -> None
     message = str(excinfo.value)
     assert ".eager()" in message
     assert "repark.cache.max_bytes" in message
+
+
+def test_eager_count_returns_shape_without_action(
+    spark: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """count() on an eager frame answers the shape with no engine action."""
+    calls = _install_action_spy(monkeypatch)
+    frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2")
+    eager = frame.eager()
+    calls.clear()
+    assert eager.count() == eager._eager_shape[0] == 2
+    assert calls == []
+    assert frame.count() == 2
+    assert calls == [1]
+
+
+def test_polars_frame_eager_wraps_spark_eager(spark: ReparkSession) -> None:
+    """PolarsFrame.eager() wraps the Spark eager frame; collect stays polars."""
+    polars = pytest.importorskip("polars")
+    frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2")
+    eager = frame.pl.eager()
+    assert eager.spark._eager_shape == (2, 1)
+    out = eager.collect()
+    assert isinstance(out, polars.DataFrame)
+    assert sorted(out["id"].to_list()) == [1, 2]
 
 
 def test_guard_spark_collect_still_returns_rows(spark: ReparkSession) -> None:

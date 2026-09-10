@@ -4,6 +4,8 @@ The `ReparkSession` builder, the conf keys you will actually set, and the one ru
 most surprises: **engine knobs are resolved once, at session build.**
 
 If you have not built a session yet, start with [getting-started.md](getting-started.md).
+To keep the same configuration in a file instead of a builder chain, see
+[repark-toml.md](repark-toml.md).
 
 ## The builder
 

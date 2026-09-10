@@ -23,6 +23,14 @@ illustrative. A claim with no verified basis does not go in.
 - [getting-started.md](getting-started.md) — install from PyPI (`pip install repark`, Python ≥ 3.12,
   abi3 wheel, the optional extras), the one-line import swap, the first session, `createDataFrame`,
   parquet / CSV / JSON round trips, a first `dynamicFlatten`, and the pointer to the tour notebook.
+- [repark-toml.md](repark-toml.md) — `repark.toml` file configuration (CFG-1, 2026-09-10):
+  one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one
+  database source, the display and session tables); discovery order, `REPARK_ENV`,
+  `REPARK_CONFIG` with the set-but-empty disable, `${VAR}` with `$$` escaping and the loud
+  refusals, the builder > profile > default chain, and the redacted dump with its `source`
+  column. States both live constraints: a non-empty `[<profile>.database]` table refuses at
+  load until CFG-2, and `[<profile>.conf]` keys apply in sorted-key order. Every block and
+  error was run in the clone. pins: cfg-1/C-030
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
   semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
@@ -125,6 +133,7 @@ illustrative. A claim with no verified basis does not go in.
 |---|---|
 | Install repark and run something | [getting-started.md](getting-started.md) |
 | Find out which conf key does what, and when it takes effect | [session-and-conf.md](session-and-conf.md) |
+| Configure a session from a `repark.toml` file | [repark-toml.md](repark-toml.md) |
 | Understand why a `conf.set` appeared to do nothing | [session-and-conf.md](session-and-conf.md) "How `conf.get` / `conf.set` behave" |
 | Learn the DataFrame API / flatten nested data | [dataframe-guide.md](dataframe-guide.md) |
 | Work out which `sql()` to call | [sql-doors.md](sql-doors.md) |

@@ -25,6 +25,9 @@ one-liner.
   `declare_sorted`: verified sorted input, refused unsorted input. No Spark analog.
 - [inspect_cache.py](inspect_cache.py) — `columns`, `dtypes`, `count`, `cache`,
   `coalesce`, and `explain` (plan print asserted non-empty, never text-pinned).
+- [lazy_and_eager.py](lazy_and_eager.py) — `eager` (new frame, source uncached),
+  `compute` (the same object as `eager`), and `lazy` (`self` on a lazy frame, a copy
+  answering the same rows on an eager one). pins: df-eager-1/C-001, C-002, C-003, C-004
 - [describe_ingest.py](describe_ingest.py) — repark extension `describe_ingest`:
   smartCsv ingest decisions, and the empty report on a non-ingest frame. No Spark analog.
 - [first_head.py](first_head.py) — `first` and `head`/`head(n)` row access, including the

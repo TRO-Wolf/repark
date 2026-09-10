@@ -12,6 +12,14 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
 
 - `__init__.py` — `sql()` ANSI callable; shim re-exports of facade names; `__version__`;
   display-style assignment guard.
+- `config.py` — **CFG-1 step 4 (2026-09-10):** the typed-construction mirror for `repark.toml`
+  (`ReparkConfig` / `ProfileConfig` / `DisplayConfig` / `SessionConfig` / `CatalogBlock` /
+  `DatabaseSource`, pydantic v2, `to_toml()` + `save()`). Validates shapes the loader
+  enforces at parse — display/session allowlists, non-negative int-or-digit-string knobs,
+  the three database spellings, dotted-name / empty-block / cross-family-collision refusals,
+  booleans refused in every table — and renders dotted conf keys bare so the loader's
+  flattening reads them back. Never the parser: no discovery, profile merge, interpolation,
+  or source translation lives here. pins: cfg-1/C-028, C-029
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).

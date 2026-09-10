@@ -43,6 +43,7 @@ DF-EXPLAIN-1 (2026-09-08): the explain rendering support splits out and
 ``explain``), so ``EXPECTED_DATAFRAME_DIR`` gains exactly ``_explain_text``;
 the package gains exactly the one new module name ``explain``, while ``core``
 gains the two private imports in its frozen surface and no module binding.
+DF-EAGER-1 step 2 (2026-09-09): eager/lazy/compute join the class; guard trio to eager.py.
 """
 
 from __future__ import annotations
@@ -386,6 +387,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
     "_checkpoint_lazy",
     "_collapse_base",
     "_display_names",
+    "_eager_shape",
     "_engine_names",
     "_ingest_report",
     "_inner",
@@ -410,6 +412,7 @@ EXPECTED_DATAFRAME_SLOTS: tuple[str, ...] = (
 
 EXPECTED_DATAFRAME_ALIASES: list[tuple[str, str]] = [
     ("col_regex", "colRegex"),
+    ("compute", "eager"),
     ("createGlobalTempView", "create_global_temp_view"),
     ("createOrReplaceGlobalTempView", "create_global_temp_view"),
     ("createOrReplaceTempView", "create_or_replace_temp_view"),
@@ -498,6 +501,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "_cross_join_enabled",
     "_display_names",
     "_display_overlay_names",
+    "_eager_shape",
     "_engine_field_for_display",
     "_engine_names",
     "_ensure_alive",
@@ -572,6 +576,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "col_regex",
     "collect",
     "columns",
+    "compute",
     "corr",
     "count",
     "cov",
@@ -598,6 +603,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "dtypes",
     "dynamicFlatten",
     "dynamic_flatten",
+    "eager",
     "exceptAll",
     "except_all",
     "explain",
@@ -620,6 +626,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
     "is_empty",
     "is_streaming",
     "join",
+    "lazy",
     "limit",
     "localCheckpoint",
     "mapInArrow",
@@ -701,6 +708,7 @@ EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "display",
+    "eager",
     "explain",
     "export_errors",
     "grouped_udf",

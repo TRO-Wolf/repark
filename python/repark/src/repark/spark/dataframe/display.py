@@ -256,6 +256,12 @@ def _resolve_display_style(frame: DataFrame) -> str:
     return "spark"
 
 
+def _styled_total_rows(frame: DataFrame) -> int:
+    """Total rows for a styled preview, reusing a known eager shape."""
+    shape = frame._eager_shape
+    return shape[0] if shape is not None else frame.count()
+
+
 def _preview_tail_rows(frame: DataFrame, n: int, *, total_rows: int) -> Any:
     """Return the last ``n`` rows for display without collecting the full result."""
     import pyarrow as pa
@@ -296,7 +302,7 @@ def _render_styled_show(
                 tail_table = None
                 use_ellipsis = False
             else:
-                total_rows = frame.count()
+                total_rows = _styled_total_rows(frame)
                 head_n, tail_n = 0, 0
                 if n > 0:
                     keep = min(n, max_rows)
@@ -308,7 +314,7 @@ def _render_styled_show(
                     frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
                 )
         else:
-            total_rows = frame.count()
+            total_rows = _styled_total_rows(frame)
             if n <= 0:
                 head_n, tail_n, use_ellipsis = 0, 0, False
             elif total_rows <= n:
@@ -325,7 +331,10 @@ def _render_styled_show(
             )
     else:
         peek_table, peek_limit = peeked
-        total_rows = peek_table.num_rows if peek_table.num_rows < peek_limit else frame.count()
+        if peek_table.num_rows < peek_limit:
+            total_rows = peek_table.num_rows
+        else:
+            total_rows = _styled_total_rows(frame)
         if style == "polars":
             if total_rows <= max_rows:
                 head_table = peek_table.slice(0, max(n, 0))
