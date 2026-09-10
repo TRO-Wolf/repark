@@ -589,7 +589,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   DBT-DESC-1 retirement; all clauses PROVEN with four residue rows. `risk_tier: standard`.
   Branch `feat/sql-describe-1`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-- [facade-audit-0-ledger.md](facade-audit-0-ledger.md) —
+- [facade-audit-0-ledger.md](../completed/facade-audit-0-ledger.md) —
   **FACADE-AUDIT-0 steps 1–2 (2026-09-10), in flight:** Half A of the Rust-backed facade
   audit — one measured row per module under `python/repark/src/repark/` (106 files,
   51,930 lines; binding sites, pyarrow references, delegate/logic/pyarrow class), the
