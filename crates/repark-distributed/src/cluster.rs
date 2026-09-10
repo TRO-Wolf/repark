@@ -33,7 +33,11 @@ use repark_core::{Error, Result};
 use tokio::task::JoinHandle;
 
 use crate::codec::repark_ballista_codec;
+<<<<<<< HEAD
 use crate::executor::{DistributedExecutor, JobHandle, JobId, JobStatus, StageMetrics};
+=======
+use crate::executor::{DistributedExecutor, JobHandle, JobId, JobStatus};
+>>>>>>> origin/main
 use crate::session_provider::ReparkSessionProvider;
 
 const EXECUTOR_WAIT: Duration = Duration::from_secs(30);
@@ -183,6 +187,7 @@ fn count_running_stage_tasks(stage: &ExecutionStage, counts: &mut HashMap<String
     }
 }
 
+<<<<<<< HEAD
 fn shuffle_totals(status: &task_status::Status) -> (u64, u64) {
     let task_status::Status::Successful(successful) = status else {
         return (0, 0);
@@ -288,6 +293,8 @@ fn completed_status(stages: &HashMap<usize, ExecutionStage>) -> JobStatus {
     }
 }
 
+=======
+>>>>>>> origin/main
 async fn fetch_partitions(
     successful: SuccessfulJob,
     max_message_size: usize,
@@ -628,6 +635,7 @@ impl DistributedExecutor for ReparkClusterExecutor {
                 })
             }
             Some(job_status::Status::Failed(failed)) => Ok(JobStatus::Failed(failed.error)),
+<<<<<<< HEAD
             Some(job_status::Status::Successful(_)) => {
                 match self
                     .cluster
@@ -643,6 +651,9 @@ impl DistributedExecutor for ReparkClusterExecutor {
                     }),
                 }
             }
+=======
+            Some(job_status::Status::Successful(_)) => Ok(JobStatus::Completed),
+>>>>>>> origin/main
         }
     }
 

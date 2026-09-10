@@ -103,7 +103,11 @@ async fn status_is_queued_or_running_before_drain_and_completed_after() {
             JobStatus::Running {
                 completed_stages: _,
                 total_stages: _
+<<<<<<< HEAD
             } | JobStatus::Completed { .. }
+=======
+            } | JobStatus::Completed
+>>>>>>> origin/main
         ),
         "during drain: {during:?}"
     );
@@ -116,10 +120,14 @@ async fn status_is_queued_or_running_before_drain_and_completed_after() {
         Ok(status) => status,
         Err(error) => panic!("status after: {error}"),
     };
+<<<<<<< HEAD
     assert!(
         matches!(after, JobStatus::Completed { .. }),
         "after drain: {after:?}"
     );
+=======
+    assert!(after == JobStatus::Completed, "after drain: {after:?}");
+>>>>>>> origin/main
 }
 
 #[tokio::test]
