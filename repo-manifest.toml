@@ -108,6 +108,11 @@ path = "crates/repark-sql"
 layer = "surface crates"
 status = "delivered"
 
+[components.repark-distributed]
+path = "crates/repark-distributed"
+layer = "surface crates"
+status = "delivered"
+
 [components.repark-python]
 path = "crates/repark-python"
 layer = "bindings"
