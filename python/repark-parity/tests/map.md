@@ -592,7 +592,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   start tag; the parser-based transform cannot do either. Plus key redaction, non-string scalars
   untouched, XML attributes, longest-prefix-wins ordering, malformed-input loud failures, plain
   text passthrough, in-place rewrite idempotence, and the CLI exit codes.
-  Stamp pin moved to `_Last updated: 2026-09-07._` with the DFCORE slate-close truth-up.
+  Stamp pin moved to `_Last updated: 2026-09-10._` with the REVIEW-FIX-4 departure truth-up (2026-09-10).
 
 ## Pointers
 
