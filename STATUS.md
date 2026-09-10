@@ -106,8 +106,8 @@ What happens next, in order:
 4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is
    pinned at 888 names in
    [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy:
-   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the north-star gate
-   line V1-GATE wrote the same day.
+   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the
+   north-star gate line V1-GATE wrote the same day.
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
