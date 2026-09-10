@@ -14,6 +14,7 @@ use repark_iceberg::catalog::build_iceberg_catalog_provider;
 use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
+use crate::config_file::maintenance::MaintenancePolicy;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
@@ -90,6 +91,7 @@ pub struct ReparkSessionBuilder {
     /// The full Spark-style `.config(key, value)` map.
     config: HashMap<String, String>,
     config_file: Option<PathBuf>,
+    maintenance: Option<(String, Option<MaintenancePolicy>)>,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -170,6 +172,7 @@ impl ReparkSessionBuilder {
     fn prepare_build_state(&mut self) -> Result<Vec<(String, String, String)>> {
         let file = crate::config_file::load_for_build(self.config_file.clone())?;
         let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
+        self.maintenance.clone_from(&file.maintenance);
         for (key, value) in file.pairs_for_map() {
             self.config.entry(key).or_insert(value);
         }
@@ -290,7 +293,7 @@ impl ReparkSessionBuilder {
             .sql_dialect
             .unwrap_or_else(|| Arc::new(DataFusionDialect));
         dialect.on_session_built(&context);
-        Ok(ReparkSession {
+        let session = ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
             dialect,
             catalogs: Arc::new(RwLock::new(CatalogRegistry::with_cache_settings(caches))),
@@ -303,7 +306,13 @@ impl ReparkSessionBuilder {
             postgres_catalog_names: Arc::new(RwLock::new(HashSet::new())),
             aws_signaled,
             aws_sdk_config: Arc::new(OnceLock::new()),
-        })
+        };
+        if let Some((profile_name, policy)) = self.maintenance {
+            RwLock::write(&session.catalogs)
+                .unwrap_or_else(PoisonError::into_inner)
+                .set_maintenance_policy(profile_name, policy);
+        }
+        Ok(session)
     }
 }
 

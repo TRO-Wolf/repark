@@ -25,12 +25,19 @@ illustrative. A claim with no verified basis does not go in.
   parquet / CSV / JSON round trips, a first `dynamicFlatten`, and the pointer to the tour notebook.
 - [repark-toml.md](repark-toml.md) — `repark.toml` file configuration (CFG-1, 2026-09-10):
   one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one
-  database source, the display and session tables); discovery order, `REPARK_ENV`,
+  database source, the display, session, and maintenance tables); discovery order, `REPARK_ENV`,
   `REPARK_CONFIG` with the set-but-empty disable, `${VAR}` with `$$` escaping and the loud
   refusals, the builder > profile > default chain, and the redacted dump with its `source`
   column. States both live constraints: a non-empty `[<profile>.database]` table refuses at
   load until CFG-2, and `[<profile>.conf]` keys apply in sorted-key order. Every block and
   error was run in the clone. pins: cfg-1/C-030
+- [maintenance-policy.md](maintenance-policy.md) — `[<profile>.maintenance]` and
+  `CALL run_maintenance()` (MAINT-POLICY-1, 2026-09-10): the D-1 policy shape with
+  per-table overrides, duration strings, the D-4 step order with the delete-ratio gate,
+  the D-3 result frame with a worked dry run and a worked apply (both executed against
+  the built module), the `session.run_maintenance` wrapper, the D-6 refusal, and the
+  reserved `adaptive_partitioning` key.
+  pins: maint-policy-1/C-026
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
   semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
@@ -141,7 +148,7 @@ illustrative. A claim with no verified basis does not go in.
 | Fit a model, or find out whether an estimator exists at all | [ml-guide.md](ml-guide.md) |
 | Point a session at Glue / S3 Tables, or read an Iceberg table | [iceberg-guide.md](iceberg-guide.md) |
 | Time-travel a table, or work out why a statement refuses | [iceberg-guide.md](iceberg-guide.md) |
-| Schedule table maintenance, or port a Spark maintenance DAG | [iceberg-guide.md](iceberg-guide.md) "The maintenance runbook" — read its format-version line first; the v2 and v3 cycles differ in their first CALL |
+| Schedule table maintenance, or port a Spark maintenance DAG | [iceberg-guide.md](iceberg-guide.md) "The maintenance runbook" — read its format-version line first; the v2 and v3 cycles differ in their first CALL. For the policy-driven single CALL, [maintenance-policy.md](maintenance-policy.md) |
 | Diagnose a surprising result or a loud refusal | [troubleshooting.md](troubleshooting.md) |
 | Find out how repark differs from Apache Spark, and why | [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) (authoritative) |
 | Check release / delivery state | [../../STATUS.md](../../STATUS.md) (authoritative) |

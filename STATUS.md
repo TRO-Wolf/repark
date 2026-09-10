@@ -12,42 +12,43 @@ _Last updated: 2026-09-07._
 ## Release state
 
 **v1.1.1 shipped (2026-09-06)** — the first patch on v1.1.0: RDF-SCHEMA-EVO-1 (compaction after
-schema evolution, fork pin RP-15 `85db42f2`), WRITE-DISTRIBUTION-2 (one partition value, one writer
-on INSERT OVERWRITE and MERGE), CSV-INFER-PERF-1 (`inferSchema` CSV without per-candidate
-materialization). Version SSOT at the Cargo workspace (`1.1.1`).
+schema evolution, fork pin RP-15 `85db42f2`), WRITE-DISTRIBUTION-2 (one partition value, one
+writer on INSERT OVERWRITE and MERGE), CSV-INFER-PERF-1. Version SSOT: the Cargo workspace.
 **v1.1.0 shipped (2026-09-06)** — the first minor on v1.0.0 (2026-09-03, the first stable tag;
-v1.0.1 the first patch, 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`,
-PyPI trusted publishing, `cp312-abi3` manylinux wheel, wheel-only (crates.io publishing
-structurally deferred, see docs/release.md).
+v1.0.1 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`, PyPI trusted
+publishing, a `cp312-abi3` manylinux wheel, wheel-only (see docs/release.md).
 v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
 for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling
-2026-09-03). 1.1.0 is additive: WIN-SLIDE-1, the dbt path (DBT-1), FN-REGEXP-EXTRACT-1, FNP-9/10, the
-Spark-door type corrections (TYPES-1, CUTOVER-SCHEMA-1, NULLABILITY-2), and the performance
-units — collect()/withColumn/createDataFrame in the binding (FACADE-1, FACADE-CDF-1), avg
-GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and manifest caches
-(CATALOG-IO-1..3, default ON), parallel CTAS writers with a hash distribution rule
-(WRITEPATH-1, WRITE-DISTRIBUTION-1), count(*) folds and parallel small-table scans (ICE-SCAN-1),
-and the dynamicFlatten null-mask extractor (DYNFLATTEN-2, LISTNULL-1). Post-1.1.1 `main`
+2026-09-03). 1.1.0 is additive: WIN-SLIDE-1, DBT-1, FN-REGEXP-EXTRACT-1, FNP-9/10, the Spark-door
+type corrections (TYPES-1, CUTOVER-SCHEMA-1, NULLABILITY-2) and the performance units — FACADE-1,
+FACADE-CDF-1, avg GroupsAccumulator, Greenwald-Khanna percentile_approx, the session metadata and
+manifest caches (CATALOG-IO-1..3, default ON), parallel CTAS writers with a hash distribution rule
+(WRITEPATH-1, WRITE-DISTRIBUTION-1), ICE-SCAN-1, DYNFLATTEN-2 and LISTNULL-1. Post-1.1.1 `main`
 (2026-09-07) adds the DataFrame core decomposition slate (DFCORE-1…6: `core.py` 6,302 → 4,539
 lines behind an identical export surface; PERF-APPROXQUANTILE-1, PERF-EAGER-PREVIEW-1) and FNP-8
 with its after-the-fact review (FNP-8-REVIEW). **DISPLAY-POLARS-1 (2026-09-09)** changes a
 user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
 not the PySpark ASCII grid. `repark.DataFrame` is unchanged — only the rendering is — and the grid
-is one setting away (`REPARK_DISPLAY_STYLE=spark`, `.config("repark.display.style", "spark")` or
-`session.display_style`); `max_rows` (10), `max_cols` (8) and `str_len` (30) join `style` as
-facade-local keys, and a styled frame shorter than `max_rows + 1` now renders with no `count()`.
-The keys and the precedence chain are documented in
-[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md); **DISPLAY-BRIDGE-1
-(2026-09-09)** closes the one place the flip had missed, so an uncached `mapInArrow` frame's
-`show()` renders with the resolved style and matches its own `repr` instead of falling back to the
-Spark grid. **DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (the same function
-object) and `.lazy()`: `.eager()` materialises through the existing cache-view path and returns a
-**new `repark.DataFrame`** — same class, full Spark surface, never a polars object — whose row and
-column counts are read once and then answered by `count()`, `repr` and `show()` with no engine
-action; `.lazy()` returns the frame back to a plan over the same view without re-executing. The
-Spark `collect()` and `df.pl.collect()` keep their own meanings. Release mechanics:
+is one setting away (`REPARK_DISPLAY_STYLE=spark`). DISPLAY-BRIDGE-1 (2026-09-10) closes the last
+door that ignored the style: a bridged frame's `show()` now matches its own `repr`. The four
+facade-local keys and the precedence chain:
+[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
+**DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (one function object) and
+`.lazy()`. `.eager()` materialises through the existing cache-view path and returns a **new
+`repark.DataFrame`** — same class, full Spark surface, never a polars object — whose row and
+column counts are read once and thereafter answered with no engine action; `.lazy()` returns the
+frame to a plan over the same view. Spark's `collect()` and `df.pl.collect()` are unchanged.
+**MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
+`[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
+build, and the procedure that spends it —
+`CALL <catalog>.system.run_maintenance(table => 'db.t' [, dry_run => …] [, <policy key> => …])`,
+mirrored as `session.run_maintenance(...)`. **`dry_run` defaults to true** (the call answers a
+plan; `dry_run => false` runs the five-step chain, one commit per step, a failure stopping it).
+No scheduler; `adaptive_partitioning` is reserved for ADAPT-PART. Keys, precedence, the step
+order and the result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
+Release mechanics:
 [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
