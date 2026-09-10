@@ -39,15 +39,14 @@ the same view. Spark's `collect()` and `df.pl.collect()` are unchanged.
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
 build, and the procedure that spends it —
 `CALL <catalog>.system.run_maintenance(table => 'db.t' [, dry_run => …] [, <policy key> => …])`,
-mirrored as `session.run_maintenance(...)`. **`dry_run` defaults to true** (the call answers a
-plan; `dry_run => false` runs the five-step chain, one commit per step, a failure stopping it).
-No scheduler; `adaptive_partitioning` is reserved for ADAPT-PART. Keys, precedence, the step
-order and the result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
+mirrored as `session.run_maintenance(...)`; **`dry_run` defaults to true**, `false` runs the
+five-step chain one commit per step. No scheduler; `adaptive_partitioning` is reserved for
+ADAPT-PART. Keys, order, result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
 **Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: `repark-distributed`
-(tier 3, role `runtime`) carries the `DistributedExecutor` seam and a local executor, and behind
-the off-by-default `cluster` feature an in-process Ballista scheduler, multi-stage queries with
-per-stage metrics and Iceberg reads on each executor; nineteen pins. Two clauses stay OPEN on one
-wall (`datafusion-proto`), taken as Milestone 2's first unit by
+(tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind
+the off-by-default `cluster` feature, an in-process Ballista scheduler, multi-stage queries with
+per-stage metrics and Iceberg reads on each executor. Two clauses stay OPEN on the
+`datafusion-proto` wall, Milestone 2's first unit per
 [review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9;
 design [docs/design/distributed-m1.md](docs/design/distributed-m1.md).
 Release mechanics:
