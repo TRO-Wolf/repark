@@ -2,8 +2,9 @@
 #![allow(clippy::disallowed_methods)]
 
 use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use datafusion::arrow::array::{Array, Int64Array};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
@@ -15,7 +16,8 @@ use datafusion::prelude::SessionContext;
 use futures::StreamExt;
 use repark_core::ReparkSession;
 use repark_distributed::{
-    DistributedExecutor, LocalDataFusionExecutor, ReparkClusterExecutor, ReparkSessionProvider,
+    DistributedExecutor, JobStatus, LocalDataFusionExecutor, ReparkClusterExecutor,
+    ReparkSessionProvider,
 };
 
 fn bind_address() -> SocketAddr {
@@ -346,4 +348,177 @@ async fn sort_merge_join_with_prefer_hash_join_false_matches_local_executor() {
         got_rows == expected_rows,
         "cluster rows {got_rows:?} != local rows {expected_rows:?}"
     );
+}
+
+fn unique_spill_dir() -> PathBuf {
+    let nanos = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_nanos(),
+        Err(_) => 0,
+    };
+    let path =
+        std::env::temp_dir().join(format!("repark-m1c-spill-{}-{nanos}", std::process::id()));
+    if let Err(error) = std::fs::create_dir_all(&path) {
+        panic!("create spill dir {}: {error}", path.display());
+    }
+    path
+}
+
+fn arrow_shuffle_files(root: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            let is_arrow = path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("arrow"));
+            if name.starts_with("data") && is_arrow {
+                files.push(path);
+            }
+        }
+    }
+    files
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn completed_two_stage_hash_aggregate_reports_shuffle_bytes() {
+    let (session, context) = session_with(4, &[]);
+    let keys: Vec<i64> = (0..16).map(|row| row % 4).collect();
+    let values: Vec<i64> = (0..16).map(|row| row + 1).collect();
+    register_kv(&context, "sales", &keys, &values, 4);
+    let sql = "SELECT k, sum(v) AS total FROM sales GROUP BY k";
+    let plan = physical_plan(&context, sql).await;
+    let text = plan_text(plan.as_ref());
+    assert!(
+        count_named(plan.as_ref(), "AggregateExec") >= 2,
+        "two-stage hash aggregate required, plan:\n{text}"
+    );
+
+    let expected = local_answer(&context, Arc::clone(&plan)).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
+        Ok(cluster) => cluster,
+        Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
+    };
+    let handle = match cluster.execute(plan).await {
+        Ok(handle) => handle,
+        Err(error) => panic!("cluster execute: {error}"),
+    };
+    let job = handle.id;
+    let got = tokio::time::timeout(Duration::from_secs(30), drain_stream(handle.stream()))
+        .await
+        .expect("cluster drain timed out after 30s");
+    let expected_rows = sorted_row_keys(&expected);
+    let got_rows = sorted_row_keys(&got);
+    assert!(
+        got_rows == expected_rows,
+        "cluster rows {got_rows:?} != local rows {expected_rows:?}"
+    );
+
+    let status = match cluster.status(job).await {
+        Ok(status) => status,
+        Err(error) => panic!("status after drain: {error}"),
+    };
+    let JobStatus::Completed {
+        stages,
+        retried_stages: _,
+    } = status
+    else {
+        panic!("expected Completed with stage metrics, got {status:?}");
+    };
+    assert!(
+        stages.len() >= 2,
+        "two-stage hash aggregate must report per-stage metrics, got {stages:?}"
+    );
+    let bytes_shuffled: u64 = stages.iter().map(|stage| stage.bytes_shuffled).sum();
+    assert!(
+        bytes_shuffled > 0,
+        "two-stage hash aggregate must shuffle bytes > 0, stages {stages:?}"
+    );
+    let rows: u64 = stages.iter().map(|stage| stage.rows).sum();
+    assert!(
+        rows > 0,
+        "two-stage hash aggregate must report rows, stages {stages:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn session_spill_dir_has_no_shuffle_files_after_complete_and_after_cancel() {
+    let spill = unique_spill_dir();
+    let spill_text = spill.to_string_lossy().into_owned();
+    let extra = [("datafusion.runtime.temp_directory", spill_text.as_str())];
+    let (session, context) = session_with(4, &extra);
+    let before = arrow_shuffle_files(&spill);
+    assert!(
+        before.is_empty(),
+        "spill dir must start without shuffle files: {before:?}"
+    );
+
+    let keys: Vec<i64> = (0..16).map(|row| row % 4).collect();
+    let values: Vec<i64> = (0..16).map(|row| row + 1).collect();
+    register_kv(&context, "sales", &keys, &values, 4);
+    let sql = "SELECT k, sum(v) AS total FROM sales GROUP BY k";
+    let plan = physical_plan(&context, sql).await;
+    let _ = cluster_answer(&session, plan).await;
+    let after_complete = arrow_shuffle_files(&spill);
+    assert!(
+        after_complete.is_empty(),
+        "session spill dir must not hold shuffle files after complete: {after_complete:?} under {}",
+        spill.display()
+    );
+
+    let long_sql = "SELECT value FROM range(100000000)";
+    let long_plan = physical_plan(&context, long_sql).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
+        Ok(cluster) => cluster,
+        Err(error) => panic!("ReparkClusterExecutor::new: {error}"),
+    };
+    let handle = match cluster.execute(long_plan).await {
+        Ok(handle) => handle,
+        Err(error) => panic!("cluster execute: {error}"),
+    };
+    let job = handle.id;
+    let started = Instant::now();
+    loop {
+        let status = match cluster.status(job).await {
+            Ok(status) => status,
+            Err(error) => panic!("status poll: {error}"),
+        };
+        if matches!(status, JobStatus::Running { .. }) {
+            break;
+        }
+        if matches!(
+            status,
+            JobStatus::Completed { .. } | JobStatus::Failed(_) | JobStatus::Cancelled
+        ) {
+            panic!("long range left Running before cancel, {status:?}");
+        }
+        assert!(
+            started.elapsed() <= Duration::from_secs(15),
+            "timed out waiting for Running before cancel"
+        );
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    tokio::time::timeout(Duration::from_secs(5), cluster.cancel(job))
+        .await
+        .expect("cancel timed out after 5s")
+        .unwrap_or_else(|error| panic!("cancel: {error}"));
+    let after_cancel = arrow_shuffle_files(&spill);
+    assert!(
+        after_cancel.is_empty(),
+        "session spill dir must not hold shuffle files after cancel: {after_cancel:?} under {}",
+        spill.display()
+    );
+    let _ = std::fs::remove_dir_all(&spill);
 }

@@ -30,7 +30,10 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   `target_partitions=4`); hash join of `left_t`/`right_t` with CollectLeft thresholds
   zeroed so both sides `RepartitionExec`; sort-merge join of the same tables with
   `prefer_hash_join=false` and a `RepartitionExec` on both children.
-  pins: ballista-m1-c/C-001
+  Step 2 adds: `Completed` on the two-stage hash aggregate reports per-stage rows and
+  shuffle bytes > 0; the session spill directory has no `data*.arrow` shuffle files after
+  that job completes and after a long-range cancel.
+  pins: ballista-m1-c/C-001, C-003, C-004
 
 ## Pointers
 

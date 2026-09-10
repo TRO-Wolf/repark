@@ -42,8 +42,14 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
 - **BALLISTA-M1-C step 1.** Three multi-stage shapes against the local executor on the same
   physical plan (`tests/multi_stage.rs`): hash aggregate over 4 partitions, partitioned hash
   join of two tables, sort-merge join with `prefer_hash_join=false`. Cluster row order is
-  sorted before compare. Retry, metrics, and spill-dir cleanup are step 2.
-  pins: ballista-m1-c/C-001
+  sorted before compare. pins: ballista-m1-c/C-001
+- **BALLISTA-M1-C step 2.** `JobStatus::Completed { stages, retried_stages }` from the
+  scheduler graph (rows, shuffle bytes, wall time, attempt number). Shuffle bytes > 0 on
+  the two-stage hash aggregate. Session spill dir has no shuffle files after complete or
+  cancel (Ballista standalone work_dir is a dropped `TempDir`, not the session spill dir).
+  Retry is OPEN: ChaosExec is not fail-once; stopping an executor needs `arrow_flight`.
+  Design: [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md).
+  pins: ballista-m1-c/C-003, C-004
 
 ## Contents
 

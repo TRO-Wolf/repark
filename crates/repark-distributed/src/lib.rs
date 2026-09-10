@@ -8,7 +8,7 @@ mod codec;
 #[cfg(feature = "cluster")]
 mod session_provider;
 
-pub use executor::{DistributedExecutor, JobHandle, JobId, JobStatus};
+pub use executor::{DistributedExecutor, JobHandle, JobId, JobStatus, StageMetrics};
 pub use local::LocalDataFusionExecutor;
 
 #[cfg(feature = "cluster")]
