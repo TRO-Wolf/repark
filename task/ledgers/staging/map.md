@@ -11,6 +11,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   cancel pins green; `cluster` feature builds with no cluster code. `risk_tier: standard`.
   Branch `feat/ballista-m1-a`.
   pins: ballista-m1-a/C-001, C-002, C-003, C-004
+- [ballista-m1-b-ledger.md](ballista-m1-b-ledger.md) —
+  **BALLISTA-M1-B step 1 (2026-09-10), in flight:** in-process `ReparkClusterExecutor`
+  (one scheduler + two executors); `SELECT sum(x) FROM t` equals the local executor;
+  both executors ran a task; status walks Queued → Running → Completed. D-2 UDF pin
+  and D-3 round-trip pin stay OPEN for step 2. `risk_tier: standard`.
+  Branch `feat/ballista-m1-b`.
+  pins: ballista-m1-b/C-001, C-002
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
