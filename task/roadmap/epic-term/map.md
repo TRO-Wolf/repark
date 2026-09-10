@@ -68,6 +68,13 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   new-crate checklist; §6 records the six placement rulings (D-5: 2.2's changelog is a
   RePark-side snapshot diff over upstream-compatible primitives, so it survives a later
   migration off the fork).
+- [facade-audit-2026-09-10.md](facade-audit-2026-09-10.md) — **the Rust-backed facade
+  audit, Half A facts (FACADE-AUDIT-0 step 1, 2026-09-10, in flight):** one measured row
+  per module under `python/repark/src/repark/` (106 files, 51,930 lines; binding sites,
+  pyarrow references, delegate/logic/pyarrow class), the IPC crossing sites, and every
+  place a `Column` renders SQL text. Base `2fad8135`. Half B (weighing + sequence) is
+  step 2 and stays open. Branch `docs/facade-audit-0`.
+  pins: facade-audit-0/C-001, C-002, C-003, C-004
 - [ballista-audit-2026-09-08.md](ballista-audit-2026-09-08.md) — **the Ballista audit
   (Milestone 0 of the rust-unification brief, BALLISTA-AUDIT-0):** the smallest coherent
   upstream subset that can serve as RePark's owned distributed runtime, read at tag
