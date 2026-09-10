@@ -21,13 +21,25 @@ impl fmt::Display for JobId {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StageMetrics {
+    pub stage_id: usize,
+    pub rows: u64,
+    pub bytes_shuffled: u64,
+    pub wall_time_ms: u128,
+    pub attempt_num: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum JobStatus {
     Queued,
     Running {
         completed_stages: usize,
         total_stages: usize,
     },
-    Completed,
+    Completed {
+        stages: Vec<StageMetrics>,
+        retried_stages: usize,
+    },
     Failed(String),
     Cancelled,
 }

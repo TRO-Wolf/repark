@@ -153,7 +153,14 @@ impl Stream for JobStream {
         match this.inner.as_mut().poll_next(cx) {
             Poll::Ready(None) => {
                 if !this.cancelled.load(Ordering::SeqCst) {
-                    mark_terminal(&this.jobs, this.id, JobStatus::Completed);
+                    mark_terminal(
+                        &this.jobs,
+                        this.id,
+                        JobStatus::Completed {
+                            stages: Vec::new(),
+                            retried_stages: 0,
+                        },
+                    );
                 }
                 Poll::Ready(None)
             }

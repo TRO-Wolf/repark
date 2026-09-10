@@ -11,17 +11,22 @@ adds `running_executor_task_counts` on the cluster executor.
 ## Contents
 
 - `lib.rs` — the crate manifest: the module list and the public re-exports.
-- `executor.rs` — D-3: `DistributedExecutor`, `JobHandle`, `JobId`, `JobStatus`.
-  pins: ballista-m1-a/C-001
+- `executor.rs` — D-3: `DistributedExecutor`, `JobHandle`, `JobId`, `JobStatus`,
+  `StageMetrics`. `Completed` carries per-stage rows, shuffle bytes, wall time, attempt
+  number, and `retried_stages`. pins: ballista-m1-a/C-001, ballista-m1-c/C-003
 - `local.rs` — D-4: `LocalDataFusionExecutor` runs a plan on the session `SessionContext`
-  in-process; `status` is `Completed`/`Failed` after the stream drains; `cancel` sets
-  `Cancelled` and stops the stream. pins: ballista-m1-a/C-002, C-003
+  in-process; `status` is `Completed { stages: [], retried_stages: 0 }` / `Failed` after
+  the stream drains; `cancel` sets `Cancelled` and stops the stream.
+  pins: ballista-m1-a/C-002, C-003
 - `cluster.rs` (`cluster` feature) — D-1: `ReparkClusterExecutor` starts one in-process
   scheduler and N executors on ephemeral ports; `execute` submits a physical plan; `status`
-  walks Queued → Running → Completed; `executor_task_counts` reads the scheduler job graph;
+  walks Queued → Running → `Completed { stages, retried_stages }` (per-stage rows, shuffle
+  bytes, wall time, and attempt number from the execution graph's `ShuffleWritePartition`
+  and `TaskInfo` times; `retried_stages` counts stages with `stage_attempt_num > 0`).
+  `executor_task_counts` reads the scheduler job graph;
   `running_executor_task_counts` counts only in-flight tasks (or reports the job still
   queued/running when the graph is not yet in completed state).
-  pins: ballista-m1-b/C-001, C-005
+  pins: ballista-m1-b/C-001, C-005, ballista-m1-c/C-003
 - `session_provider.rs` (`cluster` feature) — D-2 seat / D-4: `ReparkSessionProvider` builds
   every executor `SessionState` from a RePark session (catalog, UDFs, analyzer rules). The
   two-executor pin registers in-memory table `t` here; the UDF pin registers `repark_times_ten`

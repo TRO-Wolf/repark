@@ -121,7 +121,7 @@ async fn wait_until_running(
         }
         if matches!(
             status,
-            JobStatus::Completed | JobStatus::Failed(_) | JobStatus::Cancelled
+            JobStatus::Completed { .. } | JobStatus::Failed(_) | JobStatus::Cancelled
         ) {
             panic!("job left Running before the wait finished, seen {seen:?}");
         }
@@ -177,7 +177,7 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
         }
         if matches!(
             status,
-            JobStatus::Completed | JobStatus::Failed(_) | JobStatus::Cancelled
+            JobStatus::Completed { .. } | JobStatus::Failed(_) | JobStatus::Cancelled
         ) {
             break;
         }
@@ -208,7 +208,7 @@ async fn two_executors_sum_matches_local_and_status_walks_queued_running_complet
         Err(error) => panic!("status after: {error}"),
     };
     assert!(
-        after == JobStatus::Completed,
+        matches!(after, JobStatus::Completed { .. }),
         "after drain: {after:?}, walk {seen:?}"
     );
 
