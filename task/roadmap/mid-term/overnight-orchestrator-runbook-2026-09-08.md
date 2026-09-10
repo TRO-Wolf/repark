@@ -92,6 +92,8 @@ Grok (under G-4): actor `~/.claude/skills/grok-worker/grok-worker.sh --lane $LAN
 critic `… --role critic-quality|critic-logic|critic-security --sandbox read-only --max-turns 120`
 on a fresh clone of `main`. The launcher refuses `~/CodeRepos` and denies push/gh/aws. Run dirs
 land in `/tmp/grok-worker/<lane>/<stamp>/`; read them with `python3 ~/.claude/skills/grok-worker/handback.py <run>`.
+**New test directories (run 5):** a directory added under `python/repark-parity/tests/` that needs the native module guards its own `conftest.py` with `pytest.importorskip("repark")`, never an `--ignore` in `make py-test` (that target mirrors `ci.yml`).
+
 **Lane discipline (2026-09-10):** a worker or critic reads and edits only its own lane clone —
 never another lane's, never the live checkout; a critic clone is refreshed to `origin/main`
 between rounds; never `git checkout` in a clone whose worker is mid-round. The Grok launcher now
@@ -172,6 +174,8 @@ with **no trailer** and never the session URL anywhere.
 
 ```bash
 cd /tmp/oc-$LANE && make preflight                      # alone; read its exit code
+PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q   # the WHOLE parity suite (run 5: a third mirror file reds CI)
+make verify                                              # after every orchestrator edit too (RUF100 on a stray noqa cost a CI round)
 git fetch -q origin main && git merge-base --is-ancestor origin/main HEAD \
   && git push -q https://github.com/TRO-Wolf/repark.git $BR \
   && gh pr create --repo TRO-Wolf/repark --base main --head $BR --title "<type>(<unit>): <what>" --body-file /tmp/oc-worker/$LANE/pr.md
