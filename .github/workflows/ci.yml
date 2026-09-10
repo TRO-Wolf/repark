@@ -167,6 +167,9 @@ jobs:
       - name: live-document guard (check_docs_compaction)
         run: python3 scripts/check_docs_compaction.py
 
+      - name: docs link guard (check_docs_links)
+        run: python3 scripts/check_docs_links.py
+
       - name: owner-ruling preservation guard (check_owner_ruling)
         run: python3 scripts/check_owner_ruling.py
       # Parse first because zizmor exits successfully when broken YAML yields no auditable input.

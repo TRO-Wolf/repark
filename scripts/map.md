@@ -628,8 +628,11 @@ repark-parity slice.
   matched no finding in the run is itself a failure (`stale entry … — the link is no longer
   broken; remove this row`), so a fixed link takes its row away under gate pressure. The
   baseline was re-measured on the merged tree at the D-9 reseed: the same 10 links, 9
-  entries after the collapse. Not wired to
-  the pre-commit hook or ci.yml (the card's Home named the Makefile only). Proofs:
+  entries after the collapse. **Dual-wired since RF-8 (O-1,
+  2026-09-10):** `make check-docs-links` in `make ci` AND the `docs link guard
+  (check_docs_links)` step in ci.yml's `guards` job, seated after `check_docs_compaction` the way
+  `make ci` runs it — the DOCS-LINKS-1 card's Home named the Makefile only, which is why the
+  ci.yml half arrived later as an orchestrator step. Not wired to the pre-commit hook. Proofs:
   `python/repark-parity/tests/test_dl_6_docs_links.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
