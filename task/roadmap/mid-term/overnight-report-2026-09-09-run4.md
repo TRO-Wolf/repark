@@ -16,12 +16,14 @@ run-4 order, docs read at the PR-#444 tip · **Cards:**
 | DISPLAY-POLARS-1 step 5 + departure (**unit complete**) | [#449](https://github.com/TRO-Wolf/repark/pull/449) | **merged `df74ae3e`**, tree-equal | Muse | 1 |
 | CFG-1 step 3 (the loader reaches a session) | [#451](https://github.com/TRO-Wolf/repark/pull/451) | **merged `89287739`**, tree-equal | Muse | 2 + 1 dropped |
 | DF-EAGER-1 steps 2 + 3 + departure (**unit complete**) | [#452](https://github.com/TRO-Wolf/repark/pull/452) | **merged `ca629ee7`**, tree-equal | Muse | 3 |
-| DISPLAY-BRIDGE-1 (R-13, one-round card, **unit complete**) | [#454](https://github.com/TRO-Wolf/repark/pull/454) | open, CI green at hand-off | GLM | 1 |
-| CFG-1 step 4 (the typed mirror and the guide) | [#455](https://github.com/TRO-Wolf/repark/pull/455) | open, CI running at hand-off | Muse | 1 |
+| DISPLAY-BRIDGE-1 (R-13, one-round card, work complete) | [#454](https://github.com/TRO-Wolf/repark/pull/454) | **PARKED** — green on its own base, needs one rebase round (§4) | GLM | 1 |
+| CFG-1 step 4 (the typed mirror and the guide) | [#455](https://github.com/TRO-Wolf/repark/pull/455) | **merged `5d188bf9`**, tree-equal | Muse | 1 |
 
-**Three units finished tonight:** DISPLAY-POLARS-1, DF-EAGER-1, DISPLAY-BRIDGE-1 — all three
-ledgers in `completed/` with attestation blocks. **CFG-1 is finished as work** (steps 0, 1, 1b, 2,
-3, 4) but its ledger stays in `staging/` on one open clause, C-024, below.
+**Seven PRs merged, all tree-equal. Two units finished and merged:** DISPLAY-POLARS-1 and
+DF-EAGER-1, both ledgers in `completed/` with attestation blocks. **CFG-1 is finished as work**
+(steps 0, 1, 1b, 2, 3, 4) but its ledger stays in `staging/` on one open clause, C-024, below.
+**DISPLAY-BRIDGE-1's work is finished and its ledger is written**, but the PR is parked on a
+rebase — see §4.
 
 **Not opened** (the §7 order ran out of clock, not out of order): PROFILES-1 steps 1–3, AP-0,
 CONF-UNREAD-1. Those plus slate 2 are the next run's queue.
@@ -104,13 +106,24 @@ before I found it. `cargo clean -p repark-iceberg` fixed it. **Reuse a warm clon
 `--repo` at its existing path; do not rename it.** Warm clones are worth reusing — `make develop`
 took 26 s instead of a full rebuild.
 
+**DISPLAY-BRIDGE-1 is parked on a real semantic conflict, not a textual one.** DF-EAGER-1 (#452)
+rewrote the same `_render_styled_show` region the bridge card edits — `frame.count()` became the
+eager-aware `_styled_total_rows(frame)`, and the head window moved onto the probe slice — so
+`git merge origin/main` conflicts in two hunks of `display.py`. The resolution is a union that has
+to keep the peeked-bridge branch's shape while every styled `count()` becomes `_styled_total_rows`,
+so an eager frame still pays nothing. Hand-merging a renderer against the stop clock is how a
+silent rendering bug gets in; I aborted the merge, left the branch exactly as it was, and put the
+resolution and its four arbiter pin files in a comment on the PR. **Lesson for the runbook: when
+two open lanes touch the same function, merge the second one's base forward as soon as the first
+one merges, not at PR time.**
+
 **`dv_close`'s fixture path is global** (`/tmp/repark-v3e3-partdv`), so two clones running the
 workspace Rust tests at once collide. I serialised `preflight` runs after noticing. Worth a fix
 in the test itself.
 
 ## 5. Numbers
 
-- 6 PRs merged, all tree-equal after the squash; 2 PRs open and green/running at hand-off.
+- 7 PRs merged, all tree-equal after the squash; 1 PR parked green (#454), 1 report PR open (#456).
 - 14 worker rounds: 3 GLM ($0.33), 11 Muse (2 dropped and relaunched).
 - 4 orchestrator follow-up rounds, all from audit findings, all fixed on the first return.
 - `main` moved 8 times during the run; every lane needed at least one `git merge origin/main`.
