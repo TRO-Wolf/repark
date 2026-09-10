@@ -55,6 +55,8 @@ from `main`.
 | DOCS-LINKS-1 | #437 | `critic-logic` | 21 | $0.31 | 2 CONFIRMED |
 | LEDGER-READING-1 | #432 | `critic-quality` | 19 | $0.27 | 2 CONFIRMED |
 | PREFLIGHT-PARITY-1 | #433 #438 | `critic-logic` | 17 | $0.24 | **no findings** |
+| DF-EAGER-1 | #443 #452 | `critic-security` | 20 | $0.28 | 1 CONFIRMED (high) |
+| DISPLAY-POLARS-1 | #429 #434 #439 #448 #449 | `critic-security` | 22 | $0.31 | 2 CONFIRMED |
 
 A first `critic-logic` round on CFG-1 returned the fabrication pattern the runbook §3 names —
 `num_turns` 1, a summary naming eight pytest files that do not exist in the tree, no report file
@@ -64,7 +66,7 @@ it is `ls` on the report path plus `num_turns`, both of which the runbook alread
 
 ## 2. Findings
 
-Forty-four numbered findings across twenty rounds: 33 CONFIRMED (nine of them re-run by the
+Forty-seven numbered findings across twenty-two rounds: 36 CONFIRMED (nine of them re-run by the
 orchestrator, all nine holding), 3 SUSPECTED, 8 filed as owner questions. Three rounds over two
 units yielded nothing, which is recorded here as a result rather than omitted.
 
@@ -453,6 +455,29 @@ the parent Makefile and green on `HEAD`, the CAP-1 mirror 23 passed. PREFLIGHT-P
 unit in the sweep that took two rounds and yielded nothing in either.
 
 
+### The two security rounds that closed the sweep
+
+**Q-50 · The `FROM None` bug is also an injection surface.** CONFIRMED, high — the DF-EAGER-1
+security round reached Q-12 from the third direction and escalated it: `_to_lazy` interpolating
+`SELECT * FROM {frame._cache_view}` with `_cache_view = None` does not merely fail. If a temp view
+named `none` exists in the session, the frame **silently reads that view instead** — a caller who
+checkpointed one frame gets another frame's rows with no error. Three independent rounds
+(`critic-logic`, `critic-quality`, `critic-security`) filed this same line; it is the strongest
+signal the sweep produced and REVIEW-FIX-4 should be worked first.
+
+**Q-51 · `repark.display.max_rows` has no ceiling.** CONFIRMED (`session_configuration.py:516`):
+the styled `repr` / `show` probe issues `limit(max_rows + 1)`, so a user-supplied `max_rows` is an
+unbounded fetch bound with no cap. It is a resource question rather than a data one, but the value
+comes straight from configuration.
+
+**Q-52 · After `conf.unset("repark.display.style")`, `conf.get` re-reads the environment.**
+CONFIRMED (`builder_conf.py:234` against `:302`): `unset` snapshots `REPARK_DISPLAY_STYLE` into the
+token, but `get` calls `default_display_style()` again while the unset tomb is set. A later process
+environment mutation therefore changes `conf.get` on a **live** session without passing through any
+Session API, while `display_style` and styled `show()` keep the snapshot — the lockstep the
+docstring promises is broken, and it is a query-time environment read that ADR-0004 forbids.
+
+
 ## 3. Fix cards
 
 The cards below are the disposition REVIEW-1 D-4 requires: a confirmed finding becomes a card for
@@ -530,6 +555,9 @@ lazy one through `_spawn_preserving_identity(frame._inner)`. A set `_eager_shape
 `_cache_view` is not a cache-owned frame. D-2 `count()` and the styled row count keep D-4's ban on
 a *count query* while still running the pending-checkpoint materialize, so
 `localCheckpoint(eager=False)` is discharged by the next action as Spark discharges it.
+
+D-3 A temp view named `none` in the session cannot be reached by a checkpointed frame's `lazy()`
+(Q-50) — the pin registers one and proves the frame's own rows come back.
 
 **Pins (red first).** `eager().localCheckpoint().lazy()` plans and collects;
 `eager().localCheckpoint(eager=False)` then `count()` leaves no pending checkpoint and drops the
@@ -699,8 +727,9 @@ that does not resolve; a four-space-indented fence.
 
 ## 5. What this sweep has not covered
 
-Twenty rounds landed, plus one discarded fabrication. Not reviewed: the security angle of every unit but CFG-1 and
-SQL-DESCRIBE-1, the `critic-logic` half of PREFLIGHT-PARITY-1, and PROFILES-1's remaining role, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
+Twenty-two rounds landed, plus one discarded fabrication. Not reviewed: the security angle of DF-EXPLAIN-1, PROFILES-1,
+DOCS-LINKS-1, LEDGER-READING-1 and BALLISTA-AUDIT-0, and the `critic-logic` half of
+BALLISTA-AUDIT-0, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
 list, because it merged into the display path mid-sweep). REVIEW-1's "done when" is therefore not
 met; the card stays open with this
 document as its first instalment.

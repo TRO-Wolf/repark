@@ -18,7 +18,7 @@ MAINT-POLICY-1, TORTURE-1, NEVEROOM-1 and AP-1 beside this session.
 | BALLISTA-M1-B | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#466](https://github.com/TRO-Wolf/repark/pull/466) | **merged** `0eddabfe` |
 | BALLISTA-M1-C | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#469](https://github.com/TRO-Wolf/repark/pull/469) | open, auto-merge armed on green |
 | BALLISTA-M1-D | 1–2 | Grok ×2 | 2 | [#470](https://github.com/TRO-Wolf/repark/pull/470) | open, auto-merge armed on green |
-| REVIEW-1 | 20 critic rounds | Grok critic | 20 (+1 discarded) | this PR | findings document, 11 fix cards, 8 owner questions |
+| REVIEW-1 | 22 critic rounds | Grok critic | 22 (+1 discarded) | this PR | findings document, 11 fix cards, 8 owner questions |
 
 Every merge was checked for squash tree-equality against the branch head before the Slack note.
 
@@ -54,15 +54,18 @@ the first of those independently.
 
 ## 3. The Grok critic sweep (REVIEW-1)
 
-Twenty rounds over eleven units, ~$8.50 in worker cost, in
-[review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 44 numbered findings — 33
+Twenty-two rounds over eleven units, ~$9.10 in worker cost, in
+[review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 47 numbered findings — 36
 CONFIRMED, 3 SUSPECTED, 8 owner questions — 12 fix cards, and two units that survived with nothing
 (PREFLIGHT-PARITY-1 in both roles, DISPLAY-BRIDGE-1). The orchestrator re-ran nine reproductions
 itself; all nine held. Highlights:
 
 - **A data-loss path in DF-EAGER-1** (raised to high by the second round): `count()` on an eager
   frame skips the pending-checkpoint materialize, so a later `catalog.clearCache()` restores
-  source lineage and a frame whose source file is gone collects as `[]`.
+  source lineage and a frame whose source file is gone collects as `[]`. Its sibling — `lazy()`
+  after `localCheckpoint()` interpolating `SELECT * FROM None` — was filed by all three roles
+  independently, and the security round showed it silently reads a temp view named `none` if one
+  exists. That fix card is the one to work first.
 - **A TOML injection in the CFG-1 config mirror**: an unsanitized profile name renders extra
   tables, including a Glue catalog block, into a document the loader accepts.
 - **A credential echo**: a config parse error forwards the `toml` crate's `Display`, which reprints
@@ -90,7 +93,7 @@ itself; all nine held. Highlights:
   `datafusion-proto`. **That is the first question Milestone 2 has to answer**, and it is the one
   thing in this run the owner should look at before scheduling more distributed work.
 - **REVIEW-1 is not done.** The card wants both roles on every unit in its D-1 list plus two
-  security rounds; this run did twenty of about twenty-six. The findings document names exactly
+  security rounds; this run did twenty-two of about twenty-six. The findings document names exactly
   what is missing.
 - **Twelve fix cards** (REVIEW-FIX-1…12) are written but unopened. None
   was worked this run: REVIEW-1 D-4 says a critic never patches, and the fix rounds belong to a
@@ -137,7 +140,7 @@ itself; all nine held. Highlights:
 ## 7. Cost
 
 Worker cost from `runs.tsv`: Grok actor rounds ≈ $6.30 (M1-A $0.86, M1-B $2.58, M1-C $2.86),
-Grok critic rounds ≈ $8.50 over 20 rounds plus $0.02 of discarded stalls, Muse ≈ two rounds on
+Grok critic rounds ≈ $9.10 over 22 rounds plus $0.02 of discarded stalls, Muse ≈ two rounds on
 `muse-spark-1.3-contributor`. The orchestrator's own spend is one audit per round plus the merge
 chains.
 
