@@ -7,6 +7,8 @@ use std::sync::Arc;
 use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
+use crate::config_file::maintenance::MaintenancePolicy;
+
 /// How a registered catalog resolves a staged-CTAS location when the target namespace has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LocationPolicy {
@@ -74,6 +76,7 @@ pub struct CatalogRegistry {
     /// Local filesystem warehouse roots for SEC-02 grandfather (memory / `LocalFs` catalogs).
     local_warehouse_roots: Vec<String>,
     iceberg_caches: Arc<CatalogCaches>,
+    maintenance_policy: Option<(String, Option<MaintenancePolicy>)>,
 }
 
 impl CatalogRegistry {
@@ -131,6 +134,21 @@ impl CatalogRegistry {
     /// Attach the set of read-only catalog names (postgres) for this execute snapshot.
     pub fn set_read_only_catalogs(&mut self, names: std::collections::HashSet<String>) {
         self.read_only_catalogs = names;
+    }
+
+    pub fn set_maintenance_policy(
+        &mut self,
+        profile_name: impl Into<String>,
+        policy: Option<MaintenancePolicy>,
+    ) {
+        self.maintenance_policy = Some((profile_name.into(), policy));
+    }
+
+    #[must_use]
+    pub fn maintenance_policy(&self) -> Option<(&str, Option<&MaintenancePolicy>)> {
+        self.maintenance_policy
+            .as_ref()
+            .map(|(name, policy)| (name.as_str(), policy.as_ref()))
     }
 
     /// Whether `name` is a known read-only (postgres) catalog for P11 routing.

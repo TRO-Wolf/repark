@@ -389,6 +389,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: dml-c-truncate/C-004, C-006, C-007
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
+- [test_maintenance_policy_1.py](test_maintenance_policy_1.py) —
+  **MAINT-POLICY-1 step 4 (2026-09-10):** `session.run_maintenance` facade pins on a
+  memory-catalog table: the dry-run default, override kwargs reaching the CALL
+  (read back off the planned `arguments` column), the D-6 refusal by exception
+  class (`AnalysisException`), the result-frame shape, and the reserved
+  `adaptive_partitioning` refusal. These pins are the executable companion of the
+  guide's worked claims.
+  pins: maint-policy-1/C-021, C-022, C-023, C-024, C-025, C-026
 - [test_rp3_c009_write_default.py](test_rp3_c009_write_default.py) — **RP-3 C-009:** no engine
   caller sets `write_default`; Iceberg fixture bytes stay flat vs `origin/main` when that
   ref exists (skips on a shallow checkout). pins: rp-3-fork-repin/C-009, C-010, C-011

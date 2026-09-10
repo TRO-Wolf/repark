@@ -168,6 +168,14 @@ def _join_table_identifier_segments(segments: list[str]) -> str:
     return ".".join(_quote_ident_if_needed(segment) for segment in segments)
 
 
+def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
+    """The temp view's home segments, or ``None`` when it is not a temp view."""
+    try:
+        return inner.resolve_temp_view_home_ref(name)
+    except Exception:
+        return None
+
+
 def resolve_table_name(
     name: str,
     *,

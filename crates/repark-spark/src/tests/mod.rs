@@ -41,6 +41,7 @@ mod partitioned_merge;
 mod ref_ddl;
 mod refs_and_wap;
 mod router;
+mod run_maintenance;
 mod service_managed_ctas;
 mod spark_string_literals;
 mod time_travel;
