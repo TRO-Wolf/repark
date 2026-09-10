@@ -19,7 +19,7 @@ Nothing else in this file is required reading for a round.
 | # | Ruling | Where it binds |
 |---|---|---|
 | R-1 | Polars display shows **5 head + 5 tail** rows (polars' own default), not 5 + 10. | DISPLAY-POLARS-1 D-3 |
-| R-2 | A lazy frame's `repr` **renders data with a count**, not the plan. | DISPLAY-POLARS-1 D-4 |
+| R-2 | ~~A lazy frame's `repr` **renders data with a count**, not the plan.~~ **Superseded by R-22 (2026-09-10)** after the owner watched a bare `df.withColumns(...)` cell run its plan. | DISPLAY-POLARS-1 D-4 (shipped) → DISPLAY-LAZY-1 |
 | R-3 | The recommended order stands (§4). | §4 |
 | R-4 | `repark.toml` (roadmap v1.4, card CFG-1) is pulled **ahead of 1.2 and 1.3**. | CFG-1 |
 | R-5 | The Ballista audit runs **as Milestone 0 of the Rust migration pilot** (the rust-unification brief), not as a separate track. | BALLISTA-AUDIT-0 |
@@ -39,6 +39,7 @@ Nothing else in this file is required reading for a round.
 | R-20 | **`type = "rest"` (run 4 Q3):** belongs to the REST-catalog card (roadmap 1.13); refusing loud today is correct. | CFG-1 |
 | R-21 | **Glue at session build (run 4 Q4):** yes, `iceberg-guide.md` gains the sentence that a `type = "glue"` block connects to AWS when the session builds, so runnable examples use `memory`. CFG-1 step 5. | CFG-1 step 5 |
 | R-17a | **Muse effort ceiling (run 4):** the contributor model rejects `--effort max` and tops out at `xhigh`; the launcher default is `xhigh`, which is the ruling's intent ("max" = the model's ceiling). | runbook §3 |
+| R-22 | **Lazy `repr` is schema-only (2026-09-10).** Under `polars` and `duckdb` a frame that has not been materialised renders its **schema** in the modern style — column names and dtypes in the styled header, no data rows, no `count()`, zero engine actions — the way Spark's `DataFrame[id: bigint]` shows the plan's shape without running it. Data rows render only for a materialised frame (`.eager()` / `.compute()`, a materialised `cache()` / `persist()`, `localCheckpoint()`) or when the user asks for an action (`show()`, `collect()`, …) or opts in with `spark.sql.repl.eagerEval.enabled`. Measured 2026-09-10 on the reTest bed: `withColumns` itself is lazy (0 UDF calls, 1.7 ms); the notebook's bare-expression `repr` was what ran the plan, twice (count + rows). | DISPLAY-LAZY-1 |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -722,6 +723,70 @@ column, ledger.
 
 ---
 
+### Card DISPLAY-LAZY-1 — a lazy frame's `repr` shows the schema, not the data (R-22)
+
+**Why.** DISPLAY-POLARS-1 D-4 made `repr(df)` under `polars` / `duckdb` run the plan to render
+rows with a count. In a notebook every bare expression is a `repr`, so `df.withColumns(...)` as
+the last line of a cell executes the plan — twice (one `count()`, one head/tail fetch) — and
+looks eager. The 2026-09-10 probe on the reTest bed: `withColumns` returns in 1.7 ms with a
+spy UDF called 0 times; `repr(out)` then calls it 50 times on a 25-row frame; `repr` of the
+`.eager()` frame calls it 0 times; the `spark` style calls it 0 times. Laziness is intact; the
+default rendering spends it.
+
+**Home.** `python/repark/src/repark/spark/dataframe/display.py` (`_repr`, `_render_styled_show`),
+`core.py` only if `__repr__` needs a branch, `tests/python/test_display_styles.py` or a new
+`test_display_lazy_1.py`, `docs/guide/session-and-conf.md`, `docs/guide/dataframe-guide.md`,
+maps.
+
+**Decisions.**
+
+- **D-1 Lazy render, exact bytes.** A frame with no stored shape (`_eager_shape is None`) and no
+  materialised cache view renders, under `polars`:
+
+  ```text
+  lazy: 5 columns, not yet materialized — .eager(), .show() or .collect() run the plan
+  ┌─────┬─────┬─────────┬──────┬───────┐
+  │ id  ┆ v   ┆ new_col ┆ id_2 ┆ spied │
+  │ --- ┆ --- ┆ ---     ┆ ---  ┆ ---   │
+  │ i64 ┆ f64 ┆ i32     ┆ i32  ┆ i64   │
+  └─────┴─────┴─────────┴──────┴───────┘
+  ```
+
+  The header box is the one the data table already draws (same column widths from the names
+  and dtypes alone, same `max_cols` elision with `…`, same `str_len` on long names), closed
+  directly under the dtype row. `duckdb` uses its own header box the same way. The first line
+  replaces `shape: (…)`; it never carries a row count.
+- **D-2 What counts as materialised.** `_eager_shape` set (DF-EAGER-1) → the existing shape-first
+  data render, unchanged. A `cache()` / `persist()` frame whose view has been materialised, and a
+  `localCheckpoint()` frame → the data render with one `count()` over the view (cheap, no plan
+  re-run). Everything else is lazy. An action on a lazy frame (`show()`, `collect()`, `count()`,
+  `toPandas()`, …) does **not** flip it: Spark semantics, the frame stays a plan.
+- **D-3 eagerEval opt-in.** With `spark.sql.repl.eagerEval.enabled` truthy a lazy frame's `repr`
+  renders rows under every style through the same path as `show(eagerEval.maxNumRows)` — the
+  one way to get the shipped D-4 behaviour back. The plan runs once on that path (D-5 of
+  DISPLAY-POLARS-1 already counts only past `max_rows`); a pin fixes the run count at one.
+- **D-4 Unchanged surfaces.** `spark` style `repr` (`DataFrame[id: bigint, …]`), `str(df)`,
+  `_repr_html_` (`None` under `polars` / `duckdb`), `show()` and every action, DISPLAY-BRIDGE-1's
+  `show()` == `repr` equality for **eager** bridged frames. A lazy bridged frame renders D-1.
+- **D-5 Transformations are lazy, pinned.** One pin holds `withColumns`, `withColumn`, `select`,
+  `filter`, `groupBy().agg`, `orderBy`, `join` and `union` to zero UDF-spy calls and zero
+  `count()` calls until an action — the regression guard the owner asked for.
+
+**Steps.**
+
+| # | Tier | Round |
+|---|---|---|
+| 1 | M | Red-first pins in `test_display_lazy_1.py`: D-1 exact bytes under `polars` and `duckdb` (a 25-row, 5-column frame, then a 12-column frame for the `max_cols` elision); a spy UDF and a `count` spy prove `repr` of a lazy frame performs zero engine actions; D-2 for eager, cached and checkpointed frames; D-3 eagerEval renders rows with exactly one plan run; D-4 `spark` bytes unchanged; D-5 the transformation-laziness pin. Then the renderer branch in `display._repr`. Existing DISPLAY-POLARS-1 / DF-EAGER-1 / DISPLAY-BRIDGE-1 pins that assert a lazy `repr` renders data are re-pinned to D-1, never deleted. |
+| 2 | M | Docs: `session-and-conf.md` `repr` paragraph rewritten (schema-only when lazy, the three ways to see rows), `dataframe-guide.md` "Lazy and eager" gains the D-1 block, the `repr(eager)` example stays; ledger PROVEN; maps. |
+
+**Hand back when.** The header box cannot be drawn without a data batch (the renderer takes a
+table, not a schema): file the residue and hand back rather than fetching one row.
+
+**Rounds.** 2 (M, M). After the reTest bed is rebuilt from the merge, the orchestrator re-runs
+the tour notebook's section 24 (owner bed, outside the repo) so its prose matches.
+
+---
+
 ## 3. Epic intakes (chartered as direction; the first unit of each is cut here)
 
 ### ADAPT-PART — adaptive partitioning for Iceberg
@@ -783,6 +848,8 @@ paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until t
 | 7 | PROFILES-1 | CFG-1 for the TOML form only | M×3, I | 4 | ≈ $0.02 + one I round |
 | 8 | AP-0 | — (script only) | M | 1 | ≈ $0.01 |
 | 9 | AP-1 → AP-3, DYNCFG-1 | AP-0 result; PROFILES-1 result | I | — | after the measurements |
+
+**Status 2026-09-10 (owner, morning):** R-22 supersedes R-2; new unit 15 DISPLAY-LAZY-1 (M, 2 rounds) runs as the next slate-1 leftover after DISPLAY-BRIDGE-1 (#454) merges; it precedes any further display card.
 
 **Status 2026-09-09 after run 3:** 3 steps 2–3 merged (#434, #439); 4 seed + step 1 merged (#440); 5 step 1 merged (#443); 7 step 0 merged (#441); 12 merged (#437); 11 ledger closed (#438). New: CFG-1 step 1b, cards 13 DISPLAY-BRIDGE-1 (M, 1) and 14 CONF-UNREAD-1 (I+M, 2). Run-4 order is runbook §7.
 
