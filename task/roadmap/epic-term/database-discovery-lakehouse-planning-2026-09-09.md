@@ -20,7 +20,7 @@ The platform sits above RePark's query and table APIs. RePark remains the execut
 
 The current repository separates engine code, SQL entry points, Python bindings, and Iceberg integration. The proposal preserves those boundaries. Python may manage metadata and construct plans. Source-row decoding and local data transformations belong in Rust; source databases may execute pushed-down profiling queries.
 
-As reviewed on 2026-09-09, the roadmap places database connectors, incremental processing, and connector CDC in future milestones. This proposal describes a consumer of those capabilities, not a claim that they already exist. Repository contracts and delivery state remain authoritative in [AGENTS.md](/home/john/CodeRepos/LocalRepark/repark/AGENTS.md), [ARCHITECTURE.md](/home/john/CodeRepos/LocalRepark/repark/ARCHITECTURE.md), [STATUS.md](/home/john/CodeRepos/LocalRepark/repark/STATUS.md), and the [release roadmap](/home/john/CodeRepos/LocalRepark/repark/task/roadmap/epic-term/release-roadmap-2026-08-29.md).
+As reviewed on 2026-09-09, the roadmap places database connectors, incremental processing, and connector CDC in future milestones. This proposal describes a consumer of those capabilities, not a claim that they already exist. Repository contracts and delivery state remain authoritative in [AGENTS.md](../../../AGENTS.md), [ARCHITECTURE.md](../../../ARCHITECTURE.md), [STATUS.md](../../../STATUS.md), and the [release roadmap](release-roadmap-2026-08-29.md).
 
 ## 3. System overview
 
@@ -284,7 +284,7 @@ Customer-specific naming and transformation conventions remain configuration thr
 
 ## Orchestrator review (Claude Fable 5.1, 2026-09-10)
 
-Filed as the owner's proposal of 2026-09-09, unchanged above this line. Read against the tree
+Filed as the owner's proposal of 2026-09-09, unchanged above this line except that its four absolute repository links became relative ones (the docs-links gate). Read against the tree
 at `2fad813` and the records it must sit beside.
 
 **Where it sits.** This is the front half — discovery, profiling, planning, acceptance — of the
