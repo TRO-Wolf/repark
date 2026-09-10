@@ -24,6 +24,11 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   source names carrying `]`, `.`, a quote or a newline refuse at construction, and every
   rendered header segment is quoted with `_toml_text`, so a hostile profile name cannot
   open a second table. pins: review-fix-7/C-001
+  **REVIEW-FIX-1 (2026-09-10):** loader-agreement close — session knobs take `int`
+  (never `bool`) or ASCII digit strings after `strip()` and refuse anything else as
+  `ValidationError`; duplicate names refuse across every catalog and every database
+  source together, naming both key paths; `to_toml()` emits `[<profile>]` for every
+  profile so an empty overlay round-trips. pins: review-fix-1/C-001, C-002, C-003
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).

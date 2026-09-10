@@ -691,3 +691,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `s3.access-key-id` delta recorded as deliberate (D-4). `risk_tier: standard`.
   Branch `fix/review-fix-5`.
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-005, C-006
+- [review-fix-1-ledger.md](review-fix-1-ledger.md) —
+  **REVIEW-FIX-1 (2026-09-10), in flight:** the CFG-1 mirror agrees with the loader —
+  ASCII-only knob values refusing as `ValidationError`, duplicate names refused across
+  every catalog and every database source naming both key paths, and an empty overlay
+  profile surviving the `to_toml()` round trip. Closes Q-3, Q-4, Q-5, Q-6.
+  `risk_tier: standard`. Branch `fix/review-fix-1-2`.
+  pins: review-fix-1/C-001, C-002, C-003

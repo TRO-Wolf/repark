@@ -102,7 +102,9 @@ class SessionConfig(BaseModel):
             if value < 0:
                 raise ValueError("session knob must be a non-negative integer")
             return value
-        if value.strip().isdigit():
+        if not isinstance(value, str):
+            raise ValueError("session knob must be a non-negative integer")
+        if value.strip().isascii() and value.strip().isdigit():
             return value
         raise ValueError("session knob must be a non-negative integer")
 
@@ -205,12 +207,20 @@ class ProfileConfig(BaseModel):
         for names in self.database.values():
             for name in names:
                 _refuse_header_name(name, "database source name")
-        source_names: set[str] = set()
-        for names in self.database.values():
-            source_names.update(names)
-        for name in self.catalog:
-            if name in source_names:
-                raise ValueError(f"name {name!r} is both a catalog and a database source")
+        named: list[tuple[str, str]] = [(name, f"catalog.{name}") for name in self.catalog]
+        for kind in sorted(self.database):
+            for name in self.database[kind]:
+                named.append((name, f"database.{kind}.{name}"))
+        for index, (name, path) in enumerate(named):
+            prior: str | None = next(
+                (prior_path for prior_name, prior_path in named[:index] if prior_name == name),
+                None,
+            )
+            if prior is not None:
+                raise ValueError(
+                    f"duplicate name {name!r}: {prior!r} and {path!r} — names must be "
+                    "unique across the catalog and database families"
+                )
         return self
 
     def render_lines(self, name: str) -> list[str]:
@@ -258,6 +268,7 @@ class ReparkConfig(BaseModel):
         """Render the file text a user could write as repark.toml."""
         lines: list[str] = []
         for name in self.profiles:
+            lines.append(f"[{_toml_text(name)}]")
             lines.extend(ProfileConfig.render_lines(self.profiles[name], name))
         if not lines:
             return ""
