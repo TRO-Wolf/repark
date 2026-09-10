@@ -32,6 +32,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
   Branch `feat/ballista-m1-b`.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
+- [ballista-m1-c-ledger.md](ballista-m1-c-ledger.md) —
+  **BALLISTA-M1-C step 2 (2026-09-10), in flight:** D-1 three shapes PROVEN; D-3
+  `Completed { stages, retried_stages }` shuffle bytes > 0 on the two-stage hash aggregate;
+  D-4 session spill dir has no shuffle files after complete or cancel. D-2 retry stays
+  OPEN (ChaosExec is not fail-once; stopping an executor needs `arrow_flight`).
+  `risk_tier: standard`. Branch `feat/ballista-m1-c`.
+  pins: ballista-m1-c/C-001, C-003, C-004
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
@@ -508,6 +515,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
   Branch `perf/dynflatten-1-measure`.
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
+- [profiles-1-ledger.md](profiles-1-ledger.md) —
+  **PROFILES-1 step 1 (2026-09-10), in flight:** the measurement bed step 2 sweeps:
+  three D-2 datasets, five reads + three writes, knob × value CSV harness, one-JVM
+  guard, `--smoke` proof mode. No sweep, no timings as results. `risk_tier: standard`.
+  Branch `feat/profiles-1`.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - [perf-facade-1-ledger.md](perf-facade-1-ledger.md) —
   **PERF-FACADE-1 (2026-09-04), in flight:** slate items 1 and 2 of PERF-ANALYSIS-1, the two
   biggest measured user-visible walls. `collect()` row materialization moves into

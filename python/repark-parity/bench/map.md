@@ -56,6 +56,10 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   §7.4 before/after battery (`count_star`, `count_id`, `sum_all`, `string_len`, DV legs).
   See [icescan/map.md](icescan/map.md).
   pins: perf-ice-scan-1/C-009
+- [profiles/](profiles/map.md) — **PROFILES-1 step 1 (2026-09-10)** config-profile
+  measurement bed: three D-2 datasets, five reads + three writes, knob × value timing
+  harness writing one CSV row per cell, one-JVM guard, `--smoke` proof mode.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - [approxpct/](approxpct/map.md) — **PERF-APPROXPCT-1 round 2 (2026-09-06)** sketch
   cells: `run_cells.py ROWS ATTEMPTS [--control]` times the `percentile_approx(id,
   0.5)` wall/peak/answer rows (or the `count(id)` control) on a range scan, release
