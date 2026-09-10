@@ -202,6 +202,15 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   NOT MEASURED), and the reproduce commands. Runnable method kept beside it in
   [profiles-1-probe/](profiles-1-probe/map.md). Step 0's record only; the unit's ledger
   is born in step 1.
+- [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md) —
+  **AP-0 (measure, 2026-09-10):** the ADAPT-PART candidate measurement — three local
+  Iceberg beds (the futures frame CTAS unpartitioned, two generated 400k-row beds at
+  uniform and skewed group shares, 206 files each) scored from `files`/`partitions`
+  manifest bounds at a 512 KiB target: one ranked P-2/P-3 table per bed, the sampled
+  columns, and the plausibility read. Runnable method kept beside it in
+  [../../python/repark-parity/bench/adaptpart/map.md](../../python/repark-parity/bench/adaptpart/map.md).
+  The 20 percent prediction check is open (orchestrator O-run).
+  pins: ap-0/C-001, C-002, C-003, C-004
 
 ## Pointers
 

@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ap-0-ledger.md](ap-0-ledger.md) —
+  **AP-0 (measure, 2026-09-10), in flight:** ADAPT-PART partition-candidate
+  measurement — three local Iceberg beds (futures CTAS unpartitioned, generated
+  uniform/skewed 400k-row beds, 206 files each) scored from `files`/`partitions`
+  manifest bounds at a 512 KiB target, one ranked P-2/P-3 table per bed in
+  [../../../docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../docs/perf/ap-0-partition-candidates-2026-09-10.md),
+  runnable method in
+  [../../../python/repark-parity/bench/adaptpart/map.md](../../../python/repark-parity/bench/adaptpart/map.md).
+  4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
+  O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
+  pins: ap-0/C-001, C-002, C-003, C-004
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
