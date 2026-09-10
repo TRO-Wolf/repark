@@ -744,6 +744,8 @@ ml	ml.Vectors
 session	SparkSession.Builder.appName
 session	SparkSession.Builder.app_name
 session	SparkSession.Builder.config
+session	SparkSession.Builder.configFile
+session	SparkSession.Builder.config_file
 session	SparkSession.Builder.getOrCreate
 session	SparkSession.Builder.get_or_create
 session	SparkSession.Builder.master

@@ -8,7 +8,6 @@ const PROFILE_TABLE_KEYS: &[&str] = &["catalog", "conf", "database", "display", 
 const DISPLAY_KEYS: &[&str] = &["max_cols", "max_rows", "str_len", "style"];
 const SESSION_KEYS: &[&str] = &["batch_size", "memory_limit_gb", "target_partitions"];
 
-#[allow(dead_code)]
 pub(crate) fn profile_from_table(name: &str, table: &toml::Table) -> Result<Profile> {
     let mut profile = Profile::default();
     for (key, value) in table {
@@ -29,7 +28,6 @@ pub(crate) fn profile_from_table(name: &str, table: &toml::Table) -> Result<Prof
     Ok(profile)
 }
 
-#[allow(dead_code)]
 pub(crate) fn effective_table(
     config: &ConfigFile,
     profile_name: Option<&str>,
@@ -56,7 +54,6 @@ pub(crate) fn effective_table(
     Ok(merge_tables(&default_table, &profile_as_table(profile)))
 }
 
-#[allow(dead_code)]
 fn merge_tables(base: &toml::Table, overlay: &toml::Table) -> toml::Table {
     let mut merged = base.clone();
     for (key, overlay_value) in overlay {
@@ -71,8 +68,7 @@ fn merge_tables(base: &toml::Table, overlay: &toml::Table) -> toml::Table {
     merged
 }
 
-#[allow(dead_code)]
-fn profile_as_table(profile: &Profile) -> toml::Table {
+pub(crate) fn profile_as_table(profile: &Profile) -> toml::Table {
     let slots = [
         ("catalog", &profile.catalog),
         ("conf", &profile.conf),

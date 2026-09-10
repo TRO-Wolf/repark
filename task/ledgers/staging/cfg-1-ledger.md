@@ -1,7 +1,7 @@
 # Unit ledger — CFG-1 step 1 · `repark.toml` discovery, profile merge, `${VAR}` interpolation
 
 **Unit:** CFG-1 step 1 (+ step 1b, R-14) · **Date:** 2026-09-09 · **Branch:** `feat/cfg-1` (step 1b: `feat/cfg-1-step1b`) · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2
+**Model:** Muse Spark (muse-spark-1.3) — recording round; GLM 5.3 Flash (zai/glm-5.3-flash) — implementation, step 1b (R-14) and step 2; Muse Spark (muse-spark-1.3-contributor) — implementation, step 3
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** The CFG-1 seed commit left `config_file/{discovery,profile,interpolate}.rs` as empty
@@ -43,9 +43,21 @@ red first, wrote this ledger, updated the two maps, and committed.
 | C-015 | Redaction: `redact_config` masks every key `prop_key_is_secret` matches, an unmasked secret never appears in the redacted output, non-secret values stay verbatim, no key is dropped; `SourceSpec`'s `Debug` masks through the same function. | `a_dump_masks_every_key_the_secret_predicate_matches`, `a_source_spec_debug_masks_secret_props` | **PROVEN** | Red first (step 2 below); green in the step-2 run. The dump pin runs the C1-SEC-002 key matrix (13 secret spellings incl. hyphenated and camelCase) plus a non-secret `url`; the Debug pin asserts the password is absent, `***` present, the url verbatim. `redact.rs` calls `catalog_config::prop_key_is_secret` (widened to `pub(crate)` this step) — the predicate is not re-implemented. |
 | C-016 | Wrong shapes refuse loud naming the key path: a non-string catalog prop, a non-string database prop, a non-table catalog slot, a non-table database name slot. | `a_non_string_catalog_prop_refuses_naming_the_key_path`, `a_non_string_database_prop_refuses_naming_the_key_path`, `a_non_table_catalog_slot_refuses_naming_the_key_path`, `a_non_table_database_name_slot_refuses_naming_the_key_path` | **PROVEN** | Red first (step 2 below); green in the step-2 run. Paths asserted: `default.catalog.g.max_connections`, `prod.database.postgres.company_db.port`, `default.catalog.m`, `prod.database.postgres.company_db`. TOML scalars are never silently stringified. |
 | C-017 | Loud guards on catalog names: a block carrying no properties refuses, and a dotted catalog name refuses instead of silently re-splitting through the flat-key bridge. | `a_catalog_block_carrying_no_properties_refuses`, `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` | **PROVEN** | Red first (step 2 below); green in the step-2 run. An empty `[default.catalog.ghost]` refuses naming the path (flat config has no equivalent — a silent ignore would vanish the catalog); `[default.catalog."a.b"]` refuses naming `default.catalog.a.b` (flat keys would alias it to catalog `a`). |
+| C-018 | `[<profile>.display]` translates to `repark.display.*` pairs (`style`, `max_rows`, `max_cols`, `str_len`); string values verbatim, integers stringified; any other TOML shape refuses naming the key path. | `test_toml_display_table_sets_style` | **PROVEN** | Red first (step 3 below); green in the step-3 run (`48 passed; 0 failed`). `max_rows = 20` arrives as `"20"`; `max_rows = true` refuses naming `default.display.max_rows`. |
+| C-019 | `[<profile>.session]` knobs (`memory_limit_gb`, `batch_size`, `target_partitions`) land as typed builder fallbacks (explicit typed setters still win); integers or integer strings, else refuses naming the key path. | `test_toml_session_table_sets_builder_knobs` | **PROVEN** | Red first (step 3 below); green in the step-3 run. A file-built session reports `batch_size 4096` / `target_partitions 3` through the live engine config; `memory_limit_gb = 2` is asserted on the translation; `batch_size = "lots"` refuses naming `default.session.batch_size`. |
+| C-020 | `[<profile>.conf]` applies in sorted-key order (deterministic; see C-024 for why not file order); string values verbatim, integers stringified, other shapes refuse naming the key path. TOML-nested tables flatten with dot joins so the natural `spark.sql.x = "v"` spelling works; a quoted-plus-nested collision refuses. | `test_toml_conf_table_applies_in_order`, `conf_nested_tables_flatten_with_dot_joins` | **PROVEN** | Red first (step 3 below); green in the step-3 run. `zebra/apple/mango` in file order apply as `apple/mango/zebra`; `port = 5432.5` refuses naming `default.conf.port`. The flatten pin was red-proven separately against the pre-flatten code (`key \`default.conf.spark\` must be a string`) before going green. |
+| C-021 | Precedence is builder `.config()` > `REPARK_ENV` profile > `[default]`, pinned as a parametrised table over one file plus varying builder maps. | `file_builder_precedence_is_builder_then_profile_then_default` | **PROVEN** | Red first (step 3 below); green in the step-3 run. Builder value wins with source `builder`; otherwise the profile value wins with `file:<path>#prod`; profile-absent keys keep the default value with `default`. |
+| C-022 | The dump renders `(key, redacted value, source)` with sources `builder`, `file:<path>#<profile>`, `default` — exactly the three precedence levels — and masks every secret key through `config_file::redact`. | `file_dump_reports_origin_and_masks_secrets` | **PROVEN** | Red first (step 3 below); green in the step-3 run. `password` renders `***` with source `default`; a profile-overridden nickname renders verbatim with `file:<path>#prod`; a builder-overridden one renders verbatim with `builder`. |
+| C-023 | Done condition: a session built from a file registers the same catalogs the equivalent `.config()` calls would — equal merged pairs modulo the source column, both registrations `Ok`, both probes agree. | `file_built_session_registers_the_same_catalogs_as_config_calls` | **PROVEN** | Red first (step 3 below); green in the step-3 run. Memory catalog `m` over a tempdir warehouse on both sides; the flat side uses the `repark.sql.catalog.*` spelling so the pair maps compare key-for-key. |
+| C-024 | D-1 says `[<profile>.conf]` keys apply "in file order"; this build's `toml::Table` is `BTreeMap`-backed (`preserve_order` off), so file order is not recoverable without a dependency-feature change. | (none — open wording question for the owner) | **OPEN** | Measured in step 2, ruled for this round by the orchestrator: apply in sorted-key order, deterministic and pinned (C-020). Ways out: enable `toml`'s `preserve_order` feature, or carry the order some other way. No dependency was touched. |
+| C-025 | A non-empty `[<profile>.database]` table refuses loud at load: the sources parse and validate (collisions included) but named-source registration is CFG-2's card, and a silent drop would vanish configured sources. | `database_sources_refuse_until_named_registration_lands` | **PROVEN** | Red first (step 3 below); green in the step-3 run. The refusal names `default.database.postgres.company_db` and the `CFG-2` card. |
+| C-026 | `Builder.configFile(path)` forces a file and automatic discovery (`REPARK_CONFIG` → CWD → home) runs at `getOrCreate` without it; the file's translated pairs fold through the existing `.config()` choke point with builder keys winning, so display, session-knob, and `conf` values reach the knob resolvers and `conf.get`. | `test_config_file_folds_pairs_through_config`, `test_repark_config_env_discovers_file` | **PROVEN** | Red first (Python, below: `'Builder' object has no attribute 'configFile'`); green after `make develop` (counts in Gates). The fold asserts `custom.probe.key` in `conf.get` and `display_style == "spark"` from the file; the discovery pin sets `REPARK_CONFIG` by monkeypatch and reads the file value back. |
+| C-027 | The forced path reaches the engine through `PyReparkSession::new(config_path=...)`; end to end, an explicit `.config()` beats the file, and a forced-but-missing path refuses naming it. | `test_builder_config_beats_config_file`, `test_config_file_missing_path_refuses`, `config_path_names_the_forced_file_and_missing_refuses` (binding) | **PROVEN** | Red first (Python, below); green after `make develop` (counts in Gates). The missing-path refusal matches `does not exist` from the engine's forced-path check; the binding pin also asserts undiscoverable `config_file_pairs(None)` comes back empty. |
 
 VERDICT: 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED (6 from step 1, C-007/C-008/C-009 from step 1b).
 VERDICT (step 2, 2026-09-09): 17 clauses, 17 PROVEN, 0 OPEN, 0 REJECTED (C-010…C-017 appended this step).
+VERDICT (step 3, 2026-09-09): 25 clauses, 24 PROVEN, 1 OPEN, 0 REJECTED (C-018…C-025 appended this step; C-024 is the orchestrator-ruled D-1 wording question, carried OPEN).
+VERDICT (step 3 facade, 2026-09-09): 27 clauses, 26 PROVEN, 1 OPEN, 0 REJECTED (C-026, C-027 appended with the Python slice; C-024 still the only OPEN).
 
 ## Red first
 
@@ -146,6 +158,63 @@ After implementing the two files the same command returns green:
 `test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`
 (25 inherited pins + 15 step-2 pins).
 
+## Red first — step 3 (wiring)
+
+The 8 step-3 pins were written first (before `wiring.rs`, `from_config_file`, or
+`conf_dump` existed) and run against the untouched step-2 tree. The eighth pin
+(`conf_nested_tables_flatten_with_dot_joins`) arrived with the facade round, after the
+pins exposed that TOML nests dotted `conf` keys; it was red-proven separately (see C-020).
+Red run: `cargo test -p repark-core config_file`, 2026-09-09 — a compile refusal, the same
+honest red class as steps 1–2: the pins name items that do not exist yet.
+
+```text
+error[E0432]: unresolved import `super::wiring`
+  --> crates/repark-core/src/config_file/tests.rs:13:12
+   |
+13 | use super::wiring::{FileConfig, conf_dump_rows, load_file_config};
+   |            ^^^^^^ could not find `wiring` in `super`
+
+error[E0599]: no method named `from_config_file` found for struct `ReparkSessionBuilder` in the current scope
+   --> crates/repark-core/src/config_file/tests.rs:834:10
+
+error[E0599]: no method named `from_config_file` found for struct `ReparkSessionBuilder` in the current scope
+   --> crates/repark-core/src/config_file/tests.rs:980:10
+
+error[E0599]: no method named `conf_dump` found for struct `session::ReparkSession` in the current scope
+    --> crates/repark-core/src/config_file/tests.rs:1002:65
+
+error: could not compile `repark-core` (lib test) due to 4 previous errors
+```
+
+After implementing `wiring.rs` plus the `session.rs` hook the same command returns green:
+`test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out`
+(40 inherited pins + 8 step-3 pins). No pin was edited at any point; the battery was then
+split `tests.rs` → `tests/mod.rs` + `tests/wiring.rs` (identity move, same green after).
+
+## Red first — step 3 facade (Python)
+
+The 4 facade pins were written into `test_builder_config_map.py` first (before
+`Builder.configFile`, the fold, or the native `config_path` existed) and run against the
+untouched tree. Red run: `.venv/bin/python -m pytest
+python/repark/tests/test_builder_config_map.py -q -k "config_file or beats_config_file or
+env_discovers"`, 2026-09-09 — `4 failed, 20 deselected`, every failure the missing
+surface:
+
+```text
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'does not exist'
+E         Actual message: "'Builder' object has no attribute 'configFile'"
+
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_builder_config_map.py::test_config_file_folds_pairs_through_config
+FAILED python/repark/tests/test_builder_config_map.py::test_builder_config_beats_config_file
+FAILED python/repark/tests/test_builder_config_map.py::test_repark_config_env_discovers_file
+FAILED python/repark/tests/test_builder_config_map.py::test_config_file_missing_path_refuses
+4 failed, 20 deselected in 1.10s
+```
+
+No pin was edited at any point; green came from the implementation plus `make develop`.
+
 ## Gates
 
 | Command | Result |
@@ -169,6 +238,28 @@ tree change in this round outside the inherited diff is this ledger plus the two
 |---|---|
 | `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (25 inherited pins + 15 step-2 pins) |
 | `make verify` | exit 0 — 48 × `test result: ok`, 0 FAILED; repark-core lib suite `277 passed` (the 40 `config_file` pins included); `All checks passed!` (ruff check); `809 files already formatted` (ruff format) |
+
+## Gates — step 3 (wiring + facade)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out` (40 inherited pins + 8 step-3 pins) |
+| `cargo test -p repark-core` | exit 0 — lib `285 passed`, integration `37 passed` + `8 passed`, 0 FAILED |
+| `cargo test -p repark-python --test bindings` | exit 0 — `25 passed; 0 failed` (24 inherited + the new `config_path_names_the_forced_file_and_missing_refuses`) |
+| `.venv/bin/python -m pytest python/repark/tests/test_builder_config_map.py python/repark/tests/test_session_config_knobs.py python/repark/tests/test_session.py python/repark/tests/test_display_styles.py -q` | exit 0 — `147 passed` (resolver-move blast radius plus the 4 new facade pins) |
+| `make develop` | exit 0 — wheel rebuilt and installed editable after every native change |
+| `make py-test-facade` | exit 0 — `5841 passed, 369 skipped, 7 xfailed` in 692s |
+| `.venv/bin/python docs/examples/session/config_file.py` | exit 0 — the new covering example runs end to end |
+| `make verify` | exit 0 — full gate green (clippy, panic-ban, DAG, lib-rs, file sizes, ruff, example coverage, ledgers, ledger grammar, docs, manifest, workspace tests) |
+
+## Gates — audit follow-up (ceiling DOWN ratchet)
+
+| Command | Result |
+|---|---|
+| `cargo test -p repark-python` | exit 0 — lib `59 passed`, bindings `25 passed`, 0 FAILED (identical counts before and after the `drain_arrow_c_stream` move — the move is pure) |
+| `python3 scripts/check_rust_file_size.py` | exit 0 — `442 files clean (default ceiling 1000; 36 exceptions)`; `session.rs` row now 1128 |
+| `make verify` | exit 0 — full gate green |
+| `make py-test-parity-cap` | exit 0 — `23 passed` |
 
 ## Pins
 
@@ -216,6 +307,19 @@ All pins live in `crates/repark-core/src/config_file/tests.rs`.
 | `a_non_table_database_name_slot_refuses_naming_the_key_path` (step 2) | C-016 |
 | `a_catalog_block_carrying_no_properties_refuses` (step 2) | C-017 |
 | `a_catalog_name_with_a_dot_refuses_instead_of_resplitting` (step 2) | C-017 |
+| `test_toml_display_table_sets_style` (step 3) | C-018 |
+| `test_toml_session_table_sets_builder_knobs` (step 3) | C-019 |
+| `test_toml_conf_table_applies_in_order` (step 3) | C-020 |
+| `conf_nested_tables_flatten_with_dot_joins` (step 3) | C-020 |
+| `file_builder_precedence_is_builder_then_profile_then_default` (step 3) | C-021 |
+| `file_dump_reports_origin_and_masks_secrets` (step 3) | C-022 |
+| `file_built_session_registers_the_same_catalogs_as_config_calls` (step 3) | C-023 |
+| `database_sources_refuse_until_named_registration_lands` (step 3) | C-025 |
+| `test_config_file_folds_pairs_through_config` (step 3 facade) | C-026 |
+| `test_repark_config_env_discovers_file` (step 3 facade) | C-026 |
+| `test_builder_config_beats_config_file` (step 3 facade) | C-027 |
+| `test_config_file_missing_path_refuses` (step 3 facade) | C-027 |
+| `config_path_names_the_forced_file_and_missing_refuses` (step 3 binding) | C-027 |
 
 ## Decisions
 
@@ -252,6 +356,7 @@ Choices step 2 took that the card and D-5 did not fix (read from the code, not i
 |---|---|
 | Catalog bridge | Each `[<profile>.catalog.<name>]` block is joined into `repark.sql.catalog.<name>.<prop>` keys (the repark-native prefix, "accepted as a synonym for new code") and parsed by `parse_catalog_specs` itself — one code path for both sources, byte-identical specs by construction. |
 | Native `type = "rest"` | Refuses loud with `parse_catalog_specs`'s existing unrecognized-value error. `CatalogKind` has no `Rest` variant in this tree; the design plan gives `CatalogKind::Rest` to the REST-catalog card. No variant was invented. |
+| C-025 flagged to the owner (orchestrator, 2026-09-09) | The step chose to refuse loud at LOAD when a profile carries a non-empty `[<profile>.database]` table. That is stricter than the ruled CFG-2 card, which says a database source in this era is "parsed, validated, listed, and refuses-loud **on use**". Accepted for this step because no listing surface exists yet, so the only alternatives were a silent drop (worse) or inventing CFG-2's registry here (out of scope) — and refusing at load names the key and the CFG-2 card rather than losing the section. **Consequence the owner should weigh: until CFG-2 lands, a `repark.toml` that declares a database source cannot open a session at all.** Carried to the owner as an open question in the run-4 report. |
 | Q-1 answered (orchestrator, 2026-09-09) | The loud refusal STANDS for this unit. `type = "rest"` is refused by `parse_catalog_specs`'s existing unrecognized-value error until a `CatalogKind::Rest` ruling lands with the REST-catalog card; the TOML path adds no kind the flat `.config()` path does not already have. Carried to the owner as an open question in the run-4 report, not as work for CFG-1. |
 | `[<profile>.conf]` ordering (step-3 input, 2026-09-09) | `toml::Table` is `BTreeMap`-backed in this build (no `preserve_order` feature), so a `conf` table iterates in sorted-key order, not file order. D-1 says the `conf` keys apply "in file order"; step 3's wiring must either enable `preserve_order` or carry the order itself. Measured in step 2, filed here so step 3 does not discover it late. |
 | Database kinds | Exact-spelling match on `postgres / sqlserver / trino` per D-5's "any other spelling" — `Postgres` (capitalized) refuses; no case-folding, unlike the catalog `type` path's lowercase folding, which lives in `catalog_config.rs` and is not this step's code. |
@@ -261,6 +366,23 @@ Choices step 2 took that the card and D-5 did not fix (read from the code, not i
 | `SourceSpec` visibility | `pub(crate)` in `config_file/sources.rs` with `#[allow(dead_code)]`, per ruling D-5 — the public API is frozen; step 3 decides what leaves the crate. |
 | `SourceSpec` Debug | Manual, masking secret props through `redact_value` — the C1-SEC-002 pattern `CatalogSpec`'s Debug already sets; equality (`PartialEq`/`Eq`) stays on raw values. |
 | Collision scope | Uniqueness is enforced over the union of both families per profile: cross-family and within-database collisions both refuse naming both key paths (two catalogs can only collide if TOML allowed duplicate headers, which it does not). |
+
+Choices step 3 took that the card and the round brief did not fix (read from the code, not invented):
+
+| Choice | What the code does |
+|---|---|
+| Dump source semantics | `builder` = the builder map carried the key (it wins); `file:<path>#<profile>` = the key survived from the SELECTED profile's table; `default` = the key survived from `[default]`. The three labels are exactly the three precedence levels — no engine-default rows are invented. |
+| `REPARK_ENV` empty or absent | Both select `[default]` alone. An unknown non-empty `REPARK_ENV` refuses (step-1 behaviour, unchanged). |
+| No file discovered | `REPARK_ENV` is ignored and the builder is untouched — a globally exported `REPARK_ENV` with no `repark.toml` anywhere is a no-op, never a refusal, so existing file-less `build()` calls cannot observe the new code path. |
+| Session knobs travel typed | The file's `session` knobs set the builder's typed fields only when unset; they do not also enter the config map, so the pre-existing dual-knob refusal cannot fire on file content alone and the dump never shows a knob row the engine did not honour. The `repark.*` knob-key pairs still exist on `FileConfig.pairs` for the facade fold. |
+| `display` / `conf` / catalog value shapes | Strings verbatim, integers stringified (`max_rows = 20` → `"20"`); every other TOML shape refuses naming the key path — the same no-silent-stringification rule step 2 set for catalog and database props. |
+| Database sources refuse | A non-empty `[<profile>.database]` table refuses loud naming every offending source path and the `CFG-2` card: the sources parse and validate (collisions included) but registration is CFG-2's seam, and a silent drop would vanish configured sources. |
+| `TimeTravelOpts` moves | `session.rs` needed 26 lines for the wiring inside the 1,000-line ceiling, so the 57-line `TimeTravelOpts` + `into_spec` moved verbatim to `time_travel.rs` next to the `TimeTravelSpec` it builds (the gate's sanctioned split at a cohesive boundary). Two-line delta from verbatim: the `Result` qualifies as `repark_common::Result` (the module's `Result` is DataFusion's) plus its import; `lib.rs` re-exports the same name from the new home. |
+| Test battery split | `tests.rs` (40 pins) → `tests/mod.rs` + `tests/wiring.rs` (7 step-3 pins) when the battery passed the 1,000-line ceiling — stage pins versus wiring pins, no pin moved or edited. |
+| Facade fold placement | The fold lives in `session_configuration.py` as `fold_config_file_into_builder` and calls only the public `Builder.config` — the one choke point from the brief. Absent-keys-only (builder wins regardless of call order); `repark.display.style` aliases compare case-insensitively, every other key exactly. The pairs arrive unredacted from the native `config_file_pairs` static because they feed `.config()` like any other pairs; `getAll` redacts on read exactly as for builder-set secrets. |
+| Resolver move | `Builder._lookup_int` + the three `_resolve_*` knob resolvers moved to `session_configuration.py` (which already owns the key tuples) as config-dict functions, verbatim bodies. The sanctioned seam for the `session_core.py` ceiling: 2411 → 2306, ratcheted down in both baseline tables plus the CAP-1 mirror. `_resolve_display_style` stays on the Builder (pins call it directly). |
+| Baseline DOWN, no approval needed | `crates/repark-python/src/session.rs` 1177 → 1128: the ruled `config_path` argument plus the `config_file_pairs` static are paid for by moving `drain_arrow_c_stream` (with its capsule-name constant and imports) verbatim to `arrow_export.rs` — the sibling module for exactly this, named in the audit. Move-only otherwise: the two `pyo3::types` method traits the prelude glob used to provide are now explicit imports. Same count in both baseline tables plus the CAP-1 mirror (this row replaces the raise recorded before the audit). |
+| Clippy repairs (no behavior change) | The true clippy recipe (`-A clippy::disallowed_methods`; my first local run omitted it and showed thousands of test-target false errors on a clean tree) found three real step-3 findings: `build()` over the 100-line function ceiling → the file-merge plus knob-validation preamble extracted to the private `prepare_build_state` helper (validation order and outcomes unchanged); `flatten_conf_into`'s `prefix: String` → `&str`; the externally reachable `config_file_pairs` (core) and the `config_file_pairs` binding static each carry the compiler-mandated three-line `# Errors` doc — the two places the round's no-comment fence yields to a deny-by-default gate, recorded here instead of hidden behind an allow (the fence grep for this slice shows only these six lines plus three re-anchored doc pairs). |
 
 ## Notes for the orchestrator
 

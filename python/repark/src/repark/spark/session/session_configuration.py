@@ -8,12 +8,19 @@ import os
 import re
 from typing import Any
 
+from typing import TYPE_CHECKING
+
 from repark.errors import IllegalArgumentException
 from repark.spark._idents import sql_string_literal
 
+from repark.spark.session.session_state import _config_value_error, _warn_unbounded_batch_once
 from repark.spark.session.session_time_zone import DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY
 
 from repark.spark.session.timestamp_type import DEFAULT_TIMESTAMP_TYPE, TIMESTAMP_TYPE_KEY
+
+
+if TYPE_CHECKING:
+    from repark.spark.session.session_core import Builder
 
 
 _CONF_GET_UNSET: object = object()
@@ -272,6 +279,141 @@ def default_display_style() -> str:
     if override is None:
         return _DEFAULT_DISPLAY_STYLE
     return normalize_display_style(override)
+
+
+def fold_config_file_into_builder(builder: Builder) -> None:
+    """Fold forced-or-discovered repark.toml pairs into the builder through .config."""
+    from repark import _native
+
+    pairs: dict[str, str] = _native.PyReparkSession.config_file_pairs(builder._config_file)
+    for key in sorted(pairs):
+        if key in builder._config:
+            continue
+        if key.lower() == _DISPLAY_STYLE_KEY and any(
+            existing.lower() == _DISPLAY_STYLE_KEY for existing in builder._config
+        ):
+            continue
+        builder.config(key, pairs[key])
+
+
+def lookup_int_entry(
+    config: dict[str, str | None], keys: tuple[str, ...]
+) -> tuple[str, int] | None:
+    """Return the winning ``(key, integer)`` among ``keys``, or ``None`` if none are set.
+
+    The key is returned alongside the value because range validation is **per key family**
+    (SAF-006) and the error messages name the spelling the user actually set.
+
+    Keys are tried in order (repark-native first). If several spellings are set:
+    identical values collapse; different values raise
+    :class:`~repark.errors.IllegalArgumentException` naming both keys. Non-integer values
+    raise naming the key (never warn-and-default).
+
+    This is the FACADE twin of the engine's ``repark_core::Error::Config``: both raise the
+    SAME class live PySpark raises for an invalid ``SQLConf`` value
+    (``IllegalArgumentException``) — a deliberate break from repark's former
+    ``ValueError``, which ``except ValueError`` never caught either.
+
+    **TIMING divergence (deliberate):** the CLASS matches PySpark but the
+    MOMENT does not — repark validates eagerly inside ``getOrCreate()`` where a fresh
+    PySpark process validates at the first ``sessionState`` touch. The user-readable copy
+    of this disclosure lives on :meth:`Builder.config` (the ``help()`` surface); keep the
+    two in sync.
+    """
+    found: list[tuple[str, int]] = []
+    for key in keys:
+        value = config.get(key)
+        if value is None:
+            continue
+        try:
+            parsed = int(value)
+        except ValueError as error:
+            raise IllegalArgumentException(
+                f"config key {key!r} must be an integer, got {value!r}"
+            ) from error
+        found.append((key, parsed))
+    if not found:
+        return None
+    first_key, first_value = found[0]
+    for key, value in found[1:]:
+        if value != first_value:
+            raise IllegalArgumentException(
+                f"conflicting config: {first_key!r} and {key!r} set different values"
+            )
+    return first_key, first_value
+
+
+def resolve_memory_limit_gb(config: dict[str, str | None]) -> int | None:
+    """Resolve ``repark.memory.limit.gb`` (repark-only knob; no Spark counterpart).
+
+    ``0`` is meaningful — it opts the session out of the bounded memory pool entirely —
+    so only a NEGATIVE budget is a config error. Raising here (rather than letting a
+    negative reach the native ``Option<usize>`` argument) keeps the class the facade
+    contracts: :class:`~repark.errors.IllegalArgumentException`, not PyO3's
+    ``OverflowError``.
+    """
+    entry = lookup_int_entry(config, _MEMORY_LIMIT_KEYS)
+    if entry is None:
+        return None
+    key, value = entry
+    if value < 0:
+        raise IllegalArgumentException(
+            _config_value_error(
+                key,
+                value,
+                f"The value of {key} must not be negative (0 opts out of the bounded memory pool)",
+            )
+        )
+    return value
+
+
+def resolve_batch_size(config: dict[str, str | None]) -> int | None:
+    """Resolve the Arrow batch-size knob, honoring Spark's "no limit" sentinel (SAF-006).
+
+    ``spark.sql.execution.arrow.maxRecordsPerBatch`` carries no ``checkValue`` in Spark's
+    ``SQLConf`` and is documented "If set to zero or negative there is no limit" — a legal,
+    commonly used PySpark value. repark therefore **accepts** ``<= 0`` (returning ``None``,
+    i.e. the knob is left unset) rather than refusing it, which is what
+    ``spark.sql.shuffle.partitions`` gets — the two keys are validated per Spark's own
+    per-key rules, never by one blanket rule.
+
+    **Disclosed divergence:** Spark's sentinel asks for *unbounded* Arrow batches, and
+    DataFusion has no unbounded-batch mode, so the default batch size stays in force.
+    Values are unaffected (batching is not observable in results, only in batch
+    boundaries), so this is an accepted-but-not-honored knob, warned once per process like
+    ``.master(...)`` (OTH-010). The repark-native spelling ``repark.batch.size`` shares the
+    sentinel so both spellings of one knob cannot diverge.
+    """
+    entry = lookup_int_entry(config, _BATCH_SIZE_KEYS)
+    if entry is None:
+        return None
+    key, value = entry
+    if value <= 0:
+        _warn_unbounded_batch_once(key, value, stacklevel=4)
+        return None
+    return value
+
+
+def resolve_shuffle_partitions(config: dict[str, str | None]) -> int | None:
+    """Resolve the partition-count knob with Spark's positive-only rule (SAF-006).
+
+    ``spark.sql.shuffle.partitions`` is declared in Spark's ``SQLConf`` with
+    ``checkValue(_ > 0, …)``, so ``0`` / negative raise ``IllegalArgumentException`` in
+    real PySpark. repark mirrors the class AND Spark 4.1.2's
+    ``[INVALID_CONF_VALUE.REQUIREMENT]`` message verbatim — see :func:`_config_value_error`
+    for the live capture and the two recorded deltas (no ``SQLSTATE`` suffix; the
+    repark-native spelling has no Spark counterpart). Contrast
+    :meth:`_resolve_batch_size`, whose key is documented to accept ``0``.
+    """
+    entry = lookup_int_entry(config, _TARGET_PARTITIONS_KEYS)
+    if entry is None:
+        return None
+    key, value = entry
+    if value <= 0:
+        raise IllegalArgumentException(
+            _config_value_error(key, value, f"The value of {key} must be positive")
+        )
+    return value
 
 
 _DEFAULT_DISPLAY_MAX_ROWS = 10

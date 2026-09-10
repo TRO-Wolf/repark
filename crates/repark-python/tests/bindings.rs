@@ -15,7 +15,7 @@ use pyo3::types::PyCapsule;
 fn session(py: Python<'_>) -> Py<PyReparkSession> {
     Py::new(
         py,
-        PyReparkSession::new(py, None, None, None, None).expect("session builds"),
+        PyReparkSession::new(py, None, None, None, None, None).expect("session builds"),
     )
     .expect("pyclass instantiates")
 }
@@ -24,15 +24,37 @@ fn session(py: Python<'_>) -> Py<PyReparkSession> {
 fn session_constructs_with_builder_knobs() {
     Python::attach(|py| {
         // Exercise configured and default builder paths.
-        let s = PyReparkSession::new(py, Some(2), Some(4096), Some(4), None);
+        let s = PyReparkSession::new(py, Some(2), Some(4096), Some(4), None, None);
         assert!(s.is_ok(), "session with knobs must build");
-        let mem0 = PyReparkSession::new(py, Some(0), None, None, None);
+        let mem0 = PyReparkSession::new(py, Some(0), None, None, None, None);
         assert!(mem0.is_ok(), "memory_limit_gb=0 must opt out and build");
-        let batch0 = PyReparkSession::new(py, None, Some(0), None, None);
+        let batch0 = PyReparkSession::new(py, None, Some(0), None, None, None);
         assert!(batch0.is_err(), "batch_size=0 must refuse");
-        let parts0 = PyReparkSession::new(py, None, None, Some(0), None);
+        let parts0 = PyReparkSession::new(py, None, None, Some(0), None, None);
         assert!(parts0.is_err(), "target_partitions=0 must refuse");
         let _ = py;
+    });
+}
+
+#[test]
+fn config_path_names_the_forced_file_and_missing_refuses() {
+    Python::attach(|py| {
+        let missing =
+            std::env::temp_dir().join(format!("repark_cfg_absent_{}", std::process::id()));
+        let err = PyReparkSession::new(
+            py,
+            None,
+            None,
+            None,
+            None,
+            Some(missing.to_string_lossy().into_owned()),
+        )
+        .map(|_| ())
+        .unwrap_err();
+        assert!(err.to_string().contains("does not exist"), "{err}");
+        let pairs = PyReparkSession::config_file_pairs(None);
+        assert!(pairs.is_ok(), "undiscoverable tree pairs empty");
+        assert!(pairs.expect("pairs").is_empty(), "no file means no pairs");
     });
 }
 
@@ -63,7 +85,7 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
         ]);
         let session = Py::new(
             py,
-            PyReparkSession::new(py, None, None, None, Some(config))
+            PyReparkSession::new(py, None, None, None, Some(config), None)
                 .expect("config-driven session builds + registers the catalog"),
         )
         .expect("pyclass instantiates");
@@ -84,7 +106,7 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
         );
 
         let bad = HashMap::from([("spark.sql.catalog.x.type".to_string(), "hive".to_string())]);
-        let err = PyReparkSession::new(py, None, None, None, Some(bad))
+        let err = PyReparkSession::new(py, None, None, None, Some(bad), None)
             .map(|_| ())
             .unwrap_err();
         assert!(
@@ -226,7 +248,7 @@ fn arrow_c_stream_defers_execution_and_does_not_collect_up_front() {
     Python::attach(|py| {
         let s = Py::new(
             py,
-            PyReparkSession::new(py, None, None, Some(1), None).expect("session builds"),
+            PyReparkSession::new(py, None, None, Some(1), None, None).expect("session builds"),
         )
         .expect("pyclass instantiates");
         let df = s

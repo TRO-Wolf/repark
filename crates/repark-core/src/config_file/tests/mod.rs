@@ -1,3 +1,5 @@
+mod wiring;
+
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
