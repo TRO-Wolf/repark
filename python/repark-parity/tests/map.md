@@ -29,6 +29,15 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- [spill/](spill/map.md) — **NEVEROOM-1 step 1 (2026-09-10):** the spill-coverage matrix
+  harness: the subprocess-per-cell runner with an address-space cap, the in-engine
+  `range()` generators sized to the limit multiple, the `EXPLAIN ANALYZE` spill-bytes
+  probe reused from `bench/spill/`, the three-outcome classifier (`spilled` /
+  `completed` / `refused`, with `KILLED` failing the matrix), the worker subprocess
+  entry, and the one CI-tier cell (`sort` at 2× the 64 MB limit, measured `spilled`).
+  Needs the native module: run through `make py-test-spill-matrix`. Ledger:
+  [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/staging/neveroom-1-ledger.md).
+  pins: neveroom-1/C-001, C-002, C-003, C-004
 - [torture/](torture/map.md) — **TORTURE-1 step 1 (2026-09-10):** the both-door torture
   suite (`nested` + `inference` families; DataFrame read and `spark.sql` over a temp view;
   row counts, declared schemas, per-column inferred types, byte-identical CLI
