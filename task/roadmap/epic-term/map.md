@@ -8,6 +8,13 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   2026-09-03) — PROJECT.md points here rather than restating it.
 
 ## Contents
+- [database-discovery-lakehouse-planning-2026-09-09.md](database-discovery-lakehouse-planning-2026-09-09.md)
+  — **owner proposal (2026-09-09):** discovery, bounded profiling, evidence and decision records, a
+  deterministic planner with an optional model reviewer, immutable plan acceptance, Bronze change-log
+  and Silver current-state contracts, the CDC recovery protocol, schema-evolution classes, access and
+  deployment, the six-stage delivery sequence and the decisions a scope audit must settle; the
+  orchestrator's dated review is appended (where it sits beside the unification brief, what to settle
+  first, what can start now).
 - [project-performance-and-unsafe-rust-brief-2026-09-04.md](project-performance-and-unsafe-rust-brief-2026-09-04.md) A 2026-09-06 reconciliation note at its head lists the slate units that landed after it was written.
   — proposal opened 2026-09-04 consolidating production feedback, measured and candidate
   performance improvements, possible unsafe Rust exceptions, and agent isolation, patch
@@ -68,6 +75,14 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   new-crate checklist; §6 records the six placement rulings (D-5: 2.2's changelog is a
   RePark-side snapshot diff over upstream-compatible primitives, so it survives a later
   migration off the fork).
+- [facade-audit-2026-09-10.md](facade-audit-2026-09-10.md) — **the Rust-backed facade
+  audit (FACADE-AUDIT-0, 2026-09-10, in flight):** Half A one measured row per module
+  under `python/repark/src/repark/` (106 files, 51,930 lines; binding sites, pyarrow
+  references, delegate/logic/pyarrow class), the IPC crossing sites, and every place a
+  `Column` renders SQL text; Half B weighing by measured walls, per-unit freeze
+  constraints, the confirmed 1–5 sequence with pin lists, two open questions, and the
+  owner conclusion. Base `2fad8135`. Branch `docs/facade-audit-0`.
+  pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
 - [ballista-audit-2026-09-08.md](ballista-audit-2026-09-08.md) — **the Ballista audit
   (Milestone 0 of the rust-unification brief, BALLISTA-AUDIT-0):** the smallest coherent
   upstream subset that can serve as RePark's owned distributed runtime, read at tag

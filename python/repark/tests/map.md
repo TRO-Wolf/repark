@@ -1866,6 +1866,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `spark.app.name`=`repark`; `Column.round` + windowed TA chain; H1 bare-join export naming
   overlay on collect/to_arrow/to_polars/to_pandas (display names, dups positional, no
   `__repark_*` leak); **F-T3-002** multi-name Row pickle round-trip via `from_ordered_fields`.
+- `test_display_bridge_1.py` — **DISPLAY-BRIDGE-1 step 1** (2026-09-09): a bridged frame's
+  `show()` follows the display style (R-13, closes DISPLAY-POLARS-1-S3-Q-001). Red-first
+  atoms (7 failed, 2 passed on the base tree): `show()` equals `repr` on an uncached
+  `mapInArrow` frame under `polars` (12-row, `shape: (12, 1)` + ellipsis) and `duckdb`
+  (12-row box, `12 rows` footer); a 3-row peek returns fewer rows than asked → exact shape,
+  whole frame, no ellipsis, both styles; a full peek (25-row, limit 20) pays exactly one
+  `count()` (spy: 0 on base); a short peek (12-row) never counts (shape atom red on base);
+  `vertical=True` under a styled style warns `stay horizontal` (DID NOT WARN on base).
+  Keep-green guards: the spark peek grid horizontal + vertical bytes (D-1, reusing the
+  measured `_MIA_SHOW` / `_MIA_SHOW_VERTICAL` shapes) and exactly one
+  `_consume_map_in_arrow_batches` call per styled bridged `show()` (no double peek).
+  MUTATION: peek before style resolution again → every styled door pin reds; render the
+  peeked table through the spark grid under a styled mode → the equality pins reds; count
+  on an exact peek or peek twice → the spy pins reds; drop the styled-vertical warning →
+  `test_bridged_styled_vertical_warns` reds; touch the spark peek rendering →
+  `test_bridged_show_spark_grid_unchanged` reds.
+  pins: display-bridge-1/C-001, C-002, C-003
 - `test_display_polars_default.py` — **DISPLAY-POLARS-1 steps 2+3** (2026-09-09): D-5 small-frame
   single fetch in the styled polars renderer (`_render_styled_show`): a 7-row frame renders
   whole through the probe fetch with `count()` never called and no tail fetch; a 12-row frame

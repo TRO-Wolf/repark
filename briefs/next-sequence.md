@@ -84,3 +84,4 @@ failure shapes it filed are the remaining Never-OOM work.
 (V3-3 delivered 2026-08-30 as a measured keep-refusal; its ledger is in `completed/`); DML-A/B/C and Track A W-0. A merged unit leaves this file with no record
 here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.
+

@@ -590,10 +590,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `feat/sql-describe-1`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [maint-policy-1-ledger.md](../completed/maint-policy-1-ledger.md) —
-  **MAINT-POLICY-1 step 1 (2026-09-10), in flight:** the typed `[<profile>.maintenance]`
-  policy — `maintenance.rs` (`MaintenancePolicy` + `TablePolicy`, the D-2 duration
-  parser, per-table override resolution, unknown-key refusals naming the key path,
-  `adaptive_partitioning` reserved as not yet supported), the `maintenance` field on
-  `Profile` validated eagerly but stored raw. No procedure yet; that is step 2.
+  **MAINT-POLICY-1 (2026-09-10), complete:** the declarative maintenance policy — the typed
+  `[<profile>.maintenance]` table with per-table overrides and the D-2 duration parser
+  (`config_file/maintenance.rs`), `CALL <catalog>.system.run_maintenance(...)` with its
+  dry-run plan, the D-4 step order behind the delete-ratio gate, the apply path
+  (`ran` / `failed` / `skipped`, the chain stopping on failure), the session-build stamp
+  that makes `repark.toml` reach the procedure, and the `session.run_maintenance` facade
+  wrapper with its guide. `adaptive_partitioning` reserved for ADAPT-PART.
   `risk_tier: standard`. Branch `feat/maint-policy-1`.
-  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030
+- [facade-audit-0-ledger.md](../completed/facade-audit-0-ledger.md) —
+  **FACADE-AUDIT-0 steps 1–2 (2026-09-10), in flight:** Half A of the Rust-backed facade
+  audit — one measured row per module under `python/repark/src/repark/` (106 files,
+  51,930 lines; binding sites, pyarrow references, delegate/logic/pyarrow class), the
+  IPC crossing sites, and every place a `Column` renders SQL text — plus Half B
+  (weighing, freeze constraints, confirmed sequence with pins, open questions), in
+  [task/roadmap/epic-term/facade-audit-2026-09-10.md](../../roadmap/epic-term/facade-audit-2026-09-10.md).
+  Base `2fad8135`; no source touched; READING path under R-10.
+  `risk_tier: standard`. Branch `docs/facade-audit-0`.
+  pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
