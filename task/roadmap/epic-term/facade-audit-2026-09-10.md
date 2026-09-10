@@ -397,4 +397,113 @@ delegate, `ta.py` (1,818, D-3 out of scope), `functions_udf.py` (1,300),
 
 ## Half B — sequence and weighting (step 2)
 
-Open — step 2.
+**Opened:** 2026-09-10. **Step:** 2 of Card FACADE-AUDIT-0 (Half B only: D-1 second half, D-2).
+**Method:** reading only. Every wall below is quoted from the file named beside it, number
+as that file states it. No benchmark ran this round; another lane owns the box's builds.
+A module with no isolating measurement is marked UNMEASURED with the measurement named
+that would settle it. Half A (§§1–5) is not re-measured; `§2` row citations below refer to it.
+
+### §6 Weighing — measured cost per candidate unit
+
+#### FACADE-1 (Arrow C Stream boundary)
+
+Export side, measured. [facade-boundary-baseline §3](../../docs/perf/facade-boundary-baseline.md):
+`export/1000000/to_arrow` median 30.61 ms, `export/100000/to_arrow` 8.51 ms,
+`export/1000000/toPandas` 55.60 ms. [PERF-ANALYSIS-1
+§7.3](../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `to_arrow` 1e6 × 7 at 24.1 ms
+against Spark `local[8]` 197 ms; `toPandas` 49.3 ms against 206 ms. The export door is
+already one to two orders under the old `collect()` wall, and the out-of-engine capsule
+(`dataframe/core.py:4047,4054`) already exists beside the IPC sites.
+
+Import side, UNMEASURED. No cell isolates the `pa_ipc.new_stream` encode legs (§3:
+`dataframe/core.py:756,768,776,843,846`,
+`session/create_dataframe_rows.py:856,860,861,864`, `ml/ext/_arrow_util.py:280,298,299,305`)
+against the `register_arrow_stream_as_temp_view` capsule seam
+(`dataframe/core.py:792`, `session/create_dataframe_rows.py:842,849`). The comparison that
+would settle it: one frame through `createDataFrame` via the IPC fallback versus via the
+arrow-stream seam on the same build, plus the mapInPandas encode leg timed alone.
+
+Reading: FACADE-1 buys little wall — the export numbers above are the ceiling of what it
+can remove. Its prize is architectural: pyarrow becomes optional, every consumer speaks one
+capsule protocol, and every later unit's pins ride the same two doors.
+
+#### FACADE-2 (`Column` as a pyo3 class over a DataFusion `Expr`)
+
+The chain-scale win is already banked. [facade-boundary-baseline
+§2](../../docs/perf/facade-boundary-baseline.md): depth-100 `withColumn` build 2,476.08 ms before,
+366.11 ms after (6.76×); the residue is 346 ms of 445 ms inside DataFusion's own
+`project` (`profile_chain.py 100`), which no facade move can touch. Per-op plan build is
+closed as negligible except in chains ([PERF-ANALYSIS-1
+§3](../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `select` 45 µs, `filter` 29 µs,
+`withColumn` 131 µs on a fresh frame). The statement overhead pair is closed the same way:
+Spark door 0.32 ms per statement against native `repark.sql` 0.21 ms — the pre-parse
+rewrites cost about 0.1 ms per statement.
+
+So the measured tax FACADE-2 removes is about 0.1 ms per statement plus one analyzer
+pass per `columns` touch, against the §4 surface it deletes: 7 `PyColumn.sql` string entry
+points, 11 `column.py` SQL-assembly method groups, 25 session-level SQL scaffolds, all
+re-parsed by the engine at plan time. That is a divergence-risk removal first and a wall
+second — each rendered string is a place the facade and the parser can disagree. No cell
+isolates the re-parse plus re-analyze cost per expression op at chain scale, so anything
+beyond the 0.1 ms per statement is UNMEASURED; the measurement that would settle it is a
+depth-N expression build through native `Expr` handles versus through SQL text on the same
+build.
+
+#### FACADE-3 (`createDataFrame` inference in Rust)
+
+The largest remaining measured Python wall in the sequence. [PERF-ANALYSIS-1 §2, row
+2](../../docs/perf/engine-iceberg-analysis-2026-09-04.md) isolates 1,717 ms at 1e5 × 7 (tuples
+versus pandas input, both `.count()`), with the cProfile split: per-cell normalization
+(`session/create_dataframe_values.py:165`) 2.14 s cumulative, nested-cell preparation
+(`session/create_dataframe_inference.py:428`) 1.22 s, tuple-loop merge checks
+(`session/create_dataframe_tuples.py:107` 0.94 s, `:46` 0.43 s) and tuple-to-Arrow
+(`:183`) 2.49 s cumulative. PERF-FACADE-CDF-1 already took the tuple leg in Python
+([facade-boundary-baseline §4](../../docs/perf/facade-boundary-baseline.md): `create/100000/tuples_count`
+1,656.62 ms before, 70.30 ms after — 23.56×, reproduced 1,620.75 to 66.65 ms the same day).
+
+What is left, measured: the explicit-schema path at 1,273.94 ms is now the slowest
+`createDataFrame` shape (same §4), and the nested leg pays a 0.96× delegation cost for the
+transpose plus census before the identical conversion. The pandas-shape control sits at
+3.00–4.00 ms at 1e5. The Rust delta itself is UNMEASURED — no cell runs inference in Rust
+yet — but its ceiling is anchored: the pandas shape shows what a columnar handoff costs,
+and the explicit path's 1.27 s is almost entirely Python looping over cells that a Rust
+inference pass would never visit per cell.
+
+#### FACADE-4 (type conversions in Rust)
+
+UNMEASURED. No cell isolates `repark_type_to_arrow`, `struct_type_from_arrow`, or DDL
+parsing (`spark/types.py`, 1,834 lines, 43 pyarrow-reference lines, §2). Type conversion
+hides inside larger walls — the `to_arrow` export cells, the `createDataFrame` legs, the
+`_csv_smart` reader path — and no fixture pair varies conversion alone. The measurement
+that would settle it: round-trip `repark_type_to_arrow`/`struct_type_from_arrow` over a
+representative schema set (nested, decimal, timestamp variants) plus DDL-parse walls, run
+before the unit as its own baseline section. Expectation management: this unit is a
+correctness consolidation (one conversion table instead of three) until that baseline says
+otherwise.
+
+#### FACADE-5 (display renderer in Rust)
+
+The quoted eager walls are scan effects, not render costs. [eager-preview-baseline](../../docs/perf/eager-preview-baseline.md):
+parquet `repr`/`HTML`/vertical show 0.004 s before, 0.002 s after (the `count()` goes
+away); `mapInArrow` `repr` 0.821 s before, 0.031 s after (2,000,000 UDF rows computed
+before, one 65,536-row batch after); the vertical-show control is 0.031 s before and
+0.032 s after, unchanged by design. None of these vary the Python format path
+(`spark/dataframe/display.py`, 351 lines, bodies over capped rows calling into
+`plan_collapse.py` formatters, §2). That format cost is UNMEASURED. The measurement that
+would settle it: `show()`/`repr` over pre-materialized capped rows with the fetch leg and
+the format leg timed separately.
+
+#### UNMEASURED roll-call
+
+These `logic`/`pyarrow` masses (§2 lines) have no isolating cell anywhere in `docs/perf/`
+and no unit in the card's sequence claims them: `dataframe/plan_collapse.py` (1,057),
+`dataframe/joins_columns.py` (1,238), `dataframe/writer_readwriter.py` (1,111),
+`session/reader.py` (1,022), `session/reader_support.py` (477), `functions_udf.py`
+(1,300), `dataframe/udf_bridge.py` (471), `dataframe/udf_projection.py` (349),
+`dataframe/udf_schema.py` (64), `dataframe/grouped_udf.py` (145), the conversion core of
+`spark/types.py` (1,834; weighed under FACADE-4 above), and the session SQL-UDF modules
+(`sql_udf*.py`, ~2,800 combined). They are not sequenced here: D-2 names five units, and
+the audit does not invent a sixth. The UDF-bridge pyarrow modules are the most likely next
+weighing target once FACADE-1 gives them a capsule door on both sides. D-3 keeps ML
+transformers (2,717 lines in `ml/feature/_transformers.py` alone) and the
+library-wrapping parts of `ta.py` (1,818) out of the weighing entirely.
