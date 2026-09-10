@@ -28,6 +28,7 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
 
 - `Cargo.toml` — the crate manifest: the two features and the optional Ballista dependencies.
 - `src/` — the crate source ([src/map.md](src/map.md)).
+- `tests/` — local-executor integration pins ([tests/map.md](tests/map.md)).
 
 ## Pointers
 
