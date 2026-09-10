@@ -6,13 +6,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [torture-1-ledger.md](torture-1-ledger.md) —
-  **TORTURE-1 step 1 (2026-09-10), in flight:** the torture-test dataset suite's step 1 —
-  the `repark_parity.torture` generator package (checkout-only `__path__` graft, `generate`
-  CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested` and
-  `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
-  target, registry row `CSV-INFER-INT32-WIDTH` with a strict xfail, and the red-first
-  evidence. Steps 2–5 pending. `risk_tier: standard`. Branch `feat/torture-1`.
-  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **TORTURE-1 steps 1–2 (2026-09-10), in flight:** the torture-test dataset suite —
+  step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,
+  `generate` CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested`
+  and `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
+  target, and registry row `CSV-INFER-INT32-WIDTH`; step 2: the `extreme_types`,
+  `smartcsv`, `temporal` and `decimal_overflow` families with both-door cells, registry
+  rows `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1`, `DATE-INTERVAL-NSBOUND-1`, and the
+  no-live-Spark labeling. Steps 3–5 pending (`secrets` + the read-option flag, `v3_dv`,
+  the full-tier results). `risk_tier: standard`. Branches `feat/torture-1`,
+  `feat/torture-1-s2`.
+  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016
 - [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
   **BALLISTA-M1-A step 1 (2026-09-10), in flight:** `DistributedExecutor` +
   `LocalDataFusionExecutor` in `crates/repark-distributed`; range-sum, status, and
@@ -652,3 +657,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Base `2fad8135`; no source touched; READING path under R-10.
   `risk_tier: standard`. Branch `docs/facade-audit-0`.
   pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
+- [ap-1-ledger.md](ap-1-ledger.md) —
+  **AP-1 step 1 (2026-09-10), in flight:** `CALL
+  <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` — the P-2
+  candidates scored with exactly P-3 over the `files` metadata table, the D-1 frame, the
+  AP-0-R-001 caveat on every row, P-5 branch refusal plus the multi-spec note. Step 2 (GLM:
+  release run over the AP-0 tables, perf document, guide section) is out of scope.
+  `risk_tier: standard`. Branch `feat/ap-1`.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

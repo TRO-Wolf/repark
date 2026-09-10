@@ -4736,6 +4736,86 @@ Shared roster pin for every heading:
   inference answers Int64 for every integer column; a Spark-style narrowing pass is a
   separate unit, same family as `CSV-INFER-20DIGIT` and `EX-IO-3` (integer width).
 
+### CSV-INFER-HEADER-CASE — capitalised CSV headers raise under `inferSchema`; Spark keeps the header — **BACKLOG 2026-09-10**
+
+- **repark** — `spark.read.csv(..., header=True, inferSchema=True)` raises
+  `AnalysisException: Schema error: No field named qty. Valid fields are ... "Qty" ...`
+  whenever a header name carries an uppercase letter, on both the DataFrame door and the
+  `spark.sql` door; the refusal names the lowercased spelling while the valid-fields list
+  shows the file's casing. Lowercase headers with spaces read fine (`order total` is kept
+  verbatim), so the trigger is the case, not the space. Reproduce with the torture
+  `smartcsv` family: `python -m repark_parity.torture generate smartcsv --rows 10000
+  --seed 7 --out /tmp/torture/smartcsv` then `pytest
+  python/repark-parity/tests/torture/test_torture_smartcsv.py -q`.
+- **Apache Spark** — keeps the header text verbatim as the column name and the read
+  completes: the same 10k-row file answers
+  `struct<Order Total:string,Qty:int,Note:string,PureBlank:string,StrictFlag:boolean,LooseFlag:string,Small:int,Wide:bigint,Overflow:decimal(20,0)>`
+  with `count() = 10000`. *(oracle: live PySpark 4.1.2, zulu-17-amd64, `local[1]`, ANSI on,
+  2026-09-10, the torture `smartcsv` CSV at 10k rows, measured by the orchestrator on the
+  TORTURE-1 step-2 audit.)*
+- **Pin** —
+  `python/repark-parity/tests/torture/test_torture_smartcsv.py::test_smartcsv_csv_schema_matches_declared`
+  (`xfail(strict=True)` naming this row; reds when repark keeps the header verbatim).
+- **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 2. The reader keeps the
+  file's casing while the inference cast misses the column, so a capitalised header turns a
+  readable file into a loud refusal. Same reader family as `CSV-INFER-HEADER-NEWLINE` and
+  `CSV-INFER-PERF-1`.
+
+### SUM-DEC-I128WRAP-1 — decimal `SUM` answers a wrapped i128 value; Spark raises — **BACKLOG 2026-09-10**
+
+- **repark** — `SUM` over `DECIMAL(38,0)` inputs whose true sum overflows i128 answers the
+  wrapped value at `decimal128(38, 0)` instead of raising: the torture `decimal_overflow`
+  fixture (10k rows of 9.5e37-scale values, true sum ≈ 9.5e41) answers
+  `-68368443260189989741903949496846385152` on the SQL door and the DataFrame door. The
+  same fixture's `AVG` refuses loud (`Arithmetic Overflow in AvgAccumulator`), the Spark
+  class recorded in `AVG-DEC-SUMWRAP-1`. Reproduce with the torture `decimal_overflow`
+  family: `python -m repark_parity.torture generate decimal_overflow --rows 10000 --seed 7
+  --out /tmp/torture/decimal_overflow` then `pytest
+  python/repark-parity/tests/torture/test_torture_decimal_overflow.py -q`.
+- **Apache Spark** — raises on the same file, for `SUM` itself and on both decimal
+  columns: `ARITHMETIC_OVERFLOW` / SQLSTATE 22003, "Overflow in sum of decimals. Use
+  'try_sum' to tolerate overflow and return NULL instead." *(oracle: live PySpark 4.1.2,
+  zulu-17-amd64, `local[1]`, ANSI on, 2026-09-10, the torture `decimal_overflow` parquet at
+  10k rows, measured by the orchestrator on the TORTURE-1 step-2 audit; the `avg`/`try_avg`
+  half stays recorded in `AVG-DEC-SUMWRAP-1`, oracle 2026-09-05.)*
+- **Pin** —
+  `python/repark-parity/tests/torture/test_torture_decimal_overflow.py::test_decimal_overflow_sum_refuses_loud`
+  (`xfail(strict=True)` naming this row; reds when repark latches the overflow).
+- **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 2. The wrapping i128 add
+  behind `AVG-DEC-SUMWRAP-1` reaches `SUM` too, and a wrapped answer is silent truncation,
+  not a value. A fix needs the same overflow latching in the sum accumulators.
+
+### DATE-INTERVAL-NSBOUND-1 — `date + INTERVAL` raises at the whole-day edge; Spark adds days at date width and completes — **BACKLOG 2026-09-10**
+
+- **repark** — `day + INTERVAL 1 DAY` over a DATE column raises `Arrow error: Compute
+  error: Date arithmetic overflow: 106751990 + IntervalMonthDayNano { days: 1 ... }` on the
+  torture `temporal` fixture whose day column carries the promotion-boundary days
+  106751990 and 106751991 (the whole-day edge is `i64` microseconds ÷ one day). `try_add`
+  over the same file answers `date32` (the `BL-14` whole-day no-promotion class) instead of
+  raising. Reproduce with the torture `temporal` family: `python -m
+  repark_parity.torture generate temporal --rows 10000 --seed 7 --out
+  /tmp/torture/temporal` then `pytest python/repark-parity/tests/torture/test_torture_temporal.py -q`.
+- **Apache Spark** — completes through the whole-day edge, and **stays `date`**: over the
+  same file `day + INTERVAL 1 DAY` has type `date`, `count()` answers all 10,000 rows,
+  `max(day)` is `+294247-01-10` and `max(day + INTERVAL 1 DAY)` is `+294247-01-11`. Spark
+  adds whole days at **date** width; it does not promote a day-only interval to a timestamp,
+  so no microsecond bound is involved on its side at all. *(oracle: live PySpark 4.1.2,
+  zulu-17-amd64, `local[1]`, ANSI on, 2026-09-10, the torture `temporal` parquet at 10k rows,
+  measured by the orchestrator on the TORTURE-1 step-2 audit. Read the result as a string:
+  collecting it into Python raises `ValueError: year 294247 is out of range` from
+  `datetime`, which is a Python limit, not a Spark one.)*
+- **Pin** —
+  `python/repark-parity/tests/torture/test_torture_temporal.py::test_temporal_date_plus_one_day_completes`
+  (`xfail(strict=True)` naming this row; reds when repark serves the microsecond-width
+  promotion).
+- **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 2; the Spark half measured
+  by the orchestrator on the same day, which **narrowed the finding**. The first reading was
+  that Spark promotes to timestamp and repark's promotion window ends early; the measurement
+  refutes the promotion half — Spark keeps `date` and adds days at date width. What is left is
+  the real defect: repark performs day arithmetic through nanoseconds and so refuses a date
+  Spark adds without difficulty. **A fix does the day arithmetic at day width**, not at
+  microsecond width.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
