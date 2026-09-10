@@ -90,11 +90,17 @@ async fn run_step(
         }
         StepAction::RewriteDataFiles { target_size } => {
             let catalog = Arc::clone(crate::catalog_handle(catalogs, catalog_name)?);
+            let ident = super::resolve_table_ident(catalog_name, table_arg)?;
+            let table = catalog
+                .load_table(&ident)
+                .await
+                .map_err(crate::iceberg_err)?;
             super::rewrite_data_files::run_rewrite(
                 ctx,
                 catalog,
                 catalog_name,
-                table_arg,
+                &ident,
+                table,
                 false,
                 None,
                 target_size,

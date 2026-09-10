@@ -271,8 +271,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy
   and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
-  compacts v2.
+  compacts v2. **MAINT-POLICY-1 step 4 (2026-09-10):** a missing table plus a malformed
+  `remove-dangling-deletes` value reports the table, never the flag. The standing
+  `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: maint-policy-1/C-028, C-029
 - `write_to_branch.rs` — RP-5 C-004 family pins: INSERT VALUES/SELECT, UPDATE, DELETE,
   MERGE, INSERT OVERWRITE, TRUNCATE, empty overwrite on a diverged branch; two-part
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including

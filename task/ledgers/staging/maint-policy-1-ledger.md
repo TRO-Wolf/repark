@@ -226,6 +226,70 @@ apply pins above.
   `"0d"` fixture; a zero `target-file-size-bytes` fails in the fork before any commit, hence
   the readable table after the stopped chain.
 
+## PROPOSITION LEDGER — MAINT-POLICY-1 step 4 (Python wrapper, guide, rewrite cleanup) — 2026-09-10
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-021 | `session.run_maintenance` defaults `dry_run` to true: omitting it plans instead of applying. | `test_run_maintenance_dry_run_defaults_to_true` | **PROVEN** | Green in the step-4 run (`.venv/bin/python -m pytest python/repark/tests/test_maintenance_policy_1.py`: `5 passed`, 2026-09-10). Inline `target_file_size_bytes` + `snapshot_retain_last` with no `dry_run` answers every row `planned`. Red first below. |
+| C-022 | Override kwargs reach the CALL: `snapshot_retain_last` renders `retain_last`, `target_file_size_bytes` renders the options map. | `test_run_maintenance_override_kwargs_reach_the_call` | **PROVEN** | Green in the same run. Read behaviorally off the planned `arguments` column (`retain_last => 7`, `target-file-size-bytes', '67108864'`), so the pin observes the issued CALL rather than a mock. Red first below. |
+| C-023 | No policy and no inline keys refuses with the D-6 text as `AnalysisException`. | `test_run_maintenance_no_policy_refuses_by_class` | **PROVEN** | Green in the same run. `pytest.raises(AnalysisException)` plus the D-6 match; measured on the rebuilt native (a `DataFusionError::Plan` refusal surfaces as `repark.errors.AnalysisException`), never guessed. Red first below. |
+| C-024 | The facade answers the D-3 frame shape with stable D-4 ordinals. | `test_session_run_maintenance_frame_shape` | **PROVEN** | Green in the same run. `step` is `pa.int32()`, the four string columns are `pa.string()`, procedures read `["rewrite_data_files", "expire_snapshots"]` with ordinals `[2, 4]`. Red first below. |
+| C-025 | The reserved `adaptive_partitioning` key refuses through the facade with "not yet supported". | `test_run_maintenance_adaptive_partitioning_refuses_reserved` | **PROVEN** | Green in the same run. The kwarg rides through to the engine refusal (`AnalysisException`, `not yet supported`); the facade adds no screening of its own. Red first below. |
+| C-026 | `docs/guide/maintenance-policy.md` documents the D-1 shape, the D-4 order and gate, the D-3 frame with a worked dry run and apply, the D-6 refusal, and the reservation; `repark-toml.md` gains the `[<profile>.maintenance]` section. | files + maps | **PROVEN** | Both files landed with every behavioral claim executed against the built module first (five-file, five-snapshot memory table; exact `arguments` strings and result JSON quoted verbatim; runnable blocks use `type = "memory"` per R-21). Listed in `docs/guide/map.md` in the same commit. |
+| C-027 | The parity mirror stays green: no public-surface count moves, no new example row. | `test_ex_0_example_coverage.py` + `test_cap_1_source_file_line_cap.py` | **PROVEN** | Green in the step-4 run (command in the brief). `run_maintenance` is installed onto `ReparkSession` from the sibling module, so the AST enumerator that reads the `session_core.py` class body still counts 926 rows; `session_core.py` stays byte-identical on its 2305 baseline and every new file lands under the 1000 default. |
+| C-028 | `rewrite_data_files` loads the table once: the `where` path shares the door's load with `run_rewrite`. | existing `where` pins green + code path | **PROVEN** | Green in the step-4 run (`cargo test -p repark-spark --lib call_rewrite`: `34 passed`, `cargo test -p repark-spark --lib run_maintenance`: `28 passed`, 2026-09-10). `run_rewrite` now takes the loaded `Table` + `TableIdent`; both callers resolve and load once. No new pin can observe a load count from outside, so the standing `where` byte-identity pins are the regression guard, named here. |
+| C-029 | A CALL with both a missing table and a malformed `remove-dangling-deletes` value reports the table, never the flag. | `call_rewrite_missing_table_reports_the_table_before_a_bad_flag` | **PROVEN** | Green in the same spark run. The pin asserts the message names `ghost` and never `remove-dangling-deletes`; it FAILED on the base tree with the flag error (red first below). Decision rationale: this restores the pre-step-3 order (the door resolves and loads its target before validating options), so no shipped contract changes silently. The live-oracle multi-failure comparison was not re-run (no oracle row covers it; parity-live runs on `main`, never on unmerged code); the ledger records that instead of a measurement. |
+
+VERDICT (step 4): 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Step-4 red first
+
+Facade pins written first against the tree with no `run_maintenance` attribute.
+`.venv/bin/python -m pytest python/repark/tests/test_maintenance_policy_1.py -q`
+before any implementation line. No pin assertion was edited afterwards.
+
+```text
+python/repark/tests/test_maintenance_policy_1.py:75: AttributeError
+=========================== short test summary info ============================
+FAILED python/repark/tests/test_maintenance_policy_1.py::test_run_maintenance_dry_run_defaults_to_true
+FAILED python/repark/tests/test_maintenance_policy_1.py::test_run_maintenance_override_kwargs_reach_the_call
+FAILED python/repark/tests/test_maintenance_policy_1.py::test_run_maintenance_no_policy_refuses_by_class
+FAILED python/repark/tests/test_maintenance_policy_1.py::test_session_run_maintenance_frame_shape
+FAILED python/repark/tests/test_maintenance_policy_1.py::test_run_maintenance_adaptive_partitioning_refuses_reserved
+5 failed in 0.34s
+```
+
+The precedence pin written first against the step-3 tree (flag parsed before the
+load). `cargo test -p repark-spark --lib
+call_rewrite_missing_table_reports_the_table_before_a_bad_flag` before the fix.
+No pin assertion was edited afterwards; the table-error text it asserts
+(`TableNotFound => No such table`, naming `ghost`) was measured on the miss
+path first.
+
+```text
+thread 'tests::call_rewrite_options::call_rewrite_missing_table_reports_the_table_before_a_bad_flag' (698990) panicked at crates/repark-spark/src/tests/call_rewrite_options.rs:289:5:
+got: Error during planning: CALL argument `remove-dangling-deletes` must be a boolean literal (true / false), got `'not-a-bool'`
+```
+
+## Step-4 notes for the orchestrator
+
+- `session_core.py` is byte-identical (2305 baseline holds): the wrapper lives in
+  `session_maintenance.py` and `__init__.py` installs it as
+  `ReparkSession.run_maintenance`. Class-level assignment is slot-safe
+  (`__slots__` blocks instance attributes, not class attributes) and reaches
+  every holder of the class object, including the `session_core` direct
+  importers. The sibling carries one public function with the one-line
+  docstring, module-level lazy imports (the `sql()` precedent), and annotated
+  locals per the code-quality skill.
+- The D-6 class was measured, not chosen: `DataFusionError::Plan` surfaces as
+  `repark.errors.AnalysisException` (probe 2026-09-10 against the rebuilt
+  native), and the pin asserts that class.
+- Guide truth rule held: the worked dry run and apply ran in this clone against
+  the rebuilt native; the `arguments` strings and both result JSON frames are
+  quoted verbatim (cutoffs move run to run — the guide says so).
+- `make py-test-facade` rebuilds the native the facade pins need; the step-4
+  facade run above used that same rebuilt module.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: maint-policy-1

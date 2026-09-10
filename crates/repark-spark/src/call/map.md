@@ -22,8 +22,13 @@ and measured-parity contract would grow `call.rs` beyond its exact
   in-scope Puffin DVs with a true `removed_delete_files_count` (`V3-DANGLE-1`
   FIXED, V3-5). `options` stays refused. **MAINT-POLICY-1 step 3 (2026-09-10):** the fork
   invocation is the shared `run_rewrite` core (door passes `None` for the size after its
-  refusals; the apply path passes the policy size); the door loads the table only when a
-  `where` string needs its schema.
+  refusals; the apply path passes the policy size). **MAINT-POLICY-1 step 4 (2026-09-10):**
+  the door loads the table once up front and passes the loaded table (or its ident) into
+  `run_rewrite`, so a `where` CALL loads once and a missing table reports before a
+  malformed `remove-dangling-deletes` value — the pre-step-3 precedence, pinned. The
+  eighth parameter (ident plus table) trips pedantic `too_many_arguments`, held by the
+  item-scoped allow on `run_rewrite`; bundling the action config into a struct was
+  rejected as heavier than the two-caller shared core it would serve.
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   pins: rp-4-fork-repin/C-003
   pins: v3-5-dv-compaction/C-002, C-004
