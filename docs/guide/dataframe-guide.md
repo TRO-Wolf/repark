@@ -68,6 +68,104 @@ Two consequences of laziness that bite in practice:
   flags for signature parity but always materialize in-process — no disk spill, no off-heap, no
   replication, and the first call warns to say so.
 
+## Lazy and eager
+
+Every frame starts lazy. `.eager()` materializes the plan through the same cache-view path as
+`cache()` and answers a **new** `repark.DataFrame` — the same class with the full Spark
+surface, never a polars object — while the source frame keeps its plan and stays uncached:
+
+```python
+frame = spark.sql("SELECT id FROM (VALUES (1), (2), (3)) AS t(id) ORDER BY id")
+eager = frame.eager()
+(eager.count(), eager.columns, type(eager).__name__, eager is not frame,
+ frame.is_cached, frame.count())
+```
+
+```text
+(3, ['id'], 'DataFrame', True, False, 3)
+```
+
+`.compute` **is** `.eager` — the same function object, not a wrapper:
+
+```python
+DataFrame.compute is DataFrame.eager
+```
+
+```text
+True
+```
+
+`.lazy()` on a lazy frame returns `self`; on an eager frame it returns a shape-less copy over
+the same view, with no re-execution and no drop:
+
+```python
+back = eager.lazy()
+(frame.lazy() is frame, back is not eager, back.count(), eager.count())
+```
+
+```text
+(True, True, 3, 3)
+```
+
+The polars/RePark pair is the whole model:
+
+| polars | RePark |
+|---|---|
+| `df.lazy()` postpones work | every frame is already lazy; `df.lazy()` returns `self` |
+| `lf.collect()` runs the plan and returns rows | `lf.eager()` materializes and returns a new eager `DataFrame` |
+| the source `df` stays usable | the source frame is unchanged; the pair is `df.lazy()` / `lf.eager()` |
+
+`count()`, `repr`, and `show` on an eager frame read the stored shape with zero engine
+actions — the shape is filled once, at `.eager()` time, by one count over the
+already-materialised table:
+
+```python
+print(repr(eager))
+```
+
+```text
+shape: (3, 1)
+┌─────┐
+│ id  │
+│ --- │
+│ i32 │
+╞═════╡
+│ 1   │
+│ 2   │
+│ 3   │
+└─────┘
+```
+
+Over `repark.cache.max_bytes` the existing guard refuses, and the message names `.eager()`:
+
+```text
+.eager() cannot materialize this plan: repark config error: cache materialize size 312 bytes exceeds repark.cache.max_bytes=1; raise the conf or avoid cache()/persist() on this plan (single-node MemTable pin; no disk spill)
+```
+
+`unpersist()` drops the view and clears the shape; the frame keeps answering from its plan:
+
+```python
+eager.unpersist()
+(eager.is_cached, eager.count())
+```
+
+```text
+(False, 3)
+```
+
+Neither surface changes meaning: `df.pl.collect()` still returns a real `polars.DataFrame`,
+and `df.pl.eager()` wraps the Spark `.eager()`:
+
+```python
+out = frame.pl.collect()
+(type(out).__module__ + "." + type(out).__name__, out["id"].to_list(),
+ frame.pl.eager().spark.count())
+```
+
+```text
+('polars.dataframe.frame.DataFrame', [1, 2, 3], 3)
+```
+
 ## Selecting, filtering, aggregating
 
 Everything here is the PySpark spelling.

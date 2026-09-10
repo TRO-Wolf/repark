@@ -218,69 +218,8 @@ def _warn_writer_v2_option_once(*, stacklevel: int = 2) -> None:
     _writer_v2_option_warned = True
 
 
-# Cache materialization size guard. Read from builder or spark.conf.
-# Zero or unset disables the guard; the execution pool still bounds work.
-_CACHE_MAX_BYTES_KEY = "repark.cache.max_bytes"
 # Object-identity MemTable names created by cache/persist (not checkpoints, not CDF/MIA).
 _CACHE_VIEW_PREFIX = "__repark_cache_"
-
-
-def _cache_conf_lookup(alive_token: dict[str, Any], key: str) -> str | None:
-    """Runtime conf then builder snapshot for a cache-related conf key.
-
-    Honors ``runtime_conf_unset`` tombstones the same way :class:`~repark.session.RuntimeConfig`
-    does — an explicit ``spark.conf.unset(key)`` must not resurrect a builder snapshot value.
-    """
-    tomb = alive_token.get("runtime_conf_unset")
-    if isinstance(tomb, set) and key in tomb:
-        return None
-    store = alive_token.get("runtime_conf")
-    if isinstance(store, dict):
-        raw = store.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
-    builder = alive_token.get("builder_config") or {}
-    if isinstance(builder, dict):
-        raw = builder.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
-    return None
-
-
-def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
-    """Parse ``repark.cache.max_bytes``; ``None`` when unset or zero (no size guard).
-
-    Raises :class:`~repark.errors.IllegalArgumentException` for a non-integer / negative value
-    or a value that does not fit ``u64`` (PyO3 ``Option<u64>`` boundary) so a bad conf fails
-    at materialize time with a named key (not a silent ignore / raw OverflowError).
-    """
-    raw = _cache_conf_lookup(alive_token, _CACHE_MAX_BYTES_KEY)
-    if raw is None:
-        return None
-    try:
-        value = int(str(raw).strip())
-    except ValueError as error:
-        raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
-            f"(0 = no size guard)."
-        ) from error
-    if value < 0:
-        raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
-            f"(0 = no size guard)."
-        )
-    if value == 0:
-        return None
-    # PyO3 Option<u64> rejects > 2**64-1 with OverflowError — map to named IAE.
-    if value > 0xFFFF_FFFF_FFFF_FFFF:
-        raise IllegalArgumentException(
-            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
-            f"fitting u64 (0 = no size guard)."
-        )
-    return value
 
 
 def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None:
@@ -395,6 +334,7 @@ class DataFrame:
         # Sticky metadata for adjacent same-spec window merging.
         "_collapse_base",
         "_display_names",
+        "_eager_shape",
         # Display and origin metadata for join identity.
         "_engine_names",
         # Smart CSV diagnostics.
@@ -440,6 +380,7 @@ class DataFrame:
         # Cache is object-identity based and lazy until first action.
         self._persist_requested = False
         self._cache_view: str | None = None
+        self._eager_shape: tuple[int, int] | None = None
         self._lineage_inner: Any | None = None
         self._storage_level: Any | None = None
         self._checkpoint_lazy = False
@@ -1022,9 +963,24 @@ class DataFrame:
             self._lineage_inner = None
         self._persist_requested = False
         self._storage_level = None
+        self._eager_shape = None
         if self._map_bridge is not None:
             self._mia_plan_ready = False
         return self
+
+    def eager(self) -> DataFrame:
+        """Materialize through the cache view and return a new eager frame."""
+        from repark.spark.dataframe.eager import _eager_materialize
+
+        return _eager_materialize(self)
+
+    compute = eager
+
+    def lazy(self) -> DataFrame:
+        """Return self when lazy; a shape-less copy over the same view when eager."""
+        from repark.spark.dataframe.eager import _to_lazy
+
+        return _to_lazy(self)
 
     def localCheckpoint(  # noqa: N802 — PySpark method name
         self,
@@ -4099,8 +4055,9 @@ class DataFrame:
 
     def count(self) -> int:
         """Return the number of rows (PySpark ``DataFrame.count``)."""
-        self._ensure_alive()
-        return self._action_inner().count()
+        from repark.spark.dataframe.eager import _count_rows
+
+        return _count_rows(self)
 
     def show(
         self,
@@ -4513,6 +4470,11 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
 from repark.spark.dataframe import sampling  # noqa: E402
 from repark.spark.dataframe import display  # noqa: E402
+from repark.spark.dataframe.eager import (  # noqa: E402
+    _CACHE_MAX_BYTES_KEY,
+    _cache_conf_lookup,
+    _resolve_cache_max_bytes,
+)
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 
 __all__ = [
