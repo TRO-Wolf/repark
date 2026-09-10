@@ -8,6 +8,17 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [ap-0-ledger.md](ap-0-ledger.md) —
+  **AP-0 (measure, 2026-09-10), in flight:** ADAPT-PART partition-candidate
+  measurement — three local Iceberg beds (futures CTAS unpartitioned, generated
+  uniform/skewed 400k-row beds, 206 files each) scored from `files`/`partitions`
+  manifest bounds at a 512 KiB target, one ranked P-2/P-3 table per bed in
+  [../../../docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../docs/perf/ap-0-partition-candidates-2026-09-10.md),
+  runnable method in
+  [../../../python/repark-parity/bench/adaptpart/map.md](../../../python/repark-parity/bench/adaptpart/map.md).
+  4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
+  O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
+  pins: ap-0/C-001, C-002, C-003, C-004
 - [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
   **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B
   judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —
