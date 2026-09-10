@@ -57,6 +57,8 @@ from `main`.
 | PREFLIGHT-PARITY-1 | #433 #438 | `critic-logic` | 17 | $0.24 | **no findings** |
 | DF-EAGER-1 | #443 #452 | `critic-security` | 20 | $0.28 | 1 CONFIRMED (high) |
 | DISPLAY-POLARS-1 | #429 #434 #439 #448 #449 | `critic-security` | 22 | $0.31 | 2 CONFIRMED |
+| BALLISTA-AUDIT-0 | #426 | `critic-logic` | 26 | $0.40 | 3 CONFIRMED |
+| PROFILES-1 | #441 | `critic-security` | 19 | $0.26 | 1 CONFIRMED, 1 SUSPECTED |
 
 A first `critic-logic` round on CFG-1 returned the fabrication pattern the runbook §3 names —
 `num_turns` 1, a summary naming eight pytest files that do not exist in the tree, no report file
@@ -66,8 +68,8 @@ it is `ls` on the report path plus `num_turns`, both of which the runbook alread
 
 ## 2. Findings
 
-Forty-seven numbered findings across twenty-two rounds: 36 CONFIRMED (nine of them re-run by the
-orchestrator, all nine holding), 3 SUSPECTED, 8 filed as owner questions. Three rounds over two
+Fifty-one numbered findings across twenty-four rounds: 39 CONFIRMED (nine of them re-run by the
+orchestrator, all nine holding), 4 SUSPECTED, 8 filed as owner questions. Three rounds over two
 units yielded nothing, which is recorded here as a result rather than omitted.
 
 ### CFG-1 — the `repark.toml` loader
@@ -478,6 +480,31 @@ Session API, while `display_style` and styled `show()` keep the snapshot — the
 docstring promises is broken, and it is a query-time environment read that ADR-0004 forbids.
 
 
+### The last two rounds
+
+**Q-53 · The Ballista audit's completeness claim is false.** CONFIRMED
+(`ballista-audit-2026-09-08.md:36`): §26.E's line count omits `state/aqe` (8,936), `cluster`
+(2,069) and `physical_optimizer` (1,845), and §26.B attributes all 16,427 lines of `state/` to
+A5's 7,491-line stage-graph set. An audit's own arithmetic is the one thing a reader cannot check
+cheaply, so this matters more than its size suggests. (Q-42 — the `SessionBuilder` seat — was filed
+again by this round, from the logic side.)
+
+**Q-54 · R-7 treats optional scheduler features as unconditional dependencies.** CONFIRMED, low
+(`:217`): prometheus, graphviz and KEDA are optional features, not in the default set. This cuts
+the *other* way from Q-43, and the two should be reconciled in one pass over the audit's
+dependency-surface paragraph.
+
+**Q-55 · The PROFILES-1 probe writes under `docs/perf/` and is not gitignored.** CONFIRMED, low:
+the documented reproduce command can stage generated parquet into a tracked directory.
+
+**Q-56 · The probe's sessions never set `REPARK_CONFIG=""`.** SUSPECTED, medium — on a machine
+with `~/.config/repark/repark.toml`, a re-run would register that file's Glue / S3 Tables catalogs
+through `getOrCreate`. This is Q-1's defect in a second place: the same missing discovery guard,
+found by a different round on a different unit. REVIEW-FIX-2 and REVIEW-FIX-8 should be worked
+together and should share one rule — **no probe and no pin builds a session without disabling
+discovery.**
+
+
 ## 3. Fix cards
 
 The cards below are the disposition REVIEW-1 D-4 requires: a confirmed finding becomes a card for
@@ -629,7 +656,10 @@ one quoted header and reads back as one profile); a config error over a file who
 **Home.** `scripts/profiles1_probe.py`, the probe document under `docs/`, and the CONF-UNREAD-1
 card's key list if the owner rules Q-25.
 
-**Decisions.** D-1 The probe writes to a unique temporary directory per run and is idempotent.
+**Decisions.** D-1 The probe writes to a unique temporary directory per run — never under
+`docs/perf/`, which is tracked (Q-55) — and is idempotent. D-1a Every session the probe opens sets
+`REPARK_CONFIG=""` so a developer's own `repark.toml` cannot register catalogs into a measurement
+(Q-56); this is the same rule REVIEW-FIX-2 lands for the CFG-1 pins, and the two cards share it.
 D-2 A key that refuses an invalid value at `getOrCreate` is not "accepted but unread"; the table
 gains a third state (`VALIDATED`) and `concurrency_limit`, `file_scoped_rewrite` and `scan_pruning`
 move into it. D-3 The summary counts agree with the table.
@@ -727,9 +757,8 @@ that does not resolve; a four-space-indented fence.
 
 ## 5. What this sweep has not covered
 
-Twenty-two rounds landed, plus one discarded fabrication. Not reviewed: the security angle of DF-EXPLAIN-1, PROFILES-1,
-DOCS-LINKS-1, LEDGER-READING-1 and BALLISTA-AUDIT-0, and the `critic-logic` half of
-BALLISTA-AUDIT-0, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
+Twenty-four rounds landed, plus one discarded fabrication. Not reviewed: the security angle of DF-EXPLAIN-1,
+DOCS-LINKS-1, LEDGER-READING-1 and BALLISTA-AUDIT-0, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
 list, because it merged into the display path mid-sweep). REVIEW-1's "done when" is therefore not
 met; the card stays open with this
 document as its first instalment.
