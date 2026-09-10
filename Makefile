@@ -25,6 +25,7 @@ REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 MATURIN := uvx maturin@1.14.1
 RUFF   := uvx ruff@0.15.22
 PYTHON ?= python
+TORTURE_TIER ?= ci
 TAPLO  := uvx taplo@0.9.3
 TYPOS  := uvx typos@1.47.2
 ZIZMOR := uvx zizmor@1.26.1
@@ -205,6 +206,11 @@ py-test: ## Parity-harness tests (isolated env; no native build) — mirrors ci.
 
 .PHONY: parity
 parity: py-test ## Run the Spark-parity differential harness (alias)
+
+.PHONY: py-test-torture
+py-test-torture: ## Torture-suite doors at the $(TORTURE_TIER) tier (native module required; TORTURE_TIER=full for 1M rows) — never a preflight member; see python/repark-parity/tests/torture/map.md
+	PYTHONPATH=python/repark-parity/src \
+		.venv/bin/python -m pytest python/repark-parity/tests/torture -q
 
 .PHONY: py-test-parity-cap
 py-test-parity-cap: ## CAP-1 source-file mirror alone (test_cap_1_source_file_line_cap.py); preflight member — see python/repark-parity/tests/map.md
