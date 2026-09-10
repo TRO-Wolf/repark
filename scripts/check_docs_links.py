@@ -17,13 +17,15 @@ DESCRIPTION = (
 MISSING = "does not exist"
 UNTRACKED = "exists but is not tracked"
 ESCAPED = "resolves outside the repository"
+UNCLOSED = "unclosed fenced code block"
 
 LINK_PATTERN = re.compile(
     r"\[[^\]]*\]\(\s*(<[^<>]*>|(?:[^()\s]|\([^()]*\))*)(?:\s+\"[^\"]*\")?\s*\)"
 )
 CODE_SPAN_PATTERN = re.compile(r"`[^`]*`")
-FENCE_PATTERN = re.compile(r"^\s*(?:```|~~~)")
+FENCE_PATTERN = re.compile(r"^ {0,3}(?:```|~~~)")
 HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
+HEADING_LINK_PATTERN = re.compile(r"!?\[([^\]]*)\]\([^()]*\)")
 DOCS_CELL_PATTERN = re.compile(r"(?<![\w./-])docs:\s*([^\s|`]+)")
 ALLOWLIST_ENTRY = re.compile(r"[^\s:]+:\S+")
 
@@ -77,10 +79,14 @@ def heading_anchors(path: Path) -> frozenset[str]:
         match = HEADING_PATTERN.match(line)
         if match is None:
             continue
-        slug = slug_text(match.group(1))
+        slug = slug_text(HEADING_LINK_PATTERN.sub(r"\1", match.group(1)))
         seen = counts.get(slug, 0)
+        final = slug if seen == 0 else f"{slug}-{seen}"
+        while final in anchors:
+            seen += 1
+            final = f"{slug}-{seen}"
         counts[slug] = seen + 1
-        anchors.add(slug if seen == 0 else f"{slug}-{seen}")
+        anchors.add(final)
     return frozenset(anchors)
 
 
@@ -126,9 +132,14 @@ def scan_file(
     checked = 0
     source = repo / relative
     in_fence = False
+    fence_open = 0
+    fence_text = ""
     for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
         if FENCE_PATTERN.match(line):
             in_fence = not in_fence
+            if in_fence:
+                fence_open = number
+                fence_text = line.strip()
             continue
         if in_fence:
             continue
@@ -139,8 +150,16 @@ def scan_file(
             if "#" in local:
                 local, fragment = local.split("#", 1)
             if not local:
+                if fragment:
+                    checked += 1
+                    if relative not in anchors:
+                        anchors[relative] = heading_anchors(source)
+                    if fragment not in anchors[relative]:
+                        findings.append(
+                            (number, raw, f"anchor #{fragment} does not match a heading")
+                        )
                 continue
-            if local.lower().startswith(EXTERNAL_PREFIXES):
+            if local.startswith("/") or local.lower().startswith(EXTERNAL_PREFIXES):
                 continue
             checked += 1
             posix, exists, is_directory = resolve_target(repo, source.parent, local)
@@ -158,7 +177,7 @@ def scan_file(
                     anchors[posix] = heading_anchors(repo / posix)
                 if fragment not in anchors[posix]:
                     findings.append((number, raw, f"anchor #{fragment} does not match a heading"))
-        if relative.startswith(LEDGERS_PREFIX):
+        if relative.startswith(LEDGERS_PREFIX) and stripped.lstrip().startswith("|"):
             for match in DOCS_CELL_PATTERN.finditer(stripped):
                 token = match.group(1).rstrip(".,;:!?")
                 if "<" in token or ">" in token:
@@ -182,6 +201,8 @@ def scan_file(
                         findings.append(
                             (number, token, f"anchor #{fragment} does not match a heading")
                         )
+    if in_fence:
+        findings.append((fence_open, fence_text, UNCLOSED))
     return findings, checked
 
 

@@ -110,6 +110,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   R10-A/R10-B, recorded as D-1a). Four scratch-ledger pins, red first. `risk_tier: standard`.
   Branch `fix/review-fix-10`.
   pins: review-fix-10/C-001
+- [review-fix-12-ledger.md](review-fix-12-ledger.md) —
+  **REVIEW-FIX-12 step 1 (2026-09-10), in flight:** the docs-links gate measures what it
+  claims — rendered-text slugs, final-slug duplicates, table-cell-only `docs:` cells, the
+  unclosed-fence finding, the absolute-target skip, same-file anchors (which caught the
+  stale V3-COV-8 fragment at `docs/spark-sql-iceberg-parity.md:3053`, repaired in the same
+  commit), and the three-space fence rule. `risk_tier: standard`. Branch
+  `fix/review-fix-12`.
+  pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-7-ledger.md](review-fix-7-ledger.md) —
   **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —
