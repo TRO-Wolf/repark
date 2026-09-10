@@ -37,6 +37,12 @@ declines it (a dated ruling in the intake, then the archive).
   (including that `make check-docs-links` does not exist), and five corrections the runbook's
   §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
   directory, and the CAP-1 map.md merge conflict every lane branch now hits.
+- [overnight-report-2026-09-09-run4.md](overnight-report-2026-09-09-run4.md) — run 4 (2026-09-09,
+  14:29–22:29 local): six merged (CFG-1 steps 1b, 2 and 3; DISPLAY-POLARS-1 steps 4 and 5;
+  DF-EAGER-1 steps 2 and 3), two open at the stop (DISPLAY-BRIDGE-1, CFG-1 step 4), none parked.
+  **DISPLAY-POLARS-1, DF-EAGER-1 and DISPLAY-BRIDGE-1 all complete**; CFG-1's ledger waits on one
+  clause. Five §6 decisions, four questions for the owner, three refused ceiling raises that all
+  absorbed.
 - [overnight-report-2026-09-09-run3.md](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09,
   08:56–15:00 local): five merged (DISPLAY-POLARS-1 steps 2 and 3, DOCS-LINKS-1, the
   PREFLIGHT-PARITY-1 close, CFG-1 seed + step 1), two open at the stop (PROFILES-1 step 0,
