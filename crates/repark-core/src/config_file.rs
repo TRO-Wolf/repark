@@ -5,9 +5,10 @@ mod redact;
 mod sources;
 #[cfg(test)]
 mod tests;
+pub(crate) mod wiring;
 
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
 use repark_common::{Error, Result};
 
@@ -16,13 +17,13 @@ use self::profile::profile_from_table;
 
 pub(crate) type EnvironmentLookup<'a> = &'a dyn Fn(&str) -> Option<String>;
 
-#[allow(dead_code)]
+pub(crate) use wiring::{conf_dump_rows, load_for_build};
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ConfigFile {
     pub profiles: BTreeMap<String, Profile>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Profile {
     pub display: Option<toml::Table>,
@@ -41,12 +42,23 @@ pub fn load() -> Result<ConfigFile> {
     let Some(path) = discover(&environment, &current_directory, home.as_deref())? else {
         return Ok(ConfigFile::default());
     };
-    let text = std::fs::read_to_string(&path)
+    read_and_parse(&path)
+}
+
+/// Read a `repark.toml` file's translated pairs without building a session.
+/// # Errors
+/// Discovery, the profile merge, interpolation, or translation fails.
+pub fn config_file_pairs(forced: Option<PathBuf>) -> Result<HashMap<String, String>> {
+    let file = wiring::load_for_build(forced)?;
+    Ok(file.pairs.into_iter().collect())
+}
+
+pub(crate) fn read_and_parse(path: &Path) -> Result<ConfigFile> {
+    let text = std::fs::read_to_string(path)
         .map_err(|error| Error::Config(format!("cannot read `{}`: {error}", path.display())))?;
     parse(&text)
 }
 
-#[allow(dead_code)]
 pub(crate) fn parse(text: &str) -> Result<ConfigFile> {
     let document =
         toml::from_str::<toml::Table>(text).map_err(|error| Error::Config(error.to_string()))?;

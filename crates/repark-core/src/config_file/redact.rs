@@ -2,10 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::catalog_config::prop_key_is_secret;
 
-#[allow(dead_code)]
 pub(crate) const REDACTED: &str = "***";
 
-#[allow(dead_code)]
 pub(crate) fn redact_value(key: &str, value: &str) -> String {
     if prop_key_is_secret(key) {
         REDACTED.to_string()

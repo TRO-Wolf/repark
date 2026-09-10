@@ -19,6 +19,9 @@ network.
   `Builder.config` / `Builder.get_or_create`: the snake_case builder chain,
   with the app name, master, and shuffle-partition values read back through
   `conf` and `sparkContext`.
+- [config_file.py](config_file.py) — `Builder.config_file` / `Builder.configFile`:
+  build from a `repark.toml` file, with a `conf` value and the display style
+  read back (CFG-1 step 3).
 - [session_state.py](session_state.py) — `SparkSession.active` /
   `SparkSession.getActiveSession` / `SparkSession.newSession`: the builder
   session is active, the spare is a distinct object that answers, and it does
