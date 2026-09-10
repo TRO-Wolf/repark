@@ -209,7 +209,7 @@ delegate modules use none). `Column._inner` is the native `PyColumn`;
   `PyColumn.make_struct`, `_inner.approx_percentile_list`,
   `_inner.approx_percentile_cont`, `_inner.alias`, `_inner.aggregate_binary`.
 - `spark/functions_lambda.py` (2): `PyColumn.lambda_variable`, `PyColumn.call_higher_order`.
-- `spark/functions.py` (36): `PyColumn.sql` (5: temporal `lit` arms, `cast`, one more),
+- `spark/functions.py` (36): `PyColumn.sql` (5: three temporal `lit` arms, `cast`, `expr`),
   `PyColumn.literal` (4), `PyColumn.count_aggregate` (3), `PyColumn.column` (2),
   `PyColumn.call_scalar`, `PyColumn.coalesce`, `PyColumn.concat`,
   `PyColumn.current_timestamp`, `PyColumn.row_number`, `PyColumn.rank`,
@@ -242,3 +242,126 @@ Modules that reach the engine only through the facade (`session.sql` and friends
 `session/sql_relations.py`, `session/reader.py`, `session/create_dataframe_rows.py`
 (the `session.sql` scans), `ml/tuning.py`, `ml/evaluation.py`, `ml/base.py`,
 `ml/ext/_arrow_util.py`, `ml/feature/_transformers.py`.
+
+## §3 IPC crossing sites
+
+Arrow crosses the pyo3 boundary as IPC bytes at the `register_ipc_stream_as_temp_view`
+sites and as zero-copy C Stream capsules at the `register_arrow_stream_as_temp_view`
+sites; rows come back through `rows_from_record_batch` and the C Stream export.
+Every site below is measured with
+`grep -rn '__arrow_c_stream__|register_ipc_stream_as_temp_view|register_arrow_stream_as_temp_view|rows_from_record_batch|RecordBatchReader|pa_ipc\.|to_batches|from_batches|ipc_bytes'`.
+Comment-only mentions are marked and do not cross.
+
+Into the engine (Python builds Arrow, engine imports it):
+
+- `dataframe/core.py:792` — `register_arrow_stream_as_temp_view(view_name, stream_obj)`;
+  the mapInArrow C Stream seam (`_register_arrow_stream_as_inner`).
+- `dataframe/core.py:811` — `register_ipc_stream_as_temp_view(view_name, ipc_bytes)`;
+  the IPC fallback (`_register_ipc_bytes_as_inner`).
+- `dataframe/core.py:851` — `register_ipc_stream_as_temp_view(view_name, sink.getvalue())`;
+  the mapInPandas IPC path.
+- `dataframe/core.py:756,768,776` — `pa_ipc.new_stream` encode of the mapInArrow IPC fallback.
+- `dataframe/core.py:843,846` — `pa_ipc.new_stream` encode of the mapInPandas path.
+- `dataframe/core.py:626` — `pa.RecordBatchReader.from_stream(parent_for_stream)`;
+  the parent frame is consumed through its own `__arrow_c_stream__` export.
+- `dataframe/core.py:705,706,742` — `pa.Table.from_batches` assembly of UDF output batches.
+- `session/create_dataframe_rows.py:842,849` — `register_arrow_stream_as_temp_view`
+  probe and `register_stream(view_name, table)` call; the preferred `createDataFrame` seam.
+- `session/create_dataframe_rows.py:856,860,861,864` — `pa_ipc.new_stream` encode
+  with `table.to_batches()` and `register_ipc_stream_as_temp_view`; the version-skew fallback.
+- `dataframe/joins_columns.py:133,134,139,159,164,167,168` — `pa.array` /
+  `pa.RecordBatch.from_arrays` / `pa.Table.from_pandas` / `to_batches`; pandas-UDF
+  result assembly re-entering through the session.
+- `dataframe/grouped_udf.py:59,61` — `pa.Table.from_batches` (+ `concat_tables`
+  promote) assembly of group segments.
+- `dataframe/udf_bridge.py:39` — `table.to_batches()` of UDF output.
+- `ml/ext/_arrow_util.py:280,298,299,305` — `pa_ipc.new_stream` encode with
+  `to_batches()` and `register_ipc_stream_as_temp_view`; prediction re-entry.
+
+Out of the engine (engine produces Arrow, Python consumes it):
+
+- `dataframe/core.py:4047,4054` — `DataFrame.__arrow_c_stream__` delegates to
+  `self._action_inner().__arrow_c_stream__`; the export door FACADE-1 standardizes.
+- `dataframe/core.py:4298` — `pa.RecordBatchReader.from_stream(self)` in `to_arrow`;
+  `to_arrow_batches` (4288), `to_polars` (4319), and `to_pandas` (4342) ride the same export.
+- `dataframe/core.py:4094,4122` — `collect` via `table.to_pylist()`.
+- `dataframe/rows_export.py:235` — `_native.rows_from_record_batch(table, supplied)`;
+  the PERF-FACADE-1 native row path.
+- `dataframe/rows_export.py:179,200,203` — `table.column(index).to_pylist()` cell reads.
+- `dataframe/rows_export.py:223` — `__arrow_c_array__` capability probe.
+- `dataframe/core.py:2436,2448` — `_inner.analyzed_arrow_schema()`; an Arrow C
+  *schema* capsule (not IPC bytes) used for plan column names.
+
+Comment-only (no crossing): `core.py:601,712,715,728,731,733,739,740,753`,
+`create_dataframe_rows.py:813,815,817,852`, `grouped_udf.py:51`.
+
+## §4 Where a `Column` renders SQL text
+
+A `Column` holds a native `PyColumn` plus Python-kept `spark_display`,
+`projection_name`, `sql_expr`, and `join_sql_expr` strings; the engine re-parses the
+rendered text at plan time. Three groups of construction sites.
+
+Group 1 — `_native.PyColumn.sql(...)` string entry points (the text goes straight
+to the engine parser):
+
+- `functions.py:62,73,87` — `lit()` temporal arms render `TIMESTAMP '...'`,
+  `DATE '...'`, `TIME '...'` SQL.
+- `functions.py:280` — `cast()` renders the `CAST(<expr> AS <type>)` string.
+- `functions.py:358` — `expr()` passes the caller-supplied SQL string straight through.
+- `functions_expr.py:1812` — `pi()` renders `pi()`.
+- `functions_session.py:127` — `uuid()` renders `uuid()`.
+
+Group 2 — `Column`-internal `sql_expr` / `join_sql_expr` assembly (`column.py`;
+68 `sql_expr`-family lines). Representative sites; every operator method follows
+the same shape (native call plus display/SQL bookkeeping):
+
+- `column.py:304,327,328` — `_binary` builds both SQL parts for binary operators.
+- `column.py:386,406` — `__neg__`; `column.py:426,443,444` — `__ne__`.
+- `column.py:519,534,535` — `eqNullSafe` renders `<l> <=> <r>`.
+- `column.py:548,595` — `substr` renders `substr(...)`.
+- `column.py:625,646` — `_string_predicate`; `column.py:667,681` — `_bitwise`.
+- `column.py:690,699,700` — `__invert__`; `column.py:732,741,742` — `is_null`;
+  `column.py:753,762,763` — `is_not_null`.
+- `column.py:775,830,831` — `_from_when_pairs` renders `CASE WHEN` chains.
+- `column.py:894,932,945,953,967` — `alias` carries the SQL parts through renames.
+- `column.py:983,1044,1066,1085,1104` — `__getitem__` renders
+  `(<expr>)[<key>]` and `get_json_object`-style access.
+- `column.py:1161,1193,1213,1214` — `cast` renders `CAST`; `column.py:1225,1249,1250` —
+  `try_cast` renders `TRY_CAST`.
+- `column.py:1344,1367,1373` — `_with_sort_order` carries SQL parts into sort keys.
+
+Group 3 — session-level SQL scaffolds (query text built in Python, run through
+`session.sql`, re-parsed by the engine). One line per site with its query shape:
+
+- `dataframe/core.py:493,503` — `SELECT * FROM <cache view>` (cache materialize).
+- `dataframe/core.py:795,815,853` — `SELECT * FROM <registered view>` (arrow/IPC seams).
+- `dataframe/core.py:1180` — `SELECT * FROM <view>` (`declare_sorted`).
+- `dataframe/core.py:2097` — `SELECT <qcol projections> FROM <view>` (`_select_via_qcol_sql`).
+- `dataframe/core.py:2619` — `SELECT <projection> FROM <view>` (`selectExpr`).
+- `dataframe/core.py:2646` — `SELECT * FROM <home_ref>` (`alias`).
+- `dataframe/core.py:3364` — `<sql> SELECT * FROM <view>` (`_explain_text`).
+- `dataframe/core.py:3523` — `SELECT * FROM <left> <op> SELECT * FROM <right>` (set ops).
+- `dataframe/core.py:3590` — `SELECT * FROM <left> CROSS JOIN <right>`.
+- `dataframe/sampling.py:110,112,117,178,188` — `SELECT * FROM <view> [WHERE ...]`
+  (sample fractions, strata splits).
+- `dataframe/statistics.py:78` — the summary query (`_compute_summary`).
+- `dataframe/joins_columns.py:445,446,471,584` — `SELECT * FROM <udf/builtin/out view>`
+  (pandas-UDF agg cleanups) and the grouped-agg select.
+- `dataframe/eager.py:82` — `SELECT * FROM <cache view>` (lazy reroute).
+- `dataframe/udf_window_projection.py:180,181,219` — `SELECT * FROM <left/agg/out view>`.
+- `dataframe/writer_readwriter.py:724,1007` — `SELECT * FROM <table> LIMIT 0`
+  (by-name column probe); `:836` — `SELECT * FROM <table>.partitions LIMIT 0`.
+- `session/session_core.py:1018` — `SELECT * FROM <table_ref>` (`table()`).
+- `session/session_core.py:494` — `MERGE INTO <target> USING <source> ON ...` rewrite.
+- `session/create_dataframe_rows.py:783,868` — `SELECT * FROM <cdf view>` (VALUES/arrow scans).
+- `session/create_dataframe_values.py:28+` — `_sql_literal` renders every VALUES cell literal.
+- `spark/merge.py:167,196` — `MERGE INTO ... USING ... ON ...` with `THEN INSERT ... VALUES`.
+- `spark/catalog.py:339,437,637,645` — `SHOW NAMESPACES IN ...`, `DESCRIBE NAMESPACE ...`.
+- `spark/_csv_smart.py:836` — `SELECT 1 AS _repark_smart_empty WHERE 1 = 0` (empty probe).
+- `ml/tuning.py:232` — `SELECT * FROM <fold view>`; `ml/evaluation.py:60` —
+  `SELECT COUNT(*) AS n FROM <view>`; `ml/ext/_arrow_util.py:306` —
+  `SELECT * FROM <prediction view>`.
+- `session/sql_udf_rewrite.py` — SQL-UDF body rewrites (18 SELECT-bearing lines);
+  `udf_window_projection`, `ta.py`, and `ml/feature/_transformers.py` (64
+  SELECT-bearing lines) likewise generate query text in Python (D-3 out of scope
+  for the sequence, in scope for the count).
