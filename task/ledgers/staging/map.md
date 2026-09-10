@@ -589,7 +589,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   DBT-DESC-1 retirement; all clauses PROVEN with four residue rows. `risk_tier: standard`.
   Branch `feat/sql-describe-1`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-- [maint-policy-1-ledger.md](maint-policy-1-ledger.md) —
+- [maint-policy-1-ledger.md](../completed/maint-policy-1-ledger.md) —
   **MAINT-POLICY-1 step 1 (2026-09-10), in flight:** the typed `[<profile>.maintenance]`
   policy — `maintenance.rs` (`MaintenancePolicy` + `TablePolicy`, the D-2 duration
   parser, per-table override resolution, unknown-key refusals naming the key path,

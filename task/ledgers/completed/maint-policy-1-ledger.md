@@ -335,7 +335,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Step 1 pins walk D-1 (all keys, unknown-key refusal, per-table override order), D-2 (three suffixes green, nine malformed plus non-string red) and D-7 (reserved key refused at both levels) clause by clause; step 2 pins walk D-3 (frame shape, all-planned, dry_run default, D-6 both halves, unknown and reserved inline keys, apply refusal) and D-4 (gate both sides through real metadata tables, override order file-table-inline) clause by clause.
+      evidence: Step 1 pins walk D-1 (all keys, unknown-key refusal, per-table override order), D-2 (three suffixes green, nine malformed plus non-string red) and D-7 (reserved key refused at both levels) clause by clause; step 2 pins walk D-3 (frame shape, all-planned, dry_run default, D-6 both halves, unknown and reserved inline keys, apply refusal) and D-4 (gate both sides through real metadata tables, override order file-table-inline) clause by clause; step 3 walks the apply half of D-3/D-4 (ran / failed / skipped, the chain stopping on first failure, the table still readable after it) plus the card's "Done when" end to end, since the orchestrator ruled in the session-build stamp (D-8) the card had left to nobody; step 4 walks D-5 (the thin Python wrapper) and the guide's worked examples. Two orchestrator findings were raised on this unit and both were fixed rather than waived: the step-3 rewrite refactor's changed error precedence and double table load, and step 4's public method attached by assignment outside the class body.
       artifacts: [crates/repark-core/src/config_file/tests/mod.rs, crates/repark-spark/src/tests/run_maintenance.rs]
     - id: AT-2
       status: ATTACKED
@@ -355,21 +355,21 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/call/run_maintenance.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: Step 1 is backward compatible by construction (the maintenance slot is optional; all 48 pre-existing config_file pins pass unchanged); step 2 keeps the stamp None until set, so every pre-existing CALL behaves as before and the unknown-procedure list only gains the new name.
+      evidence: Step 1 is backward compatible by construction (the maintenance slot is optional; all 48 pre-existing config_file pins pass unchanged); step 2 keeps the stamp None until set, so every pre-existing CALL behaves as before and the unknown-procedure list only gains the new name; step 3's shared run_rewrite core is the one place compatibility could have slipped, and it did — the refactor moved the table load and changed which error a doubly-bad CALL reports — so step 4 restored the long-shipped table-first precedence and pinned it, with the existing rewrite_data_files pins (34) green throughout.
       artifacts: [crates/repark-core/src/config_file/tests/mod.rs, crates/repark-spark/src/call.rs]
     - id: AT-7
       status: ATTACKED
-      evidence: Step 1 parses a small per-profile table on the cold path; step 2 issues two single-row metadata SUMs and renders five step strings, linear in the D-4 steps.
+      evidence: Step 1 parses a small per-profile table on the cold path; step 2 issues two single-row metadata SUMs and renders five step strings, linear in the D-4 steps; step 3's apply path is one commit per step, as D-4 requires, and step 4 removed the one redundant cost the refactor had added — a second catalog.load_table on every rewrite_data_files CALL carrying a where argument.
       artifacts: [crates/repark-spark/src/call/run_maintenance.rs]
     - id: AT-8
       status: ATTACKED
-      evidence: Neither step changes a dependency. Step 1 keeps the module private with pub(crate) items under the Error::Config contract; step 2 adds four re-exports plus the registry stamp pair, and every refusal reuses the Plan/NotImplemented contract.
+      evidence: No step changes a dependency. Step 1 keeps the module private with pub(crate) items under the Error::Config contract; step 2 adds four re-exports plus the registry stamp pair, and every refusal reuses the Plan/NotImplemented contract. The unit's one new PUBLIC PYTHON name, SparkSession.run_maintenance, was initially bound by assignment in the package __init__ and was therefore invisible to check_example_coverage.py's AST walk of the class body — the inventory stayed at 926 while a shipped public method existed. Caught in the orchestrator audit and fixed: the name is declared in the ReparkSession class body, the inventory reads 927 with a runnable docs/examples entry, and session_core.py paid for the lines by ratcheting 2305 -> 2304.
       artifacts: [crates/repark-core/src/lib.rs, crates/repark-core/src/catalog_state.rs, crates/repark-core/src/config_file/maintenance.rs, crates/repark-core/src/config_file/profile.rs]
     - id: AT-9
       status: N/A
       justification: No log or metric surface in either step; each refusal carries the key path in the error text itself.
     - id: AT-10
       status: ATTACKED
-      evidence: All twelve PROVEN clauses are cited as pins: maint-policy-1/C-001 through C-006 in the config_file map and C-007 through C-012 in the Spark call, Spark tests, and Spark src maps; each pin asserts exact values or exact message text, so a changed default or reworded refusal fails the suite.
+      evidence: All thirty PROVEN clauses are cited as pins: maint-policy-1/C-001 through C-006 in the config_file map, C-007 through C-020 in the Spark call, Spark tests and Spark src maps, and C-021 through C-030 in the facade, guide, examples and parity-mirror maps; each pin asserts exact values or exact message text, so a changed default or reworded refusal fails the suite. Adequacy was attacked twice from outside the worker: the orchestrator re-ran the Rust suites independently (28 run_maintenance, 57 config_file) and found the one gap no in-suite pin could show — a public name the example-coverage gate never enumerated, which is now pinned by the 926 -> 927 inventory red.
       artifacts: [task/ledgers/staging/maint-policy-1-ledger.md, crates/repark-core/src/config_file/map.md, crates/repark-spark/src/call/map.md, crates/repark-spark/src/tests/map.md, crates/repark-spark/src/map.md]
 ```
