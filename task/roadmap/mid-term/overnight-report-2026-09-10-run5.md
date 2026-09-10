@@ -22,7 +22,7 @@ before their window came (§4).
 | MAINT-POLICY-1 steps 1–4 + departure (**unit complete**) | [#465](https://github.com/TRO-Wolf/repark/pull/465) | **merged `62373134`**, tree-equal | Muse | 5 |
 | TORTURE-1 step 1 | [#467](https://github.com/TRO-Wolf/repark/pull/467) | **merged `149147c1`**, tree-equal | GLM | 1 |
 | PROFILES-1 step 1 | [#468](https://github.com/TRO-Wolf/repark/pull/468) | **merged `52b604ab`**, tree-equal | Muse | 1 |
-| AP-1 step 1 | [#472](https://github.com/TRO-Wolf/repark/pull/472) | PLACEHOLDER-472 | Muse | 1 |
+| AP-1 step 1 | [#472](https://github.com/TRO-Wolf/repark/pull/472) | **merged `838532d1`**, tree-equal | Muse | 1 |
 | TORTURE-1 step 2 + the live-oracle correction | [#473](https://github.com/TRO-Wolf/repark/pull/473) | **merged `862a0f1a`**, tree-equal | GLM | 1 |
 | NEVEROOM-1 step 1 | [#475](https://github.com/TRO-Wolf/repark/pull/475) | **PARKED** (draft, green, §6 ruling questions — §3) | GLM | 2 |
 
@@ -193,9 +193,9 @@ GLM's ceiling is higher than "narrow mechanical" when the card is precise.
 
 ## 7. Numbers
 
-- **6 PRs merged, all tree-equal after the squash** (#454, #462, #465, #467, #468, #473); 1 PR
-  green and awaiting its merge window at the stop time (#472, AP-1 step 1); 1 PR **parked green as
-  a draft** on ruling questions (#475, NEVEROOM-1 step 1); 1 report PR.
+- **7 PRs merged, all tree-equal after the squash** (#454, #462, #465, #467, #468, #472, #473);
+  1 PR **parked green as a draft** on ruling questions (#475, NEVEROOM-1 step 1); 1 report PR
+  (#476).
 - **Three units completed**: DISPLAY-BRIDGE-1, AP-0, MAINT-POLICY-1. Four units advanced:
   TORTURE-1 (steps 1–2 of 5), PROFILES-1 (step 1 of 3), AP-1 (step 1 of 2), NEVEROOM-1 (step 1 of 3).
 - Worker rounds: Muse 9 (0 dropped), GLM 2 ($0.54 total).
