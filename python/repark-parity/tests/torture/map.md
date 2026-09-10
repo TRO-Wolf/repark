@@ -63,3 +63,6 @@ of TORTURE-1 step 1.
 The guard is in `conftest.py`, not in the Makefile: `make py-test` states that it mirrors the
 `ci.yml` python step, and adding an `--ignore` there would have made the local target green while
 CI stayed red.
+
+The imports below the guard carry no `# noqa: E402` marker: this repo's ruff configuration does
+not enable `E402`, so the directive is unused and `RUF100` reds on it.
