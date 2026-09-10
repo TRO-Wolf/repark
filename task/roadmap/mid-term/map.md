@@ -37,6 +37,18 @@ declines it (a dated ruling in the intake, then the archive).
   (including that `make check-docs-links` does not exist), and five corrections the runbook's
   §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
   directory, and the CAP-1 map.md merge conflict every lane branch now hits.
+- [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
+  05:21–13:20 local, **orchestrator A**; the Grok/Ballista and facade lanes were orchestrator B's
+  from 05:45 and are not in it): seven merged (DISPLAY-BRIDGE-1's rebase, AP-0 with its O-run,
+  MAINT-POLICY-1 end to end, TORTURE-1 steps 1 and 2, PROFILES-1 step 1, AP-1 step 1) and one
+  parked green as a draft (NEVEROOM-1 step 1, on two D-2 ruling questions).
+  **DISPLAY-BRIDGE-1, AP-0 and MAINT-POLICY-1 complete.** Two measurements changed a decision:
+  AP-0's O-run refutes P-3's byte model (76–88 % high, partition count exact), and a live-Spark
+  run narrows TORTURE-1's `DATE-INTERVAL-NSBOUND-1` (Spark keeps `date` width; the fix is day
+  width, not microsecond). Two audit findings fixed rather than shipped — a public name that had
+  escaped the example-coverage AST walk, and a refactor that moved an error's precedence. Runbook
+  corrections: run the **whole** parity suite before pushing, a native-needing test directory
+  guards its own `conftest.py`, and one clone per live lane.
 - [overnight-report-2026-09-09-run4.md](overnight-report-2026-09-09-run4.md) — run 4 (2026-09-09,
   14:29–22:29 local): seven merged (CFG-1 steps 1b, 2, 3 and 4; DISPLAY-POLARS-1 steps 4 and 5;
   DF-EAGER-1 steps 2 and 3), one parked green (DISPLAY-BRIDGE-1 #454, a semantic merge conflict
