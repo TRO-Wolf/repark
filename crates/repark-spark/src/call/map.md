@@ -77,6 +77,29 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
   agrees at every size measured.
+- `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** `CALL
+  <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
+  target positive). Statistics come from one `files WHERE content = 0` read
+  (`file_size_in_bytes` plus the `readable_metrics` bound pairs) and the `refs` table; no data
+  scan. P-2 per column: timestamp/date → `years`/`months`/`days`/`hours`; int/string →
+  `identity` when the bound-endpoint union holds at most 1000 values else `bucket(N)`; plus
+  `unpartitioned`; pairs cross the best single of the top three columns. P-3 scores each
+  projected value against the 0.25×–4× target band (a file spanning k values contributes 1/k to
+  each) and ranks by score, projected files, name. The scoring constants live in one place,
+  `plan_partitioning_score.rs`: band 0.25 and 4.0, distinct limit 1000, bucket widths
+  8/16/32/64/128. The frame answers D-1's
+  `candidate`/`score`/`projected_partitions`/`projected_files_at_target`/`ddl`/`calls`/`plan_id`
+  plus `notes`; `plan_id` hashes snapshot id plus candidate. Every row carries the AP-0-R-001
+  caveat (file counts derive from pre-rewrite bytes, 76–88 % high on the AP-0 beds); the last
+  row additionally names boundless columns; more than one partition spec in metadata adds the
+  one-spec rewrite note. A branch besides `main` refuses (P-5). Timestamps truncate in UTC
+  through a dependency-free civil calendar.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- `plan_partitioning_score.rs` — the pure P-2/P-3 engine behind the procedure above:
+  the civil calendar, the grains, the Spark DDL labels, the 1/k byte spread, the band
+  penalty, the single/pair scoring and the best-first ranking, plus the in-module unit tests
+  for each. No SQL, no catalog reads; the caller feeds it rated bound pairs.
+  pins: ap-1/C-001, C-009
 
 ## Pointers
 
