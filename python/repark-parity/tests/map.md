@@ -29,6 +29,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- [torture/](torture/map.md) — **TORTURE-1 step 1 (2026-09-10):** the both-door torture
+  suite (`nested` + `inference` families; DataFrame read and `spark.sql` over a temp view;
+  row counts, declared schemas, per-column inferred types, byte-identical CLI
+  determinism, the manifest reuse rule, and the CI-tier 60-second workload pin). The
+  `boolish` cell is `xfail(strict=True, reason="CSV-INFER-INT32-WIDTH")`. Needs the native
+  module: run through `make py-test-torture`. Ledger:
+  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/staging/torture-1-ledger.md).
+  pins: torture-1/C-001, C-002, C-003, C-004, C-006
 - `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,
   constraint preservation (dropped prefix rule, dropped sidecar
