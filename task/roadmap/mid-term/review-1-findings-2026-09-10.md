@@ -68,8 +68,8 @@ it is `ls` on the report path plus `num_turns`, both of which the runbook alread
 
 ## 2. Findings
 
-Fifty-one numbered findings across twenty-four rounds: 39 CONFIRMED (nine of them re-run by the
-orchestrator, all nine holding), 4 SUSPECTED, 8 filed as owner questions. Three rounds over two
+Fifty-one numbered findings across twenty-four rounds: 39 CONFIRMED (eleven of them re-run by the
+orchestrator, all eleven holding), 4 SUSPECTED, 8 filed as owner questions. Three rounds over two
 units yielded nothing, which is recorded here as a result rather than omitted.
 
 ### CFG-1 — the `repark.toml` loader
@@ -276,14 +276,15 @@ different doors, which is the strongest signal in this sweep. Severity high on t
 reading.
 
 **Q-27 · A four-element list cell is spelled in full; polars ellipsizes at four.**
-CONFIRMED (`polars_cells.py:118`): `_polars_nested_at_depth` ellipsizes only when
+CONFIRMED and **RE-RUN by the orchestrator** — the facade renders `[0, 1, 2, 3]` where live polars
+1.43.2 renders `[0, 1, … 3]` from the same Arrow table (`polars_cells.py:118`): `_polars_nested_at_depth` ellipsizes only when
 `len(items) > 4`, so `[0, 1, 2, 3]` renders in full while live polars 1.43.2 renders
 `[0, 1, … 3]` from the same Arrow table. D-6 requires byte-identity with
 `str(pl.from_arrow(...))`. The unit's own residue R-003 mis-states the threshold ("lists longer
 than 4"), and the three oracle pins cap lists at 3, so the boundary was never probed.
 
-**Q-28 · `±999999.0` is spelled fixed; polars switches to `±9.99999e5`.** CONFIRMED, low
-(`polars_cells.py:50`) — the same D-6 byte-identity claim, at the float-formatting boundary.
+**Q-28 · `±999999.0` is spelled fixed; polars switches to `±9.99999e5`.** CONFIRMED and **RE-RUN
+by the orchestrator** — the facade prints `999999.0`, polars prints `9.99999e5` (`polars_cells.py:50`) — the same D-6 byte-identity claim, at the float-formatting boundary.
 
 **Q-29 · Did R-005 waive R-11's "duckdb is settled in step 4"?** QUESTION for the owner. Step 4
 left the duckdb branch on count-first because the protected pin's duckdb section still pins

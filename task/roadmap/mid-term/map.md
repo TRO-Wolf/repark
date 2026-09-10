@@ -92,7 +92,7 @@ declines it (a dated ruling in the intake, then the archive).
 
 - [review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md) — **the REVIEW-1 critic
   sweep (2026-09-10):** twenty-four Grok critic rounds over the units merged since 2026-09-08, with
-  51 numbered findings (39 CONFIRMED, nine of them re-run by the orchestrator), fifteen fix cards
+  51 numbered findings (39 CONFIRMED, eleven of them re-run by the orchestrator), fifteen fix cards
   (REVIEW-FIX-1…15, none opened) and eight owner questions. Read it before opening any fix work on
   CFG-1, DISPLAY-POLARS-1, DF-EAGER-1, DF-EXPLAIN-1, SQL-DESCRIBE-1, PROFILES-1, DOCS-LINKS-1,
   LEDGER-READING-1 or BALLISTA-AUDIT-0. D-1 and D-2 coverage is complete; the card closes when this document reaches `main`.

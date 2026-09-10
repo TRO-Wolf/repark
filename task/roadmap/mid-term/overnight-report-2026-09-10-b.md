@@ -57,8 +57,8 @@ the first of those independently.
 Twenty-four rounds over eleven units, ~$9.80 in worker cost, in
 [review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 51 numbered findings — 39
 CONFIRMED, 4 SUSPECTED, 8 owner questions — 15 fix cards, and two units that survived with nothing
-(PREFLIGHT-PARITY-1 in both roles, DISPLAY-BRIDGE-1). The orchestrator re-ran nine reproductions
-itself; all nine held. Highlights:
+(PREFLIGHT-PARITY-1 in both roles, DISPLAY-BRIDGE-1). The orchestrator re-ran eleven reproductions
+itself; all eleven held. Highlights:
 
 - **A data-loss path in DF-EAGER-1** (raised to high by the second round): `count()` on an eager
   frame skips the pending-checkpoint materialize, so a later `catalog.clearCache()` restores
