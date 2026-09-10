@@ -85,7 +85,8 @@ systemd-run --user --collect --quiet --unit="oc-$LANE-$(date -u +%H%M%S)" \
 Muse (tier I steps): same wrapper around
 `~/.claude/skills/muse-worker/muse-worker.sh --lane $LANE --repo /tmp/oc-$LANE --brief … --role worker --max-steps 400`
 (no `--model` or `--effort` flag: the launcher's defaults are `muse-spark-1.3-contributor` at
-`--effort max`, the owner's ruling of 2026-09-09; a brief never lowers them)
+`--effort xhigh` — the contributor model's ceiling; it rejects `max` — per the owner's 2026-09-09
+ruling; a brief never lowers them)
 (the skill adds `--trust-workspace`; confirm `grep -c untrusted <run>/stderr.log` prints `0`).
 Grok (under G-4): actor `~/.claude/skills/grok-worker/grok-worker.sh --lane $LANE --repo /tmp/grok-$LANE --brief … --role sepmo-actor --max-turns 300`;
 critic `… --role critic-quality|critic-logic|critic-security --sandbox read-only --max-turns 120`

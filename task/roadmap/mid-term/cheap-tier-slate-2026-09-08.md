@@ -34,6 +34,11 @@ Nothing else in this file is required reading for a round.
 | R-15 | **Document rounds go to Muse (2026-09-09):** any round expected to produce a document or a ledger with measured evidence runs on Muse; GLM keeps code-and-test rounds. | runbook §3 |
 | R-16 | **Silently accepted config keys (2026-09-09):** the nine `datafusion.*` keys the PROFILES-1 probe found accepted but unread are wired through or refused loud; card CONF-UNREAD-1 after PROFILES-1 step 2. | CONF-UNREAD-1 |
 | R-17 | **Muse tier (2026-09-09, 16:30):** every Muse round runs `muse-spark-1.3-contributor` at `--effort max` (the owner accepts that the contributor model sees project data); the launcher defaults carry it, briefs pass neither flag. | runbook §3, `~/.claude/skills/muse-worker/` |
+| R-18 | **`[<profile>.conf]` order (2026-09-09, run 4 Q1):** sorted-key order, as shipped and pinned; CFG-1 D-1's "file order" is amended, no `preserve_order` feature. CFG-1's ledger closes on it. | CFG-1 D-1 |
+| R-19 | **Database sources before CFG-2 (run 4 Q2):** a declared `[<profile>.database.*]` block parses, validates, and **warns** at load ("declared, not yet usable until CFG-2"); it does not refuse the session. CFG-1 step 5. | CFG-1 step 5 |
+| R-20 | **`type = "rest"` (run 4 Q3):** belongs to the REST-catalog card (roadmap 1.13); refusing loud today is correct. | CFG-1 |
+| R-21 | **Glue at session build (run 4 Q4):** yes, `iceberg-guide.md` gains the sentence that a `type = "glue"` block connects to AWS when the session builds, so runnable examples use `memory`. CFG-1 step 5. | CFG-1 step 5 |
+| R-17a | **Muse effort ceiling (run 4):** the contributor model rejects `--effort max` and tops out at `xhigh`; the launcher default is `xhigh`, which is the ruling's intent ("max" = the model's ceiling). | runbook §3 |
 | R-8 | **The object stays a RePark DataFrame.** Polars is the example for the look and the names; no card returns a polars object from the Spark surface, adds polars as a runtime dependency, or changes what `repark.DataFrame` is. Polars is imported only inside tests, as an oracle, and skipped when absent. | DISPLAY-POLARS-1, DF-EAGER-1, X-1 |
 
 ## 1. How a card runs on the cheap tier
@@ -366,7 +371,7 @@ profile > default. This card only splits it into rounds and adds the three table
 
 **Decisions (additions to the ruled card).**
 
-- **D-1 Three more tables per profile:** `[<profile>.display]` (`style`, `max_rows`,
+- **D-1 (amended R-18: `conf` keys apply in sorted-key order, deterministic and pinned.) Three more tables per profile:** `[<profile>.display]` (`style`, `max_rows`,
   `max_cols`, `str_len` → the DISPLAY-POLARS-1 keys), `[<profile>.session]`
   (`memory_limit_gb`, `batch_size`, `target_partitions`, the three builder knobs), and
   `[<profile>.conf]` (free-form string keys applied exactly as `.config(k, v)` calls, in
@@ -392,6 +397,7 @@ profile > default. This card only splits it into rounds and adds the three table
 | 1b | M | **R-14:** in `interpolate.rs`, `$$` → literal `$` and an unterminated `${` refuses loud naming the key path; flip the two step-1 pins, add the escape pin (`$${TOTAL}` → `${TOTAL}` verbatim). |
 | 2 | M | `sources.rs` + `redact.rs` per ruled steps 4–5, tests reuse `catalog_config.rs` fixtures so specs compare byte-identical. |
 | 3 | I | Wiring: `from_config_file` in the builder, precedence merge before `build()`, the dump's `source` column, the Python `config_path` argument and `Builder.configFile`, D-1's three tables applied through the existing `.config()` path. |
+| 5 | M | **R-19 + R-21:** the database block warns at load instead of refusing (one WARNING naming the profile and source names, pinned; the refusal pin flips), and `docs/guide/iceberg-guide.md` gains the Glue-at-build sentence; CFG-1's ledger closes (R-18, R-20 recorded as clause evidence) and departs to `completed/`. |
 | 4 | M | `python/repark/src/repark/config.py` Pydantic mirror (typed construction only) and its tests; `docs/guide/repark-toml.md` with one complete example file (`[default]`, `[prod]`, `[read]`, `[write]`, one catalog, one database source, the display and session tables); maps; ledger. |
 
 **Pins.** The ruled card's list (discovery order, profile merge, missing var refuses, name
