@@ -1,5 +1,6 @@
 # Distributed Milestone 1 — what it delivers
 
+**Opened:** 2026-09-10. **Class:** campaign. **State:** in flight on `feat/ballista-m1-d`.
 **Opened:** 2026-09-10. **Class:** campaign. **State:** in flight on `feat/ballista-m1-c`.
 **Retires:** this file closes when Ballista Milestone 1 is accepted (M1-D merged) or the owner
 closes the slate row. Archive with the campaign to `docs/history/` at that event.
@@ -27,6 +28,55 @@ The crate is `crates/repark-distributed`. Local execution always builds. Ballist
 - **Per-stage metrics on complete.** `JobStatus::Completed` carries per-stage rows, shuffle
   bytes, wall time, and attempt number, read from the scheduler execution graph (not the
   Prometheus collector, which only records job-level timestamps). pins: ballista-m1-c/C-003
+- **Iceberg reads.** `IcebergScanSpec` round-trips
+  `(catalog config, table identifier, snapshot id, projection, filters)` and rebuilds the
+  Iceberg `TableProvider` from the session catalog (`ReparkSessionProvider`), never ambient
+  authority. A memory-catalog table with 8 files scanned by two executors matches the local
+  executor on `count(*)`, `sum`, and a filtered scan; both executors ran a task. Reads only.
+  pins: ballista-m1-d/C-001, C-002, C-003
+
+What this milestone does **not** deliver: Iceberg writes or a commit coordinator (Milestone 3 /
+[ADR-0004](../adr/0004-server-prep-disciplines.md)), a remote (not in-process) cluster form,
+deterministic task retry, S3/Glue executor credentials, and native `IcebergTableScan` serde
+(see open questions).
+
+## Iceberg reads (M1-D)
+
+The DataFusion-level provider codec the audit's R-4 recorded is
+`crates/repark-distributed/src/iceberg_provider.rs` (`IcebergScanSpec`). It encodes
+`(catalog config, table identifier, snapshot id, projection, filters)` as `RPIC` bytes and
+decodes them back. Rebuild looks up the table on the `SessionContext` the coordinator
+handed the executors through `ReparkSessionProvider`. A vanilla DataFusion session has no
+catalog and the rebuild refuses. The memory catalog is the test bed.
+pins: ballista-m1-d/C-001, C-002
+
+The two-executor pin is `tests/iceberg_scan.rs`: eight Iceberg data files, `count(*)` (with
+`id + 0 >= 0` so snapshot stats cannot constant-fold), `sum(id)`, and `id >= 4`, each equal
+to `LocalDataFusionExecutor`; `executor_task_counts` has both executors. Bare `count(*)` on
+this table is `PlaceholderRowExec` from Iceberg stats and is not the pin.
+pins: ballista-m1-d/C-003
+
+`IcebergTableScan` is a custom `ExecutionPlan`. Ballista 54.1.0 encodes five shuffle nodes
+and then falls through to `DefaultPhysicalExtensionCodec`, which is not implemented.
+`PhysicalExtensionCodec` lives in `datafusion-proto`, which this crate must not add (the
+same wall as M1-B C-004). Cluster plans therefore rewrite `IcebergTableScan` to parquet
+file groups taken from the Iceberg `$files` list, which the default physical codec can
+encode. The coordinator still plans through Iceberg; the executors read the file groups
+under the session `RuntimeEnv`.
+
+**S3/Glue residue.** Audit R-5 / Q-1: executors must resolve unread S3/Glue paths under
+session-owned credentials, never ambient authority. This unit does not attempt that leg.
+There are no credentials in this clone and the launcher denies `aws`. The cutover
+credential design owns it.
+
+**What the next milestone owns.** The runtime abstraction is now in place: the
+`DistributedExecutor` seam, the local reference, the in-process cluster, the session
+provider, the codec seat, and Iceberg **reads**. Iceberg **writes** and the commit
+coordinator are Milestone 3. ADR-0004 stands: executors may produce files; one authority
+commits; do not build Ballista-for-writes. A later unit that wants RePark plan nodes
+(`IcebergTableScan` today, write/commit nodes later) to cross to an executor must take
+`datafusion-proto` and make the codec wrapper a real delegating `PhysicalExtensionCodec`.
+Until then every RePark-owned node is rewritten or it stays on the coordinator.
 
 What this milestone does **not** deliver: Iceberg scans on the executors (M1-D), Iceberg writes
 or a commit coordinator (Milestone 3 / ADR-0004), a remote (not in-process) cluster form, and
@@ -56,6 +106,7 @@ not pinned does not read as done.
 | 14 | Kill one executor mid-shuffle; job completes on the remaining executor; status carries retried stage count | **missing** | ballista-m1-c/C-002 OPEN — see open questions |
 | 15 | `Completed` carries per-stage rows, shuffle bytes, wall time; shuffle bytes > 0 on the two-stage shape | done | ballista-m1-c/C-003 |
 | 16 | Shuffle data under the session spill dir is removed on complete or cancel | **narrowed** | ballista-m1-c/C-004 — session spill dir has no shuffle files; Ballista standalone work_dir is not that dir |
+| 17 | Iceberg memory-catalog scan on two executors equals local | **done** | ballista-m1-d/C-003 — `IcebergTableScan` rewritten to parquet file groups; see open question 4 |
 | 17 | Iceberg memory-catalog scan on two executors equals local | **missing** | BALLISTA-M1-D, not started |
 
 ## Open questions this unit family produced
@@ -84,3 +135,17 @@ not pinned does not read as done.
    and is not started on the standalone path; poll-loop `jobs_to_clean` would clean that
    work_dir if we held it. The pin checks the session spill directory, which never receives
    those files.
+
+4. **M1-D — `IcebergTableScan` cannot travel.** This is M1-B C-004's wall on a third node
+   type. `PhysicalExtensionCodec` is in `datafusion-proto`. Ballista does not re-export the
+   trait. The family must not add the crate. Without an `impl PhysicalExtensionCodec`,
+   Ballista cannot encode `IcebergTableScan` (or any later RePark write/commit node). Cluster
+   Iceberg reads rewrite the scan to parquet file groups so the default codec can ship them.
+   That rewrite is the delivered M1 read path, not a workaround to drop later in silence.
+
+   The codec question is not a detail. It decides whether a RePark plan node can cross to an
+   executor at all. Owner options (do not choose here): a later unit takes `datafusion-proto`
+   and the wrapper becomes a real delegating codec, or RePark keeps rewriting custom nodes
+   into first-class DataFusion scans until a node has no such rewrite. The same choice sits
+   on M1-B C-004. Recorded in
+   [crates/repark-distributed/src/map.md](../../crates/repark-distributed/src/map.md).
