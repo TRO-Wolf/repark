@@ -264,9 +264,52 @@ The P-3 ordering looks plausible against the file-size facts the metadata report
   projected file count then name. That order carries no signal beyond file count
   and is disclosed as a tie-break, not a ranking.
 
-Not claimed: whether these projections predict real rewritten file sizes within
-20 percent. That needs the manual rewrite — the orchestrator's O-run, open as
-ledger clause C-005.
+The 20-percent prediction question is answered below, in §"The O-run".
+
+## The O-run — measured, and the model is half right
+
+The orchestrator ran the manual rewrite the card asks for, on **two** beds rather than
+one, so a single bed's quirk could not carry the answer. Each bed was rebuilt from the
+same script, then rewritten under its `identity(grp)` candidate:
+
+```text
+CREATE TABLE ap.ns.<bed>_by_grp USING iceberg PARTITIONED BY (grp) AS
+SELECT ts, grp, id FROM ap.ns.<bed>
+```
+
+| Bed | Predicted partitions | Actual partitions | Predicted files at target | Actual files | Predicted bytes (P-3) | Actual bytes | Byte error |
+|---|---|---|---|---|---|---|---|
+| synthetic-uniform | 20 | **20** | 20 | **20** | 7,773,590 | 4,413,222 | **+76.2 %** |
+| synthetic-skewed | 20 | **20** | 27 | 20 | 7,773,590 | 4,134,457 | **+88.0 %** |
+
+Per-partition bytes after the rewrite: uniform min 218,209 / median 220,891 / max
+222,693; skewed min 107,256 / median 108,497 / max 1,966,598 — the skew the model
+scored at 0.853 is exactly what the rewritten layout shows.
+
+**What is right.** The partition count is predicted **exactly** on both beds, and the
+file count exactly on the uniform bed. P-2's candidate generation and P-3's
+partition-count arithmetic need no correction.
+
+**What is wrong, and why.** P-3 projects bytes by **summing the bytes of the files that
+exist today**. A rewrite recompresses: 206 small files become 20 large ones, row groups
+grow, and the same rows land in roughly **0.53–0.57×** the bytes (0.568 uniform, 0.532
+skewed). So every byte projection — and therefore every "projected file count at the
+target size" that divides by it — is high by 76–88 percent. **The card's ≤ 20 percent
+bar is not met on bytes.**
+
+**The correction AP-1 must carry.** Project bytes from `record_count` and a measured
+post-rewrite bytes-per-row, not from pre-rewrite file bytes. On these beds the source
+frame costs 19.43 B/row before the rewrite and 10.34 B/row (skewed) / 11.03 B/row
+(uniform) after it. Either sample one rewritten partition and scale, or carry a
+per-table compaction factor learned from the table's own history; a fixed constant is
+not proposed, because both beds here share one schema and one codec.
+
+**One caveat on the file-count column.** The rewrite above is a plain partitioned CTAS,
+and RePark writes one file per partition value on that path (WRITE-DISTRIBUTION-1), so
+no target-size binpack ran. The skewed bed's 27-vs-20 gap is therefore *not* a
+refutation of the file-count model: the model split the 1.97 MB `g00` partition at the
+512 KiB target and the rewrite did not. A binpacking rewrite (`rewrite_data_files` with
+`target-file-size-bytes`) is the fair test of that column, and AP-1 should run it.
 
 ## Reproduce
 
@@ -281,4 +324,4 @@ Defaults used above: `--target-file-size-bytes 524288 --sample-rows 200000
 --batches 200 --batch-rows 2000`. The script is
 [python/repark-parity/bench/adaptpart/run_adaptpart.py](../../python/repark-parity/bench/adaptpart/run_adaptpart.py);
 its clause table is
-[task/ledgers/staging/ap-0-ledger.md](../../task/ledgers/staging/ap-0-ledger.md).
+[task/ledgers/staging/ap-0-ledger.md](../../task/ledgers/completed/ap-0-ledger.md).

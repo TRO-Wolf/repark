@@ -34,7 +34,7 @@ makes never is — beds live under the `--scratch` root the caller names.
 |---|---|
 | Reproduce every row of the AP-0 document | `.venv/bin/python python/repark-parity/bench/adaptpart/run_adaptpart.py --scratch /tmp/ap0-bed` on a fresh scratch root |
 | Read the measured numbers | [docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../../docs/perf/ap-0-partition-candidates-2026-09-10.md) |
-| Read the clause table | [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/staging/ap-0-ledger.md) |
+| Read the clause table | [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/completed/ap-0-ledger.md) |
 | Run smaller (fewer batches, fewer rows per batch) | `--batches N --batch-rows M` (the document's rows need the defaults) |
 | Change the P-3 target or the sample size | `--target-file-size-bytes B --sample-rows N` (the document's rows need 524288 and 200000) |
 
@@ -51,5 +51,5 @@ directory as the orchestrator's O-run.
 
 - The numbers this script produces:
   [docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../../docs/perf/ap-0-partition-candidates-2026-09-10.md).
-- The clause table: [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/staging/ap-0-ledger.md).
+- The clause table: [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/completed/ap-0-ledger.md).
 - Up: [bench/map.md](../map.md).
