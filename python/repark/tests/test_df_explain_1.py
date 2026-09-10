@@ -90,3 +90,56 @@ def test_explain_does_not_invoke_collect(
     frame = _build_plan_frame(spark)
     monkeypatch.setattr(DataFrame, "collect", _refuse_collect)
     frame.explain()
+
+
+def test_explain_both_set_raises_cannot_set_together(spark: ReparkSession) -> None:
+    """Passing extended and mode together raises PySparkValueError CANNOT_SET_TOGETHER."""
+    frame = _build_plan_frame(spark)
+    with pytest.raises(PySparkValueError, match=r"CANNOT_SET_TOGETHER"):
+        frame.explain(True, mode="formatted")
+    with pytest.raises(PySparkValueError, match=r"CANNOT_SET_TOGETHER"):
+        frame.explain(False, mode="simple")
+    with pytest.raises(PySparkValueError, match=r"CANNOT_SET_TOGETHER"):
+        frame._explain_text("formatted", mode="formatted")
+
+
+def test_explain_string_extended_still_prints_tree(spark: ReparkSession) -> None:
+    """A mode string passed as extended with no mode still prints the tree."""
+    text = _build_plan_frame(spark)._explain_text("formatted")
+    assert _PHYSICAL_HEADER in text
+    assert "┌" in text
+    assert "└" in text
+
+
+def test_explain_simple_mode_prints_physical_only(spark: ReparkSession) -> None:
+    """Simple mode prints the physical header and never the logical header."""
+    for text in (
+        _build_plan_frame(spark)._explain_text(),
+        _build_plan_frame(spark)._explain_text(mode="simple"),
+    ):
+        assert _PHYSICAL_HEADER in text
+        assert _LOGICAL_HEADER not in text
+
+
+def test_explain_extended_separates_sections_with_blank_line(spark: ReparkSession) -> None:
+    """Extended mode joins the logical and physical sections with a blank line."""
+    text = _build_plan_frame(spark)._explain_text(True)
+    assert f"\n\n{_PHYSICAL_HEADER}" in text
+
+
+def test_explain_cost_prints_physical_without_logical(spark: ReparkSession) -> None:
+    """Cost mode runs EXPLAIN ANALYZE and prints metrics under the physical header."""
+    for text in (
+        _build_plan_frame(spark)._explain_text(mode="cost"),
+        _build_plan_frame(spark)._explain_text(mode="analyze"),
+    ):
+        assert _PHYSICAL_HEADER in text
+        assert _LOGICAL_HEADER not in text
+
+
+def test_explain_codegen_appends_not_applicable_note(spark: ReparkSession) -> None:
+    """Codegen mode prints the physical plan plus the trailing not-applicable line."""
+    text = _build_plan_frame(spark)._explain_text(mode="codegen")
+    assert _PHYSICAL_HEADER in text
+    assert _LOGICAL_HEADER not in text
+    assert text.endswith("codegen: not applicable (RePark has no generated code)\n")

@@ -305,6 +305,12 @@ REVIEW-FIX-5 D-5 (2026-09-10): `check_rust_file_size.py`
 DOWN, no approval needed. pins: review-fix-5/C-005
 pins: maint-policy-1/C-030
 
+REVIEW-FIX-6 D-2 (2026-09-10): `check_lib_py.py` `dataframe/core.py`
+4487→4486 — the four-line both-set guard is paid for by moving five `#` lines to
+the dataframe map; a ratchet DOWN, no approval needed. The duplicate table in
+`test_cap_1_source_file_line_cap.py` moves with it in the same commit.
+pins: review-fix-6/C-004
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002

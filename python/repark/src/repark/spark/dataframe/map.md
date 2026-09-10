@@ -72,6 +72,18 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `core` by identity, so the frozen core/package surfaces keep every name and the package
   gains exactly the `eager` submodule. The exact baseline ratchets 4525 → 4487 in the same
   commit. pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
+  REVIEW-FIX-6 (2026-09-10): `_explain_text` refuses the both-set shape first —
+  `extended` and `mode` together raise `PySparkValueError` `CANNOT_SET_TOGETHER` (the
+  `Row(1, a=2)` message shape) — above the untouched string-`extended` remap. The
+  four-line guard is funded under the no-comments ruling by deleting five moved comment
+  lines, whose facts live here now: grouping sets reject nested generators because the
+  grouping would land on the array placeholder, which Spark rejects; `unpivot`
+  snapshots its input into a plan-stable scratch view so the UNION ALL reads see one
+  plan even over a deferred Arrow bridge; `create_temp_view` simulates fail-if-exists
+  by listing first because the engine only offers createOrReplace, and v1 disclosed
+  behavior does not fail on replace. The exact baseline ratchets 4487 → 4486 with the
+  CAP-1 mirror in the same commit.
+  pins: review-fix-6/C-001, C-002, C-004
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /

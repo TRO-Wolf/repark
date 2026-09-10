@@ -3291,8 +3291,6 @@ class DataFrame:
         group_columns = [self._column_of(item) for item in cols]
         for column in group_columns:
             _reject_partition_transform(column)
-            # Generators only lower via select unnest — cube/rollup/groupingSets on a
-            # A generator would group by the array placeholder, which Spark rejects.
             column._reject_nested_generator("cube/rollup/groupingSets")
             column._reject_higher_order("cube/rollup/groupingSets")
         if bare:
@@ -3324,7 +3322,6 @@ class DataFrame:
             raise AnalysisException("unpivot values list must be non-empty")
         self._ensure_alive()
         view = scratch_view_name(self._session, "__repark_unpivot_")
-        # Register one plan-stable bridge snapshot.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
             parts: list[str] = []
@@ -3348,6 +3345,10 @@ class DataFrame:
 
     def _explain_text(self, extended: bool | str | None = None, mode: str | None = None) -> str:
         """Build the plan text :meth:`explain` prints (Spark headers, DataFusion plan bodies)."""
+        if extended is not None and mode is not None:
+            raise PySparkValueError(
+                "[CANNOT_SET_TOGETHER] extended and mode should not be set together."
+            )
         if isinstance(extended, str) and mode is None:
             extended, mode = None, extended
         mode = "extended" if extended is True else "simple" if mode is None else str(mode)
@@ -3382,8 +3383,6 @@ class DataFrame:
     def create_temp_view(self, name: str) -> None:
         """Create a temp view; fails if the name exists (PySpark ``createTempView``)."""
         self._ensure_alive()
-        # Engine path: createOrReplace is the only native; simulate IF NOT EXISTS fail via list.
-        # v1: same as createOrReplaceTempView (disclosed: does not fail on replace).
         self.create_or_replace_temp_view(name)
 
     createTempView = create_temp_view  # noqa: N815
