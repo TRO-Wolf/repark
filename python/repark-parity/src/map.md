@@ -6,7 +6,9 @@ Source root for the `repark_parity` package. See [../map.md](../map.md).
 
 ## Contents
 
-- `repark_parity/` — the importable package.
+- `repark_parity/` — the importable package. Its `__init__.py` carries a checkout-only
+  `__path__` graft exposing the fixture package `repark_parity.torture` from
+  [../fixtures/torture/map.md](../fixtures/torture/map.md).
 
 ## Pointers
 

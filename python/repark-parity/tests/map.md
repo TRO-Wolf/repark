@@ -29,6 +29,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- [torture/](torture/map.md) — **TORTURE-1 step 1 (2026-09-10):** the both-door torture
+  suite (`nested` + `inference` families; DataFrame read and `spark.sql` over a temp view;
+  row counts, declared schemas, per-column inferred types, byte-identical CLI
+  determinism, the manifest reuse rule, and the CI-tier 60-second workload pin). The
+  `boolish` cell is `xfail(strict=True, reason="CSV-INFER-INT32-WIDTH")`. Needs the native
+  module: run through `make py-test-torture`. Ledger:
+  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/staging/torture-1-ledger.md).
+  pins: torture-1/C-001, C-002, C-003, C-004, C-006
 - `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,
   constraint preservation (dropped prefix rule, dropped sidecar
@@ -160,6 +168,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   roster sentence stays as it is and `DEVELOPMENT.md` plus the root `map.md` are the homes
   that name new gate members — both already do, so the unit closes with no further edit and
   its ledger moved to `completed/`. pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
+- `test_profiles_bed.py` — **PROFILES-1 step 1 (2026-09-10):** engine-free bed pins:
+  three datasets (futures name, TPCH SF10, 200 Iceberg files, the shared dbgen
+  symbol), five reads + three writes (append 8 files, merge 10 %), CSV header /
+  median / row shape, the JVM guard both ways, smoke scale below full scale.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 3 (2026-09-09): `dataframe/core.py` row 4536 → 4525 with the script baseline; the two `__repr__` / `_repr_html_` docstrings condensed to one line each, their contracts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: display-polars-1/C-004
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EAGER-1 step 2 (2026-09-09): `dataframe/core.py` row 4525 → 4487 with the script baseline; `.eager()`/`.compute()`/`.lazy()` and the cache-guard trio live in the new `dataframe/eager.py`, so the row ratchets DOWN. pins: df-eager-1/C-001
