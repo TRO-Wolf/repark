@@ -16,8 +16,8 @@ MAINT-POLICY-1, TORTURE-1, NEVEROOM-1 and AP-1 beside this session.
 | FACADE-AUDIT-0 | 1–3 | Muse ×2, orchestrator | 2 | [#459](https://github.com/TRO-Wolf/repark/pull/459) | **merged** `0994d539` |
 | BALLISTA-M1-A | 0–2 | orchestrator seed + Grok ×2 (one turn-1 stall) | 2 | [#460](https://github.com/TRO-Wolf/repark/pull/460) | **merged** `07a96902` |
 | BALLISTA-M1-B | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#466](https://github.com/TRO-Wolf/repark/pull/466) | **merged** `0eddabfe` |
-| BALLISTA-M1-C | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#469](https://github.com/TRO-Wolf/repark/pull/469) | open, auto-merge armed on green |
-| BALLISTA-M1-D | 1–2 | Grok ×2 | 2 | [#470](https://github.com/TRO-Wolf/repark/pull/470) | open, auto-merge armed on green |
+| BALLISTA-M1-C | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#469](https://github.com/TRO-Wolf/repark/pull/469) | **merged** `0b12deb5` |
+| BALLISTA-M1-D | 1–2 | Grok ×2 | 2 | [#470](https://github.com/TRO-Wolf/repark/pull/470) | **merged** `6027b93d` |
 | REVIEW-1 | 24 critic rounds | Grok critic | 24 (+1 discarded) | this PR | findings document, 11 fix cards, 8 owner questions |
 
 Every merge was checked for squash tree-equality against the branch head before the Slack note.
@@ -82,11 +82,10 @@ itself; all eleven held. Highlights:
 
 ## 4. Parked, and what the next run should pick up
 
-- **Both remaining Ballista PRs (#469 M1-C, #470 M1-D) are open with auto-merge armed** and will
-  land on green without further attention; #470 is stacked on #469, so its diff collapses once
-  #469 lands. Neither ledger has departed to `completed/` — that is the owner's call together with
-  whatever STATUS.md should say about Milestone 1, and the PRs say so.
-- **The whole of Ballista Milestone 1 (A, B, C, D) was carded, built, gated and PR'd in this
+- **All four Ballista cards are on `main`** (#460, #466, #469, #470). None of the four ledgers has
+  departed to `completed/`: that move belongs with whatever `STATUS.md` should say about Milestone
+  1, which is the owner's sentence to write, and every PR says so.
+- **The whole of Ballista Milestone 1 (A, B, C, D) was carded, built, gated and merged in this
   window**, against a card family that had never been started. Two clauses are OPEN and one is
   narrowed, all three named in `docs/design/distributed-m1.md`'s open-questions section, and all
   three trace to the same cause: RePark plan nodes cannot cross to an executor without

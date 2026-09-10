@@ -98,8 +98,8 @@ declines it (a dated ruling in the intake, then the archive).
   LEDGER-READING-1 or BALLISTA-AUDIT-0. D-1 and D-2 coverage is complete; the card closes when this document reaches `main`.
 - [overnight-report-2026-09-10-b.md](overnight-report-2026-09-10-b.md) — **run 5b (2026-09-10):**
   the second orchestrating session of the day, running the Grok lane (Ballista Milestone 1 A→D and
-  the REVIEW-1 sweep) and FACADE-AUDIT-0 on Muse beside run 5. Three units merged, M1-C open,
-  M1-D in flight at the close; the decisions taken under G-2 and the process notes the runbook
+  the REVIEW-1 sweep) and FACADE-AUDIT-0 on Muse beside run 5. Six units merged — FACADE-AUDIT-0 and the whole of
+  Ballista Milestone 1 (A, B, C, D) — the decisions taken under G-2 and the process notes the runbook
   should absorb.
 
 ## Pointers
