@@ -675,7 +675,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   and the C-023 control session builds from a forced empty file. Closes Q-1.
   `risk_tier: standard`. Branch `fix/review-fix-1-2`.
   pins: review-fix-2/C-001, C-002
-- [review-fix-6-ledger.md](review-fix-6-ledger.md) —
+- [review-fix-6-ledger.md](../completed/review-fix-6-ledger.md) —
   **REVIEW-FIX-6 step 1 (2026-09-10), in flight:** `explain()` refuses the both-set
   shape — `extended` and `mode` together raise `PySparkValueError`
   `CANNOT_SET_TOGETHER` (the `Row(1, a=2)` shape), while a string `extended` with no
@@ -683,7 +683,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/review-fix-6-11`. All clauses PROVEN (both-set pin red-first on base, green
   with the guard).
   pins: review-fix-6/C-001, C-002, C-003, C-004
-- [review-fix-11-ledger.md](review-fix-11-ledger.md) —
+- [review-fix-11-ledger.md](../completed/review-fix-11-ledger.md) —
   **REVIEW-FIX-11 step 1 (2026-09-10), in flight:** every DF-EXPLAIN-1 D-2 row gets a
   pin — cost, codegen, `ANALYZE`, simple-mode physical-only, and the blank-line
   separation. Landed with REVIEW-FIX-6. Closes Q-32 (with Q-17). `risk_tier: standard`.
