@@ -16,8 +16,9 @@ B. **Pin binding.** A test cites a clause with `pins: <unit>/C-NNN[, C-MMM...]` 
    `yyyy-mm-dd-` prefix). Every `PROVEN` clause in a staging ledger must be cited at least
    once — the measured floor is seeded per ledger in EXCEPTIONS and only ratchets down — and
    every citation must resolve to a clause that exists in any bin (`staging/`, `completed/`,
-   the archive). A staging ledger whose first 40 lines carry `**Path:** READING` is a reading
-   unit: rule B does not apply to its clauses, rules A and C still do.
+   the archive). A staging ledger whose first 40 lines carry a `**Path:**` field valued
+   `READING` outside a code span is a reading unit: rule B does not apply to its
+   clauses, rules A and C still do.
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a fenced block)
    lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a non-empty `artifacts:` list,
@@ -62,7 +63,8 @@ VERDICT_CELL = re.compile(r"^\**(PROVEN|OPEN|REJECTED)\**(?:\s*\(.*\))?$")
 CITATION = re.compile(r"pins:\s*([a-z0-9][a-z0-9.-]*)/(C-\d{3}(?:\s*,\s*C-\d{3})*)")
 ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 FENCE = re.compile(r"^\s*(```|~~~)")
-READING_MARKER = re.compile(r"\*\*Path:\*\*\s*READING\b")
+READING_FIELD = re.compile(r"\*\*Path:\*\*\s*([A-Za-z0-9_-]+)")
+CODE_SPAN = re.compile(r"`[^`]*`")
 HEADER_LINES = 40
 CATEGORIES: tuple[str, ...] = tuple(f"AT-{n}" for n in range(1, 11))
 SEVERITIES: frozenset[str] = frozenset({"S0", "S1", "S2", "S3"})
@@ -87,8 +89,11 @@ def unit_of(path: str) -> str:
 
 def is_reading(text: str) -> bool:
     """Whether the header window marks the ledger as a reading unit, exempt from rule B."""
-    header = "\n".join(text.splitlines()[:HEADER_LINES])
-    return READING_MARKER.search(header) is not None
+    for line in text.splitlines()[:HEADER_LINES]:
+        match = READING_FIELD.search(CODE_SPAN.sub("", line))
+        if match is not None and match.group(1) == "READING":
+            return True
+    return False
 
 
 def _cells(rest: str) -> list[str]:
