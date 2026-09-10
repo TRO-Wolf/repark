@@ -502,7 +502,7 @@ and no unit in the card's sequence claims them: `dataframe/plan_collapse.py` (1,
 (1,300), `dataframe/udf_bridge.py` (471), `dataframe/udf_projection.py` (349),
 `dataframe/udf_schema.py` (64), `dataframe/grouped_udf.py` (145), the conversion core of
 `spark/types.py` (1,834; weighed under FACADE-4 above), and the session SQL-UDF modules
-(`sql_udf*.py`, ~2,800 combined). They are not sequenced here: D-2 names five units, and
+(`sql_udf*.py`, ~2,600 combined). They are not sequenced here: D-2 names five units, and
 the audit does not invent a sixth. The UDF-bridge pyarrow modules are the most likely next
 weighing target once FACADE-1 gives them a capsule door on both sides. D-3 keeps ML
 transformers (2,717 lines in `ml/feature/_transformers.py` alone) and the
@@ -552,3 +552,109 @@ their runtime identity, so each unit names its own keeping mechanism.
   them exactly, and any intended byte change is a separate owner decision, not a
   passenger. Display limits come from session settings (row L1, frozen except
   `repark.merge.*`), so the renderer reads the same keys through the same seam.
+
+### §8 The sequence — the card's order confirmed, with pin lists
+
+The evidence confirms the card's order 1–2–3–4–5; no reorder. Three reasons, each from
+§6. First, dependency: every later unit's pins ride the FACADE-1 doors — the collect pin
+compares against `to_arrow().to_pylist()`, the inference pins count through the import
+seam — so the boundary lands first and everything else regresses against it. Second,
+fan-in: FACADE-2's §4 surface (7 entry points, 11 method groups, 25 scaffolds, every
+`withColumn`/`select`/`filter` op) feeds all downstream work, while FACADE-3's wall is
+confined to `createDataFrame`. Third, guard direction: FACADE-2 pins the Spark display
+strings byte-for-byte, and FACADE-4 must then preserve those bytes — sequencing 4 after
+2 turns 2's pins into 4's regression guard for free. FACADE-5 closes because it renders
+through both the FACADE-4 conversions and the FACADE-2 display strings. Test paths below
+are relative to `python/repark/tests/`; all exist on the base tree.
+
+**FACADE-1 — the Arrow C Stream boundary.** Moves: `__arrow_c_stream__` capsules both
+ways as the single protocol; the `pa_ipc.new_stream` encode legs (§3) become the fallback
+behind the capsule seams; pyarrow moves from hard dependency to optional. Touches (§2):
+`dataframe/core.py` (4,487, logic) export/import seams, `session/create_dataframe_rows.py`
+(888, pyarrow), `dataframe/joins_columns.py` (1,238, logic) pandas-UDF re-entry,
+`dataframe/grouped_udf.py` (145, pyarrow), `dataframe/udf_bridge.py` (471, pyarrow),
+`ml/ext/_arrow_util.py` (323, pyarrow) prediction re-entry. Measured win: small — export
+is already 8–30 ms at 1e5–1e6 (§6); import side UNMEASURED. Freeze: §7 B2/B1/N1. Risks:
+version-skew fallback must stay working (the `register_stream` probe at
+`create_dataframe_rows.py:842,849`); pyarrow-absent installs must fail loud at the 23
+import sites. Pins: `test_dfcore_4b_exports.py` (export doors unchanged);
+`test_mapinarrow.py` + `test_mapinarrow_oracle.py` (capsule seam against the oracle);
+`test_applyinpandas.py` (IPC fallback leg); `test_perf_facade_collect_rows.py`
+(collect-to_arrow identity); new pin — polars and pandas consumers of
+`__arrow_c_stream__` run green with pyarrow uninstalled.
+
+**FACADE-2 — `Column` as a pyo3 class over a DataFusion `Expr`.** Moves: Spark display
+strings rendered in Rust on the native `PyColumn`; the seven `PyColumn.sql` entry points
+(§4 Group 1) become handle constructors; `column.py` (1,589, delegate) keeps the public
+class and thins to argument checks plus one handle call; the seven `functions*` builder
+modules (§2: `functions.py` 1,985, `functions_expr.py` 2,255, plus the five small ones)
+thin to builders over those handles. Touches: `spark/column.py`, the `functions*`
+family (~5,400 lines combined), the 25 session scaffolds stay callers. Measured win: the
+0.1 ms per-statement pre-parse tax (§6); the prize is divergence-risk removal. Freeze:
+§7 C1/J-rows, Q1 open. Risks: display-string bytes must match exactly (they feed plan
+collapse and `_origin_plan_id` lineage); the lateral-alias refusal and window-layer merge
+contracts move with the strings. Pins: `test_columns.py`, `test_column_access.py`,
+`test_column_x1_census.py`, `test_examples_column_a.py`, `test_fnp_9_collections_json.py`;
+new pin — byte-identical `sql_expr`/`spark_display` goldens for every §4 Group-1/2 site,
+plus an `isinstance(c, repark.Column)` pin that survives the unit.
+
+**FACADE-3 — `createDataFrame` inference in Rust.** Moves: rows/tuples/dicts-to-Arrow
+inference with Spark's rules, through the FACADE-1 import seam; the per-cell Python
+normalizer stays only where Spark's rules genuinely need per-cell refusal. Touches (§2):
+`session/create_dataframe_inference.py` (737, pyarrow), `create_dataframe_tuples.py`
+(628, pyarrow), `create_dataframe_columns.py` (259, pyarrow),
+`create_dataframe_values.py` (569, logic), `create_dataframe_schema.py` (692, logic),
+`create_dataframe_arrow.py` (407, pyarrow). Measured win: the explicit-schema path's
+1.27 s at 1e5 and whatever of the rows/dicts legs survives CDF-1's tuple win (§6); Rust
+delta UNMEASURED, ceiling anchored at the 3–4 ms pandas shape. Freeze: §7 A2/O1, pickle
+pin. Risks: the VALUES-parity inference rules move language — every merge-kind refusal
+must fire on the same cells. Pins: `test_interchange_parity.py` (G-INT createDataFrame
+legs against live Spark), `test_create_dataframe_materialize.py`,
+`test_perf_facade_cdf_1.py` (tuple cells must not regress), `test_csv_infer_perf_1.py`
+(plan-time `to_arrow`/`collect` counts unchanged); new pin — pickle round-trip on
+inferred frames (D-3).
+
+**FACADE-4 — type conversions in Rust.** Moves: Arrow schema ↔ Spark types ↔ DDL in one
+Rust table; `spark/types.py` (1,834, pyarrow) keeps the Python classes and thins to
+checks plus conversion calls. Touches: `spark/types.py`, `session/timestamp_type.py`
+(97, logic), the DDL writers in `session/create_dataframe_schema.py`. Measured win:
+UNMEASURED — ships as a correctness consolidation with its own baseline section (§6).
+Freeze: §7 F1/K1, isinstance by construction. Risks: three conversion tables (facade,
+`_csv_smart`, reader) must agree on timestamps, decimals, and nested nullability;
+`VariantType` stays excepted. Pins: `test_types_1.py`, `test_types_simple_string.py`,
+`test_types_x2_census.py`, `test_cast_failure_parity.py`, `test_a3_cast_vocab.py`;
+new pin — DDL round-trip bytes for every F1 type, plus the FACADE-2 display-string
+goldens re-run as the regression guard.
+
+**FACADE-5 — the display renderer in Rust.** Moves: the `display.py` bodies (351, logic)
+and the `plan_collapse.py` formatters into Rust, reading the same L1 session keys.
+Touches: `spark/dataframe/display.py`, the formatter functions in
+`dataframe/plan_collapse.py` (1,057, logic), `dataframe/eager.py` (92, logic).
+Measured win: UNMEASURED — ships byte-identical or not at all (§6). Freeze: §7 B2/L1,
+goldens binding. Risks: five renderers (ASCII table, vertical, HTML, DuckDB, polars)
+times truncation rules must match; the eager-preview count pins must not move. Pins:
+`test_dfcore_4b_eager_goldens.py`, `test_dfcore_4b_show_goldens.py`, `test_df_eager_1.py`,
+`test_dfcore_6_eager_preview.py` (scan counts unchanged), `test_display_styles.py`,
+`test_display_polars_default.py`.
+
+### §9 Open questions (filed, not asserted)
+
+- **Q1 (RULING):** if a future unit wants the pyo3 `Column` class itself to be the public
+  `repark.Column` (dropping the Python wrapper), what mechanism keeps
+  `isinstance(c, repark.Column)` true — and does the freeze's additive-only policy admit
+  it at a minor? The sequence above never needs this; FACADE-2 keeps the wrapper.
+- **Q2 (RULING):** pyarrow moves to an optional extra under N1-frozen packaging — new
+  extra name, and does the pyarrow-absent error type join the O1 taxonomy or stay a
+  plain `ImportError`? FACADE-1 needs the ruling before it lands.
+
+### What this audit concludes
+
+Half A measured 51,930 lines over 106 modules: 68% Python logic, 12% Python-side Arrow
+work, 19% thin delegation — the Rust-backed facade is a Python engine with a Rust core,
+and the five-unit sequence reverses that ratio where it is measured to matter. The card's
+order stands: the capsule boundary first (doors every later pin rides), the `Column`
+expression surface second (0.1 ms per statement plus the SQL-string divergence risk),
+inference third (the last measured 1.27 s Python wall), conversions fourth (UNMEASURED,
+a consolidation guarded by unit 2's goldens), display last (byte-identical or nothing).
+Two rulings are needed before FACADE-1/2 land (Q1, Q2); everything else is pinned and
+ready to sequence.
