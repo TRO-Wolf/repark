@@ -56,6 +56,9 @@ network.
 - [resolve_names.py](resolve_names.py) — `SparkSession.resolve_table_name`:
   bare and two-part qualification, the temp-view home under
   `prefer_temp_view=True`, and the plain form.
+- [run_maintenance.py](run_maintenance.py) — `SparkSession.run_maintenance`:
+  dry-run the maintenance plan over a memory-catalog table with inline policy
+  keys; every row plans. pins: maint-policy-1/C-021
 - [display_style.py](display_style.py) — `SparkSession.display_style`: the
   `polars` default, the `spark` switch, and the `conf` mirror. DISPLAY-POLARS-1 (2026-09-09):
   the default flipped `spark` → `polars`, so this example's default assertion and the direction
