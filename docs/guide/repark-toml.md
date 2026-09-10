@@ -199,7 +199,7 @@ masks. Which keys count as secret is the catalog predicate the redaction shares 
 
 ## The tables
 
-Each profile carries five optional tables. `[<profile>.display]` takes `style`, `max_rows`,
+Each profile carries six optional tables. `[<profile>.display]` takes `style`, `max_rows`,
 `max_cols`, `str_len` — the four `repark.display.*` keys from
 [session-and-conf.md](session-and-conf.md) — with string values verbatim and integers
 stringified. `[<profile>.session]` takes `memory_limit_gb`, `batch_size`,
@@ -209,5 +209,11 @@ flatten with dot joins, so the natural `spark.sql.x = "v"` spelling works, and a
 quoted-plus-nested collision refuses. `[<profile>.catalog.<name>]` blocks carry `type`
 (`memory`, `glue`, `s3tables`, or a `catalog-impl` class name) plus string properties, and
 parse into the same spec the equivalent `.config()` keys produce — the catalog keys
-themselves are in [iceberg-guide.md](iceberg-guide.md). Unknown keys inside `display` and
+themselves are in [iceberg-guide.md](iceberg-guide.md). `[<profile>.maintenance]` takes
+`target_file_size_bytes`, `snapshot_retain_last`, `snapshot_older_than`,
+`orphan_older_than`, `rewrite_manifests`, `position_delete_ratio`, plus a
+`tables."<catalog>.<db>.<table>"` entry per override — every key optional, durations
+as `"<n>d"`, `"<n>h"`, or `"<n>m"`, unknown keys refusing loud with the key path.
+The full shape, the step order it drives, and the `CALL run_maintenance()` door are
+in [maintenance-policy.md](maintenance-policy.md). Unknown keys inside `display` and
 `session` refuse loud; `conf` accepts any key.

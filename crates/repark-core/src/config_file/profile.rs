@@ -4,7 +4,14 @@ use super::{ConfigFile, Profile};
 
 pub(crate) const DEFAULT_PROFILE_NAME: &str = "default";
 
-const PROFILE_TABLE_KEYS: &[&str] = &["catalog", "conf", "database", "display", "session"];
+const PROFILE_TABLE_KEYS: &[&str] = &[
+    "catalog",
+    "conf",
+    "database",
+    "display",
+    "maintenance",
+    "session",
+];
 const DISPLAY_KEYS: &[&str] = &["max_cols", "max_rows", "str_len", "style"];
 const SESSION_KEYS: &[&str] = &["batch_size", "memory_limit_gb", "target_partitions"];
 
@@ -17,6 +24,7 @@ pub(crate) fn profile_from_table(name: &str, table: &toml::Table) -> Result<Prof
             "conf" => profile.conf = Some(table_slot(name, key, value)?),
             "catalog" => profile.catalog = Some(table_slot(name, key, value)?),
             "database" => profile.database = Some(table_slot(name, key, value)?),
+            "maintenance" => profile.maintenance = Some(maintenance_table(name, value)?),
             other => {
                 return Err(Error::Config(format!(
                     "unknown key `{name}.{other}`; expected one of: {}",
@@ -74,6 +82,7 @@ pub(crate) fn profile_as_table(profile: &Profile) -> toml::Table {
         ("conf", &profile.conf),
         ("database", &profile.database),
         ("display", &profile.display),
+        ("maintenance", &profile.maintenance),
         ("session", &profile.session),
     ];
     let mut table = toml::Table::new();
@@ -83,6 +92,12 @@ pub(crate) fn profile_as_table(profile: &Profile) -> toml::Table {
         }
     }
     table
+}
+
+fn maintenance_table(name: &str, value: &toml::Value) -> Result<toml::Table> {
+    let table = table_slot(name, "maintenance", value)?;
+    super::maintenance::MaintenancePolicy::from_table(name, &table)?;
+    Ok(table)
 }
 
 fn table_slot(name: &str, key: &str, value: &toml::Value) -> Result<toml::Table> {

@@ -40,7 +40,6 @@ Restated for a mixed queue:
 | 6 | **H3-SPILL residue** — `H3-SPILL-NLJ-1` (a caught DataFusion panic where a refusal belongs) and `H3-SPILL-COLLECT-1` (`collect()` past the address space panics, not `MemoryError`) | Hardening | H3-SPILL-1 (measured) | STANDARD <!-- unit id=h-3-spill --> |
 | 7 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
 | 8 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
-| 9 | **FACADE-AUDIT-0** — Rust-backed facade: classify every Python module, weigh by measured walls, sequence FACADE-1…5 (card in slate 2) | Facade | none | STANDARD <!-- unit id=facade-audit-0 --> |
 
 <!-- unit id=cutover-schema-1 -->
 **Why CUTOVER-SCHEMA-1 is first.** The owner ruled the two metadata rows are not accepted
@@ -86,6 +85,3 @@ failure shapes it filed are the remaining Never-OOM work.
 here — its ledger is in
 [../task/ledgers/archive/](../task/ledgers/archive/map.md) and its PR on `main`.
 
-<!-- unit id=facade-audit-0 -->
-**Why FACADE-AUDIT-0 (owner, 2026-09-10).** 52k Python lines over two pyo3 classes; the audit orders the Rust moves.
-<!-- /unit -->

@@ -269,3 +269,72 @@ fn database_sources_refuse_until_named_registration_lands() {
     );
     assert!(message.contains("CFG-2"), "{message}");
 }
+
+#[test]
+fn maintenance_table_resolves_into_file_config_with_profile_name() {
+    let file = try_loaded_file(
+        "[default.maintenance]\ntarget_file_size_bytes = 536870912\nsnapshot_retain_last = 7\n",
+        &[],
+    )
+    .expect("maintenance fixture loads");
+    let (profile, policy) = file
+        .maintenance
+        .as_ref()
+        .expect("a loaded maintenance table stamps the build");
+    assert_eq!(profile.as_str(), "default");
+    let policy = policy.as_ref().expect("table present means Some policy");
+    assert_eq!(policy.target_file_size_bytes, Some(536_870_912));
+    assert_eq!(policy.snapshot_retain_last, Some(7));
+}
+
+#[test]
+fn repask_env_profile_names_the_maintenance_stamp() {
+    let file = try_loaded_file(
+        "[analytics.maintenance]\nsnapshot_retain_last = 9\n",
+        &[("REPARK_ENV", "analytics")],
+    )
+    .expect("named-profile fixture loads");
+    let (profile, policy) = file
+        .maintenance
+        .as_ref()
+        .expect("the active profile stamps the build");
+    assert_eq!(profile.as_str(), "analytics");
+    assert_eq!(
+        policy
+            .as_ref()
+            .expect("named table means Some policy")
+            .snapshot_retain_last,
+        Some(9)
+    );
+    let bare = try_loaded_file(
+        "[analytics.session]\nbatch_size = 1\n",
+        &[("REPARK_ENV", "analytics")],
+    )
+    .expect("policy-less fixture loads");
+    let (profile, policy) = bare
+        .maintenance
+        .as_ref()
+        .expect("a loaded file always names its profile");
+    assert_eq!(profile.as_str(), "analytics");
+    assert!(policy.is_none(), "no table means no policy");
+}
+
+#[test]
+fn file_built_session_stamps_the_registry_maintenance_policy() {
+    let (_directory, path) = staged_file(
+        "[default.maintenance]\ntarget_file_size_bytes = 536870912\nsnapshot_retain_last = 7\n",
+    );
+    let session = ReparkSessionBuilder::default()
+        .from_config_file(Some(path))
+        .build()
+        .expect("file-built session");
+    let snapshot = session.catalogs_snapshot();
+    let (profile, policy) = snapshot
+        .maintenance_policy()
+        .map(|(name, policy)| (name.to_string(), policy.cloned()))
+        .expect("the build stamps the registry");
+    assert_eq!(profile.as_str(), "default");
+    let policy = policy.expect("table present means Some policy");
+    assert_eq!(policy.target_file_size_bytes, Some(536_870_912));
+    assert_eq!(policy.snapshot_retain_last, Some(7));
+}

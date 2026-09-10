@@ -274,6 +274,25 @@ async fn call_rewrite_bad_where_matches_spark_message() {
 }
 
 #[tokio::test]
+async fn call_rewrite_missing_table_reports_the_table_before_a_bad_flag() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.ghost', \
+         'remove-dangling-deletes' => 'not-a-bool')",
+    )
+    .await
+    .expect_err("a missing table plus a malformed flag must refuse");
+    let message = error.to_string();
+    assert!(
+        message.contains("ghost") && !message.contains("remove-dangling-deletes"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
 async fn call_rewrite_named_binpack_still_compacts_v2() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;

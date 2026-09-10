@@ -5,6 +5,28 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [torture-1-ledger.md](torture-1-ledger.md) —
+  **TORTURE-1 step 1 (2026-09-10), in flight:** the torture-test dataset suite's step 1 —
+  the `repark_parity.torture` generator package (checkout-only `__path__` graft, `generate`
+  CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested` and
+  `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
+  target, registry row `CSV-INFER-INT32-WIDTH` with a strict xfail, and the red-first
+  evidence. Steps 2–5 pending. `risk_tier: standard`. Branch `feat/torture-1`.
+  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
+  **BALLISTA-M1-A step 1 (2026-09-10), in flight:** `DistributedExecutor` +
+  `LocalDataFusionExecutor` in `crates/repark-distributed`; range-sum, status, and
+  cancel pins green; `cluster` feature builds with no cluster code. `risk_tier: standard`.
+  Branch `feat/ballista-m1-a`.
+  pins: ballista-m1-a/C-001, C-002, C-003, C-004
+- [ballista-m1-b-ledger.md](ballista-m1-b-ledger.md) —
+  **BALLISTA-M1-B step 2 (2026-09-10), in flight:** UDF-on-executor pin
+  (`repark_times_ten` through `ReparkSessionProvider`; vanilla session fails to resolve);
+  cancel mid-flight (`Cancelled`, no running tasks within 5 s); codec install pin
+  (`repark_ballista_codec()` is Ballista's defaults; two-executor shuffle completes).
+  C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
+  Branch `feat/ballista-m1-b`.
+  pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
@@ -589,3 +611,23 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   DBT-DESC-1 retirement; all clauses PROVEN with four residue rows. `risk_tier: standard`.
   Branch `feat/sql-describe-1`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [maint-policy-1-ledger.md](../completed/maint-policy-1-ledger.md) —
+  **MAINT-POLICY-1 (2026-09-10), complete:** the declarative maintenance policy — the typed
+  `[<profile>.maintenance]` table with per-table overrides and the D-2 duration parser
+  (`config_file/maintenance.rs`), `CALL <catalog>.system.run_maintenance(...)` with its
+  dry-run plan, the D-4 step order behind the delete-ratio gate, the apply path
+  (`ran` / `failed` / `skipped`, the chain stopping on failure), the session-build stamp
+  that makes `repark.toml` reach the procedure, and the `session.run_maintenance` facade
+  wrapper with its guide. `adaptive_partitioning` reserved for ADAPT-PART.
+  `risk_tier: standard`. Branch `feat/maint-policy-1`.
+  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030
+- [facade-audit-0-ledger.md](../completed/facade-audit-0-ledger.md) —
+  **FACADE-AUDIT-0 steps 1–2 (2026-09-10), in flight:** Half A of the Rust-backed facade
+  audit — one measured row per module under `python/repark/src/repark/` (106 files,
+  51,930 lines; binding sites, pyarrow references, delegate/logic/pyarrow class), the
+  IPC crossing sites, and every place a `Column` renders SQL text — plus Half B
+  (weighing, freeze constraints, confirmed sequence with pins, open questions), in
+  [task/roadmap/epic-term/facade-audit-2026-09-10.md](../../roadmap/epic-term/facade-audit-2026-09-10.md).
+  Base `2fad8135`; no source touched; READING path under R-10.
+  `risk_tier: standard`. Branch `docs/facade-audit-0`.
+  pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
