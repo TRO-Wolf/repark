@@ -50,12 +50,19 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   Retry is OPEN: ChaosExec is not fail-once; stopping an executor needs `arrow_flight`.
   Design: [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md).
   pins: ballista-m1-c/C-003, C-004
+- **BALLISTA-M1-D step 1.** `src/iceberg_provider.rs` is `IcebergScanSpec`: the provider
+  codec round-trips `(catalog, table identifier, snapshot id, projection, filters)` and
+  rebuilds the Iceberg table from `ReparkSessionProvider`'s session catalog. The
+  two-executor pin is `tests/iceberg_scan.rs` (8-file memory-catalog table; count/sum/
+  filtered scan match local; both executors ran a task). `IcebergTableScan` itself does
+  not serialize; file groups do. S3/Glue executor credentials stay residue (D-2).
+  pins: ballista-m1-d/C-001, C-002, C-003
 
 ## Contents
 
 - `Cargo.toml` — the crate manifest: the two features and the optional Ballista dependencies.
 - `src/` — the crate source ([src/map.md](src/map.md)).
-- `tests/` — local-executor, cluster two-executor, and multi-stage cluster pins
+- `tests/` — local-executor, cluster two-executor, multi-stage, and Iceberg scan pins
   ([tests/map.md](tests/map.md)).
 
 ## Pointers

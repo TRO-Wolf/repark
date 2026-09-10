@@ -6,7 +6,8 @@ Source for the distributed-execution crate. The crate seed (BALLISTA-M1-A step 0
 empty `lib.rs`; step 1 adds `executor.rs` (the `DistributedExecutor` trait, `JobHandle`,
 `JobStatus`) and `local.rs` (`LocalDataFusionExecutor`). BALLISTA-M1-B step 1 adds
 `cluster.rs`, `session_provider.rs` and `codec.rs` behind the `cluster` feature. Step 2
-adds `running_executor_task_counts` on the cluster executor.
+adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 1 adds
+`iceberg_provider.rs` (`IcebergScanSpec` provider codec) behind the same feature.
 
 ## Contents
 
@@ -41,6 +42,15 @@ adds `running_executor_task_counts` on the cluster executor.
   Ballista's codec until a RePark plan node needs serialising. C-004 stays OPEN / PARKED
   until that choice; C-006 pins what is true without the trait.
   pins: ballista-m1-b/C-006
+- `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1: `IcebergScanSpec` is the
+  DataFusion-level provider codec (audit R-4). It serialises
+  `(catalog config, table identifier, snapshot id, projection, filters)` as `RPIC` bytes
+  and rebuilds the Iceberg `TableProvider` from the session catalog (never ambient
+  authority). `IcebergTableScan` cannot travel through Ballista 54.1.0 without
+  `PhysicalExtensionCodec` (`datafusion-proto`, the same wall as M1-B C-004); scans
+  distribute as parquet file groups rewritten from the Iceberg `$files` list. Writes
+  and a commit coordinator are out of scope (ADR-0004 / Milestone 3).
+  pins: ballista-m1-d/C-001, C-002
 
 ## Pointers
 
