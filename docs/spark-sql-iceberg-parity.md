@@ -3050,7 +3050,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   and `…[s7-ctas-if-fresh]`, `…[s8-ctas-cow]`, `…[s9-ctas-cow]`,
   `…[s8-merge-idempotent-cow]`, `…[s9-merge-idempotent-cow]`; live
   `…::test_sql_harden_row_matches_the_live_spark_oracle[s1-ctas-if-fresh]`.
-- **Rationale** — FIXED. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one)
+- **Rationale** — FIXED. Sibling of [V3-COV-8](#v3-cov-8--ctas-derives-a-wider-required-iceberg-column-where-spark-derives-the-literals-narrower-optional-one--fixed-2026-09-05-types-1)
   on requiredness only: types here match the parquet schema. The parquet reader now relaxes
   non-null file nullability to nullable, and CTAS derives Iceberg requiredness from the
   relaxed query schema, so the committed schema is optional throughout. SE-1's

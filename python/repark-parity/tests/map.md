@@ -352,16 +352,24 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
   archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
 - `test_dl_6_docs_links.py` — **DOCS-LINKS-1 (2026-09-09):** the markdown link gate on a
-  scratch tree: a clean fixture counts its files and links (relative links, one GitHub-style
-  anchor, one `docs:` evidence cell; externals, bare fragments, code spans and fenced blocks
+  scratch tree: a clean fixture counts its files and links (relative links, two GitHub-style
+  anchors, one `docs:` evidence cell; externals, code spans and fenced blocks
   out of scope); a missing target, an untracked-on-disk target, a bad anchor and a bad
   `docs:` cell each red with the `path:line: <link> -> <reason>` line; an allowlist entry
   (keyed `path:link` per D-9, so a line shift never reds the gate) drops exactly its own
   finding while a stranger link stays red and a malformed entry fails closed (exit 2); a
   stale allowlist entry that matched no finding reds the gate with its own line (D-8, audit
-  round 1); the real tree runs green under the seeded allowlist. The tests carry no inline
-  pins, so the unit's clauses are cited on this line.
+  round 1); the real tree runs green under the seeded allowlist. **REVIEW-FIX-12
+  (2026-09-10):** eight red-first pins for the REVIEW-1 rounds Q-35, Q-36, Q-37, Q-38, Q-46,
+  Q-47 — a heading that is a link slugs its rendered text (and the raw-markdown anchor is
+  rejected), `Foo` / `Foo` / `Foo-1` anchor `foo` / `foo-1` / `foo-1-1`, a `docs:` token in
+  ledger prose is no evidence cell, an unclosed fence is its own finding, an absolute
+  target is skipped, a same-file anchor that does not resolve reds, a four-space-indented
+  fence hides nothing (while a two-space-indented opener still does, as a guard). The
+  clean fixture's same-file fragment now points at its target file, so the count is six
+  links. The tests carry no inline pins, so both units' clauses are cited on this line.
   pins: docs-links-1/C-001, C-002, C-003, C-004, C-005
+  pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method

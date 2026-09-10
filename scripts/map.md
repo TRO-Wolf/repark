@@ -610,15 +610,26 @@ repark-parity slice.
   check-docs-links`, in `make ci` beside `check-docs-compaction`, so in `make preflight`
   through `verify`). `sync_map_md.py` generalized from maps to the whole tree: over every
   tracked `*.md` (`git ls-files`; code spans and fenced blocks hold documentation, not links;
-  `http(s)`/`mailto`, bare `#fragments` and absolute targets are out of scope): (1) every
+  `http(s)`/`mailto` and absolute `/…` targets are out of scope, said here once): (1) every
   inline relative link (`[t](p)`, `[t](p#anchor)`) resolves to a tracked file relative to the
-  linking file — a file by name, a directory by anything tracked beneath it; (2) a `#anchor`
-  on an `.md` target matches the GitHub-style heading slug (lower-case, spaces to `-`,
-  punctuation dropped, duplicate headings suffixed `-1`); (3) `docs:` evidence cells under
-  `task/ledgers/**` follow the same rule with repo-root-relative paths. One line per broken
+  linking file — a file by name, a directory by anything tracked beneath it — and a
+  same-file `[t](#anchor)` resolves against the linking file's own headings; (2) a `#anchor`
+  on an `.md` target matches the GitHub-style slug of the rendered heading text (link
+  syntax reduced to its text before slugging; lower-case, spaces to `-`, punctuation
+  dropped, duplicate headings suffixed by occurrence of the final slug, so `Foo`, `Foo`,
+  `Foo-1` anchor `foo`, `foo-1`, `foo-1-1`); a fence opener carries at most three leading
+  spaces, so a four-space-indented fence is no fence, and an unclosed fence at end of file
+  is its own finding; (3) `docs:` evidence cells under `task/ledgers/**` follow the same
+  rule with repo-root-relative paths, table cells only, never prose. One line per broken
   link `path:line: <link> -> <reason>`, exit 1; the counts of files and links checked print
   on exit 0. Whole-tree run measured 0.82 s (692 files, 4478 links; 0.83/0.81 s on repeats,
-  2026-09-09). The D-3 baseline seeded `scripts/docs_links_allowlist.txt` with the 10
+  2026-09-09; 736 files, 4772 links on 2026-09-10 after same-file anchors started counting).
+  REVIEW-FIX-12 (2026-09-10) closed the REVIEW-1 rounds Q-35, Q-36, Q-37, Q-38, Q-46, Q-47:
+  rendered-text slugs, final-slug duplicates, table-cell-only `docs:` cells, the unclosed-
+  fence finding, the absolute-target skip, same-file anchors — which caught one genuinely
+  stale same-file fragment (`docs/spark-sql-iceberg-parity.md:3053`, repaired in the same
+  commit) — and the three-space fence rule. The D-3 baseline seeded
+  `scripts/docs_links_allowlist.txt` with the 10
   pre-existing broken links (6 missing targets, 5 of them in immutable archive ledgers, and
   4 stale anchors into the divergence registry) — one `path:link` entry per line (D-9, audit
   round 2, 2026-09-09: the line number is not part of the key, so an unrelated edit that

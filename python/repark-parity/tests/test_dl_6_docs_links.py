@@ -16,7 +16,7 @@ _README = (
     "Scratch\n"
     "\n"
     "[guide](GUIDE.md) and [usage](GUIDE.md#usage) and [site](https://example.com) and\n"
-    "[fragment](#usage) and `[span](SKIPPED.md)` links.\n"
+    "[fragment](GUIDE.md#usage) and `[span](SKIPPED.md)` links.\n"
     "\n"
     "```text\n"
     "[fenced](FENCED.md)\n"
@@ -37,6 +37,10 @@ def _write(repo: Path, path: str, text: str) -> None:
     target = repo / path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
+
+
+def _track(repo: Path) -> None:
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True, check=True)
 
 
 def _run(repo: Path) -> subprocess.CompletedProcess[str]:
@@ -65,7 +69,7 @@ def repo(tmp_path: Path) -> Path:
 def test_clean_fixture_counts_files_and_links(repo: Path) -> None:
     result = _run(repo)
     assert result.returncode == 0, result.stderr
-    assert "4 files, 5 links checked" in result.stdout
+    assert "4 files, 6 links checked" in result.stdout
 
 
 def test_missing_target_reds_with_path_line_and_reason(repo: Path) -> None:
@@ -141,4 +145,68 @@ def test_real_tree_is_green_under_the_seeded_allowlist() -> None:
     result = subprocess.run(
         [sys.executable, str(_SCRIPT)], capture_output=True, text=True, check=False
     )
+    assert result.returncode == 0, result.stderr
+
+
+def test_link_heading_slugs_the_rendered_text(repo: Path) -> None:
+    _write(repo, "LINKHEAD.md", "# Page\n\n## [Usage](README.md)\n")
+    _write(repo, "README.md", _README + "[rendered](LINKHEAD.md#usage)\n")
+    _track(repo)
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_github_anchor_of_link_heading_is_rejected(repo: Path) -> None:
+    _write(repo, "LINKHEAD.md", "# Page\n\n## [Usage](README.md)\n")
+    _write(repo, "README.md", _README + "[raw](LINKHEAD.md#usagereadmemd)\n")
+    _track(repo)
+    result = _run(repo)
+    assert result.returncode == 1
+    assert "LINKHEAD.md#usagereadmemd -> anchor #usagereadmemd does not match" in result.stderr
+
+
+def test_duplicate_slugs_count_the_final_slug(repo: Path) -> None:
+    _write(repo, "DUPS.md", "# Page\n\n## Foo\n\n## Foo\n\n## Foo-1\n")
+    _write(repo, "README.md", _README + "[third](DUPS.md#foo-1-1)\n")
+    _track(repo)
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_docs_token_in_prose_is_not_an_evidence_cell(repo: Path) -> None:
+    _write(repo, _LEDGER, _LEDGER_TEXT + "\nQuoted subject docs: add changelog\n")
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_unclosed_fence_is_a_finding(repo: Path) -> None:
+    _write(repo, "README.md", _README + "```text\n[broken](MISSING.md)\n")
+    result = _run(repo)
+    assert result.returncode == 1
+    assert "unclosed fenced code block" in result.stderr
+
+
+def test_absolute_target_is_out_of_scope(repo: Path) -> None:
+    _write(repo, "README.md", _README + "[root](/abs/path)\n")
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_same_file_anchor_is_checked(repo: Path) -> None:
+    _write(repo, "README.md", _README + "[nowhere](#nope)\n")
+    result = _run(repo)
+    assert result.returncode == 1
+    assert "README.md:11: #nope -> anchor #nope does not match a heading" in result.stderr
+
+
+def test_four_space_indented_fence_is_not_a_fence(repo: Path) -> None:
+    _write(repo, "README.md", _README + "    ```text\n    [broken](MISSING.md)\n    ```\n")
+    result = _run(repo)
+    assert result.returncode == 1
+    assert "MISSING.md -> does not exist" in result.stderr
+
+
+def test_indented_fence_opener_still_hides_links(repo: Path) -> None:
+    _write(repo, "README.md", _README + "  ```text\n  [broken](MISSING.md)\n  ```\n")
+    result = _run(repo)
     assert result.returncode == 0, result.stderr
