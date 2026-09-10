@@ -1844,6 +1844,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   whose pairs fold through `.config()`, `REPARK_CONFIG` discovery at `getOrCreate`,
   builder-beats-file precedence, and the missing-path refusal.
   pins: cfg-1/C-026, C-027
+- `test_config_mirror.py` — **CFG-1 step 4 (2026-09-10):** the `repark.config` mirror pins —
+  unknown display/session keys refuse, session knobs keep non-negative integers and digit
+  strings while booleans refuse in every table, database kinds outside the three spellings
+  refuse, dotted catalog names / empty catalog blocks / cross-family collisions refuse, the
+  rendered text parses back to the same tables, a rendered file builds a session answering
+  the file values, and a rendered database source refuses at load naming CFG-2. The guide
+  (`docs/guide/repark-toml.md`) quotes only outputs this file and the step-3 pins ran.
+  pins: cfg-1/C-028, C-029, C-030
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
