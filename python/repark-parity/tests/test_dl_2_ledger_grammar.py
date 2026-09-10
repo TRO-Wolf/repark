@@ -162,6 +162,42 @@ def test_reading_rule_b_applies_without_the_marker(repo: Path) -> None:
     )
 
 
+def test_reading_quoted_marker_in_prose_is_not_exempt(repo: Path) -> None:
+    quoted = _READING_TEXT.replace(
+        _READING_MARKER_LINE,
+        "**Path:** STANDARD\n\nThe notes quote `**Path:** READING` in prose.",
+    )
+    _write(repo, _READING_LEDGER, quoted)
+    result = _run(repo)
+    assert result.returncode == 1
+    assert (
+        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
+        in result.stderr
+    )
+
+
+def test_reading_foo_value_is_not_exempt(repo: Path) -> None:
+    _write(
+        repo, _READING_LEDGER, _READING_TEXT.replace(_READING_MARKER_LINE, "**Path:** READING-FOO")
+    )
+    result = _run(repo)
+    assert result.returncode == 1
+    assert (
+        f"1 PROVEN clause(s) with no `pins: {_READING_UNIT}/C-NNN` citation (ceiling 0): C-001"
+        in result.stderr
+    )
+
+
+def test_reading_midline_value_with_period_is_exempt(repo: Path) -> None:
+    midline = _READING_TEXT.replace(
+        _READING_MARKER_LINE,
+        "**Policy:** AGENTS.md. **Path:** READING. **risk_tier: standard.**",
+    )
+    _write(repo, _READING_LEDGER, midline)
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
 def test_reading_rule_c_still_requires_the_attestation(repo: Path) -> None:
     _write(repo, _READING_LEDGER, _READING_TEXT.replace(_ATTESTATION, ""))
     result = _run(repo)

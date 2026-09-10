@@ -417,6 +417,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   no new test was written for it, so its citation rides this line with its evidence cell
   holding the gate runs.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
+  **REVIEW-FIX-10 (2026-09-10):** three new pins on the same scratch tree — a `STANDARD`
+  ledger quoting the marker in prose and a `READING-FOO` header both fire rule B, and a
+  mid-line `READING.` field stays exempt; the real-field exemption rides the existing test.
+  The new tests carry no inline pins, so the unit's clause is cited on this line.
+  pins: review-fix-10/C-001
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
