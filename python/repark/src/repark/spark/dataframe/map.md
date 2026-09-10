@@ -248,6 +248,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
   query. `unpersist()` clears the shape with the view, so a shape never outlives its
   materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
+  REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
+  frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
+  interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint
+  path leaves exactly that) is not a cache-owned frame, so a temp view named
+  `none` stays unreachable. `_count_rows` and `_styled_total_rows` run the
+  pending-checkpoint materialize first and then reuse the shape, so
+  `localCheckpoint(eager=False)` discharges on the next action with no count
+  query. pins: review-fix-4/C-001, C-002, C-003
 - `explain.py` owns the explain rendering support (DF-EXPLAIN-1, D-5 ruling 2026-09-08): the
   section headers `_LOGICAL_PLAN_HEADER` / `_PHYSICAL_PLAN_HEADER`, the `_EXPLAIN_CODEGEN_NOTE`
   line, the `_EXPLAIN_SECTION_PLAN` mode map (mode → SQL prefix + section keys), and the

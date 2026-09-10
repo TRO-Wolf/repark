@@ -676,3 +676,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   release run over the AP-0 tables, perf document, guide section) is out of scope.
   `risk_tier: standard`. Branch `feat/ap-1`.
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [review-fix-4-ledger.md](review-fix-4-ledger.md) —
+  **REVIEW-FIX-4 (2026-09-10), in flight:** the eager frame's checkpoint paths —
+  `lazy()` with no `_cache_view` interpolation, pending-checkpoint discharge in
+  `count()` and the styled row count with no count query, and the `none`-view
+  unreachable pin. Closes Q-12, Q-13, Q-50. `risk_tier: standard`. Branch
+  `fix/review-fix-4`.
+  pins: review-fix-4/C-001, C-002, C-003
