@@ -25,10 +25,10 @@ any dependency file; `STATUS.md`; `briefs/next-sequence.md`.
 | C-001 | The audit carries one measured row per module under `python/repark/src/repark/` (106 files): lines, binding call sites with symbols, pyarrow-reference lines, class. | §2 of the audit; the three anchor facts reproduce (inference 101, types 43, core 37). | **PROVEN** | `find … -name '*.py` = 106 files; `wc -l` total 51,930; anchors reproduced exactly on `2fad8135` (see §1). |
 | C-002 | The audit lists every IPC crossing site with file:line. | §3 of the audit. | **PROVEN** | 13 into-engine + 7 out-of-engine sites with file:line, comment-only mentions excluded by inspection. |
 | C-003 | The audit lists every place a `Column` renders SQL text with file:line and what it renders. | §4 of the audit. | **PROVEN** | 7 `PyColumn.sql` entry points, 11 `column.py` method groups, 25 session scaffold sites, each with the rendered shape; `functions.py:358` identified as `expr()` by read-back. |
-| C-004 | The audit carries the totals: facade line count, per-class totals, pyarrow-touching module count. | §5 of the audit. | **OPEN** | — |
-| C-005 | Map lockstep holds and the round gates are green. | `task/roadmap/epic-term/map.md` row, `task/ledgers/staging/map.md` row, `make check-docs-compaction`, `make check-ledgers`, fence grep clean. | **OPEN** | — |
+| C-004 | The audit carries the totals: facade line count, per-class totals, pyarrow-touching module count. | §5 of the audit. | **PROVEN** | 51,930 lines / 106 files; delegate 22/10,118, logic 72/35,466, pyarrow 12/6,346; 231 binding sites; 23 runtime pyarrow importers (27 with any textual reference). |
+| C-005 | Map lockstep holds and the round gates are green. | `task/roadmap/epic-term/map.md` row, `task/ledgers/staging/map.md` row, `make check-docs-compaction`, `make check-ledgers`, fence grep clean. | **PROVEN** | `docs-compaction: clean`; `ledger-check: 284 ledgers in bins (218 archived), 796 ledger links resolve, frozen rule clean`; fence grep over staged rs/py/toml/sh/yml printed nothing (2026-09-10). |
 
-VERDICT: 5 clauses, 3 PROVEN, 2 OPEN, 0 REJECTED.
+VERDICT: 5 clauses, 5 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Red first
 

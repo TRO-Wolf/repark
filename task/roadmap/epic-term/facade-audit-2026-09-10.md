@@ -365,3 +365,36 @@ Group 3 — session-level SQL scaffolds (query text built in Python, run through
   `udf_window_projection`, `ta.py`, and `ml/feature/_transformers.py` (64
   SELECT-bearing lines) likewise generate query text in Python (D-3 out of scope
   for the sequence, in scope for the count).
+
+## §5 Totals
+
+Measured with `find python/repark/src/repark -name '*.py' | sort | xargs wc -l`
+(51,930 total) and the §1 patterns summed per class:
+
+| class | files | lines | share (rounded) |
+|---|---|---|---|
+| delegate | 22 | 10,118 | 19% |
+| logic | 72 | 35,466 | 68% |
+| pyarrow | 12 | 6,346 | 12% |
+| **facade total** | **106** | **51,930** | 100% |
+
+The 22 delegate files are the 13 re-export-only shims (956 lines combined),
+`column.py`, the seven `functions*` builder modules, and `session_core.py`.
+The 12 pyarrow files are `dataframe/rows_export.py`, `udf_bridge.py`,
+`udf_projection.py`, `udf_schema.py`, `grouped_udf.py`, `spark/types.py`, five
+`session/create_dataframe_*` modules (`arrow`, `columns`, `inference`, `tuples`,
+`rows`), and `ml/ext/_arrow_util.py`. Direct binding call sites total 231
+(§2 per-file counts). pyarrow-touching modules: 23 import pyarrow at runtime;
+27 have at least one `pyarrow|pa\.` line (the four extra are prose-only —
+`dataframe/export_errors.py`, `session/create_dataframe_schema.py`,
+`session/create_dataframe_values.py`, `session/session_core.py`).
+
+Largest logic masses outside the pyarrow set: `dataframe/core.py` (4,487),
+`ml/feature/_transformers.py` (2,717, D-3 out of scope), `session_core.py` is
+delegate, `ta.py` (1,818, D-3 out of scope), `functions_udf.py` (1,300),
+`dataframe/joins_columns.py` (1,238), `dataframe/plan_collapse.py` (1,057),
+`dataframe/writer_readwriter.py` (1,111), `session/reader.py` (1,022).
+
+## Half B — sequence and weighting (step 2)
+
+Open — step 2.
