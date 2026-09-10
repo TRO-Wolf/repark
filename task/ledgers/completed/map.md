@@ -27,6 +27,39 @@ else. The next pickup's `make ledger-archive` files everything here under
   §27 + §28 gate filled, appendix A6 closes the python/tooling gap; the ADR
   disposition and the brief's Milestone 0 row landed in #426.
   Branch `docs/ballista-audit-0`.
+- [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
+  **BALLISTA-M1-A step 1 (2026-09-10), merged** as part of Ballista Milestone 1
+  (#460/#466/#469/#470): `DistributedExecutor` + `LocalDataFusionExecutor` in
+  `crates/repark-distributed`; range-sum, status, and cancel pins green; `cluster`
+  feature builds with no cluster code. `risk_tier: standard`.
+  Branch `feat/ballista-m1-a`.
+  pins: ballista-m1-a/C-001, C-002, C-003, C-004
+- [ballista-m1-b-ledger.md](ballista-m1-b-ledger.md) —
+  **BALLISTA-M1-B step 2 (2026-09-10), merged** as part of Ballista Milestone 1
+  (#460/#466/#469/#470): UDF-on-executor pin
+  (`repark_times_ten` through `ReparkSessionProvider`; vanilla session fails to resolve);
+  cancel mid-flight (`Cancelled`, no running tasks within 5 s); codec install pin
+  (`repark_ballista_codec()` is Ballista's defaults; two-executor shuffle completes).
+  C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
+  Branch `feat/ballista-m1-b`.
+  pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
+- [ballista-m1-c-ledger.md](ballista-m1-c-ledger.md) —
+  **BALLISTA-M1-C step 2 (2026-09-10), merged** as part of Ballista Milestone 1
+  (#460/#466/#469/#470): D-1 three shapes PROVEN; D-3
+  `Completed { stages, retried_stages }` shuffle bytes > 0 on the two-stage hash aggregate;
+  D-4 session spill dir has no shuffle files after complete or cancel. D-2 retry stays
+  OPEN (ChaosExec is not fail-once; stopping an executor needs `arrow_flight`).
+  `risk_tier: standard`. Branch `feat/ballista-m1-c`.
+  pins: ballista-m1-c/C-001, C-003, C-004
+- [ballista-m1-d-ledger.md](ballista-m1-d-ledger.md) —
+  **BALLISTA-M1-D step 2 (2026-09-10), merged** as part of Ballista Milestone 1
+  (#460/#466/#469/#470): Iceberg provider codec and
+  two-executor scan pins (step 1) plus the design-doc Iceberg section and success-list
+  line 17. Runtime abstraction is in place; Iceberg writes and the commit coordinator
+  are Milestone 3 (ADR-0004). Residues: S3/Glue credentials; `IcebergTableScan` rewrite
+  to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
+  Branch `feat/ballista-m1-d`.
+  pins: ballista-m1-d/C-001, C-002, C-003
 - [df-eager-1-ledger.md](df-eager-1-ledger.md) —
   **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
   facade DataFrame. Step 1 only: the red-first pins in
