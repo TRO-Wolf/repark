@@ -236,11 +236,51 @@ apply pins above.
 | C-024 | The facade answers the D-3 frame shape with stable D-4 ordinals. | `test_session_run_maintenance_frame_shape` | **PROVEN** | Green in the same run. `step` is `pa.int32()`, the four string columns are `pa.string()`, procedures read `["rewrite_data_files", "expire_snapshots"]` with ordinals `[2, 4]`. Red first below. |
 | C-025 | The reserved `adaptive_partitioning` key refuses through the facade with "not yet supported". | `test_run_maintenance_adaptive_partitioning_refuses_reserved` | **PROVEN** | Green in the same run. The kwarg rides through to the engine refusal (`AnalysisException`, `not yet supported`); the facade adds no screening of its own. Red first below. |
 | C-026 | `docs/guide/maintenance-policy.md` documents the D-1 shape, the D-4 order and gate, the D-3 frame with a worked dry run and apply, the D-6 refusal, and the reservation; `repark-toml.md` gains the `[<profile>.maintenance]` section. | files + maps | **PROVEN** | Both files landed with every behavioral claim executed against the built module first (five-file, five-snapshot memory table; exact `arguments` strings and result JSON quoted verbatim; runnable blocks use `type = "memory"` per R-21). Listed in `docs/guide/map.md` in the same commit. |
-| C-027 | The parity mirror stays green: no public-surface count moves, no new example row. | `test_ex_0_example_coverage.py` + `test_cap_1_source_file_line_cap.py` | **PROVEN** | Green in the step-4 run (command in the brief). `run_maintenance` is installed onto `ReparkSession` from the sibling module, so the AST enumerator that reads the `session_core.py` class body still counts 926 rows; `session_core.py` stays byte-identical on its 2305 baseline and every new file lands under the 1000 default. |
+| C-027 | The parity mirror stays green: no public-surface count moves, no new example row. | `test_ex_0_example_coverage.py` + `test_cap_1_source_file_line_cap.py` | **PROVEN** | Green in the step-4 run (command in the brief). Superseded by the audit fix below: the assignment this clause describes kept the count at 926 by hiding the name from the enumerator, so C-030 replaces this reasoning with a declared name and a 927 count. |
 | C-028 | `rewrite_data_files` loads the table once: the `where` path shares the door's load with `run_rewrite`. | existing `where` pins green + code path | **PROVEN** | Green in the step-4 run (`cargo test -p repark-spark --lib call_rewrite`: `34 passed`, `cargo test -p repark-spark --lib run_maintenance`: `28 passed`, 2026-09-10). `run_rewrite` now takes the loaded `Table` + `TableIdent`; both callers resolve and load once. No new pin can observe a load count from outside, so the standing `where` byte-identity pins are the regression guard, named here. |
 | C-029 | A CALL with both a missing table and a malformed `remove-dangling-deletes` value reports the table, never the flag. | `call_rewrite_missing_table_reports_the_table_before_a_bad_flag` | **PROVEN** | Green in the same spark run. The pin asserts the message names `ghost` and never `remove-dangling-deletes`; it FAILED on the base tree with the flag error (red first below). Decision rationale: this restores the pre-step-3 order (the door resolves and loads its target before validating options), so no shipped contract changes silently. The live-oracle multi-failure comparison was not re-run (no oracle row covers it; parity-live runs on `main`, never on unmerged code); the ledger records that instead of a measurement. |
 
 VERDICT (step 4): 9 clauses, 9 PROVEN, 0 OPEN, 0 REJECTED.
+
+## PROPOSITION LEDGER — MAINT-POLICY-1 audit fix (class-body declaration + 927) — 2026-09-10
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-030 | `run_maintenance` is declared in the `ReparkSession` class body and the example-coverage inventory counts 927 names with a runnable example covering it. | `test_ex_0_enumerator_emits_five_families_and_repark_sql` + `docs/examples/session/run_maintenance.py` | **PROVEN** | Green after the fix (mirror command: `48 passed`, 2026-09-10). The delegator replaced the `__init__` assignment; `_temp_view_home_ref` moved byte-identical to `catalog_resolution.py` (`session_core` imports it back, temp-view reads verified) so `session_core.py` lands on 2304 with both baselines ratcheted down; `docs/examples/session/run_maintenance.py` runs green with its inventory and session-map rows. Red first below. |
+
+VERDICT (audit fix): 1 clause, 1 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Audit-fix red first
+
+The class-body declaration landed with the mirror still asserting 926.
+`test_ex_0_enumerator_emits_five_families_and_repark_sql` before the count bump.
+No pin assertion was edited afterwards except the 926 → 927 baseline the red
+names.
+
+```text
+>       assert len(rows) == 926
+E       AssertionError: assert 927 == 926
+E        +  where 927 = len([('catalog', 'Catalog.clearCache'), ('catalog', 'Catalog.clear_cache'), ('catalog', 'Catalog.currentCatalog'), ('catalog', 'Catalog.current_database'), ...])
+python/repark-parity/tests/test_ex_0_example_coverage.py:57: AssertionError
+=========================== short test summary info ============================
+FAILED python/repark-parity/tests/test_ex_0_example_coverage.py::test_ex_0_enumerator_emits_five_families_and_repark_sql
+1 failed in 0.17s
+```
+
+## Audit-fix notes for the orchestrator
+
+- The moved helper keeps its exact body (including the one-line docstring) in
+  `catalog_resolution.py`, its natural home beside name resolution; `session_core`
+  takes it back through one top-level import (no cycle: that module touches no
+  session code at runtime). The `CREATE TEMP VIEW`-via-`sql()` refusal seen during
+  verification predates this change (reproduced on the stashed base tree) and is
+  engine territory, not this move.
+- The delegator keeps the shipped signature (`table`, `dry_run = True`,
+  `**overrides: Any`) so the five facade pins pass unchanged; the real body
+  stays in `session_maintenance.py`.
+- `session_core.py` 2305 → 2304 in `scripts/check_lib_py.py` and the CAP-1
+  mirror; the example-coverage count 926 → 927 with no backlog movement (the new
+  name ships covered on day one).
 
 ## Step-4 red first
 
@@ -273,14 +313,12 @@ got: Error during planning: CALL argument `remove-dangling-deletes` must be a bo
 
 ## Step-4 notes for the orchestrator
 
-- `session_core.py` is byte-identical (2305 baseline holds): the wrapper lives in
-  `session_maintenance.py` and `__init__.py` installs it as
-  `ReparkSession.run_maintenance`. Class-level assignment is slot-safe
-  (`__slots__` blocks instance attributes, not class attributes) and reaches
-  every holder of the class object, including the `session_core` direct
-  importers. The sibling carries one public function with the one-line
-  docstring, module-level lazy imports (the `sql()` precedent), and annotated
-  locals per the code-quality skill.
+- The wrapper lives in `session_maintenance.py` (one public function with the
+  one-line docstring, module-level lazy imports on the `sql()` precedent, and
+  annotated locals per the code-quality skill). The audit fix replaced the
+  original `__init__` assignment with a class-body delegator (see the audit-fix
+  section above); the assignment reasoning it supersedes is kept here for the
+  record only.
 - The D-6 class was measured, not chosen: `DataFusionError::Plan` surfaces as
   `repark.errors.AnalysisException` (probe 2026-09-10 against the rebuilt
   native), and the pin asserts that class.

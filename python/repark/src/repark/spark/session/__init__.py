@@ -26,7 +26,6 @@ from repark.spark.session import reader as _reader
 from repark.spark.session import reader_support as _reader_support
 from repark.spark.session import session_configuration as _session_configuration
 from repark.spark.session import session_core as _session_core
-from repark.spark.session import session_maintenance as _session_maintenance
 from repark.spark.session import session_state as _session_state
 from repark.spark.session import sql_relations as _sql_relations
 from repark.spark.session import sql_udf as _sql_udf
@@ -89,8 +88,6 @@ for _name in dir(_session_funcs):
     if _name.startswith("__"):
         continue
     globals()[_name] = getattr(_session_funcs, _name)
-
-ReparkSession.run_maintenance = _session_maintenance.run_maintenance
 
 _session_state._install_state_proxy(_sys.modules[__name__])
 

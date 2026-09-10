@@ -294,6 +294,12 @@ a ratchet DOWN, no approval needed. The duplicate table in
 `test_cap_1_source_file_line_cap.py` moves with both in the same commit.
 pins: cfg-1/C-026, C-027
 
+MAINT-POLICY-1 audit fix (2026-09-10): `check_lib_py.py` `session_core.py`
+2305→2304 — `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for
+the `run_maintenance` class-body declaration; a ratchet DOWN. The duplicate
+table in `test_cap_1_source_file_line_cap.py` moves with it in the same commit.
+pins: maint-policy-1/C-030
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002
