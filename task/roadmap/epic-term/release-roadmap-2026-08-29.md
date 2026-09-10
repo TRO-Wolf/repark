@@ -145,6 +145,12 @@ beyond documentation and pins.
 
 ### v1.4 — `repark.toml`: one configuration file (was v0.10)
 
+**Re-themed 2026-09-10 (owner ruling).** The loader shipped ahead of its tag (CFG-1, #440–#455) and
+CFG-2 named sources moved to 1.5, so **v1.4 is the maintenance-policy tag:** roadmap 2.1's
+`[<profile>.maintenance]` + `CALL run_maintenance()` (MAINT-POLICY-1) as the file's first real consumer,
+with AP-1 `plan_partitioning()` alongside. The design text below stays as the record of the loader.
+
+
 Split out of v0.8 on 2026-08-29 (now v1.2). It is product surface with precedence rules, and a dependency
 of v1.10 (database connections) and v1.11 (dbt targets), so the schema wants to be right early.
 Modeled loosely on `.pyiceberg.yaml`, but TOML with environment profiles.
@@ -341,6 +347,7 @@ both.
 | 2026-08-29 | Federated SQL | **The SQL door is primary.** One namespace `<source>.<schema>.<table>` across Iceberg catalogs, databases and remote engines; `repark.sql()` queries and joins across them with no per-source function. Functions are conveniences. Recorded as the governing rule under v0.10; v1.6 acceptance carries a federated join. |
 | 2026-08-29 | 2.x continuation and 3.0 | Agreed: 2.2 incremental / change-data reads and 2.3 CDC ingestion are the priority of the 2.x line; **maintenance policy moves up to 2.1** ahead of them (multi-writer and CDC generate many small commits). Fleet-parallel, ML out-of-core and the DuckDB leg shift to 2.5 / 2.6 / 2.8. MVs at 2.4, observability at 2.7, Substrait + Ibis at 2.9. **3.0 = the trust promise** (auth, policies, quotas, audit); Iceberg v4 is spec-timed, not committed. |
 | 2026-09-10 | 1.5 scope | **The Rust-backed facade sequence (FACADE-AUDIT-0 → FACADE-1…5) and CFG-2 named sources join 1.5.** The database discovery, profiling and planning product is excluded from 1.5 and stays with 2.3. Cards: slate 2 (`../mid-term/cheap-tier-slate-2-2026-09-09.md`), the ruled CFG-2 card in the design plan. |
+| 2026-09-10 | 1.4 re-theme and the order after 1.5 | **v1.4 = maintenance policy (2.1 pulled forward) + AP-1**, since the toml loader shipped early and CFG-2 moved to 1.5. Tag order: 1.2 torture suite → 1.3 Never-OOM → 1.4 maintenance policy → 1.5 facade + CFG-2 + FNP/TA. Ballista M1 lands feature-gated in whichever tag is open. **After 1.5 the standing recommendation is 1.12 Spark Connect server first, 1.10 connectors (with the discovery proposal's Stage 1) second; the ruling is due at the 1.5 cut.** |
 
 ## Open rulings
 
