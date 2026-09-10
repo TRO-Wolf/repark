@@ -407,10 +407,10 @@ that would settle it. Half A (§§1–5) is not re-measured; `§2` row citations
 
 #### FACADE-1 (Arrow C Stream boundary)
 
-Export side, measured. [facade-boundary-baseline §3](../../docs/perf/facade-boundary-baseline.md):
+Export side, measured. [facade-boundary-baseline §3](../../../docs/perf/facade-boundary-baseline.md):
 `export/1000000/to_arrow` median 30.61 ms, `export/100000/to_arrow` 8.51 ms,
 `export/1000000/toPandas` 55.60 ms. [PERF-ANALYSIS-1
-§7.3](../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `to_arrow` 1e6 × 7 at 24.1 ms
+§7.3](../../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `to_arrow` 1e6 × 7 at 24.1 ms
 against Spark `local[8]` 197 ms; `toPandas` 49.3 ms against 206 ms. The export door is
 already one to two orders under the old `collect()` wall, and the out-of-engine capsule
 (`dataframe/core.py:4047,4054`) already exists beside the IPC sites.
@@ -430,11 +430,11 @@ capsule protocol, and every later unit's pins ride the same two doors.
 #### FACADE-2 (`Column` as a pyo3 class over a DataFusion `Expr`)
 
 The chain-scale win is already banked. [facade-boundary-baseline
-§2](../../docs/perf/facade-boundary-baseline.md): depth-100 `withColumn` build 2,476.08 ms before,
+§2](../../../docs/perf/facade-boundary-baseline.md): depth-100 `withColumn` build 2,476.08 ms before,
 366.11 ms after (6.76×); the residue is 346 ms of 445 ms inside DataFusion's own
 `project` (`profile_chain.py 100`), which no facade move can touch. Per-op plan build is
 closed as negligible except in chains ([PERF-ANALYSIS-1
-§3](../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `select` 45 µs, `filter` 29 µs,
+§3](../../../docs/perf/engine-iceberg-analysis-2026-09-04.md): `select` 45 µs, `filter` 29 µs,
 `withColumn` 131 µs on a fresh frame). The statement overhead pair is closed the same way:
 Spark door 0.32 ms per statement against native `repark.sql` 0.21 ms — the pre-parse
 rewrites cost about 0.1 ms per statement.
@@ -452,13 +452,13 @@ build.
 #### FACADE-3 (`createDataFrame` inference in Rust)
 
 The largest remaining measured Python wall in the sequence. [PERF-ANALYSIS-1 §2, row
-2](../../docs/perf/engine-iceberg-analysis-2026-09-04.md) isolates 1,717 ms at 1e5 × 7 (tuples
+2](../../../docs/perf/engine-iceberg-analysis-2026-09-04.md) isolates 1,717 ms at 1e5 × 7 (tuples
 versus pandas input, both `.count()`), with the cProfile split: per-cell normalization
 (`session/create_dataframe_values.py:165`) 2.14 s cumulative, nested-cell preparation
 (`session/create_dataframe_inference.py:428`) 1.22 s, tuple-loop merge checks
 (`session/create_dataframe_tuples.py:107` 0.94 s, `:46` 0.43 s) and tuple-to-Arrow
 (`:183`) 2.49 s cumulative. PERF-FACADE-CDF-1 already took the tuple leg in Python
-([facade-boundary-baseline §4](../../docs/perf/facade-boundary-baseline.md): `create/100000/tuples_count`
+([facade-boundary-baseline §4](../../../docs/perf/facade-boundary-baseline.md): `create/100000/tuples_count`
 1,656.62 ms before, 70.30 ms after — 23.56×, reproduced 1,620.75 to 66.65 ms the same day).
 
 What is left, measured: the explicit-schema path at 1,273.94 ms is now the slowest
@@ -483,7 +483,7 @@ otherwise.
 
 #### FACADE-5 (display renderer in Rust)
 
-The quoted eager walls are scan effects, not render costs. [eager-preview-baseline](../../docs/perf/eager-preview-baseline.md):
+The quoted eager walls are scan effects, not render costs. [eager-preview-baseline](../../../docs/perf/eager-preview-baseline.md):
 parquet `repr`/`HTML`/vertical show 0.004 s before, 0.002 s after (the `count()` goes
 away); `mapInArrow` `repr` 0.821 s before, 0.031 s after (2,000,000 UDF rows computed
 before, one 65,536-row batch after); the vertical-show control is 0.031 s before and
@@ -510,7 +510,7 @@ library-wrapping parts of `ta.py` (1,818) out of the weighing entirely.
 
 ### §7 Freeze constraints — what each unit is forbidden to change
 
-Source: [v1-0-api-freeze.json](../../docs/design/v1-0-api-freeze.json) (2026-09-02; 35 rows,
+Source: [v1-0-api-freeze.json](../../../docs/design/v1-0-api-freeze.json) (2026-09-02; 35 rows,
 30 frozen, 888 frozen names; additive-only within a major, breaking a frozen row needs a
 major plus a one-minor deprecation shim). The `isinstance` rule — `isinstance` on `Column`,
 `Row`, and the type classes must keep working — is stated by the card (D-1); the freeze
