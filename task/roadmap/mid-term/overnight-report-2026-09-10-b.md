@@ -56,7 +56,7 @@ the first of those independently.
 
 Twenty-four rounds over eleven units, ~$9.80 in worker cost, in
 [review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 51 numbered findings — 39
-CONFIRMED, 4 SUSPECTED, 8 owner questions — 12 fix cards, and two units that survived with nothing
+CONFIRMED, 4 SUSPECTED, 8 owner questions — 15 fix cards, and two units that survived with nothing
 (PREFLIGHT-PARITY-1 in both roles, DISPLAY-BRIDGE-1). The orchestrator re-ran nine reproductions
 itself; all nine held. Highlights:
 
@@ -92,10 +92,12 @@ itself; all nine held. Highlights:
   three trace to the same cause: RePark plan nodes cannot cross to an executor without
   `datafusion-proto`. **That is the first question Milestone 2 has to answer**, and it is the one
   thing in this run the owner should look at before scheduling more distributed work.
-- **REVIEW-1 is not done.** The card wants both roles on every unit in its D-1 list plus two
-  security rounds; this run did twenty-four of about twenty-six. The findings document names exactly
-  what is missing.
-- **Twelve fix cards** (REVIEW-FIX-1…12) are written but unopened. None
+- **REVIEW-1's coverage contract is met**: every unit in D-1's list drew a `critic-quality` and a
+  `critic-logic` round, and both D-2 security rounds ran, with four extra rounds beyond the card.
+  The card closes when PR #471 merges — which is the owner's read, not an auto-merge. Nothing that
+  merged after 09:00 local was reviewed; MAINT-POLICY-1, TORTURE-1, AP-0 and AP-1 landed from the
+  other lane during the sweep and belong to the next one.
+- **Fifteen fix cards** (REVIEW-FIX-1…15) are written but unopened. None
   was worked this run: REVIEW-1 D-4 says a critic never patches, and the fix rounds belong to a
   scheduled slate, not to the sweep.
 - **Eight owner questions** are collected in §4 of the findings document, each with the

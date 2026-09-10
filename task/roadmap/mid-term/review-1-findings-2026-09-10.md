@@ -742,6 +742,62 @@ that does not resolve; a four-space-indented fence.
 **Tier.** M. **Rounds.** 1. Every pin is lifted from the critic's reproductions.
 
 
+---
+
+### Card REVIEW-FIX-13 — the Ballista audit is trued up (Q-42, Q-43, Q-44, Q-45, Q-53, Q-54)
+
+**Home.** `task/roadmap/epic-term/ballista-audit-2026-09-08.md`,
+`task/roadmap/epic-term/map.md`, and one paragraph of `docs/design/distributed-m1.md` if the
+dependency-surface correction changes what Milestone 2 must decide.
+
+**Decisions.** D-1 §26.B/§26.E's line arithmetic is re-measured and corrected — `state/aqe`,
+`cluster` and `physical_optimizer` counted, and `state/`'s 16,427 lines no longer attributed to
+A5's 7,491-line set — with the command that produced each number written beside it. D-2 The
+per-session seat is named `SessionBuilder` with its signature, since two units have now been
+briefed off the wrong name. D-3 R-7's dependency paragraph distinguishes default from optional
+features: prometheus, graphviz and KEDA are optional (Q-54), while REST/axum cannot be gated away
+and the scheduler defaults do pull AWS (Q-43). D-4 The A1 reproduction command is a real command or
+the `20110` figure is removed. D-5 `task/roadmap/epic-term/map.md:91` stops saying step 3 is
+pending.
+
+**Tier.** M for D-1/D-4/D-5 (measurement and text), I for D-3 (it needs a `cargo tree` read against
+the pinned versions). **Rounds.** 1. **Note.** Every M1 card was written off this document; two of
+its errors have already cost a Grok round each.
+
+---
+
+### Card REVIEW-FIX-14 — the display configuration keeps its promises (Q-51, Q-52)
+
+**Home.** `python/repark/src/repark/spark/session/builder_conf.py`,
+`python/repark/src/repark/spark/session/session_configuration.py`,
+`python/repark/tests/test_display_polars_default.py`.
+
+**Decisions.** D-1 `conf.get("repark.display.style")` reads the session's snapshot, never the
+process environment, after an `unset` — the lockstep its docstring promises, and ADR-0004's rule
+against query-time environment reads. D-2 `repark.display.max_rows` carries a ceiling, so the
+styled probe's `limit(max_rows + 1)` cannot be driven unbounded from configuration.
+
+**Pin (red first).** Mutate `REPARK_DISPLAY_STYLE` after `unset` and assert `conf.get`,
+`session.display_style` and `show()` still agree; a `max_rows` above the ceiling refuses or clamps,
+with the behaviour pinned either way.
+
+**Tier.** M. **Rounds.** 1.
+
+---
+
+### Card REVIEW-FIX-15 — a pin cites the clause it holds (Q-48, Q-49)
+
+**Home.** `python/repark-parity/tests/test_dl_2_ledger_grammar.py` and its two siblings,
+`python/repark-parity/tests/map.md`.
+
+**Decisions.** D-1 LEDGER-READING-1's C-001…C-004 citations move into the tests that pin them; the
+`map.md` rows may stay as navigation but are no longer the only home. D-2 The reading fixture's
+Verdict and Evidence columns are the way round the grammar describes.
+
+**Tier.** M. **Rounds.** 1. **Note.** Neither is a defect in shipped behaviour; both are in the one
+unit whose subject is pin binding, which is why they are worth an hour.
+
+
 ## 4. Questions for the owner
 
 | # | Question | Lean |
@@ -757,8 +813,14 @@ that does not resolve; a four-space-indented fence.
 
 ## 5. What this sweep has not covered
 
-Twenty-four rounds landed, plus one discarded fabrication. Not reviewed: the security angle of DF-EXPLAIN-1,
-DOCS-LINKS-1, LEDGER-READING-1 and BALLISTA-AUDIT-0, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
+**REVIEW-1's D-1 and D-2 coverage is complete**: every unit in D-1's list has a `critic-quality`
+and a `critic-logic` file, and the two security rounds D-2 names (CFG-1, SQL-DESCRIBE-1) both ran.
+Four extra rounds went further — DISPLAY-BRIDGE-1, which merged mid-sweep, and security rounds over
+DF-EAGER-1, DISPLAY-POLARS-1 and PROFILES-1. Twenty-four rounds landed, plus one discarded
+fabrication. Beyond the card: no security round ran over DF-EXPLAIN-1,
+DOCS-LINKS-1, LEDGER-READING-1 or BALLISTA-AUDIT-0, and nothing merged after 2026-09-10 09:00 local
+was reviewed (MAINT-POLICY-1, TORTURE-1, AP-0 and AP-1 all landed from the other lane during this
+sweep and belong to a later one), (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
 list, because it merged into the display path mid-sweep). REVIEW-1's "done when" is therefore not
 met; the card stays open with this
 document as its first instalment.

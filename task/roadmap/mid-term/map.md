@@ -91,11 +91,11 @@ declines it (a dated ruling in the intake, then the archive).
   DML-A/B/C. Track C points at the fork handoff.
 
 - [review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md) — **the REVIEW-1 critic
-  sweep (2026-09-10):** eighteen Grok critic rounds over the units merged since 2026-09-08, with
-  42 numbered findings (31 CONFIRMED, nine of them re-run by the orchestrator), twelve fix cards
-  (REVIEW-FIX-1…12, none opened) and eight owner questions. Read it before opening any fix work on
+  sweep (2026-09-10):** twenty-four Grok critic rounds over the units merged since 2026-09-08, with
+  51 numbered findings (39 CONFIRMED, nine of them re-run by the orchestrator), fifteen fix cards
+  (REVIEW-FIX-1…15, none opened) and eight owner questions. Read it before opening any fix work on
   CFG-1, DISPLAY-POLARS-1, DF-EAGER-1, DF-EXPLAIN-1, SQL-DESCRIBE-1, PROFILES-1, DOCS-LINKS-1,
-  LEDGER-READING-1 or BALLISTA-AUDIT-0. REVIEW-1 stays open; the document names what is unreviewed.
+  LEDGER-READING-1 or BALLISTA-AUDIT-0. D-1 and D-2 coverage is complete; the card closes when this document reaches `main`.
 - [overnight-report-2026-09-10-b.md](overnight-report-2026-09-10-b.md) — **run 5b (2026-09-10):**
   the second orchestrating session of the day, running the Grok lane (Ballista Milestone 1 A→D and
   the REVIEW-1 sweep) and FACADE-AUDIT-0 on Muse beside run 5. Three units merged, M1-C open,
