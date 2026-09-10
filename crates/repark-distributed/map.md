@@ -23,6 +23,11 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   default feature and always builds. The four Ballista crates are pinned `=54.1.0` in the
   workspace manifest, the release line that matches the workspace's DataFusion 54.1 pin
   (verified on crates.io at the seed commit).
+- **D-3 / D-4 (step 1).** `src/executor.rs` holds `DistributedExecutor`, `JobHandle`, `JobId`,
+  and `JobStatus`. `src/local.rs` holds `LocalDataFusionExecutor`: it runs a plan on the
+  session `SessionContext` in-process, reports `Completed`/`Failed` after the stream drains,
+  and `cancel` sets `Cancelled` without a detached spawn. pins: ballista-m1-a/C-001, C-002,
+  C-003, C-004
 
 ## Contents
 

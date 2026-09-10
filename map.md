@@ -11,7 +11,7 @@ front-door navigation map. See [README.md](README.md) for the overview,
 (release state, delivery, active workstreams — the single source of truth; do not restate it here).
 F-Y10-1 closed 2026-08-30.
 
-The workspace carries nine delivered crates: `crates/repark-common` (error seed + the
+The workspace carries ten delivered crates: `crates/repark-common` (error seed + the
 surface-matrix registry), `crates/repark-iceberg` (catalog + write over the owned iceberg-rust
 fork, `[patch.crates-io]`-pinned), `crates/repark-core` (the `ReparkSession` engine API + the
 frozen `SqlDialect` / `SessionExtension` seams, and since 2026-09-09 the `repark.toml` loader

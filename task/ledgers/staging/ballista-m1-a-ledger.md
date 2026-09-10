@@ -10,8 +10,10 @@ This file closes when BALLISTA-M1-A merges, or when the owner closes the slate r
 **Path:** STANDARD.
 
 Step 0 (seed) is already on this branch. Step 1 lands `executor.rs` (D-3), `local.rs` (D-4),
-the three local-executor pins, and the `cluster` feature compile proof. Step 2
-(ARCHITECTURE.md paragraph, crate-DAG figure, design-note expansion) may chain.
+the three local-executor pins, and the `cluster` feature compile proof. Step 2 (chained in
+this session, separate commit) adds the ARCHITECTURE.md paragraph and DAG figure row, the
+`repark-distributed → repark-core` DAG sentence in `crates/map.md`, and the D-3/D-4 design
+note on the crate map.
 
 **Not in this unit:** cluster executor code (BALLISTA-M1-B), Iceberg providers, `STATUS.md`,
 `briefs/next-sequence.md`, `.github/`, `Cargo.toml`, `Cargo.lock`.
