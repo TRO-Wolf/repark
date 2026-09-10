@@ -4716,6 +4716,26 @@ Shared roster pin for every heading:
 - **Rationale** — DECLARED. Same family as EX-IO-3 (integer width). A decimal infer
   path is a separate unit. The pin reds when repark answers Spark's decimal.
 
+### CSV-INFER-INT32-WIDTH — every-integer CSV column infers `bigint`; Spark narrows all-`int` columns to `int` — **BACKLOG 2026-09-10**
+
+- **repark** — `spark.read.csv(..., inferSchema=True)` answers `bigint` for every
+  all-integer column, including columns whose every value fits `int`: a 0/1 column at
+  10k rows answers `int64` on the DataFrame door and the `spark.sql` door (values
+  agree). Reproduce with the torture `inference` family:
+  `python -m repark_parity.torture generate inference --rows 10000 --seed 7 --out
+  /tmp/torture/inference` then `pytest python/repark-parity/tests/torture
+  test_torture_inference.py -q`.
+- **Apache Spark** — the same file infers `boolish: int` (`IntegerType`) while `growth`
+  (an int32 head, int64 tail) infers `bigint`: Spark narrows an all-`int` column to
+  `IntegerType` and widens only past `int`. *(oracle: recorded — live PySpark 4.1.2,
+  zulu-17-amd64, local[1], 2026-09-10, the torture `inference` CSV at 10k rows.)*
+- **Pin** —
+  `python/repark-parity/tests/torture/test_torture_inference.py::test_inferred_type_matches_declared_csv[boolish]`
+  (`xfail(strict=True)` naming this row; reds when repark narrows).
+- **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 1. DataFusion's CSV
+  inference answers Int64 for every integer column; a Spark-style narrowing pass is a
+  separate unit, same family as `CSV-INFER-20DIGIT` and `EX-IO-3` (integer width).
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

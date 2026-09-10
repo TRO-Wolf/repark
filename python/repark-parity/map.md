@@ -13,7 +13,11 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   dataclass because it runs as bare `python3`); `record` extra (`pyspark`) for
   golden refresh.
 - `src/repark_parity/` — `compare.py` (the comparison core), `__init__.py`, `py.typed`.
-- `tests/` — unit tests for the comparison core **and the dataset generators**.
+- `tests/` — unit tests for the comparison core **and the dataset generators**; the
+  TORTURE-1 both-door suite lives in [tests/torture/](tests/torture/map.md).
+- `fixtures/` — generated-test fixture sources; the TORTURE-1 generator package
+  (`repark_parity.torture`, data never committed) lives in
+  [fixtures/torture/](fixtures/torture/map.md).
 - `datasets/` — torture-dataset generators (cache-root outputs, data never committed);
   loaded as `repark_datasets`, not part of the hatch package; see [datasets/map.md](datasets/map.md).
 - `bench/` — local performance measurement scripts (R-PERF-MEASURE); see [bench/map.md](bench/map.md).
@@ -59,6 +63,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 | Compare two census runs (the acceptance gate) | `python -m compat.compare_reports` / [../../docs/port/census.md](../../docs/port/census.md) |
 | Follow the recorded census procedure | [../../docs/port/census.md](../../docs/port/census.md) |
 | Generate / test torture datasets | [datasets/map.md](datasets/map.md) |
+| Generate / run the TORTURE-1 both-door torture suite | [fixtures/torture/map.md](fixtures/torture/map.md) / `make py-test-torture` |
 
 ## Pointers
 

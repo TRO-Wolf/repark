@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [torture-1-ledger.md](torture-1-ledger.md) —
+  **TORTURE-1 step 1 (2026-09-10), in flight:** the torture-test dataset suite's step 1 —
+  the `repark_parity.torture` generator package (checkout-only `__path__` graft, `generate`
+  CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested` and
+  `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
+  target, registry row `CSV-INFER-INT32-WIDTH` with a strict xfail, and the red-first
+  evidence. Steps 2–5 pending. `risk_tier: standard`. Branch `feat/torture-1`.
+  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
