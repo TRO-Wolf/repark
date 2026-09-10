@@ -7,8 +7,8 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
 - [cheap-tier-slate-2026-09-08.md](cheap-tier-slate-2026-09-08.md) — **the 2026-09-08 owner slate,
-  cut for mechanical-tier workers:** eight owner rulings (5+5 polars edges, lazy `repr` renders
-  data, `repark.toml` pulled ahead of 1.2/1.3, the Ballista audit joins the Rust migration pilot,
+  cut for mechanical-tier workers:** the owner rulings (5+5 polars edges, lazy `repr` shows the
+  schema — R-22 of 2026-09-10 superseding R-2's data render, card DISPLAY-LAZY-1 — `repark.toml` pulled ahead of 1.2/1.3, the Ballista audit joins the Rust migration pilot,
   fixtures pin `spark` style, the object stays a RePark DataFrame) and seven work cards with
   pre-made decisions, one step per worker round, tier per step, red-first pin names, gates and
   hand-back conditions: SQL-DESCRIBE-1, DF-EXPLAIN-1, DISPLAY-POLARS-1, CFG-1, DF-EAGER-1,
