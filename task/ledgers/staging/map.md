@@ -34,6 +34,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   OPEN (ChaosExec is not fail-once; stopping an executor needs `arrow_flight`).
   `risk_tier: standard`. Branch `feat/ballista-m1-c`.
   pins: ballista-m1-c/C-001, C-003, C-004
+- [ballista-m1-d-ledger.md](ballista-m1-d-ledger.md) —
+  **BALLISTA-M1-D step 2 (2026-09-10), in flight:** Iceberg provider codec and
+  two-executor scan pins (step 1) plus the design-doc Iceberg section and success-list
+  line 17. Runtime abstraction is in place; Iceberg writes and the commit coordinator
+  are Milestone 3 (ADR-0004). Residues: S3/Glue credentials; `IcebergTableScan` rewrite
+  to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
+  Branch `feat/ballista-m1-d`.
+  pins: ballista-m1-d/C-001, C-002, C-003
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
