@@ -33,7 +33,7 @@ use repark_core::{Error, Result};
 use tokio::task::JoinHandle;
 
 use crate::codec::repark_ballista_codec;
-use crate::executor::{DistributedExecutor, JobHandle, JobId, JobStatus};
+use crate::executor::{DistributedExecutor, JobHandle, JobId, JobStatus, StageMetrics};
 use crate::session_provider::ReparkSessionProvider;
 
 const EXECUTOR_WAIT: Duration = Duration::from_secs(30);
@@ -180,6 +180,111 @@ fn count_running_stage_tasks(stage: &ExecutionStage, counts: &mut HashMap<String
         if let task_status::Status::Running(running_task) = &info.task_status {
             *counts.entry(running_task.executor_id.clone()).or_insert(0) += 1;
         }
+    }
+}
+
+fn shuffle_totals(status: &task_status::Status) -> (u64, u64) {
+    let task_status::Status::Successful(successful) = status else {
+        return (0, 0);
+    };
+    let mut rows = 0_u64;
+    let mut bytes = 0_u64;
+    for partition in &successful.partitions {
+        rows += partition.num_rows;
+        bytes += partition.num_bytes;
+    }
+    (rows, bytes)
+}
+
+fn wall_span_ms(start_times: &[u128], end_times: &[u128]) -> u128 {
+    let min_start = start_times.iter().copied().filter(|time| *time > 0).min();
+    let max_end = end_times.iter().copied().filter(|time| *time > 0).max();
+    match (min_start, max_end) {
+        (Some(start), Some(end)) if end >= start => end - start,
+        _ => 0,
+    }
+}
+
+fn completed_status(stages: &HashMap<usize, ExecutionStage>) -> JobStatus {
+    let mut metrics = Vec::new();
+    let mut retried_stages = 0_usize;
+    for (stage_id, stage) in stages {
+        let (rows, bytes_shuffled, wall_time_ms, attempt_num) = match stage {
+            ExecutionStage::Successful(successful) => {
+                let mut rows = 0_u64;
+                let mut bytes = 0_u64;
+                let mut starts = Vec::new();
+                let mut ends = Vec::new();
+                for info in &successful.task_infos {
+                    let (part_rows, part_bytes) = shuffle_totals(&info.task_status);
+                    rows += part_rows;
+                    bytes += part_bytes;
+                    starts.push(info.start_exec_time);
+                    ends.push(info.end_exec_time);
+                }
+                (
+                    rows,
+                    bytes,
+                    wall_span_ms(&starts, &ends),
+                    successful.stage_attempt_num,
+                )
+            }
+            ExecutionStage::Running(running) => {
+                let mut rows = 0_u64;
+                let mut bytes = 0_u64;
+                let mut starts = Vec::new();
+                let mut ends = Vec::new();
+                for info in running.task_infos.iter().flatten() {
+                    let (part_rows, part_bytes) = shuffle_totals(&info.task_status);
+                    rows += part_rows;
+                    bytes += part_bytes;
+                    starts.push(info.start_exec_time);
+                    ends.push(info.end_exec_time);
+                }
+                (
+                    rows,
+                    bytes,
+                    wall_span_ms(&starts, &ends),
+                    running.stage_attempt_num,
+                )
+            }
+            ExecutionStage::Failed(failed) => {
+                let mut rows = 0_u64;
+                let mut bytes = 0_u64;
+                let mut starts = Vec::new();
+                let mut ends = Vec::new();
+                for info in failed.task_infos.iter().flatten() {
+                    let (part_rows, part_bytes) = shuffle_totals(&info.task_status);
+                    rows += part_rows;
+                    bytes += part_bytes;
+                    starts.push(info.start_exec_time);
+                    ends.push(info.end_exec_time);
+                }
+                (
+                    rows,
+                    bytes,
+                    wall_span_ms(&starts, &ends),
+                    failed.stage_attempt_num,
+                )
+            }
+            ExecutionStage::UnResolved(unresolved) => (0, 0, 0, unresolved.stage_attempt_num),
+            ExecutionStage::Resolved(resolved) => (0, 0, 0, resolved.stage_attempt_num),
+        };
+        if attempt_num > 0 {
+            retried_stages += 1;
+        }
+        metrics.push(StageMetrics {
+            stage_id: *stage_id,
+            rows,
+            bytes_shuffled,
+            wall_time_ms,
+            attempt_num,
+        });
+    }
+    metrics.sort_by_key(|stage| stage.stage_id);
+    JobStatus::Completed {
+        stages: metrics,
+        retried_stages,
     }
 }
 
@@ -523,7 +628,21 @@ impl DistributedExecutor for ReparkClusterExecutor {
                 })
             }
             Some(job_status::Status::Failed(failed)) => Ok(JobStatus::Failed(failed.error)),
-            Some(job_status::Status::Successful(_)) => Ok(JobStatus::Completed),
+            Some(job_status::Status::Successful(_)) => {
+                match self
+                    .cluster
+                    .job_state()
+                    .get_execution_graph(&ballista_id)
+                    .await
+                    .map_err(ballista_err)?
+                {
+                    Some(graph) => Ok(completed_status(graph.stages())),
+                    None => Ok(JobStatus::Completed {
+                        stages: Vec::new(),
+                        retried_stages: 0,
+                    }),
+                }
+            }
         }
     }
 

@@ -10,6 +10,20 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 ## Contents
 
+- [distributed-m1.md](distributed-m1.md) — **BALLISTA-M1 (2026-09-10):** what Milestone 1
+  delivers (`DistributedExecutor`, local and in-process cluster executors, multi-stage
+  reads, per-stage `Completed` metrics, Iceberg reads through `IcebergScanSpec`) and the
+  owner's plan §12 success list with a check per line. Line 17 (Iceberg scan) is done.
+  Open questions: M1-B C-004 (`datafusion-proto` codec round-trip), M1-C C-002 (no
+  deterministic fail-once hook without a new dependency), M1-D (`IcebergTableScan` cannot
+  travel; same codec wall). Iceberg writes and the commit coordinator are Milestone 3
+  (ADR-0004). Closes when M1-D merges or the owner closes the slate row.
+  pins: ballista-m1-c/C-001, C-003, C-004; ballista-m1-d/C-001, C-002, C-003
+  reads, per-stage `Completed` metrics) and the owner's plan §12 success list with a check
+  per line. Two open questions: M1-B C-004 (`datafusion-proto` codec round-trip) and M1-C
+  C-002 (no deterministic fail-once hook without a new dependency). Closes when M1-D merges
+  or the owner closes the slate row.
+  pins: ballista-m1-c/C-001, C-003, C-004
 - [sql-harden-cutover-matrix.md](sql-harden-cutover-matrix.md) — **SQL-HARDEN-1 (2026-09-04):**
   the cutover pipeline cutover shapes S1–S7 measured on memory Spark vs repark — 9 programs, 0 EQUAL,
   9 DIVERGES, four registry rows filed, `V3-COV-7` cited. **SQL-HARDEN-2 (2026-09-04):** S8/S9

@@ -17,13 +17,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `feat/neveroom-1`.
   pins: neveroom-1/C-001, C-002, C-003, C-004
 - [torture-1-ledger.md](torture-1-ledger.md) —
-  **TORTURE-1 step 1 (2026-09-10), in flight:** the torture-test dataset suite's step 1 —
-  the `repark_parity.torture` generator package (checkout-only `__path__` graft, `generate`
-  CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested` and
-  `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
-  target, registry row `CSV-INFER-INT32-WIDTH` with a strict xfail, and the red-first
-  evidence. Steps 2–5 pending. `risk_tier: standard`. Branch `feat/torture-1`.
-  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **TORTURE-1 steps 1–2 (2026-09-10), in flight:** the torture-test dataset suite —
+  step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,
+  `generate` CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested`
+  and `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
+  target, and registry row `CSV-INFER-INT32-WIDTH`; step 2: the `extreme_types`,
+  `smartcsv`, `temporal` and `decimal_overflow` families with both-door cells, registry
+  rows `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1`, `DATE-INTERVAL-NSBOUND-1`, and the
+  no-live-Spark labeling. Steps 3–5 pending (`secrets` + the read-option flag, `v3_dv`,
+  the full-tier results). `risk_tier: standard`. Branches `feat/torture-1`,
+  `feat/torture-1-s2`.
+  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016
 - [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
   **BALLISTA-M1-A step 1 (2026-09-10), in flight:** `DistributedExecutor` +
   `LocalDataFusionExecutor` in `crates/repark-distributed`; range-sum, status, and
@@ -38,6 +43,21 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
   Branch `feat/ballista-m1-b`.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
+- [ballista-m1-c-ledger.md](ballista-m1-c-ledger.md) —
+  **BALLISTA-M1-C step 2 (2026-09-10), in flight:** D-1 three shapes PROVEN; D-3
+  `Completed { stages, retried_stages }` shuffle bytes > 0 on the two-stage hash aggregate;
+  D-4 session spill dir has no shuffle files after complete or cancel. D-2 retry stays
+  OPEN (ChaosExec is not fail-once; stopping an executor needs `arrow_flight`).
+  `risk_tier: standard`. Branch `feat/ballista-m1-c`.
+  pins: ballista-m1-c/C-001, C-003, C-004
+- [ballista-m1-d-ledger.md](ballista-m1-d-ledger.md) —
+  **BALLISTA-M1-D step 2 (2026-09-10), in flight:** Iceberg provider codec and
+  two-executor scan pins (step 1) plus the design-doc Iceberg section and success-list
+  line 17. Runtime abstraction is in place; Iceberg writes and the commit coordinator
+  are Milestone 3 (ADR-0004). Residues: S3/Glue credentials; `IcebergTableScan` rewrite
+  to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
+  Branch `feat/ballista-m1-d`.
+  pins: ballista-m1-d/C-001, C-002, C-003
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →

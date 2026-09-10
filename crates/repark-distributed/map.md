@@ -39,12 +39,37 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   five shuffle nodes) stays OPEN / PARKED: it needs `PhysicalExtensionCodec` from
   `datafusion-proto`, which this unit may not add. The owner question on the wrapper lives in
   [src/map.md](src/map.md). pins: ballista-m1-b/C-003, C-005, C-006
+- **BALLISTA-M1-C step 1.** Three multi-stage shapes against the local executor on the same
+  physical plan (`tests/multi_stage.rs`): hash aggregate over 4 partitions, partitioned hash
+  join of two tables, sort-merge join with `prefer_hash_join=false`. Cluster row order is
+  sorted before compare. pins: ballista-m1-c/C-001
+- **BALLISTA-M1-C step 2.** `JobStatus::Completed { stages, retried_stages }` from the
+  scheduler graph (rows, shuffle bytes, wall time, attempt number). Shuffle bytes > 0 on
+  the two-stage hash aggregate. Session spill dir has no shuffle files after complete or
+  cancel (Ballista standalone work_dir is a dropped `TempDir`, not the session spill dir).
+  Retry is OPEN: ChaosExec is not fail-once; stopping an executor needs `arrow_flight`.
+  Design: [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md).
+  pins: ballista-m1-c/C-003, C-004
+- **BALLISTA-M1-D step 1.** `src/iceberg_provider.rs` is `IcebergScanSpec`: the provider
+  codec round-trips `(catalog, table identifier, snapshot id, projection, filters)` and
+  rebuilds the Iceberg table from `ReparkSessionProvider`'s session catalog. The
+  two-executor pin is `tests/iceberg_scan.rs` (8-file memory-catalog table; count/sum/
+  filtered scan match local; both executors ran a task). `IcebergTableScan` itself does
+  not serialize; file groups do. S3/Glue executor credentials stay residue (D-2).
+  pins: ballista-m1-d/C-001, C-002, C-003
+- **BALLISTA-M1-D step 2.** Iceberg section and success-list line 17 in
+  [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md). The runtime
+  abstraction is in place. Iceberg writes and the commit coordinator are Milestone 3
+  (ADR-0004). The `IcebergTableScan` serde wall sits beside M1-B C-004: without
+  `datafusion-proto`, RePark plan nodes cannot cross to an executor.
+  pins: ballista-m1-d/C-001, C-002, C-003
 
 ## Contents
 
 - `Cargo.toml` — the crate manifest: the two features and the optional Ballista dependencies.
 - `src/` — the crate source ([src/map.md](src/map.md)).
-- `tests/` — local-executor and cluster two-executor integration pins
+- `tests/` — local-executor, cluster two-executor, multi-stage, and Iceberg scan pins
+- `tests/` — local-executor, cluster two-executor, and multi-stage cluster pins
   ([tests/map.md](tests/map.md)).
 
 ## Pointers
