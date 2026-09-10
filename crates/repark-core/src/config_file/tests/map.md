@@ -8,9 +8,10 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
 
 ## Contents
 
-- `mod.rs` — the 40 stage pins (the seed's three, step-1 discovery/merge/interpolation,
-  step-1b `$`-edge flips, step 2's catalog/database/redaction pins) plus the shared
-  fixtures (`stub_environment`, `write_file`). Untouched by the split.
+- `mod.rs` — the 46 stage pins (the seed's three, step-1 discovery/merge/interpolation,
+  step-1b `$`-edge flips, step 2's catalog/database/redaction pins, the 6 step-1
+  maintenance pins) plus the shared fixtures (`stub_environment`, `write_file`,
+  `maintenance_policy_fixture`). Untouched by the split.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017
 - `wiring.rs` — the 8 step-3 wiring pins (display/session/`conf` translation, nested-`conf`

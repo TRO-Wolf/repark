@@ -68,6 +68,17 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `default` — the three precedence levels, nothing else. `load_for_build` is the thin
   process-environment wrapper `session.rs` calls. Step 3.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+- `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
+  `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
+  naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
+  supported at both levels, reserving the name for ADAPT-PART), `parse_duration` (the one
+  D-2 `<n>d | <n>h | <n>m` parser; anything else refuses naming the key), and `resolve`
+  (per-table entry wins key by key, unset keys fall back to the profile values; step 2's
+  entry point, `#[allow(dead_code)]` until the procedure calls it). `profile.rs`
+  validates eagerly through `from_table` but still stores the raw table on
+  `Profile.maintenance`, so both `parse()` and the typed API refuse; `profile_as_table`
+  carries the slot so the `REPARK_ENV` merge keeps it. Step 1 of MAINT-POLICY-1.
+  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
   pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the

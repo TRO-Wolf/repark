@@ -1,5 +1,6 @@
 mod discovery;
 mod interpolate;
+mod maintenance;
 mod profile;
 mod redact;
 mod sources;
@@ -31,6 +32,7 @@ pub struct Profile {
     pub conf: Option<toml::Table>,
     pub catalog: Option<toml::Table>,
     pub database: Option<toml::Table>,
+    pub maintenance: Option<toml::Table>,
 }
 
 #[allow(dead_code)]
