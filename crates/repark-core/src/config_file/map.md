@@ -55,7 +55,11 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   home)` (forced path refuses naming it when absent, else automatic discovery; empty
   `REPARK_CONFIG` disables, empty `REPARK_ENV` selects default) then `REPARK_ENV` profile,
   merge, interpolation, and translation of the effective table into flat pairs:
-  `display.*` → `repark.display.*` (string or integer, else refuses), `session` knobs →
+  `display.*` → `repark.display.*` (string or integer, else refuses), `maintenance` →
+  the `(active-profile, Option<MaintenancePolicy>)` stamp `session.rs` installs on the
+  registry at build (MAINT-POLICY-1 step 3, 2026-09-10; a loaded file always names its
+  profile, `None` policy when the table is absent; no file leaves the build unstamped),
+  `session` knobs →
   typed fallbacks plus `repark.*` knob-key pairs, `conf` flattened with dot joins
   (TOML nests dotted keys; a quoted-plus-nested collision refuses) in sorted-key order
   (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
@@ -68,6 +72,21 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `default` — the three precedence levels, nothing else. `load_for_build` is the thin
   process-environment wrapper `session.rs` calls. Step 3.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+- `maintenance.rs` — `MaintenancePolicy` (the six D-1 profile-level keys plus the
+  `tables` map of per-table `TablePolicy` entries) with `from_table` (unknown keys refuse
+  naming the `name.maintenance.key` path; `adaptive_partitioning` refuses as not yet
+  supported at both levels, reserving the name for ADAPT-PART), `parse_duration` (the one
+  D-2 `<n>d | <n>h | <n>m` parser; anything else refuses naming the key), and `resolve`
+  (per-table entry wins key by key, unset keys fall back to the profile values; step 2's
+  entry point, `#[allow(dead_code)]` until the procedure calls it). `profile.rs`
+  validates eagerly through `from_table` but still stores the raw table on
+  `Profile.maintenance`, so both `parse()` and the typed API refuse; `profile_as_table`
+  carries the slot so the `REPARK_ENV` merge keeps it. Step 1 of MAINT-POLICY-1.
+  pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **MAINT-POLICY-1 step 2 (2026-09-10):** the policy types, `resolve`, `parse_duration`,
+  and `parse_maintenance_policy` (full-document text in, typed policy out, `None` for a
+  profile with no maintenance table) are public for the Spark procedure; the
+  `#[allow(dead_code)]` is gone now that `plan_steps` calls `resolve` through the stamp.
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
   pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the
@@ -75,8 +94,12 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   or edited in the split. The environment arrives as a stub closure throughout, so no pin
   mutates the process environment (build-level pins use forced temp paths and assume the
   ambient `REPARK_ENV` is unset, the same class of assumption as the seed's no-file pin).
+  **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file policy resolves with its
+  profile name, `REPARK_ENV` names a non-default stamp with and without a table, the
+  file-built session carries the stamp on its registry).
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: maint-policy-1/C-020
 
 ## Pointers
 

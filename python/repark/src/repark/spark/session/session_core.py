@@ -10,6 +10,7 @@ import repark.spark.session._funcs as _sf
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
+from repark.spark.session.catalog_resolution import _temp_view_home_ref
 from repark.spark.session.session_configuration import (
     fold_config_file_into_builder,
     resolve_batch_size,
@@ -31,14 +32,6 @@ for _name in dir(_sf):
     globals()[_name] = getattr(_sf, _name)
 # keep module ref for active-session mutations (do not del _sf)
 del _name
-
-
-def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
-    """The temp view's home segments, or ``None`` when it is not a temp view."""
-    try:
-        return inner.resolve_temp_view_home_ref(name)
-    except Exception:
-        return None
 
 
 class ReparkSession:
@@ -1016,6 +1009,12 @@ class ReparkSession:
         table_ref = self._sql_table_ref_resolved(table_name, prefer_temp_view=True)
         inner = self._ensure_alive()
         return DataFrame(inner.sql(f"SELECT * FROM {table_ref}"), inner, self._alive_token)
+
+    def run_maintenance(self, table: str, dry_run: bool = True, **overrides: Any) -> DataFrame:
+        """Run the maintenance policy for one table."""
+        from repark.spark.session import session_maintenance
+
+        return session_maintenance.run_maintenance(self, table, dry_run=dry_run, **overrides)
 
     def registerTempTable(self, name: str, table: Any) -> None:  # noqa: N802
         """Unsupported legacy alias of createOrReplaceTempView (R-FACADE-HYGIENE W7)."""

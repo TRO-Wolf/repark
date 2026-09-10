@@ -5,10 +5,11 @@ use repark_common::{Error, Result};
 
 use super::discovery::discover;
 use super::interpolate::interpolate_table;
+use super::maintenance::MaintenancePolicy;
 use super::profile::{DEFAULT_PROFILE_NAME, effective_table, profile_as_table, profile_from_table};
 use super::redact::redact_value;
 use super::sources::{CATALOG_KEY_PREFIX, profile_sources};
-use super::{ConfigFile, EnvironmentLookup, read_and_parse};
+use super::{ConfigFile, EnvironmentLookup, Profile, read_and_parse};
 
 pub(crate) const ENV_PROFILE_VARIABLE: &str = "REPARK_ENV";
 
@@ -32,6 +33,7 @@ pub(crate) struct FileConfig {
     pub memory_limit_gb: Option<usize>,
     pub batch_size: Option<usize>,
     pub target_partitions: Option<usize>,
+    pub maintenance: Option<(String, Option<MaintenancePolicy>)>,
 }
 
 impl FileConfig {
@@ -182,7 +184,15 @@ fn translate_document(
         memory_limit_gb,
         batch_size,
         target_partitions,
+        maintenance: Some((label.to_string(), resolve_maintenance(label, &profile)?)),
     })
+}
+
+fn resolve_maintenance(label: &str, profile: &Profile) -> Result<Option<MaintenancePolicy>> {
+    match profile.maintenance.as_ref() {
+        None => Ok(None),
+        Some(table) => MaintenancePolicy::from_table(label, table).map(Some),
+    }
 }
 
 fn plain_string(label: &str, section: &str, key: &str, value: &toml::Value) -> Result<String> {
