@@ -2,7 +2,7 @@
 
 **Unit:** FACADE-AUDIT-0 steps 1–2 · **Date:** 2026-09-10 · **Branch:** `docs/facade-audit-0` · **Base:** `2fad8135`
 **Model:** Muse Spark (muse-spark-1.3-contributor) — implementation, via muse-worker
-**Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
+**Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** READING. **risk_tier: standard.**
 **Reading path:** this is a READING unit under R-10 — no code runs, no benchmark runs;
 evidence is quoted measurements with file paths, verified by grep, not re-taken.
 
@@ -66,3 +66,55 @@ confirmed present on the base tree with `ls`. Result: 40 number greps across
 the hard pyarrow dependency; all 24 cited `python/repark/tests/*.py` pin files exist.
 A misquoted wall or a nonexistent pin would have failed this check first; only then
 were the sections committed.
+
+## Closing attestation (orchestrator, 2026-09-10)
+
+The orchestrator re-measured the audit's anchor numbers on the same base commit before the PR:
+`find python/repark/src/repark -name '*.py' | wc -l` = 106, the same tree's line total 51,930, and
+`grep -cE 'pyarrow|pa\.' python/repark/src/repark/spark/types.py` = 43 — the three that Half A's
+own red-first check turns on. The document quotes measurements; it takes none, ships no code, and
+changes no behaviour, so rule B (pin binding) does not apply — this ledger is a READING unit
+under R-10.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: facade-audit-0
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Card FACADE-AUDIT-0's D-1 (two halves), D-2 (the five candidate units) and D-3 (out of scope) were walked clause by clause against the document. Half A carries the per-module table, the IPC sites and the Column SQL sites D-1 names; Half B confirms D-2's order on quoted walls and holds D-3's exclusions (ML transformers, ta.py wrappers, public names, pickling).
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md, task/ledgers/completed/facade-audit-0-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: The module set is the whole recursive .py tree under python/repark/src/repark (106 files, re-counted by the orchestrator), not a sample; modules with zero binding calls and zero pyarrow lines carry rows, and the four prose-only pyarrow mentions are separated from the 23 runtime imports rather than folded in.
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md]
+    - id: AT-3
+      status: N/A
+      justification: A reading unit: no code path ships, so there is no failure, retry or cleanup path to attack. The document's own failure mode — a wrong number — is attacked under AT-8 and AT-10.
+    - id: AT-4
+      status: N/A
+      justification: No state, no concurrency, no ordering: the deliverable is one markdown document and its ledger.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no input parsing, no secret handling; the audit reads tracked source and tracked perf documents only.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The API freeze is the compatibility constraint the sequence must respect; Half B states per candidate unit what docs/design/v1-0-api-freeze.json forbids in it, and files the isinstance mechanism it cannot prove as an open question rather than asserting it.
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md, docs/design/v1-0-api-freeze.json]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Weighing is by quoted measured walls with their source files, and every candidate whose cost no cell isolates is marked UNMEASURED with the measurement that would settle it — the audit does not convert a guess into a ranking.
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md, docs/perf/facade-boundary-baseline.md, docs/perf/engine-iceberg-analysis-2026-09-04.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The card's premise that the native module is `repark._repark` was measured false and corrected in the document to `repark._native` (zero hits for the card's spelling); every wall quoted in Half B was confirmed present in its cited file by grep before the section was committed (40 greps, zero misses).
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md, crates/repark-python/src/lib.rs]
+    - id: AT-9
+      status: N/A
+      justification: Nothing runs in production from this unit; there is no log, metric or alarm surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: A reading unit has no behavioural pin; its falsifiable check is the anchor reproduction recorded under "Red first" (three card-stated pyarrow counts reproduced exactly, a wrong file set or pattern failing first) and the quote verification under "Red first (step 2)". The orchestrator re-ran the file-count, line-count and types.py anchors independently and they hold. Each candidate unit in the sequence carries its own pin list, so the audit hands the next unit its test obligations rather than leaving them open.
+      artifacts: [task/roadmap/epic-term/facade-audit-2026-09-10.md]
+  complete: true
+```
