@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [neveroom-1-ledger.md](neveroom-1-ledger.md) —
+  **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
+  a subprocess-per-cell runner whose address-space cap is the measured baseline plus
+  3 × limit, in-engine `range()` generators sized to the limit multiple, the
+  `EXPLAIN ANALYZE` spill-bytes probe reused from `bench/spill/`, the three-outcome
+  classifier (`KILLED` fails the matrix and never folds), and the one CI-tier cell
+  (`sort` at 2× the 64 MB limit, measured `spilled`, `spill_bytes=211812352`). Two
+  measured D-2 readings (cap-as-headroom, the `PySparkException` refusal family) are
+  filed as hand-back ruling questions. Steps 2–3 pending. `risk_tier: standard`.
+  Branch `feat/neveroom-1`.
+  pins: neveroom-1/C-001, C-002, C-003, C-004
 - [torture-1-ledger.md](torture-1-ledger.md) —
   **TORTURE-1 steps 1–2 (2026-09-10), in flight:** the torture-test dataset suite —
   step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,
@@ -657,3 +668,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Base `2fad8135`; no source touched; READING path under R-10.
   `risk_tier: standard`. Branch `docs/facade-audit-0`.
   pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
+- [ap-1-ledger.md](ap-1-ledger.md) —
+  **AP-1 step 1 (2026-09-10), in flight:** `CALL
+  <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` — the P-2
+  candidates scored with exactly P-3 over the `files` metadata table, the D-1 frame, the
+  AP-0-R-001 caveat on every row, P-5 branch refusal plus the multi-spec note. Step 2 (GLM:
+  release run over the AP-0 tables, perf document, guide section) is out of scope.
+  `risk_tier: standard`. Branch `feat/ap-1`.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
