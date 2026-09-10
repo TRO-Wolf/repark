@@ -17,7 +17,11 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   TORTURE-1 both-door suite lives in [tests/torture/](tests/torture/map.md).
 - `fixtures/` — generated-test fixture sources; the TORTURE-1 generator package
   (`repark_parity.torture`, data never committed) lives in
-  [fixtures/torture/](fixtures/torture/map.md).
+  [fixtures/torture/](fixtures/torture/map.md). **Contract:** `src/repark_parity/__init__.py`
+  grafts this whole directory onto the package path, so **every directory added here becomes
+  importable as `repark_parity.<name>`** — that is the rule, not a special case for `torture`.
+  Add a directory here only when you mean it to carry that spelling; anything else belongs in
+  `datasets/` or `bench/`.
 - `datasets/` — torture-dataset generators (cache-root outputs, data never committed);
   loaded as `repark_datasets`, not part of the hatch package; see [datasets/map.md](datasets/map.md).
 - `bench/` — local performance measurement scripts (R-PERF-MEASURE); see [bench/map.md](bench/map.md).
