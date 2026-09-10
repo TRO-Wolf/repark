@@ -16,7 +16,7 @@ schema evolution, fork pin RP-15 `85db42f2`), WRITE-DISTRIBUTION-2 (one partitio
 writer on INSERT OVERWRITE and MERGE), CSV-INFER-PERF-1. Version SSOT: the Cargo workspace.
 **v1.1.0 shipped (2026-09-06)** — the first minor on v1.0.0 (2026-09-03, the first stable tag;
 v1.0.1 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`, PyPI trusted
-publishing, a `cp312-abi3` manylinux wheel, wheel-only (see docs/release.md).
+publishing, a wheel-only `cp312-abi3` manylinux wheel (see docs/release.md).
 v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
 [the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
 (V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
@@ -25,33 +25,37 @@ for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json)
 `main` adds the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines, identical
 export surface) and FNP-8 with its review. **DISPLAY-POLARS-1 (2026-09-09)** changes a
 user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
-not the PySpark ASCII grid. `repark.DataFrame` is unchanged — only the rendering is — and the grid
-is one setting away (`REPARK_DISPLAY_STYLE=spark`). DISPLAY-BRIDGE-1 (2026-09-10) closes the last
-door that ignored the style: a bridged frame's `show()` now matches its own `repr`. The four
-facade-local keys and the precedence chain:
+not the PySpark ASCII grid; the grid is one setting away (`REPARK_DISPLAY_STYLE=spark`) and
+`repark.DataFrame` itself is unchanged. DISPLAY-BRIDGE-1 (2026-09-10) closes the last door that
+ignored the style: a bridged frame's `show()` now matches its own `repr`. The four facade-local
+keys and the precedence chain:
 [docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
 **DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (one function object) and
 `.lazy()`: `.eager()` materialises through the cache-view path into a **new `repark.DataFrame`**
-(same class, never a polars object) whose shape is read once; `.lazy()` returns to a plan over
-the same relation. Spark's `collect()` and `df.pl.collect()` are unchanged. **REVIEW-FIX-4 (2026-09-10)**: `.lazy()` no longer
-interpolates the cache view into SQL, and `count()` and the styled preview discharge a pending
-`localCheckpoint(eager=False)` on the next action, still without a count query.
-**REVIEW-FIX-7 (2026-09-10)** hardens `repark.toml`: a name that would break a TOML header
-refuses, a parse error carries its position but never the offending line, and a `glue` /
-`s3tables` / `rest` catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
-`configFile`) warns once at session build naming the file and the catalog.
+(same class, never a polars object) whose shape is read once; `.lazy()` returns to a plan over the
+same relation. `collect()` and `df.pl.collect()` are unchanged.
+**REVIEW-1 fixes (2026-09-10)** — the confirmed findings of the 24-round critic sweep
+([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)), one card at a time.
+**FIX-4:** `.lazy()` on an eager frame no longer interpolates the cache view into SQL, and
+`count()` and the styled preview discharge a pending `localCheckpoint(eager=False)` with no count
+query. **FIX-5:** `DESCRIBE` completes one- and two-part names from the session defaults, a real
+`ice.sales.files` table describes, `Owner` is snapshotted at session build (ADR-0004), and
+`DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — a deliberate divergence from
+Spark, which prints `s3.access-key-id` in the clear. **FIX-7:** a `repark.toml` name that would
+break a TOML header refuses, a parse error carries its position but never the offending line, and
+a `glue` / `s3tables` / `rest` catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
+`configFile`) warns once at session build.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
-build, and the procedure that spends it —
-`CALL <catalog>.system.run_maintenance(table => 'db.t' [, dry_run => …] [, <policy key> => …])`,
-mirrored as `session.run_maintenance(...)`; **`dry_run` defaults to true**, `false` runs the
-five-step chain one commit per step. No scheduler; `adaptive_partitioning` is reserved for
-ADAPT-PART. Keys, order, result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
+build, and `CALL <catalog>.system.run_maintenance(table => 'db.t', …)` — mirrored as
+`session.run_maintenance(...)` — that spends it. **`dry_run` defaults to true**; `false` runs the
+five-step chain one commit per step. No scheduler. Keys, order, result frame:
+[docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
 **Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: `repark-distributed`
 (tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind the
-off-by-default `cluster` feature, an in-process Ballista scheduler, multi-stage queries with
-per-stage metrics and Iceberg reads per executor. Two clauses stay OPEN on the `datafusion-proto`
-wall, Milestone 2's first unit per
+off-by-default `cluster` feature, an in-process Ballista scheduler with multi-stage queries and
+per-executor Iceberg reads. Two clauses stay OPEN on the `datafusion-proto` wall, Milestone 2's
+first unit per
 [review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9;
 design [docs/design/distributed-m1.md](docs/design/distributed-m1.md).
 Release mechanics:
@@ -84,8 +88,8 @@ deferred-ledger tests read it; acceptance inputs are [task/port/](task/port/).
 [Delivered capabilities](#delivered-capabilities) above.
 
 **Standing decision: the private v1 predecessor is bugfix-only, and this repository is the sole
-forward target.** New engine work happens here. v1 receives fixes only, and a defect both engines
-share is fixed there and re-ported rather than patched only here.
+forward target.** New engine work happens here; a defect both engines share is fixed there and
+re-ported rather than patched only here.
 
 What happens next, in order:
 
@@ -95,16 +99,14 @@ What happens next, in order:
    [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records (2026-08-13/14) are the
    increment ledgers indexed in
    [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
-3. **Production-pipeline cutover inventory** — which workloads move, in what order, under
-   **single-writer-per-table**, with each rollback story. **Filed 2026-09-04:**
-   [docs/cutover/inventory.md](docs/cutover/inventory.md), whose §7 carries the four owner
-   rulings of the same day (nullability → `CUTOVER-SCHEMA-1`; queue `DBT-1`; shadow namespace
-   and retention; the daily diff as an Airflow task).
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze
-   is pinned at 888 names in
+3. **Production-pipeline cutover inventory** — **Filed 2026-09-04:**
+   [docs/cutover/inventory.md](docs/cutover/inventory.md) — which workloads move, in what order,
+   under **single-writer-per-table**, with each rollback story; its §7 carries the four owner
+   rulings of the same day.
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is
+   pinned at 888 names in
    [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy:
-   [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut 2026-09-03 on the
-   north-star gate line V1-GATE wrote the same day.
+   [docs/release.md](docs/release.md) "Versioning policy").
 
 Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
 remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
