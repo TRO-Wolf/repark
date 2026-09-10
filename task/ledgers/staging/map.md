@@ -683,3 +683,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   unreachable pin. Closes Q-12, Q-13, Q-50. `risk_tier: standard`. Branch
   `fix/review-fix-4`.
   pins: review-fix-4/C-001, C-002, C-003
+- [review-fix-5-ledger.md](../completed/review-fix-5-ledger.md) —
+  **REVIEW-FIX-5 step 1 (2026-09-10), in flight:** DESCRIBE takes one- to three-part names
+  with session-default completion (D-3), never filters a three-part table named like a
+  metadata table (D-1), resolves `Owner` from the session-built `DescribeOwnerConfig`
+  extension (D-2), and redacts Table Properties through `prop_key_is_secret` with the Spark
+  `s3.access-key-id` delta recorded as deliberate (D-4). `risk_tier: standard`.
+  Branch `fix/review-fix-5`.
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-005, C-006

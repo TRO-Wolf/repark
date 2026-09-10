@@ -17,6 +17,7 @@ use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fal
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
+use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::TempViewHome;
 use crate::time_travel::{self, TimeTravelOpts};
@@ -239,7 +240,7 @@ impl ReparkSessionBuilder {
             .extension
             .clone()
             .unwrap_or_else(|| Arc::new(NoopSessionExtension));
-        let mut config = SessionConfig::new();
+        let mut config = with_session_owner(SessionConfig::new(), session_owner_snapshot());
         apply_df_54_1_config_guards(&mut config);
         config = repark_iceberg::write::with_merge_session_knobs(
             config,
@@ -562,7 +563,8 @@ impl ReparkSession {
     }
 
     /// A cheap clone of the catalog registry (keys + `Arc`s) for passing to the SQL layer.
-    pub(crate) fn catalogs_snapshot(&self) -> CatalogRegistry {
+    #[must_use]
+    pub fn catalogs_snapshot(&self) -> CatalogRegistry {
         self.catalogs
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner)

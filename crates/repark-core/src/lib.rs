@@ -17,6 +17,7 @@ mod pre_execute;
 mod read_options;
 mod runtime;
 mod session;
+mod session_owner;
 mod session_time_zone;
 mod sorted_view;
 mod spark_nullable;
@@ -44,13 +45,14 @@ pub use pre_execute::PreExecute;
 pub use runtime::EngineRuntime;
 
 // --- Catalog configuration + engine-side registry (hoisted).
-pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
+pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs, prop_key_is_secret};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 pub use config_file::config_file_pairs;
 pub use config_file::maintenance::{
     MaintenancePolicy, TablePolicy, parse_duration, parse_maintenance_policy,
 };
 pub use namespace_create::refuse_contradictory_namespace_location;
+pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 
 // === Time travel ===
 pub use time_travel::{

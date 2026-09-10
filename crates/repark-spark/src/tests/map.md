@@ -588,11 +588,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
   step-1 live capture (commented `bigint` column, `string`, `timestamp`, `days(ts)`,
   `k=v`). Parser accepts the plain/extended/formatted spellings and leaves namespace forms,
-  one-part names, metadata suffixes, and trailing shapes alone; plain rows match the capture
+  four-or-more-part metadata paths, and trailing shapes alone; plain rows match the capture
   verbatim; extended adds the metadata and detail sections (`FORMATTED` byte-identical);
   missing tables raise `[TABLE_OR_VIEW_NOT_FOUND]`; temp views and unregistered catalogs fall
   through; secrets redact in `Table Properties`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **REVIEW-FIX-5 (2026-09-10):** the parser takes one- and two-part names (missing parts
+  complete from the session defaults in the router) and no longer filters a three-part table
+  named like a metadata table, while four-part metadata paths still stay out; a real
+  `ice.sales.files` table describes; `Owner` equals the per-session owner across two sessions
+  in one process and the resolved owner in a production-built session; short names return
+  the three-part rows; `s3.access-key-id` redacts while
+  `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
+  refusal; temp-view fall-through stays pinned end to end).
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
 
 ## Mapping rule
 

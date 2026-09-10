@@ -32,7 +32,7 @@ EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fi
 # requires explicit owner approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "crates/repark-core/src/catalog_config.rs": (
-        1044,
+        1028,
         "Session catalog configuration still owns every backend shape.",
         "Split backend-specific option parsing from shared session installation.",
     ),

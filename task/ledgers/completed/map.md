@@ -119,6 +119,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `fix/review-fix-12`.
   pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
+- [review-fix-5-ledger.md](review-fix-5-ledger.md) — Unit ledger — REVIEW-FIX-5 step 1 · DESCRIBE metadata-name intercept, Owner, short names, redaction
 - [review-fix-7-ledger.md](review-fix-7-ledger.md) —
   **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —
   header-injection close in the Python mirror (refuse + quote), secret-free TOML parse

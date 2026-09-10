@@ -298,6 +298,11 @@ MAINT-POLICY-1 audit fix (2026-09-10): `check_lib_py.py` `session_core.py`
 2305→2304 — `_temp_view_home_ref` moves to `catalog_resolution.py` to pay for
 the `run_maintenance` class-body declaration; a ratchet DOWN. The duplicate
 table in `test_cap_1_source_file_line_cap.py` moves with it in the same commit.
+
+REVIEW-FIX-5 D-5 (2026-09-10): `check_rust_file_size.py`
+`repark-core/src/catalog_config.rs` 1044→1028 — the D-4 `pub` widening plus its
+`#[must_use]` are paid for by moving seventeen `//` lines to the core map; a ratchet
+DOWN, no approval needed. pins: review-fix-5/C-005
 pins: maint-policy-1/C-030
 
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —

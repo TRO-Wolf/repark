@@ -257,13 +257,25 @@ pins: rp-4-fork-repin/C-005, C-006
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
   (live-Spark-4.1.2-pinned rows, `bigint` via `spark_type_names`, secret redaction shared
-  with the namespace path). The table parser leaves namespace forms, non-three-part names,
-  and metadata-table suffixes alone; the router arm only shadows registered catalogs, so
+  with the namespace path). The table parser leaves namespace forms, zero- and four-or-more-
+  part names alone; the router arm only shadows registered catalogs, so
   temp views and DataFusion-native tables fall through. `EXTENDED` and `FORMATTED` share one
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
-  summary for `Statistics`, OS user for `Owner`).
+  summary for `Statistics`, the session-built `Owner` below).
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
+  never filters the table segment of a three-part name, so `cat.ns.files` describes while a
+  four-or-more-part metadata path still stays out; the router completes missing parts from
+  the engine `datafusion.catalog.default_catalog` / `default_schema` (the same rule `SELECT`
+  resolves by) before the registered-catalog check. `Owner` comes from the
+  `repark_core::DescribeOwnerConfig` session extension, installed once by
+  `ReparkSessionBuilder` (`unknown` when absent) — no environment read on the
+  query path. Table Properties redacts
+  through `repark_core::prop_key_is_secret` (widened to `pub` for this call; no second
+  predicate): **deliberate Spark delta** — Spark prints `s3.access-key-id` in the clear and
+  RePark redacts it; printing a credential is the worse divergence (RF-6).
+  pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS

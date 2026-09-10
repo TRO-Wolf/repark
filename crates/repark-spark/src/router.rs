@@ -309,12 +309,14 @@ async fn try_preparse_intercepts(
     }
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
         match parsed {
-            Ok(describe_table) if catalogs.get(&describe_table.catalog).is_some() => {
-                return Some(
-                    describe_show::execute_describe_table(ctx, catalogs, describe_table).await,
-                );
+            Ok(mut describe_table) => {
+                describe_table.complete_from_session(ctx);
+                if catalogs.get(&describe_table.catalog).is_some() {
+                    return Some(
+                        describe_show::execute_describe_table(ctx, catalogs, describe_table).await,
+                    );
+                }
             }
-            Ok(_) => {}
             Err(error) => return Some(Err(error)),
         }
     }

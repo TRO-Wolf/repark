@@ -19,10 +19,9 @@ use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use regex::RegexBuilder;
 
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, resolve_namespace};
-use crate::metadata_tables::is_metadata_table_name;
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
-use repark_core::CatalogRegistry;
+use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
 
 /// A parsed Spark `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
 pub(crate) struct DescribeNamespace {
@@ -206,6 +205,20 @@ pub(crate) struct DescribeTable {
     pub(crate) extended: bool,
 }
 
+impl DescribeTable {
+    pub(crate) fn complete_from_session(&mut self, ctx: &SessionContext) {
+        if self.catalog.is_empty() || self.namespace.is_empty() {
+            let catalog = ctx.copied_config().options().catalog.clone();
+            if self.catalog.is_empty() {
+                self.catalog.clone_from(&catalog.default_catalog);
+            }
+            if self.namespace.is_empty() {
+                self.namespace.clone_from(&catalog.default_schema);
+            }
+        }
+    }
+}
+
 pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
@@ -224,16 +237,16 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         return None;
     }
     let parts = name_parts(&name);
-    let [catalog, namespace, table] = parts.as_slice() else {
-        return None;
+    let (catalog, namespace, table) = match parts.as_slice() {
+        [catalog, namespace, table] => (catalog.clone(), namespace.clone(), table.clone()),
+        [namespace, table] => (String::new(), namespace.clone(), table.clone()),
+        [table] => (String::new(), String::new(), table.clone()),
+        _ => return None,
     };
-    if is_metadata_table_name(table) {
-        return None;
-    }
     Some(Ok(DescribeTable {
-        catalog: catalog.clone(),
-        namespace: namespace.clone(),
-        table: table.clone(),
+        catalog,
+        namespace,
+        table,
         extended,
     }))
 }
@@ -269,11 +282,16 @@ pub(crate) async fn execute_describe_table(
         }
         Err(error) => return Err(iceberg_err(error)),
     };
-    ctx.read_batch(describe_table_batch(&describe, &table)?)
+    let owner = describe_table_owner(ctx);
+    ctx.read_batch(describe_table_batch(&describe, &table, &owner)?)
 }
 
-pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
-    let rows = describe_table_rows(describe, table)?;
+pub(crate) fn describe_table_batch(
+    describe: &DescribeTable,
+    table: &Table,
+    owner: &str,
+) -> Result<RecordBatch> {
+    let rows = describe_table_rows(describe, table, owner)?;
     let mut names = Vec::with_capacity(rows.len());
     let mut types = Vec::with_capacity(rows.len());
     let mut comments = Vec::with_capacity(rows.len());
@@ -300,6 +318,7 @@ pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> R
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
+    owner: &str,
 ) -> Result<Vec<(String, String, Option<String>)>> {
     let metadata = table.metadata();
     let iceberg_schema = metadata.current_schema();
@@ -354,7 +373,7 @@ fn describe_table_rows(
         rows.push(plain_describe_row("Type", "MANAGED"));
         rows.push(plain_describe_row("Location", metadata.location()));
         rows.push(plain_describe_row("Provider", "iceberg"));
-        rows.push(plain_describe_row("Owner", &describe_table_owner()));
+        rows.push(plain_describe_row("Owner", owner));
         rows.push(plain_describe_row(
             "Table Properties",
             &render_table_properties(metadata),
@@ -410,10 +429,15 @@ fn describe_partition_struct_type(
     Ok(spark_ddl_type_name(&arrow_type))
 }
 
-fn describe_table_owner() -> String {
-    std::env::var("USER")
-        .or_else(|_| std::env::var("USERNAME"))
-        .unwrap_or_else(|_| "unknown".to_string())
+fn describe_table_owner(ctx: &SessionContext) -> String {
+    ctx.copied_config()
+        .options()
+        .extensions
+        .get::<DescribeOwnerConfig>()
+        .map_or_else(
+            || "unknown".to_string(),
+            |extension| extension.owner.clone(),
+        )
 }
 
 fn render_table_properties(metadata: &TableMetadata) -> String {
@@ -429,7 +453,7 @@ fn render_table_properties(metadata: &TableMetadata) -> String {
     let rendered: Vec<String> = pairs
         .iter()
         .map(|(key, value)| {
-            let shown = if property_is_redacted(key, value) {
+            let shown = if prop_key_is_secret(key) {
                 REDACTION_REPLACEMENT_TEXT
             } else {
                 value.as_str()

@@ -119,6 +119,25 @@ async fn describe_table_parser_accepts_plain_and_extended_forms() {
 }
 
 #[tokio::test]
+async fn describe_table_parser_accepts_short_names_for_session_completion() {
+    let one = crate::describe_show::try_parse_describe_table("DESCRIBE TABLE desc_demo")
+        .expect("a one-part describe must parse")
+        .expect("a one-part describe must not error");
+    assert_eq!(one.table, "desc_demo");
+    assert!(one.catalog.is_empty());
+    assert!(one.namespace.is_empty());
+    assert!(!one.extended);
+    let two =
+        crate::describe_show::try_parse_describe_table("DESCRIBE TABLE EXTENDED sales.desc_demo")
+            .expect("a two-part describe must parse")
+            .expect("a two-part describe must not error");
+    assert!(two.catalog.is_empty());
+    assert_eq!(two.namespace, "sales");
+    assert_eq!(two.table, "desc_demo");
+    assert!(two.extended);
+}
+
+#[tokio::test]
 async fn describe_table_parser_leaves_non_table_forms_alone() {
     for sql in [
         "DESCRIBE EXTENDED",
@@ -126,7 +145,6 @@ async fn describe_table_parser_leaves_non_table_forms_alone() {
         "DESCRIBE NAMESPACE ice.sales",
         "DESCRIBE DATABASE ice.sales",
         "DESC SCHEMA ice.sales",
-        "DESCRIBE src",
         "DESCRIBE ice.sales.t1.snapshots",
         "DESCRIBE ice.sales.t1 extra",
         "SELECT 1",
@@ -346,6 +364,265 @@ async fn describe_table_unregistered_catalog_falls_through_unchanged() {
     assert!(
         !error.to_string().contains("[TABLE_OR_VIEW_NOT_FOUND]"),
         "a non-catalog name must not take the describe-table path, got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn describe_table_extended_describes_a_real_table_named_files() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    let location = format!("{warehouse}/sales/files");
+    std::fs::create_dir_all(&location).unwrap();
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
+            1,
+            "id",
+            Type::Primitive(PrimitiveType::Long),
+        ))])
+        .build()
+        .unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("files".to_string())
+                .location(location)
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED ice.sales.files").await;
+    assert_eq!(
+        rows[0],
+        ("id".to_string(), "bigint".to_string(), None),
+        "a real table named files takes the describe-table path"
+    );
+    assert!(
+        rows.iter()
+            .any(|(name, value, _)| name == "Name" && value == "ice.sales.files"),
+        "extended output names the three-part table, got: {rows:?}"
+    );
+    let (owner_name, owner_value, _) = rows
+        .iter()
+        .find(|(name, _, _)| name == "Owner")
+        .expect("extended output carries Owner");
+    assert_eq!(owner_name, "Owner");
+    assert!(!owner_value.is_empty());
+}
+
+#[tokio::test]
+async fn describe_table_owner_is_the_session_resolved_user() {
+    let first = TempDir::new().unwrap();
+    let (first_ctx, first_catalogs) =
+        setup_with_owner(&first, "review_fix_5_first_session_user").await;
+    create_step_one_table(&first_catalogs, first.path().to_str().unwrap()).await;
+    let second = TempDir::new().unwrap();
+    let (second_ctx, second_catalogs) =
+        setup_with_owner(&second, "review_fix_5_second_session_user").await;
+    create_step_one_table(&second_catalogs, second.path().to_str().unwrap()).await;
+
+    let first_rows = describe_rows(
+        &first_ctx,
+        &first_catalogs,
+        "DESCRIBE TABLE EXTENDED ice.sales.t1",
+    )
+    .await;
+    let second_rows = describe_rows(
+        &second_ctx,
+        &second_catalogs,
+        "DESCRIBE TABLE EXTENDED ice.sales.t1",
+    )
+    .await;
+    let first_owner = first_rows
+        .iter()
+        .find(|(name, _, _)| name == "Owner")
+        .expect("extended output carries Owner");
+    let second_owner = second_rows
+        .iter()
+        .find(|(name, _, _)| name == "Owner")
+        .expect("extended output carries Owner");
+    assert_eq!(
+        first_owner.1, "review_fix_5_first_session_user",
+        "Owner is fixed at session build, not read at query time"
+    );
+    assert_eq!(
+        second_owner.1, "review_fix_5_second_session_user",
+        "a second session in the same process resolves its own user"
+    );
+}
+
+#[tokio::test]
+async fn describe_table_owner_resolves_in_a_production_built_session() {
+    let warehouse = TempDir::new().unwrap();
+    let warehouse_path = warehouse.path().to_str().unwrap().to_string();
+    let session = repark_core::ReparkSession::builder()
+        .build()
+        .expect("a production session builds");
+    session
+        .register_memory_catalog("ice", &warehouse_path)
+        .await
+        .expect("the production session registers ice");
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse_path}/sales"))]),
+        )
+        .await
+        .expect("the production session creates sales");
+    let catalogs = session.catalogs_snapshot();
+    let location = format!("{warehouse_path}/sales/prod_owner");
+    std::fs::create_dir_all(&location).expect("the fixture directory builds");
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
+            1,
+            "id",
+            Type::Primitive(PrimitiveType::Long),
+        ))])
+        .build()
+        .expect("the fixture schema builds");
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("prod_owner".to_string())
+                .location(location)
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .expect("the production catalog creates the table");
+
+    let rows = describe_rows(
+        session.context(),
+        &catalogs,
+        "DESCRIBE TABLE EXTENDED ice.sales.prod_owner",
+    )
+    .await;
+    let owner = rows
+        .iter()
+        .find(|(name, _, _)| name == "Owner")
+        .expect("extended output carries Owner");
+    assert_eq!(
+        owner.1,
+        repark_core::session_owner_snapshot(),
+        "a production-built session resolves the owner at build, never unknown"
+    );
+}
+
+#[tokio::test]
+async fn describe_table_short_names_complete_from_session_defaults() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    let location = format!("{warehouse}/sales/desc_demo");
+    std::fs::create_dir_all(&location).unwrap();
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
+            1,
+            "id",
+            Type::Primitive(PrimitiveType::Long),
+        ))])
+        .build()
+        .unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("desc_demo".to_string())
+                .location(location)
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+    for set in [
+        "SET datafusion.catalog.default_catalog = 'ice'",
+        "SET datafusion.catalog.default_schema = 'sales'",
+    ] {
+        ctx.sql(set).await.unwrap().collect().await.unwrap();
+    }
+
+    let full = describe_rows(&ctx, &catalogs, "DESCRIBE TABLE ice.sales.desc_demo").await;
+    assert_eq!(
+        describe_rows(&ctx, &catalogs, "DESCRIBE TABLE desc_demo").await,
+        full,
+        "a one-part name resolves through the session current catalog and namespace"
+    );
+    assert_eq!(
+        describe_rows(&ctx, &catalogs, "DESCRIBE TABLE sales.desc_demo").await,
+        full,
+        "a two-part name resolves through the session current catalog"
+    );
+    assert_eq!(
+        describe_rows(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED desc_demo").await,
+        describe_rows(
+            &ctx,
+            &catalogs,
+            "DESCRIBE TABLE EXTENDED ice.sales.desc_demo"
+        )
+        .await,
+        "short names work in the extended spelling too"
+    );
+}
+
+#[tokio::test]
+async fn describe_table_extended_redacts_through_prop_key_is_secret() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    let location = format!("{warehouse}/sales/keyed");
+    std::fs::create_dir_all(&location).unwrap();
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
+            1,
+            "id",
+            Type::Primitive(PrimitiveType::Long),
+        ))])
+        .build()
+        .unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("keyed".to_string())
+                .location(location)
+                .schema(schema)
+                .properties(HashMap::from([
+                    ("s3.access-key-id".to_string(), "AKIAEXAMPLE".to_string()),
+                    ("k".to_string(), "v".to_string()),
+                ]))
+                .build(),
+        )
+        .await
+        .unwrap();
+
+    let rows = describe_rows(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED ice.sales.keyed").await;
+    let properties = rows
+        .iter()
+        .find(|(name, _, _)| name == "Table Properties")
+        .expect("extended output carries Table Properties");
+    assert!(
+        properties.1.contains("*********(redacted)"),
+        "the secret-shaped key must be redacted, got: {}",
+        properties.1
+    );
+    assert!(
+        !properties.1.contains("AKIAEXAMPLE"),
+        "the plaintext access key must never reach output, got: {}",
+        properties.1
+    );
+    assert!(
+        properties.1.contains("k=v"),
+        "a non-secret property renders in the clear, got: {}",
+        properties.1
     );
 }
 
