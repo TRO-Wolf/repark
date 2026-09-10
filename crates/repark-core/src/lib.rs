@@ -25,7 +25,7 @@ mod time_travel;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use session::ReparkSession as Session;
-pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
+pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder};
 
 // === Session timezone ===
 pub use session_time_zone::{
@@ -46,12 +46,13 @@ pub use runtime::EngineRuntime;
 // --- Catalog configuration + engine-side registry (hoisted).
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
+pub use config_file::config_file_pairs;
 pub use namespace_create::refuse_contradictory_namespace_location;
 
 // === Time travel ===
 pub use time_travel::{
-    TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms, parse_version_value, read_table_at,
-    resolve_snapshot_id, snapshot_id_as_of_time,
+    TimeTravelOpts, TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms,
+    parse_version_value, read_table_at, resolve_snapshot_id, snapshot_id_as_of_time,
 };
 
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};

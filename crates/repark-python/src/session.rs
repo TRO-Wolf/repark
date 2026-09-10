@@ -1,22 +1,16 @@
 //! Synchronous Python wrapper over [`repark_core::ReparkSession`].
 
 use std::collections::HashMap;
-use std::ffi::CStr;
 use std::sync::{Arc, OnceLock};
 
-use arrow::array::{RecordBatch, RecordBatchReader};
-use arrow::ffi_stream::{ArrowArrayStreamReader, FFI_ArrowArrayStream};
 use pyo3::prelude::*;
-use pyo3::types::PyCapsule;
 use repark_core::{EngineRuntime, ReparkSession, ReparkSessionBuilder};
 use tokio::runtime::Runtime;
 
+use crate::arrow_export::drain_arrow_c_stream;
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
 use crate::fence::{fenced, fenced_span};
 use crate::{UnsupportedOperationException, to_py_err};
-
-/// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path.
-const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
 
 /// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
 fn apply_session_knobs(
@@ -108,21 +102,35 @@ impl PyReparkSession {
     /// # Errors
     /// Returns `RuntimeError` if the DataFusion session or the Tokio runtime fails to build.
     #[new]
-    #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None))]
+    #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None, config_path=None))]
     pub fn new(
         py: Python<'_>,
         memory_limit_gb: Option<usize>,
         batch_size: Option<usize>,
         target_partitions: Option<usize>,
         config: Option<HashMap<String, String>>,
+        config_path: Option<String>,
     ) -> PyResult<Self> {
         fenced_span!("py.session", "PyReparkSession.__new__", {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
+            let builder = builder.from_config_file(config_path.map(std::path::PathBuf::from));
             let builder = builder
                 .with_sql_dialect(Arc::new(repark_spark::SparkDialect))
                 .with_extension(Arc::new(repark_spark::SparkExtension));
             finish_session(py, builder)
+        })
+    }
+
+    /// Read a `repark.toml` file's translated pairs without building a session.
+    /// # Errors
+    /// Returns `RuntimeError` if discovery, the profile merge, interpolation, or translation fails.
+    #[staticmethod]
+    #[pyo3(signature = (config_path=None))]
+    pub fn config_file_pairs(config_path: Option<String>) -> PyResult<HashMap<String, String>> {
+        fenced_span!("py.session", "PyReparkSession.config_file_pairs", {
+            repark_core::config_file_pairs(config_path.map(std::path::PathBuf::from))
+                .map_err(to_py_err)
         })
     }
 
@@ -755,70 +763,6 @@ fn deferred_reader_error(surface: &str) -> PyErr {
     ))
 }
 
-/// Resolve an Arrow C Stream capsule or exporter and drain non-empty batches.
-/// # Errors
-/// Returns `TypeError` for a missing exporter or non-capsule exporter result.
-fn drain_arrow_c_stream(
-    obj: &Bound<'_, PyAny>,
-) -> PyResult<(arrow::datatypes::SchemaRef, Vec<RecordBatch>)> {
-    // Keep the capsule alive for the import: `from_raw` moves the FFI stream and nulls release.
-    let capsule_obj: Bound<'_, PyAny> = if obj.is_instance_of::<PyCapsule>() {
-        obj.clone()
-    } else {
-        let exporter = obj.getattr("__arrow_c_stream__").map_err(|_| {
-            pyo3::exceptions::PyTypeError::new_err(
-                "register_arrow_stream_as_temp_view: object is not an Arrow C Stream exporter \
-                 (missing __arrow_c_stream__) and is not an arrow_array_stream PyCapsule",
-            )
-        })?;
-        // Call the optional-schema protocol without negotiation and preserve exporter errors.
-        exporter.call0()?
-    };
-    let capsule = capsule_obj.cast::<PyCapsule>().map_err(|error| {
-        pyo3::exceptions::PyTypeError::new_err(format!(
-            "register_arrow_stream_as_temp_view: expected arrow_array_stream PyCapsule: {error}"
-        ))
-    })?;
-
-    let pointer = capsule
-        .pointer_checked(Some(ARROW_STREAM_CAPSULE_NAME))
-        .map_err(|error| {
-            repark_core::Error::DataFusion(format!(
-                "register_arrow_stream_as_temp_view: invalid arrow_array_stream capsule: {error}"
-            ))
-        })
-        .map_err(to_py_err)?
-        .as_ptr()
-        .cast::<FFI_ArrowArrayStream>();
-
-    // SAFETY: `pointer_checked` verifies the capsule name and non-null pointer.
-    let ffi_stream = unsafe { FFI_ArrowArrayStream::from_raw(pointer) };
-    let mut reader = ArrowArrayStreamReader::try_new(ffi_stream)
-        .map_err(|error| {
-            repark_core::Error::DataFusion(format!(
-                "register_arrow_stream_as_temp_view: open Arrow C Stream failed: {error}"
-            ))
-        })
-        .map_err(to_py_err)?;
-
-    let schema = reader.schema();
-    let mut batches = Vec::new();
-    // Python-backed streams re-enter the interpreter on every `get_next`.
-    for batch_result in &mut reader {
-        let batch = batch_result
-            .map_err(|error| {
-                repark_core::Error::DataFusion(format!(
-                    "register_arrow_stream_as_temp_view: Arrow C Stream batch failed: {error}"
-                ))
-            })
-            .map_err(to_py_err)?;
-        if batch.num_rows() > 0 {
-            batches.push(batch);
-        }
-    }
-    Ok((schema, batches))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -828,7 +772,8 @@ mod tests {
     #[test]
     fn spark_doored_session_resolves_spark_function_and_routes_spark_statement() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
 
             // (1) Spark function registry is installed: a Spark-only name resolves and evaluates.
             let frame = session
@@ -908,7 +853,8 @@ mod tests {
     #[test]
     fn read_excel_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             // `PyDataFrame` is not `Debug`; pattern-match the error arm instead of `expect_err`.
             let Err(error) = session.read_excel(py, "/tmp/never-opened.xlsx", None) else {
                 panic!(
@@ -943,7 +889,8 @@ mod tests {
     #[test]
     fn excel_sheet_names_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let error = session
                 .excel_sheet_names(py, "/tmp/never-opened.xlsx")
                 .expect_err("the excel reader is deferred post-milestone-one");
@@ -964,7 +911,8 @@ mod tests {
     #[test]
     fn read_postgres_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let Err(error) = session.read_postgres(
                 py,
                 "postgresql://user:sentinel-secret@host:5432/db",
@@ -1013,7 +961,7 @@ mod tests {
         Python::attach(|py| {
             let session = Py::new(
                 py,
-                PyReparkSession::new(py, None, None, None, None).expect("session builds"),
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds"),
             )
             .expect("pyclass instantiates");
 
@@ -1056,8 +1004,10 @@ mod tests {
     fn sequential_sessions_share_one_tokio_runtime() {
         // Two sequential constructors must share one process-wide Tokio runtime.
         Python::attach(|py| {
-            let first = PyReparkSession::new(py, None, None, None, None).expect("first session");
-            let second = PyReparkSession::new(py, None, None, None, None).expect("second session");
+            let first =
+                PyReparkSession::new(py, None, None, None, None, None).expect("first session");
+            let second =
+                PyReparkSession::new(py, None, None, None, None, None).expect("second session");
             assert!(
                 Arc::ptr_eq(&first.runtime_arc(), &second.runtime_arc()),
                 "two PyReparkSession values must share the process-wide Tokio runtime Arc"
@@ -1152,7 +1102,8 @@ mod tests {
             .to_string();
 
         Python::attach(|py| {
-            let session = PyReparkSession::new(py, None, None, None, None).expect("session builds");
+            let session =
+                PyReparkSession::new(py, None, None, None, None, None).expect("session builds");
             let frame = session.sql(py, "SELECT 1 AS n").expect("sql plans");
             assert_eq!(frame.count(py).expect("count"), 1);
             // py.read: span opens before the body fails (missing path) — family still recorded.

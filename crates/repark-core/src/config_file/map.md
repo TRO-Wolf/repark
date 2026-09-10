@@ -48,16 +48,35 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `prop_key_is_secret` (widened to `pub(crate)` this step, the one authorized edit outside
   the family; the predicate is not re-implemented). The `***` mask matches the `CatalogSpec`
   `Debug` placeholder; `SourceSpec`'s `Debug` masks through the same function, so a secret
-  value never reaches `Debug`/dump output. The dump's `source` column (`builder`,
-  `file:<path>#<profile>`, `default`) is step-3 wiring and is not here yet. Step 2.
+  value never reaches `Debug`/dump output. Step 3 wires `redact_value` into the dump's
+  value column. Step 2.
   pins: cfg-1/C-015
-- `tests.rs` — all 40 pins in one file (the seed's three, the step-1 discovery/merge/
-  interpolation pins, the step-1b `$`-edge flips, and step 2's catalog/database/redaction
-  pins); the environment arrives as a stub closure, so no pin mutates the process
-  environment, and the catalog fixtures restate `catalog_config.rs`'s measured values so the
-  TOML side compares `assert_eq!`-equal to the flat side.
+- `wiring.rs` — step-3 builder seam. `load_file_config(forced, environment, current_directory,
+  home)` (forced path refuses naming it when absent, else automatic discovery; empty
+  `REPARK_CONFIG` disables, empty `REPARK_ENV` selects default) then `REPARK_ENV` profile,
+  merge, interpolation, and translation of the effective table into flat pairs:
+  `display.*` → `repark.display.*` (string or integer, else refuses), `session` knobs →
+  typed fallbacks plus `repark.*` knob-key pairs, `conf` flattened with dot joins
+  (TOML nests dotted keys; a quoted-plus-nested collision refuses) in sorted-key order
+  (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
+  as sorted, ledger C-024 carries the D-1 wording), `catalog` blocks → the same
+  `repark.sql.catalog.*` keys `parse_catalog_specs` reads. `profile_sources` still runs on
+  every load (collision and shape refusals stay single-implementation); a non-empty
+  `[<profile>.database]` table refuses loud until CFG-2 registers named sources. `KeyOrigin`
+  (`Profile` / `Default`) records which table each pair survived from; `conf_dump_rows`
+  renders `(key, redacted value, source)` with `builder`, `file:<path>#<profile>`, or
+  `default` — the three precedence levels, nothing else. `load_for_build` is the thin
+  process-environment wrapper `session.rs` calls. Step 3.
+  pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+- `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
+  discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
+  pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the
+  battery passed the 1,000-line file ceiling — stage pins versus wiring pins, no pin moved
+  or edited in the split. The environment arrives as a stub closure throughout, so no pin
+  mutates the process environment (build-level pins use forced temp paths and assume the
+  ambient `REPARK_ENV` is unset, the same class of assumption as the seed's no-file pin).
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
-  C-012, C-013, C-014, C-015, C-016, C-017
+  C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
 
 ## Pointers
 

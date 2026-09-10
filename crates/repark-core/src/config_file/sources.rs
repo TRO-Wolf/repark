@@ -6,10 +6,9 @@ use super::Profile;
 use super::redact::redact_value;
 use crate::catalog_config::{CatalogSpec, parse_catalog_specs};
 
-const CATALOG_KEY_PREFIX: &str = "repark.sql.catalog.";
+pub(crate) const CATALOG_KEY_PREFIX: &str = "repark.sql.catalog.";
 const DATABASE_KIND_SPELLINGS: &[&str] = &["postgres", "sqlserver", "trino"];
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SourceKind {
     Postgres,
@@ -18,7 +17,6 @@ pub(crate) enum SourceKind {
 }
 
 impl SourceKind {
-    #[allow(dead_code)]
     fn from_spelling(spelling: &str) -> Option<SourceKind> {
         match spelling {
             "postgres" => Some(SourceKind::Postgres),
@@ -28,8 +26,7 @@ impl SourceKind {
         }
     }
 
-    #[allow(dead_code)]
-    fn spelling(self) -> &'static str {
+    pub(crate) fn spelling(self) -> &'static str {
         match self {
             SourceKind::Postgres => "postgres",
             SourceKind::SqlServer => "sqlserver",
@@ -68,7 +65,6 @@ pub(crate) struct ProfileSources {
     pub sources: Vec<SourceSpec>,
 }
 
-#[allow(dead_code)]
 pub(crate) fn profile_sources(profile_name: &str, profile: &Profile) -> Result<ProfileSources> {
     let catalogs = match &profile.catalog {
         Some(catalog) => catalog_specs(profile_name, catalog)?,

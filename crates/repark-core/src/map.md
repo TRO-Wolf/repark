@@ -30,10 +30,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   byte-identical specs, `[<profile>.database.<kind>.<name>]` into the crate-private
   `SourceSpec`, per-profile cross-family name uniqueness) and `redact.rs`
   (`redact_value`/`redact_config` over `catalog_config::prop_key_is_secret`, widened to
-  `pub(crate)` this step). The `#[allow(dead_code)]` attributes stay until the builder
-  wiring of step 3, and the crate is built with warnings denied.
+  `pub(crate)` this step). Step 3 wired the builder (`wiring.rs`: forced-or-discovered load,
+  `REPARK_ENV` profile, merge, interpolation, translation to flat pairs, the `(key, redacted
+  value, source)` dump rows) and took the now-live `#[allow(dead_code)]` attributes off;
+  the ones still unreachable (`load`, `redact_config`, the spec-field carriers) stay, and
+  the crate is built with warnings denied. The facade round added the `config_file_pairs`
+  entry (translated pairs for the binding fold) and nested-`conf` dot-join flattening.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014,
-  C-015, C-016, C-017
+  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025, C-026, C-027
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). Builder collects
@@ -58,7 +62,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   swaps a new FairSpillPool — see `session/spill.rs`;
   `batch_size(0)` / `target_partitions(0)` refuse at build; unset `batch_size` defaults to
   `DEFAULT_BATCH_SIZE` 65536, not DataFusion's 8192 — 2026-08 perf baseline, typed setter >
-  conf key > default), attaches the write/scan knobs as
+  conf key > default; CFG-1 step 3: `from_config_file(path?)` forces a file (`None` keeps
+  automatic discovery), `build()` resolves the file first and merges its pairs UNDER the
+  builder map (builder wins per key) with the file's `session` knobs as typed fallbacks,
+  and the session keeps the redacted `(key, value, source)` `conf_dump()`), attaches the
+  write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
   `with_scan_concurrency`, `with_write_concurrency`), and builds `RuntimeEnv` with
   `object_list_cache_limit(0)` so path-overwrite stage-swap never serves a stale listing. Async
@@ -274,7 +282,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refuse `[V3-ROWID-2]`. v1/v2 stay unresolved (`No field named _row_id`). Both SQL doors
   call it.
   pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
-- `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
+- `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
+  here from `session.rs` in CFG-1 step 3, next to the spec its `into_spec` builds) + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
   ONE minter of the `__repark_tt_` namespace** (H-1b fix pass, 2026-08-11). SQL-text rewriting
