@@ -507,3 +507,48 @@ the audit does not invent a sixth. The UDF-bridge pyarrow modules are the most l
 weighing target once FACADE-1 gives them a capsule door on both sides. D-3 keeps ML
 transformers (2,717 lines in `ml/feature/_transformers.py` alone) and the
 library-wrapping parts of `ta.py` (1,818) out of the weighing entirely.
+
+### §7 Freeze constraints — what each unit is forbidden to change
+
+Source: [v1-0-api-freeze.json](../../docs/design/v1-0-api-freeze.json) (2026-09-02; 35 rows,
+30 frozen, 888 frozen names; additive-only within a major, breaking a frozen row needs a
+major plus a one-minor deprecation shim). The `isinstance` rule — `isinstance` on `Column`,
+`Row`, and the type classes must keep working — is stated by the card (D-1); the freeze
+file's nearest rows are C1 and F1 below, which freeze the class names but say nothing about
+their runtime identity, so each unit names its own keeping mechanism.
+
+- **FACADE-1.** Row B2 (DataFrame actions, accessors, collect shapes) is UNFROZEN
+  (decision NO): the export-door signatures may change at a minor with a changelog line —
+  but the DFCORE-4b goldens still pin their bytes, so in practice the door keeps its shape
+  and only the transport changes. Row B1 is frozen: `mapInArrow`/`mapInPandas` names and
+  params stay. Row N1 (packaging) is frozen: the extension module stays `repark._native`,
+  and pyarrow is today a hard dependency (`python/repark/pyproject.toml` line 20:
+  `dependencies = ["pyarrow>=25.0.0", ...]`), so making it optional moves a name from
+  `dependencies` to `optional-dependencies` on an N1-frozen surface — allowed with a
+  changelog line, and every `import pyarrow` site (§2: 23 runtime importers) must degrade
+  to a loud error, never a silent skew.
+- **FACADE-2.** Row C1 (Column API) is frozen YES except `cast` and `eqNullSafe`: every
+  other method name, and `required_params` where listed, stays. The function-builder rows
+  J1/J4–J9 are frozen (J2, the aggregate/window root module, is unfrozen). The freeze-safe
+  mechanism for `isinstance(c, repark.Column)` is to keep the Python `Column` class object
+  as the public type and grow the native `PyColumn` handle it already holds (§2 binding
+  symbols: `Column._inner` is the native `PyColumn` today) — display strings move into
+  Rust methods, the class identity never moves. Making the pyo3 class itself the public
+  `Column` would need a different keeping mechanism; none is decided (open question Q1).
+- **FACADE-3.** Row A2 is frozen: `createDataFrame`/`create_dataframe` names and the
+  `data` parameter stay, as does the dispatch over rows, tuples, dicts, pandas, and
+  explicit schema. Row O1 (errors taxonomy) is frozen: inference refusals keep their
+  exception classes. D-3 binds pickling: no pickling behaviour change without a pin, so
+  the unit carries a pickle round-trip pin on inferred frames.
+- **FACADE-4.** Row F1 (`repark.spark.types` + `Row`) is frozen YES except `VariantType`:
+  every type class name stays, and the conversion members `repark_type_to_arrow` and
+  `struct_type_from_arrow` are frozen by name with their `required_params`. Row K1 (DDL)
+  is frozen: DDL spellings stay byte-identical. The unit keeps the Python type classes as
+  the public objects and moves only the conversion tables into Rust, so `isinstance`
+  holds by construction — there is no class-identity move to defend.
+- **FACADE-5.** Row B2 is unfrozen, so `show`/`repr` shapes may legally change at a minor
+  with a changelog line — but the DFCORE-4b golden files pin them byte-for-byte, and this
+  audit treats the goldens as the binding constraint: the Rust renderer must reproduce
+  them exactly, and any intended byte change is a separate owner decision, not a
+  passenger. Display limits come from session settings (row L1, frozen except
+  `repark.merge.*`), so the renderer reads the same keys through the same seam.
