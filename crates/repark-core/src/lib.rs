@@ -47,6 +47,9 @@ pub use runtime::EngineRuntime;
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 pub use config_file::config_file_pairs;
+pub use config_file::maintenance::{
+    MaintenancePolicy, TablePolicy, parse_duration, parse_maintenance_policy,
+};
 pub use namespace_create::refuse_contradictory_namespace_location;
 
 // === Time travel ===

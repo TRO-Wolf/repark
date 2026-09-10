@@ -22,6 +22,8 @@ use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, r
 mod rewrite_data_files;
 mod rewrite_manifests;
 mod rewrite_where;
+mod run_maintenance;
+mod run_maintenance_apply;
 
 /// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[
@@ -32,6 +34,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "remove_orphan_files",
     "rewrite_position_delete_files",
     "rollback_to_snapshot",
+    "run_maintenance",
 ];
 
 /// Execute one `CALL catalog.system.<proc>(…)` statement.
@@ -71,6 +74,9 @@ pub async fn execute_call(
             .await
         }
         "register_table" => execute_register_table(ctx, catalog, &catalog_name, &args).await,
+        "run_maintenance" => {
+            run_maintenance::execute_run_maintenance(ctx, &catalog_name, &args, catalogs).await
+        }
         other => Err(DataFusionError::NotImplemented(format!(
             "CALL system.{other} is not supported. Supported procedures: {}.",
             SUPPORTED_PROCEDURES.join(", ")

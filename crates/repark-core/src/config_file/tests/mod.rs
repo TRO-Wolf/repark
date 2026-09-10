@@ -9,6 +9,7 @@ use crate::catalog_config::{CatalogKind, parse_catalog_specs};
 
 use super::discovery::discover;
 use super::interpolate::interpolate_table;
+use super::maintenance::{MaintenancePolicy, parse_duration};
 use super::profile::effective_table;
 use super::redact::redact_config;
 use super::sources::{SourceKind, SourceSpec, profile_sources};
@@ -763,6 +764,120 @@ fn a_catalog_block_carrying_no_properties_refuses() {
     let message = error.to_string();
     assert!(message.contains("default.catalog.ghost"), "{message}");
     assert!(message.contains("no properties"), "{message}");
+}
+
+fn maintenance_policy_fixture(text: &str) -> MaintenancePolicy {
+    let config = parse(text).expect("config fixture");
+    let (_, profile) = config.profiles.iter().next().expect("one profile");
+    MaintenancePolicy::from_table(
+        "default",
+        profile.maintenance.as_ref().expect("maintenance table"),
+    )
+    .expect("policy fixture")
+}
+
+#[test]
+fn maintenance_policy_parses_every_documented_key() {
+    let policy = maintenance_policy_fixture(
+        r#"
+[default.maintenance]
+target_file_size_bytes = 536870912
+snapshot_retain_last = 5
+snapshot_older_than = "7d"
+orphan_older_than = "3d"
+rewrite_manifests = true
+position_delete_ratio = 0.3
+"#,
+    );
+    assert_eq!(policy.target_file_size_bytes, Some(536_870_912));
+    assert_eq!(policy.snapshot_retain_last, Some(5));
+    assert_eq!(
+        policy
+            .snapshot_older_than
+            .map(|duration| duration.as_secs()),
+        Some(604_800)
+    );
+    assert_eq!(
+        policy.orphan_older_than.map(|duration| duration.as_secs()),
+        Some(259_200)
+    );
+    assert_eq!(policy.rewrite_manifests, Some(true));
+    assert_eq!(policy.position_delete_ratio, Some(0.3));
+    assert!(policy.tables.is_empty());
+}
+
+#[test]
+fn an_unknown_maintenance_key_refuses_naming_the_key_path() {
+    let error = parse("[default.maintenance]\nnonesuch = 1").expect_err("unknown key must refuse");
+    assert!(
+        error.to_string().contains("default.maintenance.nonesuch"),
+        "{error}"
+    );
+}
+
+#[test]
+fn durations_parse_days_hours_and_minutes() {
+    let path = "default.maintenance.snapshot_older_than";
+    assert_eq!(parse_duration(path, "7d").expect("days").as_secs(), 604_800);
+    assert_eq!(
+        parse_duration(path, "12h").expect("hours").as_secs(),
+        43_200
+    );
+    assert_eq!(
+        parse_duration(path, "30m").expect("minutes").as_secs(),
+        1_800
+    );
+}
+
+#[test]
+fn a_malformed_duration_refuses_naming_the_key() {
+    let path = "default.maintenance.snapshot_older_than";
+    for bad in ["7", "d", "7w", "1y", "", "seven days", "7 d", "-3d", "1.5h"] {
+        let error = parse_duration(path, bad).expect_err("bad duration must refuse");
+        assert!(error.to_string().contains(path), "{bad}: {error}");
+    }
+    let error = parse("[default.maintenance]\nsnapshot_older_than = 7")
+        .expect_err("non-string duration must refuse");
+    assert!(error.to_string().contains(path), "{error}");
+}
+
+#[test]
+fn a_table_entry_overrides_the_profile_policy() {
+    let policy = maintenance_policy_fixture(
+        r#"
+[default.maintenance]
+target_file_size_bytes = 536870912
+snapshot_retain_last = 5
+[default.maintenance.tables."glue.silver.orders"]
+target_file_size_bytes = 268435456
+snapshot_retain_last = 20
+[default.maintenance.tables."glue.silver.partial"]
+target_file_size_bytes = 134217728
+"#,
+    );
+    let resolved = policy.resolve("glue.silver.orders");
+    assert_eq!(resolved.target_file_size_bytes, Some(268_435_456));
+    assert_eq!(resolved.snapshot_retain_last, Some(20));
+    let partial = policy.resolve("glue.silver.partial");
+    assert_eq!(partial.target_file_size_bytes, Some(134_217_728));
+    assert_eq!(partial.snapshot_retain_last, Some(5));
+    let fallback = policy.resolve("glue.silver.other");
+    assert_eq!(fallback.target_file_size_bytes, Some(536_870_912));
+    assert_eq!(fallback.snapshot_retain_last, Some(5));
+}
+
+#[test]
+fn the_adaptive_partitioning_key_refuses_as_not_yet_supported() {
+    let error = parse("[default.maintenance]\nadaptive_partitioning = true")
+        .expect_err("reserved key must refuse");
+    let message = error.to_string();
+    assert!(message.contains("adaptive_partitioning"), "{message}");
+    assert!(message.contains("not yet supported"), "{message}");
+    let error = parse("[default.maintenance.tables.orders]\nadaptive_partitioning = true")
+        .expect_err("reserved key must refuse at table level");
+    let message = error.to_string();
+    assert!(message.contains("adaptive_partitioning"), "{message}");
+    assert!(message.contains("not yet supported"), "{message}");
 }
 
 #[test]
