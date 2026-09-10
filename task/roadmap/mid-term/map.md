@@ -40,9 +40,8 @@ declines it (a dated ruling in the intake, then the archive).
 - [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
   05:21–13:20 local, **orchestrator A**; the Grok/Ballista and facade lanes were orchestrator B's
   from 05:45 and are not in it): seven merged (DISPLAY-BRIDGE-1's rebase, AP-0 with its O-run,
-  MAINT-POLICY-1 end to end, TORTURE-1 steps 1 and 2, PROFILES-1 step 1, AP-1 step 1), one green at the stop
-  (AP-1 step 1, merged at 12:48), one parked green as a draft (NEVEROOM-1 step 1, on two D-2
-  ruling questions).
+  MAINT-POLICY-1 end to end, TORTURE-1 steps 1 and 2, PROFILES-1 step 1, AP-1 step 1) and one
+  parked green as a draft (NEVEROOM-1 step 1, on two D-2 ruling questions).
   **DISPLAY-BRIDGE-1, AP-0 and MAINT-POLICY-1 complete.** Two measurements changed a decision:
   AP-0's O-run refutes P-3's byte model (76–88 % high, partition count exact), and a live-Spark
   run narrows TORTURE-1's `DATE-INTERVAL-NSBOUND-1` (Spark keeps `date` width; the fix is day
