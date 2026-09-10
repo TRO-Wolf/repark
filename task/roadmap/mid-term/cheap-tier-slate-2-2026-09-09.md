@@ -459,6 +459,8 @@ every `CONFIRMED` finding has a fix card or a filed question, and the findings d
 
 ### Card FACADE-AUDIT-0 — the Rust-backed facade audit (owner, 2026-09-10)
 
+**Release target:** v1.5 (owner ruling 2026-09-10, recorded in the release roadmap's Q&A log), together with FACADE-1…5 and CFG-2 named sources.
+
 **Facts on `2fad813`.** The Python facade is ~52k lines (`core.py` 4,487; ML transformers 2,717;
 `session_core.py` 2,305; `functions_expr.py` 2,255; `functions.py` 1,985; `types.py` 1,834;
 `ta.py` 1,818; `column.py` 1,589) over **two** pyo3 classes (`PyReparkSession`, `PyDataFrame`,
