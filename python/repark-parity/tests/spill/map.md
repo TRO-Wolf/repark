@@ -103,6 +103,12 @@ is True), and D-3's release-build idle-box rules belong to step 2.
   arithmetic `rlimit_as_bytes == vm_size_at_cap + 3 × CI_LIMIT_BYTES`.
 - `map.md` — this file.
 
+The step's pins: `test_classifier_three_outcomes_only`,
+`test_killed_subprocess_fails_matrix`, `test_generator_sizes_input_to_the_target_multiple`,
+`test_memory_limit_string_matches_the_engine_capacity_parser`, and
+`test_ci_tier_sort_cell_end_to_end`.
+pins: neveroom-1/C-001, C-002, C-003, C-004
+
 Step 2 adds the full-tier roster and its D-3 rules; step 3 adds the CI
 golden CSV and its comparison pins. The Makefile target
 `py-test-spill-matrix` is deliberately absent from `preflight`.
@@ -110,5 +116,6 @@ golden CSV and its comparison pins. The Makefile target
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- Ledger: [../../../../task/ledgers/staging/neveroom-1-ledger.md](../../../../task/ledgers/staging/neveroom-1-ledger.md)
 - Reused probe parser: [../../bench/spill/map.md](../../bench/spill/map.md)
   (`spill.plan_metrics`, the H3-SPILL-1 harness)
