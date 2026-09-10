@@ -29,35 +29,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `feat/torture-1-s2`.
   pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016
-- [ballista-m1-a-ledger.md](ballista-m1-a-ledger.md) —
-  **BALLISTA-M1-A step 1 (2026-09-10), in flight:** `DistributedExecutor` +
-  `LocalDataFusionExecutor` in `crates/repark-distributed`; range-sum, status, and
-  cancel pins green; `cluster` feature builds with no cluster code. `risk_tier: standard`.
-  Branch `feat/ballista-m1-a`.
-  pins: ballista-m1-a/C-001, C-002, C-003, C-004
-- [ballista-m1-b-ledger.md](ballista-m1-b-ledger.md) —
-  **BALLISTA-M1-B step 2 (2026-09-10), in flight:** UDF-on-executor pin
-  (`repark_times_ten` through `ReparkSessionProvider`; vanilla session fails to resolve);
-  cancel mid-flight (`Cancelled`, no running tasks within 5 s); codec install pin
-  (`repark_ballista_codec()` is Ballista's defaults; two-executor shuffle completes).
-  C-004 round-trip serde stays OPEN / PARKED (needs `datafusion-proto`). `risk_tier: standard`.
-  Branch `feat/ballista-m1-b`.
-  pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
-- [ballista-m1-c-ledger.md](ballista-m1-c-ledger.md) —
-  **BALLISTA-M1-C step 2 (2026-09-10), in flight:** D-1 three shapes PROVEN; D-3
-  `Completed { stages, retried_stages }` shuffle bytes > 0 on the two-stage hash aggregate;
-  D-4 session spill dir has no shuffle files after complete or cancel. D-2 retry stays
-  OPEN (ChaosExec is not fail-once; stopping an executor needs `arrow_flight`).
-  `risk_tier: standard`. Branch `feat/ballista-m1-c`.
-  pins: ballista-m1-c/C-001, C-003, C-004
-- [ballista-m1-d-ledger.md](ballista-m1-d-ledger.md) —
-  **BALLISTA-M1-D step 2 (2026-09-10), in flight:** Iceberg provider codec and
-  two-executor scan pins (step 1) plus the design-doc Iceberg section and success-list
-  line 17. Runtime abstraction is in place; Iceberg writes and the commit coordinator
-  are Milestone 3 (ADR-0004). Residues: S3/Glue credentials; `IcebergTableScan` rewrite
-  to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
-  Branch `feat/ballista-m1-d`.
-  pins: ballista-m1-d/C-001, C-002, C-003
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
