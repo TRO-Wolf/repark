@@ -53,6 +53,8 @@ from `main`.
 | DISPLAY-BRIDGE-1 | #454 | `critic-logic` | 22 | $0.31 | **no findings** |
 | BALLISTA-AUDIT-0 | #426 | `critic-quality` | 24 | $0.37 | 4 CONFIRMED |
 | DOCS-LINKS-1 | #437 | `critic-logic` | 21 | $0.31 | 2 CONFIRMED |
+| LEDGER-READING-1 | #432 | `critic-quality` | 19 | $0.27 | 2 CONFIRMED |
+| PREFLIGHT-PARITY-1 | #433 #438 | `critic-logic` | 17 | $0.24 | **no findings** |
 
 A first `critic-logic` round on CFG-1 returned the fabrication pattern the runbook §3 names —
 `num_turns` 1, a summary naming eight pytest files that do not exist in the tree, no report file
@@ -62,9 +64,9 @@ it is `ls` on the report path plus `num_turns`, both of which the runbook alread
 
 ## 2. Findings
 
-Forty-two numbered findings across eighteen rounds: 31 CONFIRMED (nine of them re-run by the
-orchestrator, all nine holding), 3 SUSPECTED, 8 filed as owner questions. Two units drew a round
-each and yielded nothing, which is recorded here as a result rather than omitted.
+Forty-four numbered findings across twenty rounds: 33 CONFIRMED (nine of them re-run by the
+orchestrator, all nine holding), 3 SUSPECTED, 8 filed as owner questions. Three rounds over two
+units yielded nothing, which is recorded here as a result rather than omitted.
 
 ### CFG-1 — the `repark.toml` loader
 
@@ -430,6 +432,27 @@ hypothetical: the tree is red today under a correct gate.
 with the same fix.
 
 
+### LEDGER-READING-1 — quality round
+
+**Q-48 · The unit's own clauses are cited only from a `map.md`.** CONFIRMED
+(`python/repark-parity/tests/map.md:391`): C-001…C-004 carry their `pins:` citations in the map,
+not in the three tests that actually pin them. That is legal — the ledger-grammar gate reads every
+tracked file under `python/`, and the owner's 2026-08-26 adjustment explicitly blesses a citation
+in a `map.md` — but for a unit whose whole subject is pin binding it is worth tightening: a reader
+who opens the test cannot see which clause it holds.
+
+**Q-49 · The reading fixture puts `docs:` in the Verdict column and `PROVEN` in Evidence.**
+CONFIRMED, low (`test_dl_2_ledger_grammar.py:56`): the fixture's columns are transposed relative to
+the ledger grammar it is fixture for. It passes because neither column is parsed positionally,
+which is itself worth knowing.
+
+### PREFLIGHT-PARITY-1 — logic round, no findings
+
+The second clean round on this unit, from the other role: D-1/D-2 wiring correct, both pins red on
+the parent Makefile and green on `HEAD`, the CAP-1 mirror 23 passed. PREFLIGHT-PARITY-1 is the only
+unit in the sweep that took two rounds and yielded nothing in either.
+
+
 ## 3. Fix cards
 
 The cards below are the disposition REVIEW-1 D-4 requires: a confirmed finding becomes a card for
@@ -676,9 +699,8 @@ that does not resolve; a four-space-indented fence.
 
 ## 5. What this sweep has not covered
 
-Eighteen rounds landed, plus one discarded fabrication. Not reviewed: the security angle of every unit but CFG-1 and
-SQL-DESCRIBE-1, the `critic-logic` half of PREFLIGHT-PARITY-1, and the `critic-quality` half of
-LEDGER-READING-1 and PROFILES-1's logic counterpart, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
+Twenty rounds landed, plus one discarded fabrication. Not reviewed: the security angle of every unit but CFG-1 and
+SQL-DESCRIBE-1, the `critic-logic` half of PREFLIGHT-PARITY-1, and PROFILES-1's remaining role, (DISPLAY-BRIDGE-1 was reviewed even though it is not in D-1's
 list, because it merged into the display path mid-sweep). REVIEW-1's "done when" is therefore not
 met; the card stays open with this
 document as its first instalment.

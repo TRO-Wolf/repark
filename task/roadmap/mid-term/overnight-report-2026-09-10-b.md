@@ -17,8 +17,8 @@ MAINT-POLICY-1, TORTURE-1, NEVEROOM-1 and AP-1 beside this session.
 | BALLISTA-M1-A | 0–2 | orchestrator seed + Grok ×2 (one turn-1 stall) | 2 | [#460](https://github.com/TRO-Wolf/repark/pull/460) | **merged** `07a96902` |
 | BALLISTA-M1-B | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#466](https://github.com/TRO-Wolf/repark/pull/466) | **merged** `0eddabfe` |
 | BALLISTA-M1-C | 1–2 | Grok ×2 (one turn-1 stall) | 2 | [#469](https://github.com/TRO-Wolf/repark/pull/469) | open, auto-merge armed on green |
-| BALLISTA-M1-D | 1 | Grok | 1 | — | see §4 |
-| REVIEW-1 | 18 critic rounds | Grok critic | 18 (+1 discarded) | this PR | findings document, 11 fix cards, 8 owner questions |
+| BALLISTA-M1-D | 1–2 | Grok ×2 | 2 | [#470](https://github.com/TRO-Wolf/repark/pull/470) | open, auto-merge armed on green |
+| REVIEW-1 | 20 critic rounds | Grok critic | 20 (+1 discarded) | this PR | findings document, 11 fix cards, 8 owner questions |
 
 Every merge was checked for squash tree-equality against the branch head before the Slack note.
 
@@ -33,8 +33,8 @@ the first Grok round opened.
 By the end of the run the crate carries the `DistributedExecutor` seam, the local reference
 executor, an in-process Ballista cluster (one scheduler, N executors on ephemeral ports), the
 session-provider and codec seats, three multi-stage shapes checked against the local executor,
-per-stage metrics on `Completed`, and a Milestone 1 design document whose success list is checked
-line by line against pins. Fifteen pins, all running, none `#[ignore]`d.
+per-stage metrics on `Completed`, Iceberg reads rebuilt on each executor from the session catalog,
+and a Milestone 1 design document whose success list is checked line by line against pins. Nineteen pins, all running, none `#[ignore]`d: three local, four cluster, five multi-stage, four Iceberg, plus the crate's own.
 
 **Two clauses are OPEN on purpose, and both are dependency walls the runbook says to park:**
 
@@ -54,10 +54,10 @@ the first of those independently.
 
 ## 3. The Grok critic sweep (REVIEW-1)
 
-Eighteen rounds over eleven units, ~$8 in worker cost, in
-[review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 42 numbered findings — 31
-CONFIRMED, 3 SUSPECTED, 8 owner questions — 12 fix cards, and two units that survived a round
-with nothing (PREFLIGHT-PARITY-1, DISPLAY-BRIDGE-1). The orchestrator re-ran nine reproductions
+Twenty rounds over eleven units, ~$8.50 in worker cost, in
+[review-1-findings-2026-09-10.md](review-1-findings-2026-09-10.md): 44 numbered findings — 33
+CONFIRMED, 3 SUSPECTED, 8 owner questions — 12 fix cards, and two units that survived with nothing
+(PREFLIGHT-PARITY-1 in both roles, DISPLAY-BRIDGE-1). The orchestrator re-ran nine reproductions
 itself; all nine held. Highlights:
 
 - **A data-loss path in DF-EAGER-1** (raised to high by the second round): `count()` on an eager
@@ -79,13 +79,18 @@ itself; all nine held. Highlights:
 
 ## 4. Parked, and what the next run should pick up
 
-- **BALLISTA-M1-D** was launched as the last Grok round of the window. Its outcome — including a
-  HALT, if the Iceberg `TableProvider` cannot be rebuilt on an executor without a forbidden
-  dependency — is on `feat/ballista-m1-d`; the next orchestrator reads
-  `/tmp/grok-worker/b-ballista/` for the hand-back and either finishes step 1 or files the wall.
-  Step 2 (the design-doc section) was not briefed.
+- **Both remaining Ballista PRs (#469 M1-C, #470 M1-D) are open with auto-merge armed** and will
+  land on green without further attention; #470 is stacked on #469, so its diff collapses once
+  #469 lands. Neither ledger has departed to `completed/` — that is the owner's call together with
+  whatever STATUS.md should say about Milestone 1, and the PRs say so.
+- **The whole of Ballista Milestone 1 (A, B, C, D) was carded, built, gated and PR'd in this
+  window**, against a card family that had never been started. Two clauses are OPEN and one is
+  narrowed, all three named in `docs/design/distributed-m1.md`'s open-questions section, and all
+  three trace to the same cause: RePark plan nodes cannot cross to an executor without
+  `datafusion-proto`. **That is the first question Milestone 2 has to answer**, and it is the one
+  thing in this run the owner should look at before scheduling more distributed work.
 - **REVIEW-1 is not done.** The card wants both roles on every unit in its D-1 list plus two
-  security rounds; this run did eighteen of about twenty-six. The findings document names exactly
+  security rounds; this run did twenty of about twenty-six. The findings document names exactly
   what is missing.
 - **Twelve fix cards** (REVIEW-FIX-1…12) are written but unopened. None
   was worked this run: REVIEW-1 D-4 says a critic never patches, and the fix rounds belong to a
@@ -108,7 +113,7 @@ itself; all nine held. Highlights:
 
 ## 6. Process notes for the runbook
 
-- **The turn-1 stall fired on three of five Grok actor rounds** and once as the fabrication
+- **The turn-1 stall fired on four of seven Grok actor rounds** and once as the fabrication
   pattern (a `CONCLUDED` naming eight pytest files that do not exist, `num_turns` 1, no report on
   disk). The runbook's two checks caught all four. Resuming the same session with a one-paragraph
   proceed mandate worked every time; no round needed a second resume. Worth folding into the
@@ -132,7 +137,7 @@ itself; all nine held. Highlights:
 ## 7. Cost
 
 Worker cost from `runs.tsv`: Grok actor rounds ≈ $6.30 (M1-A $0.86, M1-B $2.58, M1-C $2.86),
-Grok critic rounds ≈ $8.00 over 18 rounds plus $0.02 of discarded stalls, Muse ≈ two rounds on
+Grok critic rounds ≈ $8.50 over 20 rounds plus $0.02 of discarded stalls, Muse ≈ two rounds on
 `muse-spark-1.3-contributor`. The orchestrator's own spend is one audit per round plus the merge
 chains.
 
