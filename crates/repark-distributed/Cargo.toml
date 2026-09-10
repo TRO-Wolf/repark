@@ -1,0 +1,33 @@
+[package]
+name = "repark-distributed"
+description = "Distributed execution for RePark: the DistributedExecutor seam, a local DataFusion executor, and the Ballista-backed cluster executor behind the `cluster` feature."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["local"]
+local = []
+cluster = ["dep:ballista", "dep:ballista-core", "dep:ballista-scheduler", "dep:ballista-executor"]
+
+[dependencies]
+repark-core.workspace = true
+datafusion.workspace = true
+arrow.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+ballista = { workspace = true, optional = true }
+ballista-core = { workspace = true, optional = true }
+ballista-scheduler = { workspace = true, optional = true }
+ballista-executor = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio.workspace = true
