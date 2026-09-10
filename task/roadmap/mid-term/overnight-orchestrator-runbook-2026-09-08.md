@@ -92,6 +92,10 @@ Grok (under G-4): actor `~/.claude/skills/grok-worker/grok-worker.sh --lane $LAN
 critic `… --role critic-quality|critic-logic|critic-security --sandbox read-only --max-turns 120`
 on a fresh clone of `main`. The launcher refuses `~/CodeRepos` and denies push/gh/aws. Run dirs
 land in `/tmp/grok-worker/<lane>/<stamp>/`; read them with `python3 ~/.claude/skills/grok-worker/handback.py <run>`.
+**Lane discipline (2026-09-10):** a worker or critic reads and edits only its own lane clone —
+never another lane's, never the live checkout; a critic clone is refreshed to `origin/main`
+between rounds; never `git checkout` in a clone whose worker is mid-round. The Grok launcher now
+prepends the proceed mandate to every brief (turn-1 stall fired on 4 of 7 actor rounds in run B).
 **Two Grok patterns to check on every hand-back:** (1) the turn-1 stall — `num_turns` 1 with a
 placeholder summary: resume the same session with a proceed mandate ("never end a turn to report
 progress; CONCLUDED is valid only with commits/report present"), and after two stalls launch a
@@ -187,6 +191,13 @@ gh pr checks <n> --repo TRO-Wolf/repark --json bucket --jq 'all(.bucket=="pass")
 ~/.claude/skills/grok-worker/notify.sh "<unit> merged as <sha> — <one line>"     # separate command
 git status --porcelain | wc -l                                                    # 0, then: rm -rf /tmp/oc-$LANE
 ```
+
+**Merge mechanics after run 5b (owner, 2026-09-10):** the repository's auto-merge setting is
+switched **off** once run 5 and orchestrator B have ended; from then on never pass `--auto`. The
+shape is `gh pr update-branch <n>` (resolve conflicts locally when it refuses), then
+`gh pr checks <n> --watch` in the foreground, then the explicit squash above. Before committing
+any merge resolution, `git diff --diff-filter=U --name-only` must print nothing and the tree
+must compile — orchestrator B committed conflict markers in five files once.
 
 Before the merge the unit's last commit carries the departure edit: ledger `move` to
 `completed/` (`python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed`),

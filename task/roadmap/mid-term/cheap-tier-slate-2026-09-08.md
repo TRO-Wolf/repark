@@ -32,7 +32,7 @@ Nothing else in this file is required reading for a round.
 | R-13 | **Bridged frames (2026-09-09):** `show()` on an uncached `mapInArrow` frame renders with the resolved display style, the same renderer `repr` uses; its own card DISPLAY-BRIDGE-1. | DISPLAY-BRIDGE-1 |
 | R-14 | **`repark.toml` `${}` edges (2026-09-09):** `$$` is the escape for a literal `$`; an unterminated `${` refuses loud naming the key path, like a missing variable. CFG-1 step 1b re-pins both before step 4 documents the file. | CFG-1 |
 | R-15 | **Document rounds go to Muse (2026-09-09):** any round expected to produce a document or a ledger with measured evidence runs on Muse; GLM keeps code-and-test rounds. | runbook §3 |
-| R-16 | **Silently accepted config keys (2026-09-09):** the nine `datafusion.*` keys the PROFILES-1 probe found accepted but unread are wired through or refused loud; card CONF-UNREAD-1 after PROFILES-1 step 2. | CONF-UNREAD-1 |
+| R-16 | **Silently accepted config keys (2026-09-09; narrowed 2026-09-10 by RF-4 of the review-fix slate):** the **four** `datafusion.*` keys the PROFILES-1 probe found accepted but unread (`parquet.enable_page_index`, `parquet.bloom_filter_on_read`, `coalesce_batches`, `parquet.write_batch_size`) are wired through or refused loud; the three `repark.*` session keys and two Iceberg properties in the same probe are REVIEW-FIX-8's. Card CONF-UNREAD-1 after PROFILES-1 step 2. | CONF-UNREAD-1 |
 | R-17 | **Muse tier (2026-09-09, 16:30):** every Muse round runs `muse-spark-1.3-contributor` at `--effort max` (the owner accepts that the contributor model sees project data); the launcher defaults carry it, briefs pass neither flag. | runbook §3, `~/.claude/skills/muse-worker/` |
 | R-18 | **`[<profile>.conf]` order (2026-09-09, run 4 Q1):** sorted-key order, as shipped and pinned; CFG-1 D-1's "file order" is amended, no `preserve_order` feature. CFG-1's ledger closes on it. | CFG-1 D-1 |
 | R-19 | **Database sources before CFG-2 (run 4 Q2):** a declared `[<profile>.database.*]` block parses, validates, and **warns** at load ("declared, not yet usable until CFG-2"); it does not refuse the session. CFG-1 step 5. | CFG-1 step 5 |
@@ -708,7 +708,7 @@ A user who sets one believes it took effect.
 
 **Decisions.**
 
-- **D-1** For each of the nine keys, read its DataFusion `ConfigOptions` path: if the option
+- **D-1** For each of the four `datafusion.*` keys (RF-4), read its DataFusion `ConfigOptions` path: if the option
   exists in DataFusion 54.1.0 and reaches `SessionConfig` before the context is built, wire it
   the same way the eleven are wired; if it does not exist or cannot take effect after build,
   refuse loud at `.config()` time with the key name and the reason.

@@ -48,6 +48,15 @@ mirrored as `session.run_maintenance(...)`. **`dry_run` defaults to true** (the 
 plan; `dry_run => false` runs the five-step chain, one commit per step, a failure stopping it).
 No scheduler; `adaptive_partitioning` is reserved for ADAPT-PART. Keys, precedence, the step
 order and the result frame: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
+**Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: the `repark-distributed`
+crate (tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local reference executor,
+and — behind the off-by-default `cluster` feature — an in-process Ballista scheduler with N
+executors, multi-stage queries with per-stage metrics, and Iceberg reads rebuilt on each executor
+from the session catalog; nineteen pins, none ignored. Two clauses stay OPEN on one wall, that a
+RePark plan node cannot cross to an executor without `datafusion-proto`; the 2026-09-10 ruling
+takes that crate as Milestone 2's first unit
+([review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9).
+Design: [docs/design/distributed-m1.md](docs/design/distributed-m1.md).
 Release mechanics:
 [docs/release.md](docs/release.md).
 
