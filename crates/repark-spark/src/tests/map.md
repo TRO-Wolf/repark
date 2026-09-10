@@ -602,6 +602,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 The test modules follow production ownership. Archived ledgers remain available from the pointers
 above.
 
+- `run_maintenance.rs` — **MAINT-POLICY-1 step 2 (2026-09-10):** the dry-run door pins on a
+  memory-catalog table with 20 small files and 3 snapshots (plus a merge-on-read table with
+  live delete files for the gate): the five-step planned frame shape, the `dry_run` default,
+  the delete-ratio gate both sides (exact equality admits), the file → table → inline
+  override order, the D-6 refusal both halves, and the loud inline refusals (unknown key,
+  reserved key, negative integer, malformed duration, apply mode).
+  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

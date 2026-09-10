@@ -28,6 +28,17 @@ and measured-parity contract would grow `call.rs` beyond its exact
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
   pins: maint-rewrite-data-files-options/C-007
+- `run_maintenance.rs` — **MAINT-POLICY-1 step 2 (2026-09-10):** `CALL
+  <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`, dry run
+  only. Inline keys overlay the stamped file policy (per-table entry, then profile) through
+  step 1's `resolve`; no stamped policy and no inline keys refuse with the D-6 text.
+  `plan_steps` admits each D-4 step by its gate (delete ratio from `files WHERE content = 0`
+  against `delete_files` byte sums, `rewrite_manifests = true`, set cutoffs) with stable D-4
+  ordinals and renders each step's CALL string; the frame answers `step` Int32 plus
+  `procedure` / `arguments` / `status` / `result` Utf8, every `status` `planned`.
+  `dry_run => false` refuses loud until step 3 lands the apply path. In-module unit tests
+  pin the gates, the renderings, and the saturating cutoff math.
+  pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary

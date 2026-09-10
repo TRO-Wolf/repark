@@ -1,6 +1,6 @@
 mod discovery;
 mod interpolate;
-mod maintenance;
+pub(crate) mod maintenance;
 mod profile;
 mod redact;
 mod sources;

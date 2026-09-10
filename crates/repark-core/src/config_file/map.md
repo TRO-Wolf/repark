@@ -79,6 +79,10 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `Profile.maintenance`, so both `parse()` and the typed API refuse; `profile_as_table`
   carries the slot so the `REPARK_ENV` merge keeps it. Step 1 of MAINT-POLICY-1.
   pins: maint-policy-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **MAINT-POLICY-1 step 2 (2026-09-10):** the policy types, `resolve`, `parse_duration`,
+  and `parse_maintenance_policy` (full-document text in, typed policy out, `None` for a
+  profile with no maintenance table) are public for the Spark procedure; the
+  `#[allow(dead_code)]` is gone now that `plan_steps` calls `resolve` through the stamp.
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
   pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the

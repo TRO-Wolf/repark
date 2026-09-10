@@ -17,7 +17,7 @@ const SECONDS_PER_HOUR: u64 = 3_600;
 const SECONDS_PER_DAY: u64 = 86_400;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub(crate) struct TablePolicy {
+pub struct TablePolicy {
     pub target_file_size_bytes: Option<u64>,
     pub snapshot_retain_last: Option<u64>,
     pub snapshot_older_than: Option<Duration>,
@@ -27,7 +27,7 @@ pub(crate) struct TablePolicy {
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub(crate) struct MaintenancePolicy {
+pub struct MaintenancePolicy {
     pub target_file_size_bytes: Option<u64>,
     pub snapshot_retain_last: Option<u64>,
     pub snapshot_older_than: Option<Duration>,
@@ -75,8 +75,8 @@ impl MaintenancePolicy {
         })
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn resolve(&self, table_name: &str) -> TablePolicy {
+    #[must_use]
+    pub fn resolve(&self, table_name: &str) -> TablePolicy {
         let entry = self.tables.get(table_name);
         TablePolicy {
             target_file_size_bytes: entry
@@ -101,7 +101,31 @@ impl MaintenancePolicy {
     }
 }
 
-pub(crate) fn parse_duration(key_path: &str, text: &str) -> Result<Duration> {
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_maintenance_policy(
+    profile_name: &str,
+    document: &str,
+) -> Result<Option<MaintenancePolicy>> {
+    let file = super::parse(document)?;
+    let Some(profile) = file.profiles.get(profile_name) else {
+        let known = file.profiles.keys().cloned().collect::<Vec<_>>().join(", ");
+        let known = if known.is_empty() {
+            "none"
+        } else {
+            known.as_str()
+        };
+        return Err(Error::Config(format!(
+            "unknown profile `{profile_name}`; the config file carries profiles: {known}"
+        )));
+    };
+    let Some(table) = profile.maintenance.as_ref() else {
+        return Ok(None);
+    };
+    MaintenancePolicy::from_table(profile_name, table).map(Some)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_duration(key_path: &str, text: &str) -> Result<Duration> {
     let invalid = || {
         Error::Config(format!(
             "key `{key_path}` has an invalid duration `{text}`; expected `<n>d`, `<n>h` or `<n>m`"
