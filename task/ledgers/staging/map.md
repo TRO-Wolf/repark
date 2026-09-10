@@ -67,12 +67,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [review-fix-7-ledger.md](review-fix-7-ledger.md) —
-  **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —
-  header-injection close in the Python mirror (refuse + quote), secret-free TOML parse
-  errors in the engine, and the RF-3 one-warning disclosure for ambiently discovered
-  cloud catalogs. 3 PROVEN, 0 OPEN. `risk_tier: standard`. Branch `fix/review-fix-7`.
-  pins: review-fix-7/C-001, C-002, C-003
 - [csv-infer-perf-1-ledger.md](csv-infer-perf-1-ledger.md) —
   **CSV-INFER-PERF-1 (2026-09-06), in flight:** local CSV `inferSchema` no longer
   materializes the frame per candidate cast. Native DataFusion inference plus

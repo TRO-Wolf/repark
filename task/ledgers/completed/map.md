@@ -104,6 +104,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branch `feat/preflight-parity-1`.
   pins: preflight-parity-1/C-001, C-002, C-003, C-004, C-005
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
+- [review-fix-7-ledger.md](review-fix-7-ledger.md) —
+  **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —
+  header-injection close in the Python mirror (refuse + quote), secret-free TOML parse
+  errors in the engine, and the RF-3 one-warning disclosure for ambiently discovered
+  cloud catalogs. 3 PROVEN, 0 OPEN. `risk_tier: standard`. Branch `fix/review-fix-7`.
+  pins: review-fix-7/C-001, C-002, C-003
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 
 ## Pointers
