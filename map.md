@@ -11,7 +11,7 @@ front-door navigation map. See [README.md](README.md) for the overview,
 (release state, delivery, active workstreams — the single source of truth; do not restate it here).
 F-Y10-1 closed 2026-08-30.
 
-The workspace carries nine delivered crates: `crates/repark-common` (error seed + the
+The workspace carries ten delivered crates: `crates/repark-common` (error seed + the
 surface-matrix registry), `crates/repark-iceberg` (catalog + write over the owned iceberg-rust
 fork, `[patch.crates-io]`-pinned), `crates/repark-core` (the `ReparkSession` engine API + the
 frozen `SqlDialect` / `SessionExtension` seams, and since 2026-09-09 the `repark.toml` loader
@@ -20,7 +20,10 @@ scalar/aggregate function shims, tier 3), `crates/repark-spark` (the Spark-SQL d
 `SparkDialect` + `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional
 window-UDF layer, tier 3), `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` +
 guard set + wrong-door sniff + the curated `WITH (…)` vocabulary), `crates/repark-ml` (native ML
-estimator kernels, tier 3), and `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**).
+estimator kernels, tier 3), `crates/repark-distributed` (distributed execution, tier 3, role
+`runtime`: the `DistributedExecutor` seam and the local executor, with Ballista behind the
+off-by-default `cluster` feature — seeded by BALLISTA-M1-A), and `crates/repark-python` (the
+PyO3 cdylib, **tier 4 "bindings"**).
 The Python tree ships `python/repark-parity` (the parity harness + census machinery + report
 comparator) and `python/repark` (the PySpark facade wheel, published to PyPI — see
 [STATUS.md](STATUS.md) "Release state").
