@@ -41,6 +41,7 @@ const SCHEDULER_CONNECT_WAIT: Duration = Duration::from_secs(10);
 const JOB_WAIT: Duration = Duration::from_secs(30);
 const POLL: Duration = Duration::from_millis(50);
 const TASKS_PER_EXECUTOR: usize = 1;
+const IN_FLIGHT: &str = "inflight";
 
 type SubmitFn =
     Arc<dyn Fn(Arc<dyn ExecutionPlan>) -> BoxFuture<'static, Result<BallistaJobId>> + Send + Sync>;
@@ -168,6 +169,17 @@ fn count_stage_tasks(stage: &ExecutionStage, counts: &mut HashMap<String, usize>
             }
         }
         ExecutionStage::UnResolved(_) | ExecutionStage::Resolved(_) => {}
+    }
+}
+
+fn count_running_stage_tasks(stage: &ExecutionStage, counts: &mut HashMap<String, usize>) {
+    let ExecutionStage::Running(running) = stage else {
+        return;
+    };
+    for info in running.task_infos.iter().flatten() {
+        if let task_status::Status::Running(running_task) = &info.task_status {
+            *counts.entry(running_task.executor_id.clone()).or_insert(0) += 1;
+        }
     }
 }
 
@@ -401,6 +413,42 @@ impl ReparkClusterExecutor {
             count_stage_tasks(stage, &mut counts);
         }
         Ok(counts)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn running_executor_task_counts(&self, job: JobId) -> Result<HashMap<String, usize>> {
+        let ballista_id = {
+            let jobs = jobs_lock(&self.jobs);
+            slot_for(&jobs, job)?.ballista_id.clone()
+        };
+        if let Some(graph) = self
+            .cluster
+            .job_state()
+            .get_execution_graph(&ballista_id)
+            .await
+            .map_err(ballista_err)?
+        {
+            let mut counts = HashMap::new();
+            for stage in graph.stages().values() {
+                count_running_stage_tasks(stage, &mut counts);
+            }
+            return Ok(counts);
+        }
+        match self
+            .cluster
+            .job_state()
+            .get_job_status(&ballista_id)
+            .await
+            .map_err(ballista_err)?
+            .and_then(|job_status| job_status.status)
+        {
+            Some(job_status::Status::Queued(_) | job_status::Status::Running(_)) | None => {
+                Ok(HashMap::from([(IN_FLIGHT.to_owned(), 1)]))
+            }
+            Some(job_status::Status::Failed(_) | job_status::Status::Successful(_)) => {
+                Ok(HashMap::new())
+            }
+        }
     }
 }
 

@@ -32,6 +32,13 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   scheduler plus N executors on ephemeral ports (constructor arguments). Session state comes
   from `ReparkSessionProvider`; the codec seat is `repark_ballista_codec()`. The two-executor
   pin is `tests/cluster_two_executors.rs`. pins: ballista-m1-b/C-001, C-002
+- **BALLISTA-M1-B step 2.** UDF-on-executor pin (`repark_times_ten` through the provider,
+  vanilla session fails to resolve the same plan); cancel mid-flight (`Cancelled`, no running
+  tasks within 5 s); codec install pin (`repark_ballista_codec()` matches Ballista defaults,
+  and the two-executor job shuffles through those codecs). C-004 (round-trip serde over the
+  five shuffle nodes) stays OPEN / PARKED: it needs `PhysicalExtensionCodec` from
+  `datafusion-proto`, which this unit may not add. The owner question on the wrapper lives in
+  [src/map.md](src/map.md). pins: ballista-m1-b/C-003, C-005, C-006
 
 ## Contents
 
