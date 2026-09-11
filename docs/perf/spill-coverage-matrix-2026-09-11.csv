@@ -1,0 +1,28 @@
+operator,multiple,input_bytes,outcome_1,outcome_2,outcome_3,outcome,spill_bytes,seconds,notes
+sort,2,2147000000,refused,refused,refused,refused,,2.2,ExternalSorter spills; the reference spilling operator; refused as PySparkException
+sort,4,4294000000,refused,refused,refused,refused,,30.4,ExternalSorter spills; the reference spilling operator; refused as PySparkException
+sort,8,8589000000,refused,refused,refused,refused,,0.4,ExternalSorter spills; the reference spilling operator; refused as PySparkException
+hash_aggregate,2,2147000000,refused,spilled,refused,UNSTABLE,7350412902,8.9,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
+hash_aggregate,4,4294000000,refused,refused,refused,refused,,0.6,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
+hash_aggregate,8,8589000000,refused,refused,refused,refused,,3.0,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
+hash_join,2,2147000000,refused,refused,refused,refused,,2.6,build side has no spill path; upstream epic https://github.com/apache/datafusion/issues/24768; refused as PySparkException
+hash_join,4,4294000000,KILLED,KILLED,KILLED,KILLED,,10.5,build side has no spill path; upstream epic https://github.com/apache/datafusion/issues/24768; KILLED: note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace; KILLED: note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace; KILLED: note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+hash_join,8,8589000000,refused,refused,refused,refused,,8.3,build side has no spill path; upstream epic https://github.com/apache/datafusion/issues/24768; refused as PySparkException
+sort_merge_join,2,2147000000,refused,refused,refused,refused,,20.7,forced by datafusion.optimizer.prefer_hash_join=false; input sorts and the buffered side can spill; refused as PySparkException
+sort_merge_join,4,4294000000,refused,refused,refused,refused,,0.4,forced by datafusion.optimizer.prefer_hash_join=false; input sorts and the buffered side can spill; refused as PySparkException
+sort_merge_join,8,8589000000,refused,refused,refused,refused,,4.6,forced by datafusion.optimizer.prefer_hash_join=false; input sorts and the buffered side can spill; refused as PySparkException
+window_sliding,2,2147000000,completed,completed,completed,completed,0,1.4,BoundedWindowAggExec takes no pool reservation; upstream accounting epic https://github.com/apache/datafusion/issues/22758
+window_sliding,4,4294000000,completed,completed,completed,completed,0,1.9,BoundedWindowAggExec takes no pool reservation; upstream accounting epic https://github.com/apache/datafusion/issues/22758
+window_sliding,8,8589000000,completed,completed,completed,completed,0,2.9,BoundedWindowAggExec takes no pool reservation; upstream accounting epic https://github.com/apache/datafusion/issues/22758
+window_unbounded,2,2147000000,refused,refused,KILLED,UNSTABLE,,21.0,WindowAggExec takes no pool reservation; only the SortExec beneath it can spill; https://github.com/apache/datafusion/issues/22758; refused as PySparkException; KILLED: note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+window_unbounded,4,4294000000,refused,refused,refused,refused,,46.6,WindowAggExec takes no pool reservation; only the SortExec beneath it can spill; https://github.com/apache/datafusion/issues/22758; refused as PySparkException
+window_unbounded,8,8589000000,refused,refused,refused,refused,,0.5,WindowAggExec takes no pool reservation; only the SortExec beneath it can spill; https://github.com/apache/datafusion/issues/22758; refused as PySparkException
+dynamic_flatten,2,2147000000,completed,completed,completed,completed,0,1.3,UnnestExec takes no pool reservation; https://github.com/apache/datafusion/issues/22758
+dynamic_flatten,4,4294000000,completed,completed,completed,completed,0,2.1,UnnestExec takes no pool reservation; https://github.com/apache/datafusion/issues/22758
+dynamic_flatten,8,8589000000,completed,completed,completed,completed,0,3.7,UnnestExec takes no pool reservation; https://github.com/apache/datafusion/issues/22758
+nested_loop_join,2,2147000000,refused,refused,refused,refused,,0.5,upstream fallback re-executes the build child and panics; repark reports the pool refusal instead (H3-SPILL-NLJ-1 FIXED); https://github.com/apache/datafusion/issues/24661; refused as PySparkException
+nested_loop_join,4,4294000000,refused,refused,refused,refused,,0.5,upstream fallback re-executes the build child and panics; repark reports the pool refusal instead (H3-SPILL-NLJ-1 FIXED); https://github.com/apache/datafusion/issues/24661; refused as PySparkException
+nested_loop_join,8,8589000000,refused,refused,refused,refused,,0.5,upstream fallback re-executes the build child and panics; repark reports the pool refusal instead (H3-SPILL-NLJ-1 FIXED); https://github.com/apache/datafusion/issues/24661; refused as PySparkException
+collect,2,2147000000,refused,refused,refused,refused,,2.6,facade boundary takes no pool reservation; MemoryError is H3-SPILL-COLLECT-1 FIXED; upstream accounting epic https://github.com/apache/datafusion/issues/22758; refused as MemoryError
+collect,4,4294000000,refused,refused,refused,refused,,2.4,facade boundary takes no pool reservation; MemoryError is H3-SPILL-COLLECT-1 FIXED; upstream accounting epic https://github.com/apache/datafusion/issues/22758; refused as MemoryError
+collect,8,8589000000,refused,refused,refused,refused,,1.3,facade boundary takes no pool reservation; MemoryError is H3-SPILL-COLLECT-1 FIXED; upstream accounting epic https://github.com/apache/datafusion/issues/22758; refused as MemoryError
