@@ -696,6 +696,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `lazy: N columns` first line, D-2 materialised classification, D-3 eagerEval
   rows with one plan run, D-4 unchanged doors plus the lazy bridge header, D-5
   transformation-laziness chains, and RF-5's duckdb probe with its re-pin. Step 2
-  (docs) follows under its own brief. `risk_tier: standard`.
+  adds the plain-checkpoint marker (C-007) and the docs round. `risk_tier: standard`.
   Branch `feat/display-lazy-1`.
-  pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

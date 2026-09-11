@@ -509,6 +509,8 @@ class DataFrame:
         self._storage_level = None
         self._cache_view = None
         self._lineage_inner = None
+        if self._eager_shape is None:
+            self._eager_shape = (self._action_inner().count(), len(self.columns))
 
     def _prepare_for_plan(self) -> None:
         """Materialize one plan-stable ``mapInArrow`` snapshot before child plans.

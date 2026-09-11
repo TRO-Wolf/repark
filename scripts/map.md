@@ -405,6 +405,12 @@ the cache-guard trio moves to `eager.py`, which carries no row, while `eager` / 
 stay on the class as one-line wrappers with the `compute` alias. Ratchets DOWN.
 pins: df-eager-1/C-001, C-002, C-003
 
+DISPLAY-LAZY-1 step 2 (2026-09-10): `check_lib_py.py` `dataframe/core.py` 4487→4489 —
+the checkpoint arm records `_eager_shape` (two lines, no new slot so the CAP-1
+`dir()` freeze is untouched); no cohesive region moves, so the debt and split-seam
+notes stand unchanged. Ratchets UP by two with reason; reviewed like code.
+pins: display-lazy-1/C-007
+
 DISPLAY-POLARS-1 step 3 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4536→4525 —
 the `__repr__` / `_repr_html_` wrapper docstrings condense to one line under the comment
 ban (the behaviour contract moved to `dataframe/map.md`). Ratchets DOWN.

@@ -440,11 +440,18 @@ shape: (1, 1)
 └─────────────┘
 ```
 
-`repr(df)` prints the same styled table `show()` prints under `polars` and `duckdb`
-(measured byte-identical on the same frame), regardless of
-`spark.sql.repl.eagerEval.enabled`. Under those two styles `_repr_html_` returns `None`,
-so a notebook shows the text table. Under `spark` the existing eagerEval behaviour is
-unchanged.
+`repr(df)` of a lazy frame prints only its schema under `polars` and `duckdb` — the
+column names and dtypes in the data table's own header box, but no rows and no row
+count — so a bare `df.withColumns(...)` at the end of a notebook cell never runs the
+plan. This reverses the shipped DISPLAY-POLARS-1 D-4 behaviour under ruling R-22: the
+old default rendered rows with a count, which executed the plan twice (one `count()`,
+one head/tail fetch) on every bare expression and made a lazy engine look eager. To see
+rows, run the plan one of three ways: `.eager()` (or `.compute()`), an action such as
+`show()` or `collect()`, or set `spark.sql.repl.eagerEval.enabled`, under which a lazy
+`repr` renders rows through the same path as `show(eagerEval.maxNumRows)`. Eager,
+cached, and checkpointed frames keep the data render with at most one `count()`. Under
+those two styles `_repr_html_` returns `None`, so a notebook shows the text table. Under
+`spark` the existing eagerEval behaviour is unchanged.
 
 ## Stopping
 

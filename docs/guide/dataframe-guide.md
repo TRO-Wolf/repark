@@ -115,6 +115,24 @@ The polars/RePark pair is the whole model:
 | `lf.collect()` runs the plan and returns rows | `lf.eager()` materializes and returns a new eager `DataFrame` |
 | the source `df` stays usable | the source frame is unchanged; the pair is `df.lazy()` / `lf.eager()` |
 
+`repr` of a lazy frame never runs the plan: under `polars` and `duckdb` it prints the
+schema header only — names and dtypes in the data table's own header box, no rows, no
+row count. This is the R-22 reversal of the shipped DISPLAY-POLARS-1 D-4 default, which
+rendered rows; see `session-and-conf.md` for why the default had to change:
+
+```python
+print(repr(frame))
+```
+
+```text
+lazy: 1 columns, not yet materialized — .eager(), .show() or .collect() run the plan
+┌─────┐
+│ id  │
+│ --- │
+│ i32 │
+└─────┘
+```
+
 `count()`, `repr`, and `show` on an eager frame read the stored shape with zero engine
 actions — the shape is filled once, at `.eager()` time, by one count over the
 already-materialised table:

@@ -2020,6 +2020,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   eagerEval rows with exactly one plan run; D-4 spark door/str/HTML bytes plus the lazy
   bridge header; D-5 eight lazy transformation chains with per-chain closing actions.
   pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005
+  **DISPLAY-LAZY-1 step 2** (2026-09-10): plain-`localCheckpoint()` and pending-discharge
+  pins hold the data render with zero plan re-runs at `repr`.
+  pins: display-lazy-1/C-007
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`

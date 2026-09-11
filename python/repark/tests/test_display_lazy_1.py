@@ -1,4 +1,4 @@
-"""Lazy-repr pins. pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005"""
+"""Lazy-repr pins. pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005, C-007"""
 
 from __future__ import annotations
 
@@ -178,6 +178,43 @@ def test_lazy_repr_empty_columns() -> None:
             assert rendered.endswith("┌┐\n└┘")
         finally:
             session.stop()
+
+
+def test_plain_checkpoint_repr_renders_data_with_zero_reruns(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Repr of a plain localCheckpoint frame renders rows with zero plan re-runs."""
+    count_calls = _install_count_spy(monkeypatch)
+    udf_calls: list[int] = []
+    frame = _spied_frame(polars_session, udf_calls)
+    frame.localCheckpoint()
+    assert frame._eager_shape == (25, 5)
+    assert len(udf_calls) == 25
+    assert count_calls == []
+    rendered = repr(frame)
+    assert rendered.splitlines()[0] == "shape: (25, 5)"
+    assert "│ 25  ┆ 37.5" in rendered
+    assert len(udf_calls) == 25
+    assert count_calls == []
+
+
+def test_pending_checkpoint_discharge_renders_data(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Repr after a pending checkpoint discharges renders rows with zero counts."""
+    count_calls = _install_count_spy(monkeypatch)
+    frame = _twelve_id_frame(polars_session)
+    frame.localCheckpoint(eager=False)
+    assert frame._eager_shape is None
+    assert frame.count() == 12
+    assert frame._eager_shape == (12, 1)
+    count_calls.clear()
+    rendered = repr(frame)
+    assert count_calls == []
+    assert rendered.splitlines()[0] == "shape: (12, 1)"
+    assert "│ 12  │" in rendered
 
 
 def test_lazy_repr_zero_engine_actions(

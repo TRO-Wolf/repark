@@ -25,11 +25,12 @@ commit). Smoke: `SELECT 1 AS a` collects `[Row(a=1)]`. No `maturin develop` ran.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | D-1: a frame with no stored shape and no materialised cache view renders, under `polars`, the `lazy: N columns, not yet materialized` first line over the data table's own header box (same widths from names and dtypes alone, same `max_cols` elision, names untruncated like the data path), closed directly under the dtype row; `duckdb` uses its own header box the same way; no row count anywhere. | `test_lazy_repr_polars_exact_bytes`, `test_lazy_repr_duckdb_exact_bytes`, `test_lazy_repr_max_cols_elision`, `test_lazy_repr_empty_columns`, `test_lazy_repr_zero_engine_actions` in `python/repark/tests/test_display_lazy_1.py` | **PROVEN** | Red-first `11 failed, 3 passed` on base `e4dafea7` (see Red first); green after the `display._repr` branch: `15 passed` (new file). The polars bytes match the card block exactly; the duckdb/elision transcriptions were reconciled against eager data-table headers rendered in this clone. |
-| C-002 | D-2: `_eager_shape` set, a materialised `cache()`/`persist()` view, or an eager-plus-checkpoint frame renders the existing shape-first data table (cached pays one `count()` over the view, eager and checkpointed pay zero); a `cache()`-marked but unmaterialised frame stays lazy; an action on a lazy frame does not flip it to eager. | `test_eager_repr_renders_data_with_zero_counts`, `test_cached_materialised_repr_renders_data_with_one_count`, `test_persist_materialised_repr_renders_data_with_one_count`, `test_checkpointed_repr_renders_data_with_zero_counts`, `test_pending_cache_repr_stays_lazy`, `test_action_does_not_flip_lazy` in `python/repark/tests/test_display_lazy_1.py`; re-pinned `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` in `test_df_eager_1.py` | **PROVEN** | Red-first on base (pending-cache and no-flip pins fail: base renders data); green after the branch. Disposition: a plain `localCheckpoint()` without a prior `eager()` leaves no materialisation marker in the tree (`_eager_shape None`, `_cache_view None`, `_checkpoint_lazy False`), so it renders lazy under "everything else is lazy"; the pinned checkpoint case is the eager-plus-checkpoint frame the brief names. |
+| C-002 | D-2: `_eager_shape` set, a materialised `cache()`/`persist()` view, or an eager-plus-checkpoint frame renders the existing shape-first data table (cached pays one `count()` over the view, eager and checkpointed pay zero); a `cache()`-marked but unmaterialised frame stays lazy; an action on a lazy frame does not flip it to eager. | `test_eager_repr_renders_data_with_zero_counts`, `test_cached_materialised_repr_renders_data_with_one_count`, `test_persist_materialised_repr_renders_data_with_one_count`, `test_checkpointed_repr_renders_data_with_zero_counts`, `test_pending_cache_repr_stays_lazy`, `test_action_does_not_flip_lazy` in `python/repark/tests/test_display_lazy_1.py`; re-pinned `test_repr_of_eager_frame_skips_count_and_matches_lazy_table` in `test_df_eager_1.py` | **PROVEN** | Red-first on base (pending-cache and no-flip pins fail: base renders data); green after the branch. Step-1 disposition CLOSED in step 2: the checkpoint arm now records `_eager_shape` (see C-007), so every checkpoint-materialised frame classifies as materialised. |
 | C-003 | D-3: with `spark.sql.repl.eagerEval.enabled` truthy a lazy frame's `repr` renders rows under `polars` and `duckdb` through the same path as `show(eagerEval.maxNumRows)`; on a 7-row frame the plan runs exactly once (one `to_arrow`, zero `count()` calls). | `test_eager_eval_lazy_repr_renders_rows_with_one_plan_run` in `python/repark/tests/test_display_lazy_1.py` | **PROVEN** | Red-first on base (the duckdb leg counts once, `assert [1] == []`); green after the branch: one export, zero counts, rows rendered under both styles. |
 | C-004 | D-4: `spark`-style `repr`, `str(df)`, `_repr_html_` (`None` under `polars`/`duckdb`), `show()` and every action are byte-identical; `show() == repr()` still holds for eager bridged frames while a lazy bridged frame renders D-1. | `test_spark_door_and_str_and_html_unchanged`, `test_lazy_bridged_repr_renders_header` in `python/repark/tests/test_display_lazy_1.py`; re-pinned `test_bridged_show_matches_repr_polars`, `test_bridged_show_matches_repr_duckdb`, `test_bridged_small_peek_shape_exact_duckdb` in `test_display_bridge_1.py` | **PROVEN** | Red-first on base (lazy bridged renders data); green after the branch. The spark door never enters the changed code (verified by structure plus the byte pins). |
 | C-005 | D-5: `withColumns`, `withColumn`, `select`, `filter`, `groupBy().agg`, `orderBy`, `join` and `union` cost zero UDF-spy calls and zero `count()` calls through `repr`, until an action; a closing action proves the spy UDF is still wired into the plan. | `test_transformations_stay_lazy_until_action` in `python/repark/tests/test_display_lazy_1.py` | **PROVEN** | Red-first on base (50 spy calls after the repr loop). Green after the branch as eight lazy chains: each op holds literal zero through build and repr, each closing `collect()` runs the plan exactly once per output row. Measured during red: the first child plan over a bridge-UDF frame runs the deliberate plan-stable snapshot once (`_prepare_for_plan`), so the chains introduce the spy onto native frames. |
 | C-006 | RF-5: the `duckdb` styled branch probes `limit(max_rows + 1)` first and only counts past it, the way R-11 did for `polars`; the protected pin's `duckdb` section re-pins `max_rows_per_export` to 11 with the `all(row_count < 12)` tooth and the `(10, 2)` skip byte-identical. | `test_styled_show_does_not_full_collect` (`duckdb` section) in `python/repark/tests/test_display_styles.py` | **PROVEN** | Red forced by the probe (`assert 11 <= 2`, exports `[11, 2, 2]`, R-11 pattern); green after the one-token re-pin to 11. The duckdb goldens (`_DUCKDB_ELLIPSIS_GOLDEN` et al.) are byte-identical. |
+| C-007 | Step-2 close-out of the C-002 disposition (brief asks C-006; taken here as C-007 since C-006 is RF-5): a plain `localCheckpoint()` with no prior `eager()` records the same `_eager_shape` marker the eager path sets, so the frame renders data with zero plan re-runs; a pending checkpoint that later discharges records it too. | `test_plain_checkpoint_repr_renders_data_with_zero_reruns`, `test_pending_checkpoint_discharge_renders_data` in `python/repark/tests/test_display_lazy_1.py` | **PROVEN** | Red-first on the step-1 tree (`assert None == (25, 5)`, `assert None == (12, 1)`); green after the two-line checkpoint-arm change. No new attribute: the shape count runs over the pinned view (checkpoint clears `_map_bridge`, so nothing re-runs); skipped when a shape is already stored, so eager-plus-checkpoint and cache paths keep their exact action profiles. |
 
 ## Red first
 
@@ -90,6 +91,16 @@ literal zero, with a per-chain closing action proving the wiring.
   '^\+\s*(//|#(?! noqa))'` prints nothing (one sanctioned `# noqa: N812` rides
   along on the `functions as F` import line).
 
+## Step-2 gates
+
+- C-007 pins red-first on the step-1 tree (`assert None == (25, 5)`,
+  `assert None == (12, 1)`), green after the checkpoint-arm change.
+- Brief gate command (six display-adjacent suites): `105 passed`; plus
+  `test_cache_persist.py` (checkpoint blast radius: all plain-checkpoint
+  consumers assert values only): `129 passed`.
+- `make verify`: exit 0 after staging, including the `check_lib_py` baseline
+  amendment (core.py 4487 to 4489, debt note unchanged).
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: display-lazy-1-step-1
@@ -97,7 +108,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Red-first pins for every clause (11 failed on base, pasted above); green after the fix (15 passed new file, 102 passed across the six display-adjacent suites).
+      evidence: Red-first pins for every clause (11 failed on base, pasted above); green after the fix (15 passed new file, 102 passed across the six display-adjacent suites). Step 2: C-007 pins red-first on the step-1 tree (assert None == (25, 5), assert None == (12, 1)), green after the checkpoint-arm change.
       artifacts: [python/repark/tests/test_display_lazy_1.py]
     - id: AT-2
       status: ATTACKED
@@ -116,21 +127,21 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/src/repark/spark/dataframe/display.py]
     - id: AT-6
       status: ATTACKED
-      evidence: Repr is display-only; eager/cached/checkpointed data renders are byte-identical to the shipped tables (re-pinned goldens hold) and the spark door never enters the changed code.
-      artifacts: [python/repark/tests/test_df_eager_1.py, python/repark/tests/test_display_bridge_1.py]
+      evidence: Repr is display-only; eager/cached/checkpointed data renders are byte-identical to the shipped tables (re-pinned goldens hold) and the spark door never enters the changed code. Step 2: plain and discharged checkpoints render through the same shape-first path (values asserted identical; cache/persist suites green).
+      artifacts: [python/repark/tests/test_df_eager_1.py, python/repark/tests/test_display_bridge_1.py, python/repark/tests/test_cache_persist.py]
     - id: AT-7
       status: ATTACKED
       evidence: The card is a resource fix and the pins fix it: lazy repr performs zero engine actions (UDF/count/export spies all empty); the header is O(columns); materialised paths keep their single-count discipline.
       artifacts: [python/repark/tests/test_display_lazy_1.py]
     - id: AT-8
       status: ATTACKED
-      evidence: No public signature change; display.py stays under the default ceiling (check_lib_py clean, no baseline touched); docstring-presence and python-conventions clean.
+      evidence: No public signature change; display.py stays under the default ceiling (check_lib_py clean, no baseline touched); docstring-presence and python-conventions clean. Step 2: two added lines in core.py touch no slots, so dir(DataFrame) and the CAP-1 freeze are unchanged; the core.py exact baseline moves 4487 to 4489 in the gate script with the debt note unchanged (visible SSOT-table edit, reviewed like code).
       artifacts: [scripts/check_lib_py.py, scripts/check_docstring_presence.py, scripts/check_python_conventions.py]
     - id: AT-9
       status: N/A
       justification: No new log or metric surface; show() logging untouched.
     - id: AT-10
       status: ATTACKED
-      evidence: Every clause is cited from the tests map, the dataframe map, and the staging map; each new branch (lazy/eager/cached/pending/eagerEval/spark/polars/duckdb/gap/empty) has a named pin whose flip changes the asserted output.
-      artifacts: [task/ledgers/staging/display-lazy-1-ledger.md, python/repark/tests/map.md, python/repark/src/repark/spark/dataframe/map.md, task/ledgers/staging/map.md]
+      evidence: Every clause is cited from the tests map, the dataframe map, and the staging map; each new branch (lazy/eager/cached/pending/eagerEval/spark/polars/duckdb/gap/empty) has a named pin whose flip changes the asserted output. Step 2: C-007 is cited from the test file, the tests map, the dataframe map, and the staging map; the guide map covers the docs round.
+      artifacts: [task/ledgers/staging/display-lazy-1-ledger.md, python/repark/tests/map.md, python/repark/src/repark/spark/dataframe/map.md, task/ledgers/staging/map.md, docs/guide/map.md]
 ```

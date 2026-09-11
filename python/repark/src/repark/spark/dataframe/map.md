@@ -258,6 +258,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   probes `limit(max_rows + 1)` first like polars (the awaited unification card),
   slicing short probes with no `count()`. pins: display-lazy-1/C-001, C-002,
   C-003, C-004, C-005, C-006
+  DISPLAY-LAZY-1 step 2 (2026-09-10): the checkpoint arm of
+  `_materialize_cache_if_needed` records `_eager_shape` (one count over the pinned
+  view, skipped when a shape is stored), so a plain `localCheckpoint()` classifies as
+  materialised with zero plan re-runs at `repr`. pins: display-lazy-1/C-007
 - `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
   step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
   the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes
