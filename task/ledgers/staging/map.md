@@ -5,16 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
-  **CONF-UNREAD-1 step 1 (2026-09-11), in flight:** the wiring/refusals for the
-  four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses loud
-  at build and at runtime `SET` (no DataFusion 54.1.0 engine path reads it);
-  `enable_page_index`, `bloom_filter_on_read` and `write_batch_size` are wired
-  (values reach the scan-source / writer options; the write subject moves file
-  bytes); the probe re-run carries nineteen accepted keys, one refusal, and
-  nine validation refusals. Step 2 (guide paragraph, probe-table column, ledger
-  close) pending. `risk_tier: standard`. Branch `feat/conf-unread-1`.
-  pins: conf-unread-1/C-001, C-002, C-003, C-004, C-005
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus

@@ -14,6 +14,15 @@ re-described as table properties with this round's measurements. Counts are
 re-derived in §5. The four remaining `ACCEPTED BUT UNREAD` rows are
 CONF-UNREAD-1's; the next round owns them.
 
+**CONF-UNREAD-1 (2026-09-11):** the four `ACCEPTED BUT UNREAD` rows are
+resolved. Both tables gain an `after CONF-UNREAD-1` column carrying each key's
+new state and one line of the unit ledger's evidence: `enable_page_index`,
+`bloom_filter_on_read` and `write_batch_size` are pinned reaching the engine
+structures that read them (`PASSES THROUGH`); `coalesce_batches` is `REFUSED`
+loud at build and at runtime `conf.set` — DataFusion 54.1.0 defines the option
+but no engine path reads it. §5's counts are re-derived again. Ledger:
+[../../task/ledgers/completed/conf-unread-1-ledger.md](../../task/ledgers/completed/conf-unread-1-ledger.md).
+
 ## 1. Method
 
 Two probe scripts, both run against a debug native provisioned the way `make
@@ -34,10 +43,12 @@ JVM or Spark. Both scripts are kept beside this document in
   (alone and with `target_partitions=1`) against a same-process baseline. Output:
   `probe2_out.txt`. Both runs' stderr files were empty.
 
-Global results, true of all twenty keys: `builder.config(key, value)` accepted every
-valid value with no refusal; `session.conf.set(key, value)` at runtime accepted every
-key as well; `conf.get` and `conf.getAll` agreed on all twenty. The only refusals in the
-capture are the deliberate validation probes (§4).
+Global results after the CONF-UNREAD-1 re-run: `builder.config(key, value)`
+accepted nineteen keys and refused `datafusion.execution.coalesce_batches` (the
+D-1 refuse branch — its §2 row quotes the message); `session.conf.set(key,
+value)` at runtime agrees, accepting the same nineteen and refusing
+`coalesce_batches`. `conf.get` and `conf.getAll` agreed on every accepted key.
+The remaining refusals in the capture are the deliberate validation probes (§4).
 
 Verdict meanings (D-7, plus REVIEW-FIX-8 D-2): `PASSES THROUGH` (set, readable,
 engine evidence observed), `VALIDATED` (set, readable, and an invalid value
@@ -51,20 +62,20 @@ rows are table properties: their engine evidence is observed at the table
 
 ## 2. Read keys (twelve)
 
-| key (set value) | set | read back | reaches the engine | verdict |
-|---|---|---|---|---|
-| `datafusion.optimizer.prefer_hash_join` (`false`) | accepted | `false` | join plan: `HashJoinExec: mode=Partitioned` becomes `SortMergeJoinExec: join_type=Inner, on=[(k@0, k@0)]` | PASSES THROUGH |
-| `datafusion.execution.target_partitions` (`1`) | accepted | `1` | join plan: `HashJoinExec: mode=CollectLeft`, both `RepartitionExec` lines gone; scan plan loses its `RepartitionExec: partitioning=RoundRobinBatch(64)` | PASSES THROUGH |
-| `datafusion.execution.batch_size` (`3`) | accepted | `3` | not plan-visible; `range(10)` yields 4 batches against a 1-batch baseline (runtime `conf.set` to `5` yields 2) | PASSES THROUGH |
-| `datafusion.optimizer.repartition_joins` (`false`) | accepted | `false` | join plan: `HashJoinExec: mode=CollectLeft`; left `RepartitionExec: partitioning=Hash([k@0], 64)` gone, right side keeps `RepartitionExec: partitioning=RoundRobinBatch(64)` | PASSES THROUGH |
-| `datafusion.optimizer.repartition_aggregations` (`false`) | accepted | `false` | agg plan: `AggregateExec: mode=FinalPartitioned` + `RepartitionExec: partitioning=Hash([g@0], 64)` becomes `AggregateExec: mode=Final` over `CoalescePartitionsExec` | PASSES THROUGH |
-| `datafusion.optimizer.repartition_file_scans` (`false`) | accepted | `false` | single-file subject: byte-identical to baseline; 8-file subject: `DataSourceExec: file_groups={64 groups: [[...part_0.parquet:0..352905], ...]}` becomes `RepartitionExec: partitioning=RoundRobinBatch(64), input_partitions=8` over `file_groups={8 groups: [[...part_0.parquet], ...]}` | PASSES THROUGH |
-| `datafusion.execution.parquet.pushdown_filters` (`true`) | accepted | `true` | scan plan loses the `FilterExec: v@2 > 150000` wrapper: bare `DataSourceExec: ... predicate=v@2 > 150000, pruning_predicate=...` (probe 2: `false` on the 8-file bed leaves all three plans byte-identical) | PASSES THROUGH |
-| `datafusion.execution.parquet.enable_page_index` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD |
-| `datafusion.execution.parquet.bloom_filter_on_read` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD |
-| `datafusion.execution.coalesce_batches` (`false`) | accepted | `false` | not plan-visible: agg and join plans byte-identical to baseline; probe-2 8-file plans byte-identical too | ACCEPTED BUT UNREAD |
-| `repark.scan.concurrency_limit` (`4`) | accepted | `4` | parsed at session build (`0` and `abc` refuse, §4); the value bounds MERGE target-scan file concurrency (`session.rs:235`, `target_scan.rs:99`); no plan-visible signal on the probed subjects | VALIDATED |
-| `repark.batch.size` (`3`) | accepted | `3` | not plan-visible; `range(10)` yields 4 batches against a 1-batch baseline | PASSES THROUGH |
+| key (set value) | set | read back | reaches the engine | verdict | after CONF-UNREAD-1 |
+|---|---|---|---|---|---|
+| `datafusion.optimizer.prefer_hash_join` (`false`) | accepted | `false` | join plan: `HashJoinExec: mode=Partitioned` becomes `SortMergeJoinExec: join_type=Inner, on=[(k@0, k@0)]` | PASSES THROUGH | — |
+| `datafusion.execution.target_partitions` (`1`) | accepted | `1` | join plan: `HashJoinExec: mode=CollectLeft`, both `RepartitionExec` lines gone; scan plan loses its `RepartitionExec: partitioning=RoundRobinBatch(64)` | PASSES THROUGH | — |
+| `datafusion.execution.batch_size` (`3`) | accepted | `3` | not plan-visible; `range(10)` yields 4 batches against a 1-batch baseline (runtime `conf.set` to `5` yields 2) | PASSES THROUGH | — |
+| `datafusion.optimizer.repartition_joins` (`false`) | accepted | `false` | join plan: `HashJoinExec: mode=CollectLeft`; left `RepartitionExec: partitioning=Hash([k@0], 64)` gone, right side keeps `RepartitionExec: partitioning=RoundRobinBatch(64)` | PASSES THROUGH | — |
+| `datafusion.optimizer.repartition_aggregations` (`false`) | accepted | `false` | agg plan: `AggregateExec: mode=FinalPartitioned` + `RepartitionExec: partitioning=Hash([g@0], 64)` becomes `AggregateExec: mode=Final` over `CoalescePartitionsExec` | PASSES THROUGH | — |
+| `datafusion.optimizer.repartition_file_scans` (`false`) | accepted | `false` | single-file subject: byte-identical to baseline; 8-file subject: `DataSourceExec: file_groups={64 groups: [[...part_0.parquet:0..352905], ...]}` becomes `RepartitionExec: partitioning=RoundRobinBatch(64), input_partitions=8` over `file_groups={8 groups: [[...part_0.parquet], ...]}` | PASSES THROUGH | — |
+| `datafusion.execution.parquet.pushdown_filters` (`true`) | accepted | `true` | scan plan loses the `FilterExec: v@2 > 150000` wrapper: bare `DataSourceExec: ... predicate=v@2 > 150000, pruning_predicate=...` (probe 2: `false` on the 8-file bed leaves all three plans byte-identical) | PASSES THROUGH | — |
+| `datafusion.execution.parquet.enable_page_index` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD | PASSES THROUGH — `false` reaches `SessionConfig` and the session table options the scan source gates page pruning on (ledger C-001); still plan-invisible on the probe's index-less files |
+| `datafusion.execution.parquet.bloom_filter_on_read` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD | PASSES THROUGH — `false` reaches both structures the source reads into `enable_bloom_filter` (ledger C-002); plan-invisible on the probe's bloom-filter-less files |
+| `datafusion.execution.coalesce_batches` (`false`) | accepted | `false` | not plan-visible: agg and join plans byte-identical to baseline; probe-2 8-file plans byte-identical too | ACCEPTED BUT UNREAD | REFUSED — build `.config()` and runtime `conf.set` fail naming the key: `unsupported DataFusion session config 'datafusion.execution.coalesce_batches' = 'false': DataFusion 54.1.0 defines the option but no engine path reads it, so the value cannot take effect` (ledger C-003) |
+| `repark.scan.concurrency_limit` (`4`) | accepted | `4` | parsed at session build (`0` and `abc` refuse, §4); the value bounds MERGE target-scan file concurrency (`session.rs:235`, `target_scan.rs:99`); no plan-visible signal on the probed subjects | VALIDATED | — |
+| `repark.batch.size` (`3`) | accepted | `3` | not plan-visible; `range(10)` yields 4 batches against a 1-batch baseline | PASSES THROUGH | — |
 
 Quoted plan baselines these rows compare against (`probe_out.json`, `baseline`):
 
@@ -80,21 +91,24 @@ codecs `[ZSTD]`, `part_files` 4, `row_groups` 1, `bytes` 575742, `bloom_filter_l
 `[null, null, null, null]`. Row and byte counts describe the first part file, the only
 file the probe's fact collector opens.
 
-| key (set value) | set | read back | reaches the engine | verdict |
-|---|---|---|---|---|
-| `datafusion.execution.parquet.compression` (`uncompressed`) | accepted | `uncompressed` | written file: codecs `[UNCOMPRESSED]`, `bytes` 2302311 against 575742 | PASSES THROUGH |
-| `datafusion.execution.parquet.max_row_group_size` (`1000`) | accepted | `1000` | written file: `row_groups` 66 against 1, `bytes` 485195 | PASSES THROUGH |
-| `datafusion.execution.parquet.bloom_filter_on_write` (`true`) | accepted | `true` | written file: `bloom_filter_lengths` `[65553, 47, 65553, 65553]` against `[null, null, null, null]` | PASSES THROUGH |
-| `datafusion.execution.parquet.write_batch_size` (`1000`) | accepted | `1000` | no subject measured for this key; the probe gave it an empty subject list | ACCEPTED BUT UNREAD |
-| `write.target-file-size-bytes` (`134217728`) | accepted | `134217728` | an Iceberg table property: the session stores any value (even `abc`), the write path reads the table's own property at commit (`append.rs:272`); measured this round — with `target_partitions` pinned to 16, a MERGE rewrite with target `1` lands 16 new data files against 4 on default (20k rows, seed files excluded), pinned by `test_profiles1_table_properties.py` (ledger C-004) | PASSES THROUGH |
-| `write.distribution-mode` (`hash`) | accepted | `hash` | an Iceberg table property: the session stores any value (even `bogus`), RePark-owned writes read the table's property (`distribution.rs:169`); measured this round — `bogus` refuses loud at partitioned CTAS with more than one writer (`write.distribution-mode 'bogus' is not supported`, ledger C-004; the pin fixes `target_partitions` to 16 so the property is always consulted) | PASSES THROUGH |
-| `repark.merge.file_scoped_rewrite` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates the copy-on-write file-scoped rewrite path (`merge/mod.rs:226,622`); no MERGE ran in the probe | VALIDATED |
-| `repark.merge.scan_pruning` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates MERGE scan pruning (`merge/mod.rs:219`) and the predicate-DML residual probe (`residual.rs:168`); no MERGE ran in the probe | VALIDATED |
+| key (set value) | set | read back | reaches the engine | verdict | after CONF-UNREAD-1 |
+|---|---|---|---|---|---|
+| `datafusion.execution.parquet.compression` (`uncompressed`) | accepted | `uncompressed` | written file: codecs `[UNCOMPRESSED]`, `bytes` 2302311 against 575742 | PASSES THROUGH | — |
+| `datafusion.execution.parquet.max_row_group_size` (`1000`) | accepted | `1000` | written file: `row_groups` 66 against 1, `bytes` 485195 | PASSES THROUGH | — |
+| `datafusion.execution.parquet.bloom_filter_on_write` (`true`) | accepted | `true` | written file: `bloom_filter_lengths` `[65553, 47, 65553, 65553]` against `[null, null, null, null]` | PASSES THROUGH | — |
+| `datafusion.execution.parquet.write_batch_size` (`1000`) | accepted | `1000` | no subject measured for this key; the probe gave it an empty subject list | ACCEPTED BUT UNREAD | PASSES THROUGH — `1000` reaches the writer options and moves the written file: the new `["write"]` subject lands first-part-file bytes 575692 against the 575742 baseline with `part_files` and `row_groups` equal (ledger C-004) |
+| `write.target-file-size-bytes` (`134217728`) | accepted | `134217728` | an Iceberg table property: the session stores any value (even `abc`), the write path reads the table's own property at commit (`append.rs:272`); measured this round — with `target_partitions` pinned to 16, a MERGE rewrite with target `1` lands 16 new data files against 4 on default (20k rows, seed files excluded), pinned by `test_profiles1_table_properties.py` (ledger C-004) | PASSES THROUGH | — |
+| `write.distribution-mode` (`hash`) | accepted | `hash` | an Iceberg table property: the session stores any value (even `bogus`), RePark-owned writes read the table's property (`distribution.rs:169`); measured this round — `bogus` refuses loud at partitioned CTAS with more than one writer (`write.distribution-mode 'bogus' is not supported`, ledger C-004; the pin fixes `target_partitions` to 16 so the property is always consulted) | PASSES THROUGH | — |
+| `repark.merge.file_scoped_rewrite` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates the copy-on-write file-scoped rewrite path (`merge/mod.rs:226,622`); no MERGE ran in the probe | VALIDATED | — |
+| `repark.merge.scan_pruning` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates MERGE scan pruning (`merge/mod.rs:219`) and the predicate-DML residual probe (`residual.rs:168`); no MERGE ran in the probe | VALIDATED | — |
 
 ## 4. Refusal shape (validation probes, all refused as designed)
 
-No D-1 key with its probed value was refused. The probe's deliberate bad values show
-refusals are loud and exact, which is what a `REFUSED` row would quote:
+One D-1 key's probed value is refused since CONF-UNREAD-1 —
+`datafusion.execution.coalesce_batches` fails at `builder.config` and at runtime
+`conf.set` (its §2 row quotes the message). Before that round, no D-1 key with
+its probed value was refused. The probe's deliberate bad values show the other
+refusal shapes, loud and exact:
 
 - `builder.config("datafusion.execution.batch_size", "notanumber")`:
   `repark config error: invalid DataFusion session config 'datafusion.execution.batch_size' = 'notanumber': Error parsing 'notanumber' as usize`
@@ -114,21 +128,25 @@ and read back. Refusal for those keys happens at the table, per the §3 rows.
 
 ## 5. Answer, counts, and reproduce
 
-Answer to the card's gating question: yes. Every `datafusion.*` and `repark.*` key in
-the D-1 inventory is accepted through `.config()`, reads back through `conf.get` and the
-dump, accepts a runtime `conf.set` as well, and where the engine has an observable
-signal it responds: join, agg and scan plans change for six read keys, batch counts
-move for the two batch-size keys, written parquet files change codec, row-group
-count and bloom filters for three write keys, the three `repark.*` session keys
-refuse invalid values at build, and the two `write.*` table properties apply at
-the table (or refuse loud there). Counts: **PASSES THROUGH 13, VALIDATED 3,
-ACCEPTED BUT UNREAD 4, REFUSED 0, NOT MEASURED 0.** The four remaining
-`ACCEPTED BUT UNREAD` rows are CONF-UNREAD-1's four DataFusion keys (page index,
-read bloom filter, coalesce and write batch size, whose plans cannot show them);
-the next round re-measures them. No row rests on an empty subject any more
-(Q-41's mapping is gone): every row carries a probe subject, a build-time
-refusal, or a table measurement. The card's premise holds; no separate
-pass-through step is needed before measurement.
+Answer to the card's gating question: yes, with one loud exception. Every
+`datafusion.*` and `repark.*` key in the D-1 inventory that the engine can honor
+is accepted through `.config()`, reads back through `conf.get` and the dump, and
+accepts a runtime `conf.set`; `datafusion.execution.coalesce_batches` is refused
+at both doors instead of being stored unread. Where the engine has an
+observable signal it responds: join, agg and scan plans change for six read
+keys, batch counts move for the two batch-size keys, written parquet files
+change codec, row-group count, bloom filters and file bytes for four write
+keys, the three `repark.*` session keys refuse invalid values at build, and the
+two `write.*` table properties apply at the table (or refuse loud there).
+Counts after CONF-UNREAD-1: **PASSES THROUGH 16, VALIDATED 3, ACCEPTED BUT
+UNREAD 0, REFUSED 1, NOT MEASURED 0.** The last unread rows are closed: the
+page-index, read-bloom and write-batch keys are pinned reaching the options the
+scan source and writer read, and `coalesce_batches` refuses because DataFusion
+54.1.0 defines the option but no engine path reads it (the `after CONF-UNREAD-1`
+column carries each row's one-line evidence). No row rests on an empty subject
+any more (Q-41's mapping is gone): every row carries a probe subject, a
+build-time refusal, or a table measurement. The card's premise holds; no
+separate pass-through step is needed before measurement.
 
 Reproduce (the two scripts are the method; each builds its subjects in a unique
 temporary directory per run, so no fixture setup precedes them and nothing lands

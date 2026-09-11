@@ -4088,6 +4088,10 @@ pins: fnp-8-review/C-009, C-010
   than the baseline with `part_files`/`row_groups` equal (intra-run comparison,
   so no `target_partitions` pin is needed).
   pins: conf-unread-1/C-004, C-005
+  Step 2 (2026-09-11): the states this pin asserts are the ones the probe
+  document's `after CONF-UNREAD-1` column records — three `PASSES THROUGH`, one
+  `REFUSED`, `ACCEPTED BUT UNREAD` zero.
+  pins: conf-unread-1/C-006
 
 - `test_profiles1_table_properties.py` — **REVIEW-FIX-8 (2026-09-11):** the two
   `write.*` rows' table-side evidence as pins on the memory catalog —

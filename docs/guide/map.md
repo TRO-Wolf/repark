@@ -49,6 +49,11 @@ illustrative. A claim with no verified basis does not go in.
   DISPLAY-POLARS-1 step 5, 2026-09-09 — every transcript executed; pins: display-polars-1/C-006).
   DISPLAY-LAZY-1 step 2 (2026-09-10): the `repr` paragraph states the R-22 schema-only
   lazy default and the three ways to see rows.
+  CONF-UNREAD-1 step 2 (2026-09-11): the `datafusion.*` paragraph names the
+  measured forwarding set, the two repark-owned `datafusion.runtime.*`
+  pseudo-keys, and the `coalesce_batches` refusal on DataFusion 54.1.0 with the
+  verbatim message.
+  pins: conf-unread-1/C-007
 - [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; the
   D-1 lazy-`repr` block with measured bytes (DISPLAY-LAZY-1 step 2, 2026-09-10);
   the `explain` sections (Spark headers over verbatim DataFusion plan text, the five modes, and

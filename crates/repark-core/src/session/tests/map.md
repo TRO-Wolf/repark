@@ -21,6 +21,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   reads `true`); `write_batch_size` set to `1000` reaches both structures
   (control leg: the default reads `1024`).
   pins: conf-unread-1/C-001, C-002, C-003, C-004
+  Step 2 (2026-09-11): the refusal pins hold the message's load-bearing tokens
+  (key named, `cannot take effect`) that `docs/guide/session-and-conf.md`
+  quotes verbatim in its `datafusion.*` paragraph.
+  pins: conf-unread-1/C-007
 - `df_guard.rs` — seven DataFusion 54.1 guard pins.
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `a13.rs` — `file://` warehouse fallback-root pin.
