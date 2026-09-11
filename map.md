@@ -31,7 +31,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 ## Contents
 
 - `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (1.1.1) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
-  `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table;
+  `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table
+  (the four Ballista crates and, since the BALLISTA-M2-A seed of 2026-09-11, `datafusion-proto` are
+  pinned `=54.1.0` and consumed only behind `repark-distributed`'s `cluster` feature);
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.

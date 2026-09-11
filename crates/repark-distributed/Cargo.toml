@@ -14,7 +14,13 @@ workspace = true
 [features]
 default = ["local"]
 local = []
-cluster = ["dep:ballista", "dep:ballista-core", "dep:ballista-scheduler", "dep:ballista-executor"]
+cluster = [
+  "dep:ballista",
+  "dep:ballista-core",
+  "dep:ballista-scheduler",
+  "dep:ballista-executor",
+  "dep:datafusion-proto",
+]
 
 [dependencies]
 repark-core.workspace = true
@@ -28,6 +34,7 @@ ballista = { workspace = true, optional = true }
 ballista-core = { workspace = true, optional = true }
 ballista-scheduler = { workspace = true, optional = true }
 ballista-executor = { workspace = true, optional = true }
+datafusion-proto = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio.workspace = true

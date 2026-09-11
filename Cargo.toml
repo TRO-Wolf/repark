@@ -124,6 +124,7 @@ ballista = "=54.1.0"
 ballista-core = "=54.1.0"
 ballista-scheduler = "=54.1.0"
 ballista-executor = "=54.1.0"
+datafusion-proto = "=54.1.0"
 # Internal crates. Path-only + `default-features = false`.
 # `default-features = false` is the one-way door: retrofitting it after internal feature flags
 # proliferate is a workspace-wide breaking change (rust-lang/cargo#11329), so it lands now

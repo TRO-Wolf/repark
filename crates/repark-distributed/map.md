@@ -23,6 +23,13 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   default feature and always builds. The four Ballista crates are pinned `=54.1.0` in the
   workspace manifest, the release line that matches the workspace's DataFusion 54.1 pin
   (verified on crates.io at the seed commit).
+- **D-2a `datafusion-proto` (O-2 seed for BALLISTA-M2-A, ruling RF-9, 2026-09-11).**
+  `datafusion-proto = "=54.1.0"` joins the workspace pins and this crate's `cluster` feature
+  (`dep:datafusion-proto`), never the default build. It is already in the lockfile at 54.1.0 as a
+  transitive dependency of the Ballista crates, so the pin adds no new version to the graph; it
+  exists so the codec wrapper can implement a real delegating `PhysicalExtensionCodec`
+  (BALLISTA-M2-A D-1). `arrow_flight` is deliberately **not** added (RF-9 D-4). Proof at the seed:
+  `cargo build -p repark-distributed --features cluster` green.
 - **D-3 / D-4 (step 1).** `src/executor.rs` holds `DistributedExecutor`, `JobHandle`, `JobId`,
   and `JobStatus`. `src/local.rs` holds `LocalDataFusionExecutor`: it runs a plan on the
   session `SessionContext` in-process, reports `Completed`/`Failed` after the stream drains,

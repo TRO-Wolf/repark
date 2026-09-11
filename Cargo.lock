@@ -5066,6 +5066,7 @@ dependencies = [
  "ballista-executor",
  "ballista-scheduler",
  "datafusion",
+ "datafusion-proto",
  "futures",
  "repark-core",
  "thiserror 2.0.20",
