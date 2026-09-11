@@ -52,6 +52,7 @@ class CellRecord(BaseModel):
     wall_ms: float = 0.0
     rlimit_as_bytes: int | None = None
     vm_size_at_cap: int | None = None
+    plan_operators: str | None = None
 
 
 class MatrixKilledError(RuntimeError):
@@ -171,6 +172,7 @@ def run_cell(
         fields["error_type"] = _str_or_none(payload.get("error_type"))
         fields["rlimit_as_bytes"] = _int_or_none(payload.get("rlimit_as_bytes"))
         fields["vm_size_at_cap"] = _int_or_none(payload.get("vm_size_at_cap"))
+        fields["plan_operators"] = _str_or_none(payload.get("plan_operators"))
         worker_message = _str_or_none(payload.get("message"))
         if worker_message is not None:
             fields["message"] = worker_message[:_STDERR_TAIL]
