@@ -43,7 +43,9 @@ query. **FIX-5:** `DESCRIBE` completes one- and two-part names from the session 
 `DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — Spark prints
 `s3.access-key-id` in the clear and RePark deliberately does not. **FIX-1/FIX-2:** the Python config mirror refuses exactly what
 the engine loader refuses (a non-ASCII digit string is not a number) and names both key paths on a
-duplicate; the loader's own pins no longer read the developer's `HOME`. **FIX-7:** a `repark.toml`
+duplicate; the loader's own pins no longer read the developer's `HOME`. **FIX-6/FIX-11:**
+`explain()` refuses the both-set shape (`extended` with `mode`) the way PySpark does, and every
+documented mode row is pinned. **FIX-7:** a `repark.toml`
 name
 that would break a TOML header refuses, a parse error carries its position but never the offending
 line, and a cloud catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
@@ -162,20 +164,16 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
 
 <!-- ws id=perf ledgers=perf- state=open -->
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
-  Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not
-  list binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md):
-  the one queued candidate is delivered — the null-mask struct extractor takes `struct_d6`'s
-  isolated null cost 64.83 ms → 0.01 ms (0.1x its run's floor) and closes `DYNFLATTEN-QUALNAME-1`;
-  Cartesian and walks stay closed.
+  Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not list
+  binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md): the one
+  queued candidate is delivered — the null-mask struct extractor takes `struct_d6`'s isolated null
+  cost 64.83 ms → 0.01 ms and closes `DYNFLATTEN-QUALNAME-1`; Cartesian and walks stay closed.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
-- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche merged as
-  [#190](https://github.com/TRO-Wolf/repark/pull/190),
-  [#191](https://github.com/TRO-Wolf/repark/pull/191),
-  [#192](https://github.com/TRO-Wolf/repark/pull/192), and
-  [#193](https://github.com/TRO-Wolf/repark/pull/193)). Close the `pyspark.sql.functions` gap and
-  move the semantics behind every name out of Python into Rust. Design:
+- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche merged as #190,
+  #191, #192 and #193). Close the `pyspark.sql.functions` gap and move the semantics behind every
+  name out of Python into Rust. Design:
   [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); gate (12/12 `PROVEN`):
   [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md).
@@ -208,12 +206,11 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
-- **Example campaign** (chartered 2026-08-31, the 1.1 slate (was v0.7)). Batches EX-2 and EX-4..EX-14 merged
-  2026-09-01..03. Static coverage 333 / 913 public names, 578 backlog, 2 exceptions, 83
-  examples. The packaged-wheel execution gate (`scripts/check_example_coverage.py
-  --require-execute` on the published wheel) is authoritative — it ran green on the 1.0.1
-  wheel 2026-09-04. Slate: [briefs/example-backfill.md](briefs/example-backfill.md).
-  **Next:** batches from the 578.
+- **Example campaign** (chartered 2026-08-31, the 1.1 slate). Batches EX-2 and EX-4..EX-14 merged
+  2026-09-01..03. Static coverage 333 / 913 public names, 578 backlog, 2 exceptions, 83 examples.
+  The packaged-wheel execution gate (`scripts/check_example_coverage.py --require-execute` on the
+  published wheel) is authoritative — green on the 1.0.1 wheel 2026-09-04. Slate:
+  [briefs/example-backfill.md](briefs/example-backfill.md). **Next:** batches from the 578.
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
@@ -221,9 +218,8 @@ Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
 
 <!-- ws id=dbt ledgers=dbt- state=open -->
 - **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
-  insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
-  done until those gates run.
-  **Next:** the dbt AWS gates (validate on the 1.0.1 wheel).
+  insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2 done
+  until those run. **Next:** the dbt AWS gates (validate on the 1.0.1 wheel).
 <!-- /ws -->
 
 **Closed campaigns** — each record is in [docs/history/](docs/history/map.md); the rows below are

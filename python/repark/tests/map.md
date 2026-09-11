@@ -74,7 +74,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with `test_explain_prints_plan_text_without_row_repr` the one smoke test through the print;
   C-004 `test_explain_does_not_invoke_collect`; C-005 the formatted tree-glyph pin against the
   measured `EXPLAIN FORMAT TREE` pass-through; C-006 the recorded red run.
+  REVIEW-FIX-6/11 (2026-09-10): the both-set refusal
+  `test_explain_both_set_raises_cannot_set_together`, the string-`extended` compat
+  `test_explain_string_extended_still_prints_tree`, and the D-2 row pins
+  `test_explain_simple_mode_prints_physical_only` +
+  `test_explain_extended_separates_sections_with_blank_line` +
+  `test_explain_cost_prints_physical_without_logical` +
+  `test_explain_codegen_appends_not_applicable_note`.
   pins: df-explain-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: review-fix-6/C-001, C-002, C-003, C-004
+  pins: review-fix-11/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_perf_approxpct_1.py](test_perf_approxpct_1.py) — **PERF-APPROXPCT-1 (2026-09-05):**
   the sketch pins. The accuracy matrix (default/100/10/2 × scalar/array × NULLs ×
   duplicate-heavy × skewed × int/float/decimal) against values recorded from live PySpark

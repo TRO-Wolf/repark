@@ -144,6 +144,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   R10-A/R10-B, recorded as D-1a). Four scratch-ledger pins, red first. `risk_tier: standard`.
   Branch `fix/review-fix-10`.
   pins: review-fix-10/C-001
+- [review-fix-11-ledger.md](review-fix-11-ledger.md) — Unit ledger — REVIEW-FIX-11 step 1 · the unpinned `explain()` rows (Q-32, with Q-17)
 - [review-fix-12-ledger.md](review-fix-12-ledger.md) —
   **REVIEW-FIX-12 step 1 (2026-09-10), in flight:** the docs-links gate measures what it
   claims — rendered-text slugs, final-slug duplicates, table-cell-only `docs:` cells, the
@@ -155,6 +156,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [review-fix-2-ledger.md](review-fix-2-ledger.md) — Unit ledger — REVIEW-FIX-2 · CFG-1's own pins stop reading the developer's HOME
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-5-ledger.md](review-fix-5-ledger.md) — Unit ledger — REVIEW-FIX-5 step 1 · DESCRIBE metadata-name intercept, Owner, short names, redaction
+- [review-fix-6-ledger.md](review-fix-6-ledger.md) — Unit ledger — REVIEW-FIX-6 step 1 · `explain()` refuses the both-set shape (Q-17)
 - [review-fix-7-ledger.md](review-fix-7-ledger.md) —
   **REVIEW-FIX-7 step 1 (2026-09-10), in flight:** the sweep's security-shaped fixes —
   header-injection close in the Python mirror (refuse + quote), secret-free TOML parse
