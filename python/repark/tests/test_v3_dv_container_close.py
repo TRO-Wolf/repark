@@ -150,7 +150,6 @@ def _live_shared_puffin_close_shape() -> dict:
         ]
         return _dv_close_shape(before, after, rows)
     finally:
-        session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 
@@ -321,5 +320,4 @@ def _live_subquery_dml_matrix() -> dict[str, list[int]]:
         _seed_matrix(run, namespace)
         return _matrix_answers(run, ids_of, namespace)
     finally:
-        session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)

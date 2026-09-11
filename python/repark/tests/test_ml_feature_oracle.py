@@ -697,19 +697,16 @@ def test_live_string_indexer_labels_oracle() -> None:
         )
     except Exception as error:
         pytest.skip(f"live pyspark unavailable: {error}")
+    data = [("a",), ("b",), ("a",), ("c",), ("a",), ("b",)]
+    pdf = spark.createDataFrame(data, ["cat"])
+    spark_labels = SparkStringIndexer(inputCol="cat", outputCol="idx").fit(pdf).labels
+    rs = _session()
     try:
-        data = [("a",), ("b",), ("a",), ("c",), ("a",), ("b",)]
-        pdf = spark.createDataFrame(data, ["cat"])
-        spark_labels = SparkStringIndexer(inputCol="cat", outputCol="idx").fit(pdf).labels
-        rs = _session()
-        try:
-            rdf = rs.createDataFrame(data, ["cat"])
-            repark_labels = StringIndexer(inputCol="cat", outputCol="idx").fit(rdf).labels
-        finally:
-            rs.stop()
-        assert list(spark_labels) == list(repark_labels)
+        rdf = rs.createDataFrame(data, ["cat"])
+        repark_labels = StringIndexer(inputCol="cat", outputCol="idx").fit(rdf).labels
     finally:
-        spark.stop()
+        rs.stop()
+    assert list(spark_labels) == list(repark_labels)
 
 
 def test_sql_transformer_refuses_non_select() -> None:

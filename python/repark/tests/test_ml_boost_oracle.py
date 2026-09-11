@@ -352,31 +352,28 @@ def test_cross_validator_parallelism_ctor_refuses_non_positive() -> None:
 def test_cross_validator_live_pyspark_shape() -> None:
     """When JVM available: Spark CrossValidator also accepts ParamGrid + numFolds shape."""
     spark = _maybe_live_spark()
-    try:
-        from pyspark.ml.evaluation import RegressionEvaluator as SparkRE
-        from pyspark.ml.feature import VectorAssembler as SparkVA
-        from pyspark.ml.regression import LinearRegression as SparkLR
-        from pyspark.ml.tuning import CrossValidator as SparkCV
-        from pyspark.ml.tuning import ParamGridBuilder as SparkPGB
+    from pyspark.ml.evaluation import RegressionEvaluator as SparkRE
+    from pyspark.ml.feature import VectorAssembler as SparkVA
+    from pyspark.ml.regression import LinearRegression as SparkLR
+    from pyspark.ml.tuning import CrossValidator as SparkCV
+    from pyspark.ml.tuning import ParamGridBuilder as SparkPGB
 
-        rows = [(float(x), 1.0 + 2.0 * float(x)) for x in range(20)]
-        sdf = spark.createDataFrame(rows, ["x", "label"])
-        assembled = SparkVA(inputCols=["x"], outputCol="features").transform(sdf)
-        lr = SparkLR(featuresCol="features", labelCol="label")
-        grid = SparkPGB().addGrid(lr.fitIntercept, [True, False]).build()
-        evaluator = SparkRE(labelCol="label", predictionCol="prediction", metricName="rmse")
-        cv = SparkCV(
-            estimator=lr,
-            estimatorParamMaps=grid,
-            evaluator=evaluator,
-            numFolds=3,
-            seed=7,
-        )
-        model = cv.fit(assembled)
-        assert model.bestModel is not None
-        assert len(model.avgMetrics) == 2
-    finally:
-        spark.stop()
+    rows = [(float(x), 1.0 + 2.0 * float(x)) for x in range(20)]
+    sdf = spark.createDataFrame(rows, ["x", "label"])
+    assembled = SparkVA(inputCols=["x"], outputCol="features").transform(sdf)
+    lr = SparkLR(featuresCol="features", labelCol="label")
+    grid = SparkPGB().addGrid(lr.fitIntercept, [True, False]).build()
+    evaluator = SparkRE(labelCol="label", predictionCol="prediction", metricName="rmse")
+    cv = SparkCV(
+        estimator=lr,
+        estimatorParamMaps=grid,
+        evaluator=evaluator,
+        numFolds=3,
+        seed=7,
+    )
+    model = cv.fit(assembled)
+    assert model.bestModel is not None
+    assert len(model.avgMetrics) == 2
 
 
 # OneHotEncoder plural inputCols/outputCols (merge bar)

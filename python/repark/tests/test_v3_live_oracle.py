@@ -210,30 +210,27 @@ def _assert_partitioned_dv_live_against_spark(
     import _live_parity as live_parity
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
-    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
+    catalog = "v3e5part"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-part-"))
+    engine = live_parity.build_spark_iceberg_engine(warehouse, catalog=catalog)
     try:
-        engine = live_parity.build_spark_iceberg_engine(warehouse)
-        try:
-            engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
-            engine.session.sql(
-                f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
-                f"metadata_file => '{metadata_file}')"
-            )
-            spark_rows = engine.session.sql(
-                "SELECT id, name, part FROM local.sales.partdv ORDER BY id"
-            ).toArrow()
-            assert _id_name_part_rows(spark_rows) == expected
-            prune0 = engine.session.sql(
-                "SELECT id, name FROM local.sales.partdv WHERE part = 0 ORDER BY id"
-            ).toArrow()
-            assert _id_name_rows(prune0) == [(1, "a"), (3, "c")]
-            prune1 = engine.session.sql(
-                "SELECT id, name FROM local.sales.partdv WHERE part = 1 ORDER BY id"
-            ).toArrow()
-            assert _id_name_rows(prune1) == [(4, "d"), (6, "f")]
-        finally:
-            engine.session.stop()
+        engine.session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+        engine.session.sql(
+            f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
+            f"metadata_file => '{metadata_file}')"
+        )
+        spark_rows = engine.session.sql(
+            f"SELECT id, name, part FROM {catalog}.sales.partdv ORDER BY id"
+        ).toArrow()
+        assert _id_name_part_rows(spark_rows) == expected
+        prune0 = engine.session.sql(
+            f"SELECT id, name FROM {catalog}.sales.partdv WHERE part = 0 ORDER BY id"
+        ).toArrow()
+        assert _id_name_rows(prune0) == [(1, "a"), (3, "c")]
+        prune1 = engine.session.sql(
+            f"SELECT id, name FROM {catalog}.sales.partdv WHERE part = 1 ORDER BY id"
+        ).toArrow()
+        assert _id_name_rows(prune1) == [(4, "d"), (6, "f")]
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
@@ -279,20 +276,17 @@ def _assert_equality_delete_live_against_spark(
 
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-eq-"))
+    engine = live_parity.build_spark_iceberg_engine(warehouse)
     try:
-        engine = live_parity.build_spark_iceberg_engine(warehouse)
-        try:
-            engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
-            engine.session.sql(
-                f"CALL {catalog}.system.register_table(table => 'sales.eqdv', "
-                f"metadata_file => '{metadata_file}')"
-            )
-            spark_rows = engine.session.sql(
-                "SELECT id, name, part FROM local.sales.eqdv ORDER BY id"
-            ).toArrow()
-            assert _id_name_part_rows(spark_rows) == expected
-        finally:
-            engine.session.stop()
+        engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
+        engine.session.sql(
+            f"CALL {catalog}.system.register_table(table => 'sales.eqdv', "
+            f"metadata_file => '{metadata_file}')"
+        )
+        spark_rows = engine.session.sql(
+            "SELECT id, name, part FROM local.sales.eqdv ORDER BY id"
+        ).toArrow()
+        assert _id_name_part_rows(spark_rows) == expected
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
@@ -362,43 +356,40 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
     import _live_parity as live_parity
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 
-    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
+    catalog = "v3e5del"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3e-5-live-del-"))
+    engine = live_parity.build_spark_iceberg_engine(warehouse, catalog=catalog)
     try:
-        engine = live_parity.build_spark_iceberg_engine(warehouse)
-        try:
-            engine.session.sql("CREATE NAMESPACE IF NOT EXISTS local.sales")
-            engine.session.sql(
-                f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
-                f"metadata_file => '{part_meta}')"
-            )
-            part = engine.session.sql(
-                "SELECT content, file_format, equality_ids FROM local.sales.partdv.delete_files"
-            ).toArrow()
-            assert set(part.column("content").to_pylist()) == {1}
-            assert all(
-                str(v).upper() == "PUFFIN" for v in part.column("file_format").to_pylist()
-            ), part.column("file_format").to_pylist()
-            assert all(v in (None, []) for v in part.column("equality_ids").to_pylist()), (
-                part.column("equality_ids").to_pylist()
-            )
-            engine.session.sql(
-                f"CALL {catalog}.system.register_table(table => 'sales.eqdv2', "
-                f"metadata_file => '{eq_meta}')"
-            )
-            eq_del = engine.session.sql(
-                "SELECT content, file_format, equality_ids FROM local.sales.eqdv2.delete_files"
-            ).toArrow()
-            contents = eq_del.column("content").to_pylist()
-            assert set(contents) == {1, 2}, contents
-            assert len(eq_del) == 2
-            by_content = {int(row["content"]): row for row in eq_del.to_pylist()}
-            assert str(by_content[1]["file_format"]).upper() == "PUFFIN"
-            assert str(by_content[2]["file_format"]).upper() == "PARQUET"
-            assert list(by_content[2]["equality_ids"]) == [1]
-            assert by_content[1]["equality_ids"] in (None, [])
-        finally:
-            engine.session.stop()
+        engine.session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+        engine.session.sql(
+            f"CALL {catalog}.system.register_table(table => 'sales.partdv', "
+            f"metadata_file => '{part_meta}')"
+        )
+        part = engine.session.sql(
+            f"SELECT content, file_format, equality_ids FROM {catalog}.sales.partdv.delete_files"
+        ).toArrow()
+        assert set(part.column("content").to_pylist()) == {1}
+        assert all(str(v).upper() == "PUFFIN" for v in part.column("file_format").to_pylist()), (
+            part.column("file_format").to_pylist()
+        )
+        assert all(v in (None, []) for v in part.column("equality_ids").to_pylist()), part.column(
+            "equality_ids"
+        ).to_pylist()
+        engine.session.sql(
+            f"CALL {catalog}.system.register_table(table => 'sales.eqdv2', "
+            f"metadata_file => '{eq_meta}')"
+        )
+        eq_del = engine.session.sql(
+            f"SELECT content, file_format, equality_ids FROM {catalog}.sales.eqdv2.delete_files"
+        ).toArrow()
+        contents = eq_del.column("content").to_pylist()
+        assert set(contents) == {1, 2}, contents
+        assert len(eq_del) == 2
+        by_content = {int(row["content"]): row for row in eq_del.to_pylist()}
+        assert str(by_content[1]["file_format"]).upper() == "PUFFIN"
+        assert str(by_content[2]["file_format"]).upper() == "PARQUET"
+        assert list(by_content[2]["equality_ids"]) == [1]
+        assert by_content[1]["equality_ids"] in (None, [])
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
@@ -566,7 +557,6 @@ def _assert_merge_matched_update_live_against_spark() -> None:
             ).toArrow()
             assert _id_row_id_seq(spark_rows) == _MATCHED_UPDATE_LINEAGE, table
     finally:
-        session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
@@ -729,7 +719,6 @@ def _live_subquery_where_dml_measurement() -> tuple[dict, dict]:
                     str(kind).upper() for kind in delete_files.column("file_format").to_pylist()
                 ]
     finally:
-        session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
     return _LIVE_SUBQUERY_LINEAGE, _LIVE_SUBQUERY_KINDS
 
@@ -839,7 +828,7 @@ def _assert_upgrade_live_against_spark() -> None:
     from pyspark.sql import SparkSession
     from pyspark.sql import types as spark_types
 
-    catalog = "local"
+    catalog = "v3_10_upg"
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3-10-live-upg-"))
     schema = spark_types.StructType(
         [
@@ -897,7 +886,6 @@ def _assert_upgrade_live_against_spark() -> None:
         assert latest["next-row-id"] == 5
         assert "format-version" not in latest.get("properties", {})
     finally:
-        session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 

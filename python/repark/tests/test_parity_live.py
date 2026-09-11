@@ -50,7 +50,6 @@ def spark_iceberg_engine() -> Iterator[lp.Engine]:
     try:
         yield engine
     finally:
-        engine.session.stop()
         # Best-effort cleanup of the temp warehouse (Iceberg metadata residue is fine to drop).
         import shutil
 

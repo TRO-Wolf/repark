@@ -674,46 +674,43 @@ def test_v3_delete_file_layout_matches_live_spark(tmp_path: Path) -> None:
         spark.stop()
 
     warehouse = Path(tempfile.mkdtemp(prefix="repark-scale-v3-live-"))
+    oracle = live_parity.build_spark_iceberg_engine(warehouse)
+    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     try:
-        oracle = live_parity.build_spark_iceberg_engine(warehouse)
-        catalog = live_parity.LIFECYCLE_SPARK_CATALOG
-        try:
-            session = oracle.session
-            session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
-            measure.seed_frame(V3_ORACLE_ROWS, SMOKE_PARTITIONS).write_parquet(
-                tmp_path / "oracle_seed.parquet"
+        session = oracle.session
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
+        measure.seed_frame(V3_ORACLE_ROWS, SMOKE_PARTITIONS).write_parquet(
+            tmp_path / "oracle_seed.parquet"
+        )
+        session.read.parquet(str(tmp_path / "oracle_seed.parquet")).createOrReplaceTempView(
+            "oracle_seed"
+        )
+        session.sql(
+            f"CREATE TABLE {catalog}.ns.leg USING iceberg PARTITIONED BY (part) "
+            f"TBLPROPERTIES ({V3_TABLE_PROPERTIES}) AS SELECT * FROM oracle_seed"
+        )
+        for generation in range(1, V3_ORACLE_MERGES + 1):
+            measure.merge_frame(
+                (generation - 1) * V3_ORACLE_ROWS_PER_MERGE,
+                V3_ORACLE_ROWS_PER_MERGE,
+                SMOKE_PARTITIONS,
+                generation,
+            ).write_parquet(tmp_path / "oracle_src.parquet")
+            session.read.parquet(str(tmp_path / "oracle_src.parquet")).createOrReplaceTempView(
+                "oracle_src"
             )
-            session.read.parquet(str(tmp_path / "oracle_seed.parquet")).createOrReplaceTempView(
-                "oracle_seed"
-            )
-            session.sql(
-                f"CREATE TABLE {catalog}.ns.leg USING iceberg PARTITIONED BY (part) "
-                f"TBLPROPERTIES ({V3_TABLE_PROPERTIES}) AS SELECT * FROM oracle_seed"
-            )
-            for generation in range(1, V3_ORACLE_MERGES + 1):
-                measure.merge_frame(
-                    (generation - 1) * V3_ORACLE_ROWS_PER_MERGE,
-                    V3_ORACLE_ROWS_PER_MERGE,
-                    SMOKE_PARTITIONS,
-                    generation,
-                ).write_parquet(tmp_path / "oracle_src.parquet")
-                session.read.parquet(str(tmp_path / "oracle_src.parquet")).createOrReplaceTempView(
-                    "oracle_src"
-                )
-                session.sql(measure.merge_sql(f"{catalog}.ns.leg", "oracle_src"))
-            files = session.sql(
-                f"SELECT content, file_format, record_count FROM {catalog}.ns.leg.files "
-                f"WHERE content = 1"
-            ).toArrow()
-            spark_deletes = sorted(
-                (int(row["content"]), str(row["file_format"]).upper(), int(row["record_count"]))
-                for row in files.to_pylist()
-            )
-            spark_rows = int(
-                session.sql(f"SELECT COUNT(*) AS n FROM {catalog}.ns.leg").toArrow()["n"][0].as_py()
-            )
-        finally:
-            oracle.session.stop()
+            session.sql(measure.merge_sql(f"{catalog}.ns.leg", "oracle_src"))
+        files = session.sql(
+            f"SELECT content, file_format, record_count FROM {catalog}.ns.leg.files "
+            f"WHERE content = 1"
+        ).toArrow()
+        spark_deletes = sorted(
+            (int(row["content"]), str(row["file_format"]).upper(), int(row["record_count"]))
+            for row in files.to_pylist()
+        )
+        spark_rows = int(
+            session.sql(f"SELECT COUNT(*) AS n FROM {catalog}.ns.leg").toArrow()["n"][0].as_py()
+        )
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
 

@@ -572,7 +572,12 @@ def test_live_avg_overflow_raises_on_both(spark_engine: live_parity.Engine) -> N
 
     with pytest.raises(PySparkException, match="Arithmetic Overflow"):
         _session().sql(SQL_AVG_OVERFLOW).toArrow()
-    with pytest.raises(SparkArithmeticException, match="NUMERIC_VALUE_OUT_OF_RANGE"):
+    with (
+        live_parity.spark_session_conf(
+            spark_engine, (("spark.sql.leafNodeDefaultParallelism", "2"),)
+        ),
+        pytest.raises(SparkArithmeticException, match="NUMERIC_VALUE_OUT_OF_RANGE"),
+    ):
         spark_engine.session.sql(SQL_AVG_OVERFLOW).toArrow()
 
 

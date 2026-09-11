@@ -126,7 +126,6 @@ def test_truncate_partitioned_ctas_keys_on_the_cast_string(tmp_path: Path) -> No
 def test_stream_write_layout_matches_spark(tmp_path: Path, statement: str) -> None:
     """C-003: Spark 4.1.2 commits the same (partition value, record count) layout for the seed."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     source = _seed_files(tmp_path / "seed", _seed_rows(statement), SEED_FILES)
     engine = _session(f"writedist2-live-{statement}", tmp_path / "wh")
@@ -136,29 +135,24 @@ def test_stream_write_layout_matches_spark(tmp_path: Path, statement: str) -> No
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = live_parity.build_spark_iceberg_engine(
         tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
     )
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("src")
-        table = f"{catalog}.w.{statement}"
-        session.sql(f"CREATE TABLE {table} {COLUMNS} USING iceberg PARTITIONED BY (part)")
-        if statement == "insert_overwrite":
-            session.sql(f"INSERT OVERWRITE {table} SELECT * FROM src")
-        else:
-            session.sql(
-                f"MERGE INTO {table} t USING src s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
-            )
-        spark_files = session.sql(
-            f"SELECT partition.part AS k, record_count FROM {table}.files"
-        ).toPandas()
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("src")
+    table = f"{catalog}.w.{statement}"
+    session.sql(f"CREATE TABLE {table} {COLUMNS} USING iceberg PARTITIONED BY (part)")
+    if statement == "insert_overwrite":
+        session.sql(f"INSERT OVERWRITE {table} SELECT * FROM src")
+    else:
+        session.sql(
+            f"MERGE INTO {table} t USING src s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+        )
+    spark_files = session.sql(
+        f"SELECT partition.part AS k, record_count FROM {table}.files"
+    ).toPandas()
 
     spark_layout = sorted(
         (int(value), int(count))

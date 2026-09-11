@@ -83,7 +83,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/tests/test_interchange_parity.py", 1533),
     ("python/repark/tests/test_join_parity.py", 1232),
     ("python/repark/tests/test_mapinarrow.py", 1578),
-    ("python/repark/tests/test_ml_boost_oracle.py", 2244),
+    ("python/repark/tests/test_ml_boost_oracle.py", 2241),
     ("python/repark/tests/test_pandas_udf.py", 1478),
     ("python/repark/tests/test_partition_value_audit.py", 1665),
     ("python/repark/tests/test_session_timezone_parity.py", 1328),

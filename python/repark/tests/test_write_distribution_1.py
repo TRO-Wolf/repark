@@ -134,7 +134,6 @@ def test_null_partition_value_lands_in_one_data_file(tmp_path: Path) -> None:
 def test_partitioned_ctas_file_count_matches_spark(tmp_path: Path) -> None:
     """C-007: Spark's own CTAS of the same seed at eight shuffle partitions writes as many files."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     source = _seed_files(tmp_path / "seed", SEED_ROWS, SEED_FILES)
     engine = _session("writedist-spark", tmp_path / "wh")
@@ -148,25 +147,20 @@ def test_partitioned_ctas_file_count_matches_spark(tmp_path: Path) -> None:
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = live_parity.build_spark_iceberg_engine(
         tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
     )
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
-        session.sql(
-            f"CREATE TABLE {catalog}.w.part USING iceberg PARTITIONED BY (part) "
-            "AS SELECT * FROM spark_src"
-        )
-        spark_files = session.sql(
-            f"SELECT partition.part AS k, record_count FROM {catalog}.w.part.files"
-        ).toPandas()
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+    session.sql(
+        f"CREATE TABLE {catalog}.w.part USING iceberg PARTITIONED BY (part) "
+        "AS SELECT * FROM spark_src"
+    )
+    spark_files = session.sql(
+        f"SELECT partition.part AS k, record_count FROM {catalog}.w.part.files"
+    ).toPandas()
 
     spark_layout = sorted(
         zip(spark_files["k"].tolist(), spark_files["record_count"].tolist(), strict=True)

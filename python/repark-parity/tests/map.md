@@ -244,6 +244,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   with the gate table (pins: write-order-dist-1/C-012).
   The same unit ratchets `repark-spark/src/tests/alter.rs` 1436 → 1397 — the obsolete
   WRITE-refusal blocks are deleted (pins: write-order-dist-1/C-001).
+  NIGHTLY-LIVE-1 (2026-09-11) ratchets `test_ml_boost_oracle.py` 2244 → 2241 with the
+  gate table — the PySpark teardown `try/finally` retires; `_live_parity.py` stays at
+  its 1778 baseline line-neutral (the `catalog` kwarg pays for itself by compressing the
+  docstring, and `spark_session_conf` restores never-set keys via `conf.unset`).
+  pins: nightly-live-1/C-003
 - `test_live_v3_docs.py` — **LIVE-v3-M (2026-09-02; tree pins):** the live v3 legs are documented
   as **measured green** — registry `S3T-V3-1` is FIXED by measurement and carries run
   33635288918, its link, base `8c4bc55`, the `6 passed in 122.13s` line, the accepted branch and

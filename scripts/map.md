@@ -311,6 +311,12 @@ the dataframe map; a ratchet DOWN, no approval needed. The duplicate table in
 `test_cap_1_source_file_line_cap.py` moves with it in the same commit.
 pins: review-fix-6/C-004
 
+NIGHTLY-LIVE-1 (2026-09-11): `check_lib_py.py` `test_ml_boost_oracle.py`
+2244→2241 — the PySpark teardown `try/finally` retires under the one-context rule;
+a ratchet DOWN. The duplicate table in `test_cap_1_source_file_line_cap.py` moves
+with it in the same commit.
+pins: nightly-live-1/C-003
+
 EX-3 batch 2 (2026-09-02): `check_example_coverage.py` `BACKLOG_BASELINE` 881 → 844 —
 37 `F.*` trig, log, rounding and try-arithmetic names covered by six new examples;
 `F.log1p` was then still divergent at `x = 1e-10` / `x = 1e-13`. pins: ex-2-functions-math-bitwise/C-002
