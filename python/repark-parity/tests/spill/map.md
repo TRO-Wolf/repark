@@ -15,8 +15,15 @@ Step 1 wired one CI-tier cell end to end: `sort` at 2× the 64 MB limit
 (D-5). Step 2 adds the full 27-cell roster (9 operators × 2×/4×/8× at the 1 GB
 limit of D-1), run on an idle release box by `matrix_run.py`, three
 repetitions per cell (D-3); its document pair is
-`docs/perf/spill-coverage-matrix-2026-09-11.{md,csv}`. The CI golden and its
-comparison pins are step 3.
+`docs/perf/spill-coverage-matrix-2026-09-11.{md,csv}`. Step 3 (S2-18) adds the
+CI golden (`ci_golden.csv`: `sort` / `hash_aggregate` / `hash_join` at 2× of
+the 64 MB pool, outcomes measured three times on the debug module), the
+`test_ci_tier_matches_golden` and `test_full_matrix_csv_has_27_cells` pins,
+the `## Never-OOM at v1.3` claim on the matrix document, and the
+`docs/testing.md` pointer. The three non-outcome full-tier cells stay as
+measured (`hash_join` 4× `KILLED`, `hash_aggregate` 2× `UNSTABLE`,
+`window_unbounded` 2× `UNSTABLE`); a CI cell whose three reps disagree or
+are `KILLED` is left out of the golden and named as residue.
 
 The suite needs the native module (the worker builds a repark session), so
 run it through `make py-test-spill-matrix` — not the JVM-free `make py-test`
@@ -127,8 +134,14 @@ conftest guard.
   `FULL_LIMIT_BYTES` (1 GB, D-1), `CI_PARTITIONS`, `FULL_PARTITIONS`,
   `CI_CELL_TIMEOUT_S`, `FULL_CELL_TIMEOUT_S`, `FULL_REPS`, `RosterRow`
   (`CellSpec` + `kind`/`conf`/`right`), the nine-operator `_ROSTER`,
-  `FULL_CELLS` (roster × multipliers 2/4/8 = 27 cells), `CI_CELLS`,
-  `worker_argv`, `json_out_path`, `plan_out_path`.
+  `FULL_CELLS` (roster × multipliers 2/4/8 = 27 cells), `CI_CELLS`
+  (`sort`, `hash_aggregate`, `hash_join` at 2×, same roster rows as the
+  full tier, 64 MB / `CI_PARTITIONS`), `worker_argv`, `json_out_path`,
+  `plan_out_path`.
+- `ci_golden.csv` — step-3 CI golden: columns `operator,multiple,outcome`.
+  A CI cell whose three debug-module reps agree is a row; a disagreeing
+  or `KILLED` cell is omitted and named as `NEVEROOM-1-R-00n` in the
+  ledger. `sort` is required.
 - `matrix_worker.py` — the worker subprocess entry: builds the bounded-pool
   session with the row's `conf`, registers the sized range input and the
   join rows' `other` input, applies the address-space cap
@@ -155,21 +168,31 @@ conftest guard.
 - `test_generator_sizing.py` — the generator pins: 2× the CI limit sizes
   1e6 rows of 134 Arrow bytes (89-char repeat), and the capacity-string
   rendering the engine's parser requires.
-- `test_ci_tier_cell.py` — the one CI-tier cell end to end:
+- `test_ci_tier_cell.py` — the CI-tier engine pins:
   `test_ci_tier_sort_cell_end_to_end` asserts the measured `spilled`
   outcome, a zero exit, positive spill bytes and count, and the cap
-  arithmetic `rlimit_as_bytes == vm_size_at_cap + 3 × CI_LIMIT_BYTES`.
+  arithmetic `rlimit_as_bytes == vm_size_at_cap + 3 × CI_LIMIT_BYTES`;
+  `test_ci_tier_matches_golden` runs every `ci_golden.csv` cell once
+  through `run_cell`, asserts the golden outcome, keeps the sort
+  assertions, and calls `require_no_killed_cells`.
+- `test_full_matrix_csv.py` — `test_full_matrix_csv_has_27_cells` reads
+  the committed `docs/perf/spill-coverage-matrix-2026-09-11.csv` (no
+  engine run): 27 rows = 9 operators × {2,4,8}; every outcome is
+  `spilled` / `completed` / `refused` except the three R-1 cells
+  (`hash_join` 4× `KILLED` #24768, `hash_aggregate` 2× `UNSTABLE` #22758,
+  `window_unbounded` 2× `UNSTABLE` #22758), each of whose `notes` names
+  the issue URL.
 - `map.md` — this file.
 
 The step's pins: `test_classifier_three_outcomes_only`,
 `test_killed_subprocess_fails_matrix`, `test_generator_sizes_input_to_the_target_multiple`,
-`test_memory_limit_string_matches_the_engine_capacity_parser`, and
-`test_ci_tier_sort_cell_end_to_end`.
+`test_memory_limit_string_matches_the_engine_capacity_parser`,
+`test_ci_tier_sort_cell_end_to_end`, `test_ci_tier_matches_golden`, and
+`test_full_matrix_csv_has_27_cells`.
 pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+pins: neveroom-1/C-008, C-009, C-010
 
-Step 3 adds the CI golden CSV and its comparison pins
-(`test_ci_tier_matches_golden`, `test_full_matrix_csv_has_27_cells`). The
-Makefile target `py-test-spill-matrix` is deliberately absent from
+The Makefile target `py-test-spill-matrix` is deliberately absent from
 `preflight`.
 
 ## Pointers

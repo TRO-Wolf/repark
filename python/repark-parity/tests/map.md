@@ -33,18 +33,18 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
-- [spill/](spill/map.md) — **NEVEROOM-1 steps 1–2 (2026-09-10/11):** the spill-coverage
-  matrix harness and the full-tier run: the subprocess-per-cell runner with an
-  address-space cap, the in-engine `range()` generators sized to the limit multiple,
-  the `EXPLAIN ANALYZE` spill-bytes probe reused from `bench/spill/`, the
+- [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
+  matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
+  with an address-space cap, the in-engine `range()` generators sized to the limit
+  multiple, the `EXPLAIN ANALYZE` spill-bytes probe reused from `bench/spill/`, the
   three-outcome classifier (`spilled` / `completed` / `refused`, with `KILLED`
   failing the matrix), the worker subprocess entry, the nine-operator × three-multiple
   roster (`matrix_cells.py` `FULL_CELLS`), the full-tier driver (`matrix_run.py`,
-  resumable JSONL → folded CSV), and the one CI-tier cell (`sort` at 2× the 64 MB
-  limit, measured `spilled`). Needs the native module: run through
-  `make py-test-spill-matrix`. Ledger:
+  resumable JSONL → folded CSV), the CI-tier cells (`sort`, `hash_aggregate`,
+  `hash_join` at 2× the 64 MB limit), `ci_golden.csv`, and the committed-CSV pin.
+  Needs the native module: run through `make py-test-spill-matrix`. Ledger:
   [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/staging/neveroom-1-ledger.md).
-  pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [torture/](torture/map.md) — **TORTURE-1 steps 1–4:** the both-door torture
   suite (all eight families — `nested`, `inference`, `extreme_types`, `smartcsv`,
   `temporal`, `decimal_overflow`, `secrets`, and the Spark-written `v3_dv` DV-table

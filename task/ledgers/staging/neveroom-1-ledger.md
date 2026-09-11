@@ -145,14 +145,88 @@ step's never-re-label rule; the fixes are W-3/upstream, not this card.
 | comment fence (each commit) | no match |
 | `uvx ruff@0.15.22 check` / `format --check` on `tests/spill/` | 0 |
 
+# Step 3 — CI golden, 27-cell CSV pin, docs/testing.md pointer
+
+**Date:** 2026-09-11 · **Branch:** `feat/neveroom-1-step-3` · **Model:** grok-4.6
+**Rulings applied:** S2-18 / R-1..R-8. The three non-outcome full-tier cells stay as
+measured (never re-run, never re-labelled, no operator change). `PROJECT.md` and
+`STATUS.md` are the orchestrator's departure edit. This ledger stays in `staging/`.
+
+## PROPOSITION LEDGER — NEVEROOM-1 step 3 — 2026-09-11
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-008 | The CI golden lists every CI cell whose three debug-module reps agree; `test_ci_tier_matches_golden` runs each golden row once through `run_cell` and asserts the outcome (and `require_no_killed_cells`). `sort` stays in the golden as `spilled`. | `test_ci_tier_matches_golden` plus `python/repark-parity/tests/spill/ci_golden.csv` | **PROVEN** | Red first (pasted below): the pin failed with `CI golden is missing: …/ci_golden.csv` before the file existed. Then each CI cell (`sort`, `hash_aggregate`, `hash_join` at 2× of 64 MB, `CI_PARTITIONS`) ran three times on this clone's debug `.venv` module. All three cells agreed across reps, so all three are in the golden: `sort` `spilled` / `spilled` / `spilled`; `hash_aggregate` `spilled` / `spilled` / `spilled`; `hash_join` `refused` / `refused` / `refused`. No residue row. `test_ci_tier_sort_cell_end_to_end` is kept; the golden pin also keeps the sort spill-bytes/count and cap-arithmetic assertions. |
+| C-009 | The committed full-tier CSV has exactly 27 rows (9 operators × {2,4,8}); every outcome is `spilled` / `completed` / `refused` except the three R-1 cells; each of those three `notes` names its upstream issue URL. | `test_full_matrix_csv_has_27_cells` | **PROVEN** | Red first (pasted below): the pin failed because `hash_aggregate` 2× notes lacked `https://github.com/apache/datafusion/issues/22758`. That URL was added to the CSV notes and the matching `.md` table cell (the only data edit in the CSV). The three R-1 cells stay labelled as measured: `hash_join` 4× `KILLED` (#24768), `hash_aggregate` 2× `UNSTABLE` (#22758), `window_unbounded` 2× `UNSTABLE` (#22758). |
+| C-010 | `docs/testing.md` points at the spill-coverage matrix (CI tier = `make py-test-spill-matrix` + golden, not a preflight member; full tier = `matrix_run.py` on an idle release box) and the matrix document carries a `## Never-OOM at v1.3` section (24 of 27 stable; the three blocked cells with issue URLs; no operator change S2-6; a DataFusion bump that closes #24768 or #22758 re-runs `matrix_run.py --reps 3`). | the two documents plus `make py-test-spill-matrix` help text naming the three CI cells | **PROVEN** | `docs/testing.md` "The spill-coverage matrix" paragraph (≤ 8 lines). `docs/perf/spill-coverage-matrix-2026-09-11.md` `## Never-OOM at v1.3` (≤ 12 lines). Makefile help text names `sort`, `hash_aggregate`, `hash_join` at 2× the 64 MB limit. Maps updated in lockstep (`tests/spill/map.md`, `tests/map.md`, `docs/perf/map.md`, `task/ledgers/staging/map.md`). |
+
+VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED. No `NEVEROOM-1-R-00n` residue: every CI cell's three reps agreed.
+
+## Red first (step 3)
+
+`test_ci_tier_matches_golden` and `test_full_matrix_csv_has_27_cells` on this clone
+before `ci_golden.csv` existed and before the #22758 note edit:
+
+```text
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________________________ test_ci_tier_matches_golden __________________________
+python/repark-parity/tests/spill/test_ci_tier_cell.py:64: in test_ci_tier_matches_golden
+    assert _GOLDEN_CSV.is_file(), f"CI golden is missing: {_GOLDEN_CSV}"
+E   AssertionError: CI golden is missing: /tmp/grok-noom3/python/repark-parity/tests/spill/ci_golden.csv
+______________________ test_full_matrix_csv_has_27_cells _______________________
+python/repark-parity/tests/spill/test_full_matrix_csv.py:41: in test_full_matrix_csv_has_27_cells
+    assert issue_url in notes
+E   AssertionError: assert 'https://github.com/apache/datafusion/issues/22758' in 'GroupedHashAggregateStream spills (row_hash); refused as PySparkException'
+=========================== short test summary info ============================
+FAILED python/repark-parity/tests/spill/test_ci_tier_cell.py::test_ci_tier_matches_golden
+FAILED python/repark-parity/tests/spill/test_full_matrix_csv.py::test_full_matrix_csv_has_27_cells
+2 failed in 1.08s
+```
+
+## CI-tier three-rep measurement (debug `.venv` module, 2026-09-11)
+
+| operator | multiple | rep 1 | rep 2 | rep 3 | golden |
+|---|---|---|---|---|---|
+| sort | 2 | spilled (211812352 B / 7, 8.7 s) | spilled (211812352 B / 7, 8.5 s) | spilled (211812352 B / 7, 8.4 s) | spilled |
+| hash_aggregate | 2 | spilled (211812352 B / 7, 12.0 s) | spilled (211812352 B / 7, 11.6 s) | spilled (211812352 B / 7, 11.7 s) | spilled |
+| hash_join | 2 | refused (`HashJoinInput`, 2.7 s) | refused (`HashJoinInput`, 2.7 s) | refused (`HashJoinInput`, 2.8 s) | refused |
+
+Verbatim worker records:
+
+```json
+{"operator": "sort", "multiplier": 2, "rep": 1, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 8735.938363010064}
+{"operator": "sort", "multiplier": 2, "rep": 2, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 8546.362190973014}
+{"operator": "sort", "multiplier": 2, "rep": 3, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 8391.77660702262}
+{"operator": "hash_aggregate", "multiplier": 2, "rep": 1, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 12014.685791917145}
+{"operator": "hash_aggregate", "multiplier": 2, "rep": 2, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 11626.22463493608}
+{"operator": "hash_aggregate", "multiplier": 2, "rep": 3, "outcome": "spilled", "returncode": 0, "spill_bytes": 211812352, "spill_count": 7, "error_type": null, "wall_ms": 11673.767598927952}
+{"operator": "hash_join", "multiplier": 2, "rep": 1, "outcome": "refused", "returncode": 0, "spill_bytes": null, "spill_count": null, "error_type": "PySparkException", "wall_ms": 2728.156048920937, "message": "Resources exhausted: Failed to allocate additional 8.3 MB for HashJoinInput with 58.2 MB already allocated for this reservation - 5.8 MB remain available for the total memory pool: fair(pool_size: 64.0 MB)"}
+{"operator": "hash_join", "multiplier": 2, "rep": 2, "outcome": "refused", "returncode": 0, "spill_bytes": null, "spill_count": null, "error_type": "PySparkException", "wall_ms": 2658.1977150635794, "message": "Resources exhausted: Failed to allocate additional 8.3 MB for HashJoinInput with 58.2 MB already allocated for this reservation - 5.8 MB remain available for the total memory pool: fair(pool_size: 64.0 MB)"}
+{"operator": "hash_join", "multiplier": 2, "rep": 3, "outcome": "refused", "returncode": 0, "spill_bytes": null, "spill_count": null, "error_type": "PySparkException", "wall_ms": 2759.1918740654364, "message": "Resources exhausted: Failed to allocate additional 8.3 MB for HashJoinInput with 58.2 MB already allocated for this reservation - 5.8 MB remain available for the total memory pool: fair(pool_size: 64.0 MB)"}
+```
+
+## Step-3 gates
+
+| Gate | Exit |
+|---|---|
+| `make py-test-spill-matrix` | 0 (8 passed, 30.88 s) |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q -p no:cacheprovider` | 0 (740 passed, 1 skipped, 11 xfailed, 125.03 s) |
+| `uvx ruff@0.15.22 check python/repark-parity/tests/spill/` | 0 |
+| `uvx ruff@0.15.22 format --check python/repark-parity/tests/spill/` | 0 |
+| `python3 scripts/check_docs_links.py` | 0 (761 files, 4854 links checked — clean) |
+| `make check-ledgers` | 0 (315 ledgers in bins, 851 ledger links resolve) |
+| `make verify` | 0 |
+| comment fence `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' \| grep -P '^\+\s*(//\|#(?!\[\|!\[\| noqa))'` | no match |
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: neveroom-1
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: The three-outcome vocabulary is pinned over completed, spilled and all three measured refusal shapes, and the fold is total — every payload class the harness can produce has a pinned verdict.
-      artifacts: [python/repark-parity/tests/spill/test_classifier_pins.py, python/repark-parity/tests/spill/matrix_harness.py]
+      evidence: The three-outcome vocabulary is pinned over completed, spilled and all three measured refusal shapes, and the fold is total — every payload class the harness can produce has a pinned verdict. Step 3 pins the CI golden against that same vocabulary (sort spilled, hash_aggregate spilled, hash_join refused) and pins the committed 27-cell CSV so a relabel of an R-1 cell is a red.
+      artifacts: [python/repark-parity/tests/spill/test_classifier_pins.py, python/repark-parity/tests/spill/matrix_harness.py, python/repark-parity/tests/spill/test_ci_tier_cell.py, python/repark-parity/tests/spill/test_full_matrix_csv.py, python/repark-parity/tests/spill/ci_golden.csv]
     - id: AT-2
       status: ATTACKED
       evidence: KILLED is pinned on a signal kill, a non-zero exit, and a silent exit-0 worker, and the matrix-level failure is pinned through require_no_killed_cells raising.
@@ -163,7 +237,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark-parity/tests/spill/test_generator_sizing.py, python/repark-parity/tests/spill/matrix_generators.py]
     - id: AT-4
       status: ATTACKED
-      evidence: One cell per subprocess; the worker applies the address-space cap after the session builds and verifies it by read-back; the record carries rlimit_as_bytes and vm_size_at_cap so the arithmetic is auditable per run. Step 2 ran the same isolation over all 81 full-tier runs and the records carry the cap fields.
+      evidence: One cell per subprocess; the worker applies the address-space cap after the session builds and verifies it by read-back; the record carries rlimit_as_bytes and vm_size_at_cap so the arithmetic is auditable per run. Step 2 ran the same isolation over all 81 full-tier runs and the records carry the cap fields. Step 3's golden pin and the three-rep CI measurement use the same run_cell isolation.
       artifacts: [python/repark-parity/tests/spill/matrix_worker.py, python/repark-parity/tests/spill/test_ci_tier_cell.py, python/repark-parity/tests/spill/matrix_run.py]
     - id: AT-5
       status: N/A
@@ -183,7 +257,7 @@ COVERAGE_ATTESTATION:
       justification: No concurrency or shared state; one worker subprocess per cell, sequential.
     - id: AT-10
       status: ATTACKED
-      evidence: Every touched directory's map.md moves in the same commit — tests/spill/map.md, tests/map.md, docs/perf/map.md and the staging ledger map — and the reused bench parser is pointed at, not copied.
+      evidence: Every touched directory's map.md moves in the same commit — tests/spill/map.md (ci_golden.csv, test_full_matrix_csv.py, C-008..C-010), tests/map.md, docs/perf/map.md, the staging ledger map — and the reused bench parser is pointed at, not copied.
       artifacts: [python/repark-parity/tests/spill/map.md, python/repark-parity/tests/map.md, task/ledgers/staging/map.md, docs/perf/map.md]
   complete: true
 ```

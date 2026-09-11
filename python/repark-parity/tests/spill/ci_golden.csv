@@ -1,0 +1,4 @@
+operator,multiple,outcome
+sort,2,spilled
+hash_aggregate,2,spilled
+hash_join,2,refused
