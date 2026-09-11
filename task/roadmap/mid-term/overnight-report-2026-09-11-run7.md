@@ -1,6 +1,6 @@
 # Overnight report — run 7 of 2026-09-11 (the Devin-first run)
 
-**Session:** Opus 5 orchestrator (unit `overnight-7`), alone on the box, 00:57 → 07:30 local (report pushed 06:55; final state appended at the end) ·
+**Session:** Opus 5 orchestrator (unit `overnight-7`), alone on the box, 00:57 → ~08:10 local (stop time 07:30 for opening lanes; the one lane open at 07:30 was finished) ·
 **Grants:** G-1, G-2, G-3 stop 07:30 local, G-4 Devin SWE-2 default (every M round, first try of
 every I round), Grok fallback per S2-15, Muse at most one lane / four rounds only after Devin and
 Grok fail an I round, no GLM; G-5 · **Order:** REVIEW-FIX-15b, TORTURE-1 steps 3–5, AP-1 step 2,
@@ -18,8 +18,8 @@ BALLISTA-M2-A steps 1–2, NEVEROOM-1 steps 2–3 (alone) · **Cards:**
 | 4 | TORTURE-1 step 4 — `v3_dv` family, 315 KB Puffin-DV fixture | [#499](https://github.com/TRO-Wolf/repark/pull/499) | **merged `65116847`**, tree-equal | Devin (alone, one JVM) | 1 |
 | 5 | TORTURE-1 step 5 — full tier at 1M rows (release), S2-12 measured | [#500](https://github.com/TRO-Wolf/repark/pull/500) | **merged `75406e42`**, tree-equal | Devin (alone) | 1 |
 | 6 | BALLISTA-M2-A steps 1–2 — delegating `PhysicalExtensionCodec`, `IcebergTableScan` crosses | [#501](https://github.com/TRO-Wolf/repark/pull/501) | **merged `e756c8e0`**, tree-equal | Devin (step 1 + one audit remediation + step 2, one resumed session) | 3 |
-| 7 | NEVEROOM-1 step 2 — the 27-cell matrix (release, box otherwise idle) | — | **in flight at report time** — harness commit `7920c70a` (27-cell roster, per-cell kinds/conf, full-tier driver); the matrix run waits for D-3's idle box (a foreign JVM, finding 8) | Devin | 1 |
-| — | NEVEROOM-1 step 3 | — | not opened (step 2 not merged) | — | — |
+| 7 | NEVEROOM-1 step 2 — the 27-cell matrix (release, 3 reps) | [#503](https://github.com/TRO-Wolf/repark/pull/503) | **merged `f7a7b61f`**, tree-equal — 18 refused, 6 completed, `hash_join`-4× **KILLED** 3/3, `hash_aggregate`-2× and `window_unbounded`-2× **UNSTABLE**; no stable spill at 1 GB | Devin | 1 |
+| — | NEVEROOM-1 step 3 | — | not opened — past the 07:30 stop (step 2 handed back at 07:33) | — | — |
 
 Every merge followed runbook §5 with auto-merge off: `gh pr update-branch`, checks watched to
 completion, explicit squash with `--match-head-commit`, then the tree-equality check against the PR
@@ -43,6 +43,7 @@ author and committer `%ae` byte-exact, trailer last, red-first evidence pasted �
 | dv-bm2a (step 1) | 102 | 115 | 16.65 M | 86.2 k |
 | dv-bm2a (audit remediation, resumed) | 87 | 85 | 11.43 M | 59.7 k |
 | dv-bm2a (step 2, resumed) | 123 | 120 | 18.10 M | 79.2 k |
+| dv-noom2 | 115 | 132 | 18.07 M | 76.3 k |
 
 ## 3. Decisions taken under G-2 (one line each)
 
@@ -55,7 +56,7 @@ author and committer `%ae` byte-exact, trailer last, red-first evidence pasted �
 - **BALLISTA-M2-A audit (not a switch):** the step-1 encode path scraped the scan node's `Debug`/`Display` text; the orchestrator sent it back in the same session (F-1/F-2) for an encode-time identity check (rebuild through the decode path, compare field by field, refuse loud on any difference) plus adversarial pins. The remediation found that on the first commit a plain string predicate encoded into an un-rebuildable spec. The direct `iceberg-datafusion` dependency that would retire the parsing was **not** taken (§6: a dependency beyond the seed) — owner question 7.
 - **Stacked step (TORTURE-1 step 5):** branched from step 4's local tip so it could run alone while #499 was in CI; `main` merged in afterwards with a per-file resolution (ours + main's AP-1 delta; `docs/perf/map.md` unioned) — branch diff re-checked equal to the worker's six files.
 - **"Alone" read as "no other worker or local build":** a lane waiting only on remote CI was not counted as open (TORTURE-1 step 4 launched while #498 was in CI; NEVEROOM-1 step 2 while #501 was).
-- **NEVEROOM-1 step 2 opened at 06:24**, before the 07:30 stop, as the last scope row; the worker held the matrix for D-3 when a foreign JVM appeared — correct per the card.
+- **NEVEROOM-1 step 2 opened at 06:24**, before the 07:30 stop, as the last scope row; the worker held the matrix for D-3 while a foreign JVM sat on the box (≈06:24–07:00), then ran all 27 cells × 3; the round handed back at 07:33 and was finished (gated, PR, merge chain) rather than abandoned past the stop time.
 
 ## 4. Findings and questions for the owner
 
@@ -81,7 +82,8 @@ author and committer `%ae` byte-exact, trailer last, red-first evidence pasted �
    contains `JAVA_HOME`. Briefs now say `pgrep -x java`; the runbook §3 line should too.
 7. **BALLISTA-M2-A-R-001 — typed scan accessors.** The fork's `IcebergTableScan` exposes `table()`, `snapshot_id()`, `projection()`, `predicates()`; using them needs `iceberg-datafusion` as a direct optional dependency of `repark-distributed` behind `cluster` (already in the lockfile, via `repark-iceberg`). That retires the text recovery and lets string-literal predicates cross (today they refuse loud; DATE predicates drop at the fork's pushdown; TIMESTAMP string literals cannot form a node). Question: grant the dependency (a G-5 seed line)?
 8. **A foreign lane on the box:** `/tmp/dv-nightly` (created 06:16, not this run's) ran a live Spark leg (`test_cutover_schema_1.py` live cells, zulu-17 JVM) at 06:24, beside NEVEROOM-1 step 2. Left untouched. The owner's interactive Devin (pts/15) and Grok (pts/4) sessions sat in the live checkout all night; neither was touched.
-9. **STATUS.md was not edited** (39 B of headroom): the BALLISTA Milestone 2 opening, TORTURE-1's completion and AP-1's residue have no STATUS sentence yet; each needs a matching cut.
+9. **NEVEROOM-1 — Never-OOM is not yet true at 1 GB with 4 partitions.** No full-tier cell spills stably: the fair pool's concurrent reservations run out before a spill cycle completes, so loud refusal is the norm (18/27); `window_sliding` and `dynamic_flatten` complete; `hash_join`-4× dies by SIGABRT on an unaccounted allocation (no hash-join spill path, datafusion#24768); `hash_aggregate`-2× races refuse vs spill; `window_unbounded`-2× races the unaccounted `WindowAggExec` cache (datafusion#22758). The card's done-when is unmet by upstream behaviour; step 3 (CI golden) can pin the stable cells. Question: does W-3 take the three failing cells, and should the matrix be re-run at `target_partitions = 1` as a labelled extra?
+10. **STATUS.md was not edited** (39 B of headroom): the BALLISTA Milestone 2 opening, TORTURE-1's completion and AP-1's residue have no STATUS sentence yet; each needs a matching cut.
 
 ## 5. Mechanics learned
 
