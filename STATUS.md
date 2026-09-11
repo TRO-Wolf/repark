@@ -11,41 +11,29 @@ _Last updated: 2026-09-11._
 
 ## Release state
 
-**v1.2.0 (2026-09-11) — the torture-suite minor on 1.1**, additive under the API freeze (names
-added, no frozen name or required parameter changed). What the tag carries, all merged on
-post-1.1.1 `main`:
+**v1.3.0 (2026-09-11) — the Never-OOM minor on 1.2**, additive under the API freeze (no frozen
+name or required parameter changed). Roadmap 1.3 is closed as measured (ruling S2-18):
 
-- **Display default (DISPLAY-POLARS-1, -BRIDGE-1, -LAZY-1; REVIEW-FIX-3/9/14):** `show()` and
-  `repr(df)` render the polars-style table; **an unmaterialised frame renders its schema, not its
-  data** (R-22 — a notebook's bare expression is a `repr`, and the old default ran the plan);
-  rows come back with `.eager()` / `.compute()`, any action, or `spark.sql.repl.eagerEval.enabled`.
-  `REPARK_DISPLAY_STYLE=spark` restores the ASCII grid; `repark.DataFrame` is unchanged.
-  Keys and precedence: [docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
-- **`DataFrame.eager()` / `.compute()` / `.lazy()` (DF-EAGER-1):** `.eager()` materialises into a
-  **new `repark.DataFrame`** (same class, never a polars object) whose shape is read once;
-  `collect()` and `df.pl.collect()` are unchanged.
-- **Torture-test dataset suite (TORTURE-1, roadmap v1.2):** eight generated families on both
-  doors — nested, inference, extreme types, smartCsv, temporal, decimal overflow, secrets
-  (`flag_secret_columns = off|warn|refuse`), `v3_dv` under real deletion vectors — CI tier 10k rows,
-  full tier 1M rows on a release build green ([docs/perf/torture-1-2026-09-11.md](docs/perf/torture-1-2026-09-11.md)).
-- **Maintenance policy (MAINT-POLICY-1, roadmap 2.1):** `[<profile>.maintenance]` in `repark.toml`
-  and `CALL <catalog>.system.run_maintenance(table => …)` / `session.run_maintenance(...)`;
-  `dry_run` defaults to true: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
-- **`repark.toml` (CFG-1), `explain()` modes (DF-EXPLAIN-1), `DESCRIBE [TABLE] [EXTENDED]` on
-  Iceberg tables with short-name completion and secret redaction (SQL-DESCRIBE-1, REVIEW-FIX-5),
-  `CALL plan_partitioning()` with a footer-measured byte ratio (AP-0/AP-1), three
-  accepted-but-unread `datafusion.*` keys wired and one refused loud (CONF-UNREAD-1).**
-- **The REVIEW-1 critic sweep's 15 fix cards** — the eager-frame data-loss path, the config
-  mirror's TOML injection and secret echo, two fail-open gates — all closed
-  ([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)).
-- **Ballista Milestone 1 + M2-A:** `repark-distributed` (tier 3, role `runtime`) behind the
-  off-by-default `cluster` feature — the `DistributedExecutor` seam, an in-process scheduler,
-  multi-stage queries, per-executor Iceberg reads, and a delegating codec so `IcebergTableScan`
-  crosses to an executor ([docs/design/distributed-m1.md](docs/design/distributed-m1.md)).
-- **Never-OOM matrix step 2 (NEVEROOM-1):** 24 of 27 cells stable at 2/4/8× a 1 GB limit;
-  `hash_join` at 4× and two unstable cells trace to datafusion#24768 / #22758 (v1.3 documents them).
-- Also: the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines), FNP-8, the
-  shared PySpark oracle guard that turned the nightly green again (NIGHTLY-LIVE-1).
+- **Never-OOM truth (NEVEROOM-1):** the spill-coverage matrix — nine operators at 2/4/8× a 1 GB
+  limit, three reps each, one subprocess per cell under an address-space cap — is the standing
+  record ([docs/perf/spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md)).
+  24 of 27 cells are stable and each spills, completes or refuses loudly; `hash_join` at 4×
+  (KILLED, datafusion#24768) and `hash_aggregate` / `window_unbounded` at 2× (UNSTABLE, #22758) are
+  named with their upstream issues, no operator change (S2-6). A DataFusion bump that closes either
+  issue re-runs the matrix as its pin. CI tier: `make py-test-spill-matrix` against a golden
+  (`sort` and `hash_aggregate` spill, `hash_join` refuses at 2× of 64 MB) — [docs/testing.md](docs/testing.md).
+
+**v1.2.0 (2026-09-11) — the torture-suite minor:** the polars-style display default with a
+schema-only lazy `repr` (DISPLAY-POLARS-1, -LAZY-1; `REPARK_DISPLAY_STYLE=spark` restores the grid;
+[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md)); `DataFrame.eager()` /
+`.compute()` / `.lazy()` (DF-EAGER-1); the torture-test suite, eight families on both doors
+([docs/perf/torture-1-2026-09-11.md](docs/perf/torture-1-2026-09-11.md)); the maintenance policy
+and `CALL run_maintenance()` ([docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md));
+`repark.toml` (CFG-1), `explain()` modes, `DESCRIBE [TABLE] [EXTENDED]`, `CALL
+plan_partitioning()` (AP-0/AP-1), CONF-UNREAD-1; the REVIEW-1 sweep's 15 fix cards
+([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)); Ballista Milestone 1
++ M2-A behind the off-by-default `cluster` feature
+([docs/design/distributed-m1.md](docs/design/distributed-m1.md)); DFCORE-1…6, FNP-8, NIGHTLY-LIVE-1.
 
 **History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1);
 v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable
@@ -321,12 +309,12 @@ Recorded, not built. Each names the trigger that would start it.
   connectivity count (6 names, same bucket) is tracked in
   [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names themselves live in
   the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
-- **Never-OOM (spill coverage)** — measured 2026-09-05 (H3-SPILL-1):
-  [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md); the honest scope in
-  [PROJECT.md](PROJECT.md) holds — spills where the engine can, documented where it cannot.
+- **Never-OOM (spill coverage)** — closed as measured at v1.3 (NEVEROOM-1, 27 cells; H3-SPILL-1's
+  180-cell baseline before it); three cells wait on upstream datafusion#24768 / #22758, and the
+  honest scope in [PROJECT.md](PROJECT.md) holds — spills where the engine can, documented where it cannot.
 
 ## Release blockers
 
-**None.** v1.2.0 cut 2026-09-11; the tag history is in [Release state](#release-state).
+**None.** v1.3.0 cut 2026-09-11; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
