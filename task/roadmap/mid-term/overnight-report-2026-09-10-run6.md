@@ -1,6 +1,6 @@
 # Overnight report — run 6 of 2026-09-10 (the review-fix run)
 
-**Session:** Opus 5 orchestrator, alone on the box, 15:06 local → (in progress), across **two
+**Session:** Opus 5 orchestrator, alone on the box, 15:06 → 00:07 local (2026-09-11), across **two
 processes**: the first ended on its 400-turn cap at ~21:24 local mid-rebase (not on a decision);
 the second resumed from live state at 21:25 · **Grants:** G-1, G-2, G-3 stop 06:30 local, G-4 Muse
 only (first process) then **Muse + Devin SWE-2 + Grok fallback** (owner, evening — §5), G-5 ·
@@ -24,9 +24,14 @@ CONF-UNREAD-1 as narrowed by RF-4).
 | 9 | REVIEW-FIX-6 + REVIEW-FIX-11 | [#487](https://github.com/TRO-Wolf/repark/pull/487) | **merged `cadf2382`**, tree-equal | Muse | 2 |
 | 7 | DISPLAY-LAZY-1 (both steps) | [#489](https://github.com/TRO-Wolf/repark/pull/489) | **merged `fd09db62`**, tree-equal | Muse | 3 |
 | 10a | REVIEW-FIX-8 | [#488](https://github.com/TRO-Wolf/repark/pull/488) | **merged `553a41d8`**, tree-equal | Muse | 2 |
-| 11 | REVIEW-FIX-13 + REVIEW-FIX-15 | [#490](https://github.com/TRO-Wolf/repark/pull/490) | open, CI running at time of writing | Muse | 2 |
-| 8 | REVIEW-FIX-3 + -9 + -14 | — | Devin lane `dv-rf3` in flight | Devin SWE-2 | 1 (in flight) |
-| 10b | CONF-UNREAD-1 step 1 | — | Muse lane `cu1` in flight | Muse | 1 (in flight) |
+| 11 | REVIEW-FIX-13 + REVIEW-FIX-15 | [#490](https://github.com/TRO-Wolf/repark/pull/490) | **merged `43db9a82`**, tree-equal | Muse | 2 |
+| 8 | REVIEW-FIX-3 + -9 + -14 | [#492](https://github.com/TRO-Wolf/repark/pull/492) | **merged `2fd72326`**, tree-equal | Devin SWE-2 | 1 |
+| 10b | CONF-UNREAD-1 (both steps) | [#493](https://github.com/TRO-Wolf/repark/pull/493) | **merged `60e2c553`**, tree-equal | Muse (step 1) + Devin (step 2) | 3 |
+| O-2 | BALLISTA-M2-A step-0 seed (`datafusion-proto` behind `cluster`) | [#494](https://github.com/TRO-Wolf/repark/pull/494) | **merged `974e66ae`**, tree-equal | orchestrator | — |
+
+**Every review-fix-slate §1 row 1–11 merged, plus M-0, O-1 and O-2 — 16 PRs, all tree-equal.** With the
+list exhausted at 23:39, the run did only the O-2 seed, as instructed, and stopped; no BALLISTA-M2-A
+worker round was opened.
 
 Every merge followed runbook §5 with auto-merge off: `gh pr update-branch`, checks watched in the
 foreground, explicit squash, then the tree-equality check. The whole parity suite and `make verify`
@@ -56,7 +61,11 @@ were re-run by the orchestrator before every push, including after every rebase.
   `unsafe` against `unsafe_code = "forbid"`; the builder takes no env); the control session uses the
   forced empty staged file.
 - **FIX-14 D-2** (ceiling on `repark.display.max_rows`): delegated to the Devin round with an
-  instruction to choose, pin and record it — see §3 when it lands.
+  instruction to choose, pin and record it. It chose **refuse-loud above 10,000**
+  (`INVALID_CONF_VALUE.REQUIREMENT`), recorded in the ledger's C-002 row.
+- **CONF-UNREAD-1** (RF-4's four keys): three wired, `datafusion.execution.coalesce_batches`
+  refused loud — DataFusion 54.1.0 defines it but no engine path reads it. User-visible: setting it
+  now raises.
 - **STATUS.md.** Gate-only units (FIX-10, FIX-12, FIX-8, FIX-13/15, M-0) got no STATUS sentence;
   user-visible ones fold into one rolling "REVIEW-1 fixes" paragraph. STATUS sat at its 25,000 B
   ceiling all night; every addition was paid for by compacting archived or superseded prose, never
@@ -78,6 +87,16 @@ were re-run by the orchestrator before every push, including after every rebase.
   beside every number; the unreproducible `20110` figure is gone.
 - **DISPLAY-LAZY-1** closed a gap its own worker disclosed: a plain `localCheckpoint()` rendered
   lazy against D-2; the checkpoint arm now records `_eager_shape` (C-007).
+- **Disk-full, self-inflicted (~21:35).** Lane clones reach 31–44 GB each after `make develop` +
+  `make verify`; eleven merged-but-kept clones took `/` from 438 GB free to 25 GB. It killed the
+  CONF-UNREAD-1 Muse round (ENOSPC, empty `exit`, no hand-back), one orchestrator verify and two
+  of the Devin round's own verifies. 363 GB reclaimed by removing the merged clones; the Muse round
+  was resumed from its uncommitted tree. Runbook §5 already says to remove a clone at merge — that
+  step is now done every time (memory `disk-consumers` updated).
+- **Renaming a clone is not free.** Moving `/tmp/oc-cu1` → `/tmp/dv-cu1` for the Devin lane left
+  test binaries with the old `CARGO_MANIFEST_DIR` baked in; fixture tests failed `read src` under
+  `cargo test --workspace`. The Devin worker diagnosed it and ran `cargo clean`. Future lane
+  switches clone fresh instead.
 - **Orchestrator lane-prep error, twice.** Copying the live `.venv` into a clone does not bring the
   native module (it lives in the source tree, gitignored) and leaves `.pth` files pointing at the
   live checkout. Two workers (FIX-1, FIX-6) found no `repark._native`; one stopped honestly, one
@@ -111,9 +130,16 @@ one lane at a time; Grok is the fallback for a misbehaving Devin card.
 - CONF-UNREAD-1 step 1 is I-tier (Rust wiring), so it runs on Muse (`cu1`) once `rf13` freed the
   one Muse slot. Its step 2 (docs) is M-tier and goes to Devin.
 
-**Muse rounds tonight:** 21 completed + 1 stopped partial (`rf3`) + CONF-UNREAD-1 in flight — final
-count in the closing edit of this report. **Devin rounds:** see closing edit. **Grok switches:** none
-so far.
+**Muse rounds tonight: 24 launched, 22 completed.** First process: 20 completed + `rf3` stopped at
+resume. Second process: `rf13` (in flight at resume) completed; CONF-UNREAD-1 step 1 launched twice
+(the first killed by the disk-full event, the resume completed). At most one Muse lane ran at a time
+after the grant change.
+**Devin SWE-2 rounds: 2, both completed, both merged** — `dv-rf3` (REVIEW-FIX-3/9/14, 98 agent steps)
+and `dv-cu1` (CONF-UNREAD-1 step 2, 70 agent steps). The first build card passed its acceptance
+audit: commit present, `%ae` byte-exact, trailer last, no comments, Home-only. One lane-discipline
+note: the `dv-cu1` worker *read* a sibling lane (`/tmp/dv-rf3`) while diagnosing the fixture
+failure; read-only, no edits outside its clone.
+**Grok switches: none** — no Devin round triggered a fallback condition.
 
 ## 6. Not opened, by instruction
 
