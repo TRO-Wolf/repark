@@ -37,6 +37,10 @@ declines it (a dated ruling in the intake, then the archive).
   (including that `make check-docs-links` does not exist), and five corrections the runbook's
   §3 needs — the `pgrep` guard that matches its own command line, Muse's separate run
   directory, and the CAP-1 map.md merge conflict every lane branch now hits.
+- [overnight-report-2026-09-10-run6.md](overnight-report-2026-09-10-run6.md) — run 6 (2026-09-10
+  15:06 → 2026-09-11, the review-fix run, one orchestrator across two processes): review-fix-slate
+  §1 rows 1–11 plus M-0 and O-1, with every size-baseline question answered by a comment-funded
+  ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
 - [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
   05:21–13:20 local, **orchestrator A**; the Grok/Ballista and facade lanes were orchestrator B's
   from 05:45 and are not in it): seven merged (DISPLAY-BRIDGE-1's rebase, AP-0 with its O-run,
