@@ -436,6 +436,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mid-line `READING.` field stays exempt; the real-field exemption rides the existing test.
   The new tests carry no inline pins, so the unit's clause is cited on this line.
   pins: review-fix-10/C-001
+  **REVIEW-FIX-15 (2026-09-11):** LEDGER-READING-1's C-001..C-003 move into the
+  tests that pin them — `_pins` bindings on the marker-exemption test (C-001, C-003),
+  the no-marker and no-attestation controls (C-001), and the EXCEPTIONS ratchet test
+  (C-002). The binding is code-as-data, not a `#` comment, under the comment ban; the
+  gate reads the `pins:` text either way. C-004 has no pinning test (its pin is the
+  real-tree gate run in its evidence cell), so its citation rides the map line only, which
+  keeps all four rows as navigation. The reading fixture's Verdict and Evidence cells are
+  the way round the grammar describes (Q-49).
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans

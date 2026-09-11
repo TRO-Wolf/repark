@@ -53,7 +53,7 @@ _READING_ROWS = f"""# Charter — U11
 
 | Clause | Proposition | Verdict | Evidence |
 |---|---|---|---|
-| C-001 | The document section exists. | docs: docs/design/session-api.md#the-session | PROVEN |
+| C-001 | The document section exists. | PROVEN | docs: docs/design/session-api.md#the-session |
 """
 _READING_TEXT = _READING_ROWS + _ATTESTATION
 
@@ -147,12 +147,14 @@ def test_unpinned_proven_clause_and_dead_citation_go_red(repo: Path) -> None:
 
 
 def test_reading_marker_exempts_rule_b(repo: Path) -> None:
+    _pins = "pins: ledger-reading-1/C-001, C-003; pins: review-fix-15/C-001, C-002"
     _write(repo, _READING_LEDGER, _READING_TEXT)
     result = _run(repo)
     assert result.returncode == 0, result.stderr
 
 
 def test_reading_rule_b_applies_without_the_marker(repo: Path) -> None:
+    _pins = "pins: ledger-reading-1/C-001; pins: review-fix-15/C-001"
     _write(repo, _READING_LEDGER, _READING_TEXT.replace(f"{_READING_MARKER_LINE}\n\n", ""))
     result = _run(repo)
     assert result.returncode == 1
@@ -199,6 +201,7 @@ def test_reading_midline_value_with_period_is_exempt(repo: Path) -> None:
 
 
 def test_reading_rule_c_still_requires_the_attestation(repo: Path) -> None:
+    _pins = "pins: ledger-reading-1/C-001; pins: review-fix-15/C-001"
     _write(repo, _READING_LEDGER, _READING_TEXT.replace(_ATTESTATION, ""))
     result = _run(repo)
     assert result.returncode == 1
@@ -278,6 +281,7 @@ def test_finding_record_fields_are_checked(repo: Path) -> None:
 
 
 def test_exceptions_table_ratchets_down_only(tmp_path: Path) -> None:
+    _pins = "pins: ledger-reading-1/C-002; pins: review-fix-15/C-001"
     # pins: dl-2-ledger-grammar-charter/C-005
     # The real table against the real tree: a ceiling above the measured count, or a row for a
     # ledger in no live bin, is a finding — provoked by editing a copy of the script.

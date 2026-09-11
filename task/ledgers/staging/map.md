@@ -412,6 +412,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   step-3 map line landed. Closes Q-42, Q-43, Q-44, Q-45, Q-53, Q-54.
   `risk_tier: standard`. Branch `fix/review-fix-13-15`.
   pins: review-fix-13/C-001, C-002, C-003, C-004, C-005
+- [review-fix-15-ledger.md](review-fix-15-ledger.md) —
+  **REVIEW-FIX-15 (2026-09-11), in flight:** a pin cites the clause it holds —
+  LEDGER-READING-1's C-001..C-003 move into the pinning tests as `_pins`
+  bindings, the reading fixture's Verdict/Evidence cells swap to the
+  grammar-described order, C-004 stays map-navigated (no pinning test exists).
+  Closes Q-48, Q-49. `risk_tier: standard`. Branch `fix/review-fix-13-15`.
+  pins: review-fix-15/C-001, C-002
 
 ## Pointers
 - Up: [../map.md](../map.md)
