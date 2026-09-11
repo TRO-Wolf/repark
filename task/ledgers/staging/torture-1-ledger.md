@@ -109,11 +109,11 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark-parity/tests/torture/map.md]
     - id: AT-2
       status: ATTACKED
-      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell; the flag pin covers off/warn/refuse on both doors; the v3_dv cells pin the post-DV true row count, the surviving id set, and the declared schema on both doors over the committed fixture plus a live generate-and-read cell.
-      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py, python/repark-parity/tests/torture/test_torture_secrets.py, python/repark-parity/tests/torture/test_torture_v3_dv.py]
+      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell; the flag pin covers off/warn/refuse on both doors; the v3_dv cells pin the post-DV true row count, the surviving id set, and the declared schema on both doors over the committed fixture plus a live generate-and-read cell; step 5 re-ran every door cell at the full 1M-row tier on a release build with the identical xfail inventory and recorded per-door wall times.
+      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py, python/repark-parity/tests/torture/test_torture_secrets.py, python/repark-parity/tests/torture/test_torture_v3_dv.py, docs/perf/torture-1-2026-09-11.md]
     - id: AT-3
       status: ATTACKED
-      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id; steps 3 and 4 measured answers repark already honors (the declared secrets schema; the v3_dv DV read at 96-of-120), so no new registry row was filed.
+      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id; steps 3 and 4 measured answers repark already honors (the declared secrets schema; the v3_dv DV read at 96-of-120), so no new registry row was filed; the step-5 full-tier run diverged nowhere new — the same 11 xfails at 1M rows.
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/torture/test_torture_inference.py]
     - id: AT-4
       status: N/A
@@ -132,8 +132,8 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/torture-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/, fixtures/torture/data/ and data/v3_dv/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers; step 3 updated the torture fixture/test maps, the core src map, the facade session map, and the staging-ledger map; step 4 updated the fixtures, torture package, tests, repark-parity, and staging maps.
-      artifacts: [python/repark-parity/map.md, python/repark-parity/fixtures/torture/data/map.md]
+      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/, fixtures/torture/data/ and data/v3_dv/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers; step 3 updated the torture fixture/test maps, the core src map, the facade session map, and the staging-ledger map; step 4 updated the fixtures, torture package, tests, repark-parity, and staging maps; step 5 updated docs/perf, tests/torture, and datasets maps for the results document and the S2-12 measurement.
+      artifacts: [python/repark-parity/map.md, python/repark-parity/fixtures/torture/data/map.md, docs/perf/map.md, python/repark-parity/datasets/map.md]
     - id: AT-9
       status: ATTACKED
       evidence: Byte-identity determinism pin runs the committed CLI twice per file family — the registry now includes secrets; the manifest-reuse pin mutates its inputs and reds; v3_dv's non-determinism is recorded, not pinned.
@@ -145,12 +145,12 @@ COVERAGE_ATTESTATION:
 DELIVERY_SIGNOFF:
   pr_unit: torture-1
   artifacts_verified:
-    ledger: PASS (C-001..C-030)
+    ledger: PASS (C-001..C-037)
     coverage_attestation: PASS (AT-1..AT-10)
     findings_ledger: PASS (none open)
     shipped_flag_register: PASS (count 0)
   done_gate: PASS
-  status_update: steps 1-4 of 5; STATUS untouched per brief
+  status_update: steps 1-5 of 5; STATUS untouched per brief
   verdict: ACCEPTED
   rejection_route: N/A
 SHIPPED_FLAG_REGISTER:
@@ -628,3 +628,141 @@ lists the single on-disk `.puffin` once per data file it covers (24 rows for one
 file) — a metadata-table listing contract, not a divergence; `git status` shows this
 clone carries a small tracked `.ivy2` seed whose `ivydata-*.properties` the resolver
 re-stamps on each run (restored, and the directory is `.git/info/exclude`d here).
+
+---
+
+# Step 5 (2026-09-11) — the full tier, the results document, S2-12
+
+**Unit:** TORTURE-1 step 5 · **Date:** 2026-09-11 · **Executor:** Devin SWE-2
+(swe-2-high), Actor · **Branch:** `feat/torture-1-step-5` · **Base:** step-4 commit
+`49c0f193` (stacked; its PR is in CI) · **Model:** swe-2-high
+**risk_tier:** standard.
+
+Scope: step 5 only — the release build, the full-tier run (≥1M rows per family,
+generated once under `/tmp/torture/`), the dated results document
+`docs/perf/torture-1-2026-09-11.md`, the `docs/testing.md` paragraph, the measured
+S2-12 `datasets/` coverage + retirement ruling, maps, and this ledger extension.
+No `STATUS.md` edit, no dependency or workflow change, no code change.
+
+## Step-5 proposition ledger
+
+| ID | Clause | Proof obligation | Verdict |
+|---|---|---|---|
+| C-031 | The timings stand on a RELEASE build: `cd python/repark && VIRTUAL_ENV=$PWD/../../.venv uvx maturin@1.14.1 develop --release` finished `release` profile `[optimized]` in 8m 08s; `repark.__file__` resolves into `python/repark/src/repark/`; `repark._native.__debug_assertions__ is False`; `_native.abi3.so` is 166 793 824 bytes. | The build output and proof commands quoted below; the doc's profile header. | **PROVEN** |
+| C-032 | Full tier measured: the seven file families generate 1 000 000 rows under `/tmp/torture/<family>` (one-time CLI generation, manifest-reused by the suite) and the `TORTURE_TIER=full` suite is green — `75 passed, 1 skipped, 11 xfailed`, the same xfail inventory as CI tier; per family × door rows, wall seconds and outcome are recorded in the doc from the stated harness. | The verbatim runs and generation timings below; the doc's results table. | **PROVEN** |
+| C-033 | v3_dv at full tier: the live generator scales to 1M rows — `generate v3_dv --rows 1000000 --seed 7` under `REPARK_PARITY_LIVE=1`, `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, the `$PWD/.ivy2` redirect — wrote 1M rows, deleted 200 000 (`id % 5 = 2`), 800 000 true rows in 48.94 s; repark reads the surviving 800 000 on both doors (0.19 s `read.table`, 0.02 s `spark.sql` over a temp view); `pgrep -x java` empty before and after; `.ivy2/` sits in `.git/info/exclude`. | The generation transcript, `truth.json`, and the measured door reads — all quoted below and in the doc. | **PROVEN** |
+| C-034 | `docs/perf/torture-1-2026-09-11.md` holds the results table (one row per family × door: rows, seconds, outcome), the box and build profile, and the exact commands; `docs/perf/map.md` lists the file in the same commit. | The document + the map diff. | **PROVEN** |
+| C-035 | `docs/testing.md` gains one paragraph naming the suite, its tiers, and `make py-test-torture`; no docs ceiling exists for the file (`check_docs_compaction.py` CEILINGS) so nothing was raised or condensed. | The paragraph diff. | **PROVEN** |
+| C-036 | S2-12 measured per D-7: each of `datasets/{nested,schema_inference,extreme_types,secrets,smartcsv}` carries a shape→torture-coverage table and a `grep -rn` consumer list in the step-5 document; verdicts — `nested` covered, retained (7 outside consumers incl. the dynflatten bench suite); `secrets` covered, retained (2); `schema_inference`, `extreme_types`, `smartcsv` partly covered — so zero directories, tests, map rows, or `_cache.py` slugs were removed. | The doc's S2-12 section; the unchanged `datasets/` tree; `datasets/map.md` carries the pin. | **PROVEN** |
+| C-037 | Gates green: `TORTURE_TIER=full make py-test-torture`, `make py-test-torture` (CI tier), the whole parity suite, `python/repark/tests/test_datasets_facade.py`, `scripts/check_docs_links.py`, `make verify`; maps in lockstep in the same commit. | The real exit codes below. | **PROVEN** |
+
+## Step-5 release-build proof (C-031)
+
+```
+$ cd python/repark && VIRTUAL_ENV=/tmp/dv-tort5/.venv uvx maturin@1.14.1 develop --release
+    Finished `release` profile [optimized] target(s) in 8m 08s
+📦 Built wheel for abi3 Python ≥ 3.12 … repark-1.1.1-cp312-abi3-linux_x86_64.whl
+🛠 Installed repark-1.1.1
+
+$ .venv/bin/python -c "import repark; print(repark.__file__)"
+/tmp/dv-tort5/python/repark/src/repark/__init__.py
+$ .venv/bin/python -c "import repark._native as n; print(n.__debug_assertions__)"
+False
+$ ls -la python/repark/src/repark/_native.abi3.so   -> 166793824 bytes, built 04:04
+```
+
+## Step-5 full-tier evidence (C-032, C-033)
+
+One-time generation into `/tmp/torture` (committed CLI, seed 7, `/usr/bin/time` wall):
+
+```
+nested 43.99 s · inference 5.70 s · extreme_types 11.26 s · smartcsv 5.01 s ·
+temporal 2.27 s · decimal_overflow 3.39 s · secrets 31.55 s   (~1.4 GB total)
+```
+
+v3_dv live generation (JVM alone; `pgrep -x java` empty before and after):
+
+```
+$ REPARK_PARITY_LIVE=1 JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 \
+    PYTHONPATH=python/repark-parity/src .venv/bin/python -m repark_parity.torture \
+    generate v3_dv --rows 1000000 --seed 7 --out /tmp/repark-torture-v3dv-full
+v3_dv: 800000 live rows -> /tmp/repark-torture-v3dv-full/ns/v3dv
+V3DV_GEN_SECONDS 48.94
+
+truth.json: rows_written 1000000, delete id%5=2, rows_deleted 200000,
+true_rows 800000, data_files 24, delete_files 24, format_version 3
+repark read.table -> 800000 rows in 0.19 s; spark.sql over temp view -> 800000 in 0.02 s
+```
+
+The suite at full tier (`--durations=0` run used for per-cell timings) and the gate:
+
+```
+$ TORTURE_TIER=full .venv/bin/python -m pytest python/repark-parity/tests/torture -q --durations=0
+75 passed, 1 skipped, 11 xfailed in 33.45s   exit 0
+
+$ TORTURE_TIER=full make py-test-torture
+75 passed, 1 skipped, 11 xfailed in 33.99s   exit 0
+
+$ make py-test-torture            (CI tier)
+75 passed, 1 skipped, 11 xfailed in 19.12s   exit 0
+```
+
+The 11 xfails are the steps 1–4 inventory, unchanged at 1M rows — no cell regressed
+at scale, so no new registry row was filed. The one skip is the
+`REPARK_PARITY_LIVE` cell; its work ran by hand above (the live cell pins a fresh
+120-row generate, not the 1M table, so the full-tier v3_dv evidence is the manual
+transcript quoted here, not a suite cell).
+
+## Step-5 S2-12 evidence (C-036)
+
+Consumer enumeration command:
+
+```
+$ grep -rn "repark_datasets\|datasets/" -l python/ scripts/ Makefile docs/ task/
+```
+
+Outside-consumer findings per family (full tables in the step-5 document):
+`nested` — `bench/dynflatten/measure.py`, `tests/test_dynflatten_bed.py`,
+`test_dynflatten_bed_gate.py`, `test_dynflatten_listnull.py`,
+`test_dynflatten_null_mask.py`, `test_parity_live_dynflatten.py`,
+`test_datasets_facade.py`; the other four — `tests/test_datasets_manifest_types.py`
+and `test_datasets_facade.py`. Coverage verdicts: `nested` and `secrets`
+shape-covered but retained for those consumers; `schema_inference`
+(leading-zero ids, comma decimals, e-notation, null-token vocabulary, €/£ marks,
+single-letter bool spellings uncovered), `extreme_types` (the >38-digit demotion
+class uncovered — `big38` tops out at 38), and `smartcsv` (BOM, preamble, duplicate
+headers, ragged rows, the delimiter zoo, embedded delimiters uncovered) are partly
+covered and stay. **Zero retirements** — no directory, test, map row, or
+`_cache.py` slug removed; D-7's "no outside consumer" test fails for every family.
+
+## Step-5 gate evidence (C-037)
+
+```
+$ PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv \
+    uv run --no-project python -m pytest python/repark-parity/tests -q
+737 passed, 1 skipped, 11 xfailed in 65.60s — plus the known
+test_real_tree_is_green_under_the_seeded_allowlist red on the not-yet-tracked
+perf doc (same index-visibility note as step 4: green once staged; re-run below).
+
+$ .venv/bin/python -m pytest python/repark-parity/tests/test_dl_6_docs_links.py -q
+   (run after git add of the new files) 19 passed in 1.85s   exit 0
+
+$ .venv/bin/python -m pytest python/repark/tests/test_datasets_facade.py -q
+21 passed in 0.82s   exit 0
+
+$ python3 scripts/check_docs_links.py      (run after git add)
+docs-links: 756 files, 4833 links checked — clean   exit 0
+
+$ make verify
+exit 0 — fmt, clippy x3, panic-ban, crate-dag (22 edges), lib-rs,
+rust-file-size, lib-py, python-conventions, docstring-presence,
+example-coverage, manifest, ledgers, ledger-grammar (95 live ledgers,
+609 clauses), docs-compaction, docs-links, owner-ruling, parity-live
+dual-wire, matrix-test-liveness, rust-check, py-lint, py-format-check,
+py-lock, toml, spell; the workspace test suite green.
+```
+
+Out-of-scope observations (recorded, not acted on): the `secrets` and `nested`
+generators dominate generation wall time (31.55 s / 43.99 s of ~103 s total); the
+`torture` `nested` CSV leg refuses loud through `CSV-INFER-HEADER-CASE` at full tier
+exactly as at CI tier; `/tmp/torture` persists ~1.4 GB between runs by design.

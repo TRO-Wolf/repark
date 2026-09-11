@@ -33,6 +33,14 @@ carry a `manifest.json` whose declared types are cross-checked against the real
 Arrow schema by `tests/test_datasets_manifest_types.py` — edit a schema field and
 its manifest row in the same change, or that test reds.
 
+S2-12 (TORTURE-1 step 5, 2026-09-11) measured each family's shape coverage against
+the `fixtures/torture` generators and enumerated its outside consumers: `nested` and
+`secrets` are shape-covered but retained for their consumers;
+`schema_inference`, `extreme_types` and `smartcsv` are partly covered. No family
+retired; the coverage tables and verdicts live in
+[../../../docs/perf/torture-1-2026-09-11.md](../../../docs/perf/torture-1-2026-09-11.md).
+pins: torture-1/C-036
+
 ## I want to…
 
 | I want to… | Go to |

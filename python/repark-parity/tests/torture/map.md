@@ -114,6 +114,13 @@ The suite needs the native module (the doors are repark's), so run it through
   including the co-collected live run after `test_parity_live.py`) are in the same
   ledger under C-024 onward.
   pins: torture-1/C-024, C-028, C-030
+- The step-5 process clauses (the release build and its `__debug_assertions__`
+  proof, the full-tier 1M-row run with per-door wall timings, the live v3_dv
+  full-tier generation and JVM lifecycle, the dated `docs/perf/` results document,
+  the `docs/testing.md` paragraph, and the gate runs) are in the same ledger under
+  C-031 onward; the S2-12 retirement measurement is pinned from
+  [../../datasets/map.md](../../datasets/map.md).
+  pins: torture-1/C-031, C-032, C-033, C-034, C-035, C-037
 
 ## Pointers
 
