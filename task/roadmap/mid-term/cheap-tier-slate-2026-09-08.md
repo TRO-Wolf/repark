@@ -837,7 +837,7 @@ paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until t
 
 ## 4. Sequence, dependencies, cost
 
-| # | Unit | Depends on | Tiers | Rounds | Worker cost (GLM ≈ $0.005/round; Muse unmetered) |
+| # | Unit | Depends on | Tiers | Rounds | Worker cost (GLM ≈ $0.005/round; Muse ≈ ½ point of its period quota per round — S2-15; Devin free) |
 |---|---|---|---|---|---|
 | 1 | DF-EXPLAIN-1 | — | M | 1–2 | ≈ $0.01 |
 | 2 | SQL-DESCRIBE-1 | live Spark on this box | M, I, M | 3 | ≈ $0.01 + one I round |
