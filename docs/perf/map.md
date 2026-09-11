@@ -162,6 +162,21 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   evidence including every repeat and the JVM stderr lines:
   [spill-matrix-baseline-cells.json](spill-matrix-baseline-cells.json).
   pins: h3-spill-1/C-002, C-003, C-004, C-005
+- [spill-coverage-matrix-2026-09-11.md](spill-coverage-matrix-2026-09-11.md) — **NEVEROOM-1
+  step 2 (2026-09-11):** the full-tier D-1 × D-3 run — 9 operators × 2×/4×/8× of a
+  1 GB FairSpillPool × 3 repetitions, each cell a subprocess under
+  `RLIMIT_AS = VmSize_at_apply + 3 × limit` (S2-8), `target_partitions=4`,
+  `batch_size=8192`. 24 of 27 cells fold to a stable three-outcome state;
+  `hash_join-4x` is `KILLED` 3/3 (an un-accounted ~35 MB allocation aborts
+  under the cap — the no-spill-path boundary, upstream epic
+  datafusion#24768), `hash_aggregate-2x` and `window_unbounded-2x` are
+  `UNSTABLE` (refuse↔spill and refuse↔kill races). Both H3-SPILL fixed
+  outcomes reproduce: `nested_loop_join` refuses naming
+  `NestedLoopJoinLoad` with the contained panic in stderr, `collect`
+  refuses as `MemoryError`. Machine CSV:
+  [spill-coverage-matrix-2026-09-11.csv](spill-coverage-matrix-2026-09-11.csv).
+  Harness: [../../python/repark-parity/tests/spill/map.md](../../python/repark-parity/tests/spill/map.md).
+  pins: neveroom-1/C-005, C-006, C-007
 - [approx-percentile-baseline.md](approx-percentile-baseline.md) — **PERF-APPROXPCT-1
   (2026-09-05):** the `percentile_approx` cells before/after the Greenwald-Khanna
   sketch (1e7 wall 2.95 → 0.14 s, peak 2507.8 → 752.9 MB against a 188.6 MB
