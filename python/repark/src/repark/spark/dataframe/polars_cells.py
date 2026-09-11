@@ -6,6 +6,8 @@ from typing import Any
 
 _POLARS_NESTED_DEPTH_CAP = 8
 
+_POLARS_SCIENTIFIC_BOUND = 999999.0
+
 
 def _polars_short_sci(negative: bool, int_part: str, int_digits: int) -> str:
     """Spell an integer float in shortest scientific form (``5e8``, ``1.5e8``)."""
@@ -45,29 +47,18 @@ def _polars_float_text(value: float) -> str:
     negative = fixed.startswith("-")
     unsigned = fixed[1:] if negative else fixed
     int_part, _, frac_part = unsigned.partition(".")
-    int_digits = len(int_part)
-    decimals = len(frac_part)
+    magnitude = abs(value)
     if not frac_part.strip("0"):
-        if int_digits <= 6:
+        if magnitude < _POLARS_SCIENTIFIC_BOUND:
             return fixed
-        if int_digits <= 9:
-            return _polars_short_sci(negative, int_part, int_digits)
+        if len(int_part) + int(negative) <= 9:
+            return _polars_short_sci(negative, int_part, len(int_part))
         return _polars_padded_sci(value)
-    if int_digits >= 8:
-        return _polars_padded_sci(value)
-    if int_digits == 7:
-        if int_digits + decimals >= 9:
+    if len(fixed) > 9:
+        if magnitude < 1e-6 or magnitude > _POLARS_SCIENTIFIC_BOUND:
             return _polars_padded_sci(value)
-        return fixed
-    if decimals <= 6:
-        return fixed
-    if decimals == 7:
-        if int_digits + decimals > 8:
-            return _polars_round_six(value)
-        return fixed
-    if abs(value) < 1e-06:
-        return _polars_padded_sci(value)
-    return _polars_round_six(value)
+        return _polars_round_six(value)
+    return fixed
 
 
 def _polars_nested_text(value: Any, arrow_type: Any | None, *, truncate_at: int | None) -> str:
@@ -115,7 +106,7 @@ def _polars_nested_at_depth(
             _polars_nested_at_depth(item, element_type, truncate_at=truncate_at, depth=depth + 1)
             for item in value
         ]
-        if len(items) > 4:
+        if len(items) > 3:
             return "[" + ", ".join(items[:2]) + ", … " + items[-1] + "]"
         return "[" + ", ".join(items) + "]"
     return _cell_text(value, style="polars", truncate_at=truncate_at)

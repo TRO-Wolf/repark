@@ -37,21 +37,17 @@ any action, or `spark.sql.repl.eagerEval.enabled`. DISPLAY-BRIDGE-1 (2026-09-10)
 (same class, never a polars object) whose shape is read once; `.lazy()` returns to a plan over the
 same relation. `collect()` and `df.pl.collect()` are unchanged.
 **REVIEW-1 fixes (2026-09-10)** — the confirmed findings of the 24-round critic sweep
-([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)), one card at a time.
-**FIX-4:** `.lazy()` on an eager frame no longer interpolates the cache view into SQL, and
-`count()` and the styled preview discharge a pending `localCheckpoint(eager=False)` with no count
-query. **FIX-5:** `DESCRIBE` completes one- and two-part names from the session defaults, a real
-`ice.sales.files` table describes, `Owner` is snapshotted at session build (ADR-0004), and
-`DESCRIBE TABLE EXTENDED` redacts secret-shaped table properties — Spark prints
-`s3.access-key-id` in the clear and RePark deliberately does not. **FIX-1/FIX-2:** the Python config mirror refuses exactly what
-the engine loader refuses (a non-ASCII digit string is not a number) and names both key paths on a
-duplicate; the loader's own pins no longer read the developer's `HOME`. **FIX-6/FIX-11:**
-`explain()` refuses the both-set shape (`extended` with `mode`) the way PySpark does, and every
-documented mode row is pinned. **FIX-7:** a `repark.toml`
-name
-that would break a TOML header refuses, a parse error carries its position but never the offending
-line, and a cloud catalog in a *discovered* file (not one named by `REPARK_CONFIG` or
-`configFile`) warns once at session build.
+([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)). **FIX-4:** `.lazy()`
+no longer interpolates the cache view into SQL; `count()` and the styled preview discharge a
+pending `localCheckpoint(eager=False)` with no count query. **FIX-5:** `DESCRIBE` completes short
+names from session defaults, describes a real `ice.sales.files`, snapshots `Owner` at session build
+(ADR-0004) and redacts secret-shaped table properties (Spark prints `s3.access-key-id`; RePark
+deliberately does not). **FIX-1/2:** the config mirror refuses exactly what the loader refuses and
+names both key paths on a duplicate; the loader's pins no longer read `HOME`. **FIX-3/9/14:** the
+polars renderer matches polars at its row, list and float boundaries; `repark.display.max_rows`
+refuses above 10,000. **FIX-6/11:** `explain()` refuses `extended` with `mode`, as PySpark does.
+**FIX-7:** a `repark.toml` name that would break a TOML header refuses, a parse error never echoes
+the offending line, and a cloud catalog in a *discovered* file warns once at session build.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
 build, and `CALL <catalog>.system.run_maintenance(table => 'db.t', …)` — mirrored as

@@ -1947,6 +1947,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   D-1 — lazy asserts the schema header, row content (oracles, `str_len`, `max_cols`
   elision) moves to eager frames; `show()` pins untouched.
   pins: display-lazy-1/C-001, C-002
+  **REVIEW-FIX-3/9/14** (2026-09-10): `test_polars_max_rows_boundaries_match_live_polars`
+  (max_rows 1/3/5 `show()` byte-compared to `str(pl.from_arrow(table))` under
+  `POLARS_FMT_MAX_ROWS`); `test_show_truncate_true_remaps_to_str_len` (mutation pin —
+  deleting the `truncate=True` → `str_len` remap reds it on a 20-char cut);
+  `test_polars_oracle_list_ellipsis_boundary` (lists of 3/4/5 against the same Arrow
+  table); `test_polars_oracle_float_fixed_scientific_switch` (±999999.0 plus neighbors
+  either side); `test_display_style_unset_reads_session_snapshot_not_env` (post-unset
+  `REPARK_DISPLAY_STYLE` mutation cannot desync `conf.get`/`display_style`/`show`);
+  `test_display_max_rows_ceiling` (refuse-loud above 10_000, at-ceiling accepted).
+  pins: review-fix-3/C-001…C-003, review-fix-9/C-001…C-003, review-fix-14/C-001, C-002
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`

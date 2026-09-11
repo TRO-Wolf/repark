@@ -4066,8 +4066,8 @@ class DataFrame:
         """Print up to ``n`` rows as a text table.
 
         The Spark style limits before collecting. Polars and DuckDB styles show head and tail
-        rows and run an extra count. ``truncate`` controls cell width; ``vertical`` applies only
-        to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
+        rows after probing ``max_rows + 1``, counting only when it fills. ``truncate`` controls
+        cell width; ``vertical`` is Spark-only. INFO logs contain counts; row data is DEBUG-only.
         """
         return display._show(self, n, truncate, vertical)
 

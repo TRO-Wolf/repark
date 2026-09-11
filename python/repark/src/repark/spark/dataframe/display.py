@@ -58,9 +58,10 @@ def _show(
 ) -> None:
     """Print up to ``n`` rows as a text table.
 
-    The Spark style limits before collecting. Polars and DuckDB styles show head and tail
-    rows and run an extra count. ``truncate`` controls cell width; ``vertical`` applies only
-    to the Spark style. INFO logs contain counts, while row data is DEBUG-only.
+    The Spark style limits before collecting. Polars and DuckDB styles probe
+    ``max_rows + 1`` rows first, show head and tail rows, and count only when the
+    probe fills. ``truncate`` controls cell width; ``vertical`` applies only to the
+    Spark style. INFO logs contain counts, while row data is DEBUG-only.
     """
     frame._ensure_alive()
     style = _resolve_display_style(frame)
@@ -381,7 +382,6 @@ def _render_styled_show(
     max_rows, max_cols, _ = _display_session_ints(frame)
     if peeked is None:
         if style == "polars":
-            edge = max_rows // 2
             probe_limit = max_rows + 1
             probe_table = frame.limit(probe_limit).to_arrow()
             if probe_table.num_rows < probe_limit:
@@ -394,9 +394,9 @@ def _render_styled_show(
                 head_n, tail_n = 0, 0
                 if n > 0:
                     keep = min(n, max_rows)
-                    head_n = min(edge, (keep + 1) // 2)
-                    tail_n = min(edge, keep - head_n)
-                use_ellipsis = tail_n > 0
+                    head_n = (keep + 1) // 2
+                    tail_n = keep - head_n
+                use_ellipsis = tail_n > 0 or n >= max_rows
                 head_table = probe_table.slice(0, head_n)
                 tail_table = (
                     frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
@@ -454,13 +454,12 @@ def _render_styled_show(
                 tail_table = None
                 use_ellipsis = False
             else:
-                edge = max_rows // 2
                 head_n, tail_n = 0, 0
                 if n > 0:
                     keep = min(n, max_rows)
-                    head_n = min(edge, (keep + 1) // 2)
-                    tail_n = min(edge, keep - head_n)
-                use_ellipsis = tail_n > 0
+                    head_n = (keep + 1) // 2
+                    tail_n = keep - head_n
+                use_ellipsis = tail_n > 0 or n >= max_rows
                 head_table = peek_table.slice(0, head_n)
                 if tail_n > 0 and peek_table.num_rows < peek_limit:
                     tail_table = peek_table.slice(peek_table.num_rows - tail_n, tail_n)

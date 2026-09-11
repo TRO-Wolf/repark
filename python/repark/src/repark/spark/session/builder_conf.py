@@ -231,10 +231,8 @@ class RuntimeConfig:
             )
         # Honor the unset tomb for display style before any store read, so get and getAll agree.
         if key.lower() == _DISPLAY_STYLE_KEY:
-            if self._display_style_is_unset():
-                if default is not _CONF_GET_UNSET:
-                    return default  # type: ignore[return-value]
-                return default_display_style()
+            if self._display_style_is_unset() and default is not _CONF_GET_UNSET:
+                return default  # type: ignore[return-value]
             return str(self._session._alive_token.get("display_style", _DEFAULT_DISPLAY_STYLE))
         for canonical, fallback in _DISPLAY_INT_DEFAULTS.items():
             if key.lower() != canonical:

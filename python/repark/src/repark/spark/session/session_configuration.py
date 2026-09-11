@@ -419,6 +419,9 @@ def resolve_shuffle_partitions(config: dict[str, str | None]) -> int | None:
 _DEFAULT_DISPLAY_MAX_ROWS = 10
 
 
+_DISPLAY_MAX_ROWS_CEILING = 10_000
+
+
 _DEFAULT_DISPLAY_MAX_COLS = 8
 
 
@@ -536,5 +539,12 @@ def _normalize_display_int(key: str, value: str | int | object) -> int:
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
             f'"{key}" is invalid. '
             f"The value of {key} must be a positive integer."
+        )
+    if key.lower() == "repark.display.max_rows" and parsed > _DISPLAY_MAX_ROWS_CEILING:
+        raise IllegalArgumentException(
+            f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
+            f'"{key}" is invalid. '
+            f"The value of {key} must be a positive integer "
+            f"at most {_DISPLAY_MAX_ROWS_CEILING}."
         )
     return parsed
