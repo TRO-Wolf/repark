@@ -17,18 +17,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `feat/neveroom-1`.
   pins: neveroom-1/C-001, C-002, C-003, C-004
 - [torture-1-ledger.md](torture-1-ledger.md) —
-  **TORTURE-1 steps 1–2 (2026-09-10), in flight:** the torture-test dataset suite —
+  **TORTURE-1 steps 1–3 (2026-09-10), in flight:** the torture-test dataset suite —
   step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,
   `generate` CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested`
   and `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
   target, and registry row `CSV-INFER-INT32-WIDTH`; step 2: the `extreme_types`,
   `smartcsv`, `temporal` and `decimal_overflow` families with both-door cells, registry
   rows `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1`, `DATE-INTERVAL-NSBOUND-1`, and the
-  no-live-Spark labeling. Steps 3–5 pending (`secrets` + the read-option flag, `v3_dv`,
+  no-live-Spark labeling; step 3: the `secrets` family (13 credential-shaped columns from
+  the `prop_key_is_secret` needle set beside `bucket_key` and three ordinary controls)
+  and the `flag_secret_columns = off|warn|refuse` read option honored on the csv/json
+  readers and refused loud elsewhere, pinned on both doors. Steps 4–5 pending (`v3_dv`,
   the full-tier results). `risk_tier: standard`. Branches `feat/torture-1`,
-  `feat/torture-1-s2`.
+  `feat/torture-1-s2`, `feat/torture-1-step-3`.
   pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-011, C-012, C-013, C-014, C-015, C-016
+  C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022,
+  C-023
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →

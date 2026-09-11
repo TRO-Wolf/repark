@@ -15,7 +15,8 @@ The suite needs the native module (the doors are repark's), so run it through
 ## Contents
 
 - `conftest.py` — one session-scoped repark session and session-scoped tier-aware family
-  data (ci: 10k rows in a temp dir; full: `/tmp/torture/<family>` reuse), seed 7.
+  data for every registered family (ci: 10k rows in a temp dir; full:
+  `/tmp/torture/<family>` reuse), seed 7.
 - `_support.py` — the shared helpers: manifest-aware generation, the two door readers, the
   loud-outcome readers, and the loud-rows assertion.
 - `test_torture_nested.py` — the nested cells: protocol conformance, row counts and
@@ -56,15 +57,26 @@ The suite needs the native module (the doors are repark's), so run it through
   value today), and the `AVG` overflow cell green on the measured loud refusal of both
   doors.
   pins: torture-1/C-010, C-011, C-013
+- `test_torture_secrets.py` — the secrets cells (step 3): protocol conformance and the
+  needle-set membership pin (every `FLAGGED_COLUMN_NAMES` entry trips
+  `prop_key_is_secret`; every ordinary name does not — D-4a), row counts and the shared
+  declared schema on both doors for Parquet and CSV, `test_secret_flag_off_warn_refuse`
+  parametrized over both doors (`off` reads clean; `warn` emits exactly one
+  `WARNING: flag_secret_columns=warn` stderr line naming every flagged column and no
+  ordinary one; `refuse` raises `AnalysisException` naming them — for the sql door the
+  temp view is registered from the flagged read itself), the bad-value refusal naming
+  the option and its three values, the option refused loud on readers without the csv/json
+  option map (parquet direct and `format('parquet').load`), and the JSON-door refuse.
+  pins: torture-1/C-017, C-018, C-019
 - `test_generate_is_deterministic.py` — byte-identical same-seed CLI runs per family,
   different-seed bytes, the unknown-family and bad-rows refusals, the repository-internal
   output refusal, and the manifest reuse rule (matching rows+seed reuses, a mismatch
   regenerates).
   pins: torture-1/C-001
-- `test_ci_tier_under_60s.py` — the CI-tier workload pins: both step-1 families and the
-  four step-2 families generate and read on both doors inside the 60-second budget, at the
-  CI row budget regardless of the active tier.
-  pins: torture-1/C-001, C-014
+- `test_ci_tier_under_60s.py` — the CI-tier workload pins: both step-1 families, the
+  four step-2 families and the step-3 secrets family each generate and read on both doors
+  inside the 60-second budget, at the CI row budget regardless of the active tier.
+  pins: torture-1/C-001, C-014, C-022
 - `map.md` — this file.
 - The step's process clauses are recorded in the ledger this map cites: the red-first run
   (the suite failed with `ModuleNotFoundError` before the package existed), the tiered
@@ -75,6 +87,10 @@ The suite needs the native module (the doors are repark's), so run it through
   the honest no-live-Spark labeling, and the gate runs) are in the same ledger under
   C-010 onward.
   pins: torture-1/C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- The step-3 process clauses (the family's red-first `ModuleNotFoundError` run, the flag
+  cells' red run against the unimplemented option, the Rust parser red, D-4a recorded,
+  and the gate runs) are in the same ledger under C-017 onward.
+  pins: torture-1/C-021, C-023
 
 ## Pointers
 

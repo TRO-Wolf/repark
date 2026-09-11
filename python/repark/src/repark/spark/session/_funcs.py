@@ -316,6 +316,7 @@ from repark.spark.session.session_state import (
 _install_state_proxy(_sys.modules[__name__])
 
 from repark.spark.session.reader_support import (
+    _CSV_JSON_ONLY_OPTION_KEYS,
     _CSV_NATIVE_OPTION_KEYS,
     _CSV_UNSUPPORTED_PARSE_OPTIONS,
     _EXCEL_NATIVE_OPTION_KEYS,

@@ -101,7 +101,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the listing families (`list_iceberg_table_names` live list-on-access / `list_temp_view_names`
   / `list_df_schema_table_names`), `refresh_catalog_provider`, `read_parquet` (an
   `s3://`/`s3a://` path lazily registers that bucket's store once — per-session guard),
-  `read_csv` (delegates to `read_options::read_csv_path`) / `read_json` (Spark-style option maps), `read_iceberg_table` + `TimeTravelOpts`
+  `read_csv` (delegates to `read_options::read_csv_path`) / `read_json` (Spark-style option maps; both apply the `flag_secret_columns` policy on the read schema — D-4), `read_iceberg_table` + `TimeTravelOpts`
   (snapshot-id / as-of-timestamp / branch / tag, mutual exclusion), and the `testing_` seams
   (`testing_create_ref` / `testing_list_snapshots` / `testing_oob_create_table` /
   `testing_oob_drop_table`). Excel/postgres readers are deferred with their crates. The file's
@@ -219,8 +219,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   fields with embedded newlines infer at any record count. Round 5: an embedded
   newline inside the header still raises (line-based first-record read);
   DECLARED `CSV-INFER-HEADER-NEWLINE`.
+  **TORTURE-1 step 3 (D-4/D-4a):** `flag_secret_columns` = `off|warn|refuse` (default
+  `off`; `flagsecretcolumns` is the folded alias; any other value refuses naming the
+  option and the three values, before any I/O). `read_csv_path` applies the flag once on
+  the final frame and `session.rs::read_json` does the same: `warn` eprintln's one
+  `WARNING: flag_secret_columns=warn` line naming the flagged top-level columns,
+  `refuse` raises `Error::Analysis` naming them — `prop_key_is_secret` on each schema
+  name verbatim, no nested walk, no value inspection. Readers without the csv/json
+  option map (parquet, table) never see the key; the facade refuses it loud there.
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
+  pins: torture-1/C-018, C-020
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk

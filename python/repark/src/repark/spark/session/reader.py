@@ -930,7 +930,7 @@ class DataFrameReader:
             if lowered == "path":
                 continue
             # compression is wired for csv/json; still loud on parquet/iceberg/empty.
-            if lowered == "compression":
+            if lowered in _CSV_JSON_ONLY_OPTION_KEYS:
                 if fmt in {"csv", "json"}:
                     continue
                 raise AnalysisException(

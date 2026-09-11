@@ -805,11 +805,15 @@ impl ReparkSession {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
             self.ensure_s3_bucket_registered(&bucket)?;
         }
+        let flag = crate::read_options::secret_column_flag(options)?;
         let json_options = json_read_options_from_map(options)?;
-        self.context()
+        let frame = self
+            .context()
             .read_json(path, json_options)
             .await
-            .map_err(engine_err)
+            .map_err(engine_err)?;
+        crate::read_options::apply_secret_column_flag(flag, frame.schema().as_ref())?;
+        Ok(frame)
     }
 
     /// Read an Iceberg catalog table, optionally pinned to a snapshot / ref / timestamp.

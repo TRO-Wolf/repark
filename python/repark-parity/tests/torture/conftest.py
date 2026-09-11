@@ -80,3 +80,9 @@ def temporal_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
 def decimal_overflow_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
     """The decimal_overflow family's generated files at the active tier."""
     return _family_output("decimal_overflow", tmp_path_factory)
+
+
+@pytest.fixture(scope="session")
+def secrets_data(tmp_path_factory: pytest.TempPathFactory) -> FamilyOutput:
+    """The secrets family's generated files at the active tier."""
+    return _family_output("secrets", tmp_path_factory)
