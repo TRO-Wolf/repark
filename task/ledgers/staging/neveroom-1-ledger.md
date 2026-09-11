@@ -108,9 +108,46 @@ matrix under them.
 | `uvx ruff@0.15.22 format --check python/repark-parity/tests/spill/` | 0 |
 | comment fence `git diff --cached … \| grep -P '^\+\s*(//\|#(?! noqa))'` | no match, both commits |
 
+# Step 2 — the full 27-cell matrix on the idle release box
+
+**Date:** 2026-09-11 · **Branch:** `feat/neveroom-1-step-2` · **Model:** swe-2-high
+**Commits:** `7920c70a` (roster + kinds + driver), `0cf94b02` (roster trued against
+measured plans).
+
+**Rulings applied:** S2-8 closed Q-1 — `RLIMIT_AS = VmSize_at_apply + 3 × limit`
+after session construction, verified by read-back (measured cap ≈ 11.8 GB over a
+≈ 8.6 GB baseline). S2-9 closed Q-2 — `refused` is `MemoryError` or a
+`PySparkException`-family exception naming the row's measured `refusal_names`;
+everything else folds to `KILLED`. The step-1 harness already implements both.
+
+## PROPOSITION LEDGER — NEVEROOM-1 step 2 — 2026-09-11
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-005 | The D-1 roster is complete — the nine carded operators (`sort`, `hash_aggregate`, `hash_join`, `sort_merge_join`, `window_sliding`, `window_unbounded`, `dynamic_flatten`, `nested_loop_join`, `collect`) × the three multipliers 2×/4×/8× at the 1 GB limit = 27 cells, each forcing its named physical operator with measured `refusal_names`. | The `FULL_CELLS` roster in `matrix_cells.py` plus the per-cell `EXPLAIN` sidecar + `plan_operators` payload | **PROVEN** | 27 cells generated. Plan text proves the operator, not the name: `SortMergeJoinExec` appears only under `prefer_hash_join=false`; `NestedLoopJoinExec` carries `RepartitionExec` under `CoalescePartitionsExec` on the build side (the H3 panic shape — a passthrough projection plans without it and measures nothing); `UnnestExec` for the flatten kind; `WindowAggExec`/`BoundedWindowAggExec` for the windows. Two roster drafts failed measurement before the run: window SQLs that dropped `payload` measured a pruned 8-byte scan (0.6 s no-ops), and the NLJ build side had to carry the sized payload to load the pool. |
+| C-006 | The full matrix ran on the idle release box — `pgrep -x java`/`cargo`/`rustc`/`maturin` all empty at launch — on the release module (`repark._native.__debug_assertions__ == False`), three repetitions per cell, one subprocess each; every cell's row is in `docs/perf/spill-coverage-matrix-2026-09-11.{csv,md}` with its folded outcome; `KILLED`/`UNSTABLE` are reported as such, never re-labelled. | `matrix_run.py --reps 3` run log + the committed CSV/document | **PROVEN** | 81 worker runs, ~9.7 min total on the idle box. Folded: 24 cells stable, `hash_join-4x` KILLED 3/3 (SIGABRT, "memory allocation of ~35 MB failed"), `hash_aggregate-2x` UNSTABLE (refused/spilled/refused — rep 2 spilled 7 350 412 902 B in 170 files), `window_unbounded-2x` UNSTABLE (refused/refused/KILLED). `datafusion.execution.batch_size=8192` is pinned for the full tier because the default 65536-row `generate_series` batch is ~560 MB at 8× — an un-accounted scan allocation that aborted workers before the operator ran (measured: sort-8x, hash_aggregate, hash_join KILLED pre-fix). |
+| C-007 | The H3-SPILL rows reproduce their FIXED outcomes — `nested_loop_join` refuses with a typed exception (the contained panic), `collect` refuses as `MemoryError` — and every cannot-spill cell names its upstream DataFusion issue URL in the document's notes. | The matrix document's H3 section + D-4 notes column | **PROVEN** | `nested_loop_join` refused 9/9 as `PySparkException` naming `NestedLoopJoinLoad[0]` (`fair(pool_size: 1024.0 MB)`) with the contained `repartition/mod.rs:1277: partition not used yet` panic in worker stderr — the H3-SPILL-NLJ-1 fixed outcome. `collect` refused 9/9 as `MemoryError` — the H3-SPILL-COLLECT-1 fixed outcome. D-4 notes cite datafusion#24768 (hash join), #24661 (NLJ fallback re-execution), #22758 (un-accounted operators: windows, UnnestExec, facade boundary) — all fetched and verified open/real 2026-09-11. |
+
+VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED. The matrix documents two honest
+boundary failures the card's done-when cannot erase: `hash_join-4x` is KILLED 3/3 and
+`hash_aggregate-2x` / `window_unbounded-2x` are UNSTABLE — all three are upstream
+memory-boundary behavior (no spill path, no accounting), reported verbatim per the
+step's never-re-label rule; the fixes are W-3/upstream, not this card.
+
+## Step-2 gates
+
+| Gate | Exit |
+|---|---|
+| `make py-test-spill-matrix` | 0 (6 passed) |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 |
+| `python3 scripts/check_docs_links.py` | 0 |
+| `make verify` | 0 |
+| comment fence (each commit) | no match |
+| `uvx ruff@0.15.22 check` / `format --check` on `tests/spill/` | 0 |
+
 ```yaml
 COVERAGE_ATTESTATION:
-  pr_unit: neveroom-1-step-1
+  pr_unit: neveroom-1
   categories:
     - id: AT-1
       status: ATTACKED
@@ -126,8 +163,8 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark-parity/tests/spill/test_generator_sizing.py, python/repark-parity/tests/spill/matrix_generators.py]
     - id: AT-4
       status: ATTACKED
-      evidence: One cell per subprocess; the worker applies the address-space cap after the session builds and verifies it by read-back; the record carries rlimit_as_bytes and vm_size_at_cap so the arithmetic is auditable per run.
-      artifacts: [python/repark-parity/tests/spill/matrix_worker.py, python/repark-parity/tests/spill/test_ci_tier_cell.py]
+      evidence: One cell per subprocess; the worker applies the address-space cap after the session builds and verifies it by read-back; the record carries rlimit_as_bytes and vm_size_at_cap so the arithmetic is auditable per run. Step 2 ran the same isolation over all 81 full-tier runs and the records carry the cap fields.
+      artifacts: [python/repark-parity/tests/spill/matrix_worker.py, python/repark-parity/tests/spill/test_ci_tier_cell.py, python/repark-parity/tests/spill/matrix_run.py]
     - id: AT-5
       status: N/A
       justification: No dependency, lockfile, or workflow change; the Makefile gains one target only.
@@ -136,8 +173,8 @@ COVERAGE_ATTESTATION:
       justification: No product code changed; the harness is measurement-only under tests/.
     - id: AT-7
       status: ATTACKED
-      evidence: Outcomes are read from the engine's own runtime metrics through the reused H3 parser, never from wall time; the record's wall_ms is labeled observability, not a claim, and no timing is asserted anywhere.
-      artifacts: [python/repark-parity/tests/spill/matrix_worker.py]
+      evidence: Outcomes are read from the engine's own runtime metrics through the reused H3 parser, never from wall time; the record's wall_ms is labeled observability, not a claim, and no timing is asserted anywhere. Step 2's measured fixes are recorded in C-005/C-006 (batch_size=8192, payload carried through every measured operator, SortPreservingMergeExec added to refusal names after a measured mis-fold).
+      artifacts: [python/repark-parity/tests/spill/matrix_worker.py, python/repark-parity/tests/spill/matrix_cells.py]
     - id: AT-8
       status: N/A
       justification: No dependency or lockfile change; Cargo.toml and Cargo.lock are untouched.
@@ -146,7 +183,7 @@ COVERAGE_ATTESTATION:
       justification: No concurrency or shared state; one worker subprocess per cell, sequential.
     - id: AT-10
       status: ATTACKED
-      evidence: Every touched directory's map.md moves in the same commit — tests/spill/map.md, tests/map.md and the staging ledger map — and the reused bench parser is pointed at, not copied.
-      artifacts: [python/repark-parity/tests/spill/map.md, python/repark-parity/tests/map.md, task/ledgers/staging/map.md]
+      evidence: Every touched directory's map.md moves in the same commit — tests/spill/map.md, tests/map.md, docs/perf/map.md and the staging ledger map — and the reused bench parser is pointed at, not copied.
+      artifacts: [python/repark-parity/tests/spill/map.md, python/repark-parity/tests/map.md, task/ledgers/staging/map.md, docs/perf/map.md]
   complete: true
 ```

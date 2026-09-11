@@ -178,3 +178,4 @@ Makefile target `py-test-spill-matrix` is deliberately absent from
 - Ledger: [../../../../task/ledgers/staging/neveroom-1-ledger.md](../../../../task/ledgers/staging/neveroom-1-ledger.md)
 - Reused probe parser: [../../bench/spill/map.md](../../bench/spill/map.md)
   (`spill.plan_metrics`, the H3-SPILL-1 harness)
+- Matrix document: [../../../../docs/perf/spill-coverage-matrix-2026-09-11.md](../../../../docs/perf/spill-coverage-matrix-2026-09-11.md)
