@@ -158,29 +158,23 @@ def test_describe_table_show_truncate_false_prints(
 def test_describe_table_live_matches_capture_and_repark(tmp_path: Path) -> None:
     """Live leg: the step-1 capture re-measures equal; repark matches it row for row."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
-    owned = SparkSession.getActiveSession() is None
     oracle = live_parity.build_spark_iceberg_engine(tmp_path / "spark-wh")
     session = oracle.session
-    try:
-        session.sql("CREATE NAMESPACE IF NOT EXISTS local.dsns1")
-        session.sql(
-            "CREATE TABLE local.dsns1.t1 "
-            "(id BIGINT COMMENT 'the row identifier', name STRING, ts TIMESTAMP) "
-            "USING iceberg PARTITIONED BY (days(ts)) TBLPROPERTIES ('k'='v')"
-        )
-        live_plain = [tuple(row) for row in session.sql("DESCRIBE local.dsns1.t1").collect()]
-        live_schema = session.sql("DESCRIBE local.dsns1.t1").schema
-        live_extended = [
-            tuple(row) for row in session.sql("DESCRIBE TABLE EXTENDED local.dsns1.t1").collect()
-        ]
-        live_formatted = [
-            tuple(row) for row in session.sql("DESCRIBE TABLE FORMATTED local.dsns1.t1").collect()
-        ]
-    finally:
-        if owned:
-            session.stop()
+    session.sql("CREATE NAMESPACE IF NOT EXISTS local.dsns1")
+    session.sql(
+        "CREATE TABLE local.dsns1.t1 "
+        "(id BIGINT COMMENT 'the row identifier', name STRING, ts TIMESTAMP) "
+        "USING iceberg PARTITIONED BY (days(ts)) TBLPROPERTIES ('k'='v')"
+    )
+    live_plain = [tuple(row) for row in session.sql("DESCRIBE local.dsns1.t1").collect()]
+    live_schema = session.sql("DESCRIBE local.dsns1.t1").schema
+    live_extended = [
+        tuple(row) for row in session.sql("DESCRIBE TABLE EXTENDED local.dsns1.t1").collect()
+    ]
+    live_formatted = [
+        tuple(row) for row in session.sql("DESCRIBE TABLE FORMATTED local.dsns1.t1").collect()
+    ]
 
     assert [field.nullable for field in live_schema] == [False, False, True]
     assert live_plain == PLAIN_ROWS

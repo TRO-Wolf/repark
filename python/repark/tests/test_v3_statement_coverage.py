@@ -208,8 +208,7 @@ def _live_session(warehouse: Path):
     from pyspark.sql import SparkSession
 
     session = SparkSession.getActiveSession()
-    owned = session is None
-    if owned:
+    if session is None:
         builder = (
             SparkSession.builder.master("local[2]")
             .appName("v3-cov-live")
@@ -233,7 +232,7 @@ def _live_session(warehouse: Path):
     session.conf.set(f"spark.sql.catalog.{_CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.type", "hadoop")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.warehouse", str(warehouse))
-    return session, owned
+    return session
 
 
 def _seed_spark(session, target: str, seed: _Seed) -> None:
@@ -301,17 +300,15 @@ def _as_golden(outcome: dict[str, Any]) -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def coverage_session() -> Iterator[Any]:
-    """One live Spark session for the whole matrix, stopped only when this module created it."""
+    """One live Spark session for the whole matrix — the shared context is never stopped."""
     if not _LIVE:
         pytest.skip(_LIVE_SKIP)
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v3cov-live-"))
-    session, owned = _live_session(warehouse)
+    session = _live_session(warehouse)
     session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
     try:
         yield session
     finally:
-        if owned:
-            session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 

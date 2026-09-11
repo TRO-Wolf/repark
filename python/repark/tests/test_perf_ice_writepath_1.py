@@ -293,7 +293,6 @@ def test_partition_writers_answer_the_single_writer_at_scale(tmp_path: Path) -> 
 def test_written_table_row_set_matches_spark(tmp_path: Path) -> None:
     """C-008: Spark's own CTAS of the same seed produces the same row set as the write node."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     source = _seed_files(tmp_path / "seed", 20_000, SEED_FILES)
     engine = _session("writepath-rowset", tmp_path / "wh")
@@ -309,24 +308,17 @@ def test_written_table_row_set_matches_spark(tmp_path: Path) -> None:
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     warehouse = tmp_path / "spark-wh"
     oracle = live_parity.build_spark_iceberg_engine(warehouse)
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
-        session.sql(
-            f"CREATE TABLE {catalog}.w.rows USING iceberg PARTITIONED BY (part) "
-            "AS SELECT * FROM spark_src"
-        )
-        spark_rows = session.sql(
-            f"SELECT id, part, label FROM {catalog}.w.rows ORDER BY id"
-        ).toPandas()
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+    session.sql(
+        f"CREATE TABLE {catalog}.w.rows USING iceberg PARTITIONED BY (part) "
+        "AS SELECT * FROM spark_src"
+    )
+    spark_rows = session.sql(f"SELECT id, part, label FROM {catalog}.w.rows ORDER BY id").toPandas()
 
     assert engine_rows.num_rows == len(spark_rows)
     assert [value.as_py() for value in engine_rows.column("id")] == list(spark_rows["id"])

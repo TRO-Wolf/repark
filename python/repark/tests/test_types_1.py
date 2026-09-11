@@ -762,7 +762,7 @@ def test_live_recoercion_shapes_match_the_oracle(spark_engine: lp.Engine) -> Non
     mine = _live_type(engine, mapping)
     spark = _live_type(spark_engine, mapping)
     assert (mine[0], mine[2]) == (spark[0], spark[2])
-    assert (mine[1], spark[1]) == (True, False)
+    assert mine[1] is spark[1] is False
     array_query = "SELECT array(1, 2) AS r"
     mine_nested = _live_array_cell(engine.arrow_of(engine.session.sql(array_query)))
     spark_nested = _live_array_cell(spark_engine.arrow_of(spark_engine.session.sql(array_query)))

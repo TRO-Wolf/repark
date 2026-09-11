@@ -186,22 +186,23 @@ def build_spark_engine() -> Engine:
     )
 
 
-def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) -> Engine:
+def build_spark_iceberg_engine(
+    warehouse: Path, session_conf: SessionConf = (), *, catalog: str | None = None
+) -> Engine:
     """Live PySpark + Iceberg engine for multi-statement table lifecycle scenarios.
 
     The default live session has no Iceberg catalog; under ``REPARK_PARITY_LIVE=1`` the module
-    arms ``PYSPARK_SUBMIT_ARGS`` with the pinned GAV (from :mod:`_oracle_pins`) so the first
-    SparkContext can resolve ``SparkCatalog``. Only lifecycle tests request this engine. Pins a
-    local Hadoop catalog rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC,
-    ``local[2]``. ``session_conf`` is applied at BUILD time (the session is not shared with the
-    plain spark engine, so build-time application is safe).
+    arms ``PYSPARK_SUBMIT_ARGS`` with the pinned GAV so the first SparkContext can resolve
+    ``SparkCatalog``. Pins a Hadoop catalog ``catalog`` at ``warehouse``, extensions, ANSI on,
+    UTC, ``local[2]``; ``session_conf`` applies at BUILD time. ``catalog`` binds its warehouse
+    once for the shared session's life — pass a private name for a private warehouse.
     """
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession, Window
     from pyspark.sql import functions as sfunctions
     from pyspark.sql import types as stypes
 
-    catalog = LIFECYCLE_SPARK_CATALOG
+    catalog = catalog if catalog is not None else LIFECYCLE_SPARK_CATALOG
     builder = (
         SparkSession.builder.master("local[2]")
         .appName("repark-parity-live-iceberg")
@@ -221,7 +222,6 @@ def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) 
     for key, value in session_conf:
         builder = builder.config(key, value)
     session = builder.getOrCreate()
-    # Catalog keys are session-level; if getOrCreate reused an earlier context, set them live.
     session.conf.set(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
     session.conf.set(f"spark.sql.catalog.{catalog}.type", "hadoop")
     session.conf.set(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
@@ -243,9 +243,6 @@ def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[No
     The oracle session spans the whole pytest run (one JVM), so an override must be reversible
     or it leaks into every later scenario.
     """
-    if not session_conf:
-        yield
-        return
     previous = {key: engine.session.conf.get(key) for key, _ in session_conf}
     try:
         for key, value in session_conf:
@@ -253,7 +250,10 @@ def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[No
         yield
     finally:
         for key, value in previous.items():
-            engine.session.conf.set(key, value)
+            if value is None:
+                engine.session.conf.unset(key)
+            else:
+                engine.session.conf.set(key, value)
 
 
 def run_scenario(scenario: Scenario, engine: Engine) -> pa.Table:

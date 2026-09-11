@@ -413,15 +413,12 @@ def test_mixed_dense_widths_loud() -> None:
 
 def test_live_pyspark_uid_and_explain_shape() -> None:
     """Live oracle: uid regex + explainParams key names (importorskip JVM)."""
-    spark = _maybe_live_spark()
-    try:
-        from pyspark.ml.feature import StringIndexer
+    _maybe_live_spark()
+    from pyspark.ml.feature import StringIndexer
 
-        indexer = StringIndexer(inputCol="a", outputCol="b")
-        assert re.fullmatch(r"StringIndexer_[0-9a-f]{8,}", indexer.uid), indexer.uid
-        explained = indexer.explainParams()
-        assert "inputCol:" in explained
-        assert "outputCol:" in explained
-        assert "stringOrderType:" in explained
-    finally:
-        spark.stop()
+    indexer = StringIndexer(inputCol="a", outputCol="b")
+    assert re.fullmatch(r"StringIndexer_[0-9a-f]{8,}", indexer.uid), indexer.uid
+    explained = indexer.explainParams()
+    assert "inputCol:" in explained
+    assert "outputCol:" in explained
+    assert "stringOrderType:" in explained

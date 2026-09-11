@@ -786,32 +786,29 @@ def test_kmeans_random_init_two_blobs() -> None:
 def test_linear_regression_live_pyspark_parity() -> None:
     """Well-conditioned coefficients within 1e-6 rel of live Spark 4.x OLS."""
     spark_jvm = _maybe_live_spark()
-    try:
-        from pyspark.ml.feature import VectorAssembler as SparkVA
-        from pyspark.ml.regression import LinearRegression as SparkLR
+    from pyspark.ml.feature import VectorAssembler as SparkVA
+    from pyspark.ml.regression import LinearRegression as SparkLR
 
-        data = [
-            (1.0, 0.0, 3.0),
-            (0.0, 1.0, 0.5),
-            (1.0, 1.0, 2.5),
-            (2.0, 1.0, 4.5),
-            (1.0, 2.0, 2.0),
-            (3.0, 2.0, 6.0),
-            (4.0, 1.0, 8.5),
-            (2.0, 3.0, 3.5),
-        ]
-        sdf = spark_jvm.createDataFrame(data, ["x0", "x1", "label"])
-        s_assembled = SparkVA(inputCols=["x0", "x1"], outputCol="features").transform(sdf)
-        s_model = (
-            SparkLR(featuresCol="features", labelCol="label", standardization=False)
-            .setElasticNetParam(0.0)
-            .setRegParam(0.0)
-            .fit(s_assembled)
-        )
-        s_intercept = float(s_model.intercept)
-        s_coefs = [float(c) for c in s_model.coefficients.toArray()]
-    finally:
-        spark_jvm.stop()
+    data = [
+        (1.0, 0.0, 3.0),
+        (0.0, 1.0, 0.5),
+        (1.0, 1.0, 2.5),
+        (2.0, 1.0, 4.5),
+        (1.0, 2.0, 2.0),
+        (3.0, 2.0, 6.0),
+        (4.0, 1.0, 8.5),
+        (2.0, 3.0, 3.5),
+    ]
+    sdf = spark_jvm.createDataFrame(data, ["x0", "x1", "label"])
+    s_assembled = SparkVA(inputCols=["x0", "x1"], outputCol="features").transform(sdf)
+    s_model = (
+        SparkLR(featuresCol="features", labelCol="label", standardization=False)
+        .setElasticNetParam(0.0)
+        .setRegParam(0.0)
+        .fit(s_assembled)
+    )
+    s_intercept = float(s_model.intercept)
+    s_coefs = [float(c) for c in s_model.coefficients.toArray()]
 
     spark = _session()
     try:

@@ -495,7 +495,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,
   `from_unixtime` always nullable like Spark 4.1.2. The array/struct/map cell flags
-  converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal).
+  converged non-null 2026-09-06 (NULLABILITY-2 round 2, Spark-equal); the live
+  re-coercion leg's map flag cell caught up to that convergence on 2026-09-11
+  (NIGHTLY-LIVE-1 — the pin still expected the retired divergence).
 - [test_date_fn_1.py](test_date_fn_1.py) — **DATE-FN-1 (2026-09-04):** Spark SQL `date()` Clock-flake fix (2026-09-05): the zero-arg pin asserts each door repeats one value per row and the two doors agree within one second, since the two statements run in different seconds (it straddled a second boundary in three CI runs).
   and `unix_timestamp` unit pins (timestamp / string / date / NULL; invalid string ANSI on
   and off; zero-arg `FROM range(3)` is three identical BIGINT rows on SQL and the facade).
@@ -1726,6 +1728,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   JVM: a fixture imported into a second module would register a second definition and build a
   second session. `spark_iceberg_engine` stays in `test_parity_live.py` (single consumer).
   pins: perf-dynflatten-1-measure/C-002
+  **NIGHTLY-LIVE-1 (2026-09-11):** the suite rule is *no test ever calls `.stop()` on a PySpark
+  session* — every session shares the one JVM SparkContext the oracle runs on, so a stop
+  anywhere kills the shared oracle (the red nightly of 2026-09-05+). The autouse
+  `_shared_oracle_context_guard` fixture enforces it: under `REPARK_PARITY_LIVE=1`, once
+  `pyspark` is imported, it fails the test that left the oracle's `_jsc` stopped or swapped.
+  `spark_engine` no longer stops its session at teardown for the same reason; `ReparkSession.stop()`
+  (no JVM) is unaffected. pins: nightly-live-1/C-001, C-002, C-003, C-004
   **DISPLAY-POLARS-1 step 1 (2026-09-09):** pins `spark` at import via
   `os.environ.setdefault("REPARK_DISPLAY_STYLE", "spark")`, before any session exists, so the
   flipped `polars` default changes no existing expectation. pins: display-polars-1/C-002
@@ -3119,6 +3128,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
+  **NIGHTLY-LIVE-1 (2026-09-11):** the whole suite shares ONE context and ONE session, so
+  `spark_session_conf` restores a never-set key via `conf.unset` (restore-by-set of `None`
+  raises), and `build_spark_iceberg_engine` takes a `catalog` name — a hadoop catalog binds its
+  warehouse at first use and keeps it for the session's life, so a lifecycle site that asserts
+  on warehouse files or reuses a table name (`v3e5part`, `v3e5del`, `v3_10_upg`, `wo_meta`,
+  `wo_nested`, and the pre-existing `v312legacy`/`v3cov`/`sqlh1`/`v3_11_file_order`) passes a
+  private name; the shared `local` stays for sites that only query through SQL.
 - `test_perf_ice_catalog_io_1.py` — **PERF-ICE-CATALOG-IO-1 (2026-09-05; RP-12 landed F-CATIO at
   pin `79119643`; IO-2 un-skipped the part-3 pin):** the catalog-IO
   census and the manifest target on the memory catalog. The instrument is

@@ -68,10 +68,7 @@ def spark_oracle() -> Iterator[SparkSession]:
         )
     except Exception as error:
         pytest.skip(f"PySpark gateway unavailable for mapInArrow oracle: {error}")
-    try:
-        yield session
-    finally:
-        session.stop()
+    yield session
 
 
 def test_oracle_mapinarrow_values(spark_oracle: SparkSession) -> None:

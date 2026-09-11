@@ -155,7 +155,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split construction, conversion, and nested-operation families.",
     ),
     "python/repark/tests/test_ml_boost_oracle.py": (
-        2244,
+        2241,
         "Boosted-model oracle cases and fixtures share one module.",
         "Split estimator families while retaining the independent oracle boundary.",
     ),
