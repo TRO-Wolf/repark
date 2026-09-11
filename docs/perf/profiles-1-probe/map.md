@@ -20,12 +20,19 @@ for the script-relative `WORK` directory.
   `<work>` in every plan so two runs agree byte for byte. Run data stays under the
   system temporary root for the operator to delete. Pinned by
   `python/repark/tests/test_profiles1_probe_rerun.py`.
+  **CONF-UNREAD-1 step 1 (2026-09-11):** a key whose build refuses is recorded as
+  `outcome: refused` with the message (plus a `conf.set` probe on an unkeyed
+  session) instead of aborting the run; `write_batch_size` carries a `["write"]`
+  subject so its file-visible signal is measured.
 - [profiles1_probe2.py](profiles1_probe2.py) — multi-file follow-up on an 8-file
   directory subject: `pushdown_filters=false`, `repartition_file_scans=false`,
   `coalesce_batches=false` (alone and with `target_partitions=1`) against a
   same-process baseline. Produces the probe-2 rows the document cites. Same
   REVIEW-FIX-8 guards as the main probe (temporary directory, `REPARK_CONFIG=""`,
   `<work>` scrub).
+  **CONF-UNREAD-1 step 1 (2026-09-11):** a case whose build refuses is recorded as
+  `{"refused": message}` and the run continues, so the two `coalesce_batches`
+  cases now capture the refusal instead of aborting.
 
 ## Pointers
 

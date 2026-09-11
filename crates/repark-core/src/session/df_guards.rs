@@ -10,12 +10,23 @@ use datafusion::logical_expr::LogicalPlan;
 use datafusion::optimizer::{AnalyzerRule, ApplyOrder, Optimizer, OptimizerConfig, OptimizerRule};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
+use repark_common::Error;
+
 use crate::extension::SessionExtension;
 
 mod window_rescan;
 
 /// DataFusion's own name for the pass-2 leaf-projection rule.
 const LEAF_PUSHDOWN_RULE_NAME: &str = "push_down_leaf_projections";
+
+pub(super) const DEAD_DATAFUSION_54_1_KEYS: &[&str] = &["datafusion.execution.coalesce_batches"];
+
+pub(super) fn dead_datafusion_54_1_refusal(key: &str, value: &str) -> Error {
+    Error::Config(format!(
+        "unsupported DataFusion session config '{key}' = '{value}': DataFusion 54.1.0 defines \
+         the option but no engine path reads it, so the value cannot take effect"
+    ))
+}
 
 /// DF 54.1 regression guard 1 of 2 — applied as a CORE `SessionConfig` default.
 pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {

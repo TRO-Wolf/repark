@@ -60,6 +60,18 @@ else. The next pickup's `make ledger-archive` files everything here under
   to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
   Branch `feat/ballista-m1-d`.
   pins: ballista-m1-d/C-001, C-002, C-003
+- [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
+  **CONF-UNREAD-1 steps 1–2 (2026-09-11), in flight:** the wiring/refusals for
+  the four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses
+  loud at build and at runtime `SET` (no DataFusion 54.1.0 engine path reads
+  it); `enable_page_index`, `bloom_filter_on_read` and `write_batch_size` are
+  wired (values reach the scan-source / writer options; the write subject moves
+  file bytes); the probe re-run carries nineteen accepted keys, one refusal,
+  and nine validation refusals. Step 2: the probe tables gained the
+  `after CONF-UNREAD-1` column (`ACCEPTED BUT UNREAD` zero), §5's counts were
+  re-derived, and the guide gained the `datafusion.*` forwarding/refusal
+  paragraph. `risk_tier: standard`. Branch `feat/conf-unread-1`.
+  pins: conf-unread-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [df-eager-1-ledger.md](df-eager-1-ledger.md) —
   **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
   facade DataFrame. Step 1 only: the red-first pins in

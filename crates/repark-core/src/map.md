@@ -439,7 +439,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin
   `bare_session_without_extension_carries_df_54_1_subquery_guard`, NEW — outside the ported
-  census).
+  census)
+  and `tests/conf_unread.rs` (CONF-UNREAD-1 step 1: the four accepted-but-unread
+  keys — coalesce refusal plus three wiring pins).
 
 ## Pointers
 

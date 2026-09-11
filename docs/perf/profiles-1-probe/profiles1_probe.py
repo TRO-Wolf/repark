@@ -33,7 +33,7 @@ KEYS = [
     ("datafusion.execution.parquet.compression", "uncompressed", ["write"]),
     ("datafusion.execution.parquet.max_row_group_size", "1000", ["write"]),
     ("datafusion.execution.parquet.bloom_filter_on_write", "true", ["write"]),
-    ("datafusion.execution.parquet.write_batch_size", "1000", []),
+    ("datafusion.execution.parquet.write_batch_size", "1000", ["write"]),
     ("write.target-file-size-bytes", "134217728", []),
     ("write.distribution-mode", "hash", []),
     ("repark.merge.file_scoped_rewrite", "true", []),
@@ -187,7 +187,17 @@ def main() -> None:
 
     for key, value, subjects in KEYS:
         entry: dict[str, object] = {"set_value": value, "subjects": subjects}
-        session = open_session([(key, value)])
+        try:
+            session = open_session([(key, value)])
+        except Exception as error:
+            entry["outcome"] = "refused"
+            entry["refusal"] = str(error)
+            unkeyed = open_session([])
+            entry["runtime_set"] = runtime_probe(unkeyed, key, value)
+            unkeyed.stop()
+            report["keys"][key] = entry
+            continue
+        entry["outcome"] = "accepted"
         entry["conf_get"] = session.conf.get(key)
         entry["conf_getall"] = session.conf.getAll.get(key)
         write_path = WORK / ("out_" + key.replace(".", "_").replace("-", "_"))

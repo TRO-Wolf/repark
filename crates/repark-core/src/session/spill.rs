@@ -9,6 +9,7 @@ use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_common::{Error, Result};
 
+use super::df_guards::{DEAD_DATAFUSION_54_1_KEYS, dead_datafusion_54_1_refusal};
 use crate::engine_err;
 use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool, pool_refusal_log};
 
@@ -195,6 +196,12 @@ pub(crate) fn maybe_apply_runtime_set(
     };
     if key.eq_ignore_ascii_case(TEMP_DIRECTORY_KEY) {
         return Err(Error::Config(TEMP_DIRECTORY_RUNTIME_REFUSAL.to_string()));
+    }
+    if DEAD_DATAFUSION_54_1_KEYS
+        .iter()
+        .any(|dead| key.eq_ignore_ascii_case(dead))
+    {
+        return Err(dead_datafusion_54_1_refusal(&key, &value));
     }
     if !key.eq_ignore_ascii_case(MEMORY_LIMIT_KEY) {
         return Ok(None);

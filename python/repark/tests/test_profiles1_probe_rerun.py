@@ -63,14 +63,25 @@ def test_probe_ignores_a_poisoned_discovered_config(tmp_path: Path) -> None:
 
 
 def test_probe_output_holds_the_table_inputs() -> None:
-    """D-2/D-3: twenty accepted-and-readable keys, nine loud validation refusals."""
+    """CONF-UNREAD-1 D-2: nineteen accepted keys, one loud refusal, nine validation refusals."""
     run = _run_probe(_clean_env())
     assert run.returncode == 0, run.stderr[-2000:]
     report = json.loads(run.stdout)
     assert len(report["keys"]) == 20
+    refused = report["keys"]["datafusion.execution.coalesce_batches"]
+    assert refused["outcome"] == "refused"
+    assert "datafusion.execution.coalesce_batches" in refused["refusal"]
+    assert refused["runtime_set"]["set"] == "refused"
     for key, entry in report["keys"].items():
+        if entry["outcome"] == "refused":
+            continue
         assert entry["conf_get"] == entry["set_value"], key
         assert entry["runtime_set"]["set"] == "accepted", key
+    written = report["keys"]["datafusion.execution.parquet.write_batch_size"]["measured"]["write"]
+    baseline_write = report["baseline"]["write"]
+    assert written["part_files"] == baseline_write["part_files"]
+    assert written["row_groups"] == baseline_write["row_groups"]
+    assert written["bytes"] != baseline_write["bytes"]
     assert len(report["validation"]) == 9
     for name, probe in report["validation"].items():
         assert probe["outcome"] == "refused", name

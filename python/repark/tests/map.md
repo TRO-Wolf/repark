@@ -4081,6 +4081,17 @@ pins: fnp-8-review/C-009, C-010
   poisoned `HOME` and a poisoned CWD with no `REPARK_CONFIG` in its own environment
   (exit 0, so the probe's own `REPARK_CONFIG=""` holds).
   pins: review-fix-8/C-001, C-002
+  **CONF-UNREAD-1 step 1 (2026-09-11):** `test_probe_output_holds_the_table_inputs`
+  now expects the D-2 verdicts — nineteen keys accepted and readable,
+  `datafusion.execution.coalesce_batches` refused at build and at runtime
+  `conf.set`, and the `write_batch_size` write subject landing different bytes
+  than the baseline with `part_files`/`row_groups` equal (intra-run comparison,
+  so no `target_partitions` pin is needed).
+  pins: conf-unread-1/C-004, C-005
+  Step 2 (2026-09-11): the states this pin asserts are the ones the probe
+  document's `after CONF-UNREAD-1` column records — three `PASSES THROUGH`, one
+  `REFUSED`, `ACCEPTED BUT UNREAD` zero.
+  pins: conf-unread-1/C-006
 
 - `test_profiles1_table_properties.py` — **REVIEW-FIX-8 (2026-09-11):** the two
   `write.*` rows' table-side evidence as pins on the memory catalog —

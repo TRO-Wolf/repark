@@ -210,6 +210,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   4 ACCEPTED BUT UNREAD, 0 REFUSED, 0 NOT MEASURED. The four remaining UNREAD rows are
   CONF-UNREAD-1's.
   pins: review-fix-8/C-001, C-002, C-003, C-004, C-005
+  **CONF-UNREAD-1 (2026-09-11)** resolves the four UNREAD rows: both tables gain
+  an `after CONF-UNREAD-1` column — `enable_page_index`, `bloom_filter_on_read`
+  and `write_batch_size` are pinned reaching the scan-source / writer options
+  (PASSES THROUGH), `coalesce_batches` is REFUSED loud at build and at runtime
+  `conf.set` (DataFusion 54.1.0 defines the option but no engine path reads it)
+  — and §5's counts re-derive to 16 PASSES THROUGH, 3 VALIDATED, 0 ACCEPTED BUT
+  UNREAD, 1 REFUSED, 0 NOT MEASURED.
+  pins: conf-unread-1/C-006
 - [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md) —
   **AP-0 (measure, 2026-09-10):** the ADAPT-PART candidate measurement — three local
   Iceberg beds (the futures frame CTAS unpartitioned, two generated 400k-row beds at

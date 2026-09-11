@@ -103,6 +103,36 @@ IllegalArgumentException: [INVALID_CONF_VALUE.REQUIREMENT] The value '1' in the 
 Config value "nope" not found on ConfigOptions
 ```
 
+RePark forwards the whole `datafusion.` prefix: a builder `.config()` key is
+applied to the engine's `SessionConfig` before the context is built, and a
+runtime `conf.set` reaches the live engine as `SET`. The measured forwarding set
+([../perf/profiles-1-passthrough-probe-2026-09-09.md](../perf/profiles-1-passthrough-probe-2026-09-09.md),
+the `after CONF-UNREAD-1` column) is the optimizer keys
+`datafusion.optimizer.prefer_hash_join`, `.repartition_joins`,
+`.repartition_aggregations` and `.repartition_file_scans`, the execution keys
+`datafusion.execution.target_partitions` and `.batch_size`, the parquet scan
+options `datafusion.execution.parquet.pushdown_filters`, `.enable_page_index`
+and `.bloom_filter_on_read`, and the parquet write options
+`.compression`, `.max_row_group_size`, `.bloom_filter_on_write` and
+`.write_batch_size`. Two `datafusion.runtime.*` spellings are repark-owned
+pseudo-keys rather than DataFusion options — `memory_limit` (the live pool's
+one truth, below) and `temp_directory` (build-time only) — and one real
+DataFusion option is refused rather than stored: on DataFusion 54.1.0
+`datafusion.execution.coalesce_batches` exists in `ConfigOptions` but no engine
+path reads it, so a value set on it could never take effect. A refused key
+fails at `.config()` inside `getOrCreate()` and at `conf.set` / SQL `SET` —
+naming the key and the reason — instead of being silently accepted:
+
+```python
+ReparkSession.builder.config("datafusion.execution.coalesce_batches", "false").getOrCreate()
+```
+
+```text
+IllegalArgumentException: repark config error: unsupported DataFusion session
+config 'datafusion.execution.coalesce_batches' = 'false': DataFusion 54.1.0
+defines the option but no engine path reads it, so the value cannot take effect
+```
+
 ## Where the defaults live
 
 The facade's default conf table is `_SQLCONF_DEFAULTS` in
