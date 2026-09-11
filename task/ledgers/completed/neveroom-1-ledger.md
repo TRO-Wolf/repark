@@ -162,6 +162,10 @@ measured (never re-run, never re-labelled, no operator change). `PROJECT.md` and
 
 VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED. No `NEVEROOM-1-R-00n` residue: every CI cell's three reps agreed.
 
+**Departure (orchestrator, 2026-09-11, run 8).** The unit is closed as measured under S2-18: the
+ledger moves to `completed/`, `PROJECT.md` points at the matrix document, and the v1.3.0 release
+PR carries the STATUS sentence.
+
 ## Red first (step 3)
 
 `test_ci_tier_matches_golden` and `test_full_matrix_csv_has_27_cells` on this clone

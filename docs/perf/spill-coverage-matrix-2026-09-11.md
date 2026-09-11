@@ -131,4 +131,4 @@ operator change, S2-6): `hash_join` 4× `KILLED`
 (https://github.com/apache/datafusion/issues/22758). A DataFusion bump
 that closes #24768 or #22758 re-runs `matrix_run.py --reps 3` as its pin.
 
-Ledger: [../../task/ledgers/staging/neveroom-1-ledger.md](../../task/ledgers/staging/neveroom-1-ledger.md).
+Ledger: [../../task/ledgers/staging/neveroom-1-ledger.md](../../task/ledgers/completed/neveroom-1-ledger.md).

@@ -43,7 +43,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   resumable JSONL → folded CSV), the CI-tier cells (`sort`, `hash_aggregate`,
   `hash_join` at 2× the 64 MB limit), `ci_golden.csv`, and the committed-CSV pin.
   Needs the native module: run through `make py-test-spill-matrix`. Ledger:
-  [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/staging/neveroom-1-ledger.md).
+  [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/completed/neveroom-1-ledger.md).
   pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [torture/](torture/map.md) — **TORTURE-1 steps 1–4:** the both-door torture
   suite (all eight families — `nested`, `inference`, `extreme_types`, `smartcsv`,
