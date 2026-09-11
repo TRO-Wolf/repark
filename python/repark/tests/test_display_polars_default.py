@@ -2,6 +2,9 @@
 
 pins: display-polars-1/C-003, display-polars-1/C-004
 pins: display-lazy-1/C-001, C-002
+pins: review-fix-3/C-001, C-002, C-003
+pins: review-fix-9/C-001, C-002, C-003
+pins: review-fix-14/C-001, C-002
 """
 
 from __future__ import annotations
@@ -344,3 +347,106 @@ def test_display_keys_conf_get_set(polars_session: ReparkSession) -> None:
         polars_session.conf.set("repark.display.max_cols", True)
     with pytest.raises(IllegalArgumentException, match=r"repark\.display"):
         ReparkSession.builder.config("repark.display.str_len", "bogus").getOrCreate()
+
+
+def test_polars_max_rows_boundaries_match_live_polars(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """max_rows 1, 3 and 5 render byte-identically to live polars at the same tbl_rows."""
+    polars = pytest.importorskip("polars")
+    monkeypatch.delenv("POLARS_FMT_STR_LEN", raising=False)
+    monkeypatch.delenv("POLARS_FMT_MAX_COLS", raising=False)
+    frame = polars_session.sql(_ORDERED_12_SQL)
+    table = frame.to_arrow()
+    for max_rows in (1, 3, 5):
+        monkeypatch.setenv("POLARS_FMT_MAX_ROWS", str(max_rows))
+        oracle = str(polars.from_arrow(table))
+        polars_session.conf.set("repark.display.max_rows", str(max_rows))
+        try:
+            assert _capture_show(frame) == oracle
+        finally:
+            polars_session.conf.unset("repark.display.max_rows")
+
+
+def test_show_truncate_true_remaps_to_str_len(polars_session: ReparkSession) -> None:
+    """show() with the default truncate=True cuts cells at str_len, not Spark's 20."""
+    frame = polars_session.sql("SELECT 'abcdefghijklmnopqrstuvwxyz0123456789' AS s")
+    polars_session.conf.set("repark.display.str_len", "7")
+    try:
+        out = _capture_show(frame)
+        assert "abcdefg…" in out
+        assert "abcdefgh" not in out
+    finally:
+        polars_session.conf.unset("repark.display.str_len")
+    assert polars_session.conf.get("repark.display.str_len") == "30"
+
+
+def test_polars_oracle_list_ellipsis_boundary(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """List cells of lengths 3, 4 and 5 render byte-identically to live polars."""
+    frame = polars_session.sql(
+        "SELECT ord, li FROM (VALUES "
+        "(0, array(0, 1, 2)), "
+        "(1, array(0, 1, 2, 3)), "
+        "(2, array(0, 1, 2, 3, 4))"
+        ") AS t(ord, li) ORDER BY ord"
+    )
+    assert repr(frame.eager()) == _polars_text_of(frame, monkeypatch)
+
+
+def test_polars_oracle_float_fixed_scientific_switch(
+    polars_session: ReparkSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Float cells either side of the 999999.0 switch render byte-identically to polars."""
+    frame = polars_session.sql(
+        "SELECT ord, f FROM (VALUES "
+        "(0, CAST(999998.0 AS DOUBLE)), "
+        "(1, CAST(999999.0 AS DOUBLE)), "
+        "(2, CAST(-999999.0 AS DOUBLE)), "
+        "(3, CAST(999999.5 AS DOUBLE)), "
+        "(4, CAST(999999.9999 AS DOUBLE)), "
+        "(5, CAST(1234567.0 AS DOUBLE))"
+        ") AS t(ord, f) ORDER BY ord"
+    )
+    assert repr(frame.eager()) == _polars_text_of(frame, monkeypatch)
+
+
+def test_display_style_unset_reads_session_snapshot_not_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After conf.unset, a REPARK_DISPLAY_STYLE mutation cannot desync get/property/show."""
+    monkeypatch.setenv("REPARK_DISPLAY_STYLE", "spark")
+    session = ReparkSession.builder.getOrCreate()
+    try:
+        frame = session.sql("SELECT 1 AS a, 'x' AS b")
+        session.conf.set("repark.display.style", "duckdb")
+        assert session.conf.get("repark.display.style") == "duckdb"
+        session.conf.unset("repark.display.style")
+        monkeypatch.setenv("REPARK_DISPLAY_STYLE", "polars")
+        assert session.conf.get("repark.display.style") == "spark"
+        assert session.display_style == "spark"
+        out = _capture_show(frame)
+        assert "+-" in out
+        assert "shape:" not in out
+    finally:
+        session.stop()
+
+
+def test_display_max_rows_ceiling(polars_session: ReparkSession) -> None:
+    """repark.display.max_rows refuses above the 10000 ceiling and accepts at it."""
+    polars_session.conf.set("repark.display.max_rows", "10000")
+    try:
+        assert polars_session.conf.get("repark.display.max_rows") == "10000"
+        for over in ("10001", "99999999"):
+            with pytest.raises(IllegalArgumentException, match=r"repark\.display"):
+                polars_session.conf.set("repark.display.max_rows", over)
+        assert polars_session.conf.get("repark.display.max_rows") == "10000"
+        with pytest.raises(IllegalArgumentException, match=r"repark\.display"):
+            ReparkSession.builder.config("repark.display.max_rows", "10001")
+    finally:
+        polars_session.conf.unset("repark.display.max_rows")
+    assert polars_session.conf.get("repark.display.max_rows") == "10"

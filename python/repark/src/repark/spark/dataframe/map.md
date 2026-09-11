@@ -84,6 +84,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   behavior does not fail on replace. The exact baseline ratchets 4487 → 4486 with the
   CAP-1 mirror in the same commit.
   pins: review-fix-6/C-001, C-002, C-004
+  REVIEW-FIX-3 (2026-09-10): `show`'s docstring states the probe-first count D-5
+  introduced, line-neutral at the exact baseline.
+  pins: review-fix-3/C-004
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -196,6 +199,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Spark vertical door fetches one row past the limit and reads the footer
   from it instead of counting. The INFO log keeps a row-count
   breadcrumb; the rendered table stays DEBUG-only because row data is PII.
+  REVIEW-FIX-3/9 (2026-09-10): in `_render_styled_show` the polars keep-set is
+  `min(n, max_rows)` split `(keep + 1) // 2` head / `keep - head` tail — the
+  `edge = max_rows // 2` cap dropped a row at every odd `max_rows` and emptied the
+  body at `max_rows = 1`; the ellipsis row shows when a tail exists or the budget
+  itself bound (`n >= max_rows`), which is how `max_rows = 1` earns `1, …` without
+  reviving the bare-ellipsis `show(1)` regression (C8-Q-001).
+  pins: review-fix-3/C-001, review-fix-3/C-002, review-fix-9/C-001
   `truncate` validation refuses bool `n` (an int subclass would silently
   shrink the window), accepts digit strings as width caps, and labels other
   shapes NOT_BOOL per the live oracle. Eager `__repr__` / `_repr_html_` read
@@ -318,7 +328,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (nested Arrow types are genuinely recursive; a flat walk would hide the
   shape; past the cap values fall back to plain text). No plan logic here, so
   the module never imports `plan_collapse` (import direction stays one-way).
-  pins: display-polars-1/C-005
+  REVIEW-FIX-9 (2026-09-10): lists elide at four items (`[0, 1, … 3]`, threshold
+  `> 3`), and `_polars_float_text` is re-derived from polars' `fmt_float` itself —
+  integral floats below `999999.0` stay fixed, integral at-or-above go
+  shortest-sci while the Rust `{:}`-spelling length stays ≤ 9, and non-integral
+  expansions past nine characters go four-decimal-sci when `|v|` leaves
+  `[1e-6, 999999.0]`, six-decimal-trimmed otherwise.
+  pins: display-polars-1/C-005, review-fix-9/C-002, review-fix-9/C-003
 - `udf_bridge.py` owns action-time pandas, classic, and Arrow UDF callbacks without importing
   `DataFrame` at module scope. DFCORE-2 (2026-09-07) keeps callback execution here; only the
   projection rewrites moved out. pins: dfcore-2/C-005
