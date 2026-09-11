@@ -1,6 +1,7 @@
 """DISPLAY-BRIDGE-1 pins: a bridged frame's show() follows the display style (R-13).
 
 pins: display-bridge-1/C-001, C-002, C-003
+pins: display-lazy-1/C-004
 """
 
 from __future__ import annotations
@@ -95,23 +96,31 @@ def test_bridged_show_spark_grid_unchanged(spark_session: ReparkSession) -> None
 
 
 def test_bridged_show_matches_repr_polars(polars_session: ReparkSession) -> None:
-    """A 12-row bridged frame's show() prints exactly the styled text repr returns."""
+    """Lazy bridged repr is the header; eager show() prints what eager repr returns."""
     frame = _bridged_frame(polars_session, 12)
-    shown = _capture_show(frame)
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "│ 2   │" not in lazy
+    eager = frame.eager()
+    shown = _capture_show(eager)
     assert shown.startswith("shape: (12, 1)")
     assert "│ 2   │" in shown
     assert "│ 24  │" in shown
     assert "│ …   │" in shown
-    assert repr(frame) == shown
+    assert repr(eager) == shown
 
 
 def test_bridged_show_matches_repr_duckdb(duckdb_session: ReparkSession) -> None:
-    """A 12-row bridged frame's show() prints exactly the styled box repr returns."""
+    """Lazy bridged repr is the header; eager show() prints what eager repr returns."""
     frame = _bridged_frame(duckdb_session, 12)
-    shown = _capture_show(frame)
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "12 rows" not in lazy
+    eager = frame.eager()
+    shown = _capture_show(eager)
     assert "12 rows" in shown
     assert "(12 shown)" not in shown
-    assert repr(frame) == shown
+    assert repr(eager) == shown
 
 
 def test_bridged_small_peek_shape_exact(polars_session: ReparkSession) -> None:
@@ -126,12 +135,16 @@ def test_bridged_small_peek_shape_exact(polars_session: ReparkSession) -> None:
 
 
 def test_bridged_small_peek_shape_exact_duckdb(duckdb_session: ReparkSession) -> None:
-    """A 3-row bridged frame renders the whole duckdb box exactly as repr does."""
+    """A lazy 3-row bridged frame headers; eager renders the whole box as repr does."""
     frame = _bridged_frame(duckdb_session, 3)
-    shown = _capture_show(frame)
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "3 rows" not in lazy
+    eager = frame.eager()
+    shown = _capture_show(eager)
     assert "3 rows" in shown
     assert "(3 shown)" not in shown
-    assert repr(frame) == shown
+    assert repr(eager) == shown
 
 
 def test_bridged_show_pays_one_count_when_peek_full(polars_session: ReparkSession) -> None:

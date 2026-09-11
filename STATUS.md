@@ -25,10 +25,12 @@ for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json)
 `main` adds the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines, identical
 export surface) and FNP-8 with its review. **DISPLAY-POLARS-1 (2026-09-09)** changes a
 user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
-not the PySpark ASCII grid; the grid is one setting away (`REPARK_DISPLAY_STYLE=spark`) and
-`repark.DataFrame` itself is unchanged. DISPLAY-BRIDGE-1 (2026-09-10) closes the last door that
-ignored the style: a bridged frame's `show()` now matches its own `repr`. The four facade-local
-keys and the precedence chain:
+not the PySpark ASCII grid (`REPARK_DISPLAY_STYLE=spark` restores the grid);
+`repark.DataFrame` itself is unchanged. **DISPLAY-LAZY-1 (2026-09-11, R-22)** reverses its D-4: an
+unmaterialised frame renders its **schema**, not its data — in a notebook every bare expression is
+a `repr`, and the old default ran the plan twice. Rows come back with `.eager()` / `.compute()`,
+any action, or `spark.sql.repl.eagerEval.enabled`. DISPLAY-BRIDGE-1 (2026-09-10): a bridged frame's
+`show()` matches its own `repr`. The four facade-local keys and the precedence chain:
 [docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
 **DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (one function object) and
 `.lazy()`: `.eager()` materialises through the cache-view path into a **new `repark.DataFrame`**
@@ -128,8 +130,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
   design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg
-  ([#253](https://github.com/TRO-Wolf/repark/pull/253)); first green nightly 2026-09-02.
+  **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg (#253); first green
+  nightly 2026-09-02.
   V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW `_row_id` — `V3-COW-1` **FIXED**.
   **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, append fills
   from a schema-carried `write_default`, and DEFAULT DDL / `unknown` / binary `variant`
@@ -139,11 +141,11 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors (`V3-UPGRADE-1` FIXED).
   RP-7: shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**.
   **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
-  (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's exact `_row_id`
-  assertion. **V3-11 (2026-09-02):** same-commit data files ascend in the manifest, so the
-  MoR MERGE insert's `_row_id` is Spark-equal (`V3-ROWID-3` FIXED).
-  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` lower/upper
-  bounds, so `rewrite_data_files` selects the delete-laden file (residue `F-RDF1-1`).
+  (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's `_row_id` assertion.
+  **V3-11 (2026-09-02):** same-commit data files ascend in the manifest, so the MoR MERGE
+  insert's `_row_id` is Spark-equal (`V3-ROWID-3` FIXED).
+  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` bounds, so
+  `rewrite_data_files` selects the delete-laden file (residue `F-RDF1-1`).
   **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 —
   **96 delete files against v2's 400**; maintenance ends at
   **zero delete files and zero delete records**. Numbers:
@@ -153,11 +155,10 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
   filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
   FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
-  - **Next:** lineage carry and merge-on-read are complete on every served DML shape
-    (`V3-COW-1`, `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, `V3-UPGRADE-DV-1`,
-    `V3-UPGRADE-DV-PLAIN-1`, `V3-UPGRADE-DV-PART-1`, `V3-COV-3`,
-    `F-v3-10-partition-file-order` FIXED); open v3 residuals are `V3-FILEORDER-1`,
-    `V3-COV-4` / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
+  - **Next:** lineage carry and merge-on-read are complete on every served DML shape (`V3-COW-1`,
+    `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, the three `V3-UPGRADE-DV` rows, `V3-COV-3` and
+    `F-v3-10-partition-file-order` all FIXED); open v3 residuals are `V3-FILEORDER-1`, `V3-COV-4`
+    / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
     `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
     landed 2026-09-04.
 <!-- /ws -->
@@ -240,24 +241,23 @@ written by `scripts/ledger_lifecycle.py compact` when a workstream's marker says
 Carried debt from the port; each is a real defect, honestly tracked, not a blocker for the state
 above.
 
-**Where each fact lives.** This section is the authoritative home for an issue that has **no
-disposition yet** — its state *and* enough description to be understood. Once an issue is *disposed
-of* as a **divergence** — DECLARED (a permanent difference) or BACKLOG (a difference we intend to
-close) — its semantics move to the divergence registry,
-[docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md), and this file keeps one line
-of state plus a link. A known **defect with its fix scheduled** is not a divergence and gets no
-row: it stays here until the fix lands, and the fixing unit deletes the entry rather than moving
-it. Nothing is described in both places.
+**Where each fact lives.** This section is the authoritative home for an issue with **no
+disposition yet** — its state *and* enough description to be understood. Once an issue is disposed
+of as a **divergence** — DECLARED (permanent) or BACKLOG (we intend to close it) — its semantics
+move to the registry, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md), and
+this file keeps one line of state plus a link. A known **defect with its fix scheduled** is not a
+divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
+entry rather than moving it. Nothing is described in both places.
 
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
   FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
-  `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress
-  (residue: ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT
-  nullability BACKLOG (G6-4; the epoch-seconds class itself FIXED, #64). Semantics + pins: the
-  registry's TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
+  `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress (residue:
+  ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT
+  nullability BACKLOG (G6-4; the epoch-seconds class FIXED, #64). Semantics + pins: the registry's
+  TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
 - **decimal128** — DEC-2 / DEC-6 / DEC-7 / DEC-8 FIXED (#94 / #99); DEC-1 / DEC-3 / DEC-4 / DEC-5
   width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9 in
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).

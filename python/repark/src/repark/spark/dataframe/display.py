@@ -8,14 +8,20 @@ from typing import TYPE_CHECKING, Any
 
 from repark.errors import PySparkTypeError
 from repark.spark.dataframe.plan_collapse import (
+    _box_rule,
+    _column_widths,
     _display_type_labels_from_arrow,
+    _duckdb_row_line,
     _format_duckdb_show,
     _format_eager_eval_table,
     _format_polars_show,
     _format_show_table,
     _format_show_vertical,
+    _polars_column_gap,
+    _polars_row_line,
     _table_to_cell_rows,
 )
+from repark.spark.dataframe.polars_cells import _arrow_pa_type_label
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -106,11 +112,17 @@ def _show(
 
 
 def _repr(frame: DataFrame) -> str:
-    """Schema form under spark without eager eval; the styled table under polars and duckdb."""
+    """Schema header when lazy; the styled table when materialised or eager-evalled."""
     frame._ensure_alive()
     style = _resolve_display_style(frame)
     if style != "spark":
         str_len = _display_session_ints(frame)[2]
+        if _repr_renders_schema(frame):
+            if _eager_eval_enabled(frame):
+                max_rows, _ = _eager_eval_limits(frame)
+                rendered, _ = _render_styled_show(frame, style, n=max_rows, truncate_at=str_len)
+                return rendered
+            return _render_lazy_header(frame, style)
         rendered, _ = _render_styled_show(frame, style, n=20, truncate_at=str_len)
         return rendered
     if not _eager_eval_enabled(frame):
@@ -126,6 +138,81 @@ def _repr(frame: DataFrame) -> str:
     if has_more:
         rendered = f"{rendered}\nonly showing top {max_rows} row" + ("s" if max_rows != 1 else "")
     return rendered
+
+
+def _repr_renders_schema(frame: DataFrame) -> bool:
+    """Whether ``repr`` shows the schema header: no stored shape, no materialised view."""
+    return frame._eager_shape is None and frame._cache_view is None
+
+
+def _lazy_first_line(column_count: int) -> str:
+    """First line of a lazy ``repr``; it names the column count, never a row count."""
+    return (
+        f"lazy: {column_count} columns, not yet materialized — .eager(), "
+        ".show() or .collect() run the plan"
+    )
+
+
+def _render_lazy_header(frame: DataFrame, style: str) -> str:
+    """Render the schema-only header for a lazy frame without running the plan."""
+    names = list(frame.columns)
+    schema = frame._analyzed_arrow_schema()
+    type_labels = [_arrow_pa_type_label(field.type, style=style) for field in schema]
+    first_line = _lazy_first_line(len(names))
+    if style == "polars":
+        _, max_cols, _ = _display_session_ints(frame)
+        return _format_polars_lazy_header(
+            names, type_labels, first_line=first_line, max_cols=max_cols
+        )
+    return _format_duckdb_lazy_header(names, type_labels, first_line=first_line)
+
+
+def _format_polars_lazy_header(
+    names: list[str],
+    type_labels: list[str],
+    *,
+    first_line: str,
+    max_cols: int | None = None,
+) -> str:
+    """Render the polars header box over the lazy first line, with no data rows."""
+    if not names:
+        return f"{first_line}\n┌┐\n└┘"
+    names, type_labels, _, _, gap_at = _polars_column_gap(names, type_labels, [], [], max_cols)
+    widths = _column_widths(names, type_labels)
+    inner_widths = [width + 2 for width in widths]
+    dashes = ["---"] * len(names)
+    if gap_at is not None:
+        dashes[gap_at] = ""
+    lines = [
+        first_line,
+        _box_rule(inner_widths, "┌", "┬", "┐"),
+        _polars_row_line(names, widths),
+        _polars_row_line(dashes, widths),
+        _polars_row_line(type_labels, widths),
+        _box_rule(inner_widths, "└", "┴", "┘"),
+    ]
+    return "\n".join(lines)
+
+
+def _format_duckdb_lazy_header(
+    names: list[str],
+    type_labels: list[str],
+    *,
+    first_line: str,
+) -> str:
+    """Render the duckdb header box over the lazy first line, with no footer."""
+    if not names:
+        return f"{first_line}\n┌┐\n└┘"
+    widths = _column_widths(names, type_labels)
+    padded_widths = [width + 2 for width in widths]
+    lines = [
+        first_line,
+        _box_rule(padded_widths, "┌", "┬", "┐"),
+        _duckdb_row_line(names, widths, center=True),
+        _duckdb_row_line(type_labels, widths, center=True),
+        _box_rule(padded_widths, "└", "┴", "┘"),
+    ]
+    return "\n".join(lines)
 
 
 def _repr_html(frame: DataFrame) -> str | None:
@@ -315,21 +402,46 @@ def _render_styled_show(
                     frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
                 )
         else:
-            total_rows = _styled_total_rows(frame)
-            if n <= 0:
-                head_n, tail_n, use_ellipsis = 0, 0, False
-            elif total_rows <= n:
-                head_n, tail_n, use_ellipsis = total_rows, 0, False
+            probe_limit = max_rows + 1
+            probe_table = frame.limit(probe_limit).to_arrow()
+            if probe_table.num_rows < probe_limit:
+                total_rows = probe_table.num_rows
+                if n <= 0:
+                    head_table = probe_table.slice(0, 0)
+                    tail_table = None
+                    use_ellipsis = False
+                elif total_rows <= n:
+                    head_table = probe_table.slice(0, total_rows)
+                    tail_table = None
+                    use_ellipsis = False
+                else:
+                    head_n = n // 2
+                    if head_n == 0:
+                        head_n = 1
+                    tail_n = n - head_n
+                    use_ellipsis = tail_n > 0
+                    head_table = probe_table.slice(0, head_n)
+                    tail_table = (
+                        probe_table.slice(total_rows - tail_n, tail_n) if tail_n > 0 else None
+                    )
             else:
-                head_n = n // 2
-                if head_n == 0:
-                    head_n = 1
-                tail_n = n - head_n
-                use_ellipsis = tail_n > 0
-            head_table = frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
-            tail_table = (
-                frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
-            )
+                total_rows = _styled_total_rows(frame)
+                if n <= 0:
+                    head_n, tail_n, use_ellipsis = 0, 0, False
+                elif total_rows <= n:
+                    head_n, tail_n, use_ellipsis = total_rows, 0, False
+                else:
+                    head_n = n // 2
+                    if head_n == 0:
+                        head_n = 1
+                    tail_n = n - head_n
+                    use_ellipsis = tail_n > 0
+                head_table = (
+                    frame.limit(head_n).to_arrow() if head_n > 0 else frame.limit(0).to_arrow()
+                )
+                tail_table = (
+                    frame._preview_tail_rows(tail_n, total_rows=total_rows) if tail_n > 0 else None
+                )
     else:
         peek_table, peek_limit = peeked
         if peek_table.num_rows < peek_limit:

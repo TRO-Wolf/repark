@@ -100,6 +100,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   [../../../python/repark/tests/test_display_bridge_1.py](../../../python/repark/tests/test_display_bridge_1.py).
   `risk_tier: standard`. Branch `feat/display-bridge-1`.
   pins: display-bridge-1/C-001, C-002, C-003
+- [display-lazy-1-ledger.md](display-lazy-1-ledger.md) — Unit ledger — DISPLAY-LAZY-1 step 1 · a lazy frame's `repr` shows the schema, not the data (R-22)
 - [display-polars-1-ledger.md](display-polars-1-ledger.md) —
   **DISPLAY-POLARS-1 step 1 (2026-09-09), in flight:** polars-style rendering becomes the
   default. Step 1 only (D-1 + D-2): `_DEFAULT_DISPLAY_STYLE` flips to `polars`, resolved

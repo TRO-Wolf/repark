@@ -62,6 +62,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_lazy_checkpoint_styled_repr_discharges_without_count_query`; C-003
   `test_checkpointed_eager_lazy_ignores_none_view`.
   pins: review-fix-4/C-001, C-002, C-003
+  **DISPLAY-LAZY-1 step 1** (2026-09-10): `test_repr_of_eager_frame_skips_count_and_matches_lazy_table`
+  asserts the lazy schema header with zero counts and the eager data table over the same
+  header box, also with zero counts. pins: display-lazy-1/C-002
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
   step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +
@@ -1911,6 +1914,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_bridged_styled_vertical_warns` reds; touch the spark peek rendering →
   `test_bridged_show_spark_grid_unchanged` reds.
   pins: display-bridge-1/C-001, C-002, C-003
+  **DISPLAY-LAZY-1 step 1** (2026-09-10): the three `show() == repr()` equality pins move
+  to eager bridged frames; a lazy bridged frame renders the D-1 header.
+  pins: display-lazy-1/C-004
 - `test_display_polars_default.py` — **DISPLAY-POLARS-1 steps 2+3** (2026-09-09): D-5 small-frame
   single fetch in the styled polars renderer (`_render_styled_show`): a 7-row frame renders
   whole through the probe fetch with `count()` never called and no tail fetch; a 12-row frame
@@ -1937,6 +1943,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   values plus bool refuse, builder invalid refuses). MUTATION: drop the float
   speller → the floats oracle reds on the scientific row; drop the struct quotes
   → the ints oracle reds on `{1,"x"}`; drop the column gap → the wide oracle reds.
+  **DISPLAY-LAZY-1 step 1** (2026-09-10): every lazy-`repr`-renders-data pin moves to
+  D-1 — lazy asserts the schema header, row content (oracles, `str_len`, `max_cols`
+  elision) moves to eager frames; `show()` pins untouched.
+  pins: display-lazy-1/C-001, C-002
 - `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
   Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
   ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`
@@ -1992,10 +2002,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (one token, line-neutral); the probe/edge numbers now read `max_rows`
   (`limit(max_rows + 1)`, edges `max_rows // 2`), unchanged at 11/5+5 under defaults.
   pins: display-polars-1/C-005
+  **DISPLAY-LAZY-1 step 1 (RF-5, 2026-09-10):** the `duckdb` branch probes
+  `limit(max_rows + 1)` first and only counts past it, so the partial-collect pin's
+  `duckdb` section re-pins `max_rows_per_export` to 11 (one token, R-11 pattern);
+  the `(10, 2)` skip and the `< 12` tooth are byte-identical.
+  pins: display-lazy-1/C-006
   **DISPLAY-POLARS-1 step 5 (2026-09-09):** `docs/guide/session-and-conf.md`'s
   `repark.display.style` section states the behaviors these pins verify (polars default,
   the four keys, the env precedence, the probe-first count, the truncate mapping, the
   styled repr), every transcript executed against this tree. pins: display-polars-1/C-006
+- `test_display_lazy_1.py` — **DISPLAY-LAZY-1 step 1** (2026-09-10, R-22): a lazy frame's
+  `repr` renders the schema header, never rows. Red-first (11 failed, 3 passed on the
+  base tree): D-1 exact bytes under `polars` (25-row 5-column) and `duckdb` plus the
+  12-column `max_cols` elision; zero UDF/count/export calls on a lazy `repr`; D-2 eager
+  (shape-first, zero counts), materialised cache/persist (one `count()` over the view),
+  eager-plus-checkpoint (shape reuse), pending-cache lazy, actions never flip; D-3
+  eagerEval rows with exactly one plan run; D-4 spark door/str/HTML bytes plus the lazy
+  bridge header; D-5 eight lazy transformation chains with per-chain closing actions.
+  pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005
+  **DISPLAY-LAZY-1 step 2** (2026-09-10): plain-`localCheckpoint()` and pending-discharge
+  pins hold the data render with zero plan re-runs at `repr`.
+  pins: display-lazy-1/C-007
 - `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
   range validation pinned at the REAL user entry point
   (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`

@@ -690,3 +690,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `fix/review-fix-6-11`. All clauses PROVEN (mode pins green-before-green on
   base, confirming the D-2 rows; green on the landed tree).
   pins: review-fix-11/C-001, C-002, C-003, C-004, C-005, C-006
+- [display-lazy-1-ledger.md](../completed/display-lazy-1-ledger.md) —
+  **DISPLAY-LAZY-1 step 1 (2026-09-10), in flight:** a lazy frame's `repr` shows
+  the schema, not the data (R-22 supersedes R-2) — the D-1 header box over the
+  `lazy: N columns` first line, D-2 materialised classification, D-3 eagerEval
+  rows with one plan run, D-4 unchanged doors plus the lazy bridge header, D-5
+  transformation-laziness chains, and RF-5's duckdb probe with its re-pin. Step 2
+  adds the plain-checkpoint marker (C-007) and the docs round. `risk_tier: standard`.
+  Branch `feat/display-lazy-1`.
+  pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007

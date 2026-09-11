@@ -249,6 +249,22 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   count-first fetch and its `n`-based keep-set; the protected
   no-full-collect pin pins that shape, so unifying the doors needs its own
   card. pins: display-polars-1/C-005
+  DISPLAY-LAZY-1 step 1 (2026-09-10, R-22): `_repr` renders the schema header for
+  a lazy frame (no stored shape, no materialised cache view) without running the
+  plan — header labels come from `_analyzed_arrow_schema` through the same
+  `_arrow_pa_type_label` the data table uses, so the box is byte-identical to the
+  data header; materialised frames keep the data render, and eagerEval renders
+  rows through the `show(maxNumRows)` path. RF-5 rides here: the duckdb door now
+  probes `limit(max_rows + 1)` first like polars (the awaited unification card),
+  slicing short probes with no `count()`. pins: display-lazy-1/C-001, C-002,
+  C-003, C-004, C-005, C-006
+  DISPLAY-LAZY-1 step 2 (2026-09-10): the checkpoint arm of
+  `_materialize_cache_if_needed` records `_eager_shape` (one count over the pinned
+  view, skipped when a shape is stored), so a plain `localCheckpoint()` classifies as
+  materialised with zero plan re-runs at `repr`. The `_cache_view`-set early return
+  carries a `not self._checkpoint_lazy` term because returning on the view alone left
+  a pending checkpoint sticky with lineage untruncated — checkpoint-after-cache must
+  still run. pins: display-lazy-1/C-007
 - `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
   step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
   the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes
