@@ -61,6 +61,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   to parquet file groups (`datafusion-proto` wall, third time). `risk_tier: standard`.
   Branch `feat/ballista-m1-d`.
   pins: ballista-m1-d/C-001, C-002, C-003
+- [ballista-m2-a-ledger.md](ballista-m2-a-ledger.md) —
+  **BALLISTA-M2-A steps 1–2 (2026-09-11):** the delegating physical extension codec —
+  `ReparkPhysicalExtensionCodec` implements `PhysicalExtensionCodec`, delegates every node it
+  does not own to `BallistaPhysicalExtensionCodec`, owns `IcebergTableScan` via the `RPIC`
+  `IcebergScanSpec` wire format, and rebuilds the scan from the session catalog carried inside
+  the codec (never ambient authority). Re-proves BALLISTA-M1-B C-004. Step 2 owns the design
+  doc. `risk_tier: standard`. Branch `feat/ballista-m2-a`.
+  pins: ballista-m2-a/C-001, C-002, C-003, C-004
 - [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
   **CONF-UNREAD-1 steps 1–2 (2026-09-11), in flight:** the wiring/refusals for
   the four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses
