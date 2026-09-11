@@ -2,7 +2,7 @@
 
 ## Purpose
 
-NEVEROOM-1 step 1: the spill-coverage matrix harness. One cell = one worker
+NEVEROOM-1: the spill-coverage matrix. One cell = one worker
 subprocess running one operator over an in-engine `range()` input sized to a
 multiple of the memory limit, under an address-space cap, with the outcome
 folded by a classifier that knows exactly three outcomes: `spilled`
@@ -11,10 +11,12 @@ no spill), `refused` (a loud `MemoryError` / typed facade exception naming the
 operator). A killed or non-zero-exit worker without a refusal is `KILLED`,
 which fails the matrix and is never folded into an outcome.
 
-Step 1 wires one CI-tier cell end to end: `sort` at 2× the 64 MB limit
-(D-5). The full 27-cell matrix (9 operators × 2×/4×/8× at the 1 GB limit of
-D-1) is step 2 and runs on an idle box only; the CI golden and its comparison
-pins are step 3.
+Step 1 wired one CI-tier cell end to end: `sort` at 2× the 64 MB limit
+(D-5). Step 2 adds the full 27-cell roster (9 operators × 2×/4×/8× at the 1 GB
+limit of D-1), run on an idle release box by `matrix_run.py`, three
+repetitions per cell (D-3); its document pair is
+`docs/perf/spill-coverage-matrix-2026-09-11.{md,csv}`. The CI golden and its
+comparison pins are step 3.
 
 The suite needs the native module (the worker builds a repark session), so
 run it through `make py-test-spill-matrix` — not the JVM-free `make py-test`
@@ -35,7 +37,7 @@ conftest guard.
   2.10× limit of the 3× headroom and completed. The absolute form is not a
   defensible alternative at any tier: at the CI tier (192 MB) the pyarrow
   import alone fails, and at the full tier (3 GB) the import baseline alone
-  is 4.27 GB. Filed as a ruling question on the step-1 hand-back.
+  is 4.27 GB. **Ruled S2-8 (2026-09-10):** the full matrix runs this way.
 - **The refusal surface is the facade's typed family, not only
   `AnalysisException`.** Measured at a 2 MB pool: the pool refusal surfaces
   as `PySparkException` ("Not enough memory to continue external sort …
@@ -47,7 +49,7 @@ conftest guard.
   `MemoryError` is accepted without a name because CPython's own
   `MemoryError` carries no message (measured in H3-SPILL-RESIDUE-1 C-001).
   Any other caught exception exits the worker non-zero with no result JSON,
-  which folds to `KILLED`.
+  which folds to `KILLED`. **Ruled S2-9 (2026-09-10).**
 - **The runtime metrics do expose the spill counters**, so the card's
   temp-dir fallback probe is not needed: `EXPLAIN ANALYZE` output carries
   `spill_count` and `spilled_bytes` per executor, and the matrix reads them
@@ -57,9 +59,42 @@ conftest guard.
   datafusion.runtime.memory_limit = '67108864': … Unit must be one of: 'K',
   'M', 'G'`), so the worker renders the limit as `64M`-shaped strings.
 
-No timing is claimed anywhere in step 1: another lane is building on this
-box, the module is the debug `.venv` build (`repark._native.__debug_assertions__`
-is True), and D-3's release-build idle-box rules belong to step 2.
+## Step-2 roster facts (2026-09-11, release module)
+
+- **Every cell names its physical operator, and the plan text proves it.**
+  The worker writes `EXPLAIN` plan text to a `<cell>.plan.txt` sidecar before
+  the measured call (so a refused cell still leaves its plan behind) and
+  carries the exec-name set in `plan_operators`. `sort_merge_join` is forced
+  by `datafusion.optimizer.prefer_hash_join=false` (measured:
+  `SortMergeJoinExec` in the plan); `nested_loop_join` is forced by the
+  non-equi predicate `l.v < r.v` and its build side carries the sized
+  payload through a computed-`v` subquery — that is the projection shape that
+  puts `RepartitionExec` under the `CoalescePartitionsExec` beneath
+  `NestedLoopJoinExec`, the H3 panic path the containment reports as a
+  refusal. A passthrough `l.id < r.v` projection plans without that
+  `RepartitionExec` and measures nothing.
+- **Both equi-join sides are generated at the full multiple** (`right =
+  "sized"`); the NLJ right side stays 64 rows (`right = "key64"`) so the
+  cell terminates, the H3 shape.
+- **Full tier runs at `target_partitions = 4`** (`FULL_PARTITIONS`), the H3
+  baseline's own parameter and the value whose enforcer output puts
+  `RepartitionExec` under the NLJ build side.
+- **Measured `refusal_names`** come from the H3 evidence and this tree's
+  cells: `ExternalSorter`/`ExternalSorterMerge` (sort, SMJ, windows),
+  `GroupedHashAggregateStream` (hash_aggregate), `HashJoinInput`
+  (hash_join), `NestedLoopJoinLoad` (nested_loop_join), `UnnestExec`
+  (dynamic_flatten). `collect` carries no names: its refusal is
+  `MemoryError`, which needs none — and `--refusal-names ""` splits to the
+  empty tuple, never a match-all (the worker filters empties).
+- **Cell kinds.** `sql` cells run `EXPLAIN ANALYZE` and read spill totals
+  off the plan metrics. `collect` runs `session.sql(…).collect()` — the
+  facade boundary is the measured operation, `EXPLAIN` only writes the plan
+  sidecar. `flatten` builds the nested frame
+  (`named_struct('a', id, 'b', payload)` + `array(payload)`),
+  `dynamicFlatten()`s it into the `flat` view, then runs
+  `EXPLAIN ANALYZE SELECT * FROM flat` — the `UnnestExec` pipeline under the
+  pool; the `to_arrow` materialization cost is the `collect` row's
+  boundary, not this one's.
 
 ## Contents
 
@@ -78,16 +113,28 @@ is True), and D-3's release-build idle-box rules belong to step 2.
   (`range()` + `md5` + `repeat('x', n)` payload, no files),
   `input_arrow_bytes`, and `memory_limit_string`.
 - `matrix_cells.py` — the roster: `CI_LIMIT_BYTES` (64 MB, D-5),
-  `CI_PARTITIONS`, `CI_CELL_TIMEOUT_S`, `CI_CELLS` (the one step-1
-  cell: `sort` at 2×, ordered by the payload itself), `worker_argv` and
-  `json_out_path`.
-- `matrix_worker.py` — the worker subprocess entry: builds the 64 MB-pool
-  session, registers the sized range input, applies the address-space cap
+  `FULL_LIMIT_BYTES` (1 GB, D-1), `CI_PARTITIONS`, `FULL_PARTITIONS`,
+  `CI_CELL_TIMEOUT_S`, `FULL_CELL_TIMEOUT_S`, `FULL_REPS`, `RosterRow`
+  (`CellSpec` + `kind`/`conf`/`right`), the nine-operator `_ROSTER`,
+  `FULL_CELLS` (roster × multipliers 2/4/8 = 27 cells), `CI_CELLS`,
+  `worker_argv`, `json_out_path`, `plan_out_path`.
+- `matrix_worker.py` — the worker subprocess entry: builds the bounded-pool
+  session with the row's `conf`, registers the sized range input and the
+  join rows' `other` input, applies the address-space cap
   (`RLIMIT_AS = VmSize_at_apply + 3 × limit`, verified by read-back),
-  executes the cell once through `EXPLAIN ANALYZE`, and writes the result
-  JSON (`completed` with the spill totals, or `refused` when the caught
-  error passes `is_loud_refusal`); anything else exits non-zero with no
-  result JSON, which the parent folds to `KILLED`.
+  writes the `EXPLAIN` plan sidecar, executes the cell by `kind`
+  (`EXPLAIN ANALYZE` + spill totals for `sql`/`flatten`, `.collect()` for
+  `collect`), and writes the result JSON (`completed` with the spill
+  totals and `plan_operators`, or `refused` when the caught error passes
+  `is_loud_refusal`); anything else exits non-zero with no result JSON,
+  which the parent folds to `KILLED`.
+- `matrix_run.py` — the full-tier driver (step 2): `run_rep` runs every
+  `FULL_CELLS` cell once per rep in a worker subprocess and appends each
+  `CellRecord` as a JSONL line to the results file (so a run is resumable
+  and a crash costs one cell); `fold_rows` folds the three reps per cell
+  into the CSV (identical outcomes → that outcome, else `UNSTABLE`;
+  `spill_bytes` is the max and `seconds` the median across reps); the D-4
+  per-operator notes live in `_CELL_NOTES`.
 - `test_classifier_pins.py` — the card's step-1 classifier pins:
   `test_classifier_three_outcomes_only` and
   `test_killed_subprocess_fails_matrix` (signal-kill, non-zero exit, and a
@@ -107,11 +154,12 @@ The step's pins: `test_classifier_three_outcomes_only`,
 `test_killed_subprocess_fails_matrix`, `test_generator_sizes_input_to_the_target_multiple`,
 `test_memory_limit_string_matches_the_engine_capacity_parser`, and
 `test_ci_tier_sort_cell_end_to_end`.
-pins: neveroom-1/C-001, C-002, C-003, C-004
+pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
-Step 2 adds the full-tier roster and its D-3 rules; step 3 adds the CI
-golden CSV and its comparison pins. The Makefile target
-`py-test-spill-matrix` is deliberately absent from `preflight`.
+Step 3 adds the CI golden CSV and its comparison pins
+(`test_ci_tier_matches_golden`, `test_full_matrix_csv_has_27_cells`). The
+Makefile target `py-test-spill-matrix` is deliberately absent from
+`preflight`.
 
 ## Pointers
 
