@@ -42,7 +42,9 @@ the dialect layers are thin translators.
   goal is "spills where the engine can, documented where it cannot", and the document is the
   180-cell truth table in [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md)
   — which operators spill, which refuse cleanly, and which take no memory-pool reservation at
-  all and so are not bounded by the pool.*)
+  all and so are not bounded by the pool. The standing coverage matrix since v1.3 is
+  [docs/perf/spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md):
+  24 of 27 cells stable, three named with their upstream DataFusion issues.*)
 - Zero-copy interop — anything that speaks Arrow is a first-class citizen.
 - Reproducibility: same query + same snapshot = same bytes, every time.
 - **TA serving performance at parity with `polars_talib`** on the shapes that matter

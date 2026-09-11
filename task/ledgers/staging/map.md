@@ -22,17 +22,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   live suite: 6298 passed, 0 failed on this box. `risk_tier: standard`. Branch
   `fix/nightly-live-1`.
   pins: nightly-live-1/C-001, C-002, C-003, C-004
-- [neveroom-1-ledger.md](neveroom-1-ledger.md) —
-  **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
-  a subprocess-per-cell runner whose address-space cap is the measured baseline plus
-  3 × limit, in-engine `range()` generators sized to the limit multiple, the
-  `EXPLAIN ANALYZE` spill-bytes probe reused from `bench/spill/`, the three-outcome
-  classifier (`KILLED` fails the matrix and never folds), and the one CI-tier cell
-  (`sort` at 2× the 64 MB limit, measured `spilled`, `spill_bytes=211812352`). Two
-  measured D-2 readings (cap-as-headroom, the `PySparkException` refusal family) are
-  filed as hand-back ruling questions. Steps 2–3 pending. `risk_tier: standard`.
-  Branch `feat/neveroom-1`.
-  pins: neveroom-1/C-001, C-002, C-003, C-004
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →

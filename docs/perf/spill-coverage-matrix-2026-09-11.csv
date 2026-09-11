@@ -2,7 +2,7 @@ operator,multiple,input_bytes,outcome_1,outcome_2,outcome_3,outcome,spill_bytes,
 sort,2,2147000000,refused,refused,refused,refused,,2.2,ExternalSorter spills; the reference spilling operator; refused as PySparkException
 sort,4,4294000000,refused,refused,refused,refused,,30.4,ExternalSorter spills; the reference spilling operator; refused as PySparkException
 sort,8,8589000000,refused,refused,refused,refused,,0.4,ExternalSorter spills; the reference spilling operator; refused as PySparkException
-hash_aggregate,2,2147000000,refused,spilled,refused,UNSTABLE,7350412902,8.9,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
+hash_aggregate,2,2147000000,refused,spilled,refused,UNSTABLE,7350412902,8.9,GroupedHashAggregateStream spills (row_hash); refused as PySparkException; https://github.com/apache/datafusion/issues/22758
 hash_aggregate,4,4294000000,refused,refused,refused,refused,,0.6,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
 hash_aggregate,8,8589000000,refused,refused,refused,refused,,3.0,GroupedHashAggregateStream spills (row_hash); refused as PySparkException
 hash_join,2,2147000000,refused,refused,refused,refused,,2.6,build side has no spill path; upstream epic https://github.com/apache/datafusion/issues/24768; refused as PySparkException
