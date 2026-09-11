@@ -207,6 +207,28 @@ else. The next pickup's `make ledger-archive` files everything here under
 - [review-fix-8-ledger.md](review-fix-8-ledger.md) — Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
 - [review-fix-9-ledger.md](review-fix-9-ledger.md) — Unit ledger — REVIEW-FIX-9 step 1 · the polars renderer matches polars at its boundaries
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
+- [torture-1-ledger.md](torture-1-ledger.md) —
+  **TORTURE-1 steps 1–5 (2026-09-11):** the torture-test dataset suite —
+  step 1: the `repark_parity.torture` generator package (checkout-only `__path__` graft,
+  `generate` CLI writing Parquet + CSV, ci/full tiers, one `Family` protocol), the `nested`
+  and `inference` families, the both-door suite skeleton, the tiered `make py-test-torture`
+  target, and registry row `CSV-INFER-INT32-WIDTH`; step 2: the `extreme_types`,
+  `smartcsv`, `temporal` and `decimal_overflow` families with both-door cells, registry
+  rows `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1`, `DATE-INTERVAL-NSBOUND-1`, and the
+  no-live-Spark labeling; step 3: the `secrets` family (13 credential-shaped columns from
+  the `prop_key_is_secret` needle set beside `bucket_key` and three ordinary controls)
+  and the `flag_secret_columns = off|warn|refuse` read option honored on the csv/json
+  readers and refused loud elsewhere, pinned on both doors; step 4: the `v3_dv` family —
+  a live-Spark-only generator writing a many-file format-v3 merge-on-read Iceberg table
+  with Puffin deletion vectors under `REPARK_PARITY_LIVE=1`, the ≤ 1 MB committed fixture
+  under `fixtures/torture/data/v3_dv/` with its `truth.json`, and both-door cells pinning
+  the true post-delete count on repark (96 of 120, no registry divergence — repark reads
+  the DVs correctly). Step 5 pending (the full-tier results document).
+  `risk_tier: standard`. Branches `feat/torture-1`, `feat/torture-1-s2`,
+  `feat/torture-1-step-3`, `feat/torture-1-step-4`.
+  pins: torture-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022,
+  C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030
 
 ## Pointers
 - Up: [../map.md](../map.md)
