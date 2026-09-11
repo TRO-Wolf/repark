@@ -11,6 +11,7 @@ from repark_parity.torture.secrets import SECRETS_FAMILY
 from repark_parity.torture.smartcsv import SMARTCSV_FAMILY
 from repark_parity.torture.temporal import TEMPORAL_FAMILY
 from repark_parity.torture.tiers import CI_ROWS, FULL_ROWS, tier_from_env, tier_rows
+from repark_parity.torture.v3_dv import V3DV_FAMILY
 
 FAMILIES: dict[str, Family] = {
     "decimal_overflow": DECIMAL_OVERFLOW_FAMILY,
@@ -35,6 +36,7 @@ __all__ = [
     "SECRETS_FAMILY",
     "SMARTCSV_FAMILY",
     "TEMPORAL_FAMILY",
+    "V3DV_FAMILY",
     "Family",
     "FamilyOutput",
     "tier_from_env",

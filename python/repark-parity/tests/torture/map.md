@@ -18,7 +18,10 @@ The suite needs the native module (the doors are repark's), so run it through
   data for every registered family (ci: 10k rows in a temp dir; full:
   `/tmp/torture/<family>` reuse), seed 7.
 - `_support.py` — the shared helpers: manifest-aware generation, the two door readers, the
-  loud-outcome readers, and the loud-rows assertion.
+  loud-outcome readers, the loud-rows assertion, and `materialize_table` (the
+  `_DirLock`-guarded copy of a checked-in table tree onto its baked-in absolute path,
+  returning the newest metadata file — the `test_v3_live_oracle.py` `_materialize`
+  contract, re-homed here because tests must not import a `test_` module).
 - `test_torture_nested.py` — the nested cells: protocol conformance, row counts and
   declared-schema equality on both doors for Parquet, the JSON-text CSV leg's
   completes-or-refuses-loud plus row count, and the `--depth`/`--width` scaling cell
@@ -68,10 +71,25 @@ The suite needs the native module (the doors are repark's), so run it through
   the option and its three values, the option refused loud on readers without the csv/json
   option map (parquet direct and `format('parquet').load`), and the JSON-door refuse.
   pins: torture-1/C-017, C-018, C-019
+- `test_torture_v3_dv.py` — the v3_dv cells (step 4): the module contract, the loud
+  refusal naming `REPARK_PARITY_LIVE` on the direct call and the committed CLI, the
+  committed fixture's truth-record self-consistency, the `delete_files` metadata-table
+  pin that the fixture carries live Puffin DVs (content 1), and the D-3 door cells —
+  `read.table` and `spark.sql` over a temp view — asserting repark's row count equals
+  the truth record's `true_rows` (96 of 120 under `id % 5 = 2`), the surviving id list
+  recomputed from the delete rule, and `DECLARED_SCHEMA` (`id`/`part` int32, `name`
+  string, all nullable). The fixture is materialized onto its baked-in location
+  `/tmp/repark-torture-v3dv/ns/v3dv` under `_support.materialize_table`'s lock and
+  registered via `CALL <catalog>.system.register_table`; `test_v3_dv_live_generate_and_read`
+  is the live-only cell (skips unless `REPARK_PARITY_LIVE=1`) that generates a fresh
+  table in a pytest temp dir and reads it back on both doors.
+  pins: torture-1/C-024, C-025, C-026, C-027, C-029
 - `test_generate_is_deterministic.py` — byte-identical same-seed CLI runs per family,
   different-seed bytes, the unknown-family and bad-rows refusals, the repository-internal
   output refusal, and the manifest reuse rule (matching rows+seed reuses, a mismatch
-  regenerates).
+  regenerates). These pins iterate `FAMILIES` — the file families only; `v3_dv` stays out
+  of that registry because Spark's output bytes (UUID file names, metadata timestamps)
+  are not deterministic, so byte-identity pins could never cover it.
   pins: torture-1/C-001
 - `test_ci_tier_under_60s.py` — the CI-tier workload pins: both step-1 families, the
   four step-2 families and the step-3 secrets family each generate and read on both doors
@@ -91,6 +109,11 @@ The suite needs the native module (the doors are repark's), so run it through
   cells' red run against the unimplemented option, the Rust parser red, D-4a recorded,
   and the gate runs) are in the same ledger under C-017 onward.
   pins: torture-1/C-021, C-023
+- The step-4 process clauses (the v3_dv red-first collection failure, the measured
+  relocation contract, the live-JVM rules, the ≤ 1 MB fixture, and the gate runs —
+  including the co-collected live run after `test_parity_live.py`) are in the same
+  ledger under C-024 onward.
+  pins: torture-1/C-024, C-028, C-030
 
 ## Pointers
 

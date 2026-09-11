@@ -16,7 +16,8 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 - `tests/` — unit tests for the comparison core **and the dataset generators**; the
   TORTURE-1 both-door suite lives in [tests/torture/](tests/torture/map.md).
 - `fixtures/` — generated-test fixture sources; the TORTURE-1 generator package
-  (`repark_parity.torture`, data never committed) lives in
+  (`repark_parity.torture`, data never committed except the ruled `data/v3_dv/`
+  Spark-written fixture) lives in
   [fixtures/torture/](fixtures/torture/map.md). **Contract:** `src/repark_parity/__init__.py`
   grafts this whole directory onto the package path, so **every directory added here becomes
   importable as `repark_parity.<name>`** — that is the rule, not a special case for `torture`.

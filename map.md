@@ -102,7 +102,11 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   must resolve; `make install-hooks` wires both). `.typos.toml`'s `extend-words` carries the domain
   vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
-  port-source pin's own config, never invented to silence a real misspelling. `.gitignore` also
+  port-source pin's own config, never invented to silence a real misspelling. Its
+  `extend-exclude` also covers the two Spark-written Iceberg fixture trees
+  (`crates/repark-spark/src/tests/fixtures/` and, since TORTURE-1 step 4,
+  `python/repark-parity/fixtures/torture/data/` — binary Avro/Parquet/Puffin, not prose).
+  `.gitignore` also
   carries `handback.json`, the hand-back artifact an agent writes at the lane root: a `git add -A`
   picked it up twice during H3-SPILL-1, and it is never repository content.
   pins: h3-spill-1/C-001

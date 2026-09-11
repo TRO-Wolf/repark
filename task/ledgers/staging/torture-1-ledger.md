@@ -105,51 +105,52 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: The suite ran red before the families existed (C-005) and before the secrets module existed (C-021); the flag cells ran red against the silently-tolerated option and the Rust pins compile-red — all pasted.
+      evidence: The suite ran red before the families existed (C-005), before the secrets module existed (C-021), and before the v3_dv generator/helper/fixture existed (C-028, pasted); the flag cells ran red against the silently-tolerated option and the Rust pins compile-red — all pasted.
       artifacts: [python/repark-parity/tests/torture/map.md]
     - id: AT-2
       status: ATTACKED
-      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell; the flag pin covers off/warn/refuse on both doors with the sql door's temp view registered from the flagged read.
-      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py, python/repark-parity/tests/torture/test_torture_secrets.py]
+      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell; the flag pin covers off/warn/refuse on both doors; the v3_dv cells pin the post-DV true row count, the surviving id set, and the declared schema on both doors over the committed fixture plus a live generate-and-read cell.
+      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py, python/repark-parity/tests/torture/test_torture_secrets.py, python/repark-parity/tests/torture/test_torture_v3_dv.py]
     - id: AT-3
       status: ATTACKED
-      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id; step 3 measured a declared schema repark already honors, so no new registry row was filed.
+      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id; steps 3 and 4 measured answers repark already honors (the declared secrets schema; the v3_dv DV read at 96-of-120), so no new registry row was filed.
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/torture/test_torture_inference.py]
     - id: AT-4
       status: N/A
       justification: Generators are stateless module-level functions and small classes; no shared mutable state.
     - id: AT-5
       status: ATTACKED
-      evidence: No AWS, IAM, secrets, .github, or dependency-file change; data writes go to temp dirs or /tmp/torture and a generator refuses repository-internal outputs; the secrets family's values are repark-fake- prefixed with no real key-id shape, and the flag inspects names only.
-      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/secrets.py]
+      evidence: No AWS, IAM, secrets, .github, or dependency-file change; data writes go to temp dirs, /tmp/torture, or the ruled D-5 committed fixture; the secrets family's values are repark-fake- prefixed with no real key-id shape, and the flag inspects names only. The v3_dv live path uses a module-private catalog name, never `local`, and its session is stopped only when the generator created it.
+      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/secrets.py, python/repark-parity/fixtures/torture/v3_dv.py]
     - id: AT-6
       status: ATTACKED
-      evidence: One Family protocol; all seven families implement it; the CLI adds no second dispatch surface; the flag rides the existing csv/json option maps and the existing facade semantic gate rather than a new plumbing path.
-      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/__main__.py, python/repark/src/repark/spark/session/reader_support.py]
+      evidence: One Family protocol for the file families; v3_dv deliberately stays outside FAMILIES (its generate returns a table result, not a Parquet+CSV pair, and its bytes are not deterministic) and the CLI carries it through the choices list plus the existing special-case dispatch shape; the flag rides the existing csv/json option maps.
+      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/__main__.py, python/repark-parity/fixtures/torture/v3_dv.py, python/repark/src/repark/spark/session/reader_support.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Tests and code land in the same commit; the red-first runs are recorded in this ledger for all three steps.
+      evidence: Tests and code land in the same commit; the red-first runs are recorded in this ledger for all four steps.
       artifacts: [task/ledgers/staging/torture-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers; step 3 updated the torture fixture/test maps, the core src map, the facade session map, and the staging-ledger map.
-      artifacts: [python/repark-parity/map.md]
+      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/, fixtures/torture/data/ and data/v3_dv/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers; step 3 updated the torture fixture/test maps, the core src map, the facade session map, and the staging-ledger map; step 4 updated the fixtures, torture package, tests, repark-parity, and staging maps.
+      artifacts: [python/repark-parity/map.md, python/repark-parity/fixtures/torture/data/map.md]
     - id: AT-9
       status: ATTACKED
-      evidence: Byte-identity determinism pin runs the committed CLI twice per family — the registry now includes secrets; the manifest-reuse pin mutates its inputs and reds.
+      evidence: Byte-identity determinism pin runs the committed CLI twice per file family — the registry now includes secrets; the manifest-reuse pin mutates its inputs and reds; v3_dv's non-determinism is recorded, not pinned.
       artifacts: [python/repark-parity/tests/torture/test_generate_is_deterministic.py]
     - id: AT-10
-      status: N/A
-      justification: No live-oracle tier belongs to steps 1–3 (the flag contract is engine-local; its answers are measured below); the recorded oracle is stated in the measured-behavior table above.
+      status: ATTACKED
+      evidence: Step 4's live leg is real and measured: the generator runs PySpark 4.1.2 with Iceberg 1.11.0 under zulu-17, asserts Spark's own post-delete COUNT(*) equals the computed truth, and the live cell is proven green co-collected after test_parity_live.py (124 passed); repark-only assertions sit in always-run cells.
+      artifacts: [python/repark-parity/tests/torture/test_torture_v3_dv.py]
 DELIVERY_SIGNOFF:
   pr_unit: torture-1
   artifacts_verified:
-    ledger: PASS (C-001..C-023)
+    ledger: PASS (C-001..C-030)
     coverage_attestation: PASS (AT-1..AT-10)
     findings_ledger: PASS (none open)
     shipped_flag_register: PASS (count 0)
   done_gate: PASS
-  status_update: steps 1-3 of 5; STATUS untouched per brief
+  status_update: steps 1-4 of 5; STATUS untouched per brief
   verdict: ACCEPTED
   rejection_route: N/A
 SHIPPED_FLAG_REGISTER:
@@ -450,3 +451,180 @@ seeded generator with `FAKE_PREFIX = "repark-fake-"`) declares the same hygiene 
 this family now shares; its map's "opt-in flagging is a later facade feature" sentence is
 now delivered by this step. The `warn` channel is stderr (`eprintln!`), not the
 opt-in tracing subscriber — callers grepping `REPARK_LOG` output will not see it.
+
+---
+
+# Step 4 (2026-09-11) — the v3_dv family under live Spark
+
+**Unit:** TORTURE-1 step 4 · **Date:** 2026-09-11 · **Executor:** Devin SWE-2
+(swe-2-high), Actor · **Branch:** `feat/torture-1-step-4` · **Base:** `main`
+`3f4a8adc` (step 3 merged) · **Model:** swe-2-high
+**risk_tier:** standard.
+
+Scope: step 4 only — the `v3_dv` generator (D-5, live-Spark-only), the ≤ 1 MB
+committed CI fixture, and its suite cells. No `docs/perf/` results document, no
+`docs/testing.md` paragraph (step 5), no `STATUS.md` edit.
+
+Live-Spark environment used (the card's load-bearing flags, all observed):
+`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (default `java` is 11), `.venv` pyspark 4.1.2
+verified (`import pyspark` → `4.1.2`), the `.ivy2` cache copy at `$PWD/.ivy2` with
+`PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=$PWD/.ivy2 pyspark-shell"`, and
+`pgrep -x java` empty before and after every JVM run. `.ivy2/` is in
+`.git/info/exclude`, never committed (the clone's tracked seed files inside it were
+restored after Spark's resolver stamped a timestamp).
+
+Within-card rulings recorded (consequences of the card's homes, not new decisions):
+`v3_dv` is **not** registered in `FAMILIES` — `Family.generate` returns a
+Parquet+CSV `FamilyOutput`, this family produces an Iceberg table, and Spark's output
+bytes (UUID file names, metadata timestamps) are not deterministic, so the
+byte-identity and repository-refusal pins in `test_generate_is_deterministic.py` stay
+scoped to the file families unchanged. The CLI gains the family through the `choices`
+list plus a dispatch branch beside `nested`'s (the existing special-case shape). The
+`--out` argument is the table's **warehouse**: the table root lands at
+`<out>/ns/v3dv`. The committed fixture is a copy of that table root including the
+`truth.json` the generator writes there; `refuse_repository_output` still fires for it
+because the fixture is generated outside the repo and copied in by hand — `--out` is
+never a repository path.
+
+## Step-4 proposition ledger
+
+| ID | Clause | Proof obligation | Verdict |
+|---|---|---|---|
+| C-024 | The `v3_dv` generator exists at `fixtures/torture/v3_dv.py`, is registered in the committed CLI (`generate v3_dv --rows N --seed S --out DIR`), and runs only under `REPARK_PARITY_LIVE=1` — otherwise it refuses loud naming the flag (direct call AND CLI subprocess). | `test_v3_dv_generate_refuses_without_live_flag`, `test_v3_dv_cli_registers_and_refuses`. | **PROVEN** |
+| C-025 | A ≤ 1 MB checked-in CI fixture exists under `fixtures/torture/data/v3_dv/`, written by that generator, with the true counts recorded beside it (`truth.json`: 120 written, 24 deleted under `id % 5 = 2`, 96 true rows, 24 data files, one Puffin DV). | `du -sb` = 315020 bytes; `test_v3_dv_fixture_truth_is_self_consistent`. | **PROVEN** |
+| C-026 | Relocation is measured, not assumed: repark follows the absolute paths baked into Iceberg metadata — a copy at an arbitrary path fails on manifest-list load — so the suite materializes the fixture onto its canonical baked-in location (`/tmp/repark-torture-v3dv/ns/v3dv`) under a directory lock, the `test_v3_live_oracle.py` contract. | The verbatim relocation probe below + `_support.materialize_table`. | **PROVEN** |
+| C-027 | The D-3 cells run on BOTH doors over the checked-in fixture with no JVM: `read.table` and `spark.sql` over a temp view each assert repark's row count equals the truth record's `true_rows` (96), the schema equals `DECLARED_SCHEMA`, and the surviving id set equals the recomputed expectation; a `delete_files` cell pins that the fixture carries live Puffin DVs (content 1); a live-only cell generates a fresh table and reads it back on both doors. | `test_torture_v3_dv.py` — 7 always-run cells + 1 live cell, all green. | **PROVEN** |
+| C-028 | Red-first: the suite ran before the generator, the `_support` helper, and the fixture existed and failed at collection; the verbatim output is pasted below. | The red run in the step-4 evidence section. | **PROVEN** |
+| C-029 | Live-cell rules honored: the generator records `SparkSession.getActiveSession()` first and stops only a session it created; the Spark catalog name is module-private (`torture_v3dv`, never `local`); `PYSPARK_SUBMIT_ARGS` is never popped; no per-call `spark.jars.ivy` tempdir; the new live test is proven green CO-COLLECTED after `python/repark/tests/test_parity_live.py`; repark-only assertions sit in always-run cells; `pgrep -x java` printed nothing before the first JVM and after the last. | The co-collected gate run + the pgrep checks in evidence. | **PROVEN** |
+| C-030 | Maps in lockstep and gates green: `fixtures/map.md`, `fixtures/torture/map.md`, `fixtures/torture/data/map.md` + `data/v3_dv/map.md` (new), `tests/map.md`, `tests/torture/map.md`, `repark-parity/map.md`, `staging/map.md` updated in the same commit; `make py-test-torture`, the co-collected live run, the whole parity suite, and `make verify` pass with real exit codes. | The gate runs in the step-4 evidence section. | **PROVEN** |
+
+## Step-4 red-first evidence (C-028)
+
+Command: `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+python/repark-parity/tests/torture -q`, run after `test_torture_v3_dv.py` existed and
+before `v3_dv.py`, the `_support.materialize_table` helper, and the fixture did
+(exit 2):
+
+```
+ImportError while importing test module '/tmp/dv-tort4/python/repark-parity/tests/torture/test_torture_v3_dv.py'.
+python/repark-parity/tests/torture/test_torture_v3_dv.py:12: in <module>
+    from _support import materialize_table
+E   ImportError: cannot import name 'materialize_table' from '_support' (/tmp/dv-tort4/python/repark-parity/tests/torture/_support.py')
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.20s
+```
+
+A second red once the code landed but before the fixture was generated — the four
+fixture cells errored on the missing tree while the three JVM-free cells passed
+(exit 1):
+
+```
+E   FileNotFoundError: [Errno 2] No such file or directory: '/tmp/dv-tort4/python/repark-parity/fixtures/torture/data/v3_dv'
+3 passed, 1 skipped, 4 errors in 1.37s
+```
+
+## Measured behavior behind step 4 (2026-09-11)
+
+Repark measured through the .venv native module; the Spark half was produced live by
+the generator itself (PySpark 4.1.2, `zulu-17-amd64`, `local[2]`, Iceberg
+1.11.0 hadoop catalog).
+
+| Shape | repark answer (measured 2026-09-11) | Spark half | Cell |
+|---|---|---|---|
+| format-v3 MoR table read under live Puffin DVs | 96 rows of 120 written (24 deleted), both doors; surviving id set exact | `SELECT COUNT(*)` = 96 inside the generator | door cells (green) |
+| schema of the DV table | `id int32, name string, part int32`, all nullable | `struct<id:int,name:string,part:int>` (all nullable, Spark DDL default) | door cells (green) |
+| `delete_files` metadata table on the fixture | 24 rows, all `content = 1` `PUFFIN` | 24 delete-file entries (one .puffin file on disk, listed once per data file it covers) | DV-presence cell (green) |
+| relocating the table tree to an arbitrary path | `PySparkException: ... Failed to read file <baked-in path>: No such file or directory` on manifest-list load | n/a — Iceberg metadata carries absolute file paths | materialize-table design (measured probe below) |
+| `generate` without `REPARK_PARITY_LIVE=1` | `RuntimeError` naming the flag, before any JVM work | n/a | refusal cells (green) |
+
+The relocation probe (verbatim): a repark-written Iceberg table at
+`/tmp/dv-reloc-orig/.../ns/t` was copied to `/tmp/dv-reloc-moved`, the original tree
+deleted, and `register_table` + `SELECT` answered:
+
+```
+repark.errors.PySparkException: Unexpected => Failed to load manifest list in cache,
+source: DataInvalid => Failed to read file
+/tmp/dv-reloc-orig/repark_ctas/ice/ns/t/metadata/snap-5782391719024352955-0-01a08f43-d46d-7761-a42e-7cf1afc0a3e6.avro:
+No such file or directory (os error 2)
+```
+
+so the committed fixture carries the `v3-spark-part-dv` contract: it is materialized
+onto its baked-in absolute location under a lock, never read in place.
+
+## Step-4 fixture and generation evidence (C-024, C-025)
+
+Generation transcript (live, JAVA_HOME=zulu-17-amd64, ivy cache at `$PWD/.ivy2`):
+
+```
+$ python -m repark_parity.torture generate v3_dv --rows 120 --seed 7 --out /tmp/repark-torture-v3dv
+v3_dv: 96 live rows -> /tmp/repark-torture-v3dv/ns/v3dv
+exit 0
+```
+
+truth.json (committed at the fixture root):
+
+```json
+{"family": "v3_dv", "seed": 7, "rows_written": 120,
+ "delete": {"modulus": 5, "residue": 2}, "rows_deleted": 24, "true_rows": 96,
+ "data_files": 24, "delete_files": 24, "format_version": 3, "table": "ns.v3dv",
+ "table_location": "/tmp/repark-torture-v3dv/ns/v3dv",
+ "metadata_file": "metadata/v14.metadata.json",
+ "schema": "struct<id:int,name:string,part:int>"}
+```
+
+```
+$ du -sb python/repark-parity/fixtures/torture/data/v3_dv
+315020	python/repark-parity/fixtures/torture/data/v3_dv
+$ find ... -name '*.puffin' | wc -l   -> 1
+$ find ... -name '*.parquet' | wc -l  -> 24
+$ find ... -type f | wc -l            -> 67  (.crc sidecars stripped)
+```
+
+## Step-4 gate evidence (C-029, C-030)
+
+All gate commands run 2026-09-11 on this branch (real exit codes):
+
+```
+$ pgrep -x java   (before the first JVM run, and after the last)
+exit 1 (empty)
+
+$ make py-test-torture
+...............xxx........x........x...........................x........ [ 82%]
+..xxxxx.......s                                                          [100%]
+75 passed, 1 skipped, 11 xfailed in 43.53s
+exit 0
+
+$ REPARK_PARITY_LIVE=1 .venv/bin/python -m pytest \
+    python/repark/tests/test_parity_live.py \
+    python/repark-parity/tests/torture/test_torture_v3_dv.py -q
+124 passed in 57.92s
+exit 0
+(test_v3_dv_live_generate_and_read PASSED — verified in the -v rerun, 8/8 cells green)
+
+$ PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv \
+    uv run --no-project python -m pytest python/repark-parity/tests -q
+738 passed, 1 skipped, 11 xfailed   (exit 0; the docs-links cell reads the git index,
+so the count includes the fixture staged for commit — see the note below)
+
+$ make verify
+exit 0 — fmt, clippy x3, panic-ban, crate-dag, lib-rs, rust-file-size, lib-py,
+python-conventions, docstring-presence, example-coverage, manifest, ledgers,
+ledger-grammar, docs-compaction, docs-links, owner-ruling, parity-live dual-wire,
+matrix-test-liveness, rust-check, py-lint, py-format-check, py-lock, toml, spell;
+workspace test suite green.
+```
+
+Docs-links note: `test_real_tree_is_green_under_the_seeded_allowlist` reds on
+links to not-yet-tracked files, so the parity suite shows one spurious failure until
+the new maps are `git add`ed; with the files staged it is green (19 passed) and the
+committed tree satisfies it.
+
+No new registry rows: repark reads the DVs correctly on both doors, so no cell
+diverged and no `xfail` was filed — the measured-Spark half is the generator's own
+post-delete `COUNT(*)`.
+
+Out-of-scope observations (recorded, not acted on): the `delete_files` metadata table
+lists the single on-disk `.puffin` once per data file it covers (24 rows for one
+file) — a metadata-table listing contract, not a divergence; `git status` shows this
+clone carries a small tracked `.ivy2` seed whose `ivydata-*.properties` the resolver
+re-stamps on each run (restored, and the directory is `.git/info/exclude`d here).

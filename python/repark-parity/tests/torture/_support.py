@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
+import shutil
+import time
+from contextlib import suppress
 from pathlib import Path
 
 import pyarrow as pa
@@ -77,3 +81,48 @@ def assert_loud_rows(outcome: LOUD_READ, rows: int, door: str) -> None:
         assert str(outcome) != "", door
         return
     assert outcome.num_rows == rows, door
+
+
+class _DirLock:
+    """Cross-process lock guarding a shared absolute fixture-materialization path."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        started = time.monotonic()
+        while True:
+            try:
+                self.path.mkdir()
+                return
+            except FileExistsError:
+                if time.monotonic() - started > 120:
+                    raise TimeoutError(f"fixture lock {path} held for 2 minutes") from None
+                time.sleep(0.025)
+
+    def close(self) -> None:
+        """Release the lock directory."""
+        with suppress(OSError):
+            self.path.rmdir()
+
+
+def _metadata_version(path: Path) -> int:
+    """Order metadata files by leading version digits (vN.metadata.json or NNNNN-uuid)."""
+    match = re.match(r"v?(\d+)", path.name)
+    if match is None:
+        raise ValueError(f"unrecognized metadata file name: {path.name}")
+    return int(match.group(1))
+
+
+def materialize_table(src: Path, dest: Path) -> str:
+    """Copy a Hadoop-layout table tree onto dest under a lock; return the newest metadata file."""
+    lock = _DirLock(Path(str(dest) + ".lock"))
+    try:
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+        versions = sorted((dest / "metadata").glob("*.metadata.json"), key=_metadata_version)
+        if not versions:
+            raise ValueError(f"no metadata files under {dest}/metadata")
+        return str(versions[-1])
+    finally:
+        lock.close()
