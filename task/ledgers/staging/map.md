@@ -699,3 +699,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   adds the plain-checkpoint marker (C-007) and the docs round. `risk_tier: standard`.
   Branch `feat/display-lazy-1`.
   pins: display-lazy-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- [review-fix-8-ledger.md](../completed/review-fix-8-ledger.md) —
+  **REVIEW-FIX-8 (2026-09-11), in flight:** the PROFILES-1 probe is re-runnable and its
+  table is true — a unique temporary directory per run, `REPARK_CONFIG=""` in every
+  session, the `VALIDATED` state for the three `repark.*` session keys, the two
+  `write.*` rows re-described as accepted-at-session / applied-at-table with per-key
+  table measurements, and re-derived counts (13 / 3 / 4 / 0 / 0). Closes Q-21, Q-22,
+  Q-23, Q-40, Q-41, Q-55, Q-56. `risk_tier: standard`. Branch
+  `fix/review-fix-8-conf-unread-1`.
+  pins: review-fix-8/C-001, C-002, C-003, C-004, C-005

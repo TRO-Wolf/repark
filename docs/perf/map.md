@@ -202,6 +202,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   NOT MEASURED), and the reproduce commands. Runnable method kept beside it in
   [profiles-1-probe/](profiles-1-probe/map.md). Step 0's record only; the unit's ledger
   is born in step 1.
+  **REVIEW-FIX-8 (2026-09-11)** makes the probe re-runnable (unique temporary directory
+  per run, `REPARK_CONFIG=""`, the work prefix scrubbed to `<work>`, two outputs byte
+  for byte identical) and trues the table: `VALIDATED` state for the three `repark.*`
+  session keys, the two `write.*` rows re-described as table properties with this
+  round's measurements, counts re-derived as 13 PASSES THROUGH, 3 VALIDATED,
+  4 ACCEPTED BUT UNREAD, 0 REFUSED, 0 NOT MEASURED. The four remaining UNREAD rows are
+  CONF-UNREAD-1's.
+  pins: review-fix-8/C-001, C-002, C-003, C-004, C-005
 - [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md) —
   **AP-0 (measure, 2026-09-10):** the ADAPT-PART candidate measurement — three local
   Iceberg beds (the futures frame CTAS unpartitioned, two generated 400k-row beds at

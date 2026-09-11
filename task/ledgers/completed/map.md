@@ -164,6 +164,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   errors in the engine, and the RF-3 one-warning disclosure for ambiently discovered
   cloud catalogs. 3 PROVEN, 0 OPEN. `risk_tier: standard`. Branch `fix/review-fix-7`.
   pins: review-fix-7/C-001, C-002, C-003
+- [review-fix-8-ledger.md](review-fix-8-ledger.md) — Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 
 ## Pointers

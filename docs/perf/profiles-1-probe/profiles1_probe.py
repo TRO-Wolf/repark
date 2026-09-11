@@ -3,6 +3,8 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
+import tempfile
 import warnings
 from pathlib import Path
 
@@ -116,14 +118,19 @@ def file_facts(path: Path) -> dict[str, object]:
     }
 
 
+def scrub_work_dir(plan: str) -> str:
+    raw = str(WORK)
+    return plan.replace(raw, "<work>").replace(raw.lstrip(os.sep), "<work>")
+
+
 def collect_subjects(
     spark: SparkSession,
     write_path: Path | None = None,
 ) -> dict[str, object]:
     subjects: dict[str, object] = {
-        "join": join_plan(spark),
-        "agg": agg_plan(spark),
-        "scan": scan_plan(spark),
+        "join": scrub_work_dir(join_plan(spark)),
+        "agg": scrub_work_dir(agg_plan(spark)),
+        "scan": scrub_work_dir(scan_plan(spark)),
         "range_batches": range_batches(spark),
     }
     if write_path is not None:
@@ -166,7 +173,9 @@ def runtime_probe(session: SparkSession, key: str, value: str) -> dict[str, str 
 
 
 def main() -> None:
-    WORK.mkdir(parents=True, exist_ok=True)
+    global WORK
+    os.environ["REPARK_CONFIG"] = ""
+    WORK = Path(tempfile.mkdtemp(prefix="profiles1-"))
     build_source_parquet(WORK / "left.parquet", 0)
     build_source_parquet(WORK / "right.parquet", 1)
 

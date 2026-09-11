@@ -4062,3 +4062,24 @@ pins: fnp-8-review/C-009, C-010
   Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
   and `Table Properties` engine defaults differ by construction).
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+
+- `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
+  probe re-runnability pins, run as a subprocess exactly as the document's reproduce
+  block does — `test_probe_runs_twice_with_identical_output` runs the full twenty-key
+  probe twice (exit 0 both, byte-identical stdout, the probe directory listing
+  unchanged) and `test_probe_ignores_a_poisoned_discovered_config` runs it under a
+  poisoned `HOME` and a poisoned CWD with no `REPARK_CONFIG` in its own environment
+  (exit 0, so the probe's own `REPARK_CONFIG=""` holds).
+  pins: review-fix-8/C-001, C-002
+
+- `test_profiles1_table_properties.py` — **REVIEW-FIX-8 (2026-09-11):** the two
+  `write.*` rows' table-side evidence as pins on the memory catalog —
+  `test_bogus_distribution_mode_refuses_at_write` (a `bogus` distribution-mode
+  table property refuses loud at partitioned CTAS) and
+  `test_target_file_size_applies_at_table` (a `1`-byte target property splits a
+  20k-row MERGE rewrite 16 new files against 4 on default, with row counts held).
+  Both run with `target_partitions` fixed to 16: the rewrite file count tracks the
+  input partition count (the 2026-09-12 CI red: 5 vs 5 on a few-core runner), so an
+  unpinned session makes the pin machine-dependent. Seed files are excluded by
+  set-diff so the count is the rewrite's alone.
+  pins: review-fix-8/C-004

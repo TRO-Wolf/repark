@@ -6,6 +6,14 @@ it be read back? This document is the round's product. No knob is chosen here, n
 is written, no engine code changed. The unit's ledger is born in step 1 with the bed
 script; this file is step 0's record alone.
 
+**REVIEW-FIX-8 (2026-09-11):** the probe is re-runnable (a unique temporary
+directory per run, `REPARK_CONFIG=""` in every session, the work prefix scrubbed
+to `<work>` so two outputs agree byte for byte), the table gains the `VALIDATED`
+state, the three `repark.*` rows move into it, and the two `write.*` rows are
+re-described as table properties with this round's measurements. Counts are
+re-derived in §5. The four remaining `ACCEPTED BUT UNREAD` rows are
+CONF-UNREAD-1's; the next round owns them.
+
 ## 1. Method
 
 Two probe scripts, both run against a debug native provisioned the way `make
@@ -31,10 +39,15 @@ valid value with no refusal; `session.conf.set(key, value)` at runtime accepted 
 key as well; `conf.get` and `conf.getAll` agreed on all twenty. The only refusals in the
 capture are the deliberate validation probes (§4).
 
-Verdict meanings (D-7): `PASSES THROUGH` (set, readable, engine evidence observed),
-`ACCEPTED BUT UNREAD` (set and readable, no engine-visible signal on the probed
-subjects), `REFUSED` (with the message). A key the probe never reached would read
-`NOT MEASURED`; every D-1 key was reached, so that verdict does not occur.
+Verdict meanings (D-7, plus REVIEW-FIX-8 D-2): `PASSES THROUGH` (set, readable,
+engine evidence observed), `VALIDATED` (set, readable, and an invalid value
+refuses loud at `getOrCreate` — the key is parsed at session build, so "accepted
+but unread" overstates nothing and understates the check), `ACCEPTED BUT UNREAD`
+(set and readable, no engine-visible signal on the probed subjects), `REFUSED`
+(with the message). A key the probe never reached would read `NOT MEASURED`;
+every D-1 key was reached, so that verdict does not occur. The two `write.*`
+rows are table properties: their engine evidence is observed at the table
+(measured in REVIEW-FIX-8, cited per row), not in the probe's plan subjects.
 
 ## 2. Read keys (twelve)
 
@@ -50,7 +63,7 @@ subjects), `REFUSED` (with the message). A key the probe never reached would rea
 | `datafusion.execution.parquet.enable_page_index` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD |
 | `datafusion.execution.parquet.bloom_filter_on_read` (`false`) | accepted | `false` | not plan-visible: filtered single-file scan plan byte-identical to baseline | ACCEPTED BUT UNREAD |
 | `datafusion.execution.coalesce_batches` (`false`) | accepted | `false` | not plan-visible: agg and join plans byte-identical to baseline; probe-2 8-file plans byte-identical too | ACCEPTED BUT UNREAD |
-| `repark.scan.concurrency_limit` (`4`) | accepted | `4` | no subject measured for this key; nothing plan-visible was checked | ACCEPTED BUT UNREAD |
+| `repark.scan.concurrency_limit` (`4`) | accepted | `4` | parsed at session build (`0` and `abc` refuse, §4); the value bounds MERGE target-scan file concurrency (`session.rs:235`, `target_scan.rs:99`); no plan-visible signal on the probed subjects | VALIDATED |
 | `repark.batch.size` (`3`) | accepted | `3` | not plan-visible; `range(10)` yields 4 batches against a 1-batch baseline | PASSES THROUGH |
 
 Quoted plan baselines these rows compare against (`probe_out.json`, `baseline`):
@@ -73,10 +86,10 @@ file the probe's fact collector opens.
 | `datafusion.execution.parquet.max_row_group_size` (`1000`) | accepted | `1000` | written file: `row_groups` 66 against 1, `bytes` 485195 | PASSES THROUGH |
 | `datafusion.execution.parquet.bloom_filter_on_write` (`true`) | accepted | `true` | written file: `bloom_filter_lengths` `[65553, 47, 65553, 65553]` against `[null, null, null, null]` | PASSES THROUGH |
 | `datafusion.execution.parquet.write_batch_size` (`1000`) | accepted | `1000` | no subject measured for this key; the probe gave it an empty subject list | ACCEPTED BUT UNREAD |
-| `write.target-file-size-bytes` (`134217728`) | accepted | `134217728` | no subject measured; the Iceberg write path was not exercised | ACCEPTED BUT UNREAD |
-| `write.distribution-mode` (`hash`) | accepted | `hash` | no subject measured; the Iceberg write path was not exercised | ACCEPTED BUT UNREAD |
-| `repark.merge.file_scoped_rewrite` (`true`) | accepted | `true` | no subject measured; no MERGE ran in the probe | ACCEPTED BUT UNREAD |
-| `repark.merge.scan_pruning` (`true`) | accepted | `true` | no subject measured; no MERGE ran in the probe | ACCEPTED BUT UNREAD |
+| `write.target-file-size-bytes` (`134217728`) | accepted | `134217728` | an Iceberg table property: the session stores any value (even `abc`), the write path reads the table's own property at commit (`append.rs:272`); measured this round — with `target_partitions` pinned to 16, a MERGE rewrite with target `1` lands 16 new data files against 4 on default (20k rows, seed files excluded), pinned by `test_profiles1_table_properties.py` (ledger C-004) | PASSES THROUGH |
+| `write.distribution-mode` (`hash`) | accepted | `hash` | an Iceberg table property: the session stores any value (even `bogus`), RePark-owned writes read the table's property (`distribution.rs:169`); measured this round — `bogus` refuses loud at partitioned CTAS with more than one writer (`write.distribution-mode 'bogus' is not supported`, ledger C-004; the pin fixes `target_partitions` to 16 so the property is always consulted) | PASSES THROUGH |
+| `repark.merge.file_scoped_rewrite` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates the copy-on-write file-scoped rewrite path (`merge/mod.rs:226,622`); no MERGE ran in the probe | VALIDATED |
+| `repark.merge.scan_pruning` (`true`) | accepted | `true` | parsed at session build (`maybe` refuses, §4); gates MERGE scan pruning (`merge/mod.rs:219`) and the predicate-DML residual probe (`residual.rs:168`); no MERGE ran in the probe | VALIDATED |
 
 ## 4. Refusal shape (validation probes, all refused as designed)
 
@@ -94,23 +107,32 @@ refusals are loud and exact, which is what a `REFUSED` row would quote:
 - `repark.scan.concurrency-limit` (dash spelling) validates identically to the underscore
   spelling; both `repark.merge` dash spellings validate identically too.
 
+REVIEW-FIX-8 measured the other side of the `write.*` rows: the session
+validates nothing there — `builder.config("write.distribution-mode", "bogus")`
+and `builder.config("write.target-file-size-bytes", "abc")` are both accepted
+and read back. Refusal for those keys happens at the table, per the §3 rows.
+
 ## 5. Answer, counts, and reproduce
 
 Answer to the card's gating question: yes. Every `datafusion.*` and `repark.*` key in
 the D-1 inventory is accepted through `.config()`, reads back through `conf.get` and the
 dump, accepts a runtime `conf.set` as well, and where the engine has an observable
 signal it responds: join, agg and scan plans change for six read keys, batch counts
-move for the two batch-size keys, and written parquet files change codec, row-group
-count and bloom filters for three write keys. Counts: **PASSES THROUGH 11, ACCEPTED BUT
-UNREAD 9, REFUSED 0, NOT MEASURED 0.** The nine `ACCEPTED BUT UNREAD` rows are not
-counter-evidence: five had no subject that could show them (page index, read bloom
-filter and coalesce affect execution, not the plan text; the concurrency, write-batch,
-file-size, distribution and merge keys had no exercised path in this probe) and are
-step-1 sweep material, not premise threats. The card's premise holds; no separate
+move for the two batch-size keys, written parquet files change codec, row-group
+count and bloom filters for three write keys, the three `repark.*` session keys
+refuse invalid values at build, and the two `write.*` table properties apply at
+the table (or refuse loud there). Counts: **PASSES THROUGH 13, VALIDATED 3,
+ACCEPTED BUT UNREAD 4, REFUSED 0, NOT MEASURED 0.** The four remaining
+`ACCEPTED BUT UNREAD` rows are CONF-UNREAD-1's four DataFusion keys (page index,
+read bloom filter, coalesce and write batch size, whose plans cannot show them);
+the next round re-measures them. No row rests on an empty subject any more
+(Q-41's mapping is gone): every row carries a probe subject, a build-time
+refusal, or a table measurement. The card's premise holds; no separate
 pass-through step is needed before measurement.
 
-Reproduce (the two scripts are the method; each generates its own data directory, so no
-fixture setup precedes them):
+Reproduce (the two scripts are the method; each builds its subjects in a unique
+temporary directory per run, so no fixture setup precedes them and nothing lands
+under tracked `docs/perf/`):
 
 - `.venv/bin/python docs/perf/profiles-1-probe/profiles1_probe.py > probe_out.json`
   produces §2–§4's main table (the twenty `keys` entries against `baseline`), the
@@ -119,9 +141,15 @@ fixture setup precedes them):
   produces the five-case multi-file follow-up that the `repartition_file_scans`,
   `pushdown_filters=false` and `coalesce_batches` rows rest on.
 
-The copies differ from the measuring worker's originals in exactly one line each: the
-`WORK` directory is script-relative (`Path(__file__).resolve().parent / "data"`), since
-the originals named this clone's scratch path. Environment provisioning was not
+Each run sets `REPARK_CONFIG=""` before opening any session, so a developer's
+own `repark.toml` cannot register catalogs into a measurement (Q-56), and
+scrubs its work prefix to `<work>` in every plan, so two runs in a row exit 0
+with byte-identical outputs — the committed pin
+(`python/repark/tests/test_profiles1_probe_rerun.py`) asserts exactly that,
+plus immunity to a poisoned discovered file. Run data stays under the system
+temporary root for the operator to delete. The scripts differ from the measuring
+worker's originals in the work directory (once script-relative `data/`, now the
+temporary directory) and the two guards above. Environment provisioning was not
 recorded beyond "debug native as `make py-test-facade` provisions it"; the exact
 provisioning command is an open question below.
 
