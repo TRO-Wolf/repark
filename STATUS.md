@@ -7,62 +7,54 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-10._
+_Last updated: 2026-09-11._
 
 ## Release state
 
-**v1.1.1 shipped (2026-09-06)** — the first patch on v1.1.0: RDF-SCHEMA-EVO-1 (compaction after
-schema evolution, fork pin RP-15 `85db42f2`), WRITE-DISTRIBUTION-2 (one partition value, one
-writer on INSERT OVERWRITE and MERGE), CSV-INFER-PERF-1. Version SSOT: the Cargo workspace.
-**v1.1.0 shipped (2026-09-06)** — the first minor on v1.0.0 (2026-09-03, the first stable tag;
-v1.0.1 2026-09-04; v0.1.0–v0.6.0 2026-08-15 → 08-31): tag-triggered `release.yml`, PyPI trusted
-publishing, a wheel-only `cp312-abi3` manylinux wheel (see docs/release.md).
-v1.0.0 is the format-v3 north star at its gate: all twenty §3 rows of
-[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED
-(V1-GATE #320, V3-COV #321). From that tag the API freeze binds: additive-only within the major
-for every frozen row of [v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (owner ruling
-2026-09-03). 1.1.0 is additive — the roll-call is the v1.1.0 tag's release notes. Post-1.1.1
-`main` adds the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines, identical
-export surface) and FNP-8 with its review. **DISPLAY-POLARS-1 (2026-09-09)** changes a
-user-visible default on post-1.1.1 `main`: `show()` and `repr(df)` render the polars-style table,
-not the PySpark ASCII grid (`REPARK_DISPLAY_STYLE=spark` restores the grid);
-`repark.DataFrame` itself is unchanged. **DISPLAY-LAZY-1 (2026-09-11, R-22)** reverses its D-4: an
-unmaterialised frame renders its **schema**, not its data — in a notebook every bare expression is
-a `repr`, and the old default ran the plan twice. Rows come back with `.eager()` / `.compute()`,
-any action, or `spark.sql.repl.eagerEval.enabled`. DISPLAY-BRIDGE-1 (2026-09-10): a bridged frame's
-`show()` matches its own `repr`. The four facade-local keys and the precedence chain:
-[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
-**DF-EAGER-1 (2026-09-09)** adds `DataFrame.eager()` / `.compute()` (one function object) and
-`.lazy()`: `.eager()` materialises through the cache-view path into a **new `repark.DataFrame`**
-(same class, never a polars object) whose shape is read once; `.lazy()` returns to a plan over the
-same relation. `collect()` and `df.pl.collect()` are unchanged.
-**REVIEW-1 fixes (2026-09-10)** — the confirmed findings of the 24-round critic sweep
-([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)). **FIX-4:** `.lazy()`
-no longer interpolates the cache view into SQL; `count()` and the styled preview discharge a
-pending `localCheckpoint(eager=False)` with no count query. **FIX-5:** `DESCRIBE` completes short
-names from session defaults, describes a real `ice.sales.files`, snapshots `Owner` at session build
-(ADR-0004) and redacts secret-shaped table properties (Spark prints `s3.access-key-id`; RePark
-deliberately does not). **FIX-1/2:** the config mirror refuses exactly what the loader refuses and
-names both key paths on a duplicate; the loader's pins no longer read `HOME`. **FIX-3/9/14:** the
-polars renderer matches polars at its row, list and float boundaries; `repark.display.max_rows`
-refuses above 10,000. **FIX-6/11:** `explain()` refuses `extended` with `mode`, as PySpark does.
-**CONF-UNREAD-1:** three accepted-but-unread `datafusion.*` keys are wired;
-`datafusion.execution.coalesce_batches` (read by no DataFusion 54.1.0 path) refuses loud. **FIX-7:** a `repark.toml` name that would break a TOML header refuses, a parse error never echoes
-the offending line, and a cloud catalog in a *discovered* file warns once at session build.
-**MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
-`[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
-build, and `CALL <catalog>.system.run_maintenance(table => 'db.t', …)` — mirrored as
-`session.run_maintenance(...)` — that spends it. **`dry_run` defaults to true**; `false` runs the
-five-step chain one commit per step. No scheduler. Keys, order, result frame:
-[docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
-**Ballista Milestone 1 (2026-09-10, #460/#466/#469/#470)** is on `main`: `repark-distributed`
-(tier 3, role `runtime`) carries the `DistributedExecutor` seam, a local executor and, behind the
-off-by-default `cluster` feature, an in-process Ballista scheduler with multi-stage queries and
-per-executor Iceberg reads. Two clauses stay OPEN on the `datafusion-proto` wall — Milestone 2's
-first unit per
-[review-fix-slate-2026-09-10.md](task/roadmap/mid-term/review-fix-slate-2026-09-10.md) RF-9;
-design [docs/design/distributed-m1.md](docs/design/distributed-m1.md). Release mechanics:
-[docs/release.md](docs/release.md).
+**v1.2.0 (2026-09-11) — the torture-suite minor on 1.1**, additive under the API freeze (names
+added, no frozen name or required parameter changed). What the tag carries, all merged on
+post-1.1.1 `main`:
+
+- **Display default (DISPLAY-POLARS-1, -BRIDGE-1, -LAZY-1; REVIEW-FIX-3/9/14):** `show()` and
+  `repr(df)` render the polars-style table; **an unmaterialised frame renders its schema, not its
+  data** (R-22 — a notebook's bare expression is a `repr`, and the old default ran the plan);
+  rows come back with `.eager()` / `.compute()`, any action, or `spark.sql.repl.eagerEval.enabled`.
+  `REPARK_DISPLAY_STYLE=spark` restores the ASCII grid; `repark.DataFrame` is unchanged.
+  Keys and precedence: [docs/guide/session-and-conf.md](docs/guide/session-and-conf.md).
+- **`DataFrame.eager()` / `.compute()` / `.lazy()` (DF-EAGER-1):** `.eager()` materialises into a
+  **new `repark.DataFrame`** (same class, never a polars object) whose shape is read once;
+  `collect()` and `df.pl.collect()` are unchanged.
+- **Torture-test dataset suite (TORTURE-1, roadmap v1.2):** eight generated families on both
+  doors — nested, inference, extreme types, smartCsv, temporal, decimal overflow, secrets
+  (`flag_secret_columns = off|warn|refuse`), `v3_dv` under real deletion vectors — CI tier 10k rows,
+  full tier 1M rows on a release build green ([docs/perf/torture-1-2026-09-11.md](docs/perf/torture-1-2026-09-11.md)).
+- **Maintenance policy (MAINT-POLICY-1, roadmap 2.1):** `[<profile>.maintenance]` in `repark.toml`
+  and `CALL <catalog>.system.run_maintenance(table => …)` / `session.run_maintenance(...)`;
+  `dry_run` defaults to true: [docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md).
+- **`repark.toml` (CFG-1), `explain()` modes (DF-EXPLAIN-1), `DESCRIBE [TABLE] [EXTENDED]` on
+  Iceberg tables with short-name completion and secret redaction (SQL-DESCRIBE-1, REVIEW-FIX-5),
+  `CALL plan_partitioning()` with a footer-measured byte ratio (AP-0/AP-1), three
+  accepted-but-unread `datafusion.*` keys wired and one refused loud (CONF-UNREAD-1).**
+- **The REVIEW-1 critic sweep's 15 fix cards** — the eager-frame data-loss path, the config
+  mirror's TOML injection and secret echo, two fail-open gates — all closed
+  ([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)).
+- **Ballista Milestone 1 + M2-A:** `repark-distributed` (tier 3, role `runtime`) behind the
+  off-by-default `cluster` feature — the `DistributedExecutor` seam, an in-process scheduler,
+  multi-stage queries, per-executor Iceberg reads, and a delegating codec so `IcebergTableScan`
+  crosses to an executor ([docs/design/distributed-m1.md](docs/design/distributed-m1.md)).
+- **Never-OOM matrix step 2 (NEVEROOM-1):** 24 of 27 cells stable at 2/4/8× a 1 GB limit;
+  `hash_join` at 4× and two unstable cells trace to datafusion#24768 / #22758 (v1.3 documents them).
+- Also: the DataFrame core decomposition (DFCORE-1…6, `core.py` 6,302 → 4,539 lines), FNP-8, the
+  shared PySpark oracle guard that turned the nightly green again (NIGHTLY-LIVE-1).
+
+**History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1);
+v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable
+tag)** — the format-v3 north star at its gate, all twenty §3 rows of
+[the north star](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ✅ or dated DECLARED, from
+which the API freeze binds: additive-only within the major for every frozen row of
+[v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json); v0.1.0–v0.6.0 (2026-08-15 → 08-31).
+Tag-triggered `release.yml`, PyPI trusted publishing, one `cp312-abi3` manylinux wheel; version
+SSOT: the Cargo workspace. Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
@@ -335,6 +327,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.1.1 shipped 2026-09-06; the tag history is in [Release state](#release-state).
+**None.** v1.2.0 cut 2026-09-11; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
