@@ -82,7 +82,10 @@ pins: rp-4-fork-repin/C-005, C-006
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).
   **AP-1 step 1 (2026-09-10):** `plan_partitioning` scores the P-2 candidates with exactly
   P-3 over the `files` metadata table and answers the D-1 plan frame (the pure engine lives
-  in `call/plan_partitioning_score.rs`).
+  in `call/plan_partitioning_score.rs`). **AP-1 step 2 (2026-09-11):**
+  `projected_files_at_target` derives from post-rewrite bytes via the parquet-footer
+  `byte_ratio` in `call/plan_partitioning_bytes.rs` (0.55 fallback), reported per row in
+  `notes`.
   Details and test pointers:
   [call/map.md](call/map.md).
   pins: v3-5-dv-compaction/C-002, C-003, C-006

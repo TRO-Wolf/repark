@@ -637,8 +637,14 @@ above.
   unit tests pin the civil calendar, the grains, the band penalty, the 1/k split, the Spark
   DDL labels, the bucket split, the pair cross-product, and the plan-id stability. Timestamp
   fixture days are rendered as literals in Rust (`TIMESTAMP '…'` arms over `src`) because the
-  door exposes no SQL `date_add`.
-  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  door exposes no SQL `date_add`. **AP-1 step 2 (2026-09-11):** the byte-ratio pins — a
+  CTAS-written compressible table (CTAS lands zstd; `INSERT INTO` lands uncompressed through
+  the fork's task writer, so the ratio pin cannot seed by INSERT) whose `notes` carry
+  `byte_ratio=<footer sums recomputed independently via datafusion::parquet> (footers)` and
+  whose `unpartitioned` projected count equals `ceil(bytes × ratio / target)`, and the same
+  fixture with one data file overwritten by non-parquet bytes answering
+  `byte_ratio=0.55 (fallback)` with the projection folded by 0.55.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 
 ## Pointers
 

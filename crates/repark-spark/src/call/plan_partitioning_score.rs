@@ -7,6 +7,7 @@ const LOW_FRACTION: f64 = 0.25;
 const HIGH_MULTIPLE: f64 = 4.0;
 pub(super) const DISTINCT_LIMIT: usize = 1000;
 pub(super) const BUCKET_WIDTHS: [u32; 5] = [8, 16, 32, 64, 128];
+pub(super) const FALLBACK_BYTE_RATIO: f64 = 0.55;
 
 #[derive(Clone, Copy)]
 pub(super) enum ColumnKind {
@@ -126,7 +127,11 @@ fn penalty(value: f64, target: u64) -> f64 {
 }
 
 #[allow(clippy::cast_precision_loss)]
-pub(super) fn accumulate(items: &[(u64, Vec<ValueKey>)], target: u64) -> (f64, usize, f64) {
+pub(super) fn accumulate(
+    items: &[(u64, Vec<ValueKey>)],
+    target: u64,
+    byte_ratio: f64,
+) -> (f64, usize, f64) {
     let mut totals: BTreeMap<&ValueKey, f64> = BTreeMap::new();
     for (size, values) in items {
         let share = *size as f64 / values.len() as f64;
@@ -138,7 +143,7 @@ pub(super) fn accumulate(items: &[(u64, Vec<ValueKey>)], target: u64) -> (f64, u
     let mut projected = 0.0;
     for amount in totals.values() {
         score += penalty(*amount, target);
-        projected += (amount / target as f64).ceil();
+        projected += (amount * byte_ratio / target as f64).ceil();
     }
     (score, totals.len(), projected)
 }
@@ -282,6 +287,7 @@ pub(super) fn score_single(
     rated: &RatedColumn,
     sizes: &[u64],
     target: u64,
+    byte_ratio: f64,
 ) -> Option<ScoredSpec> {
     let part = SpecPart {
         column: column.to_string(),
@@ -309,7 +315,7 @@ pub(super) fn score_single(
         }
         Grain::Bucket(width) => (bucket_items(*width, sizes), 0),
     };
-    let (score, partitions, projected) = accumulate(&items, target);
+    let (score, partitions, projected) = accumulate(&items, target, byte_ratio);
     let note = match &part.grain {
         Grain::Bucket(_) => "uniform-hash spread over N buckets".to_string(),
         _ if fallback > 0 => format!("{fallback} files spread uniformly"),
@@ -326,7 +332,12 @@ pub(super) fn score_single(
     })
 }
 
-pub(super) fn score_pair(first: &ScoredSpec, second: &ScoredSpec, target: u64) -> ScoredSpec {
+pub(super) fn score_pair(
+    first: &ScoredSpec,
+    second: &ScoredSpec,
+    target: u64,
+    byte_ratio: f64,
+) -> ScoredSpec {
     let combined: Vec<(u64, Vec<ValueKey>)> = first
         .items
         .iter()
@@ -344,7 +355,7 @@ pub(super) fn score_pair(first: &ScoredSpec, second: &ScoredSpec, target: u64) -
             (*size, values)
         })
         .collect();
-    let (score, partitions, projected) = accumulate(&combined, target);
+    let (score, partitions, projected) = accumulate(&combined, target, byte_ratio);
     let mut parts = first.parts.clone();
     parts.extend(second.parts.iter().cloned());
     ScoredSpec {
@@ -414,7 +425,7 @@ mod tests {
     #[test]
     fn accumulate_splits_a_spanning_file_one_over_k() {
         let items = vec![(100_u64, vec![ValueKey::Number(0), ValueKey::Number(1)])];
-        let (score, partitions, projected) = accumulate(&items, 100);
+        let (score, partitions, projected) = accumulate(&items, 100, 1.0);
         assert!((score - 0.0).abs() < f64::EPSILON);
         assert_eq!(partitions, 2);
         assert!((projected - 2.0).abs() < f64::EPSILON);
@@ -426,7 +437,7 @@ mod tests {
             (100_u64, vec![ValueKey::Number(0)]),
             (100_u64, vec![ValueKey::Number(0)]),
         ];
-        let (score, partitions, projected) = accumulate(&items, 100);
+        let (score, partitions, projected) = accumulate(&items, 100, 1.0);
         assert!((score - 0.0).abs() < f64::EPSILON);
         assert_eq!(partitions, 1);
         assert!((projected - 2.0).abs() < f64::EPSILON);
@@ -455,8 +466,8 @@ mod tests {
     #[test]
     fn bucket_single_splits_bytes_evenly_over_n() {
         let rated = rated_numbers(vec![Some((0, 9)), Some((10, 19))]);
-        let candidate =
-            score_single("id", Grain::Bucket(8), &rated, &[800, 800], 100).expect("bucket scores");
+        let candidate = score_single("id", Grain::Bucket(8), &rated, &[800, 800], 100, 1.0)
+            .expect("bucket scores");
         assert_eq!(candidate.label, "bucket(8, id)");
         assert!((candidate.score - 0.0).abs() < f64::EPSILON);
         assert_eq!(candidate.partitions, 8);
@@ -472,6 +483,7 @@ mod tests {
             &rated,
             &[100],
             100,
+            1.0,
         )
         .expect("day scores");
         let second = score_single(
@@ -480,9 +492,10 @@ mod tests {
             &rated,
             &[100],
             100,
+            1.0,
         )
         .expect("hour scores");
-        let pair = score_pair(&first, &second, 100);
+        let pair = score_pair(&first, &second, 100, 1.0);
         assert_eq!(pair.label, "days(ts)+hours(ts)");
         assert_eq!(pair.partitions, 50);
         assert_eq!(pair.note, "cross-product spread");

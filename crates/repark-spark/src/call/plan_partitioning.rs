@@ -31,6 +31,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::TableIdent;
 use iceberg::spec::TableMetadata;
 
+use super::plan_partitioning_bytes::byte_ratio;
 use super::plan_partitioning_score::BUCKET_WIDTHS;
 use super::plan_partitioning_score::ColumnKind;
 use super::plan_partitioning_score::Grain;
@@ -51,7 +52,7 @@ use super::{CallArgs, resolve_table_ident};
 use crate::{catalog_handle, iceberg_err};
 use repark_core::CatalogRegistry;
 
-const RESIDUE_NOTE: &str = "AP-0-R-001: projected_files_at_target derives from pre-rewrite file bytes and measured 76-88% high on the AP-0 beds; projected_partitions measured exact";
+const RESIDUE_NOTE: &str = "AP-0-R-001: projected_files_at_target applies byte_ratio to the pre-rewrite file bytes (the raw sum measured 76-88% high on the AP-0 beds); projected_partitions measured exact";
 
 pub(super) async fn execute_plan_partitioning(
     ctx: &SessionContext,
@@ -80,6 +81,7 @@ pub(super) async fn execute_plan_partitioning(
     let spec_count = table.metadata().partition_specs_iter().len();
     let inventory = inventory(table.metadata());
     let files = read_files(ctx, catalogs, catalog_name, &ident).await?;
+    let ratio = byte_ratio(table.file_io(), &files.paths).await;
     let rated = rate_columns(&inventory.columns, &files);
     let inputs = PlanInputs {
         table_arg: &table_arg,
@@ -90,6 +92,8 @@ pub(super) async fn execute_plan_partitioning(
         sizes: &files.sizes,
         unsupported: &inventory.unsupported,
         spec_count,
+        byte_ratio: ratio.value,
+        ratio_source: ratio.source,
     };
     let rows = build_plan(&inputs)?;
     plan_dataframe(ctx, &rows)
@@ -222,6 +226,7 @@ async fn read_branch_names(
 
 struct FilesSnapshot {
     sizes: Vec<u64>,
+    paths: Vec<String>,
     metrics: Vec<StructArray>,
 }
 
@@ -236,11 +241,12 @@ async fn read_files(
         ctx,
         catalogs,
         &format!(
-            "SELECT \"file_size_in_bytes\", \"readable_metrics\" FROM {path} WHERE \"content\" = 0"
+            "SELECT \"file_size_in_bytes\", \"file_path\", \"readable_metrics\" FROM {path} WHERE \"content\" = 0"
         ),
     )
     .await?;
     let mut sizes = Vec::new();
+    let mut paths = Vec::new();
     let mut metrics = Vec::new();
     for batch in &batches {
         let raw_sizes = batch
@@ -269,6 +275,23 @@ async fn read_files(
                 ))
             })?);
         }
+        let raw_paths = batch
+            .column_by_name("file_path")
+            .ok_or_else(|| {
+                DataFusionError::Plan(format!(
+                    "files table over `{path}` missed column `file_path`"
+                ))
+            })?
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .ok_or_else(|| {
+                DataFusionError::Plan(format!(
+                    "files table over `{path}` column `file_path` is not Utf8"
+                ))
+            })?;
+        for row in 0..batch.num_rows() {
+            paths.push(raw_paths.value(row).to_string());
+        }
         let column = batch
             .column_by_name("readable_metrics")
             .ok_or_else(|| {
@@ -286,7 +309,11 @@ async fn read_files(
             .clone();
         metrics.push(column);
     }
-    Ok(FilesSnapshot { sizes, metrics })
+    Ok(FilesSnapshot {
+        sizes,
+        paths,
+        metrics,
+    })
 }
 
 enum NormScalar {
@@ -530,6 +557,8 @@ struct PlanInputs<'a> {
     sizes: &'a [u64],
     unsupported: &'a [(String, String)],
     spec_count: usize,
+    byte_ratio: f64,
+    ratio_source: &'static str,
 }
 
 struct ScoredSingles {
@@ -571,9 +600,14 @@ fn score_singles(inputs: &PlanInputs) -> ScoredSingles {
         let grains = grains_for(column, &mut skipped);
         let mut column_best: Option<usize> = None;
         for grain in grains {
-            if let Some(candidate) =
-                score_single(&column.name, grain, column, inputs.sizes, inputs.target)
-            {
+            if let Some(candidate) = score_single(
+                &column.name,
+                grain,
+                column,
+                inputs.sizes,
+                inputs.target,
+                inputs.byte_ratio,
+            ) {
                 let better = match column_best {
                     None => true,
                     Some(index) => is_better(
@@ -600,7 +634,12 @@ fn score_singles(inputs: &PlanInputs) -> ScoredSingles {
     }
 }
 
-fn push_pairs(scored: &mut Vec<ScoredSpec>, best: &mut [(String, usize)], target: u64) {
+fn push_pairs(
+    scored: &mut Vec<ScoredSpec>,
+    best: &mut [(String, usize)],
+    target: u64,
+    byte_ratio: f64,
+) {
     best.sort_by(|left, right| {
         let first = &scored[left.1];
         let second = &scored[right.1];
@@ -613,18 +652,18 @@ fn push_pairs(scored: &mut Vec<ScoredSpec>, best: &mut [(String, usize)], target
     let top: Vec<usize> = best.iter().take(3).map(|(_, index)| *index).collect();
     for (position, first) in top.iter().enumerate() {
         for second in top.iter().skip(position + 1) {
-            let pair = score_pair(&scored[*first], &scored[*second], target);
+            let pair = score_pair(&scored[*first], &scored[*second], target, byte_ratio);
             scored.push(pair);
         }
     }
 }
 
-fn push_unpartitioned(scored: &mut Vec<ScoredSpec>, sizes: &[u64], target: u64) {
+fn push_unpartitioned(scored: &mut Vec<ScoredSpec>, sizes: &[u64], target: u64, byte_ratio: f64) {
     let items: Vec<(u64, Vec<ValueKey>)> = sizes
         .iter()
         .map(|size| (*size, vec![ValueKey::Number(0)]))
         .collect();
-    let (score, partitions, projected) = accumulate(&items, target);
+    let (score, partitions, projected) = accumulate(&items, target, byte_ratio);
     scored.push(ScoredSpec {
         label: spec_label(&[]),
         parts: Vec::new(),
@@ -636,11 +675,18 @@ fn push_unpartitioned(scored: &mut Vec<ScoredSpec>, sizes: &[u64], target: u64) 
     });
 }
 
-fn table_notes(spec_count: usize) -> Vec<String> {
-    let mut notes = vec![RESIDUE_NOTE.to_string()];
-    if spec_count > 1 {
+fn table_notes(inputs: &PlanInputs) -> Vec<String> {
+    let mut notes = vec![
+        RESIDUE_NOTE.to_string(),
+        format!(
+            "byte_ratio={:.2} ({})",
+            inputs.byte_ratio, inputs.ratio_source
+        ),
+    ];
+    if inputs.spec_count > 1 {
         notes.push(format!(
-            "table carries {spec_count} partition specs; apply would rewrite to one spec"
+            "table carries {} partition specs; apply would rewrite to one spec",
+            inputs.spec_count
         ));
     }
     notes
@@ -651,7 +697,7 @@ fn render_rows(
     scored: &[ScoredSpec],
     skipped: &[(String, String)],
 ) -> Result<Vec<PlanFrameRow>> {
-    let table_notes = table_notes(inputs.spec_count);
+    let table_notes = table_notes(inputs);
     let skipped_note = skipped
         .iter()
         .map(|(name, reason)| format!("no candidate for {name}: {reason}"))
@@ -690,9 +736,9 @@ fn render_rows(
 fn build_plan(inputs: &PlanInputs) -> Result<Vec<PlanFrameRow>> {
     let singles = score_singles(inputs);
     let mut scored = singles.scored;
-    push_unpartitioned(&mut scored, inputs.sizes, inputs.target);
+    push_unpartitioned(&mut scored, inputs.sizes, inputs.target, inputs.byte_ratio);
     let mut best = singles.best;
-    push_pairs(&mut scored, &mut best, inputs.target);
+    push_pairs(&mut scored, &mut best, inputs.target, inputs.byte_ratio);
     scored.sort_by(|left, right| {
         left.score
             .total_cmp(&right.score)
