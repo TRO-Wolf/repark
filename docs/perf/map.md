@@ -89,10 +89,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   row), the census reproduced cell for cell with no knob set, and 500 small tables at
   332.2 vs 323.9 MB peak RSS (delta 8.3 MB, bar 64 MB). Earlier tables untouched.
   Round 2 (same unit) extended §6.3 with the 2,000/8,000-table peak and VmRSS-growth
-  rows (the 32 MiB budget binds estimated weight, not resident bytes — a ~7.5×
+  rows (the 32 MiB budget then bound estimated weight, not resident bytes — a ~7.5×
   under-count, registry `PERF-CATALOG-CACHE-WEIGHT-1`), added §6.4 with the token-budget
   second-pass cells, and moved Commands to §6.5.
+  **RP-16 (2026-09-11):** §6.3 closes `PERF-CATALOG-CACHE-WEIGHT-1` FIXED at pin
+  `090bc821` (fork `#274`): charged object-graph weight, measured retaining
+  1,071,000 / evicting 1,070,000, retain pin 1,250,000, old 280000 now evicts.
   pins: perf-ice-catalog-io-3/C-006
+  pins: rp-16/C-002, C-003
 
 - [iceberg-scan-baseline.md](iceberg-scan-baseline.md) — **PERF-ICE-SCAN-1
   (2026-09-05):** the `count_star`, `count_id`, `sum_all` and `string_len` cells at 1e6 and

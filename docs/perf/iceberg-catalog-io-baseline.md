@@ -8,6 +8,7 @@ Measured 2026-09-05 on the lane `$HOME/repark-lanes/lanes/oc-catio` (branch
 pins: perf-ice-catalog-io-1/C-001, C-005, C-006
 pins: perf-ice-catalog-io-2/C-006
 pins: perf-ice-catalog-io-3/C-006
+pins: rp-16/C-002, C-003
 
 ## Machine and profile
 
@@ -398,11 +399,26 @@ a noisy per-run figure (independent 2,000-table samples measured growth deltas f
 fixed-level wobble, not retention, and is disclosed as such. The estimate under-counts
 before any parsed-form overhead is even considered: one table's manifest list is
 1,604 B and its manifest 3,466 B on disk (5,070 B of file bytes charged as 1,024 B).
-Registry `PERF-CATALOG-CACHE-WEIGHT-1` / fork ask `F-CATIO-WEIGHT` carries the fix;
-the red-when-fixed pin is
+Registry `PERF-CATALOG-CACHE-WEIGHT-1` / fork ask `F-CATIO-WEIGHT` carried the fix;
+the red-when-fixed pin was
 `test_a_budget_sized_to_the_charged_weight_retains_every_table` (256 tables fit a
-280000 budget at charged weight, so the coldest table still hits after every manifest
+280000 budget at estimated weight, so the coldest table still hits after every manifest
 is deleted; true weights evict it and the leg reds).
+
+**RP-16 (2026-09-11)** at pin `090bc821` (fork `#274`): the weigher charges retained
+parsed object graphs. The red-when-fixed pin redded as designed (`Failed to load
+manifest list in cache` / `No such file` on `r0`). Bisection of
+`repark.iceberg.manifestCacheBytes` over the same 256-table `_RSS_ROWS_EACH` shape
+(`/tmp/rp16_weight_bisect.py`, this clone, debug module): smallest round budget that
+retains every table after `_delete_manifests` is **1,071,000**; largest round budget
+that evicts the coldest table is **1,070,000** (~4,184 B charged per small table).
+The retain pin uses **1,250,000** (headroom: 1,071,000 retained 3/3 isolated, then
+r0 missed once under pytest). The old 280000 budget still evicts (probe: 64
+retained / 192 evicted, r0 misses). Pins:
+`test_a_budget_sized_to_the_charged_weight_retains_every_table` (budget 1250000)
+and `test_the_old_estimated_weight_budget_evicts_the_coldest_table` (budget
+280000). The 8,000-table "8 MB charged of 32 MB" figure above is the
+pre-fix estimate; this unit does not re-measure that cell.
 
 At 8,000 tables the cache holds 8 MB of an estimated 32 MB budget (25 %) while the
 session peaks at 370 MB total. The 32,768-table at-bound run (32.0 MB charged — 100 %

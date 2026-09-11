@@ -412,6 +412,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [rp-16-ledger.md](rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
+  `090bc821` (F-WRITE-COMPRESS-1 `#276` plus riders `#273`–`#275`, `#277`). Consumer
+  fix: `PERF-CATALOG-CACHE-WEIGHT-1` FIXED — charged object-graph weight, measured
+  retain 1,071,000 / evict 1,070,000, retain pin 1,250,000, old 280000 now evicts. Do not re-measure
+  AP-1. `risk_tier: standard`. Branch `chore/repin-rp-16`.
+  pins: rp-16/C-001, C-002, C-003, C-004
 - [date-fn-1-spark-date-spelling-ledger.md](date-fn-1-spark-date-spelling-ledger.md) —
   **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
   `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.
