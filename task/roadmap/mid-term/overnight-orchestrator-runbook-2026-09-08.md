@@ -65,7 +65,7 @@ round ignored the preamble's comment ban once, and repeating it here fixed that:
 
 ```text
 Fence for this round: NO comments in code. Before you commit, run
-  git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?! noqa))'
+  git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'
 and it must print nothing; Rust `///` and `//!` count as comments. Facts go in map.md or the ledger.
 ```
 
@@ -129,7 +129,7 @@ builder cap (no more than two concurrent cargo builds) and the one-JVM rule stil
 (`pgrep -f` would match your own shell's command line and never return). Put every launch
 sequence in a script file under `/tmp/oc-worker/<lane>/` and run the file; an inline compound
 command loses its newlines. A live-Spark step (any
-`REPARK_PARITY_LIVE=1` measurement) runs alone: no other lane open, `pgrep -f java` empty, and the
+`REPARK_PARITY_LIVE=1` measurement) runs alone: no other lane open, `pgrep -x java` empty, and the
 brief exports `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64` (the default `java` is 11).
 
 Tier rule (R-15, after six dropped GLM rounds across runs 1–3): any round expected to produce a
@@ -150,7 +150,7 @@ Audit checklist, in order; any `no` sends the round back with a follow-up brief:
 1. A commit exists for the step (a hand-back naming green gates with no commit is a fabrication).
 2. `git diff origin/main..HEAD --name-only` stays inside the card's Home list plus the ledger
    and maps. Anything else: revert that file in a follow-up, do not merge it.
-3. No comments in code: `git diff origin/main..HEAD -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?! noqa))'`
+3. No comments in code: `git diff origin/main..HEAD -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'`
    must print nothing (Rust `///` and `//!` included; the one-line docstring the thinness gate
    demands is the only allowed docstring).
 4. The pin was red first: the ledger's evidence cell pastes the failing run.
