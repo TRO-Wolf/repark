@@ -78,6 +78,14 @@ commits; do not build Ballista-for-writes. A later unit that wants RePark plan n
 `datafusion-proto` and make the codec wrapper a real delegating `PhysicalExtensionCodec`.
 Until then every RePark-owned node is rewritten or it stays on the coordinator.
 
+**Scheduler placement input (measured 2026-09-11, inherited by BALLISTA-M2-A).**
+Depending on `ballista-scheduler` 54.1.0 under default features always pulls `axum` +
+`tower-http` and the AWS credential stack (`aws-config`, `aws-credential-types`);
+`prometheus`, `graphviz-rust`, and the KEDA scaler stay out unless their features are
+enabled. A Milestone 2 that moves the scheduler out of process inherits that surface, so
+its placement decision says which tier it accepts. Measured in the Ballista audit §26.C /
+appendix A2.
+
 What this milestone does **not** deliver: Iceberg scans on the executors (M1-D), Iceberg writes
 or a commit coordinator (Milestone 3 / ADR-0004), a remote (not in-process) cluster form, and
 deterministic task retry (see open questions).

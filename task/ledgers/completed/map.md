@@ -154,6 +154,23 @@ else. The next pickup's `make ledger-archive` files everything here under
   commit), and the three-space fence rule. `risk_tier: standard`. Branch
   `fix/review-fix-12`.
   pins: review-fix-12/C-001, C-002, C-003, C-004, C-005, C-006
+- [review-fix-13-ledger.md](review-fix-13-ledger.md) —
+  **REVIEW-FIX-13 (2026-09-11), in flight:** the Ballista audit is trued up —
+  `state/` 16427 split 7491 + 8936 with the producing commands, the per-session
+  seat renamed `SessionBuilder` with its tag signature, R-7 split into default
+  (`axum`, AWS credential stack) versus optional (`prometheus-metrics`,
+  `graphviz-support`, `keda-scaler`) with `cargo tree` proof, the A1
+  placeholder replaced by a runnable counter (23249 test-only lines), and the
+  step-3 map line landed. Closes Q-42, Q-43, Q-44, Q-45, Q-53, Q-54.
+  `risk_tier: standard`. Branch `fix/review-fix-13-15`.
+  pins: review-fix-13/C-001, C-002, C-003, C-004, C-005
+- [review-fix-15-ledger.md](review-fix-15-ledger.md) —
+  **REVIEW-FIX-15 (2026-09-11), in flight:** a pin cites the clause it holds —
+  LEDGER-READING-1's C-001..C-003 move into the pinning tests as `_pins`
+  bindings, the reading fixture's Verdict/Evidence cells swap to the
+  grammar-described order, C-004 stays map-navigated (no pinning test exists).
+  Closes Q-48, Q-49. `risk_tier: standard`. Branch `fix/review-fix-13-15`.
+  pins: review-fix-15/C-001, C-002
 - [review-fix-2-ledger.md](review-fix-2-ledger.md) — Unit ledger — REVIEW-FIX-2 · CFG-1's own pins stop reading the developer's HOME
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-5-ledger.md](review-fix-5-ledger.md) — Unit ledger — REVIEW-FIX-5 step 1 · DESCRIBE metadata-name intercept, Owner, short names, redaction
