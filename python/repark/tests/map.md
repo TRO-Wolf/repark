@@ -401,7 +401,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
   `_promote_csv_string_types` (optional leftover-candidate list; last docstring line restored).
   Round 5 re-hashed `_promote_csv_string_types` (boolean fail is Spark `true`/`false` tokens,
-  not Arrow `try_cast`).
+  not Arrow `try_cast`). TORTURE-1 step 3 re-hashed `_CSV_NATIVE_OPTION_KEYS` and
+  `_JSON_NATIVE_OPTION_KEYS` (`flag_secret_columns`).
   pins: csv-infer-perf-1/C-002, C-005
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.

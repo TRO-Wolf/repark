@@ -105,51 +105,51 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: The suite ran red before the families existed; output pasted in C-005 evidence.
+      evidence: The suite ran red before the families existed (C-005) and before the secrets module existed (C-021); the flag cells ran red against the silently-tolerated option and the Rust pins compile-red — all pasted.
       artifacts: [python/repark-parity/tests/torture/map.md]
     - id: AT-2
       status: ATTACKED
-      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell.
-      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py]
+      evidence: Both doors pinned per family; row counts, declared schemas, and per-column inferred types each have a named cell; the flag pin covers off/warn/refuse on both doors with the sql door's temp view registered from the flagged read.
+      artifacts: [python/repark-parity/tests/torture/test_torture_nested.py, python/repark-parity/tests/torture/test_torture_inference.py, python/repark-parity/tests/torture/test_torture_secrets.py]
     - id: AT-3
       status: ATTACKED
-      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id.
+      evidence: The one divergent cell (CSV all-int columns) carries a registry row with a recorded live-PySpark oracle and a strict xfail naming the row id; step 3 measured a declared schema repark already honors, so no new registry row was filed.
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark-parity/tests/torture/test_torture_inference.py]
     - id: AT-4
       status: N/A
       justification: Generators are stateless module-level functions and small classes; no shared mutable state.
     - id: AT-5
       status: ATTACKED
-      evidence: No AWS, IAM, secrets, .github, or dependency-file change; data writes go to temp dirs or /tmp/torture and a generator refuses repository-internal outputs.
-      artifacts: [python/repark-parity/fixtures/torture/family.py]
+      evidence: No AWS, IAM, secrets, .github, or dependency-file change; data writes go to temp dirs or /tmp/torture and a generator refuses repository-internal outputs; the secrets family's values are repark-fake- prefixed with no real key-id shape, and the flag inspects names only.
+      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/secrets.py]
     - id: AT-6
       status: ATTACKED
-      evidence: One Family protocol; both families implement it; the CLI adds no second dispatch surface.
-      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/__main__.py]
+      evidence: One Family protocol; all seven families implement it; the CLI adds no second dispatch surface; the flag rides the existing csv/json option maps and the existing facade semantic gate rather than a new plumbing path.
+      artifacts: [python/repark-parity/fixtures/torture/family.py, python/repark-parity/fixtures/torture/__main__.py, python/repark/src/repark/spark/session/reader_support.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Tests and code land in the same commit; the red-first run is recorded in this ledger.
+      evidence: Tests and code land in the same commit; the red-first runs are recorded in this ledger for all three steps.
       artifacts: [task/ledgers/staging/torture-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers.
+      evidence: map.md created for fixtures/, fixtures/torture/, tests/torture/ and updated for src/, src/repark_parity/, repark-parity/, tests/, staging ledgers; step 3 updated the torture fixture/test maps, the core src map, the facade session map, and the staging-ledger map.
       artifacts: [python/repark-parity/map.md]
     - id: AT-9
       status: ATTACKED
-      evidence: Byte-identity determinism pin runs the committed CLI twice per family; the manifest-reuse pin mutates its inputs and reds.
+      evidence: Byte-identity determinism pin runs the committed CLI twice per family — the registry now includes secrets; the manifest-reuse pin mutates its inputs and reds.
       artifacts: [python/repark-parity/tests/torture/test_generate_is_deterministic.py]
     - id: AT-10
       status: N/A
-      justification: No live-oracle tier belongs to step 1; the recorded oracle is stated in the measured-behavior table above.
+      justification: No live-oracle tier belongs to steps 1–3 (the flag contract is engine-local; its answers are measured below); the recorded oracle is stated in the measured-behavior table above.
 DELIVERY_SIGNOFF:
   pr_unit: torture-1
   artifacts_verified:
-    ledger: PASS (C-001..C-009)
+    ledger: PASS (C-001..C-023)
     coverage_attestation: PASS (AT-1..AT-10)
     findings_ledger: PASS (none open)
     shipped_flag_register: PASS (count 0)
   done_gate: PASS
-  status_update: step 1 of 5; STATUS untouched per brief
+  status_update: steps 1-3 of 5; STATUS untouched per brief
   verdict: ACCEPTED
   rejection_route: N/A
 SHIPPED_FLAG_REGISTER:
@@ -310,3 +310,143 @@ width**. The row and its rationale now say so.
 One trap recorded for the next live round: collecting the Spark answer into Python raises
 `ValueError: year 294247 is out of range` from `datetime`. That is a Python limit, not a Spark
 refusal — cast to `STRING` before collecting or the oracle reads backwards.
+
+---
+
+# Step 3 (2026-09-11) — the secrets family and the D-4 flag
+
+**Unit:** TORTURE-1 step 3 · **Date:** 2026-09-11 · **Executor:** Devin SWE-2
+(swe-2-high), Actor · **Branch:** `feat/torture-1-step-3` · **Base:** `main`
+`bf810824` · **Model:** swe-2-high
+**risk_tier:** standard.
+
+Scope: step 3 only — the `secrets` family, the `flag_secret_columns` read option parsed
+in `read_options.rs` and plumbed through `DataFrameReader.option` to the csv/json engine
+reads, the both-door suite cells, maps, and this ledger extension. No `v3_dv` (step 4),
+no results document (step 5), no `STATUS.md` edit.
+
+Decision recorded: **D-4a** (G-2, run 7, binding) — "exact-name match only against the
+existing needle set" means `prop_key_is_secret` applied to each TOP-LEVEL data column's
+name exactly as the schema spells it: no new needle list, no nested-field walk, no
+inspection of values, no fuzzy matching beyond the predicate.
+
+Within-card rulings recorded (consequences of the card's homes, not new decisions):
+`read_options.rs` is the csv/json option-map home, so the flag is honored on `csv` and
+`json` reads and — via the facade's semantic gate, generalized from the `compression`
+branch into `_CSV_JSON_ONLY_OPTION_KEYS` — refuses loud on readers without that option
+map (parquet, `table`, empty-format `load`): a silently ignored refusal guard would
+change load semantics. `warn` emits one `eprintln!` `WARNING:` line — repark-core
+carries no `tracing` dependency (none may be added) and `eprintln!` is the crate's
+existing warning channel (the session-install warning uses it); the facade's inferSchema
+re-read pops the flag keys so exactly one WARNING fires per logical read.
+
+## Step-3 proposition ledger
+
+| ID | Clause | Proof obligation | Verdict |
+|---|---|---|---|
+| C-017 | The `secrets` family at `fixtures/torture/secrets.py` implements the `Family` protocol (seeded, deterministic, Parquet AND CSV): thirteen credential-shaped column names each tripping a distinct `prop_key_is_secret` needle, beside `id`/`name`/`note` and the `bucket_key` carve-out control; every flagged value is `repark-fake-`-prefixed and never a real key-id shape; registered in `FAMILIES` and the CLI. | `test_torture_secrets.py` protocol + `test_flagged_names_match_the_needle_set` cells; the byte-identity determinism pins now iterate it via `FAMILIES`. | **PROVEN** |
+| C-018 | `flag_secret_columns` = `off`\|`warn`\|`refuse`, default `off`, parsed in `read_options.rs` (`secret_column_flag`); any other value refuses loud naming the option and the three accepted values before any I/O. `warn` logs exactly one WARNING naming the flagged columns; `refuse` raises `AnalysisException` naming them; `off` changes nothing. Plumbed from the Python reader option through the csv/json option maps; refused loud on parquet/table readers. | torture flag cells on both doors + the parquet/table refusal cells + the bad-value refusal; `session/map.md` rows. | **PROVEN** |
+| C-019 | `test_torture_secrets.py` runs the D-3 cells for the family on both doors (Parquet + CSV row counts and declared-schema equality through the DataFrame read and `spark.sql` over a temp view), plus `test_secret_flag_off_warn_refuse` parametrized over both doors — for the sql door the temp view is registered from the flagged read — plus the bad-value refusal and the option-map-less refusal. | The suite file; every cell names its door. | **PROVEN** |
+| C-020 | Rust unit tests for the parser in the crate's existing test layout (`read_options.rs` `#[cfg(test)] mod tests`): default, each accepted value, folded spelling, bad-value refusal, apply semantics (off/warn pass; refuse names exactly the flagged names), and end-to-end pins through `Session::read_csv`/`read_json`. | `cargo test -p repark-core read_options` — 11 pins green. | **PROVEN** |
+| C-021 | Red-first: the suite ran before `secrets.py` existed and failed on `ModuleNotFoundError`; the five flag cells ran against the unimplemented option and failed (the option was silently tolerated); the Rust test module failed to compile before the implementation. All three runs pasted below. | The verbatim red runs in the step-3 evidence section. | **PROVEN** |
+| C-022 | The CI-tier workload pin now covers the secrets family: at CI rows it generates and reads on both doors inside the 60-second budget. | `test_ci_tier_step3_family_under_60_seconds`. | **PROVEN** |
+| C-023 | Maps in lockstep and gates green: `fixtures/torture/map.md`, `tests/torture/map.md`, `crates/repark-core/src/map.md`, `python/repark/src/repark/spark/session/map.md`, and `task/ledgers/staging/map.md` updated in the same commit; the card's gate commands pass with real exit codes. | The gate runs in the step-3 evidence section. | **PROVEN** |
+
+## Step-3 red-first evidence (C-021)
+
+Command 1: `PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest
+python/repark-parity/tests/torture -q`, run after the test file, the conftest fixture,
+the `__init__` registration and the timer cell existed and before `secrets.py` did
+(exit 4):
+
+```
+ImportError while loading conftest '/tmp/dv-tort3/python/repark-parity/tests/torture/conftest.py'.
+python/repark-parity/tests/torture/conftest.py:16: in <module>
+    from _support import family_output
+python/repark-parity/tests/torture/_support.py:11: in <module>
+    from repark_parity.torture import Family, FamilyOutput
+python/repark-parity/fixtures/torture/__init__.py:10: in <module>
+    from repark_parity.torture.secrets import SECRETS_FAMILY
+E   ModuleNotFoundError: No module named 'repark_parity.torture.secrets'
+```
+
+Command 2: the same suite after `secrets.py` landed but before the flag existed —
+every family cell green, the five flag cells red because the option was silently
+tolerated (exit 1):
+
+```
+FAILED test_torture_secrets.py::test_secret_flag_off_warn_refuse[dataframe] — AssertionError: []
+FAILED test_torture_secrets.py::test_secret_flag_off_warn_refuse[sql] — AssertionError: []
+FAILED test_torture_secrets.py::test_secret_flag_bad_value_refuses_loud — DID NOT RAISE AnalysisException
+FAILED test_torture_secrets.py::test_secret_flag_refused_on_reads_without_the_option_map — DID NOT RAISE AnalysisException
+FAILED test_torture_secrets.py::test_secret_flag_refuse_names_flagged_columns_on_json — DID NOT RAISE AnalysisException
+5 failed, 62 passed, 11 xfailed in 46.78s
+```
+
+Command 3: `cargo test -p repark-core read_options` after the test module was added and
+before the implementation (exit 101):
+
+```
+error[E0425]: cannot find function `secret_column_flag` in this scope
+error[E0433]: cannot find type `SecretColumnFlag` in this scope
+error[E0425]: cannot find function `apply_secret_column_flag` in this scope
+error: could not compile `repark-core` (lib test) due to 19 previous errors
+```
+
+## Measured repark behavior behind step 3 (2026-09-11)
+
+Repark measured through the .venv native module on this branch; no live Spark was run.
+The flag contract is engine-local, so the table records repark's own answers.
+
+| Shape | repark answer (measured 2026-09-11) | Cell |
+|---|---|---|
+| `secrets` parquet/CSV read, flag unset or `off` | full row count, declared schema `id: int64` + 16 strings, all nullable, both doors | family door cells (green) |
+| `warn` on a flagged CSV | reads normally; exactly one stderr line `WARNING: flag_secret_columns=warn: credential-shaped column names in the read schema: <all 13 names>` | `test_secret_flag_off_warn_refuse` (green) |
+| `refuse` on a flagged CSV/JSON | `AnalysisException` naming all 13 flagged names and no ordinary name, raised at read time (no view registered) | flag cells (green) |
+| bad value (`bogus`) | `AnalysisException` naming `flag_secret_columns` and `off`/`warn`/`refuse`, before any I/O | bad-value cell + Rust pin (green) |
+| flag on `.parquet()` / `format("parquet").load()` | `AnalysisException`: `reader option 'flag_secret_columns' is not supported by repark yet` | option-map-less cell (green) |
+| `bucket_key` (`_key` suffix, `bucket` carve-out) | never flagged — present in both schemas, absent from warn/refuse output | membership + flag cells (green) |
+
+## Step-3 gate evidence (C-023)
+
+```
+$ cargo test -p repark-core read_options
+11 passed; 0 failed  exit 0
+
+$ make develop
+Finished dev profile; repark-1.1.1 editable install  exit 0
+
+$ make py-test-torture
+68 passed, 11 xfailed in 44.06s  exit 0
+
+$ .venv/bin/python -m pytest python/repark/tests -q -k "read or option"
+206 passed, 8 skipped in 29.63s  exit 0
+
+$ .venv/bin/python -m pytest test_e2_readwriter.py test_r1_read_formats.py \
+    test_facade_polish.py test_csv_infer_perf_1.py -q   (reader surface files)
+166 passed, 3 skipped in 15.21s  exit 0
+
+$ PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv \
+    uv run --no-project python -m pytest python/repark-parity/tests -q
+731 passed, 11 xfailed in 97.96s  exit 0
+
+$ make verify
+exit 0 — fmt, clippy x3, panic-ban, crate-dag, lib-rs, rust-file-size, lib-py,
+python-conventions, docstring-presence, example-coverage, manifest, ledgers,
+ledger-grammar (94 live ledgers clean), docs-compaction, docs-links, owner-ruling,
+parity-live dual-wire, matrix-test-liveness, rust-check, py-lint, py-format-check,
+py-lock, toml, spell; full workspace test suite green.
+```
+
+Fence note: the card's no-comments grep
+(`git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?! noqa))'`)
+prints 13 lines on this diff — every one a Rust attribute required by the mandated parser
+tests (`#[derive]` on the flag enum, `#[cfg(test)]`, `#[test]`, `#[tokio::test]`); the
+card's own text classifies `///`/`//!` as comments, and no such line exists. The
+attribute-aware re-run `grep -P '^\+\s*(//|#(?! noqa|\[))'` prints nothing.
+
+Out-of-scope observations (recorded, not acted on): `datasets/secrets/` (the separate
+seeded generator with `FAKE_PREFIX = "repark-fake-"`) declares the same hygiene contract
+this family now shares; its map's "opt-in flagging is a later facade feature" sentence is
+now delivered by this step. The `warn` channel is stderr (`eprintln!`), not the
+opt-in tracing subscriber — callers grepping `REPARK_LOG` output will not see it.

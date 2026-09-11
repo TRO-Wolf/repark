@@ -150,11 +150,70 @@ pub(crate) fn csv_force_utf8_schema(options: &HashMap<String, String>) -> bool {
     options.contains_key("nullvalue")
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SecretColumnFlag {
+    Off,
+    Warn,
+    Refuse,
+}
+
+pub(crate) fn secret_column_flag(options: &HashMap<String, String>) -> Result<SecretColumnFlag> {
+    let Some(raw) = options
+        .get("flag_secret_columns")
+        .or_else(|| options.get("flagsecretcolumns"))
+    else {
+        return Ok(SecretColumnFlag::Off);
+    };
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "off" => Ok(SecretColumnFlag::Off),
+        "warn" => Ok(SecretColumnFlag::Warn),
+        "refuse" => Ok(SecretColumnFlag::Refuse),
+        _ => Err(Error::Analysis(format!(
+            "reader option \"flag_secret_columns\" accepts only \"off\", \"warn\", or \
+             \"refuse\"; got {raw:?}"
+        ))),
+    }
+}
+
+pub(crate) fn apply_secret_column_flag(
+    flag: SecretColumnFlag,
+    schema: &arrow::datatypes::Schema,
+) -> Result<()> {
+    if flag == SecretColumnFlag::Off {
+        return Ok(());
+    }
+    let flagged: Vec<&str> = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().as_str())
+        .filter(|name| crate::prop_key_is_secret(name))
+        .collect();
+    if flagged.is_empty() {
+        return Ok(());
+    }
+    let names = flagged.join(", ");
+    match flag {
+        SecretColumnFlag::Warn => {
+            eprintln!(
+                "WARNING: flag_secret_columns=warn: credential-shaped column names \
+                 in the read schema: {names}"
+            );
+            Ok(())
+        }
+        SecretColumnFlag::Refuse => Err(Error::Analysis(format!(
+            "flag_secret_columns=refuse: credential-shaped column names \
+             in the read schema: {names}"
+        ))),
+        SecretColumnFlag::Off => Ok(()),
+    }
+}
+
 pub(crate) async fn read_csv_path(
     context: &SessionContext,
     path: &str,
     options: &HashMap<String, String>,
 ) -> Result<DataFrame> {
+    let flag = secret_column_flag(options)?;
     let mut csv_options = csv_read_options_from_map(options)?;
     // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens.
     let multiline = options
@@ -173,16 +232,19 @@ pub(crate) async fn read_csv_path(
         .read_csv(path, csv_options.clone())
         .await
         .map_err(engine_err)?;
-    if utf8_schema.is_some() {
-        return Ok(frame);
-    }
-    match csv_utf8_column_schema(options, frame.schema().as_ref()) {
-        None => Ok(frame),
-        Some(schema) => context
-            .read_csv(path, csv_options.schema(&schema))
-            .await
-            .map_err(engine_err),
-    }
+    let frame = if utf8_schema.is_some() {
+        frame
+    } else {
+        match csv_utf8_column_schema(options, frame.schema().as_ref()) {
+            None => frame,
+            Some(schema) => context
+                .read_csv(path, csv_options.schema(&schema))
+                .await
+                .map_err(engine_err)?,
+        }
+    };
+    apply_secret_column_flag(flag, frame.schema().as_ref())?;
+    Ok(frame)
 }
 
 pub(crate) fn csv_utf8_column_schema(
@@ -389,5 +451,157 @@ pub(crate) fn normalize_compression_name(raw: &str) -> String {
         "xz" => "XZ".to_string(),
         "zstd" | "zst" => "ZSTD".to_string(),
         other => other.to_ascii_uppercase(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn options_map(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+            .collect()
+    }
+
+    fn utf8_schema_of(names: &[&str]) -> arrow::datatypes::Schema {
+        arrow::datatypes::Schema::new(
+            names
+                .iter()
+                .map(|name| {
+                    arrow::datatypes::Field::new(*name, arrow::datatypes::DataType::Utf8, true)
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
+
+    #[test]
+    fn secret_column_flag_defaults_off_when_unset() {
+        let options = options_map(&[("header", "true")]);
+        assert_eq!(secret_column_flag(&options).unwrap(), SecretColumnFlag::Off);
+    }
+
+    #[test]
+    fn secret_column_flag_parses_each_accepted_value_case_and_space_insensitive() {
+        for (raw, expected) in [
+            ("off", SecretColumnFlag::Off),
+            ("warn", SecretColumnFlag::Warn),
+            ("refuse", SecretColumnFlag::Refuse),
+            (" WARN ", SecretColumnFlag::Warn),
+            ("REFUSE", SecretColumnFlag::Refuse),
+        ] {
+            let options = options_map(&[("flag_secret_columns", raw)]);
+            assert_eq!(secret_column_flag(&options).unwrap(), expected, "{raw}");
+        }
+    }
+
+    #[test]
+    fn secret_column_flag_accepts_the_folded_spelling() {
+        let options = options_map(&[("flagsecretcolumns", "warn")]);
+        assert_eq!(
+            secret_column_flag(&options).unwrap(),
+            SecretColumnFlag::Warn
+        );
+    }
+
+    #[test]
+    fn secret_column_flag_refuses_bad_values_naming_option_and_choices() {
+        let options = options_map(&[("flag_secret_columns", "bogus")]);
+        let Err(error) = secret_column_flag(&options) else {
+            panic!("a value outside off/warn/refuse must refuse");
+        };
+        let message = error.to_string();
+        for token in ["flag_secret_columns", "off", "warn", "refuse"] {
+            assert!(message.contains(token), "{token} missing from: {message}");
+        }
+    }
+
+    #[test]
+    fn apply_secret_column_flag_off_and_warn_pass_flagged_schemas() {
+        let flagged = utf8_schema_of(&["password", "note"]);
+        apply_secret_column_flag(SecretColumnFlag::Off, &flagged).unwrap();
+        apply_secret_column_flag(SecretColumnFlag::Warn, &flagged).unwrap();
+    }
+
+    #[test]
+    fn apply_secret_column_flag_refuse_names_only_flagged_columns() {
+        let schema = utf8_schema_of(&["id", "password", "bucket_key", "note"]);
+        let Err(error) = apply_secret_column_flag(SecretColumnFlag::Refuse, &schema) else {
+            panic!("a flagged schema under refuse must raise");
+        };
+        let message = error.to_string();
+        assert!(message.contains("refuse"), "{message}");
+        let listed: Vec<&str> = message.rsplit(": ").next().unwrap().split(", ").collect();
+        assert_eq!(listed, ["password"], "{message}");
+    }
+
+    #[test]
+    fn apply_secret_column_flag_refuse_passes_a_clean_schema() {
+        let schema = utf8_schema_of(&["id", "note", "bucket_key"]);
+        apply_secret_column_flag(SecretColumnFlag::Refuse, &schema).unwrap();
+    }
+
+    #[tokio::test]
+    async fn read_options_flag_secret_columns_csv_refuse_names_flagged_columns() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(&path, "id,password,bucket_key\n1,repark-fake-1,obj\n").unwrap();
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let options = options_map(&[("header", "true"), ("flag_secret_columns", "refuse")]);
+        let Err(error) = session.read_csv(path.to_str().unwrap(), &options).await else {
+            panic!("a credential-shaped column under refuse must raise");
+        };
+        let message = error.to_string();
+        let listed: Vec<&str> = message.rsplit(": ").next().unwrap().split(", ").collect();
+        assert_eq!(listed, ["password"], "{message}");
+    }
+
+    #[tokio::test]
+    async fn read_options_flag_secret_columns_csv_off_and_warn_read_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(
+            &path,
+            "id,password,note\n1,repark-fake-1,x\n2,repark-fake-2,y\n",
+        )
+        .unwrap();
+        let session = crate::ReparkSession::builder().build().unwrap();
+        for mode in ["off", "warn"] {
+            let options = options_map(&[("header", "true"), ("flag_secret_columns", mode)]);
+            let frame = session
+                .read_csv(path.to_str().unwrap(), &options)
+                .await
+                .unwrap();
+            let batches = frame.collect().await.unwrap();
+            let rows: usize = batches
+                .iter()
+                .map(arrow::array::RecordBatch::num_rows)
+                .sum();
+            assert_eq!(rows, 2, "{mode} must read every row");
+        }
+    }
+
+    #[tokio::test]
+    async fn read_options_flag_secret_columns_csv_bad_value_refuses_before_read() {
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let options = options_map(&[("flag_secret_columns", "loud")]);
+        let Err(error) = session.read_csv("/nonexistent/nowhere.csv", &options).await else {
+            panic!("a bad flag value must refuse before any read");
+        };
+        assert!(error.to_string().contains("flag_secret_columns"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn read_options_flag_secret_columns_json_refuse_names_flagged_columns() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.json");
+        std::fs::write(&path, "{\"id\":1,\"password\":\"repark-fake\"}\n").unwrap();
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let options = options_map(&[("flag_secret_columns", "refuse")]);
+        let Err(error) = session.read_json(path.to_str().unwrap(), &options).await else {
+            panic!("a credential-shaped JSON column under refuse must raise");
+        };
+        assert!(error.to_string().contains("password"), "{error}");
     }
 }
