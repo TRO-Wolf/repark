@@ -50,7 +50,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   families, the manifest reuse rule, the `flag_secret_columns` option pins, and the
   CI-tier 60-second workload pin). Divergent cells are strict xfails naming their
   registry rows. Needs the native module: run through `make py-test-torture`. Ledger:
-  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/staging/torture-1-ledger.md).
+  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/completed/torture-1-ledger.md).
   pins: torture-1/C-001, C-002, C-003, C-004, C-006
 - `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,

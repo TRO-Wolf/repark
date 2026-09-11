@@ -125,7 +125,7 @@ The suite needs the native module (the doors are repark's), so run it through
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Ledger: [../../../../task/ledgers/staging/torture-1-ledger.md](../../../../task/ledgers/staging/torture-1-ledger.md)
+- Ledger: [../../../../task/ledgers/staging/torture-1-ledger.md](../../../../task/ledgers/completed/torture-1-ledger.md)
 - Registry: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
   `CSV-INFER-INT32-WIDTH`, `CSV-INFER-HEADER-CASE`, `SUM-DEC-I128WRAP-1`,
   `DATE-INTERVAL-NSBOUND-1`
