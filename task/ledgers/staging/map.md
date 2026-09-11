@@ -639,7 +639,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Base `2fad8135`; no source touched; READING path under R-10.
   `risk_tier: standard`. Branch `docs/facade-audit-0`.
   pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
-- [ap-1-ledger.md](ap-1-ledger.md) —
+- [ap-1-ledger.md](../completed/ap-1-ledger.md) —
   **AP-1 step 1 (2026-09-10), in flight:** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` — the P-2
   candidates scored with exactly P-3 over the `files` metadata table, the D-1 frame, the
