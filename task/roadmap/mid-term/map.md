@@ -41,6 +41,7 @@ declines it (a dated ruling in the intake, then the archive).
   15:06 → 2026-09-11, the review-fix run, one orchestrator across two processes): review-fix-slate
   §1 rows 1–11 plus M-0 and O-1, with every size-baseline question answered by a comment-funded
   ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
+- [overnight-report-2026-09-11-run7.md](overnight-report-2026-09-11-run7.md) — run 7 (2026-09-11, Devin-first): REVIEW-FIX-15b, TORTURE-1 steps 3–5, AP-1 step 2, BALLISTA-M2-A steps 1–2 merged (#496–#501); NEVEROOM-1 step 2 in flight; owner questions on uncompressed INSERT, typed scan accessors, the secrets flag scope.
 - [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
   05:21–13:20 local, **orchestrator A**; the Grok/Ballista and facade lanes were orchestrator B's
   from 05:45 and are not in it): seven merged (DISPLAY-BRIDGE-1's rebase, AP-0 with its O-run,
