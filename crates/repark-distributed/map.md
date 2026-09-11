@@ -43,9 +43,8 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   vanilla session fails to resolve the same plan); cancel mid-flight (`Cancelled`, no running
   tasks within 5 s); codec install pin (`repark_ballista_codec()` matches Ballista defaults,
   and the two-executor job shuffles through those codecs). C-004 (round-trip serde over the
-  five shuffle nodes) stays OPEN / PARKED: it needs `PhysicalExtensionCodec` from
-  `datafusion-proto`, which this unit may not add. The owner question on the wrapper lives in
-  [src/map.md](src/map.md). pins: ballista-m1-b/C-003, C-005, C-006
+  five shuffle nodes) stayed OPEN / PARKED until RF-9 took `datafusion-proto`; re-proven by
+  ballista-m2-a/C-002. pins: ballista-m1-b/C-003, C-005, C-006
 - **BALLISTA-M1-C step 1.** Three multi-stage shapes against the local executor on the same
   physical plan (`tests/multi_stage.rs`): hash aggregate over 4 partitions, partitioned hash
   join of two tables, sort-merge join with `prefer_hash_join=false`. Cluster row order is
@@ -61,23 +60,33 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   codec round-trips `(catalog, table identifier, snapshot id, projection, filters)` and
   rebuilds the Iceberg table from `ReparkSessionProvider`'s session catalog. The
   two-executor pin is `tests/iceberg_scan.rs` (8-file memory-catalog table; count/sum/
-  filtered scan match local; both executors ran a task). `IcebergTableScan` itself does
-  not serialize; file groups do. S3/Glue executor credentials stay residue (D-2).
+  filtered scan match local; both executors ran a task). `IcebergTableScan` itself did not
+  serialize until M2-A; the file-group rewrite stays as the fallback for a node with no
+  codec entry. S3/Glue executor credentials stay residue (D-2).
   pins: ballista-m1-d/C-001, C-002, C-003
 - **BALLISTA-M1-D step 2.** Iceberg section and success-list line 17 in
   [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md). The runtime
   abstraction is in place. Iceberg writes and the commit coordinator are Milestone 3
-  (ADR-0004). The `IcebergTableScan` serde wall sits beside M1-B C-004: without
-  `datafusion-proto`, RePark plan nodes cannot cross to an executor.
+  (ADR-0004). The `IcebergTableScan` serde wall fell at BALLISTA-M2-A: `datafusion-proto`
+  is now a `cluster`-gated dependency and the codec carries the scan.
   pins: ballista-m1-d/C-001, C-002, C-003
+- **BALLISTA-M2-A (2026-09-11, RF-9).** `src/codec.rs`'s `ReparkPhysicalExtensionCodec` is a
+  real delegating `PhysicalExtensionCodec` — every unowned node to
+  `BallistaPhysicalExtensionCodec`, `IcebergTableScan` owned: encoded as an `RPIC`
+  `IcebergScanSpec` recovered from the node's Debug/Verbose text plus a session-catalog
+  probe, with an encode-time rebuild check that refuses loud (naming the field) rather than
+  shipping a spec that describes a different scan; decoded by rebuilding under the codec's
+  session context. Pins in `tests/codec.rs` — delegation sweep, scan round-trip, adversarial
+  refuse-or-round-trip cases. Residue BALLISTA-M2-A-R-001 (text recovery; the fork's typed
+  accessors would retire it — owner question) lives in [src/map.md](src/map.md).
+  pins: ballista-m2-a/C-001, C-002, C-003, C-004
 
 ## Contents
 
 - `Cargo.toml` — the crate manifest: the two features and the optional Ballista dependencies.
 - `src/` — the crate source ([src/map.md](src/map.md)).
-- `tests/` — local-executor, cluster two-executor, multi-stage, and Iceberg scan pins
-- `tests/` — local-executor, cluster two-executor, and multi-stage cluster pins
-  ([tests/map.md](tests/map.md)).
+- `tests/` — local-executor, cluster two-executor, multi-stage, Iceberg scan, and codec
+  pins ([tests/map.md](tests/map.md)).
 
 ## Pointers
 

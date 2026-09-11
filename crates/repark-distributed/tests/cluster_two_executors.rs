@@ -16,8 +16,7 @@ use futures::StreamExt;
 use repark_core::ReparkSession;
 use repark_distributed::{
     DistributedExecutor, JobStatus, LocalDataFusionExecutor, ReparkClusterExecutor,
-    ReparkLogicalExtensionCodec, ReparkPhysicalExtensionCodec, ReparkSessionProvider,
-    repark_ballista_codec,
+    ReparkLogicalExtensionCodec, ReparkSessionProvider, repark_ballista_codec,
 };
 
 fn register_table_t(context: &SessionContext) {
@@ -385,15 +384,15 @@ async fn cancel_mid_flight_sets_cancelled_and_no_running_tasks_within_five_secon
 }
 
 #[test]
-fn repark_ballista_codec_installs_ballista_default_physical_and_logical_codecs() {
-    let installed = repark_ballista_codec();
-    let physical = ReparkPhysicalExtensionCodec::new().into_inner();
-    let logical = ReparkLogicalExtensionCodec::new().into_inner();
+fn repark_ballista_codec_installs_the_physical_wrapper_and_the_ballista_logical_codec() {
+    let provider = ReparkSessionProvider::from_context(&SessionContext::new());
+    let installed = repark_ballista_codec(&provider);
+    let physical = format!("{:?}", installed.physical_extension_codec());
     assert!(
-        format!("{:?}", installed.physical_extension_codec()) == format!("{physical:?}"),
-        "physical codec {:?} != wrapped Ballista default {physical:?}",
-        installed.physical_extension_codec()
+        physical.contains("ReparkPhysicalExtensionCodec"),
+        "physical codec {physical} is not the RePark wrapper"
     );
+    let logical = ReparkLogicalExtensionCodec::new().into_inner();
     assert!(
         format!("{:?}", installed.logical_extension_codec()) == format!("{logical:?}"),
         "logical codec {:?} != wrapped Ballista default {logical:?}",
