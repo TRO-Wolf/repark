@@ -436,14 +436,18 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mid-line `READING.` field stays exempt; the real-field exemption rides the existing test.
   The new tests carry no inline pins, so the unit's clause is cited on this line.
   pins: review-fix-10/C-001
-  **REVIEW-FIX-15 (2026-09-11):** LEDGER-READING-1's C-001..C-003 move into the
-  tests that pin them — `_pins` bindings on the marker-exemption test (C-001, C-003),
-  the no-marker and no-attestation controls (C-001), and the EXCEPTIONS ratchet test
-  (C-002). The binding is code-as-data, not a `#` comment, under the comment ban; the
-  gate reads the `pins:` text either way. C-004 has no pinning test (its pin is the
-  real-tree gate run in its evidence cell), so its citation rides the map line only, which
-  keeps all four rows as navigation. The reading fixture's Verdict and Evidence cells are
-  the way round the grammar describes (Q-49).
+  **REVIEW-FIX-15 (2026-09-11):** the reading fixture's Verdict and Evidence cells are
+  the way round the grammar describes (Q-49), and the unit cited LEDGER-READING-1's
+  C-001..C-003 from the tests that pin them. Under ruling S2-14 (2026-09-11) a `pins:`
+  citation lives in this map, never in code, so the `_pins` code-as-data bindings the
+  unit first used are gone and the unit's own clause citations sit on the next line.
+  C-004 has no pinning test (its pin is the real-tree gate run in its evidence cell), so
+  its citation rides the ledger-reading-1 line only, which keeps all four rows as
+  navigation.
+  pins: review-fix-15/C-001, C-002
+  **REVIEW-FIX-15B (2026-09-11):** the S2-14 move itself — the four `_pins` bindings
+  deleted from the tests, the citations they carried re-homed to this bullet.
+  pins: review-fix-15b/C-001, C-002
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
