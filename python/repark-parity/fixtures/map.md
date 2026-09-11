@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Generated-test fixture sources for the parity harness. Data is never committed: the
+Generated-test fixture sources for the parity harness. Data is never committed — the
 generators write into a temp dir at test time or under `/tmp/torture/` on the full tier,
-and refuse repository-internal output directories.
+and refuse repository-internal output directories — with a single ruled exception:
+`fixtures/torture/data/v3_dv/` (TORTURE-1 D-5, the ≤ 1 MB Spark-written DV table).
 
 ## Contents
 

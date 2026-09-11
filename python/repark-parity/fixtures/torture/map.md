@@ -90,8 +90,25 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
   nullable credential column (every 7th row null). `id` is int64, the rest string, so
   Parquet and CSV share one declared schema (measured: repark's CSV inference answers
   `id`→int64, all text→string, all-nullable). pins: torture-1/C-017
+- `v3_dv.py` — the `v3_dv` family (D-2, D-5, step 4): a **live-Spark-only** generator —
+  `generate` refuses loud naming `REPARK_PARITY_LIVE` unless it is `1`, because only Spark
+  writes the Puffin deletion vectors the family exists to exercise. It builds (or adopts)
+  an Iceberg-armed local session — module-private catalog `torture_v3dv`, never `local`;
+  the Iceberg runtime GAV is restated here because this package cannot import the
+  `python/repark/tests/` pin module — creates `<out>/ns/v3dv` as a format-v3,
+  all-merge-on-read table partitioned by `part = id % 2`, seeds ids 1..rows in twelve
+  contiguous insert batches (many small files), then deletes `id % 5 = seed % 5`
+  (falling back to `id = rows` when a tiny row count empties the modulo set), measures
+  Spark's own post-delete count, and writes `truth.json` at the table root. It returns a
+  `V3DvResult`, not a `FamilyOutput`, and stays OUT of `FAMILIES`: it produces an Iceberg
+  table, not a Parquet+CSV pair, and Spark's UUID file names and timestamps are not
+  byte-deterministic, so the determinism pins stay scoped to the file families.
+  pins: torture-1/C-024, C-029
+- `data/` — the card's one committed-data exception (D-5): the ≤ 1 MB checked-in
+  `v3_dv` table instance the JVM-free cells read. See [data/map.md](data/map.md).
 - `__main__.py` — the `generate` CLI; `--depth`/`--width` are refused for non-nested
-  families.
+  families; `v3_dv` is a listed family choice with its own dispatch branch and print
+  line (live rows and the table root, not the parquet/csv pair).
 - `map.md` — this file.
 
 ## I want to…
@@ -99,6 +116,8 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
 | I want to… | Go to |
 |---|---|
 | Generate a family by hand | `python -m repark_parity.torture generate <family> --rows N --seed 7 --out DIR` |
+| Generate the v3_dv table | same CLI with family `v3_dv`, under `REPARK_PARITY_LIVE=1` + a Java 17 `JAVA_HOME`; `<out>/ns/v3dv` is the table root |
+| Regenerate the committed fixture | generate with `--out /tmp/repark-torture-v3dv`, copy `ns/v3dv` over [data/v3_dv/](data/v3_dv/map.md), strip `*.crc` |
 | Scale the dynamicFlatten bed | `... generate nested ... --depth D --width W` |
 | Run the suite | `make py-test-torture` (`TORTURE_TIER=full` for the big tier) |
 | Read the door pins | [../../tests/torture/map.md](../../tests/torture/map.md) |
@@ -115,8 +134,11 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
 
 ## Constraints
 
-- Zero new Python dependencies (pyarrow + stdlib + the harness's pydantic).
+- Zero new Python dependencies (pyarrow + stdlib + the harness's pydantic; `v3_dv`
+  imports pyspark lazily inside `generate`, which the `record` extra already carries).
 - Data files never enter the repository: generators refuse repository-internal outputs.
+  The one exception is D-5's checked-in `v3_dv` instance under `data/` — written by the
+  generator outside the repo and copied in by hand, never a `--out` target.
 - No comments in code (owner ruling); the reasons above live here.
 
 ## Debug

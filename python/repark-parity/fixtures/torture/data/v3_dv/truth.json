@@ -1,0 +1,18 @@
+{
+  "family": "v3_dv",
+  "seed": 7,
+  "rows_written": 120,
+  "delete": {
+    "modulus": 5,
+    "residue": 2
+  },
+  "rows_deleted": 24,
+  "true_rows": 96,
+  "data_files": 24,
+  "delete_files": 24,
+  "format_version": 3,
+  "table": "ns.v3dv",
+  "table_location": "/tmp/repark-torture-v3dv/ns/v3dv",
+  "metadata_file": "metadata/v14.metadata.json",
+  "schema": "struct<id:int,name:string,part:int>"
+}

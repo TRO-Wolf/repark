@@ -8,6 +8,8 @@ from pathlib import Path
 from repark_parity.torture import FAMILIES
 from repark_parity.torture.nested import NESTED_FAMILY
 from repark_parity.torture.tiers import DEFAULT_SEED
+from repark_parity.torture.v3_dv import NAME as V3DV_NAME
+from repark_parity.torture.v3_dv import V3DV_FAMILY
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     generate = subparsers.add_parser("generate", help="write one family's Parquet and CSV files")
-    generate.add_argument("family", choices=sorted(FAMILIES))
+    generate.add_argument("family", choices=sorted([*FAMILIES, V3DV_NAME]))
     generate.add_argument("--rows", type=int, required=True)
     generate.add_argument("--seed", type=int, default=DEFAULT_SEED)
     generate.add_argument("--out", type=Path, required=True)
@@ -41,8 +43,13 @@ def main(argv: list[str] | None = None) -> int:
             depth=args.depth,
             width=args.width,
         )
-    else:
-        output = FAMILIES[args.family].generate(rows=args.rows, seed=args.seed, out=args.out)
+        print(f"{args.family}: {output.rows} rows -> {output.parquet_path} {output.csv_path}")
+        return 0
+    if args.family == V3DV_NAME:
+        result = V3DV_FAMILY.generate(rows=args.rows, seed=args.seed, out=args.out)
+        print(f"{args.family}: {result.rows} live rows -> {result.table_root}")
+        return 0
+    output = FAMILIES[args.family].generate(rows=args.rows, seed=args.seed, out=args.out)
     print(f"{args.family}: {output.rows} rows -> {output.parquet_path} {output.csv_path}")
     return 0
 
