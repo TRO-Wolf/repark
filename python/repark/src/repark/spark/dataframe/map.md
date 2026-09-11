@@ -261,7 +261,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DISPLAY-LAZY-1 step 2 (2026-09-10): the checkpoint arm of
   `_materialize_cache_if_needed` records `_eager_shape` (one count over the pinned
   view, skipped when a shape is stored), so a plain `localCheckpoint()` classifies as
-  materialised with zero plan re-runs at `repr`. pins: display-lazy-1/C-007
+  materialised with zero plan re-runs at `repr`. The `_cache_view`-set early return
+  carries a `not self._checkpoint_lazy` term because returning on the view alone left
+  a pending checkpoint sticky with lineage untruncated — checkpoint-after-cache must
+  still run. pins: display-lazy-1/C-007
 - `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
   step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
   the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes

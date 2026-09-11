@@ -469,9 +469,6 @@ class DataFrame:
         needs = self._persist_requested or self._checkpoint_lazy
         if not needs:
             return
-        # Already cache-pinned and not converting to checkpoint → done.
-        # Checkpoint after cache must still run: early-return on `_cache_view`
-        # alone left `_checkpoint_lazy` sticky with lineage untruncated.
         if self._cache_view is not None and not self._checkpoint_lazy:
             return
         self._ensure_alive()

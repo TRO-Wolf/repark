@@ -98,8 +98,8 @@ literal zero, with a per-chain closing action proving the wiring.
 - Brief gate command (six display-adjacent suites): `105 passed`; plus
   `test_cache_persist.py` (checkpoint blast radius: all plain-checkpoint
   consumers assert values only): `129 passed`.
-- `make verify`: exit 0 after staging, including the `check_lib_py` baseline
-  amendment (core.py 4487 to 4489, debt note unchanged).
+- `make verify`: exit 0 after staging. Close-out correction: no baseline increase —
+  the `check_lib_py` core.py row ratchets 4487 to 4486, mirrored in the CAP-1 test.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -135,7 +135,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_display_lazy_1.py]
     - id: AT-8
       status: ATTACKED
-      evidence: No public signature change; display.py stays under the default ceiling (check_lib_py clean, no baseline touched); docstring-presence and python-conventions clean. Step 2: two added lines in core.py touch no slots, so dir(DataFrame) and the CAP-1 freeze are unchanged; the core.py exact baseline moves 4487 to 4489 in the gate script with the debt note unchanged (visible SSOT-table edit, reviewed like code).
+      evidence: No public signature change; display.py stays under the default ceiling (check_lib_py clean, no baseline touched); docstring-presence and python-conventions clean. Step 2: two added lines in core.py touch no slots, so dir(DataFrame) and the CAP-1 freeze are unchanged. Close-out round: no baseline increase — the two lines are funded by deleting the three-line cache-pinned early-return rationale in the same seat (fact restated on the dataframe map), so the core.py row ratchets 4487 to 4486 with the debt note unchanged, mirrored in the CAP-1 test.
       artifacts: [scripts/check_lib_py.py, scripts/check_docstring_presence.py, scripts/check_python_conventions.py]
     - id: AT-9
       status: N/A
