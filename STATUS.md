@@ -46,7 +46,8 @@ deliberately does not). **FIX-1/2:** the config mirror refuses exactly what the 
 names both key paths on a duplicate; the loader's pins no longer read `HOME`. **FIX-3/9/14:** the
 polars renderer matches polars at its row, list and float boundaries; `repark.display.max_rows`
 refuses above 10,000. **FIX-6/11:** `explain()` refuses `extended` with `mode`, as PySpark does.
-**FIX-7:** a `repark.toml` name that would break a TOML header refuses, a parse error never echoes
+**CONF-UNREAD-1:** three accepted-but-unread `datafusion.*` keys are wired;
+`datafusion.execution.coalesce_batches` (read by no DataFusion 54.1.0 path) refuses loud. **FIX-7:** a `repark.toml` name that would break a TOML header refuses, a parse error never echoes
 the offending line, and a cloud catalog in a *discovered* file warns once at session build.
 **MAINT-POLICY-1 (2026-09-10)** adds the declarative maintenance policy (roadmap 2.1): a
 `[<profile>.maintenance]` table in `repark.toml` with per-table overrides, resolved at session
