@@ -241,6 +241,29 @@ fn iceberg_scan_spec_round_trips_catalog_table_snapshot_projection_and_filters()
 }
 
 #[test]
+fn iceberg_scan_spec_old_format_payload_refuses_loud() {
+    let spec = scan_spec("/tmp/repark-m1d-warehouse", Some(42), Vec::new());
+    let encoded = match spec.encode() {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode: {error}"),
+    };
+    assert!(
+        encoded.len() > 4,
+        "encoded spec must carry a version byte after MAGIC"
+    );
+    let mut old = encoded;
+    old[4] = 1;
+    let error = match IcebergScanSpec::decode(&old) {
+        Ok(decoded) => panic!("old-format payload decoded: {decoded:?}"),
+        Err(error) => error.to_string(),
+    };
+    assert!(
+        error.contains("version") && error.contains('1'),
+        "old-format decode must refuse naming the version, got {error}"
+    );
+}
+
+#[test]
 fn iceberg_scan_spec_decode_rejects_truncated_payload() {
     let spec = scan_spec("/tmp/repark-m1d-warehouse", None, Vec::new());
     let encoded = match spec.encode() {

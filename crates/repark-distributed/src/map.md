@@ -8,6 +8,7 @@ empty `lib.rs`; step 1 adds `executor.rs` (the `DistributedExecutor` trait, `Job
 `cluster.rs`, `session_provider.rs` and `codec.rs` behind the `cluster` feature. Step 2
 adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 1 adds
 `iceberg_provider.rs` (`IcebergScanSpec` provider codec) behind the same feature.
+BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind that feature.
 
 ## Contents
 
@@ -33,42 +34,30 @@ adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 
   two-executor pin registers in-memory table `t` here; the UDF pin registers `repark_times_ten`
   on that same session so the executor registry has it.
   pins: ballista-m1-b/C-002, C-003
-- `codec.rs` (`cluster` feature) — BALLISTA-M2-A D-1 (RF-9 answered the owner question):
-  `ReparkPhysicalExtensionCodec` is a real delegating `PhysicalExtensionCodec`. Every node
-  it does not own — the five Ballista shuffle nodes, UDF/UDAF/UDWF and expression calls —
-  delegates to `BallistaPhysicalExtensionCodec`; `repark_ballista_codec(&provider)` installs
-  the wrapper itself into `BallistaCodec::new` beside the Ballista logical default. The
-  wrapper owns `IcebergTableScan`: encode recovers an `RPIC` `IcebergScanSpec` (catalog
-  spec, table identifier, the node's frozen `resolved_snapshot_id`, projection, predicate)
-  from the node's Debug/Verbose text plus a session-catalog probe, then verifies before
-  emitting — it rebuilds the spec through `IcebergScanSpec::scan` on the same session
-  context and refuses loud (naming the field) unless the rebuilt node matches on table
-  identifier, resolved snapshot id, projected schema, predicate text and partition count;
-  identifiers and projected columns carrying `"`, `\`, `[` or `]` refuse up front, so the
-  codec never emits a spec that describes a different scan. Decode rebuilds the scan
-  through `IcebergScanSpec::scan` against the `SessionContext` the codec carries (built
-  from `ReparkSessionProvider::session_state` — never ambient authority) on a dedicated
-  thread runtime, and refuses loud when the rebuilt frozen snapshot differs from the
-  spec's. No `arrow_flight` is added — the M1-C C-002 residue stands. Residue
-  BALLISTA-M2-A-R-001: the encode path parses Debug/Verbose text only because
-  `iceberg-datafusion` is not a dependency of this crate; the fork's `IcebergTableScan`
-  already exposes typed accessors (`table()`, `snapshot_id()`, `projection()`,
-  `predicates()` in `crates/integrations/datafusion/src/physical_plan/scan.rs`), so a
-  direct optional dependency behind `cluster` would retire the parsing — owner question.
-  A measured consequence of the text surface: the fork renders string literals
-  double-quoted (`name = "alpha"`), which re-parses as a column identifier and fails the
-  rebuild check — string-literal predicates refuse to travel until the fork's predicate
-  Display emits re-parseable text.
-  pins: ballista-m2-a/C-001, C-002, C-003, C-004, ballista-m1-b/C-006
-- `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1: `IcebergScanSpec` is the
-  DataFusion-level provider codec (audit R-4). It serialises
-  `(catalog config, table identifier, snapshot id, projection, filters)` as `RPIC` bytes
-  and rebuilds the Iceberg `TableProvider` from the session catalog (never ambient
-  authority). `IcebergTableScan` cannot travel through Ballista 54.1.0 without
-  `PhysicalExtensionCodec` (`datafusion-proto`, the same wall as M1-B C-004); scans
-  distribute as parquet file groups rewritten from the Iceberg `$files` list. Writes
-  and a commit coordinator are out of scope (ADR-0004 / Milestone 3).
-  pins: ballista-m1-d/C-001, C-002
+- `codec.rs` (`cluster` feature) — BALLISTA-M2-B D-1/D-3: `ReparkPhysicalExtensionCodec`
+  still delegates every unowned node to `BallistaPhysicalExtensionCodec`. Encode of
+  `IcebergTableScan` downcasts the node (`node.as_any` / `downcast_ref`) and reads the
+  spec from typed accessors (`table().identifier()`, `resolved_snapshot_id()`,
+  `projection()`, `predicates()`). The encode-time rebuild-and-compare guard is retired.
+  Decode still rebuilds through `IcebergScanSpec::scan` on the codec-carried session
+  context and refuses when the rebuilt frozen snapshot differs from the spec's.
+  Catalog spec recovery stays a session-catalog probe (`session_catalog_spec` /
+  `catalog_spec_from_debug`): `IcebergTableScan` / `Table` have no catalog-spec accessor
+  at this fork pin (measured 2026-09-11). Wire `RPIC` version is 2 so a v1 payload
+  refuses on decode. pins: ballista-m2-b/C-001, C-004, ballista-m2-a/C-001, C-003,
+  ballista-m1-b/C-006
+- `predicate_expr.rs` (`cluster` feature) — BALLISTA-M2-B D-2: typed
+  `iceberg::expr::Predicate` → `datafusion::logical_expr::Expr` (And/Or/Not, unary
+  IsNull/NotNull/IsNan/NotNan, binary comparisons including StartsWith/NotStartsWith,
+  In/NotIn, Datum → ScalarValue for the fork's primitive pushdown types). An
+  inexpressible shape (AlwaysTrue/AlwaysFalse, AboveMax/BelowMin, Unknown, a StartsWith
+  prefix carrying LIKE wildcards) refuses loud naming the shape. The Expr travels as
+  `datafusion-proto` bytes. pins: ballista-m2-b/C-002
+- `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1 plus M2-B: `IcebergScanSpec`
+  serialises catalog config, table identifier, snapshot id, projection, and either SQL
+  filter text (local constructor) or typed Expr bytes (codec path) as `RPIC` v2. Rebuild
+  looks up the Iceberg table from the session catalog. File-group rewrite stays the
+  fallback for a node with no codec entry. pins: ballista-m1-d/C-001, C-002, ballista-m2-b/C-001, C-004
 
 ## Pointers
 

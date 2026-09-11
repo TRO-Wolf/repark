@@ -16,15 +16,15 @@ changing a decision here means a new dated design pass, not an in-place edit.
   owner's plan §12 success list with a check per line. **BALLISTA-M2-A (2026-09-11, RF-9):**
   open questions 1 and 4 closed — `datafusion-proto =54.1.0` behind `cluster` made the codec
   wrapper a real delegating `PhysicalExtensionCodec`; `IcebergTableScan` crosses to the
-  executor as an `RPIC` spec rebuilt under session authority, and encode verifies the
-  rebuilt node before emitting (refuses loud naming the field rather than shipping a
-  different scan). The file-group rewrite stays as the M1 read path and the no-codec-entry
-  fallback. Open question left: M1-C C-002 (deterministic retry — no `arrow_flight`).
-  Residue BALLISTA-M2-A-R-001: spec recovery parses Debug/Verbose text because
-  `iceberg-datafusion` is not a dependency here; the fork's typed accessors would retire it
-  (owner question). Iceberg writes and the commit coordinator are Milestone 3 (ADR-0004).
-  Closes when M1-D merges or the owner closes the slate row.
-  pins: ballista-m1-c/C-001, C-003, C-004; ballista-m1-d/C-001, C-002, C-003; ballista-m2-a/C-001, C-002, C-003, C-004
+  executor as an `RPIC` spec rebuilt under session authority. **BALLISTA-M2-B (2026-09-11,
+  S2-17):** typed encode through `iceberg-datafusion` accessors; predicates travel as
+  `datafusion-proto` `Expr`s; string literals and bracketed names travel; the encode-time
+  rebuild-and-compare guard is retired; BALLISTA-M2-A-R-001 is closed. The file-group
+  rewrite stays as the M1 read path and the no-codec-entry fallback. Open question left:
+  M1-C C-002 (deterministic retry — no `arrow_flight`). Iceberg writes and the commit
+  coordinator are Milestone 3 (ADR-0004). Closes when the distributed campaign closes or
+  the owner closes the slate row.
+  pins: ballista-m1-c/C-001, C-003, C-004; ballista-m1-d/C-001, C-002, C-003; ballista-m2-a/C-001, C-002, C-003, C-004; ballista-m2-b/C-001, C-002, C-003, C-004, C-005
 - [sql-harden-cutover-matrix.md](sql-harden-cutover-matrix.md) — **SQL-HARDEN-1 (2026-09-04):**
   the cutover pipeline cutover shapes S1–S7 measured on memory Spark vs repark — 9 programs, 0 EQUAL,
   9 DIVERGES, four registry rows filed, `V3-COV-7` cited. **SQL-HARDEN-2 (2026-09-04):** S8/S9

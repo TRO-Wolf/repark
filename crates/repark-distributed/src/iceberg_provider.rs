@@ -5,13 +5,17 @@ use datafusion::arrow::array::{Array, StringArray};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::TableProvider;
 use datafusion::common::DFSchema;
-use datafusion::physical_plan::{ExecutionPlan, displayable};
+use datafusion::logical_expr::Expr;
+use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{ParquetReadOptions, SessionContext};
 use datafusion::sql::TableReference;
+use iceberg_datafusion::IcebergTableScan;
 use repark_core::{CatalogKind, CatalogSpec, Error, Result, engine_err};
 
+use crate::predicate_expr::{decode_expr, encode_expr, predicate_to_expr};
+
 pub(crate) const MAGIC: &[u8; 4] = b"RPIC";
-const CODEC_VERSION: u8 = 1;
+const CODEC_VERSION: u8 = 2;
 const MAX_ITEM_BYTES: usize = 1_048_576;
 const KIND_GLUE: u8 = 0;
 const KIND_S3_TABLES: u8 = 1;
@@ -26,6 +30,7 @@ pub struct IcebergScanSpec {
     pub snapshot_id: Option<i64>,
     pub projection: Option<Vec<String>>,
     pub filters: Vec<String>,
+    pub filter_expr_bytes: Vec<Vec<u8>>,
 }
 
 impl IcebergScanSpec {
@@ -43,6 +48,7 @@ impl IcebergScanSpec {
             snapshot_id,
             projection,
             filters,
+            filter_expr_bytes: Vec::new(),
         }
     }
 
@@ -51,46 +57,38 @@ impl IcebergScanSpec {
         node: &Arc<dyn ExecutionPlan>,
         context: &SessionContext,
     ) -> Result<Self> {
-        if node.name() != ICEBERG_TABLE_SCAN {
-            return Err(codec_err(format!(
-                "node {} is not {ICEBERG_TABLE_SCAN}",
-                node.name()
-            )));
-        }
-        let debug = format!("{node:?}");
-        let (namespace, table) = scan_node_table_ident(&debug).map_err(|error| {
-            codec_err(format!(
-                "{ICEBERG_TABLE_SCAN} table identifier field: {error}"
-            ))
-        })?;
+        let scan = node
+            .as_ref()
+            .downcast_ref::<IcebergTableScan>()
+            .ok_or_else(|| {
+                codec_err(format!("node {} is not {ICEBERG_TABLE_SCAN}", node.name()))
+            })?;
+        let identifier = scan.table().identifier();
+        let namespace = identifier.namespace();
         if namespace.len() != 1 {
             return Err(codec_err(format!(
                 "{ICEBERG_TABLE_SCAN} namespace {namespace:?} is nested; the spec encodes \
                  catalog.namespace.table"
             )));
         }
-        for part in &namespace {
-            reject_reserved_text("table identifier", part)?;
-        }
-        reject_reserved_text("table identifier", &table)?;
-        let snapshot_id = Some(scan_node_resolved_snapshot_id(node)?);
-        let projection = scan_node_projection(&debug).map_err(|error| {
-            codec_err(format!("{ICEBERG_TABLE_SCAN} projection field: {error}"))
-        })?;
-        if let Some(columns) = &projection {
-            for column in columns {
-                reject_reserved_text("projection", column)?;
+        let table = identifier.name().to_owned();
+        let snapshot_id = Some(scan.resolved_snapshot_id());
+        let projection = scan.projection().map(<[String]>::to_vec);
+        let filter_expr_bytes = match scan.predicates() {
+            None => Vec::new(),
+            Some(predicate) => {
+                let expr = predicate_to_expr(predicate)?;
+                vec![encode_expr(&expr)?]
             }
-        }
-        let filters = scan_node_filters(node)
-            .map_err(|error| codec_err(format!("{ICEBERG_TABLE_SCAN} predicate field: {error}")))?;
+        };
         let catalog = session_catalog_spec(context, &namespace[0], &table)?;
         Ok(Self {
             table_identifier: vec![catalog.name.clone(), namespace[0].clone(), table],
             catalog,
             snapshot_id,
             projection,
-            filters,
+            filters: Vec::new(),
+            filter_expr_bytes,
         })
     }
 
@@ -111,7 +109,7 @@ impl IcebergScanSpec {
                 write_string_list(&mut buffer, columns)?;
             }
         }
-        write_string_list(&mut buffer, &self.filters)?;
+        write_bytes_list(&mut buffer, &self.wire_filter_bytes())?;
         Ok(buffer)
     }
 
@@ -144,13 +142,14 @@ impl IcebergScanSpec {
                 )));
             }
         };
-        let filters = read_string_list(bytes, &mut cursor)?;
+        let raw_filters = read_bytes_list(bytes, &mut cursor)?;
         if cursor != bytes.len() {
             return Err(codec_err(format!(
                 "Iceberg scan spec has {} trailing byte(s)",
                 bytes.len() - cursor
             )));
         }
+        let (filters, filter_expr_bytes) = split_wire_filters(raw_filters)?;
         Ok(Self {
             catalog: CatalogSpec {
                 name: catalog_name,
@@ -161,6 +160,7 @@ impl IcebergScanSpec {
             snapshot_id,
             projection,
             filters,
+            filter_expr_bytes,
         })
     }
 
@@ -189,14 +189,7 @@ impl IcebergScanSpec {
             Some(names) => Some(projection_indices(&schema, names)?),
         };
         let df_schema = DFSchema::try_from(schema.as_ref().clone()).map_err(engine_err)?;
-        let mut filters = Vec::with_capacity(self.filters.len());
-        for filter in &self.filters {
-            filters.push(
-                context
-                    .parse_sql_expr(filter, &df_schema)
-                    .map_err(engine_err)?,
-            );
-        }
+        let filters = self.scan_filter_exprs(context, &df_schema)?;
         let state = context.state();
         provider
             .scan(&state, projection.as_ref(), &filters, None)
@@ -251,6 +244,40 @@ impl IcebergScanSpec {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    fn wire_filter_bytes(&self) -> Vec<Vec<u8>> {
+        if self.filter_expr_bytes.is_empty() {
+            self.filters
+                .iter()
+                .map(|filter| filter.as_bytes().to_vec())
+                .collect()
+        } else {
+            self.filter_expr_bytes.clone()
+        }
+    }
+
+    fn scan_filter_exprs(
+        &self,
+        context: &SessionContext,
+        df_schema: &DFSchema,
+    ) -> Result<Vec<Expr>> {
+        if !self.filter_expr_bytes.is_empty() {
+            let mut exprs = Vec::with_capacity(self.filter_expr_bytes.len());
+            for bytes in &self.filter_expr_bytes {
+                exprs.push(decode_expr(bytes)?);
+            }
+            return Ok(exprs);
+        }
+        let mut exprs = Vec::with_capacity(self.filters.len());
+        for filter in &self.filters {
+            exprs.push(
+                context
+                    .parse_sql_expr(filter, df_schema)
+                    .map_err(engine_err)?,
+            );
+        }
+        Ok(exprs)
+    }
+
     fn table_reference(&self) -> Result<TableReference> {
         match self.table_identifier.as_slice() {
             [catalog, namespace, table] => Ok(TableReference::full(
@@ -309,6 +336,38 @@ fn write_string(buffer: &mut Vec<u8>, value: &str) -> Result<()> {
     }
     write_u32(buffer, len);
     buffer.extend_from_slice(value.as_bytes());
+    Ok(())
+}
+
+fn write_bytes(buffer: &mut Vec<u8>, value: &[u8]) -> Result<()> {
+    let len = u32::try_from(value.len()).map_err(|_| {
+        codec_err(format!(
+            "Iceberg scan spec bytes length {} exceeds u32",
+            value.len()
+        ))
+    })?;
+    if value.len() > MAX_ITEM_BYTES {
+        return Err(codec_err(format!(
+            "Iceberg scan spec bytes length {} exceeds {MAX_ITEM_BYTES}",
+            value.len()
+        )));
+    }
+    write_u32(buffer, len);
+    buffer.extend_from_slice(value);
+    Ok(())
+}
+
+fn write_bytes_list(buffer: &mut Vec<u8>, values: &[Vec<u8>]) -> Result<()> {
+    let len = u32::try_from(values.len()).map_err(|_| {
+        codec_err(format!(
+            "Iceberg scan spec list length {} exceeds u32",
+            values.len()
+        ))
+    })?;
+    write_u32(buffer, len);
+    for value in values {
+        write_bytes(buffer, value)?;
+    }
     Ok(())
 }
 
@@ -403,6 +462,50 @@ fn read_string(bytes: &[u8], cursor: &mut usize) -> Result<String> {
     let slice = read_exact(bytes, cursor, len)?;
     String::from_utf8(slice.to_vec())
         .map_err(|error| codec_err(format!("Iceberg scan spec string is not utf-8: {error}")))
+}
+
+fn read_bytes(bytes: &[u8], cursor: &mut usize) -> Result<Vec<u8>> {
+    let len = usize::try_from(read_u32(bytes, cursor)?)
+        .map_err(|_| codec_err("Iceberg scan spec bytes length does not fit usize".to_owned()))?;
+    if len > MAX_ITEM_BYTES {
+        return Err(codec_err(format!(
+            "Iceberg scan spec bytes length {len} exceeds {MAX_ITEM_BYTES}"
+        )));
+    }
+    Ok(read_exact(bytes, cursor, len)?.to_vec())
+}
+
+fn read_bytes_list(bytes: &[u8], cursor: &mut usize) -> Result<Vec<Vec<u8>>> {
+    let len = usize::try_from(read_u32(bytes, cursor)?)
+        .map_err(|_| codec_err("Iceberg scan spec list length does not fit usize".to_owned()))?;
+    if len > MAX_ITEM_BYTES {
+        return Err(codec_err(format!(
+            "Iceberg scan spec list length {len} exceeds {MAX_ITEM_BYTES}"
+        )));
+    }
+    let mut values = Vec::with_capacity(len);
+    for _ in 0..len {
+        values.push(read_bytes(bytes, cursor)?);
+    }
+    Ok(values)
+}
+
+fn split_wire_filters(raw: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<Vec<u8>>)> {
+    let mut filters = Vec::new();
+    let mut filter_expr_bytes = Vec::new();
+    for item in raw {
+        if decode_expr(&item).is_ok() {
+            filter_expr_bytes.push(item);
+        } else {
+            let sql = String::from_utf8(item).map_err(|error| {
+                codec_err(format!(
+                    "Iceberg scan spec filter is neither an Expr nor utf-8 SQL: {error}"
+                ))
+            })?;
+            filters.push(sql);
+        }
+    }
+    Ok((filters, filter_expr_bytes))
 }
 
 fn read_string_list(bytes: &[u8], cursor: &mut usize) -> Result<Vec<String>> {
@@ -578,79 +681,26 @@ fn debug_quoted_values(text: &str) -> Result<Vec<String>> {
     Ok(values)
 }
 
-fn reject_reserved_text(field: &str, value: &str) -> Result<()> {
-    if value.contains('"') || value.contains('\\') || value.contains('[') || value.contains(']') {
-        return Err(codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} {field} {value:?} carries a character the codec's debug \
-             surface cannot round-trip ('\"', '\\', '[' or ']')"
-        )));
-    }
-    Ok(())
-}
-
-pub(crate) fn scan_node_table_ident(debug: &str) -> Result<(Vec<String>, String)> {
-    let rest = debug_field(debug, "identifier: TableIdent")?;
-    let rest = debug_field(rest, "NamespaceIdent([")?;
-    let end = rest.find(']').ok_or_else(|| {
-        codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} namespace list has no closing bracket"
-        ))
-    })?;
-    let namespace = debug_quoted_values(&rest[..end])?;
-    if namespace.is_empty() {
-        return Err(codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} debug text names an empty namespace"
-        )));
-    }
-    let rest = debug_field(&rest[end..], "name: \"")?;
-    let end = rest
-        .find('"')
-        .ok_or_else(|| codec_err(format!("{ICEBERG_TABLE_SCAN} table name is unterminated")))?;
-    Ok((namespace, rest[..end].to_owned()))
-}
-
-fn scan_node_projection(debug: &str) -> Result<Option<Vec<String>>> {
-    let rest = debug_field(debug, "projection: ")?;
-    if rest.starts_with("None") {
-        return Ok(None);
-    }
-    let rest = debug_field(rest, "Some([")?;
-    let end = rest.find(']').ok_or_else(|| {
-        codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} projection list has no closing bracket"
-        ))
-    })?;
-    Ok(Some(debug_quoted_values(&rest[..end])?))
-}
-
 pub(crate) fn scan_node_resolved_snapshot_id(node: &Arc<dyn ExecutionPlan>) -> Result<i64> {
-    let debug = format!("{node:?}");
-    let rest = debug_field(&debug, ", resolved_snapshot_id: ")?;
-    let end = rest
-        .find(|character: char| !(character.is_ascii_digit() || character == '-'))
-        .unwrap_or(rest.len());
-    rest[..end].parse::<i64>().map_err(|error| {
-        codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} resolved snapshot id {:?} is not an i64: {error}",
-            &rest[..end]
-        ))
-    })
+    node.as_ref()
+        .downcast_ref::<IcebergTableScan>()
+        .map(IcebergTableScan::resolved_snapshot_id)
+        .ok_or_else(|| codec_err(format!("node {} is not {ICEBERG_TABLE_SCAN}", node.name())))
 }
 
-pub(crate) fn scan_node_filters(node: &Arc<dyn ExecutionPlan>) -> Result<Vec<String>> {
-    let text = displayable(node.as_ref()).indent(true).to_string();
-    let rest = debug_field(&text, "predicate:[")?;
-    let end = rest.find("] snapshot_id=").ok_or_else(|| {
-        codec_err(format!(
-            "{ICEBERG_TABLE_SCAN} predicate is not followed by snapshot_id in {text:?}"
-        ))
-    })?;
-    let predicate = &rest[..end];
-    if predicate.is_empty() {
-        Ok(Vec::new())
-    } else {
-        Ok(vec![predicate.to_owned()])
-    }
+#[must_use]
+pub fn iceberg_scan_predicates_match(
+    left: &Arc<dyn ExecutionPlan>,
+    right: &Arc<dyn ExecutionPlan>,
+) -> bool {
+    scan_predicates(left) == scan_predicates(right)
+}
+
+fn scan_predicates(node: &Arc<dyn ExecutionPlan>) -> Option<iceberg::expr::Predicate> {
+    node.as_ref()
+        .downcast_ref::<IcebergTableScan>()
+        .and_then(IcebergTableScan::predicates)
+        .cloned()
 }
 
 fn session_catalog_spec(

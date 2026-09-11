@@ -31,7 +31,7 @@ use futures::StreamExt;
 use repark_core::{CatalogKind, CatalogSpec, ReparkSession};
 use repark_distributed::{
     DistributedExecutor, IcebergScanSpec, LocalDataFusionExecutor, ReparkClusterExecutor,
-    ReparkSessionProvider, repark_ballista_codec,
+    ReparkSessionProvider, iceberg_scan_predicates_match, repark_ballista_codec,
 };
 
 const CATALOG_NAME: &str = "ice";
@@ -388,10 +388,9 @@ async fn iceberg_table_scan_round_trips_through_the_wrapper() {
         spec.projection
     );
     assert!(
-        wire.filters == spec.filters,
-        "wire filters {:?} != {:?}",
-        wire.filters,
-        spec.filters
+        !wire.filter_expr_bytes.is_empty(),
+        "wire must carry typed predicate Expr bytes, got SQL filters {:?}",
+        wire.filters
     );
 
     let task = SessionContext::new().task_ctx();
@@ -726,8 +725,19 @@ fn bind_address() -> SocketAddr {
     }
 }
 
+fn encode_must_travel(
+    physical: &dyn datafusion_proto::physical_plan::PhysicalExtensionCodec,
+    scan: &Arc<dyn ExecutionPlan>,
+    label: &str,
+) -> Vec<u8> {
+    match encode_or_refusal(physical, scan, label) {
+        Ok(buffer) => buffer,
+        Err(message) => panic!("{label} predicate must travel, got refusal: {message}"),
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn string_literal_injection_predicate_refuses_loud() {
+async fn string_literal_injection_predicate_travels_exactly() {
     let warehouse = unique_warehouse();
     let warehouse_text = warehouse.to_string_lossy().into_owned();
     let (session, context) = adversarial_session(&warehouse_text).await;
@@ -741,19 +751,20 @@ async fn string_literal_injection_predicate_refuses_loud() {
     let provider = ReparkSessionProvider::from_session(&session);
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
-    match encode_or_refusal(physical, &scan, "literal-injection") {
-        Err(message) => assert_refusal_names_field("literal-injection", &message, "predicate"),
-        Ok(buffer) => {
-            let decoded = decoded_scan(physical, &buffer, "literal-injection");
-            assert_same_scan("literal-injection", &decoded, &scan);
-        }
-    }
+    let buffer = encode_must_travel(physical, &scan, "literal-injection");
+    let decoded = decoded_scan(physical, &buffer, "literal-injection");
+    assert_same_scan("literal-injection", &decoded, &scan);
+    assert!(
+        iceberg_scan_predicates_match(&decoded, &scan),
+        "literal-injection decoded predicates() != original"
+    );
+    cluster_batches("literal-injection", &session, &context, &scan).await;
     drop(session);
     let _ = std::fs::remove_dir_all(&warehouse);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn string_literal_predicate_refuses_loud() {
+async fn string_literal_predicate_travels_exactly() {
     let warehouse = unique_warehouse();
     let warehouse_text = warehouse.to_string_lossy().into_owned();
     let (session, context) = adversarial_session(&warehouse_text).await;
@@ -767,13 +778,14 @@ async fn string_literal_predicate_refuses_loud() {
     let provider = ReparkSessionProvider::from_session(&session);
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
-    match encode_or_refusal(physical, &scan, "string-literal") {
-        Err(message) => assert_refusal_names_field("string-literal", &message, "predicate"),
-        Ok(buffer) => {
-            let decoded = decoded_scan(physical, &buffer, "string-literal");
-            assert_same_scan("string-literal", &decoded, &scan);
-        }
-    }
+    let buffer = encode_must_travel(physical, &scan, "string-literal");
+    let decoded = decoded_scan(physical, &buffer, "string-literal");
+    assert_same_scan("string-literal", &decoded, &scan);
+    assert!(
+        iceberg_scan_predicates_match(&decoded, &scan),
+        "string-literal decoded predicates() != original"
+    );
+    cluster_batches("string-literal", &session, &context, &scan).await;
     drop(session);
     let _ = std::fs::remove_dir_all(&warehouse);
 }
@@ -851,7 +863,7 @@ async fn in_list_predicate_travels_exactly_or_refuses() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn bracket_column_projection_refuses_loud() {
+async fn bracket_column_projection_travels_exactly() {
     let warehouse = unique_warehouse();
     let warehouse_text = warehouse.to_string_lossy().into_owned();
     let (session, context) = adversarial_session(&warehouse_text).await;
@@ -865,19 +877,20 @@ async fn bracket_column_projection_refuses_loud() {
     let provider = ReparkSessionProvider::from_session(&session);
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
-    match encode_or_refusal(physical, &scan, "bracket-column") {
-        Err(message) => assert_refusal_names_field("bracket-column", &message, "projection"),
-        Ok(buffer) => {
-            let decoded = decoded_scan(physical, &buffer, "bracket-column");
-            assert_same_scan("bracket-column", &decoded, &scan);
-        }
-    }
+    let buffer = encode_must_travel(physical, &scan, "bracket-column");
+    let decoded = decoded_scan(physical, &buffer, "bracket-column");
+    assert_same_scan("bracket-column", &decoded, &scan);
+    assert!(
+        iceberg_scan_predicates_match(&decoded, &scan),
+        "bracket-column decoded predicates() != original"
+    );
+    cluster_batches("bracket-column", &session, &context, &scan).await;
     drop(session);
     let _ = std::fs::remove_dir_all(&warehouse);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn bracket_table_identifier_refuses_loud() {
+async fn bracket_table_identifier_travels_exactly() {
     let warehouse = unique_warehouse();
     let warehouse_text = warehouse.to_string_lossy().into_owned();
     let (session, context) = adversarial_session(&warehouse_text).await;
@@ -886,13 +899,14 @@ async fn bracket_table_identifier_refuses_loud() {
     let provider = ReparkSessionProvider::from_session(&session);
     let codec = repark_ballista_codec(&provider);
     let physical = codec.physical_extension_codec();
-    match encode_or_refusal(physical, &scan, "bracket-table") {
-        Err(message) => assert_refusal_names_field("bracket-table", &message, "identifier"),
-        Ok(buffer) => {
-            let decoded = decoded_scan(physical, &buffer, "bracket-table");
-            assert_same_scan("bracket-table", &decoded, &scan);
-        }
-    }
+    let buffer = encode_must_travel(physical, &scan, "bracket-table");
+    let decoded = decoded_scan(physical, &buffer, "bracket-table");
+    assert_same_scan("bracket-table", &decoded, &scan);
+    assert!(
+        iceberg_scan_predicates_match(&decoded, &scan),
+        "bracket-table decoded predicates() != original"
+    );
+    cluster_batches("bracket-table", &session, &context, &scan).await;
     drop(session);
     let _ = std::fs::remove_dir_all(&warehouse);
 }
