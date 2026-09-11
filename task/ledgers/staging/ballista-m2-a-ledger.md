@@ -3,18 +3,19 @@
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 This file closes when BALLISTA-M2-A merges, or when the owner closes the slate row.
 
-**Unit:** BALLISTA-M2-A step 1 · **Date:** 2026-09-11 · **Executor:** Devin (swe-2-high), Actor, step 1 ·
+**Unit:** BALLISTA-M2-A steps 1+2 · **Date:** 2026-09-11 · **Executor:** Devin (swe-2-high), Actor, steps 1 and 2 ·
 **Branch:** `feat/ballista-m2-a` · **Base:** `65116847`
 **Model:** swe-2-high
 **risk_tier:** standard.
 **Path:** STANDARD.
 
-Step 1 lands the red-first codec pins, the delegating `PhysicalExtensionCodec`
-implementation, and `IcebergTableScan` travelling through the codec. Step 2 owns the design
-doc (`distributed-m1.md` open questions 1 and 4), remaining map language, and ledger close-out.
+Step 1 landed the red-first codec pins, the delegating `PhysicalExtensionCodec`
+implementation, and `IcebergTableScan` travelling through the codec (plus the audit fix —
+encode verifies the rebuilt scan before emitting). Step 2 closed design-doc open questions
+1 and 4, brought every crate map true, and completed this ledger.
 
-**Not in this step:** `docs/design/distributed-m1.md` (step 2), `STATUS.md`,
-`briefs/next-sequence.md`, `Cargo.toml`, `Cargo.lock`, `arrow_flight`.
+**Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `Cargo.toml`,
+`Cargo.lock`, `arrow_flight`, `distributed-m2.md` (design unchanged — step 2 §note).
 
 ## Proposition ledger
 
@@ -137,6 +138,28 @@ projection; `we]t` table refuses naming table identifier.
   so *every* string-literal predicate refuses to travel until the fork's Display emits
   re-parseable text; date/timestamp literals never bind into the node's predicate at all
   (dropped at pushdown — `predicate:[]` — so those nodes round-trip exactly).
+
+## Step 2 — design doc, crate map, ledger (M)
+
+**Model:** swe-2-high · **Date:** 2026-09-11 · **Branch:** `feat/ballista-m2-a` ·
+**Base:** `f8da984c` + audit fix `efaf7a76`, merged with `origin/main` at `43457d8f`.
+
+Step 2 is documentation only — no code changed. `docs/design/distributed-m1.md` closed
+open questions 1 and 4 with the RF-9 ruling and step-1 proof (each keeps its question text,
+carries the dated close, the measured cross/refuse surface, and `pins: ballista-m2-a/…`
+lines); the §12 success list now marks row 10 done (un-parked M1-B C-004) and row 17's note
+states both the file-group rewrite and the codec path; question 2 (deterministic retry)
+stays OPEN unchanged per D-4. `docs/design/map.md`, `crates/repark-distributed/map.md`,
+`src/map.md` and `tests/map.md` are in lockstep — no "cannot travel" or "PARKED" claim
+survives; R-001 is recorded in the ledger residue and both codec map entries. No
+`distributed-m2.md` was written: the design did not change — step 1 is exactly the D-1/D-2
+shape the card described, plus the audit-required encode-verify. The clause table is
+unchanged — all four clauses stay PROVEN on step-1 pins; this step's proof is the gate run
+below. The ledger stays in `staging/`; the orchestrator does the departure.
+
+Gates: `python3 scripts/check_docs_links.py`, `check_ledger_grammar.py`,
+`ledger_lifecycle.py check`, `cargo test -p repark-distributed --features cluster`,
+`make verify` — all green.
 
 ```yaml
 COVERAGE_ATTESTATION:

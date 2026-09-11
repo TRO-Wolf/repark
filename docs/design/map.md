@@ -13,17 +13,18 @@ changing a decision here means a new dated design pass, not an in-place edit.
 - [distributed-m1.md](distributed-m1.md) — **BALLISTA-M1 (2026-09-10):** what Milestone 1
   delivers (`DistributedExecutor`, local and in-process cluster executors, multi-stage
   reads, per-stage `Completed` metrics, Iceberg reads through `IcebergScanSpec`) and the
-  owner's plan §12 success list with a check per line. Line 17 (Iceberg scan) is done.
-  Open questions: M1-B C-004 (`datafusion-proto` codec round-trip), M1-C C-002 (no
-  deterministic fail-once hook without a new dependency), M1-D (`IcebergTableScan` cannot
-  travel; same codec wall). Iceberg writes and the commit coordinator are Milestone 3
-  (ADR-0004). Closes when M1-D merges or the owner closes the slate row.
-  pins: ballista-m1-c/C-001, C-003, C-004; ballista-m1-d/C-001, C-002, C-003
-  reads, per-stage `Completed` metrics) and the owner's plan §12 success list with a check
-  per line. Two open questions: M1-B C-004 (`datafusion-proto` codec round-trip) and M1-C
-  C-002 (no deterministic fail-once hook without a new dependency). Closes when M1-D merges
-  or the owner closes the slate row.
-  pins: ballista-m1-c/C-001, C-003, C-004
+  owner's plan §12 success list with a check per line. **BALLISTA-M2-A (2026-09-11, RF-9):**
+  open questions 1 and 4 closed — `datafusion-proto =54.1.0` behind `cluster` made the codec
+  wrapper a real delegating `PhysicalExtensionCodec`; `IcebergTableScan` crosses to the
+  executor as an `RPIC` spec rebuilt under session authority, and encode verifies the
+  rebuilt node before emitting (refuses loud naming the field rather than shipping a
+  different scan). The file-group rewrite stays as the M1 read path and the no-codec-entry
+  fallback. Open question left: M1-C C-002 (deterministic retry — no `arrow_flight`).
+  Residue BALLISTA-M2-A-R-001: spec recovery parses Debug/Verbose text because
+  `iceberg-datafusion` is not a dependency here; the fork's typed accessors would retire it
+  (owner question). Iceberg writes and the commit coordinator are Milestone 3 (ADR-0004).
+  Closes when M1-D merges or the owner closes the slate row.
+  pins: ballista-m1-c/C-001, C-003, C-004; ballista-m1-d/C-001, C-002, C-003; ballista-m2-a/C-001, C-002, C-003, C-004
 - [sql-harden-cutover-matrix.md](sql-harden-cutover-matrix.md) — **SQL-HARDEN-1 (2026-09-04):**
   the cutover pipeline cutover shapes S1–S7 measured on memory Spark vs repark — 9 programs, 0 EQUAL,
   9 DIVERGES, four registry rows filed, `V3-COV-7` cited. **SQL-HARDEN-2 (2026-09-04):** S8/S9
