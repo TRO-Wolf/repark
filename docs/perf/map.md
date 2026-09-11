@@ -227,6 +227,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   [../../python/repark-parity/bench/adaptpart/map.md](../../python/repark-parity/bench/adaptpart/map.md).
   The 20 percent prediction check is open (orchestrator O-run).
   pins: ap-0/C-001, C-002, C-003, C-004
+- [torture-1-2026-09-11.md](torture-1-2026-09-11.md) — **TORTURE-1 step 5
+  (2026-09-11):** the full-tier results table — eight families at 1 000 000 rows
+  (`v3_dv`: 800 000 live after the `id % 5 = 2` delete, generated live under
+  `REPARK_PARITY_LIVE=1` on zulu-17) × both doors on a release module, one row per
+  family × door with rows, harness wall seconds and outcome; the same 11-xfail
+  inventory as CI tier and no new registry rows. Also carries the S2-12
+  measurement: per-`datasets/` coverage tables and consumer lists — zero
+  retirements (`nested`/`secrets` covered but consumed outside their own tests;
+  `schema_inference`/`extreme_types`/`smartcsv` partly covered).
+  pins: torture-1/C-031, C-032, C-033, C-034, C-036
 - [adapt-part-ap1-2026-09-11.md](adapt-part-ap1-2026-09-11.md) — **AP-1 step 2
   (measure, 2026-09-11):** `CALL plan_partitioning` run against the same three beds
   on the release module — per-bed `byte_ratio` measured from parquet footers and

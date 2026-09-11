@@ -109,6 +109,22 @@ law for *authoring* a golden (routine CI must stay no-JVM for everyone); the liv
   *disclosure* that reds ⇒ the two engines **converged** — update the disclosure, do not silently
   re-label it parity.
 
+### The torture suite (generator families at scale)
+
+`python/repark-parity/tests/torture/` drives the seeded generator families in
+`python/repark-parity/fixtures/torture/` through both doors — the DataFrame read and
+`spark.sql` over a temp view — at two tiers: `TORTURE_TIER=ci` (default) generates 10k
+rows per family into a temp dir at test time, `TORTURE_TIER=full` generates ≥1M rows
+once under `/tmp/torture/` and reuses them via per-family manifests. Run it with
+`make py-test-torture` (needs the native module; deliberately not a `preflight`
+member). Every cell asserts the D-3 contract — completes-or-refuses-loud, the
+generated row count, the declared schema, per-column inferred type for `inference` —
+and a divergent cell is never a bare xfail: it files a
+`docs/spark-sql-iceberg-parity.md` registry row and goes `xfail(strict=True,
+reason="<row id>")`. The `v3_dv` family reads a checked-in ≤ 1 MB format-v3
+deletion-vector fixture; its live generator needs `REPARK_PARITY_LIVE=1` and a
+Java-17 `JAVA_HOME`. Full-tier results: `docs/perf/torture-1-2026-09-11.md`.
+
 ## Boundary changes need a real-artifact test (applies from phase 3)
 
 In-process tests cannot catch boundary bugs: when producer and consumer compile together
