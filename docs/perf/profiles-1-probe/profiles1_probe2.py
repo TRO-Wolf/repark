@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
+import tempfile
 from pathlib import Path
 
 import pyarrow as pa
@@ -52,6 +54,11 @@ def small_repartition_plan(spark: SparkSession) -> str:
     return capture_explain(frame.filter("v > 100").select("v").repartition(32))
 
 
+def scrub_work_dir(plan: str) -> str:
+    raw = str(WORK)
+    return plan.replace(raw, "<work>").replace(raw.lstrip(os.sep), "<work>")
+
+
 def open_session(configs: list[tuple[str, str]]) -> SparkSession:
     builder = SparkSession.builder
     for key, value in configs:
@@ -60,7 +67,9 @@ def open_session(configs: list[tuple[str, str]]) -> SparkSession:
 
 
 def main() -> None:
-    WORK.mkdir(parents=True, exist_ok=True)
+    global WORK
+    os.environ["REPARK_CONFIG"] = ""
+    WORK = Path(tempfile.mkdtemp(prefix="profiles1p2-"))
     build_source_dir()
 
     results: dict[str, object] = {}
@@ -82,11 +91,12 @@ def main() -> None:
     ]
     for name, configs in cases:
         session = open_session(configs)
-        results[name] = {
+        plans = {
             "numeric_filter": scan_dir_plan(session, "v > 1000000"),
             "string_filter": scan_dir_plan(session, "s LIKE '%7-1%'"),
             "small_repartition": small_repartition_plan(session),
         }
+        results[name] = {label: scrub_work_dir(plan) for label, plan in plans.items()}
         session.stop()
 
     for name, plans in results.items():
