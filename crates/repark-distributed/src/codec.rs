@@ -9,14 +9,13 @@ use datafusion::error::Result as DataFusionResult;
 use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use datafusion::physical_expr::PhysicalExpr;
-use datafusion::physical_plan::{ExecutionPlan, ExecutionPlanProperties};
+use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion_proto::physical_plan::PhysicalExtensionCodec;
 use repark_core::{Error, Result as ReparkResult};
 
 use crate::iceberg_provider::{
-    ICEBERG_TABLE_SCAN, IcebergScanSpec, MAGIC, scan_node_filters, scan_node_resolved_snapshot_id,
-    scan_node_table_ident,
+    ICEBERG_TABLE_SCAN, IcebergScanSpec, MAGIC, scan_node_resolved_snapshot_id,
 };
 use crate::session_provider::ReparkSessionProvider;
 
@@ -55,15 +54,6 @@ impl ReparkPhysicalExtensionCodec {
         buf: &mut Vec<u8>,
     ) -> DataFusionResult<()> {
         let spec = IcebergScanSpec::from_scan_node(node, &self.context).map_err(codec_error)?;
-        let rebuilt =
-            rebuild_iceberg_scan(self.context.clone(), spec.clone()).map_err(|error| {
-                DataFusionError::Execution(format!(
-                    "{ICEBERG_TABLE_SCAN} encode refused: the spec could not be rebuilt into an \
-                 equivalent scan — the predicate or table identifier field did not re-parse \
-                 under session authority: {error}"
-                ))
-            })?;
-        verify_scan_identity(node, &rebuilt)?;
         buf.extend_from_slice(&spec.encode().map_err(codec_error)?);
         Ok(())
     }
@@ -173,70 +163,6 @@ pub fn repark_ballista_codec(provider: &ReparkSessionProvider) -> BallistaCodec 
 
 fn codec_error(error: Error) -> DataFusionError {
     DataFusionError::External(Box::new(error))
-}
-
-fn scan_identity_mismatch(field: &str, before: &str, after: &str) -> DataFusionError {
-    DataFusionError::Execution(format!(
-        "{ICEBERG_TABLE_SCAN} encode refused: the {field} field rebuilt to {after} from an \
-         original of {before}; the codec never emits a spec that describes a different scan"
-    ))
-}
-
-fn verify_scan_identity(
-    original: &Arc<dyn ExecutionPlan>,
-    rebuilt: &Arc<dyn ExecutionPlan>,
-) -> DataFusionResult<()> {
-    if rebuilt.name() != ICEBERG_TABLE_SCAN {
-        return Err(scan_identity_mismatch(
-            "node type",
-            ICEBERG_TABLE_SCAN,
-            rebuilt.name(),
-        ));
-    }
-    let before_ident = scan_node_table_ident(&format!("{original:?}")).map_err(codec_error)?;
-    let after_ident = scan_node_table_ident(&format!("{rebuilt:?}")).map_err(codec_error)?;
-    if after_ident != before_ident {
-        return Err(scan_identity_mismatch(
-            "table identifier",
-            &format!("{before_ident:?}"),
-            &format!("{after_ident:?}"),
-        ));
-    }
-    let before_snapshot = scan_node_resolved_snapshot_id(original).map_err(codec_error)?;
-    let after_snapshot = scan_node_resolved_snapshot_id(rebuilt).map_err(codec_error)?;
-    if after_snapshot != before_snapshot {
-        return Err(scan_identity_mismatch(
-            "resolved snapshot id",
-            &before_snapshot.to_string(),
-            &after_snapshot.to_string(),
-        ));
-    }
-    if rebuilt.schema() != original.schema() {
-        return Err(scan_identity_mismatch(
-            "projected schema",
-            &format!("{:?}", original.schema()),
-            &format!("{:?}", rebuilt.schema()),
-        ));
-    }
-    let before_predicate = scan_node_filters(original).map_err(codec_error)?;
-    let after_predicate = scan_node_filters(rebuilt).map_err(codec_error)?;
-    if after_predicate != before_predicate {
-        return Err(scan_identity_mismatch(
-            "predicate",
-            &format!("{before_predicate:?}"),
-            &format!("{after_predicate:?}"),
-        ));
-    }
-    let before_partitions = original.output_partitioning().partition_count();
-    let after_partitions = rebuilt.output_partitioning().partition_count();
-    if after_partitions != before_partitions {
-        return Err(scan_identity_mismatch(
-            "partition count",
-            &before_partitions.to_string(),
-            &after_partitions.to_string(),
-        ));
-    }
-    Ok(())
 }
 
 fn rebuild_iceberg_scan(

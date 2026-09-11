@@ -11,12 +11,12 @@ use datafusion::arrow::array::Array;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::ScalarValue;
 use datafusion::physical_plan::ExecutionPlan;
-use datafusion::prelude::SessionContext;
+use datafusion::prelude::{SessionContext, col, lit};
 use futures::StreamExt;
 use repark_core::{CatalogKind, CatalogSpec, ReparkSession};
 use repark_distributed::{
     DistributedExecutor, IcebergScanSpec, JobStatus, LocalDataFusionExecutor,
-    ReparkClusterExecutor, ReparkSessionProvider,
+    ReparkClusterExecutor, ReparkSessionProvider, encode_expr,
 };
 
 const DATA_FILE_COUNT: usize = 8;
@@ -241,6 +241,95 @@ fn iceberg_scan_spec_round_trips_catalog_table_snapshot_projection_and_filters()
 }
 
 #[test]
+fn iceberg_scan_spec_sql_and_expr_filters_round_trip_together() {
+    let expr_bytes = match encode_expr(&col("id").lt_eq(lit(3i32))) {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode_expr: {error}"),
+    };
+    let mut spec = scan_spec(
+        "/tmp/repark-m1d-warehouse",
+        Some(42),
+        vec!["id >= 1".to_owned()],
+    );
+    spec.filter_expr_bytes = vec![expr_bytes];
+    let encoded = match spec.encode() {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode: {error}"),
+    };
+    let decoded = match IcebergScanSpec::decode(&encoded) {
+        Ok(decoded) => decoded,
+        Err(error) => panic!("decode: {error}"),
+    };
+    assert!(
+        decoded.filters == spec.filters,
+        "SQL filters dropped on the wire: {:?} != {:?}",
+        decoded.filters,
+        spec.filters
+    );
+    assert!(
+        decoded.filter_expr_bytes == spec.filter_expr_bytes,
+        "Expr filters dropped on the wire: {:?} != {:?}",
+        decoded.filter_expr_bytes,
+        spec.filter_expr_bytes
+    );
+}
+
+#[test]
+fn iceberg_scan_spec_unknown_filter_tag_refuses_loud() {
+    let spec = scan_spec(
+        "/tmp/repark-m1d-warehouse",
+        Some(42),
+        vec!["id >= 4".to_owned()],
+    );
+    let encoded = match spec.encode() {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode: {error}"),
+    };
+    let sql = b"id >= 4";
+    let Some(sql_at) = encoded.windows(sql.len()).rposition(|window| window == sql) else {
+        panic!("encoded spec does not contain the SQL filter {sql:?}");
+    };
+    assert!(
+        sql_at > 0 && encoded[sql_at - 1] == 0,
+        "SQL filter must be tagged 0, byte before {sql:?} was {:?}",
+        encoded.get(sql_at.saturating_sub(1))
+    );
+    let mut unknown = encoded;
+    unknown[sql_at - 1] = 99;
+    let error = match IcebergScanSpec::decode(&unknown) {
+        Ok(decoded) => panic!("unknown filter tag decoded: {decoded:?}"),
+        Err(error) => error.to_string(),
+    };
+    assert!(
+        error.contains("tag") && error.contains("99"),
+        "unknown filter tag must refuse naming the tag, got {error}"
+    );
+}
+
+#[test]
+fn iceberg_scan_spec_old_format_payload_refuses_loud() {
+    let spec = scan_spec("/tmp/repark-m1d-warehouse", Some(42), Vec::new());
+    let encoded = match spec.encode() {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode: {error}"),
+    };
+    assert!(
+        encoded.len() > 4,
+        "encoded spec must carry a version byte after MAGIC"
+    );
+    let mut old = encoded;
+    old[4] = 1;
+    let error = match IcebergScanSpec::decode(&old) {
+        Ok(decoded) => panic!("old-format payload decoded: {decoded:?}"),
+        Err(error) => error.to_string(),
+    };
+    assert!(
+        error.contains("version") && error.contains('1'),
+        "old-format decode must refuse naming the version, got {error}"
+    );
+}
+
+#[test]
 fn iceberg_scan_spec_decode_rejects_truncated_payload() {
     let spec = scan_spec("/tmp/repark-m1d-warehouse", None, Vec::new());
     let encoded = match spec.encode() {
@@ -256,6 +345,40 @@ fn iceberg_scan_spec_decode_rejects_truncated_payload() {
         error.contains("truncated") || error.contains("trailing"),
         "truncated decode should name the fault, got {error}"
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn iceberg_scan_spec_sql_and_expr_filters_both_apply_on_scan() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = iceberg_session(&warehouse_text).await;
+    insert_id_rows(&context, DATA_FILE_COUNT).await;
+    let expr_bytes = match encode_expr(&col("id").lt_eq(lit(3i32))) {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode_expr: {error}"),
+    };
+    let mut spec = scan_spec(&warehouse_text, None, vec!["id >= 1".to_owned()]);
+    spec.filter_expr_bytes = vec![expr_bytes];
+    let encoded = match spec.encode() {
+        Ok(bytes) => bytes,
+        Err(error) => panic!("encode: {error}"),
+    };
+    let decoded = match IcebergScanSpec::decode(&encoded) {
+        Ok(decoded) => decoded,
+        Err(error) => panic!("decode: {error}"),
+    };
+    let plan = match decoded.scan(&context).await {
+        Ok(plan) => plan,
+        Err(error) => panic!("decoded.scan: {error}"),
+    };
+    let batches = local_answer(&context, plan).await;
+    let rows = sorted_row_keys(&batches);
+    assert!(
+        rows == ["1", "2", "3"],
+        "SQL id >= 1 and Expr id <= 3 must both apply, got {rows:?}"
+    );
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

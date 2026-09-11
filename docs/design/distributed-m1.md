@@ -1,8 +1,8 @@
 # Distributed Milestone 1 — what it delivers
 
 **Opened:** 2026-09-10. **Class:** campaign. **State:** M1 delivered (M1-A…D merged);
-the record continues through BALLISTA-M2-A on `feat/ballista-m2-a` — open questions 1 and
-4 closed 2026-09-11, question 2 open.
+the record continues through BALLISTA-M2-B on `feat/ballista-m2-b` — open questions 1 and
+4 closed 2026-09-11 (typed rebuild), question 2 open.
 **Retires:** this file closes when the distributed campaign closes or the owner
 closes the slate row. Archive with the campaign to `docs/history/` at that event.
 
@@ -143,6 +143,15 @@ not pinned does not read as done.
    the field. The residue that remains is BALLISTA-M2-A-R-001 (text recovery — see open
    question 4). pins: ballista-m2-a/C-001, C-002
 
+   **Typed rebuild 2026-09-11 (BALLISTA-M2-B, S2-17).** The codec now reads
+   `IcebergTableScan` through `iceberg-datafusion`'s typed accessors
+   (`table().identifier()`, `resolved_snapshot_id()`, `projection()`, `predicates()`).
+   Predicates travel as `datafusion-proto` `Expr`s. String literals and bracketed names
+   travel. The encode-time rebuild-and-compare guard is retired. BALLISTA-M2-A-R-001 is
+   closed. Catalog spec recovery stays a session-catalog Debug probe — no typed catalog
+   accessor exists at this fork pin. Decode still verifies the rebuilt frozen snapshot and
+   resolves catalogs only through the codec-carried session. pins: ballista-m2-b/C-001, C-002, C-003, C-004
+
 2. **M1-C C-002 — deterministic retry.** Ballista 54.1.0 exposes `ChaosExec` (transient IoError,
    retryable) but the fault decision is `seed + partition` and does not change on retry, so
    probability 1.0 fails every attempt up to `task_max_failures` (4) and the job fails.
@@ -201,3 +210,14 @@ not pinned does not read as done.
    dependency behind `cluster` would retire the parsing — an owner question, not this unit's
    call. The file-group rewrite stays as the M1 read path and the fallback for a node with no
    codec entry. pins: ballista-m2-a/C-002, C-003
+
+   **Typed rebuild 2026-09-11 (BALLISTA-M2-B, S2-17).** The codec now reads
+   `IcebergTableScan` through `iceberg-datafusion`'s typed accessors
+   (`table().identifier()`, `resolved_snapshot_id()`, `projection()`, `predicates()`).
+   Predicates travel as `datafusion-proto` `Expr`s. String literals (`name = 'alpha'`,
+   `name = 'x] snapshot_id=1'`) and bracketed projection / table names travel — decoded
+   `predicates()` equals the original's, and the two-executor cluster answer equals
+   `LocalDataFusionExecutor`. The encode-time rebuild-and-compare guard is retired.
+   BALLISTA-M2-A-R-001 is closed. Decode keeps the frozen-snapshot check and the
+   session-authority rule. Wire `RPIC` version is 2; a v1 payload refuses on decode.
+   pins: ballista-m2-b/C-001, C-002, C-003, C-004

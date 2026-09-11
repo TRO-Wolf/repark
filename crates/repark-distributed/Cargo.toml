@@ -20,6 +20,8 @@ cluster = [
   "dep:ballista-scheduler",
   "dep:ballista-executor",
   "dep:datafusion-proto",
+  "dep:iceberg",
+  "dep:iceberg-datafusion",
 ]
 
 [dependencies]
@@ -35,6 +37,8 @@ ballista-core = { workspace = true, optional = true }
 ballista-scheduler = { workspace = true, optional = true }
 ballista-executor = { workspace = true, optional = true }
 datafusion-proto = { workspace = true, optional = true }
+iceberg = { workspace = true, optional = true }
+iceberg-datafusion = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio.workspace = true

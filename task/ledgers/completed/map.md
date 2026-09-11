@@ -69,6 +69,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   the codec (never ambient authority). Re-proves BALLISTA-M1-B C-004. Step 2 owns the design
   doc. `risk_tier: standard`. Branch `feat/ballista-m2-a`.
   pins: ballista-m2-a/C-001, C-002, C-003, C-004
+- [ballista-m2-b-ledger.md](ballista-m2-b-ledger.md) —
+  **BALLISTA-M2-B (2026-09-11), in flight:** typed `IcebergTableScan` encode — downcast
+  plus `table().identifier()`, `resolved_snapshot_id()`, `projection()`, `predicates()`;
+  predicates travel as `datafusion-proto` `Expr`s; string literals and bracketed names
+  travel; encode-time rebuild-and-compare guard retired; BALLISTA-M2-A-R-001 closed.
+  Wire `RPIC` v2. `risk_tier: standard`. Branch `feat/ballista-m2-b`.
+  pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
 - [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
   **CONF-UNREAD-1 steps 1–2 (2026-09-11), in flight:** the wiring/refusals for
   the four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses
