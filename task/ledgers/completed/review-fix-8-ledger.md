@@ -1,3 +1,25 @@
+**Errata (2026-09-12, CI follow-up).** CI failed
+`test_target_file_size_applies_at_table` with `assert 5 > 5` while this box
+measured 21 against 5: the MERGE-rewrite file count tracks the rewrite input
+partition count, which defaults from the core count (64 here, few on CI) — the
+50-vs-5 number in the C-004 evidence cell below is a property of this box, not
+of the table property, and it is superseded by what follows. Measured: with a
+default session the rewrite lands 21 tiny vs 5 default files here but 3 vs 3
+with `target_partitions=2` (identical byte sizes both legs), so the count moves
+with partitions, not the size bound; the largest file (404915 B) is shared
+because the seed INSERT travels the fork provider, which never consults the
+property. The pin now fixes `target_partitions=16` in its session and counts
+rewrite-only files by set-diff against the pre-MERGE set: 16 new files against
+4 on default at 20k rows, row counts held at 20000, stable across repeated runs.
+The `write.distribution-mode` refusal was re-checked the same way: it is a
+planning-time error, but `hash_distribution` consults the property only with
+more than one writer, so the pin's session carries the same fixed 16 partitions
+(a one-partition input would accept `bogus` silently). Bite: valid `hash` CTAS
+is accepted, and two default tables land 5 and 5. The document's
+`write.target-file-size-bytes` row now carries the pinned-partitions claim; the
+distribution-mode row notes the multi-writer condition. Everything else below
+stands unchanged.
+
 # Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
 
 **Unit:** REVIEW-FIX-8 · **Date:** 2026-09-11 · **Branch:** `fix/review-fix-8-conf-unread-1` · **Base:** `origin/main`

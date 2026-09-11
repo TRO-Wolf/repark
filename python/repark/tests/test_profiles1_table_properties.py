@@ -19,16 +19,19 @@ from repark import ReparkSession
 @pytest.fixture
 def spark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReparkSession:
     monkeypatch.setenv("REPARK_CONFIG", "")
-    session = ReparkSession.builder.appName("pytest-write-table-props").getOrCreate()
+    builder = ReparkSession.builder.appName("pytest-write-table-props").config(
+        "datafusion.execution.target_partitions", "16"
+    )
+    session = builder.getOrCreate()
     session.register_memory_catalog("mem", tmp_path)
     session.sql("CREATE NAMESPACE mem.ns")
     return session
 
 
-def _data_files(warehouse: Path, table: str) -> int:
+def _data_files(warehouse: Path, table: str) -> set[Path]:
     roots = list((warehouse / "repark_ctas" / "mem" / "ns").rglob(table))
     assert len(roots) == 1
-    return len(list((roots[0] / "data").rglob("*.parquet")))
+    return set((roots[0] / "data").rglob("*.parquet"))
 
 
 def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str) -> int:
@@ -37,6 +40,7 @@ def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str
         f"INSERT INTO mem.ns.{table} SELECT value AS id, CAST(value AS STRING) AS v "
         "FROM range(20000)"
     )
+    before = _data_files(warehouse, table)
     spark.sql("CREATE TABLE mem.ns.src (id BIGINT, v STRING) USING iceberg")
     spark.sql("INSERT INTO mem.ns.src SELECT value AS id, 'w' AS v FROM range(20000)")
     spark.sql(
@@ -46,7 +50,7 @@ def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str
     spark.sql("DROP TABLE mem.ns.src")
     rows = spark.sql(f"SELECT count(*) AS n FROM mem.ns.{table}").to_arrow().to_pylist()
     assert rows == [{"n": 20000}]
-    return _data_files(warehouse, table)
+    return len(_data_files(warehouse, table) - before)
 
 
 def test_bogus_distribution_mode_refuses_at_write(spark: ReparkSession) -> None:
@@ -65,4 +69,4 @@ def test_target_file_size_applies_at_table(spark: ReparkSession, tmp_path: Path)
         spark, tmp_path, "t_tiny", "TBLPROPERTIES ('write.target-file-size-bytes' = '1')"
     )
     plain = _merge_rewrite(spark, tmp_path, "t_plain", "")
-    assert tiny > plain
+    assert (tiny, plain) == (16, 4)

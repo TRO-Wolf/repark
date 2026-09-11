@@ -4077,5 +4077,9 @@ pins: fnp-8-review/C-009, C-010
   `test_bogus_distribution_mode_refuses_at_write` (a `bogus` distribution-mode
   table property refuses loud at partitioned CTAS) and
   `test_target_file_size_applies_at_table` (a `1`-byte target property splits a
-  20k-row MERGE rewrite past the default layout with row counts held).
+  20k-row MERGE rewrite 16 new files against 4 on default, with row counts held).
+  Both run with `target_partitions` fixed to 16: the rewrite file count tracks the
+  input partition count (the 2026-09-12 CI red: 5 vs 5 on a few-core runner), so an
+  unpinned session makes the pin machine-dependent. Seed files are excluded by
+  set-diff so the count is the rewrite's alone.
   pins: review-fix-8/C-004
