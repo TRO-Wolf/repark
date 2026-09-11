@@ -5,19 +5,19 @@ use datafusion::arrow::array::{Array, StringArray};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::TableProvider;
 use datafusion::common::DFSchema;
-use datafusion::physical_plan::ExecutionPlan;
+use datafusion::physical_plan::{ExecutionPlan, displayable};
 use datafusion::prelude::{ParquetReadOptions, SessionContext};
 use datafusion::sql::TableReference;
 use repark_core::{CatalogKind, CatalogSpec, Error, Result, engine_err};
 
-const MAGIC: &[u8; 4] = b"RPIC";
+pub(crate) const MAGIC: &[u8; 4] = b"RPIC";
 const CODEC_VERSION: u8 = 1;
 const MAX_ITEM_BYTES: usize = 1_048_576;
 const KIND_GLUE: u8 = 0;
 const KIND_S3_TABLES: u8 = 1;
 const KIND_MEMORY: u8 = 2;
 const KIND_POSTGRES: u8 = 3;
-const ICEBERG_TABLE_SCAN: &str = "IcebergTableScan";
+pub(crate) const ICEBERG_TABLE_SCAN: &str = "IcebergTableScan";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IcebergScanSpec {
@@ -44,6 +44,38 @@ impl IcebergScanSpec {
             projection,
             filters,
         }
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub(crate) fn from_scan_node(
+        node: &Arc<dyn ExecutionPlan>,
+        context: &SessionContext,
+    ) -> Result<Self> {
+        if node.name() != ICEBERG_TABLE_SCAN {
+            return Err(codec_err(format!(
+                "node {} is not {ICEBERG_TABLE_SCAN}",
+                node.name()
+            )));
+        }
+        let debug = format!("{node:?}");
+        let (namespace, table) = scan_node_table_ident(&debug)?;
+        if namespace.len() != 1 {
+            return Err(codec_err(format!(
+                "{ICEBERG_TABLE_SCAN} namespace {namespace:?} is nested; the spec encodes \
+                 catalog.namespace.table"
+            )));
+        }
+        let snapshot_id = Some(scan_node_resolved_snapshot_id(node)?);
+        let projection = scan_node_projection(&debug)?;
+        let filters = scan_node_filters(node)?;
+        let catalog = session_catalog_spec(context, &namespace[0], &table)?;
+        Ok(Self {
+            table_identifier: vec![catalog.name.clone(), namespace[0].clone(), table],
+            catalog,
+            snapshot_id,
+            projection,
+            filters,
+        })
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -502,4 +534,190 @@ fn first_named_schema(root: &dyn ExecutionPlan, name: &str) -> Option<SchemaRef>
         }
     }
     None
+}
+
+fn debug_field<'text>(text: &'text str, marker: &str) -> Result<&'text str> {
+    text.find(marker)
+        .map(|at| &text[at + marker.len()..])
+        .ok_or_else(|| {
+            codec_err(format!(
+                "{ICEBERG_TABLE_SCAN} debug text is missing field {marker:?}"
+            ))
+        })
+}
+
+fn debug_quoted_values(text: &str) -> Result<Vec<String>> {
+    let mut values = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find('"') {
+        rest = &rest[start + 1..];
+        let Some(end) = rest.find('"') else {
+            return Err(codec_err(format!(
+                "{ICEBERG_TABLE_SCAN} debug text has an unterminated string in {text:?}"
+            )));
+        };
+        values.push(rest[..end].to_owned());
+        rest = &rest[end + 1..];
+    }
+    Ok(values)
+}
+
+fn scan_node_table_ident(debug: &str) -> Result<(Vec<String>, String)> {
+    let rest = debug_field(debug, "identifier: TableIdent")?;
+    let rest = debug_field(rest, "NamespaceIdent([")?;
+    let end = rest.find(']').ok_or_else(|| {
+        codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} namespace list has no closing bracket"
+        ))
+    })?;
+    let namespace = debug_quoted_values(&rest[..end])?;
+    if namespace.is_empty() {
+        return Err(codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} debug text names an empty namespace"
+        )));
+    }
+    let rest = debug_field(&rest[end..], "name: \"")?;
+    let end = rest
+        .find('"')
+        .ok_or_else(|| codec_err(format!("{ICEBERG_TABLE_SCAN} table name is unterminated")))?;
+    Ok((namespace, rest[..end].to_owned()))
+}
+
+fn scan_node_projection(debug: &str) -> Result<Option<Vec<String>>> {
+    let rest = debug_field(debug, "projection: ")?;
+    if rest.starts_with("None") {
+        return Ok(None);
+    }
+    let rest = debug_field(rest, "Some([")?;
+    let end = rest.find(']').ok_or_else(|| {
+        codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} projection list has no closing bracket"
+        ))
+    })?;
+    Ok(Some(debug_quoted_values(&rest[..end])?))
+}
+
+pub(crate) fn scan_node_resolved_snapshot_id(node: &Arc<dyn ExecutionPlan>) -> Result<i64> {
+    let debug = format!("{node:?}");
+    let rest = debug_field(&debug, ", resolved_snapshot_id: ")?;
+    let end = rest
+        .find(|character: char| !(character.is_ascii_digit() || character == '-'))
+        .unwrap_or(rest.len());
+    rest[..end].parse::<i64>().map_err(|error| {
+        codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} resolved snapshot id {:?} is not an i64: {error}",
+            &rest[..end]
+        ))
+    })
+}
+
+fn scan_node_filters(node: &Arc<dyn ExecutionPlan>) -> Result<Vec<String>> {
+    let text = displayable(node.as_ref()).indent(true).to_string();
+    let rest = debug_field(&text, "predicate:[")?;
+    let end = rest.find("] snapshot_id=").ok_or_else(|| {
+        codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} predicate is not followed by snapshot_id in {text:?}"
+        ))
+    })?;
+    let predicate = &rest[..end];
+    if predicate.is_empty() {
+        Ok(Vec::new())
+    } else {
+        Ok(vec![predicate.to_owned()])
+    }
+}
+
+fn session_catalog_spec(
+    context: &SessionContext,
+    namespace: &str,
+    table: &str,
+) -> Result<CatalogSpec> {
+    let mut hits = Vec::new();
+    for name in context.catalog_names() {
+        let Some(catalog) = context.catalog(&name) else {
+            continue;
+        };
+        let debug = format!("{catalog:?}");
+        if !debug.starts_with("ReparkCatalogProvider")
+            && !debug.starts_with("IcebergCatalogProvider")
+        {
+            continue;
+        }
+        let Some(schema) = catalog.schema(namespace) else {
+            continue;
+        };
+        if schema
+            .table_names()
+            .iter()
+            .any(|candidate| candidate == table)
+        {
+            hits.push((name, debug));
+        }
+    }
+    match hits.as_slice() {
+        [] => Err(codec_err(format!(
+            "no session catalog holds Iceberg table {namespace}.{table}; {ICEBERG_TABLE_SCAN} \
+             resolves through ReparkSessionProvider, never ambient authority"
+        ))),
+        [(name, debug)] => catalog_spec_from_debug(name, debug),
+        _ => Err(codec_err(format!(
+            "session catalogs {:?} all hold {namespace}.{table}; {ICEBERG_TABLE_SCAN} encode \
+             is ambiguous",
+            hits.iter().map(|(name, _)| name).collect::<Vec<_>>()
+        ))),
+    }
+}
+
+fn catalog_spec_from_debug(name: &str, debug: &str) -> Result<CatalogSpec> {
+    let rest = debug_field(debug, "catalog: ")?;
+    let end = rest
+        .find(|character: char| !(character.is_alphanumeric() || character == '_'))
+        .unwrap_or(rest.len());
+    let kind = match &rest[..end] {
+        "MemoryCatalog" => CatalogKind::Memory,
+        "GlueCatalog" => CatalogKind::Glue,
+        "S3TablesCatalog" => CatalogKind::S3Tables,
+        "PostgresCatalog" => CatalogKind::Postgres,
+        other => {
+            return Err(codec_err(format!(
+                "session catalog {name:?} debug handle {other:?} is not a known Iceberg \
+                 catalog kind"
+            )));
+        }
+    };
+    let mut props = HashMap::new();
+    if let Some(warehouse) = debug_string_field(rest, "warehouse: \"") {
+        props.insert("warehouse".to_owned(), warehouse);
+    }
+    for (key, value) in debug_props_map(rest)? {
+        props.insert(key, value);
+    }
+    Ok(CatalogSpec {
+        name: name.to_owned(),
+        kind,
+        props,
+    })
+}
+
+fn debug_string_field(text: &str, marker: &str) -> Option<String> {
+    let rest = &text[text.find(marker)? + marker.len()..];
+    rest.find('"').map(|end| rest[..end].to_owned())
+}
+
+fn debug_props_map(text: &str) -> Result<Vec<(String, String)>> {
+    let Some(start) = text.find("props: {") else {
+        return Ok(Vec::new());
+    };
+    let rest = &text[start + "props: {".len()..];
+    let Some(end) = rest.find('}') else {
+        return Err(codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} catalog props map is unterminated"
+        )));
+    };
+    let values = debug_quoted_values(&rest[..end])?;
+    let mut pairs = Vec::with_capacity(values.len() / 2);
+    for pair in values.chunks_exact(2) {
+        pairs.push((pair[0].clone(), pair[1].clone()));
+    }
+    Ok(pairs)
 }

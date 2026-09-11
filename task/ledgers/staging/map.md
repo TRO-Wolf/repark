@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ballista-m2-a-ledger.md](ballista-m2-a-ledger.md) —
+  **BALLISTA-M2-A step 1 (2026-09-11), in flight:** the delegating physical extension codec —
+  `ReparkPhysicalExtensionCodec` implements `PhysicalExtensionCodec`, delegates every node it
+  does not own to `BallistaPhysicalExtensionCodec`, owns `IcebergTableScan` via the `RPIC`
+  `IcebergScanSpec` wire format, and rebuilds the scan from the session catalog carried inside
+  the codec (never ambient authority). Re-proves BALLISTA-M1-B C-004. Step 2 owns the design
+  doc. `risk_tier: standard`. Branch `feat/ballista-m2-a`.
+  pins: ballista-m2-a/C-001, C-002, C-003, C-004
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus

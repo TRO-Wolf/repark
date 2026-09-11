@@ -33,15 +33,19 @@ adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 
   two-executor pin registers in-memory table `t` here; the UDF pin registers `repark_times_ten`
   on that same session so the executor registry has it.
   pins: ballista-m1-b/C-002, C-003
-- `codec.rs` (`cluster` feature) — D-3: `ReparkPhysicalExtensionCodec` /
-  `ReparkLogicalExtensionCodec` wrap the Ballista defaults and `repark_ballista_codec()`
-  installs those inner codecs into `BallistaCodec::new`. The wrappers add no encode/decode
-  behaviour today. Owner question (do not choose here): either BALLISTA-M1-C takes a
-  `datafusion-proto` dev-dependency and the wrapper becomes a real delegating codec with a
-  round-trip pin over the five shuffle nodes, or the wrapper is deleted and RePark uses
-  Ballista's codec until a RePark plan node needs serialising. C-004 stays OPEN / PARKED
-  until that choice; C-006 pins what is true without the trait.
-  pins: ballista-m1-b/C-006
+- `codec.rs` (`cluster` feature) — BALLISTA-M2-A D-1 (RF-9 answered the owner question):
+  `ReparkPhysicalExtensionCodec` is a real delegating `PhysicalExtensionCodec`. Every node
+  it does not own — the five Ballista shuffle nodes, UDF/UDAF/UDWF and expression calls —
+  delegates to `BallistaPhysicalExtensionCodec`; `repark_ballista_codec(&provider)` installs
+  the wrapper itself into `BallistaCodec::new` beside the Ballista logical default. The
+  wrapper owns `IcebergTableScan`: encode recovers an `RPIC` `IcebergScanSpec` (catalog
+  spec, table identifier, the node's frozen `resolved_snapshot_id`, projection, predicate)
+  from the node's Debug/Verbose text plus a session-catalog probe; decode rebuilds the scan
+  through `IcebergScanSpec::scan` against the `SessionContext` the codec carries (built from
+  `ReparkSessionProvider::session_state` — never ambient authority) on a dedicated thread
+  runtime, and refuses loud when the rebuilt frozen snapshot differs from the spec's. No
+  `arrow_flight` is added — the M1-C C-002 residue stands.
+  pins: ballista-m2-a/C-001, C-002, C-003, C-004, ballista-m1-b/C-006
 - `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1: `IcebergScanSpec` is the
   DataFusion-level provider codec (audit R-4). It serialises
   `(catalog config, table identifier, snapshot id, projection, filters)` as `RPIC` bytes

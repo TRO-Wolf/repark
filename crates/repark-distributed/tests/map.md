@@ -23,9 +23,17 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   the RePark session resolves on the executors and equals the local answer; a cluster whose
   provider is a vanilla `SessionContext` fails to resolve the same UDF (stream error names
   `repark_times_ten`); cancel of `range(100000000)` mid-flight sets `Cancelled` and
-  `running_executor_task_counts` reaches empty within 5 s; `repark_ballista_codec()` Debug
-  matches the wrapped Ballista default codecs.
+  `running_executor_task_counts` reaches empty within 5 s; `repark_ballista_codec(&provider)`
+  installs the RePark physical wrapper and the Ballista logical default.
   pins: ballista-m1-b/C-001, C-002, C-003, C-005, C-006
+- `codec.rs` (`feature = "cluster"`) — BALLISTA-M2-A step 1: the installed physical codec is
+  the RePark wrapper; the five Ballista shuffle nodes and an `IcebergTableScan` round-trip
+  through `try_encode`/`try_decode` (same node name, schema, partitioning, partition count;
+  the scan's `RPIC` payload carries the catalog spec, table identifier, frozen resolved
+  snapshot id, projection and predicate); decode rebuilds the scan from the session catalog
+  the codec carries — a vanilla session refuses encode and decode loud; an unowned custom
+  node refuses encode loud and passes the file-group rewrite untouched.
+  pins: ballista-m2-a/C-001, C-002, C-003
 - `multi_stage.rs` (`feature = "cluster"`) — D-1: three physical-plan shapes, each built
   once, run through `LocalDataFusionExecutor`, then through a two-executor
   `ReparkClusterExecutor`, compared after sorting rows (cluster partition order is not
@@ -44,8 +52,8 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   two-executor pin: a memory-catalog table with 8 files answers the same `count(*)`
   (with `id + 0 >= 0` so stats cannot constant-fold), `sum(id)`, and `id >= 4` filter
   as `LocalDataFusionExecutor`, and both executors ran a task. Cluster plans rewrite
-  `IcebergTableScan` to parquet file groups because Ballista cannot encode that node
-  without `datafusion-proto`.
+  `IcebergTableScan` to parquet file groups — the fallback path for a node with no codec
+  entry; the codec now also carries `IcebergTableScan` directly (tests/codec.rs).
   pins: ballista-m1-d/C-001, C-002, C-003
 
 ## Pointers
