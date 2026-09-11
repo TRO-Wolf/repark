@@ -149,6 +149,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   twelve clauses to `PROVEN` on `docs:` cells. Branch `feat/ledger-reading-1`.
   pins: ledger-reading-1/C-001, C-002, C-003, C-004
 - [maint-policy-1-ledger.md](maint-policy-1-ledger.md) — Unit ledger — MAINT-POLICY-1 step 1 · typed `[<profile>.maintenance]` policy
+- [neveroom-1-ledger.md](neveroom-1-ledger.md) —
+  **NEVEROOM-1 steps 1–3 (2026-09-10/11), in flight:** the spill-coverage matrix
+  harness, the full 27-cell run, and the CI golden. Step 3 (S2-18) pins
+  `ci_golden.csv` and `test_ci_tier_matches_golden` (C-008), the committed
+  27-cell CSV pin with the three R-1 cells (C-009), and the `docs/testing.md`
+  plus `## Never-OOM at v1.3` pointers (C-010). The three non-outcome cells
+  stay as measured; the ledger does not move to `completed/` in this step.
+  `risk_tier: standard`. Branch `feat/neveroom-1-step-3`.
+  pins: neveroom-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [preflight-parity-1-ledger.md](preflight-parity-1-ledger.md) —
   **PREFLIGHT-PARITY-1 (2026-09-09), in flight:** the CAP-1 source-file mirror joins
   `make preflight` as `make py-test-parity-cap` — the mirror file alone

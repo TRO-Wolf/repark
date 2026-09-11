@@ -213,7 +213,7 @@ py-test-torture: ## Torture-suite doors at the $(TORTURE_TIER) tier (native modu
 		.venv/bin/python -m pytest python/repark-parity/tests/torture -q
 
 .PHONY: py-test-spill-matrix
-py-test-spill-matrix: ## Spill-coverage matrix, CI tier (one cell: sort at 2x the 64 MB limit) — never a preflight member; see python/repark-parity/tests/spill/map.md
+py-test-spill-matrix: ## Spill-coverage matrix, CI tier (sort, hash_aggregate, hash_join at 2x the 64 MB limit) — never a preflight member; see python/repark-parity/tests/spill/map.md
 	.venv/bin/python -m pytest python/repark-parity/tests/spill -q
 
 .PHONY: py-test-parity-cap

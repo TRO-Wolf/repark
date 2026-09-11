@@ -128,6 +128,15 @@ reason="<row id>")`. The `v3_dv` family reads a checked-in ≤ 1 MB format-v3
 deletion-vector fixture; its live generator needs `REPARK_PARITY_LIVE=1` and a
 Java-17 `JAVA_HOME`. Full-tier results: `docs/perf/torture-1-2026-09-11.md`.
 
+### The spill-coverage matrix (operators at 2×/4×/8× of the memory limit)
+
+`python/repark-parity/tests/spill/` is the Never-OOM coverage matrix. The CI
+tier (`make py-test-spill-matrix`; not a `preflight` member) runs `sort`,
+`hash_aggregate` and `hash_join` at 2× of a 64 MB pool and compares outcomes
+to `python/repark-parity/tests/spill/ci_golden.csv`. The full tier is
+`matrix_run.py` on an idle release box only. Matrix document:
+[docs/perf/spill-coverage-matrix-2026-09-11.md](perf/spill-coverage-matrix-2026-09-11.md).
+
 ## Boundary changes need a real-artifact test (applies from phase 3)
 
 In-process tests cannot catch boundary bugs: when producer and consumer compile together

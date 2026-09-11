@@ -51,7 +51,7 @@ refusal (SIGABRT on an un-accounted allocation in every case observed here).
 | operator | 2× | 4× | 8× | notes |
 |---|---|---|---|---|
 | sort | refused | refused | refused | `SortExec`+`SortPreservingMergeExec` in plan; pool refusal names `ExternalSorter`/`SortPreservingMergeExec` |
-| hash_aggregate | **UNSTABLE** (refused/spilled/refused) | refused | refused | `AggregateExec` in plan; rep 2 spilled 7 350 412 902 B in 170 spill files; the refuse-vs-spill boundary is racy at 2× |
+| hash_aggregate | **UNSTABLE** (refused/spilled/refused) | refused | refused | `AggregateExec` in plan; rep 2 spilled 7 350 412 902 B in 170 spill files; the refuse-vs-spill boundary is racy at 2×. Upstream accounting epic: https://github.com/apache/datafusion/issues/22758 |
 | hash_join | refused | **KILLED** | refused | `HashJoinExec` in plan; refusals name `HashJoinInput`; 4× aborts on an un-accounted ~35 MB allocation while the build side saturates the pool. No upstream spill path: https://github.com/apache/datafusion/issues/24768 |
 | sort_merge_join | refused | refused | refused | `SortMergeJoinExec` in plan (forced by `datafusion.optimizer.prefer_hash_join=false`); refusals name `ExternalSorter`/`SortExec` |
 | window_sliding | completed | completed | completed | `BoundedWindowAggExec` in plan; streams the full input, takes no pool reservation |
@@ -119,4 +119,16 @@ Both H3-SPILL-RESIDUE-1 fixed outcomes reproduce at all three multiples:
   multiples**: both stream under the cap with no pool reservation and no
   accumulation — the bounded-memory end of the matrix.
 
-Ledger: [../../task/ledgers/staging/neveroom-1-ledger.md](../../task/ledgers/staging/neveroom-1-ledger.md).
+## Never-OOM at v1.3
+
+Never-OOM at v1.3 is the matrix as measured: 24 of 27 cells are stable at
+2×/4×/8× of 1 GB. Each stable cell spills, completes, or refuses loudly —
+no silent OOM. The three blocked cells stay as measured (S2-18; no
+operator change, S2-6): `hash_join` 4× `KILLED`
+(https://github.com/apache/datafusion/issues/24768), `hash_aggregate` 2×
+`UNSTABLE` (https://github.com/apache/datafusion/issues/22758),
+`window_unbounded` 2× `UNSTABLE`
+(https://github.com/apache/datafusion/issues/22758). A DataFusion bump
+that closes #24768 or #22758 re-runs `matrix_run.py --reps 3` as its pin.
+
+Ledger: [../../task/ledgers/staging/neveroom-1-ledger.md](../../task/ledgers/completed/neveroom-1-ledger.md).

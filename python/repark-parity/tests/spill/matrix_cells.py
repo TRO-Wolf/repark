@@ -144,8 +144,10 @@ FULL_CELLS: Final[tuple[RosterRow, ...]] = tuple(
     for multiplier in FULL_MULTIPLIERS
 )
 
-CI_CELLS: Final[tuple[RosterRow, ...]] = (
-    RosterRow(operator="sort", multiplier=2, sql=_SORT_SQL, refusal_names=_SORT_NAMES),
+_CI_OPERATORS: Final[frozenset[str]] = frozenset({"sort", "hash_aggregate", "hash_join"})
+
+CI_CELLS: Final[tuple[RosterRow, ...]] = tuple(
+    row.model_copy(update={"multiplier": 2}) for row in _ROSTER if row.operator in _CI_OPERATORS
 )
 
 _WORKER_PATH: Final[Path] = Path(__file__).resolve().parent / "matrix_worker.py"
