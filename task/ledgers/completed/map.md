@@ -178,12 +178,20 @@ else. The next pickup's `make ledger-archive` files everything here under
   pins: review-fix-13/C-001, C-002, C-003, C-004, C-005
 - [review-fix-14-ledger.md](review-fix-14-ledger.md) — Unit ledger — REVIEW-FIX-14 step 1 · the display configuration keeps its promises
 - [review-fix-15-ledger.md](review-fix-15-ledger.md) —
-  **REVIEW-FIX-15 (2026-09-11), in flight:** a pin cites the clause it holds —
-  LEDGER-READING-1's C-001..C-003 move into the pinning tests as `_pins`
-  bindings, the reading fixture's Verdict/Evidence cells swap to the
-  grammar-described order, C-004 stays map-navigated (no pinning test exists).
+  **REVIEW-FIX-15 (2026-09-11):** the reading fixture's Verdict/Evidence cells
+  swap to the grammar-described order; its first-cut `_pins` bindings left the
+  code under S2-14 (REVIEW-FIX-15b), so every citation is map-navigated.
   Closes Q-48, Q-49. `risk_tier: standard`. Branch `fix/review-fix-13-15`.
   pins: review-fix-15/C-001, C-002
+- [review-fix-15b-ledger.md](review-fix-15b-ledger.md) —
+  **REVIEW-FIX-15B (2026-09-11):** ruling S2-14 — REVIEW-FIX-15's four
+  `_pins = "pins: …"` code-as-data bindings in `test_dl_2_ledger_grammar.py` are the
+  comment ban routed through a variable, so they are deleted with no replacement
+  construct; the citations they carried (`ledger-reading-1/C-001..C-003`,
+  `review-fix-15/C-001, C-002`) and this unit's own move to the DL-2 bullet of
+  `python/repark-parity/tests/map.md`. `risk_tier: standard`. Branch
+  `fix/review-fix-15b`.
+  pins: review-fix-15b/C-001, C-002
 - [review-fix-2-ledger.md](review-fix-2-ledger.md) — Unit ledger — REVIEW-FIX-2 · CFG-1's own pins stop reading the developer's HOME
 - [review-fix-3-ledger.md](review-fix-3-ledger.md) — Unit ledger — REVIEW-FIX-3 step 1 · the polars display honours every legal `max_rows`
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)

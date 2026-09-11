@@ -5,15 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [review-fix-15b-ledger.md](review-fix-15b-ledger.md) —
-  **REVIEW-FIX-15B (2026-09-11), in flight:** ruling S2-14 — REVIEW-FIX-15's four
-  `_pins = "pins: …"` code-as-data bindings in `test_dl_2_ledger_grammar.py` are the
-  comment ban routed through a variable, so they are deleted with no replacement
-  construct; the citations they carried (`ledger-reading-1/C-001..C-003`,
-  `review-fix-15/C-001, C-002`) and this unit's own move to the DL-2 bullet of
-  `python/repark-parity/tests/map.md`. `risk_tier: standard`. Branch
-  `fix/review-fix-15b`.
-  pins: review-fix-15b/C-001, C-002
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus
