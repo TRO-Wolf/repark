@@ -36,8 +36,12 @@ illustrative. A claim with no verified basis does not go in.
   per-table overrides, duration strings, the D-4 step order with the delete-ratio gate,
   the D-3 result frame with a worked dry run and a worked apply (both executed against
   the built module), the `session.run_maintenance` wrapper, the D-6 refusal, and the
-  reserved `adaptive_partitioning` key.
+  reserved `adaptive_partitioning` key. **AP-1 step 2 (2026-09-11):** adds the
+  `plan_partitioning` section — the CALL, the D-1 frame columns, the footer-measured
+  `byte_ratio` behind `projected_files_at_target` with its 0.55 fallback, and the
+  plan-only boundary.
   pins: maint-policy-1/C-026
+  pins: ap-1/C-013
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
   semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);

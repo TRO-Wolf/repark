@@ -20,6 +20,7 @@ use crate::call_args::CallArgs;
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
 mod plan_partitioning;
+mod plan_partitioning_bytes;
 mod plan_partitioning_score;
 mod rewrite_data_files;
 mod rewrite_manifests;
