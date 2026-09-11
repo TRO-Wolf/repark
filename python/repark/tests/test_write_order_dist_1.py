@@ -447,7 +447,6 @@ def test_write_ordered_nested_overwrite_writes_sorted_files(tmp_path: Path) -> N
 def test_write_ordered_overwrite_row_set_matches_spark(tmp_path: Path) -> None:
     """C-008: RePark and Spark commit the same row set per value after DDL + overwrite."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     warehouse = tmp_path / "wh"
     source = _seed_files(tmp_path / "seed", 8_000, 2)
@@ -465,26 +464,21 @@ def test_write_ordered_overwrite_row_set_matches_spark(tmp_path: Path) -> None:
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = live_parity.build_spark_iceberg_engine(
         tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
     )
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
-        session.sql(
-            f"CREATE TABLE {catalog}.w.t USING iceberg PARTITIONED BY (part) "
-            f"TBLPROPERTIES ('format-version' = '2') AS SELECT * FROM spark_src"
-        )
-        session.sql(f"ALTER TABLE {catalog}.w.t WRITE ORDERED BY (id)")
-        session.sql(f"INSERT OVERWRITE {catalog}.w.t SELECT * FROM spark_src")
-        spark_files = session.sql(f"SELECT file_path FROM {catalog}.w.t.files").collect()
-        want = _rows_by_part([row["file_path"] for row in spark_files])
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+    session.sql(
+        f"CREATE TABLE {catalog}.w.t USING iceberg PARTITIONED BY (part) "
+        f"TBLPROPERTIES ('format-version' = '2') AS SELECT * FROM spark_src"
+    )
+    session.sql(f"ALTER TABLE {catalog}.w.t WRITE ORDERED BY (id)")
+    session.sql(f"INSERT OVERWRITE {catalog}.w.t SELECT * FROM spark_src")
+    spark_files = session.sql(f"SELECT file_path FROM {catalog}.w.t.files").collect()
+    want = _rows_by_part([row["file_path"] for row in spark_files])
 
     assert got.keys() == want.keys()
     for part in want:
@@ -495,7 +489,6 @@ def test_write_ordered_overwrite_row_set_matches_spark(tmp_path: Path) -> None:
 def test_write_order_metadata_matches_spark_after_same_statements(tmp_path: Path) -> None:
     """C-009: metadata.json sort order + property equal Spark's after the same DDL."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     forms = [
         "WRITE ORDERED BY (id, name DESC NULLS LAST)",
@@ -517,38 +510,35 @@ def test_write_order_metadata_matches_spark_after_same_statements(tmp_path: Path
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
+    catalog = "wo_meta"
     oracle = live_parity.build_spark_iceberg_engine(
-        tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
+        tmp_path / "spark-wh",
+        (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),),
+        catalog=catalog,
     )
-    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
-        for index in range(len(forms)):
-            session.sql(
-                f"CREATE TABLE {catalog}.w.t{index} USING iceberg PARTITIONED BY (part) "
-                f"TBLPROPERTIES ('format-version' = '2') AS SELECT * FROM spark_src"
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+    for index in range(len(forms)):
+        session.sql(
+            f"CREATE TABLE {catalog}.w.t{index} USING iceberg PARTITIONED BY (part) "
+            f"TBLPROPERTIES ('format-version' = '2') AS SELECT * FROM spark_src"
+        )
+    for index, form in enumerate(forms):
+        session.sql(f"ALTER TABLE {catalog}.w.t{index} {form}")
+    spark_states = []
+    for index in range(len(forms)):
+        directory = tmp_path / "spark-wh" / "w" / f"t{index}" / "metadata"
+        metas = sorted(directory.glob("*.metadata.json"))
+        with metas[-1].open() as handle:
+            meta = json.load(handle)
+        spark_states.append(
+            (
+                sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
+                meta.get("default-sort-order-id", -1),
+                meta.get("properties", {}).get("write.distribution-mode"),
             )
-        for index, form in enumerate(forms):
-            session.sql(f"ALTER TABLE {catalog}.w.t{index} {form}")
-        spark_states = []
-        for index in range(len(forms)):
-            directory = tmp_path / "spark-wh" / "w" / f"t{index}" / "metadata"
-            metas = sorted(directory.glob("*.metadata.json"))
-            with metas[-1].open() as handle:
-                meta = json.load(handle)
-            spark_states.append(
-                (
-                    sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
-                    meta.get("default-sort-order-id", -1),
-                    meta.get("properties", {}).get("write.distribution-mode"),
-                )
-            )
-    finally:
-        if owned:
-            session.stop()
+        )
 
     for index, form in enumerate(forms):
         assert states[index][1] == spark_states[index][1], form
@@ -560,7 +550,6 @@ def test_write_order_metadata_matches_spark_after_same_statements(tmp_path: Path
 def test_write_ordered_nested_metadata_matches_spark(tmp_path: Path) -> None:
     """F2 live: WRITE ORDERED BY (st.a) leaves equal metadata on both engines, v2 and v3."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     versions = ("2", "3")
     warehouse = tmp_path / "wh"
@@ -576,38 +565,35 @@ def test_write_ordered_nested_metadata_matches_spark(tmp_path: Path) -> None:
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
+    catalog = "wo_nested"
     oracle = live_parity.build_spark_iceberg_engine(
-        tmp_path / "spark-wh", (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),)
+        tmp_path / "spark-wh",
+        (("spark.sql.shuffle.partitions", SHUFFLE_PARTITIONS),),
+        catalog=catalog,
     )
-    catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
-        for version in versions:
-            session.sql(
-                f"CREATE TABLE {catalog}.w.t{version} USING iceberg PARTITIONED BY (part) "
-                f"TBLPROPERTIES ('format-version' = '{version}') AS SELECT * FROM spark_src"
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.read.parquet(str(source)).createOrReplaceTempView("spark_src")
+    for version in versions:
+        session.sql(
+            f"CREATE TABLE {catalog}.w.t{version} USING iceberg PARTITIONED BY (part) "
+            f"TBLPROPERTIES ('format-version' = '{version}') AS SELECT * FROM spark_src"
+        )
+    for version in versions:
+        session.sql(f"ALTER TABLE {catalog}.w.t{version} WRITE ORDERED BY (st.a)")
+    spark_states = []
+    for version in versions:
+        directory = tmp_path / "spark-wh" / "w" / f"t{version}" / "metadata"
+        metas = sorted(directory.glob("*.metadata.json"))
+        with metas[-1].open() as handle:
+            meta = json.load(handle)
+        spark_states.append(
+            (
+                sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
+                meta.get("default-sort-order-id", -1),
+                meta.get("properties", {}).get("write.distribution-mode"),
             )
-        for version in versions:
-            session.sql(f"ALTER TABLE {catalog}.w.t{version} WRITE ORDERED BY (st.a)")
-        spark_states = []
-        for version in versions:
-            directory = tmp_path / "spark-wh" / "w" / f"t{version}" / "metadata"
-            metas = sorted(directory.glob("*.metadata.json"))
-            with metas[-1].open() as handle:
-                meta = json.load(handle)
-            spark_states.append(
-                (
-                    sorted(meta.get("sort-orders", []), key=lambda order: order["order-id"]),
-                    meta.get("default-sort-order-id", -1),
-                    meta.get("properties", {}).get("write.distribution-mode"),
-                )
-            )
-    finally:
-        if owned:
-            session.stop()
+        )
 
     for index, version in enumerate(versions):
         assert states[index][1] == spark_states[index][1], version

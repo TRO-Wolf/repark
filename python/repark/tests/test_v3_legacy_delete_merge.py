@@ -101,8 +101,7 @@ def _live_session(warehouse: Path):
     from pyspark.sql import SparkSession
 
     session = SparkSession.getActiveSession()
-    owned = session is None
-    if owned:
+    if session is None:
         builder = (
             SparkSession.builder.master("local[2]")
             .appName("v3-12-legacy-delete-merge-live")
@@ -126,13 +125,13 @@ def _live_session(warehouse: Path):
     session.conf.set(f"spark.sql.catalog.{_CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.type", "hadoop")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.warehouse", str(warehouse))
-    return session, owned
+    return session
 
 
 def _spark_legacy_merge_shape() -> dict:
     """Live Spark running the same statements over a layout-independent one-file seed."""
     warehouse = Path(tempfile.mkdtemp(prefix="repark-v312-legacy-"))
-    session, owned = _live_session(warehouse)
+    session = _live_session(warehouse)
     target = f"{_CATALOG}.sales.legacy"
     try:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.sales")
@@ -151,8 +150,6 @@ def _spark_legacy_merge_shape() -> dict:
         }
     finally:
         session.sql(f"DROP TABLE IF EXISTS {target}")
-        if owned:
-            session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 
@@ -241,7 +238,7 @@ def _repark_plain_where_shape(warehouse: Path) -> dict:
 def _spark_plain_where_shape() -> dict:
     """Live Spark running the plain-`WHERE` statements over the same one-file seed."""
     warehouse = Path(tempfile.mkdtemp(prefix="repark-rp8-plain-"))
-    session, owned = _live_session(warehouse)
+    session = _live_session(warehouse)
     target = f"{_CATALOG}.sales.plain"
     try:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.sales")
@@ -258,8 +255,6 @@ def _spark_plain_where_shape() -> dict:
         }
     finally:
         session.sql(f"DROP TABLE IF EXISTS {target}")
-        if owned:
-            session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 
@@ -318,7 +313,7 @@ def _repark_partition_scoped_shape(warehouse: Path) -> dict:
 def _spark_partition_scoped_shape() -> dict:
     """Live Spark over the §12 layout: two data files in one partition, one delete covering both."""
     warehouse = Path(tempfile.mkdtemp(prefix="repark-rp8-partsc-"))
-    session, owned = _live_session(warehouse)
+    session = _live_session(warehouse)
     target = f"{_CATALOG}.sales.partsc"
     try:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.sales")
@@ -348,8 +343,6 @@ def _spark_partition_scoped_shape() -> dict:
         }
     finally:
         session.sql(f"DROP TABLE IF EXISTS {target}")
-        if owned:
-            session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 

@@ -103,14 +103,13 @@ def repark_outcome(
         repark.stop()
 
 
-def _live_session(warehouse: Path) -> tuple[Any, bool]:
+def _live_session(warehouse: Path) -> Any:
     """Reuse the collection's live session when one is alive; otherwise build one."""
     from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession
 
     session = SparkSession.getActiveSession()
-    owned = session is None
-    if owned:
+    if session is None:
         builder = (
             SparkSession.builder.master("local[2]")
             .appName("sql-harden-1-live")
@@ -134,7 +133,7 @@ def _live_session(warehouse: Path) -> tuple[Any, bool]:
     session.conf.set(f"spark.sql.catalog.{_CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.type", "hadoop")
     session.conf.set(f"spark.sql.catalog.{_CATALOG}.warehouse", str(warehouse))
-    return session, owned
+    return session
 
 
 def spark_outcome(
@@ -158,19 +157,17 @@ def spark_outcome(
 
 @pytest.fixture(scope="module")
 def coverage_session() -> Iterator[Any]:
-    """One live Spark session for the whole matrix, stopped only when this module created it."""
+    """One live Spark session for the whole matrix — the shared context is never stopped."""
     if not _LIVE:
         pytest.skip(_LIVE_SKIP)
     warehouse = Path(tempfile.mkdtemp(prefix="repark-sqlh1-live-"))
     parquet = warehouse / "bronze.parquet"
     write_bronze_parquet(parquet)
-    session, owned = _live_session(warehouse)
+    session = _live_session(warehouse)
     session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_CATALOG}.{_NAMESPACE}")
     try:
         yield session, warehouse, parquet
     finally:
-        if owned:
-            session.stop()
         shutil.rmtree(warehouse, ignore_errors=True)
 
 

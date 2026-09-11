@@ -105,7 +105,6 @@ def _assert_live_against_spark(tmp_path: Path) -> None:
 
     catalog = _CATALOG
     warehouse = Path(tmp_path) / "spark-warehouse"
-    owned = SparkSession.getActiveSession() is None
     builder = (
         SparkSession.builder.master("local[1]")
         .appName("v3-11-file-order-live")
@@ -129,26 +128,22 @@ def _assert_live_against_spark(tmp_path: Path) -> None:
         builder = builder.config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
     session = builder.getOrCreate()
     session.sparkContext.setLogLevel("ERROR")
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
-        ctas_table = f"{catalog}.sales.ctas_order"
-        session.sql(
-            f"CREATE TABLE {ctas_table} USING iceberg PARTITIONED BY (part) "
-            "TBLPROPERTIES ('format-version' = '3') AS "
-            f"SELECT * FROM (VALUES {_CTAS_VALUES}) AS t(id, part)"
-        )
-        ctas = session.sql(_LINEAGE_SELECT.format(table=ctas_table)).toArrow()
-        assert _triples(ctas) == _CTAS_LINEAGE
-        merge_table = f"{catalog}.sales.merge_order"
-        session.sql(
-            f"CREATE TABLE {merge_table} (id INT, name STRING, part INT) USING iceberg "
-            f"PARTITIONED BY (part) TBLPROPERTIES ({_MOR_V3})"
-        )
-        session.sql(f"INSERT INTO {merge_table} VALUES (1, 'a', 2), (2, 'b', 2)")
-        session.sql(_merge_sql(merge_table))
-        merged = session.sql(_LINEAGE_SELECT.format(table=merge_table)).toArrow()
-        assert _triples(merged) == _MERGE_LINEAGE
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.sales")
+    ctas_table = f"{catalog}.sales.ctas_order"
+    session.sql(
+        f"CREATE TABLE {ctas_table} USING iceberg PARTITIONED BY (part) "
+        "TBLPROPERTIES ('format-version' = '3') AS "
+        f"SELECT * FROM (VALUES {_CTAS_VALUES}) AS t(id, part)"
+    )
+    ctas = session.sql(_LINEAGE_SELECT.format(table=ctas_table)).toArrow()
+    assert _triples(ctas) == _CTAS_LINEAGE
+    merge_table = f"{catalog}.sales.merge_order"
+    session.sql(
+        f"CREATE TABLE {merge_table} (id INT, name STRING, part INT) USING iceberg "
+        f"PARTITIONED BY (part) TBLPROPERTIES ({_MOR_V3})"
+    )
+    session.sql(f"INSERT INTO {merge_table} VALUES (1, 'a', 2), (2, 'b', 2)")
+    session.sql(_merge_sql(merge_table))
+    merged = session.sql(_LINEAGE_SELECT.format(table=merge_table)).toArrow()
+    assert _triples(merged) == _MERGE_LINEAGE
     assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"

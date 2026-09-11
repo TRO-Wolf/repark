@@ -666,21 +666,18 @@ def test_cross_engine_collect_and_multi_count_distinct_vs_pyspark() -> None:
         # Any gateway/JVM failure is a skip, not a product RED (routine suite stays green).
         pytest.skip(f"live PySpark oracle unavailable: {err}")
     spark.sparkContext.setLogLevel("ERROR")
-    try:
-        spark_df = spark.createDataFrame(rows, columns)
-        spark_out = (
-            spark_df.groupBy("g")
-            .agg(
-                spark_functions.collect_list("x"),
-                spark_functions.collect_set("x"),
-                spark_functions.countDistinct("x", "y"),
-            )
-            .orderBy("g")
+    spark_df = spark.createDataFrame(rows, columns)
+    spark_out = (
+        spark_df.groupBy("g")
+        .agg(
+            spark_functions.collect_list("x"),
+            spark_functions.collect_set("x"),
+            spark_functions.countDistinct("x", "y"),
         )
-        spark_rows = [row.asDict() for row in spark_out.collect()]
-        spark_arrow = spark_out.toArrow()
-    finally:
-        spark.stop()
+        .orderBy("g")
+    )
+    spark_rows = [row.asDict() for row in spark_out.collect()]
+    spark_arrow = spark_out.toArrow()
 
     assert repark_out.column_names == spark_arrow.column_names
     # countDistinct LongType non-null on both

@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [nightly-live-1-ledger.md](nightly-live-1-ledger.md) —
+  **NIGHTLY-LIVE-1 (2026-09-11):** the parity-live nightly red since 2026-09-05 — a test
+  calling `.stop()` on a PySpark session kills the one JVM `SparkContext` under the shared
+  oracle. The conftest `_shared_oracle_context_guard` fails the stopper by name (red-first:
+  `test_group_agg.py::test_cross_engine_collect_and_multi_count_distinct_vs_pyspark`); every
+  PySpark teardown stop removed, `ReparkSession.stop()` kept; shared-catalog sites given
+  private catalog names and the avg-overflow leg pins `leafNodeDefaultParallelism`. Full
+  live suite: 6298 passed, 0 failed on this box. `risk_tier: standard`. Branch
+  `fix/nightly-live-1`.
+  pins: nightly-live-1/C-001, C-002, C-003, C-004
 - [neveroom-1-ledger.md](neveroom-1-ledger.md) —
   **NEVEROOM-1 step 1 (2026-09-10), in flight:** the spill-coverage matrix harness —
   a subprocess-per-cell runner whose address-space cap is the measured baseline plus

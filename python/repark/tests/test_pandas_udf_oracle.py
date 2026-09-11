@@ -86,10 +86,7 @@ def spark_oracle() -> Iterator[Any]:
         )
     except Exception as error:
         pytest.skip(f"PySpark gateway unavailable for pandas_udf oracle: {error}")
-    try:
-        yield session
-    finally:
-        session.stop()
+    yield session
 
 
 @pytest.fixture

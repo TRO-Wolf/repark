@@ -108,6 +108,9 @@ law for *authoring* a golden (routine CI must stay no-JVM for everyone); the liv
   now diverges ⇒ **oracle drift** (a Spark bump moved the semantics; re-record and reconcile). A
   *disclosure* that reds ⇒ the two engines **converged** — update the disclosure, do not silently
   re-label it parity.
+- **One JVM context, never stopped.** Every PySpark session in `python/repark/tests` shares the
+  one JVM `SparkContext` the live oracle runs on, so no test in that suite may call `.stop()` on
+  a PySpark session — `conftest.py`'s `_shared_oracle_context_guard` fails the test that does.
 
 ### The torture suite (generator families at scale)
 

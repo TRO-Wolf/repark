@@ -248,7 +248,6 @@ def _live_oracle(warehouse: Path) -> Any:
 def test_partitioned_row_set_matches_spark(tmp_path: Path, f27_present: bool) -> None:
     """C-009: the partitioned bed reads the same row set as Spark."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     if not f27_present:
         pytest.skip(F27_SKIP)
@@ -268,42 +267,36 @@ def test_partitioned_row_set_matches_spark(tmp_path: Path, f27_present: bool) ->
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = _live_oracle(tmp_path / "spark-wh")
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.sql(
+        f"CREATE TABLE {catalog}.w.p (id INT, part INT, name STRING) USING iceberg "
+        "PARTITIONED BY (part)"
+    )
+    for index in range(FILES):
+        base = index * ROWS_PER_FILE
         session.sql(
-            f"CREATE TABLE {catalog}.w.p (id INT, part INT, name STRING) USING iceberg "
-            "PARTITIONED BY (part)"
+            f"INSERT INTO {catalog}.w.p VALUES ({base + 1}, {index % 2}, 'a'), "
+            f"({base + 2}, {index % 2}, 'b'), ({base + 3}, {index % 2}, 'c')"
         )
-        for index in range(FILES):
-            base = index * ROWS_PER_FILE
-            session.sql(
-                f"INSERT INTO {catalog}.w.p VALUES ({base + 1}, {index % 2}, 'a'), "
-                f"({base + 2}, {index % 2}, 'b'), ({base + 3}, {index % 2}, 'c')"
-            )
-        spark_rows = session.sql(f"SELECT id, part, name FROM {catalog}.w.p ORDER BY id")
-        assert [tuple(row) for row in spark_rows.collect()] == [
-            tuple(row)
-            for row in zip(
-                engine_rows.column("id").to_pylist(),
-                engine_rows.column("part").to_pylist(),
-                engine_rows.column("name").to_pylist(),
-                strict=True,
-            )
-        ]
-    finally:
-        if owned:
-            session.stop()
+    spark_rows = session.sql(f"SELECT id, part, name FROM {catalog}.w.p ORDER BY id")
+    assert [tuple(row) for row in spark_rows.collect()] == [
+        tuple(row)
+        for row in zip(
+            engine_rows.column("id").to_pylist(),
+            engine_rows.column("part").to_pylist(),
+            engine_rows.column("name").to_pylist(),
+            strict=True,
+        )
+    ]
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_identity_delete_row_set_matches_spark(tmp_path: Path, f27_present: bool) -> None:
     """C-009: DELETE over eight files leaves the same rows as Spark."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     if not f27_present:
         pytest.skip(F27_SKIP)
@@ -316,32 +309,26 @@ def test_identity_delete_row_set_matches_spark(tmp_path: Path, f27_present: bool
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = _live_oracle(tmp_path / "spark-wh")
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
-        session.sql(f"CREATE TABLE {catalog}.w.d (id INT, name STRING) USING iceberg")
-        for index in range(FILES):
-            base = index * ROWS_PER_FILE
-            session.sql(
-                f"INSERT INTO {catalog}.w.d VALUES ({base + 1}, 'a'), "
-                f"({base + 2}, 'b'), ({base + 3}, 'c')"
-            )
-        session.sql(f"DELETE FROM {catalog}.w.d WHERE id % 2 = 0")
-        spark_ids = sorted(row[0] for row in session.sql(f"SELECT id FROM {catalog}.w.d").collect())
-        assert spark_ids == engine_ids
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.sql(f"CREATE TABLE {catalog}.w.d (id INT, name STRING) USING iceberg")
+    for index in range(FILES):
+        base = index * ROWS_PER_FILE
+        session.sql(
+            f"INSERT INTO {catalog}.w.d VALUES ({base + 1}, 'a'), "
+            f"({base + 2}, 'b'), ({base + 3}, 'c')"
+        )
+    session.sql(f"DELETE FROM {catalog}.w.d WHERE id % 2 = 0")
+    spark_ids = sorted(row[0] for row in session.sql(f"SELECT id FROM {catalog}.w.d").collect())
+    assert spark_ids == engine_ids
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_dv_count_matches_spark(tmp_path: Path, f27_present: bool) -> None:
     """C-003: the MoR count answers what Spark answers."""
     import _live_parity as live_parity
-    from pyspark.sql import SparkSession
 
     if not f27_present:
         pytest.skip(F27_SKIP)
@@ -357,25 +344,20 @@ def test_dv_count_matches_spark(tmp_path: Path, f27_present: bool) -> None:
     finally:
         engine.stop()
 
-    owned = SparkSession.getActiveSession() is None
     oracle = _live_oracle(tmp_path / "spark-wh")
     catalog = live_parity.LIFECYCLE_SPARK_CATALOG
     session = oracle.session
-    try:
-        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    session.sql(
+        f"CREATE TABLE {catalog}.w.dv (id INT, name STRING) USING iceberg "
+        f"TBLPROPERTIES ({V3}, {MOR})"
+    )
+    for index in range(FILES):
+        base = index * ROWS_PER_FILE
         session.sql(
-            f"CREATE TABLE {catalog}.w.dv (id INT, name STRING) USING iceberg "
-            f"TBLPROPERTIES ({V3}, {MOR})"
+            f"INSERT INTO {catalog}.w.dv VALUES ({base + 1}, 'a'), "
+            f"({base + 2}, 'b'), ({base + 3}, 'c')"
         )
-        for index in range(FILES):
-            base = index * ROWS_PER_FILE
-            session.sql(
-                f"INSERT INTO {catalog}.w.dv VALUES ({base + 1}, 'a'), "
-                f"({base + 2}, 'b'), ({base + 3}, 'c')"
-            )
-        session.sql(f"DELETE FROM {catalog}.w.dv WHERE id = 7")
-        spark_count = session.sql(f"SELECT count(*) FROM {catalog}.w.dv").collect()[0][0]
-        assert spark_count == engine_count == TOTAL_ROWS - 1
-    finally:
-        if owned:
-            session.stop()
+    session.sql(f"DELETE FROM {catalog}.w.dv WHERE id = 7")
+    spark_count = session.sql(f"SELECT count(*) FROM {catalog}.w.dv").collect()[0][0]
+    assert spark_count == engine_count == TOTAL_ROWS - 1
