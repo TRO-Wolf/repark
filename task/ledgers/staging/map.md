@@ -708,7 +708,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Q-23, Q-40, Q-41, Q-55, Q-56. `risk_tier: standard`. Branch
   `fix/review-fix-8-conf-unread-1`.
   pins: review-fix-8/C-001, C-002, C-003, C-004, C-005
-- [review-fix-3-ledger.md](review-fix-3-ledger.md) —
+- [review-fix-3-ledger.md](../completed/review-fix-3-ledger.md) —
   **REVIEW-FIX-3 step 1 (2026-09-10), in flight:** the polars keep-set honours every
   legal `max_rows` — `min(n, max_rows)` split `(keep + 1) // 2` head /
   `keep - head` tail (Q-9), `max_rows = 1` earns its `1, …` without reviving the
@@ -716,7 +716,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   mutation pin (Q-10), and `show`'s docstring states the probe-first count (Q-11).
   `risk_tier: standard`. Branch `fix/review-fix-3-9-14`.
   pins: review-fix-3/C-001, C-002, C-003, C-004
-- [review-fix-9-ledger.md](review-fix-9-ledger.md) —
+- [review-fix-9-ledger.md](../completed/review-fix-9-ledger.md) —
   **REVIEW-FIX-9 step 1 (2026-09-10), in flight:** the polars renderer matches live
   polars 1.43.2 at its boundaries — list cells elide at four items
   (`[0, 1, … 3]`, Q-27) and `_polars_float_text` is re-derived from `fmt_float`
@@ -725,7 +725,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `max_rows` pin is worked once under REVIEW-FIX-3 (Q-26).
   `risk_tier: standard`. Branch `fix/review-fix-3-9-14`.
   pins: review-fix-9/C-001, C-002, C-003
-- [review-fix-14-ledger.md](review-fix-14-ledger.md) —
+- [review-fix-14-ledger.md](../completed/review-fix-14-ledger.md) —
   **REVIEW-FIX-14 step 1 (2026-09-10), in flight:** the display configuration keeps
   its promises — `conf.get` on an unset `repark.display.style` serves the
   alive-token snapshot instead of re-reading `REPARK_DISPLAY_STYLE` (Q-52,

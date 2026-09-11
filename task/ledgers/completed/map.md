@@ -164,6 +164,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   step-3 map line landed. Closes Q-42, Q-43, Q-44, Q-45, Q-53, Q-54.
   `risk_tier: standard`. Branch `fix/review-fix-13-15`.
   pins: review-fix-13/C-001, C-002, C-003, C-004, C-005
+- [review-fix-14-ledger.md](review-fix-14-ledger.md) — Unit ledger — REVIEW-FIX-14 step 1 · the display configuration keeps its promises
 - [review-fix-15-ledger.md](review-fix-15-ledger.md) —
   **REVIEW-FIX-15 (2026-09-11), in flight:** a pin cites the clause it holds —
   LEDGER-READING-1's C-001..C-003 move into the pinning tests as `_pins`
@@ -172,6 +173,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   Closes Q-48, Q-49. `risk_tier: standard`. Branch `fix/review-fix-13-15`.
   pins: review-fix-15/C-001, C-002
 - [review-fix-2-ledger.md](review-fix-2-ledger.md) — Unit ledger — REVIEW-FIX-2 · CFG-1's own pins stop reading the developer's HOME
+- [review-fix-3-ledger.md](review-fix-3-ledger.md) — Unit ledger — REVIEW-FIX-3 step 1 · the polars display honours every legal `max_rows`
 - [review-fix-4-ledger.md](review-fix-4-ledger.md) — Unit ledger — REVIEW-FIX-4 · the eager frame's checkpoint paths (Q-12, Q-13)
 - [review-fix-5-ledger.md](review-fix-5-ledger.md) — Unit ledger — REVIEW-FIX-5 step 1 · DESCRIBE metadata-name intercept, Owner, short names, redaction
 - [review-fix-6-ledger.md](review-fix-6-ledger.md) — Unit ledger — REVIEW-FIX-6 step 1 · `explain()` refuses the both-set shape (Q-17)
@@ -182,6 +184,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   cloud catalogs. 3 PROVEN, 0 OPEN. `risk_tier: standard`. Branch `fix/review-fix-7`.
   pins: review-fix-7/C-001, C-002, C-003
 - [review-fix-8-ledger.md](review-fix-8-ledger.md) — Unit ledger — REVIEW-FIX-8 · the PROFILES-1 probe is re-runnable and its table is true
+- [review-fix-9-ledger.md](review-fix-9-ledger.md) — Unit ledger — REVIEW-FIX-9 step 1 · the polars renderer matches polars at its boundaries
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 
 ## Pointers
