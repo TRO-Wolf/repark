@@ -417,7 +417,7 @@ impl ReparkClusterExecutor {
         let session_builder = provider.session_builder();
         let config_producer = provider.config_producer();
         let session_config = config_producer();
-        let codec = repark_ballista_codec();
+        let codec = repark_ballista_codec(&provider);
         let cluster = BallistaCluster::new_memory(
             scheduler_bind.to_string(),
             session_builder,
