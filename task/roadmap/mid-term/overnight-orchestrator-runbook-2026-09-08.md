@@ -15,7 +15,7 @@ and [../../../AGENTS.md](../../../AGENTS.md) wins on everything.
 | G-2 Decision authority per §6 (bounded). | Park the unit on the first hand-back that needs a decision. |
 | G-3 A stop time (local) and a usage ceiling. | Stop at 03:00 local, or on the first rate-limit or usage-limit signal, whichever comes first. |
 | G-5 Seed commits: the orchestrator may make a card's step-0 dependency commit itself when the card spells the exact lines (CFG-1 D-3 does). | Park the card until the owner seeds it. |
-| G-4 Which launchers may run: `oc-worker` (GLM), `muse-worker` (Muse), `grok-worker` (Grok — granted 2026-09-09 evening with ~82 % weekly quota left, for slate 2's Ballista and REVIEW-1 cards). | GLM and Muse only. |
+| G-4 Which launchers may run: `oc-worker` (GLM), `muse-worker` (Muse), `grok-worker` (Grok — granted 2026-09-09 evening with ~82 % weekly quota left, for slate 2's Ballista and REVIEW-1 cards), `devin-worker` (Devin CLI on SWE-2, **free tier**, granted 2026-09-10 evening as a third lane; `~/.claude/skills/devin-worker/SKILL.md`; trailer `Authored-By: Devin SWE-2 (swe-2-high) <noreply@cognition.ai>`, ledger `Model: swe-2-high`; `--brief` via file only; the first Devin build card of a run is its acceptance test — audit diff, comment-ban grep and `%ae` byte-exact). | GLM and Muse only. |
 
 The owner launches the session (§9). The session never launches another orchestrator.
 
@@ -121,7 +121,8 @@ until ls /tmp/oc-worker/$LANE/*/exit >/dev/null 2>&1; do sleep 30; done
 ```
 
 Concurrency: at most **two** worker lanes at once, plus a **third** lane when it is a Grok
-round on `repark-distributed` (its own crate, feature-gated) or a read-only Grok critic; the
+round on `repark-distributed` (its own crate, feature-gated), a read-only Grok critic, or a Devin
+SWE-2 round on a card whose Home shares no file with the other two lanes (lanes `/tmp/dv-<card>`); the
 builder cap (no more than two concurrent cargo builds) and the one-JVM rule still bind. A fresh clone's first Python round runs
 `maturin develop`, so before launching any lane wait until no build is running:
 `while pgrep -x cargo >/dev/null || pgrep -x maturin >/dev/null || pgrep -x rustc >/dev/null; do sleep 30; done`
