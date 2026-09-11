@@ -5,13 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [ballista-m2-b-ledger.md](ballista-m2-b-ledger.md) —
-  **BALLISTA-M2-B (2026-09-11), in flight:** typed `IcebergTableScan` encode — downcast
-  plus `table().identifier()`, `resolved_snapshot_id()`, `projection()`, `predicates()`;
-  predicates travel as `datafusion-proto` `Expr`s; string literals and bracketed names
-  travel; encode-time rebuild-and-compare guard retired; BALLISTA-M2-A-R-001 closed.
-  Wire `RPIC` v2. `risk_tier: standard`. Branch `feat/ballista-m2-b`.
-  pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
 - [nightly-live-1-ledger.md](nightly-live-1-ledger.md) —
   **NIGHTLY-LIVE-1 (2026-09-11):** the parity-live nightly red since 2026-09-05 — a test
   calling `.stop()` on a PySpark session kills the one JVM `SparkContext` under the shared
