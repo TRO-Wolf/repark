@@ -32,7 +32,16 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   the scan's `RPIC` payload carries the catalog spec, table identifier, frozen resolved
   snapshot id, projection and predicate); decode rebuilds the scan from the session catalog
   the codec carries — a vanilla session refuses encode and decode loud; an unowned custom
-  node refuses encode loud and passes the file-group rewrite untouched.
+  node refuses encode loud and passes the file-group rewrite untouched. The adversarial
+  pins (audit F-1/F-2) prove "round-trips exactly or refuses loud — never a different
+  result": a `name = 'x] snapshot_id=1'` string literal refuses naming the predicate field;
+  `name = 'alpha'` refuses the same way (the fork renders literals double-quoted, which
+  re-parses as a missing column — measured); a `]`-carrying projection and a `]`-carrying
+  table name refuse naming projection / table identifier; a DATE predicate drops out of the
+  scan node at pushdown (measured — the fork cannot bind date/timestamp datums) so the
+  predicate-less node round-trips and its two-executor answer equals
+  `LocalDataFusionExecutor`; an `IN` list (`id IN (1, 2, 3)` renders `id IN (1, 3, 2)`)
+  travels exactly or refuses, and when it travels the cluster answer equals the local one.
   pins: ballista-m2-a/C-001, C-002, C-003
 - `multi_stage.rs` (`feature = "cluster"`) — D-1: three physical-plan shapes, each built
   once, run through `LocalDataFusionExecutor`, then through a two-executor

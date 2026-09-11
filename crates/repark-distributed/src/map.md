@@ -40,11 +40,25 @@ adds `running_executor_task_counts` on the cluster executor. BALLISTA-M1-D step 
   the wrapper itself into `BallistaCodec::new` beside the Ballista logical default. The
   wrapper owns `IcebergTableScan`: encode recovers an `RPIC` `IcebergScanSpec` (catalog
   spec, table identifier, the node's frozen `resolved_snapshot_id`, projection, predicate)
-  from the node's Debug/Verbose text plus a session-catalog probe; decode rebuilds the scan
-  through `IcebergScanSpec::scan` against the `SessionContext` the codec carries (built from
-  `ReparkSessionProvider::session_state` — never ambient authority) on a dedicated thread
-  runtime, and refuses loud when the rebuilt frozen snapshot differs from the spec's. No
-  `arrow_flight` is added — the M1-C C-002 residue stands.
+  from the node's Debug/Verbose text plus a session-catalog probe, then verifies before
+  emitting — it rebuilds the spec through `IcebergScanSpec::scan` on the same session
+  context and refuses loud (naming the field) unless the rebuilt node matches on table
+  identifier, resolved snapshot id, projected schema, predicate text and partition count;
+  identifiers and projected columns carrying `"`, `\`, `[` or `]` refuse up front, so the
+  codec never emits a spec that describes a different scan. Decode rebuilds the scan
+  through `IcebergScanSpec::scan` against the `SessionContext` the codec carries (built
+  from `ReparkSessionProvider::session_state` — never ambient authority) on a dedicated
+  thread runtime, and refuses loud when the rebuilt frozen snapshot differs from the
+  spec's. No `arrow_flight` is added — the M1-C C-002 residue stands. Residue
+  BALLISTA-M2-A-R-001: the encode path parses Debug/Verbose text only because
+  `iceberg-datafusion` is not a dependency of this crate; the fork's `IcebergTableScan`
+  already exposes typed accessors (`table()`, `snapshot_id()`, `projection()`,
+  `predicates()` in `crates/integrations/datafusion/src/physical_plan/scan.rs`), so a
+  direct optional dependency behind `cluster` would retire the parsing — owner question.
+  A measured consequence of the text surface: the fork renders string literals
+  double-quoted (`name = "alpha"`), which re-parses as a column identifier and fails the
+  rebuild check — string-literal predicates refuse to travel until the fork's predicate
+  Display emits re-parseable text.
   pins: ballista-m2-a/C-001, C-002, C-003, C-004, ballista-m1-b/C-006
 - `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1: `IcebergScanSpec` is the
   DataFusion-level provider codec (audit R-4). It serialises

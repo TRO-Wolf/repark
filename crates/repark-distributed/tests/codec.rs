@@ -3,9 +3,10 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ballista_core::JobId;
 use ballista_core::execution_plans::sort_shuffle::SortShuffleConfig;
@@ -13,6 +14,8 @@ use ballista_core::execution_plans::{
     ChaosExec, ShuffleReaderExec, ShuffleWriterExec, SortShuffleWriterExec, UnresolvedShuffleExec,
 };
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::error::Result as DataFusionResult;
 use datafusion::execution::TaskContext;
 use datafusion::physical_expr::EquivalenceProperties;
@@ -24,8 +27,12 @@ use datafusion::physical_plan::{
     PlanProperties, SendableRecordBatchStream, displayable,
 };
 use datafusion::prelude::SessionContext;
+use futures::StreamExt;
 use repark_core::{CatalogKind, CatalogSpec, ReparkSession};
-use repark_distributed::{IcebergScanSpec, ReparkSessionProvider, repark_ballista_codec};
+use repark_distributed::{
+    DistributedExecutor, IcebergScanSpec, LocalDataFusionExecutor, ReparkClusterExecutor,
+    ReparkSessionProvider, repark_ballista_codec,
+};
 
 const CATALOG_NAME: &str = "ice";
 const NAMESPACE: &str = "sales";
@@ -497,6 +504,395 @@ async fn unowned_node_refuses_encode_and_passes_the_rewrite_untouched() {
         encode_error.contains("Unsupported plan node") && encode_error.contains("UnownedScanExec"),
         "unowned node must refuse encode loud, got {encode_error}"
     );
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+fn named_spec(
+    warehouse: &str,
+    table: &str,
+    projection: Option<Vec<String>>,
+    filters: Vec<String>,
+) -> IcebergScanSpec {
+    let mut props = HashMap::new();
+    props.insert("warehouse".to_owned(), warehouse.to_owned());
+    IcebergScanSpec::new(
+        CatalogSpec {
+            name: CATALOG_NAME.to_owned(),
+            kind: CatalogKind::Memory,
+            props,
+        },
+        vec![
+            CATALOG_NAME.to_owned(),
+            NAMESPACE.to_owned(),
+            table.to_owned(),
+        ],
+        None,
+        projection,
+        filters,
+    )
+}
+
+async fn adversarial_session(warehouse: &str) -> (ReparkSession, SessionContext) {
+    let session = match ReparkSession::builder().target_partitions(2).build() {
+        Ok(session) => session,
+        Err(error) => panic!("ReparkSession::build: {error}"),
+    };
+    if let Err(error) = session
+        .register_memory_catalog(CATALOG_NAME, warehouse)
+        .await
+    {
+        panic!("register_memory_catalog: {error}");
+    }
+    if let Err(error) = session
+        .create_namespace(CATALOG_NAME, NAMESPACE, HashMap::new())
+        .await
+    {
+        panic!("create_namespace: {error}");
+    }
+    let statements = [
+        "CREATE TABLE ice.sales.strs (id INT NOT NULL, name STRING NOT NULL)",
+        "CREATE TABLE ice.sales.dates (id INT NOT NULL, d DATE, ts TIMESTAMP)",
+        "CREATE TABLE ice.sales.t2 (\"we]col\" INT NOT NULL)",
+        "CREATE TABLE ice.sales.\"we]t\" (id INT NOT NULL)",
+        "INSERT INTO ice.sales.strs VALUES (1, 'alpha'), (2, 'x] snapshot_id=1'), (3, 'beta')",
+        "INSERT INTO ice.sales.dates VALUES (1, DATE '2024-01-01', TIMESTAMP '2024-01-02 03:04:05'), (2, DATE '2024-06-01', TIMESTAMP '2024-06-02 03:04:05')",
+        "INSERT INTO ice.sales.t2 VALUES (5)",
+        "INSERT INTO ice.sales.\"we]t\" VALUES (7)",
+    ];
+    for sql in statements {
+        let frame = match session.sql(sql).await {
+            Ok(frame) => frame,
+            Err(error) => panic!("sql {sql}: {error}"),
+        };
+        if let Err(error) = frame.collect().await {
+            panic!("collect {sql}: {error}");
+        }
+    }
+    let context = session.context().clone();
+    (session, context)
+}
+
+async fn built_scan(context: &SessionContext, spec: &IcebergScanSpec) -> Arc<dyn ExecutionPlan> {
+    match spec.scan(context).await {
+        Ok(plan) => plan,
+        Err(error) => panic!("spec.scan for {:?}: {error}", spec.table_identifier),
+    }
+}
+
+fn encode_or_refusal(
+    physical: &dyn datafusion_proto::physical_plan::PhysicalExtensionCodec,
+    scan: &Arc<dyn ExecutionPlan>,
+    label: &str,
+) -> Result<Vec<u8>, String> {
+    let mut buffer = Vec::new();
+    match physical.try_encode(Arc::clone(scan), &mut buffer) {
+        Ok(()) => {
+            assert!(!buffer.is_empty(), "{label} encode produced no bytes");
+            Ok(buffer)
+        }
+        Err(error) => {
+            assert!(
+                buffer.is_empty(),
+                "{label} refusal must not emit bytes, got {}",
+                buffer.len()
+            );
+            Err(error.to_string())
+        }
+    }
+}
+
+fn assert_refusal_names_field(label: &str, message: &str, field: &str) {
+    assert!(
+        message.contains(field),
+        "{label} refusal must name the {field} field, got {message}"
+    );
+    assert!(
+        message.contains("IcebergTableScan"),
+        "{label} refusal must name IcebergTableScan, got {message}"
+    );
+}
+
+fn decoded_scan(
+    physical: &dyn datafusion_proto::physical_plan::PhysicalExtensionCodec,
+    buffer: &[u8],
+    label: &str,
+) -> Arc<dyn ExecutionPlan> {
+    let task = SessionContext::new().task_ctx();
+    match physical.try_decode(buffer, &[], &task) {
+        Ok(plan) => plan,
+        Err(error) => panic!(
+            "{label} encoded bytes did not decode — the codec emitted a spec it cannot \
+             rebuild: {error}"
+        ),
+    }
+}
+
+fn assert_same_scan(
+    label: &str,
+    decoded: &Arc<dyn ExecutionPlan>,
+    original: &Arc<dyn ExecutionPlan>,
+) {
+    assert!(
+        decoded.name() == original.name(),
+        "{label} decoded as {}",
+        decoded.name()
+    );
+    assert!(
+        decoded.schema() == original.schema(),
+        "{label} schema changed through the codec"
+    );
+    assert!(
+        decoded.output_partitioning().partition_count()
+            == original.output_partitioning().partition_count(),
+        "{label} partition count changed through the codec"
+    );
+    assert!(
+        plan_verbose(decoded) == plan_verbose(original),
+        "{label} decoded scan display {} != original {}",
+        plan_verbose(decoded),
+        plan_verbose(original)
+    );
+}
+
+fn sorted_rows(batches: &[RecordBatch], label: &str) -> Vec<String> {
+    let mut rows = Vec::new();
+    for batch in batches {
+        for row in 0..batch.num_rows() {
+            let mut cells = Vec::new();
+            for column in batch.columns() {
+                match array_value_to_string(column, row) {
+                    Ok(cell) => cells.push(cell),
+                    Err(error) => panic!("{label} cell format: {error}"),
+                }
+            }
+            rows.push(cells.join("|"));
+        }
+    }
+    rows.sort();
+    rows
+}
+
+async fn drain(stream: SendableRecordBatchStream, label: &str) -> Vec<RecordBatch> {
+    let mut stream = stream;
+    let mut batches = Vec::new();
+    while let Some(item) = stream.next().await {
+        match item {
+            Ok(batch) => batches.push(batch),
+            Err(error) => panic!("{label} stream: {error}"),
+        }
+    }
+    batches
+}
+
+async fn cluster_batches(
+    label: &str,
+    session: &ReparkSession,
+    context: &SessionContext,
+    plan: &Arc<dyn ExecutionPlan>,
+) -> Vec<RecordBatch> {
+    let local = LocalDataFusionExecutor::new(context.clone());
+    let local_handle = match local.execute(Arc::clone(plan)).await {
+        Ok(handle) => handle,
+        Err(error) => panic!("{label} local execute: {error}"),
+    };
+    let expected = drain(local_handle.stream(), label).await;
+
+    let provider = ReparkSessionProvider::from_session(session);
+    let cluster = match ReparkClusterExecutor::new(2, bind_address(), provider).await {
+        Ok(cluster) => cluster,
+        Err(error) => panic!("{label} ReparkClusterExecutor::new: {error}"),
+    };
+    let handle = match cluster.execute(Arc::clone(plan)).await {
+        Ok(handle) => handle,
+        Err(error) => panic!("{label} cluster execute: {error}"),
+    };
+    let Ok(got) =
+        tokio::time::timeout(Duration::from_secs(30), drain(handle.stream(), label)).await
+    else {
+        panic!("{label} cluster drain timed out");
+    };
+    assert!(
+        sorted_rows(&got, label) == sorted_rows(&expected, label),
+        "{label} cluster rows != LocalDataFusionExecutor rows"
+    );
+    got
+}
+
+fn bind_address() -> SocketAddr {
+    match "127.0.0.1:0".parse() {
+        Ok(address) => address,
+        Err(error) => panic!("bind address: {error}"),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn string_literal_injection_predicate_refuses_loud() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let spec = named_spec(
+        &warehouse_text,
+        "strs",
+        Some(vec!["id".to_owned()]),
+        vec!["name = 'x] snapshot_id=1'".to_owned()],
+    );
+    let scan = built_scan(&context, &spec).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "literal-injection") {
+        Err(message) => assert_refusal_names_field("literal-injection", &message, "predicate"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "literal-injection");
+            assert_same_scan("literal-injection", &decoded, &scan);
+        }
+    }
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn string_literal_predicate_refuses_loud() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let spec = named_spec(
+        &warehouse_text,
+        "strs",
+        None,
+        vec!["name = 'alpha'".to_owned()],
+    );
+    let scan = built_scan(&context, &spec).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "string-literal") {
+        Err(message) => assert_refusal_names_field("string-literal", &message, "predicate"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "string-literal");
+            assert_same_scan("string-literal", &decoded, &scan);
+        }
+    }
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn date_and_timestamp_predicates_measure_the_pushdown_surface() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let timestamp_spec = named_spec(
+        &warehouse_text,
+        "dates",
+        None,
+        vec!["ts = TIMESTAMP '2024-01-02 03:04:05'".to_owned()],
+    );
+    match timestamp_spec.scan(&context).await {
+        Ok(_) => panic!("the fork bound a string-typed timestamp literal as a scan predicate"),
+        Err(error) => assert!(
+            error.to_string().contains("timestamp"),
+            "timestamp literal refusal should name its type, got {error}"
+        ),
+    }
+    let spec = named_spec(
+        &warehouse_text,
+        "dates",
+        None,
+        vec!["d = DATE '2024-01-01'".to_owned()],
+    );
+    let scan = built_scan(&context, &spec).await;
+    assert!(
+        plan_verbose(&scan).contains("predicate:[]"),
+        "measured: the fork drops the DATE predicate out of the scan node, got {}",
+        plan_verbose(&scan)
+    );
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "date-predicate") {
+        Err(message) => assert_refusal_names_field("date-predicate", &message, "predicate"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "date-predicate");
+            assert_same_scan("date-predicate", &decoded, &scan);
+            cluster_batches("date-predicate", &session, &context, &scan).await;
+        }
+    }
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn in_list_predicate_travels_exactly_or_refuses() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let spec = named_spec(
+        &warehouse_text,
+        "strs",
+        None,
+        vec!["id IN (1, 2, 3)".to_owned()],
+    );
+    let scan = built_scan(&context, &spec).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "in-list") {
+        Err(message) => assert_refusal_names_field("in-list", &message, "predicate"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "in-list");
+            assert_same_scan("in-list", &decoded, &scan);
+            cluster_batches("in-list", &session, &context, &scan).await;
+        }
+    }
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn bracket_column_projection_refuses_loud() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let spec = named_spec(
+        &warehouse_text,
+        "t2",
+        Some(vec!["we]col".to_owned()]),
+        Vec::new(),
+    );
+    let scan = built_scan(&context, &spec).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "bracket-column") {
+        Err(message) => assert_refusal_names_field("bracket-column", &message, "projection"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "bracket-column");
+            assert_same_scan("bracket-column", &decoded, &scan);
+        }
+    }
+    drop(session);
+    let _ = std::fs::remove_dir_all(&warehouse);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn bracket_table_identifier_refuses_loud() {
+    let warehouse = unique_warehouse();
+    let warehouse_text = warehouse.to_string_lossy().into_owned();
+    let (session, context) = adversarial_session(&warehouse_text).await;
+    let spec = named_spec(&warehouse_text, "we]t", None, Vec::new());
+    let scan = built_scan(&context, &spec).await;
+    let provider = ReparkSessionProvider::from_session(&session);
+    let codec = repark_ballista_codec(&provider);
+    let physical = codec.physical_extension_codec();
+    match encode_or_refusal(physical, &scan, "bracket-table") {
+        Err(message) => assert_refusal_names_field("bracket-table", &message, "identifier"),
+        Ok(buffer) => {
+            let decoded = decoded_scan(physical, &buffer, "bracket-table");
+            assert_same_scan("bracket-table", &decoded, &scan);
+        }
+    }
     drop(session);
     let _ = std::fs::remove_dir_all(&warehouse);
 }

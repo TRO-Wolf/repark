@@ -21,7 +21,7 @@ doc (`distributed-m1.md` open questions 1 and 4), remaining map language, and le
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | `ReparkPhysicalExtensionCodec` implements `datafusion_proto::physical_plan::PhysicalExtensionCodec`, delegates every node it does not own to `BallistaPhysicalExtensionCodec`, and `repark_ballista_codec(&provider)` installs the wrapper itself (not `into_inner()`). | `repark_ballista_codec_installs_the_repark_physical_wrapper` plus the delegation proof in `ballista_shuffle_nodes_round_trip_through_the_wrapper` in `crates/repark-distributed/tests/codec.rs`. | **PROVEN** | Red first on the base tree: `installed physical codec must be the RePark wrapper, got BallistaPhysicalExtensionCodec { default_codec: DefaultPhysicalExtensionCodec }`. Green after `src/codec.rs`: installed codec Debug contains `ReparkPhysicalExtensionCodec`; the five shuffle nodes and the unowned-node refusal (`Unsupported plan node`) prove every unowned path delegates to Ballista's codec. pins: ballista-m2-a/C-001 |
-| C-002 | Each of Ballista's five shuffle nodes AND an `IcebergTableScan` encode and decode through the wrapper and come back structurally equal — same node type, same schema, same partition count; for the scan the same table identifier, snapshot id, projection and filters. Re-proves BALLISTA-M1-B C-004 (`task/ledgers/completed/ballista-m1-b-ledger.md`, frozen — re-proof cited, not rewritten). | `ballista_shuffle_nodes_round_trip_through_the_wrapper` and `iceberg_table_scan_round_trips_through_the_wrapper` in `crates/repark-distributed/tests/codec.rs`. | **PROVEN** | Red first on the base tree: `wrapper refused the IcebergTableScan on encode: Internal error: Unsupported plan node, name: [IcebergTableScan] .` — the default codec refuses the scan exactly as the card predicts. Green after: five shuffle nodes + the scan round-trip; the `RPIC` payload decodes to the same catalog spec, `ice.sales.orders` identifier, frozen resolved snapshot id, `["id"]` projection and `["id >= 4"]` filter; the decoded node re-encodes byte-identically; decode rebuilds through the codec-carried session catalog and verifies the rebuilt `resolved_snapshot_id` equals the frozen one. pins: ballista-m2-a/C-002 |
+| C-002 | Each of Ballista's five shuffle nodes AND an `IcebergTableScan` encode and decode through the wrapper and come back structurally equal — same node type, same schema, same partition count; for the scan the same table identifier, snapshot id, projection and filters. Encode additionally verifies before emitting: the spec is rebuilt through `IcebergScanSpec::scan` on the codec's session context and the rebuilt node must match on table identifier, resolved snapshot id, projected schema, predicate text and partition count — any difference, or an identifier/projection carrying `"` `\` `[` `]`, refuses loud naming the field, so the codec never emits a spec describing a different scan. Re-proves BALLISTA-M1-B C-004 (`task/ledgers/completed/ballista-m1-b-ledger.md`, frozen — re-proof cited, not rewritten). | `ballista_shuffle_nodes_round_trip_through_the_wrapper`, `iceberg_table_scan_round_trips_through_the_wrapper` and the six adversarial pins (`string_literal_injection_predicate_refuses_loud`, `string_literal_predicate_refuses_loud`, `date_and_timestamp_predicates_measure_the_pushdown_surface`, `in_list_predicate_travels_exactly_or_refuses`, `bracket_column_projection_refuses_loud`, `bracket_table_identifier_refuses_loud`) in `crates/repark-distributed/tests/codec.rs`. | **PROVEN** | Red first on the base tree: `wrapper refused the IcebergTableScan on encode: Internal error: Unsupported plan node, name: [IcebergTableScan] .` — the default codec refuses the scan exactly as the card predicts. Green after: five shuffle nodes + the scan round-trip; the `RPIC` payload decodes to the same catalog spec, `ice.sales.orders` identifier, frozen resolved snapshot id, `["id"]` projection and `["id >= 4"]` filter; the decoded node re-encodes byte-identically; decode rebuilds through the codec-carried session catalog and verifies the rebuilt `resolved_snapshot_id` equals the frozen one. Audit round (F-1/F-2): red-first on `f8da984c` the injection and plain-string-literal scans encoded to specs that could not rebuild (`name = "x` TokenizerError; `name = "alpha"` → `No field named alpha`) and the `]`-column refused without naming the field; after the encode-verify each refuses loud naming its field (the `]`-table now refuses on reserved chars too — it had round-tripped), the `IN`-list and dropped-DATE-predicate cases round-trip exactly, and the round-tripping cases answer identically on the two-executor cluster and `LocalDataFusionExecutor`. pins: ballista-m2-a/C-002 |
 | C-003 | The parquet-file-group rewrite stays and is pinned as the path for a node with no codec entry — measured: an unowned custom node is refused loud by `try_encode` and passes through `rewrite_iceberg_table_scans_as_file_groups` untouched. | `unowned_node_refuses_encode_and_passes_the_rewrite_untouched` in `crates/repark-distributed/tests/codec.rs`. | **PROVEN** | Measured: `UnownedScanExec` passes through the rewrite unchanged (`Arc::ptr_eq`) and `try_encode` refuses with `Unsupported plan node, name: [UnownedScanExec]`. The rewrite stays the distribution path only for plans whose scans it owns; a node with no codec entry refuses loud rather than travelling. pins: ballista-m2-a/C-003 |
 | C-004 | No `arrow_flight`; BALLISTA-M1-C C-002 stays OPEN with its residue — reading clause: `docs/design/distributed-m1.md` keeps the flight-codec ban line and no dependency on `arrow_flight` appears anywhere in the crate graph. | Reading: cite the design-doc line; `cargo tree` check for `arrow_flight`. | **PROVEN** | `docs/design/distributed-m1.md` line 134: "Reimplementing that startup needs `arrow_flight`, which this crate does not depend on and must not add." `Cargo.toml`/`Cargo.lock` untouched; `cargo tree -p repark-distributed --features cluster` shows `arrow-flight v58.4.0` only as a transitive entry under `datafusion`/`ballista`, no direct edge. pins: ballista-m2-a/C-004 |
 
@@ -53,6 +53,47 @@ Green after `src/codec.rs` (the delegating impl) + `src/iceberg_provider.rs`
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
 
+## Red-first evidence (audit fix F-1/F-2, 2026-09-11)
+
+Command: `cargo test -p repark-distributed --features cluster --test codec` on `f8da984c`
+with the six adversarial pins added and no production change.
+
+```
+---- bracket_column_projection_refuses_loud ----
+bracket-column refusal must name the projection field, got External error: datafusion
+engine error: IcebergTableScan debug text has an unterminated string in "\"we"
+
+---- string_literal_predicate_refuses_loud ----
+string-literal encoded bytes did not decode — the codec emitted a spec it cannot rebuild:
+External error: Schema error: No field named alpha. Valid fields are id, name.
+
+---- string_literal_injection_predicate_refuses_loud ----
+literal-injection encoded bytes did not decode — the codec emitted a spec it cannot
+rebuild: External error: SQL error: TokenizerError("Expected close delimiter '\"' before
+EOF. at Line: 1, Column: 8")
+
+test result: FAILED. 8 passed; 3 failed
+```
+
+The two string-literal reds are the finding's core: encode emitted a spec that rebuilds to
+a different (here unbuildable) scan — a narrower mis-parse would prune rows silently.
+
+Green after the encode-verify + reserved-char refusal:
+
+```
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+Measured per-case outcomes on the fixed tree (each pin asserts the same contract):
+`name = 'x] snapshot_id=1'` refuses naming predicate (truncated spec fails rebuild);
+`name = 'alpha'` refuses naming predicate (the fork renders the literal double-quoted —
+`name = "alpha"` re-parses as a missing column); `id IN (1, 2, 3)` renders
+`id IN (1, 3, 2)` and round-trips byte-identically; the DATE predicate drops out of the
+node at pushdown (`predicate:[]`, the fork cannot bind date/timestamp datums — a timestamp
+literal fails `spec.scan` itself) so the predicate-less node round-trips and answers equal
+on two executors vs `LocalDataFusionExecutor`; `"we]col"` projection refuses naming
+projection; `we]t` table refuses naming table identifier.
+
 ## Mechanism notes for the Critic
 
 - `try_encode` receives only `Arc<dyn ExecutionPlan>`; `repark-distributed` cannot name
@@ -73,6 +114,29 @@ test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
   refuses loud: the executor cannot bind a pinned snapshot (`IcebergStaticTableProvider`
   lives behind the absent `iceberg-datafusion` dep), so a moved or time-travel-pinned table
   is an error, never a silent divergent read.
+- Encode-time identity check (audit F-1): before any bytes are emitted the spec is rebuilt
+  through the same `IcebergScanSpec::scan` path decode uses, on the codec's session
+  context, on the same joined-thread bridge. The rebuilt node must match the original on
+  table identifier, resolved snapshot id, projected schema, predicate text and partition
+  count; a rebuild failure or any field difference refuses loud naming the field. Up
+  front, identifiers and projected columns carrying `"` `\` `[` `]` refuse, since those
+  characters break the Debug text the parse depends on.
+
+## Step 1 residue
+
+- **BALLISTA-M2-A-R-001** — the encode path recovers the `IcebergScanSpec` from the node's
+  Debug/Verbose text plus a session-catalog probe only because `iceberg-datafusion` is not
+  a dependency of this crate. The owned fork's `IcebergTableScan` already exposes the
+  typed accessors this needs (`table()`, `snapshot_id()`, `projection()`, `predicates()`
+  in the fork's `crates/integrations/datafusion/src/physical_plan/scan.rs`), so a direct
+  optional dependency behind `cluster` — or a `repark-core`-level extractor — would retire
+  the text parsing and the reserved-character refusals wholesale. That is an owner
+  question (it is a dependency decision), not this round's call. A measured consequence of
+  the text surface: the fork's predicate Display renders string literals double-quoted
+  (`name = "alpha"`), which re-parses as a column identifier and fails the rebuild check,
+  so *every* string-literal predicate refuses to travel until the fork's Display emits
+  re-parseable text; date/timestamp literals never bind into the node's predicate at all
+  (dropped at pushdown — `predicate:[]` — so those nodes round-trip exactly).
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -84,7 +148,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-distributed/tests/codec.rs, crates/repark-distributed/src/codec.rs, crates/repark-distributed/src/iceberg_provider.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundary inputs exercised — a codec built on a vanilla session (no catalog), an unowned custom `ExecutionPlan` (no codec entry), a five-node delegation sweep, a scan built through the real memory-catalog bed; nested/empty namespace, missing marker, and unknown catalog kind all take the loud-refusal branches in the Debug parser.
+      evidence: Boundary inputs exercised — a codec built on a vanilla session (no catalog), an unowned custom `ExecutionPlan` (no codec entry), a five-node delegation sweep, a scan built through the real memory-catalog bed; nested/empty namespace, missing marker, and unknown catalog kind all take the loud-refusal branches in the Debug parser. The audit round adds adversarial surfaces: a `] snapshot_id=`-carrying string literal, a plain string literal, a `]`-named projection column, a `]`-named table, a dropped DATE predicate, a timestamp literal that cannot even form a node, and a re-ordered `IN` list.
       artifacts: [crates/repark-distributed/tests/codec.rs]
     - id: AT-3
       status: ATTACKED
@@ -114,8 +178,8 @@ COVERAGE_ATTESTATION:
       justification: Every new refusal is a `DataFusionError`/`repark Error` naming the node, the missing catalog, or the snapshot mismatch — DataFusion surfaces it on the task as today; no new silent path exists to alarm on.
     - id: AT-10
       status: ATTACKED
-      evidence: Pins cover every new branch by name — install pin (wrapper vs inner), five-node delegation, scan round-trip including the frozen-snapshot assert, vanilla encode/decode refusals, unowned-node encode refusal plus rewrite pass-through; a mutation flipping the `node.name()` check or the `MAGIC` guard would red the suite.
-      artifacts: [crates/repark-distributed/tests/codec.rs]
+      evidence: Pins cover every new branch by name — install pin (wrapper vs inner), five-node delegation, scan round-trip including the frozen-snapshot assert, vanilla encode/decode refusals, unowned-node encode refusal plus rewrite pass-through; a mutation flipping the `node.name()` check or the `MAGIC` guard would red the suite. The audit round adds per-field refusal branches (predicate rebuild failure, table-identifier reserved chars, projection reserved chars) and the round-trip-or-refuse contract pin over `IN` lists and the dropped DATE predicate, each asserting the refusal names its field and emits no bytes, and — when it travels — that the two-executor cluster answer equals `LocalDataFusionExecutor`.
+      artifacts: [crates/repark-distributed/tests/codec.rs, crates/repark-distributed/src/codec.rs]
   complete: true
 ```
 

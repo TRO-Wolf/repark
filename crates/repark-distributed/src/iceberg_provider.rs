@@ -58,16 +58,32 @@ impl IcebergScanSpec {
             )));
         }
         let debug = format!("{node:?}");
-        let (namespace, table) = scan_node_table_ident(&debug)?;
+        let (namespace, table) = scan_node_table_ident(&debug).map_err(|error| {
+            codec_err(format!(
+                "{ICEBERG_TABLE_SCAN} table identifier field: {error}"
+            ))
+        })?;
         if namespace.len() != 1 {
             return Err(codec_err(format!(
                 "{ICEBERG_TABLE_SCAN} namespace {namespace:?} is nested; the spec encodes \
                  catalog.namespace.table"
             )));
         }
+        for part in &namespace {
+            reject_reserved_text("table identifier", part)?;
+        }
+        reject_reserved_text("table identifier", &table)?;
         let snapshot_id = Some(scan_node_resolved_snapshot_id(node)?);
-        let projection = scan_node_projection(&debug)?;
-        let filters = scan_node_filters(node)?;
+        let projection = scan_node_projection(&debug).map_err(|error| {
+            codec_err(format!("{ICEBERG_TABLE_SCAN} projection field: {error}"))
+        })?;
+        if let Some(columns) = &projection {
+            for column in columns {
+                reject_reserved_text("projection", column)?;
+            }
+        }
+        let filters = scan_node_filters(node)
+            .map_err(|error| codec_err(format!("{ICEBERG_TABLE_SCAN} predicate field: {error}")))?;
         let catalog = session_catalog_spec(context, &namespace[0], &table)?;
         Ok(Self {
             table_identifier: vec![catalog.name.clone(), namespace[0].clone(), table],
@@ -562,7 +578,17 @@ fn debug_quoted_values(text: &str) -> Result<Vec<String>> {
     Ok(values)
 }
 
-fn scan_node_table_ident(debug: &str) -> Result<(Vec<String>, String)> {
+fn reject_reserved_text(field: &str, value: &str) -> Result<()> {
+    if value.contains('"') || value.contains('\\') || value.contains('[') || value.contains(']') {
+        return Err(codec_err(format!(
+            "{ICEBERG_TABLE_SCAN} {field} {value:?} carries a character the codec's debug \
+             surface cannot round-trip ('\"', '\\', '[' or ']')"
+        )));
+    }
+    Ok(())
+}
+
+pub(crate) fn scan_node_table_ident(debug: &str) -> Result<(Vec<String>, String)> {
     let rest = debug_field(debug, "identifier: TableIdent")?;
     let rest = debug_field(rest, "NamespaceIdent([")?;
     let end = rest.find(']').ok_or_else(|| {
@@ -611,7 +637,7 @@ pub(crate) fn scan_node_resolved_snapshot_id(node: &Arc<dyn ExecutionPlan>) -> R
     })
 }
 
-fn scan_node_filters(node: &Arc<dyn ExecutionPlan>) -> Result<Vec<String>> {
+pub(crate) fn scan_node_filters(node: &Arc<dyn ExecutionPlan>) -> Result<Vec<String>> {
     let text = displayable(node.as_ref()).indent(true).to_string();
     let rest = debug_field(&text, "predicate:[")?;
     let end = rest.find("] snapshot_id=").ok_or_else(|| {
