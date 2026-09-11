@@ -21,6 +21,8 @@ const KIND_GLUE: u8 = 0;
 const KIND_S3_TABLES: u8 = 1;
 const KIND_MEMORY: u8 = 2;
 const KIND_POSTGRES: u8 = 3;
+const FILTER_TAG_SQL: u8 = 0;
+const FILTER_TAG_EXPR: u8 = 1;
 pub(crate) const ICEBERG_TABLE_SCAN: &str = "IcebergTableScan";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -245,14 +247,20 @@ impl IcebergScanSpec {
 
     #[allow(clippy::missing_errors_doc)]
     fn wire_filter_bytes(&self) -> Vec<Vec<u8>> {
-        if self.filter_expr_bytes.is_empty() {
-            self.filters
-                .iter()
-                .map(|filter| filter.as_bytes().to_vec())
-                .collect()
-        } else {
-            self.filter_expr_bytes.clone()
+        let mut items = Vec::with_capacity(self.filters.len() + self.filter_expr_bytes.len());
+        for filter in &self.filters {
+            let mut item = Vec::with_capacity(1 + filter.len());
+            item.push(FILTER_TAG_SQL);
+            item.extend_from_slice(filter.as_bytes());
+            items.push(item);
         }
+        for bytes in &self.filter_expr_bytes {
+            let mut item = Vec::with_capacity(1 + bytes.len());
+            item.push(FILTER_TAG_EXPR);
+            item.extend_from_slice(bytes);
+            items.push(item);
+        }
+        items
     }
 
     fn scan_filter_exprs(
@@ -260,20 +268,16 @@ impl IcebergScanSpec {
         context: &SessionContext,
         df_schema: &DFSchema,
     ) -> Result<Vec<Expr>> {
-        if !self.filter_expr_bytes.is_empty() {
-            let mut exprs = Vec::with_capacity(self.filter_expr_bytes.len());
-            for bytes in &self.filter_expr_bytes {
-                exprs.push(decode_expr(bytes)?);
-            }
-            return Ok(exprs);
-        }
-        let mut exprs = Vec::with_capacity(self.filters.len());
+        let mut exprs = Vec::with_capacity(self.filters.len() + self.filter_expr_bytes.len());
         for filter in &self.filters {
             exprs.push(
                 context
                     .parse_sql_expr(filter, df_schema)
                     .map_err(engine_err)?,
             );
+        }
+        for bytes in &self.filter_expr_bytes {
+            exprs.push(decode_expr(bytes)?);
         }
         Ok(exprs)
     }
@@ -494,15 +498,29 @@ fn split_wire_filters(raw: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<Vec<u8>>)> 
     let mut filters = Vec::new();
     let mut filter_expr_bytes = Vec::new();
     for item in raw {
-        if decode_expr(&item).is_ok() {
-            filter_expr_bytes.push(item);
-        } else {
-            let sql = String::from_utf8(item).map_err(|error| {
-                codec_err(format!(
-                    "Iceberg scan spec filter is neither an Expr nor utf-8 SQL: {error}"
-                ))
-            })?;
-            filters.push(sql);
+        let Some((tag, payload)) = item.split_first() else {
+            return Err(codec_err(
+                "Iceberg scan spec filter item is empty; a tag byte is required".to_owned(),
+            ));
+        };
+        match *tag {
+            FILTER_TAG_SQL => {
+                let sql = String::from_utf8(payload.to_vec()).map_err(|error| {
+                    codec_err(format!(
+                        "Iceberg scan spec SQL filter is not utf-8: {error}"
+                    ))
+                })?;
+                filters.push(sql);
+            }
+            FILTER_TAG_EXPR => {
+                decode_expr(payload)?;
+                filter_expr_bytes.push(payload.to_vec());
+            }
+            tag => {
+                return Err(codec_err(format!(
+                    "Iceberg scan spec filter tag {tag} is unknown; want 0 (SQL) or 1 (Expr)"
+                )));
+            }
         }
     }
     Ok((filters, filter_expr_bytes))

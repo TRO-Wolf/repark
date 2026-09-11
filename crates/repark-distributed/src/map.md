@@ -51,13 +51,16 @@ BALLISTA-M2-B adds `predicate_expr.rs` (typed `Predicate` → `Expr`) behind tha
   IsNull/NotNull/IsNan/NotNan, binary comparisons including StartsWith/NotStartsWith,
   In/NotIn, Datum → ScalarValue for the fork's primitive pushdown types). An
   inexpressible shape (AlwaysTrue/AlwaysFalse, AboveMax/BelowMin, Unknown, a StartsWith
-  prefix carrying LIKE wildcards) refuses loud naming the shape. The Expr travels as
+  prefix carrying LIKE wildcards or the LIKE escape `\`) refuses loud naming the shape.
+  Timestamptz datums use `iceberg::arrow::UTC_TIME_ZONE` (`"UTC"`). The Expr travels as
   `datafusion-proto` bytes. pins: ballista-m2-b/C-002
 - `iceberg_provider.rs` (`cluster` feature) — BALLISTA-M1-D D-1 plus M2-B: `IcebergScanSpec`
-  serialises catalog config, table identifier, snapshot id, projection, and either SQL
-  filter text (local constructor) or typed Expr bytes (codec path) as `RPIC` v2. Rebuild
-  looks up the Iceberg table from the session catalog. File-group rewrite stays the
-  fallback for a node with no codec entry. pins: ballista-m1-d/C-001, C-002, ballista-m2-b/C-001, C-004
+  serialises catalog config, table identifier, snapshot id, projection, and filters as
+  `RPIC` v2. Each filter item on the wire carries an explicit tag byte (0 = SQL text,
+  1 = datafusion-proto `Expr`); encode writes both lists and scan applies both. An
+  unknown tag refuses loud. Rebuild looks up the Iceberg table from the session catalog.
+  File-group rewrite stays the fallback for a node with no codec entry.
+  pins: ballista-m1-d/C-001, C-002, ballista-m2-b/C-001, C-002, C-004
 
 ## Pointers
 

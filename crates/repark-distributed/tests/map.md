@@ -57,8 +57,10 @@ The crate-root `lib.rs` gate forbids inline `#[cfg(test)]` modules, so the pins 
   as `LocalDataFusionExecutor`, and both executors ran a task. Cluster plans rewrite
   `IcebergTableScan` to parquet file groups — the fallback path for a node with no codec
   entry; the codec now also carries `IcebergTableScan` directly (tests/codec.rs). A v1
-  `RPIC` payload refuses on decode (version byte).
-  pins: ballista-m1-d/C-001, C-002, C-003, ballista-m2-b/C-004
+  `RPIC` payload refuses on decode (version byte). A spec carrying one SQL filter and one
+  Expr filter round-trips both and scans with both applied; an unknown filter tag byte
+  refuses naming the tag.
+  pins: ballista-m1-d/C-001, C-002, C-003, ballista-m2-b/C-002, C-004
 
 ## Pointers
 

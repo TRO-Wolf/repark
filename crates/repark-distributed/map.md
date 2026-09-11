@@ -89,7 +89,8 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   literals and bracketed names travel. The encode-time rebuild-and-compare guard is
   retired; decode keeps the frozen-snapshot check and session-authority rule. Catalog spec
   recovery stays a Debug probe — no typed catalog accessor at this pin. Wire `RPIC`
-  version 2. pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
+  version 2; each filter item is a tag byte (0 = SQL, 1 = Expr) so both lists travel.
+  pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
 
 ## Contents
 

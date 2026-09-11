@@ -6,6 +6,7 @@ use datafusion::logical_expr::{Expr, Operator};
 use datafusion::prelude::col;
 #[allow(clippy::wildcard_imports)]
 use datafusion_proto::bytes::*;
+use iceberg::arrow::UTC_TIME_ZONE;
 use iceberg::expr::{Predicate, PredicateOperator, Reference};
 use iceberg::spec::{Datum, PrimitiveLiteral, PrimitiveType};
 use repark_core::{Error, Result};
@@ -157,8 +158,8 @@ fn starts_with_expr(column: Expr, literal: &Datum, negated: bool) -> Result<Expr
             return refuse_shape("StartsWith with a non-string datum");
         }
     };
-    if prefix.contains('%') || prefix.contains('_') {
-        return refuse_shape("StartsWith whose prefix carries LIKE wildcards");
+    if prefix.contains('%') || prefix.contains('_') || prefix.contains('\\') {
+        return refuse_shape("StartsWith whose prefix carries LIKE wildcards or the LIKE escape");
     }
     let pattern = format!("{prefix}%");
     Ok(Expr::Like(Like::new(
@@ -218,13 +219,13 @@ fn datum_to_scalar(datum: &Datum) -> Result<ScalarValue> {
             Ok(ScalarValue::TimestampMicrosecond(Some(*value), None))
         }
         (PrimitiveType::Timestamptz, PrimitiveLiteral::Long(value)) => Ok(
-            ScalarValue::TimestampMicrosecond(Some(*value), Some(Arc::<str>::from("+00:00"))),
+            ScalarValue::TimestampMicrosecond(Some(*value), Some(Arc::<str>::from(UTC_TIME_ZONE))),
         ),
         (PrimitiveType::TimestampNs, PrimitiveLiteral::Long(value)) => {
             Ok(ScalarValue::TimestampNanosecond(Some(*value), None))
         }
         (PrimitiveType::TimestamptzNs, PrimitiveLiteral::Long(value)) => Ok(
-            ScalarValue::TimestampNanosecond(Some(*value), Some(Arc::<str>::from("+00:00"))),
+            ScalarValue::TimestampNanosecond(Some(*value), Some(Arc::<str>::from(UTC_TIME_ZONE))),
         ),
         (PrimitiveType::String, PrimitiveLiteral::String(value)) => {
             Ok(ScalarValue::Utf8(Some(value.clone())))
@@ -315,6 +316,70 @@ mod tests {
         assert!(
             error.contains("AlwaysFalse") && error.contains("IcebergTableScan"),
             "refusal must name the AlwaysFalse shape, got {error}"
+        );
+    }
+
+    #[test]
+    fn timestamptz_datum_converts_to_utc_timestamp_microsecond() {
+        let predicate = iceberg::expr::Reference::new("ts").equal_to(Datum::timestamptz_micros(0));
+        let expr = match predicate_to_expr(&predicate) {
+            Ok(expr) => expr,
+            Err(error) => panic!("timestamptz Eq must convert, got {error}"),
+        };
+        let Expr::BinaryExpr(binary) = expr else {
+            panic!("timestamptz Eq must be a binary expr, got {expr}");
+        };
+        let Expr::Literal(scalar, _) = binary.right.as_ref() else {
+            panic!(
+                "timestamptz Eq right side must be a literal, got {}",
+                binary.right
+            );
+        };
+        match scalar {
+            ScalarValue::TimestampMicrosecond(Some(0), Some(zone)) => {
+                assert!(
+                    zone.as_ref() == "UTC",
+                    "timestamptz zone must be UTC, got {zone}"
+                );
+            }
+            other => panic!(
+                "timestamptz datum must become TimestampMicrosecond(Some(0), Some(\"UTC\")), got {other:?}"
+            ),
+        }
+    }
+
+    fn starts_with_refusal(prefix: &str) -> String {
+        let predicate = iceberg::expr::Reference::new("name").starts_with(Datum::string(prefix));
+        match predicate_to_expr(&predicate) {
+            Ok(expr) => panic!("StartsWith prefix {prefix:?} must refuse, got {expr}"),
+            Err(error) => error.to_string(),
+        }
+    }
+
+    #[test]
+    fn starts_with_percent_prefix_refuses_loud() {
+        let error = starts_with_refusal("a%b");
+        assert!(
+            error.contains("StartsWith") && error.contains("IcebergTableScan"),
+            "percent prefix refusal must name StartsWith, got {error}"
+        );
+    }
+
+    #[test]
+    fn starts_with_underscore_prefix_refuses_loud() {
+        let error = starts_with_refusal("a_b");
+        assert!(
+            error.contains("StartsWith") && error.contains("IcebergTableScan"),
+            "underscore prefix refusal must name StartsWith, got {error}"
+        );
+    }
+
+    #[test]
+    fn starts_with_backslash_prefix_refuses_loud() {
+        let error = starts_with_refusal("a\\b");
+        assert!(
+            error.contains("StartsWith") && error.contains("IcebergTableScan"),
+            "backslash prefix refusal must name StartsWith, got {error}"
         );
     }
 }

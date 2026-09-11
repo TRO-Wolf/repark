@@ -22,6 +22,6 @@ pub use codec::{ReparkLogicalExtensionCodec, ReparkPhysicalExtensionCodec, repar
 #[cfg(feature = "cluster")]
 pub use iceberg_provider::{IcebergScanSpec, iceberg_scan_predicates_match};
 #[cfg(feature = "cluster")]
-pub use predicate_expr::predicate_to_expr;
+pub use predicate_expr::{encode_expr, predicate_to_expr};
 #[cfg(feature = "cluster")]
 pub use session_provider::ReparkSessionProvider;
