@@ -80,12 +80,23 @@ conftest guard.
   baseline's own parameter and the value whose enforcer output puts
   `RepartitionExec` under the NLJ build side.
 - **Measured `refusal_names`** come from the H3 evidence and this tree's
-  cells: `ExternalSorter`/`ExternalSorterMerge` (sort, SMJ, windows),
+  cells: `ExternalSorter`/`ExternalSorterMerge`/`SortPreservingMergeExec`
+  (sort, SMJ, windows — the merge exec's own reservation refuses too),
   `GroupedHashAggregateStream` (hash_aggregate), `HashJoinInput`
   (hash_join), `NestedLoopJoinLoad` (nested_loop_join), `UnnestExec`
   (dynamic_flatten). `collect` carries no names: its refusal is
   `MemoryError`, which needs none — and `--refusal-names ""` splits to the
   empty tuple, never a match-all (the worker filters empties).
+- **`datafusion.execution.batch_size = 8192` is pinned for the full tier**
+  (`FULL_SESSION_CONF`). The `generate_series` default batches 65536 rows,
+  which at the 8× payload width is ~560 MB per batch — one batch's own
+  un-accounted scan allocation aborts the worker (SIGABRT) before the
+  operator under test is ever reached. 8192-row batches keep a single scan
+  batch ≈ 70 MB at 8×, so the address-space cap bounds the operator, not
+  the input reader.
+- **Window cells select `payload` in their output.** Without it the
+  optimizer prunes the column at the scan and the window operator sees an
+  8-byte row — a 0.6 s no-op that measures nothing.
 - **Cell kinds.** `sql` cells run `EXPLAIN ANALYZE` and read spill totals
   off the plan metrics. `collect` runs `session.sql(…).collect()` — the
   facade boundary is the measured operation, `EXPLAIN` only writes the plan

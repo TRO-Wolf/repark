@@ -30,22 +30,36 @@ _NLJ_SQL: Final[str] = (
     "JOIN other r ON l.v < r.v"
 )
 _WIN_SLIDING_SQL: Final[str] = (
-    "SELECT id, sum(id) OVER (ORDER BY id ROWS BETWEEN 99 PRECEDING AND CURRENT ROW) AS s FROM base"
+    "SELECT id, payload, "
+    "sum(id) OVER (ORDER BY id ROWS BETWEEN 99 PRECEDING AND CURRENT ROW) AS s FROM base"
 )
-_WIN_UNBOUNDED_SQL: Final[str] = "SELECT id, sum(id) OVER (PARTITION BY (id % 1024)) AS s FROM base"
+_WIN_UNBOUNDED_SQL: Final[str] = (
+    "SELECT id, payload, sum(id) OVER (PARTITION BY (id % 1024)) AS s FROM base"
+)
 _COLLECT_SQL: Final[str] = "SELECT id, payload FROM base"
 _FLAT_SQL: Final[str] = "SELECT * FROM flat"
 
-_SORT_NAMES: Final[tuple[str, ...]] = ("SortExec", "ExternalSorter")
+_SORT_NAMES: Final[tuple[str, ...]] = ("SortExec", "ExternalSorter", "SortPreservingMergeExec")
 _AGG_NAMES: Final[tuple[str, ...]] = ("GroupedHashAggregateStream", "AggregateExec")
 _HASH_JOIN_NAMES: Final[tuple[str, ...]] = ("HashJoinInput", "HashJoinExec")
-_SMJ_NAMES: Final[tuple[str, ...]] = ("SortMergeJoinExec", "ExternalSorter", "SortExec")
+_SMJ_NAMES: Final[tuple[str, ...]] = (
+    "SortMergeJoinExec",
+    "ExternalSorter",
+    "SortExec",
+    "SortPreservingMergeExec",
+)
 _WIN_SLIDING_NAMES: Final[tuple[str, ...]] = (
     "BoundedWindowAggExec",
     "SortExec",
     "ExternalSorter",
+    "SortPreservingMergeExec",
 )
-_WIN_UNBOUNDED_NAMES: Final[tuple[str, ...]] = ("WindowAggExec", "SortExec", "ExternalSorter")
+_WIN_UNBOUNDED_NAMES: Final[tuple[str, ...]] = (
+    "WindowAggExec",
+    "SortExec",
+    "ExternalSorter",
+    "SortPreservingMergeExec",
+)
 _FLAT_NAMES: Final[tuple[str, ...]] = ("UnnestExec",)
 _NLJ_NAMES: Final[tuple[str, ...]] = ("NestedLoopJoinLoad", "NestedLoopJoinExec")
 
@@ -117,8 +131,15 @@ _ROSTER: Final[tuple[RosterRow, ...]] = (
 
 FULL_MULTIPLIERS: Final[tuple[int, ...]] = (2, 4, 8)
 
+FULL_SESSION_CONF: Final[dict[str, str]] = {"datafusion.execution.batch_size": "8192"}
+
 FULL_CELLS: Final[tuple[RosterRow, ...]] = tuple(
-    row.model_copy(update={"multiplier": multiplier})
+    row.model_copy(
+        update={
+            "multiplier": multiplier,
+            "conf": {**FULL_SESSION_CONF, **row.conf},
+        }
+    )
     for row in _ROSTER
     for multiplier in FULL_MULTIPLIERS
 )
