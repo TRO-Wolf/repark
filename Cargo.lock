@@ -5068,6 +5068,8 @@ dependencies = [
  "datafusion",
  "datafusion-proto",
  "futures",
+ "iceberg",
+ "iceberg-datafusion",
  "repark-core",
  "thiserror 2.0.20",
  "tokio",

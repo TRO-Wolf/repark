@@ -30,6 +30,14 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   exists so the codec wrapper can implement a real delegating `PhysicalExtensionCodec`
   (BALLISTA-M2-A D-1). `arrow_flight` is deliberately **not** added (RF-9 D-4). Proof at the seed:
   `cargo build -p repark-distributed --features cluster` green.
+- **D-2b `iceberg-datafusion` + `iceberg` (G-5 seed for BALLISTA-M2-B, ruling S2-17, 2026-09-11).**
+  Both join this crate's `cluster` feature (`dep:iceberg-datafusion`, `dep:iceberg`) through the
+  workspace table, so they resolve to the owned fork's single `[patch.crates-io]` rev and move only
+  with a `make bump-fork-pin` PR — no sixth `rev` line. `iceberg-datafusion` gives the codec
+  `IcebergTableScan`'s typed accessors (`table()`, `resolved_snapshot_id()`, `projection()`,
+  `predicates()`); `iceberg` names the types those accessors return (`Table`, `expr::Predicate`,
+  `spec::Datum`). Neither enters the default build, and both are already in the lockfile through
+  `repark-iceberg`. Proof at the seed: `cargo build -p repark-distributed --features cluster` green.
 - **D-3 / D-4 (step 1).** `src/executor.rs` holds `DistributedExecutor`, `JobHandle`, `JobId`,
   and `JobStatus`. `src/local.rs` holds `LocalDataFusionExecutor`: it runs a plan on the
   session `SessionContext` in-process, reports `Completed`/`Failed` after the stream drains,
