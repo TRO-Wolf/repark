@@ -90,7 +90,11 @@ def main() -> None:
         ),
     ]
     for name, configs in cases:
-        session = open_session(configs)
+        try:
+            session = open_session(configs)
+        except Exception as error:
+            results[name] = {"refused": str(error)}
+            continue
         plans = {
             "numeric_filter": scan_dir_plan(session, "v > 1000000"),
             "string_filter": scan_dir_plan(session, "s LIKE '%7-1%'"),

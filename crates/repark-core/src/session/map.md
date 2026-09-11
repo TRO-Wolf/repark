@@ -9,7 +9,8 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
 `spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
-`session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`). Test cohorts are two: the E-2 gate tests
+`session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
+`conf_unread.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
 `task/port/deferred-tests.md`).
@@ -80,6 +81,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     a genuinely-failing shape silently keeps the slower, correct plan.
   Pins: all seven live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2.
+  **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
+  `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
+  which 54.1.0 defines but no engine path reads) with its refusal constructor;
+  the build sweep in `session.rs` enforces it. Pins: `tests/conf_unread.rs`.
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
@@ -106,6 +111,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   fresh log there would have disarmed the containment on every bounded facade session, and did
   until it was measured.
   pins: h3-spill-residue-1/C-002
+  **CONF-UNREAD-1 step 1 (2026-09-11):** `maybe_apply_runtime_set` also refuses a
+  runtime `SET` of a dead 54.1 key (`coalesce_batches`), so the refusal holds on
+  both SQL doors. Pins: `tests/conf_unread.rs`.
+  pins: conf-unread-1/C-003
 - `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
   rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
   two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding
@@ -196,7 +205,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 |---|---|
 | `S3 read … refused: this session never resolved its AWS SDK config` | Call `register_configured_catalogs()` after signaling AWS use (AWS-backed catalog spec, S3-region conf, or `repark.aws.enable=true`). |
 | Uncorrelated scalar subquery misplans on a bare session | The DF-54.1 guard (`enable_physical_uncorrelated_scalar_subquery = false`) is a core session default (G8), pinned by `bare_session_without_extension_carries_df_54_1_subquery_guard`. |
-| A builder `datafusion.*` key seems ignored | It is not (P2G R2) — `apply_datafusion_config_keys` applies it and an unknown key is a build error, with exact-key exclusions in `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` (`datafusion.runtime.memory_limit` is applied to a **FairSpillPool** at `build()` / runtime SET, never swept into `ConfigOptions`). The typo pin carries TWO fixtures — truncated (catches a namespace-prefix exclusion) and extended (catches a `starts_with(pseudo_key)` exclusion). If the value did not take, check ordering: the extension `configure` hook runs AFTER, so an extension can still overwrite. Pin: `builder_datafusion_config_key_reaches_session_config`. |
+| A builder `datafusion.*` key seems ignored | It is not (P2G R2) — `apply_datafusion_config_keys` applies it and an unknown key is a build error, with exact-key exclusions in `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` (`datafusion.runtime.memory_limit` is applied to a **FairSpillPool** at `build()` / runtime SET, never swept into `ConfigOptions`). The typo pin carries TWO fixtures — truncated (catches a namespace-prefix exclusion) and extended (catches a `starts_with(pseudo_key)` exclusion). A third outcome exists since CONF-UNREAD-1 step 1: a known-but-dead 54.1 key (`datafusion.execution.coalesce_batches`, in `DEAD_DATAFUSION_54_1_KEYS`) refuses loud at build and at runtime SET, naming the key and the reason. If the value did not take, check ordering: the extension `configure` hook runs AFTER, so an extension can still overwrite. Pin: `builder_datafusion_config_key_reaches_session_config`. |
 | Runtime `SET datafusion.runtime.memory_limit` OOMs with `greedy(` | Intercept lives in `spill.rs` (`maybe_apply_runtime_set`) and must run **before** `dialect.execute`. Pin: `runtime_set_memory_limit_oom_is_fair_not_greedy`. |
 | Runtime `SET datafusion.runtime.temp_directory` succeeds silently | R2: must refuse and name `TMPDIR`. Pin: `runtime_set_temp_directory_refuses_loud_naming_tmpdir`. Build-time key: `builder_temp_directory_wires_disk_manager`. |
 

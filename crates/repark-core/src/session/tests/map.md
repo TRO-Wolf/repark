@@ -12,6 +12,15 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).
   pins: rp-5-fork-repin/C-003
 - `aws_gate.rs` — E-2 offline AWS-gate pins.
+- `conf_unread.rs` — **CONF-UNREAD-1 step 1 (2026-09-11):** the four
+  accepted-but-unread keys. `coalesce_batches` refuses loud at build and at
+  runtime `SET`, naming the key and the reason (DataFusion 54.1.0 defines the
+  option but no engine path reads it); `enable_page_index` and
+  `bloom_filter_on_read` set to `false` reach both `SessionConfig` and the
+  session table options the scan source reads (control leg: the default session
+  reads `true`); `write_batch_size` set to `1000` reaches both structures
+  (control leg: the default reads `1024`).
+  pins: conf-unread-1/C-001, C-002, C-003, C-004
 - `df_guard.rs` — seven DataFusion 54.1 guard pins.
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `a13.rs` — `file://` warehouse fallback-root pin.

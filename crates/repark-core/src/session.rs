@@ -37,7 +37,10 @@ mod late_catalogs;
 mod spill;
 mod temp_views;
 
-use df_guards::{apply_df_54_1_config_guards, context_with_df_54_1_rule_guards};
+use df_guards::{
+    DEAD_DATAFUSION_54_1_KEYS, apply_df_54_1_config_guards, context_with_df_54_1_rule_guards,
+    dead_datafusion_54_1_refusal,
+};
 
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
@@ -67,6 +70,9 @@ fn apply_datafusion_config_keys(
     keys.sort();
     for key in keys {
         let value = &map[key];
+        if DEAD_DATAFUSION_54_1_KEYS.contains(&key.as_str()) {
+            return Err(dead_datafusion_54_1_refusal(key, value));
+        }
         config.options_mut().set(key, value).map_err(|error| {
             Error::Config(format!(
                 "invalid DataFusion session config '{key}' = '{value}': {error}"
