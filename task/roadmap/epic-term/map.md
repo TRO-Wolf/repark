@@ -89,7 +89,7 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   `54.1.0` (`f4e66525`). Steps 1–2 landed: Half A facts (line counts,
   dependencies, protobuf inventory, extension-point grep, lifecycle file map)
   plus Half B judgement (§26 A–H, §27, the §28 gate, appendix A6). Step 3
-  (read, ADR disposition line, PR) pending.
+  (read, ADR disposition line, PR) landed (#426, 2026-09-09).
 
 ## Pointers
 - Up: [../map.md](../map.md)

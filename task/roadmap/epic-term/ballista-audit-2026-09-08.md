@@ -35,15 +35,21 @@ all counts below were produced by the commands shown, run at that checkout.
 
 Complexity concentrates in two places. The scheduler is 30182 of 76209
 lines (40%), and over half of that sits in `scheduler/src/state`
-(16427 lines): the stage graph, stage, and task-manager files named in
-appendix A5. `execution_graph.rs` alone is 3020 lines, the largest file in
-the tree. The second mass is `ballista/core` (19233 lines), where the serde
-layer (5721) and the shuffle-heavy `execution_plans` (8153) dominate.
+(16427 lines). That directory is two masses, not one: 7491 lines of
+top-level state files (the stage-graph, stage, session, executor-manager,
+and task-manager files in appendix A5) plus 8936 lines under `state/aqe`
+(adaptive execution: optimizer rules, coalesce, exchange, and its tests),
+which is the largest single scheduler subtree. The six A5 stage-graph files
+are 6101 of the 7491 top-level lines. `execution_graph.rs` alone is 3020
+lines, the largest hand-written file in the tree (the checked-in prost
+output `ballista.rs` is 3129). The second mass is `ballista/core` (19233
+lines), where the serde layer (5721) and the shuffle-heavy
+`execution_plans` (8153) dominate.
 
 The client is thin by design: 3838 lines, of which 3556 are `tests/`, so the
 shipped client surface is about 300 lines over `ballista-core`. The executor
 is mid-size (6090) with no `tests/` directory. Test weight is material:
-20110 `#[cfg(test)]` lines are 26% of the tree, and the scheduler holds 7508
+23249 test-only lines are 30% of the tree, and the scheduler holds 10806
 of them, which raises the cost of any future import of the scheduling core.
 
 `ballista-cli` (11073), `benchmarks` (3079), and `examples` (2714) are
@@ -67,9 +73,17 @@ pull no foreign engine; the JVM-free constraint from the unification brief §1
 is satisfied by construction.
 
 Second, the scheduler and executor binaries pull an operational stack that a
-dependency also inherits: `axum` + `tower-http` (REST API), `prometheus`
-(metrics), `graphviz-rust` (plan display), the KEDA autoscaling proto
-(appendix A3), and `sysinfo` + full `tokio` on the executor. None of this is
+dependency also inherits, in two tiers. Always on under default features:
+`axum` + `tower-http` (unconditional dependencies, `Cargo.toml` lines 51–52;
+`axum` is used outside the REST module too, `scheduler_server/grpc.rs:18`),
+`sysinfo` + full `tokio` on the executor, and the AWS credential stack
+(`aws-config`, `aws-credential-types`) through `ballista-core`'s
+`build-binary` feature, which the scheduler default enables. Optional, off
+by default: `prometheus` (feature `prometheus-metrics`), `graphviz-rust`
+(feature `graphviz-support`), and the KEDA autoscaling module (feature
+`keda-scaler`; the `tonic-prost` crate itself still rides along
+transitively via `arrow-flight`). Appendix A2 shows the feature table and
+the `cargo tree` confirmation. None of this is
 a veto, but it is the real cost of depending on the scheduler crate rather
 than only on core + client, and it is why §26.H scopes the subset narrowly.
 
@@ -141,16 +155,17 @@ ends. Client submit is thin: `ballista/client` (three files, ~300 shipped
 lines) plus `core/src/planner.rs` (319) and `core/src/client.rs` (762).
 Scheduler accept-and-plan centers on `scheduler_server/grpc.rs` (1292),
 `scheduler_server/mod.rs` (1093), and `scheduler/src/planner.rs` (1934);
-per-session state enters through the `SessionProvider` hook
-(`scheduler_server/mod.rs` line 65), which is the seat a RePark session
-builder would occupy. The stage graph (`execution_graph.rs` 3020,
+per-session state enters through the `SessionBuilder` hook
+(`scheduler_server/mod.rs` lines 64–65: `Arc<dyn Fn(SessionConfig) ->
+datafusion::common::Result<SessionState> + Send + Sync>`, re-exported from
+`lib.rs:49`), which is the seat a RePark session builder would occupy. The stage graph (`execution_graph.rs` 3020,
 `execution_stage.rs` 1333, `query_stage_scheduler.rs` 455) is the largest
 and least divisible scheduling mass; task dispatch is a single 1175-line
-file. Executor run spreads ~4700 lines across ten files, with the process
+file. Executor run spreads ~5000 lines across ten files, with the process
 entry (`executor_process.rs` 1158, carrying the codec and config overrides),
 the run loop (`executor.rs` 567, `execution_loop.rs` 380), and the plan
 execution seat (`execution_engine.rs` 519) as the files a RePark embedding
-would touch first. Shuffle write (~3360 lines, eight files) is outweighed by
+would touch first. Shuffle write (~3360 lines, nine files) is outweighed by
 shuffle read (~3940, five files), and the 2430-line `shuffle_reader.rs`
 against the 828-line writer says read-path complexity — coalescing,
 broadcast, multi-stream partition handling — dominates the data plane.
@@ -171,9 +186,9 @@ coordination, Python API). Verdicts:
 |---|---|---|
 | `ballista/core` serde, shuffle `execution_plans`, `extension`, `config`, `planner`, `client`, `object_store`, `registry`, `utils` | KEEP (as dependency) | The read path: plan serialization, shuffle data plane, session/codec/config override seats, object-store registry. No RePark-owned change needed while writes stay coordinator-side. |
 | `ballista/client` | KEEP (as dependency) | Thin submit surface over core; the standalone feature (optional executor + scheduler seats) is the local-first embedding shape. |
-| `ballista/scheduler` state machine (`state/`, `scheduler_server/`, `planner.rs`, `task_manager.rs`) | KEEP (as dependency) | Whole-stage scheduling has no RePark counterpart; the `SessionProvider` and codec-override seats admit RePark sessions without forking. Taken whole, never carved. |
+| `ballista/scheduler` state machine (`state/`, `scheduler_server/`, `planner.rs`, `task_manager.rs`) | KEEP (as dependency) | Whole-stage scheduling has no RePark counterpart; the `SessionBuilder` and codec-override seats admit RePark sessions without forking. Taken whole, never carved. |
 | `ballista/executor` run loop, engine, Flight service | KEEP (as dependency) | Task execution plus the `execution_engine.rs` and `executor_process.rs` override seats. |
-| `ballista/scheduler` REST API (`api/`), KEDA proto + autoscaling hooks, `graphviz` display, `flight_proxy_service` | DROP | Operations/display surface with no RePark requirement behind it; pulled only if the scheduler crate is depended on, switched off where features allow. |
+| `ballista/scheduler` REST API (`api/`), KEDA proto + autoscaling hooks, `graphviz` display, `flight_proxy_service` | DROP | Operations/display surface with no RePark requirement behind it; pulled only if the scheduler crate is depended on. The `api/` module is ungated and `rest-api` is a default feature, so it ships with defaults; `prometheus`, `graphviz`, and KEDA stay off unless their features are enabled (appendix A2). |
 | `ballista-cli`, `benchmarks`, `examples` | DROP | Harness and demo code; not runtime. |
 | `dev/msrvcheck` | DROP | Release tooling (71-line MSRV checker); no runtime content. |
 | `python/` (`pyballista`) | DROP as a crate, WRAP as a pattern | The crate itself is not taken: it couples `pyo3` + `datafusion-python` 54 to the full scheduler/executor path (appendix A6) and would lock RePark's binding to Ballista's release train, against the thin-adapter discipline. Its *pattern* — `PyScheduler`/`PyExecutor` lifecycle classes plus `create_ballista_data_frame` shipping a serialized plan blob to a remote session — is the shape a future RePark distribution switch copies. No divergence is proposed now because no distribution unit has opened. |
@@ -185,7 +200,7 @@ pinned tag — `ballista-core`, `ballista` (client), `ballista-scheduler`,
 surface uncalled. No upstream file is imported, vendored, or renamed. The
 only RePark-owned code this audit anticipates, and only when a distribution
 unit opens, is a thin embedding layer: a delegating codec wrapper (§26.D), a
-session builder occupying the `SessionProvider` seat, and a commit-coordinator
+session builder occupying the `SessionBuilder` seat, and a commit-coordinator
 client that keeps publication coordinator-side. That layer is a future unit's
 design, not this audit's deliverable.
 
@@ -216,21 +231,24 @@ design, not this audit's deliverable.
   recovery); that machinery is RePark-owned and coordinator-side whenever it
   arrives. The risk is assuming the transport provides it.
 - R-7 Operational stack inheritance. Depending on the scheduler crate pulls
-  `axum`, `prometheus`, `graphviz-rust`, and KEDA hooks (§26.C) into RePark's
-  supply chain whether or not RePark calls them.
+  `axum` + `tower-http` and the AWS credential stack (`aws-config`,
+  `aws-credential-types`) into RePark's supply chain under default features,
+  whether or not RePark calls them; `prometheus`, `graphviz-rust`, and the
+  KEDA module stay out unless their features (`prometheus-metrics`,
+  `graphviz-support`, `keda-scaler`) are enabled (§26.C, appendix A2).
 
 ## §26.H — Dependency-versus-import recommendation
 
 RECOMMENDATION: depend, not import. RePark takes `ballista-core`,
 `ballista` (client), `ballista-scheduler`, and `ballista-executor` as
 version-pinned dependencies at tag `54.1.0`, and owns nothing upstream. The
-override seats (§26.D: single-slot codec wrappers; `SessionProvider`;
+override seats (§26.D: single-slot codec wrappers; `SessionBuilder`;
 `override_config_producer` / `override_session_builder`) admit every
 RePark behavior the audit found a requirement for without touching an
 upstream file, and the DF 54 version match (§26.A) removes the usual reason
-to fork. Importing would take ~59 runtime kilolines plus 20 kilolines of
-upstream tests — including the 3020-line stage graph and its 7508 lines of
-scheduler in-source tests — with no owner and no RePark requirement that
+to fork. Importing would take ~59 runtime kilolines plus 23 kilolines of
+upstream tests — including the 3020-line stage graph and its 10806 lines of
+scheduler test-only code — with no owner and no RePark requirement that
 justifies the maintenance. The one condition that reopens this verdict is
 measured, not speculative: a distribution unit proves that a needed behavior
 change falls inside the stage-graph block (R-3) where no override seat
@@ -309,27 +327,134 @@ for d in ballista/client ballista/core ballista/executor ballista/scheduler ball
 | `benchmarks` | 2763 | 0 (no `tests/` dir) |
 | `examples` | 107 | 823 |
 
-Command for the `#[cfg(test)]` in-source test blocks (run at `upstream-ballista/`;
-brace-matching counter over every file listed by
-`grep -rl '#\[cfg(test)\]' ballista ballista-cli benchmarks examples --include='*.rs'`,
-73 files total):
+Command for the test-only lines (run at `upstream-ballista/`). The counter
+below is the command: for every file containing `#[cfg(test)]` it counts the
+attribute line plus the balanced-brace block that follows it (comments,
+block comments, and string/char literals excluded from brace matching;
+a body-less declaration such as a trait method contributes its attribute
+line only). Two test-only modules live behind `mod x;` declarations with no
+inner marker and are counted by the second command:
 
 ```sh
-python3 -c "<brace-matching counter; see ledger C-001 evidence>"
+python3 - <<'EOF'
+import subprocess
+import sys
+
+roots = sys.argv[1:] or ["ballista", "ballista-cli", "benchmarks", "examples"]
+files = subprocess.run(
+    ["grep", "-rl", "--include=*.rs", r"#\[cfg(test)\]"] + roots,
+    capture_output=True,
+    text=True,
+    check=True,
+).stdout.split()
+
+
+def code_part(line, in_block):
+    out = []
+    i = 0
+    n = len(line)
+    while i < n:
+        if in_block:
+            end = line.find("*/", i)
+            if end < 0:
+                return "".join(out), True
+            i = end + 2
+            in_block = False
+        elif line.startswith("//", i):
+            break
+        elif line.startswith("/*", i):
+            in_block = True
+            i += 2
+        elif line[i] == '"':
+            i += 1
+            while i < n:
+                if line[i] == "\\":
+                    i += 2
+                elif line[i] == '"':
+                    i += 1
+                    break
+                else:
+                    i += 1
+        elif line[i] == "'":
+            i += 1
+            while i < n:
+                if line[i] == "\\":
+                    i += 2
+                elif line[i] == "'":
+                    i += 1
+                    break
+                else:
+                    i += 1
+        else:
+            out.append(line[i])
+            i += 1
+    return "".join(out), in_block
+
+
+def test_lines(path):
+    total = 0
+    depth = 0
+    pending = False
+    start = None
+    in_block = False
+    with open(path) as handle:
+        for raw in handle:
+            code, in_block = code_part(raw.rstrip("\n"), in_block)
+            if start is not None:
+                total += 1
+            else:
+                if "#[cfg(test)]" in code:
+                    pending = True
+                    total += 1
+                    if "{" in code:
+                        start = depth
+                        pending = False
+                elif pending and "{" in code:
+                    start = depth
+                    pending = False
+                    total += 1
+                elif pending and ";" in code:
+                    pending = False
+            depth += code.count("{") - code.count("}")
+            if start is not None and depth <= start:
+                start = None
+    return total
+
+
+per_dir = {}
+grand = 0
+for path in sorted(files):
+    count = test_lines(path)
+    grand += count
+    key = path.split("/")[0] + ("/" + path.split("/")[1] if path.startswith("ballista/") else "")
+    per_dir[key] = per_dir.get(key, 0) + count
+print(f"{len(files)} files with #[cfg(test)]")
+for key in sorted(per_dir):
+    print(f"{per_dir[key]:7d}  {key}")
+print(f"{grand:7d}  TOTAL")
+EOF
+wc -l ballista/scheduler/src/test_utils.rs ballista/scheduler/src/state/aqe/test/*.rs
 ```
 
-| Location | `#[cfg(test)]` lines |
+| Location | test-only lines |
 |---|---:|
-| `ballista/client` `tests/` files | 3129 |
-| `ballista/core` `src/` | 4084 |
-| `ballista/executor` `src/` | 1072 |
-| `ballista/scheduler` `src/` | 7508 |
-| `ballista-cli` `src/` | 2917 |
-| `benchmarks` `src/` | 787 |
-| `examples` `tests/` files | 613 |
-| **Total `#[cfg(test)]`** | **20110** |
+| `ballista/client` | 3123 |
+| `ballista/core` | 4083 |
+| `ballista/executor` | 1071 |
+| `ballista/scheduler` in-source blocks | 7208 |
+| `ballista/scheduler` test-only files (`test_utils.rs` + `state/aqe/test/`) | 3598 |
+| `ballista-cli` | 2849 |
+| `benchmarks` | 707 |
+| `examples` | 610 |
+| **Total test-only** | **23249** |
 
-Largest `src/` subdirectories, command
+The earlier `20110` figure had no runnable command behind it and no stated
+method reproduces it, so it is replaced by the measured `23249` (73 files
+with `#[cfg(test)]`, 19651 block lines, 3598 lines in wholly test-gated
+files). §26.B and §26.H use the new total.
+
+Largest `src/` subdirectories, command (run at `upstream-ballista/`;
+repeat with `<src>` set to each crate's `src/` directory)
 `for s in $(find <src> -mindepth 1 -maxdepth 1 -type d); do echo -n "$s: "; find $s -name '*.rs' | xargs wc -l | tail -1; done`:
 
 | Directory | Lines |
@@ -341,6 +466,19 @@ Largest `src/` subdirectories, command
 | `ballista/scheduler/src/cluster` | 2069 |
 | `ballista/scheduler/src/physical_optimizer` | 1845 |
 | `ballista/scheduler/src/api` | 1354 |
+
+`state/` splits 7491 / 8936 by this command (run at `upstream-ballista/`):
+
+```sh
+find ballista/scheduler/src/state -maxdepth 1 -name '*.rs' | xargs wc -l | tail -1
+find ballista/scheduler/src/state/aqe -name '*.rs' | xargs wc -l | tail -1
+```
+
+The 7491 top-level lines are all eight `state/*.rs` files (3020 + 1333 +
+1175 + 669 + 584 + 413 + 211 + 86); the six A5 stage-graph files are 6101
+of them. The 8936 `state/aqe` lines (optimizer rules, coalesce, exchange,
+planner, adapter, and `test/`) are the largest single scheduler subtree,
+not stage-graph. §26.B no longer attributes the whole 16427 to the A5 set.
 
 ## Appendix A2 — Direct dependencies per crate
 
@@ -365,6 +503,33 @@ sed -n '/^\[dependencies\]/,/^\[/p' <crate>/Cargo.toml
 `(ws)` marks a version pinned once in the workspace root `Cargo.toml`.
 Internal shape: every Ballista crate depends on `ballista-core`; only the
 client optionally pulls in executor and scheduler (standalone feature).
+
+Default versus optional (scheduler `Cargo.toml` `[features]`: `default =
+["build-binary", "rest-api"]`, lines 36–37; `graphviz-support`,
+`keda-scaler`, `prometheus-metrics`, `rest-api`, `spark-compat`, `substrait`
+on lines 41–46, none in the default set; `axum` and `tower-http` are
+unconditional dependencies, lines 51–52; `ballista-core`'s `build-binary`
+is `["aws-config", "aws-credential-types", "clap", "object_store"]`). The
+`cargo tree` confirmation below ran in a scratch crate pinning
+`ballista-scheduler = "=54.1.0"`, the same version this workspace pins:
+
+```sh
+cargo tree --offline -e normal --depth 1 -p ballista-scheduler
+cargo tree --offline -e normal -p ballista-scheduler -i aws-config
+cargo tree --offline -e normal -p ballista-scheduler -i prometheus
+cargo tree --offline -e normal -p ballista-scheduler -i graphviz-rust
+cargo tree --offline -e normal -p ballista-scheduler -i tonic-prost
+```
+
+Depth 1 shows `axum`, `tower-http`, `clap`, `tracing`, and the rest of the
+unconditional set, with no `prometheus`, `graphviz-rust`,
+`datafusion-substrait`, or `tonic-prost-build`. `-i aws-config` resolves to
+`aws-config` under `ballista-core` under `ballista-scheduler`: the scheduler
+defaults pull AWS. `-i prometheus` and `-i graphviz-rust` fail with `did not
+match any packages`: both stay out unless `prometheus-metrics` /
+`graphviz-support` are enabled. `-i tonic-prost` resolves through
+`arrow-flight`, not through any KEDA edge: the crate rides along
+transitively while the KEDA scaler module stays behind its feature.
 
 ## Appendix A3 — Protobuf file inventory
 
@@ -465,7 +630,7 @@ Each row lists one file and every hit line in it. Definition sites carry
 | `ballista/core/src/registry.rs` | 19, 166, 167 |
 | `ballista/executor/src/standalone.rs` | 38, 54, 161 |
 | `examples/tests/common/mod.rs` | 24, 77 |
-| `ballista/scheduler/src/scheduler_server/mod.rs` | 27, 65 (`SessionProvider` hook: builds `SessionState` from `SessionConfig`) |
+| `ballista/scheduler/src/scheduler_server/mod.rs` | 27, 64–65 (`SessionBuilder` hook: builds `SessionState` from `SessionConfig`) |
 | `ballista/scheduler/src/standalone.rs` | 34, 61 |
 | `examples/examples/standalone-broadcast-join.rs` | 38, 134 |
 | `examples/examples/remote-dataframe.rs` | 22, 32 |
