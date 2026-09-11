@@ -1,4 +1,7 @@
-"""DF-EAGER-1 step 1: red-first pins for .eager(), .compute() and .lazy()."""
+"""DF-EAGER-1 step 1: red-first pins for .eager(), .compute() and .lazy().
+
+pins: display-lazy-1/C-002
+"""
 
 from __future__ import annotations
 
@@ -107,15 +110,19 @@ def test_repr_of_eager_frame_skips_count_and_matches_lazy_table(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """repr of an eager frame prints the lazy table with zero count() calls."""
+    """Lazy repr is the schema header; eager repr prints the data table with zero counts."""
     calls = _install_count_spy(monkeypatch)
     frame = polars_session.sql(_ORDERED_12_SQL)
-    lazy_repr = repr(frame)
-    assert calls == [1]
+    lazy_lines = repr(frame).splitlines()
+    assert calls == []
+    assert lazy_lines[0].startswith("lazy: ")
     eager = frame.eager()
     calls.clear()
-    assert repr(eager) == lazy_repr
+    eager_lines = repr(eager).splitlines()
     assert calls == []
+    assert eager_lines[0] == "shape: (12, 1)"
+    assert eager_lines[1:5] == lazy_lines[1:5]
+    assert eager_lines[-1] == lazy_lines[-1]
 
 
 def test_eager_frame_survives_csv_source_deletion(

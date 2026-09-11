@@ -1,6 +1,7 @@
 """DISPLAY-POLARS-1 steps 2 and 3 pins: styled show fetch discipline and styled repr doors.
 
 pins: display-polars-1/C-003, display-polars-1/C-004
+pins: display-lazy-1/C-001, C-002
 """
 
 from __future__ import annotations
@@ -133,19 +134,25 @@ def test_large_frame_counts_once(
 
 
 def test_polars_repr_renders_table_without_eager_eval(polars_session: ReparkSession) -> None:
-    """repr under polars returns exactly the table show() prints, eager eval unset."""
+    """Lazy repr is the schema header; eager repr is exactly the table show() prints."""
     frame = polars_session.sql(_ORDERED_7_SQL)
     shown = _capture_show(frame)
     assert shown.startswith("shape: (7, 1)")
-    assert repr(frame) == shown
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "│ 1   │" not in lazy
+    assert repr(frame.eager()) == shown
 
 
 def test_duckdb_repr_renders_table(duckdb_session: ReparkSession) -> None:
-    """repr under duckdb returns exactly the styled box show() prints, eager eval unset."""
+    """Lazy repr is the schema header; eager repr is exactly the box show() prints."""
     frame = duckdb_session.sql(_ORDERED_7_SQL)
     shown = _capture_show(frame)
     assert "7 rows" in shown
-    assert repr(frame) == shown
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "7 rows" not in lazy
+    assert repr(frame.eager()) == shown
 
 
 def test_spark_repr_unchanged(spark_session: ReparkSession) -> None:
@@ -187,15 +194,15 @@ def test_small_frame_repr_does_not_count(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A 7-row frame's repr renders whole through the probe fetch with zero count calls."""
+    """A lazy 7-row frame's repr is the schema header with zero count calls."""
     calls = _install_count_spy(monkeypatch)
     frame = polars_session.sql(_ORDERED_7_SQL)
     out = repr(frame)
     assert calls == []
-    assert out.startswith("shape: (7, 1)")
-    assert "│ 1   │" in out
-    assert "│ 7   │" in out
-    assert "│ …   │" not in out
+    assert out.splitlines()[0].startswith("lazy: ")
+    assert "shape:" not in out
+    assert "│ 1   │" not in out
+    assert "│ 7   │" not in out
 
 
 _ORACLE_SQL_INTS_STRINGS_NULLS = """\
@@ -242,35 +249,43 @@ def test_polars_oracle_ints_strings_nulls(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The polars look matches polars itself on ints, strings, nulls, and nested cells."""
+    """Lazy repr is the header; eager repr matches polars itself on nested cells."""
     frame = polars_session.sql(_ORACLE_SQL_INTS_STRINGS_NULLS)
-    assert repr(frame) == _polars_text_of(frame, monkeypatch)
+    assert repr(frame).splitlines()[0].startswith("lazy: ")
+    assert "{" not in repr(frame)
+    assert repr(frame.eager()) == _polars_text_of(frame, monkeypatch)
 
 
 def test_polars_oracle_floats_bools_dates(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The polars look matches polars itself on floats, bools, and dates."""
+    """Lazy repr is the header; eager repr matches polars itself on dates."""
     frame = polars_session.sql(_ORACLE_SQL_FLOATS_BOOLS_DATES)
-    assert repr(frame) == _polars_text_of(frame, monkeypatch)
+    assert repr(frame).splitlines()[0].startswith("lazy: ")
+    assert repr(frame.eager()) == _polars_text_of(frame, monkeypatch)
 
 
 def test_polars_oracle_wide_frame_col_ellipsis(
     polars_session: ReparkSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A 9-column frame matches polars itself: first four, a column, last four."""
+    """A 9-column lazy frame elides the header; eager matches polars itself."""
     frame = polars_session.sql(_ORACLE_WIDE_SQL)
-    assert repr(frame) == _polars_text_of(frame, monkeypatch)
+    lazy = repr(frame)
+    assert lazy.splitlines()[0].startswith("lazy: ")
+    assert "c4" not in lazy
+    assert repr(frame.eager()) == _polars_text_of(frame, monkeypatch)
 
 
 def test_str_len_cuts_with_ellipsis(polars_session: ReparkSession) -> None:
-    """Cells longer than str_len keep str_len characters plus one ellipsis."""
+    """Eager cells longer than str_len keep str_len characters plus one ellipsis."""
     assert polars_session.conf.get("repark.display.str_len") == "30"
     frame = polars_session.sql("SELECT 'abcdefghijklmnopqrstuvwxyz0123456789' AS s")
-    assert "abcdefghijklmnopqrstuvwxyz0123…" in repr(frame)
-    assert "abcdefghijklmnopqrstuvwxyz0123456789" not in repr(frame)
+    eager = frame.eager()
+    assert "abcdefghijklmnopqrstuvwxyz0123…" in repr(eager)
+    assert "abcdefghijklmnopqrstuvwxyz0123456789" not in repr(eager)
+    assert "…" not in repr(frame)
     shown = _capture_show(frame, truncate=False)
     assert "abcdefghijklmnopqrstuvwxyz0123456789" in shown
     shown_ten = _capture_show(frame, truncate=10)
@@ -278,8 +293,8 @@ def test_str_len_cuts_with_ellipsis(polars_session: ReparkSession) -> None:
     assert "abcdefghijk" not in shown_ten
     polars_session.conf.set("repark.display.str_len", "4")
     try:
-        assert "abcd…" in repr(frame)
-        assert "abcde" not in repr(frame)
+        assert "abcd…" in repr(eager)
+        assert "abcde" not in repr(eager)
     finally:
         polars_session.conf.unset("repark.display.str_len")
     assert polars_session.conf.get("repark.display.str_len") == "30"
@@ -308,12 +323,18 @@ def test_display_keys_conf_get_set(polars_session: ReparkSession) -> None:
     wide = polars_session.sql("SELECT 1 AS a, 2 AS b, 3 AS c, 4 AS d, 5 AS e, 6 AS f")
     polars_session.conf.set("repark.display.max_cols", 4)
     try:
-        wide_out = repr(wide)
+        wide_out = repr(wide.eager())
         assert wide_out.startswith("shape: (1, 6)")
         assert "│ a   ┆ b   ┆ … ┆ e   ┆ f   │" in wide_out
         assert "│ 1   ┆ 2   ┆ … ┆ 5   ┆ 6   │" in wide_out
         assert "┆ c " not in wide_out
         assert "┆ d " not in wide_out
+        lazy_out = repr(wide)
+        assert lazy_out.splitlines()[0].startswith("lazy: ")
+        assert "│ a   ┆ b   ┆ … ┆ e   ┆ f   │" in lazy_out
+        assert "│ 1   ┆ 2   ┆ … ┆ 5   ┆ 6   │" not in lazy_out
+        assert "┆ c " not in lazy_out
+        assert "┆ d " not in lazy_out
     finally:
         polars_session.conf.unset("repark.display.max_cols")
     for bad in ("0", "-1", "abc", "10.5", ""):
