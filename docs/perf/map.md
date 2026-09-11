@@ -237,6 +237,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   retirements (`nested`/`secrets` covered but consumed outside their own tests;
   `schema_inference`/`extreme_types`/`smartcsv` partly covered).
   pins: torture-1/C-031, C-032, C-033, C-034, C-036
+- [adapt-part-ap1-2026-09-11.md](adapt-part-ap1-2026-09-11.md) — **AP-1 step 2
+  (measure, 2026-09-11):** `CALL plan_partitioning` run against the same three beds
+  on the release module — per-bed `byte_ratio` measured from parquet footers and
+  independently recomputed (futures 0.462675 on zstd CTAS files; uniform and skewed
+  1.0 on uncompressed INSERT files — the write-path codec split is named), the top
+  three frame rows verbatim per bed, and the projection re-read against AP-0's O-run
+  actuals: still +76.2 % / +88.0 % on the synthetic beds, filed as residue
+  AP-1-R-001 with its mechanism (the footer ratio reads the input codec; the rewrite
+  changed codec).
+  pins: ap-1/C-012
 
 ## Pointers
 
