@@ -80,26 +80,49 @@ and measured-parity contract would grow `call.rs` beyond its exact
 - `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read
-  (`file_size_in_bytes` plus the `readable_metrics` bound pairs) and the `refs` table; no data
-  scan. P-2 per column: timestamp/date → `years`/`months`/`days`/`hours`; int/string →
-  `identity` when the bound-endpoint union holds at most 1000 values else `bucket(N)`; plus
-  `unpartitioned`; pairs cross the best single of the top three columns. P-3 scores each
-  projected value against the 0.25×–4× target band (a file spanning k values contributes 1/k to
-  each) and ranks by score, projected files, name. The scoring constants live in one place,
-  `plan_partitioning_score.rs`: band 0.25 and 4.0, distinct limit 1000, bucket widths
-  8/16/32/64/128. The frame answers D-1's
+  (`file_size_in_bytes`, `file_path`, plus the `readable_metrics` bound pairs) and the `refs`
+  table; no data scan. P-2 per column: timestamp/date → `years`/`months`/`days`/`hours`;
+  int/string → `identity` when the bound-endpoint union holds at most 1000 values else
+  `bucket(N)`; plus `unpartitioned`; pairs cross the best single of the top three columns.
+  P-3 scores each projected value against the 0.25×–4× target band (a file spanning k values
+  contributes 1/k to each) and ranks by score, projected files, name. The scoring constants
+  live in one place, `plan_partitioning_score.rs`: band 0.25 and 4.0, distinct limit 1000,
+  bucket widths 8/16/32/64/128, and `FALLBACK_BYTE_RATIO = 0.55` (S2-10/D-4: the value AP-0's
+  O-run measured post-rewrite bytes at, 0.53–0.57× of the pre-rewrite sum —
+  `docs/perf/ap-0-partition-candidates-2026-09-10.md` §"The O-run"). The frame answers D-1's
   `candidate`/`score`/`projected_partitions`/`projected_files_at_target`/`ddl`/`calls`/`plan_id`
-  plus `notes`; `plan_id` hashes snapshot id plus candidate. Every row carries the AP-0-R-001
-  caveat (file counts derive from pre-rewrite bytes, 76–88 % high on the AP-0 beds); the last
-  row additionally names boundless columns; more than one partition spec in metadata adds the
-  one-spec rewrite note. A branch besides `main` refuses (P-5). Timestamps truncate in UTC
-  through a dependency-free civil calendar.
-  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  plus `notes`; `plan_id` hashes snapshot id plus candidate. **AP-1 step 2 (2026-09-11):**
+  `projected_files_at_target` now derives from post-rewrite bytes — each partition value's
+  raw byte share times `byte_ratio` (per `plan_partitioning_bytes.rs`); `score` keeps the raw
+  P-3 band model, D-4 amends the file-count projection only. Every row's `notes` carries
+  `byte_ratio=<r rounded 2 places> (footers|fallback)` and the reworded AP-0-R-001 caveat
+  (the projection now applies the ratio); the last row additionally names boundless columns;
+  more than one partition spec in metadata adds the one-spec rewrite note. A branch besides
+  `main` refuses (P-5). Timestamps truncate in UTC through a dependency-free civil calendar.
+  pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- `plan_partitioning_bytes.rs` — **AP-1 step 2 (2026-09-11):** the `byte_ratio` measurement
+  behind the step-2 byte model. For every live data file's `file_path` it opens the table's
+  own `FileIO`, takes the file size from `metadata()`, and range-reads only the parquet tail
+  (last 8 bytes, then the footer extent the `NeedMoreData` hint names — never row-group data)
+  through `datafusion::parquet`'s `ParquetMetaDataReader` (the `datafusion` re-export; no new
+  dependency). `byte_ratio` is Σ `total_compressed_size` / Σ `total_uncompressed_size` over
+  every column chunk of every row group; any unreadable footer (bad magic, missing file,
+  non-parquet data file, thrift decode failure, zero uncompressed sum) yields
+  `FALLBACK_BYTE_RATIO` and the `fallback` source tag, else `footers`. Note on coverage:
+  repark's own write paths split codecs — CTAS writes zstd via `writer_properties_for` while
+  `INSERT INTO` goes through the fork's `iceberg-datafusion` task writer at parquet-rs's
+  uncompressed default — so an INSERT-grown table measures 1.0 and the correction is a no-op
+  there; measured on the AP-0 beds in
+  `docs/perf/adapt-part-ap1-2026-09-11.md`.
+  pins: ap-1/C-010, C-011
 - `plan_partitioning_score.rs` — the pure P-2/P-3 engine behind the procedure above:
   the civil calendar, the grains, the Spark DDL labels, the 1/k byte spread, the band
   penalty, the single/pair scoring and the best-first ranking, plus the in-module unit tests
-  for each. No SQL, no catalog reads; the caller feeds it rated bound pairs.
-  pins: ap-1/C-001, C-009
+  for each. No SQL, no catalog reads; the caller feeds it rated bound pairs. Step 2 threads
+  `byte_ratio` through `accumulate`/`score_single`/`score_pair`: `score` and
+  `projected_partitions` stay on raw file bytes (P-3 verbatim); only the projected file
+  count folds each value's share by the ratio before `ceil(…/target)`.
+  pins: ap-1/C-001, C-009, C-010
 
 ## Pointers
 

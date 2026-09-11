@@ -93,6 +93,54 @@ A CALL with neither refuses loud:
 run_maintenance: no [default.maintenance] table and no inline keys for ns.t
 ```
 
+## Planning a partition spec — `CALL plan_partitioning()`
+
+`run_maintenance` keeps today's layout; `plan_partitioning` proposes tomorrow's.
+It reads the `files` metadata table (per-file sizes and paths plus the
+`readable_metrics` lower/upper bounds) and the `refs` table, never the data,
+and returns one row per candidate spec, best first:
+
+```sql
+CALL <catalog>.system.plan_partitioning(table => 'db.t', target_file_size_bytes => 524288)
+```
+
+Both arguments are required and the target must be a positive integer.
+
+| Column | Contents |
+|---|---|
+| `candidate` | the spec in Spark DDL spelling — `days(ts)`, `bucket(16, id)`, `identity(region)`, or `unpartitioned` |
+| `score` | the target-band penalty, lower is better; 0 means every projected partition value lands between 0.25× and 4× the target |
+| `projected_partitions` | partition values carrying bytes under the candidate |
+| `projected_files_at_target` | projected files per value — `ceil(post-rewrite bytes / target)` — summed |
+| `ddl` | the `ALTER TABLE … ADD PARTITION FIELD` statements the candidate would take |
+| `calls` | the maintenance CALL chain that would follow (`rewrite_data_files`, `rewrite_manifests`, `expire_snapshots`) |
+| `plan_id` | a hash of the snapshot id and the candidate; an apply step requires this dry-run id |
+| `notes` | per-candidate spread assumptions plus the table-wide caveats below |
+
+`projected_files_at_target` projects post-rewrite bytes: the procedure reads
+every live data file's parquet footer through the table's own `FileIO` (a
+metadata read only — no row-group data is decoded), sums each column chunk's
+`total_compressed_size` and `total_uncompressed_size`, and folds each partition
+value's byte share by that `byte_ratio` before dividing by the target. Every
+row's `notes` reports the ratio as `byte_ratio=<value> (footers)`. When any
+footer is unreadable the ratio falls back to the measured constant 0.55 and the
+notes say `(fallback)`. The AP-0-R-001 caveat stays on every row: the
+projection applies the ratio to the pre-rewrite file bytes, and
+`projected_partitions` is the column the AP-0 rewrite measured exact.
+
+Candidate generation follows P-2: timestamp and date columns get
+`years`/`months`/`days`/`hours`; int and string columns get `identity` when the
+union of their bound endpoints holds at most 1 000 values, else `bucket(N)` for
+N ∈ {8, 16, 32, 64, 128}; plus `unpartitioned` and the two-field specs crossing
+the best single candidate of the top three columns. A column with no readable
+bounds produces no candidate — the last row's `notes` names it and why. Tables
+with a branch besides `main` refuse; a table carrying several partition specs
+plans normally with a note that applying would rewrite to one spec.
+
+The procedure plans only — it writes nothing and changes no table. Applying a
+plan is a later unit's `apply_partitioning`, keyed by `plan_id`; until then the
+`calls` column is documentation of the chain an operator would issue.
+
 ## Reserved: `adaptive_partitioning`
 
 The `adaptive_partitioning` key is reserved for a later unit and refuses with

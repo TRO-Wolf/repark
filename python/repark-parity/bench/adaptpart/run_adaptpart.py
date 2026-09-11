@@ -515,6 +515,19 @@ def analyze_bed(
     )
 
 
+def print_plan_frame(session: ReparkSession, bed: str, target: int) -> None:
+    """Issue CALL plan_partitioning on one bed and print every frame row."""
+    frame = session.sql(
+        f"CALL ap.system.plan_partitioning(table => 'ns.{bed}', target_file_size_bytes => {target})"
+    ).to_arrow()
+    print(f"== plan {bed} ==")
+    for index, row in enumerate(frame.to_pylist(), start=1):
+        print(f"rank {index}")
+        for key, value in row.items():
+            print(f"  {key}: {value}")
+    print("")
+
+
 def format_bed_report(report: BedReport) -> str:
     """Render one bed's facts and its ranked candidate table as text."""
     constant = ", ".join(report.constant_columns) if report.constant_columns else "none"
@@ -557,6 +570,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--batches", type=int, default=200, help="append batches per synthetic bed")
     parser.add_argument("--batch-rows", type=int, default=2000, help="rows per synthetic batch")
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="after scoring, run CALL ap.system.plan_partitioning on each bed and print the frame",
+    )
     parser.add_argument(
         "--futures-parquet",
         type=Path,
@@ -601,6 +619,9 @@ def main() -> int:
             )
             print(format_bed_report(report))
             print("")
+        if args.plan:
+            for bed in ("futures", "uniform", "skewed"):
+                print_plan_frame(session, bed, args.target_file_size_bytes)
     finally:
         session.stop()
     return 0

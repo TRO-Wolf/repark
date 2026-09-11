@@ -161,6 +161,18 @@ async fn seed_days90(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     }
 }
 
+async fn seed_compressible(ctx: &SessionContext, catalogs: &CatalogRegistry) {
+    let padding = "a".repeat(600);
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.comp USING iceberg AS SELECT TIMESTAMP '2026-01-01 00:00:00' AS ts, '{padding}' AS note FROM src a CROSS JOIN src b CROSS JOIN src c CROSS JOIN src d CROSS JOIN src e"
+        ),
+    )
+    .await;
+}
+
 async fn seed_regions(ctx: &SessionContext, catalogs: &CatalogRegistry) {
     run(
         ctx,
@@ -463,4 +475,142 @@ async fn plan_identity_region_ranks_first_at_twice_target() {
         plan[0].score
     );
     assert_eq!(plan[0].partitions, 4);
+}
+
+async fn data_file_paths(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<String> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT file_path FROM {table}.files WHERE content = 0"),
+    )
+    .await
+    .expect("file_path query")
+    .collect()
+    .await
+    .expect("collect file paths");
+    let mut paths = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("file_path is Utf8");
+        for row in 0..batch.num_rows() {
+            paths.push(column.value(row).to_string());
+        }
+    }
+    paths
+}
+
+fn fs_path(file_path: &str) -> String {
+    for prefix in ["file://", "file:"] {
+        if let Some(rest) = file_path.strip_prefix(prefix) {
+            return if rest.starts_with('/') {
+                rest.to_string()
+            } else {
+                format!("/{rest}")
+            };
+        }
+    }
+    file_path.to_string()
+}
+
+fn footer_ratio_independent(paths: &[String]) -> f64 {
+    use datafusion::parquet::file::metadata::ParquetMetaDataReader;
+    let mut compressed = 0_i64;
+    let mut uncompressed = 0_i64;
+    for path in paths {
+        let file = std::fs::File::open(fs_path(path)).expect("data file opens");
+        let metadata = ParquetMetaDataReader::new()
+            .parse_and_finish(&file)
+            .expect("footer parses");
+        for group in metadata.row_groups() {
+            for column in group.columns() {
+                compressed += column.compressed_size();
+                uncompressed += column.uncompressed_size();
+            }
+        }
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let ratio = compressed as f64 / uncompressed as f64;
+    ratio
+}
+
+#[tokio::test]
+async fn plan_byte_ratio_is_measured_from_parquet_footers() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_compressible(&ctx, &catalogs).await;
+    let total = files_total_bytes(&ctx, &catalogs, "ice.sales.comp").await;
+    let target = total / 2;
+    let paths = data_file_paths(&ctx, &catalogs, "ice.sales.comp").await;
+    let measured = footer_ratio_independent(&paths);
+    assert!(
+        measured > 0.0 && measured < 1.0,
+        "fixture footers yield a ratio strictly inside (0, 1), got {measured}"
+    );
+    let plan = plan_rows(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.plan_partitioning(table => 'sales.comp', target_file_size_bytes => {target})"
+        ),
+    )
+    .await;
+    for row in &plan {
+        assert!(
+            row.notes
+                .contains(&format!("byte_ratio={measured:.2} (footers)")),
+            "every row carries the footer-measured ratio, got: {}",
+            row.notes
+        );
+    }
+    let unpartitioned = plan
+        .iter()
+        .find(|row| row.candidate == "unpartitioned")
+        .expect("unpartitioned row present");
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    let expected = (total as f64 * measured / target as f64).ceil() as i64;
+    assert_eq!(
+        unpartitioned.files_at_target, expected,
+        "projected files derive from footer-scaled bytes"
+    );
+}
+
+#[tokio::test]
+async fn plan_byte_ratio_falls_back_when_a_footer_is_unreadable() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_days90(&ctx, &catalogs).await;
+    let total = files_total_bytes(&ctx, &catalogs, "ice.sales.days90").await;
+    let target = total / 90;
+    let sql = format!(
+        "CALL ice.system.plan_partitioning(table => 'sales.days90', target_file_size_bytes => {target})"
+    );
+    let paths = data_file_paths(&ctx, &catalogs, "ice.sales.days90").await;
+    std::fs::write(fs_path(&paths[0]), b"not a parquet file").expect("corrupt one data file");
+    let plan = plan_rows(&ctx, &catalogs, &sql).await;
+    for row in &plan {
+        assert!(
+            row.notes.contains("byte_ratio=0.55 (fallback)"),
+            "every row reports the fallback ratio, got: {}",
+            row.notes
+        );
+    }
+    let unpartitioned = plan
+        .iter()
+        .find(|row| row.candidate == "unpartitioned")
+        .expect("unpartitioned row present");
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    let expected = (total as f64 * 0.55 / target as f64).ceil() as i64;
+    assert_eq!(
+        unpartitioned.files_at_target, expected,
+        "projected files derive from the fallback ratio"
+    );
 }
