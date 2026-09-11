@@ -52,3 +52,17 @@ def test_ci_tier_step2_families_under_60_seconds(spark: ReparkSession, tmp_path:
         assert_loud_rows(csv_outcome, CI_ROWS, "dataframe")
     elapsed = time.perf_counter() - started
     assert elapsed < BUDGET_SECONDS, elapsed
+
+
+def test_ci_tier_step3_family_under_60_seconds(spark: ReparkSession, tmp_path: Path) -> None:
+    """The step-3 secrets family generates and reads on both doors inside the 60-second budget."""
+    started = time.perf_counter()
+    output = family_output(FAMILIES["secrets"], rows=CI_ROWS, seed=7, out=tmp_path / "secrets")
+    table = read_frame_door(spark, output.parquet_path, "parquet")
+    assert table.num_rows == CI_ROWS
+    read_sql_door(spark, output.parquet_path, "parquet", "torture_timer_secrets_parquet")
+    csv_table = read_frame_door(spark, output.csv_path, "csv")
+    assert csv_table.num_rows == CI_ROWS
+    read_sql_door(spark, output.csv_path, "csv", "torture_timer_secrets_csv")
+    elapsed = time.perf_counter() - started
+    assert elapsed < BUDGET_SECONDS, elapsed

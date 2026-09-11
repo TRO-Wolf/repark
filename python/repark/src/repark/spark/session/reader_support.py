@@ -82,6 +82,15 @@ _JSON_UNSUPPORTED_PARSE_OPTIONS: frozenset[str] = frozenset(
 )
 
 
+_CSV_JSON_ONLY_OPTION_KEYS: frozenset[str] = frozenset(
+    {
+        "compression",
+        "flag_secret_columns",
+        "flagsecretcolumns",
+    }
+)
+
+
 _CSV_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
     {
         "header",
@@ -94,6 +103,8 @@ _CSV_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
         "inferschema",
         "multiline",
         "compression",
+        "flag_secret_columns",
+        "flagsecretcolumns",
     }
 )
 
@@ -102,6 +113,8 @@ _JSON_NATIVE_OPTION_KEYS: frozenset[str] = frozenset(
     {
         "multiline",
         "compression",
+        "flag_secret_columns",
+        "flagsecretcolumns",
     }
 )
 
@@ -317,6 +330,8 @@ def _finish_csv_infer_schema(
         return frame
     if utf8_names:
         options = reader._native_options_for(_CSV_NATIVE_OPTION_KEYS)
+        options.pop("flag_secret_columns", None)
+        options.pop("flagsecretcolumns", None)
         if "header" not in {key.lower() for key in options}:
             options["header"] = "false"
         options["utf8_columns"] = ",".join(utf8_names)

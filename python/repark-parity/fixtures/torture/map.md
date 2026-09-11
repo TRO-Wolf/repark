@@ -80,6 +80,16 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
   loud on both doors, matching the recorded `AVG-DEC-SUMWRAP-1` Spark class. The CSV leg's
   38-digit integer text infers `double` on repark against Spark's measured
   `decimal(38,0)`-class answer — strict xfails citing `CSV-INFER-20DIGIT`.
+- `secrets.py` — the `secrets` family (D-2, step 3): thirteen credential-shaped column
+  names, each one tripping a distinct needle in `prop_key_is_secret`
+  (`password`, `*token`, `*secret*`, `privatekey`, `access_key_id`, `access_key`,
+  `connection_string`, `credential`, `user_info`, `bearer`, `apikey`), beside the ordinary
+  `id`/`name`/`note` and the `bucket_key` negative control (`_key` suffix rescued by the
+  `bucket` carve-out). Every flagged value carries the `repark-fake-` prefix and no
+  real-looking key-id shape (`AKIA[0-9A-Z]{16}` is forbidden); `session_token` is the one
+  nullable credential column (every 7th row null). `id` is int64, the rest string, so
+  Parquet and CSV share one declared schema (measured: repark's CSV inference answers
+  `id`→int64, all text→string, all-nullable). pins: torture-1/C-017
 - `__main__.py` — the `generate` CLI; `--depth`/`--width` are refused for non-nested
   families.
 - `map.md` — this file.
