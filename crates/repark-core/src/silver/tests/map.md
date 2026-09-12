@@ -9,7 +9,7 @@ See [../map.md](../map.md).
 
 - `mod.rs` — fixture loader and the D-6 / D-7 pins.
 - `parse.rs` — D-1 / D-2 / D-3 parse and structural-refusal pins.
-- `identity.rs` — D-4 canonical bytes and D-5 explain goldens.
+- `identity.rs` — D-4 canonical bytes and D-5 explain goldens (SILVER-S1 commit 2).
 
 pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 
