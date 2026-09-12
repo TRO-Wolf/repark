@@ -6,6 +6,16 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [rest-catalogs-intake-2026-09-12.md](rest-catalogs-intake-2026-09-12.md) — **generic Iceberg
+  REST catalog support (Lakekeeper, Apache Polaris), scoped 2026-09-12 by an Opus reading agent at
+  fork pin `9e3522e3`:** the owned fork already ships a complete `iceberg-catalog-rest` (OAuth2 client
+  credentials with proactive refresh, bearer tokens, `header.*`, `/v1/config` prefix routing,
+  pagination, views, the commit-outcome taxonomy MERGE and compaction rely on, vended-credential
+  overlay by longest prefix) that RePark consumes nowhere; the thirteen ranked gaps by owning layer
+  (no `rest` catalog kind; one storage factory per catalog chosen from a scheme a REST warehouse
+  never shows; vended-credential lifetime — the fork's R160; namespace property updates; views;
+  `header.*` in `repark.toml`; SigV4), the zero-dependency-delta measurement, the CI-only docker
+  strategy, the slate REST-0…4 plus four fork cards, and decisions REST-D-1…8 for the owner.
 - [cheap-tier-slate-2026-09-08.md](cheap-tier-slate-2026-09-08.md) — **the 2026-09-08 owner slate,
   cut for mechanical-tier workers:** the owner rulings (5+5 polars edges, lazy `repr` shows the
   schema — R-22 of 2026-09-10 superseding R-2's data render, card DISPLAY-LAZY-1 — `repark.toml` pulled ahead of 1.2/1.3, the Ballista audit joins the Rust migration pilot,
