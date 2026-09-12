@@ -37,6 +37,16 @@ pub(super) async fn apply_steps(
     let mut rows: Vec<(i32, String, String, String, String)> = Vec::new();
     let mut stopped = false;
     for step in steps {
+        if let Some(reason) = &step.skip_reason {
+            rows.push((
+                step.ordinal,
+                step.procedure.to_string(),
+                step.arguments.clone(),
+                "skipped".to_string(),
+                reason.clone(),
+            ));
+            continue;
+        }
         if stopped {
             rows.push((
                 step.ordinal,

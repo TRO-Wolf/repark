@@ -92,6 +92,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
+  **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
+  on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
+  naming the table and the service's `unreferencedFileRemoval` maintenance as the remedy
+  (D-1); `dry_run` refuses identically; `run_maintenance` keeps the orphan step in the plan
+  but reports it `skipped` with that reason on the dry run and on apply (D-2); the refusal
+  keys on `LocationPolicy::ServiceManagedLocation` so the pins need no AWS (D-3); the
+  maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
+  `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
+  pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
   collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
