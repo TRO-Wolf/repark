@@ -340,12 +340,14 @@ no manifest-list and no manifest at all. The default is on since PERF-ICE-CATALO
 (2026-09-05): RP-13 landed the fork key fix first (`F-CATIO-KEY` — the cache stores the
 context-free parse and applies each caller's lineage per read), so upgrade-boundary
 tables serve assigned lineage with the cache on. To turn the cache off, set the key to
-`"0"`. The 32 MiB is the fork's estimated manifest weight per memory catalog (one shared
-cache per catalog handle; the fork enforces it with moka `max_capacity`), not a
-resident-bytes ceiling — a cached small manifest+list measures several KB resident
-against ~1 KiB charged (the file bytes alone are ≥ 5× the charge), and a session that
-fills the whole 32 MiB budget (32,768 small tables) held about 617 MB resident against
-about 339 MB with the cache off. Size the budget to the working set: a budget far under it
+`"0"`. The 32 MiB is moka `max_capacity` over charged entry weight per memory catalog
+(one shared cache per catalog handle). Through PERF-ICE-CATALOG-IO-3 the weigher was
+the fork's estimate (~1 KiB per small table; file bytes ≥ 5× the charge). **RP-16
+(2026-09-11)** at pin `090bc821` (fork `#274`): the weigher charges retained parsed
+object graphs (`PERF-CATALOG-CACHE-WEIGHT-1` FIXED) — about 4,184 B per small table
+as measured. It is not a resident-bytes ceiling: a session that filled the whole
+32 MiB budget at the old estimate (32,768 small tables) held about 617 MB resident
+against about 339 MB with the cache off. Size the budget to the working set: a budget far under it
 churns, so a second pass over 2,000 tables at 128 KiB costs what explicit `"0"` costs
 (8.1 s vs 8.2 s, against 5.6 s cached); below ~1 MiB prefer `"0"`. Numbers and the
 commit-side scope live in

@@ -196,3 +196,5 @@ the total, the bound needs 32,768 small tables to fill, and `F-CATIO-WEIGHT` cap
 retention when it lands; lowering now churns the number twice.
 
 **Orchestrator ruling (2026-09-06, on Q1):** keep the 32 MiB default. The at-bound cost is ~270 MB of resident cache above a ~340 MB session base, reached only by a session that touches 32,768 tables; the documented escape is `manifestCacheBytes = "0"`; `F-CATIO-WEIGHT` (PERF-CATALOG-CACHE-WEIGHT-1) is the fix for the 8× under-count and re-measures this cell when it lands. The registry row and `session-and-conf.md` carry the at-bound number so the ceiling is not overstated.
+
+**RP-16 consumer (2026-09-11).** Fork pin `090bc821` landed `#274` F-CATIO-WEIGHT. This ledger's clause verdicts stay as written (C-005 PROVEN on the estimated-weight pin). The registry row `PERF-CATALOG-CACHE-WEIGHT-1` is FIXED in RP-16: measured retaining budget 1,071,000, evicting budget 1,070,000, retain pin 1,250,000, old 280000 now evicts. The at-bound RSS cell is not re-measured here. Citation: [rp-16-ledger.md](rp-16-ledger.md).
