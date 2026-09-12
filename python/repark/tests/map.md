@@ -267,8 +267,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   on an unset key raises a bare `Exception` where Spark raises `SparkNoSuchElementException`
   (EX-SES-4), and a missing file raises `AnalysisException` 'No files found' through the readers
   where Spark raises `PATH_NOT_FOUND` (EX-SES-5). EX-20's window/catalog pins share this file
-  since the EX-20 merge.
+  since the EX-20 merge. **EX-29 (2026-09-11)** extends the EX-CAT-1/EX-CAT-2 pins with the
+  `get_database` / `list_databases` snake legs — repark extensions absent from
+  `pyspark.sql.catalog.Catalog`, sharing the divergent function objects.
   pins: ex-21-catalog-session/C-001
+  pins: ex-29-class-remainder/C-002, C-003
 - [test_examples_dataframe_b.py](test_examples_dataframe_b.py) — **EX-16 (2026-09-04):**
   DF-PRINTSCHEMA-1 (2026-09-04): the printSchema pin is `test_print_schema_stdout_matches_spark` and asserts Spark's tail.
   the four divergence pins for the DataFrame-b example batch — `intersectAll`/`intersect_all`
@@ -360,15 +363,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_col_cast_qualified_projection_name`: a bare `F.col("v").cast("double")`
   select names the CDF-qualified column where Spark answers `v` (EX-COL-1), and
   `test_get_field_bare_projection_name`: an unaliased `getField` projects `r['a']`
-  where Spark answers `r.a` (EX-COL-2).
+  where Spark answers `r.a` (EX-COL-2). EX-29 (2026-09-11) measured the six
+  engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
+  `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`) absent from
+  `pyspark.sql.Column` as real members — `hasattr` answers True only through
+  `__getattr__` item fabrication — and reported them for an owner ruling on inventory
+  narrowing; no pin added here.
   pins: ex-17-column-a/C-001
+  pins: ex-29-class-remainder/C-004
 - [test_examples_dataframe_d.py](test_examples_dataframe_d.py) — **EX-19 (2026-09-04):**
   the three divergence pins for the DataFrame-d example batch — `withColumnsRenamed`
   refusing duplicate final names where Spark answers the duplicate-named frame
   (EX-DF-18), `stat.freqItems` refusing loudly where Spark answers the frequent-item
   table (EX-DF-19), and the struct-valued `Row` field answering a dict where Spark
   keeps the nested `Row` (EX-ROW-1). The module docstring names the row span.
+  **EX-29 (2026-09-11)** adds two arm pins from the class-remainder re-measure:
+  `describe` on a string column (and bare `describe()` over a frame containing one)
+  raising `AnalysisException` where Spark answers NULL mean/stddev cells (EX-DF-4),
+  and `colRegex`/`col_regex` answering the first match only on a multi-match pattern
+  where Spark expands all matches (EX-DF-1).
   pins: ex-19-dataframe-d-window/C-001
+  pins: ex-29-class-remainder/C-002, C-003
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
