@@ -18,15 +18,28 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_colregex_spelling_divergence(spark: ReparkSession) -> None:
-    """colRegex compiles the raw string: plain regex matches, backticked raises (EX-DF-1)."""
+def test_colregex_backtick_spelling_parity(spark: ReparkSession) -> None:
+    """colRegex strips backticks into a regex; a bare pattern is a literal name (EX-DF-1 FIXED).
+
+    Spark resolves a non-backticked argument as a literal column name at the ``colRegex``
+    call (``UNRESOLVED_COLUMN`` for ``^(k)$``) and resolves a literal hit eagerly; the
+    backticked marker expands only inside ``select`` — ``drop`` no-ops on it and
+    ``withColumn`` refuses it (live PySpark 4.1.2).
+
+    pins: df-colregex-1/C-001, C-002, C-003, C-005
+    """
     frame = spark.createDataFrame([("a", 1), ("b", 2)], ["g", "k"])
-    assert frame.select(frame.colRegex("^(k)$")).columns == ["k"]
-    assert frame.select(frame.col_regex("^(k)$")).columns == ["k"]
+    assert frame.select(frame.colRegex("`^(k)$`")).columns == ["k"]
+    assert frame.select(frame.col_regex("`^(k)$`")).columns == ["k"]
+    assert frame.select(frame.colRegex("k")).columns == ["k"]
+    assert frame.drop(frame.colRegex("`^(k)$`")).columns == ["g", "k"]
+    assert frame.withColumn("w", frame.colRegex("k")).columns == ["g", "k", "w"]
     with pytest.raises(AnalysisException):
-        frame.colRegex("`^(k)$`")
+        frame.colRegex("^(k)$")
     with pytest.raises(AnalysisException):
-        frame.col_regex("`^(k)$`")
+        frame.col_regex("^(k)$")
+    with pytest.raises(AnalysisException):
+        frame.withColumn("w", frame.colRegex("`^(k)$`"))
 
 
 def test_global_temp_view_divergence(spark: ReparkSession) -> None:

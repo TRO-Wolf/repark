@@ -55,8 +55,20 @@ def test_describe_string_column_refuses(spark: ReparkSession) -> None:
         frame.describe().collect()
 
 
-def test_colregex_multi_match_first_match(spark: ReparkSession) -> None:
-    """colRegex answers the first match only; Spark expands all matches (EX-DF-1)."""
+def test_colregex_multi_match_expands(spark: ReparkSession) -> None:
+    """colRegex expands every full-match in frame order at its select position (EX-DF-1 FIXED).
+
+    The backticked pattern is a Java full-match (``matches()``) applied case-insensitively;
+    zero matches project zero columns (live PySpark 4.1.2).
+
+    pins: df-colregex-1/C-001, C-002, C-003, C-005
+    """
     frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
-    assert frame.select(frame.colRegex("^(g|k)$")).columns == ["g"]
-    assert frame.select(frame.col_regex("^(g|k)$")).columns == ["g"]
+    assert frame.select(frame.colRegex("`^(g|k)$`")).columns == ["g", "k"]
+    assert frame.select(frame.col_regex("`^(g|k)$`")).columns == ["g", "k"]
+    assert frame.select("v", frame.colRegex("`^(g|k)$`")).columns == ["v", "g", "k"]
+    assert frame.select(frame.colRegex("`^(K)$`")).columns == ["k"]
+    assert frame.select(frame.colRegex("`^zzz$`")).columns == []
+    assert frame.select(frame.colRegex("`^zzz$`")).count() == 1
+    with pytest.raises(AnalysisException):
+        frame.select(frame.colRegex("`^(g|k)$`").alias("z"))

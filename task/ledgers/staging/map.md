@@ -14,6 +14,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
+  **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
+  measured Spark contract — a backticked pattern returns the `RegexColumn` marker
+  (`python/repark/src/repark/spark/dataframe/colregex.py`) that `select` expands to
+  every full-matching column in frame order, case-insensitively, zero matches
+  included; a bare pattern resolves as a literal column name at the call. `drop`
+  no-ops the marker; `withColumn`/`groupBy`/`orderBy`/`.alias` on it refuse. Both
+  pins flipped to parity (`test_colregex_backtick_spelling_parity`,
+  `test_colregex_multi_match_expands`); EX-DF-1 FIXED both arms. Facade-only — no
+  engine change. `risk_tier: standard`. Branch `fix/df-colregex-1`.
+  pins: df-colregex-1/C-001, C-002, C-003, C-004, C-005
 - [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
   **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
   remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on

@@ -110,11 +110,12 @@ one-liner.
   pins: ex-26-io-session/C-013
 
 Divergent names and arms stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in
+([EX-DF-2](../../spark-sql-iceberg-parity.md) … [EX-DF-17](../../spark-sql-iceberg-parity.md)), pinned in
 `python/repark/tests/test_examples_dataframe_{a,b,c}.py`. The snake spellings `same_semantics`, `select_expr`, `sort_within_partitions`, `storage_level`, `to_arrow`, `to_arrow_batches`, `to_df`, `to_local_iterator`, `to_numpy`, `to_pandas`, `to_polars` are repark-only — PySpark 4.1.2 raises `ATTRIBUTE_NOT_SUPPORTED` for each — and the examples keep the arms where the engines agree.
 Divergent names stay on the backlog with §7 registry rows
-([EX-DF-1](../../spark-sql-iceberg-parity.md), EX-DF-2, EX-DF-3, EX-DF-4, EX-DF-5, EX-DF-6) and
-pins in `python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`,
+([EX-DF-2](../../spark-sql-iceberg-parity.md), EX-DF-3, EX-DF-4, EX-DF-5, EX-DF-6) and
+pins in `python/repark/tests/test_examples_dataframe_a.py`: `colRegex` / `col_regex`
+(EX-DF-1 FIXED by DF-COLREGEX-1 — the pin now asserts parity),
 the three global-temp-view spellings, `exceptAll` / `except_all`, the
 `describe` row order, the `corr` / `cov` NULL-pair arm, and the `createTempView` /
 `create_temp_view` replace-on-existing arm (the examples keep the arms where the
@@ -125,7 +126,7 @@ measured answers differ), EX-DF-9 (`mergeInto`'s bare-key sugar and `target.`/`s
 qualifiers; Spark wants a table-name/alias SQL condition — the covered merge program answers
 Spark's rows), and EX-DF-10 (`printSchema`'s stdout tail, FIXED by DF-PRINTSCHEMA-1),
 with pins in `python/repark/tests/test_examples_dataframe_b.py`.
-The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame), EX-DF-19 (`stat.freqItems` refuses; the name stays on the backlog), and EX-ROW-1 (a struct-valued `Row` field is a dict in repark; Spark keeps the nested `Row`), pinned in `test_examples_dataframe_d.py`; `Row.as_dict`, `Row.from_mapping`, and `Row.from_ordered_fields` are repark extensions (`hasattr` False on live PySpark 4.1.2). EX-29 (2026-09-11) re-measured every stayed `DataFrame`/`stat` roster name on live PySpark 4.1.2 — all still refuse or diverge as their rows record — and pinned two further arms in `test_examples_dataframe_d.py`: `describe` on a string column raises `AnalysisException` where Spark answers NULL cells (EX-DF-4), and `colRegex`/`col_regex` answer the first match only on a multi-match pattern where Spark expands all matches (EX-DF-1).
+The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame), EX-DF-19 (`stat.freqItems` refuses; the name stays on the backlog), and EX-ROW-1 (a struct-valued `Row` field is a dict in repark; Spark keeps the nested `Row`), pinned in `test_examples_dataframe_d.py`; `Row.as_dict`, `Row.from_mapping`, and `Row.from_ordered_fields` are repark extensions (`hasattr` False on live PySpark 4.1.2). EX-29 (2026-09-11) re-measured every stayed `DataFrame`/`stat` roster name on live PySpark 4.1.2 — all still refuse or diverge as their rows record — and pinned two further arms in `test_examples_dataframe_d.py`: `describe` on a string column raises `AnalysisException` where Spark answers NULL cells (EX-DF-4), and the `colRegex`/`col_regex` multi-match arm (EX-DF-1 — both arms FIXED by DF-COLREGEX-1, 2026-09-11: a backticked pattern returns a marker `select` expands to every full-match in frame order, case-insensitively; a bare pattern resolves as a literal column name, `drop` no-ops the marker and `withColumn` refuses it).
 
 ## Pointers
 
