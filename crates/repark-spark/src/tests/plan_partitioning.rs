@@ -506,6 +506,35 @@ async fn data_file_paths(
     paths
 }
 
+async fn data_file_sizes(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<i64> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT file_size_in_bytes FROM {table}.files WHERE content = 0"),
+    )
+    .await
+    .expect("file_size_in_bytes query")
+    .collect()
+    .await
+    .expect("collect file sizes");
+    let mut sizes = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("file_size_in_bytes is Int64");
+        for row in 0..batch.num_rows() {
+            sizes.push(column.value(row));
+        }
+    }
+    sizes
+}
+
 fn fs_path(file_path: &str) -> String {
     for prefix in ["file://", "file:"] {
         if let Some(rest) = file_path.strip_prefix(prefix) {
@@ -519,7 +548,7 @@ fn fs_path(file_path: &str) -> String {
     file_path.to_string()
 }
 
-fn footer_ratio_independent(paths: &[String]) -> f64 {
+fn footer_sums_independent(paths: &[String]) -> (i64, i64) {
     use datafusion::parquet::file::metadata::ParquetMetaDataReader;
     let mut compressed = 0_i64;
     let mut uncompressed = 0_i64;
@@ -535,9 +564,7 @@ fn footer_ratio_independent(paths: &[String]) -> f64 {
             }
         }
     }
-    #[allow(clippy::cast_precision_loss)]
-    let ratio = compressed as f64 / uncompressed as f64;
-    ratio
+    (compressed, uncompressed)
 }
 
 #[tokio::test]
@@ -545,10 +572,10 @@ async fn plan_byte_ratio_is_measured_from_parquet_footers() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_compressible(&ctx, &catalogs).await;
-    let total = files_total_bytes(&ctx, &catalogs, "ice.sales.comp").await;
-    let target = total / 2;
     let paths = data_file_paths(&ctx, &catalogs, "ice.sales.comp").await;
-    let measured = footer_ratio_independent(&paths);
+    let (compressed, uncompressed) = footer_sums_independent(&paths);
+    #[allow(clippy::cast_precision_loss)]
+    let measured = compressed as f64 / uncompressed as f64;
     assert!(
         measured > 0.0 && measured < 1.0,
         "fixture footers yield a ratio strictly inside (0, 1), got {measured}"
@@ -556,9 +583,7 @@ async fn plan_byte_ratio_is_measured_from_parquet_footers() {
     let plan = plan_rows(
         &ctx,
         &catalogs,
-        &format!(
-            "CALL ice.system.plan_partitioning(table => 'sales.comp', target_file_size_bytes => {target})"
-        ),
+        "CALL ice.system.plan_partitioning(table => 'sales.comp', target_file_size_bytes => 1)",
     )
     .await;
     for row in &plan {
@@ -575,10 +600,10 @@ async fn plan_byte_ratio_is_measured_from_parquet_footers() {
         .expect("unpartitioned row present");
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
-    let expected = (total as f64 * measured / target as f64).ceil() as i64;
+    let expected = (uncompressed as f64 * measured).ceil() as i64;
     assert_eq!(
         unpartitioned.files_at_target, expected,
-        "projected files derive from footer-scaled bytes"
+        "at target 1 the projection is the footers' uncompressed sum scaled once by the ratio — the compressed sum"
     );
 }
 
@@ -606,11 +631,14 @@ async fn plan_byte_ratio_falls_back_when_a_footer_is_unreadable() {
         .iter()
         .find(|row| row.candidate == "unpartitioned")
         .expect("unpartitioned row present");
+    let sizes = data_file_sizes(&ctx, &catalogs, "ice.sales.days90").await;
+    #[allow(clippy::cast_precision_loss)]
+    let estimated: f64 = sizes.iter().map(|size| *size as f64 / 0.55).sum();
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
-    let expected = (total as f64 * 0.55 / target as f64).ceil() as i64;
+    let expected = (estimated * 0.55 / target as f64).ceil() as i64;
     assert_eq!(
         unpartitioned.files_at_target, expected,
-        "projected files derive from the fallback ratio"
+        "projected files fold the per-file stored/0.55 uncompressed estimate by the fallback ratio"
     );
 }

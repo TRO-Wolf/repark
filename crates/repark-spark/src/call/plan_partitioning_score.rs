@@ -444,6 +444,20 @@ mod tests {
     }
 
     #[test]
+    fn rp17_bed_shape_projects_the_uncompressed_sum_once() {
+        let items: Vec<(u64, Vec<ValueKey>)> = std::iter::once(15_219_u64)
+            .chain(std::iter::repeat(14_925).take(205))
+            .map(|size| (size, vec![ValueKey::Number(0)]))
+            .collect();
+        let (_score, partitions, projected) = accumulate(&items, 524_288, 0.376076);
+        assert_eq!(partitions, 1);
+        assert!(
+            (projected - 6.0).abs() < f64::EPSILON,
+            "RP-17 uniform shape projects ceil(2 831 692 / 524 288) = 6, got {projected}"
+        );
+    }
+
+    #[test]
     fn candidate_labels_use_spark_ddl_spelling() {
         let part = SpecPart {
             column: "ts".to_string(),

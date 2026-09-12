@@ -142,6 +142,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `projected_partitions` stay on raw file bytes (P-3 verbatim); only the projected file
   count folds each value's share by the ratio before `ceil(…/target)`.
   pins: ap-1/C-001, C-009, C-010
+  pins: ap-3/C-003
 
 ## Pointers
 

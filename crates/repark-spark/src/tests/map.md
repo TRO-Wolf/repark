@@ -656,7 +656,15 @@ above.
   whose `unpartitioned` projected count equals `ceil(bytes × ratio / target)`, and the same
   fixture with one data file overwritten by non-parquet bytes answering
   `byte_ratio=0.55 (fallback)` with the projection folded by 0.55.
+  **AP-3 (2026-09-12):** the byte basis moves to the footers' uncompressed
+  column-chunk sum — the footer pin reads `ceil(Σ uncompressed × ratio / target)`
+  at target 1 (the footers' compressed sum exactly), the fallback pin folds each
+  file's `file_size_in_bytes / 0.55` estimate back by 0.55, and the in-module
+  score pin `rp17_bed_shape_projects_the_uncompressed_sum_once` carries the
+  RP-17 uniform bed shape (206 items, Σ uncompressed 7 529 566, ratio 0.376076,
+  target 524 288 → 6 files).
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  pins: ap-3/C-001, C-002, C-004, C-005
 
 ## Pointers
 
