@@ -566,6 +566,27 @@ exactly six on top of whatever EX-30 left. D-3 no product file changes; the six 
 
 ---
 
+### Card PERF-DESCRIBE-1 — one aggregate pass for `describe` / `summary` (from the S2-21 reviewer, 2026-09-11)
+
+**Why.** The first Grok perf review under S2-21 (DF-DESCRIBE-STR-1 branch) measured that `describe()` runs
+one full scan per statistic — mean, stddev, min and max are four `DataSourceExec` passes over the frame
+(count folds to a placeholder), about 80 ms of a 110 ms collect on 200 k rows. Pre-existing, unchanged by
+that unit; the dominant cost of the surface.
+
+**Home.** `python/repark/src/repark/spark/dataframe/statistics.py`, its pins, the dataframe `map.md`,
+ledger `task/ledgers/staging/perf-describe-1-ledger.md`. No engine change.
+
+**Decisions.** D-1 one `AggregateExec` computes count / avg / stddev / min / max per column in a single pass,
+then five literal summary rows are projected (an unpivot in SQL), the row order carried by construction so
+the DF-DESCRIBE-STR-1 ordinal wrapper can go. D-2 measured before and after on the reviewer's harness
+(200 k numeric, 50 × 10 k wide, string-bearing frame), three repetitions, medians in the ledger; the unit
+lands only if every shape is faster. D-3 every describe / summary pin stays green; Spark's answers are the
+spec (the DF-DESCRIBE-STR-1 oracle table).
+
+**Steps.** 1 (I). **Rounds.** 1 (I), after DF-DESCRIBE-STR-1 merges.
+
+---
+
 ## 2. Sequence
 
 | # | Unit | Depends on | Tiers | Rounds |
