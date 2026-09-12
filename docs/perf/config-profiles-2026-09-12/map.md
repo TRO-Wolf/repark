@@ -25,4 +25,5 @@ box, full scale.
 - [datafusion.execution.parquet.bloom_filter_on_read.csv](datafusion.execution.parquet.bloom_filter_on_read.csv)
 - [repark.scan.concurrency_limit.csv](repark.scan.concurrency_limit.csv)
 - [repark.batch.size.csv](repark.batch.size.csv)
+- [datafusion.execution.parquet.compression.csv](datafusion.execution.parquet.compression.csv)
 - `map.md` — this file.
