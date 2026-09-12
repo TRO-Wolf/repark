@@ -65,6 +65,10 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   0.5)` wall/peak/answer rows (or the `count(id)` control) on a range scan, release
   module only. See [approxpct/map.md](approxpct/map.md).
   pins: perf-approxpct-1/C-004
+- [cast/](cast/map.md) — **PERF-CAST-1 step 1 (2026-09-12)** CAST-cost
+  measurement: 200k-row eager MemTable, CAST counts 50 / 250 / 2500, three
+  plan shapes, warmup + three reps, one CSV row per cell, attribution probes.
+  pins: perf-cast-1/C-001, C-002, C-003
 - [adaptpart/](adaptpart/map.md) — **AP-0 (measure, 2026-09-10)** adaptive-partitioning
   candidate measurement: three local Iceberg beds scored from `files`/`partitions`
   manifest bounds (P-2 candidates, P-3 target-band scores, one ranked table per bed).
@@ -100,6 +104,8 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
 | Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |
+| Run the CAST-cost measurement | `cast/run_cast.py --out docs/perf/cast-cost-2026-09-12.csv` |
+| Read CAST-cost numbers | [../../../docs/perf/cast-cost-2026-09-12.md](../../../docs/perf/cast-cost-2026-09-12.md) |
 | Run the AP-0 partition-candidate measurement | `adaptpart/run_adaptpart.py --scratch <dir>` (fresh dir; rows need the defaults) |
 | Read TPC-H findings | `../../../task/tpch-report-2026-07-31.md` |
 | Read fuzzer long-pass census | `../../../task/d3-sql-fuzzer-ledger.md` |

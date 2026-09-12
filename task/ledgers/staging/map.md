@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-cast-1-ledger.md](perf-cast-1-ledger.md) —
+  **PERF-CAST-1 step 1 (2026-09-12), in flight:** where a CAST costs a
+  millisecond — 200k-row MemTable, 50 / 250 / 2500 CASTs, three plan
+  shapes; superlinear phase is CAST-over-aggregate logical planning
+  (exponent 1.535); `max_passes` 0/1/3 do not move the wall; current cost
+  pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
+  No product change. `risk_tier: standard`. Branch `perf/cast-1`.
+  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
   **AP-1 re-measure (2026-09-11), in flight:** RP-16 fork pin `090bc821` makes
   INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
