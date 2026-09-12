@@ -33,6 +33,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 ## Contents
 
+- [cast/](cast/map.md) — **PERF-CAST-1 step 1 (2026-09-12):** the CAST-cost
+  golden CSV pin (nine shape×count rows), the 2500-cast standalone regression
+  budget (1.5× the measured median), and the strict-xfail linear-from-50 pin
+  on CAST-over-aggregate planning. Needs the native module.
+  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit

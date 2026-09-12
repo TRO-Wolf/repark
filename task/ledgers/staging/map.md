@@ -271,6 +271,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
   Branch `perf/dynflatten-1-measure`.
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
+- [perf-cast-1-ledger.md](perf-cast-1-ledger.md) —
+  **PERF-CAST-1 step 1 (2026-09-12), in flight:** where a CAST costs a
+  millisecond — 200k-row MemTable, 50 / 250 / 2500 CASTs, three plan
+  shapes; superlinear phase is CAST-over-aggregate logical planning
+  (exponent 1.535); `max_passes` 0/1/3 do not move the wall; current cost
+  pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
+  No product change. `risk_tier: standard`. Branch `perf/cast-1`.
+  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - [profiles-1-ledger.md](../completed/profiles-1-ledger.md) —
   **PROFILES-1 steps 1–3 (2026-09-10/12), in flight:** the measurement bed step 2
   sweeps: three D-2 datasets, five reads + three writes, knob × value CSV harness,

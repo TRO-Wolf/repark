@@ -45,6 +45,7 @@ sections left open.
 | S2-25 | **F-REWRITE-SIZE-1 step 1 measured (fork #279, 2026-09-12): the cause is dead dictionary pages.** On ~22k-row rewrite chunks parquet-rs's dictionary overflows its page limit mid-chunk and the dead ~144 KB dictionary page is still written per high-cardinality column chunk; dictionary off alone → 1.009× (baseline 1.47×). Secondary: the fork's default zstd level is 1 where Java writes 3 (level 3 alone → 1.13×; both → 0.67×). Row order is not the cause. **Step 2 ruled:** per-column dictionary decided from the input files' footers (a column whose input chunks fell back from dictionary writes without one; low-cardinality columns keep it, pinned on an 8-value bed), and the unset-level default becomes zstd 3 to match Java (pinned by bytes). `rewrite_size_pin` un-ignored at ≤ 1.05×. Then RP-18 and AP-1's fourth 20 % check. | fork lane, RP-18, AP-1 |
 | S2-26 | **Two engine costs measured by the S2-21 reviews (2026-09-12), cards opened:** (a) every plan-side unpivot shape in this DataFusion is superlinear in expression count — PERF-DESCRIBE-1 tried a struct grid + `unnest` (~95 s at 500 columns), multi-column `UNNEST` (fails on `OuterReferenceColumn`), `dynamic_flatten(explode_lists=True)` (a cross product, not a zip) and chained projections (time out), and settled on an action-time unpivot in the Arrow bridge; card **PERF-UNPIVOT-1** (a native unpivot/stack primitive, then `describe` moves back to a pure plan). (b) each `CAST` physical expression costs ~1.4–2.7 ms and the cost is superlinear in wide plans (250 casts: 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s inside a 2500-expression projection); card **PERF-CAST-1** (measure where the cost lives — planning, physical expression creation, or per-batch evaluation — before any fix). Both are v1.5 perf units, Devin I rounds, after the v1.4 cut. | PERF-UNPIVOT-1, PERF-CAST-1 |
 | S2-27 | **AP-1-R-001 ruled closed as an estimator property (RP-18's fourth check, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md`):** with the fork's dictionary fix and one-pass compression (AP-3), the live rewrite compresses BETTER than its inputs (output ratio 0.28 vs the inputs' 0.38 — 20 large files versus 206 tiny ones), so the AP-3 projection (= the inputs' compressed bytes, 2 840 672) reads +55 % / +62 % against actuals of 1 839 168 / 1 755 749, while the old stored × ratio reads −37 % / −34 %. No footer-derived number predicts the output codec's ratio on files it has not written; what the inputs' compressed bytes give is a sound **upper bound** (a rewrite of the same rows under the same codec into fewer, larger files never compresses worse than its inputs once dead dictionary pages are gone). The 20 % target is retired: `projected_files_at_target` is documented and pinned as an upper-bound estimate, monotone across candidates (ranking unchanged on every bed), within [0.5×, 1.0×] of the live actual on the AP-0 beds. Card **AP-1-CLOSE-1** (one M round: the `RESIDUE_NOTE` and frame `notes` say "upper bound", the registry row closes, the maintenance guide's S2-24 caveat is retired — compaction is a net-size WIN again — and a pin holds the bound on the three beds). | AP-1-CLOSE-1 |
+| S2-28 | **Owner bug (2026-09-12): `CALL s3tables.system.remove_orphan_files` fails on an S3 Tables table.** Measured on the dev table bucket: an S3 Tables table's location is the bare table bucket (`s3://<id>--table-s3`), which the fork's `s3_relative_path` rejects (Java's `S3URI` reads a bare bucket as the root) — fork card **F-S3ROOT-1**; and past the parser the bucket answers **405 MethodNotAllowed** to `ListObjectsV2`, so no listing-based orphan removal can work on S3 Tables — S3 Tables removes unreferenced files itself through the bucket maintenance configuration. Card **ORPHAN-S3TABLES-1**: the CALL refuses loud on the `s3tables` catalog kind naming that remedy, `run_maintenance` skips the step with a reason row. Then RP-19 (the parser fix consumed). No workaround exists for the owner today; the `location =>` argument reaches the 405. | fork lane, ORPHAN-S3TABLES-1, RP-19 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -698,6 +699,57 @@ ledger `task/ledgers/staging/ap-1-close-1-ledger.md`.
 projection is ≥ the live actual and ≤ 2× it, and the candidate ranking equals RP-18's — red first by
 doctoring the bound. D-3 docs say "upper bound" wherever the projection is explained; nothing claims
 ±20 %. **Steps.** 1 (M). **Rounds.** 1 (M), after RP-18 merges.
+
+---
+
+### Card F-S3ROOT-1 — a bare-bucket S3 location is the bucket root (fork lane, S2-28)
+
+**Why.** `s3_relative_path` (`crates/storage/opendal/src/s3.rs`) strips only `scheme://bucket/`; the bare
+form `s3://bucket` — every S3 Tables table's metadata location — answers `None` and the storage layer
+refuses with `Invalid s3 url … should start with one of […/]`. Java's `S3URI` treats the bare bucket as
+the root with an empty key.
+
+**Home (fork).** `crates/storage/opendal/src/s3.rs` and its unit pins; `FileIO::list` on a bare bucket
+against the MinIO-backed integration suite (CI-proven; no Docker on the box); the orphan scan on a
+bucket-root table; sibling parsers only where the same defect is real; `task/f-s3root-1-ledger.md`.
+
+**Decisions.** D-1 `s3://b` and `s3://b/` both resolve to the root for every scheme alias; `s3://bx` and
+`s3://b-other/…` stay refused. D-2 `list("s3://b")` equals `list("s3://b/")`. D-3 red first on the parser
+pins. D-4 no dependency change. **Steps.** 1 (I). **Rounds.** 1 (I); RP-19 consumes it.
+
+---
+
+### Card ORPHAN-S3TABLES-1 — `remove_orphan_files` refuses loud on S3 Tables, naming the service's own maintenance (owner bug, 2026-09-12)
+
+**Why.** Measured on the owner's dev table bucket (2026-09-12): an S3 Tables table's location is the
+bare table bucket (`s3://<id>--table-s3`), and the bucket answers **405 MethodNotAllowed** to
+`ListObjectsV2` — listing is not a supported operation on a table bucket. Today the CALL fails first on
+the fork's path parser (`Invalid s3 url … should start with one of […/]`, fixed separately as fork
+F-S3ROOT-1) and, past that, on the 405 as an opaque io error. No listing-based orphan removal can work
+there. Amazon S3 Tables removes unreferenced files itself through the table bucket's maintenance
+configuration (`unreferencedFileRemoval` in `PutTableBucketMaintenanceConfiguration`), which is the
+right tool.
+
+**Home.** `crates/repark-spark/src/call.rs` / `call/run_maintenance.rs` / `call/run_maintenance_apply.rs`
+(the `remove_orphan_files` door and the policy runner's orphan step), the catalog registry's kind
+(`s3tables` is already a typed catalog kind — read `crates/repark-spark/src/catalogs*` / the S3 Tables
+catalog spec), pins in `crates/repark-spark/src/tests/call_orphan.rs` and the run_maintenance tests,
+`docs/guide/maintenance-policy.md` (an "S3 Tables" paragraph), `docs/spark-sql-iceberg-parity.md`
+(a registry row: Spark's procedure on S3 Tables fails the same way — the divergence is the loud
+refusal), ledger `task/ledgers/staging/orphan-s3tables-1-ledger.md`, maps.
+
+**Decisions.** D-1 `CALL <cat>.system.remove_orphan_files(...)` on a table whose catalog kind is
+`s3tables` refuses BEFORE any IO with one message naming the table, the reason (table buckets do not
+support listing) and the remedy (S3 Tables unreferenced-file removal via the bucket maintenance
+configuration); `dry_run => true` refuses the same way. D-2 `CALL run_maintenance()` on an S3 Tables
+table SKIPS the orphan step and records it in the result rows as skipped with that reason (the
+`[<profile>.maintenance]` policy stays valid; nothing else changes). D-3 pins need no AWS: the refusal
+keys on the catalog kind, so a session with an `s3tables` catalog spec (the existing config-loader test
+fixtures build one without connecting) plus a table handle is enough — if constructing the table
+handle needs the network, pin the refusal at the argument-resolution layer with a fake catalog kind
+and say so. D-4 no engine change; the fork's F-S3ROOT-1 parser fix lands independently.
+
+**Steps.** 1 (I). **Rounds.** 1 (I).
 
 ---
 
