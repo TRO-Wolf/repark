@@ -48,8 +48,9 @@ illustrative. A claim with no verified basis does not go in.
   for two-field plans (D-8), step order, result columns, one-commit-per-step warning,
   P-5 refusals, and a plan-then-apply example. **AP-3 (2026-09-12):** the projection
   now multiplies the footers' uncompressed sum by the ratio once (S2-23), and the
-  section gains the S2-24 known-issues line — zstd compaction is a net-size loss
-  until F-REWRITE-SIZE-1 lands.
+  section carries the known-issues line — AP-1-R-001 (was S2-24): fork `#280`
+  removed the dead dictionary pages so compaction is no longer a net-size loss,
+  but the projection still misses the 20 % bar, now over-reading.
   pins: maint-policy-1/C-026
   pins: ap-1/C-013
   pins: ap-2/C-007, C-008

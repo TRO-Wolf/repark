@@ -182,6 +182,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   both projections are recorded for the orchestrator's Q-1 ruling.
   `risk_tier: standard`. Branch `chore/repin-rp-17`.
   pins: rp-17/C-001, C-002, C-003, C-004
+- [rp-18-ledger.md](rp-18-ledger.md) — **RP-18 (2026-09-12), in flight:** consume fork pin
+  `9e3522e3` (F-REWRITE-SIZE-1 step 2 `#280`, the whole bump — the maintenance
+  rewrite disables the dictionary per column from the input footers, removing the
+  dead dictionary pages that caused the measured 1.47× S2-24 inflation, and an
+  unset `write.parquet.compression-level` means zstd 3 like Java). Consumer: the
+  fourth AP-1 re-measure, now with AP-3's uncompressed-basis projection; the 20 %
+  check answers AP-1-R-001 as measured. `risk_tier: standard`. Branch
+  `chore/repin-rp-18`.
+  pins: rp-18/C-001, C-002, C-003, C-004
 - [date-fn-1-spark-date-spelling-ledger.md](../completed/date-fn-1-spark-date-spelling-ledger.md) —
   **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
   `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.

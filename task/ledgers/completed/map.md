@@ -19,7 +19,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
   O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
   pins: ap-0/C-001, C-002, C-003, C-004
-- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001. **RP-17 re-measure (2026-09-12)** errata at the top (above the RP-16 one): fork `#278` makes `rewrite_data_files` write zstd; live actuals 4 474 081 / 4 136 632 ZSTD; the 20 percent check reads −74.2 % / −72.0 % against stored×ratio; AP-1-R-001 still OPEN; both projections recorded for the orchestrator's Q-1 ruling. Clause verdicts untouched.
+- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001. **RP-18 re-measure (2026-09-12)** errata at the top (above RP-17/RP-16): fork `#280` removes the dead dictionary pages and defaults unset level to zstd 3; live actuals 1 839 168 / 1 755 749 ZSTD with dictionary only on `grp`; the AP-3 projection reads +54.5 % / +61.8 %; AP-1-R-001 still OPEN. Clause verdicts untouched.
 - [ap-2-ledger.md](ap-2-ledger.md) — Unit ledger — AP-2 step 1 (apply) · `CALL apply_partitioning()`
 - [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
   **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B

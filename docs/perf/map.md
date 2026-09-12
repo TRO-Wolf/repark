@@ -302,6 +302,19 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   deferred question Q-1; the 20 % check answers AP-1-R-001 as measured. No Rust
   or Python source changed.
   pins: rp-17/C-002, C-003
+- [adapt-part-ap1-remeasure-3-2026-09-12.md](adapt-part-ap1-remeasure-3-2026-09-12.md) —
+  **AP-1 RP-18 re-measure (2026-09-12):** the fourth re-measure, on fork pin
+  `9e3522e3` (`#280` F-REWRITE-SIZE-1 step 2 — the rewrite disables the
+  dictionary per column from the input footers, deleting the dead dictionary
+  pages that caused the measured 1.47× S2-24 inflation; unset compression level
+  means zstd 3). Same three beds, same `identity(grp)` candidate, live
+  `rewrite_data_files` actuals with zstd on every chunk, no dictionary page on
+  the near-unique columns and one on the low-cardinality `grp` (asserted). The
+  AP-3 projection (uncompressed sum × `byte_ratio`) now reads +54.5 % / +61.8 %
+  against actuals 1 839 168 / 1 755 749 — the sign flipped because the rewrite's
+  own output ratio (0.284 / 0.270) beats the inputs' 0.377; AP-1-R-001 stays
+  OPEN. No Rust or Python source changed.
+  pins: rp-18/C-002, C-003
 
 ## Pointers
 

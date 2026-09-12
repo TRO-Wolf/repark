@@ -48,7 +48,11 @@ extend-glob = ["dfcore-4b-ledger.md", "*-dfcore-4b-ledger.md"]
 ba = "ba" # base commit ba77977a in the DFCORE-4b header (typos splits the short hash)
 
 [type.ap1remeasure]
-extend-glob = ["adapt-part-ap1-remeasure-2026-09-11.md", "adapt-part-ap1-remeasure-2-2026-09-12.md"]
+extend-glob = [
+  "adapt-part-ap1-remeasure-2026-09-11.md",
+  "adapt-part-ap1-remeasure-2-2026-09-12.md",
+  "adapt-part-ap1-remeasure-3-2026-09-12.md",
+]
 
 [type.ap1remeasure.extend-words]
 ba = "ba"
