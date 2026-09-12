@@ -91,6 +91,11 @@ file is empty.
   unset inputCol, ParamGridBuilder.baseOn pairs/tuples, mixin setters, empty
   Pipeline.getStages, Spark-shaped UnaryTransformer, persistence format, and
   DenseVector.dot/squared_distance stay as §7 EX-ML-1..9 on covered names).
+- [config/](config/map.md) — the two measured `repark.toml` profiles from
+  PROFILES-1 step 3 (2026-09-12): `read.toml` (three knobs whose values beat the
+  default by ≥ 5 % on the read bed) and `write.toml` (the empty profile — no
+  write-side win measured). Not `*.py` examples: these are configuration files,
+  outside the `COVERS` gate's walk.
 
 ## I want to...
 

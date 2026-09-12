@@ -195,8 +195,17 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   every committed CSV, every doc table row equal to its CSV median with its ratio,
   the argmax row per knob, and the no-effect table recomputed under the
   AFFECTED_CELLS / CONTROL_VALUES rule (a knob is flat only where it can reach;
-  same-as-default spellings are controls, not evidence).
-  pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  same-as-default spellings are controls, not evidence). Step 3 (2026-09-12) adds
+  the profile pins: the committed `docs/examples/config/*.toml` parse (tomllib,
+  conf tables flattened with dot joins as the CFG-1 loader emits them) and their
+  knob sets must equal the D-1 derivation recomputed from the step-2 CSVs — a
+  value qualifies only on an affected, non-noise cell ≥ 5 % better than
+  `@default` and outside that cell's measured noise floor, and only while no
+  sibling cell in its class pays a ≥ 5 % regression outside the floor; the
+  futures read cells are the named noise set. The same file pins the guide's
+  profile rows recompute from the CSVs, the guide no-effect list equals the
+  step-2 table, and the step-3 re-measure CSVs reproduce each profile win.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 3 (2026-09-09): `dataframe/core.py` row 4536 → 4525 with the script baseline; the two `__repr__` / `_repr_html_` docstrings condensed to one line each, their contracts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: display-polars-1/C-004
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
 - `test_cap_1_source_file_line_cap.py` — DF-EAGER-1 step 2 (2026-09-09): `dataframe/core.py` row 4525 → 4487 with the script baseline; `.eager()`/`.compute()`/`.lazy()` and the cache-guard trio live in the new `dataframe/eager.py`, so the row ratchets DOWN. pins: df-eager-1/C-001

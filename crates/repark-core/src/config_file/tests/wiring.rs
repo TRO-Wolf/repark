@@ -152,6 +152,34 @@ fn test_toml_session_table_sets_builder_knobs() {
         error.to_string().contains("default.session.batch_size"),
         "{error}"
     );
+    let examples =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/examples/config");
+    let read = load_file_config(
+        Some(examples.join("read.toml")),
+        &stub_environment(&[("REPARK_ENV", "read")]),
+        examples.as_path(),
+        None,
+    )
+    .expect("read.toml loads through the CFG-1 loader");
+    assert_eq!(read.batch_size, Some(16384));
+    assert_eq!(read.target_partitions, Some(32));
+    let read_pairs: HashMap<String, String> = read.pairs.into_iter().collect();
+    assert_eq!(
+        read_pairs
+            .get("datafusion.optimizer.repartition_joins")
+            .map(String::as_str),
+        Some("false")
+    );
+    let write = load_file_config(
+        Some(examples.join("write.toml")),
+        &stub_environment(&[("REPARK_ENV", "write")]),
+        examples.as_path(),
+        None,
+    )
+    .expect("write.toml loads through the CFG-1 loader");
+    assert!(write.pairs.is_empty(), "{:?}", write.pairs);
+    assert_eq!(write.batch_size, None);
+    assert_eq!(write.target_partitions, None);
 }
 
 #[test]

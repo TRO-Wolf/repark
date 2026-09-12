@@ -1,0 +1,6 @@
+[read.session]
+batch_size = 16384
+target_partitions = 32
+
+[read.conf]
+datafusion.optimizer.repartition_joins = "false"

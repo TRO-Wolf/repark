@@ -485,6 +485,42 @@ cached, and checkpointed frames keep the data render with at most one `count()`.
 those two styles `_repr_html_` returns `None`, so a notebook shows the text table. Under
 `spark` the existing eagerEval behaviour is unchanged.
 
+## The measured `read` and `write` profiles
+
+The two `repark.toml` profiles from
+[repark-toml.md](repark-toml.md) ("The measured `read` and `write` profiles") as
+builder `.config()` sets — the same measured values (PROFILES-1, three
+repetitions, release build,
+[../perf/config-profiles-2026-09-12.md](../perf/config-profiles-2026-09-12.md)).
+The file is the home for these; this is the equivalent for a code-built session:
+
+```python
+spark = (
+    ReparkSession.builder
+    .master("local[*]")
+    .config("repark.batch.size", "16384")
+    .config("repark.target.partitions", "32")
+    .config("datafusion.optimizer.repartition_joins", "false")
+    .getOrCreate()
+)
+```
+
+`write` is the defaults — no swept value beat the default by at least 5 % on the
+write bed without costing a sibling write shape, so a write-shaped session is
+built plain:
+
+```python
+spark = ReparkSession.builder.master("local[*]").getOrCreate()
+```
+
+`repark.batch.size` is `datafusion.execution.batch_size` (equally
+`spark.sql.execution.arrow.maxRecordsPerBatch`); `repark.target.partitions` is
+`datafusion.execution.target_partitions` (equally `spark.sql.shuffle.partitions`)
+— one engine option per alias group, swept under both spellings. The two
+`repark.*` keys are build-time only: set them on the builder or in `repark.toml`;
+a `spark.conf.set` after the session exists warns and does not reapply. The
+`datafusion.optimizer.repartition_joins` line also works live via `conf.set`.
+
 ## Stopping
 
 `spark.stop()` ends the session. Every handle taken from it — DataFrames, `sparkContext`, `conf` —

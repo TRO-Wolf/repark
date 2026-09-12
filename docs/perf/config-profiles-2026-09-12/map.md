@@ -33,4 +33,11 @@ box, full scale.
 - [write.distribution-mode.csv](write.distribution-mode.csv)
 - [repark.merge.file_scoped_rewrite.csv](repark.merge.file_scoped_rewrite.csv)
 - [repark.merge.scan_pruning.csv](repark.merge.scan_pruning.csv)
+- [step3-remeasure/](step3-remeasure/map.md) — the PROFILES-1 step-3 re-measure
+  (2026-09-12, same release module and bed, three repetitions): the three knobs
+  whose profile wins rested partly on noisy cells re-ran `@default` and their
+  swept values — `datafusion.execution.batch_size`, `target_partitions`,
+  `optimizer.repartition_joins`. The C-009 pin re-derives each profile win from
+  these files.
+  pins: profiles-1/C-009
 - `map.md` — this file.
