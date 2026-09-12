@@ -19,6 +19,8 @@ brief) or when the owner declines the track; it is then archived to `docs/histor
 
 ---
 
+_Owner ruling 2026-09-12: all REST catalog work joins the roadmap at target **1.8 (tentative)** — see the release roadmap's 1.8 row and Q&A log; the slate and decisions below stand as recommended until the owner rules on REST-D-1…7. Not started before the current 1.4/1.5 track._
+
 ## 1. Verdict
 
 RePark is **much closer to a generic REST catalog than the empty `[patch.crates-io]` row suggests**:
