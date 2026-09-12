@@ -30,7 +30,11 @@ illustrative. A claim with no verified basis does not go in.
   refusals, the builder > profile > default chain, and the redacted dump with its `source`
   column. States both live constraints: a non-empty `[<profile>.database]` table refuses at
   load until CFG-2, and `[<profile>.conf]` keys apply in sorted-key order. Every block and
-  error was run in the clone. pins: cfg-1/C-030
+  error was run in the clone. pins: cfg-1/C-030. **PROFILES-1 step 3 (2026-09-12):** adds
+  the measured `read` and `write` profile tables — one row per winning knob with the
+  measured ratio and the cell it was measured on, the near-misses, the no-effect list,
+  and the `batch_size` / `target_partitions` alias notes; values trace to the step-2
+  CSVs. pins: profiles-1/C-009, C-011
 - [maintenance-policy.md](maintenance-policy.md) — `[<profile>.maintenance]` and
   `CALL run_maintenance()` (MAINT-POLICY-1, 2026-09-10): the D-1 policy shape with
   per-table overrides, duration strings, the D-4 step order with the delete-ratio gate,
@@ -63,7 +67,9 @@ illustrative. A claim with no verified basis does not go in.
   CONF-UNREAD-1 step 2 (2026-09-11): the `datafusion.*` paragraph names the
   measured forwarding set, the two repark-owned `datafusion.runtime.*`
   pseudo-keys, and the `coalesce_batches` refusal on DataFusion 54.1.0 with the
-  verbatim message.
+  verbatim message. PROFILES-1 step 3 (2026-09-12): the measured `read` and
+  `write` profiles as builder `.config()` blocks, with the build-time note on
+  the `repark.*` keys.
   pins: conf-unread-1/C-007
 - [dataframe-guide.md](dataframe-guide.md) — the lazy model and what is schema-only; the
   D-1 lazy-`repr` block with measured bytes (DISPLAY-LAZY-1 step 2, 2026-09-10);
