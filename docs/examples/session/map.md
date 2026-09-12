@@ -89,4 +89,4 @@ network.
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
-- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/staging/ex-21-catalog-session-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/completed/ex-21-catalog-session-ledger.md)
