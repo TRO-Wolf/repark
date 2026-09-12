@@ -92,6 +92,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
   appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [orphan-s3tables-1-ledger.md](orphan-s3tables-1-ledger.md) —
+  **ORPHAN-S3TABLES-1 step 1 (2026-09-12), in flight:** `remove_orphan_files` refuses loud
+  on an `s3tables`-kind catalog before any IO — table buckets answer `ListObjectsV2` 405 —
+  naming the table and the service's `unreferencedFileRemoval` maintenance as the remedy
+  (D-1); `dry_run` refuses identically; `run_maintenance` keeps the orphan step in the plan
+  but reports it `skipped` with that reason on the dry run and on apply (D-2); the refusal
+  keys on `LocationPolicy::ServiceManagedLocation` so the pins need no AWS (D-3); the
+  maintenance guide's S3 Tables paragraph and the parity registry row land with it (C-005).
+  `risk_tier: standard`. Branch `fix/orphan-s3tables-1`.
+  pins: orphan-s3tables-1/C-001, C-002, C-003, C-004, C-005
 - [sepmo-e0-e1-ledger.md](sepmo-e0-e1-ledger.md) —
   **SEPMO-E0E1 (2026-09-06), in flight, round 3:** telemetry inventory (E-0) and usage
   collector (E-1). Minority truncated JSONL and exit-without-terminal are degraded
@@ -169,6 +179,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
+  `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
+  location, every S3 Tables table's, resolves to the bucket root like Java's
+  `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
+  with the parser half FIXED at this pin and the owner's dev-bucket reproduction
+  verbatim (the parser error before, the 405 `ListObjectsV2` refusal after); the
+  loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
+  (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
+  pins: rp-19/C-001, C-002, C-003
 - [rp-16-ledger.md](rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
   `090bc821` (F-WRITE-COMPRESS-1 `#276` plus riders `#273`–`#275`, `#277`). Consumer
   fix: `PERF-CATALOG-CACHE-WEIGHT-1` FIXED — charged object-graph weight, measured
@@ -192,15 +211,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   check answers AP-1-R-001 as measured. `risk_tier: standard`. Branch
   `chore/repin-rp-18`.
   pins: rp-18/C-001, C-002, C-003, C-004
-- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
-  `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
-  location, every S3 Tables table's, resolves to the bucket root like Java's
-  `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
-  with the parser half FIXED at this pin and the owner's dev-bucket reproduction
-  verbatim (the parser error before, the 405 `ListObjectsV2` refusal after); the
-  loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
-  (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
-  pins: rp-19/C-001, C-002, C-003
 - [date-fn-1-spark-date-spelling-ledger.md](../completed/date-fn-1-spark-date-spelling-ledger.md) —
   **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
   `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.

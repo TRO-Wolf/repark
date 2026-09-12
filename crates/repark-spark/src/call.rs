@@ -381,6 +381,31 @@ pub(crate) fn refuse_shared_temp_fallback_location(
     Ok(())
 }
 
+pub(crate) fn refuse_service_managed_orphan_sweep(
+    policy: Option<&LocationPolicy>,
+    catalog_name: &str,
+    table_arg: &str,
+) -> Result<()> {
+    if matches!(policy, Some(LocationPolicy::ServiceManagedLocation)) {
+        return Err(DataFusionError::Plan(s3_tables_orphan_sweep_reason(
+            catalog_name,
+            table_arg,
+        )));
+    }
+    Ok(())
+}
+
+fn s3_tables_orphan_sweep_reason(catalog_name: &str, table_arg: &str) -> String {
+    format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: catalog `{catalog_name}` \
+         is an S3 Tables catalog and table buckets do not support listing — the bucket \
+         answers ListObjectsV2 with 405 MethodNotAllowed — so no listing-based orphan sweep \
+         can run there. S3 Tables removes unreferenced files itself through the table \
+         bucket's maintenance configuration: enable `unreferencedFileRemoval` in \
+         PutTableBucketMaintenanceConfiguration instead of running this procedure."
+    )
+}
+
 fn normalize_orphan_scan_path(location: &str) -> PathBuf {
     normalize_lexically(&memory_warehouse_fallback_root(location))
 }
@@ -476,6 +501,7 @@ async fn execute_remove_orphan_files(
     }
 
     let table_arg = args.require_string("table", 0)?;
+    refuse_service_managed_orphan_sweep(policy.as_ref(), catalog_name, &table_arg)?;
 
     // REQUIRED, unlike Spark.
     let older_than_ms = args
