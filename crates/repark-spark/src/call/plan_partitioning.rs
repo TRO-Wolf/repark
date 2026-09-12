@@ -64,7 +64,18 @@ pub(super) async fn execute_plan_partitioning(
     args.reject_excess_positional(2)?;
     let table_arg = args.require_string("table", 0)?;
     let target = parse_target(args)?;
-    let ident = resolve_table_ident(catalog_name, &table_arg)?;
+    let rows = collect_plan_rows(ctx, catalog_name, catalogs, &table_arg, target).await?;
+    plan_dataframe(ctx, &rows)
+}
+
+pub(super) async fn collect_plan_rows(
+    ctx: &SessionContext,
+    catalog_name: &str,
+    catalogs: &CatalogRegistry,
+    table_arg: &str,
+    target: u64,
+) -> Result<Vec<PlanFrameRow>> {
+    let ident = resolve_table_ident(catalog_name, table_arg)?;
     let table = catalog_handle(catalogs, catalog_name)?
         .load_table(&ident)
         .await
@@ -76,7 +87,7 @@ pub(super) async fn execute_plan_partitioning(
     })?;
     refuse_extra_branches(
         &read_branch_names(ctx, catalogs, catalog_name, &ident).await?,
-        &table_arg,
+        table_arg,
     )?;
     let spec_count = table.metadata().partition_specs_iter().len();
     let inventory = inventory(table.metadata());
@@ -84,7 +95,7 @@ pub(super) async fn execute_plan_partitioning(
     let ratio = byte_ratio(table.file_io(), &files.paths).await;
     let rated = rate_columns(&inventory.columns, &files);
     let inputs = PlanInputs {
-        table_arg: &table_arg,
+        table_arg,
         catalog_name,
         snapshot_id,
         target,
@@ -95,8 +106,7 @@ pub(super) async fn execute_plan_partitioning(
         byte_ratio: ratio.value,
         ratio_source: ratio.source,
     };
-    let rows = build_plan(&inputs)?;
-    plan_dataframe(ctx, &rows)
+    build_plan(&inputs)
 }
 
 fn parse_target(args: &CallArgs) -> Result<u64> {
@@ -479,15 +489,15 @@ fn rate_column(name: &str, kind: ColumnKind, files: &FilesSnapshot) -> RatedColu
     }
 }
 
-struct PlanFrameRow {
-    label: String,
-    score: f64,
-    partitions: i64,
-    projected: i64,
-    ddl: String,
-    calls: String,
-    plan_id: String,
-    notes: String,
+pub(super) struct PlanFrameRow {
+    pub(super) label: String,
+    pub(super) score: f64,
+    pub(super) partitions: i64,
+    pub(super) projected: i64,
+    pub(super) ddl: String,
+    pub(super) calls: String,
+    pub(super) plan_id: String,
+    pub(super) notes: String,
 }
 
 fn plan_id(snapshot_id: i64, candidate: &str) -> String {
