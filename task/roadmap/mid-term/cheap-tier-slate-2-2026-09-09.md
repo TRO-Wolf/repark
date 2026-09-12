@@ -40,6 +40,8 @@ sections left open.
 | S2-20 | **STATUS sentences for BALLISTA-M2-B, AP-2 and RP-16** ride the v1.4 release PR (they landed after the v1.3.0 cut; the file sits at 22 959 B under its 25 000 B ceiling, so the release rewrite pays for them). No standalone STATUS PR. | v1.4 release PR |
 | S2-21 | **Perf review agents (2026-09-02 rule) under the critic-tier rule:** they return as **Grok critic rounds**, read-only, only on a unit branch whose diff touches `crates/` or `python/repark/src/` beyond pins (docs, ledger and example rounds skip them). One Rust reviewer and one Python reviewer per such branch, findings back to the actor before the PR, as REVIEW-1 ran. | every product unit branch |
 | S2-22 | **EX-29 Q1 — six `Column.*` engine-plumbing names** (`for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`), measured absent from `pyspark.sql.Column` on 4.1.2: **the example inventory narrows to drop them** — they are not Spark surface and no honest example can teach them. Card **EX-31** (Devin, one M round, after EX-30 merges so the baselines move once): the enumerator gains an explicit named exclusion list with the measurement as its reason, the six names leave `backlog.txt`, plus **`F.PythonUDFColumn`** (EX-30 Q1, 2026-09-11: the marker class `F.udf(f)("n")` returns, measured absent from `pyspark.sql.functions` and `pyspark.sql.column` on 4.1.2 — same class of name), so seven names; `BACKLOG_BASELINE` 119 → 112 after EX-30, `inventory.txt` regenerated, a pin that the seven are neither public nor on the backlog. | EX-31 |
+| S2-23 | **Q-1 ruled (RP-17's third AP-1 re-measure, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md`):** `plan_partitioning`'s `projected_files_at_target` multiplies the **stored** (already-compressed) file bytes by the footer `byte_ratio`, so it applies compression twice — under one codec it projects 1 156 376 B against a live rewrite of 4 474 081 B (−74 %). The formula changes to **Σ uncompressed footer bytes × byte_ratio** (= the input's compressed bytes, the honest floor for a rewrite of the same rows), which reads −37 % / −32 % on the same beds. Card **AP-3** (one M round, Rust, red-first on the AP-1 beds). The remaining gap is S2-24's, so AP-1-R-001 stays OPEN until both land and the 20 % check runs a fourth time. | AP-3, AP-1 |
+| S2-24 | **The rewrite writes 1.5× its input's compressed bytes under the same codec** (RP-17 re-measure: 206 zstd INSERT files, Σ compressed 2 831 692 B → 20 zstd rewrite files, 4 474 081 B; skewed 4 136 632 B). Same rows, same codec, 45–58 % larger — an encoding difference between `IcebergWriteExec` and the maintenance rewrite writer (dictionary encoding, page/row-group shape, statistics, zstd level, or the sort order the INSERT path preserved and the rewrite lost). Fork card **F-REWRITE-SIZE-1** (measure-first on the fork: one bed, both writers, every parquet-level property diffed; then the fix and RP-18). Until it lands the maintenance policy's compaction is a net-size **loss** on zstd tables — say so in the maintenance guide's known-issues line (rides AP-3). | fork lane, RP-18, AP-1 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -584,6 +586,54 @@ lands only if every shape is faster. D-3 every describe / summary pin stays gree
 spec (the DF-DESCRIBE-STR-1 oracle table).
 
 **Steps.** 1 (I). **Rounds.** 1 (I), after DF-DESCRIBE-STR-1 merges.
+
+---
+
+### Card AP-3 — `projected_files_at_target` multiplies the uncompressed footer sum (S2-23)
+
+**Why.** Three AP-1 measurements agree: the projection multiplies the stored (compressed) file bytes
+by the footer `byte_ratio`, compressing twice. RP-17's re-measure under one codec reads −74 % / −72 %
+against the live rewrite; the corrected form reads −37 % / −32 % (the remainder is S2-24's).
+
+**Home.** `crates/repark-spark/src/call/plan_partitioning_bytes.rs` (the sums the footers give),
+`crates/repark-spark/src/call/plan_partitioning_score.rs` (`accumulate`: `amount` becomes the
+uncompressed sum per item), `plan_partitioning.rs` (the residue note and the frame's `notes` spelling
+`byte_ratio=… (footers)`), the AP-0/AP-1 pins, the maintenance guide's known-issues line (S2-24),
+ledger `task/ledgers/staging/ap-3-ledger.md`.
+
+**Decisions.** D-1 `projected_files_at_target` = ceil(Σ_uncompressed(item) × byte_ratio / target) per
+item, where Σ_uncompressed is the footers' `total_uncompressed_size` sum; the fallback (unreadable
+footer) keeps its documented ratio but multiplies the uncompressed estimate `stored / ratio`. D-2 red
+first: the AP-1 beds' pins move from the stored-bytes projection to the uncompressed one with the
+RP-17 numbers as evidence (1 156 376 → 2 831 692 on uniform/skewed); every other plan pin stays green.
+D-3 `projected_partitions` is untouched (measured exact). D-4 no fork change.
+
+**Steps.** 1 (M). **Rounds.** 1 (M).
+
+---
+
+### Card F-REWRITE-SIZE-1 — why the rewrite's output is 1.5× its input's compressed bytes (fork lane, S2-24)
+
+**Why.** RP-17's re-measure: 206 zstd `INSERT` files (Σ compressed 2 831 692 B, Σ uncompressed
+7 529 566 B) → `rewrite_data_files` → 20 zstd files, 4 474 081 B (uniform) / 4 136 632 B (skewed).
+Same rows, same codec. Compaction on a zstd table is a net-size loss until this is understood.
+
+**Home (fork).** Measure first: `crates/iceberg/src/maintenance/rewrite_data_files_write.rs` and
+`crates/integrations/datafusion/src/physical_plan/write.rs` (`IcebergWriteExec`) — diff every parquet
+writer property both paths end up with (`WriterProperties`: dictionary enabled/page size,
+`data_page_size_limit`, `max_row_group_size`, `write_batch_size`, statistics, zstd level, encodings
+per column) and the row order each writes (the INSERT path preserves the partition-hash order; a
+rewrite that concatenates files in manifest order may destroy run-length and dictionary locality).
+Then the fix at the site the measurement names; ledger `task/f-rewrite-size-1-ledger.md`.
+
+**Decisions.** D-1 step 1 is a measurement ledger (one bed, both writers, a table of properties and
+per-column encodings read back from the footers with `parquet::file::reader`, plus the output size
+with each candidate property flipped one at a time). D-2 the fix is whatever single change brings the
+rewrite within 10 % of the input's compressed bytes on that bed, pinned; if it is a sort, it must be
+the table's sort order or the input's observed order, never an invented one. D-3 RP-18 consumes it;
+AP-1's 20 % check runs a fourth time.
+
+**Steps.** 1 (I, measure); 2 (I, fix). **Rounds.** 2.
 
 ---
 
