@@ -135,6 +135,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PySpark 4.1.2 (ANSI on, UTC). `risk_tier: standard`. Branch
   `docs/ex-28-scalar-remainder`.
   pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
+- [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
+  **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
+  remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on
+  live PySpark 4.1.2 (ANSI on, UTC, zulu-17): zero names coverable, 23 stay with
+  their existing §7 rows (EX-DF-1/2/3/4/7/8/17/19, EX-CAT-1/2, EX-W2-1,
+  EX-IO-7), the six `Column.*` plumbing names stay pending an owner ruling on
+  inventory narrowing. Pin gaps filled: `get_database` / `list_databases` snake
+  legs, the `describe` string-column raise, the `colRegex` multi-match arm.
+  `risk_tier: standard`. Branch `docs/ex-29-class-remainder`.
+  pins: ex-29-class-remainder/C-001, C-002, C-003, C-004, C-005, C-006
 - [fn-fix-2-ctrl-1-controls-ledger.md](fn-fix-2-ctrl-1-controls-ledger.md) — **FN-FIX-2-CTRL-1
   (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
   missing, measured on live PySpark 4.1.2 (both ANSI modes) and pinned; controls 2–7
