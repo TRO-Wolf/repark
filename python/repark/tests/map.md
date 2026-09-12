@@ -437,6 +437,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
+  FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
+  and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
   CSV-INFER-PERF-1 re-hashed `_promote_csv_string_types` (one `try_cast` failure-count agg)
   and `_CSV_NATIVE_OPTION_KEYS` (`utf8_columns`). Round 2 restored `_CSV_NATIVE_OPTION_KEYS`
   (internal `utf8_columns` no longer in the public native-key set) and re-hashed
@@ -1495,6 +1497,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   = current; DROP main / kind mismatch refuse; DEFAULT column option refuse; trailing AS OF
   misspelled RETENTION refuse; **r25 T2** `test_ref_ddl_replace_and_retain` (CREATE OR REPLACE
   lands + misspelled RETENTION still loud); octo C8 py-lint line wrap on NOT NULL create. No AWS.
+- `test_facade_1_arrow_c_stream.py` — **FACADE-1 (2026-09-12):** capsule seam both ways.
+  Package import, polars/pandas `__arrow_c_stream__` consumers, and polars
+  `createDataFrame` run with pyarrow hidden; `to_arrow` names `repark[pyarrow]`;
+  mapInArrow construction and ML prediction re-entry register capsules, not IPC;
+  version-skew IPC fallback stays; export-door signatures and answers hold.
+  pins: facade-1/C-001, C-002, C-003, C-004, C-005
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

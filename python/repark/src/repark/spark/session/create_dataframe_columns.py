@@ -6,10 +6,8 @@ import datetime
 from decimal import Decimal
 from typing import Any
 
-import pyarrow as pa
-import pyarrow.compute as pc
-
 from repark.errors import PySparkTypeError, PySparkValueError
+from repark.spark._pyarrow import require_pyarrow
 from repark.spark.session.create_dataframe_inference import (
     _prepare_nested_cell,
     _validate_decimal_envelope,
@@ -47,6 +45,9 @@ def _arrow_table_from_raw_tuples(
 
 def _refuse_infinite_float_column(values: list[Any]) -> Any:
     """Build a float64 array, refusing infinite cells exactly like normalization."""
+    pa = require_pyarrow()
+    import pyarrow.compute as pc
+
     column = pa.array(values, type=pa.float64())
 
     if len(column) > 0 and pc.any(pc.is_inf(column)).as_py():
@@ -106,6 +107,7 @@ def _normalize_slow_column(column_name: str, raw_values: list[Any]) -> tuple[str
 
 def _arrow_table_from_raw_tuples_fast(names: list[str], raw_tuples: list[tuple[Any, ...]]) -> Any:
     """Build the Arrow table with one census pass per column, then one build pass."""
+    pa = require_pyarrow()
     width = len(names)
 
     raw_columns: list[list[Any]] = [
@@ -209,6 +211,7 @@ def _column_is_slow(present: set[type]) -> bool:
 
 def _fast_column_arrow_type(raw_values: list[Any], present: set[type]) -> Any:
     """The Arrow type for one single-kind scalar column (Spark inference rules)."""
+    pa = require_pyarrow()
     if not present:
         return _arrow_type_for_typed_null_sql(_infer_null_sql_from_raw_cells(raw_values))
 

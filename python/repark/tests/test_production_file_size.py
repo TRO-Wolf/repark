@@ -140,7 +140,7 @@ EXPECTED_SYMBOL_HASHES = {
         "37f0e6f380080cd0a794b7792e813128dd311e23efb78f1dd12049b8e0368d5d"
     ),
     "_arrow_table_from_raw_tuples_fast": (
-        "5cb5f470039bce910210fb55148d084c63d89ed2281544438632865206819aa5"
+        "40b8a21d4f1baad5577a9da5c93e20055c6ea1e0f0d752e68cdfa0a4052ad7f9"
     ),
     "_arrow_table_from_raw_tuples_legacy": (
         "075bb5efe8ce7da91bae93c336cc2b0586e98d2d37a57f2f079ec136bbc2f769"
@@ -173,7 +173,7 @@ EXPECTED_SYMBOL_HASHES = {
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
     "_create_dataframe_from_rows_inner": (
-        "db5ae911ff2aa17e40c2dc14714751331b87d238062ce759ec3e26579cace5fe"
+        "8cdae71aa80a2be992e1b66f24b2273faa467a15e31112b0943799e1481cb4b9"
     ),
     "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
     "_datetime64_unit_from_dtype": (
@@ -228,7 +228,7 @@ EXPECTED_SYMBOL_HASHES = {
         "536a4c6c4810c55736b8ca642f4189f39e811b2245bc7ddf0e1d7c58b4aa2af1"
     ),
     "_materialize_arrow_as_memtable_frame": (
-        "701fce3a0cc294a2b919f3f97777d53128f742e2e03dfc82d07d1fc1d04e89dd"
+        "75fde5520c9bd4362523509defbde54daa899a612f112f6b43117b97b952f1a6"
     ),
     "_materialize_values_as_memtable_frame": (
         "6161ab242a59a6829c18f8cfc4e8a26cbebdd1ba667a4b49836e1a20ca32d0a6"

@@ -93,6 +93,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   marker before the `*` arm, so expansion keeps the marker's position in the
   projection. Line-neutral at the exact baseline.
   pins: df-colregex-1/C-003
+  FACADE-1 (2026-09-12): mapInArrow construction registers an empty Arrow table through
+  the capsule helper (IPC only when the native symbol is absent). `to_arrow` /
+  `to_arrow_batches` go through `require_pyarrow`. `to_polars` consumes
+  `__arrow_c_stream__` via `pl.DataFrame(self)` when pyarrow is hidden. mapInArrow
+  still materializes UDF output batches in Python before the capsule register: a live
+  RecordBatchReader over the generator would re-enter `__arrow_c_stream__` while Rust
+  holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
+  so tests that patch `pa.RecordBatchReader` keep tracking `from_stream`. Exact baseline
+  ratchets 4485 → 4473. pins: facade-1/C-001, C-002
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -481,6 +490,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   C-005).
   PERF-DESCRIBE-1 (2026-09-12): `statistics.py` 318→372, no new module, no ceiling
   row; stays below the source-size default (pins: perf-describe-1/C-002, C-005).
+  FACADE-1 (2026-09-12): `core.py` 4485→4473; `_pyarrow.py` and `_arrow_stream.py`
+  stay below the source-size default (pins: facade-1/C-001, C-002).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-

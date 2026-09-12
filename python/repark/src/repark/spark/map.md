@@ -28,6 +28,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `_secrets.py` — secret-property classification and redacted runtime configuration
   listing. Explicit `get` calls do not redact values.
 - `_temp_views.py` — temporary-view ownership and cleanup helpers.
+- `_pyarrow.py` — **FACADE-1 (2026-09-12):** `require_pyarrow()` imports pyarrow or raises
+  `ImportError` naming `repark[pyarrow]`. Package import does not load pyarrow.
+  pins: facade-1/C-002
+- `_arrow_stream.py` — **FACADE-1 (2026-09-12):** `register_arrow_exporter_as_temp_view`
+  prefers `register_arrow_stream_as_temp_view` (the `__arrow_c_stream__` capsule seam) and
+  keeps `pa_ipc.new_stream` + `register_ipc_stream_as_temp_view` as the version-skew fallback
+  when the native capsule symbol is absent. pins: facade-1/C-001
 - `catalog.py` — Spark catalog facade. It lists namespaces, Iceberg tables, temporary
   views, and schema tables; supports current catalog/database state, function
   registration, cache clearing, and table/view existence operations. Engine-private
