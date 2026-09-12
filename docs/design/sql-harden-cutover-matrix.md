@@ -3,8 +3,8 @@
 **Measured 2026-09-04 · SQL-HARDEN-1 (S1–S7, base `e6ebd40`) + SQL-HARDEN-2 (S8/S9 CoW, base
 `c70a306`) · oracle live PySpark 4.1.2 + Iceberg 1.11.0
 (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`, `REPARK_PARITY_LIVE=1`) ·
-ledgers [`sql-harden-1-cutover-shapes-ledger.md`](../../task/ledgers/staging/sql-harden-1-cutover-shapes-ledger.md),
-[`sql-harden-2-cow-shapes-ledger.md`](../../task/ledgers/staging/sql-harden-2-cow-shapes-ledger.md);
+ledgers [`sql-harden-1-cutover-shapes-ledger.md`](../../task/ledgers/completed/sql-harden-1-cutover-shapes-ledger.md),
+[`sql-harden-2-cow-shapes-ledger.md`](../../task/ledgers/completed/sql-harden-2-cow-shapes-ledger.md);
 REPARK halves re-measured 2026-09-04 (CUTOVER-SCHEMA-1)**
 
 This file closes when the cutover matrix is filed on `main`. Memory-catalog Spark cells are the
