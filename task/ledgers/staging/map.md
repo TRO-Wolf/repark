@@ -236,11 +236,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `perf/dynflatten-1-measure`.
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
 - [profiles-1-ledger.md](profiles-1-ledger.md) —
-  **PROFILES-1 step 1 (2026-09-10), in flight:** the measurement bed step 2 sweeps:
-  three D-2 datasets, five reads + three writes, knob × value CSV harness, one-JVM
-  guard, `--smoke` proof mode. No sweep, no timings as results. `risk_tier: standard`.
-  Branch `feat/profiles-1`.
-  pins: profiles-1/C-001, C-002, C-003, C-004, C-005
+  **PROFILES-1 steps 1–2 (2026-09-10/12), in flight:** the measurement bed step 2
+  sweeps: three D-2 datasets, five reads + three writes, knob × value CSV harness,
+  one-JVM guard, `--smoke` proof mode. Step 2 ran the sweep on a release build —
+  baseline plus 19 knobs × 3 reps in
+  `docs/perf/config-profiles-2026-09-12.md` with its CSV evidence; the two
+  `write.*` table-property knobs reached the bed via `ALTER TABLE … SET
+  TBLPROPERTIES` (harness fix); 5 knobs land "no effect measured" under the
+  affected-cells rule. All eight clauses PROVEN.
+  `risk_tier: standard`. Branch `feat/profiles-1-step-2`.
+  pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [perf-facade-1-ledger.md](../completed/perf-facade-1-ledger.md) —
   **PERF-FACADE-1 (2026-09-04), in flight:** slate items 1 and 2 of PERF-ANALYSIS-1, the two
   biggest measured user-visible walls. `collect()` row materialization moves into
