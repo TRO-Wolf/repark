@@ -34,6 +34,13 @@ naming it (exit 1), and a wrong-bytes control in `catalog/list_names.py` failed 
 execute leg by name (exit 1).
 pins: ex-29-class-remainder/C-001, C-005, C-006
 
+DF-COLREGEX-1 (2026-09-11): `check_example_coverage.py` ran unchanged —
+`BACKLOG_BASELINE` holds at 128; no example names `DataFrame.colRegex` /
+`col_regex`, so the names stay on the backlog and the `--require-execute` leg is
+the clause's proof (exit 0 on the shipped tree: 927 names, 797 covered, 212
+examples). The fix lives in `python/repark/src/repark/spark/dataframe/colregex.py`.
+pins: df-colregex-1/C-004
+
 EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
 names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.

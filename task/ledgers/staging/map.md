@@ -32,6 +32,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
   `fix/df-describe-str-1`.
   pins: df-describe-str-1/C-001, C-002, C-003, C-004
+- [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
+  **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
+  measured Spark contract — a backticked pattern returns the `RegexColumn` marker
+  (`python/repark/src/repark/spark/dataframe/colregex.py`) that `select` expands to
+  every full-matching column in frame order, case-insensitively, zero matches
+  included; a bare pattern resolves as a literal column name at the call. `drop`
+  no-ops the marker; `withColumn`/`groupBy`/`orderBy`/`.alias` on it refuse. Both
+  pins flipped to parity (`test_colregex_backtick_spelling_parity`,
+  `test_colregex_multi_match_expands`, `test_colregex_duplicate_names_expand_positionally`);
+  EX-DF-1 FIXED both arms. Remediation round (ruling S2-21, review P2-1):
+  `expand_col_regex` binds matches only — 16.7–23.5× on sparse matches, parity at
+  500 — while overlay/duplicate-name frames keep the positional path. Facade-only —
+  no engine change. `risk_tier: standard`. Branch `fix/df-colregex-1`.
+  pins: df-colregex-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
   **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
   remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on

@@ -111,9 +111,8 @@ def test_random_split_weights(spark: ReparkSession) -> None:
 
 def test_col_regex_and_noops(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS user_id, 2 AS user_name, 3 AS other")
-    col = frame.colRegex("user_.*")
-    # first match only (disclosed)
-    assert frame.select(col).columns[0].startswith("user_")
+    col = frame.colRegex("`user_.*`")
+    assert frame.select(col).columns == ["user_id", "user_name"]
     same = frame.repartition(4).coalesce(1).hint("broadcast")
     assert same.count() == 1
 
