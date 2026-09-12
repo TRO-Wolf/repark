@@ -3439,6 +3439,38 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `FeatureUnsupported` before any AWS call so the engine can cite R126 instead of "not
   supported yet". Pins: rp-3-fork-repin/C-008.
 
+### ORPHAN-S3TABLES-1 — `remove_orphan_files` on S3 Tables refuses loud and names the service's own maintenance
+
+- **repark** — `CALL <catalog>.system.remove_orphan_files(…)` against an `s3tables`-kind
+  catalog **refuses before any IO** — before the table load and before `dry_run` is read,
+  so the armed and dry-run spellings fail identically — with one message naming the table,
+  the reason (table buckets do not support listing: the bucket answers `ListObjectsV2` with
+  405 MethodNotAllowed) and the remedy (the service's own `unreferencedFileRemoval` in
+  `PutTableBucketMaintenanceConfiguration`). `CALL run_maintenance` keeps the orphan step
+  in the plan when `orphan_older_than` is set but reports its row `skipped` with the same
+  reason as `result`, on the dry run and on apply; every other step is unchanged, and
+  every other catalog kind is unchanged. The refusal keys on the registry's
+  `LocationPolicy::ServiceManagedLocation`, so it needs no AWS.
+- **Apache Spark** — fails the same way, opaquely: Spark's `remove_orphan_files` is
+  listing-based too, so on a table bucket it reaches the same refusal as an S3 error
+  rather than a named reason. The divergence is the loud refusal, not the outcome.
+  *(oracle: documented + measured — AWS documents that table buckets do not support
+  `ListObjectsV2` and that unreferenced-file removal runs through
+  `PutTableBucketMaintenanceConfiguration`; the owner measured the 405 on a dev table
+  bucket 2026-09-12, and the base engine reached the bucket's refusal as an opaque io
+  error (previously the fork's `Invalid s3 url` path-parser error, fixed separately as
+  fork F-S3ROOT-1).)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_orphan.rs::call_remove_orphan_files_on_s3_tables_refuses_before_any_io`,
+  `::call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way`,
+  `crates/repark-spark/src/tests/run_maintenance.rs::run_maintenance_on_s3_tables_marks_the_orphan_step_skipped`,
+  `::run_maintenance_apply_on_s3_tables_skips_orphan_and_runs_the_rest`, and
+  `call/run_maintenance.rs::tests::a_service_managed_catalog_marks_step_5_skipped`
+- **Rationale** — DECLARED, the refusal is the correct end state, not a gap to close: the
+  service owns unreferenced-file removal on table buckets, so there is nothing to fix and
+  nothing to mirror — the row exists so a reader hitting the refusal finds why it is the
+  intended answer. Pins: orphan-s3tables-1/C-001, C-002, C-003, C-005.
+
 ### S3T-V3-1 — FIXED (LIVE-v3-M, 2026-09-02): both live v3 legs are green; S3 Tables accepts `format-version = 3` at CREATE
 
 - **repark** — `test_v3_dv_dml_maintenance_against_glue` and
