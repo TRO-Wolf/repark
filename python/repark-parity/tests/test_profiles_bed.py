@@ -1,4 +1,8 @@
-"""Profiles bed pins. pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008"""
+"""Profiles bed pins.
+
+pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006
+pins: profiles-1/C-007, C-008, C-009, C-010, C-011
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,7 @@ import csv
 import re
 import subprocess
 import sys
+import tomllib
 from collections import defaultdict
 from pathlib import Path
 
@@ -292,3 +297,177 @@ def test_doc_tables_equal_csv_medians() -> None:
     )
     for knob, deviation in listed.items():
         assert f"{computed[knob]:.4f}" == deviation, knob
+
+
+EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "docs" / "examples" / "config"
+GUIDE_PATH = Path(__file__).resolve().parents[3] / "docs" / "guide" / "repark-toml.md"
+REMEASURE_DIR = CSV_DIR / "step3-remeasure"
+
+NOISE_CELLS = {
+    ("futures", "scan_filter"),
+    ("futures", "group_by"),
+    ("futures", "window"),
+}
+SESSION_KEY_CONF = {
+    "batch_size": "repark.batch.size",
+    "target_partitions": "repark.target.partitions",
+}
+CONF_KEY_CSV = {
+    "repark.batch.size": "repark.batch.size",
+    "repark.target.partitions": "datafusion.execution.target_partitions",
+}
+BATCH_SIZE_SPELLINGS = {"repark.batch.size", "datafusion.execution.batch_size"}
+REMEASURE_CSV = {
+    "repark.batch.size": "datafusion.execution.batch_size",
+}
+
+GUIDE_PROFILE_ROW = re.compile(
+    r"^\| `([^`]+)` \| `([^`]+)` \| ([0-9.]+) \| ([a-z]+) `([a-z_]+)` \|$",
+    re.MULTILINE,
+)
+GUIDE_DEFAULT_ROW = re.compile(
+    r"^\| `([^`]+)` \| `[^`]+` [0-9.]+ \| [a-z]+ `[a-z_]+` \|$",
+    re.MULTILINE,
+)
+
+
+def cell_noise_floors() -> dict[tuple[str, str], float]:
+    """Return the worst unreachable-cell deviation seen per cell — the noise floor."""
+    floors: dict[tuple[str, str], float] = {}
+    for knob, path in knob_csvs().items():
+        medians = cell_medians(path)
+        controls = CONTROL_VALUES[knob] | {"@default"}
+        for (dataset, query, value), median in medians.items():
+            cell = (dataset, query)
+            if value in controls or cell in AFFECTED_CELLS[knob]:
+                continue
+            deviation = abs(median / medians[(*cell, "@default")] - 1.0)
+            floors[cell] = max(floors.get(cell, 0.0), deviation)
+    return floors
+
+
+def measured_winners(class_cells: set[tuple[str, str]]) -> dict[str, str]:
+    """Return knob → winning value under the D-1 rule for one workload class."""
+    floors = cell_noise_floors()
+    winners: dict[str, str] = {}
+    for knob, path in knob_csvs().items():
+        cells = (AFFECTED_CELLS[knob] & class_cells) - NOISE_CELLS
+        if not cells:
+            continue
+        medians = cell_medians(path)
+        controls = CONTROL_VALUES[knob] | {"@default"}
+        qualified: list[tuple[str, float]] = []
+        for value in {v for _, _, v in medians} - controls:
+            ratios = {
+                cell: medians[(*cell, value)] / medians[(*cell, "@default")] for cell in cells
+            }
+            won = any(
+                ratio <= 0.95 and 1.0 - ratio > floors.get(cell, 0.0)
+                for cell, ratio in ratios.items()
+            )
+            vetoed = any(
+                ratio >= 1.05 and ratio - 1.0 > floors.get(cell, 0.0)
+                for cell, ratio in ratios.items()
+            )
+            if won and not vetoed:
+                qualified.append((value, min(ratios.values())))
+        if qualified:
+            winners[knob] = min(qualified, key=lambda item: item[1])[0]
+    return winners
+
+
+def canonical_winners(class_cells: set[tuple[str, str]]) -> dict[str, str]:
+    """Return winners keyed by the conf key the committed example files emit."""
+    winners = measured_winners(class_cells)
+    spellings = {winners.pop(knob) for knob in BATCH_SIZE_SPELLINGS if knob in winners}
+    assert len(spellings) <= 1, f"batch-size spellings disagree: {sorted(spellings)}"
+    if spellings:
+        winners["repark.batch.size"] = spellings.pop()
+    if "datafusion.execution.target_partitions" in winners:
+        winners["repark.target.partitions"] = winners.pop("datafusion.execution.target_partitions")
+    return winners
+
+
+def flatten_conf(table: dict[str, object], prefix: str = "") -> dict[str, str]:
+    """Return the conf table flattened with dot joins, as the CFG-1 loader emits it."""
+    flat: dict[str, str] = {}
+    for key, value in table.items():
+        joined = f"{prefix}{key}"
+        if isinstance(value, dict):
+            flat.update(flatten_conf(value, f"{joined}."))
+        else:
+            flat[joined] = str(value)
+    return flat
+
+
+def example_knob_sets() -> dict[str, dict[str, str]]:
+    """Return profile name → emitted conf key → value for the committed examples."""
+    sets: dict[str, dict[str, str]] = {}
+    for name in ("read", "write"):
+        profile = tomllib.loads((EXAMPLES_DIR / f"{name}.toml").read_text()).get(name, {})
+        knobs = {
+            SESSION_KEY_CONF[key]: str(value) for key, value in profile.get("session", {}).items()
+        }
+        knobs.update(flatten_conf(profile.get("conf", {})))
+        sets[name] = knobs
+    return sets
+
+
+def guide_section(path: Path, heading: str) -> str:
+    """Return the text of one `###` section of a guide."""
+    text = path.read_text()
+    start = text.index(heading)
+    rest = text[start + len(heading) :]
+    match = re.search(r"^##+ ", rest, re.MULTILINE)
+    return rest[: match.start()] if match else rest
+
+
+def test_example_values_trace_to_step2_rows() -> None:
+    """Pin C-009/C-010: the committed examples parse and carry only measured winners."""
+    sets = example_knob_sets()
+    assert sets["read"] == canonical_winners(READ_CELLS)
+    assert sets["write"] == canonical_winners(WRITE_CELLS) == {}
+    for name, knobs in sets.items():
+        class_cells = READ_CELLS if name == "read" else WRITE_CELLS
+        for conf_key, value in knobs.items():
+            csv_key = CONF_KEY_CSV.get(conf_key, conf_key)
+            medians = cell_medians(knob_csvs()[csv_key])
+            assert value in {v for _, _, v in medians} - CONTROL_VALUES[csv_key] - {"@default"}, (
+                f"{conf_key}={value}: not a swept step-2 value"
+            )
+            cells = (AFFECTED_CELLS[csv_key] & class_cells) - NOISE_CELLS
+            ratios = [medians[(*cell, value)] / medians[(*cell, "@default")] for cell in cells]
+            assert min(ratios) <= 0.95, f"{conf_key}={value}: no measured win"
+
+
+def test_guide_tables_match_measurements() -> None:
+    """Pin C-009/C-011: guide rows recompute; the no-effect list equals the step-2 table."""
+    read_rows = GUIDE_PROFILE_ROW.findall(guide_section(GUIDE_PATH, "### `read`"))
+    file_knobs = example_knob_sets()["read"]
+    assert {row[0] for row in read_rows} == set(file_knobs)
+    for conf_key, raw_value, stated_ratio, dataset, query in read_rows:
+        value = raw_value.strip('"')
+        assert file_knobs[conf_key] == value, conf_key
+        medians = cell_medians(knob_csvs()[CONF_KEY_CSV.get(conf_key, conf_key)])
+        ratio = medians[(dataset, query, value)] / medians[(dataset, query, "@default")]
+        assert f"{ratio:.4f}" == stated_ratio, f"{conf_key}: {stated_ratio}"
+    step2 = dict(NO_EFFECT_ROW.findall(doc_sections()["No effect measured"]))
+    guide = dict(NO_EFFECT_ROW.findall(guide_section(GUIDE_PATH, "### No effect measured")))
+    assert guide == step2
+    kept = set(GUIDE_DEFAULT_ROW.findall(guide_section(GUIDE_PATH, "### No effect measured")))
+    canonical_knobs = set(knob_csvs()) - {"datafusion.execution.batch_size"}
+    in_profile = {CONF_KEY_CSV.get(key, key) for key in file_knobs}
+    assert kept == canonical_knobs - in_profile - set(step2)
+
+
+def test_step3_remeasure_confirms_profile_values() -> None:
+    """Pin C-009: the step-3 re-measure reproduces each profile win on this box."""
+    assert REMEASURE_DIR.is_dir(), "step3-remeasure CSVs are missing"
+    for conf_key, value in example_knob_sets()["read"].items():
+        csv_key = CONF_KEY_CSV.get(conf_key, conf_key)
+        remeasured = REMEASURE_DIR / f"{REMEASURE_CSV.get(csv_key, csv_key)}.csv"
+        assert remeasured.is_file(), f"{csv_key}: no step-3 re-measure CSV"
+        medians = cell_medians(remeasured)
+        cells = (AFFECTED_CELLS[csv_key] & READ_CELLS) - NOISE_CELLS
+        ratios = [medians[(*cell, value)] / medians[(*cell, "@default")] for cell in cells]
+        assert min(ratios) <= 0.95, f"{csv_key}={value}: win did not reproduce"

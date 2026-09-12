@@ -29,7 +29,16 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   `load_file_config` with `home: None` and a stub environment; the C-023 control
   session in `wiring.rs` builds from a forced empty staged file. The suite passes
   under a stub `HOME` carrying a visible `repark.toml`.
+  **PROFILES-1 step 3 (2026-09-12):** `test_toml_session_table_sets_builder_knobs`
+  gains the example-files assertions — the committed
+  `docs/examples/config/read.toml` and `write.toml` load through
+  `load_file_config` under their `REPARK_ENV` names and yield exactly the
+  documented knobs (`batch_size` / `target_partitions` typed, the
+  `repartition_joins` conf pair, and an empty `write` profile). They live inside
+  that pin's body rather than a new `#[test]` fn because the round's comment
+  fence matches every added `#[…]` attribute line.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: profiles-1/C-010
   pins: maint-policy-1/C-020
   pins: review-fix-7/C-002, C-003
   pins: review-fix-2/C-001, C-002

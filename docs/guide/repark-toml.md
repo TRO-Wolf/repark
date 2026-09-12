@@ -217,3 +217,106 @@ as `"<n>d"`, `"<n>h"`, or `"<n>m"`, unknown keys refusing loud with the key path
 The full shape, the step order it drives, and the `CALL run_maintenance()` door are
 in [maintenance-policy.md](maintenance-policy.md). Unknown keys inside `display` and
 `session` refuse loud; `conf` accepts any key.
+
+## The measured `read` and `write` profiles
+
+PROFILES-1 swept nineteen knobs over a ten-cell bed — five read shapes over the
+futures parquet and TPC-H SF10, three write shapes over a 200-file Iceberg table —
+three repetitions, medians, release build
+([../perf/config-profiles-2026-09-12.md](../perf/config-profiles-2026-09-12.md)
+carries every row and the method; the committed CSVs beside it recompute each
+number). A knob earns a place in a profile only when one of its values measured
+at least 5 % better than the default on a cell the knob can reach in the
+profile's own workload class (read: scan+filter, group-by, joins, window; write:
+append, `INSERT OVERWRITE`, `MERGE`) — and it keeps the place only when no
+sibling cell in that class paid the win back. The profiles are per-knob argmaxes:
+values were measured one knob at a time, never in combination (DYNCFG-1 owns
+interactions), so read them as "each value won alone on this box", not as a tuned
+bundle.
+
+### `read` — analytics scans, joins, aggregations
+
+| conf key | value | measured ratio | measured on |
+|---|---|---|---|
+| `repark.batch.size` | `16384` | 0.3323 | tpch `group_by` |
+| `repark.target.partitions` | `32` | 0.7800 | tpch `group_by` |
+| `datafusion.optimizer.repartition_joins` | `"false"` | 0.7517 | tpch `sort_merge_join` |
+
+Committed as [../examples/config/read.toml](../examples/config/read.toml):
+
+```toml
+[read.session]
+batch_size = 16384
+target_partitions = 32
+
+[read.conf]
+datafusion.optimizer.repartition_joins = "false"
+```
+
+`REPARK_ENV=read` selects it. The `[read.session]` keys emit the same conf keys
+the table names: `session.batch_size` is `repark.batch.size`, and
+`session.target_partitions` is `repark.target.partitions`. Two spellings drive
+the one engine batch-size option — `repark.batch.size` (equally
+`spark.sql.execution.arrow.maxRecordsPerBatch`) and
+`datafusion.execution.batch_size` were swept separately and agree (0.3323 /
+0.3148 on tpch `group_by`); the profile names the repark spelling, and the
+`datafusion.*` spellings alias `target_partitions` the same way
+(`spark.sql.shuffle.partitions` is the PySpark spelling). Each row's ratio is the
+measured median ratio to `@default` on the cited cell; `repartition_joins` also
+measured 0.9426 on tpch `hash_join` and 0.9647 on `merge_updates`, and
+`target_partitions = 32` measured 0.8178 on tpch `scan_filter`.
+
+### `write` — bulk appends, `INSERT OVERWRITE`, `MERGE`
+
+No knob earned a place. Every swept value either stayed within 5 % of the
+default on the write cells or bought one write shape at the price of a sibling:
+`write.distribution-mode = 'none'` measured 0.9333 on `INSERT OVERWRITE` but
+1.2217 on `MERGE` (and it is an Iceberg table property regardless — it would sit
+unread in this file; it is set with `ALTER TABLE … SET TBLPROPERTIES`), and
+`datafusion.execution.batch_size = 262144` measured 0.9391 on append in one sweep
+while its `MERGE` cost (1.0543) replicated across both batch-size spellings — the
+twin spelling's append read 0.9854, so the win did not reproduce. The `write`
+profile is therefore the engine defaults, and the committed file
+([../examples/config/write.toml](../examples/config/write.toml)) carries the
+bare `[write]` table as the honest record: `REPARK_ENV=write` builds a stock
+session.
+
+### No effect measured
+
+Five more knobs were swept and moved no reachable cell by more than 5 % — the
+maximum deviation |ratio − 1| over each knob's affected cells, per the step-2
+method:
+
+| knob | max deviation on affected cells |
+|---|---|---|
+| `repark.scan.concurrency_limit` | 0.0345 |
+| `datafusion.execution.parquet.max_row_group_size` | 0.0399 |
+| `datafusion.execution.parquet.bloom_filter_on_write` | 0.0153 |
+| `datafusion.execution.parquet.write_batch_size` | 0.0438 |
+| `write.target-file-size-bytes` | 0.0417 |
+
+The remaining ten swept knobs measured an effect but never a qualifying win —
+each stays at the default because its non-default cells were flat-to-worse, not
+untried (ratios are the argmax regression each knob produced on a cell it can
+reach):
+
+| knob | non-default result | cell |
+|---|---|---|
+| `datafusion.optimizer.prefer_hash_join` | `false` 10.2064 | tpch `hash_join` |
+| `datafusion.optimizer.repartition_aggregations` | `false` 4.2430 | tpch `hash_join` |
+| `datafusion.optimizer.repartition_file_scans` | `false` 6.7024 | tpch `scan_filter` |
+| `datafusion.execution.parquet.pushdown_filters` | `true` 1.7493 | tpch `hash_join` |
+| `datafusion.execution.parquet.enable_page_index` | `false` 1.0839 | tpch `sort_merge_join` |
+| `datafusion.execution.parquet.bloom_filter_on_read` | `false` 1.2182 | futures `window` |
+| `datafusion.execution.parquet.compression` | `snappy` 1.0870 | iceberg `append_files` |
+| `write.distribution-mode` | `none` 1.2217 | iceberg `merge_updates` |
+| `repark.merge.file_scoped_rewrite` | `false` 1.8483 | iceberg `merge_updates` |
+| `repark.merge.scan_pruning` | `false` 1.4638 | iceberg `merge_updates` |
+
+`repartition_file_scans = "false"` also produced the sweep's largest single
+improvement (0.3331 on futures `scan_filter`) — on the bed's noisiest cell, while
+the same shape on TPC-H regressed 6.7×, so it is not a win. The same applies to
+every argmax that landed on a futures read cell: those cells carried the run's
+desktop noise (the step-2 method records load ~15 of 64 threads), and no profile
+entry rests on one. `datafusion.execution.coalesce_batches` is not swept at all —
+it refuses loud at `.config()` (R-16).
