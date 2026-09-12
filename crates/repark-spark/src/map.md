@@ -70,7 +70,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
   pins: rp-5-fork-repin/C-004
-- `call.rs` — nine maintenance procedures: eight maintenance calls plus `register_table`. Each
+- `call.rs` — ten maintenance procedures: nine maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete returns Spark's
   four zeros on a DV-only table and converts admitted parquet deletes to one PUFFIN per data
@@ -85,7 +85,9 @@ pins: rp-4-fork-repin/C-005, C-006
   in `call/plan_partitioning_score.rs`). **AP-1 step 2 (2026-09-11):**
   `projected_files_at_target` derives from post-rewrite bytes via the parquet-footer
   `byte_ratio` in `call/plan_partitioning_bytes.rs` (0.55 fallback), reported per row in
-  `notes`.
+  `notes`. **AP-2 step 1 (2026-09-11):** `apply_partitioning` re-derives the plan id at the
+  current snapshot and applies the matching candidate (`dry_run` default true; `false`
+  executes one commit per step). Body: `call/apply_partitioning.rs`.
   Details and test pointers:
   [call/map.md](call/map.md).
   pins: v3-5-dv-compaction/C-002, C-003, C-006
@@ -94,6 +96,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: rp-11-repin-f24/C-002
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
