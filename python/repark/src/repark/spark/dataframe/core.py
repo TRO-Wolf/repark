@@ -1464,6 +1464,7 @@ class DataFrame:
         """
         from repark.spark.dataframe.colregex import RegexColumn, expand_col_regex
         from repark.spark.functions import PandasUDFColumn, PythonUDFColumn
+        from repark.spark.functions_stack import select_with_stack_if_present
 
         expanded: list[Any] = []
         for item in cols:
@@ -1481,7 +1482,9 @@ class DataFrame:
                     expanded.extend(self.columns)
             else:
                 expanded.append(item)
-        # Scalar UDF markers rewrite before Column projection.
+        stacked = select_with_stack_if_present(self, expanded)
+        if stacked is not None:
+            return stacked
         has_pandas_udf = any(isinstance(item, PandasUDFColumn) for item in expanded)
         has_python_udf = any(isinstance(item, PythonUDFColumn) for item in expanded)
         if has_pandas_udf and has_python_udf:
@@ -1502,12 +1505,7 @@ class DataFrame:
         for item in expanded:
             if isinstance(item, Column):
                 _reject_partition_transform(item)
-                # Validate window, random, and stratified-sampling markers.
-                # Range markers are sticky pre-for_select Column attrs — validate on the
-                # raw inputs here; for_select (deferred below) drops the sticky attrs.
                 _reject_non_numeric_range_order(self, item)
-        # Rebind origin Columns before projection.
-        # for_select is deferred until multi-name disambiguation assigns unique aliases.
         projected = [self._rebind_origin_column(self._column_of(item)) for item in expanded]
         generators = [column for column in projected if getattr(column, "_generator", None)]
         if len(generators) > 1:

@@ -71,6 +71,7 @@ impl SessionExtension for SparkExtension {
         for rule in repark_functions::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
+        ctx.add_analyzer_rule(Arc::new(repark_core::StackRewrite));
         TaExtension.register(ctx)
     }
 }

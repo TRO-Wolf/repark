@@ -36,6 +36,8 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 `map_build.py` pins: fnp-9-collections-json/C-006.
 - [explode.py](explode.py) — `F.explode` and `F.explode_outer`: one row per array element,
   the outer spelling keeping the empty and NULL rows.
+- [stack.py](stack.py) — `F.stack`: Spark's `stack(n, expr…)` unpivot, two rows from four
+  literals. pins: perf-unpivot-1/C-004
 - [higher_order.py](higher_order.py) — the lambda names: `F.exists`, `F.forall`, `F.filter`,
   `F.transform` (element and index forms), `F.aggregate` (with and without finish),
   `F.reduce`, `F.zip_with`; an `F.slice` empty array drives the empty-aggregate case.

@@ -66,6 +66,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   split: `EXPECTED_DATAFRAME_DIR` gains `_explain_text`, the package gains the `explain`
   submodule, and the frozen core/package surfaces gain the two private imports.
   pins: df-explain-1/C-003
+  PERF-UNPIVOT-1 (2026-09-12): `select` dispatches one `StackCall` through
+  `functions_stack.select_with_stack_if_present` onto `PyDataFrame.stack` /
+  `UnpivotExec`. Baseline 4485 → 4483. pins: perf-unpivot-1/C-003, C-004
   DF-EAGER-1 step 2 (2026-09-09): `eager` / `lazy` stay as one-line wrappers with the
   `compute` = `eager` alias; the cache-guard trio (`_CACHE_MAX_BYTES_KEY`,
   `_cache_conf_lookup`, `_resolve_cache_max_bytes`) moves to `eager.py`, re-imported by

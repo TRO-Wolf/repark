@@ -5042,6 +5042,7 @@ dependencies = [
  "aws-credential-types",
  "chrono",
  "datafusion",
+ "futures",
  "iceberg",
  "iceberg-datafusion",
  "object_store",
