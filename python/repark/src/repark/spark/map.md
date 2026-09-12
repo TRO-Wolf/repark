@@ -54,21 +54,25 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10
   (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
   pins: fnp-9-collections-json/C-003, C-006
+- `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
+  `select_with_stack_if_present`. Installed last onto `functions.py`. pins: perf-unpivot-1/C-004
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
   `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
   re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10
   surface reaches `functions.py` through the existing installer chain instead of growing that
   module past its exact size baseline. `FNP9_NAMES` is the export table
   `scripts/check_example_coverage.py` reads, so a name added here is a name that needs an
-  example. The unit's unbuilt names (`inline`, `inline_outer`, `stack`, `call_udf`,
-  `call_function`) are deliberately NOT here: exporting a refusal would add five rows to an
-  example backlog whose count only ratchets down. §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
+  example. The unit's unbuilt names (`inline`, `inline_outer`, `call_udf`,
+  `call_function`) are deliberately NOT here (`stack` landed in PERF-UNPIVOT-1): exporting a
+  refusal would add rows to an example backlog whose count only ratchets down.
+  §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
   The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through
   `repark.spark.types`. `_refuse_json_options` is the one rule `from_json`, `to_json` and
   `schema_of_json` share: repark implements no JSON option beyond `mode` and
   `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
   answer, so a non-empty mapping refuses instead of being ignored.
-  `install_into` runs LAST in `functions.py`'s installer chain, which
+  `install_into` ran last in `functions.py`'s installer chain until PERF-UNPIVOT-1 appended
+  `functions_stack`; `test_functions_split_identity.py` pins the order, which
   `test_functions_split_identity.py` pins by position. The rules each wrapper carries — Spark's
   `map(k1, v1, …)` spelling behind `create_map`, the `-1`-appends and NULL-padding rules of
   `array_insert`, the NULL-fill of `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record`

@@ -566,6 +566,7 @@ functions	F.st_geogfromwkb
 functions	F.st_geomfromwkb
 functions	F.st_setsrid
 functions	F.st_srid
+functions	F.stack
 functions	F.startswith
 functions	F.std
 functions	F.stddev

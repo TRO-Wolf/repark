@@ -48,10 +48,13 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_config(config)
         .with_runtime_env(runtime)
         .with_default_features()
+        .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
         .with_optimizer_rules(unnest_safe_optimizer_rules())
         .with_analyzer_rules(analyzer_rules)
         .build();
-    Ok(SessionContext::new_with_state(state))
+    let context = SessionContext::new_with_state(state);
+    crate::stack::register_stack(&context);
+    Ok(context)
 }
 
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>>
