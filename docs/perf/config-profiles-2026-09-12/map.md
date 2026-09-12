@@ -31,4 +31,5 @@ box, full scale.
 - [datafusion.execution.parquet.write_batch_size.csv](datafusion.execution.parquet.write_batch_size.csv)
 - [write.target-file-size-bytes.csv](write.target-file-size-bytes.csv)
 - [write.distribution-mode.csv](write.distribution-mode.csv)
+- [repark.merge.file_scoped_rewrite.csv](repark.merge.file_scoped_rewrite.csv)
 - `map.md` — this file.
