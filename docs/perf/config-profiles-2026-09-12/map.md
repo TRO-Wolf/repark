@@ -22,4 +22,5 @@ box, full scale.
 - [datafusion.optimizer.repartition_file_scans.csv](datafusion.optimizer.repartition_file_scans.csv)
 - [datafusion.execution.parquet.pushdown_filters.csv](datafusion.execution.parquet.pushdown_filters.csv)
 - [datafusion.execution.parquet.enable_page_index.csv](datafusion.execution.parquet.enable_page_index.csv)
+- [datafusion.execution.parquet.bloom_filter_on_read.csv](datafusion.execution.parquet.bloom_filter_on_read.csv)
 - `map.md` — this file.
