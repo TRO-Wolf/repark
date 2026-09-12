@@ -28,4 +28,5 @@ box, full scale.
 - [datafusion.execution.parquet.compression.csv](datafusion.execution.parquet.compression.csv)
 - [datafusion.execution.parquet.max_row_group_size.csv](datafusion.execution.parquet.max_row_group_size.csv)
 - [datafusion.execution.parquet.bloom_filter_on_write.csv](datafusion.execution.parquet.bloom_filter_on_write.csv)
+- [datafusion.execution.parquet.write_batch_size.csv](datafusion.execution.parquet.write_batch_size.csv)
 - `map.md` — this file.
