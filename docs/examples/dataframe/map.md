@@ -125,7 +125,7 @@ measured answers differ), EX-DF-9 (`mergeInto`'s bare-key sugar and `target.`/`s
 qualifiers; Spark wants a table-name/alias SQL condition — the covered merge program answers
 Spark's rows), and EX-DF-10 (`printSchema`'s stdout tail, FIXED by DF-PRINTSCHEMA-1),
 with pins in `python/repark/tests/test_examples_dataframe_b.py`.
-The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame), EX-DF-19 (`stat.freqItems` refuses; the name stays on the backlog), and EX-ROW-1 (a struct-valued `Row` field is a dict in repark; Spark keeps the nested `Row`), pinned in `test_examples_dataframe_d.py`; `Row.as_dict`, `Row.from_mapping`, and `Row.from_ordered_fields` are repark extensions (`hasattr` False on live PySpark 4.1.2).
+The EX-19 batch adds §7 EX-DF-18 (`withColumnsRenamed` refuses duplicate final names; Spark answers the duplicate-named frame), EX-DF-19 (`stat.freqItems` refuses; the name stays on the backlog), and EX-ROW-1 (a struct-valued `Row` field is a dict in repark; Spark keeps the nested `Row`), pinned in `test_examples_dataframe_d.py`; `Row.as_dict`, `Row.from_mapping`, and `Row.from_ordered_fields` are repark extensions (`hasattr` False on live PySpark 4.1.2). EX-29 (2026-09-11) re-measured every stayed `DataFrame`/`stat` roster name on live PySpark 4.1.2 — all still refuse or diverge as their rows record — and pinned two further arms in `test_examples_dataframe_d.py`: `describe` on a string column raises `AnalysisException` where Spark answers NULL cells (EX-DF-4), and `colRegex`/`col_regex` answer the first match only on a multi-match pattern where Spark expands all matches (EX-DF-1).
 
 ## Pointers
 

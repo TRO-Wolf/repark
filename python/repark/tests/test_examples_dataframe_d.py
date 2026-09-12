@@ -1,4 +1,7 @@
-"""Divergence pins for the EX-19 DataFrame-d example batch (registry §7 EX-DF-18/19, EX-ROW-1)."""
+"""Divergence pins for the EX-19 DataFrame-d and EX-29 class-remainder batches.
+
+Registry §7 rows EX-DF-18/19, EX-ROW-1 (EX-19) and the EX-DF-1/EX-DF-4 arm extensions (EX-29).
+"""
 
 from __future__ import annotations
 
@@ -41,3 +44,19 @@ def test_row_asdict_recursive_false_struct_divergence(spark: ReparkSession) -> N
     assert row.asDict() == {"s": {"g": "a", "k": 1}}
     assert row.as_dict() == {"s": {"g": "a", "k": 1}}
     assert row.asDict(True) == {"s": {"g": "a", "k": 1}}
+
+
+def test_describe_string_column_refuses(spark: ReparkSession) -> None:
+    """describe over a string column raises; Spark answers NULL mean/stddev cells (EX-DF-4)."""
+    frame = spark.createDataFrame([("a", 1), ("b", 2)], ["g", "k"])
+    with pytest.raises(AnalysisException):
+        frame.describe("g").collect()
+    with pytest.raises(AnalysisException):
+        frame.describe().collect()
+
+
+def test_colregex_multi_match_first_match(spark: ReparkSession) -> None:
+    """colRegex answers the first match only; Spark expands all matches (EX-DF-1)."""
+    frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
+    assert frame.select(frame.colRegex("^(g|k)$")).columns == ["g"]
+    assert frame.select(frame.col_regex("^(g|k)$")).columns == ["g"]

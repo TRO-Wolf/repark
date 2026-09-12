@@ -14,6 +14,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ex-29-class-remainder-ledger.md](ex-29-class-remainder-ledger.md) —
+  **EX-29 (2026-09-11), in flight:** the v1.1 example backfill's class-surface
+  remainder — the 29 non-`F.*` backlog names at base `a10062b8`. Re-measured on
+  live PySpark 4.1.2 (ANSI on, UTC, zulu-17): zero names coverable, 23 stay with
+  their existing §7 rows (EX-DF-1/2/3/4/7/8/17/19, EX-CAT-1/2, EX-W2-1,
+  EX-IO-7), the six `Column.*` plumbing names stay pending an owner ruling on
+  inventory narrowing. Pin gaps filled: `get_database` / `list_databases` snake
+  legs, the `describe` string-column raise, the `colRegex` multi-match arm.
+  `risk_tier: standard`. Branch `docs/ex-29-class-remainder`.
+  pins: ex-29-class-remainder/C-001, C-002, C-003, C-004, C-005, C-006
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

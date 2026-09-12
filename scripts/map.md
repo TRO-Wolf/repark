@@ -6,6 +6,19 @@ retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` d
 the matching `_RUST_BASELINES` row in the same commit. Round 2: `check_lib_py.py`
 `reader.py` 1026 → 1022 (path argument, no stored `path` option).
 pins: csv-infer-perf-1/C-006
+EX-29 class remainder (2026-09-11): `check_example_coverage.py` ran unchanged —
+`BACKLOG_BASELINE` holds at 128 because none of the 29 non-`F.*` roster names has an
+arm where the engines agree that a prior batch had not already taught; every stayed name
+re-measured against live PySpark 4.1.2 (ANSI on, UTC, zulu-17) keeps its §7 row
+(EX-DF-1/2/3/4/7/8/17/19, EX-CAT-1/2, EX-W2-1, EX-IO-7). The six `Column.*` plumbing
+names are `__getattr__` fabrications on PySpark, not members — reported for an owner
+ruling on inventory narrowing. Pin gaps filled in `test_examples_window_catalog.py`
+(snake legs) and `test_examples_dataframe_d.py` (describe string-column raise, colRegex
+multi-match). Red-first: a stayed name deleted from `backlog.txt` reds the static gate
+naming it (exit 1), and a wrong-bytes control in `catalog/list_names.py` failed the
+execute leg by name (exit 1).
+pins: ex-29-class-remainder/C-001, C-005, C-006
+
 EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster
 names, taught by extending `docs/examples/functions/{utf8,dates_more,session_misc}.py`.
