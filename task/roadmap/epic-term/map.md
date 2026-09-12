@@ -8,6 +8,14 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   2026-09-03) — PROJECT.md points here rather than restating it.
 
 ## Contents
+- [deterministic-silver-layer-compiler-2026-09-12.md](deterministic-silver-layer-compiler-2026-09-12.md)
+  — **owner design proposal (2026-09-12, filed into 1.5 the same day):** a Rust-native compiler
+  from a pinned bronze Iceberg snapshot plus an explicit transformation policy to a classified
+  silver result — a typed, versioned `SilverPlan`; accepted / quarantined / superseded rows in one
+  table under one publication commit; latest-source-version selection that fails on conflicting
+  ties; exact disposition accounting; plan, run and publication identities; drift and replay
+  rules; the S-0…S-6 slice sequence and the ten SIL decisions open for the owner. Source
+  ingestion, CDC, deletes, joins and further backends are deferred.
 - [database-discovery-lakehouse-planning-2026-09-09.md](database-discovery-lakehouse-planning-2026-09-09.md)
   — **owner proposal (2026-09-09):** discovery, bounded profiling, evidence and decision records, a
   deterministic planner with an optional model reviewer, immutable plan acceptance, Bronze change-log
