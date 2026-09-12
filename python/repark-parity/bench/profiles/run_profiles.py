@@ -29,6 +29,13 @@ def run_read_cell(spark: object, query: str, dataset: str, repeats: int) -> list
     return harness.measure(functools.partial(func, spark, dataset), repeats)
 
 
+def table_property_alter(knob: str, value: str, table: str) -> str | None:
+    """Return the ALTER landing a `write.*` table property on the bed table."""
+    if not knob.startswith("write.") or value == harness.BASELINE_VALUE:
+        return None
+    return f"ALTER TABLE {table} SET TBLPROPERTIES ('{knob}'='{value}')"
+
+
 def run_write_cell(
     spark: object,
     query: str,
@@ -37,6 +44,8 @@ def run_write_cell(
     rows_per_file: int,
     scale: queries.WriteScale,
     repeats: int,
+    knob: str,
+    value: str,
 ) -> list[float]:
     """Rebuild the bed table per repetition, then time one write shape."""
     func, _ = queries.WRITE_QUERIES[query]
@@ -44,6 +53,9 @@ def run_write_cell(
     for _ in range(repeats):
         harness.require_quiet_box()
         table = datasets.build_iceberg_table(spark, files, rows_per_file)
+        alter = table_property_alter(knob, value, table)
+        if alter is not None:
+            spark.sql(alter)  # type: ignore[attr-defined, union-attr]
         start = time.perf_counter()
         func(spark, table, scale)
         seconds.append(time.perf_counter() - start)
@@ -126,7 +138,15 @@ def main(argv: list[str] | None = None) -> int:
                     report_cell(out, dataset, query, knob, value, seconds)
             for query in queries.WRITE_QUERIES:
                 seconds = run_write_cell(
-                    spark, query, warehouse, iceberg_files, rows_per_file, scale, repeats
+                    spark,
+                    query,
+                    warehouse,
+                    iceberg_files,
+                    rows_per_file,
+                    scale,
+                    repeats,
+                    args.knob,
+                    value,
                 )
                 report_cell(out, "iceberg", query, knob, value, seconds)
         finally:

@@ -1,7 +1,7 @@
-# Unit ledger — PROFILES-1 step 1 · the measurement bed (harness only, no timings)
+# Unit ledger — PROFILES-1 steps 1–2 · the measurement bed and the knob sweep
 
-**Unit:** PROFILES-1 step 1 · **Date:** 2026-09-10 · **Branch:** `feat/profiles-1` · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3-contributor)
+**Unit:** PROFILES-1 steps 1–2 · **Date:** 2026-09-10, step 2 2026-09-12 · **Branch:** `feat/profiles-1` / `feat/profiles-1-step-2` · **Base:** `origin/main`
+**Model:** Muse Spark (muse-spark-1.3-contributor); step 2 Devin SWE-2 (swe-2-high)
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** Step 0 is merged (`docs/perf/profiles-1-passthrough-probe-2026-09-09.md`:
@@ -68,6 +68,22 @@ scale, another lane building on the box). No timing is reported as a result.
 The 16-file count reconciles exactly: three fresh 4-file builds (12) + 2 smoke
 appends + 1 overwrite rewrite + 1 merge rewrite. `DROP TABLE` orphans prior files,
 so step 2 should sweep each knob on a fresh scratch root.
+
+## PROPOSITION LEDGER — PROFILES-1 step 2 — 2026-09-12
+
+Step 2 (M, card PROFILES-1): the sweep and the measurements document. The step-0 probe's
+table is re-checked after CONF-UNREAD-1: the three `datafusion.execution.parquet.*` keys it
+left UNREAD now pass through, `coalesce_batches` refuses loud, so the swept set is the
+nineteen keys whose values reach the engine. One harness fix was needed and is named in the
+hand-back: the two `write.*` knobs are Iceberg table properties, not session conf, so
+`run_profiles.py` lands them on the rebuilt bed table with `ALTER TABLE … SET TBLPROPERTIES`
+before the timed write (`table_property_alter`, pinned).
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-006 | The baseline ran at full scale on a release build with the quiet-box guard: futures parquet, TPC-H SF10, 200-file Iceberg table, three repetitions per cell. | `profiles_baseline_ran_at_full_scale` | OPEN | |
+| C-007 | Every swept knob's CSV carries its full value set with three repetitions per (dataset, query, value) cell; the two `write.*` knobs reach the bed table as properties. | `profiles_sweep_csvs_carry_three_reps_per_cell` | OPEN | |
+| C-008 | The measurements document's numbers equal the medians recomputed from the committed CSVs, and its "no effect measured" table equals the <5 % rule applied to those medians. | `profiles_doc_tables_equal_csv_medians` | OPEN | |
 
 ```yaml
 COVERAGE_ATTESTATION:

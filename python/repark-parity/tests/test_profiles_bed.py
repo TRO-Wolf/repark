@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "bench"))
 from profiles import datasets as bed_datasets
 from profiles import harness as bed_harness
 from profiles import queries as bed_queries
+from profiles import run_profiles as bed_runner
 
 
 def test_bed_builds_three_datasets() -> None:
@@ -78,6 +79,19 @@ def test_harness_refuses_when_a_jvm_is_running(monkeypatch: pytest.MonkeyPatch) 
     quiet = subprocess.CompletedProcess(["pgrep", "-f", "java"], 1, stdout="", stderr="")
     monkeypatch.setattr(bed_harness.subprocess, "run", lambda *a, **k: quiet)
     assert bed_harness.require_quiet_box() is None
+
+
+def test_runner_lands_write_properties_on_the_bed_table() -> None:
+    """Pin: write.* knobs reach the rebuilt bed table as TBLPROPERTIES."""
+    table = "cat.ns.bed"
+    assert bed_runner.table_property_alter("write.distribution-mode", "none", table) == (
+        "ALTER TABLE cat.ns.bed SET TBLPROPERTIES ('write.distribution-mode'='none')"
+    )
+    assert bed_runner.table_property_alter("write.target-file-size-bytes", "1024", table) == (
+        "ALTER TABLE cat.ns.bed SET TBLPROPERTIES ('write.target-file-size-bytes'='1024')"
+    )
+    assert bed_runner.table_property_alter("write.distribution-mode", "@default", table) is None
+    assert bed_runner.table_property_alter("datafusion.execution.batch_size", "x", table) is None
 
 
 def test_smoke_completes_at_tiny_scale() -> None:
