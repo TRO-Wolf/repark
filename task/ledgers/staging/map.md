@@ -192,6 +192,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   check answers AP-1-R-001 as measured. `risk_tier: standard`. Branch
   `chore/repin-rp-18`.
   pins: rp-18/C-001, C-002, C-003, C-004
+- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
+  `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
+  location, every S3 Tables table's, resolves to the bucket root like Java's
+  `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
+  with the parser half FIXED at this pin and the owner's dev-bucket reproduction
+  verbatim (the parser error before, the 405 `ListObjectsV2` refusal after); the
+  loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
+  (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
+  pins: rp-19/C-001, C-002, C-003
 - [date-fn-1-spark-date-spelling-ledger.md](../completed/date-fn-1-spark-date-spelling-ledger.md) —
   **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
   `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.
