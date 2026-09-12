@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 import textwrap
 from collections.abc import Iterator
 from pathlib import Path
@@ -42,38 +43,52 @@ def spark() -> Iterator[ReparkSession]:
         session.stop()
 
 
-def _hidden_pyarrow_env() -> dict[str, str]:
-    """Child env with the facade src on PYTHONPATH."""
-    env = os.environ.copy()
-    src = str(_REPO_ROOT / "python" / "repark" / "src")
-    previous = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = src if not previous else os.pathsep.join([src, previous])
-    return env
+def _path_is_under(path: Path, root: Path) -> bool:
+    """True when ``path`` is ``root`` or a file under it."""
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _run_hidden_pyarrow(body: str) -> subprocess.CompletedProcess[str]:
     """Run ``body`` in a child interpreter with pyarrow hidden."""
     script = _HIDE_PYARROW_PREFIX + "\n" + textwrap.dedent(body).strip() + "\n"
-    return subprocess.run(
-        [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=_hidden_pyarrow_env(),
-        check=False,
-        cwd=str(_REPO_ROOT),
-    )
+    with tempfile.TemporaryDirectory() as scratch:
+        return subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env=os.environ.copy(),
+            check=False,
+            cwd=scratch,
+        )
 
 
 def test_package_imports_with_pyarrow_hidden() -> None:
     """Package import succeeds when pyarrow is hidden. pins: facade-1/C-002"""
+    import repark
+
     result = _run_hidden_pyarrow(
         "import repark\n"
         "from repark import ReparkSession, DataFrame, Column, Row\n"
-        "print('imported', repark.__name__, ReparkSession.__name__, DataFrame.__name__)"
+        "print('imported', repark.__name__, ReparkSession.__name__, DataFrame.__name__)\n"
+        "print('repark-file', repark.__file__)\n"
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "imported repark" in result.stdout
+    child_file: Path | None = None
+    for line in result.stdout.splitlines():
+        if line.startswith("repark-file "):
+            child_file = Path(line.split(" ", 1)[1])
+    assert child_file is not None
+    parent_file = Path(repark.__file__)
+    src_root = _REPO_ROOT / "python" / "repark" / "src"
+    if not _path_is_under(parent_file, src_root):
+        assert not _path_is_under(child_file, src_root)
+    assert child_file.resolve() == parent_file.resolve()
 
 
 def test_polars_and_pandas_consume_arrow_c_stream_with_pyarrow_hidden() -> None:

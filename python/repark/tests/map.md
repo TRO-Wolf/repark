@@ -1499,7 +1499,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lands + misspelled RETENTION still loud); octo C8 py-lint line wrap on NOT NULL create. No AWS.
 - `test_facade_1_arrow_c_stream.py` — **FACADE-1 (2026-09-12):** capsule seam both ways.
   Package import, polars/pandas `__arrow_c_stream__` consumers, and polars
-  `createDataFrame` run with pyarrow hidden; `to_arrow` names `repark[pyarrow]`;
+  `createDataFrame` run with pyarrow hidden; the hidden-pyarrow child imports
+  the installed package (same `sys.executable` and env, cwd a scratch dir, no
+  `python/repark/src` on `PYTHONPATH`); `to_arrow` names `repark[pyarrow]`;
   mapInArrow construction and ML prediction re-entry register capsules, not IPC;
   version-skew IPC fallback stays; export-door signatures and answers hold.
   pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
