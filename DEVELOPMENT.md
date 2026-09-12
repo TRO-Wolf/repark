@@ -71,7 +71,7 @@ The **live-Spark oracle** tier needs a JVM: `make parity-live` / `parity-live.ym
 The **dbt-adapter** suite (`python/dbt-repark/tests`, DBT-1, 2026-09-04) needs the native module
 and `dbt-core`, so it sits beside the facade suite in `preflight` as `make py-test-dbt`; **no CI
 job runs it yet**, and the wiring it wants is recorded in
-[task/ledgers/staging/dbt-1-adapter-ledger.md](task/ledgers/staging/dbt-1-adapter-ledger.md) §9.
+[task/ledgers/completed/dbt-1-adapter-ledger.md](task/ledgers/completed/dbt-1-adapter-ledger.md) §9.
 
 The testing **contract** (tests land in the same commit as the code; test-per-change; the
 entry-point matrix; divergence-class claims) is in [docs/testing.md](docs/testing.md) — read it

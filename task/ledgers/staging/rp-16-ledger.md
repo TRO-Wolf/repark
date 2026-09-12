@@ -4,7 +4,7 @@
 **Model:** grok-4.6 · **Policy:**
 [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract".
 **Path:** STANDARD. **Proven pattern:**
-[rp-10-repin-f25-ledger.md](rp-10-repin-f25-ledger.md).
+[rp-10-repin-f25-ledger.md](../completed/rp-10-repin-f25-ledger.md).
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 

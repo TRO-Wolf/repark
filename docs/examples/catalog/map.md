@@ -58,5 +58,5 @@ over §7 `EX-CAT-2`.
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/test_examples_window_catalog.py](../../../python/repark/tests/test_examples_window_catalog.py)
-- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/staging/ex-20-window-catalog-ledger.md)
-- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/staging/ex-21-catalog-session-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/completed/ex-20-window-catalog-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/completed/ex-21-catalog-session-ledger.md)
