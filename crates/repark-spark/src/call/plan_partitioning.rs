@@ -52,7 +52,7 @@ use super::{CallArgs, resolve_table_ident};
 use crate::{catalog_handle, iceberg_err};
 use repark_core::CatalogRegistry;
 
-const RESIDUE_NOTE: &str = "AP-0-R-001: projected_files_at_target applies byte_ratio to the pre-rewrite file bytes (the raw sum measured 76-88% high on the AP-0 beds); projected_partitions measured exact";
+const RESIDUE_NOTE: &str = "AP-0-R-001: projected_files_at_target applies byte_ratio to the footers' uncompressed byte sum, counting compression once (the stored-byte form measured -74%/-72% low against the RP-17 same-codec rewrite; the remaining gap is S2-24); projected_partitions measured exact";
 
 pub(super) async fn execute_plan_partitioning(
     ctx: &SessionContext,
@@ -92,7 +92,7 @@ pub(super) async fn collect_plan_rows(
     let spec_count = table.metadata().partition_specs_iter().len();
     let inventory = inventory(table.metadata());
     let files = read_files(ctx, catalogs, catalog_name, &ident).await?;
-    let ratio = byte_ratio(table.file_io(), &files.paths).await;
+    let ratio = byte_ratio(table.file_io(), &files.paths, &files.sizes).await;
     let rated = rate_columns(&inventory.columns, &files);
     let inputs = PlanInputs {
         table_arg,
@@ -100,7 +100,7 @@ pub(super) async fn collect_plan_rows(
         snapshot_id,
         target,
         rated: &rated,
-        sizes: &files.sizes,
+        sizes: &ratio.uncompressed,
         unsupported: &inventory.unsupported,
         spec_count,
         byte_ratio: ratio.value,
@@ -568,7 +568,7 @@ struct PlanInputs<'a> {
     snapshot_id: i64,
     target: u64,
     rated: &'a [RatedColumn],
-    sizes: &'a [u64],
+    sizes: &'a [f64],
     unsupported: &'a [(String, String)],
     spec_count: usize,
     byte_ratio: f64,
@@ -672,8 +672,8 @@ fn push_pairs(
     }
 }
 
-fn push_unpartitioned(scored: &mut Vec<ScoredSpec>, sizes: &[u64], target: u64, byte_ratio: f64) {
-    let items: Vec<(u64, Vec<ValueKey>)> = sizes
+fn push_unpartitioned(scored: &mut Vec<ScoredSpec>, sizes: &[f64], target: u64, byte_ratio: f64) {
+    let items: Vec<(f64, Vec<ValueKey>)> = sizes
         .iter()
         .map(|size| (*size, vec![ValueKey::Number(0)]))
         .collect();

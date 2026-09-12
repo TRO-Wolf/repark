@@ -128,13 +128,13 @@ fn penalty(value: f64, target: u64) -> f64 {
 
 #[allow(clippy::cast_precision_loss)]
 pub(super) fn accumulate(
-    items: &[(u64, Vec<ValueKey>)],
+    items: &[(f64, Vec<ValueKey>)],
     target: u64,
     byte_ratio: f64,
 ) -> (f64, usize, f64) {
     let mut totals: BTreeMap<&ValueKey, f64> = BTreeMap::new();
     for (size, values) in items {
-        let share = *size as f64 / values.len() as f64;
+        let share = *size / values.len() as f64;
         for value in values {
             *totals.entry(value).or_default() += share;
         }
@@ -151,8 +151,8 @@ pub(super) fn accumulate(
 fn truncate_items(
     rated: &RatedColumn,
     grain: &TemporalGrain,
-    sizes: &[u64],
-) -> (Vec<(u64, Vec<ValueKey>)>, usize) {
+    sizes: &[f64],
+) -> (Vec<(f64, Vec<ValueKey>)>, usize) {
     let present: Vec<(i64, i64)> = rated.numbers.iter().filter_map(|pair| *pair).collect();
     if present.is_empty() {
         return (
@@ -228,8 +228,8 @@ fn identity_items(
     domain: &[ValueKey],
     rated: &RatedColumn,
     is_text: bool,
-    sizes: &[u64],
-) -> (Vec<(u64, Vec<ValueKey>)>, usize) {
+    sizes: &[f64],
+) -> (Vec<(f64, Vec<ValueKey>)>, usize) {
     let mut items = Vec::with_capacity(sizes.len());
     let mut fallback = 0;
     for (size, index) in sizes.iter().zip(0..) {
@@ -266,7 +266,7 @@ fn identity_items(
     (items, fallback)
 }
 
-fn bucket_items(width: u32, sizes: &[u64]) -> Vec<(u64, Vec<ValueKey>)> {
+fn bucket_items(width: u32, sizes: &[f64]) -> Vec<(f64, Vec<ValueKey>)> {
     let buckets: Vec<ValueKey> = (0..i64::from(width)).map(ValueKey::Number).collect();
     sizes.iter().map(|size| (*size, buckets.clone())).collect()
 }
@@ -277,7 +277,7 @@ pub(super) struct ScoredSpec {
     pub(super) score: f64,
     pub(super) partitions: usize,
     pub(super) projected: f64,
-    pub(super) items: Vec<(u64, Vec<ValueKey>)>,
+    pub(super) items: Vec<(f64, Vec<ValueKey>)>,
     pub(super) note: String,
 }
 
@@ -285,7 +285,7 @@ pub(super) fn score_single(
     column: &str,
     grain: Grain,
     rated: &RatedColumn,
-    sizes: &[u64],
+    sizes: &[f64],
     target: u64,
     byte_ratio: f64,
 ) -> Option<ScoredSpec> {
@@ -338,7 +338,7 @@ pub(super) fn score_pair(
     target: u64,
     byte_ratio: f64,
 ) -> ScoredSpec {
-    let combined: Vec<(u64, Vec<ValueKey>)> = first
+    let combined: Vec<(f64, Vec<ValueKey>)> = first
         .items
         .iter()
         .zip(second.items.iter())
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn accumulate_splits_a_spanning_file_one_over_k() {
-        let items = vec![(100_u64, vec![ValueKey::Number(0), ValueKey::Number(1)])];
+        let items = vec![(100.0, vec![ValueKey::Number(0), ValueKey::Number(1)])];
         let (score, partitions, projected) = accumulate(&items, 100, 1.0);
         assert!((score - 0.0).abs() < f64::EPSILON);
         assert_eq!(partitions, 2);
@@ -434,13 +434,27 @@ mod tests {
     #[test]
     fn accumulate_counts_one_file_per_value_at_target() {
         let items = vec![
-            (100_u64, vec![ValueKey::Number(0)]),
-            (100_u64, vec![ValueKey::Number(0)]),
+            (100.0, vec![ValueKey::Number(0)]),
+            (100.0, vec![ValueKey::Number(0)]),
         ];
         let (score, partitions, projected) = accumulate(&items, 100, 1.0);
         assert!((score - 0.0).abs() < f64::EPSILON);
         assert_eq!(partitions, 1);
         assert!((projected - 2.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn rp17_bed_shape_projects_the_uncompressed_sum_once() {
+        let items: Vec<(f64, Vec<ValueKey>)> = std::iter::once(36_611.0)
+            .chain(std::iter::repeat_n(36_551.0, 205))
+            .map(|size| (size, vec![ValueKey::Number(0)]))
+            .collect();
+        let (_score, partitions, projected) = accumulate(&items, 524_288, 0.376_076);
+        assert_eq!(partitions, 1);
+        assert!(
+            (projected - 6.0).abs() < f64::EPSILON,
+            "RP-17 uniform shape projects ceil(2 831 692 / 524 288) = 6, got {projected}"
+        );
     }
 
     #[test]
@@ -466,7 +480,7 @@ mod tests {
     #[test]
     fn bucket_single_splits_bytes_evenly_over_n() {
         let rated = rated_numbers(vec![Some((0, 9)), Some((10, 19))]);
-        let candidate = score_single("id", Grain::Bucket(8), &rated, &[800, 800], 100, 1.0)
+        let candidate = score_single("id", Grain::Bucket(8), &rated, &[800.0, 800.0], 100, 1.0)
             .expect("bucket scores");
         assert_eq!(candidate.label, "bucket(8, id)");
         assert!((candidate.score - 0.0).abs() < f64::EPSILON);
@@ -481,7 +495,7 @@ mod tests {
             "ts",
             Grain::Temporal(TemporalGrain::Days),
             &rated,
-            &[100],
+            &[100.0],
             100,
             1.0,
         )
@@ -490,7 +504,7 @@ mod tests {
             "ts",
             Grain::Temporal(TemporalGrain::Hours),
             &rated,
-            &[100],
+            &[100.0],
             100,
             1.0,
         )
@@ -504,7 +518,7 @@ mod tests {
     #[test]
     fn truncate_items_spread_missing_bounds_over_the_global_range() {
         let rated = rated_numbers(vec![Some((0, 86_400)), None]);
-        let (items, fallback) = truncate_items(&rated, &TemporalGrain::Days, &[1_000, 1_000]);
+        let (items, fallback) = truncate_items(&rated, &TemporalGrain::Days, &[1_000.0, 1_000.0]);
         assert_eq!(fallback, 1);
         assert_eq!(items[0].1.len(), 2);
         assert_eq!(items[1].1.len(), 2);

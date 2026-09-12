@@ -118,30 +118,42 @@ and measured-parity contract would grow `call.rs` beyond its exact
   (the projection now applies the ratio); the last row additionally names boundless columns;
   more than one partition spec in metadata adds the one-spec rewrite note. A branch besides
   `main` refuses (P-5). Timestamps truncate in UTC through a dependency-free civil calendar.
+  **AP-3 (2026-09-12, S2-23):** the scoring byte basis is each file's footer
+  `total_uncompressed_size` sum — `projected_files_at_target` multiplies the uncompressed
+  share by `byte_ratio` once (the stored-byte form compressed twice and read −74 %/−72 %
+  low against the RP-17 same-codec rewrite; the residue note says so and names S2-24 as the
+  remaining gap). `score` bands the uncompressed share; `projected_partitions` is untouched.
+  On an unreadable footer each file's basis is the estimate `file_size_in_bytes / 0.55`.
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  pins: ap-3/C-001, C-006
 - `plan_partitioning_bytes.rs` — **AP-1 step 2 (2026-09-11):** the `byte_ratio` measurement
   behind the step-2 byte model. For every live data file's `file_path` it opens the table's
   own `FileIO`, takes the file size from `metadata()`, and range-reads only the parquet tail
   (last 8 bytes, then the footer extent the `NeedMoreData` hint names — never row-group data)
   through `datafusion::parquet`'s `ParquetMetaDataReader` (the `datafusion` re-export; no new
   dependency). `byte_ratio` is Σ `total_compressed_size` / Σ `total_uncompressed_size` over
-  every column chunk of every row group; any unreadable footer (bad magic, missing file,
-  non-parquet data file, thrift decode failure, zero uncompressed sum) yields
-  `FALLBACK_BYTE_RATIO` and the `fallback` source tag, else `footers`. Note on coverage:
-  repark's own write paths split codecs — CTAS writes zstd via `writer_properties_for` while
-  `INSERT INTO` goes through the fork's `iceberg-datafusion` task writer at parquet-rs's
-  uncompressed default — so an INSERT-grown table measures 1.0 and the correction is a no-op
-  there; measured on the AP-0 beds in
-  `docs/perf/adapt-part-ap1-2026-09-11.md`.
+  every column chunk of every row group; **AP-3 (2026-09-12):** the measure also returns each
+  file's uncompressed sum in `paths` order — the byte basis the score folds by the ratio.
+  Any unreadable footer (bad magic, missing file, non-parquet data file, thrift decode
+  failure, zero uncompressed sum) yields `FALLBACK_BYTE_RATIO` and the `fallback` source tag
+  with each file's basis estimated as `file_size_in_bytes / 0.55`, else `footers`. Since
+  RP-16 both write paths honour `write.parquet.compression-codec` (CTAS and INSERT land zstd
+  by default); measured on the AP-0 beds in
+  `docs/perf/adapt-part-ap1-2026-09-11.md` and re-measured in
+  `docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md`.
   pins: ap-1/C-010, C-011
+  pins: ap-3/C-002
 - `plan_partitioning_score.rs` — the pure P-2/P-3 engine behind the procedure above:
   the civil calendar, the grains, the Spark DDL labels, the 1/k byte spread, the band
   penalty, the single/pair scoring and the best-first ranking, plus the in-module unit tests
   for each. No SQL, no catalog reads; the caller feeds it rated bound pairs. Step 2 threads
-  `byte_ratio` through `accumulate`/`score_single`/`score_pair`: `score` and
-  `projected_partitions` stay on raw file bytes (P-3 verbatim); only the projected file
-  count folds each value's share by the ratio before `ceil(…/target)`.
+  `byte_ratio` through `accumulate`/`score_single`/`score_pair`: the projected file count
+  folds each value's byte share by the ratio before `ceil(…/target)`. **AP-3 (2026-09-12):**
+  the item byte basis is `f64` and carries the footers' uncompressed sum per file (so the
+  fallback's `stored / 0.55` estimate stays exact); `score` bands that uncompressed share
+  against the target and `projected_partitions` stays a pure value count.
   pins: ap-1/C-001, C-009, C-010
+  pins: ap-3/C-003
 
 ## Pointers
 

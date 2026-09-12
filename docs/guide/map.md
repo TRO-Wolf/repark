@@ -46,7 +46,10 @@ illustrative. A claim with no verified basis does not go in.
   plan-only boundary. **AP-2 (2026-09-11):** `apply_partitioning` — signature and
   defaults (`dry_run` true), re-derived `plan_id`, the same `target_file_size_bytes`
   for two-field plans (D-8), step order, result columns, one-commit-per-step warning,
-  P-5 refusals, and a plan-then-apply example.
+  P-5 refusals, and a plan-then-apply example. **AP-3 (2026-09-12):** the projection
+  now multiplies the footers' uncompressed sum by the ratio once (S2-23), and the
+  section gains the S2-24 known-issues line — zstd compaction is a net-size loss
+  until F-REWRITE-SIZE-1 lands.
   pins: maint-policy-1/C-026
   pins: ap-1/C-013
   pins: ap-2/C-007, C-008

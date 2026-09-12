@@ -14,6 +14,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   AP-1-R-001 still OPEN. Owner question Q-1 parked. No source change.
   `risk_tier: standard`. Branch `feat/ap-1-remeasure`.
   pins: ap-1-remeasure/C-001, C-002, C-003, C-004
+- [ap-3-ledger.md](ap-3-ledger.md) —
+  **AP-3 step 1 (2026-09-12), in flight:** `projected_files_at_target` multiplies
+  each item's footer `total_uncompressed_size` sum by `byte_ratio` — compression
+  counted once (S2-23, Q-1 ruled); the 0.55 fallback estimates uncompressed as
+  `file_size_in_bytes / 0.55`; the residue note, the frame `notes` and the
+  maintenance guide's S2-24 known-issues line move with it.
+  `risk_tier: standard`. Branch `feat/ap-3`.
+  pins: ap-3/C-001, C-002, C-003, C-004, C-005, C-006
 - [cfg-1-ledger.md](cfg-1-ledger.md) —
   **CFG-1 step 1 (2026-09-09), in flight:** `repark.toml` discovery, profile merge and
   `${VAR}` interpolation — `discovery.rs` (`$REPARK_CONFIG` → `./repark.toml` →
