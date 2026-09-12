@@ -63,22 +63,21 @@ def test_except_all_divergence(spark: ReparkSession) -> None:
         left.except_all(right)
 
 
-def test_describe_row_order_divergence(spark: ReparkSession) -> None:
-    """describe rows are unordered in repark; Spark prints count/mean/stddev/min/max (EX-DF-4)."""
+def test_describe_row_order_matches_spark(spark: ReparkSession) -> None:
+    """describe rows collect in Spark's order count/mean/stddev/min/max (EX-DF-4)."""
     frame = spark.createDataFrame(
         [(1, 10.0), (2, 20.0), (2, 30.0), (3, 40.0), (1, 50.0), (2, None)],
         ["k", "v"],
     )
     described = frame.describe("k", "v")
     assert described.columns == ["summary", "k", "v"]
-    rows = {row["summary"]: (row["k"], row["v"]) for row in described.collect()}
-    assert rows == {
-        "count": ("6", "5"),
-        "mean": ("1.8333333333333333", "30.0"),
-        "stddev": ("0.752772652709081", "15.811388300841896"),
-        "min": ("1", "10.0"),
-        "max": ("3", "50.0"),
-    }
+    assert [(row["summary"], row["k"], row["v"]) for row in described.collect()] == [
+        ("count", "6", "5"),
+        ("mean", "1.8333333333333333", "30.0"),
+        ("stddev", "0.752772652709081", "15.811388300841896"),
+        ("min", "1", "10.0"),
+        ("max", "3", "50.0"),
+    ]
 
 
 def test_corr_cov_null_pair_divergence(spark: ReparkSession) -> None:

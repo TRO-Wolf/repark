@@ -23,6 +23,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
+  **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
+  ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`
+  (NULL for `"a"`/`"b"`, `6.0` for `"10","2","a"`), non-numeric non-string columns
+  skipped by the bare forms and refused with `PySparkValueError` when named, UNION ALL
+  legs ordered by a stat ordinal. §7 EX-DF-4 FIXED whole; EX-DF-15 narrowed to the
+  bare-`summary()` percentile refusal. `risk_tier: standard`. Branch
+  `fix/df-describe-str-1`.
+  pins: df-describe-str-1/C-001, C-002, C-003, C-004
 - [df-colregex-1-ledger.md](df-colregex-1-ledger.md) —
   **DF-COLREGEX-1 step 1 (2026-09-11), in flight:** `colRegex`/`col_regex` reach the
   measured Spark contract — a backticked pattern returns the `RegexColumn` marker

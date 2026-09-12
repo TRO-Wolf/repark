@@ -5654,30 +5654,36 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
   the example backlog until the multiset semantics are Spark-correct.
 
-### EX-DF-4 — `describe` row order is engine-arbitrary; Spark's is count/mean/stddev/min/max
+### EX-DF-4 — FIXED 2026-09-11 (DF-DESCRIBE-STR-1): `describe` collected unordered rows and refused string columns
 
-- **repark** — the five summary rows answer the same cells Spark answers, but their collect
-  order varies run to run: three consecutive collects printed three different orders.
-  A second arm measured 2026-09-11 (EX-29): `describe("g")` on a string column — and bare
-  `describe()` over a frame containing one — raises `AnalysisException` (the `avg`/`stddev`
-  legs reject `Utf8`), where Spark answers the same five rows with NULL cells under the
-  string column's `mean`/`stddev`.
+- **repark** — before the fix the five summary rows answered the same cells Spark answers but
+  collected in an arbitrary order (the UNION ALL legs reordered between collects), and
+  `describe("g")` on a string column — and bare `describe()` over a frame containing one —
+  raised `AnalysisException` (the `avg`/`stddev` legs reject `Utf8`). Since
+  DF-DESCRIBE-STR-1 the rows collect in the requested stat order (a stat ordinal orders the
+  UNION ALL legs), the `mean`/`stddev` legs run over `try_cast(col AS DOUBLE)` on string
+  columns — so `"a"`/`"b"` answer NULL and `"10"`/`"2"`/`"a"` answers `mean` `6.0` like
+  Spark — and the bare column set is numeric+string like Spark's: a `boolean`/`date`/
+  `timestamp`/`array` column is skipped by `describe()`/`summary(...)`, and naming one
+  (`describe("b")`) raises `PySparkValueError`.
 - **Apache Spark** — `describe("k", "v")` collects in the stable order
   `count, mean, stddev, min, max`. The cells themselves measured identical:
   count `('6', '5')`, mean `('1.8333333333333333', '30.0')`,
   stddev `('0.752772652709081', '15.811388300841896')`, min `('1', '10.0')`,
-  max `('3', '50.0')`. The string-column arm answers `('count','6')`, `('mean',None)`,
-  `('stddev',None)`, `('min','a')`, `('max','b')` for `describe("g")`. *(oracle: live PySpark
-  4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch; string arm re-measured 2026-09-11,
-  EX-29.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_divergence`
-  (cells pinned order-independently; the order itself is unpinned because repark's is
-  nondeterministic, so no red-on-fix pin can assert it) and
-  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_refuses`
-  (the string-column raise).
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. `DataFrame.describe`
-  stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
-  example would teach a weaker contract than Spark answers.
+  max `('3', '50.0')`. The string-column arm answers `('count','2')`, `('mean',None)`,
+  `('stddev',None)`, `('min','a')`, `('max','b')` for `describe("g")` on
+  `[('a',1),('b',2)]`, and `('count','3'),('mean','6.0'),('stddev','5.656854249492381'),
+  ('min','10'),('max','a')` on `["10","2","a"]` — Spark casts strings to double
+  non-strictly for `mean`/`stddev`. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11,
+  DF-DESCRIBE-STR-1 — the skip/refuse and numeric-string arms are new measurements; the
+  cell arms supersede EX-15/EX-29 on the repark half.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_matches_spark`
+  (the ordered cells) and
+  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_null_stats`
+  + `test_describe_non_describable_column_arms` (the string arms and the skip/refuse
+  boundary).
+- **Rationale** — FIXED 2026-09-11 by DF-DESCRIBE-STR-1 (filed 2026-09-04 from the EX-15
+  measurement; the string arm was added by EX-29 the morning of the fix).
 
 ### EX-DF-5 — `corr` / `cov` skip NULL pairs; Spark's stat arms answer the NULL as 0.0
 
@@ -5860,26 +5866,28 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the 0.0/1.0 strata arms; this row records the seeded-fraction arm until the
   per-stratum rand stream matches Spark's XORShift sequence row for row.
 
-### EX-DF-15 — `summary` multi-stat arms: row order is engine-arbitrary and string columns raise
+### EX-DF-15 — `summary` without statistics refuses; Spark answers the percentile-shaped table
 
-- **repark** — `summary("count", "min", "max")` answers the same three rows Spark answers but in
-  an arbitrary order (the UNION ALL legs reorder between collects: three in-process collects
-  agreed, the next process reordered `min`/`max`). `summary("count", "mean", "stddev", ...)`
-  over a frame with a `string` column raises `AnalysisException` (DataFusion `avg`/`stddev`
-  reject `Utf8`), and bare `summary()` raises `UnsupportedOperationException` (disclosed; the
-  engine lacks the percentile rows). `summary("count")` on a numeric frame is a single row and
-  measured Spark-equal; it is the covered example.
+- **repark** — bare `summary()` raises `UnsupportedOperationException` (disclosed; the
+  engine lacks the percentile rows). Two arms FIXED 2026-09-11 (DF-DESCRIBE-STR-1): the
+  multi-stat rows now collect in the requested order (before, the UNION ALL legs reordered
+  between collects — three in-process collects agreed, the next process reordered
+  `min`/`max`), and `summary("count", "mean", "stddev", ...)` over a frame with a `string`
+  column answers NULL or the `try_cast`-to-double cell instead of raising
+  `AnalysisException` — the same fix as EX-DF-4, which shares the `_summary` leg.
+  `summary("count")` on a numeric frame is a single row and measured Spark-equal; it is the
+  covered example.
 - **Apache Spark** — `summary("count", "min", "max")` collects in the requested order
   `count, min, max` every run; `summary` over the six-row `g/k/v` frame answers the full
   `count, mean, stddev, min, 25%, 50%, 75%, max` table with `None` cells under the string
   column's `mean`/`stddev`; `count` cells match repark's. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-18 DataFrame-c batch; repark order re-measured across processes after the
-  example gate caught a reorder.)*
+  2026-09-04, EX-18 DataFrame-c batch; order and string arms re-measured 2026-09-11,
+  DF-DESCRIBE-STR-1.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_summary_divergent_arms`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the single-stat arm; this row records the multi-stat order, the string-column
-  raise, and the bare-call refusal until the engine answers Spark's ordered percentile-shaped
-  summary.
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, narrowed
+  2026-09-11 by DF-DESCRIBE-STR-1: the order and string-column arms are FIXED; the row
+  stays for the bare-call percentile refusal until the engine answers Spark's
+  `25%`/`50%`/`75%` rows.
 
 ### EX-DF-16 — `show` renders its own grid and drops the truncation trailer; the rows agree
 
