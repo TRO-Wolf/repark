@@ -110,6 +110,10 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [covariance.py](covariance.py) — `F.corr`, `F.covar_pop`, `F.covar_samp` over (y, x) pairs,
 - [regression.py](regression.py) — Spark's nine `F.regr_*` linear-regression aggregates over
 - [bit_aggregates.py](bit_aggregates.py) — `F.bit_and`, `F.bit_or`, `F.bit_xor` folding each
+- [bitmap.py](bitmap.py) — `F.bitmap_bit_position` / `F.bitmap_bucket_number` splitting a
+  mark into its 32768-wide bucket and the bit inside it (negative, zero, both bucket
+  edges, NULL included), and `F.bitmap_count` counting set bits in a binary (EX-30).
+  pins: ex-30-functions-remainder/C-002
 - [case.py](case.py) — `F.lcase`/`F.lower` and `F.ucase`/`F.upper` (alias pairs)
 - [concat.py](concat.py) — `F.concat` propagating NULL beside `F.concat_ws`
 - [edges.py](edges.py) — `F.left` / `F.right` at a positive width, and the empty
@@ -165,6 +169,12 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
   `F.raise_error` (EX-FN-14) and `F.expr` (EX-FN-4) stay on the backlog.
   pins: ex-25-functions-a/C-006
   pins: ex-28-scalar-remainder/C-004
+- [udf.py](udf.py) — the Python-UDF doors: `F.udf` on a callable, direct
+  `F.UserDefinedFunction` construction, `F.pandas_udf` with `functionType=F.PandasUDFType.SCALAR`,
+  and an `@F.udtf` class answering as a `F.UserDefinedTableFunction` (EX-30). The factories'
+  return-type arm is §7 `EX-FN-23`; `F.PythonUDFColumn` and `F.unwrap_udt` stay on the
+  backlog (EX-30 owner question, FNP-15).
+  pins: ex-30-functions-remainder/C-003
 ## Pointers
 
 - Up: [../map.md](../map.md)

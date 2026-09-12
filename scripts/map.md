@@ -6,6 +6,21 @@ retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` d
 the matching `_RUST_BASELINES` row in the same commit. Round 2: `check_lib_py.py`
 `reader.py` 1026 → 1022 (path argument, no stored `path` option).
 pins: csv-infer-perf-1/C-006
+EX-30 functions remainder (2026-09-11): `check_example_coverage.py`
+`BACKLOG_BASELINE` 128 → 119 — nine of the 99 `F.*` remainder roster names,
+taught by two new `docs/examples/functions/` scripts (`bitmap.py`, `udf.py`).
+Every asserted value measured on live PySpark 4.1.2 (ANSI on, UTC, zulu-17).
+Eighty-nine roster names stay on the backlog with existing EX-FN / BL-17 /
+FNP-9 / FNP-15 / FNP-16 rows plus new `EX-FN-22` (`from_xml` / `schema_of_xml`
+E1 stubs) and `EX-FN-23` (the `udf` / `pandas_udf` factory return-type arm,
+BACKLOG ARM on covered names); `F.PythonUDFColumn` stays pending an owner
+ruling on inventory narrowing. Pins in
+`python/repark/tests/test_examples_functions_b.py`. Red-first: the nine covered
+names deleted from `backlog.txt` with `COVERS` stripped red the static gate
+with nine findings (exit 1), and a wrong-bytes control in `bitmap.py` failed
+the execute leg by name (exit 1).
+pins: ex-30-functions-remainder/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+
 EX-29 class remainder (2026-09-11): `check_example_coverage.py` ran unchanged —
 `BACKLOG_BASELINE` holds at 128 because none of the 29 non-`F.*` roster names has an
 arm where the engines agree that a prior batch had not already taught; every stayed name
@@ -18,6 +33,13 @@ multi-match). Red-first: a stayed name deleted from `backlog.txt` reds the stati
 naming it (exit 1), and a wrong-bytes control in `catalog/list_names.py` failed the
 execute leg by name (exit 1).
 pins: ex-29-class-remainder/C-001, C-005, C-006
+
+DF-COLREGEX-1 (2026-09-11): `check_example_coverage.py` ran unchanged —
+`BACKLOG_BASELINE` holds at 128; no example names `DataFrame.colRegex` /
+`col_regex`, so the names stay on the backlog and the `--require-execute` leg is
+the clause's proof (exit 0 on the shipped tree: 927 names, 797 covered, 212
+examples). The fix lives in `python/repark/src/repark/spark/dataframe/colregex.py`.
+pins: df-colregex-1/C-004
 
 EX-28 scalar remainder (2026-09-06): `check_example_coverage.py`
 `BACKLOG_BASELINE` 136 → 129 — seven of the 34 `F.*` scalar-remainder roster

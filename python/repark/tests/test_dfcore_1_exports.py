@@ -44,6 +44,7 @@ DF-EXPLAIN-1 (2026-09-08): the explain rendering support splits out and
 the package gains exactly the one new module name ``explain``, while ``core``
 gains the two private imports in its frozen surface and no module binding.
 DF-EAGER-1 step 2 (2026-09-09): eager/lazy/compute join the class; guard trio to eager.py.
+DF-COLREGEX-1 (2026-09-11): the package gains exactly ``colregex``, imported below.
 """
 
 from __future__ import annotations
@@ -53,6 +54,7 @@ from types import ModuleType
 from typing import Any
 
 import repark.spark.dataframe as dataframe_package
+import repark.spark.dataframe.colregex as colregex  # noqa: F401
 import repark.spark.dataframe.core as dataframe_core
 import repark.spark.dataframe.export_errors as export_errors
 import repark.spark.dataframe.grouped_udf as grouped_udf
@@ -707,6 +709,7 @@ EXPECTED_DATAFRAME_DIR: list[str] = [
 EXPECTED_OVERLOADED_METHODS: dict[str, int] = {"head": 2}
 
 EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
+    "colregex",
     "display",
     "eager",
     "explain",
@@ -751,12 +754,9 @@ def test_package_export_set_unchanged() -> None:
     """Assert the package export surface still equals the pre-slice snapshot.
 
     Dunders are interpreter state (warning registries, import caches) and vary with
-    test order, so the delta asserts cover non-dunder names only. The only accepted
-    gain is the ten new submodule attributes (DFCORE-1's four plus DFCORE-2's
-    ``udf_projection`` and ``udf_window_projection`` plus DFCORE-3's
-    ``statistics`` plus DFCORE-4a's ``sampling`` plus DFCORE-4b's ``display`` plus
-    DF-EXPLAIN-1's ``explain``),
-    bound by the import system when core imports the new homes.
+    test order, so the delta asserts cover non-dunder names only; the accepted gain
+    is the submodule-attribute set bound by the import system when the facade
+    imports each new home — the module docstring narrates membership per split.
     """
     expected_surface = [
         name

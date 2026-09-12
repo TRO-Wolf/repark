@@ -285,8 +285,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
   refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
   BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
-  `EX-FN-20` and `EX-FN-21`.
+  `EX-FN-20` and `EX-FN-21`. **EX-30 (2026-09-11):** three more pins for the F.*
+  remainder — `from_xml` and `schema_of_xml` refuse as E1 stubs (EX-FN-22) and the
+  `udf` / `pandas_udf` factories answer typed UDF objects where Spark 4.1.2 answers
+  plain functions (EX-FN-23, BACKLOG ARM on covered names).
   pins: ex-28-scalar-remainder/C-006
+  pins: ex-30-functions-remainder/C-005
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
   pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
@@ -324,12 +328,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-26-io-session/C-015
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
-  raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
-  `exceptAll`/`except_all` refusal (EX-DF-3), `describe`'s unordered rows with
-  Spark's cells pinned order-independently (EX-DF-4), the `corr`/`cov` NULL-pair
+  backtick-stripping parity (EX-DF-1, FIXED by DF-COLREGEX-1 2026-09-11), the three global-temp-view refusals (EX-DF-2),
+  `exceptAll`/`except_all` refusal (EX-DF-3), `describe`'s rows collecting in Spark's
+  count/mean/stddev/min/max order with the measured cells (EX-DF-4, FIXED by
+  DF-DESCRIBE-STR-1 2026-09-11), the `corr`/`cov` NULL-pair
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
+  **DF-COLREGEX-1 (2026-09-11)** flips the EX-DF-1 pin to the FIXED-arm parity pin
+  `test_colregex_backtick_spelling_parity` — a backticked pattern expands every
+  full-match in `select`, a bare pattern resolves as a literal column name at the call,
+  `drop` no-ops the marker and `withColumn` refuses it.
   pins: ex-15-dataframe-a/C-001
+  pins: df-describe-str-1/C-004
+  pins: df-colregex-1/C-002, C-003
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-20 (2026-09-04):**
   the four divergence pins for the window/catalog example batch — the DataFrame-door tied-key
   ordered default frame running per-row where Spark shares peer sums (EX-WIN-1, the G5
@@ -351,11 +362,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `replace` without subset casts or raises where Spark replaces typed cells (EX-DF-12),
   `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
   the seeded sets differ (EX-DF-13), `sampleBy`'s seeded 0.5/0.5 fractions keeping three
-  rows where Spark keeps two (EX-DF-14), `summary`'s unordered multi-stat rows,
-  string-column raise, and bare-call refusal with the count row pinned (EX-DF-15),
+  rows where Spark keeps two (EX-DF-14), `summary`'s bare-call refusal alongside
+  ordered multi-stat rows and NULL/`try_cast` string-column stats (EX-DF-15, order
+  and string arms FIXED by DF-DESCRIBE-STR-1 2026-09-11),
   `show`'s rendering without Spark's truncation trailer (EX-DF-16), and the `toJSON`
   refusal (EX-DF-17).
   pins: ex-18-dataframe-c/C-001
+  pins: df-describe-str-1/C-003
 - [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):** imports
   `repark.spark.functions` (importing the `repark.functions` shim rebinds the package attribute
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
@@ -380,10 +393,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **EX-29 (2026-09-11)** adds two arm pins from the class-remainder re-measure:
   `describe` on a string column (and bare `describe()` over a frame containing one)
   raising `AnalysisException` where Spark answers NULL mean/stddev cells (EX-DF-4),
-  and `colRegex`/`col_regex` answering the first match only on a multi-match pattern
-  where Spark expands all matches (EX-DF-1).
+  and the `colRegex`/`col_regex` multi-match arm (EX-DF-1). **DF-COLREGEX-1
+  (2026-09-11)** flips that arm to the FIXED parity pin
+  `test_colregex_multi_match_expands` — every full-match expands in frame order at
+  the marker's select position, case-insensitively, with the zero-match and
+  alias-refusal arms pinned. The remediation round adds
+  `test_colregex_duplicate_names_expand_positionally` — a condition-join frame's
+  duplicate display names expand per position (the `_iter_bound_columns` guard).
+  **DF-DESCRIBE-STR-1 (2026-09-11)** flips
+  the EX-DF-4 pin to Spark's answer — ordered NULL mean/stddev cells plus the
+  `try_cast` numeric-string arm (`"10","2","a"` answers `mean` `6.0`) — and adds
+  `test_describe_non_describable_column_arms` for the measured boundary: bare
+  `describe()`/`summary(...)` skip non-numeric non-string columns and naming one
+  raises `PySparkValueError`.
   pins: ex-19-dataframe-d-window/C-001
   pins: ex-29-class-remainder/C-002, C-003
+  pins: df-describe-str-1/C-001, C-002, C-003
+  pins: df-colregex-1/C-002, C-003, C-006
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1024,6 +1050,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and the `compute` alias plus the `_eager_shape` slot; the package gains exactly
   `eager`; the cache-guard trio moves to `eager.py` re-imported by identity.
   pins: df-eager-1/C-001, C-002, C-003, C-004
+  DF-COLREGEX-1 (2026-09-11): the package gains exactly `colregex` (the marker
+  module binds lazily on first `colRegex`/`select` use — `core`'s imports stay
+  function-local, so `core` gains no binding); the set row grows by one member,
+  funded line-neutrally at the default ceiling.
+  pins: df-colregex-1/C-003
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -1633,7 +1664,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (aligned pipelines byte-equal; divergences pinned: all-NULL sum NULL-vs-0, join collision
   loud-not-suffixed; repo-ruff strict: zip strict=, raw match patterns, pinned-ruff 0.15.22 format).
 
-- `test_df_easy.py` — **R-DF-EASY**: selectExpr/toDF/dtypes/printSchema/set-ops/crossJoin/offset/alias/describe/summary/replace/sample/randomSplit/colRegex/no-ops.
+- `test_df_easy.py` — **R-DF-EASY**: selectExpr/toDF/dtypes/printSchema/set-ops/crossJoin/offset/alias/describe/summary/replace/sample/randomSplit/colRegex (the backticked Spark spelling since DF-COLREGEX-1)/no-ops.
+  pins: df-colregex-1/C-003
 - `test_df_printschema.py` — **DF-PRINTSCHEMA-1**: `printSchema` stdout byte-identical to
   Spark (flat / nested struct / array / `level=1` exact captures) plus the live leg;
   red-first 4 red of 4.

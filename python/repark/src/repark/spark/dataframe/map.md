@@ -87,6 +87,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   REVIEW-FIX-3 (2026-09-10): `show`'s docstring states the probe-first count D-5
   introduced, line-neutral at the exact baseline.
   pins: review-fix-3/C-004
+  DF-COLREGEX-1 (2026-09-11): `colRegex`/`col_regex` delegate to `colregex.py` — a
+  backticked pattern returns the `RegexColumn` marker `select` expands, a bare
+  `colName` resolves as a literal column name at the call. `select` checks the
+  marker before the `*` arm, so expansion keeps the marker's position in the
+  projection. Line-neutral at the exact baseline.
+  pins: df-colregex-1/C-003
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
   `core.py`.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
@@ -144,10 +150,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   order last-wins. pins: dfcore-2/C-005
 - `statistics.py` owns the seven statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`). `summary` builds one row
-  per statistic with SQL aggregations joined by UNION ALL; bare `summary()` refuses
-  because Spark percentile rows are an engine gap. Multi-name frames aggregate on unique
-  engine fields — a display name can be ambiguous or absent from the view schema. Engine
-  aliases stay unique; the facade overlays Spark-legal display names afterwards.
+  per statistic with SQL aggregations joined by UNION ALL, each leg carrying a stat
+  ordinal that a plain `ORDER BY` on the union sorts on and a facade `drop()` then
+  strips, so rows collect in the requested stat order like Spark (per-leg positions,
+  so duplicate stats keep their requested slots). The remediation measurement
+  (df-describe-str-1/C-005): the earlier wrapping `SELECT … ORDER BY` cost ~16 ms on a
+  200k-row numeric describe (+14–18 %) and ~+96 ms on a 50×10k wide frame; the
+  bare-union `ORDER BY` + `drop()` shape measures 0.1185 s facade median on the 200k
+  frame and 1.14 s on the wide frame — ~60–90 ms saved on wide. A `CASE summary WHEN`
+  order key is marginally cheaper still but collapses duplicate stats to name order,
+  and a coalesce-then-sort (LIMIT) shape is slower; union leg order without ORDER BY
+  is nondeterministic (20/20 collects out of stat order), so the sort node stays;
+  bare `summary()` refuses because Spark percentile rows are an engine gap. The column
+  set is Spark's numeric+string rule: `mean`/`stddev` run `try_cast(col AS DOUBLE)` on
+  string columns (matching Spark's silent cast — `"10","2","a"` answers `6.0`),
+  non-numeric non-string columns are skipped by the bare forms and refused with
+  `PySparkValueError` when named (DF-DESCRIBE-STR-1). Multi-name frames aggregate on
+  unique engine fields — a display name can be ambiguous or absent from the view
+  schema. Engine aliases stay unique; the facade overlays Spark-legal display names
+  afterwards. pins: df-describe-str-1/C-001
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5
@@ -304,6 +325,24 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   any mode containing `analyze` runs `EXPLAIN ANALYZE`, whose measured rows carry
   `plan_type='Plan with Metrics'`. Unknown modes raise `PySparkValueError` naming the five
   modes. pins: df-explain-1/C-001, C-002, C-004, C-005
+- `colregex.py` owns the `colRegex` marker (DF-COLREGEX-1, 2026-09-11; §7 EX-DF-1 FIXED).
+  `RegexColumn` carries the stripped pattern on a never-resolvable quoted ref, so every
+  surface but `select` fails it as an unresolved column while `drop` no-ops through its
+  absent name — Spark's `UnresolvedRegex` shape (`withColumn`, `groupBy`, `orderBy`,
+  `filter`, and `.alias` on the marker all refuse). `col_regex_column` strips one
+  surrounding backtick pair; a bare argument resolves eagerly as a literal column name,
+  raising `AnalysisException` when absent (Spark's `UNRESOLVED_COLUMN` class).
+  `expand_col_regex` applies Java full-match semantics case-insensitively over
+  `frame.columns` and answers the bound columns in frame order, zero matches included —
+  on a multi-name frame each duplicate display name contributes its own bound column.
+  Remediation (ruling S2-21, review P2-1): the names list is read once and only
+  full-matching names bind (`_bind_schema_column(name, name)`); when
+  `_display_names`/`_engine_names` is set or names repeat, the positional
+  `_iter_bound_columns` path is kept — that branch is the correctness guard that
+  keeps duplicate display names positional (per-attribute expansion, no
+  `AMBIGUOUS_REFERENCE`) and resolves origins through `_origin_map`. Measured
+  500-col/10-match 5.40 → 0.32 ms (ledger C-006).
+  pins: df-colregex-1/C-001, C-003, C-005, C-006
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import
@@ -381,6 +420,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 | Need | Home |
 |---|---|
 | DataFrame methods and plan glue | [`core.py`](core.py) |
+| `colRegex` marker and `select` expansion | [`colregex.py`](colregex.py) |
 | Grouping, pivot, and `applyInPandas` | [`joins_columns.py`](joins_columns.py) |
 | Missing-data helpers | [`actions_export.py`](actions_export.py) |
 | Export-error mapping | [`export_errors.py`](export_errors.py) |
@@ -428,5 +468,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   stays below the source-size default (pins: dfcore-5/C-005).
   DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
   stays below the source-size default (pins: dfcore-6/C-005).
+  DF-DESCRIBE-STR-1 (2026-09-11): `statistics.py` 264→325→318, no new module, no
+  ceiling row; stays below the source-size default (pins: df-describe-str-1/C-001,
+  C-005).
+  DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
+  `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

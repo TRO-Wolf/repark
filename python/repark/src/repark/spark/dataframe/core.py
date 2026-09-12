@@ -1462,11 +1462,14 @@ class DataFrame:
         without ``groupBy`` raises :class:`~repark.errors.AnalysisException` with Spark's
         ``[MISSING_GROUP_BY]`` tag. The projection must not silently group free attributes.
         """
+        from repark.spark.dataframe.colregex import RegexColumn, expand_col_regex
         from repark.spark.functions import PandasUDFColumn, PythonUDFColumn
 
         expanded: list[Any] = []
         for item in cols:
-            if isinstance(item, str) and item == "*":
+            if isinstance(item, RegexColumn):
+                expanded.extend(expand_col_regex(self, item))
+            elif isinstance(item, str) and item == "*":
                 # Multi-name frames cannot re-resolve bare display strings (duplicate
                 # "b" → AMBIGUOUS_REFERENCE). Expand via engine fields + display identity.
                 if self._display_names is not None and self._engine_names is not None:
@@ -2661,10 +2664,11 @@ class DataFrame:
         self,
         colName: str,  # noqa: N803 — PySpark arg name
     ) -> Column:
-        """Select columns matching a Java/Python regex (PySpark ``colRegex``).
+        """Return the ``colRegex`` column (Spark ``UnresolvedRegex``, EX-DF-1 FIXED).
 
-        Returns a :class:`Column` usable in :meth:`select`. When multiple columns match,
-        selects the first match (disclose: Spark expands all matches in select).
+        A backticked pattern returns a marker :class:`Column` that :meth:`select` expands
+        to every full-matching column in frame order; a bare ``colName`` resolves as a
+        literal column name and raises ``AnalysisException`` when absent.
         """
         self._ensure_alive()
         if not isinstance(colName, str):
@@ -2675,13 +2679,9 @@ class DataFrame:
                     "arg_type": type(colName).__name__,
                 },
             )
-        pattern = re.compile(colName)
-        matches = [name for name in self.columns if pattern.search(name)]
-        if not matches:
-            raise AnalysisException(f"No column matched regex {colName!r}")
-        from repark.spark.functions import col as col_fn
+        from repark.spark.dataframe.colregex import col_regex_column
 
-        return col_fn(matches[0])
+        return col_regex_column(self, colName)
 
     col_regex = colRegex
 

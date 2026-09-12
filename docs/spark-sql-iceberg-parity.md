@@ -5596,22 +5596,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
   not a row; the example covers the two-argument form.
 
-### EX-DF-1 — `colRegex` / `col_regex` compile the raw string; Spark strips the backticks
+### EX-DF-1 — FIXED 2026-09-11 (DF-COLREGEX-1): `colRegex` / `col_regex` compiled the raw string and answered the first match only
 
-- **repark** — `DataFrame.colRegex` (and its `col_regex` alias) compiles `colName` as-is: the
-  plain regex `colRegex("^(k)$")` selects `["k"]`, while the PySpark-documented backticked
-  spelling ``colRegex("`^(k)$`")`` raises `AnalysisException: No column matched regex`.
-  A multi-match pattern answers the first match only (Spark expands all matches in `select`).
-- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]`; the plain
-  string `colRegex("^(k)$")` raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` as an
-  unresolvable column. The two engines accept opposite spellings, so no input answers
-  Spark-equal on both. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
-  batch, six-row `g/k/v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_spelling_divergence`
-  and `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_first_match`
-  (the first-match-only arm, added 2026-09-11 by EX-29).
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
-  the example backlog; teaching either spelling would assert an answer Spark does not give.
+- **repark** — before the fix `colRegex` compiled `colName` as-is and returned the first
+  match: ``colRegex("`^(k)$`")`` raised `AnalysisException` while the plain
+  `colRegex("^(k)$")` selected `["k"]`, and a multi-match pattern answered `["g"]`. Since
+  DF-COLREGEX-1 a backticked pattern returns a marker column that `select` expands to every
+  column the inner pattern full-matches, in frame order and case-insensitively (zero matches
+  project zero columns); a bare pattern resolves as a literal column name at the `colRegex`
+  call — an unknown one raises `AnalysisException` (Spark's `UNRESOLVED_COLUMN` class). The
+  marker is `select`-only: `drop` ignores it (Spark's no-op) and `withColumn`, `groupBy`,
+  `orderBy`, `filter`, and `.alias(...)` on it all raise `AnalysisException` (Spark's
+  `INVALID_USAGE_OF_STAR_OR_REGEX` class).
+- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]` and a
+  backticked multi-match expands every match (`` `^(g|k)$` `` → `["g", "k"]`), keeping the
+  marker's position in the select list and matching case-insensitively with Java full-match
+  (`matches()`) semantics; the bare string `colRegex("^(k)$")` raises
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` at the call, while a bare literal hit
+  (`colRegex("k")`) resolves eagerly. *(oracle: live PySpark 4.1.2, ANSI on, UTC; first
+  measured 2026-09-04 EX-15 DataFrame-a batch, re-measured 2026-09-11 by DF-COLREGEX-1
+  across `select`/`drop`/`withColumn` plus the position, zero-match, case-fold, and
+  full-match arms on the `g/k/v` and `k/kx` frames.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_backtick_spelling_parity`
+  (spellings plus the `drop`/`withColumn` arms) and
+  `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_expands`
+  (expansion order, position, case-fold, zero-match, alias refusal);
+  `python/repark/tests/test_df_easy.py::test_col_regex_and_noops` uses the backticked
+  spelling.
+- **Rationale** — filed 2026-09-04 from the EX-15 measurement; FIXED 2026-09-11 by
+  DF-COLREGEX-1 with a facade marker column and `select` expansion — no engine change.
 
 ### EX-DF-2 — the three global-temp-view spellings refuse; Spark registers the view
 
@@ -5641,30 +5654,36 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
   the example backlog until the multiset semantics are Spark-correct.
 
-### EX-DF-4 — `describe` row order is engine-arbitrary; Spark's is count/mean/stddev/min/max
+### EX-DF-4 — FIXED 2026-09-11 (DF-DESCRIBE-STR-1): `describe` collected unordered rows and refused string columns
 
-- **repark** — the five summary rows answer the same cells Spark answers, but their collect
-  order varies run to run: three consecutive collects printed three different orders.
-  A second arm measured 2026-09-11 (EX-29): `describe("g")` on a string column — and bare
-  `describe()` over a frame containing one — raises `AnalysisException` (the `avg`/`stddev`
-  legs reject `Utf8`), where Spark answers the same five rows with NULL cells under the
-  string column's `mean`/`stddev`.
+- **repark** — before the fix the five summary rows answered the same cells Spark answers but
+  collected in an arbitrary order (the UNION ALL legs reordered between collects), and
+  `describe("g")` on a string column — and bare `describe()` over a frame containing one —
+  raised `AnalysisException` (the `avg`/`stddev` legs reject `Utf8`). Since
+  DF-DESCRIBE-STR-1 the rows collect in the requested stat order (a stat ordinal orders the
+  UNION ALL legs), the `mean`/`stddev` legs run over `try_cast(col AS DOUBLE)` on string
+  columns — so `"a"`/`"b"` answer NULL and `"10"`/`"2"`/`"a"` answers `mean` `6.0` like
+  Spark — and the bare column set is numeric+string like Spark's: a `boolean`/`date`/
+  `timestamp`/`array` column is skipped by `describe()`/`summary(...)`, and naming one
+  (`describe("b")`) raises `PySparkValueError`.
 - **Apache Spark** — `describe("k", "v")` collects in the stable order
   `count, mean, stddev, min, max`. The cells themselves measured identical:
   count `('6', '5')`, mean `('1.8333333333333333', '30.0')`,
   stddev `('0.752772652709081', '15.811388300841896')`, min `('1', '10.0')`,
-  max `('3', '50.0')`. The string-column arm answers `('count','6')`, `('mean',None)`,
-  `('stddev',None)`, `('min','a')`, `('max','b')` for `describe("g")`. *(oracle: live PySpark
-  4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch; string arm re-measured 2026-09-11,
-  EX-29.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_divergence`
-  (cells pinned order-independently; the order itself is unpinned because repark's is
-  nondeterministic, so no red-on-fix pin can assert it) and
-  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_refuses`
-  (the string-column raise).
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. `DataFrame.describe`
-  stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
-  example would teach a weaker contract than Spark answers.
+  max `('3', '50.0')`. The string-column arm answers `('count','2')`, `('mean',None)`,
+  `('stddev',None)`, `('min','a')`, `('max','b')` for `describe("g")` on
+  `[('a',1),('b',2)]`, and `('count','3'),('mean','6.0'),('stddev','5.656854249492381'),
+  ('min','10'),('max','a')` on `["10","2","a"]` — Spark casts strings to double
+  non-strictly for `mean`/`stddev`. *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11,
+  DF-DESCRIBE-STR-1 — the skip/refuse and numeric-string arms are new measurements; the
+  cell arms supersede EX-15/EX-29 on the repark half.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_matches_spark`
+  (the ordered cells) and
+  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_null_stats`
+  + `test_describe_non_describable_column_arms` (the string arms and the skip/refuse
+  boundary).
+- **Rationale** — FIXED 2026-09-11 by DF-DESCRIBE-STR-1 (filed 2026-09-04 from the EX-15
+  measurement; the string arm was added by EX-29 the morning of the fix).
 
 ### EX-DF-5 — `corr` / `cov` skip NULL pairs; Spark's stat arms answer the NULL as 0.0
 
@@ -5847,26 +5866,28 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the 0.0/1.0 strata arms; this row records the seeded-fraction arm until the
   per-stratum rand stream matches Spark's XORShift sequence row for row.
 
-### EX-DF-15 — `summary` multi-stat arms: row order is engine-arbitrary and string columns raise
+### EX-DF-15 — `summary` without statistics refuses; Spark answers the percentile-shaped table
 
-- **repark** — `summary("count", "min", "max")` answers the same three rows Spark answers but in
-  an arbitrary order (the UNION ALL legs reorder between collects: three in-process collects
-  agreed, the next process reordered `min`/`max`). `summary("count", "mean", "stddev", ...)`
-  over a frame with a `string` column raises `AnalysisException` (DataFusion `avg`/`stddev`
-  reject `Utf8`), and bare `summary()` raises `UnsupportedOperationException` (disclosed; the
-  engine lacks the percentile rows). `summary("count")` on a numeric frame is a single row and
-  measured Spark-equal; it is the covered example.
+- **repark** — bare `summary()` raises `UnsupportedOperationException` (disclosed; the
+  engine lacks the percentile rows). Two arms FIXED 2026-09-11 (DF-DESCRIBE-STR-1): the
+  multi-stat rows now collect in the requested order (before, the UNION ALL legs reordered
+  between collects — three in-process collects agreed, the next process reordered
+  `min`/`max`), and `summary("count", "mean", "stddev", ...)` over a frame with a `string`
+  column answers NULL or the `try_cast`-to-double cell instead of raising
+  `AnalysisException` — the same fix as EX-DF-4, which shares the `_summary` leg.
+  `summary("count")` on a numeric frame is a single row and measured Spark-equal; it is the
+  covered example.
 - **Apache Spark** — `summary("count", "min", "max")` collects in the requested order
   `count, min, max` every run; `summary` over the six-row `g/k/v` frame answers the full
   `count, mean, stddev, min, 25%, 50%, 75%, max` table with `None` cells under the string
   column's `mean`/`stddev`; `count` cells match repark's. *(oracle: live PySpark 4.1.2, ANSI on,
-  2026-09-04, EX-18 DataFrame-c batch; repark order re-measured across processes after the
-  example gate caught a reorder.)*
+  2026-09-04, EX-18 DataFrame-c batch; order and string arms re-measured 2026-09-11,
+  DF-DESCRIBE-STR-1.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_summary_divergent_arms`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the single-stat arm; this row records the multi-stat order, the string-column
-  raise, and the bare-call refusal until the engine answers Spark's ordered percentile-shaped
-  summary.
+- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement, narrowed
+  2026-09-11 by DF-DESCRIBE-STR-1: the order and string-column arms are FIXED; the row
+  stays for the bare-call percentile refusal until the engine answers Spark's
+  `25%`/`50%`/`75%` rows.
 
 ### EX-DF-16 — `show` renders its own grid and drops the truncation trailer; the rows agree
 
@@ -6478,6 +6499,41 @@ field NAME.
 - **Rationale** — BACKLOG ARM, filed 2026-09-06 from the EX-28 measurement. The name stays
   covered by the no-format arms; this row records the format argument until the parser
   accepts Spark's pattern.
+
+### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as E1 stubs; Spark parses and infers XML
+
+- **repark** — `F.from_xml("x", "b INT")` raises `UnsupportedOperationException:
+  functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)`, and
+  `F.schema_of_xml(F.lit("<a><b>1</b></a>"))` raises `UnsupportedOperationException:
+  functions.schema_of_xml is not supported yet (disclosed E1)`.
+- **Apache Spark** — `from_xml("<a><b>1</b></a>", "b INT")` answers `Row(b=1)`;
+  `schema_of_xml("<a><b>1</b></a>")` answers `"STRUCT<b: BIGINT>"`. *(oracle: live PySpark
+  4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_from_xml_refuses` and
+  `…::test_schema_of_xml_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-11 from the EX-30 measurement. Both names stay on
+  the example backlog until the XML parse kernel lands — the same E1 stub family as
+  `from_csv` (EX-FN-6) and `schema_of_csv` (EX-FN-16); the serializer side `to_xml` and the
+  `xpath_*` names stay under FNP-16-csv-xml-xpath.
+
+### EX-FN-23 — the `udf` / `pandas_udf` factories answer a typed UDF object; Spark answers a plain function
+
+- **repark** — `F.udf(f)` answers a `UserDefinedFunction` instance,
+  `F.pandas_udf(f, returnType=…)` answers a `PandasUDFFunction`, and
+  `F.udtf(returnType=…)` answers a decorator `function` whose decorated class is a
+  `UserDefinedTableFunction`.
+- **Apache Spark** — `F.udf(f)` and `F.pandas_udf(f, returnType=…)` answer plain
+  `function` objects (`isinstance(u, UserDefinedFunction)` is False); `F.udtf(returnType=…)`
+  answers `functools.partial` and its decorated class is a `UserDefinedTableFunction`,
+  same as repark. The projected values agree on every measured arm (`u1`/`u2`/`u3` through
+  both factories, `2`/`4`/`6` through the pandas arm, `(5,)`/`(6,)` through the UDTF).
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_udf_factories_answer_typed_wrappers`
+- **Rationale** — BACKLOG ARM, filed 2026-09-11 from the EX-30 measurement; same mechanism
+  as EX-SES-6 (`spark.udf.register` answers the UDF object where Spark answers a plain
+  function). `F.udf`, `F.pandas_udf` and `F.udtf` stay covered by the value arms; this row
+  records the factory return-type arm — a migrated `isinstance(u, UserDefinedFunction)`
+  reads True here and False on Spark 4.1.2.
 
 ### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
