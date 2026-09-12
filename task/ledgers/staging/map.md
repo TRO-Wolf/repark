@@ -193,6 +193,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
+  `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
+  location, every S3 Tables table's, resolves to the bucket root like Java's
+  `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
+  with the parser half FIXED at this pin and the owner's dev-bucket reproduction
+  verbatim (the parser error before, the 405 `ListObjectsV2` refusal after); the
+  loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
+  (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
+  pins: rp-19/C-001, C-002, C-003
 - [rp-16-ledger.md](rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
   `090bc821` (F-WRITE-COMPRESS-1 `#276` plus riders `#273`–`#275`, `#277`). Consumer
   fix: `PERF-CATALOG-CACHE-WEIGHT-1` FIXED — charged object-graph weight, measured

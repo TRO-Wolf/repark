@@ -57,6 +57,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `repark-python` only — not a family pin).
   **RP-17 (2026-09-12):** `41e25ba2` (F-WRITE-COMPRESS-2 `#278` — the maintenance, COW/MoR rewrite and position-delete writers honour `write.parquet.compression-codec` too, closing the four residue writer sites; RePark re-measures AP-1 a third time under one codec).
   **RP-18 (2026-09-12):** `9e3522e3` (F-REWRITE-SIZE-1 step 2 `#280` — the maintenance rewrite disables the dictionary per column from the input footers, so compaction no longer writes dead dictionary pages, and an unset compression level means zstd 3 like Java; RePark re-measures AP-1 a fourth time).
+  **RP-19 (2026-09-12):** `3ebf7d36` (F-S3ROOT-1 `#281` — a bare-bucket object-store location, every S3 Tables table's, resolves to the bucket root like Java's S3URI, for S3, GCS and OSS; the S3 Tables orphan door itself is ORPHAN-S3TABLES-1).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
