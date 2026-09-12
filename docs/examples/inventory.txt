@@ -42,7 +42,6 @@ column	Column.desc_nulls_last
 column	Column.dt
 column	Column.endswith
 column	Column.eqNullSafe
-column	Column.for_select
 column	Column.getField
 column	Column.getItem
 column	Column.ilike
@@ -50,16 +49,11 @@ column	Column.isNotNull
 column	Column.isNull
 column	Column.is_not_null
 column	Column.is_null
-column	Column.join_sql_part
 column	Column.like
 column	Column.otherwise
 column	Column.over
 column	Column.rlike
 column	Column.round
-column	Column.spark_display_part
-column	Column.spark_wrap_display_part
-column	Column.sql_expr_part
-column	Column.sql_expr_without_alias
 column	Column.startswith
 column	Column.str
 column	Column.substr
@@ -220,7 +214,6 @@ dataframe	GroupedData.min
 dataframe	GroupedData.pivot
 dataframe	GroupedData.sum
 functions	F.PandasUDFType
-functions	F.PythonUDFColumn
 functions	F.UserDefinedFunction
 functions	F.UserDefinedTableFunction
 functions	F.abs
