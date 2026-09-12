@@ -172,8 +172,10 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [udf.py](udf.py) — the Python-UDF doors: `F.udf` on a callable, direct
   `F.UserDefinedFunction` construction, `F.pandas_udf` with `functionType=F.PandasUDFType.SCALAR`,
   and an `@F.udtf` class answering as a `F.UserDefinedTableFunction` (EX-30). The factories'
-  return-type arm is §7 `EX-FN-23`; `F.PythonUDFColumn` and `F.unwrap_udt` stay on the
-  backlog (EX-30 owner question, FNP-15).
+  return-type arm is §7 `EX-FN-23`; `F.unwrap_udt` stays on the backlog (FNP-15) while
+  `F.PythonUDFColumn` — the repark-only marker class `F.udf(f)("n")` returns, measured
+  absent from PySpark 4.1.2 — left the inventory under `INVENTORY_EXCLUSIONS` (EX-31,
+  ruling S2-22).
   pins: ex-30-functions-remainder/C-003
 ## Pointers
 
