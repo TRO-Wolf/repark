@@ -44,6 +44,7 @@ sections left open.
 | S2-24 | **The rewrite writes 1.5× its input's compressed bytes under the same codec** (RP-17 re-measure: 206 zstd INSERT files, Σ compressed 2 831 692 B → 20 zstd rewrite files, 4 474 081 B; skewed 4 136 632 B). Same rows, same codec, 45–58 % larger — an encoding difference between `IcebergWriteExec` and the maintenance rewrite writer (dictionary encoding, page/row-group shape, statistics, zstd level, or the sort order the INSERT path preserved and the rewrite lost). Fork card **F-REWRITE-SIZE-1** (measure-first on the fork: one bed, both writers, every parquet-level property diffed; then the fix and RP-18). Until it lands the maintenance policy's compaction is a net-size **loss** on zstd tables — say so in the maintenance guide's known-issues line (rides AP-3). | fork lane, RP-18, AP-1 |
 | S2-25 | **F-REWRITE-SIZE-1 step 1 measured (fork #279, 2026-09-12): the cause is dead dictionary pages.** On ~22k-row rewrite chunks parquet-rs's dictionary overflows its page limit mid-chunk and the dead ~144 KB dictionary page is still written per high-cardinality column chunk; dictionary off alone → 1.009× (baseline 1.47×). Secondary: the fork's default zstd level is 1 where Java writes 3 (level 3 alone → 1.13×; both → 0.67×). Row order is not the cause. **Step 2 ruled:** per-column dictionary decided from the input files' footers (a column whose input chunks fell back from dictionary writes without one; low-cardinality columns keep it, pinned on an 8-value bed), and the unset-level default becomes zstd 3 to match Java (pinned by bytes). `rewrite_size_pin` un-ignored at ≤ 1.05×. Then RP-18 and AP-1's fourth 20 % check. | fork lane, RP-18, AP-1 |
 | S2-26 | **Two engine costs measured by the S2-21 reviews (2026-09-12), cards opened:** (a) every plan-side unpivot shape in this DataFusion is superlinear in expression count — PERF-DESCRIBE-1 tried a struct grid + `unnest` (~95 s at 500 columns), multi-column `UNNEST` (fails on `OuterReferenceColumn`), `dynamic_flatten(explode_lists=True)` (a cross product, not a zip) and chained projections (time out), and settled on an action-time unpivot in the Arrow bridge; card **PERF-UNPIVOT-1** (a native unpivot/stack primitive, then `describe` moves back to a pure plan). (b) each `CAST` physical expression costs ~1.4–2.7 ms and the cost is superlinear in wide plans (250 casts: 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s inside a 2500-expression projection); card **PERF-CAST-1** (measure where the cost lives — planning, physical expression creation, or per-batch evaluation — before any fix). Both are v1.5 perf units, Devin I rounds, after the v1.4 cut. | PERF-UNPIVOT-1, PERF-CAST-1 |
+| S2-27 | **AP-1-R-001 ruled closed as an estimator property (RP-18's fourth check, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md`):** with the fork's dictionary fix and one-pass compression (AP-3), the live rewrite compresses BETTER than its inputs (output ratio 0.28 vs the inputs' 0.38 — 20 large files versus 206 tiny ones), so the AP-3 projection (= the inputs' compressed bytes, 2 840 672) reads +55 % / +62 % against actuals of 1 839 168 / 1 755 749, while the old stored × ratio reads −37 % / −34 %. No footer-derived number predicts the output codec's ratio on files it has not written; what the inputs' compressed bytes give is a sound **upper bound** (a rewrite of the same rows under the same codec into fewer, larger files never compresses worse than its inputs once dead dictionary pages are gone). The 20 % target is retired: `projected_files_at_target` is documented and pinned as an upper-bound estimate, monotone across candidates (ranking unchanged on every bed), within [0.5×, 1.0×] of the live actual on the AP-0 beds. Card **AP-1-CLOSE-1** (one M round: the `RESIDUE_NOTE` and frame `notes` say "upper bound", the registry row closes, the maintenance guide's S2-24 caveat is retired — compaction is a net-size WIN again — and a pin holds the bound on the three beds). | AP-1-CLOSE-1 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -676,6 +677,27 @@ planning, optimizer passes (which one), physical expression creation, or per-bat
 DataFusion config knob owns the superlinearity, fix or set it and pin the 2500-cast shape under a budget;
 if it is upstream DataFusion, file the issue with the numbers and pin the current cost so a bump that fixes
 it flips the pin. **Steps.** 1 (I, measure), 2 (M/I, fix or upstream). **Rounds.** 2.
+
+---
+
+### Card AP-1-CLOSE-1 — `projected_files_at_target` is an upper bound, pinned; AP-1-R-001 closes (S2-27)
+
+**Why.** Four re-measures (run 7, RP-16, RP-17, RP-18) chased a 20 % target that no footer-derived
+projection can meet in both directions: before the fork fixes the rewrite wrote MORE than its inputs
+(dead dictionary pages, uncompressed files), after them it writes LESS (fewer, larger files compress
+better). What the inputs' compressed bytes bound is the ceiling. S2-27 retires the target.
+
+**Home.** `crates/repark-spark/src/call/plan_partitioning.rs` (`RESIDUE_NOTE` and the frame `notes`
+spelling: "upper bound, inputs' compressed bytes"), its pins, `docs/spark-sql-iceberg-parity.md` (the
+AP-1-R-001 row → CLOSED with the four measurements), `docs/guide/maintenance-policy.md` (the S2-24
+known-issues line retired; compaction is a net-size win on zstd tables at the RP-18 pin), `docs/perf/`
+AP-1 docs (a closing note), the AP-1 remeasure ledger (departs to `completed/` in the same PR),
+ledger `task/ledgers/staging/ap-1-close-1-ledger.md`.
+
+**Decisions.** D-1 no formula change (AP-3's basis stays). D-2 the pin: on the three AP-0 beds the
+projection is ≥ the live actual and ≤ 2× it, and the candidate ranking equals RP-18's — red first by
+doctoring the bound. D-3 docs say "upper bound" wherever the projection is explained; nothing claims
+±20 %. **Steps.** 1 (M). **Rounds.** 1 (M), after RP-18 merges.
 
 ---
 
