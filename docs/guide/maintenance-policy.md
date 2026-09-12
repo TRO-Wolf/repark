@@ -182,6 +182,23 @@ CALL ice.system.apply_partitioning(table => 'sales.orders', plan_id => '<id>',
   target_file_size_bytes => 524288, dry_run => false);
 ```
 
+## S3 Tables
+
+A table in an `s3tables` catalog lives directly in its table bucket
+(`s3://<id>--table-s3`), and a table bucket answers `ListObjectsV2` with
+405 MethodNotAllowed — listing is not a supported operation, so no
+listing-based orphan sweep can run there. `CALL <cat>.system.remove_orphan_files`
+on such a catalog refuses before any IO — before the table is loaded and
+whether `dry_run` is true or false — naming the table, the unsupported
+listing, and the remedy: Amazon S3 Tables removes unreferenced files itself
+through the table bucket's maintenance configuration, so enable
+`unreferencedFileRemoval` in `PutTableBucketMaintenanceConfiguration`
+instead of running this procedure. `CALL run_maintenance()` keeps the rest
+of the cycle; when `orphan_older_than` is set the orphan step still appears
+in the plan but reports `status = skipped` with that reason as its `result`,
+on the dry run and on apply. The `[<profile>.maintenance]` policy itself
+stays valid unchanged.
+
 ## Reserved: `adaptive_partitioning`
 
 The `adaptive_partitioning` key is reserved for a later unit and refuses with
