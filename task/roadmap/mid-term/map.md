@@ -17,7 +17,7 @@ declines it (a dated ruling in the intake, then the archive).
   2026-09-09):** roadmap 2.1 maintenance policy (`[<profile>.maintenance]` + `CALL run_maintenance()`,
   the ADAPT-PART AP-1 planner underneath), 1.2 torture-test dataset suite (eight generated families,
   the secrets flag), 1.3 Never-OOM spill-coverage matrix (27 cells, three outcomes, subprocess-guarded);
-  four cards in slate 1's format with pre-made decisions, tiers per step and red-first pins.
+  four cards in slate 1's format with pre-made decisions, tiers per step and red-first pins. **Run-8 rulings S2-19…S2-22 (2026-09-11):** fork card F-WRITE-COMPRESS-2 (compaction and the rewrite writers carry the codec; Q-1 deferred to its re-measure), STATUS sentences ride v1.4, perf reviewers return as Grok critic rounds on product branches, card EX-31 (the inventory drops six `Column.*` plumbing names and `F.PythonUDFColumn`), card PERF-DESCRIBE-1 (one aggregate pass for describe/summary, from the first S2-21 review).
 - [overnight-orchestrator-runbook-2026-09-08.md](overnight-orchestrator-runbook-2026-09-08.md) — **how a
   cheaper orchestrating session runs the slate unattended:** the four owner grants, the five
   reads, lane/brief/launch commands per launcher, the hand-back audit checklist, the gated
