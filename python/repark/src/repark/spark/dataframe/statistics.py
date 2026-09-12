@@ -40,6 +40,18 @@ def _summary(
             f"summary statistics not supported yet: {bad} "
             f"(supported: {sorted(supported)}; percentiles are an engine gap)"
         )
+    from repark.errors import PySparkValueError
+    from repark.spark.types import (
+        ByteType,
+        DecimalType,
+        DoubleType,
+        FloatType,
+        IntegerType,
+        LongType,
+        ShortType,
+        StringType,
+    )
+
     if _columns:
         target_pairs: list[tuple[str, str]] = [(name, name) for name in _columns]
         if frame._display_names is not None and frame._engine_names is not None:
@@ -52,30 +64,72 @@ def _summary(
         target_pairs = list(zip(frame._display_names, frame._engine_names, strict=True))
     else:
         target_pairs = [(name, name) for name in frame.columns]
+    numeric_types = (
+        ByteType,
+        ShortType,
+        IntegerType,
+        LongType,
+        FloatType,
+        DoubleType,
+        DecimalType,
+    )
+    describable_types = (*numeric_types, StringType)
+    fields = frame.schema.fields
+    engine_order = (
+        list(frame._engine_names)
+        if frame._engine_names is not None
+        else [field.name for field in fields]
+    )
+    kind_by_engine = dict(zip(engine_order, (field.dataType for field in fields), strict=True))
+    if _columns:
+        refused = [
+            display
+            for display, engine in target_pairs
+            if not isinstance(kind_by_engine.get(engine), describable_types)
+        ]
+        if refused:
+            raise PySparkValueError(
+                f"describe/summary columns must be numeric or string; refused: {refused}"
+            )
+    else:
+        target_pairs = [
+            pair
+            for pair in target_pairs
+            if isinstance(kind_by_engine.get(pair[1]), describable_types)
+        ]
     if not target_pairs:
         raise AnalysisException("summary/describe on a zero-column frame is undefined")
+    ord_name = "__repark_sum_ord"
+    while ord_name in kind_by_engine:
+        ord_name = f"_{ord_name}"
     view = scratch_view_name(frame._session, "__repark_sum_")
     frame._session.create_or_replace_temp_view(view, frame._plan())
     try:
         pieces: list[str] = []
-        for stat in stats:
-            select_parts = [f"'{stat}' AS summary"]
+        for position, stat in enumerate(stats):
+            select_parts = [f"{position} AS {ord_name}", f"'{stat}' AS summary"]
             for _display, engine in target_pairs:
                 quoted_eng = _quote_ident_sql(engine)
                 quoted_as = quoted_eng
+                data_type = kind_by_engine.get(engine)
                 if stat == "count":
                     select_parts.append(f"CAST(count({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat == "mean":
-                    select_parts.append(f"CAST(avg({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat == "stddev":
-                    select_parts.append(f"CAST(stddev({quoted_eng}) AS VARCHAR) AS {quoted_as}")
+                elif stat in ("mean", "stddev"):
+                    agg = "avg" if stat == "mean" else "stddev"
+                    if isinstance(data_type, numeric_types):
+                        select_parts.append(f"CAST({agg}({quoted_eng}) AS VARCHAR) AS {quoted_as}")
+                    else:
+                        select_parts.append(
+                            f"CAST({agg}(try_cast({quoted_eng} AS DOUBLE)) AS VARCHAR)"
+                            f" AS {quoted_as}"
+                        )
                 elif stat == "min":
                     select_parts.append(f"CAST(min({quoted_eng}) AS VARCHAR) AS {quoted_as}")
                 elif stat == "max":
                     select_parts.append(f"CAST(max({quoted_eng}) AS VARCHAR) AS {quoted_as}")
             pieces.append(f"SELECT {', '.join(select_parts)} FROM {view}")
-        sql = " UNION ALL ".join(pieces)
-        child = frame._spawn(frame._session.sql(sql))
+        sql = f"{' UNION ALL '.join(pieces)} ORDER BY {ord_name}"
+        child = frame._spawn(frame._session.sql(sql)).drop(ord_name)
         if frame._display_names is not None or any(
             display != engine for display, engine in target_pairs
         ):

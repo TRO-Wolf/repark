@@ -329,11 +329,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_examples_dataframe_a.py](test_examples_dataframe_a.py) — **EX-15 (2026-09-04):**
   the six divergence pins for the DataFrame-a example batch — `colRegex`/`col_regex`
   raw-string compilation (EX-DF-1), the three global-temp-view refusals (EX-DF-2),
-  `exceptAll`/`except_all` refusal (EX-DF-3), `describe`'s unordered rows with
-  Spark's cells pinned order-independently (EX-DF-4), the `corr`/`cov` NULL-pair
+  `exceptAll`/`except_all` refusal (EX-DF-3), `describe`'s rows collecting in Spark's
+  count/mean/stddev/min/max order with the measured cells (EX-DF-4, FIXED by
+  DF-DESCRIBE-STR-1 2026-09-11), the `corr`/`cov` NULL-pair
   arm under an explicit all-nullable DoubleType schema (EX-DF-5), and the silent
   `createTempView`/`create_temp_view` replace of an existing name (EX-DF-6).
   pins: ex-15-dataframe-a/C-001
+  pins: df-describe-str-1/C-004
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-20 (2026-09-04):**
   the four divergence pins for the window/catalog example batch — the DataFrame-door tied-key
   ordered default frame running per-row where Spark shares peer sums (EX-WIN-1, the G5
@@ -355,11 +357,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `replace` without subset casts or raises where Spark replaces typed cells (EX-DF-12),
   `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
   the seeded sets differ (EX-DF-13), `sampleBy`'s seeded 0.5/0.5 fractions keeping three
-  rows where Spark keeps two (EX-DF-14), `summary`'s unordered multi-stat rows,
-  string-column raise, and bare-call refusal with the count row pinned (EX-DF-15),
+  rows where Spark keeps two (EX-DF-14), `summary`'s bare-call refusal alongside
+  ordered multi-stat rows and NULL/`try_cast` string-column stats (EX-DF-15, order
+  and string arms FIXED by DF-DESCRIBE-STR-1 2026-09-11),
   `show`'s rendering without Spark's truncation trailer (EX-DF-16), and the `toJSON`
   refusal (EX-DF-17).
   pins: ex-18-dataframe-c/C-001
+  pins: df-describe-str-1/C-003
 - [test_examples_column_a.py](test_examples_column_a.py) — **EX-17 (2026-09-04):** imports
   `repark.spark.functions` (importing the `repark.functions` shim rebinds the package attribute
   and hides the private SSOT names `test_qi1_idents.py` pins; imports sorted);
@@ -385,9 +389,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `describe` on a string column (and bare `describe()` over a frame containing one)
   raising `AnalysisException` where Spark answers NULL mean/stddev cells (EX-DF-4),
   and `colRegex`/`col_regex` answering the first match only on a multi-match pattern
-  where Spark expands all matches (EX-DF-1).
+  where Spark expands all matches (EX-DF-1). **DF-DESCRIBE-STR-1 (2026-09-11)** flips
+  the EX-DF-4 pin to Spark's answer — ordered NULL mean/stddev cells plus the
+  `try_cast` numeric-string arm (`"10","2","a"` answers `mean` `6.0`) — and adds
+  `test_describe_non_describable_column_arms` for the measured boundary: bare
+  `describe()`/`summary(...)` skip non-numeric non-string columns and naming one
+  raises `PySparkValueError`.
   pins: ex-19-dataframe-d-window/C-001
   pins: ex-29-class-remainder/C-002, C-003
+  pins: df-describe-str-1/C-001, C-002, C-003
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
