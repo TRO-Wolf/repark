@@ -636,7 +636,9 @@ above.
   the snapshot; a branch besides `main` refuses; `WRITE ORDERED BY (id)` survives a real
   apply; a multi-spec table (ADD `days(ts)` then apply `identity(id)`) reads back with one
   live data-file spec and row-correct data; the `unpartitioned` candidate has no DDL step.
-  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006
+  **D-8 (2026-09-11):** a two-field candidate planned at 1024 is found when the same
+  `target_file_size_bytes` is passed, and refuses naming that key when it is omitted.
+  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** the plan door pins on memory-catalog
   fixtures: a 90-day `ts` table in 9 ten-day files at total/90 target (`days(ts)` first at 0.0
   over 90 partitions, best-first order, `unpartitioned` present, the D-1 frame shape with Arrow

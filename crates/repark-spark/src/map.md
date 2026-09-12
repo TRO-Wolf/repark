@@ -96,7 +96,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: rp-11-repin-f24/C-002
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming

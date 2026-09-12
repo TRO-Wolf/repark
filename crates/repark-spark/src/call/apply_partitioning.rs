@@ -10,7 +10,7 @@ use datafusion::sql::sqlparser::tokenizer::Span;
 use iceberg::TableIdent;
 use repark_core::CatalogRegistry;
 
-use super::plan_partitioning::{PlanFrameRow, collect_plan_rows};
+use super::plan_partitioning::{PlanFrameRow, collect_plan_rows, parse_positive_target};
 use super::{CallArgs, resolve_table_ident};
 
 const LOOKUP_TARGET: u64 = 1;
@@ -35,17 +35,23 @@ pub(super) async fn execute_apply_partitioning(
     args: &CallArgs,
     catalogs: &CatalogRegistry,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&["dry_run", "plan_id", "table"])?;
-    args.reject_excess_positional(3)?;
+    args.reject_unknown_named(&["dry_run", "plan_id", "table", "target_file_size_bytes"])?;
+    args.reject_excess_positional(4)?;
     let table_arg = args.require_string("table", 0)?;
     let plan_id = args.require_string("plan_id", 1)?;
     let dry_run = args.optional_bool("dry_run", Some(2))?.unwrap_or(true);
+    let target_raw = args.optional_i64("target_file_size_bytes", Some(3))?;
+    let passed_target = target_raw.is_some();
+    let lookup_target = match target_raw {
+        Some(raw) => parse_positive_target(raw, "apply_partitioning")?,
+        None => LOOKUP_TARGET,
+    };
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
-    let planned = collect_plan_rows(ctx, catalog_name, catalogs, &table_arg, LOOKUP_TARGET).await?;
+    let planned = collect_plan_rows(ctx, catalog_name, catalogs, &table_arg, lookup_target).await?;
     let selected = planned
         .iter()
         .find(|row| row.plan_id == plan_id)
-        .ok_or_else(|| missing_plan_id(&table_arg, &plan_id))?;
+        .ok_or_else(|| missing_plan_id(&table_arg, &plan_id, passed_target))?;
     let steps = build_steps(catalog_name, &ident, selected)?;
     if dry_run {
         return steps_dataframe(ctx, &steps, &plan_id, "dry_run");
@@ -61,12 +67,21 @@ pub(super) async fn execute_apply_partitioning(
     .await
 }
 
-fn missing_plan_id(table_arg: &str, plan_id: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "apply_partitioning refuses table `{table_arg}`: plan_id `{plan_id}` matches no \
-         candidate at the current snapshot (the snapshot moved, or the id is not from this \
-         table); re-run plan_partitioning and pass a fresh id"
-    ))
+fn missing_plan_id(table_arg: &str, plan_id: &str, passed_target: bool) -> DataFusionError {
+    if passed_target {
+        DataFusionError::Plan(format!(
+            "apply_partitioning refuses table `{table_arg}`: plan_id `{plan_id}` matches no \
+             candidate at the current snapshot (the snapshot moved, or the id is not from this \
+             table); re-run plan_partitioning and pass a fresh id"
+        ))
+    } else {
+        DataFusionError::Plan(format!(
+            "apply_partitioning refuses table `{table_arg}`: plan_id `{plan_id}` matches no \
+             candidate at the current snapshot (the snapshot moved, or the id is not from this \
+             table); pass the same `target_file_size_bytes` used for planning, and re-run \
+             plan_partitioning if the snapshot moved"
+        ))
+    }
 }
 
 fn qualified_table(catalog_name: &str, ident: &TableIdent) -> String {

@@ -27,10 +27,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   Int32, `procedure` / `arguments` / `status` / `result` / `plan_id` Utf8. P-5: extra
   branches refuse (same helper as plan); sort order is unchanged after a real apply; a
   multi-spec table is rewritten so live data files share one spec. AP-1 is SQL-only, so this
-  door is SQL-only too (no Python session method). Lookup uses `collect_plan_rows` with
-  target `1` because D-1 has no `target_file_size_bytes`; `plan_id` hashes snapshot plus
-  candidate label, so single-field and unpartitioned ids match any plan target.
-  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006
+  door is SQL-only too (no Python session method). **D-8 (2026-09-11):** optional
+  `target_file_size_bytes`, spelled and parsed as in `plan_partitioning` (positive
+  integer). When present the lookup re-plans at that target so a two-field `plan_id` is
+  found; when absent the lookup stays at target 1 and a miss tells the caller to pass
+  the planning target. Guide: `docs/guide/maintenance-policy.md`.
+  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown

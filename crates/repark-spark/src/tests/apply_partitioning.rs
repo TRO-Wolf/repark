@@ -138,6 +138,83 @@ async fn plan_id_of(
     panic!("candidate `{candidate}` missing, got {available:?}");
 }
 
+async fn seed_pair_table(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (ts TIMESTAMP, id INT, region STRING, cat STRING) USING iceberg"
+        ),
+    )
+    .await;
+    let regions = ["g00", "g01"];
+    let cats = ["a", "b", "c"];
+    for day in 1..=6 {
+        let region = regions[(day - 1) % 2];
+        let cat = cats[(day - 1) % 3];
+        run(
+            ctx,
+            catalogs,
+            &format!(
+                "INSERT INTO ice.sales.{table} SELECT TIMESTAMP '2026-01-{day:02} 00:00:00' AS ts, {day} AS id, '{region}' AS region, '{cat}' AS cat FROM src"
+            ),
+        )
+        .await;
+    }
+}
+
+async fn plan_candidates(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    target: i64,
+) -> Vec<(String, String)> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!(
+            "CALL ice.system.plan_partitioning(table => 'sales.{table}', target_file_size_bytes => {target})"
+        ),
+    )
+    .await
+    .expect("plan_partitioning runs")
+    .collect()
+    .await
+    .expect("collect plan frame");
+    assert_eq!(batches.len(), 1);
+    let batch = &batches[0];
+    let labels = batch
+        .column_by_name("candidate")
+        .expect("candidate")
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("candidate is Utf8");
+    let ids = batch
+        .column_by_name("plan_id")
+        .expect("plan_id")
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("plan_id is Utf8");
+    (0..batch.num_rows())
+        .map(|row| (labels.value(row).to_string(), ids.value(row).to_string()))
+        .collect()
+}
+
+fn pair_missing_at_lookup(
+    at_real: &[(String, String)],
+    at_one: &[(String, String)],
+) -> (String, String) {
+    let lookup: std::collections::HashSet<&str> =
+        at_one.iter().map(|(label, _)| label.as_str()).collect();
+    at_real
+        .iter()
+        .find(|(label, _)| label.contains('+') && !lookup.contains(label.as_str()))
+        .cloned()
+        .unwrap_or_else(|| {
+            panic!("no pair unique to the real target; real={at_real:?} lookup={at_one:?}")
+        })
+}
+
 async fn current_snapshot(catalogs: &CatalogRegistry, table: &str) -> i64 {
     load_sales_table(catalogs, table)
         .await
@@ -444,4 +521,59 @@ async fn apply_unpartitioned_candidate_has_no_ddl_step() {
     );
     assert_eq!(frame[0].procedure, "rewrite_data_files");
     assert_eq!(frame[0].step, 1);
+}
+
+#[tokio::test]
+async fn apply_pair_plan_id_is_found_when_the_planning_target_is_passed() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_pair_table(&ctx, &catalogs, "pairhit").await;
+    let at_real = plan_candidates(&ctx, &catalogs, "pairhit", 1024).await;
+    let at_one = plan_candidates(&ctx, &catalogs, "pairhit", 1).await;
+    let (label, plan_id) = pair_missing_at_lookup(&at_real, &at_one);
+    let frame = apply_rows(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.apply_partitioning(table => 'sales.pairhit', plan_id => '{plan_id}', target_file_size_bytes => 1024)"
+        ),
+    )
+    .await;
+    assert!(
+        frame
+            .iter()
+            .all(|row| row.status == "dry_run" && row.plan_id == plan_id),
+        "pair {label} is found when the planning target is passed"
+    );
+    assert!(
+        frame.iter().any(|row| row.procedure == "ALTER TABLE"),
+        "pair {label} still has DDL steps"
+    );
+}
+
+#[tokio::test]
+async fn apply_pair_plan_id_without_target_names_the_planning_target() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_pair_table(&ctx, &catalogs, "pairmiss").await;
+    let at_real = plan_candidates(&ctx, &catalogs, "pairmiss", 1024).await;
+    let at_one = plan_candidates(&ctx, &catalogs, "pairmiss", 1).await;
+    let (label, plan_id) = pair_missing_at_lookup(&at_real, &at_one);
+    let error = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.apply_partitioning(table => 'sales.pairmiss', plan_id => '{plan_id}')"
+        ),
+    )
+    .await
+    .expect_err("pair id without the planning target must refuse");
+    let message = error.to_string();
+    assert!(
+        message.contains("sales.pairmiss")
+            && message.contains(plan_id.as_str())
+            && message.contains("target_file_size_bytes")
+            && message.contains("plan_partitioning"),
+        "pair {label} refusal names the planning target, got: {message}"
+    );
 }

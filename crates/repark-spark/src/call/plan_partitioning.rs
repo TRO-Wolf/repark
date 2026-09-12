@@ -118,12 +118,16 @@ fn parse_target(args: &CallArgs) -> Result<u64> {
                     .to_string(),
             )
         })?;
+    parse_positive_target(raw, "plan_partitioning")
+}
+
+pub(super) fn parse_positive_target(raw: i64, procedure: &str) -> Result<u64> {
     u64::try_from(raw)
         .ok()
         .filter(|target| *target > 0)
         .ok_or_else(|| {
             DataFusionError::Plan(format!(
-                "plan_partitioning `target_file_size_bytes` must be a positive integer, got {raw}"
+                "{procedure} `target_file_size_bytes` must be a positive integer, got {raw}"
             ))
         })
 }
