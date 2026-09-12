@@ -3228,7 +3228,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   hit — a token budget churns without benefit) and a charged-weight pin
   (256 tables fit a 280000 budget at the fork's estimated weight, so the coldest table
   still hits; true fork weights evict it and red the leg — registry
-  `PERF-CATALOG-CACHE-WEIGHT-1`). Renames
+  `PERF-CATALOG-CACHE-WEIGHT-1`).
+  **RP-16 (2026-09-11)** at pin `090bc821` (fork `#274`): that pin is FIXED. The retain
+  leg keeps its name and takes budget 1250000 (measured smallest retain 1,071,000;
+  1,250,000 is headroom so r0 is not the TinyLFU edge); a sibling pin holds that
+  280000 now evicts the coldest table and the miss names the manifest.
+  Renames
   (the flip inverts their meaning):
   `test_a_default_session_reopens_manifests_after_they_vanish` →
   `test_a_default_session_answers_from_the_shared_cache_after_manifests_vanish`,
@@ -3253,12 +3258,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   | `test_peak_rss_over_five_hundred_tables_stays_within_the_default_cache_budget` | C-005 |
   | `test_a_sub_megabyte_byte_budget_churns_cold_tables_while_hot_tables_hit` | C-005 |
   | `test_a_budget_sized_to_the_charged_weight_retains_every_table` | C-005 |
+  | `test_the_old_estimated_weight_budget_evicts_the_coldest_table` | rp-16/C-002 |
   | `test_a_bad_cache_knob_fails_loud_naming_the_key[manifest legs]` | C-001 |
   | `test_a_bad_underscore_alias_names_the_key_the_user_set_and_the_canonical_one[manifest leg]` | C-001 |
   | the four v3 upgrade/legacy tests (`test_v3_legacy_delete_merge.py` × 2, the `alter-set-format-version-3-mor` statement row, `test_alter_upgrade_with_the_opt_in_serves_v3_lineage`) | C-002 |
   | the re-measured `t_many` / `t_many_merged` cells | C-006 |
 
   pins: perf-ice-catalog-io-3/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: rp-16/C-001, C-002, C-003, C-004
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
   `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
