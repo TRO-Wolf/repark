@@ -5596,22 +5596,35 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   unboundedFollowing)` on the EX-14 frame = `[20, 20, 20, 20, None, None]`. No pin yet, so it is
   not a row; the example covers the two-argument form.
 
-### EX-DF-1 — `colRegex` / `col_regex` compile the raw string; Spark strips the backticks
+### EX-DF-1 — FIXED 2026-09-11 (DF-COLREGEX-1): `colRegex` / `col_regex` compiled the raw string and answered the first match only
 
-- **repark** — `DataFrame.colRegex` (and its `col_regex` alias) compiles `colName` as-is: the
-  plain regex `colRegex("^(k)$")` selects `["k"]`, while the PySpark-documented backticked
-  spelling ``colRegex("`^(k)$`")`` raises `AnalysisException: No column matched regex`.
-  A multi-match pattern answers the first match only (Spark expands all matches in `select`).
-- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]`; the plain
-  string `colRegex("^(k)$")` raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` as an
-  unresolvable column. The two engines accept opposite spellings, so no input answers
-  Spark-equal on both. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
-  batch, six-row `g/k/v` frame.)*
-- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_spelling_divergence`
-  and `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_first_match`
-  (the first-match-only arm, added 2026-09-11 by EX-29).
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
-  the example backlog; teaching either spelling would assert an answer Spark does not give.
+- **repark** — before the fix `colRegex` compiled `colName` as-is and returned the first
+  match: ``colRegex("`^(k)$`")`` raised `AnalysisException` while the plain
+  `colRegex("^(k)$")` selected `["k"]`, and a multi-match pattern answered `["g"]`. Since
+  DF-COLREGEX-1 a backticked pattern returns a marker column that `select` expands to every
+  column the inner pattern full-matches, in frame order and case-insensitively (zero matches
+  project zero columns); a bare pattern resolves as a literal column name at the `colRegex`
+  call — an unknown one raises `AnalysisException` (Spark's `UNRESOLVED_COLUMN` class). The
+  marker is `select`-only: `drop` ignores it (Spark's no-op) and `withColumn`, `groupBy`,
+  `orderBy`, `filter`, and `.alias(...)` on it all raise `AnalysisException` (Spark's
+  `INVALID_USAGE_OF_STAR_OR_REGEX` class).
+- **Apache Spark** — the backticked spelling ``colRegex("`^(k)$`")`` selects `["k"]` and a
+  backticked multi-match expands every match (`` `^(g|k)$` `` → `["g", "k"]`), keeping the
+  marker's position in the select list and matching case-insensitively with Java full-match
+  (`matches()`) semantics; the bare string `colRegex("^(k)$")` raises
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` naming `^(k)$` at the call, while a bare literal hit
+  (`colRegex("k")`) resolves eagerly. *(oracle: live PySpark 4.1.2, ANSI on, UTC; first
+  measured 2026-09-04 EX-15 DataFrame-a batch, re-measured 2026-09-11 by DF-COLREGEX-1
+  across `select`/`drop`/`withColumn` plus the position, zero-match, case-fold, and
+  full-match arms on the `g/k/v` and `k/kx` frames.)*
+- **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_backtick_spelling_parity`
+  (spellings plus the `drop`/`withColumn` arms) and
+  `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_expands`
+  (expansion order, position, case-fold, zero-match, alias refusal);
+  `python/repark/tests/test_df_easy.py::test_col_regex_and_noops` uses the backticked
+  spelling.
+- **Rationale** — filed 2026-09-04 from the EX-15 measurement; FIXED 2026-09-11 by
+  DF-COLREGEX-1 with a facade marker column and `select` expansion — no engine change.
 
 ### EX-DF-2 — the three global-temp-view spellings refuse; Spark registers the view
 

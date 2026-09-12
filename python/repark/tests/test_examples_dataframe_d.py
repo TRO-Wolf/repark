@@ -92,8 +92,38 @@ def test_describe_non_describable_column_arms(spark: ReparkSession) -> None:
         frame.describe("b").collect()
 
 
-def test_colregex_multi_match_first_match(spark: ReparkSession) -> None:
-    """colRegex answers the first match only; Spark expands all matches (EX-DF-1)."""
+def test_colregex_multi_match_expands(spark: ReparkSession) -> None:
+    """colRegex expands every full-match in frame order at its select position (EX-DF-1 FIXED).
+
+    The backticked pattern is a Java full-match (``matches()``) applied case-insensitively;
+    zero matches project zero columns (live PySpark 4.1.2).
+
+    pins: df-colregex-1/C-001, C-002, C-003, C-005
+    """
     frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
-    assert frame.select(frame.colRegex("^(g|k)$")).columns == ["g"]
-    assert frame.select(frame.col_regex("^(g|k)$")).columns == ["g"]
+    assert frame.select(frame.colRegex("`^(g|k)$`")).columns == ["g", "k"]
+    assert frame.select(frame.col_regex("`^(g|k)$`")).columns == ["g", "k"]
+    assert frame.select("v", frame.colRegex("`^(g|k)$`")).columns == ["v", "g", "k"]
+    assert frame.select(frame.colRegex("`^(K)$`")).columns == ["k"]
+    assert frame.select(frame.colRegex("`^zzz$`")).columns == []
+    assert frame.select(frame.colRegex("`^zzz$`")).count() == 1
+    with pytest.raises(AnalysisException):
+        frame.select(frame.colRegex("`^(g|k)$`").alias("z"))
+
+
+def test_colregex_duplicate_names_expand_positionally(spark: ReparkSession) -> None:
+    """colRegex on a duplicate-display-name frame expands every match positionally.
+
+    A condition join keeps Spark-legal duplicate display names; expansion must bind
+    each match positionally — a name lookup would raise ``AMBIGUOUS_REFERENCE``
+    (DF-COLREGEX-1 remediation).
+
+    pins: df-colregex-1/C-003, C-006
+    """
+    frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
+    joined = frame.join(frame, frame["g"] == frame["g"])
+    assert joined.columns == ["g", "k", "v", "g", "k", "v"]
+    assert joined.select(joined.colRegex("`^k$`")).columns == ["k", "k"]
+    assert joined.select(joined.colRegex("`^(g|v)$`")).columns == ["g", "v", "g", "v"]
+    row = joined.select(joined.colRegex("`^k$`")).first()
+    assert (row[0], row[1]) == (1, 1)
