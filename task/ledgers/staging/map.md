@@ -5,23 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [perf-cast-1-ledger.md](perf-cast-1-ledger.md) —
-  **PERF-CAST-1 step 1 (2026-09-12), in flight:** where a CAST costs a
-  millisecond — 200k-row MemTable, 50 / 250 / 2500 CASTs, three plan
-  shapes; superlinear phase is CAST-over-aggregate logical planning
-  (exponent 1.535); `max_passes` 0/1/3 do not move the wall; current cost
-  pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
-  No product change. `risk_tier: standard`. Branch `perf/cast-1`.
-  pins: perf-cast-1/C-001, C-002, C-003, C-004
-- [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
-  **AP-1 re-measure (2026-09-11), in flight:** RP-16 fork pin `090bc821` makes
-  INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
-  module. Uniform/skewed codecs ZSTD (was uncompressed), `byte_ratio` 0.376076
-  (was 1.000000). Round 2 live rewrite actuals 7 928 680 / 7 672 169
-  (UNCOMPRESSED); honest 20 percent check −85.4 % / −84.9 %; residue
-  AP-1-R-001 still OPEN. Owner question Q-1 parked. No source change.
-  `risk_tier: standard`. Branch `feat/ap-1-remeasure`.
-  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
+- [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
+  **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
+  upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
+  no formula change (D-1), the note and frame `notes` say "upper bound", the pin
+  reproduces the three AP-0 beds' RP-18 frame (bound ≥ live actual ≤ 2×, ranking
+  identical, red first by doctoring the bound), residue AP-1-R-001 closes
+  2026-09-12, the maintenance guide's S2-24 known-issues line retires, and the
+  AP-1 remeasure ledger departs to `completed/` through the lifecycle tool.
+  `risk_tier: standard`. Branch `chore/ap-1-close-1`.
+  pins: ap-1-close-1/C-001, C-002, C-003, C-004, C-005
 - [ap-3-ledger.md](ap-3-ledger.md) —
   **AP-3 step 1 (2026-09-12), in flight:** `projected_files_at_target` multiplies
   each item's footer `total_uncompressed_size` sum by `byte_ratio` — compression
@@ -278,6 +271,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
   Branch `perf/dynflatten-1-measure`.
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
+- [perf-cast-1-ledger.md](perf-cast-1-ledger.md) —
+  **PERF-CAST-1 step 1 (2026-09-12), in flight:** where a CAST costs a
+  millisecond — 200k-row MemTable, 50 / 250 / 2500 CASTs, three plan
+  shapes; superlinear phase is CAST-over-aggregate logical planning
+  (exponent 1.535); `max_passes` 0/1/3 do not move the wall; current cost
+  pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
+  No product change. `risk_tier: standard`. Branch `perf/cast-1`.
+  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - [profiles-1-ledger.md](../completed/profiles-1-ledger.md) —
   **PROFILES-1 steps 1–3 (2026-09-10/12), in flight:** the measurement bed step 2
   sweeps: three D-2 datasets, five reads + three writes, knob × value CSV harness,
