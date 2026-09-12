@@ -1,3 +1,36 @@
+# Errata — RP-17 re-measure (2026-09-12)
+
+**Model:** swe-2-high. **Branch:** `chore/repin-rp-17`. **Base:** fork pin
+`41e25ba2` (RP-17, F-WRITE-COMPRESS-2 / fork `#278`). Measurement only: no Rust
+or Python source changed. Clause verdicts below are untouched. This note sits at
+the top because `completed/` ledgers are frozen except a prepended errata.
+
+The rewrite writers now carry the table's codec. Same beds, same commands as the
+RP-16 errata: the `_orun` copies rebuilt identical (206 files, 3 074 844 bytes,
+ZSTD, ratio 0.376076), then `ALTER TABLE ap.ns.<bed>_orun ADD PARTITION FIELD
+identity(grp)` and `CALL ap.system.rewrite_data_files(table => 'ns.<bed>_orun')`.
+CALL frames: rewritten 206, added 20, rewritten bytes 3 074 844, failed 0.
+
+Live current-snapshot `files` sums (`content = 0`): uniform **4 474 081** (20
+files), skewed **4 136 632** (20 files). Live footers on all 20 files per bed are
+**ZSTD** on every column chunk — run 8's uncompressed-compaction mechanism is
+gone; the outputs live under `data/grp=<value>/` partition directories.
+
+| Bed | Proj (stored × ratio) | Proj (uncompressed × ratio) | New actual | Δ stored-proj | Δ uncompressed-proj |
+|---|---|---|---|---|---|
+| uniform | 3 074 844 × 0.376076 = 1 156 376 | 7 529 566 × 0.376076 = 2 831 692 | 4 474 081 | **−74.2 %** | −36.7 % |
+| skewed | 3 074 844 × 0.376076 = 1 156 376 | 7 529 566 × 0.376076 = 2 831 692 | 4 136 632 | **−72.0 %** | −31.5 % |
+
+**AP-1-R-001 still OPEN** — the named check (`Σ file_size × byte_ratio` vs the
+live actual) is outside 20 % on both beds even under one codec. Both projections
+are recorded for the orchestrator's deferred Q-1 ruling; the uncompressed-side
+projection halves the miss but stays outside 20 % because the rewrite's own
+output ratio (0.563 / 0.538) is not the inputs' 0.376. Full record:
+[docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md).
+Clause table: [task/ledgers/staging/rp-17-ledger.md](../staging/rp-17-ledger.md).
+
+---
+
 # Errata — RP-16 re-measure (2026-09-11)
 
 **Model:** grok-4.6. **Branch:** `feat/ap-1-remeasure`. **Base:** RP-16
