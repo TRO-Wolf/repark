@@ -15,4 +15,5 @@ box, full scale.
 - [baseline.csv](baseline.csv) — the no-knob run (`(baseline)` rows), the C-006
   evidence. pins: profiles-1/C-006
 - [datafusion.optimizer.prefer_hash_join.csv](datafusion.optimizer.prefer_hash_join.csv)
+- [datafusion.execution.target_partitions.csv](datafusion.execution.target_partitions.csv)
 - `map.md` — this file.
