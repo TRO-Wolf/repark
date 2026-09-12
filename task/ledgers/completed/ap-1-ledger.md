@@ -1,3 +1,56 @@
+# Errata — RP-16 re-measure (2026-09-11)
+
+**Model:** grok-4.6. **Branch:** `feat/ap-1-remeasure`. **Base:** RP-16
+`864e3483` (fork pin `090bc821`, F-WRITE-COMPRESS-1 / fork `#276`).
+Measurement only: no Rust or Python source changed. Clause verdicts below are
+untouched. This note sits at the top because `completed/` ledgers are frozen
+except a prepended errata.
+
+The residue's named mechanism is gone. Independent `pyarrow.parquet` over
+`/tmp/ap1r-bed/warehouse/repark_ctas/ap/ns/<bed>/data/*.parquet` on the release
+module (`__debug_assertions__ == False`) reads **ZSTD** on every column chunk of
+every bed, including the two INSERT-grown synthetics:
+
+| Bed | Codec (AP-1 step 2) | Codec (this run) | byte_ratio (AP-1) | byte_ratio (this run) | On-disk bytes (this run) |
+|---|---|---|---|---|---|
+| futures | zstd (CTAS) | zstd | 0.462675 | 0.462675 | 26 729 684 |
+| uniform | uncompressed (INSERT) | **zstd** | 1.000000 | 0.376076 | 3 074 844 |
+| skewed | uncompressed (INSERT) | **zstd** | 1.000000 | 0.376076 | 3 074 844 |
+
+Frame notes say `byte_ratio=0.46 (footers)` on futures and `byte_ratio=0.38
+(footers)` on both synthetics. The 0.55 fallback did not fire.
+
+Round 2 re-ran the rewrite on fresh INSERT-zstd copies. Statements, verbatim:
+
+```text
+ALTER TABLE ap.ns.<bed>_orun ADD PARTITION FIELD identity(grp)
+CALL ap.system.rewrite_data_files(table => 'ns.<bed>_orun')
+```
+
+Live current-snapshot `files` sums (`content = 0`): uniform **7 928 680** (20
+files), skewed **7 672 169** (20 files). Live footers on those 20 files are
+**UNCOMPRESSED** (ratio 1.0). CALL frames: rewritten 206, added 20, rewritten
+bytes 3 074 844, failed 0. Pre-rewrite copies matched the plan beds (206 files,
+3 074 844 bytes, ZSTD, ratio 0.376076).
+
+| Bed | Projected | New actual | Error vs new | AP-0 stale actual | Error vs stale |
+|---|---|---|---|---|---|
+| uniform | 3 074 844 × 0.376076 = 1 156 376 | 7 928 680 | **−85.4 %** | 4 413 222 | −73.8 % |
+| skewed | 3 074 844 × 0.376076 = 1 156 376 | 7 672 169 | **−84.9 %** | 4 134 457 | −72.0 % |
+
+**The honest comparison is the new actual** (same zstd INSERT beds, ALTER +
+`rewrite_data_files`). AP-0's actuals are a partitioned CTAS of uncompressed
+inputs. **AP-1-R-001 still OPEN.** Full record:
+[docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
+Clause table:
+[task/ledgers/staging/ap-1-remeasure-ledger.md](../staging/ap-1-remeasure-ledger.md).
+
+**Owner question Q-1 (not decided here):** should `byte_ratio` multiply the
+footers' *uncompressed* sum rather than the stored file bytes, i.e. predict the
+rewrite's own codec?
+
+---
+
 # Unit ledger — AP-1 step 1 (plan) · `CALL plan_partitioning()`
 
 **Unit:** AP-1 step 1 (plan) · **Date:** 2026-09-10 · **Branch:** `feat/ap-1` · **Base:** `origin/main`
