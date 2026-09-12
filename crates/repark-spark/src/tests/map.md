@@ -395,6 +395,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pin needs no credentials. The green run beside the existing nine pins is C-004's
   evidence that every other catalog kind is unchanged.
   pins: orphan-s3tables-1/C-001, C-002, C-004
+  **RP-19 (2026-09-12):** fork pin `3ebf7d36` (F-S3ROOT-1 `#281`) resolves a bare-bucket
+  object-store location to the bucket root like Java's `S3URI`, so
+  `remove_orphan_files` on an S3 Tables table (`s3://<id>--table-s3`) no longer dies on
+  the path parser — it reaches the bucket and surfaces the `405 MethodNotAllowed`
+  listing refusal, pending ORPHAN-S3TABLES-1's loud refusal on the `s3tables` catalog
+  kind. The RePark-side pin is the registry row plus the owner's verbatim reproduction
+  (card D-2: no live test without AWS).
+  pins: rp-19/C-001, C-002, C-003
 - **Time-travel pins:**
   `time_travel_temp_views_do_not_survive_a_{successful,failed}_statement` and
   `time_travel_statement_pins_never_collide_with_a_reader_options_view` (the fix-pass collision
