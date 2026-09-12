@@ -134,6 +134,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   gaps F-1 (mutation-proven cast pin), F-2 (partitioned abort pin) and F-4 (§8 counts). No
   dependency, no spawn. `risk_tier: standard`. Branch `perf/write-distribution-2`.
   pins: write-distribution-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [perf-describe-1-ledger.md](perf-describe-1-ledger.md) —
+  **PERF-DESCRIBE-1 (2026-09-11), in flight:** `describe`/`summary` aggregate in one
+  pass — one `AggregateExec` computes count/avg/stddev/min/max per column over the
+  frame's own plan (native column API, no SQL text, no temp view), then the requested
+  summary rows are projected as literal `VALUES` in Spark's order so the stat ordinal
+  and its `ORDER BY` are gone. Casts are emitted only where engine formatting is
+  load-bearing; measured medians improve on every harness shape (200k numeric 0.132 →
+  0.098 s, 50×10k wide 1.164 → 0.993 s, 200k strings 0.194 → 0.191 s, 200k mixed
+  0.197 → 0.139 s). `risk_tier: standard`. Branch `perf/describe-1`.
+  pins: perf-describe-1/C-001, C-002, C-003, C-004
 
 ## Pointers
 - Up: [../map.md](../map.md)

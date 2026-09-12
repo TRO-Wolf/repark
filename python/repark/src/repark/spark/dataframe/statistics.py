@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._temp_views import scratch_view_name
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -50,6 +49,8 @@ def _summary(
         LongType,
         ShortType,
         StringType,
+        StructField,
+        StructType,
     )
 
     if _columns:
@@ -99,45 +100,98 @@ def _summary(
         ]
     if not target_pairs:
         raise AnalysisException("summary/describe on a zero-column frame is undefined")
-    ord_name = "__repark_sum_ord"
-    while ord_name in kind_by_engine:
-        ord_name = f"_{ord_name}"
-    view = scratch_view_name(frame._session, "__repark_sum_")
-    frame._session.create_or_replace_temp_view(view, frame._plan())
-    try:
-        pieces: list[str] = []
-        for position, stat in enumerate(stats):
-            select_parts = [f"{position} AS {ord_name}", f"'{stat}' AS summary"]
-            for _display, engine in target_pairs:
-                quoted_eng = _quote_ident_sql(engine)
-                quoted_as = quoted_eng
-                data_type = kind_by_engine.get(engine)
-                if stat == "count":
-                    select_parts.append(f"CAST(count({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat in ("mean", "stddev"):
-                    agg = "avg" if stat == "mean" else "stddev"
-                    if isinstance(data_type, numeric_types):
-                        select_parts.append(f"CAST({agg}({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    else:
-                        select_parts.append(
-                            f"CAST({agg}(try_cast({quoted_eng} AS DOUBLE)) AS VARCHAR)"
-                            f" AS {quoted_as}"
-                        )
-                elif stat == "min":
-                    select_parts.append(f"CAST(min({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat == "max":
-                    select_parts.append(f"CAST(max({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-            pieces.append(f"SELECT {', '.join(select_parts)} FROM {view}")
-        sql = f"{' UNION ALL '.join(pieces)} ORDER BY {ord_name}"
-        child = frame._spawn(frame._session.sql(sql)).drop(ord_name)
-        if frame._display_names is not None or any(
-            display != engine for display, engine in target_pairs
-        ):
-            child._display_names = ["summary"] + [display for display, _engine in target_pairs]
-            child._engine_names = ["summary"] + [engine for _display, engine in target_pairs]
-        return child
-    finally:
-        frame._session.drop_temp_view(view)
+    from repark import _native
+    from repark.spark import functions as spark_functions
+    from repark.spark.column import Column
+
+    stat_functions = {
+        "count": spark_functions.count,
+        "mean": spark_functions.avg,
+        "stddev": spark_functions.stddev,
+        "min": spark_functions.min,
+        "max": spark_functions.max,
+    }
+    needed = list(dict.fromkeys(stats))
+    plan = frame._plan()
+    cell_position: dict[tuple[int, str], int] = {}
+    engine_stringified = (FloatType, DoubleType, DecimalType)
+    chunk_plans: list[Any] = []
+    position = 0
+    for chunk_start in range(0, len(target_pairs), 50):
+        chunk_exprs: list[Any] = []
+        for column_index in range(chunk_start, min(chunk_start + 50, len(target_pairs))):
+            _display, engine = target_pairs[column_index]
+            quoted_engine = _quote_ident_sql(engine)
+            data_type = kind_by_engine.get(engine)
+            base_column = Column(
+                _native.PyColumn.column(quoted_engine),
+                spark_display=engine,
+                projection_name=engine,
+                stable_name=True,
+                sql_expr=quoted_engine,
+            )
+            for stat in needed:
+                operand = (
+                    base_column.try_cast("double")
+                    if stat in ("mean", "stddev") and not isinstance(data_type, numeric_types)
+                    else base_column
+                )
+                aggregated = stat_functions[stat](operand)._inner
+                if stat in ("mean", "stddev") or (
+                    stat in ("min", "max") and isinstance(data_type, engine_stringified)
+                ):
+                    aggregated = aggregated.cast("string")
+                chunk_exprs.append(aggregated.alias(f"__repark_stat_{position}"))
+                cell_position[(column_index, stat)] = position
+                position += 1
+        chunk_plans.append(plan.aggregate([], chunk_exprs))
+    joined = chunk_plans[0]
+    for extra in chunk_plans[1:]:
+        joined = joined.join_on_condition(extra, _native.PyColumn.literal(True), "inner")
+    positions = [
+        [cell_position[(column_index, stat)] for column_index in range(len(target_pairs))]
+        for stat in stats
+    ]
+    import functools
+
+    import pyarrow as pa
+
+    field_names = ["summary"] + [f"f{index}" for index in range(len(target_pairs))]
+    arrow_schema = pa.schema([pa.field(name, pa.string()) for name in field_names])
+    out_schema = StructType([StructField(name, StringType()) for name in field_names])
+    aggregated_frame = frame._spawn(joined)
+    child = aggregated_frame.mapInArrow(
+        functools.partial(
+            _summary_unpivot, stats=stats, positions=positions, arrow_schema=arrow_schema
+        ),
+        out_schema,
+    )
+    child._display_names = ["summary"] + [display for display, _engine in target_pairs]
+    child._engine_names = field_names
+    return child
+
+
+def _summary_unpivot(
+    batches: Any, *, stats: list[str], positions: list[list[int]], arrow_schema: Any
+) -> Any:
+    """Unpivot one aggregate row into the summary grid inside the lazy bridge."""
+    import pyarrow as pa
+
+    for batch in batches:
+        for row_index in range(batch.num_rows):
+            cells: list[str | None] = []
+            for column_index in range(batch.num_columns):
+                value = batch.column(column_index)[row_index].as_py()
+                cells.append(value if value is None or isinstance(value, str) else str(value))
+            arrays = [pa.array(list(stats), type=pa.string())]
+            for column_index in range(len(positions[0])):
+                arrays.append(
+                    pa.array(
+                        [cells[positions[row][column_index]] for row in range(len(stats))],
+                        type=pa.string(),
+                    )
+                )
+            yield pa.RecordBatch.from_arrays(arrays, schema=arrow_schema)
 
 
 def _approx_quantile(
