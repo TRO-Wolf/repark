@@ -19,7 +19,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
   O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
   pins: ap-0/C-001, C-002, C-003, C-004
-- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001
+- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001. **RP-16 re-measure (2026-09-11)** errata at the top: INSERT files now zstd, 20 percent check −73.8 % / −72.0 %, AP-1-R-001 still OPEN. Clause verdicts untouched.
 - [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
   **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B
   judgement for the Ballista audit at upstream tag `54.1.0` (`f4e66525`) —

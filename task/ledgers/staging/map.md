@@ -5,6 +5,15 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
+  **AP-1 re-measure (2026-09-11), in flight:** RP-16 fork pin `090bc821` makes
+  INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
+  module. Uniform/skewed codecs ZSTD (was uncompressed), `byte_ratio` 0.376076
+  (was 1.000000). 20 percent check −73.8 % / −72.0 % against AP-0 O-run
+  actuals; residue AP-1-R-001 still OPEN. Owner question on whether the ratio
+  should multiply uncompressed footer sums. No source change.
+  `risk_tier: standard`. Branch `feat/ap-1-remeasure`.
+  pins: ap-1-remeasure/C-001, C-002, C-003
 - [nightly-live-1-ledger.md](nightly-live-1-ledger.md) —
   **NIGHTLY-LIVE-1 (2026-09-11):** the parity-live nightly red since 2026-09-05 — a test
   calling `.stop()` on a PySpark session kills the one JVM `SparkContext` under the shared

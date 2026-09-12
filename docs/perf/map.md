@@ -269,6 +269,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   AP-1-R-001 with its mechanism (the footer ratio reads the input codec; the rewrite
   changed codec).
   pins: ap-1/C-012
+- [adapt-part-ap1-remeasure-2026-09-11.md](adapt-part-ap1-remeasure-2026-09-11.md) —
+  **AP-1 RP-16 re-measure (2026-09-11):** the three AP-0 beds rebuilt on the
+  release module at fork pin `090bc821`. INSERT data files on uniform and skewed
+  now carry zstd (independent footer recompute: codec ZSTD, `byte_ratio`
+  0.376076 vs AP-1 step 2's uncompressed 1.000000). The 20 percent check against
+  AP-0's O-run actuals is now −73.8 % / −72.0 % (was +76.2 % / +88.0 %); residue
+  AP-1-R-001 stays OPEN. No Rust or Python source changed.
+  pins: ap-1-remeasure/C-001, C-002, C-003
 
 ## Pointers
 

@@ -1,3 +1,48 @@
+# Errata — RP-16 re-measure (2026-09-11)
+
+**Model:** grok-4.6. **Branch:** `feat/ap-1-remeasure`. **Base:** RP-16
+`864e3483` (fork pin `090bc821`, F-WRITE-COMPRESS-1 / fork `#276`).
+Measurement only: no Rust or Python source changed. Clause verdicts below are
+untouched. This note sits at the top because `completed/` ledgers are frozen
+except a prepended errata.
+
+The residue's named mechanism is gone. Independent `pyarrow.parquet` over
+`/tmp/ap1r-bed/warehouse/repark_ctas/ap/ns/<bed>/data/*.parquet` on the release
+module (`__debug_assertions__ == False`) reads **ZSTD** on every column chunk of
+every bed, including the two INSERT-grown synthetics:
+
+| Bed | Codec (AP-1 step 2) | Codec (this run) | byte_ratio (AP-1) | byte_ratio (this run) | On-disk bytes (this run) |
+|---|---|---|---|---|---|
+| futures | zstd (CTAS) | zstd | 0.462675 | 0.462675 | 26 729 684 |
+| uniform | uncompressed (INSERT) | **zstd** | 1.000000 | 0.376076 | 3 074 844 |
+| skewed | uncompressed (INSERT) | **zstd** | 1.000000 | 0.376076 | 3 074 844 |
+
+Frame notes say `byte_ratio=0.46 (footers)` on futures and `byte_ratio=0.38
+(footers)` on both synthetics. The 0.55 fallback did not fire.
+
+`run_adaptpart.py` has `--plan` and no rewrite flag, so the O-run rewrite was
+not re-run. The 20 percent check compares `Σ file_size × byte_ratio` against
+AP-0's recorded O-run actuals (those actuals predate the INSERT codec change):
+
+| Bed | Projected bytes | O-run actual | New error | AP-1 step-2 error |
+|---|---|---|---|---|
+| uniform | 3 074 844 × 0.376076 = 1 156 376 | 4 413 222 | **-73.8 %** | +76.2 % |
+| skewed | 3 074 844 × 0.376076 = 1 156 376 | 4 134 457 | **-72.0 %** | +88.0 % |
+
+**AP-1-R-001 still OPEN.** The projection is still more than 20 percent wrong
+on both beds; the sign flipped from over-predict to under-predict because the
+ratio now multiplies already-zstd stored bytes. Full frames, codecs and
+reproduce commands:
+[docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
+This unit's clause table:
+[task/ledgers/staging/ap-1-remeasure-ledger.md](../staging/ap-1-remeasure-ledger.md).
+
+**Owner question (not decided here):** should `byte_ratio` multiply the
+footers' *uncompressed* sum rather than the stored file bytes, i.e. predict the
+rewrite's own codec?
+
+---
+
 # Unit ledger — AP-1 step 1 (plan) · `CALL plan_partitioning()`
 
 **Unit:** AP-1 step 1 (plan) · **Date:** 2026-09-10 · **Branch:** `feat/ap-1` · **Base:** `origin/main`
