@@ -19,6 +19,7 @@ use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_roo
 use crate::call_args::CallArgs;
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod apply_partitioning;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
@@ -28,8 +29,8 @@ mod rewrite_where;
 mod run_maintenance;
 mod run_maintenance_apply;
 
-/// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[
+    "apply_partitioning",
     "expire_snapshots",
     "plan_partitioning",
     "register_table",
@@ -83,6 +84,10 @@ pub async fn execute_call(
         }
         "plan_partitioning" => {
             plan_partitioning::execute_plan_partitioning(ctx, &catalog_name, &args, catalogs).await
+        }
+        "apply_partitioning" => {
+            apply_partitioning::execute_apply_partitioning(ctx, &catalog_name, &args, catalogs)
+                .await
         }
         other => Err(DataFusionError::NotImplemented(format!(
             "CALL system.{other} is not supported. Supported procedures: {}.",

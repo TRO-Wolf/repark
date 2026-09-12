@@ -4,6 +4,7 @@ mod common;
 
 mod alter;
 mod alter_write_order;
+mod apply_partitioning;
 mod call;
 mod call_manifests;
 mod call_orphan;
