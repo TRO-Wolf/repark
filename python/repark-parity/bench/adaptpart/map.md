@@ -30,6 +30,15 @@ makes never is — beds live under the `--scratch` root the caller names.
   `notes` carry the measured `byte_ratio` and its `footers|fallback` source).
   pins: ap-0/C-001, C-002, C-003, C-004
   pins: ap-1/C-012, C-013
+  **AP-1 RP-16 re-measure (2026-09-11):** the same `--plan` command against a
+  fresh `/tmp/ap1r-bed` on the release module at pin `090bc821`. INSERT files on
+  the synthetic beds now read zstd. Numbers:
+  [docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
+  The script still has no rewrite flag. Round 2 drove
+  `ADD PARTITION FIELD identity(grp)` plus `rewrite_data_files` on fresh copies
+  and compared the projection to those live actuals (7 928 680 / 7 672 169,
+  UNCOMPRESSED).
+  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…
@@ -38,6 +47,7 @@ makes never is — beds live under the `--scratch` root the caller names.
 |---|---|
 | Reproduce every row of the AP-0 document | `.venv/bin/python python/repark-parity/bench/adaptpart/run_adaptpart.py --scratch /tmp/ap0-bed` on a fresh scratch root |
 | Reproduce the AP-1 step-2 plan frames | the same command plus `--plan`; the beds rebuild, then each bed's plan frame prints after its ranked table |
+| Reproduce the RP-16 re-measure | the same `--plan` command with `--scratch /tmp/ap1r-bed`; numbers in [adapt-part-ap1-remeasure-2026-09-11.md](../../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md) |
 | Read the measured numbers | [docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../../docs/perf/ap-0-partition-candidates-2026-09-10.md) |
 | Read the clause table | [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/completed/ap-0-ledger.md) |
 | Run smaller (fewer batches, fewer rows per batch) | `--batches N --batch-rows M` (the document's rows need the defaults) |

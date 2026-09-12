@@ -68,8 +68,10 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 - [adaptpart/](adaptpart/map.md) — **AP-0 (measure, 2026-09-10)** adaptive-partitioning
   candidate measurement: three local Iceberg beds scored from `files`/`partitions`
   manifest bounds (P-2 candidates, P-3 target-band scores, one ranked table per bed).
-  See [adaptpart/map.md](adaptpart/map.md).
+  **AP-1 / RP-16 re-measure (2026-09-11):** `--plan` runs `CALL plan_partitioning`
+  on those beds. See [adaptpart/map.md](adaptpart/map.md).
   pins: ap-0/C-001, C-002, C-003, C-004
+  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…

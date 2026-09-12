@@ -177,6 +177,8 @@ these beds. A projection that accounts for the *rewrite's* codec — not just th
 input's — is the follow-up this residue points at; it is AP-1's out-of-scope call,
 recorded for the card's reader, not decided here.
 
+RP-16 re-measure (2026-09-11): the INSERT path now writes zstd (fork `#276`); the same 20 percent check on rebuilt beds is in [adapt-part-ap1-remeasure-2026-09-11.md](adapt-part-ap1-remeasure-2026-09-11.md).
+
 ## Reproduce
 
 ```text

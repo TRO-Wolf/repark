@@ -39,9 +39,13 @@ illustrative. A claim with no verified basis does not go in.
   reserved `adaptive_partitioning` key. **AP-1 step 2 (2026-09-11):** adds the
   `plan_partitioning` section — the CALL, the D-1 frame columns, the footer-measured
   `byte_ratio` behind `projected_files_at_target` with its 0.55 fallback, and the
-  plan-only boundary.
+  plan-only boundary. **AP-2 (2026-09-11):** `apply_partitioning` — signature and
+  defaults (`dry_run` true), re-derived `plan_id`, the same `target_file_size_bytes`
+  for two-field plans (D-8), step order, result columns, one-commit-per-step warning,
+  P-5 refusals, and a plan-then-apply example.
   pins: maint-policy-1/C-026
   pins: ap-1/C-013
+  pins: ap-2/C-007, C-008
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
   semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);
