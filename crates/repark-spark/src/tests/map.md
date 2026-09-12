@@ -388,7 +388,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `service_managed_ctas` also has `ctas_service_managed_from_view_typed_batches_round_trips`.
   pins: ctas-view-1-conform-stream/C-003
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
-<<<<<<< HEAD
+  **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
+  and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
+  service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)
+  registered `ServiceManagedLocation`; the refusal fires before any AWS call would, so the
+  pin needs no credentials. The green run beside the existing nine pins is C-004's
+  evidence that every other catalog kind is unchanged.
+  pins: orphan-s3tables-1/C-001, C-002, C-004
   **RP-19 (2026-09-12):** fork pin `3ebf7d36` (F-S3ROOT-1 `#281`) resolves a bare-bucket
   object-store location to the bucket root like Java's `S3URI`, so
   `remove_orphan_files` on an S3 Tables table (`s3://<id>--table-s3`) no longer dies on
@@ -397,15 +403,6 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   kind. The RePark-side pin is the registry row plus the owner's verbatim reproduction
   (card D-2: no live test without AWS).
   pins: rp-19/C-001, C-002, C-003
-=======
-  **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
-  and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
-  service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)
-  registered `ServiceManagedLocation`; the refusal fires before any AWS call would, so the
-  pin needs no credentials. The green run beside the existing nine pins is C-004's
-  evidence that every other catalog kind is unchanged.
-  pins: orphan-s3tables-1/C-001, C-002, C-004
->>>>>>> origin/main
 - **Time-travel pins:**
   `time_travel_temp_views_do_not_survive_a_{successful,failed}_statement` and
   `time_travel_statement_pins_never_collide_with_a_reader_options_view` (the fix-pass collision
