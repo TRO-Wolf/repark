@@ -625,7 +625,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Base `2fad8135`; no source touched; READING path under R-10.
   `risk_tier: standard`. Branch `docs/facade-audit-0`.
   pins: facade-audit-0/C-001, C-002, C-003, C-004, C-006, C-007, C-008
-- [ap-2-ledger.md](ap-2-ledger.md) —
+- [ap-2-ledger.md](../completed/ap-2-ledger.md) —
   **AP-2 (2026-09-11), in flight:** `CALL
   <catalog>.system.apply_partitioning(table => …, plan_id => … [, dry_run => …]
   [, target_file_size_bytes => …])` — dry-run default, plan-id re-derived at the current
