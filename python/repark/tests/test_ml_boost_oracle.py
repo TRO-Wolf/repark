@@ -768,9 +768,9 @@ def test_ext_transform_temp_view_owned_and_dropped() -> None:
         real_session = assembled._session
 
         class _SessionProxy:
-            def register_ipc_stream_as_temp_view(self, view_name: str, ipc_bytes: bytes) -> None:
+            def register_arrow_stream_as_temp_view(self, view_name: str, stream: object) -> None:
                 events.append(("register", view_name))
-                real_session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
+                real_session.register_arrow_stream_as_temp_view(view_name, stream)
 
             def drop_temp_view(self, view_name: str) -> object:
                 events.append(("drop", view_name))

@@ -39,7 +39,8 @@ conftest guard.
   4.27 GB after `import repark`, 8.70 GB after a 64 MB-pool session build at
   `target_partitions=1`. The worker therefore applies the card's constant as
   the cell's own headroom, `RLIMIT_AS = VmSize_at_apply + 3 × limit`, after
-  the session builds and before the cell runs — the formula
+  numpy and pyarrow load, after the session builds, and before the cell
+  runs — the formula
   H3-SPILL-RESIDUE-1 (ledger F-5) measured first. The measured CI cell used
   2.10× limit of the 3× headroom and completed. The absolute form is not a
   defensible alternative at any tier: at the CI tier (192 MB) the pyarrow
@@ -142,16 +143,26 @@ conftest guard.
   A CI cell whose three debug-module reps agree is a row; a disagreeing
   or `KILLED` cell is omitted and named as `NEVEROOM-1-R-00n` in the
   ledger. `sort` is required.
-- `matrix_worker.py` — the worker subprocess entry: builds the bounded-pool
-  session with the row's `conf`, registers the sized range input and the
-  join rows' `other` input, applies the address-space cap
-  (`RLIMIT_AS = VmSize_at_apply + 3 × limit`, verified by read-back),
-  writes the `EXPLAIN` plan sidecar, executes the cell by `kind`
-  (`EXPLAIN ANALYZE` + spill totals for `sql`/`flatten`, `.collect()` for
-  `collect`), and writes the result JSON (`completed` with the spill
+- `matrix_worker.py` — the worker subprocess entry: loads numpy and pyarrow
+  first (`load_spill_worker_libraries`) so OpenBLAS thread buffers exist,
+  then builds the bounded-pool session with the row's `conf`, registers the
+  sized range input and the join rows' `other` input, applies the
+  address-space cap (`RLIMIT_AS = VmSize_at_apply + 3 × limit`, verified
+  by read-back), writes the `EXPLAIN` plan sidecar, executes the cell by
+  `kind` (`EXPLAIN ANALYZE` + spill totals for `sql`/`flatten`, `.collect()`
+  for `collect`), and writes the result JSON (`completed` with the spill
   totals and `plan_operators`, or `refused` when the caught error passes
   `is_loud_refusal`); anything else exits non-zero with no result JSON,
-  which the parent folds to `KILLED`.
+  which the parent folds to `KILLED`. The cap must follow those library
+  loads: FACADE-1 made pyarrow lazy, so the first `to_arrow` inside a
+  capped cell imported pyarrow → numpy → OpenBLAS and died (`KILLED`,
+  OpenBLAS memory allocation). Pre-import restores the main-tree load
+  order (pyarrow at `import repark`) and keeps the CI golden
+  (`sort`/`hash_aggregate` SPILLED, `hash_join` refused at 2× of 64 MB).
+  `OPENBLAS_NUM_THREADS=1` also passed that golden (2/2, 44.5 s) by
+  shrinking post-cap buffers; the worker keeps pre-import so the cap
+  arithmetic describes a process that already holds the libraries.
+  pins: facade-1/C-002
 - `matrix_run.py` — the full-tier driver (step 2): `run_rep` runs every
   `FULL_CELLS` cell once per rep in a worker subprocess and appends each
   `CellRecord` as a JSONL line to the results file (so a run is resumable

@@ -269,16 +269,15 @@ def reenter_with_prediction(
     predictions: Any,
     prediction_col: str,
 ) -> Any:
-    """Append predictions through an Arrow IPC MemTable and tie its view to frame lifetime.
+    """Append predictions through an Arrow C Stream MemTable and tie its view to frame lifetime.
 
     ``predictions`` must contain one value per input row. The prediction column
     must not already exist. The returned frame owns cleanup of the scratch view.
     """
-    import io
+    from repark.spark._arrow_stream import register_arrow_exporter_as_temp_view
+    from repark.spark._pyarrow import require_pyarrow
 
-    import pyarrow as pa
-    import pyarrow.ipc as pa_ipc
-
+    pa = require_pyarrow()
     np = require_numpy()
     preds = np.asarray(predictions, dtype=np.float64).reshape(-1)
     if len(preds) != original_table.num_rows:
@@ -294,15 +293,11 @@ def reenter_with_prediction(
         )
     pred_array = pa.array(preds.tolist(), type=pa.float64())
     new_table = original_table.append_column(prediction_col, pred_array)
-    sink = io.BytesIO()
-    with pa_ipc.new_stream(sink, new_table.schema) as writer:
-        for batch in new_table.to_batches():
-            writer.write_batch(batch)
     session = frame._session
     view_name = scratch_view_name(session, "__repark_ml_ext_")
     owned = False
     try:
-        session.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
+        register_arrow_exporter_as_temp_view(session, view_name, new_table)
         inner = session.sql(f"SELECT * FROM {view_name}")
         result = frame._spawn(inner)
         _own_ext_temp_view(result, session, view_name)

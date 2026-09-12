@@ -726,17 +726,6 @@ class DataFrame:
 
         register_stream = getattr(self._session, "register_arrow_stream_as_temp_view", None)
         if callable(register_stream):
-            # Drain the user iterator in pure Python first (same GIL ownership as the IPC path).
-            # A *live* RecordBatchReader over this generator fed into Rust's C-stream drain is
-            # unsafe: Rust holds the GIL → pyarrow get_next re-enters Python → the generator
-            # pulls the parent `__arrow_c_stream__` → StreamingBatchReader::next does
-            # Python::attach + detach and aborts with "GIL is released / thread state is NULL".
-            # Materializing output batches here keeps parent-stream pulls on the normal Python
-            # thread state; the C-stream import then only yields already-buffered RecordBatches
-            # (no nested engine stream re-entry). Win vs IPC: no encode/decode byte buffer.
-            # User-func exceptions surface as PySparkException here, before the native call.
-            # Use Table (not RecordBatchReader.from_batches) so tests that patch
-            # ``pa.RecordBatchReader`` for ``from_stream`` tracking stay compatible.
             batches = list(self._iter_map_in_arrow_output(max_output_rows=None))
             table = pa.Table.from_batches(batches, schema=expected_arrow)
             return self._register_arrow_stream_as_inner(
@@ -833,21 +822,15 @@ class DataFrame:
         if not callable(func):
             raise PySparkTypeError(f"mapInArrow func must be callable, got {type(func).__name__}")
         declared, arrow_schema = _coerce_map_in_arrow_schema(schema)
-        # Schema-only placeholder (empty IPC) so schema()/columns work without running func.
-        # Register against the *result* DataFrame so weakref.finalize can drop the view
-        # (native PyDataFrame is not weakref-able).
         import contextlib
-        import io
 
-        import pyarrow.ipc as pa_ipc
+        from repark.spark._arrow_stream import register_arrow_exporter_as_temp_view
+        from repark.spark._pyarrow import require_pyarrow
 
-        sink = io.BytesIO()
-        with pa_ipc.new_stream(sink, arrow_schema):
-            pass
+        pa = require_pyarrow()
         view_name = scratch_view_name(self._session, "__repark_mia_")
-        # If sql fails after register, drop eagerly so the MemTable is not orphaned without a
-        # finalize owner. Track immediately after a successful sql.
-        self._session.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
+        placeholder = pa.Table.from_batches([], schema=arrow_schema)
+        register_arrow_exporter_as_temp_view(self._session, view_name, placeholder)
         try:
             placeholder_inner = self._session.sql(f"SELECT * FROM {view_name}")
         except Exception:
@@ -4272,8 +4255,9 @@ class DataFrame:
         errors keep their original classification. Use ``to_arrow_batches`` for O(batch) memory.
         """
         self._ensure_alive()
-        import pyarrow as pa
+        from repark.spark._pyarrow import require_pyarrow
 
+        pa = require_pyarrow()
         try:
             table = pa.table(self)
         except pa.lib.ArrowException as arrow_error:
@@ -4288,8 +4272,9 @@ class DataFrame:
         yield one zero-row batch with the declared schema. This is a RePark extension.
         """
         self._ensure_alive()
-        import pyarrow as pa
+        from repark.spark._pyarrow import require_pyarrow
 
+        pa = require_pyarrow()
         try:
             reader = pa.RecordBatchReader.from_stream(self)
         except pa.lib.ArrowException as arrow_error:
@@ -4313,27 +4298,27 @@ class DataFrame:
     toArrowBatches = to_arrow_batches  # noqa: N815 — deliberate camelCase twin of to_arrow_batches
 
     def to_polars(self) -> pl.DataFrame:
-        """Return the rows as a Polars DataFrame through Arrow.
+        """Return the rows as a Polars DataFrame through the Arrow C stream.
 
         Requires the optional ``polars`` extra. Duplicate display names receive occurrence
         suffixes because Polars requires unique names.
         """
         import polars as pl
 
-        table = self.to_arrow()
-        names = list(table.column_names)
-        if len(names) != len(set(names)):
-            seen: dict[str, int] = {}
-            unique: list[str] = []
-            for name in names:
-                occurrence = seen.get(name, 0)
-                seen[name] = occurrence + 1
-                if occurrence == 0:
-                    unique.append(name)
-                else:
-                    unique.append(f"{name}__{occurrence}")
-            table = table.rename_columns(unique)
-        return pl.from_arrow(table)
+        frame = pl.DataFrame(self)
+        display = self._display_names
+        if display is None or self._engine_names is None or len(display) != frame.width:
+            return frame
+        seen: dict[str, int] = {}
+        unique: list[str] = []
+        for name in display:
+            occurrence = seen.get(name, 0)
+            seen[name] = occurrence + 1
+            unique.append(name if occurrence == 0 else f"{name}__{occurrence}")
+        current = list(frame.columns)
+        if unique != current:
+            frame = frame.rename(dict(zip(current, unique, strict=True)))
+        return frame
 
     def to_pandas(self) -> pd.DataFrame:
         """Return the rows as a :class:`pandas.DataFrame` (PySpark ``DataFrame.toPandas``).

@@ -523,6 +523,13 @@ def _create_dataframe_from_rows_inner(
         return _materialize_arrow_as_memtable_frame(session, arrow_table)
 
     if _is_polars_dataframe(data):
+        try:
+            from repark.spark._pyarrow import require_pyarrow
+
+            require_pyarrow()
+        except ImportError:
+            return _materialize_exporter_as_memtable_frame(session, data)
+
         import repark.spark.session as _session_pkg
 
         arrow_table = _session_pkg._arrow_table_from_polars(data, schema, engine_types=engine_types)
@@ -830,59 +837,32 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
 
     """
 
-    import pyarrow as pa
+    from repark.spark._pyarrow import require_pyarrow
+
+    pa = require_pyarrow()
 
     if not isinstance(table, pa.Table):
         raise TypeError(f"expected pyarrow.Table, got {type(table).__name__}")
 
+    return _materialize_exporter_as_memtable_frame(session, table)
+
+
+def _materialize_exporter_as_memtable_frame(session: ReparkSession, exporter: Any) -> DataFrame:
+    """Register an Arrow C Stream exporter as a MemTable temp view and scan it."""
+    from repark.spark._arrow_stream import register_arrow_exporter_as_temp_view
+
     view_name = scratch_view_name(session._ensure_alive(), "__repark_cdf_")
-
     native = session._ensure_alive()
-
-    register_stream = getattr(native, "register_arrow_stream_as_temp_view", None)
-
     registered = False
-
     try:
-        if callable(register_stream):
-            # pa.Table is an Arrow C Stream exporter — same path mapInArrow uses.
-            register_stream(view_name, table)
-
-        else:
-            # Version-skew fallback: IPC encode + register_ipc_stream_as_temp_view.
-
-            import io
-
-            import pyarrow.ipc as pa_ipc
-
-            sink = io.BytesIO()
-
-            with pa_ipc.new_stream(sink, table.schema) as writer:
-                for batch in table.to_batches():
-                    writer.write_batch(batch)
-
-            native.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
-
+        register_arrow_exporter_as_temp_view(native, view_name, exporter)
         registered = True
-
         frame = session.sql(f"SELECT * FROM {view_name}")
-
     except BaseException:
-        # BaseException: also drop on KeyboardInterrupt/SystemExit after register.
-
         if registered:
             with contextlib.suppress(Exception):
                 native.drop_temp_view(view_name)
-
         raise
-
     _register_cdf_view_cleanup(session, frame, view_name)
-
-    # SE-1 declared-sorted door: tag the handed-back frame as the *source* frame over this
-    # MemTable view, so ``DataFrame.declareSorted`` knows which registered view to verify
-    # and declare. Transformed frames get a fresh handle from ``_spawn`` and never inherit
-    # the tag.
-
     frame._source_view_name = view_name
-
     return frame

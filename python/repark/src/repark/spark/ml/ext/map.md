@@ -28,7 +28,9 @@ remain in the Rust-backed modules.
 - Sparse structs are densified only when size, width, and nonzero counts are at most 4096.
 - Nullness and widths are checked before Arrow scalar materialization.
 - Predictions must have one value per input row. Existing prediction columns are refused.
-- Prediction re-entry uses an Arrow IPC MemTable. The returned frame owns scratch-view cleanup.
+- Prediction re-entry registers the prediction table through the Arrow C Stream capsule
+  seam (`register_arrow_exporter_as_temp_view`); IPC is the version-skew fallback. The
+  returned frame owns scratch-view cleanup. pins: facade-1/C-001
 - XGBoost uses `save_raw`; LightGBM uses `model_to_string`. Both check the library major version.
 - RandomForest save, write, read, and load refuse because pickle loading permits arbitrary code execution.
 - Model envelopes require a positive feature count, a confined booster path, and a non-empty blob.
