@@ -16,4 +16,5 @@ box, full scale.
   evidence. pins: profiles-1/C-006
 - [datafusion.optimizer.prefer_hash_join.csv](datafusion.optimizer.prefer_hash_join.csv)
 - [datafusion.execution.target_partitions.csv](datafusion.execution.target_partitions.csv)
+- [datafusion.execution.batch_size.csv](datafusion.execution.batch_size.csv)
 - `map.md` — this file.
