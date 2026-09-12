@@ -22,6 +22,13 @@ rule). Still outside the inventory: RuntimeConfig (5), SparkContext (3),
 UDFRegistration (3), StorageLevel (0 public). Widening again is an owner
 decision. Measured 2026-08-31.
 
+Seven names are repark plumbing, not PySpark surface — the six ``Column.*``
+select-boundary helpers and ``F.PythonUDFColumn`` — measured absent from
+PySpark 4.1.2 (EX-29 / EX-30, 2026-09-11; owner ruling S2-22).
+``INVENTORY_EXCLUSIONS`` names each one with its measured reason and drops it
+from the example inventory, the backlog and the live ``__all__`` cross-check;
+the raw walk still reports them, so the API-freeze register keeps them frozen.
+
 A ``COVERS`` entry must be used in that script's body. Class-surface names
 bind only on a repark-rooted local (assignment dataflow from a door or session
 builder), except the class-root surfaces ``SparkSession.builder`` /
@@ -33,6 +40,7 @@ as the backlog.
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 pins: ex-1-class-surfaces/C-001, C-002, C-004, C-005
+pins: ex-31-inventory-plumbing/C-002, C-003, C-004
 """
 
 from __future__ import annotations
@@ -94,8 +102,26 @@ FAMILIES: tuple[str, ...] = (
     "types",
     "window",
 )
-BACKLOG_BASELINE = 119
+BACKLOG_BASELINE = 112
 EXCEPTIONS_BASELINE = 2
+COLUMN_PLUMBING_REASON = (
+    "bound select-boundary plumbing on repark's Column; measured absent from "
+    "pyspark.sql.Column 4.1.2 — inspect.getattr_static finds no member and "
+    "hasattr answers True only through Column.__getattr__ item fabrication "
+    "(EX-29, 2026-09-11)"
+)
+INVENTORY_EXCLUSIONS: dict[str, str] = {
+    "Column.for_select": COLUMN_PLUMBING_REASON,
+    "Column.join_sql_part": COLUMN_PLUMBING_REASON,
+    "Column.spark_display_part": COLUMN_PLUMBING_REASON,
+    "Column.spark_wrap_display_part": COLUMN_PLUMBING_REASON,
+    "Column.sql_expr_part": COLUMN_PLUMBING_REASON,
+    "Column.sql_expr_without_alias": COLUMN_PLUMBING_REASON,
+    "F.PythonUDFColumn": (
+        "repark-only marker class F.udf(f)(...) returns; measured absent from "
+        "pyspark.sql.functions and pyspark.sql.column 4.1.2 (EX-30, 2026-09-11)"
+    ),
+}
 EXAMPLE_TIMEOUT_SECONDS = 120
 NATIVE_MODULE = "repark._native"
 CLOUD_ENV_PREFIXES: tuple[str, ...] = ("AWS_",)
@@ -375,6 +401,19 @@ def enumerate_public_surface(root: Path) -> list[tuple[str, str]]:
     if not rows:
         raise RuntimeError("enumerator produced an empty inventory")
     return rows
+
+
+def example_inventory(root: Path) -> list[tuple[str, str]]:
+    """Return the example-inventory rows: the public walk minus the named exclusions.
+
+    pins: ex-31-inventory-plumbing/C-002
+    """
+    rows = enumerate_public_surface(root)
+    walked = {name for _family, name in rows}
+    for excluded in INVENTORY_EXCLUSIONS:
+        if excluded not in walked:
+            raise RuntimeError(f"inventory exclusion {excluded} is not a public surface name")
+    return [row for row in rows if row[1] not in INVENTORY_EXCLUSIONS]
 
 
 def parse_named_lines(path: Path, *, kind: str) -> list[str]:
@@ -773,6 +812,7 @@ def live_all_findings(enumerated: list[tuple[str, str]]) -> list[str]:
     findings: list[str] = []
     for prefix, module_path in LIVE_ALL_MODULES:
         live = {f"{prefix}{name}" for name in live_all_names(module_path)}
+        live.difference_update(INVENTORY_EXCLUSIONS)
         walked = {name for _family, name in enumerated if name.startswith(prefix)}
         for name in sorted(live - walked):
             findings.append(f"live {prefix}__all__ has {name} missing from the AST walk")
@@ -841,7 +881,7 @@ def run_gate(
 ) -> int:
     """Run the drift gate over ``root``. Returns the process exit code."""
     try:
-        enumerated = enumerate_public_surface(root)
+        enumerated = example_inventory(root)
         inventory_path = root / INVENTORY_RELATIVE
         if write_snapshot:
             write_inventory(inventory_path, enumerated)

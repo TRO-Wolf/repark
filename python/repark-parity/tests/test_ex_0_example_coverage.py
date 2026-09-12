@@ -2,6 +2,7 @@
 
 pins: ex-0-example-drift-gate/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 pins: ex-1-class-surfaces/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: ex-31-inventory-plumbing/C-001, C-005
 """
 
 from __future__ import annotations
@@ -497,13 +498,47 @@ def test_ex_1_module_surface_binds_only_on_its_own_door() -> None:
     assert not gate.cover_is_used("ml.Pipeline", reversed_cross)
 
 
+def test_ex_31_plumbing_names_left_the_inventory_and_the_backlog() -> None:
+    """EX-31: the seven measured non-PySpark plumbing names are excluded, not backlogged.
+
+    The exclusion is a named list — ``INVENTORY_EXCLUSIONS`` — never a pattern.
+    The names stay on the raw public walk (they are still shipped, callable
+    facade members) but are absent from the example inventory, its checked-in
+    snapshot, and the backlog.
+
+    pins: ex-31-inventory-plumbing/C-005
+    """
+    gate = _load_gate()
+    excluded = {
+        "Column.for_select",
+        "Column.join_sql_part",
+        "Column.spark_display_part",
+        "Column.spark_wrap_display_part",
+        "Column.sql_expr_part",
+        "Column.sql_expr_without_alias",
+        "F.PythonUDFColumn",
+    }
+    assert set(gate.INVENTORY_EXCLUSIONS) == excluded
+    assert all(reason.strip() for reason in gate.INVENTORY_EXCLUSIONS.values())
+    shipped = {name for _family, name in gate.enumerate_public_surface(_REPO)}
+    assert excluded <= shipped
+    inventory = {name for _family, name in gate.example_inventory(_REPO)}
+    assert excluded.isdisjoint(inventory)
+    snapshot = {
+        name for _family, name in gate.parse_inventory_file(_REPO / gate.INVENTORY_RELATIVE)
+    }
+    assert excluded.isdisjoint(snapshot)
+    backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
+    assert excluded.isdisjoint(backlog)
+
+
 def test_ex_1_every_new_name_is_in_the_backlog() -> None:
     """EX-1 C-006: every widened name is a backlog row until an example covers it.
 
     pins: ex-1-class-surfaces/C-006
     """
     gate = _load_gate()
-    rows = gate.enumerate_public_surface(_REPO)
+    rows = gate.example_inventory(_REPO)
     backlog = set(gate.parse_named_lines(_REPO / gate.BACKLOG_RELATIVE, kind="backlog"))
     covered: set[str] = set()
     for script in gate.example_scripts(_REPO):

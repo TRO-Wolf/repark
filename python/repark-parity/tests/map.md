@@ -103,6 +103,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   C-008
   **EX-17 (2026-09-04):** `test_ex_1_every_new_name_is_in_the_backlog` accepts a widened name that an
   example now covers (backlog OR covered); the first `Column.*` batch was the first to cover one.
+  **EX-31 (2026-09-12):** the seven measured non-PySpark plumbing names (six `Column.*`
+  helpers, `F.PythonUDFColumn`) are pinned out of the example inventory, its checked-in
+  snapshot and the backlog by the named `INVENTORY_EXCLUSIONS` list, while the raw
+  `enumerate_public_surface` walk still ships them (frozen API, still callable); the
+  widened-name pin now reads `example_inventory`, the post-exclusion view.
+  pins: ex-31-inventory-plumbing/C-001, C-005
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
