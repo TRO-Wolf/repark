@@ -9,7 +9,7 @@ This file closes when FNP-9/10 merges, or when the owner closes the slate row.
 **risk_tier:** standard.
 
 Spark is the oracle. Live PySpark 4.1.2, zulu-17, `TZ=UTC`, ANSI on and off, 2026-09-05.
-The campaign charter is [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md); the unit rows are
+The campaign charter is [fnp-0-charter-ledger.md](../staging/fnp-0-charter-ledger.md); the unit rows are
 [docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md) §7 **FNP-9**
 (collections, generators, dispatch — 8 names) and **FNP-10** (JSON — 6 names). Clauses discharged
 from the campaign charter: C-001 (Rust-owned expression per name), C-002 (no Python row compute),

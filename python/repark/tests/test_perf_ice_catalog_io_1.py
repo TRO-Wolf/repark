@@ -30,6 +30,7 @@ _THRASH_TABLES = 256
 _THRASH_BUDGET = "131072"
 _WEIGHT_TABLES = 256
 _WEIGHT_BUDGET = "280000"
+_WEIGHT_RETAIN_BUDGET = "1250000"
 _RSS_DRIVER = (
     "import resource\n"
     "import sys\n"
@@ -436,8 +437,8 @@ def test_a_sub_megabyte_byte_budget_churns_cold_tables_while_hot_tables_hit(
 def test_a_budget_sized_to_the_charged_weight_retains_every_table(
     tmp_path: Path,
 ) -> None:
-    """PERF-CATALOG-CACHE-WEIGHT-1 BACKLOG: true weights evict the coldest table and red this."""
-    spark = _session("manifest_weight", tmp_path, **{_MANIFEST_KEY: _WEIGHT_BUDGET})
+    """PERF-CATALOG-CACHE-WEIGHT-1 FIXED at pin 090bc821: 1250000 retains every table."""
+    spark = _session("manifest_weight", tmp_path, **{_MANIFEST_KEY: _WEIGHT_RETAIN_BUDGET})
     _range_view(spark, _RSS_ROWS_EACH)
     for index in range(_WEIGHT_TABLES):
         spark.sql(f"CREATE TABLE ice.ns.r{index} AS SELECT * FROM src").to_arrow()
@@ -453,6 +454,26 @@ def test_a_budget_sized_to_the_charged_weight_retains_every_table(
     assert (
         _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{_WEIGHT_TABLES - 1}") == _RSS_ROWS_EACH
     )
+
+
+def test_the_old_estimated_weight_budget_evicts_the_coldest_table(
+    tmp_path: Path,
+) -> None:
+    """PERF-CATALOG-CACHE-WEIGHT-1 FIXED at pin 090bc821: 280000 now evicts the coldest table."""
+    spark = _session("manifest_weight_old", tmp_path, **{_MANIFEST_KEY: _WEIGHT_BUDGET})
+    _range_view(spark, _RSS_ROWS_EACH)
+    for index in range(_WEIGHT_TABLES):
+        spark.sql(f"CREATE TABLE ice.ns.r{index} AS SELECT * FROM src").to_arrow()
+    for index in range(_WEIGHT_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+    for index in range(1, _WEIGHT_TABLES):
+        assert _scalar(spark, f"SELECT count(id) AS c FROM ice.ns.r{index}") == _RSS_ROWS_EACH
+
+    removed = _delete_manifests(tmp_path / "manifest_weight_old")
+
+    assert removed > 0, "the pin means nothing without a manifest to delete"
+    with pytest.raises(Exception, match="manifest"):
+        spark.sql("SELECT count(id) AS c FROM ice.ns.r0").to_arrow()
 
 
 def test_time_travel_reads_the_pinned_snapshot_with_the_cache_on(
