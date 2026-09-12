@@ -1,7 +1,7 @@
-# Unit ledger — PROFILES-1 step 1 · the measurement bed (harness only, no timings)
+# Unit ledger — PROFILES-1 steps 1–2 · the measurement bed and the knob sweep
 
-**Unit:** PROFILES-1 step 1 · **Date:** 2026-09-10 · **Branch:** `feat/profiles-1` · **Base:** `origin/main`
-**Model:** Muse Spark (muse-spark-1.3-contributor)
+**Unit:** PROFILES-1 steps 1–2 · **Date:** 2026-09-10, step 2 2026-09-12 · **Branch:** `feat/profiles-1` / `feat/profiles-1-step-2` · **Base:** `origin/main`
+**Model:** Muse Spark (muse-spark-1.3-contributor); step 2 Devin SWE-2 (swe-2-high)
 **Policy:** [AGENTS.md](../../../AGENTS.md). **Path:** STANDARD. **risk_tier: standard.**
 
 **Why now.** Step 0 is merged (`docs/perf/profiles-1-passthrough-probe-2026-09-09.md`:
@@ -10,9 +10,10 @@ will run alone on the box on a release build: three datasets, eight query shapes
 knob × value timing harness writing one CSV row per cell, a one-JVM guard, and a `--smoke`
 mode that proves the harness at tiny scale.
 
-**Not in this step:** the sweep, any timing number as a result, `maturin develop --release`,
-TPC-H at SF10, `docs/perf/config-profiles-*.md`, profile tables. Another lane builds on this
-box; timed runs now would be lies, so the harness refuses unless the box is quiet.
+**Not in step 1** (its scope note, kept for the record): the sweep, any timing number as a
+result, `maturin develop --release`, TPC-H at SF10, `docs/perf/config-profiles-*.md`, profile
+tables. Step 2 (this ledger's second clause table) ran the sweep and wrote the measurements
+document; the profiles themselves stay step 3.
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
 
@@ -69,46 +70,106 @@ The 16-file count reconciles exactly: three fresh 4-file builds (12) + 2 smoke
 appends + 1 overwrite rewrite + 1 merge rewrite. `DROP TABLE` orphans prior files,
 so step 2 should sweep each knob on a fresh scratch root.
 
+## PROPOSITION LEDGER — PROFILES-1 step 2 — 2026-09-12
+
+Step 2 (M, card PROFILES-1): the sweep and the measurements document. The step-0 probe's
+table is re-checked after CONF-UNREAD-1: the three `datafusion.execution.parquet.*` keys it
+left UNREAD now pass through, `coalesce_batches` refuses loud, so the swept set is the
+nineteen keys whose values reach the engine. One harness fix was needed and is named in the
+hand-back: the two `write.*` knobs are Iceberg table properties, not session conf, so
+`run_profiles.py` lands them on the rebuilt bed table with `ALTER TABLE … SET TBLPROPERTIES`
+before the timed write (`table_property_alter`, pinned).
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-006 | The baseline ran at full scale on a release build with the quiet-box guard: futures parquet, TPC-H SF10, 200-file Iceberg table, three repetitions per cell. | `profiles_baseline_ran_at_full_scale` | **PROVEN** | `baseline.csv` committed (30 rows, 10 cells × 3 reps); run output pasted below — `SWEEP DONE`, all ten cells at n=3. Release build verified: `python/repark/src/repark/_native.abi3.so` is the `target/release/lib_native.so` artifact; the guard (`pgrep -f java` per timed repetition) held for every cell — no JVM ran. `test_sweep_csvs_carry_three_reps_per_cell` asserts the baseline CSV's datasets and rep counts. |
+| C-007 | Every swept knob's CSV carries its full value set with three repetitions per (dataset, query, value) cell; the two `write.*` knobs reach the bed table as properties. | `profiles_sweep_csvs_carry_three_reps_per_cell` | **PROVEN** | Pin green: all 19 knob CSVs hold `@default` plus ≥ 3 values (compression sweeps 8 enum members, distribution-mode 4) and exactly 3 rows per cell — 1,830 rows total, zero cells with a rep count ≠ 3. `test_runner_lands_write_properties_on_the_bed_table` pins `table_property_alter` emitting `ALTER TABLE … SET TBLPROPERTIES` for `write.*` and `None` for session knobs/`@default`. |
+| C-008 | The measurements document's numbers equal the medians recomputed from the committed CSVs, and its "no effect measured" table equals the <5 % rule applied to those medians. | `profiles_doc_tables_equal_csv_medians` | **PROVEN** | Pin green: every doc row's median and ratio re-derive from the CSV at 3/4 decimals, every argmax row equals the global min-ratio non-`@default` cell, and the no-effect table equals the computed set under the affected-cells rule (5 knobs). Red-first evidence: a doctored cell (11.038 → 9.999 on `prefer_hash_join`/`tpch`/`hash_join`/`false`) fails the pin — output pasted below — and the file was restored byte-exact. |
+
+VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Step-2 run evidence
+
+Baseline (release module, quiet box, full scale):
+
+```text
+$ REPARK_CONFIG="" .venv/bin/python python/repark-parity/bench/profiles/run_profiles.py \
+    --scratch /tmp/dv-prof2-scratch --repeats 3 \
+    --out docs/perf/config-profiles-2026-09-12/baseline.csv
+futures  scan_filter         (baseline)=@default n=3 median=0.014s
+tpch     scan_filter         (baseline)=@default n=3 median=0.387s
+futures  group_by            (baseline)=@default n=3 median=0.040s
+tpch     group_by            (baseline)=@default n=3 median=0.526s
+tpch     hash_join           (baseline)=@default n=3 median=1.124s
+tpch     sort_merge_join     (baseline)=@default n=3 median=5.352s
+futures  window              (baseline)=@default n=3 median=0.676s
+iceberg  append_files        (baseline)=@default n=3 median=0.835s
+iceberg  overwrite_partition (baseline)=@default n=3 median=0.172s
+iceberg  merge_updates       (baseline)=@default n=3 median=0.621s
+cells=docs/perf/config-profiles-2026-09-12/baseline.csv iceberg_parquet_files=1851
+SWEEP DONE
+```
+
+The 1851 file count is warehouse orphans accumulated across per-repetition table
+rebuilds, not a bed change — each rebuild holds exactly 200 files.
+
+C-008 red first — one doc cell doctored, pin catches it:
+
+```text
+$ .venv/bin/python -m pytest python/repark-parity/tests/test_profiles_bed.py::test_doc_tables_equal_csv_medians -x -q
+E   AssertionError: datafusion.optimizer.prefer_hash_join ('tpch', 'hash_join', 'false'): 9.999
+E   assert '11.038' == '9.999'
+FAILED python/repark-parity/tests/test_profiles_bed.py::test_doc_tables_equal_csv_medians
+1 failed in 0.21s
+```
+
+Restored, then green:
+
+```text
+$ .venv/bin/python -m pytest python/repark-parity/tests/test_profiles_bed.py -q
+9 passed in 0.20s
+```
+
 ```yaml
 COVERAGE_ATTESTATION:
-  pr_unit: profiles-1-step-1
+  pr_unit: profiles-1-step-2
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Pins assert the three datasets, dbgen reuse, and the 200-file shape.
-      artifacts: [python/repark-parity/tests/test_profiles_bed.py, python/repark-parity/bench/profiles/datasets.py]
+      evidence: Full-scale bed held for every sweep cell — futures parquet in place, TPC-H SF10 generated once under the scratch root, 200-file Iceberg table rebuilt per write repetition; pin asserts the baseline CSV's three datasets and rep counts.
+      artifacts: [python/repark-parity/tests/test_profiles_bed.py, docs/perf/config-profiles-2026-09-12/baseline.csv]
     - id: AT-2
       status: ATTACKED
-      evidence: Pins assert all eight query names plus append count and merge fraction.
-      artifacts: [python/repark-parity/tests/test_profiles_bed.py, python/repark-parity/bench/profiles/queries.py]
+      evidence: All eight query shapes ran in every sweep CSV — pin asserts every cell carries exactly three repetitions over the full ten-cell bed.
+      artifacts: [python/repark-parity/tests/test_profiles_bed.py, docs/perf/config-profiles-2026-09-12/map.md]
     - id: AT-3
       status: ATTACKED
-      evidence: JVM guard refusal is pinned both ways; live JVM absence checked before smoke.
-      artifacts: [python/repark-parity/tests/test_profiles_bed.py, python/repark-parity/bench/profiles/harness.py]
+      evidence: Quiet-box guard ran before every timed repetition of the baseline and all 19 sweeps; no JVM was ever present.
+      artifacts: [python/repark-parity/bench/profiles/harness.py]
     - id: AT-4
       status: ATTACKED
-      evidence: One session per knob value, stopped after; write table rebuilt per repetition.
-      artifacts: [python/repark-parity/bench/profiles/run_profiles.py]
+      evidence: One session per knob value, stopped after; write.* properties land on the rebuilt bed table via table_property_alter, pinned.
+      artifacts: [python/repark-parity/bench/profiles/run_profiles.py, python/repark-parity/tests/test_profiles_bed.py]
     - id: AT-5
       status: N/A
-      justification: No product code changed; the bed is measurement-only under bench/.
+      justification: No product code changed; the step adds a document, CSVs, a pin, and one harness helper under bench/.
     - id: AT-6
       status: N/A
       justification: No catalog, write path, or exception taxonomy touched.
     - id: AT-7
       status: ATTACKED
-      evidence: CSV header and row shape pinned; smoke CSV holds 10 data rows.
-      artifacts: [python/repark-parity/tests/test_profiles_bed.py]
+      evidence: The doc's tables re-derive from the committed CSVs cell for cell — the C-008 pin recomputes medians, ratios, argmax rows, and the no-effect set; red-first via a doctored cell.
+      artifacts: [python/repark-parity/tests/test_profiles_bed.py, docs/perf/config-profiles-2026-09-12.md]
     - id: AT-8
       status: ATTACKED
-      evidence: Refusal paths measured live (repeats guard, knobless values guard, both exit 2).
-      artifacts: [python/repark-parity/bench/profiles/run_profiles.py]
+      evidence: CONF-UNREAD-1 keys re-probed — coalesce_batches still refuses loud and is swept nowhere (R-16); invalid compression spellings measured refused before the enum set was chosen.
+      artifacts: [docs/perf/config-profiles-2026-09-12.md]
     - id: AT-9
       status: N/A
-      justification: No concurrency, locks, or shared state; one process, sequential cells.
+      justification: Sequential single-process sweeps; no concurrency, locks, or shared state introduced.
     - id: AT-10
       status: ATTACKED
-      evidence: Overwrite arity refusal and catalog re-registration refusal met live and fixed in the bed.
-      artifacts: [python/repark-parity/bench/profiles/queries.py, python/repark-parity/bench/profiles/datasets.py]
+      evidence: The write.* knobs-as-table-properties defect was found by the sweep design, fixed minimally in the harness, and pinned; the no-effect rule's affected-cells and control-spelling readings are encoded in the pin so the doc cannot drift from them.
+      artifacts: [python/repark-parity/bench/profiles/run_profiles.py, python/repark-parity/tests/test_profiles_bed.py]
   complete: true
 ```

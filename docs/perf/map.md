@@ -240,6 +240,18 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   — and §5's counts re-derive to 16 PASSES THROUGH, 3 VALIDATED, 0 ACCEPTED BUT
   UNREAD, 1 REFUSED, 0 NOT MEASURED.
   pins: conf-unread-1/C-006
+- [config-profiles-2026-09-12.md](config-profiles-2026-09-12.md) — **PROFILES-1 step 2
+  (2026-09-12):** the full-scale knob sweep on a release module — baseline plus one
+  table per knob (19 swept, `coalesce_batches` refused loud so not read, R-16),
+  value × query → median of three repetitions with ratio to `@default`, the argmax
+  row per knob, the affected-cells reading of the card's "its query" and the
+  control-spelling rule, and the "no effect measured" list (5 knobs flat within
+  5 % on the cells they can reach — `bloom_filter_on_write`,
+  `max_row_group_size`, `write_batch_size`, `scan.concurrency_limit`,
+  `target-file-size-bytes`). Every number recomputes from the committed CSVs in
+  [config-profiles-2026-09-12/](config-profiles-2026-09-12/map.md) — the C-008
+  pin parses the tables and re-derives each cell.
+  pins: profiles-1/C-006, C-007, C-008
 - [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md) —
   **AP-0 (measure, 2026-09-10):** the ADAPT-PART candidate measurement — three local
   Iceberg beds (the futures frame CTAS unpartitioned, two generated 400k-row beds at

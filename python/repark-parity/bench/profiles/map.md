@@ -29,7 +29,11 @@ results, no `docs/perf/config-profiles-*.md` — those are steps 2–3.
   `--knob` + `--values`, `--repeats`, `--smoke`, `--futures`. One session per value
   (stopped after, as the step-0 probe did); the write table is rebuilt before every
   timed write repetition so appends never see another cell's rows. Non-smoke runs
-  refuse unless `--repeats 3` (D-3); values without a knob refuse.
+  refuse unless `--repeats 3` (D-3); values without a knob refuse. `write.*` knobs
+  are Iceberg table properties the session conf only stores, so step 2's fix lands
+  them on the rebuilt bed table with `ALTER TABLE … SET TBLPROPERTIES` before the
+  timed write (`table_property_alter`), leaving every bed identical across cells.
+  pins: profiles-1/C-007
 - `map.md` — this file.
 
 ## The accepted-but-unread nine
