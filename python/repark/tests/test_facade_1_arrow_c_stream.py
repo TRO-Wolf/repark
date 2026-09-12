@@ -252,3 +252,22 @@ def test_to_arrow_to_pandas_collect_signatures_unchanged(spark: ReparkSession) -
     assert callable(frame.toPandas)
     assert callable(frame.collect)
     assert DataFrame.toPandas is DataFrame.to_pandas
+
+
+def test_to_polars_does_not_call_to_arrow(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """to_polars consumes the capsule once; it does not call to_arrow. pins: facade-1/C-006"""
+    calls = {"n": 0}
+    original = DataFrame.to_arrow
+
+    def tracking_to_arrow(self: DataFrame) -> object:
+        calls["n"] += 1
+        return original(self)
+
+    monkeypatch.setattr(DataFrame, "to_arrow", tracking_to_arrow)
+    frame = spark.range(1_000_000)
+    polars_frame = frame.to_polars()
+    assert calls["n"] == 0
+    assert polars_frame.height == 1_000_000
+    assert list(polars_frame.columns) == ["id"]

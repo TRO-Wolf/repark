@@ -1502,7 +1502,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `createDataFrame` run with pyarrow hidden; `to_arrow` names `repark[pyarrow]`;
   mapInArrow construction and ML prediction re-entry register capsules, not IPC;
   version-skew IPC fallback stays; export-door signatures and answers hold.
-  pins: facade-1/C-001, C-002, C-003, C-004, C-005
+  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

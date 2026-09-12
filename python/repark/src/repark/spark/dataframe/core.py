@@ -4300,30 +4300,27 @@ class DataFrame:
     toArrowBatches = to_arrow_batches  # noqa: N815 — deliberate camelCase twin of to_arrow_batches
 
     def to_polars(self) -> pl.DataFrame:
-        """Return the rows as a Polars DataFrame through Arrow.
+        """Return the rows as a Polars DataFrame through the Arrow C stream.
 
         Requires the optional ``polars`` extra. Duplicate display names receive occurrence
         suffixes because Polars requires unique names.
         """
         import polars as pl
 
-        try:
-            table = self.to_arrow()
-        except ImportError:
-            return pl.DataFrame(self)
-        names = list(table.column_names)
-        if len(names) != len(set(names)):
-            seen: dict[str, int] = {}
-            unique: list[str] = []
-            for name in names:
-                occurrence = seen.get(name, 0)
-                seen[name] = occurrence + 1
-                if occurrence == 0:
-                    unique.append(name)
-                else:
-                    unique.append(f"{name}__{occurrence}")
-            table = table.rename_columns(unique)
-        return pl.from_arrow(table)
+        frame = pl.DataFrame(self)
+        display = self._display_names
+        if display is None or self._engine_names is None or len(display) != frame.width:
+            return frame
+        seen: dict[str, int] = {}
+        unique: list[str] = []
+        for name in display:
+            occurrence = seen.get(name, 0)
+            seen[name] = occurrence + 1
+            unique.append(name if occurrence == 0 else f"{name}__{occurrence}")
+        current = list(frame.columns)
+        if unique != current:
+            frame = frame.rename(dict(zip(current, unique, strict=True)))
+        return frame
 
     def to_pandas(self) -> pd.DataFrame:
         """Return the rows as a :class:`pandas.DataFrame` (PySpark ``DataFrame.toPandas``).

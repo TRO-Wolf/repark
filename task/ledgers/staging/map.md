@@ -10,7 +10,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `__arrow_c_stream__` capsules both ways, pyarrow optional at import and for
   polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
   fallback. `risk_tier: standard`. Branch `feat/facade-1`.
-  pins: facade-1/C-001, C-002, C-003, C-004, C-005
+  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
   **AP-1 re-measure (2026-09-11), in flight:** RP-16 fork pin `090bc821` makes
   INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
