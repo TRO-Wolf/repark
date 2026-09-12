@@ -9,7 +9,7 @@ from collections.abc import Iterator
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
+from repark.errors import PySparkException, UnsupportedOperationException
 
 SIX_ROWS = [
     ("a", 1, 10.0),
@@ -64,18 +64,20 @@ def test_sampleby_seeded_fraction_divergence(spark: ReparkSession) -> None:
 
 
 def test_summary_divergent_arms(spark: ReparkSession) -> None:
-    """Bare summary() and string-column mean raise; Spark answers ordered rows (EX-DF-15)."""
+    """Bare summary() still refuses; multi-stat rows answer ordered like Spark (EX-DF-15)."""
     frame = spark.createDataFrame(SIX_ROWS, ["g", "k", "v"])
     with pytest.raises(UnsupportedOperationException, match="not Spark-shaped"):
         frame.summary()
-    with pytest.raises(AnalysisException):
-        frame.summary("count", "mean", "stddev")
-    cells = set(frame.summary("count", "min", "max").collect())
-    assert cells == {
+    assert frame.summary("count", "mean", "stddev").collect() == [
+        ("count", "6", "6", "5"),
+        ("mean", None, "1.8333333333333333", "30.0"),
+        ("stddev", None, "0.752772652709081", "15.811388300841896"),
+    ]
+    assert frame.summary("count", "min", "max").collect() == [
         ("count", "6", "6", "5"),
         ("min", "a", "1", "10.0"),
         ("max", "b", "3", "50.0"),
-    }
+    ]
     stats = spark.createDataFrame(
         [(1, 10.0), (2, 20.0), (2, 30.0), (3, 40.0), (1, 50.0)],
         ["k", "v"],

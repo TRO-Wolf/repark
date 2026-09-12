@@ -144,10 +144,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   order last-wins. pins: dfcore-2/C-005
 - `statistics.py` owns the seven statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`). `summary` builds one row
-  per statistic with SQL aggregations joined by UNION ALL; bare `summary()` refuses
-  because Spark percentile rows are an engine gap. Multi-name frames aggregate on unique
-  engine fields — a display name can be ambiguous or absent from the view schema. Engine
-  aliases stay unique; the facade overlays Spark-legal display names afterwards.
+  per statistic with SQL aggregations joined by UNION ALL under a stat ordinal that a
+  wrapping `ORDER BY` sorts on, so rows collect in the requested stat order like Spark;
+  bare `summary()` refuses because Spark percentile rows are an engine gap. The column
+  set is Spark's numeric+string rule: `mean`/`stddev` run `try_cast(col AS DOUBLE)` on
+  string columns (matching Spark's silent cast — `"10","2","a"` answers `6.0`),
+  non-numeric non-string columns are skipped by the bare forms and refused with
+  `PySparkValueError` when named (DF-DESCRIBE-STR-1). Multi-name frames aggregate on
+  unique engine fields — a display name can be ambiguous or absent from the view
+  schema. Engine aliases stay unique; the facade overlays Spark-legal display names
+  afterwards. pins: df-describe-str-1/C-001
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5
@@ -428,5 +434,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   stays below the source-size default (pins: dfcore-5/C-005).
   DFCORE-6 (2026-09-07): `display.py` 322→320, no new module, no ceiling row;
   stays below the source-size default (pins: dfcore-6/C-005).
+  DF-DESCRIBE-STR-1 (2026-09-11): `statistics.py` 264→325, no new module, no ceiling
+  row; stays below the source-size default (pins: df-describe-str-1/C-001).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
