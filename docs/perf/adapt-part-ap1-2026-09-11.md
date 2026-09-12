@@ -181,6 +181,8 @@ RP-16 re-measure (2026-09-11): the INSERT path now writes zstd (fork `#276`); th
 
 RP-17 re-measure (2026-09-12): the rewrite writers now carry the codec too (fork `#278`); the third run's live actuals are zstd and the check reads −74.2 % / −72.0 % — AP-1-R-001 still OPEN. [adapt-part-ap1-remeasure-2-2026-09-12.md](adapt-part-ap1-remeasure-2-2026-09-12.md).
 
+RP-18 re-measure (2026-09-12): the rewrite drops dead dictionary pages and defaults to zstd 3 (fork `#280`), and AP-3 moved the projection to the uncompressed sum × `byte_ratio`; the fourth run's live actuals 1 839 168 / 1 755 749 land *below* the projection 2 840 672 (+54.5 % / +61.8 %) — AP-1-R-001 still OPEN. [adapt-part-ap1-remeasure-3-2026-09-12.md](adapt-part-ap1-remeasure-3-2026-09-12.md).
+
 ## Reproduce
 
 ```text

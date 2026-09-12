@@ -130,11 +130,13 @@ as `file_size_in_bytes / 0.55`, and the notes say `(fallback)`. The AP-0-R-001
 caveat stays on every row, and `projected_partitions` is the column the AP-0
 rewrite measured exact.
 
-Known issue (S2-24): on zstd tables `rewrite_data_files` currently writes about
-1.5× its input's compressed bytes under the same codec (the RP-17 re-measure
-rewrote 206 files at 2 831 692 B into 20 at 4 474 081 B), so a compaction is a
-net-size *loss* there and the projection under-reads the live actual until fork
-card F-REWRITE-SIZE-1 lands.
+Known issue (AP-1-R-001, was S2-24): fork `#280` (F-REWRITE-SIZE-1) removed the
+dead dictionary pages and made an unset compression level mean zstd 3, so a
+compaction is no longer a net-size loss — the RP-18 re-measure rewrote 206 files
+at 2 840 672 compressed bytes into 20 at 1 839 168 B. The projection still
+misses the 20 % bar, now in the other direction (+54.5 % / +61.8 % high),
+because an input's footer ratio measured over 2 000-row files understates how
+well the rewrite's ~20 000-row groups compress.
 
 Candidate generation follows P-2: timestamp and date columns get
 `years`/`months`/`days`/`hours`; int and string columns get `identity` when the

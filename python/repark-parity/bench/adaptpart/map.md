@@ -46,6 +46,14 @@ makes never is — beds live under the `--scratch` root the caller names.
   codec. Numbers:
   [docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md](../../../../docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md).
   pins: rp-17/C-001, C-002, C-003, C-004
+  **AP-1 RP-18 re-measure (2026-09-12):** the same `--plan` command and the same
+  rewrite driver against fresh `/tmp/ap1r-bed` / `/tmp/ap1r-orun` on the release
+  module at pin `9e3522e3` (fork `#280` F-REWRITE-SIZE-1 step 2). The rewrite
+  drops dead dictionary pages per column and defaults to zstd 3, so the AP-3
+  projection (uncompressed sum × `byte_ratio`, compression counted once) and the
+  actual sit under one codec and one compression pass. Numbers:
+  [docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md).
+  pins: rp-18/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…

@@ -1,3 +1,41 @@
+# Errata — RP-18 re-measure (2026-09-12)
+
+**Model:** swe-2-high. **Branch:** `chore/repin-rp-18`. **Base:** fork pin
+`9e3522e3` (RP-18, F-REWRITE-SIZE-1 step 2 / fork `#280`) plus RePark AP-3
+(`#526`, the projection multiplies the uncompressed footer sum by `byte_ratio`).
+Measurement only: no Rust or Python source changed. Clause verdicts below are
+untouched. This note sits at the top because `completed/` ledgers are frozen
+except a prepended errata.
+
+The rewrite drops dead dictionary pages per column and compresses at zstd 3.
+Same beds, same commands as the RP-17 errata: the `_orun` copies rebuilt
+identical (206 files, 3 083 824 bytes, ZSTD, ratio 0.377269 — the unset-level
+zstd 3 default shifted the INSERT bytes slightly from 3 074 844 / 0.376076),
+then `ALTER TABLE ap.ns.<bed>_orun ADD PARTITION FIELD identity(grp)` and
+`CALL ap.system.rewrite_data_files(table => 'ns.<bed>_orun')`. CALL frames:
+rewritten 206, added 20, rewritten bytes 3 083 824, failed 0.
+
+Live current-snapshot `files` sums (`content = 0`): uniform **1 839 168** (20
+files), skewed **1 755 749** (20 files). Live footers on all 20 files per bed
+are **ZSTD** on every column chunk with **no dictionary page** on the
+near-unique `ts`/`id` and one on the low-cardinality `grp` — the 1.47× dead-
+dictionary mechanism is gone, and the outputs' own footer ratios (0.284 / 0.270)
+beat the inputs' 0.377.
+
+| Bed | Proj (stored × ratio, recorded) | Proj (uncompressed × ratio, the AP-3 basis) | New actual | Δ stored-proj | Δ uncompressed-proj |
+|---|---|---|---|---|---|
+| uniform | 3 083 824 × 0.377269 = 1 163 431 | 7 529 566 × 0.377269 = 2 840 672 | 1 839 168 | −36.7 % | **+54.5 %** |
+| skewed | 3 083 824 × 0.377269 = 1 163 431 | 7 529 566 × 0.377269 = 2 840 672 | 1 755 749 | −33.7 % | **+61.8 %** |
+
+**AP-1-R-001 still OPEN** — the named check (the projection vs the live actual)
+is outside 20 % on both beds under either byte basis, and the sign flipped on
+the AP-3 basis: the rewrite now lands *below* the inputs' compressed sum because
+20 large row groups compress better than 206 small files did. Full record:
+[docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md).
+Clause table: [task/ledgers/staging/rp-18-ledger.md](../staging/rp-18-ledger.md).
+
+---
+
 # Errata — RP-17 re-measure (2026-09-12)
 
 **Model:** swe-2-high. **Branch:** `chore/repin-rp-17`. **Base:** fork pin
