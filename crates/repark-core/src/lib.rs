@@ -19,6 +19,7 @@ mod runtime;
 mod session;
 mod session_owner;
 mod session_time_zone;
+pub mod silver;
 mod sorted_view;
 mod spark_nullable;
 mod stack;

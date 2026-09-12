@@ -20,6 +20,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
+- `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML
+  parse with key-path refusals, closed operation enums, parse-time structural validation,
+  canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound
+  into Python, unstable until SIL-1..SIL-10. No data execution.
+  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1,
   steps 1–2 landed 2026-09-09). The module owns `ConfigFile` (`profiles: BTreeMap<String,
   Profile>` over the D-1 tables), the public `load()` entry (discovery, then the file read,
