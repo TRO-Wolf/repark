@@ -46,7 +46,7 @@ sections left open.
 | S2-26 | **Two engine costs measured by the S2-21 reviews (2026-09-12), cards opened:** (a) every plan-side unpivot shape in this DataFusion is superlinear in expression count — PERF-DESCRIBE-1 tried a struct grid + `unnest` (~95 s at 500 columns), multi-column `UNNEST` (fails on `OuterReferenceColumn`), `dynamic_flatten(explode_lists=True)` (a cross product, not a zip) and chained projections (time out), and settled on an action-time unpivot in the Arrow bridge; card **PERF-UNPIVOT-1** (a native unpivot/stack primitive, then `describe` moves back to a pure plan). (b) each `CAST` physical expression costs ~1.4–2.7 ms and the cost is superlinear in wide plans (250 casts: 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s inside a 2500-expression projection); card **PERF-CAST-1** (measure where the cost lives — planning, physical expression creation, or per-batch evaluation — before any fix). Both are v1.5 perf units, Devin I rounds, after the v1.4 cut. | PERF-UNPIVOT-1, PERF-CAST-1 |
 | S2-27 | **AP-1-R-001 ruled closed as an estimator property (RP-18's fourth check, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md`):** with the fork's dictionary fix and one-pass compression (AP-3), the live rewrite compresses BETTER than its inputs (output ratio 0.28 vs the inputs' 0.38 — 20 large files versus 206 tiny ones), so the AP-3 projection (= the inputs' compressed bytes, 2 840 672) reads +55 % / +62 % against actuals of 1 839 168 / 1 755 749, while the old stored × ratio reads −37 % / −34 %. No footer-derived number predicts the output codec's ratio on files it has not written; what the inputs' compressed bytes give is a sound **upper bound** (a rewrite of the same rows under the same codec into fewer, larger files never compresses worse than its inputs once dead dictionary pages are gone). The 20 % target is retired: `projected_files_at_target` is documented and pinned as an upper-bound estimate, monotone across candidates (ranking unchanged on every bed), within [0.5×, 1.0×] of the live actual on the AP-0 beds. Card **AP-1-CLOSE-1** (one M round: the `RESIDUE_NOTE` and frame `notes` say "upper bound", the registry row closes, the maintenance guide's S2-24 caveat is retired — compaction is a net-size WIN again — and a pin holds the bound on the three beds). | AP-1-CLOSE-1 |
 | S2-28 | **Owner bug (2026-09-12): `CALL s3tables.system.remove_orphan_files` fails on an S3 Tables table.** Measured on the dev table bucket: an S3 Tables table's location is the bare table bucket (`s3://<id>--table-s3`), which the fork's `s3_relative_path` rejects (Java's `S3URI` reads a bare bucket as the root) — fork card **F-S3ROOT-1**; and past the parser the bucket answers **405 MethodNotAllowed** to `ListObjectsV2`, so no listing-based orphan removal can work on S3 Tables — S3 Tables removes unreferenced files itself through the bucket maintenance configuration. Card **ORPHAN-S3TABLES-1**: the CALL refuses loud on the `s3tables` catalog kind naming that remedy, `run_maintenance` skips the step with a reason row. Then RP-19 (the parser fix consumed). No workaround exists for the owner today; the `location =>` argument reaches the 405. | fork lane, ORPHAN-S3TABLES-1, RP-19 |
-| S2-29 | **Windows, macOS and arm support — slated for 1.6 (owner, 2026-09-12).** Measured on `main`: zero platform-specific code in the product crates (no `cfg(target_os)`, no `libc`, no rlimit outside tests) and none in the facade source; every dependency is portable (DataFusion, Arrow, pyo3, opendal, the AWS SDK on rustls; `mimalloc` optional); the owned fork's CI already builds and tests on ubuntu, macOS and Windows on every PR. RePark's own workflows build only on `ubuntu-latest` and ship one `cp312-abi3` manylinux x86_64 wheel; the 21 Linux-flavoured files are all tests and benches (the spill harness's address-space cap, `pgrep` guards, `/proc` reads). So this is a CI and packaging job: cards **PLATFORM-1** (the wheel matrix: Linux x86_64 + aarch64, macOS arm64 + x86_64, Windows x86_64, abi3 each), **PLATFORM-2** (the facade suite on each platform, Linux-only tiers marked by tier, not skipped ad hoc), **PLATFORM-3** (the tag pipeline publishes and smokes every wheel). | PLATFORM-1…3 (1.6) |
+| S2-29 | **Windows, macOS and arm support — slated for 1.6 (owner, 2026-09-12).** Measured on `main`: zero platform-specific code in the product crates (no `cfg(target_os)`, no `libc`, no rlimit outside tests) and none in the facade source; every dependency is portable (DataFusion, Arrow, pyo3, opendal, the AWS SDK on rustls; `mimalloc` optional); the owned fork's CI already builds and tests on ubuntu, macOS and Windows on every PR. RePark's own workflows build only on `ubuntu-latest` and ship one `cp312-abi3` manylinux x86_64 wheel; the 21 Linux-flavoured files are all tests and benches (the spill harness's address-space cap, `pgrep` guards, `/proc` reads). So this is a CI and packaging job: cards **PLATFORM-1** (the wheel matrix: Linux x86_64 + aarch64, macOS arm64 + x86_64, Windows x86_64, abi3 each), **PLATFORM-2** (the facade suite on each platform, Linux-only tiers marked by tier, not skipped ad hoc), **PLATFORM-3** (the tag pipeline publishes and smokes every wheel), **PLATFORM-4** (Python 3.13 and 3.14 — the `cp312-abi3` wheel already installs on both and pyo3 `0.29.2` supports 3.14; what is missing is proof: the suites on 3.13 and 3.14 in CI, the wheel smoke per interpreter, the classifiers; free-threaded `3.14t` out of scope). | PLATFORM-1…4 (1.6) |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -816,6 +816,29 @@ wheel is smoked on its own platform before publish (import + one collect). D-3 t
 tag asserts five filenames. D-4 dry run on a pre-release tag (`v1.6.0rc1`) before the real cut.
 
 **Steps.** 1 (M). **Rounds.** 1 (M) plus the rc dry run.
+
+---
+
+### Card PLATFORM-4 — Python 3.13 and 3.14 supported, proven (1.6, S2-29)
+
+**Why.** The wheel is `cp312-abi3` and `requires-python = ">=3.12"`, so 3.13 and 3.14 already install
+it; pyo3 `0.29.2` (Cargo.lock) supports 3.14. Nothing has ever run the suites there. A version the suite
+never ran on is not a supported version.
+
+**Home.** `.github/workflows/ci.yml` and `wheels.yml` (a Python matrix `3.12` / `3.13` / `3.14` on the
+test and wheel-smoke jobs — crossed with PLATFORM-1's OS legs only where minutes allow; an owner decision at
+intake), `python/repark/pyproject.toml` (classifiers for 3.13 and 3.14; `requires-python` unchanged),
+`uv.lock` if a dependency needs a floor for 3.14 wheels (pyarrow, polars, pandas, numpy — the one sanctioned
+lock edit in this card, named in the ledger), `docs/release.md`, ledger `task/ledgers/staging/platform-4-ledger.md`.
+
+**Decisions.** D-1 the abi3 wheel stays one build per platform; no per-Python wheels. D-2 the facade suite
+and the parity suite run on 3.13 and 3.14 in CI; a failure is a real defect (a `datetime`/`typing` change,
+a dependency without a 3.14 wheel) fixed with a pin, never skipped by version. D-3 free-threaded `3.14t`
+is out of scope for 1.6 (pyo3 requires an explicit opt-in and the facade's global session is not audited
+for it); say so in the docs. D-4 `uv sync --locked` must resolve on every version — measure which
+dependency floors move and record them.
+
+**Steps.** 1 (M). **Rounds.** 1 (M) plus CI iteration.
 
 ---
 
