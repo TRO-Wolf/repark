@@ -226,7 +226,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   nested bed; rank the three H-3 intake candidates. `risk_tier: standard`.
   Branch `perf/dynflatten-1-measure`.
   pins: perf-dynflatten-1-measure/C-001, C-002, C-003, C-004
-- [profiles-1-ledger.md](profiles-1-ledger.md) —
+- [profiles-1-ledger.md](../completed/profiles-1-ledger.md) —
   **PROFILES-1 steps 1–3 (2026-09-10/12), in flight:** the measurement bed step 2
   sweeps: three D-2 datasets, five reads + three writes, knob × value CSV harness,
   one-JVM guard, `--smoke` proof mode. Step 2 ran the sweep on a release build —

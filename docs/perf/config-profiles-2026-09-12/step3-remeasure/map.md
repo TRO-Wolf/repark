@@ -9,7 +9,7 @@ same release module and quiet box, so every profile entry carries a second
 measurement beside the step-2 row. Same row shape as the step-2 CSVs
 (`dataset,query,knob,value,repetition,seconds`); the C-009 pin recomputes each
 profile win from these files. The step-3 derivation and the re-measure reading
-live in [../../../../task/ledgers/staging/profiles-1-ledger.md](../../../../task/ledgers/staging/profiles-1-ledger.md).
+live in [../../../../task/ledgers/staging/profiles-1-ledger.md](../../../../task/ledgers/completed/profiles-1-ledger.md).
 
 ## Contents
 
