@@ -18,4 +18,5 @@ box, full scale.
 - [datafusion.execution.target_partitions.csv](datafusion.execution.target_partitions.csv)
 - [datafusion.execution.batch_size.csv](datafusion.execution.batch_size.csv)
 - [datafusion.optimizer.repartition_joins.csv](datafusion.optimizer.repartition_joins.csv)
+- [datafusion.optimizer.repartition_aggregations.csv](datafusion.optimizer.repartition_aggregations.csv)
 - `map.md` — this file.
