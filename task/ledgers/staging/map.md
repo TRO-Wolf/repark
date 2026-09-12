@@ -5,6 +5,13 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [silver-s0-ledger.md](silver-s0-ledger.md) —
+  **SILVER-S0 (2026-09-12), in flight:** READING unit — contract and storage
+  feasibility for the deterministic silver-layer compiler (epic §17 S-0).
+  Clause verdicts from the fork pin `3ebf7d36` and RePark write adapter
+  source; probe tests live only in `fork/` on `probe/silver-s0`.
+  `risk_tier: standard`. Branch `docs/silver-s0`.
+  pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
   `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent
