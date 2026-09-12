@@ -43,6 +43,7 @@ sections left open.
 | S2-23 | **Q-1 ruled (RP-17's third AP-1 re-measure, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md`):** `plan_partitioning`'s `projected_files_at_target` multiplies the **stored** (already-compressed) file bytes by the footer `byte_ratio`, so it applies compression twice — under one codec it projects 1 156 376 B against a live rewrite of 4 474 081 B (−74 %). The formula changes to **Σ uncompressed footer bytes × byte_ratio** (= the input's compressed bytes, the honest floor for a rewrite of the same rows), which reads −37 % / −32 % on the same beds. Card **AP-3** (one M round, Rust, red-first on the AP-1 beds). The remaining gap is S2-24's, so AP-1-R-001 stays OPEN until both land and the 20 % check runs a fourth time. | AP-3, AP-1 |
 | S2-24 | **The rewrite writes 1.5× its input's compressed bytes under the same codec** (RP-17 re-measure: 206 zstd INSERT files, Σ compressed 2 831 692 B → 20 zstd rewrite files, 4 474 081 B; skewed 4 136 632 B). Same rows, same codec, 45–58 % larger — an encoding difference between `IcebergWriteExec` and the maintenance rewrite writer (dictionary encoding, page/row-group shape, statistics, zstd level, or the sort order the INSERT path preserved and the rewrite lost). Fork card **F-REWRITE-SIZE-1** (measure-first on the fork: one bed, both writers, every parquet-level property diffed; then the fix and RP-18). Until it lands the maintenance policy's compaction is a net-size **loss** on zstd tables — say so in the maintenance guide's known-issues line (rides AP-3). | fork lane, RP-18, AP-1 |
 | S2-25 | **F-REWRITE-SIZE-1 step 1 measured (fork #279, 2026-09-12): the cause is dead dictionary pages.** On ~22k-row rewrite chunks parquet-rs's dictionary overflows its page limit mid-chunk and the dead ~144 KB dictionary page is still written per high-cardinality column chunk; dictionary off alone → 1.009× (baseline 1.47×). Secondary: the fork's default zstd level is 1 where Java writes 3 (level 3 alone → 1.13×; both → 0.67×). Row order is not the cause. **Step 2 ruled:** per-column dictionary decided from the input files' footers (a column whose input chunks fell back from dictionary writes without one; low-cardinality columns keep it, pinned on an 8-value bed), and the unset-level default becomes zstd 3 to match Java (pinned by bytes). `rewrite_size_pin` un-ignored at ≤ 1.05×. Then RP-18 and AP-1's fourth 20 % check. | fork lane, RP-18, AP-1 |
+| S2-26 | **Two engine costs measured by the S2-21 reviews (2026-09-12), cards opened:** (a) every plan-side unpivot shape in this DataFusion is superlinear in expression count — PERF-DESCRIBE-1 tried a struct grid + `unnest` (~95 s at 500 columns), multi-column `UNNEST` (fails on `OuterReferenceColumn`), `dynamic_flatten(explode_lists=True)` (a cross product, not a zip) and chained projections (time out), and settled on an action-time unpivot in the Arrow bridge; card **PERF-UNPIVOT-1** (a native unpivot/stack primitive, then `describe` moves back to a pure plan). (b) each `CAST` physical expression costs ~1.4–2.7 ms and the cost is superlinear in wide plans (250 casts: 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s inside a 2500-expression projection); card **PERF-CAST-1** (measure where the cost lives — planning, physical expression creation, or per-batch evaluation — before any fix). Both are v1.5 perf units, Devin I rounds, after the v1.4 cut. | PERF-UNPIVOT-1, PERF-CAST-1 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -635,6 +636,46 @@ the table's sort order or the input's observed order, never an invented one. D-3
 AP-1's 20 % check runs a fourth time.
 
 **Steps.** 1 (I, measure — done, fork #279, S2-25 names the cause); 2 (I, fix — per-column dictionary from the input footers + zstd default level 3, S2-25). **Rounds.** 2.
+
+---
+
+### Card PERF-UNPIVOT-1 — a native unpivot primitive, and `describe` back on a pure plan (S2-26)
+
+**Why.** `describe()` / `summary()` now unpivot their one aggregate row into five summary rows inside the
+facade's Arrow bridge at action time, because every plan-side shape measured superlinear in expression
+count (S2-26). That keeps laziness and the single scan, but ties `describe` to the bridge's action routing
+(a future bypass would silently drop the unpivot — the laziness pin catches the symptom, not the mechanism),
+and every future wide-schema unpivot pays the same wall.
+
+**Home.** `crates/repark-core` or `crates/repark-spark` (the intake checks the crate DAG for where a table
+function / physical operator belongs), a `stack`-shaped primitive (`stack(n, expr…)` as Spark spells it, or
+an `unpivot` physical node) usable from SQL and from the facade; then `statistics.py` moves `describe` /
+`summary` back to a pure plan (aggregate → unpivot) with no Python at action time; pins: the DF-DESCRIBE-STR-1
+and PERF-DESCRIBE-1 suites unchanged, the laziness pin, and a plan-shape pin (no `mapInArrow` bridge).
+
+**Decisions.** D-1 measure first: `stack` over the 500-column aggregate row must be linear in columns
+(three repetitions, medians, against the bridge shape's 21.5 s / 0.7 s call). D-2 Spark's `stack` semantics
+are the spec where the name is exposed (parity pin on the oracle). D-3 no change to the accepted describe
+answers. **Steps.** 1 (I, the primitive + pins), 2 (M, `describe` back on the plan). **Rounds.** 2.
+
+---
+
+### Card PERF-CAST-1 — where a `CAST` costs a millisecond (S2-26)
+
+**Why.** Three S2-21 reviews measured the same thing: each `CAST` physical expression costs ~1.4–2.7 ms,
+and the cost is superlinear in wide plans (250 casts 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s
+inside a 2500-expression projection). Any wide-schema plan with per-cell expressions is hostage to it.
+
+**Home.** Measure first, `crates/repark-core` (session / planner), a bench under
+`python/repark-parity/bench/` shaped like the reviewers' harness (200k rows, 50 / 250 / 2500 casts, three
+plan shapes), ledger `task/ledgers/staging/perf-cast-1-ledger.md`.
+
+**Decisions.** D-1 the unit's first deliverable is a table saying where the time goes — SQL parse, logical
+planning, optimizer passes (which one), physical expression creation, or per-batch evaluation — from
+`EXPLAIN ANALYZE` and a profiled run; no fix before that table. D-2 if a repark-side optimizer pass or a
+DataFusion config knob owns the superlinearity, fix or set it and pin the 2500-cast shape under a budget;
+if it is upstream DataFusion, file the issue with the numbers and pin the current cost so a bump that fixes
+it flips the pin. **Steps.** 1 (I, measure), 2 (M/I, fix or upstream). **Rounds.** 2.
 
 ---
 
