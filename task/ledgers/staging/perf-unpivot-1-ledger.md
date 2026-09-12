@@ -25,8 +25,24 @@ is not in the tree yet; the superlinear planner is the one PERF-DESCRIBE-1 measu
 | C-003 | EXPLAIN shows one scan, one aggregate, one unpivot node, no per-cell projection / no `mapInArrow`. | `test_stack_plan_is_scan_aggregate_unpivot` (TableScan=1, AggregateExec, UnpivotExec). | **PROVEN** |
 | C-004 | Reachable from SQL and from `F.stack` with parity pins on the oracle. | `test_stack_sql_two_by_two_matches_spark`, `test_stack_facade_with_passthrough_and_alias`; example `docs/examples/functions/stack.py`. | **PROVEN** |
 | C-005 | Red-first: on the base tree the name is unsupported. | Red output below; the FNP-9 absence pin listed `stack`. | **PROVEN** |
+| C-006 | `stack` over the reviewer's shapes uses one `interleave` per stacked column (shared `(piece, row)` index per batch), not `concat`+`take`. Three reps, medians, 500-col × 1 row → 5 rows and 200k × 20. | Measurement table below (before/after, 2026-09-12). | **PROVEN** |
+| C-007 | `UnpivotExec` emits the first output batch before the input stream is exhausted. Peak memory is one input batch + one output batch. | Red `produced=8` on collect-then-emit; pin `unpivot_exec_emits_first_batch_before_input_is_exhausted`. | **PROVEN** |
 
-`LOGIC_SCORE` = **5/5 `PROVEN`**.
+`LOGIC_SCORE` = **7/7 `PROVEN`**.
+
+## P3 observed (no change this round)
+
+P3-1 — `StackRewrite` walks every Spark plan (`transform_up_with_subqueries`). Reviewer
+(2026-09-12): +1.6 ms on a 500-column `.schema` (~4 %), +2.6 ms on 500-column `to_arrow`
+(~1.4 %). Not CAST-1 superlinear. Left in place.
+
+P3-2 — `repeat_row_indices` uses `i32` take indices. `I·n > i32::MAX` fails
+(`stack row index overflow`). n=5 allows ~429 M input rows. Left as `i32`; a later
+step that must unpivot partitions that large can switch to `UInt64Array`.
+
+`repark-core` now declares `futures.workspace = true` (already pinned 0.3; Cargo.lock
+gains one line on the `repark-core` package). `RecordBatchStream` is sealed without
+`futures::Stream`; `collect` was the step-1 workaround. Streaming poll needs the crate.
 
 ## Oracle (live PySpark 4.1.2, ANSI on, UTC, zulu-17, 2026-09-12)
 
@@ -59,6 +75,32 @@ One-row MemTable, `stack(5, *columns)`, three timed reps after one warmup, media
 | 500 | 0.2666 |
 
 Log-log exponent **0.91** (≤ 1.1). Bridge shape at 500 columns was 21.50 s collect / 0.70 s call.
+
+## C-006 before/after (no JVM, 2026-09-12, debug `.so`, schema cached)
+
+Reviewer shapes. One warmup + three timed `to_arrow`, medians. Before = `concat`+`take`
+per stacked column and partition `collect`. After = one `interleave` per column
+(shared index) and `UnpivotStream` poll.
+
+| Shape | Before median (s) | After median (s) | Before samples | After samples |
+|---|---:|---:|---|---|
+| 500 columns × 1 row → 5 rows | 0.2105 | 0.2286 | 0.2105, 0.2270, 0.2078 | 0.2286, 0.2258, 0.2433 |
+| 200k rows × 20 cols, n=5 → 1 M × 4 | 0.1033 | 0.1240 | 0.1033, 0.0962, 0.1073 | 0.1187, 0.1240, 0.1465 |
+
+Debug `.so`: wall is noise-dominated on these shapes (reviewer: unpivot ≈ 26 ms of the 500-col `to_arrow`; 200k×20 is 34 ns/cell). The after path copies each stacked cell once (`interleave`) instead of twice (`concat` then `take`) and does not `collect` the partition. Both medians stay ≪ 21.5 s.
+
+## C-007 red-first
+
+On the collect-then-emit exec (`f40e9b7f` + the pin only), eight one-row input batches
+and `LocalLimitExec(fetch=1)`:
+
+```
+thread 'stack::exec::streaming_pin::unpivot_exec_emits_first_batch_before_input_is_exhausted' panicked at crates/repark-core/src/stack/exec.rs:
+UnpivotExec must emit before the input stream is exhausted; produced=8
+test stack::exec::streaming_pin::unpivot_exec_emits_first_batch_before_input_is_exhausted ... FAILED
+```
+
+After `UnpivotStream` the same pin is green (`produced < 8`).
 
 ## Red-first
 
@@ -115,7 +157,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_perf_unpivot_1.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Linearity pin exponent 0.91 at 50/250/500; UnpivotExec has no per-cell physical expressions.
+      evidence: Linearity pin exponent 0.91 at 50/250/500; UnpivotExec interleaves with a shared index and streams each input batch (C-006/C-007).
       artifacts: [python/repark/tests/test_perf_unpivot_1.py, crates/repark-core/src/stack/exec.rs]
     - id: AT-8
       status: ATTACKED

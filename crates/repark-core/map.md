@@ -80,7 +80,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   FixedSizeList explode.
 - `src/stack/` — **PERF-UNPIVOT-1:** Spark `stack(n, expr…)` as `UnpivotExec`, linear in
   columns. `apply_stack` is the DataFrame entry; SQL rewrite is the Spark-door
-  `StackRewrite`. pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005
+  `StackRewrite`. Step-1 remediation: `interleave` + streaming poll.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,
