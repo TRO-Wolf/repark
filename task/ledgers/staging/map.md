@@ -156,6 +156,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   retain 1,071,000 / evict 1,070,000, retain pin 1,250,000, old 280000 now evicts. Do not re-measure
   AP-1. `risk_tier: standard`. Branch `chore/repin-rp-16`.
   pins: rp-16/C-001, C-002, C-003, C-004
+- [rp-17-ledger.md](rp-17-ledger.md) — **RP-17 (2026-09-12), in flight:** consume fork pin
+  `41e25ba2` (F-WRITE-COMPRESS-2 `#278`, the whole bump — the maintenance, COW/MoR
+  rewrite and position-delete writers honour `write.parquet.compression-codec`,
+  closing residue sites F-WRITE-COMPRESS-1-R-001…R-004). Consumer: the third AP-1
+  re-measure under one codec; the 20 % check answers AP-1-R-001 as measured and
+  both projections are recorded for the orchestrator's Q-1 ruling.
+  `risk_tier: standard`. Branch `chore/repin-rp-17`.
+  pins: rp-17/C-001, C-002, C-003, C-004
 - [date-fn-1-spark-date-spelling-ledger.md](../completed/date-fn-1-spark-date-spelling-ledger.md) —
   **DATE-FN-1 (2026-09-04), in flight:** Spark SQL `date()` spelling and `unix_timestamp`;
   `CUTOVER-DATE-1` FIXED; S6 gold rows Spark-equal, program still DIVERGES on `V3-COV-7`.

@@ -55,6 +55,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-16 (2026-09-11):** `090bc821` (F-WRITE-COMPRESS-1 `#276` — `INSERT INTO` data files carry the table's `write.parquet.compression-codec`, default zstd, instead of parquet-rs's UNCOMPRESSED; riders `#273`–`#275`, `#277`).
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
+  **RP-17 (2026-09-12):** `41e25ba2` (F-WRITE-COMPRESS-2 `#278` — the maintenance, COW/MoR rewrite and position-delete writers honour `write.parquet.compression-codec` too, closing the four residue writer sites; RePark re-measures AP-1 a third time under one codec).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
