@@ -2349,16 +2349,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   list runs green with this file in the tree, and §6 of the ledger records the
   three named mutations red.
   pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [test_perf_describe_1.py](test_perf_describe_1.py) — **PERF-DESCRIBE-1 (2026-09-11):**
-  `describe()` aggregates the source in one pass. A `DataFrame.to_arrow` spy explains
-  every frame materialized during the call and asserts exactly one aggregate plan with
-  one `TableScan` / one `DataSourceExec` and no `UnionExec`; a session proxy proves the
-  only surviving SQL leg (the literal `VALUES` grid) scans nothing; and the returned
-  frame's EXPLAIN shows `Values:` with no `TableScan`, union, or sort node — the
-  DF-DESCRIBE-STR-1 ordinal wrapper is gone because row order is carried by literal
-  construction. `test_summary_duplicate_stats_keep_requested_order` pins a repeated stat
-  answering one row per occurrence in the requested order.
-  pins: perf-describe-1/C-001, C-002, C-003, C-004
+- [test_perf_describe_1.py](test_perf_describe_1.py) — **PERF-DESCRIBE-1 (2026-09-12):**
+  `describe()` aggregates the source lazily. The returned frame is a `mapInArrow`
+  bridge; the pin explains its `_map_bridge["parent"]` and asserts one `TableScan` /
+  one `DataSourceExec` under one `AggregateExec` with no `UnionExec` or sort node —
+  the DF-DESCRIBE-STR-1 ordinal wrapper is gone because the bridge emits rows in
+  requested order. `test_describe_runs_nothing_until_an_action` pins laziness
+  (DISPLAY-LAZY-1): `describe()` on a source whose scan raises (`CAST('abc' AS INT)`)
+  returns a frame with the right columns and surfaces the failure only at `collect`,
+  with an Arrow-export spy proving nothing ran inside the call.
+  `test_summary_duplicate_stats_keep_requested_order` pins a repeated stat answering
+  one row per occurrence in the requested order. The same scan-count pin asserts the
+  cast inventory: `CAST(count` never appears and `min`/`max` casts exist only for the
+  double column (500-column × 10k perf evidence lives in the staging ledger's C-006
+  table — 35.19 → 21.50 s).
+  pins: perf-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
   `createDataFrame` path against the legacy row-wise path, kept callable as
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the

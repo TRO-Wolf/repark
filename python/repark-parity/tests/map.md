@@ -633,7 +633,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   start tag; the parser-based transform cannot do either. Plus key redaction, non-string scalars
   untouched, XML attributes, longest-prefix-wins ordering, malformed-input loud failures, plain
   text passthrough, in-place rewrite idempotence, and the CLI exit codes.
-  Stamp pin moved to `_Last updated: 2026-09-10._` with the REVIEW-FIX-4 departure truth-up (2026-09-10). PERF-DESCRIBE-1 (2026-09-12): the helper-call inventory gains `statistics.py` — one `sql_string_literal` call, the literal VALUES grid of the single-pass `describe`.
+  Stamp pin moved to `_Last updated: 2026-09-10._` with the REVIEW-FIX-4 departure truth-up (2026-09-10). PERF-DESCRIBE-1 (2026-09-12): the helper-call inventory briefly gained `statistics.py` for the literal VALUES grid of the single-pass `describe`; the remediation round moved the unpivot into a lazy `mapInArrow` bridge, so `statistics.py` carries no SQL-literal helper call and the inventory row is gone again.
 
 ## Pointers
 

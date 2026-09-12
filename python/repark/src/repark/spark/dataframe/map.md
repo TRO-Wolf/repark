@@ -150,20 +150,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   order last-wins. pins: dfcore-2/C-005
 - `statistics.py` owns the seven statistics bodies behind the public wrappers (DFCORE-3,
   moved from `core.py` and `DataFrameStatFunctions.freqItems`). `summary` computes every
-  requested statistic for every target column in ONE aggregate pass over the frame's own
-  plan (native `aggregate([], exprs)` on quoted engine-field refs — no SQL text, no temp
-  view), collects the single result row, and projects the summary grid as literal
-  `VALUES` rows in the requested order — the DF-DESCRIBE-STR-1 stat ordinal and its
-  `ORDER BY` are gone because order is carried by construction, so duplicate stats keep
-  their requested slots (PERF-DESCRIBE-1, 2026-09-11: 0.1185 → ~0.098 s on the 200k
-  numeric frame, 1.14 → ~0.99 s on 50×10k wide; the earlier five-leg UNION ALL ran one
-  source scan per statistic). The aggregate is built natively because measured
-  per-SQL-expression cost (~1.4–2.7 ms per `CAST`, superlinear in a 250-expression
-  aggregate query) would erase the one-scan win; `CAST(agg AS VARCHAR)` is emitted only
-  where engine formatting is load-bearing (`avg`/`stddev`, and `min`/`max` on
-  Float/Double/Decimal — Float64 uses ryu-style presentation Python `repr` does not
-  reproduce) while `count` and integer/string `min`/`max` collect raw and format
-  trivially (`str(int)`, the string itself). The column set is Spark's numeric+string
+  requested statistic for every target column in chunked native aggregate passes over
+  the frame's own plan (`aggregate([], exprs)` on quoted engine-field refs — no SQL
+  text, no temp view — one plan per ~50 columns, chunk results cross-joined on a
+  literal-true condition), then wraps the aggregate in a lazy `mapInArrow` bridge whose
+  Python unpivot emits the five summary rows in requested order at action time — the
+  DF-DESCRIBE-STR-1 stat ordinal and its `ORDER BY` are gone because order is carried
+  by construction, so duplicate stats keep their requested slots (PERF-DESCRIBE-1:
+  0.120 → ~0.078 s on 200k numeric, 1.15 → ~0.89 s on 50×10k wide, 35.2 → ~21.5 s on
+  500×10k; the earlier five-leg UNION ALL ran one source scan per statistic). The
+  bridge exists because the call must be lazy (DISPLAY-LAZY-1): an eager first cut ran
+  `to_arrow` inside `summary`, and every plan-side unpivot shape measured — struct-grid
+  `unnest`, multi-column `UNNEST`, CASE over a joined literal grid, chained
+  projections — pays superlinear per-expression cost at width (~2500 leaf cells cost
+  ~70 s over the 500-column aggregate). `CAST(agg AS VARCHAR)` is emitted only where
+  engine formatting is load-bearing (`avg`/`stddev`, and `min`/`max` on
+  Float/Double/Decimal — engine Float64 presentation `1e16`/`1.0`/`0.0` is a custom
+  formatter neither Arrow `pc.cast` nor Python `repr` reproduces) while `count` and
+  integer/string `min`/`max` stay raw Int64/Utf8 and the bridge formats them trivially
+  (`str(int)`, the string itself). The column set is Spark's numeric+string
   rule: `mean`/`stddev` run `try_cast(col AS DOUBLE)` on string columns (matching
   Spark's silent cast — `"10","2","a"` answers `6.0`), non-numeric non-string columns
   are skipped by the bare forms and refused with `PySparkValueError` when named
@@ -474,6 +479,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   DF-DESCRIBE-STR-1 (2026-09-11): `statistics.py` 264→325→318, no new module, no
   ceiling row; stays below the source-size default (pins: df-describe-str-1/C-001,
   C-005).
+  PERF-DESCRIBE-1 (2026-09-12): `statistics.py` 318→372, no new module, no ceiling
+  row; stays below the source-size default (pins: perf-describe-1/C-002, C-005).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-

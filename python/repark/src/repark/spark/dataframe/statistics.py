@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._idents import sql_string_literal
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -50,6 +49,8 @@ def _summary(
         LongType,
         ShortType,
         StringType,
+        StructField,
+        StructType,
     )
 
     if _columns:
@@ -103,72 +104,94 @@ def _summary(
     from repark.spark import functions as spark_functions
     from repark.spark.column import Column
 
-    integer_types = (ByteType, ShortType, IntegerType, LongType)
+    stat_functions = {
+        "count": spark_functions.count,
+        "mean": spark_functions.avg,
+        "stddev": spark_functions.stddev,
+        "min": spark_functions.min,
+        "max": spark_functions.max,
+    }
     needed = list(dict.fromkeys(stats))
-    aggregate_exprs: list[Any] = []
-    cell_positions: dict[tuple[str, int], int] = {}
-    for column_index, (_display, engine) in enumerate(target_pairs):
-        quoted_engine = _quote_ident_sql(engine)
-        data_type = kind_by_engine.get(engine)
-        base_column = Column(
-            _native.PyColumn.column(quoted_engine),
-            spark_display=engine,
-            projection_name=engine,
-            stable_name=True,
-            sql_expr=quoted_engine,
-        )
-        for stat in needed:
-            position = len(aggregate_exprs)
-            cell_positions[(stat, column_index)] = position
-            if stat == "count":
-                aggregated = spark_functions.count(base_column)
-            elif stat in ("mean", "stddev"):
-                operand = (
-                    base_column
-                    if isinstance(data_type, numeric_types)
-                    else base_column.try_cast("double")
-                )
-                aggregated = (spark_functions.avg if stat == "mean" else spark_functions.stddev)(
-                    operand
-                )
-            elif stat == "min":
-                aggregated = spark_functions.min(base_column)
-            else:
-                aggregated = spark_functions.max(base_column)
-            if stat in ("mean", "stddev") or not isinstance(
-                data_type, (*integer_types, StringType)
-            ):
-                aggregated = aggregated.cast("string")
-            aggregate_exprs.append(aggregated._inner.alias(f"__repark_stat_{position}"))
-    cells_table = frame._spawn(frame._plan().aggregate([], aggregate_exprs)).to_arrow()
-    cells = [
-        cells_table.column(position).to_pylist()[0] for position in range(cells_table.num_columns)
-    ]
-    literal_rows = []
-    for stat in stats:
-        row_cells = [f"'{stat}'"]
-        for column_index in range(len(target_pairs)):
-            value = cells[cell_positions[(stat, column_index)]]
-            row_cells.append(
-                "NULL"
-                if value is None
-                else sql_string_literal(value if isinstance(value, str) else str(value))
+    plan = frame._plan()
+    cell_position: dict[tuple[int, str], int] = {}
+    engine_stringified = (FloatType, DoubleType, DecimalType)
+    chunk_plans: list[Any] = []
+    position = 0
+    for chunk_start in range(0, len(target_pairs), 50):
+        chunk_exprs: list[Any] = []
+        for column_index in range(chunk_start, min(chunk_start + 50, len(target_pairs))):
+            _display, engine = target_pairs[column_index]
+            quoted_engine = _quote_ident_sql(engine)
+            data_type = kind_by_engine.get(engine)
+            base_column = Column(
+                _native.PyColumn.column(quoted_engine),
+                spark_display=engine,
+                projection_name=engine,
+                stable_name=True,
+                sql_expr=quoted_engine,
             )
-        literal_rows.append(f"({', '.join(row_cells)})")
-    column_names = ["summary"] + [engine for _display, engine in target_pairs]
-    alias = ", ".join(_quote_ident_sql(name) for name in column_names)
-    projection = ", ".join(
-        f"CAST({_quote_ident_sql(name)} AS VARCHAR) AS {_quote_ident_sql(name)}"
-        for name in column_names
+            for stat in needed:
+                operand = (
+                    base_column.try_cast("double")
+                    if stat in ("mean", "stddev") and not isinstance(data_type, numeric_types)
+                    else base_column
+                )
+                aggregated = stat_functions[stat](operand)._inner
+                if stat in ("mean", "stddev") or (
+                    stat in ("min", "max") and isinstance(data_type, engine_stringified)
+                ):
+                    aggregated = aggregated.cast("string")
+                chunk_exprs.append(aggregated.alias(f"__repark_stat_{position}"))
+                cell_position[(column_index, stat)] = position
+                position += 1
+        chunk_plans.append(plan.aggregate([], chunk_exprs))
+    joined = chunk_plans[0]
+    for extra in chunk_plans[1:]:
+        joined = joined.join_on_condition(extra, _native.PyColumn.literal(True), "inner")
+    positions = [
+        [cell_position[(column_index, stat)] for column_index in range(len(target_pairs))]
+        for stat in stats
+    ]
+    import functools
+
+    import pyarrow as pa
+
+    field_names = ["summary"] + [f"f{index}" for index in range(len(target_pairs))]
+    arrow_schema = pa.schema([pa.field(name, pa.string()) for name in field_names])
+    out_schema = StructType([StructField(name, StringType()) for name in field_names])
+    aggregated_frame = frame._spawn(joined)
+    child = aggregated_frame.mapInArrow(
+        functools.partial(
+            _summary_unpivot, stats=stats, positions=positions, arrow_schema=arrow_schema
+        ),
+        out_schema,
     )
-    sql = f"SELECT {projection} FROM (VALUES {', '.join(literal_rows)}) AS t({alias})"
-    child = frame._spawn(frame._session.sql(sql))
-    if frame._display_names is not None or any(
-        display != engine for display, engine in target_pairs
-    ):
-        child._display_names = ["summary"] + [display for display, _engine in target_pairs]
-        child._engine_names = ["summary"] + [engine for _display, engine in target_pairs]
+    child._display_names = ["summary"] + [display for display, _engine in target_pairs]
+    child._engine_names = field_names
     return child
+
+
+def _summary_unpivot(
+    batches: Any, *, stats: list[str], positions: list[list[int]], arrow_schema: Any
+) -> Any:
+    """Unpivot one aggregate row into the summary grid inside the lazy bridge."""
+    import pyarrow as pa
+
+    for batch in batches:
+        for row_index in range(batch.num_rows):
+            cells: list[str | None] = []
+            for column_index in range(batch.num_columns):
+                value = batch.column(column_index)[row_index].as_py()
+                cells.append(value if value is None or isinstance(value, str) else str(value))
+            arrays = [pa.array(list(stats), type=pa.string())]
+            for column_index in range(len(positions[0])):
+                arrays.append(
+                    pa.array(
+                        [cells[positions[row][column_index]] for row in range(len(stats))],
+                        type=pa.string(),
+                    )
+                )
+            yield pa.RecordBatch.from_arrays(arrays, schema=arrow_schema)
 
 
 def _approx_quantile(
