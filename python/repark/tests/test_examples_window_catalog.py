@@ -56,13 +56,14 @@ def test_get_database_default_fields(spark: ReparkSession) -> None:
     assert database == Database(
         name="default", catalog="spark_catalog", description=None, locationUri=None
     )
+    assert spark.catalog.get_database("default") == database
 
 
 def test_list_databases_fields_none(spark: ReparkSession) -> None:
     """listDatabases rows carry None fields where Spark fills both (EX-CAT-2, FA-2)."""
-    assert [tuple(row) for row in spark.catalog.listDatabases()] == [
-        ("default", "spark_catalog", None, None)
-    ]
+    expected = [("default", "spark_catalog", None, None)]
+    assert [tuple(row) for row in spark.catalog.listDatabases()] == expected
+    assert [tuple(row) for row in spark.catalog.list_databases()] == expected
 
 
 def test_function_exists_db_name_arm(spark: ReparkSession) -> None:

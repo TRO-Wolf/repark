@@ -11,7 +11,8 @@ Iceberg table (`register_memory_catalog("local", …)` plus
 (EX-W2-1; EX-W2-2, EX-W2-3 and EX-W2-4 pin the empty-source, branch and unpartitioned arms of names
 that are covered). The excel surface (`excel`, `sheet_names`, `read_excel`,
 `excel_sheet_names`) stays too: the engine reader is deferred post-milestone-one (§7 EX-IO-7;
-Spark has no excel reader, so there is no Spark oracle for these four). Examples keep the house
+Spark has no excel reader, so there is no Spark oracle for these four) and `openpyxl` is
+absent from the locked venv (measured by EX-29, 2026-09-11). Examples keep the house
 form: one module docstring, the `main()` one-liner, and bare helpers — every example in this
 directory carries the one-liner (verified by scan, EX-26 round 2).
 
