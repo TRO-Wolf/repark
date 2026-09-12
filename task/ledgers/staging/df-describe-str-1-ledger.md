@@ -41,8 +41,9 @@ string arms; EX-DF-15 stays for the bare-`summary()` percentile refusal (engine 
 | C-002 | The pins rewritten to assert Spark's answer fail on the base tree (red first, D-3); the red output is pasted in this ledger's evidence cell. | The pytest run under "Red-first" — four pins red at base `f413241b` with the fix reverted. | **PROVEN** |
 | C-003 | The rewritten pins are green after the fix and every other describe/summary pin stays green: the `-k "describe or summary"` selection over the pin files plus the whole `python/repark/tests` suite, plus an 8-collect determinism probe on `describe()`. | The pytest runs in the gates table and the probe in the C-003 note below. | **PROVEN** |
 | C-004 | §7 EX-DF-4 reads FIXED, dated 2026-09-11, unit DF-DESCRIBE-STR-1 — both the string arm and the order arm (D-2: the same `_summary` code path fixed the order at no extra cost); §7 EX-DF-15 is narrowed to the bare-`summary()` percentile refusal. | The amended §7 rows and the map.md entries. | **PROVEN** |
+| C-005 | The cheapest provably-ordered SQL shape is selected for the stat row order (P1-1 remediation): per-leg ordinal + `ORDER BY` on the bare UNION ALL, with the ordinal stripped by a facade `drop()` — `SortPreservingMergeExec` over the union keeps the proof, the wrapping projection goes. Union leg order without `ORDER BY` is nondeterministic on this engine (20/20 collects out of stat order), so a sort node is required; `CASE summary WHEN` is cheaper still but collapses duplicate stats to name order, and a LIMIT-coalesce → `SortExec` shape is slower — both rejected. | The measurement table under "P1-1 remediation" below, run on the report's harness (same 200k numeric MemTable, same 50×10k wide frame, three-plus timed reps, medians; no JVM). | **PROVEN** |
 
-`LOGIC_SCORE` = **4/4 `PROVEN`**.
+`LOGIC_SCORE` = **5/5 `PROVEN`**.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
@@ -93,6 +94,39 @@ there was not measured this unit (one-session cap). `describe("g","missing")` ke
 dropping the missing name where Spark raises `UNRESOLVED_COLUMN` — pre-existing, outside the
 card.
 
+## P1-1 remediation (2026-09-11, no JVM)
+
+Review ruling S2-21 (`/tmp/oc-worker/grok-rev-descr/report.md`) measured the wrapping
+`SELECT … FROM (UNION ALL …) ORDER BY __repark_sum_ord` at +14–18 % on a 200k-row
+numeric `describe().collect()` and +127 ms on a 50×10k wide frame; EXPLAIN ANALYZE
+isolated it to the plan shape (`SortPreservingMergeExec` plus two `ProjectionExec`s),
+not scans. The report's harness was reused: `spark.range(200_000).select(...).eager()`
+MemTable and a 50-column × 10k wide frame, one warmup plus timed reps, medians, the
+same `SessionProxy` capture. SQL-shape timings are `spark.sql(sql).collect()` on the
+same temp view; facade timings are `_summary("count","mean","stddev","min","max")`
+followed by `.collect()`.
+
+Candidate shapes measured:
+
+| Shape | Numeric 200k median (s) | Wide 50×10k median (s) | Ordered? |
+|---|---:|---:|---|
+| plain UNION ALL, no sort | 0.1074 | 1.0951 | **no** — 20/20 collects out of stat order |
+| old: wrap + ordinal + `ORDER BY ord` | 0.1211 | 1.1918 | yes |
+| **new: ordinal legs + `ORDER BY ord` + facade `drop(ord)`** | **0.1201** | **1.1321** | yes — `SortPreservingMergeExec` on per-leg positions, exact for duplicate stats |
+| `ORDER BY CASE summary WHEN 'count' THEN 0 …` (no ordinal column) | 0.1174–0.1200 | 1.1035–1.1160 | yes, but rejected: `summary("mean","count","mean")` collects mean,mean,count instead of the requested mean,count,mean |
+| `LIMIT 5` coalesce → `SortExec`/TopK | 0.1304 | 1.3367 | yes, but slower — the limit sinks into each leg (`GlobalLimitExec` ×4) |
+| `GROUP BY`/`DISTINCT` coalesce → sort | 0.1299–0.1494 | not re-run | yes, but slower — extra aggregate and still a merge |
+| `ORDER BY` inside the union subquery | 0.1115 | — | **no** — the optimizer drops the sort entirely |
+
+Facade-level medians for the shipped shape: 0.1185 s on the 200k numeric frame
+(report: branch wrap 0.1246, base 0.1088) and 1.1431 s on the wide frame (report:
+branch wrap 1.230, base 1.103). The ordinal approach is kept over `CASE` because it
+orders duplicate requested stats by per-leg position — `CASE` keys on the stat name
+and cannot distinguish identical rows. EXPLAIN of the shipped SQL:
+`SortPreservingMergeExec: [ord ASC]` directly over `UnionExec` — no wrapping
+projections; each union leg is a single-row single-partition stream, trivially
+sorted, so the merge output is the requested order deterministically.
+
 ## Gates (2026-09-11, on this tree)
 
 Each command run independently; no JVM running during any gate (the oracle session stopped
@@ -101,12 +135,12 @@ identical ordered output each time.
 
 | Command | Exit |
 |---|---|
-| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_d.py python/repark/tests -q -k "describe or summary"` | 0 — 33 passed, 1 skipped |
-| `.venv/bin/python -m pytest python/repark/tests -q` | 0 — 5968 passed, 359 skipped |
-| `make check-docs-links` | 0 — 765 files, 4894 links clean |
-| `make check-ledger-grammar` | 0 — 101 live ledgers clean |
-| `make check-lib-py` | 0 — 648 files clean |
-| `make verify` | 0 — fmt/clippy/panic-ban/crate-dag/file-size/conventions/docstring/coverage/manifest/ledger/docs/owner-ruling/parity-live/matrix/rust-check/ruff/rust tests all clean |
+| `.venv/bin/python -m pytest python/repark/tests/test_examples_dataframe_d.py python/repark/tests -q -k "describe or summary"` | 0 — 33 passed, 1 skipped (round 1); 0 — 33 passed, 1 skipped (P1-1 remediation rerun) |
+| `.venv/bin/python -m pytest python/repark/tests -q` | 0 — 5968 passed, 359 skipped (round 1); 0 — 5968 passed, 359 skipped (P1-1 remediation rerun) |
+| `make check-docs-links` | 0 — 765 files, 4894 links clean (both rounds) |
+| `make check-ledger-grammar` | 0 — 101 live ledgers clean (both rounds; 647 clauses after C-005) |
+| `make check-lib-py` | 0 — 648 files clean (both rounds) |
+| `make verify` | 0 — fmt/clippy/panic-ban/crate-dag/file-size/conventions/docstring/coverage/manifest/ledger/docs/owner-ruling/parity-live/matrix/rust-check/ruff/rust tests all clean (both rounds) |
 
 ## Cost
 

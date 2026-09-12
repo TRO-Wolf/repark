@@ -128,11 +128,8 @@ def _summary(
                 elif stat == "max":
                     select_parts.append(f"CAST(max({quoted_eng}) AS VARCHAR) AS {quoted_as}")
             pieces.append(f"SELECT {', '.join(select_parts)} FROM {view}")
-        projected = ", ".join(
-            ["summary"] + [_quote_ident_sql(engine) for _display, engine in target_pairs]
-        )
-        sql = f"SELECT {projected} FROM ({' UNION ALL '.join(pieces)}) ORDER BY {ord_name}"
-        child = frame._spawn(frame._session.sql(sql))
+        sql = f"{' UNION ALL '.join(pieces)} ORDER BY {ord_name}"
+        child = frame._spawn(frame._session.sql(sql)).drop(ord_name)
         if frame._display_names is not None or any(
             display != engine for display, engine in target_pairs
         ):
