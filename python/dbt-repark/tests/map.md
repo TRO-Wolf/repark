@@ -10,7 +10,7 @@ make py-test-dbt
 
 It is wired into **`make preflight`**, immediately after `py-test-facade`, and deliberately
 **not** into `make ci`. Three measured reasons, all recorded at
-[../../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../../task/ledgers/staging/dbt-1-adapter-ledger.md)
+[../../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../../task/ledgers/completed/dbt-1-adapter-ledger.md)
 §9: `ci` is native-build-free by design and this suite imports `repark`; CI does not execute
 `make ci` at all (`.github/workflows/ci.yml` invokes each target and script individually); and
 ci.yml's Python job does not build the native module, so `wheels.yml` `smoke` is the only
@@ -67,7 +67,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 - The S6 program these tests seed from:
   [../../repark/tests/map.md](../../repark/tests/map.md)
 - Ledger:
-  [../../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../../task/ledgers/staging/dbt-1-adapter-ledger.md)
+  [../../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../../task/ledgers/completed/dbt-1-adapter-ledger.md)
 
 ## Debug
 

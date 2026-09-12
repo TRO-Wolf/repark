@@ -234,4 +234,4 @@ ms and confirmed the §1/§2 cells unmoved (`collect/1000000` 940.84, `chain/100
 
 - Up: [map.md](map.md)
 - Runner: [../../python/repark-parity/bench/facade/map.md](../../python/repark-parity/bench/facade/map.md)
-- Ledger: [../../task/ledgers/staging/perf-facade-1-ledger.md](../../task/ledgers/staging/perf-facade-1-ledger.md)
+- Ledger: [../../task/ledgers/staging/perf-facade-1-ledger.md](../../task/ledgers/completed/perf-facade-1-ledger.md)

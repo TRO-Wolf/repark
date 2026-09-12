@@ -32,34 +32,10 @@ Restated for a mixed queue:
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **CUTOVER-SCHEMA-1** — nullability derived Spark's way (`CUTOVER-CTAS-REQ-1`, `CUTOVER-DEDUP-SCHEMA-1`); owner ruling 2026-09-04 | Cutover | none (in flight, Muse) | STANDARD <!-- unit id=cutover-schema-1 --> |
-| 2 | **DBT-1** — a dbt path for RePark: design ledger, then the thinnest adapter that runs the two gold models | Cutover / dbt | none | STANDARD <!-- unit id=dbt-1 --> |
-| 3 | **PERF-DYNFLATTEN-2 residue** — `DYNFLATTEN-LISTNULL-1` / `DYNFLATTEN-READNULL-1`, the two null rows left | Performance | PERF-DYNFLATTEN-2 (built) | STANDARD <!-- unit id=perf-dynflatten-2 --> |
-| 4 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
-| 5 | **Cutover canary C2–C6** — the shadow week on `<ns>_silver_repark`, then the writer flip | Cutover | CUTOVER-SCHEMA-1, pipeline-side SHADOW-1 | STANDARD <!-- unit id=cutover-inventory --> |
-| 6 | **H3-SPILL residue** — `H3-SPILL-NLJ-1` (a caught DataFusion panic where a refusal belongs) and `H3-SPILL-COLLECT-1` (`collect()` past the address space panics, not `MemoryError`) | Hardening | H3-SPILL-1 (measured) | STANDARD <!-- unit id=h-3-spill --> |
-| 7 | **FNP-9/10** — remaining function-parity units after FN-FIX-2 | Function parity | FN-FIX-2 | STANDARD <!-- unit id=fnp-9-10 --> |
-| 8 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
-
-<!-- unit id=cutover-schema-1 -->
-**Why CUTOVER-SCHEMA-1 is first.** The owner ruled the two metadata rows are not accepted
-differences: readers nullable-by-default, CTAS `required: false`, Spark's `coalesce`/`cast`
-nullability. Blast radius is every schema pin; measured first, flipped to Spark's answer.
-<!-- /unit -->
-
-<!-- unit id=dbt-1 -->
-**Why DBT-1 is queued.** Gold is two dbt models; RePark has no dbt path, so gold cannot move.
-Design first (in-process adapter expected), then the thinnest adapter; acceptance = canary C6.
-<!-- /unit -->
-
-<!-- unit id=perf-dynflatten-2 -->
-**Why PERF-DYNFLATTEN-2 was one candidate, and what it returned.** Only null-mask struct
-extract ever cleared 3x, on `struct_d6` alone; Cartesian and the optimizer walks stay closed.
-Built and re-measured: `struct_d6`'s isolated null cost is 64.83 ms → 0.01 ms, 0.1x its run's
-floor, every bed row set byte-identical, and `DYNFLATTEN-QUALNAME-1` closed as a side effect.
-Numbers, controls and do-not list:
-[../docs/perf/dynamic-flatten-baseline.md](../docs/perf/dynamic-flatten-baseline.md).
-<!-- /unit -->
+| 1 | **EX batches** — backfill from the 578-name backlog (bounded parallel lane) | Examples | none | STANDARD <!-- unit id=ex-batches --> |
+| 2 | **Cutover canary C2–C6** — the shadow week on `<ns>_silver_repark`, then the writer flip | Cutover | CUTOVER-SCHEMA-1, pipeline-side SHADOW-1 | STANDARD <!-- unit id=cutover-inventory --> |
+| 3 | **H3-SPILL residue** — `H3-SPILL-NLJ-1` (a caught DataFusion panic where a refusal belongs) and `H3-SPILL-COLLECT-1` (`collect()` past the address space panics, not `MemoryError`) | Hardening | H3-SPILL-1 (measured) | STANDARD <!-- unit id=h-3-spill --> |
+| 4 | **DBT-GATES** — M0b/M1b/M2b AWS gates on the 1.0.1 wheel (owner-scheduled) | dbt | — | STANDARD <!-- unit id=dbt-gates --> |
 
 <!-- unit id=ex-batches -->
 **Why EX batches are a parallel lane.** 578 names remain; the 1.0.1 wheel-execute gate is
@@ -74,10 +50,6 @@ and the four rulings are taken; C2 starts when the schema unit and the shadow DA
 <!-- unit id=h-3-spill -->
 **Why the H-3 residue.** The matrix is measured (180 cells, 0 aborts, 0 wrong); the two
 failure shapes it filed are the remaining Never-OOM work.
-<!-- /unit -->
-
-<!-- unit id=fnp-9-10 ledger=fnp-9- -->
-**Why FNP-9/10 is last.** The 2026-08-31 remaining order starts here after FN-FIX-2.
 <!-- /unit -->
 
 **Not in this queue (owner-sequenced or owner-gated):** V3-4 and the engine units after it
