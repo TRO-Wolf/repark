@@ -27,4 +27,5 @@ box, full scale.
 - [repark.batch.size.csv](repark.batch.size.csv)
 - [datafusion.execution.parquet.compression.csv](datafusion.execution.parquet.compression.csv)
 - [datafusion.execution.parquet.max_row_group_size.csv](datafusion.execution.parquet.max_row_group_size.csv)
+- [datafusion.execution.parquet.bloom_filter_on_write.csv](datafusion.execution.parquet.bloom_filter_on_write.csv)
 - `map.md` — this file.
