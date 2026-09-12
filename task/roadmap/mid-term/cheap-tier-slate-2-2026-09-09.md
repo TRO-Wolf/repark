@@ -36,6 +36,10 @@ sections left open.
 | S2-16 | **`INSERT INTO` writes uncompressed parquet (run 7, AP-1-R-001):** the fork's task writer ignores the `write.parquet.compression-codec` table property, which is why AP-1's footer-measured ratio still projects 76–88 % high. This is a **fork defect**, not an AP-1 residue to absorb: fork card **F-WRITE-COMPRESS-1** (Devin first, Grok fallback, on the iceberg-rust fork lane: red-first pin that an `INSERT INTO` data file's column chunks carry the table's codec; then RP repin). AP-1-R-001 stays open until the repin lands and the ratio is re-measured. | fork lane, AP-1 |
 | S2-17 | **Ballista M2 typed scan rebuild (run 7 decision):** `repark-distributed` takes a direct `iceberg-datafusion` dependency (the fork pin the workspace already carries) so the codec rebuilds `IcebergTableScan` through typed accessors instead of the rebuild-and-compare guard; orchestrator seed under G-5 (dependency-policy row, `cargo build --features cluster` green), then card **BALLISTA-M2-B** (I: the typed rebuild, the string-filter pin that the guard caught, the guard itself retired). | BALLISTA-M2-B |
 | S2-18 | **Never-OOM at v1.3 (run 7 measurement):** 24 of 27 cells stable, `hash_join` at 4× KILLED in all three runs, two cells unstable — causes upstream (datafusion#24768, #22758). Per S2-6 the v1.3 text is documentation and pins, so **NEVEROOM-1 step 3 writes the matrix as measured** (the three cells named with their upstream issues and no operator change) and v1.3 cuts on that; a datafusion bump that closes an issue re-runs the matrix as its pin. | NEVEROOM-1 step 3, v1.3 |
+| S2-19 | **Compaction and the rewrite paths write uncompressed parquet (run 8, AP-1 re-measure #514):** `#276` fixed only `IcebergWriteExec`; `rewrite_data_files` inflated a 3.07 MB zstd bed to 7.93 MB, and three sibling writer sites build default `WriterProperties`. Fork card **F-WRITE-COMPRESS-2** is OPEN (Devin on the fork lane, Grok fallback; card below); then **RP-17** (its own PR) and AP-1's 20 % check a third time. **Q-1 (`byte_ratio` over the footers' uncompressed sum) is deferred** until that re-measure — ruling it against a polluted actual would tune the model to a defect. | fork lane, RP-17, AP-1 |
+| S2-20 | **STATUS sentences for BALLISTA-M2-B, AP-2 and RP-16** ride the v1.4 release PR (they landed after the v1.3.0 cut; the file sits at 22 959 B under its 25 000 B ceiling, so the release rewrite pays for them). No standalone STATUS PR. | v1.4 release PR |
+| S2-21 | **Perf review agents (2026-09-02 rule) under the critic-tier rule:** they return as **Grok critic rounds**, read-only, only on a unit branch whose diff touches `crates/` or `python/repark/src/` beyond pins (docs, ledger and example rounds skip them). One Rust reviewer and one Python reviewer per such branch, findings back to the actor before the PR, as REVIEW-1 ran. | every product unit branch |
+| S2-22 | **EX-29 Q1 — six `Column.*` engine-plumbing names** (`for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`), measured absent from `pyspark.sql.Column` on 4.1.2: **the example inventory narrows to drop them** — they are not Spark surface and no honest example can teach them. Card **EX-31** (Devin, one M round, after EX-30 merges so the baselines move once): the enumerator gains an explicit named exclusion list with the measurement as its reason, the six names leave `backlog.txt`, plus **`F.PythonUDFColumn`** (EX-30 Q1, 2026-09-11: the marker class `F.udf(f)("n")` returns, measured absent from `pyspark.sql.functions` and `pyspark.sql.column` on 4.1.2 — same class of name), so seven names; `BACKLOG_BASELINE` 119 → 112 after EX-30, `inventory.txt` regenerated, a pin that the seven are neither public nor on the backlog. | EX-31 |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -508,6 +512,78 @@ optional; Arrow crosses zero-copy through the C Data Interface at the edges.
 **Steps.** 1 (M) Half A tables; 2 (I) Half B judgement + the sequence; 3 (O) map lockstep, PR.
 
 **Rounds.** 2 (M, I).
+
+---
+
+### Card F-WRITE-COMPRESS-2 — the rewrite, delete and audit writers carry the table's codec (fork lane, S2-19)
+
+**Why.** iceberg-rust `#276` (F-WRITE-COMPRESS-1) fixed `IcebergWriteExec` only. Four production writer
+sites still build default `WriterProperties` (UNCOMPRESSED), and one of them is measured inflating a real
+table 2.6× — run 8's AP-1 re-measure ([#514](https://github.com/TRO-Wolf/repark/pull/514)) compacted a
+3.07 MB zstd bed into 7.93 MB through `rewrite_data_files`.
+
+**Home (fork).** `crates/iceberg/src/maintenance/rewrite_data_files_write.rs` (R-002),
+`crates/integrations/datafusion/src/physical_plan/row_lineage.rs` (R-001, COW/MoR rewrite data files),
+`crates/iceberg/src/maintenance/partition_key_audit.rs` (R-003),
+`crates/iceberg/src/writer/base_writer/position_delete_writer.rs` (R-004, the shared
+`position_delete_writer_properties` helper — its callers reuse it, so check each), their `map.md` files,
+`task/f-write-compress-2-ledger.md`.
+
+**Decisions.** D-1 each site takes the table's codec through the existing
+`parquet_compression_from_properties` helper `#276` added — no second parser. D-2 the position-delete helper
+keeps its `statistics_truncate_length` behaviour and gains the codec (RePark's own
+`position_delete_writer_properties_for` is the reference shape). D-3 red first: a compaction pin that a
+`rewrite_data_files` output file's column chunks carry the table's codec, and the same for the MoR/COW rewrite
+path and a position-delete file. D-4 no behaviour change other than the codec.
+
+**Consumer.** RP-17 (a pin bump, its own PR), then AP-1's 20 % check a third time — with compaction
+compressing, the projection and the actual are finally measured under one codec, which is the state Q-1
+(S2-19) is ruled in.
+
+**Steps.** 1 (I, fork lane). **Rounds.** 1 (I); RP-17 is one M round on the engine.
+
+---
+
+### Card EX-31 — the example inventory drops the seven plumbing names (S2-22)
+
+**Why.** EX-29 measured the six `Column.*` names absent from `pyspark.sql.Column` (`inspect.getattr_static` finds no
+member; `hasattr` answers True only through `Column.__getattr__` item fabrication). On repark they are bound
+plumbing methods. They sat on the example backlog since EX-1 widened the inventory to class surfaces.
+
+**Home.** `scripts/check_example_coverage.py` (the enumerator: a named exclusion list with the measured reason
+per name, the `BACKLOG_BASELINE` move), `docs/examples/backlog.txt`, `docs/examples/inventory.txt`
+(regenerated by whatever produced it — read the script), `python/repark-parity/tests/test_ex_0_example_coverage.py`
+(a pin that the six are neither public in the inventory nor on the backlog), lockstep `map.md`, ledger
+`task/ledgers/staging/ex-31-inventory-plumbing-ledger.md`.
+
+EX-30 (Q1) added `F.PythonUDFColumn`, the marker class `F.udf(f)("n")` returns, absent from `pyspark.sql.functions` — seven names in all.
+
+**Decisions.** D-1 the exclusion is explicit and named (never a pattern that could swallow a real surface),
+with the EX-29 measurement quoted beside it. D-2 the backlog ratchet stays a ratchet: the baseline moves down by
+exactly six on top of whatever EX-30 left. D-3 no product file changes; the six methods stay callable.
+
+**Steps.** 1 (M), after EX-30 merges. **Rounds.** 1 (M).
+
+---
+
+### Card PERF-DESCRIBE-1 — one aggregate pass for `describe` / `summary` (from the S2-21 reviewer, 2026-09-11)
+
+**Why.** The first Grok perf review under S2-21 (DF-DESCRIBE-STR-1 branch) measured that `describe()` runs
+one full scan per statistic — mean, stddev, min and max are four `DataSourceExec` passes over the frame
+(count folds to a placeholder), about 80 ms of a 110 ms collect on 200 k rows. Pre-existing, unchanged by
+that unit; the dominant cost of the surface.
+
+**Home.** `python/repark/src/repark/spark/dataframe/statistics.py`, its pins, the dataframe `map.md`,
+ledger `task/ledgers/staging/perf-describe-1-ledger.md`. No engine change.
+
+**Decisions.** D-1 one `AggregateExec` computes count / avg / stddev / min / max per column in a single pass,
+then five literal summary rows are projected (an unpivot in SQL), the row order carried by construction so
+the DF-DESCRIBE-STR-1 ordinal wrapper can go. D-2 measured before and after on the reviewer's harness
+(200 k numeric, 50 × 10 k wide, string-bearing frame), three repetitions, medians in the ledger; the unit
+lands only if every shape is faster. D-3 every describe / summary pin stays green; Spark's answers are the
+spec (the DF-DESCRIBE-STR-1 oracle table).
+
+**Steps.** 1 (I). **Rounds.** 1 (I), after DF-DESCRIBE-STR-1 merges.
 
 ---
 
