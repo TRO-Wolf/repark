@@ -10,6 +10,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
 
 ## Contents
 
+- [cast-cost-2026-09-12.md](cast-cost-2026-09-12.md) — **PERF-CAST-1 step 1
+  (2026-09-12):** where a CAST costs a millisecond. 200k-row MemTable, CAST
+  counts 50 / 250 / 2500, three plan shapes; plan vs `EXPLAIN ANALYZE` execute;
+  log-log exponents; attribution (`max_passes` 0/1/3, EXPLAIN VERBOSE pass
+  names, py-spy). Superlinear phase is CAST-over-aggregate logical planning
+  (exponent 1.535). CSV:
+  [cast-cost-2026-09-12.csv](cast-cost-2026-09-12.csv).
+  pins: perf-cast-1/C-001, C-002, C-003, C-004
 - [engine-iceberg-analysis-2026-09-04.md](engine-iceberg-analysis-2026-09-04.md) — **PERF-ANALYSIS
   (2026-09-04, Fable 5.1 session):** the query-engine + Iceberg-integration performance analysis on
   a release module at 8-thread parity — eleven measured candidates ranked by isolated cost over the
