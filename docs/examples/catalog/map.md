@@ -52,7 +52,9 @@ cross-referencing FA-2), and the `functionExists(name, dbName)` arm (§7
 EX-CAT-3) — all pinned in `python/repark/tests/test_examples_window_catalog.py`.
 `Catalog.list_databases` joins the EX-21 batch's stays: it is the same
 function object as the divergent `listDatabases`, so covering it would paper
-over §7 `EX-CAT-2`.
+over §7 `EX-CAT-2`. EX-29 (2026-09-11) re-measured all four database-listing
+names on live PySpark 4.1.2 (unchanged) and extended the two pins with the
+snake legs, which share the divergent function objects.
 
 ## Pointers
 

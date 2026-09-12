@@ -34,6 +34,13 @@ see [../map.md](../map.md).
   `dt` (Polars-style namespaces, no PySpark analog) beside the PySpark-spelled
   twins `F.upper` / `F.trim` / `F.year`, measured Spark-equal.
 
+The six engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
+`spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`) stay on the backlog as
+non-Spark surface: on live PySpark 4.1.2 `hasattr` answers True only through `Column.__getattr__`
+item fabrication (`inspect.getattr_static` finds no member; calling one raises
+`'Column' object is not callable`), so they are not PySpark API — measured by EX-29 on
+2026-09-11 and reported for an owner ruling on inventory narrowing.
+
 Two bare-name arms the live oracle measured divergent are filed as §7 registry rows
 ([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins
 (`test_col_cast_qualified_projection_name`, `test_get_field_bare_projection_name`) in

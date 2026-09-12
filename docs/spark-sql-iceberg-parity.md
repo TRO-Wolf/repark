@@ -5593,6 +5593,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Spark-equal on both. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
   batch, six-row `g/k/v` frame.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_colregex_spelling_divergence`
+  and `python/repark/tests/test_examples_dataframe_d.py::test_colregex_multi_match_first_match`
+  (the first-match-only arm, added 2026-09-11 by EX-29).
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. Both spellings stay on
   the example backlog; teaching either spelling would assert an answer Spark does not give.
 
@@ -5628,15 +5630,23 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 - **repark** — the five summary rows answer the same cells Spark answers, but their collect
   order varies run to run: three consecutive collects printed three different orders.
+  A second arm measured 2026-09-11 (EX-29): `describe("g")` on a string column — and bare
+  `describe()` over a frame containing one — raises `AnalysisException` (the `avg`/`stddev`
+  legs reject `Utf8`), where Spark answers the same five rows with NULL cells under the
+  string column's `mean`/`stddev`.
 - **Apache Spark** — `describe("k", "v")` collects in the stable order
   `count, mean, stddev, min, max`. The cells themselves measured identical:
   count `('6', '5')`, mean `('1.8333333333333333', '30.0')`,
   stddev `('0.752772652709081', '15.811388300841896')`, min `('1', '10.0')`,
-  max `('3', '50.0')`. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a
-  batch.)*
+  max `('3', '50.0')`. The string-column arm answers `('count','6')`, `('mean',None)`,
+  `('stddev',None)`, `('min','a')`, `('max','b')` for `describe("g")`. *(oracle: live PySpark
+  4.1.2, ANSI on, 2026-09-04, EX-15 DataFrame-a batch; string arm re-measured 2026-09-11,
+  EX-29.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_a.py::test_describe_row_order_divergence`
   (cells pinned order-independently; the order itself is unpinned because repark's is
-  nondeterministic, so no red-on-fix pin can assert it).
+  nondeterministic, so no red-on-fix pin can assert it) and
+  `python/repark/tests/test_examples_dataframe_d.py::test_describe_string_column_refuses`
+  (the string-column raise).
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-15 measurement. `DataFrame.describe`
   stays on the example backlog until its rows collect in Spark's stable order; a sorted-row
   example would teach a weaker contract than Spark answers.
@@ -6004,6 +6014,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch, default session plus a
   created `ex20_db` namespace with a tempdir location.)*
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_get_database_default_fields`
+  (both spellings since EX-29, 2026-09-11; `pyspark.sql.catalog.Catalog` has no `get_database`
+  member — the snake name is a repark extension sharing the divergent function object).
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. The memory catalog
   stores no default-namespace metadata, and the created-namespace location lacks the `file:`
   URI prefix Spark prints — two field gaps on one name. Both spellings stay on the example
@@ -6018,6 +6030,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `[('default', 'spark_catalog', 'default database', 'file:<warehouse>')]`.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-20 catalog batch.)*
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_list_databases_fields_none`
+  (both spellings since EX-29, 2026-09-11; `pyspark.sql.catalog.Catalog` has no `list_databases`
+  member — the snake name is a repark extension sharing the divergent function object)
   beside the FA-2 pin
   `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-20 measurement. Same declared divergence
@@ -6623,7 +6637,9 @@ field NAME.
   `…::test_excel_sheet_names_refuses`
 - **Rationale** — BACKLOG, filed 2026-09-06 from the EX-26 measurement. A refusal is documented
   as a refusal, never as an example that swallows it; all four names stay on the example backlog
-  until the connector lands.
+  until the connector lands. EX-29 re-measured 2026-09-11: the refusal is unconditional and
+  `openpyxl` is absent from the locked `.venv`, so the dependency the door would need is not
+  installed either.
 
 ### EX-IO-8 — missing-table reads share the exception type with Spark but not the text
 
