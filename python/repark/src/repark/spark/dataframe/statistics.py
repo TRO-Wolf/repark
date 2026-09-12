@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark._temp_views import scratch_view_name
+from repark.spark._idents import sql_string_literal
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -99,45 +99,76 @@ def _summary(
         ]
     if not target_pairs:
         raise AnalysisException("summary/describe on a zero-column frame is undefined")
-    ord_name = "__repark_sum_ord"
-    while ord_name in kind_by_engine:
-        ord_name = f"_{ord_name}"
-    view = scratch_view_name(frame._session, "__repark_sum_")
-    frame._session.create_or_replace_temp_view(view, frame._plan())
-    try:
-        pieces: list[str] = []
-        for position, stat in enumerate(stats):
-            select_parts = [f"{position} AS {ord_name}", f"'{stat}' AS summary"]
-            for _display, engine in target_pairs:
-                quoted_eng = _quote_ident_sql(engine)
-                quoted_as = quoted_eng
-                data_type = kind_by_engine.get(engine)
-                if stat == "count":
-                    select_parts.append(f"CAST(count({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat in ("mean", "stddev"):
-                    agg = "avg" if stat == "mean" else "stddev"
-                    if isinstance(data_type, numeric_types):
-                        select_parts.append(f"CAST({agg}({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                    else:
-                        select_parts.append(
-                            f"CAST({agg}(try_cast({quoted_eng} AS DOUBLE)) AS VARCHAR)"
-                            f" AS {quoted_as}"
-                        )
-                elif stat == "min":
-                    select_parts.append(f"CAST(min({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-                elif stat == "max":
-                    select_parts.append(f"CAST(max({quoted_eng}) AS VARCHAR) AS {quoted_as}")
-            pieces.append(f"SELECT {', '.join(select_parts)} FROM {view}")
-        sql = f"{' UNION ALL '.join(pieces)} ORDER BY {ord_name}"
-        child = frame._spawn(frame._session.sql(sql)).drop(ord_name)
-        if frame._display_names is not None or any(
-            display != engine for display, engine in target_pairs
-        ):
-            child._display_names = ["summary"] + [display for display, _engine in target_pairs]
-            child._engine_names = ["summary"] + [engine for _display, engine in target_pairs]
-        return child
-    finally:
-        frame._session.drop_temp_view(view)
+    from repark import _native
+    from repark.spark import functions as spark_functions
+    from repark.spark.column import Column
+
+    integer_types = (ByteType, ShortType, IntegerType, LongType)
+    needed = list(dict.fromkeys(stats))
+    aggregate_exprs: list[Any] = []
+    cell_positions: dict[tuple[str, int], int] = {}
+    for column_index, (_display, engine) in enumerate(target_pairs):
+        quoted_engine = _quote_ident_sql(engine)
+        data_type = kind_by_engine.get(engine)
+        base_column = Column(
+            _native.PyColumn.column(quoted_engine),
+            spark_display=engine,
+            projection_name=engine,
+            stable_name=True,
+            sql_expr=quoted_engine,
+        )
+        for stat in needed:
+            position = len(aggregate_exprs)
+            cell_positions[(stat, column_index)] = position
+            if stat == "count":
+                aggregated = spark_functions.count(base_column)
+            elif stat in ("mean", "stddev"):
+                operand = (
+                    base_column
+                    if isinstance(data_type, numeric_types)
+                    else base_column.try_cast("double")
+                )
+                aggregated = (spark_functions.avg if stat == "mean" else spark_functions.stddev)(
+                    operand
+                )
+            elif stat == "min":
+                aggregated = spark_functions.min(base_column)
+            else:
+                aggregated = spark_functions.max(base_column)
+            if stat in ("mean", "stddev") or not isinstance(
+                data_type, (*integer_types, StringType)
+            ):
+                aggregated = aggregated.cast("string")
+            aggregate_exprs.append(aggregated._inner.alias(f"__repark_stat_{position}"))
+    cells_table = frame._spawn(frame._plan().aggregate([], aggregate_exprs)).to_arrow()
+    cells = [
+        cells_table.column(position).to_pylist()[0] for position in range(cells_table.num_columns)
+    ]
+    literal_rows = []
+    for stat in stats:
+        row_cells = [f"'{stat}'"]
+        for column_index in range(len(target_pairs)):
+            value = cells[cell_positions[(stat, column_index)]]
+            row_cells.append(
+                "NULL"
+                if value is None
+                else sql_string_literal(value if isinstance(value, str) else str(value))
+            )
+        literal_rows.append(f"({', '.join(row_cells)})")
+    column_names = ["summary"] + [engine for _display, engine in target_pairs]
+    alias = ", ".join(_quote_ident_sql(name) for name in column_names)
+    projection = ", ".join(
+        f"CAST({_quote_ident_sql(name)} AS VARCHAR) AS {_quote_ident_sql(name)}"
+        for name in column_names
+    )
+    sql = f"SELECT {projection} FROM (VALUES {', '.join(literal_rows)}) AS t({alias})"
+    child = frame._spawn(frame._session.sql(sql))
+    if frame._display_names is not None or any(
+        display != engine for display, engine in target_pairs
+    ):
+        child._display_names = ["summary"] + [display for display, _engine in target_pairs]
+        child._engine_names = ["summary"] + [engine for _display, engine in target_pairs]
+    return child
 
 
 def _approx_quantile(

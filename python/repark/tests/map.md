@@ -2349,6 +2349,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   list runs green with this file in the tree, and §6 of the ledger records the
   three named mutations red.
   pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [test_perf_describe_1.py](test_perf_describe_1.py) — **PERF-DESCRIBE-1 (2026-09-11):**
+  `describe()` aggregates the source in one pass. A `DataFrame.to_arrow` spy explains
+  every frame materialized during the call and asserts exactly one aggregate plan with
+  one `TableScan` / one `DataSourceExec` and no `UnionExec`; a session proxy proves the
+  only surviving SQL leg (the literal `VALUES` grid) scans nothing; and the returned
+  frame's EXPLAIN shows `Values:` with no `TableScan`, union, or sort node — the
+  DF-DESCRIBE-STR-1 ordinal wrapper is gone because row order is carried by literal
+  construction. `test_summary_duplicate_stats_keep_requested_order` pins a repeated stat
+  answering one row per occurrence in the requested order.
+  pins: perf-describe-1/C-001, C-002, C-003, C-004
 - `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
   `createDataFrame` path against the legacy row-wise path, kept callable as
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the
