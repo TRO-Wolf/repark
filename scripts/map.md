@@ -1,5 +1,8 @@
 # map — scripts/
 
+PERF-UNPIVOT-1 (2026-09-12): `check_lib_py.py` `dataframe/core.py` 4485 → 4483;
+`check_example_coverage.py` installer sources gain `functions_stack.py` / `STACK_NAMES`;
+inventory 927 → 928 (`F.stack`). pins: perf-unpivot-1/C-004
 CSV-INFER-PERF-1 (2026-09-06): `check_rust_file_size.py` `repark-core/src/session.rs`
 1002 → 988 — `read_csv` body moved to `read_options.rs`; the CAP-1 exception row
 retired (file under the default ceiling). `test_cap_1_source_file_line_cap.py` dropped
@@ -467,6 +470,11 @@ the same seat, so the row ratchets DOWN, and the fact lives on the dataframe map
 rebased tree, where REVIEW-FIX-6 (#487) had already taken the row to 4486 by the same
 method, the measured landing number is **4486→4485**. Ratchets DOWN.
 pins: display-lazy-1/C-007
+
+FACADE-1 (2026-09-12): `check_lib_py.py` `dataframe/core.py` 4485→4473→4470 — mapInArrow
+construction and `to_polars` ride the capsule helper; `to_polars` drops the pyarrow
+Table wrap. Ratchets DOWN.
+pins: facade-1/C-001, C-002, C-006
 
 DISPLAY-POLARS-1 step 3 (2026-09-09): `check_lib_py.py` `dataframe/core.py` 4536→4525 —
 the `__repr__` / `_repr_html_` wrapper docstrings condense to one line under the comment

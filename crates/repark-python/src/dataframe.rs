@@ -91,8 +91,8 @@ fn spark_join_projection(joined: &DataFrame, keys: &[String]) -> Vec<Expr> {
 /// The Python-facing immutable `DataFrame` plan and its shared runtime.
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
-    df: DataFrame,
-    runtime: Arc<Runtime>,
+    pub(crate) df: DataFrame,
+    pub(crate) runtime: Arc<Runtime>,
     /// Cached analyzed Arrow schema.
     analyzed_schema: OnceLock<SchemaRef>,
 }

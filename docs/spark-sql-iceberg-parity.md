@@ -2780,6 +2780,41 @@ the pin rather than obeying it.
   `dry_run => false` gets Spark's behaviour exactly. What changes is which of the two a caller
   gets by typing nothing, and on an unrecoverable operation that default should be the safe one.
 
+### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
+
+- **repark** — `CALL <catalog>.system.remove_orphan_files(…)` on a table whose location is a
+  bare bucket (`s3://<id>--table-s3`, every S3 Tables table's shape). Parser half
+  **FIXED 2026-09-12 at fork pin RP-19 (`3ebf7d36`, fork `#281` F-S3ROOT-1)**: the fork's
+  `scheme_relative_path` resolves `s3://bucket` and `s3://bucket/` to the empty key like
+  Java's `S3URI` (the same fix lands on the GCS and OSS arms; azdls never had it), so the
+  call no longer dies on `Invalid s3 url … should start with one of […/]`. The open half
+  sits past the parser: a table bucket answers **405 MethodNotAllowed** to
+  `ListObjectsV2` — listing is not an operation S3 Tables table buckets support — which
+  reaches the caller as an opaque io error. Card ORPHAN-S3TABLES-1
+  ([../task/roadmap/mid-term/cheap-tier-slate-2-2026-09-09.md](../task/roadmap/mid-term/cheap-tier-slate-2-2026-09-09.md))
+  turns that into a loud refusal on the `s3tables` catalog kind naming the remedy (S3
+  Tables' own unreferenced-file removal via the bucket maintenance configuration) and
+  makes `run_maintenance` skip the step with a reason row.
+- **Apache Spark** — fails the same way: no listing-based orphan removal can run on a
+  table bucket under any engine, so the oracle has no divergent answer to pin — the
+  difference this row tracks is repark's opaque 405 io error versus the loud refusal the
+  card installs.
+  *(oracle: recorded — the owner's reproduction on the dev table bucket, 2026-09-12:
+  `DataInvalid => Invalid s3 url: s3://<id>--table-s3, should start with one of
+  [s3://<id>--table-s3/, s3a://…/, s3n://…/]` before this pin, `405 MethodNotAllowed`
+  from `ListObjectsV2` after.)*
+- **Pin** — this row plus the owner's verbatim reproduction is the RePark-side pin (card
+  RP-19 D-2: no live test exists without AWS — a `DESCRIBE TABLE EXTENDED` on a
+  memory-catalog table created with `LOCATION 's3://…'`-shaped metadata never reaches the
+  fork's `FileIO` parser). The parser half's automated pins live in the fork at `#281`:
+  the `scheme_relative_path` / `s3_relative_path` unit pins (bare bucket → `Some("")`,
+  `s3://bx` and `s3://b-other/…` → `None`), the `create_operator` root pins, and the
+  MinIO `FileIO::list` set-equality pin. ORPHAN-S3TABLES-1 lands the refusal's own pin.
+- **Rationale** — OPEN, half fixed. Opened at RP-19 so the parser half's FIXED stamp and
+  the verbatim reproduction have their single home; the disposition lands with
+  ORPHAN-S3TABLES-1's loud refusal, which stands in ORPHAN-1 / ORPHAN-2's line — a
+  deliberately safer door where Spark's own answer fails opaquely.
+
 ### MOR-1 — `rewrite_position_delete_files` compacts below Spark's `min-input-files` floor
 
 > **FIXED 2026-08-23 (RP-1 / fork F-1).** The position-delete planner now shares
@@ -6802,11 +6837,12 @@ field NAME.
 ### FNP9-GENERATORS-1 — the multi-column generators refuse; Spark projects several columns
 
 - **repark** — `F.posexplode` and `F.posexplode_outer` raise `UnsupportedOperationException`
-  and `F.json_tuple` keeps its refusal; `F.inline`, `F.inline_outer` and `F.stack` are absent
-  (`AttributeError`). The Spark door refuses the same shape at parse altitude:
-  `SELECT posexplode(array(10,20)) AS (p, c)` answers `SELECT item with multiple aliases is not
-  supported`, and `inline` / `stack` are not routines there. `SELECT json_tuple(j, 'a', 'b')`
-  does answer, but as ONE `STRUCT<c0: STRING, c1: STRING>` column.
+  and `F.json_tuple` keeps its refusal; `F.inline` and `F.inline_outer` are absent
+  (`AttributeError`). `F.stack` / SQL `stack(n, expr…)` landed in PERF-UNPIVOT-1 as
+  `UnpivotExec`. The Spark door still refuses `SELECT posexplode(array(10,20)) AS (p, c)`
+  (`SELECT item with multiple aliases is not supported`), and `inline` is not a routine
+  there. `SELECT json_tuple(j, 'a', 'b')` does answer, but as ONE
+  `STRUCT<c0: STRING, c1: STRING>` column.
 - **Apache Spark** — `posexplode([10, 20])` projects two columns `(0, 10)`, `(1, 20)`;
   `posexplode(map('a',1))` projects three; `inline(array(struct(1 AS a, 'x' AS b)))` projects
   `a` and `b` named from the struct; `inline_outer` and `posexplode_outer` keep a NULL row for a
@@ -6815,7 +6851,8 @@ field NAME.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
 - **Pin** —
   `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
-  and `…::test_json_tuple_still_refuses_on_the_facade`
+  (`stack` removed from the absent roster; pins: perf-unpivot-1/C-004) and
+  `…::test_json_tuple_still_refuses_on_the_facade`
 - **Rationale** — BACKLOG, filed 2026-09-05. One seam, not six gaps: the facade select path
   carries at most one generator column and emits exactly one output column
   (`dataframe/core.py` `_generator`), and the Spark door rejects a multi-alias select item. Every

@@ -7,6 +7,7 @@ mod catalog_census;
 mod collect_rows;
 mod column;
 mod dataframe;
+mod dataframe_stack;
 mod fence;
 mod logical_names;
 mod ml;
@@ -101,6 +102,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         "IllegalArgumentException",
         module.py().get_type::<IllegalArgumentException>(),
     )?;
+    dataframe_stack::register(module)?;
     catalog_census::register(module)?;
     collect_rows::register(module)?;
     logical_names::register(module)?;

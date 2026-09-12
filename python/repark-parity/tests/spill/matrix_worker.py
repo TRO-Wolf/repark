@@ -144,8 +144,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def load_spill_worker_libraries() -> None:
+    """Import numpy and pyarrow so OpenBLAS thread buffers exist before the address-space cap."""
+    import numpy as np
+    import pyarrow as pa
+
+    _ = (np, pa)
+
+
 def run(args: argparse.Namespace) -> int:
     """Run one cell and write its JSON payload; exit non-zero on anything unclassifiable."""
+    load_spill_worker_libraries()
     conf = json.loads(args.conf)
     session = build_session(args.limit_bytes, args.partitions, conf)
     target_bytes = args.multiplier * args.limit_bytes

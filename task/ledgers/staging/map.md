@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
+  **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
+  `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent
+  0.91 at 50/250/500. Step-1 remediation (2026-09-12): `interleave` once per
+  stacked column and stream each input batch (C-006, C-007). `describe` stays
+  on the bridge until step 2.
+  `risk_tier: standard`. Branch `perf/unpivot-1`.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
   **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
   upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
@@ -85,6 +93,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   walk still reports the seven so the API-freeze register keeps them frozen.
   `risk_tier: standard`. Branch `docs/ex-31-inventory-plumbing`.
   pins: ex-31-inventory-plumbing/C-001, C-002, C-003, C-004, C-005, C-006
+- [facade-1-ledger.md](facade-1-ledger.md) —
+  **FACADE-1 step 1 (2026-09-12), in flight:** the Arrow C Stream boundary —
+  `__arrow_c_stream__` capsules both ways, pyarrow optional at import and for
+  polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
+  fallback. `risk_tier: standard`. Branch `feat/facade-1`.
+  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
@@ -179,6 +193,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the fork repin `594bdbe5` → `85a4aaf0` (F-25). `validate_fresh_dvs_only` stops once every
   `added_dvs` key is found; `PERF-DVCLOSE-STMT-1` closes. `risk_tier: standard`. Branch
   `feat/rp-10-repin-f25`.
+- [rp-19-ledger.md](rp-19-ledger.md) — **RP-19 (2026-09-12), in flight:** consume fork pin
+  `3ebf7d36` (F-S3ROOT-1 `#281`, the whole bump — a bare-bucket object-store
+  location, every S3 Tables table's, resolves to the bucket root like Java's
+  `S3URI` for S3, GCS and OSS). Consumer: the ORPHAN-S3TABLES-1 registry row opens
+  with the parser half FIXED at this pin and the owner's dev-bucket reproduction
+  verbatim (the parser error before, the 405 `ListObjectsV2` refusal after); the
+  loud refusal itself is the ORPHAN-S3TABLES-1 card. No product code, no live test
+  (D-2/D-3). `risk_tier: standard`. Branch `chore/repin-rp-19`.
+  pins: rp-19/C-001, C-002, C-003
 - [rp-16-ledger.md](rp-16-ledger.md) — **RP-16 (2026-09-11), in flight:** consume fork pin
   `090bc821` (F-WRITE-COMPRESS-1 `#276` plus riders `#273`–`#275`, `#277`). Consumer
   fix: `PERF-CATALOG-CACHE-WEIGHT-1` FIXED — charged object-graph weight, measured

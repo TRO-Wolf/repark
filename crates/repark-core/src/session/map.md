@@ -54,6 +54,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
   unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
+  **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
+  registers the marker `stack` UDF. pins: perf-unpivot-1/C-003
   **FNP-8 (2026-09-07):** core hands the complete analyzer vector to the session extension before
   building `SessionState`; the identity hook preserves every guard and its position.
   The two guards sit at **different altitudes**,
