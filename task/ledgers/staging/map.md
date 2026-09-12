@@ -56,6 +56,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   legs, the `describe` string-column raise, the `colRegex` multi-match arm.
   `risk_tier: standard`. Branch `docs/ex-29-class-remainder`.
   pins: ex-29-class-remainder/C-001, C-002, C-003, C-004, C-005, C-006
+- [ex-30-functions-remainder-ledger.md](ex-30-functions-remainder-ledger.md) —
+  **EX-30 (2026-09-11), in flight:** the v1.1 example backfill's `F.*` remainder —
+  the 99 `F.*` backlog names at base `f413241b`. Measured on live PySpark 4.1.2
+  (ANSI on, UTC, zulu-17): 9 covered by two new `docs/examples/functions/` scripts
+  (`bitmap.py`, `udf.py`), 89 stay with their §7 rows (87 pre-existing plus
+  `from_xml` / `schema_of_xml` under the new EX-FN-22), `F.PythonUDFColumn` stays
+  pending an owner ruling on inventory narrowing. New rows EX-FN-22 (XML E1 stubs)
+  and EX-FN-23 (the `udf` / `pandas_udf` factory return-type arm, BACKLOG ARM on
+  covered names); pins in `test_examples_functions_b.py`. Backlog 128 → 119.
+  `risk_tier: standard`. Branch `docs/ex-30-functions-remainder`.
+  pins: ex-30-functions-remainder/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

@@ -6500,6 +6500,41 @@ field NAME.
   covered by the no-format arms; this row records the format argument until the parser
   accepts Spark's pattern.
 
+### EX-FN-22 — `from_xml` / `schema_of_xml` refuse as E1 stubs; Spark parses and infers XML
+
+- **repark** — `F.from_xml("x", "b INT")` raises `UnsupportedOperationException:
+  functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)`, and
+  `F.schema_of_xml(F.lit("<a><b>1</b></a>"))` raises `UnsupportedOperationException:
+  functions.schema_of_xml is not supported yet (disclosed E1)`.
+- **Apache Spark** — `from_xml("<a><b>1</b></a>", "b INT")` answers `Row(b=1)`;
+  `schema_of_xml("<a><b>1</b></a>")` answers `"STRUCT<b: BIGINT>"`. *(oracle: live PySpark
+  4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_from_xml_refuses` and
+  `…::test_schema_of_xml_refuses`
+- **Rationale** — BACKLOG, filed 2026-09-11 from the EX-30 measurement. Both names stay on
+  the example backlog until the XML parse kernel lands — the same E1 stub family as
+  `from_csv` (EX-FN-6) and `schema_of_csv` (EX-FN-16); the serializer side `to_xml` and the
+  `xpath_*` names stay under FNP-16-csv-xml-xpath.
+
+### EX-FN-23 — the `udf` / `pandas_udf` factories answer a typed UDF object; Spark answers a plain function
+
+- **repark** — `F.udf(f)` answers a `UserDefinedFunction` instance,
+  `F.pandas_udf(f, returnType=…)` answers a `PandasUDFFunction`, and
+  `F.udtf(returnType=…)` answers a decorator `function` whose decorated class is a
+  `UserDefinedTableFunction`.
+- **Apache Spark** — `F.udf(f)` and `F.pandas_udf(f, returnType=…)` answer plain
+  `function` objects (`isinstance(u, UserDefinedFunction)` is False); `F.udtf(returnType=…)`
+  answers `functools.partial` and its decorated class is a `UserDefinedTableFunction`,
+  same as repark. The projected values agree on every measured arm (`u1`/`u2`/`u3` through
+  both factories, `2`/`4`/`6` through the pandas arm, `(5,)`/`(6,)` through the UDTF).
+  *(oracle: live PySpark 4.1.2, ANSI on, UTC, 2026-09-11, EX-30 batch.)*
+- **Pin** — `python/repark/tests/test_examples_functions_b.py::test_udf_factories_answer_typed_wrappers`
+- **Rationale** — BACKLOG ARM, filed 2026-09-11 from the EX-30 measurement; same mechanism
+  as EX-SES-6 (`spark.udf.register` answers the UDF object where Spark answers a plain
+  function). `F.udf`, `F.pandas_udf` and `F.udtf` stay covered by the value arms; this row
+  records the factory return-type arm — a migrated `isinstance(u, UserDefinedFunction)`
+  reads True here and False on Spark 4.1.2.
+
 ### H3-SPILL-NLJ-1 — a nested-loop join at a tight pool refuses like every other operator — **FIXED 2026-09-06, H3-SPILL-RESIDUE-1**
 
 - **repark** — `SELECT l.id, r.v FROM base l JOIN other r ON l.v < r.v` with a 1e6-row left side,

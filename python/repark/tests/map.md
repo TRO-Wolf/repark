@@ -285,8 +285,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the two divergence pins for the F.* scalar-remainder batch — `try_to_timestamp`
   refuses (EX-FN-20) and the `unix_timestamp` format argument refuses (EX-FN-21,
   BACKLOG ARM on a covered name). Both pin at call time; the registry rows are
-  `EX-FN-20` and `EX-FN-21`.
+  `EX-FN-20` and `EX-FN-21`. **EX-30 (2026-09-11):** three more pins for the F.*
+  remainder — `from_xml` and `schema_of_xml` refuse as E1 stubs (EX-FN-22) and the
+  `udf` / `pandas_udf` factories answer typed UDF objects where Spark 4.1.2 answers
+  plain functions (EX-FN-23, BACKLOG ARM on covered names).
   pins: ex-28-scalar-remainder/C-006
+  pins: ex-30-functions-remainder/C-005
 - [test_examples_functions_a.py](test_examples_functions_a.py) — **EX-25 (2026-09-05):**
   the twenty divergence pins for the F.* long-tail (a) example batch — the refusal
   pins for `arrays_zip` (EX-FN-1), the `posexplode` pair (EX-FN-2), the
