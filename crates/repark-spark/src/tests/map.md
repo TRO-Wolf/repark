@@ -650,7 +650,11 @@ above.
   unit tests pin the civil calendar, the grains, the band penalty, the 1/k split, the Spark
   DDL labels, the bucket split, the pair cross-product, and the plan-id stability. Timestamp
   fixture days are rendered as literals in Rust (`TIMESTAMP '…'` arms over `src`) because the
-  door exposes no SQL `date_add`. **AP-1 step 2 (2026-09-11):** the byte-ratio pins — a
+  door exposes no SQL `date_add`. **AP-1-CLOSE-1 (2026-09-12):** the every-row caveat pin
+  now expects the AP-1-R-001 closure wording — `projected_files_at_target` is an upper
+  bound from the inputs' compressed bytes, the footers' uncompressed sum times `byte_ratio`
+  counting compression once — and the three-bed bound/ranking pins live in
+  `call/plan_partitioning/tests.rs`. **AP-1 step 2 (2026-09-11):** the byte-ratio pins — a
   CTAS-written compressible table (CTAS lands zstd; `INSERT INTO` lands uncompressed through
   the fork's task writer, so the ratio pin cannot seed by INSERT) whose `notes` carry
   `byte_ratio=<footer sums recomputed independently via datafusion::parquet> (footers)` and
@@ -666,6 +670,7 @@ above.
   target 524 288 → 6 files).
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
   pins: ap-3/C-001, C-002, C-004, C-005
+  pins: ap-1-close-1/C-001
 
 ## Pointers
 

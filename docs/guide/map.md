@@ -50,10 +50,15 @@ illustrative. A claim with no verified basis does not go in.
   now multiplies the footers' uncompressed sum by the ratio once (S2-23), and the
   section carries the known-issues line — AP-1-R-001 (was S2-24): fork `#280`
   removed the dead dictionary pages so compaction is no longer a net-size loss,
-  but the projection still misses the 20 % bar, now over-reading.
+  but the projection still misses the 20 % bar, now over-reading. **AP-1-CLOSE-1
+  (2026-09-12):** the known-issues line is retired — `projected_files_at_target`
+  is documented as an upper bound from the inputs' compressed bytes (the footers'
+  uncompressed sum times `byte_ratio`, compression counted once), and compaction
+  is a net-size win on zstd tables at the RP-18 pin.
   pins: maint-policy-1/C-026
   pins: ap-1/C-013
   pins: ap-2/C-007, C-008
+  pins: ap-1-close-1/C-001, C-004
 - [session-and-conf.md](session-and-conf.md) — the `ReparkSession` builder; `getOrCreate` reuse
   semantics; F-Y10-1 notes SMALLINT wrap residue (2026-08-30); how `conf.get` / `conf.set` behave (unset keys raise; three tiers of key: build-time
   engine knob / live `datafusion.*` / facade-local); where the defaults live (`_SQLCONF_DEFAULTS`);

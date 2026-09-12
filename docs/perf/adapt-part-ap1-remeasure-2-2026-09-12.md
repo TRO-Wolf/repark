@@ -25,6 +25,15 @@ The futures source is `/tmp/ap1r-src/test_futures.parquet`, md5-identical to
 Build walls on this run: futures CTAS 0.3 s, uniform 15.5 s, skewed 22.3 s;
 rewrite-copy builds 14.6 s each.
 
+**Closing note (AP-1-CLOSE-1, 2026-09-12):** the 20 % check below is retired —
+S2-27 rules AP-1-R-001 closed as an estimator property:
+`projected_files_at_target` is an upper bound from the inputs' compressed
+bytes (a same-codec rewrite into fewer, larger files does not compress worse),
+pinned on the three beds with the candidate ranking unchanged. This document's
+measurements stand; its residue verdict is superseded by the closing errata at
+the top of
+[task/ledgers/completed/ap-1-ledger.md](../../task/ledgers/completed/ap-1-ledger.md).
+
 ## Measured codecs and byte ratios
 
 Independent recompute with `pyarrow.parquet` over
@@ -239,4 +248,4 @@ current-snapshot `files` total. Related:
 [adapt-part-ap1-remeasure-2026-09-11.md](adapt-part-ap1-remeasure-2026-09-11.md);
 [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md);
 ledgers `task/ledgers/staging/rp-17-ledger.md` and
-`task/ledgers/staging/ap-1-remeasure-ledger.md`.
+`task/ledgers/completed/ap-1-remeasure-ledger.md`.

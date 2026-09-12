@@ -1,3 +1,38 @@
+# Errata — AP-1-R-001 CLOSED (2026-09-12, AP-1-CLOSE-1 / S2-27)
+
+**Model:** swe-2-high. **Branch:** `chore/ap-1-close-1`. **Base:** `origin/main`
+at fork pin `9e3522e3` (RP-18). This note sits at the top because `completed/`
+ledgers are frozen except a prepended errata.
+
+Residue **AP-1-R-001 is CLOSED** — the four re-measures chased a 20 % target
+that no footer-derived projection can meet in both directions, so S2-27 retires
+the target and rules the residue closed as an estimator property:
+`projected_files_at_target` is an **upper bound from the inputs' compressed
+bytes** — a rewrite of the same rows under the same codec into fewer, larger
+files does not compress worse once the dead dictionary pages are gone. The
+`RESIDUE_NOTE` and every frame row's `notes` spell the bound; the AP-3 formula
+is unchanged (uncompressed footer sum × `byte_ratio`, compression counted
+once). Clause table:
+[task/ledgers/staging/ap-1-close-1-ledger.md](../staging/ap-1-close-1-ledger.md).
+
+The four measurements (synthetic beds; projection vs live rewrite actual):
+
+| Round | Basis | Projection (B) | Actual (B) | Δ |
+|---|---|---|---|---|
+| run 7 (AP-1 step 2, 2026-09-11) | stored 7 773 590 × ratio 1.000000 | 7 773 590 | uniform 4 413 222 / skewed 4 134 457 | +76.2 % / +88.0 % |
+| RP-16 (2026-09-11) | stored 3 074 844 × 0.376076 | 1 156 376 | 7 928 680 / 7 672 169 (rewrite wrote UNCOMPRESSED) | −85.4 % / −84.9 % |
+| RP-17 (2026-09-12) | stored 3 074 844 × 0.376076 | 1 156 376 | 4 474 081 / 4 136 632 (zstd + dead dictionary pages) | −74.2 % / −72.0 % |
+| RP-18 (2026-09-12) | uncompressed 7 529 566 × 0.377269 (AP-3) | 2 840 672 | 1 839 168 / 1 755 749 (zstd, dictionary only on `grp`) | +54.5 % / +61.8 % |
+
+Under the pinned bound the unpartitioned row's `projected_files_at_target` ×
+524 288 reads 3 145 728 on both synthetic beds — ≥ each live actual and ≤ 2×
+it — and 26 738 688 on futures against its live 26 729 684 (the rewrite
+declines below Spark's `min-input-files` floor of 5 on the 3-file bed). The
+candidate ranking is unchanged on every bed (pinned). Full record:
+[docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md).
+
+---
+
 # Errata — RP-18 re-measure (2026-09-12)
 
 **Model:** swe-2-high. **Branch:** `chore/repin-rp-18`. **Base:** fork pin
@@ -114,7 +149,7 @@ bytes 3 074 844, failed 0. Pre-rewrite copies matched the plan beds (206 files,
 inputs. **AP-1-R-001 still OPEN.** Full record:
 [docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
 Clause table:
-[task/ledgers/staging/ap-1-remeasure-ledger.md](../staging/ap-1-remeasure-ledger.md).
+[task/ledgers/staging/ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md).
 
 **Owner question Q-1 (not decided here):** should `byte_ratio` multiply the
 footers' *uncompressed* sum rather than the stored file bytes, i.e. predict the

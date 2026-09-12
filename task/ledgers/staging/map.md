@@ -5,21 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [facade-1-ledger.md](facade-1-ledger.md) —
-  **FACADE-1 step 1 (2026-09-12), in flight:** the Arrow C Stream boundary —
-  `__arrow_c_stream__` capsules both ways, pyarrow optional at import and for
-  polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
-  fallback. `risk_tier: standard`. Branch `feat/facade-1`.
-  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
-  **AP-1 re-measure (2026-09-11), in flight:** RP-16 fork pin `090bc821` makes
-  INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
-  module. Uniform/skewed codecs ZSTD (was uncompressed), `byte_ratio` 0.376076
-  (was 1.000000). Round 2 live rewrite actuals 7 928 680 / 7 672 169
-  (UNCOMPRESSED); honest 20 percent check −85.4 % / −84.9 %; residue
-  AP-1-R-001 still OPEN. Owner question Q-1 parked. No source change.
-  `risk_tier: standard`. Branch `feat/ap-1-remeasure`.
-  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
+- [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
+  **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
+  upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
+  no formula change (D-1), the note and frame `notes` say "upper bound", the pin
+  reproduces the three AP-0 beds' RP-18 frame (bound ≥ live actual ≤ 2×, ranking
+  identical, red first by doctoring the bound), residue AP-1-R-001 closes
+  2026-09-12, the maintenance guide's S2-24 known-issues line retires, and the
+  AP-1 remeasure ledger departs to `completed/` through the lifecycle tool.
+  `risk_tier: standard`. Branch `chore/ap-1-close-1`.
+  pins: ap-1-close-1/C-001, C-002, C-003, C-004, C-005
 - [ap-3-ledger.md](ap-3-ledger.md) —
   **AP-3 step 1 (2026-09-12), in flight:** `projected_files_at_target` multiplies
   each item's footer `total_uncompressed_size` sum by `byte_ratio` — compression
@@ -90,6 +85,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   walk still reports the seven so the API-freeze register keeps them frozen.
   `risk_tier: standard`. Branch `docs/ex-31-inventory-plumbing`.
   pins: ex-31-inventory-plumbing/C-001, C-002, C-003, C-004, C-005, C-006
+- [facade-1-ledger.md](facade-1-ledger.md) —
+  **FACADE-1 step 1 (2026-09-12), in flight:** the Arrow C Stream boundary —
+  `__arrow_c_stream__` capsules both ways, pyarrow optional at import and for
+  polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
+  fallback. `risk_tier: standard`. Branch `feat/facade-1`.
+  pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

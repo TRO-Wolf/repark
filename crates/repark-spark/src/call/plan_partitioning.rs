@@ -52,7 +52,7 @@ use super::{CallArgs, resolve_table_ident};
 use crate::{catalog_handle, iceberg_err};
 use repark_core::CatalogRegistry;
 
-const RESIDUE_NOTE: &str = "AP-0-R-001: projected_files_at_target applies byte_ratio to the footers' uncompressed byte sum, counting compression once (the stored-byte form measured -74%/-72% low against the RP-17 same-codec rewrite; the remaining gap is S2-24); projected_partitions measured exact";
+const RESIDUE_NOTE: &str = "AP-1-R-001 closed 2026-09-12: projected_files_at_target is an upper bound from the inputs' compressed bytes — the footers' uncompressed byte sum times byte_ratio, counting compression once (a same-codec rewrite into fewer, larger files does not compress worse); projected_partitions measured exact";
 
 pub(super) async fn execute_plan_partitioning(
     ctx: &SessionContext,
@@ -814,21 +814,4 @@ fn plan_dataframe(ctx: &SessionContext, rows: &[PlanFrameRow]) -> Result<DataFra
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plan_id_is_stable_per_pair_and_unique_per_candidate() {
-        assert_eq!(plan_id(7, "days(ts)"), plan_id(7, "days(ts)"));
-        assert_ne!(plan_id(7, "days(ts)"), plan_id(7, "months(ts)"));
-        assert_ne!(plan_id(7, "days(ts)"), plan_id(8, "days(ts)"));
-    }
-
-    #[test]
-    fn extra_branch_refusal_names_the_branch() {
-        assert!(refuse_extra_branches(&[], "sales.t").is_ok());
-        let error = refuse_extra_branches(&["feat".to_string()], "sales.t").expect_err("branch");
-        let message = error.to_string();
-        assert!(message.contains("feat") && message.contains("main"));
-    }
-}
+mod tests;
