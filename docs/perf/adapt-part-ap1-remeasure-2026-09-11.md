@@ -214,6 +214,14 @@ stale CTAS actuals, because `rewrite_data_files` wrote **uncompressed** files
 by the stored zstd ratio (3 074 844 × 0.376076 = 1 156 376). Input codec and
 rewrite codec still do not match.
 
+The uncompressed rewrite output has a named cause: fork residue
+**F-WRITE-COMPRESS-1-R-002** (`crates/iceberg/src/maintenance/rewrite_data_files_write.rs:69`
+builds `WriterProperties::builder().build()`, parquet-rs's UNCOMPRESSED default). Fork `#276`
+fixed the INSERT path only and listed the four other writer sites as residue; this measurement is
+the first downstream evidence that one of them inflates a real table — compaction of a 3.07 MB
+zstd bed produced 7.93 MB of live files. A fork follow-up (F-WRITE-COMPRESS-2) is the fix; it is
+not this measurement's to make.
+
 Owner question Q-1, not decided here: should the ratio multiply the footers'
 *uncompressed* sum rather than the stored file bytes, i.e. predict the rewrite's
 own codec?
