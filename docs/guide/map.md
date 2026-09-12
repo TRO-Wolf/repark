@@ -54,8 +54,12 @@ illustrative. A claim with no verified basis does not go in.
   (2026-09-12):** the known-issues line is retired — `projected_files_at_target`
   is documented as an upper bound from the inputs' compressed bytes (the footers'
   uncompressed sum times `byte_ratio`, compression counted once), and compaction
-  is a net-size win on zstd tables at the RP-18 pin.
+  is a net-size win on zstd tables at the RP-18 pin. **ORPHAN-S3TABLES-1
+  (2026-09-12):** adds the S3 Tables paragraph — table buckets do not list, the
+  CALL refuses naming `unreferencedFileRemoval`, and `run_maintenance` reports
+  the orphan step `skipped` with the reason.
   pins: maint-policy-1/C-026
+  pins: orphan-s3tables-1/C-005
   pins: ap-1/C-013
   pins: ap-2/C-007, C-008
   pins: ap-1-close-1/C-001, C-004
