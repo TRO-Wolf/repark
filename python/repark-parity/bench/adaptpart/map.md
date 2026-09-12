@@ -54,6 +54,12 @@ makes never is — beds live under the `--scratch` root the caller names.
   actual sit under one codec and one compression pass. Numbers:
   [docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md).
   pins: rp-18/C-001, C-002, C-003, C-004
+  **AP-1-CLOSE-1 (2026-09-12):** the same `--plan` frame backs the closure pin —
+  `projected_files_at_target` × target is an upper bound over the live actual on
+  the three beds (a same-codec rewrite into fewer, larger files does not compress
+  worse); the pin reproduces the bed shapes in Rust and asserts bound ≥ actual ≤
+  2× plus the RP-18 ranking verbatim. No script change.
+  pins: ap-1-close-1/C-001, C-002, C-003, C-004, C-005
 - `map.md` — this file.
 
 ## I want to…

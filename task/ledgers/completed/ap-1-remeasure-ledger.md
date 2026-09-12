@@ -72,7 +72,7 @@ byte_ratio` vs live actual reads −74.2 % / −72.0 % — AP-1-R-001 stays OPEN
 Q-1 alternative projection (Σ uncompressed × ratio = 2 831 692) reads −36.7 % /
 −31.5 % — recorded for the orchestrator, not ruled here. Full record:
 [docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md);
-clause table: [rp-17-ledger.md](rp-17-ledger.md).
+clause table: [rp-17-ledger.md](../staging/rp-17-ledger.md).
 
 ## RP-18 note (2026-09-12) — verdicts above untouched
 
@@ -91,7 +91,7 @@ on the AP-3 projection (Σ uncompressed × ratio = 2 840 672) reads +54.5 % /
 rewrite's own output ratio (0.284 / 0.270) beats the inputs' 0.377. The recorded
 stored × ratio figure (1 163 431) reads −36.7 % / −33.7 %. Full record:
 [docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md);
-clause table: [rp-18-ledger.md](rp-18-ledger.md).
+clause table: [rp-18-ledger.md](../staging/rp-18-ledger.md).
 
 ## Coverage attestation
 

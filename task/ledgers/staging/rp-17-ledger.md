@@ -100,7 +100,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: AP-1-R-001 answered as measured per D-2 and stays OPEN (−74.2 % / −72.0 %); both projections recorded for the orchestrator's Q-1 ruling per D-3; residue updated in the completed AP-1 ledger errata, the remeasure ledger note, and the AP-1 doc.
-      artifacts: [task/ledgers/completed/ap-1-ledger.md, task/ledgers/staging/ap-1-remeasure-ledger.md, docs/perf/adapt-part-ap1-2026-09-11.md]
+      artifacts: [task/ledgers/completed/ap-1-ledger.md, task/ledgers/completed/ap-1-remeasure-ledger.md, docs/perf/adapt-part-ap1-2026-09-11.md]
     - id: AT-10
       status: ATTACKED
       evidence: Before state is run 8's re-measure doc (UNCOMPRESSED outputs, −85.4/−84.9); after state is this unit's zstd outputs and both deltas. No formula or product code changed (D-4).

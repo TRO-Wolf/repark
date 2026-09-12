@@ -16,6 +16,15 @@ rebuilt fresh under `/tmp/ap1-bed` (never committed): futures — 3 files,
 26 729 684 bytes, CTAS-written; uniform — 206 files, 7 773 590 bytes, INSERT-grown;
 skewed — 206 files, 7 773 590 bytes, INSERT-grown.
 
+**Closing note (AP-1-CLOSE-1, 2026-09-12):** the 20 % check this document runs
+is retired — S2-27 rules AP-1-R-001 closed as an estimator property:
+`projected_files_at_target` is an upper bound from the inputs' compressed
+bytes (a same-codec rewrite into fewer, larger files does not compress worse),
+pinned on the three beds with the candidate ranking unchanged. This document's
+measurements stand; its residue verdict is superseded by the closing errata at
+the top of
+[task/ledgers/completed/ap-1-ledger.md](../../task/ledgers/completed/ap-1-ledger.md).
+
 ## Measured byte ratios
 
 The ratio in each frame's `notes` (`byte_ratio=<r> (footers)`) recomputed
