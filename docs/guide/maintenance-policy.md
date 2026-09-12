@@ -137,9 +137,41 @@ bounds produces no candidate — the last row's `notes` names it and why. Tables
 with a branch besides `main` refuse; a table carrying several partition specs
 plans normally with a note that applying would rewrite to one spec.
 
-The procedure plans only — it writes nothing and changes no table. Applying a
-plan is a later unit's `apply_partitioning`, keyed by `plan_id`; until then the
-`calls` column is documentation of the chain an operator would issue.
+The procedure plans only — it writes nothing. Applying a printed plan is
+`apply_partitioning` below, keyed by `plan_id`.
+
+## Applying a printed plan — `CALL apply_partitioning()`
+
+```sql
+CALL <catalog>.system.apply_partitioning(
+  table => 'db.t', plan_id => '<id from the plan frame>'
+  [, dry_run => true] [, target_file_size_bytes => 524288])
+```
+
+`table` and `plan_id` are required. `dry_run` defaults **true**: nothing commits;
+the frame lists the steps it would run, each `status` `dry_run`. `dry_run => false`
+executes. `target_file_size_bytes` is optional, a positive integer spelled as in
+`plan_partitioning` — pass the same value used for planning so a two-field
+candidate is found; omit it and lookup re-plans at target 1, which can miss a pair.
+
+The `plan_id` is re-derived at the current snapshot. Nothing is stored. A moved
+snapshot, or an id not from this table, refuses; re-run `plan_partitioning` and
+pass a fresh id. If you omitted the target, the refusal also names
+`target_file_size_bytes`.
+
+Steps, one commit each: every `ALTER TABLE … ADD PARTITION FIELD …` from the
+row's `ddl` (none for `unpartitioned`), then `rewrite_data_files`,
+`rewrite_manifests`, `expire_snapshots`. Frame: `step` Int32 plus `procedure`,
+`arguments`, `status` (`applied` / `dry_run` / `skipped`), `result`, `plan_id`
+Utf8. **Not a transaction** — a failure stops the chain and leaves earlier commits.
+P-5: a branch other than `main` refuses; sort order is preserved; a multi-spec
+table is rewritten onto one current spec.
+
+```sql
+CALL ice.system.plan_partitioning(table => 'sales.orders', target_file_size_bytes => 524288);
+CALL ice.system.apply_partitioning(table => 'sales.orders', plan_id => '<id>',
+  target_file_size_bytes => 524288, dry_run => false);
+```
 
 ## Reserved: `adaptive_partitioning`
 

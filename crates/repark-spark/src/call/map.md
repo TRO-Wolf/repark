@@ -8,12 +8,31 @@ Per-procedure bodies for the maintenance `CALL` router (`../call.rs`). The route
 parsing, table-ident resolution, and the other procedures; a procedure moves here when its body
 and measured-parity contract would grow `call.rs` beyond its exact
 `check_rust_file_size` baseline. This directory contains
-`rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
+`apply_partitioning`, `rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
 `expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
 `rollback_to_snapshot`, `register_table`).
 
 ## Contents
 
+- `apply_partitioning.rs` — **AP-2 step 1 (2026-09-11):** `CALL
+  <catalog>.system.apply_partitioning(table => …, plan_id => … [, dry_run => …])`.
+  `dry_run` defaults true (nothing commits; every row `status` `dry_run`). `dry_run => false`
+  runs each `ALTER TABLE … ADD PARTITION FIELD …` from the matching plan row (one commit
+  each; the `unpartitioned` candidate has no DDL step), then `rewrite_data_files`,
+  `rewrite_manifests`, `expire_snapshots` through the existing procedure bodies. The plan id
+  is re-derived: the procedure re-plans at the current snapshot via `collect_plan_rows` and
+  matches `plan_id`; no match refuses naming the table, the id, and that the snapshot moved
+  or the id is not from this table. A step failure stops the chain and names the step number
+  and statement; earlier steps stay committed (not a transaction). Frame columns: `step`
+  Int32, `procedure` / `arguments` / `status` / `result` / `plan_id` Utf8. P-5: extra
+  branches refuse (same helper as plan); sort order is unchanged after a real apply; a
+  multi-spec table is rewritten so live data files share one spec. AP-1 is SQL-only, so this
+  door is SQL-only too (no Python session method). **D-8 (2026-09-11):** optional
+  `target_file_size_bytes`, spelled and parsed as in `plan_partitioning` (positive
+  integer). When present the lookup re-plans at that target so a two-field `plan_id` is
+  found; when absent the lookup stays at target 1 and a miss tells the caller to pass
+  the planning target. Guide: `docs/guide/maintenance-policy.md`.
+  pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
   `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown
