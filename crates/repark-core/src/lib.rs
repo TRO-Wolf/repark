@@ -21,6 +21,7 @@ mod session_owner;
 mod session_time_zone;
 mod sorted_view;
 mod spark_nullable;
+mod stack;
 mod temp_view;
 mod time_travel;
 
@@ -81,6 +82,7 @@ pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
+pub use stack::{StackQueryPlanner, StackRewrite, apply_stack, register_stack, stack_udf};
 
 #[must_use]
 pub fn built_with_debug_assertions() -> bool {

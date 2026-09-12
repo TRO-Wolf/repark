@@ -6770,11 +6770,12 @@ field NAME.
 ### FNP9-GENERATORS-1 — the multi-column generators refuse; Spark projects several columns
 
 - **repark** — `F.posexplode` and `F.posexplode_outer` raise `UnsupportedOperationException`
-  and `F.json_tuple` keeps its refusal; `F.inline`, `F.inline_outer` and `F.stack` are absent
-  (`AttributeError`). The Spark door refuses the same shape at parse altitude:
-  `SELECT posexplode(array(10,20)) AS (p, c)` answers `SELECT item with multiple aliases is not
-  supported`, and `inline` / `stack` are not routines there. `SELECT json_tuple(j, 'a', 'b')`
-  does answer, but as ONE `STRUCT<c0: STRING, c1: STRING>` column.
+  and `F.json_tuple` keeps its refusal; `F.inline` and `F.inline_outer` are absent
+  (`AttributeError`). `F.stack` / SQL `stack(n, expr…)` landed in PERF-UNPIVOT-1 as
+  `UnpivotExec`. The Spark door still refuses `SELECT posexplode(array(10,20)) AS (p, c)`
+  (`SELECT item with multiple aliases is not supported`), and `inline` is not a routine
+  there. `SELECT json_tuple(j, 'a', 'b')` does answer, but as ONE
+  `STRUCT<c0: STRING, c1: STRING>` column.
 - **Apache Spark** — `posexplode([10, 20])` projects two columns `(0, 10)`, `(1, 20)`;
   `posexplode(map('a',1))` projects three; `inline(array(struct(1 AS a, 'x' AS b)))` projects
   `a` and `b` named from the struct; `inline_outer` and `posexplode_outer` keep a NULL row for a
@@ -6783,7 +6784,8 @@ field NAME.
   *(oracle: live PySpark 4.1.2, ANSI on, UTC session zone, 2026-09-05, FNP-9/10 batch.)*
 - **Pin** —
   `python/repark/tests/test_fnp_9_collections_json.py::test_fnp9_multi_column_and_by_name_names_stay_absent`
-  and `…::test_json_tuple_still_refuses_on_the_facade`
+  (`stack` removed from the absent roster; pins: perf-unpivot-1/C-004) and
+  `…::test_json_tuple_still_refuses_on_the_facade`
 - **Rationale** — BACKLOG, filed 2026-09-05. One seam, not six gaps: the facade select path
   carries at most one generator column and emits exactly one output column
   (`dataframe/core.py` `_generator`), and the Spark door rejects a multi-alias select item. Every

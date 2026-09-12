@@ -186,7 +186,8 @@ pins: rp-4-fork-repin/C-005, C-006
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
-  `InsertStoreAssignment`, function registry, analyzer rules, and composed `TaExtension`. It also
+  `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
+  after integer-literal narrowing), and composed `TaExtension`. It also
   carries the session timezone and Spark decimal settings. Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule

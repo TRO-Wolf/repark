@@ -78,6 +78,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `DynamicFlattenOptions`; re-exported at the crate root). List-of-map and
   ListView refuse LOUD; Dictionary-of-List is cast before Unnest; LargeList /
   FixedSizeList explode.
+- `src/stack/` — **PERF-UNPIVOT-1:** Spark `stack(n, expr…)` as `UnpivotExec`, linear in
+  columns. `apply_stack` is the DataFrame entry; SQL rewrite is the Spark-door
+  `StackRewrite`. pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,

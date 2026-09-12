@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
+  **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
+  `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent
+  0.91 at 50/250/500. `describe` stays on the bridge until step 2.
+  `risk_tier: standard`. Branch `perf/unpivot-1`.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005
 - [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
   **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
   upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
