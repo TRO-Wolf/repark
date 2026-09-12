@@ -342,8 +342,11 @@ async fn plan_every_row_carries_the_r001_file_count_caveat() {
     .await;
     for row in &plan {
         assert!(
-            row.notes.contains("AP-0-R-001") && row.notes.contains("projected_files_at_target"),
-            "R-001 caveat on every row, got: {}",
+            row.notes.contains("AP-1-R-001")
+                && row.notes.contains("projected_files_at_target")
+                && row.notes.contains("upper bound")
+                && row.notes.contains("compressed bytes"),
+            "upper-bound note on every row, got: {}",
             row.notes
         );
     }

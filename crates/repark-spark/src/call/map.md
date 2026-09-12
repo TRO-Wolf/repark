@@ -96,7 +96,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
   agrees at every size measured.
-- `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** `CALL
+- `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read
   (`file_size_in_bytes`, `file_path`, plus the `readable_metrics` bound pairs) and the `refs`
@@ -124,8 +124,17 @@ and measured-parity contract would grow `call.rs` beyond its exact
   low against the RP-17 same-codec rewrite; the residue note says so and names S2-24 as the
   remaining gap). `score` bands the uncompressed share; `projected_partitions` is untouched.
   On an unreadable footer each file's basis is the estimate `file_size_in_bytes / 0.55`.
+  **AP-1-CLOSE-1 (2026-09-12, S2-27):** no formula change — the residue note is re-read as
+  an upper bound from the inputs' compressed bytes (a same-codec rewrite into fewer, larger
+  files does not compress worse), AP-1-R-001 closes, and the pins in
+  [plan_partitioning/tests.rs](plan_partitioning/map.md) reproduce the
+  three AP-0 beds' RP-18 frame: `projected_files_at_target` × target sits at or above the
+  live actual and at or below 2× it, and the candidate ranking equals RP-18's exactly.
+  The `mod tests` block moved to `plan_partitioning/tests.rs` in this change so the file
+  stays under its size ceiling.
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
   pins: ap-3/C-001, C-006
+  pins: ap-1-close-1/C-001, C-002
 - `plan_partitioning_bytes.rs` — **AP-1 step 2 (2026-09-11):** the `byte_ratio` measurement
   behind the step-2 byte model. For every live data file's `file_path` it opens the table's
   own `FileIO`, takes the file size from `metadata()`, and range-reads only the parquet tail

@@ -19,7 +19,17 @@ else. The next pickup's `make ledger-archive` files everything here under
   4 PROVEN, 1 OPEN (C-005, the 20 percent prediction check needs the orchestrator
   O-run rewrite). `risk_tier: standard`. Branch `feat/ap-0`.
   pins: ap-0/C-001, C-002, C-003, C-004
-- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001. **RP-18 re-measure (2026-09-12)** errata at the top (above RP-17/RP-16): fork `#280` removes the dead dictionary pages and defaults unset level to zstd 3; live actuals 1 839 168 / 1 755 749 ZSTD with dictionary only on `grp`; the AP-3 projection reads +54.5 % / +61.8 %; AP-1-R-001 still OPEN. Clause verdicts untouched.
+- [ap-1-ledger.md](ap-1-ledger.md) — Unit ledger — AP-1 steps 1–2 · `CALL plan_partitioning()`; step 2 (2026-09-11) projects from the footer byte ratio and files residue AP-1-R-001. **AP-1-CLOSE-1 (2026-09-12)** errata at the top (above RP-18/RP-17/RP-16): the 20 % target retires (S2-27); `projected_files_at_target` is an upper bound from the inputs' compressed bytes; AP-1-R-001 closes 2026-09-12 with the four-measurement table. Clause verdicts untouched.
+- [ap-1-remeasure-ledger.md](ap-1-remeasure-ledger.md) —
+  **AP-1 re-measure (2026-09-11), completed:** RP-16 fork pin `090bc821` makes
+  INSERT data files carry zstd; the three AP-0 beds rebuilt on the release
+  module. Uniform/skewed codecs ZSTD (was uncompressed), `byte_ratio` 0.376076
+  (was 1.000000). Round 2 live rewrite actuals 7 928 680 / 7 672 169
+  (UNCOMPRESSED); honest 20 percent check −85.4 % / −84.9 %; residue
+  AP-1-R-001 still OPEN at that date — the 20 % target is retired and the
+  residue closed by AP-1-CLOSE-1 (2026-09-12). Owner question Q-1 parked.
+  No source change. `risk_tier: standard`. Branch `feat/ap-1-remeasure`.
+  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - [ap-2-ledger.md](ap-2-ledger.md) — Unit ledger — AP-2 step 1 (apply) · `CALL apply_partitioning()`
 - [ballista-audit-0-ledger.md](ballista-audit-0-ledger.md) —
   **BALLISTA-AUDIT-0 steps 1–3 (2026-09-08), in flight:** Half A facts plus Half B
