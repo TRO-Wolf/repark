@@ -17,4 +17,5 @@ box, full scale.
 - [datafusion.optimizer.prefer_hash_join.csv](datafusion.optimizer.prefer_hash_join.csv)
 - [datafusion.execution.target_partitions.csv](datafusion.execution.target_partitions.csv)
 - [datafusion.execution.batch_size.csv](datafusion.execution.batch_size.csv)
+- [datafusion.optimizer.repartition_joins.csv](datafusion.optimizer.repartition_joins.csv)
 - `map.md` — this file.
