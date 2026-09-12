@@ -56,6 +56,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
   **RP-17 (2026-09-12):** `41e25ba2` (F-WRITE-COMPRESS-2 `#278` — the maintenance, COW/MoR rewrite and position-delete writers honour `write.parquet.compression-codec` too, closing the four residue writer sites; RePark re-measures AP-1 a third time under one codec).
+  **RP-18 (2026-09-12):** `9e3522e3` (F-REWRITE-SIZE-1 step 2 `#280` — the maintenance rewrite disables the dictionary per column from the input footers, so compaction no longer writes dead dictionary pages, and an unset compression level means zstd 3 like Java; RePark re-measures AP-1 a fourth time).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
