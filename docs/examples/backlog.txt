@@ -3,12 +3,6 @@ Catalog.getDatabase
 Catalog.get_database
 Catalog.listDatabases
 Catalog.list_databases
-Column.for_select
-Column.join_sql_part
-Column.spark_display_part
-Column.spark_wrap_display_part
-Column.sql_expr_part
-Column.sql_expr_without_alias
 DataFrame.colRegex
 DataFrame.col_regex
 DataFrame.createGlobalTempView
@@ -26,7 +20,6 @@ DataFrameReader.excel
 DataFrameReader.sheet_names
 DataFrameStatFunctions.freqItems
 DataFrameWriterV2.overwrite
-F.PythonUDFColumn
 F.arrays_zip
 F.base64
 F.decode

@@ -292,6 +292,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   AP-0 CTAS actuals −73.8 % / −72.0 % kept for continuity); residue AP-1-R-001
   stays OPEN. No Rust or Python source changed.
   pins: ap-1-remeasure/C-001, C-002, C-003, C-004
+- [adapt-part-ap1-remeasure-2-2026-09-12.md](adapt-part-ap1-remeasure-2-2026-09-12.md) —
+  **AP-1 RP-17 re-measure (2026-09-12):** the third re-measure, on fork pin
+  `41e25ba2` (`#278` F-WRITE-COMPRESS-2 — the maintenance / COW / MoR rewrite and
+  position-delete writers honour `write.parquet.compression-codec`). Same three
+  beds, same `identity(grp)` candidate, live `rewrite_data_files` actuals whose
+  output footers are now zstd; both projections (stored-bytes × ratio and
+  uncompressed-sum × ratio) sit beside the actual so the orchestrator can rule
+  deferred question Q-1; the 20 % check answers AP-1-R-001 as measured. No Rust
+  or Python source changed.
+  pins: rp-17/C-002, C-003
 
 ## Pointers
 

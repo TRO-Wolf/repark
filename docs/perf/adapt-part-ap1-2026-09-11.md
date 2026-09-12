@@ -179,6 +179,8 @@ recorded for the card's reader, not decided here.
 
 RP-16 re-measure (2026-09-11): the INSERT path now writes zstd (fork `#276`); the same 20 percent check on rebuilt beds is in [adapt-part-ap1-remeasure-2026-09-11.md](adapt-part-ap1-remeasure-2026-09-11.md).
 
+RP-17 re-measure (2026-09-12): the rewrite writers now carry the codec too (fork `#278`); the third run's live actuals are zstd and the check reads −74.2 % / −72.0 % — AP-1-R-001 still OPEN. [adapt-part-ap1-remeasure-2-2026-09-12.md](adapt-part-ap1-remeasure-2-2026-09-12.md).
+
 ## Reproduce
 
 ```text
