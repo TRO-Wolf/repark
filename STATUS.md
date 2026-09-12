@@ -7,33 +7,40 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-11._
+_Last updated: 2026-09-12._
 
 ## Release state
 
-**v1.3.0 (2026-09-11) — the Never-OOM minor on 1.2**, additive under the API freeze (no frozen
-name or required parameter changed). Roadmap 1.3 is closed as measured (ruling S2-18):
+**v1.4.0 (2026-09-12) — the maintenance minor on 1.3**, additive under the API freeze (no frozen
+name or required parameter changed). Roadmap 1.4 closes: the maintenance policy shipped in 1.2 and
+its adaptive-partitioning half lands here.
 
-- **Never-OOM truth (NEVEROOM-1):** the spill-coverage matrix — nine operators at 2/4/8× a 1 GB
-  limit, three reps each, one subprocess per cell under an address-space cap — is the standing
-  record ([docs/perf/spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md)).
-  24 of 27 cells are stable and each spills, completes or refuses loudly; `hash_join` at 4×
-  (KILLED, datafusion#24768) and `hash_aggregate` / `window_unbounded` at 2× (UNSTABLE, #22758) are
-  named with their upstream issues, no operator change (S2-6). A DataFusion bump that closes either
-  issue re-runs the matrix as its pin. CI tier: `make py-test-spill-matrix` against a golden
-  (`sort` and `hash_aggregate` spill, `hash_join` refuses at 2× of 64 MB) — [docs/testing.md](docs/testing.md).
+- **Adaptive partitioning, closed (AP-1/AP-2/AP-3, AP-1-CLOSE-1):** `CALL plan_partitioning()`
+  ranks candidates from footer statistics and `CALL apply_partitioning()` executes a printed plan
+  one commit per step, dry-run by default ([docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md)).
+  `projected_files_at_target` multiplies the uncompressed footer sum by the measured `byte_ratio`
+  and is an **upper bound**, pinned on the three AP-0 beds after four re-measures (S2-23, S2-27).
+- **Compaction is a net-size win on zstd tables** at fork pin `9e3522e3` (RP-16/17/18): `INSERT`,
+  the maintenance rewrite and the position-delete writers honour `write.parquet.compression-codec`
+  (default zstd, level 3 like Java), the rewrite decides dictionary encoding per column from the
+  input footers instead of writing dead dictionary pages, and the decision footers are fused into
+  the scan (one footer fetch per input file) — fork #276/#278/#280.
+- **Configuration profiles (PROFILES-1):** the measured `read` profile (`batch_size` 16384,
+  `target_partitions` 32, `repartition_joins` off) and a `write` profile that is the defaults, every
+  value traced to a sweep row ([docs/guide/repark-toml.md](docs/guide/repark-toml.md),
+  [docs/perf/config-profiles-2026-09-12.md](docs/perf/config-profiles-2026-09-12.md)).
+- **DataFrame fixes measured against Spark 4.1.2:** `describe()`/`summary()` answer Spark's shape on
+  string columns in Spark's row order and aggregate in one lazy pass (DF-DESCRIBE-STR-1,
+  PERF-DESCRIBE-1); `colRegex` expands every match and strips backticks (DF-COLREGEX-1);
+  BALLISTA-M2-B's typed `IcebergTableScan` rebuild behind the `cluster` feature.
+- **The example campaign closes (EX-29…31):** the inventory is exact — 920 public names, 806 covered
+  by runnable examples, 112 on the backlog each with a measured stay row, 2 network exceptions,
+  seven engine-plumbing names excluded by name ([briefs/example-backfill.md](briefs/example-backfill.md)).
 
-**v1.2.0 (2026-09-11) — the torture-suite minor:** the polars-style display default with a
-schema-only lazy `repr` (DISPLAY-POLARS-1, -LAZY-1; `REPARK_DISPLAY_STYLE=spark` restores the grid;
-[docs/guide/session-and-conf.md](docs/guide/session-and-conf.md)); `DataFrame.eager()` /
-`.compute()` / `.lazy()` (DF-EAGER-1); the torture-test suite, eight families on both doors
-([docs/perf/torture-1-2026-09-11.md](docs/perf/torture-1-2026-09-11.md)); the maintenance policy
-and `CALL run_maintenance()` ([docs/guide/maintenance-policy.md](docs/guide/maintenance-policy.md));
-`repark.toml` (CFG-1), `explain()` modes, `DESCRIBE [TABLE] [EXTENDED]`, `CALL
-plan_partitioning()` (AP-0/AP-1), CONF-UNREAD-1; the REVIEW-1 sweep's 15 fix cards
-([review-1-findings](task/roadmap/mid-term/review-1-findings-2026-09-10.md)); Ballista Milestone 1
-+ M2-A behind the off-by-default `cluster` feature
-([docs/design/distributed-m1.md](docs/design/distributed-m1.md)); DFCORE-1…6, FNP-8, NIGHTLY-LIVE-1.
+**v1.3.0 (2026-09-11) — the Never-OOM minor:** the spill-coverage matrix — nine operators at
+2/4/8× a 1 GB limit, 24 of 27 cells stable, `hash_join` at 4× and two 2× cells named with their
+upstream DataFusion issues ([docs/perf/spill-coverage-matrix-2026-09-11.md](docs/perf/spill-coverage-matrix-2026-09-11.md));
+CI tier `make py-test-spill-matrix` against a golden ([docs/testing.md](docs/testing.md)).
 
 **History:** v1.1.1 (2026-09-06, RDF-SCHEMA-EVO-1, WRITE-DISTRIBUTION-2, CSV-INFER-PERF-1);
 v1.1.0 (2026-09-06, the first minor); v1.0.1 (09-04); **v1.0.0 (2026-09-03, the first stable
@@ -184,11 +191,11 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
-- **Example campaign** (chartered 2026-08-31, the 1.1 slate). Batches EX-2 and EX-4..EX-14 merged
-  2026-09-01..03. Static coverage 333 / 913 public names, 578 backlog, 2 exceptions, 83 examples.
-  The packaged-wheel execution gate (`scripts/check_example_coverage.py --require-execute` on the
-  published wheel) is authoritative — green on the 1.0.1 wheel 2026-09-04. Slate:
-  [briefs/example-backfill.md](briefs/example-backfill.md). **Next:** batches from the 578.
+- **Example campaign** (chartered 2026-08-31, the 1.1 slate) — **closed 2026-09-12 (EX-31):**
+  920 public names, 806 covered, 112 backlog names each with a measured stay row, 2 exceptions,
+  214 examples; the packaged-wheel execution gate (`scripts/check_example_coverage.py --require-execute`)
+  is authoritative. Slate: [briefs/example-backfill.md](briefs/example-backfill.md). A backlog name
+  leaves only when the engine grows its Spark answer.
 <!-- /ws -->
 
 Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
@@ -315,6 +322,6 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.3.0 cut 2026-09-11; the tag history is in [Release state](#release-state).
+**None.** v1.4.0 cut 2026-09-12; the tag history is in [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
