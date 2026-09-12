@@ -32,14 +32,14 @@ stored-bytes projection to the uncompressed one with the RP-17 numbers as eviden
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | `uncompressed_footer_basis` (D-1): `projected_files_at_target` equals `ceil(Σ_uncompressed(value) × byte_ratio / target)` summed over partition values, where each file's byte basis is its footer `total_uncompressed_size` column-chunk sum — compression applied once. | Pin asserts the uncompressed-derived count against independently recomputed footer sums on a compressible CTAS fixture; the RP-17 bed-shape pin asserts the 2 831 692-derived count. | OPEN | pending |
-| C-002 | `fallback_estimates_uncompressed` (D-1): with any footer unreadable the frame keeps `byte_ratio=0.55 (fallback)` and each file's byte basis is the uncompressed estimate `file_size_in_bytes / 0.55`, so the projection folds back to stored bytes at target — never compressed twice. | Corrupt one data file; pin asserts `0.55 (fallback)` on every row and the `unpartitioned` count equals `ceil(Σ (stored_i / 0.55) × 0.55 / target)`. | OPEN | pending |
-| C-003 | `red_first_rp17_bed` (D-2): a pin on the RP-17 uniform bed shape (206 items, Σ stored 3 074 844, Σ uncompressed 7 529 566, ratio 0.376076, target 524 288) asserts the 2 831 692-derived file count and FAILS on the base tree. | Red output pasted below. | OPEN | Red pasted in "Red first": `rp17_bed_shape_projects_the_uncompressed_sum_once` reads 3 vs the required 6 on the base tree; the two CALL pins red beside it (252 vs 142; 50 vs 90). |
-| C-004 | `other_plan_pins_green` (D-2): every other `plan_partitioning`/`apply_partitioning` pin passes unchanged. | `cargo test -p repark-spark plan_partitioning` — only the moved pins red on base; all green after. | OPEN | pending |
-| C-005 | `projected_partitions_identical` (D-3): `projected_partitions` is byte-identical before and after on every pin (it counts distinct values, never bytes). | The pins asserting partition counts (90 days, 4 regions, 1 for the RP-17 shape) are green on both runs. | OPEN | pending |
-| C-006 | `notes_and_guide`: the residue note and the frame `notes` text state the new basis; `docs/guide/maintenance-policy.md` gains the S2-24 known-issues line (compaction is a net-size loss on zstd tables until F-REWRITE-SIZE-1 lands) where it lists the AP-0-R-001 caveat. | `plan_every_row_carries_the_r001_file_count_caveat` green; the guide paragraph names the uncompressed basis and the S2-24 line. | OPEN | pending |
+| C-001 | `uncompressed_footer_basis` (D-1): `projected_files_at_target` equals `ceil(Σ_uncompressed(value) × byte_ratio / target)` summed over partition values, where each file's byte basis is its footer `total_uncompressed_size` column-chunk sum — compression applied once. | Pin asserts the uncompressed-derived count against independently recomputed footer sums on a compressible CTAS fixture; the RP-17 bed-shape pin asserts the 2 831 692-derived count. | **PROVEN** | `plan_byte_ratio_is_measured_from_parquet_footers` — at `target => 1` the projection is exactly the footers' compressed sum (142), i.e. uncompressed×ratio once; `rp17_bed_shape_projects_the_uncompressed_sum_once` — ceil(2 831 692 / 524 288) = 6 |
+| C-002 | `fallback_estimates_uncompressed` (D-1): with any footer unreadable the frame keeps `byte_ratio=0.55 (fallback)` and each file's byte basis is the uncompressed estimate `file_size_in_bytes / 0.55`, so the projection folds back to stored bytes at target — never compressed twice. | Corrupt one data file; pin asserts `0.55 (fallback)` on every row and the `unpartitioned` count equals `ceil(Σ (stored_i / 0.55) × 0.55 / target)`. | **PROVEN** | `plan_byte_ratio_falls_back_when_a_footer_is_unreadable` — one file truncated; every row's notes say `0.55 (fallback)`; the projected count 90 = ceil(Σ stored/0.55 × 0.55 / target), equal to the stored-byte estimate |
+| C-003 | `red_first_rp17_bed` (D-2): a pin on the RP-17 uniform bed shape (206 items, Σ stored 3 074 844, Σ uncompressed 7 529 566, ratio 0.376076, target 524 288) asserts the 2 831 692-derived file count and FAILS on the base tree. | Red output pasted below. | **PROVEN** | Red pasted in "Red first": `rp17_bed_shape_projects_the_uncompressed_sum_once` read 3 vs the required 6 on the base tree; the two CALL pins red beside it (252 vs 142; 50 vs 90); committed red at `dd999a2a`, all green after the change |
+| C-004 | `other_plan_pins_green` (D-2): every other `plan_partitioning`/`apply_partitioning` pin passes unchanged. | `cargo test -p repark-spark plan_partitioning` — only the moved pins red on base; all green after. | **PROVEN** | `cargo test -p repark-spark plan_partitioning`: 26 passed, 0 failed; `cargo test -p repark-spark apply_partitioning`: 12 passed, 0 failed. Two rank pins' fixture targets moved to the uncompressed basis (uncompressed/90 and uncompressed/8) because the score bands uncompressed bytes now — the asserted outcomes are unchanged |
+| C-005 | `projected_partitions_identical` (D-3): `projected_partitions` is byte-identical before and after on every pin (it counts distinct values, never bytes). | The pins asserting partition counts (90 days, 4 regions, 1 for the RP-17 shape) are green on both runs. | **PROVEN** | `projected_partitions` is a distinct-value count untouched by the byte basis; the same pins assert 90 (days90), 4 (regions), 1 (RP-17 shape) on both trees — only the file-count column moved (252→142, 50→90, 3→6) |
+| C-006 | `notes_and_guide`: the residue note and the frame `notes` text state the new basis; `docs/guide/maintenance-policy.md` gains the S2-24 known-issues line (compaction is a net-size loss on zstd tables until F-REWRITE-SIZE-1 lands) where it lists the AP-0-R-001 caveat. | `plan_every_row_carries_the_r001_file_count_caveat` green; the guide paragraph names the uncompressed basis and the S2-24 line. | **PROVEN** | `RESIDUE_NOTE` now reads "applies byte_ratio to the footers' uncompressed byte sum, counting compression once (the stored-byte form measured -74%/-72% low against the RP-17 same-codec rewrite; the remaining gap is S2-24)"; `plan_every_row_carries_the_r001_file_count_caveat` and `plan_byte_ratio_*` pins assert the `byte_ratio=<r> (footers|fallback)` spelling; the guide's byte paragraph names the uncompressed basis and the `stored / 0.55` fallback estimate, followed by the S2-24 known-issues line |
 
-VERDICT: 6 clauses, 0 PROVEN, 6 OPEN, 0 REJECTED.
+VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Red first
 
@@ -78,4 +78,60 @@ the stored-byte form (252) cannot share a ceiling with the uncompressed form
 
 ## Gates
 
-Pending.
+- `make develop`: green (native module rebuilt and installed editable).
+- `cargo test -p repark-spark plan_partitioning`: green (26 passed; 0 failed).
+- `cargo test -p repark-spark apply_partitioning`: green (12 passed; 0 failed).
+- `.venv/bin/python -m pytest python/repark/tests -q -k "plan_partitioning or adapt or apply_partitioning"`: green (1 passed, 5 skipped, 6299 deselected).
+- `make py-test` (whole parity suite): green (744 passed, 1 skipped, 11 xfailed).
+- `make check-docs-links`: green (777 files, 4990 links).
+- `make check-ledger-grammar`: green.
+- `make verify`: green.
+- Comment fence (`git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?! noqa))'`): prints nothing.
+- D-5 facade seat: unchanged — `plan_partitioning` stays a `CALL` only; no Python session method added.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ap-3
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: All three moved pins failed red on the base tree (pasted above) and pass green after the change; the score pin feeds the RP-17 bed's exact measured sums (206 items, stored 3 074 844, uncompressed 7 529 566, ratio 0.376076) so a wrong basis cannot share the answer.
+      artifacts: [crates/repark-spark/src/call/plan_partitioning_score.rs, crates/repark-spark/src/tests/plan_partitioning.rs, crates/repark-spark/src/call/plan_partitioning_bytes.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: End-to-end on real parquet footers — the compressible-fixture pin recomputes the footer sums independently (parquet-rs metadata, not the production measure) and asserts the projection is the compressed sum at target 1; the corrupted-footer pin walks the fallback path on a live table.
+      artifacts: [crates/repark-spark/src/tests/plan_partitioning.rs, crates/repark-spark/src/call/plan_partitioning.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: The unreadable-footer path is pinned loud — `0.55 (fallback)` on every row plus the count 90 = ceil(Σ stored/0.55 × 0.55 / target), proving the fallback basis is the uncompressed estimate and not the stored bytes folded a second time.
+      artifacts: [crates/repark-spark/src/tests/plan_partitioning.rs, crates/repark-spark/src/call/plan_partitioning_bytes.rs]
+    - id: AT-4
+      status: N/A
+      justification: No shared or mutable state, no concurrency — the measure reads footers sequentially over the table's FileIO and the scorer is a pure function over its inputs.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no credential, no network — parquet footer reads through the existing FileIO and local memory-catalog fixtures only.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The integrity claim is the formula itself — compression is applied exactly once (the uncompressed share folded by the ratio equals the inputs' own compressed sum, the floor for a same-rows rewrite); the residue note keeps the measured-error record and names the remaining S2-24 gap instead of claiming exactness.
+      artifacts: [crates/repark-spark/src/call/plan_partitioning.rs, crates/repark-spark/src/call/plan_partitioning_score.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: No new work per row — the uncompressed sums come from the footer metadata the measure already decodes; fallback constructs the basis with one division per file.
+      artifacts: [crates/repark-spark/src/call/plan_partitioning_bytes.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No second byte path — `PlanInputs.sizes` takes the measure's per-file uncompressed sums in `paths` order; the fallback estimate lives in the same measure, so scoring sees one basis either way. `projected_partitions` is untouched (D-3).
+      artifacts: [crates/repark-spark/src/call/plan_partitioning.rs, crates/repark-spark/src/call/plan_partitioning_score.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The public spelling is pinned — `byte_ratio=<r rounded 2 places> (footers|fallback)` on every row's notes, the reworded AP-0-R-001 residue note asserted by `plan_every_row_carries_the_r001_file_count_caveat`, and the guide's known-issues line states the S2-24 residual.
+      artifacts: [crates/repark-spark/src/call/plan_partitioning.rs, docs/guide/maintenance-policy.md, crates/repark-spark/src/tests/plan_partitioning.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The pins are the reproduce record — 3 of 26 failed red on the base tree (3 vs 6; 252 vs 142; 50 vs 90, pasted above) and all 26 pass after; the two rank pins that changed targets document the basis move in their assert text.
+      artifacts: [task/ledgers/staging/ap-3-ledger.md, crates/repark-spark/src/tests/plan_partitioning.rs]
+  complete: true
+```

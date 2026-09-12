@@ -195,10 +195,11 @@ async fn plan_days_ts_ranks_first_on_ninety_day_fixture() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_days90(&ctx, &catalogs).await;
-    let total = files_total_bytes(&ctx, &catalogs, "ice.sales.days90").await;
-    assert!(total > 0, "fixture carries bytes to score");
-    let target = total / 90;
-    assert!(target > 0, "target covers ninety days, got {total}");
+    let paths = data_file_paths(&ctx, &catalogs, "ice.sales.days90").await;
+    let (_compressed, uncompressed) = footer_sums_independent(&paths);
+    assert!(uncompressed > 0, "fixture carries bytes to score");
+    let target = uncompressed / 90;
+    assert!(target > 0, "target covers ninety days, got {uncompressed}");
     let plan = plan_rows(
         &ctx,
         &catalogs,
@@ -456,10 +457,11 @@ async fn plan_identity_region_ranks_first_at_twice_target() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_regions(&ctx, &catalogs).await;
-    let total = files_total_bytes(&ctx, &catalogs, "ice.sales.regions").await;
-    assert!(total > 0, "fixture carries bytes to score");
-    let target = total / 8;
-    assert!(target > 0, "target leaves headroom, got {total}");
+    let paths = data_file_paths(&ctx, &catalogs, "ice.sales.regions").await;
+    let (_compressed, uncompressed) = footer_sums_independent(&paths);
+    assert!(uncompressed > 0, "fixture carries bytes to score");
+    let target = uncompressed / 8;
+    assert!(target > 0, "target leaves headroom, got {uncompressed}");
     let plan = plan_rows(
         &ctx,
         &catalogs,

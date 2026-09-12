@@ -120,13 +120,21 @@ Both arguments are required and the target must be a positive integer.
 `projected_files_at_target` projects post-rewrite bytes: the procedure reads
 every live data file's parquet footer through the table's own `FileIO` (a
 metadata read only — no row-group data is decoded), sums each column chunk's
-`total_compressed_size` and `total_uncompressed_size`, and folds each partition
-value's byte share by that `byte_ratio` before dividing by the target. Every
-row's `notes` reports the ratio as `byte_ratio=<value> (footers)`. When any
-footer is unreadable the ratio falls back to the measured constant 0.55 and the
-notes say `(fallback)`. The AP-0-R-001 caveat stays on every row: the
-projection applies the ratio to the pre-rewrite file bytes, and
-`projected_partitions` is the column the AP-0 rewrite measured exact.
+`total_compressed_size` and `total_uncompressed_size`, and projects each
+partition value's share of the uncompressed sum scaled by that `byte_ratio`
+before dividing by the target — compression is counted once, at the size a
+rewrite of the same rows would store. Every row's `notes` reports the ratio as
+`byte_ratio=<value> (footers)`. When any footer is unreadable the ratio falls
+back to the measured constant 0.55, each file's uncompressed size is estimated
+as `file_size_in_bytes / 0.55`, and the notes say `(fallback)`. The AP-0-R-001
+caveat stays on every row, and `projected_partitions` is the column the AP-0
+rewrite measured exact.
+
+Known issue (S2-24): on zstd tables `rewrite_data_files` currently writes about
+1.5× its input's compressed bytes under the same codec (the RP-17 re-measure
+rewrote 206 files at 2 831 692 B into 20 at 4 474 081 B), so a compaction is a
+net-size *loss* there and the projection under-reads the live actual until fork
+card F-REWRITE-SIZE-1 lands.
 
 Candidate generation follows P-2: timestamp and date columns get
 `years`/`months`/`days`/`hours`; int and string columns get `identity` when the
