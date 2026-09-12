@@ -32,4 +32,5 @@ box, full scale.
 - [write.target-file-size-bytes.csv](write.target-file-size-bytes.csv)
 - [write.distribution-mode.csv](write.distribution-mode.csv)
 - [repark.merge.file_scoped_rewrite.csv](repark.merge.file_scoped_rewrite.csv)
+- [repark.merge.scan_pruning.csv](repark.merge.scan_pruning.csv)
 - `map.md` — this file.
