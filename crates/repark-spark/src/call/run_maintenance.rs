@@ -6,9 +6,9 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::TableIdent;
-use repark_core::{CatalogRegistry, TablePolicy, parse_duration};
+use repark_core::{CatalogRegistry, LocationPolicy, TablePolicy, parse_duration};
 
-use super::{CallArgs, now_millis, resolve_table_ident};
+use super::{CallArgs, now_millis, resolve_table_ident, s3_tables_orphan_sweep_reason};
 
 struct InlineOverrides {
     target_file_size_bytes: Option<u64>,
@@ -40,6 +40,7 @@ pub(super) struct PlannedStep {
     pub(super) procedure: &'static str,
     pub(super) arguments: String,
     pub(super) action: StepAction,
+    pub(super) skip_reason: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -110,8 +111,19 @@ pub(super) async fn execute_run_maintenance(
         )));
     }
     let effective = apply_inline(&base.unwrap_or_default(), &inline)?;
+    let service_managed = matches!(
+        catalogs.location_policy(catalog_name),
+        Some(LocationPolicy::ServiceManagedLocation)
+    );
     let stats = table_stats(ctx, catalogs, catalog_name, &ident).await?;
-    let steps = plan_steps(&effective, catalog_name, &table_arg, &stats, now_millis()?);
+    let steps = plan_steps(
+        &effective,
+        catalog_name,
+        &table_arg,
+        &stats,
+        now_millis()?,
+        service_managed,
+    );
     if dry_run {
         return plan_dataframe(ctx, &steps);
     }
@@ -310,6 +322,7 @@ fn plan_steps(
     table_arg: &str,
     stats: &TableStats,
     now_ms: i64,
+    service_managed: bool,
 ) -> Vec<PlannedStep> {
     let mut steps = Vec::new();
     if step_1_admits(policy.position_delete_ratio, stats) {
@@ -318,6 +331,7 @@ fn plan_steps(
             procedure: "rewrite_position_delete_files",
             arguments: call_text(catalog_name, "rewrite_position_delete_files", table_arg, ""),
             action: StepAction::RewritePositionDeleteFiles,
+            skip_reason: None,
         });
     }
     let rewrite_extras = policy.target_file_size_bytes.map_or(String::new(), |size| {
@@ -335,6 +349,7 @@ fn plan_steps(
         action: StepAction::RewriteDataFiles {
             target_size: policy.target_file_size_bytes,
         },
+        skip_reason: None,
     });
     if policy.rewrite_manifests == Some(true) {
         steps.push(PlannedStep {
@@ -342,6 +357,7 @@ fn plan_steps(
             procedure: "rewrite_manifests",
             arguments: call_text(catalog_name, "rewrite_manifests", table_arg, ""),
             action: StepAction::RewriteManifests,
+            skip_reason: None,
         });
     }
     let expire_older_than = policy
@@ -367,6 +383,7 @@ fn plan_steps(
             older_than: expire_older_than,
             retain_last: policy.snapshot_retain_last,
         },
+        skip_reason: None,
     });
     if let Some(older_than) = policy.orphan_older_than {
         let cutoff = older_than_ms(now_ms, older_than);
@@ -380,6 +397,8 @@ fn plan_steps(
                 &format!(", older_than => {cutoff}"),
             ),
             action: StepAction::RemoveOrphanFiles { older_than: cutoff },
+            skip_reason: service_managed
+                .then(|| s3_tables_orphan_sweep_reason(catalog_name, table_arg)),
         });
     }
     steps
@@ -408,8 +427,24 @@ fn plan_dataframe(ctx: &SessionContext, steps: &[PlannedStep]) -> Result<DataFra
                     .map(|step| step.arguments.as_str())
                     .collect::<Vec<_>>(),
             )),
-            Arc::new(StringArray::from(vec!["planned"; steps.len()])),
-            Arc::new(StringArray::from(vec![""; steps.len()])),
+            Arc::new(StringArray::from(
+                steps
+                    .iter()
+                    .map(|step| {
+                        if step.skip_reason.is_some() {
+                            "skipped"
+                        } else {
+                            "planned"
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                steps
+                    .iter()
+                    .map(|step| step.skip_reason.clone().unwrap_or_default())
+                    .collect::<Vec<_>>(),
+            )),
         ],
     )?;
     ctx.read_batches(vec![batch])
@@ -442,7 +477,7 @@ mod tests {
             position_delete_ratio: Some(0.3),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(1000, 300), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(1000, 300), NOW_MS, false);
         assert_eq!(procedures(&steps)[0], "rewrite_position_delete_files");
     }
 
@@ -452,7 +487,7 @@ mod tests {
             position_delete_ratio: Some(0.3),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(1000, 299), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(1000, 299), NOW_MS, false);
         assert!(
             procedures(&steps)
                 .iter()
@@ -468,6 +503,7 @@ mod tests {
             "sales.t",
             &stats(1000, 900),
             NOW_MS,
+            false,
         );
         assert!(
             procedures(&steps)
@@ -482,13 +518,13 @@ mod tests {
             position_delete_ratio: Some(0.0),
             ..TablePolicy::default()
         };
-        let admitted = plan_steps(&policy, "ice", "sales.t", &stats(0, 0), NOW_MS);
+        let admitted = plan_steps(&policy, "ice", "sales.t", &stats(0, 0), NOW_MS, false);
         assert_eq!(procedures(&admitted)[0], "rewrite_position_delete_files");
         let policy = TablePolicy {
             position_delete_ratio: Some(0.1),
             ..TablePolicy::default()
         };
-        let skipped = plan_steps(&policy, "ice", "sales.t", &stats(0, 0), NOW_MS);
+        let skipped = plan_steps(&policy, "ice", "sales.t", &stats(0, 0), NOW_MS, false);
         assert!(
             procedures(&skipped)
                 .iter()
@@ -503,7 +539,7 @@ mod tests {
                 rewrite_manifests: flag,
                 ..TablePolicy::default()
             };
-            let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+            let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
             assert!(
                 procedures(&steps)
                     .iter()
@@ -515,7 +551,7 @@ mod tests {
             rewrite_manifests: Some(true),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
         assert!(procedures(&steps).contains(&"rewrite_manifests"));
     }
 
@@ -527,6 +563,7 @@ mod tests {
             "sales.t",
             &stats(100, 0),
             NOW_MS,
+            false,
         );
         assert_eq!(ordinals(&steps), vec![2, 4]);
     }
@@ -544,7 +581,7 @@ mod tests {
             ),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
         let expire = steps
             .iter()
             .find(|step| step.procedure == "expire_snapshots")
@@ -573,6 +610,7 @@ mod tests {
             "sales.o'brien",
             &stats(100, 0),
             NOW_MS,
+            false,
         );
         let rewrite = steps
             .iter()
@@ -592,6 +630,7 @@ mod tests {
             "sales.t",
             &stats(100, 0),
             NOW_MS,
+            false,
         );
         let expire = bare
             .iter()
@@ -605,7 +644,7 @@ mod tests {
             snapshot_retain_last: Some(5),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
         let expire = steps
             .iter()
             .find(|step| step.procedure == "expire_snapshots")
@@ -624,6 +663,7 @@ mod tests {
             "sales.t",
             &stats(100, 0),
             NOW_MS,
+            false,
         );
         let rewrite = bare
             .iter()
@@ -637,7 +677,7 @@ mod tests {
             target_file_size_bytes: Some(134_217_728),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
         let rewrite = steps
             .iter()
             .find(|step| step.procedure == "rewrite_data_files")
@@ -655,7 +695,7 @@ mod tests {
             snapshot_older_than: Some(Duration::from_secs(u64::MAX)),
             ..TablePolicy::default()
         };
-        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS);
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
         let expire = steps
             .iter()
             .find(|step| step.procedure == "expire_snapshots")
@@ -667,6 +707,37 @@ mod tests {
             )),
             "got: {}",
             expire.arguments
+        );
+    }
+
+    #[test]
+    fn a_service_managed_catalog_marks_step_5_skipped() {
+        let policy = TablePolicy {
+            orphan_older_than: Some(
+                repark_core::parse_duration("test.orphan_older_than", "3d")
+                    .expect("fixture duration"),
+            ),
+            ..TablePolicy::default()
+        };
+        let steps = plan_steps(&policy, "s3t", "ns.t", &stats(100, 0), NOW_MS, true);
+        let orphan = steps
+            .iter()
+            .find(|step| step.procedure == "remove_orphan_files")
+            .expect("the orphan step still plans");
+        let reason = orphan
+            .skip_reason
+            .as_ref()
+            .expect("a service-managed catalog marks the sweep skipped");
+        assert!(reason.contains("ns.t"), "{reason}");
+        assert!(
+            reason.contains("table buckets do not support listing"),
+            "{reason}"
+        );
+        assert!(reason.contains("unreferencedFileRemoval"), "{reason}");
+        let steps = plan_steps(&policy, "ice", "sales.t", &stats(100, 0), NOW_MS, false);
+        assert!(
+            steps.iter().all(|step| step.skip_reason.is_none()),
+            "other catalog kinds never mark a step skipped at plan time"
         );
     }
 }

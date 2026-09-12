@@ -46,6 +46,7 @@ sections left open.
 | S2-26 | **Two engine costs measured by the S2-21 reviews (2026-09-12), cards opened:** (a) every plan-side unpivot shape in this DataFusion is superlinear in expression count — PERF-DESCRIBE-1 tried a struct grid + `unnest` (~95 s at 500 columns), multi-column `UNNEST` (fails on `OuterReferenceColumn`), `dynamic_flatten(explode_lists=True)` (a cross product, not a zip) and chained projections (time out), and settled on an action-time unpivot in the Arrow bridge; card **PERF-UNPIVOT-1** (a native unpivot/stack primitive, then `describe` moves back to a pure plan). (b) each `CAST` physical expression costs ~1.4–2.7 ms and the cost is superlinear in wide plans (250 casts: 0.12 s standalone, 0.7 s over a wide aggregate, ~70 s inside a 2500-expression projection); card **PERF-CAST-1** (measure where the cost lives — planning, physical expression creation, or per-batch evaluation — before any fix). Both are v1.5 perf units, Devin I rounds, after the v1.4 cut. | PERF-UNPIVOT-1, PERF-CAST-1 |
 | S2-27 | **AP-1-R-001 ruled closed as an estimator property (RP-18's fourth check, 2026-09-12, `docs/perf/adapt-part-ap1-remeasure-3-2026-09-12.md`):** with the fork's dictionary fix and one-pass compression (AP-3), the live rewrite compresses BETTER than its inputs (output ratio 0.28 vs the inputs' 0.38 — 20 large files versus 206 tiny ones), so the AP-3 projection (= the inputs' compressed bytes, 2 840 672) reads +55 % / +62 % against actuals of 1 839 168 / 1 755 749, while the old stored × ratio reads −37 % / −34 %. No footer-derived number predicts the output codec's ratio on files it has not written; what the inputs' compressed bytes give is a sound **upper bound** (a rewrite of the same rows under the same codec into fewer, larger files never compresses worse than its inputs once dead dictionary pages are gone). The 20 % target is retired: `projected_files_at_target` is documented and pinned as an upper-bound estimate, monotone across candidates (ranking unchanged on every bed), within [0.5×, 1.0×] of the live actual on the AP-0 beds. Card **AP-1-CLOSE-1** (one M round: the `RESIDUE_NOTE` and frame `notes` say "upper bound", the registry row closes, the maintenance guide's S2-24 caveat is retired — compaction is a net-size WIN again — and a pin holds the bound on the three beds). | AP-1-CLOSE-1 |
 | S2-28 | **Owner bug (2026-09-12): `CALL s3tables.system.remove_orphan_files` fails on an S3 Tables table.** Measured on the dev table bucket: an S3 Tables table's location is the bare table bucket (`s3://<id>--table-s3`), which the fork's `s3_relative_path` rejects (Java's `S3URI` reads a bare bucket as the root) — fork card **F-S3ROOT-1**; and past the parser the bucket answers **405 MethodNotAllowed** to `ListObjectsV2`, so no listing-based orphan removal can work on S3 Tables — S3 Tables removes unreferenced files itself through the bucket maintenance configuration. Card **ORPHAN-S3TABLES-1**: the CALL refuses loud on the `s3tables` catalog kind naming that remedy, `run_maintenance` skips the step with a reason row. Then RP-19 (the parser fix consumed). No workaround exists for the owner today; the `location =>` argument reaches the 405. | fork lane, ORPHAN-S3TABLES-1, RP-19 |
+| S2-29 | **Windows, macOS and arm support — slated for 1.6 (owner, 2026-09-12).** Measured on `main`: zero platform-specific code in the product crates (no `cfg(target_os)`, no `libc`, no rlimit outside tests) and none in the facade source; every dependency is portable (DataFusion, Arrow, pyo3, opendal, the AWS SDK on rustls; `mimalloc` optional); the owned fork's CI already builds and tests on ubuntu, macOS and Windows on every PR. RePark's own workflows build only on `ubuntu-latest` and ship one `cp312-abi3` manylinux x86_64 wheel; the 21 Linux-flavoured files are all tests and benches (the spill harness's address-space cap, `pgrep` guards, `/proc` reads). So this is a CI and packaging job: cards **PLATFORM-1** (the wheel matrix: Linux x86_64 + aarch64, macOS arm64 + x86_64, Windows x86_64, abi3 each), **PLATFORM-2** (the facade suite on each platform, Linux-only tiers marked by tier, not skipped ad hoc), **PLATFORM-3** (the tag pipeline publishes and smokes every wheel), **PLATFORM-4** (Python 3.13 and 3.14 — the `cp312-abi3` wheel already installs on both and pyo3 `0.29.2` supports 3.14; what is missing is proof: the suites on 3.13 and 3.14 in CI, the wheel smoke per interpreter, the classifiers; free-threaded `3.14t` out of scope). | PLATFORM-1…4 (1.6) |
 | S2-6 | Never-OOM is documentation and pins, no operator change (the ruled v1.3 text); a cell that cannot spill names its upstream issue and stops there. | NEVEROOM-1 |
 
 ## 1. Cards
@@ -750,6 +751,94 @@ handle needs the network, pin the refusal at the argument-resolution layer with 
 and say so. D-4 no engine change; the fork's F-S3ROOT-1 parser fix lands independently.
 
 **Steps.** 1 (I). **Rounds.** 1 (I).
+
+---
+
+### Card PLATFORM-1 — the wheel matrix: Linux x86_64 + aarch64, macOS arm64 + x86_64, Windows x86_64 (1.6, S2-29)
+
+**Why.** One manylinux x86_64 wheel is the whole distribution today (`release.yml:14-30`, `wheels.yml:70-79`).
+Nothing in the product is platform-specific (S2-29); the fork's CI already proves the Rust builds on all three
+operating systems. The wheel is `cp312-abi3`, so it is one file per platform.
+
+**Home.** `.github/workflows/wheels.yml` (the PR/main debug smoke gains a matrix leg per platform, or a
+weekly one if minutes matter — a decision below), `.github/workflows/release.yml` (the tag build becomes a
+matrix), `docs/release.md` (the wheel list), `Makefile` only if a target is needed, ledger
+`task/ledgers/staging/platform-1-ledger.md`.
+
+**Decisions.** D-1 `maturin-action` matrix: `ubuntu-latest` (manylinux x86_64, as now), `ubuntu-24.04-arm`
+(manylinux aarch64 on GitHub's arm runner; zig cross-build is the fallback if that runner is unavailable —
+measure the cold aarch64 release build time and record it), `macos-latest` (arm64), `macos-13` (x86_64),
+`windows-latest` (x86_64). D-2 each leg installs its wheel into a fresh venv and imports `repark` plus one
+`ReparkSession` collect (the existing import smoke), nothing more in this card. D-3 red first: the matrix
+job's smoke fails before the wheel exists on the new legs — the workflow lint gate (`workflows-lint` in
+preflight) and `check-parity-live-dual-wire`-style pins cover the YAML; the CI run is the proof, linked
+from the ledger. D-4 the 1.6 cut publishes all five (release.yml), the PR smoke may run the four new legs
+on a schedule if per-PR minutes on macOS/Windows are too slow — an owner decision at the card's intake.
+
+**Steps.** 1 (M). **Rounds.** 1 (M) plus CI iteration.
+
+---
+
+### Card PLATFORM-2 — the facade suite passes on macOS and Windows; Linux-only tiers are tiers (1.6, S2-29)
+
+**Why.** The product has no platform code; the tests do. 21 files under `python/repark/tests`,
+`python/repark-parity/tests` and the benches use `resource.setrlimit`, `sys.platform`, `pgrep` or `/proc`
+(the spill harness, the never-OOM matrix, quiet-box guards). A wheel on a platform the suite never ran on is
+not a supported platform.
+
+**Home.** the test tiers (`python/repark/tests/conftest.py` markers and `docs/testing.md`'s tier table),
+`wheels.yml` (the facade suite on each matrix leg), the 21 files (a `linux_only` tier marker, never a bare
+`skipif` scattered per test), ledger `task/ledgers/staging/platform-2-ledger.md`.
+
+**Decisions.** D-1 a named tier `linux_only` carries every test that needs `RLIMIT_AS`, `/proc`, `pgrep`
+or a subprocess cap — `docs/testing.md` lists it with the reason; nothing else is excluded. D-2 every
+other test runs on macOS and Windows in CI; a failure there is a real defect (path separators, temp dirs,
+line endings, `os.fork`) fixed in the facade or the test with a pin, never skipped. D-3 the oracle
+(live PySpark) stays Linux-only by tier as today. D-4 measure the suite wall per platform once and record
+it (the owner decides per-PR versus scheduled from the numbers).
+
+**Steps.** 1 (I). **Rounds.** 1–2 (I; the second only if Windows surfaces real defects).
+
+---
+
+### Card PLATFORM-3 — the tag pipeline publishes and smokes every wheel (1.6, S2-29)
+
+**Why.** `release.yml` builds one wheel, pauses for the owner's deployment approval, and publishes through
+trusted publishing. Five wheels need one approval, one publish step, and a smoke per wheel before the
+registry check.
+
+**Home.** `.github/workflows/release.yml`, `docs/release.md`, the `publish-pypi` skill's verification
+step (the registry check lists every expected filename), ledger `task/ledgers/staging/platform-3-ledger.md`.
+
+**Decisions.** D-1 build legs upload artifacts; one publish job downloads all five and publishes them in
+one `pypa/gh-action-pypi-publish` call after the environment approval (one approval, not five). D-2 each
+wheel is smoked on its own platform before publish (import + one collect). D-3 the PyPI check after the
+tag asserts five filenames. D-4 dry run on a pre-release tag (`v1.6.0rc1`) before the real cut.
+
+**Steps.** 1 (M). **Rounds.** 1 (M) plus the rc dry run.
+
+---
+
+### Card PLATFORM-4 — Python 3.13 and 3.14 supported, proven (1.6, S2-29)
+
+**Why.** The wheel is `cp312-abi3` and `requires-python = ">=3.12"`, so 3.13 and 3.14 already install
+it; pyo3 `0.29.2` (Cargo.lock) supports 3.14. Nothing has ever run the suites there. A version the suite
+never ran on is not a supported version.
+
+**Home.** `.github/workflows/ci.yml` and `wheels.yml` (a Python matrix `3.12` / `3.13` / `3.14` on the
+test and wheel-smoke jobs — crossed with PLATFORM-1's OS legs only where minutes allow; an owner decision at
+intake), `python/repark/pyproject.toml` (classifiers for 3.13 and 3.14; `requires-python` unchanged),
+`uv.lock` if a dependency needs a floor for 3.14 wheels (pyarrow, polars, pandas, numpy — the one sanctioned
+lock edit in this card, named in the ledger), `docs/release.md`, ledger `task/ledgers/staging/platform-4-ledger.md`.
+
+**Decisions.** D-1 the abi3 wheel stays one build per platform; no per-Python wheels. D-2 the facade suite
+and the parity suite run on 3.13 and 3.14 in CI; a failure is a real defect (a `datetime`/`typing` change,
+a dependency without a 3.14 wheel) fixed with a pin, never skipped by version. D-3 free-threaded `3.14t`
+is out of scope for 1.6 (pyo3 requires an explicit opt-in and the facade's global session is not audited
+for it); say so in the docs. D-4 `uv sync --locked` must resolve on every version — measure which
+dependency floors move and record them.
+
+**Steps.** 1 (M). **Rounds.** 1 (M) plus CI iteration.
 
 ---
 

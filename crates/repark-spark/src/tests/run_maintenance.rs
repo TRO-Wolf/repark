@@ -848,3 +848,106 @@ async fn the_d6_refusal_names_the_active_profile() {
         "the refusal names the active profile, got: {error}"
     );
 }
+
+async fn register_s3t_kind(ctx: &SessionContext, catalogs: &mut CatalogRegistry) {
+    let memory = Arc::clone(catalogs.get("ice").expect("ice is registered"));
+    repark_iceberg::catalog::register_iceberg_catalog(ctx, "s3t", memory.clone())
+        .await
+        .expect("the s3t provider registers");
+    catalogs.insert(
+        "s3t".to_string(),
+        memory,
+        LocationPolicy::ServiceManagedLocation,
+    );
+}
+
+#[tokio::test]
+async fn run_maintenance_on_s3_tables_marks_the_orphan_step_skipped() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, mut catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.s3tm AS SELECT * FROM src",
+    )
+    .await;
+    register_s3t_kind(&ctx, &mut catalogs).await;
+    let plan = dry_run_rows(
+        &ctx,
+        &catalogs,
+        "CALL s3t.system.run_maintenance(table => 'sales.s3tm', orphan_older_than => '3d')",
+    )
+    .await;
+    let orphan = plan
+        .iter()
+        .find(|row| row.procedure == "remove_orphan_files")
+        .expect("the orphan step still plans");
+    assert_eq!(
+        orphan.status, "skipped",
+        "a table bucket cannot be listed, got: {}",
+        orphan.status
+    );
+    assert!(
+        orphan
+            .result
+            .contains("table buckets do not support listing"),
+        "the skipped row names the reason, got: {}",
+        orphan.result
+    );
+    assert!(
+        orphan.result.contains("unreferencedFileRemoval"),
+        "the skipped row names the remedy, got: {}",
+        orphan.result
+    );
+    for row in &plan {
+        if row.procedure != "remove_orphan_files" {
+            assert_eq!(
+                row.status, "planned",
+                "{} still plans normally, got: {}",
+                row.procedure, row.status
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn run_maintenance_apply_on_s3_tables_skips_orphan_and_runs_the_rest() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, mut catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.s3ta AS SELECT * FROM src",
+    )
+    .await;
+    register_s3t_kind(&ctx, &mut catalogs).await;
+    let applied = apply_rows(
+        &ctx,
+        &catalogs,
+        "CALL s3t.system.run_maintenance(table => 'sales.s3ta', orphan_older_than => '3d', \
+         dry_run => false)",
+    )
+    .await;
+    let orphan = applied
+        .iter()
+        .find(|row| row.procedure == "remove_orphan_files")
+        .expect("the orphan step still reports");
+    assert_eq!(orphan.status, "skipped", "got: {}", orphan.status);
+    assert!(
+        orphan
+            .result
+            .contains("table buckets do not support listing"),
+        "the skipped row names the reason, got: {}",
+        orphan.result
+    );
+    for row in applied
+        .iter()
+        .filter(|row| row.procedure != "remove_orphan_files")
+    {
+        assert_eq!(
+            row.status, "ran",
+            "{} still runs, got: {}",
+            row.procedure, row.result
+        );
+    }
+}

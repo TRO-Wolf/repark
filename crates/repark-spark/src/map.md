@@ -72,7 +72,10 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: rp-5-fork-repin/C-004
 - `call.rs` — ten maintenance procedures: nine maintenance calls plus `register_table`. Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
-  `dry_run` to true, and refuses shared fallback roots; rewrite-position-delete returns Spark's
+  `dry_run` to true, and refuses shared fallback roots; on a `ServiceManagedLocation`
+  catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
+  `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the
+  remedy (**ORPHAN-S3TABLES-1, 2026-09-12**); rewrite-position-delete returns Spark's
   four zeros on a DV-only table and converts admitted parquet deletes to one PUFFIN per data
   file (`B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11));
   rewrite-data-files honors v2 `where` file-selection, refuses
@@ -97,6 +100,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: orphan-s3tables-1/C-001, C-002, C-004, C-005
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
@@ -186,7 +190,8 @@ pins: rp-4-fork-repin/C-005, C-006
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
-  `InsertStoreAssignment`, function registry, analyzer rules, and composed `TaExtension`. It also
+  `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
+  after integer-literal narrowing), and composed `TaExtension`. It also
   carries the session timezone and Spark decimal settings. Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule

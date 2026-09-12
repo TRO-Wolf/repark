@@ -50,6 +50,7 @@ chrono.workspace = true
 # Flight SQL handler later) has a shared vocabulary for the executor it owns. No new resolved
 # package: DataFusion already pulls tokio into the lock.
 tokio.workspace = true
+futures.workspace = true
 
 [dev-dependencies]
 # `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet

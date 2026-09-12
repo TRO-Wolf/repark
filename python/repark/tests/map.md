@@ -33,6 +33,9 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
+  native `stack()` pins (SQL/F.stack oracle cells, linearity exponent ≤ 1.1 at 50/250/500,
+  EXPLAIN UnpivotExec, red-first name). pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005
 - [test_df_eager_1.py](test_df_eager_1.py) — **DF-EAGER-1 (2026-09-09):** the red-first
   `.eager()` / `.compute()` / `.lazy()` pins, red on the base tree (the marker-less run is
   recorded in the ledger). Step 2 (2026-09-09) deleted every `_XFAIL_STEP_2` marker and the

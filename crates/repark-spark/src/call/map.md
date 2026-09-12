@@ -68,7 +68,13 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `run_maintenance_apply.rs` behind one `Box::pin` (the apply future would push the router
   future past the 16 KiB `large_futures` lint otherwise). In-module unit tests
   pin the gates, the renderings, and the saturating cutoff math.
+  **ORPHAN-S3TABLES-1 (2026-09-12):** a `PlannedStep` carries an optional `skip_reason`;
+  on a `ServiceManagedLocation` catalog (the `s3tables` kind) the orphan step keeps its
+  D-4 ordinal but is marked skipped with the service's `unreferencedFileRemoval` remedy as
+  the reason — table buckets answer `ListObjectsV2` 405 — so the dry-run frame shows
+  `skipped`, never `planned`.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
+  pins: orphan-s3tables-1/C-003
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps
@@ -77,11 +83,14 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the dry-run options rendering stays Spark-spelling documentation while apply passes the
   parsed size). The frame keeps the dry-run shape with `ran` / `failed` / `skipped`: the
   first failure stops the chain, its row carries the error text, later rows are `skipped`
-  with empty results; gate-skipped steps stay absent exactly as on a dry run (`skipped`
-  means chain-stopped only). Each `result` is the step's own frame rendered as JSON by a
+  with empty results; gate-skipped steps stay absent exactly as on a dry run. Each
+  `result` is the step's own frame rendered as JSON by a
   small local renderer (no JSON dependency: `Cargo.toml` is frozen this card); unknown
   column types refuse loud rather than guessing. Orphan steps pass `dry_run => false`
-  explicitly (the door defaults it true).
+  explicitly (the door defaults it true). **ORPHAN-S3TABLES-1 (2026-09-12):** a step whose
+  `skip_reason` is set never reaches `run_step` — its row is `skipped` with the reason and
+  the chain continues (a service-managed orphan sweep on `s3tables`), unlike a
+  chain-stopped `skipped` row, which carries an empty result.
   pins: maint-policy-1/C-013, C-014, C-015, C-016, C-017
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no

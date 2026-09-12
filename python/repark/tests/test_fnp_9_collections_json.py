@@ -525,7 +525,7 @@ def test_arrays_zip_field_names_are_positional_not_the_column_name() -> None:
     assert [field.name for field in zipped_type.value_type] == ["0", "1"]
 
 
-@pytest.mark.parametrize("name", ["inline", "inline_outer", "stack", "call_udf", "call_function"])
+@pytest.mark.parametrize("name", ["inline", "inline_outer", "call_udf", "call_function"])
 def test_fnp9_multi_column_and_by_name_names_stay_absent(name: str) -> None:
     """A name this unit did not build stays absent rather than half-answering."""
     assert not hasattr(F, name)
