@@ -640,7 +640,8 @@ above.
   `target_file_size_bytes` is passed, and refuses naming that key when it is omitted.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** the plan door pins on memory-catalog
-  fixtures: a 90-day `ts` table in 9 ten-day files at total/90 target (`days(ts)` first at 0.0
+  fixtures: a 90-day `ts` table in 9 ten-day files at a target of the footer-uncompressed
+  sum/90 (`days(ts)` first at 0.0
   over 90 partitions, best-first order, `unpartitioned` present, the D-1 frame shape with Arrow
   types, the all-NULL `note` column excluded and named on the last row, stable per-candidate
   `plan_id`s, the AP-0-R-001 caveat on every row), a 4-region table (`identity(region)` first at
@@ -656,7 +657,15 @@ above.
   whose `unpartitioned` projected count equals `ceil(bytes × ratio / target)`, and the same
   fixture with one data file overwritten by non-parquet bytes answering
   `byte_ratio=0.55 (fallback)` with the projection folded by 0.55.
+  **AP-3 (2026-09-12):** the byte basis moves to the footers' uncompressed
+  column-chunk sum — the footer pin reads `ceil(Σ uncompressed × ratio / target)`
+  at target 1 (the footers' compressed sum exactly), the fallback pin folds each
+  file's `file_size_in_bytes / 0.55` estimate back by 0.55, and the in-module
+  score pin `rp17_bed_shape_projects_the_uncompressed_sum_once` carries the
+  RP-17 uniform bed shape (206 items, Σ uncompressed 7 529 566, ratio 0.376076,
+  target 524 288 → 6 files).
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  pins: ap-3/C-001, C-002, C-004, C-005
 
 ## Pointers
 

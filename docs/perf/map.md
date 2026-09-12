@@ -240,6 +240,18 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   — and §5's counts re-derive to 16 PASSES THROUGH, 3 VALIDATED, 0 ACCEPTED BUT
   UNREAD, 1 REFUSED, 0 NOT MEASURED.
   pins: conf-unread-1/C-006
+- [config-profiles-2026-09-12.md](config-profiles-2026-09-12.md) — **PROFILES-1 step 2
+  (2026-09-12):** the full-scale knob sweep on a release module — baseline plus one
+  table per knob (19 swept, `coalesce_batches` refused loud so not read, R-16),
+  value × query → median of three repetitions with ratio to `@default`, the argmax
+  row per knob, the affected-cells reading of the card's "its query" and the
+  control-spelling rule, and the "no effect measured" list (5 knobs flat within
+  5 % on the cells they can reach — `bloom_filter_on_write`,
+  `max_row_group_size`, `write_batch_size`, `scan.concurrency_limit`,
+  `target-file-size-bytes`). Every number recomputes from the committed CSVs in
+  [config-profiles-2026-09-12/](config-profiles-2026-09-12/map.md) — the C-008
+  pin parses the tables and re-derives each cell.
+  pins: profiles-1/C-006, C-007, C-008
 - [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md) —
   **AP-0 (measure, 2026-09-10):** the ADAPT-PART candidate measurement — three local
   Iceberg beds (the futures frame CTAS unpartitioned, two generated 400k-row beds at
@@ -280,6 +292,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   AP-0 CTAS actuals −73.8 % / −72.0 % kept for continuity); residue AP-1-R-001
   stays OPEN. No Rust or Python source changed.
   pins: ap-1-remeasure/C-001, C-002, C-003, C-004
+- [adapt-part-ap1-remeasure-2-2026-09-12.md](adapt-part-ap1-remeasure-2-2026-09-12.md) —
+  **AP-1 RP-17 re-measure (2026-09-12):** the third re-measure, on fork pin
+  `41e25ba2` (`#278` F-WRITE-COMPRESS-2 — the maintenance / COW / MoR rewrite and
+  position-delete writers honour `write.parquet.compression-codec`). Same three
+  beds, same `identity(grp)` candidate, live `rewrite_data_files` actuals whose
+  output footers are now zstd; both projections (stored-bytes × ratio and
+  uncompressed-sum × ratio) sit beside the actual so the orchestrator can rule
+  deferred question Q-1; the 20 % check answers AP-1-R-001 as measured. No Rust
+  or Python source changed.
+  pins: rp-17/C-002, C-003
 
 ## Pointers
 

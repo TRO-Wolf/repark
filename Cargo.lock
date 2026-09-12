@@ -3297,7 +3297,7 @@ dependencies = [
 [[package]]
 name = "iceberg"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -3353,7 +3353,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-glue"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3369,7 +3369,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-s3tables"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3382,7 +3382,7 @@ dependencies = [
 [[package]]
 name = "iceberg-datafusion"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3398,12 +3398,12 @@ dependencies = [
 [[package]]
 name = "iceberg-sketches"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 
 [[package]]
 name = "iceberg-storage-opendal"
 version = "0.9.1"
-source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=090bc82142c09e0afd8c0ddaf594ab5843e1e77d#090bc82142c09e0afd8c0ddaf594ab5843e1e77d"
+source = "git+https://github.com/TRO-Wolf/iceberg-rust?rev=41e25ba2b99a0d90caf4317b4236f5e1d4b683f5#41e25ba2b99a0d90caf4317b4236f5e1d4b683f5"
 dependencies = [
  "anyhow",
  "async-trait",

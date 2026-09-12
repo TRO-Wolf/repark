@@ -60,6 +60,20 @@ UNCOMPRESSED, errors −85.4 % / −84.9 %.
 - `make verify`: exit 0 (round 2 re-run after the live rewrite actuals)
 - Comment fence (`git diff --cached` grep for added `//`/`#` lines, attributes excepted): prints nothing
 
+## RP-17 note (2026-09-12) — verdicts above untouched
+
+Fork pin `41e25ba2` (`#278` F-WRITE-COMPRESS-2) makes `rewrite_data_files` write
+zstd. Same beds and commands as this ledger's rounds: `_orun` copies rebuilt
+identically (206 files, 3 074 844 bytes, ZSTD, ratio 0.376076), CALL frames
+rewritten 206 / added 20 / failed 0, and the 20 live output files per bed read
+ZSTD on every column chunk. Live actuals: uniform 4 474 081, skewed 4 136 632
+(was 7 928 680 / 7 672 169 UNCOMPRESSED). The D-2 check `Σ file_size ×
+byte_ratio` vs live actual reads −74.2 % / −72.0 % — AP-1-R-001 stays OPEN. The
+Q-1 alternative projection (Σ uncompressed × ratio = 2 831 692) reads −36.7 % /
+−31.5 % — recorded for the orchestrator, not ruled here. Full record:
+[docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md](../../../docs/perf/adapt-part-ap1-remeasure-2-2026-09-12.md);
+clause table: [rp-17-ledger.md](rp-17-ledger.md).
+
 ## Coverage attestation
 
 ```yaml

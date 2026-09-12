@@ -8,12 +8,18 @@ use super::plan_partitioning_score::FALLBACK_BYTE_RATIO;
 pub(super) struct ByteRatio {
     pub(super) value: f64,
     pub(super) source: &'static str,
+    pub(super) uncompressed: Vec<f64>,
 }
 
-fn fallback() -> ByteRatio {
+#[allow(clippy::cast_precision_loss)]
+fn fallback(stored: &[u64]) -> ByteRatio {
     ByteRatio {
         value: FALLBACK_BYTE_RATIO,
         source: "fallback",
+        uncompressed: stored
+            .iter()
+            .map(|size| *size as f64 / FALLBACK_BYTE_RATIO)
+            .collect(),
     }
 }
 
@@ -53,21 +59,24 @@ async fn column_chunk_sums(file_io: &FileIO, path: &str) -> Option<(u64, u64)> {
 }
 
 #[allow(clippy::cast_precision_loss)]
-pub(super) async fn byte_ratio(file_io: &FileIO, paths: &[String]) -> ByteRatio {
+pub(super) async fn byte_ratio(file_io: &FileIO, paths: &[String], stored: &[u64]) -> ByteRatio {
     let mut compressed = 0_u64;
     let mut uncompressed = 0_u64;
+    let mut per_file = Vec::with_capacity(paths.len());
     for path in paths {
         let Some(pair) = column_chunk_sums(file_io, path).await else {
-            return fallback();
+            return fallback(stored);
         };
         compressed += pair.0;
         uncompressed += pair.1;
+        per_file.push(pair.1 as f64);
     }
     if uncompressed == 0 {
-        return fallback();
+        return fallback(stored);
     }
     ByteRatio {
         value: compressed as f64 / uncompressed as f64,
         source: "footers",
+        uncompressed: per_file,
     }
 }
