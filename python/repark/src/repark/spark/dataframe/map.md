@@ -320,7 +320,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `expand_col_regex` applies Java full-match semantics case-insensitively over
   `frame.columns` and answers the bound columns in frame order, zero matches included —
   on a multi-name frame each duplicate display name contributes its own bound column.
-  pins: df-colregex-1/C-001, C-003, C-005
+  Remediation (ruling S2-21, review P2-1): the names list is read once and only
+  full-matching names bind (`_bind_schema_column(name, name)`); when
+  `_display_names`/`_engine_names` is set or names repeat, the positional
+  `_iter_bound_columns` path is kept — that branch is the correctness guard that
+  keeps duplicate display names positional (per-attribute expansion, no
+  `AMBIGUOUS_REFERENCE`) and resolves origins through `_origin_map`. Measured
+  500-col/10-match 5.40 → 0.32 ms (ledger C-006).
+  pins: df-colregex-1/C-001, C-003, C-005, C-006
 - `joins_columns.py` owns `GroupedData`, grouping sets, pivot, and pandas UDF grouping bridges.
   DFCORE-1 (2026-09-07): imports the moved schema/group helpers directly from `udf_schema.py`
   and `grouped_udf.py`, not through `core`. The grouped-UDF names arrive via a module import

@@ -44,8 +44,9 @@ already a no-op. `column.py` keeps its 1589 baseline and `core.py` stays line-ne
 | C-003 | After the fix both pins run green and the whole `python/repark/tests` suite passes under `.venv/bin/python -m pytest -q`. | The gates table below. | **PROVEN** |
 | C-004 | Every `docs/examples/` script naming `DataFrame.colRegex` / `col_regex` still executes — `.venv/bin/python scripts/check_example_coverage.py --require-execute` exits 0 (no script names the pair; the execute leg holds the whole suite). | The gate's own counts line on the shipped tree. | **PROVEN** |
 | C-005 | §7 EX-DF-1 is rewritten FIXED with both arms (backtick strip, all-match expansion) recorded against the re-measured oracle answers. | The amended row plus the flipped pins. | **PROVEN** |
+| C-006 | Remediation (ruling S2-21, review P2-1): `expand_col_regex` reads `frame.columns` once and binds only full-matching names on unique-name frames; frames carrying a display/engine overlay or duplicate names keep the positional `_iter_bound_columns` path. Re-measured on the reviewer's harness shape (500 columns × 10k rows; 1, 10, and 500 matches; three reps after warmup, medians). | The remediation table below; the duplicate-name pin `test_colregex_duplicate_names_expand_positionally`. | **PROVEN** |
 
-`LOGIC_SCORE` = 5/5.
+`LOGIC_SCORE` = 6/6.
 
 ## Oracle (live PySpark 4.1.2, ANSI on, UTC, 2026-09-11)
 
@@ -121,6 +122,35 @@ exactly `colregex` with the binding imported in the pin file itself (the file's 
 pattern for order-independent submodule binding), line-neutral at its 1000-line
 default ceiling; the suite re-run on the final tree is above.
 
+## Remediation — review P2-1 (ruling S2-21, 2026-09-11)
+
+The read-only performance review (`/tmp/oc-worker/grok-rev-colregex/report.md`) measured the
+landed change and found one P2: `expand_col_regex` bound every column through
+`_iter_bound_columns` and then filtered, and probed `frame.columns` twice (once inside
+`_iter_bound_columns`, once in the zip). The reviewer's 500-column / 10-match instrumented
+measurement: 500 binds, 2 schema probes, 5.23 ms; binding only the hits: 0.31 ms.
+
+The fix reads `names = frame.columns` once and, when the frame carries no display/engine
+overlay and names are unique, binds only the full-matching names with
+`_bind_schema_column(name, name)`. The positional `_iter_bound_columns` path is kept when
+`_display_names`/`_engine_names` is set or names repeat — that branch is the correctness
+guard: duplicate display names must expand per position (a name lookup would raise
+`AMBIGUOUS_REFERENCE`), and the overlay path resolves origin metadata through
+`_origin_map`. Harness `scratch/dfcolregex/perf_expand.py` (gitignored), same frame shape
+as the review (`spark.range(10000).select(col("id").alias(f"c{i:03d}") for i in 0..499)`),
+one warmup then three timed reps, medians; `before` is the round-1 body verbatim, `after`
+the shipped body; outputs asserted identical on all arms.
+
+| Matches | Before median | After median | Speedup |
+|---|---:|---:|---:|
+| 1 (`^c042$`) | 5.368 ms | 0.229 ms | 23.5× |
+| 10 (`^c00[0-9]$`) | 5.395 ms | 0.323 ms | 16.7× |
+| 500 (`.*`) | 5.413 ms | 5.436 ms | 1.0× (all columns bound either way) |
+
+The 500-match arm shows the unique-name guard costs nothing measurable when every column
+expands anyway. P3-1 (withColumn/alias refusal plans the frame first) and P3-2 (+19 µs
+`isinstance` on no-regex select) needed no change per the remediation card.
+
 ## Cost
 
 The Devin (SWE-2) leg started 2026-09-11: read the contract, the EX-29 ledger, the §7 row,
@@ -181,7 +211,10 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: N/A
       justification: Not a system-breaking change; expansion compiles the pattern
-        once per `select` call, the same cost class as the previous implementation.
+        once per `select` call. The remediation round measured the wide-frame arm
+        directly (C-006) — binding matches only is 16.7–23.5× on 1–10 hits and
+        parity at 500 — so the helper is strictly no worse than the shipped round-1
+        body and far better on the common sparse-match shape.
     - id: AT-8
       status: ATTACKED
       evidence: No dependency or workflow edits; the one public-surface gain — the

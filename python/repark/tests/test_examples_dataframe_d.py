@@ -72,3 +72,21 @@ def test_colregex_multi_match_expands(spark: ReparkSession) -> None:
     assert frame.select(frame.colRegex("`^zzz$`")).count() == 1
     with pytest.raises(AnalysisException):
         frame.select(frame.colRegex("`^(g|k)$`").alias("z"))
+
+
+def test_colregex_duplicate_names_expand_positionally(spark: ReparkSession) -> None:
+    """colRegex on a duplicate-display-name frame expands every match positionally.
+
+    A condition join keeps Spark-legal duplicate display names; expansion must bind
+    each match positionally — a name lookup would raise ``AMBIGUOUS_REFERENCE``
+    (DF-COLREGEX-1 remediation).
+
+    pins: df-colregex-1/C-003, C-006
+    """
+    frame = spark.createDataFrame([("a", 1, 10.0)], ["g", "k", "v"])
+    joined = frame.join(frame, frame["g"] == frame["g"])
+    assert joined.columns == ["g", "k", "v", "g", "k", "v"]
+    assert joined.select(joined.colRegex("`^k$`")).columns == ["k", "k"]
+    assert joined.select(joined.colRegex("`^(g|v)$`")).columns == ["g", "v", "g", "v"]
+    row = joined.select(joined.colRegex("`^k$`")).first()
+    assert (row[0], row[1]) == (1, 1)

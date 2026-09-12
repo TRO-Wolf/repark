@@ -388,10 +388,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-11)** flips that arm to the FIXED parity pin
   `test_colregex_multi_match_expands` — every full-match expands in frame order at
   the marker's select position, case-insensitively, with the zero-match and
-  alias-refusal arms pinned.
+  alias-refusal arms pinned. The remediation round adds
+  `test_colregex_duplicate_names_expand_positionally` — a condition-join frame's
+  duplicate display names expand per position (the `_iter_bound_columns` guard).
   pins: ex-19-dataframe-d-window/C-001
   pins: ex-29-class-remainder/C-002, C-003
-  pins: df-colregex-1/C-002, C-003
+  pins: df-colregex-1/C-002, C-003, C-006
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve

@@ -44,9 +44,12 @@ def expand_col_regex(frame: DataFrame, column: RegexColumn) -> list[Column]:
             f"colRegex pattern {column._regex_pattern!r} is not a valid regular expression "
             f"({error})"
         ) from error
+    names = frame.columns
+    if frame._display_names is None and len(set(names)) == len(names):
+        return [frame._bind_schema_column(name, name) for name in names if pattern.fullmatch(name)]
     bound = frame._iter_bound_columns()
     return [
         bound_column
-        for name, bound_column in zip(frame.columns, bound, strict=True)
+        for name, bound_column in zip(names, bound, strict=True)
         if pattern.fullmatch(name)
     ]
