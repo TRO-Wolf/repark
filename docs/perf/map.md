@@ -279,7 +279,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   three frame rows verbatim per bed, and the projection re-read against AP-0's O-run
   actuals: still +76.2 % / +88.0 % on the synthetic beds, filed as residue
   AP-1-R-001 with its mechanism (the footer ratio reads the input codec; the rewrite
-  changed codec).
+  changed codec). **AP-1-CLOSE-1 (2026-09-12):** the 20 % check is retired; the
+  document carries the closing note at the top.
   pins: ap-1/C-012
 - [adapt-part-ap1-remeasure-2026-09-11.md](adapt-part-ap1-remeasure-2026-09-11.md) —
   **AP-1 RP-16 re-measure (2026-09-11):** the three AP-0 beds rebuilt on the
@@ -290,7 +291,9 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   measured live actuals 7 928 680 / 7 672 169 (20 files, UNCOMPRESSED). The
   honest 20 percent check is −85.4 % / −84.9 % against those actuals (stale
   AP-0 CTAS actuals −73.8 % / −72.0 % kept for continuity); residue AP-1-R-001
-  stays OPEN. No Rust or Python source changed.
+  stays OPEN. No Rust or Python source changed. **AP-1-CLOSE-1 (2026-09-12):**
+  the 20 % check is retired and AP-1-R-001 is closed as an estimator property;
+  the document carries the closing note at the top.
   pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - [adapt-part-ap1-remeasure-2-2026-09-12.md](adapt-part-ap1-remeasure-2-2026-09-12.md) —
   **AP-1 RP-17 re-measure (2026-09-12):** the third re-measure, on fork pin
@@ -300,7 +303,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   output footers are now zstd; both projections (stored-bytes × ratio and
   uncompressed-sum × ratio) sit beside the actual so the orchestrator can rule
   deferred question Q-1; the 20 % check answers AP-1-R-001 as measured. No Rust
-  or Python source changed.
+  or Python source changed. **AP-1-CLOSE-1 (2026-09-12):** the 20 % check is
+  retired; the document carries the closing note at the top.
   pins: rp-17/C-002, C-003
 - [adapt-part-ap1-remeasure-3-2026-09-12.md](adapt-part-ap1-remeasure-3-2026-09-12.md) —
   **AP-1 RP-18 re-measure (2026-09-12):** the fourth re-measure, on fork pin
@@ -312,9 +316,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   the near-unique columns and one on the low-cardinality `grp` (asserted). The
   AP-3 projection (uncompressed sum × `byte_ratio`) now reads +54.5 % / +61.8 %
   against actuals 1 839 168 / 1 755 749 — the sign flipped because the rewrite's
-  own output ratio (0.284 / 0.270) beats the inputs' 0.377; AP-1-R-001 stays
-  OPEN. No Rust or Python source changed.
+  own output ratio (0.284 / 0.270) beats the inputs' 0.377. **AP-1-CLOSE-1
+  (2026-09-12):** the projection is pinned as an upper bound from the inputs'
+  compressed bytes and AP-1-R-001 is closed as an estimator property; the
+  document carries the closing note at the top.
   pins: rp-18/C-002, C-003
+  pins: ap-1-close-1/C-001, C-002
 
 ## Pointers
 

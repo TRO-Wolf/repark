@@ -111,32 +111,31 @@ Both arguments are required and the target must be a positive integer.
 | `candidate` | the spec in Spark DDL spelling — `days(ts)`, `bucket(16, id)`, `identity(region)`, or `unpartitioned` |
 | `score` | the target-band penalty, lower is better; 0 means every projected partition value lands between 0.25× and 4× the target |
 | `projected_partitions` | partition values carrying bytes under the candidate |
-| `projected_files_at_target` | projected files per value — `ceil(post-rewrite bytes / target)` — summed |
+| `projected_files_at_target` | projected files per value — `ceil(projected bytes / target)` — summed; an upper bound on the rewrite's output |
 | `ddl` | the `ALTER TABLE … ADD PARTITION FIELD` statements the candidate would take |
 | `calls` | the maintenance CALL chain that would follow (`rewrite_data_files`, `rewrite_manifests`, `expire_snapshots`) |
 | `plan_id` | a hash of the snapshot id and the candidate; an apply step requires this dry-run id |
 | `notes` | per-candidate spread assumptions plus the table-wide caveats below |
 
-`projected_files_at_target` projects post-rewrite bytes: the procedure reads
-every live data file's parquet footer through the table's own `FileIO` (a
-metadata read only — no row-group data is decoded), sums each column chunk's
-`total_compressed_size` and `total_uncompressed_size`, and projects each
-partition value's share of the uncompressed sum scaled by that `byte_ratio`
-before dividing by the target — compression is counted once, at the size a
-rewrite of the same rows would store. Every row's `notes` reports the ratio as
-`byte_ratio=<value> (footers)`. When any footer is unreadable the ratio falls
-back to the measured constant 0.55, each file's uncompressed size is estimated
-as `file_size_in_bytes / 0.55`, and the notes say `(fallback)`. The AP-0-R-001
-caveat stays on every row, and `projected_partitions` is the column the AP-0
-rewrite measured exact.
+`projected_files_at_target` is an upper-bound estimate of the rewrite's output
+file count: the procedure reads every live data file's parquet footer through
+the table's own `FileIO` (a metadata read only — no row-group data is decoded),
+sums each column chunk's `total_compressed_size` and `total_uncompressed_size`,
+and projects each partition value's share of the uncompressed sum scaled by
+that `byte_ratio` before dividing by the target — compression is counted once,
+so the projected bytes are the inputs' compressed bytes, a ceiling no
+same-codec rewrite of the same rows exceeds. Every row's `notes` reports the
+ratio as `byte_ratio=<value> (footers)`. When any footer is unreadable the
+ratio falls back to the measured constant 0.55, each file's uncompressed size
+is estimated as `file_size_in_bytes / 0.55`, and the notes say `(fallback)`.
+The AP-1-R-001 note on every row records the closed residue, and
+`projected_partitions` is the column the AP-0 rewrite measured exact.
 
-Known issue (AP-1-R-001, was S2-24): fork `#280` (F-REWRITE-SIZE-1) removed the
-dead dictionary pages and made an unset compression level mean zstd 3, so a
-compaction is no longer a net-size loss — the RP-18 re-measure rewrote 206 files
-at 2 840 672 compressed bytes into 20 at 1 839 168 B. The projection still
-misses the 20 % bar, now in the other direction (+54.5 % / +61.8 % high),
-because an input's footer ratio measured over 2 000-row files understates how
-well the rewrite's ~20 000-row groups compress.
+Compaction is a net-size win on zstd tables at the RP-18 pin: fork `#280`
+(F-REWRITE-SIZE-1) removed the dead dictionary pages and made an unset
+compression level mean zstd 3, so the re-measure rewrote 206 files at
+2 840 672 compressed bytes into 20 at 1 839 168 B (uniform) and 1 755 749 B
+(skewed) — output ratio ~0.28 against the inputs' 0.38.
 
 Candidate generation follows P-2: timestamp and date columns get
 `years`/`months`/`days`/`hours`; int and string columns get `identity` when the

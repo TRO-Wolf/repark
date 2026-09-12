@@ -103,7 +103,7 @@ COVERAGE_ATTESTATION:
     - id: AT-9
       status: ATTACKED
       evidence: AP-1-R-001 answered as measured per D-2 and stays OPEN (+54.5 % / +61.8 % on the AP-3 basis; −36.7 % / −33.7 % recorded on the stored basis); residue updated in the completed AP-1 ledger errata, the remeasure ledger note, the AP-1 doc, and the maintenance guide's known-issues line.
-      artifacts: [task/ledgers/completed/ap-1-ledger.md, task/ledgers/staging/ap-1-remeasure-ledger.md, docs/perf/adapt-part-ap1-2026-09-11.md, docs/guide/maintenance-policy.md]
+      artifacts: [task/ledgers/completed/ap-1-ledger.md, task/ledgers/completed/ap-1-remeasure-ledger.md, docs/perf/adapt-part-ap1-2026-09-11.md, docs/guide/maintenance-policy.md]
     - id: AT-10
       status: ATTACKED
       evidence: Before state is run 9's re-measure doc (zstd with dead dictionary pages, −36.7/−31.5 on the AP-3 projection); after state is this unit's dictionary-free outputs at 0.284/0.270 own-ratio and both deltas. No formula or product code changed (D-4).
