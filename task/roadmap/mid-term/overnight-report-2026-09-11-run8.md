@@ -1,6 +1,6 @@
 # Overnight report — run 8 of 2026-09-11 (Grok-only workers)
 
-**Session:** one Opus orchestrator, 2026-09-11 16:19 → 21:2x local, alone on the box.
+**Session:** one Opus orchestrator, 2026-09-11 16:19 → 22:15 local.
 **Grants:** G-1 (squash-merge on green), G-2 (bounded decisions), G-3 (stop 06:30 or list
 exhausted — the list was exhausted), G-4 **Grok only** for every worker round (owner, 2026-09-11
 afternoon), G-5 (seed commits). **Procedure:**
@@ -18,13 +18,17 @@ afternoon), G-5 (seed commits). **Procedure:**
 | 4 | fork **F-WRITE-COMPRESS-1** (S2-16) — INSERT data files carry the table's parquet codec | [iceberg-rust#276](https://github.com/TRO-Wolf/iceberg-rust/pull/276) | **merged `090bc821`**, tree-equal | 1 |
 | 5 | **BALLISTA-M2-B** (S2-17) — typed `IcebergTableScan` rebuild; the rebuild-and-compare guard retires | [#509](https://github.com/TRO-Wolf/repark/pull/509) | **merged `a10062b8`**, tree-equal | 2 (+ seed) |
 | 6 | **RP-16** — fork pin `85db42f2` → `090bc821`; `PERF-CATALOG-CACHE-WEIGHT-1` closed FIXED | [#510](https://github.com/TRO-Wolf/repark/pull/510) | **merged `864e3483`**, tree-equal | 1 |
-| 7 | **AP-2** — `CALL apply_partitioning()` executes a printed plan | [#512](https://github.com/TRO-Wolf/repark/pull/512) | merge chain run at the end of the session | 2 (+1 stall) |
-| 8 | **AP-1 re-measure** on the RP-16 pin — AP-1-R-001 stays OPEN | [#514](https://github.com/TRO-Wolf/repark/pull/514) | merge chain run at the end of the session | 2 |
-| 9 | This report | docs PR | **unmerged, for the owner** | 0 |
+| 7 | **AP-2** — `CALL apply_partitioning()` executes a printed plan | [#512](https://github.com/TRO-Wolf/repark/pull/512) | **merged `7c7fa4f1`**, tree-equal | 2 (+1 stall) |
+| 8 | **AP-1 re-measure** on the RP-16 pin — AP-1-R-001 stays OPEN | [#514](https://github.com/TRO-Wolf/repark/pull/514) | **merged `c7d34915`**, tree-equal | 2 |
+| 9 | This report | [#515](https://github.com/TRO-Wolf/repark/pull/515) | **unmerged, for the owner** | 0 |
 
 Every merge used `gh pr update-branch` → `gh pr checks --watch` → explicit
 `gh pr merge --squash --delete-branch --match-head-commit`, never `--auto`, each followed by the
-tree-equality check. No merge-conflict resolution was needed anywhere.
+tree-equality check. Three of the last chains needed a branch update and two needed a conflict resolved by hand — a
+second session was merging into `main` through the same window (#511 ledger-hygiene-1, #513
+ex-29). Both conflicts were in a `map.md` contents list; both were resolved keeping **both**
+sides, with `git diff --diff-filter=U` empty and `make check-ledgers` + `make verify` re-run
+before the merge commit.
 
 **Grok:** 10 rounds, **$20.86** (`/tmp/grok-worker/runs.tsv`). No Devin, no Muse, no GLM.
 One turn-1 stall (AP-2 round 1, `num_turns` 1, placeholder summary) — resumed with the proceed
@@ -115,3 +119,11 @@ is the state Q-1 should be ruled in.
 - Up: [map.md](map.md) · Runbook: [overnight-orchestrator-runbook-2026-09-08.md](overnight-orchestrator-runbook-2026-09-08.md)
 - Previous: [overnight-report-2026-09-11-run7.md](overnight-report-2026-09-11-run7.md)
 - Slates: [slate 1](cheap-tier-slate-2026-09-08.md) · [slate 2](cheap-tier-slate-2-2026-09-09.md) · [review-fix](review-fix-slate-2026-09-10.md)
+
+## 6. Housekeeping
+
+- Lane clones `/tmp/grok-fork-wc`, `/tmp/grok-noom3` and `/tmp/oc-report8` survive the session:
+  the harness refuses `rm -rf` on a directory it has treated as a workspace (the same block run 7
+  hit with `/tmp/dv-tort5`). Free space at the end: 372 GB. The owner can remove them.
+- Stop condition: the scoped list was exhausted at 22:15 local, well before the 06:30 stop time.
+  Card F-WRITE-COMPRESS-2 (§5) was deliberately **not** opened — it is outside this run's scope.
