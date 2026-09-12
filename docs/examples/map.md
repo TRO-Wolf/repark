@@ -5,7 +5,9 @@
 Executable worked examples of the public surface. The v0.7 drift gate
 (`scripts/check_example_coverage.py`, `make check-example-coverage`) walks the
 facade, reads each script's `COVERS` list, and fails when a public name is
-neither covered nor listed in the backlog ratchet or the cloud exceptions file.
+neither covered, listed in the backlog ratchet or the cloud exceptions file,
+nor named in the gate's exclusion list (`INVENTORY_EXCLUSIONS` — seven
+measured non-PySpark plumbing names under owner ruling S2-22, EX-31).
 
 Examples run against local filesystem and a memory catalog only. They are not a
 substitute for pins in `python/repark/tests/` — they teach the public name.
@@ -54,11 +56,12 @@ file is empty.
   `unix_timestamp` format argument as EX-FN-21).
 - [dataframe/](dataframe/map.md) — DataFrame / GroupedData / na / stat examples
   (EX-26: the repark-only `dynamicFlatten` / `dynamic_flatten` pair).
-- [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the engine-plumbing
-  rows `for_select`, `join_sql_part`, `spark_display_part`, `spark_wrap_display_part`,
-  `sql_expr_part`, `sql_expr_without_alias` stay on the backlog as non-Spark surface;
-  the repark-extension namespaces `str`/`dt` are documented with their PySpark-spelled
-  twins).
+- [column/](column/map.md) — `Column.*` examples (EX-17: 34 names; the six
+  engine-plumbing rows `for_select`, `join_sql_part`, `spark_display_part`,
+  `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias` left the
+  inventory under `INVENTORY_EXCLUSIONS` (EX-31, ruling S2-22) — measured
+  non-Spark surface, still callable; the repark-extension namespaces `str`/`dt`
+  are documented with their PySpark-spelled twins).
 - [catalog/](catalog/map.md) — `Catalog.*` examples (EX-20: the first 18 roster names minus the
   three measured divergences `getDatabase`/`get_database`, `listDatabases`, and the
   `functionExists(name, dbName)` arm — EX-CAT-1..3; EX-21: the setter, exists,

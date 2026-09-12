@@ -35,11 +35,13 @@ see [../map.md](../map.md).
   twins `F.upper` / `F.trim` / `F.year`, measured Spark-equal.
 
 The six engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
-`spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`) stay on the backlog as
-non-Spark surface: on live PySpark 4.1.2 `hasattr` answers True only through `Column.__getattr__`
+`spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`) are not PySpark
+surface: on live PySpark 4.1.2 `hasattr` answers True only through `Column.__getattr__`
 item fabrication (`inspect.getattr_static` finds no member; calling one raises
-`'Column' object is not callable`), so they are not PySpark API — measured by EX-29 on
-2026-09-11 and reported for an owner ruling on inventory narrowing.
+`'Column' object is not callable`) — measured by EX-29 on 2026-09-11. Under owner
+ruling S2-22 they left the example inventory entirely (EX-31): the gate's named
+`INVENTORY_EXCLUSIONS` list drops them from the snapshot, the backlog and the live
+`__all__` cross-check while the bound methods stay callable on repark's `Column`.
 
 Two bare-name arms the live oracle measured divergent are filed as §7 registry rows
 ([EX-COL-1](../../spark-sql-iceberg-parity.md), EX-COL-2) with pins
