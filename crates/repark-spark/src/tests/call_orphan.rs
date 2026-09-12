@@ -508,3 +508,92 @@ async fn call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root
         "{err}"
     );
 }
+
+async fn s3_tables_registry(warehouse: &TempDir) -> (SessionContext, CatalogRegistry) {
+    let (ctx, mut catalogs) = setup(warehouse).await;
+    let s3_tables = repark_iceberg::catalog::s3tables_catalog(&HashMap::from([
+        (
+            "table_bucket_arn".to_string(),
+            "arn:aws:s3tables:us-east-2:123456789012:bucket/example".to_string(),
+        ),
+        ("region_name".to_string(), "us-east-2".to_string()),
+    ]))
+    .await
+    .expect("s3tables catalog constructs offline");
+    catalogs.insert(
+        "s3t".to_string(),
+        s3_tables,
+        LocationPolicy::ServiceManagedLocation,
+    );
+    (ctx, catalogs)
+}
+
+fn assert_orphan_s3_tables_refusal(err: &DataFusionError, table_arg: &str) {
+    let message = err.to_string();
+    assert!(
+        message.contains(table_arg),
+        "the refusal must name the table, got: {message}"
+    );
+    assert!(
+        message.contains("table buckets do not support listing") && message.contains("405"),
+        "the refusal must name the reason, got: {message}"
+    );
+    assert!(
+        message.contains("unreferencedFileRemoval")
+            && message.contains("maintenance configuration"),
+        "the refusal must name the service's own remedy, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_on_s3_tables_refuses_before_any_io() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = s3_tables_registry(&warehouse).await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL s3t.system.remove_orphan_files(table => 'ns.t', older_than => {}, \
+             dry_run => false)",
+            older_than_two_days_ago_ms()
+        ),
+    )
+    .await
+    .expect_err("a table bucket cannot be listed; the CALL must refuse before any IO");
+    assert_orphan_s3_tables_refusal(&err, "ns.t");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = s3_tables_registry(&warehouse).await;
+    let older_than = older_than_two_days_ago_ms();
+    let armed = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL s3t.system.remove_orphan_files(table => 'ns.t', older_than => {older_than}, \
+             dry_run => false)"
+        ),
+    )
+    .await
+    .expect_err("armed call refuses")
+    .to_string();
+    for spelling in [
+        format!(
+            "CALL s3t.system.remove_orphan_files(table => 'ns.t', older_than => {older_than}, \
+             dry_run => true)"
+        ),
+        format!("CALL s3t.system.remove_orphan_files(table => 'ns.t', older_than => {older_than})"),
+    ] {
+        let err = execute(&ctx, &catalogs, &spelling)
+            .await
+            .expect_err("dry run refuses the same way");
+        assert_eq!(
+            err.to_string(),
+            armed,
+            "the dry-run spelling must refuse identically: {spelling}"
+        );
+        assert_orphan_s3_tables_refusal(&err, "ns.t");
+    }
+}

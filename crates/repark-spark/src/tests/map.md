@@ -388,6 +388,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `service_managed_ctas` also has `ctas_service_managed_from_view_typed_batches_round_trips`.
   pins: ctas-view-1-conform-stream/C-003
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
+  **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
+  and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
+  service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)
+  registered `ServiceManagedLocation`; the refusal fires before any AWS call would, so the
+  pin needs no credentials. The green run beside the existing nine pins is C-004's
+  evidence that every other catalog kind is unchanged.
+  pins: orphan-s3tables-1/C-001, C-002, C-004
 - **Time-travel pins:**
   `time_travel_temp_views_do_not_survive_a_{successful,failed}_statement` and
   `time_travel_statement_pins_never_collide_with_a_reader_options_view` (the fix-pass collision
@@ -625,8 +632,14 @@ above.
   size failing step 2 with `failed` + `skipped` rows and a readable table, gate-skipped
   steps absent on apply exactly as on a dry run, and the session-build stamp end to end
   (a `repark.toml` policy plans with no inline keys; the D-6 refusal names `default`).
+  **ORPHAN-S3TABLES-1 (2026-09-12):** `register_s3t_kind` re-registers the memory catalog
+  under `s3t` as `ServiceManagedLocation` after the table exists (the DataFusion provider
+  snapshots tables at registration); `run_maintenance_on_s3_tables_marks_the_orphan_step_skipped`
+  and `run_maintenance_apply_on_s3_tables_skips_orphan_and_runs_the_rest` pin the skipped
+  orphan row — reason in `result` — on the dry run and on apply while the other steps run.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
   C-017, C-018, C-019
+  pins: orphan-s3tables-1/C-003, C-004
 - `apply_partitioning.rs` — **AP-2 step 1 (2026-09-11):** the apply door pins on
   memory-catalog fixtures: unknown-key refusal names `dry_run`/`plan_id`/`table`; missing
   `plan_id` is required; default dry-run leaves the snapshot and unpartitioned spec unchanged
