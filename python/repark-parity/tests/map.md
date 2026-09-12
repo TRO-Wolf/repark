@@ -191,7 +191,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   symbol), five reads + three writes (append 8 files, merge 10 %), CSV header /
   median / row shape, the JVM guard both ways, smoke scale below full scale. Step 2
   adds the `table_property_alter` pin (write.* knobs land as TBLPROPERTIES, session
-  knobs and `@default` do not) and the doc-vs-CSV median equality pin.
+  knobs and `@default` do not) and the doc-vs-CSV pins: three repetitions per cell in
+  every committed CSV, every doc table row equal to its CSV median with its ratio,
+  the argmax row per knob, and the no-effect table recomputed under the
+  AFFECTED_CELLS / CONTROL_VALUES rule (a knob is flat only where it can reach;
+  same-as-default spellings are controls, not evidence).
   pins: profiles-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 3 (2026-09-09): `dataframe/core.py` row 4536 → 4525 with the script baseline; the two `__repr__` / `_repr_html_` docstrings condensed to one line each, their contracts moved to `python/repark/src/repark/spark/dataframe/map.md`. pins: display-polars-1/C-004
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-POLARS-1 step 4 (2026-09-09, follow-up): `dataframe/plan_collapse.py` row 1168 → 1057 and `session/session_core.py` row 2411 → 2410 with the script baseline (ratchet DOWN; the spellers live in the new `dataframe/polars_cells.py`, the key plumbing in `session_configuration.py`). pins: display-polars-1/C-005
