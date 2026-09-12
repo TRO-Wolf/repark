@@ -34,9 +34,11 @@ makes never is — beds live under the `--scratch` root the caller names.
   fresh `/tmp/ap1r-bed` on the release module at pin `090bc821`. INSERT files on
   the synthetic beds now read zstd. Numbers:
   [docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
-  The script still has no rewrite flag; the 20 percent check compares against
-  AP-0's recorded O-run actuals.
-  pins: ap-1-remeasure/C-001, C-002, C-003
+  The script still has no rewrite flag. Round 2 drove
+  `ADD PARTITION FIELD identity(grp)` plus `rewrite_data_files` on fresh copies
+  and compared the projection to those live actuals (7 928 680 / 7 672 169,
+  UNCOMPRESSED).
+  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…

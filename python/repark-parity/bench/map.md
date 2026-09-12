@@ -71,7 +71,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
   **AP-1 / RP-16 re-measure (2026-09-11):** `--plan` runs `CALL plan_partitioning`
   on those beds. See [adaptpart/map.md](adaptpart/map.md).
   pins: ap-0/C-001, C-002, C-003, C-004
-  pins: ap-1-remeasure/C-001, C-002, C-003
+  pins: ap-1-remeasure/C-001, C-002, C-003, C-004
 - `map.md` — this file.
 
 ## I want to…

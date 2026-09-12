@@ -160,43 +160,61 @@ rank 3
 files (AP-1 step 2: rank 2, score 0.853, 27 files). Ranking moved for the same
 stored-byte drop.
 
-## The 20 percent check — old vs new
+## The 20 percent check — projection vs live rewrite actuals
 
-AP-0's O-run rewrote `identity(grp)` on the two synthetic beds and measured
-actual post-rewrite bytes (uniform 4 413 222, skewed 4 134 457).
-`run_adaptpart.py` has `--plan` and no rewrite flag, so this round does not
-re-run that rewrite. The comparison uses those recorded actuals and flags that
-they predate the INSERT codec change (the O-run was a partitioned CTAS of
-uncompressed INSERT files).
+AP-0's O-run actuals (uniform 4 413 222, skewed 4 134 457) rewrote
+**uncompressed** INSERT files with a partitioned CTAS. They are the wrong
+generation of input once INSERT writes zstd. This round re-ran the rewrite on
+fresh copies of the zstd INSERT beds (`uniform_orun`, `skewed_orun`), built
+from the same seeds as the plan beds (pre-rewrite 206 files, 3 074 844 bytes,
+codec ZSTD, footer ratio 0.376076 — cell for cell the plan-bed numbers).
 
-Projected bytes use the same formula the AP-1 step-2 document used:
-`Σ file_size × byte_ratio`, with the independently recomputed ratio.
+Statements, verbatim, per copy:
 
-| Bed | Projected bytes (`Σ file_size × byte_ratio`) | O-run actual bytes | New byte error | AP-1 step-2 error |
-|---|---|---|---|---|
-| uniform | 3 074 844 × 0.376076 = 1 156 376 | 4 413 222 | **-73.8 %** | +76.2 % |
-| skewed | 3 074 844 × 0.376076 = 1 156 376 | 4 134 457 | **-72.0 %** | +88.0 % |
+```text
+ALTER TABLE ap.ns.<bed>_orun ADD PARTITION FIELD identity(grp)
+CALL ap.system.rewrite_data_files(table => 'ns.<bed>_orun')
+```
 
-**The projection is still more than 20 percent wrong on both beds.** The sign
-flipped from over-predict to under-predict. Residue AP-1-R-001 stays OPEN. The
-measurement wins; the formula was not tuned.
+`run_adaptpart.py` still has no rewrite flag; the driver was a throwaway
+`/tmp/ap1r-orun.py` (not committed) against the same release module. CALL
+frames: both beds `rewritten_data_files_count=206`, `added_data_files_count=20`,
+`rewritten_bytes_count=3074844`, `failed_data_files_count=0`. Live data-file
+bytes are the current-snapshot `files` metadata sum of `file_size_in_bytes`
+where `content = 0`. Live footer codecs are the 20 current-snapshot parquet
+files (the data directory still holds the 206 superseded zstd inputs until
+expire; those are not live).
 
-Stored file bytes without the second multiply (3 074 844) would be −30.3 % /
-−25.6 % against the same actuals — still outside 20 percent, and those actuals
-are the wrong generation of input. A same-codec rewrite of the new beds was not
-run.
+| Bed | Projected bytes (`Σ file_size × byte_ratio`) | **New actual** (this rewrite) | Error vs new actual | AP-0 stale actual | Error vs stale |
+|---|---|---|---|---|---|
+| uniform | 3 074 844 × 0.376076 = 1 156 376 | **7 928 680** (20 files, UNCOMPRESSED) | **-85.4 %** | 4 413 222 | −73.8 % |
+| skewed | 3 074 844 × 0.376076 = 1 156 376 | **7 672 169** (20 files, UNCOMPRESSED) | **-84.9 %** | 4 134 457 | −72.0 % |
+
+**The honest comparison is the new actual.** It rewrites the same zstd INSERT
+beds the projection read. AP-0's actuals stay in the table for continuity; they
+are a different write path (partitioned CTAS of uncompressed inputs) and a
+different codec (those outputs were zstd at 0.53–0.57×). No timing is claimed:
+1-minute load was 7.37 at O-run start and 10.13 at end.
+
+Post-rewrite layout: 20 live files (one per `grp` value). Uniform every file
+396 434 bytes. Skewed min 196 394 / median 196 394 / max 3 745 643. Live
+column-chunk codecs are **UNCOMPRESSED** on all 20 files, footer ratio 1.0.
+`rewrite_data_files` did not carry `target-file-size-bytes`; it did not split
+the 3.75 MB `g00` file at 512 KiB (projected_files_at_target was 21 on skewed).
+
+**The projection is still more than 20 percent wrong on both beds against the
+new actuals.** Residue AP-1-R-001 stays OPEN. The formula was not tuned.
 
 ## What this means for AP-1-R-001
 
-The named mechanism of the residue is gone: INSERT files on the synthetic beds
-are no longer uncompressed, and `byte_ratio` is no longer a no-op. The 20 percent
-bar is still missed, now on the other side, because `byte_ratio` still multiplies
-the *stored* (already zstd) file bytes by the stored codec ratio. On these beds
-that applies compression twice: 3 074 844 × 0.376076 = 1 156 376, while the
-column-chunk uncompressed sum is 7 529 566 and the compressed column-chunk sum
-is 2 831 692.
+INSERT on these beds is now zstd (the RP-16 pin took). The 20 percent bar is
+still missed, and the gap is larger against the live rewrite than against the
+stale CTAS actuals, because `rewrite_data_files` wrote **uncompressed** files
+(7.93 MB / 7.67 MB) while the projection multiplied already-zstd stored bytes
+by the stored zstd ratio (3 074 844 × 0.376076 = 1 156 376). Input codec and
+rewrite codec still do not match.
 
-Owner question, not decided here: should the ratio multiply the footers'
+Owner question Q-1, not decided here: should the ratio multiply the footers'
 *uncompressed* sum rather than the stored file bytes, i.e. predict the rewrite's
 own codec?
 
@@ -212,6 +230,8 @@ rm -rf /tmp/ap1r-bed
 `--plan` issues the CALL per bed after the AP-0 scoring tables print and dumps
 every frame row field by field; the blocks above are that output verbatim. The
 independent ratio check is `pyarrow.parquet` over the warehouse path named
-above. Related: [adapt-part-ap1-2026-09-11.md](adapt-part-ap1-2026-09-11.md);
+above. The O-run rewrite is the two statements in the 20 percent section, on a
+fresh INSERT-grown copy per synthetic bed (scratch `/tmp/ap1r-orun`). Related:
+[adapt-part-ap1-2026-09-11.md](adapt-part-ap1-2026-09-11.md);
 [ap-0-partition-candidates-2026-09-10.md](ap-0-partition-candidates-2026-09-10.md);
 ledger `task/ledgers/staging/ap-1-remeasure-ledger.md`.

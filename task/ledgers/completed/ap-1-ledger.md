@@ -20,24 +20,32 @@ every bed, including the two INSERT-grown synthetics:
 Frame notes say `byte_ratio=0.46 (footers)` on futures and `byte_ratio=0.38
 (footers)` on both synthetics. The 0.55 fallback did not fire.
 
-`run_adaptpart.py` has `--plan` and no rewrite flag, so the O-run rewrite was
-not re-run. The 20 percent check compares `Σ file_size × byte_ratio` against
-AP-0's recorded O-run actuals (those actuals predate the INSERT codec change):
+Round 2 re-ran the rewrite on fresh INSERT-zstd copies. Statements, verbatim:
 
-| Bed | Projected bytes | O-run actual | New error | AP-1 step-2 error |
-|---|---|---|---|---|
-| uniform | 3 074 844 × 0.376076 = 1 156 376 | 4 413 222 | **-73.8 %** | +76.2 % |
-| skewed | 3 074 844 × 0.376076 = 1 156 376 | 4 134 457 | **-72.0 %** | +88.0 % |
+```text
+ALTER TABLE ap.ns.<bed>_orun ADD PARTITION FIELD identity(grp)
+CALL ap.system.rewrite_data_files(table => 'ns.<bed>_orun')
+```
 
-**AP-1-R-001 still OPEN.** The projection is still more than 20 percent wrong
-on both beds; the sign flipped from over-predict to under-predict because the
-ratio now multiplies already-zstd stored bytes. Full frames, codecs and
-reproduce commands:
+Live current-snapshot `files` sums (`content = 0`): uniform **7 928 680** (20
+files), skewed **7 672 169** (20 files). Live footers on those 20 files are
+**UNCOMPRESSED** (ratio 1.0). CALL frames: rewritten 206, added 20, rewritten
+bytes 3 074 844, failed 0. Pre-rewrite copies matched the plan beds (206 files,
+3 074 844 bytes, ZSTD, ratio 0.376076).
+
+| Bed | Projected | New actual | Error vs new | AP-0 stale actual | Error vs stale |
+|---|---|---|---|---|---|
+| uniform | 3 074 844 × 0.376076 = 1 156 376 | 7 928 680 | **−85.4 %** | 4 413 222 | −73.8 % |
+| skewed | 3 074 844 × 0.376076 = 1 156 376 | 7 672 169 | **−84.9 %** | 4 134 457 | −72.0 % |
+
+**The honest comparison is the new actual** (same zstd INSERT beds, ALTER +
+`rewrite_data_files`). AP-0's actuals are a partitioned CTAS of uncompressed
+inputs. **AP-1-R-001 still OPEN.** Full record:
 [docs/perf/adapt-part-ap1-remeasure-2026-09-11.md](../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md).
-This unit's clause table:
+Clause table:
 [task/ledgers/staging/ap-1-remeasure-ledger.md](../staging/ap-1-remeasure-ledger.md).
 
-**Owner question (not decided here):** should `byte_ratio` multiply the
+**Owner question Q-1 (not decided here):** should `byte_ratio` multiply the
 footers' *uncompressed* sum rather than the stored file bytes, i.e. predict the
 rewrite's own codec?
 
