@@ -1,0 +1,2212 @@
+{
+  "g1_cast_numpy_float64": {
+    "join_sql": "CAST(array(1.5, 2.0) AS ARRAY<DOUBLE>)",
+    "projection_name": "array<double>",
+    "select_columns": [
+      "array<double>"
+    ],
+    "spark_display": "array<double>",
+    "sql_expr": "CAST(array(1.5, 2.0) AS ARRAY<DOUBLE>)",
+    "sql_expr_without_alias": "CAST(array(1.5, 2.0) AS ARRAY<DOUBLE>)"
+  },
+  "g1_cast_numpy_int32": {
+    "join_sql": "CAST(array(1, 2, 3) AS ARRAY<INT>)",
+    "projection_name": "array<int>",
+    "select_columns": [
+      "array<int>"
+    ],
+    "spark_display": "array<int>",
+    "sql_expr": "CAST(array(1, 2, 3) AS ARRAY<INT>)",
+    "sql_expr_without_alias": "CAST(array(1, 2, 3) AS ARRAY<INT>)"
+  },
+  "g1_cast_numpy_int64": {
+    "join_sql": "CAST(array(1, 2) AS ARRAY<BIGINT>)",
+    "projection_name": "array<bigint>",
+    "select_columns": [
+      "array<bigint>"
+    ],
+    "spark_display": "array<bigint>",
+    "sql_expr": "CAST(array(1, 2) AS ARRAY<BIGINT>)",
+    "sql_expr_without_alias": "CAST(array(1, 2) AS ARRAY<BIGINT>)"
+  },
+  "g1_expr_cast_sql": {
+    "join_sql": "CAST(1 AS DOUBLE)",
+    "projection_name": "CAST(1 AS DOUBLE)",
+    "select_columns": [
+      "CAST(1 AS DOUBLE)"
+    ],
+    "spark_display": "CAST(1 AS DOUBLE)",
+    "sql_expr": "CAST(1 AS DOUBLE)",
+    "sql_expr_without_alias": "CAST(1 AS DOUBLE)"
+  },
+  "g1_expr_infix": {
+    "join_sql": "(1 + 1)",
+    "projection_name": "(1 + 1)",
+    "select_columns": [
+      "(1 + 1)"
+    ],
+    "spark_display": "(1 + 1)",
+    "sql_expr": "(1 + 1)",
+    "sql_expr_without_alias": "(1 + 1)"
+  },
+  "g1_expr_infix_mul": {
+    "join_sql": "(2 * 3)",
+    "projection_name": "(2 * 3)",
+    "select_columns": [
+      "(2 * 3)"
+    ],
+    "spark_display": "(2 * 3)",
+    "sql_expr": "(2 * 3)",
+    "sql_expr_without_alias": "(2 * 3)"
+  },
+  "g1_expr_paren": {
+    "join_sql": "(1 + 1)",
+    "projection_name": "(1 + 1)",
+    "select_columns": [
+      "(1 + 1)"
+    ],
+    "spark_display": "(1 + 1)",
+    "sql_expr": "(1 + 1)",
+    "sql_expr_without_alias": "(1 + 1)"
+  },
+  "g1_expr_passthrough_pi": {
+    "join_sql": "pi()",
+    "projection_name": "pi()",
+    "select_columns": [
+      "pi()"
+    ],
+    "spark_display": "pi()",
+    "sql_expr": "pi()",
+    "sql_expr_without_alias": "pi()"
+  },
+  "g1_lit_date": {
+    "join_sql": "DATE '2024-01-02'",
+    "projection_name": "2024-01-02",
+    "select_columns": [
+      "2024-01-02"
+    ],
+    "spark_display": "2024-01-02",
+    "sql_expr": "DATE '2024-01-02'",
+    "sql_expr_without_alias": "DATE '2024-01-02'"
+  },
+  "g1_lit_date_leap": {
+    "join_sql": "DATE '2024-02-29'",
+    "projection_name": "2024-02-29",
+    "select_columns": [
+      "2024-02-29"
+    ],
+    "spark_display": "2024-02-29",
+    "sql_expr": "DATE '2024-02-29'",
+    "sql_expr_without_alias": "DATE '2024-02-29'"
+  },
+  "g1_lit_datetime_micro": {
+    "join_sql": "TIMESTAMP '2024-01-02 03:04:05.123456'",
+    "projection_name": "2024-01-02 03:04:05.123456",
+    "select_columns": [
+      "2024-01-02 03:04:05.123456"
+    ],
+    "spark_display": "2024-01-02 03:04:05.123456",
+    "sql_expr": "TIMESTAMP '2024-01-02 03:04:05.123456'",
+    "sql_expr_without_alias": "TIMESTAMP '2024-01-02 03:04:05.123456'"
+  },
+  "g1_lit_datetime_micro_trailing": {
+    "join_sql": "TIMESTAMP '2024-01-02 03:04:05.123'",
+    "projection_name": "2024-01-02 03:04:05.123",
+    "select_columns": [
+      "2024-01-02 03:04:05.123"
+    ],
+    "spark_display": "2024-01-02 03:04:05.123",
+    "sql_expr": "TIMESTAMP '2024-01-02 03:04:05.123'",
+    "sql_expr_without_alias": "TIMESTAMP '2024-01-02 03:04:05.123'"
+  },
+  "g1_lit_datetime_naive": {
+    "join_sql": "TIMESTAMP '2024-01-02 03:04:05'",
+    "projection_name": "2024-01-02 03:04:05",
+    "select_columns": [
+      "2024-01-02 03:04:05"
+    ],
+    "spark_display": "2024-01-02 03:04:05",
+    "sql_expr": "TIMESTAMP '2024-01-02 03:04:05'",
+    "sql_expr_without_alias": "TIMESTAMP '2024-01-02 03:04:05'"
+  },
+  "g1_lit_datetime_tz_ny": {
+    "join_sql": "TIMESTAMP '2024-01-02 13:04:05'",
+    "projection_name": "2024-01-02 13:04:05",
+    "select_columns": [
+      "2024-01-02 13:04:05"
+    ],
+    "spark_display": "2024-01-02 13:04:05",
+    "sql_expr": "TIMESTAMP '2024-01-02 13:04:05'",
+    "sql_expr_without_alias": "TIMESTAMP '2024-01-02 13:04:05'"
+  },
+  "g1_lit_datetime_tz_utc": {
+    "join_sql": "TIMESTAMP '2024-01-02 03:04:05'",
+    "projection_name": "2024-01-02 03:04:05",
+    "select_columns": [
+      "2024-01-02 03:04:05"
+    ],
+    "spark_display": "2024-01-02 03:04:05",
+    "sql_expr": "TIMESTAMP '2024-01-02 03:04:05'",
+    "sql_expr_without_alias": "TIMESTAMP '2024-01-02 03:04:05'"
+  },
+  "g1_lit_time": {
+    "join_sql": "TIME '03:04:05'",
+    "projection_name": "03:04:05",
+    "select_columns": [
+      "03:04:05"
+    ],
+    "spark_display": "03:04:05",
+    "sql_expr": "TIME '03:04:05'",
+    "sql_expr_without_alias": "TIME '03:04:05'"
+  },
+  "g1_lit_time_micro": {
+    "join_sql": "TIME '03:04:05.007'",
+    "projection_name": "03:04:05.007",
+    "select_columns": [
+      "03:04:05.007"
+    ],
+    "spark_display": "03:04:05.007",
+    "sql_expr": "TIME '03:04:05.007'",
+    "sql_expr_without_alias": "TIME '03:04:05.007'"
+  },
+  "g1_pi": {
+    "join_sql": "pi()",
+    "projection_name": "pi()",
+    "select_columns": [
+      "pi()"
+    ],
+    "spark_display": "pi()",
+    "sql_expr": "pi()",
+    "sql_expr_without_alias": "pi()"
+  },
+  "g1_uuid": {
+    "join_sql": "uuid()",
+    "projection_name": "uuid()",
+    "select_columns": [
+      "uuid()"
+    ],
+    "spark_display": "uuid()",
+    "sql_expr": "uuid()",
+    "sql_expr_without_alias": "uuid()"
+  },
+  "g2_agg__sum_plus_one": {
+    "join_sql": "(sum(\"x\") + 1)",
+    "projection_name": "(sum(x) + 1)",
+    "select_columns": [
+      "(sum(x) + 1)"
+    ],
+    "spark_display": "(sum(x) + 1)",
+    "sql_expr": "(sum(\"x\") + 1)",
+    "sql_expr_without_alias": "(sum(\"x\") + 1)"
+  },
+  "g2_alias__add": {
+    "join_sql": "(\"x\" + 1)",
+    "projection_name": "sum1",
+    "select_columns": [
+      "sum1"
+    ],
+    "spark_display": "(x + 1) AS sum1",
+    "sql_expr": "(\"x\" + 1)",
+    "sql_expr_without_alias": "(\"x\" + 1)"
+  },
+  "g2_alias__metadata": {
+    "join_sql": "\"x\"",
+    "projection_name": "z",
+    "select_columns": [
+      "z"
+    ],
+    "spark_display": "x AS z",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_alias__multi": {
+    "join_sql": "\"x\"",
+    "projection_name": "a",
+    "select_columns": [
+      "a"
+    ],
+    "spark_display": "x AS a",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_alias__simple": {
+    "join_sql": "\"x\"",
+    "projection_name": "z",
+    "select_columns": [
+      "z"
+    ],
+    "spark_display": "x AS z",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_binary_arith__add_chain": {
+    "join_sql": "((\"x\" + \"y\") * 2)",
+    "projection_name": "((x + y) * 2)",
+    "select_columns": [
+      "((x + y) * 2)"
+    ],
+    "spark_display": "((x + y) * 2)",
+    "sql_expr": "((\"x\" + \"y\") * 2)",
+    "sql_expr_without_alias": "((\"x\" + \"y\") * 2)"
+  },
+  "g2_binary_arith__add_col": {
+    "join_sql": "(\"x\" + \"y\")",
+    "projection_name": "(x + y)",
+    "select_columns": [
+      "(x + y)"
+    ],
+    "spark_display": "(x + y)",
+    "sql_expr": "(\"x\" + \"y\")",
+    "sql_expr_without_alias": "(\"x\" + \"y\")"
+  },
+  "g2_binary_arith__add_float": {
+    "join_sql": "(\"x\" + 1.5)",
+    "projection_name": "(x + 1.5)",
+    "select_columns": [
+      "(x + 1.5)"
+    ],
+    "spark_display": "(x + 1.5)",
+    "sql_expr": "(\"x\" + 1.5)",
+    "sql_expr_without_alias": "(\"x\" + 1.5)"
+  },
+  "g2_binary_arith__add_lit_-1": {
+    "join_sql": "(\"x\" + -1)",
+    "projection_name": "(x + -1)",
+    "select_columns": [
+      "(x + -1)"
+    ],
+    "spark_display": "(x + -1)",
+    "sql_expr": "(\"x\" + -1)",
+    "sql_expr_without_alias": "(\"x\" + -1)"
+  },
+  "g2_binary_arith__add_lit_0": {
+    "join_sql": "(\"x\" + 0)",
+    "projection_name": "(x + 0)",
+    "select_columns": [
+      "(x + 0)"
+    ],
+    "spark_display": "(x + 0)",
+    "sql_expr": "(\"x\" + 0)",
+    "sql_expr_without_alias": "(\"x\" + 0)"
+  },
+  "g2_binary_arith__add_lit_1": {
+    "join_sql": "(\"x\" + 1)",
+    "projection_name": "(x + 1)",
+    "select_columns": [
+      "(x + 1)"
+    ],
+    "spark_display": "(x + 1)",
+    "sql_expr": "(\"x\" + 1)",
+    "sql_expr_without_alias": "(\"x\" + 1)"
+  },
+  "g2_binary_arith__add_lit_2": {
+    "join_sql": "(\"x\" + 2)",
+    "projection_name": "(x + 2)",
+    "select_columns": [
+      "(x + 2)"
+    ],
+    "spark_display": "(x + 2)",
+    "sql_expr": "(\"x\" + 2)",
+    "sql_expr_without_alias": "(\"x\" + 2)"
+  },
+  "g2_binary_arith__add_lit_4": {
+    "join_sql": "(\"x\" + 4)",
+    "projection_name": "(x + 4)",
+    "select_columns": [
+      "(x + 4)"
+    ],
+    "spark_display": "(x + 4)",
+    "sql_expr": "(\"x\" + 4)",
+    "sql_expr_without_alias": "(\"x\" + 4)"
+  },
+  "g2_binary_arith__div_col": {
+    "join_sql": "(\"x\" / \"y\")",
+    "projection_name": "(x / y)",
+    "select_columns": [
+      "(x / y)"
+    ],
+    "spark_display": "(x / y)",
+    "sql_expr": "(\"x\" / \"y\")",
+    "sql_expr_without_alias": "(\"x\" / \"y\")"
+  },
+  "g2_binary_arith__div_lit_-1": {
+    "join_sql": "(\"x\" / -1)",
+    "projection_name": "(x / -1)",
+    "select_columns": [
+      "(x / -1)"
+    ],
+    "spark_display": "(x / -1)",
+    "sql_expr": "(\"x\" / -1)",
+    "sql_expr_without_alias": "(\"x\" / -1)"
+  },
+  "g2_binary_arith__div_lit_1": {
+    "join_sql": "(\"x\" / 1)",
+    "projection_name": "(x / 1)",
+    "select_columns": [
+      "(x / 1)"
+    ],
+    "spark_display": "(x / 1)",
+    "sql_expr": "(\"x\" / 1)",
+    "sql_expr_without_alias": "(\"x\" / 1)"
+  },
+  "g2_binary_arith__div_lit_2": {
+    "join_sql": "(\"x\" / 2)",
+    "projection_name": "(x / 2)",
+    "select_columns": [
+      "(x / 2)"
+    ],
+    "spark_display": "(x / 2)",
+    "sql_expr": "(\"x\" / 2)",
+    "sql_expr_without_alias": "(\"x\" / 2)"
+  },
+  "g2_binary_arith__div_lit_4": {
+    "join_sql": "(\"x\" / 4)",
+    "projection_name": "(x / 4)",
+    "select_columns": [
+      "(x / 4)"
+    ],
+    "spark_display": "(x / 4)",
+    "sql_expr": "(\"x\" / 4)",
+    "sql_expr_without_alias": "(\"x\" / 4)"
+  },
+  "g2_binary_arith__mod_col": {
+    "join_sql": "(\"x\" % \"y\")",
+    "projection_name": "(x % y)",
+    "select_columns": [
+      "(x % y)"
+    ],
+    "spark_display": "(x % y)",
+    "sql_expr": "(\"x\" % \"y\")",
+    "sql_expr_without_alias": "(\"x\" % \"y\")"
+  },
+  "g2_binary_arith__mod_lit_-1": {
+    "join_sql": "(\"x\" % -1)",
+    "projection_name": "(x % -1)",
+    "select_columns": [
+      "(x % -1)"
+    ],
+    "spark_display": "(x % -1)",
+    "sql_expr": "(\"x\" % -1)",
+    "sql_expr_without_alias": "(\"x\" % -1)"
+  },
+  "g2_binary_arith__mod_lit_1": {
+    "join_sql": "(\"x\" % 1)",
+    "projection_name": "(x % 1)",
+    "select_columns": [
+      "(x % 1)"
+    ],
+    "spark_display": "(x % 1)",
+    "sql_expr": "(\"x\" % 1)",
+    "sql_expr_without_alias": "(\"x\" % 1)"
+  },
+  "g2_binary_arith__mod_lit_2": {
+    "join_sql": "(\"x\" % 2)",
+    "projection_name": "(x % 2)",
+    "select_columns": [
+      "(x % 2)"
+    ],
+    "spark_display": "(x % 2)",
+    "sql_expr": "(\"x\" % 2)",
+    "sql_expr_without_alias": "(\"x\" % 2)"
+  },
+  "g2_binary_arith__mod_lit_4": {
+    "join_sql": "(\"x\" % 4)",
+    "projection_name": "(x % 4)",
+    "select_columns": [
+      "(x % 4)"
+    ],
+    "spark_display": "(x % 4)",
+    "sql_expr": "(\"x\" % 4)",
+    "sql_expr_without_alias": "(\"x\" % 4)"
+  },
+  "g2_binary_arith__mul_col": {
+    "join_sql": "(\"x\" * \"y\")",
+    "projection_name": "(x * y)",
+    "select_columns": [
+      "(x * y)"
+    ],
+    "spark_display": "(x * y)",
+    "sql_expr": "(\"x\" * \"y\")",
+    "sql_expr_without_alias": "(\"x\" * \"y\")"
+  },
+  "g2_binary_arith__mul_lit_-1": {
+    "join_sql": "(\"x\" * -1)",
+    "projection_name": "(x * -1)",
+    "select_columns": [
+      "(x * -1)"
+    ],
+    "spark_display": "(x * -1)",
+    "sql_expr": "(\"x\" * -1)",
+    "sql_expr_without_alias": "(\"x\" * -1)"
+  },
+  "g2_binary_arith__mul_lit_0": {
+    "join_sql": "(\"x\" * 0)",
+    "projection_name": "(x * 0)",
+    "select_columns": [
+      "(x * 0)"
+    ],
+    "spark_display": "(x * 0)",
+    "sql_expr": "(\"x\" * 0)",
+    "sql_expr_without_alias": "(\"x\" * 0)"
+  },
+  "g2_binary_arith__mul_lit_1": {
+    "join_sql": "(\"x\" * 1)",
+    "projection_name": "(x * 1)",
+    "select_columns": [
+      "(x * 1)"
+    ],
+    "spark_display": "(x * 1)",
+    "sql_expr": "(\"x\" * 1)",
+    "sql_expr_without_alias": "(\"x\" * 1)"
+  },
+  "g2_binary_arith__mul_lit_2": {
+    "join_sql": "(\"x\" * 2)",
+    "projection_name": "(x * 2)",
+    "select_columns": [
+      "(x * 2)"
+    ],
+    "spark_display": "(x * 2)",
+    "sql_expr": "(\"x\" * 2)",
+    "sql_expr_without_alias": "(\"x\" * 2)"
+  },
+  "g2_binary_arith__mul_lit_4": {
+    "join_sql": "(\"x\" * 4)",
+    "projection_name": "(x * 4)",
+    "select_columns": [
+      "(x * 4)"
+    ],
+    "spark_display": "(x * 4)",
+    "sql_expr": "(\"x\" * 4)",
+    "sql_expr_without_alias": "(\"x\" * 4)"
+  },
+  "g2_binary_arith__pow_col": {
+    "join_sql": "pow(\"x\", \"y\")",
+    "projection_name": "pow(x, y)",
+    "select_columns": [
+      "pow(x, y)"
+    ],
+    "spark_display": "pow(x, y)",
+    "sql_expr": "pow(\"x\", \"y\")",
+    "sql_expr_without_alias": "pow(\"x\", \"y\")"
+  },
+  "g2_binary_arith__pow_lit_-1": {
+    "join_sql": "pow(\"x\", -1)",
+    "projection_name": "pow(x, -1)",
+    "select_columns": [
+      "pow(x, -1)"
+    ],
+    "spark_display": "pow(x, -1)",
+    "sql_expr": "pow(\"x\", -1)",
+    "sql_expr_without_alias": "pow(\"x\", -1)"
+  },
+  "g2_binary_arith__pow_lit_1": {
+    "join_sql": "pow(\"x\", 1)",
+    "projection_name": "pow(x, 1)",
+    "select_columns": [
+      "pow(x, 1)"
+    ],
+    "spark_display": "pow(x, 1)",
+    "sql_expr": "pow(\"x\", 1)",
+    "sql_expr_without_alias": "pow(\"x\", 1)"
+  },
+  "g2_binary_arith__pow_lit_2": {
+    "join_sql": "pow(\"x\", 2)",
+    "projection_name": "pow(x, 2)",
+    "select_columns": [
+      "pow(x, 2)"
+    ],
+    "spark_display": "pow(x, 2)",
+    "sql_expr": "pow(\"x\", 2)",
+    "sql_expr_without_alias": "pow(\"x\", 2)"
+  },
+  "g2_binary_arith__pow_lit_4": {
+    "join_sql": "pow(\"x\", 4)",
+    "projection_name": "pow(x, 4)",
+    "select_columns": [
+      "pow(x, 4)"
+    ],
+    "spark_display": "pow(x, 4)",
+    "sql_expr": "pow(\"x\", 4)",
+    "sql_expr_without_alias": "pow(\"x\", 4)"
+  },
+  "g2_binary_arith__radd_lit_-1": {
+    "join_sql": "(\"x\" + -1)",
+    "projection_name": "(x + -1)",
+    "select_columns": [
+      "(x + -1)"
+    ],
+    "spark_display": "(x + -1)",
+    "sql_expr": "(\"x\" + -1)",
+    "sql_expr_without_alias": "(\"x\" + -1)"
+  },
+  "g2_binary_arith__radd_lit_0": {
+    "join_sql": "(\"x\" + 0)",
+    "projection_name": "(x + 0)",
+    "select_columns": [
+      "(x + 0)"
+    ],
+    "spark_display": "(x + 0)",
+    "sql_expr": "(\"x\" + 0)",
+    "sql_expr_without_alias": "(\"x\" + 0)"
+  },
+  "g2_binary_arith__radd_lit_1": {
+    "join_sql": "(\"x\" + 1)",
+    "projection_name": "(x + 1)",
+    "select_columns": [
+      "(x + 1)"
+    ],
+    "spark_display": "(x + 1)",
+    "sql_expr": "(\"x\" + 1)",
+    "sql_expr_without_alias": "(\"x\" + 1)"
+  },
+  "g2_binary_arith__radd_lit_2": {
+    "join_sql": "(\"x\" + 2)",
+    "projection_name": "(x + 2)",
+    "select_columns": [
+      "(x + 2)"
+    ],
+    "spark_display": "(x + 2)",
+    "sql_expr": "(\"x\" + 2)",
+    "sql_expr_without_alias": "(\"x\" + 2)"
+  },
+  "g2_binary_arith__radd_lit_4": {
+    "join_sql": "(\"x\" + 4)",
+    "projection_name": "(x + 4)",
+    "select_columns": [
+      "(x + 4)"
+    ],
+    "spark_display": "(x + 4)",
+    "sql_expr": "(\"x\" + 4)",
+    "sql_expr_without_alias": "(\"x\" + 4)"
+  },
+  "g2_binary_arith__rdiv_lit_-1": {
+    "join_sql": "(-1 / \"x\")",
+    "projection_name": "(-1 / x)",
+    "select_columns": [
+      "(-1 / x)"
+    ],
+    "spark_display": "(-1 / x)",
+    "sql_expr": "(-1 / \"x\")",
+    "sql_expr_without_alias": "(-1 / \"x\")"
+  },
+  "g2_binary_arith__rdiv_lit_1": {
+    "join_sql": "(1 / \"x\")",
+    "projection_name": "(1 / x)",
+    "select_columns": [
+      "(1 / x)"
+    ],
+    "spark_display": "(1 / x)",
+    "sql_expr": "(1 / \"x\")",
+    "sql_expr_without_alias": "(1 / \"x\")"
+  },
+  "g2_binary_arith__rdiv_lit_2": {
+    "join_sql": "(2 / \"x\")",
+    "projection_name": "(2 / x)",
+    "select_columns": [
+      "(2 / x)"
+    ],
+    "spark_display": "(2 / x)",
+    "sql_expr": "(2 / \"x\")",
+    "sql_expr_without_alias": "(2 / \"x\")"
+  },
+  "g2_binary_arith__rdiv_lit_4": {
+    "join_sql": "(4 / \"x\")",
+    "projection_name": "(4 / x)",
+    "select_columns": [
+      "(4 / x)"
+    ],
+    "spark_display": "(4 / x)",
+    "sql_expr": "(4 / \"x\")",
+    "sql_expr_without_alias": "(4 / \"x\")"
+  },
+  "g2_binary_arith__rmod_lit_-1": {
+    "join_sql": "(-1 % \"x\")",
+    "projection_name": "(-1 % x)",
+    "select_columns": [
+      "(-1 % x)"
+    ],
+    "spark_display": "(-1 % x)",
+    "sql_expr": "(-1 % \"x\")",
+    "sql_expr_without_alias": "(-1 % \"x\")"
+  },
+  "g2_binary_arith__rmod_lit_1": {
+    "join_sql": "(1 % \"x\")",
+    "projection_name": "(1 % x)",
+    "select_columns": [
+      "(1 % x)"
+    ],
+    "spark_display": "(1 % x)",
+    "sql_expr": "(1 % \"x\")",
+    "sql_expr_without_alias": "(1 % \"x\")"
+  },
+  "g2_binary_arith__rmod_lit_2": {
+    "join_sql": "(2 % \"x\")",
+    "projection_name": "(2 % x)",
+    "select_columns": [
+      "(2 % x)"
+    ],
+    "spark_display": "(2 % x)",
+    "sql_expr": "(2 % \"x\")",
+    "sql_expr_without_alias": "(2 % \"x\")"
+  },
+  "g2_binary_arith__rmod_lit_4": {
+    "join_sql": "(4 % \"x\")",
+    "projection_name": "(4 % x)",
+    "select_columns": [
+      "(4 % x)"
+    ],
+    "spark_display": "(4 % x)",
+    "sql_expr": "(4 % \"x\")",
+    "sql_expr_without_alias": "(4 % \"x\")"
+  },
+  "g2_binary_arith__rmul_lit_-1": {
+    "join_sql": "(\"x\" * -1)",
+    "projection_name": "(x * -1)",
+    "select_columns": [
+      "(x * -1)"
+    ],
+    "spark_display": "(x * -1)",
+    "sql_expr": "(\"x\" * -1)",
+    "sql_expr_without_alias": "(\"x\" * -1)"
+  },
+  "g2_binary_arith__rmul_lit_0": {
+    "join_sql": "(\"x\" * 0)",
+    "projection_name": "(x * 0)",
+    "select_columns": [
+      "(x * 0)"
+    ],
+    "spark_display": "(x * 0)",
+    "sql_expr": "(\"x\" * 0)",
+    "sql_expr_without_alias": "(\"x\" * 0)"
+  },
+  "g2_binary_arith__rmul_lit_1": {
+    "join_sql": "(\"x\" * 1)",
+    "projection_name": "(x * 1)",
+    "select_columns": [
+      "(x * 1)"
+    ],
+    "spark_display": "(x * 1)",
+    "sql_expr": "(\"x\" * 1)",
+    "sql_expr_without_alias": "(\"x\" * 1)"
+  },
+  "g2_binary_arith__rmul_lit_2": {
+    "join_sql": "(\"x\" * 2)",
+    "projection_name": "(x * 2)",
+    "select_columns": [
+      "(x * 2)"
+    ],
+    "spark_display": "(x * 2)",
+    "sql_expr": "(\"x\" * 2)",
+    "sql_expr_without_alias": "(\"x\" * 2)"
+  },
+  "g2_binary_arith__rmul_lit_4": {
+    "join_sql": "(\"x\" * 4)",
+    "projection_name": "(x * 4)",
+    "select_columns": [
+      "(x * 4)"
+    ],
+    "spark_display": "(x * 4)",
+    "sql_expr": "(\"x\" * 4)",
+    "sql_expr_without_alias": "(\"x\" * 4)"
+  },
+  "g2_binary_arith__rpow_lit_-1": {
+    "join_sql": "pow(-1, \"x\")",
+    "projection_name": "pow(-1, x)",
+    "select_columns": [
+      "pow(-1, x)"
+    ],
+    "spark_display": "pow(-1, x)",
+    "sql_expr": "pow(-1, \"x\")",
+    "sql_expr_without_alias": "pow(-1, \"x\")"
+  },
+  "g2_binary_arith__rpow_lit_1": {
+    "join_sql": "pow(1, \"x\")",
+    "projection_name": "pow(1, x)",
+    "select_columns": [
+      "pow(1, x)"
+    ],
+    "spark_display": "pow(1, x)",
+    "sql_expr": "pow(1, \"x\")",
+    "sql_expr_without_alias": "pow(1, \"x\")"
+  },
+  "g2_binary_arith__rpow_lit_2": {
+    "join_sql": "pow(2, \"x\")",
+    "projection_name": "pow(2, x)",
+    "select_columns": [
+      "pow(2, x)"
+    ],
+    "spark_display": "pow(2, x)",
+    "sql_expr": "pow(2, \"x\")",
+    "sql_expr_without_alias": "pow(2, \"x\")"
+  },
+  "g2_binary_arith__rpow_lit_4": {
+    "join_sql": "pow(4, \"x\")",
+    "projection_name": "pow(4, x)",
+    "select_columns": [
+      "pow(4, x)"
+    ],
+    "spark_display": "pow(4, x)",
+    "sql_expr": "pow(4, \"x\")",
+    "sql_expr_without_alias": "pow(4, \"x\")"
+  },
+  "g2_binary_arith__rsub_lit_-1": {
+    "join_sql": "(-1 - \"x\")",
+    "projection_name": "(-1 - x)",
+    "select_columns": [
+      "(-1 - x)"
+    ],
+    "spark_display": "(-1 - x)",
+    "sql_expr": "(-1 - \"x\")",
+    "sql_expr_without_alias": "(-1 - \"x\")"
+  },
+  "g2_binary_arith__rsub_lit_0": {
+    "join_sql": "(0 - \"x\")",
+    "projection_name": "(0 - x)",
+    "select_columns": [
+      "(0 - x)"
+    ],
+    "spark_display": "(0 - x)",
+    "sql_expr": "(0 - \"x\")",
+    "sql_expr_without_alias": "(0 - \"x\")"
+  },
+  "g2_binary_arith__rsub_lit_1": {
+    "join_sql": "(1 - \"x\")",
+    "projection_name": "(1 - x)",
+    "select_columns": [
+      "(1 - x)"
+    ],
+    "spark_display": "(1 - x)",
+    "sql_expr": "(1 - \"x\")",
+    "sql_expr_without_alias": "(1 - \"x\")"
+  },
+  "g2_binary_arith__rsub_lit_2": {
+    "join_sql": "(2 - \"x\")",
+    "projection_name": "(2 - x)",
+    "select_columns": [
+      "(2 - x)"
+    ],
+    "spark_display": "(2 - x)",
+    "sql_expr": "(2 - \"x\")",
+    "sql_expr_without_alias": "(2 - \"x\")"
+  },
+  "g2_binary_arith__rsub_lit_4": {
+    "join_sql": "(4 - \"x\")",
+    "projection_name": "(4 - x)",
+    "select_columns": [
+      "(4 - x)"
+    ],
+    "spark_display": "(4 - x)",
+    "sql_expr": "(4 - \"x\")",
+    "sql_expr_without_alias": "(4 - \"x\")"
+  },
+  "g2_binary_arith__sub_col": {
+    "join_sql": "(\"x\" - \"y\")",
+    "projection_name": "(x - y)",
+    "select_columns": [
+      "(x - y)"
+    ],
+    "spark_display": "(x - y)",
+    "sql_expr": "(\"x\" - \"y\")",
+    "sql_expr_without_alias": "(\"x\" - \"y\")"
+  },
+  "g2_binary_arith__sub_lit_-1": {
+    "join_sql": "(\"x\" - -1)",
+    "projection_name": "(x - -1)",
+    "select_columns": [
+      "(x - -1)"
+    ],
+    "spark_display": "(x - -1)",
+    "sql_expr": "(\"x\" - -1)",
+    "sql_expr_without_alias": "(\"x\" - -1)"
+  },
+  "g2_binary_arith__sub_lit_0": {
+    "join_sql": "(\"x\" - 0)",
+    "projection_name": "(x - 0)",
+    "select_columns": [
+      "(x - 0)"
+    ],
+    "spark_display": "(x - 0)",
+    "sql_expr": "(\"x\" - 0)",
+    "sql_expr_without_alias": "(\"x\" - 0)"
+  },
+  "g2_binary_arith__sub_lit_1": {
+    "join_sql": "(\"x\" - 1)",
+    "projection_name": "(x - 1)",
+    "select_columns": [
+      "(x - 1)"
+    ],
+    "spark_display": "(x - 1)",
+    "sql_expr": "(\"x\" - 1)",
+    "sql_expr_without_alias": "(\"x\" - 1)"
+  },
+  "g2_binary_arith__sub_lit_2": {
+    "join_sql": "(\"x\" - 2)",
+    "projection_name": "(x - 2)",
+    "select_columns": [
+      "(x - 2)"
+    ],
+    "spark_display": "(x - 2)",
+    "sql_expr": "(\"x\" - 2)",
+    "sql_expr_without_alias": "(\"x\" - 2)"
+  },
+  "g2_binary_arith__sub_lit_4": {
+    "join_sql": "(\"x\" - 4)",
+    "projection_name": "(x - 4)",
+    "select_columns": [
+      "(x - 4)"
+    ],
+    "spark_display": "(x - 4)",
+    "sql_expr": "(\"x\" - 4)",
+    "sql_expr_without_alias": "(\"x\" - 4)"
+  },
+  "g2_binary_cmp__eq_col": {
+    "join_sql": "(\"x\" = \"y\")",
+    "projection_name": "(x = y)",
+    "select_columns": [
+      "(x = y)"
+    ],
+    "spark_display": "(x = y)",
+    "sql_expr": "(\"x\" = \"y\")",
+    "sql_expr_without_alias": "(\"x\" = \"y\")"
+  },
+  "g2_binary_cmp__eq_lit_-1": {
+    "join_sql": "(\"x\" = -1)",
+    "projection_name": "(x = -1)",
+    "select_columns": [
+      "(x = -1)"
+    ],
+    "spark_display": "(x = -1)",
+    "sql_expr": "(\"x\" = -1)",
+    "sql_expr_without_alias": "(\"x\" = -1)"
+  },
+  "g2_binary_cmp__eq_lit_0": {
+    "join_sql": "(\"x\" = 0)",
+    "projection_name": "(x = 0)",
+    "select_columns": [
+      "(x = 0)"
+    ],
+    "spark_display": "(x = 0)",
+    "sql_expr": "(\"x\" = 0)",
+    "sql_expr_without_alias": "(\"x\" = 0)"
+  },
+  "g2_binary_cmp__eq_lit_1": {
+    "join_sql": "(\"x\" = 1)",
+    "projection_name": "(x = 1)",
+    "select_columns": [
+      "(x = 1)"
+    ],
+    "spark_display": "(x = 1)",
+    "sql_expr": "(\"x\" = 1)",
+    "sql_expr_without_alias": "(\"x\" = 1)"
+  },
+  "g2_binary_cmp__ge_col": {
+    "join_sql": "(\"x\" >= \"y\")",
+    "projection_name": "(x >= y)",
+    "select_columns": [
+      "(x >= y)"
+    ],
+    "spark_display": "(x >= y)",
+    "sql_expr": "(\"x\" >= \"y\")",
+    "sql_expr_without_alias": "(\"x\" >= \"y\")"
+  },
+  "g2_binary_cmp__ge_lit_-1": {
+    "join_sql": "(\"x\" >= -1)",
+    "projection_name": "(x >= -1)",
+    "select_columns": [
+      "(x >= -1)"
+    ],
+    "spark_display": "(x >= -1)",
+    "sql_expr": "(\"x\" >= -1)",
+    "sql_expr_without_alias": "(\"x\" >= -1)"
+  },
+  "g2_binary_cmp__ge_lit_0": {
+    "join_sql": "(\"x\" >= 0)",
+    "projection_name": "(x >= 0)",
+    "select_columns": [
+      "(x >= 0)"
+    ],
+    "spark_display": "(x >= 0)",
+    "sql_expr": "(\"x\" >= 0)",
+    "sql_expr_without_alias": "(\"x\" >= 0)"
+  },
+  "g2_binary_cmp__ge_lit_1": {
+    "join_sql": "(\"x\" >= 1)",
+    "projection_name": "(x >= 1)",
+    "select_columns": [
+      "(x >= 1)"
+    ],
+    "spark_display": "(x >= 1)",
+    "sql_expr": "(\"x\" >= 1)",
+    "sql_expr_without_alias": "(\"x\" >= 1)"
+  },
+  "g2_binary_cmp__gt_col": {
+    "join_sql": "(\"x\" > \"y\")",
+    "projection_name": "(x > y)",
+    "select_columns": [
+      "(x > y)"
+    ],
+    "spark_display": "(x > y)",
+    "sql_expr": "(\"x\" > \"y\")",
+    "sql_expr_without_alias": "(\"x\" > \"y\")"
+  },
+  "g2_binary_cmp__gt_lit_-1": {
+    "join_sql": "(\"x\" > -1)",
+    "projection_name": "(x > -1)",
+    "select_columns": [
+      "(x > -1)"
+    ],
+    "spark_display": "(x > -1)",
+    "sql_expr": "(\"x\" > -1)",
+    "sql_expr_without_alias": "(\"x\" > -1)"
+  },
+  "g2_binary_cmp__gt_lit_0": {
+    "join_sql": "(\"x\" > 0)",
+    "projection_name": "(x > 0)",
+    "select_columns": [
+      "(x > 0)"
+    ],
+    "spark_display": "(x > 0)",
+    "sql_expr": "(\"x\" > 0)",
+    "sql_expr_without_alias": "(\"x\" > 0)"
+  },
+  "g2_binary_cmp__gt_lit_1": {
+    "join_sql": "(\"x\" > 1)",
+    "projection_name": "(x > 1)",
+    "select_columns": [
+      "(x > 1)"
+    ],
+    "spark_display": "(x > 1)",
+    "sql_expr": "(\"x\" > 1)",
+    "sql_expr_without_alias": "(\"x\" > 1)"
+  },
+  "g2_binary_cmp__le_col": {
+    "join_sql": "(\"x\" <= \"y\")",
+    "projection_name": "(x <= y)",
+    "select_columns": [
+      "(x <= y)"
+    ],
+    "spark_display": "(x <= y)",
+    "sql_expr": "(\"x\" <= \"y\")",
+    "sql_expr_without_alias": "(\"x\" <= \"y\")"
+  },
+  "g2_binary_cmp__le_lit_-1": {
+    "join_sql": "(\"x\" <= -1)",
+    "projection_name": "(x <= -1)",
+    "select_columns": [
+      "(x <= -1)"
+    ],
+    "spark_display": "(x <= -1)",
+    "sql_expr": "(\"x\" <= -1)",
+    "sql_expr_without_alias": "(\"x\" <= -1)"
+  },
+  "g2_binary_cmp__le_lit_0": {
+    "join_sql": "(\"x\" <= 0)",
+    "projection_name": "(x <= 0)",
+    "select_columns": [
+      "(x <= 0)"
+    ],
+    "spark_display": "(x <= 0)",
+    "sql_expr": "(\"x\" <= 0)",
+    "sql_expr_without_alias": "(\"x\" <= 0)"
+  },
+  "g2_binary_cmp__le_lit_1": {
+    "join_sql": "(\"x\" <= 1)",
+    "projection_name": "(x <= 1)",
+    "select_columns": [
+      "(x <= 1)"
+    ],
+    "spark_display": "(x <= 1)",
+    "sql_expr": "(\"x\" <= 1)",
+    "sql_expr_without_alias": "(\"x\" <= 1)"
+  },
+  "g2_binary_cmp__lt_col": {
+    "join_sql": "(\"x\" < \"y\")",
+    "projection_name": "(x < y)",
+    "select_columns": [
+      "(x < y)"
+    ],
+    "spark_display": "(x < y)",
+    "sql_expr": "(\"x\" < \"y\")",
+    "sql_expr_without_alias": "(\"x\" < \"y\")"
+  },
+  "g2_binary_cmp__lt_lit_-1": {
+    "join_sql": "(\"x\" < -1)",
+    "projection_name": "(x < -1)",
+    "select_columns": [
+      "(x < -1)"
+    ],
+    "spark_display": "(x < -1)",
+    "sql_expr": "(\"x\" < -1)",
+    "sql_expr_without_alias": "(\"x\" < -1)"
+  },
+  "g2_binary_cmp__lt_lit_0": {
+    "join_sql": "(\"x\" < 0)",
+    "projection_name": "(x < 0)",
+    "select_columns": [
+      "(x < 0)"
+    ],
+    "spark_display": "(x < 0)",
+    "sql_expr": "(\"x\" < 0)",
+    "sql_expr_without_alias": "(\"x\" < 0)"
+  },
+  "g2_binary_cmp__lt_lit_1": {
+    "join_sql": "(\"x\" < 1)",
+    "projection_name": "(x < 1)",
+    "select_columns": [
+      "(x < 1)"
+    ],
+    "spark_display": "(x < 1)",
+    "sql_expr": "(\"x\" < 1)",
+    "sql_expr_without_alias": "(\"x\" < 1)"
+  },
+  "g2_binary_cmp__ne_col": {
+    "join_sql": "(NOT (\"x\" = \"y\"))",
+    "projection_name": "(NOT (x = y))",
+    "select_columns": [
+      "(NOT (x = y))"
+    ],
+    "spark_display": "(NOT (x = y))",
+    "sql_expr": "(NOT (\"x\" = \"y\"))",
+    "sql_expr_without_alias": "(NOT (\"x\" = \"y\"))"
+  },
+  "g2_binary_cmp__ne_lit_-1": {
+    "join_sql": "(NOT (\"x\" = -1))",
+    "projection_name": "(NOT (x = -1))",
+    "select_columns": [
+      "(NOT (x = -1))"
+    ],
+    "spark_display": "(NOT (x = -1))",
+    "sql_expr": "(NOT (\"x\" = -1))",
+    "sql_expr_without_alias": "(NOT (\"x\" = -1))"
+  },
+  "g2_binary_cmp__ne_lit_0": {
+    "join_sql": "(NOT (\"x\" = 0))",
+    "projection_name": "(NOT (x = 0))",
+    "select_columns": [
+      "(NOT (x = 0))"
+    ],
+    "spark_display": "(NOT (x = 0))",
+    "sql_expr": "(NOT (\"x\" = 0))",
+    "sql_expr_without_alias": "(NOT (\"x\" = 0))"
+  },
+  "g2_binary_cmp__ne_lit_1": {
+    "join_sql": "(NOT (\"x\" = 1))",
+    "projection_name": "(NOT (x = 1))",
+    "select_columns": [
+      "(NOT (x = 1))"
+    ],
+    "spark_display": "(NOT (x = 1))",
+    "sql_expr": "(NOT (\"x\" = 1))",
+    "sql_expr_without_alias": "(NOT (\"x\" = 1))"
+  },
+  "g2_binary_cmp__req_lit_-1": {
+    "join_sql": "(\"x\" = -1)",
+    "projection_name": "(x = -1)",
+    "select_columns": [
+      "(x = -1)"
+    ],
+    "spark_display": "(x = -1)",
+    "sql_expr": "(\"x\" = -1)",
+    "sql_expr_without_alias": "(\"x\" = -1)"
+  },
+  "g2_binary_cmp__req_lit_0": {
+    "join_sql": "(\"x\" = 0)",
+    "projection_name": "(x = 0)",
+    "select_columns": [
+      "(x = 0)"
+    ],
+    "spark_display": "(x = 0)",
+    "sql_expr": "(\"x\" = 0)",
+    "sql_expr_without_alias": "(\"x\" = 0)"
+  },
+  "g2_binary_cmp__req_lit_1": {
+    "join_sql": "(\"x\" = 1)",
+    "projection_name": "(x = 1)",
+    "select_columns": [
+      "(x = 1)"
+    ],
+    "spark_display": "(x = 1)",
+    "sql_expr": "(\"x\" = 1)",
+    "sql_expr_without_alias": "(\"x\" = 1)"
+  },
+  "g2_binary_cmp__rge_lit_-1": {
+    "join_sql": "(\"x\" <= -1)",
+    "projection_name": "(x <= -1)",
+    "select_columns": [
+      "(x <= -1)"
+    ],
+    "spark_display": "(x <= -1)",
+    "sql_expr": "(\"x\" <= -1)",
+    "sql_expr_without_alias": "(\"x\" <= -1)"
+  },
+  "g2_binary_cmp__rge_lit_0": {
+    "join_sql": "(\"x\" <= 0)",
+    "projection_name": "(x <= 0)",
+    "select_columns": [
+      "(x <= 0)"
+    ],
+    "spark_display": "(x <= 0)",
+    "sql_expr": "(\"x\" <= 0)",
+    "sql_expr_without_alias": "(\"x\" <= 0)"
+  },
+  "g2_binary_cmp__rge_lit_1": {
+    "join_sql": "(\"x\" <= 1)",
+    "projection_name": "(x <= 1)",
+    "select_columns": [
+      "(x <= 1)"
+    ],
+    "spark_display": "(x <= 1)",
+    "sql_expr": "(\"x\" <= 1)",
+    "sql_expr_without_alias": "(\"x\" <= 1)"
+  },
+  "g2_binary_cmp__rgt_lit_-1": {
+    "join_sql": "(\"x\" < -1)",
+    "projection_name": "(x < -1)",
+    "select_columns": [
+      "(x < -1)"
+    ],
+    "spark_display": "(x < -1)",
+    "sql_expr": "(\"x\" < -1)",
+    "sql_expr_without_alias": "(\"x\" < -1)"
+  },
+  "g2_binary_cmp__rgt_lit_0": {
+    "join_sql": "(\"x\" < 0)",
+    "projection_name": "(x < 0)",
+    "select_columns": [
+      "(x < 0)"
+    ],
+    "spark_display": "(x < 0)",
+    "sql_expr": "(\"x\" < 0)",
+    "sql_expr_without_alias": "(\"x\" < 0)"
+  },
+  "g2_binary_cmp__rgt_lit_1": {
+    "join_sql": "(\"x\" < 1)",
+    "projection_name": "(x < 1)",
+    "select_columns": [
+      "(x < 1)"
+    ],
+    "spark_display": "(x < 1)",
+    "sql_expr": "(\"x\" < 1)",
+    "sql_expr_without_alias": "(\"x\" < 1)"
+  },
+  "g2_binary_cmp__rle_lit_-1": {
+    "join_sql": "(\"x\" >= -1)",
+    "projection_name": "(x >= -1)",
+    "select_columns": [
+      "(x >= -1)"
+    ],
+    "spark_display": "(x >= -1)",
+    "sql_expr": "(\"x\" >= -1)",
+    "sql_expr_without_alias": "(\"x\" >= -1)"
+  },
+  "g2_binary_cmp__rle_lit_0": {
+    "join_sql": "(\"x\" >= 0)",
+    "projection_name": "(x >= 0)",
+    "select_columns": [
+      "(x >= 0)"
+    ],
+    "spark_display": "(x >= 0)",
+    "sql_expr": "(\"x\" >= 0)",
+    "sql_expr_without_alias": "(\"x\" >= 0)"
+  },
+  "g2_binary_cmp__rle_lit_1": {
+    "join_sql": "(\"x\" >= 1)",
+    "projection_name": "(x >= 1)",
+    "select_columns": [
+      "(x >= 1)"
+    ],
+    "spark_display": "(x >= 1)",
+    "sql_expr": "(\"x\" >= 1)",
+    "sql_expr_without_alias": "(\"x\" >= 1)"
+  },
+  "g2_binary_cmp__rlt_lit_-1": {
+    "join_sql": "(\"x\" > -1)",
+    "projection_name": "(x > -1)",
+    "select_columns": [
+      "(x > -1)"
+    ],
+    "spark_display": "(x > -1)",
+    "sql_expr": "(\"x\" > -1)",
+    "sql_expr_without_alias": "(\"x\" > -1)"
+  },
+  "g2_binary_cmp__rlt_lit_0": {
+    "join_sql": "(\"x\" > 0)",
+    "projection_name": "(x > 0)",
+    "select_columns": [
+      "(x > 0)"
+    ],
+    "spark_display": "(x > 0)",
+    "sql_expr": "(\"x\" > 0)",
+    "sql_expr_without_alias": "(\"x\" > 0)"
+  },
+  "g2_binary_cmp__rlt_lit_1": {
+    "join_sql": "(\"x\" > 1)",
+    "projection_name": "(x > 1)",
+    "select_columns": [
+      "(x > 1)"
+    ],
+    "spark_display": "(x > 1)",
+    "sql_expr": "(\"x\" > 1)",
+    "sql_expr_without_alias": "(\"x\" > 1)"
+  },
+  "g2_binary_cmp__rne_lit_-1": {
+    "join_sql": "(NOT (\"x\" = -1))",
+    "projection_name": "(NOT (x = -1))",
+    "select_columns": [
+      "(NOT (x = -1))"
+    ],
+    "spark_display": "(NOT (x = -1))",
+    "sql_expr": "(NOT (\"x\" = -1))",
+    "sql_expr_without_alias": "(NOT (\"x\" = -1))"
+  },
+  "g2_binary_cmp__rne_lit_0": {
+    "join_sql": "(NOT (\"x\" = 0))",
+    "projection_name": "(NOT (x = 0))",
+    "select_columns": [
+      "(NOT (x = 0))"
+    ],
+    "spark_display": "(NOT (x = 0))",
+    "sql_expr": "(NOT (\"x\" = 0))",
+    "sql_expr_without_alias": "(NOT (\"x\" = 0))"
+  },
+  "g2_binary_cmp__rne_lit_1": {
+    "join_sql": "(NOT (\"x\" = 1))",
+    "projection_name": "(NOT (x = 1))",
+    "select_columns": [
+      "(NOT (x = 1))"
+    ],
+    "spark_display": "(NOT (x = 1))",
+    "sql_expr": "(NOT (\"x\" = 1))",
+    "sql_expr_without_alias": "(NOT (\"x\" = 1))"
+  },
+  "g2_bitwise__and_col": {
+    "join_sql": "(\"x\" & \"y\")",
+    "projection_name": "(x & y)",
+    "select_columns": [
+      "(x & y)"
+    ],
+    "spark_display": "(x & y)",
+    "sql_expr": "(\"x\" & \"y\")",
+    "sql_expr_without_alias": "(\"x\" & \"y\")"
+  },
+  "g2_bitwise__and_lit": {
+    "join_sql": "(\"x\" & 1)",
+    "projection_name": "(x & 1)",
+    "select_columns": [
+      "(x & 1)"
+    ],
+    "spark_display": "(x & 1)",
+    "sql_expr": "(\"x\" & 1)",
+    "sql_expr_without_alias": "(\"x\" & 1)"
+  },
+  "g2_bitwise__or_col": {
+    "join_sql": "(\"x\" | \"y\")",
+    "projection_name": "(x | y)",
+    "select_columns": [
+      "(x | y)"
+    ],
+    "spark_display": "(x | y)",
+    "sql_expr": "(\"x\" | \"y\")",
+    "sql_expr_without_alias": "(\"x\" | \"y\")"
+  },
+  "g2_bitwise__or_lit": {
+    "join_sql": "(\"x\" | 1)",
+    "projection_name": "(x | 1)",
+    "select_columns": [
+      "(x | 1)"
+    ],
+    "spark_display": "(x | 1)",
+    "sql_expr": "(\"x\" | 1)",
+    "sql_expr_without_alias": "(\"x\" | 1)"
+  },
+  "g2_bitwise__xor_col": {
+    "join_sql": "(\"x\" ^ \"y\")",
+    "projection_name": "(x ^ y)",
+    "select_columns": [
+      "(x ^ y)"
+    ],
+    "spark_display": "(x ^ y)",
+    "sql_expr": "(\"x\" ^ \"y\")",
+    "sql_expr_without_alias": "(\"x\" ^ \"y\")"
+  },
+  "g2_bitwise__xor_lit": {
+    "join_sql": "(\"x\" ^ 1)",
+    "projection_name": "(x ^ 1)",
+    "select_columns": [
+      "(x ^ 1)"
+    ],
+    "spark_display": "(x ^ 1)",
+    "sql_expr": "(\"x\" ^ 1)",
+    "sql_expr_without_alias": "(\"x\" ^ 1)"
+  },
+  "g2_cast__BooleanType": {
+    "join_sql": "CAST(\"x\" AS BOOLEAN)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS BOOLEAN)",
+    "sql_expr": "CAST(\"x\" AS BOOLEAN)",
+    "sql_expr_without_alias": "CAST(\"x\" AS BOOLEAN)"
+  },
+  "g2_cast__ByteType": {
+    "join_sql": "CAST(\"x\" AS TINYINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS TINYINT)",
+    "sql_expr": "CAST(\"x\" AS TINYINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS TINYINT)"
+  },
+  "g2_cast__DecimalType_10_4": {
+    "join_sql": "CAST(\"x\" AS DECIMAL(10,4))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS DECIMAL(10,4))",
+    "sql_expr": "CAST(\"x\" AS DECIMAL(10,4))",
+    "sql_expr_without_alias": "CAST(\"x\" AS DECIMAL(10,4))"
+  },
+  "g2_cast__DoubleType": {
+    "join_sql": "CAST(\"x\" AS DOUBLE)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS DOUBLE)",
+    "sql_expr": "CAST(\"x\" AS DOUBLE)",
+    "sql_expr_without_alias": "CAST(\"x\" AS DOUBLE)"
+  },
+  "g2_cast__FloatType": {
+    "join_sql": "CAST(\"x\" AS FLOAT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS FLOAT)",
+    "sql_expr": "CAST(\"x\" AS FLOAT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS FLOAT)"
+  },
+  "g2_cast__IntegerType": {
+    "join_sql": "CAST(\"x\" AS INT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS INT)",
+    "sql_expr": "CAST(\"x\" AS INT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS INT)"
+  },
+  "g2_cast__LongType": {
+    "join_sql": "CAST(\"x\" AS BIGINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS BIGINT)",
+    "sql_expr": "CAST(\"x\" AS BIGINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS BIGINT)"
+  },
+  "g2_cast__ShortType": {
+    "join_sql": "CAST(\"x\" AS SMALLINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS SMALLINT)",
+    "sql_expr": "CAST(\"x\" AS SMALLINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS SMALLINT)"
+  },
+  "g2_cast__StringType": {
+    "join_sql": "CAST(\"x\" AS STRING)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS STRING)",
+    "sql_expr": "CAST(\"x\" AS STRING)",
+    "sql_expr_without_alias": "CAST(\"x\" AS STRING)"
+  },
+  "g2_cast__ddl_boolean": {
+    "join_sql": "CAST(\"x\" AS BOOLEAN)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS BOOLEAN)",
+    "sql_expr": "CAST(\"x\" AS BOOLEAN)",
+    "sql_expr_without_alias": "CAST(\"x\" AS BOOLEAN)"
+  },
+  "g2_cast__ddl_byte": {
+    "join_sql": "CAST(\"x\" AS TINYINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS TINYINT)",
+    "sql_expr": "CAST(\"x\" AS TINYINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS TINYINT)"
+  },
+  "g2_cast__ddl_decimal_10_2": {
+    "join_sql": "CAST(\"x\" AS DECIMAL(10,2))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS DECIMAL(10,2))",
+    "sql_expr": "CAST(\"x\" AS DECIMAL(10,2))",
+    "sql_expr_without_alias": "CAST(\"x\" AS DECIMAL(10,2))"
+  },
+  "g2_cast__ddl_decimal_38_10": {
+    "join_sql": "CAST(\"x\" AS DECIMAL(38,10))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS DECIMAL(38,10))",
+    "sql_expr": "CAST(\"x\" AS DECIMAL(38,10))",
+    "sql_expr_without_alias": "CAST(\"x\" AS DECIMAL(38,10))"
+  },
+  "g2_cast__ddl_double": {
+    "join_sql": "CAST(\"x\" AS DOUBLE)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS DOUBLE)",
+    "sql_expr": "CAST(\"x\" AS DOUBLE)",
+    "sql_expr_without_alias": "CAST(\"x\" AS DOUBLE)"
+  },
+  "g2_cast__ddl_float": {
+    "join_sql": "CAST(\"x\" AS FLOAT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS FLOAT)",
+    "sql_expr": "CAST(\"x\" AS FLOAT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS FLOAT)"
+  },
+  "g2_cast__ddl_int": {
+    "join_sql": "CAST(\"x\" AS INT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS INT)",
+    "sql_expr": "CAST(\"x\" AS INT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS INT)"
+  },
+  "g2_cast__ddl_long": {
+    "join_sql": "CAST(\"x\" AS BIGINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS BIGINT)",
+    "sql_expr": "CAST(\"x\" AS BIGINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS BIGINT)"
+  },
+  "g2_cast__ddl_short": {
+    "join_sql": "CAST(\"x\" AS SMALLINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS SMALLINT)",
+    "sql_expr": "CAST(\"x\" AS SMALLINT)",
+    "sql_expr_without_alias": "CAST(\"x\" AS SMALLINT)"
+  },
+  "g2_cast__ddl_string": {
+    "join_sql": "CAST(\"x\" AS STRING)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "CAST(x AS STRING)",
+    "sql_expr": "CAST(\"x\" AS STRING)",
+    "sql_expr_without_alias": "CAST(\"x\" AS STRING)"
+  },
+  "g2_eqnullsafe__col": {
+    "join_sql": "(\"x\" IS NOT DISTINCT FROM \"y\")",
+    "projection_name": "(x <=> y)",
+    "select_columns": [
+      "(x <=> y)"
+    ],
+    "spark_display": "(x <=> y)",
+    "sql_expr": "(\"x\" IS NOT DISTINCT FROM \"y\")",
+    "sql_expr_without_alias": "(\"x\" IS NOT DISTINCT FROM \"y\")"
+  },
+  "g2_eqnullsafe__lit": {
+    "join_sql": "(\"x\" IS NOT DISTINCT FROM 1)",
+    "projection_name": "(x <=> 1)",
+    "select_columns": [
+      "(x <=> 1)"
+    ],
+    "spark_display": "(x <=> 1)",
+    "sql_expr": "(\"x\" IS NOT DISTINCT FROM 1)",
+    "sql_expr_without_alias": "(\"x\" IS NOT DISTINCT FROM 1)"
+  },
+  "g2_eqnullsafe__none": {
+    "join_sql": "(\"x\" IS NOT DISTINCT FROM NULL)",
+    "projection_name": "(x <=> NULL)",
+    "select_columns": [
+      "(x <=> NULL)"
+    ],
+    "spark_display": "(x <=> NULL)",
+    "sql_expr": "(\"x\" IS NOT DISTINCT FROM NULL)",
+    "sql_expr_without_alias": "(\"x\" IS NOT DISTINCT FROM NULL)"
+  },
+  "g2_eqnullsafe__zero": {
+    "join_sql": "(\"x\" IS NOT DISTINCT FROM 0)",
+    "projection_name": "(x <=> 0)",
+    "select_columns": [
+      "(x <=> 0)"
+    ],
+    "spark_display": "(x <=> 0)",
+    "sql_expr": "(\"x\" IS NOT DISTINCT FROM 0)",
+    "sql_expr_without_alias": "(\"x\" IS NOT DISTINCT FROM 0)"
+  },
+  "g2_getfield__a": {
+    "join_sql": "(\"st\").\"a\"",
+    "projection_name": "st['a']",
+    "select_columns": [
+      "st['a']"
+    ],
+    "spark_display": "st['a']",
+    "sql_expr": "(\"st\").\"a\"",
+    "sql_expr_without_alias": "(\"st\").\"a\""
+  },
+  "g2_getfield__b": {
+    "join_sql": "(\"st\").\"b\"",
+    "projection_name": "st['b']",
+    "select_columns": [
+      "st['b']"
+    ],
+    "spark_display": "st['b']",
+    "sql_expr": "(\"st\").\"b\"",
+    "sql_expr_without_alias": "(\"st\").\"b\""
+  },
+  "g2_getitem__array": {
+    "join_sql": "(\"arr\")[0]",
+    "projection_name": "arr[0]",
+    "select_columns": [
+      "arr[0]"
+    ],
+    "spark_display": "arr[0]",
+    "sql_expr": "(\"arr\")[0]",
+    "sql_expr_without_alias": "(\"arr\")[0]"
+  },
+  "g2_getitem__array_1": {
+    "join_sql": "(\"arr\")[1]",
+    "projection_name": "arr[1]",
+    "select_columns": [
+      "arr[1]"
+    ],
+    "spark_display": "arr[1]",
+    "sql_expr": "(\"arr\")[1]",
+    "sql_expr_without_alias": "(\"arr\")[1]"
+  },
+  "g2_getitem__array_col": {
+    "join_sql": "(\"arr\")[\"x\"]",
+    "projection_name": "arr[x]",
+    "select_columns": [
+      "arr[x]"
+    ],
+    "spark_display": "arr[x]",
+    "sql_expr": "(\"arr\")[\"x\"]",
+    "sql_expr_without_alias": "(\"arr\")[\"x\"]"
+  },
+  "g2_getitem__map": {
+    "join_sql": "(\"m\").\"k\"",
+    "projection_name": "m['k']",
+    "select_columns": [
+      "m['k']"
+    ],
+    "spark_display": "m['k']",
+    "sql_expr": "(\"m\").\"k\"",
+    "sql_expr_without_alias": "(\"m\").\"k\""
+  },
+  "g2_getitem__map_ab": {
+    "join_sql": "(\"m\").\"ab\"",
+    "projection_name": "m['ab']",
+    "select_columns": [
+      "m['ab']"
+    ],
+    "spark_display": "m['ab']",
+    "sql_expr": "(\"m\").\"ab\"",
+    "sql_expr_without_alias": "(\"m\").\"ab\""
+  },
+  "g2_getitem__map_col": {
+    "join_sql": "(\"m\")[\"s\"]",
+    "projection_name": "m[s]",
+    "select_columns": [
+      "m[s]"
+    ],
+    "spark_display": "m[s]",
+    "sql_expr": "(\"m\")[\"s\"]",
+    "sql_expr_without_alias": "(\"m\")[\"s\"]"
+  },
+  "g2_getitem__struct": {
+    "join_sql": "(\"st\").\"a\"",
+    "projection_name": "st['a']",
+    "select_columns": [
+      "st['a']"
+    ],
+    "spark_display": "st['a']",
+    "sql_expr": "(\"st\").\"a\"",
+    "sql_expr_without_alias": "(\"st\").\"a\""
+  },
+  "g2_getitem__struct_b": {
+    "join_sql": "(\"st\").\"b\"",
+    "projection_name": "st['b']",
+    "select_columns": [
+      "st['b']"
+    ],
+    "spark_display": "st['b']",
+    "sql_expr": "(\"st\").\"b\"",
+    "sql_expr_without_alias": "(\"st\").\"b\""
+  },
+  "g2_getitem_method__0": {
+    "join_sql": "(\"arr\")[0]",
+    "projection_name": "arr[0]",
+    "select_columns": [
+      "arr[0]"
+    ],
+    "spark_display": "arr[0]",
+    "sql_expr": "(\"arr\")[0]",
+    "sql_expr_without_alias": "(\"arr\")[0]"
+  },
+  "g2_getitem_method__map": {
+    "join_sql": "(\"m\").\"k\"",
+    "projection_name": "m['k']",
+    "select_columns": [
+      "m['k']"
+    ],
+    "spark_display": "m['k']",
+    "sql_expr": "(\"m\").\"k\"",
+    "sql_expr_without_alias": "(\"m\").\"k\""
+  },
+  "g2_invert__cmp": {
+    "join_sql": "(NOT (\"x\" > 0))",
+    "projection_name": "(NOT (x > 0))",
+    "select_columns": [
+      "(NOT (x > 0))"
+    ],
+    "spark_display": "(NOT (x > 0))",
+    "sql_expr": "(NOT (\"x\" > 0))",
+    "sql_expr_without_alias": "(NOT (\"x\" > 0))"
+  },
+  "g2_invert__flag": {
+    "join_sql": "(NOT \"flag\")",
+    "projection_name": "(NOT flag)",
+    "select_columns": [
+      "(NOT flag)"
+    ],
+    "spark_display": "(NOT flag)",
+    "sql_expr": "(NOT \"flag\")",
+    "sql_expr_without_alias": "(NOT \"flag\")"
+  },
+  "g2_logical__and": {
+    "join_sql": "(\"flag\" AND (\"x\" > 0))",
+    "projection_name": "(flag AND (x > 0))",
+    "select_columns": [
+      "(flag AND (x > 0))"
+    ],
+    "spark_display": "(flag AND (x > 0))",
+    "sql_expr": "(\"flag\" AND (\"x\" > 0))",
+    "sql_expr_without_alias": "(\"flag\" AND (\"x\" > 0))"
+  },
+  "g2_logical__or": {
+    "join_sql": "(\"flag\" OR (\"x\" > 0))",
+    "projection_name": "(flag OR (x > 0))",
+    "select_columns": [
+      "(flag OR (x > 0))"
+    ],
+    "spark_display": "(flag OR (x > 0))",
+    "sql_expr": "(\"flag\" OR (\"x\" > 0))",
+    "sql_expr_without_alias": "(\"flag\" OR (\"x\" > 0))"
+  },
+  "g2_logical__rand": {
+    "join_sql": "(TRUE AND \"flag\")",
+    "projection_name": "(true AND flag)",
+    "select_columns": [
+      "(true AND flag)"
+    ],
+    "spark_display": "(true AND flag)",
+    "sql_expr": "(TRUE AND \"flag\")",
+    "sql_expr_without_alias": "(TRUE AND \"flag\")"
+  },
+  "g2_logical__ror": {
+    "join_sql": "(FALSE OR \"flag\")",
+    "projection_name": "(false OR flag)",
+    "select_columns": [
+      "(false OR flag)"
+    ],
+    "spark_display": "(false OR flag)",
+    "sql_expr": "(FALSE OR \"flag\")",
+    "sql_expr_without_alias": "(FALSE OR \"flag\")"
+  },
+  "g2_nesting__op_cast_alias_getitem": {
+    "join_sql": "(CAST((\"st\").\"a\" AS DOUBLE) + 1)",
+    "projection_name": "(CAST(inner AS DOUBLE) + 1)",
+    "select_columns": [
+      "(CAST(inner AS DOUBLE) + 1)"
+    ],
+    "spark_display": "(CAST(inner AS DOUBLE) + 1)",
+    "sql_expr": "(CAST((\"st\").\"a\" AS DOUBLE) + 1)",
+    "sql_expr_without_alias": "(CAST((\"st\").\"a\" AS DOUBLE) + 1)"
+  },
+  "g2_null__isnotnull": {
+    "join_sql": "(\"x\" IS NOT NULL)",
+    "projection_name": "(x IS NOT NULL)",
+    "select_columns": [
+      "(x IS NOT NULL)"
+    ],
+    "spark_display": "(x IS NOT NULL)",
+    "sql_expr": "(\"x\" IS NOT NULL)",
+    "sql_expr_without_alias": "(\"x\" IS NOT NULL)"
+  },
+  "g2_null__isnotnull_alias": {
+    "join_sql": "(\"x\" IS NOT NULL)",
+    "projection_name": "(x IS NOT NULL)",
+    "select_columns": [
+      "(x IS NOT NULL)"
+    ],
+    "spark_display": "(x IS NOT NULL)",
+    "sql_expr": "(\"x\" IS NOT NULL)",
+    "sql_expr_without_alias": "(\"x\" IS NOT NULL)"
+  },
+  "g2_null__isnull": {
+    "join_sql": "(\"x\" IS NULL)",
+    "projection_name": "(x IS NULL)",
+    "select_columns": [
+      "(x IS NULL)"
+    ],
+    "spark_display": "(x IS NULL)",
+    "sql_expr": "(\"x\" IS NULL)",
+    "sql_expr_without_alias": "(\"x\" IS NULL)"
+  },
+  "g2_null__isnull_alias": {
+    "join_sql": "(\"x\" IS NULL)",
+    "projection_name": "(x IS NULL)",
+    "select_columns": [
+      "(x IS NULL)"
+    ],
+    "spark_display": "(x IS NULL)",
+    "sql_expr": "(\"x\" IS NULL)",
+    "sql_expr_without_alias": "(\"x\" IS NULL)"
+  },
+  "g2_sort__asc": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_sort__asc_nulls_first": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_sort__asc_nulls_last": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_sort__desc": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_sort__desc_nulls_first": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_sort__desc_nulls_last": {
+    "join_sql": "\"x\"",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "x",
+    "sql_expr": "\"x\"",
+    "sql_expr_without_alias": "\"x\""
+  },
+  "g2_string_pred__contains_col": {
+    "join_sql": "contains(\"s\", 'a')",
+    "projection_name": "s.contains(a)",
+    "select_columns": [
+      "s.contains(a)"
+    ],
+    "spark_display": "s.contains(a)",
+    "sql_expr": "contains(\"s\", 'a')",
+    "sql_expr_without_alias": "contains(\"s\", 'a')"
+  },
+  "g2_string_pred__contains_str": {
+    "join_sql": "contains(\"s\", 'a')",
+    "projection_name": "s.contains(a)",
+    "select_columns": [
+      "s.contains(a)"
+    ],
+    "spark_display": "s.contains(a)",
+    "sql_expr": "contains(\"s\", 'a')",
+    "sql_expr_without_alias": "contains(\"s\", 'a')"
+  },
+  "g2_string_pred__endswith_col": {
+    "join_sql": "ends_with(\"s\", 'b')",
+    "projection_name": "s.endswith(b)",
+    "select_columns": [
+      "s.endswith(b)"
+    ],
+    "spark_display": "s.endswith(b)",
+    "sql_expr": "ends_with(\"s\", 'b')",
+    "sql_expr_without_alias": "ends_with(\"s\", 'b')"
+  },
+  "g2_string_pred__endswith_str": {
+    "join_sql": "ends_with(\"s\", 'b')",
+    "projection_name": "s.endswith(b)",
+    "select_columns": [
+      "s.endswith(b)"
+    ],
+    "spark_display": "s.endswith(b)",
+    "sql_expr": "ends_with(\"s\", 'b')",
+    "sql_expr_without_alias": "ends_with(\"s\", 'b')"
+  },
+  "g2_string_pred__like_col": {
+    "join_sql": "like(\"s\", 'a%')",
+    "projection_name": "s.like(a%)",
+    "select_columns": [
+      "s.like(a%)"
+    ],
+    "spark_display": "s.like(a%)",
+    "sql_expr": "like(\"s\", 'a%')",
+    "sql_expr_without_alias": "like(\"s\", 'a%')"
+  },
+  "g2_string_pred__like_str": {
+    "join_sql": "like(\"s\", 'a%')",
+    "projection_name": "s.like(a%)",
+    "select_columns": [
+      "s.like(a%)"
+    ],
+    "spark_display": "s.like(a%)",
+    "sql_expr": "like(\"s\", 'a%')",
+    "sql_expr_without_alias": "like(\"s\", 'a%')"
+  },
+  "g2_string_pred__rlike_col": {
+    "join_sql": "rlike(\"s\", '^a')",
+    "projection_name": "s.rlike(^a)",
+    "select_columns": [
+      "s.rlike(^a)"
+    ],
+    "spark_display": "s.rlike(^a)",
+    "sql_expr": "rlike(\"s\", '^a')",
+    "sql_expr_without_alias": "rlike(\"s\", '^a')"
+  },
+  "g2_string_pred__rlike_str": {
+    "join_sql": "rlike(\"s\", '^a')",
+    "projection_name": "s.rlike(^a)",
+    "select_columns": [
+      "s.rlike(^a)"
+    ],
+    "spark_display": "s.rlike(^a)",
+    "sql_expr": "rlike(\"s\", '^a')",
+    "sql_expr_without_alias": "rlike(\"s\", '^a')"
+  },
+  "g2_string_pred__startswith_col": {
+    "join_sql": "starts_with(\"s\", 'a')",
+    "projection_name": "s.startswith(a)",
+    "select_columns": [
+      "s.startswith(a)"
+    ],
+    "spark_display": "s.startswith(a)",
+    "sql_expr": "starts_with(\"s\", 'a')",
+    "sql_expr_without_alias": "starts_with(\"s\", 'a')"
+  },
+  "g2_string_pred__startswith_str": {
+    "join_sql": "starts_with(\"s\", 'a')",
+    "projection_name": "s.startswith(a)",
+    "select_columns": [
+      "s.startswith(a)"
+    ],
+    "spark_display": "s.startswith(a)",
+    "sql_expr": "starts_with(\"s\", 'a')",
+    "sql_expr_without_alias": "starts_with(\"s\", 'a')"
+  },
+  "g2_substr__col": {
+    "join_sql": "substr(\"s\", 1, 2)",
+    "projection_name": "substr(s, 1, 2)",
+    "select_columns": [
+      "substr(s, 1, 2)"
+    ],
+    "spark_display": "substr(s, 1, 2)",
+    "sql_expr": "substr(\"s\", 1, 2)",
+    "sql_expr_without_alias": "substr(\"s\", 1, 2)"
+  },
+  "g2_substr__int": {
+    "join_sql": "substr(\"s\", 1, 2)",
+    "projection_name": "substr(s, 1, 2)",
+    "select_columns": [
+      "substr(s, 1, 2)"
+    ],
+    "spark_display": "substr(s, 1, 2)",
+    "sql_expr": "substr(\"s\", 1, 2)",
+    "sql_expr_without_alias": "substr(\"s\", 1, 2)"
+  },
+  "g2_substr__int_long": {
+    "join_sql": "substr(\"s\", 1, 10)",
+    "projection_name": "substr(s, 1, 10)",
+    "select_columns": [
+      "substr(s, 1, 10)"
+    ],
+    "spark_display": "substr(s, 1, 10)",
+    "sql_expr": "substr(\"s\", 1, 10)",
+    "sql_expr_without_alias": "substr(\"s\", 1, 10)"
+  },
+  "g2_try_cast__DecimalType_10_4": {
+    "join_sql": "TRY_CAST(\"x\" AS DECIMAL(10,4))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS DECIMAL(10,4))",
+    "sql_expr": "TRY_CAST(\"x\" AS DECIMAL(10,4))",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS DECIMAL(10,4))"
+  },
+  "g2_try_cast__DoubleType": {
+    "join_sql": "TRY_CAST(\"x\" AS DOUBLE)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS DOUBLE)",
+    "sql_expr": "TRY_CAST(\"x\" AS DOUBLE)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS DOUBLE)"
+  },
+  "g2_try_cast__IntegerType": {
+    "join_sql": "TRY_CAST(\"x\" AS INT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS INT)",
+    "sql_expr": "TRY_CAST(\"x\" AS INT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS INT)"
+  },
+  "g2_try_cast__LongType": {
+    "join_sql": "TRY_CAST(\"x\" AS BIGINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS BIGINT)",
+    "sql_expr": "TRY_CAST(\"x\" AS BIGINT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS BIGINT)"
+  },
+  "g2_try_cast__StringType": {
+    "join_sql": "TRY_CAST(\"x\" AS STRING)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS STRING)",
+    "sql_expr": "TRY_CAST(\"x\" AS STRING)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS STRING)"
+  },
+  "g2_try_cast__ddl_boolean": {
+    "join_sql": "TRY_CAST(\"x\" AS BOOLEAN)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS BOOLEAN)",
+    "sql_expr": "TRY_CAST(\"x\" AS BOOLEAN)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS BOOLEAN)"
+  },
+  "g2_try_cast__ddl_byte": {
+    "join_sql": "TRY_CAST(\"x\" AS TINYINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS TINYINT)",
+    "sql_expr": "TRY_CAST(\"x\" AS TINYINT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS TINYINT)"
+  },
+  "g2_try_cast__ddl_decimal_10_2": {
+    "join_sql": "TRY_CAST(\"x\" AS DECIMAL(10,2))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS DECIMAL(10,2))",
+    "sql_expr": "TRY_CAST(\"x\" AS DECIMAL(10,2))",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS DECIMAL(10,2))"
+  },
+  "g2_try_cast__ddl_decimal_38_10": {
+    "join_sql": "TRY_CAST(\"x\" AS DECIMAL(38,10))",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS DECIMAL(38,10))",
+    "sql_expr": "TRY_CAST(\"x\" AS DECIMAL(38,10))",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS DECIMAL(38,10))"
+  },
+  "g2_try_cast__ddl_double": {
+    "join_sql": "TRY_CAST(\"x\" AS DOUBLE)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS DOUBLE)",
+    "sql_expr": "TRY_CAST(\"x\" AS DOUBLE)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS DOUBLE)"
+  },
+  "g2_try_cast__ddl_float": {
+    "join_sql": "TRY_CAST(\"x\" AS FLOAT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS FLOAT)",
+    "sql_expr": "TRY_CAST(\"x\" AS FLOAT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS FLOAT)"
+  },
+  "g2_try_cast__ddl_int": {
+    "join_sql": "TRY_CAST(\"x\" AS INT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS INT)",
+    "sql_expr": "TRY_CAST(\"x\" AS INT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS INT)"
+  },
+  "g2_try_cast__ddl_long": {
+    "join_sql": "TRY_CAST(\"x\" AS BIGINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS BIGINT)",
+    "sql_expr": "TRY_CAST(\"x\" AS BIGINT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS BIGINT)"
+  },
+  "g2_try_cast__ddl_short": {
+    "join_sql": "TRY_CAST(\"x\" AS SMALLINT)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS SMALLINT)",
+    "sql_expr": "TRY_CAST(\"x\" AS SMALLINT)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS SMALLINT)"
+  },
+  "g2_try_cast__ddl_string": {
+    "join_sql": "TRY_CAST(\"x\" AS STRING)",
+    "projection_name": "x",
+    "select_columns": [
+      "x"
+    ],
+    "spark_display": "TRY_CAST(x AS STRING)",
+    "sql_expr": "TRY_CAST(\"x\" AS STRING)",
+    "sql_expr_without_alias": "TRY_CAST(\"x\" AS STRING)"
+  },
+  "g2_unary__neg": {
+    "join_sql": "(-(\"x\"))",
+    "projection_name": "negative(x)",
+    "select_columns": [
+      "negative(x)"
+    ],
+    "spark_display": "negative(x)",
+    "sql_expr": "(-(\"x\"))",
+    "sql_expr_without_alias": "(-(\"x\"))"
+  },
+  "g2_unary__neg_add": {
+    "join_sql": "(-((\"x\" + 1)))",
+    "projection_name": "negative((x + 1))",
+    "select_columns": [
+      "negative((x + 1))"
+    ],
+    "spark_display": "negative((x + 1))",
+    "sql_expr": "(-((\"x\" + 1)))",
+    "sql_expr_without_alias": "(-((\"x\" + 1)))"
+  },
+  "g2_unary__neg_neg": {
+    "join_sql": "(-((-(\"x\"))))",
+    "projection_name": "negative(negative(x))",
+    "select_columns": [
+      "negative(negative(x))"
+    ],
+    "spark_display": "negative(negative(x))",
+    "sql_expr": "(-((-(\"x\"))))",
+    "sql_expr_without_alias": "(-((-(\"x\"))))"
+  },
+  "g2_when__len1": {
+    "join_sql": "CASE WHEN (\"x\" > 0) THEN 1 ELSE 0 END",
+    "projection_name": "CASE WHEN (x > 0) THEN 1 ELSE 0 END",
+    "select_columns": [
+      "CASE WHEN (x > 0) THEN 1 ELSE 0 END"
+    ],
+    "spark_display": "CASE WHEN (x > 0) THEN 1 ELSE 0 END",
+    "sql_expr": "CASE WHEN (\"x\" > 0) THEN 1 ELSE 0 END",
+    "sql_expr_without_alias": "CASE WHEN (\"x\" > 0) THEN 1 ELSE 0 END"
+  },
+  "g2_when__len1_open": {
+    "join_sql": "CASE WHEN (\"x\" > 0) THEN 1 END",
+    "projection_name": "CASE WHEN (x > 0) THEN 1 END",
+    "select_columns": [
+      "CASE WHEN (x > 0) THEN 1 END"
+    ],
+    "spark_display": "CASE WHEN (x > 0) THEN 1 END",
+    "sql_expr": "CASE WHEN (\"x\" > 0) THEN 1 END",
+    "sql_expr_without_alias": "CASE WHEN (\"x\" > 0) THEN 1 END"
+  },
+  "g2_when__len3": {
+    "join_sql": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 ELSE 8 END",
+    "projection_name": "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 ELSE 8 END",
+    "select_columns": [
+      "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 ELSE 8 END"
+    ],
+    "spark_display": "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 ELSE 8 END",
+    "sql_expr": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 ELSE 8 END",
+    "sql_expr_without_alias": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 ELSE 8 END"
+  },
+  "g2_when__len3_open": {
+    "join_sql": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 END",
+    "projection_name": "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 END",
+    "select_columns": [
+      "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 END"
+    ],
+    "spark_display": "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 WHEN (x = 0) THEN 9 END",
+    "sql_expr": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 END",
+    "sql_expr_without_alias": "CASE WHEN (\"x\" > 0) THEN 1 WHEN (\"x\" < 0) THEN -1 WHEN (\"x\" = 0) THEN 9 END"
+  }
+}

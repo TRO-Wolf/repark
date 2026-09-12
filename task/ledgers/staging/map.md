@@ -106,6 +106,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   polars/pandas capsule consumers, `pa_ipc.new_stream` kept as the version-skew
   fallback. `risk_tier: standard`. Branch `feat/facade-1`.
   pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [facade-2-ledger.md](facade-2-ledger.md) —
+  **FACADE-2 step 1 (2026-09-12), in flight:** pins only — byte-identical Column
+  display goldens for every audit §4 Group-1/2 site, `isinstance(c, repark.Column)`,
+  D-2 record-mode CI guard, mutation proof. No product change. Branch
+  `feat/facade-2-s1`.
+  pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

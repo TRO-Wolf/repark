@@ -1508,6 +1508,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   mapInArrow construction and ML prediction re-entry register capsules, not IPC;
   version-skew IPC fallback stays; export-door signatures and answers hold.
   pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `test_facade_2_column_display_goldens.py` + `facade_2_column_display_goldens.json`
+  — **FACADE-2 step 1 (2026-09-12):** byte-identical `spark_display` / `sql_expr` /
+  `sql_expr_without_alias` / `join_sql` / projection name / `select(...).columns`
+  goldens for every audit §4 Group-1 and Group-2 site, recorded from main.
+  Record mode is `REPARK_FACADE_2_RECORD_GOLDENS=1` and is refused when `CI` or
+  `GITHUB_ACTIONS` is set. `isinstance(c, repark.Column)` is pinned. Cast/try_cast
+  of a named attribute currently answers `select` with a
+  `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
+  trailing field only (the UUID is session-local, not a display-string contract).
+  pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
