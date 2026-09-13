@@ -46,7 +46,9 @@ and hand execution, SQL, and ML semantics to the engine crates.
   Nested DDL element tokens come from `repark-spark::spark_ddl_type_name_at_depth`
   (SQL-DESCRIBE-1 D-3); `long` stays local for `printSchema`. pins: sql-describe-1/C-003 |
 | [`column/`](column/map.md) | Immutable expressions, scalar functions, aggregates, and windows.
-  `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`). |
+  `PyColumn.sql` also runs the FNP-15/16 declared-function valve (`refuse_declared_function_in_sql`).
+  **FACADE-2 step 2 (2026-09-12):** `column/display.rs` (`PyColumnParts`) renders Group-2
+  display/SQL/join strings. pins: facade-2/C-008, C-009 |
 | [`collect_rows.rs`](collect_rows.rs) | Arrow batch → Python value tuples for `collect`.
   Imports the batch back through the Arrow C Data Interface and converts only the cell kinds
   whose `to_pylist` mapping is unambiguous; anything else is supplied pre-converted by the
