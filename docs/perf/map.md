@@ -354,6 +354,16 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pandas control +2.8 % inside the 5 % band; the polars control is unmeasurable
   under the 8 GiB cap (jemalloc ≈7.7 GiB + session ≈5.5 GiB of address space) —
   recorded as a finding, cap not raised. pins: facade-3/C-011
+- [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
+  step 0 (2026-09-13):** the bare-`eager()` retention before/after pair — ten
+  bare `eager()` calls on the deterministic 1e6-row × 25-column TA
+  `withColumns` fixture, per-iteration wall / VmRSS / VmHWM and
+  `__repark_cache_*` counts post-loop, post-gc, post-`clearCache()`. `base.json`
+  at `8936346a` (release native, 24 GiB `systemd-run` scope): ten orphan
+  registrations survive `gc.collect()`, RSS 546 MB → 2,966 MB; wall flat at
+  0.80–0.86 s on this box. Harness:
+  [../../python/repark-parity/tests/eager_own/map.md](../../python/repark-parity/tests/eager_own/map.md).
+  pins: eager-own-1/C-001
 
 ## Pointers
 
