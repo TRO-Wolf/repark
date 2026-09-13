@@ -109,17 +109,19 @@ and hand execution, SQL, and ML semantics to the engine crates.
   needs an abi3-compatible route since `Py_LIMITED_API` hides the `PyDateTime`/`PyDate`
   getters); F-SLOTS and F-RESCAN are ledger-only P3s. **F-FUNNEL (step 3, 2026-09-13):**
   `cdf_infer/named.rs` adds `cdf_arrow_export_named(is_row, rows, schema_names, schema, …)` —
-  `Row` and `dict` lists enter native directly; the module collects per-row mappings
-  (`asDict()` for exact-type `Row`, the dict itself for exact-type `dict`), resolves the bind
-  the Python funnel owned — dict key-union (sorted first-row keys, then newly seen keys
-  sorted per row), explicit-schema null-fill (extras dropped, absent keys `Null`), or the
-  strict bind (`_schema_names_and_permutation` parity: identity / by-name reorder /
-  positional rename / fail-loud partial or length mismatch, plus the per-row key-set check
-  `_bind_named_row` owned) — then runs the same tag-screen → extract → `build_batch` tail,
-  fetching cells by interned `PyString` keys. Any refusal it cannot reproduce (heterogeneous
-  elements, non-str keys, subclassed `dict`/`Row`, strict key-set mismatch, dup names)
-  returns `None` before extraction and Python's `_rows_from_mapping_list` owns the pinned
-  class/message/index. **F-TIMETUPLE (step 3, 2026-09-13):** `cells.rs` drops `timetuple()`
+  `Row` and `dict` lists enter native directly; the module resolves the bind the Python
+  funnel owned — dict key-union (sorted first-row keys, then newly seen keys sorted per
+  row), explicit-schema null-fill (extras dropped, absent keys `Null`), or the strict bind
+  (`_schema_names_and_permutation` parity: identity / by-name reorder / positional rename /
+  fail-loud partial or length mismatch, plus the per-row key-set check `_bind_named_row`
+  owned) — then runs the same tag-screen → extract → `build_batch` tail, fetching cells by
+  interned `PyString` keys. Doomed inputs decline at the cheapest probe first: pointer
+  type-checks run before any `asDict()`, strict `Row` key-sets are validated on
+  `_Row__field_names` tuples before the mapping collection, and the residual key-set check
+  is fused into the tag pass (`len` + a missing lookup key decline). Any refusal it cannot
+  reproduce (heterogeneous elements, non-str keys, subclassed `dict`/`Row`, strict key-set
+  mismatch, dup names) returns `None` before extraction and Python's
+  `_rows_from_mapping_list` owns the pinned class/message/index. **F-TIMETUPLE (step 3, 2026-09-13):** `cells.rs` drops `timetuple()`
   for the probe-measured abi3 routes — `date` cells subtract a cached `date(1970,1,1)` and
   read `.days`; `datetime` cells read seven interned wall-clock getattrs; `utcoffset` is
   cached by `tzinfo` identity armed only for exact `datetime.timezone`. `Ctx` gains

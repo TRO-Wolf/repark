@@ -1654,7 +1654,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: facade-3/C-010, C-014
 - `test_facade_3_cdf_step3.py` — **FACADE-3 step 3 (2026-09-13):** dispatch pin for the
   native named-rows funnel: `cdf_arrow_export_named` must exist and take `Row` and `dict`
-  lists (bare, dict + DDL null-fill, Row + reordered StructType) without calling
+  lists (bare, dict + DDL null-fill, Row + reordered StructType, a Row whose field order
+  differs from row 0 — by-name bind) without calling
   `_rows_from_mapping_list` / `_bind_named_row` / `_apply_permutation` — a spy asserts zero
   calls — while the dict key-union order (`a,c,b,d`) is preserved natively; homogeneity,
   strict key-set, and uncovered-cell refusals still fall back and keep their pinned

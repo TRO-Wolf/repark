@@ -197,7 +197,10 @@ fn utcoffset_call_us(tzinfo: &Bound<'_, PyAny>, dt: &Bound<'_, PyDateTime>) -> R
         return Err(Cdf::Fallback);
     }
     let delta = offset.cast::<PyDelta>().map_err(|_| Cdf::Fallback)?;
-    Ok((delta.call_method0("total_seconds")?.extract::<f64>()? * 1_000_000.0).round() as i64)
+    Ok((delta.getattr("days")?.extract::<i64>()? * 86_400
+        + delta.getattr("seconds")?.extract::<i64>()?)
+        * 1_000_000
+        + delta.getattr("microseconds")?.extract::<i64>()?)
 }
 
 pub(crate) fn extract_cell<'py>(

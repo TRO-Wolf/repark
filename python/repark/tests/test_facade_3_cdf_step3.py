@@ -223,6 +223,20 @@ def test_row_structtype_reorder_skips_python_funnel(
     assert frame.columns[0] == "dc"
 
 
+def test_row_reordered_field_names_bind_by_name(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rows whose field order differs from row 0 bind by name natively."""
+    calls = _funnel_spies(monkeypatch)
+    rows: list[Any] = [Row(a=index, b=index * 2) for index in range(30)]
+    rows[10] = Row(b=123, a=456)
+    frame = spark.createDataFrame(rows)
+    assert calls == {"bind": 0, "perm": 0, "mapping_list": 0}
+    collected = frame.collect()
+    assert collected[10]["a"] == 456
+    assert collected[10]["b"] == 123
+
+
 def test_named_fallback_owns_homogeneity_refusal(spark: ReparkSession) -> None:
     """A late non-dict element falls back pre-extraction; Python raises (facade-3/C-019)."""
     data: list[Any] = [{"a": index} for index in range(50)]

@@ -108,14 +108,15 @@ pub(crate) fn build_batch<'py>(
     Ok(Some(batch))
 }
 
-pub(crate) fn make_ctx<'py>(
-    py: Python<'py>,
+#[allow(clippy::fn_params_excessive_bools)]
+pub(crate) fn make_ctx(
+    py: Python<'_>,
     session_tz_utc: bool,
     timestamp_ntz: bool,
     infer_dict_as_struct: bool,
     legacy_first_element: bool,
     decimal_prec: i64,
-) -> PyResult<Ctx<'py>> {
+) -> PyResult<Ctx<'_>> {
     let decimal_type = py
         .import("decimal")?
         .getattr("Decimal")?
