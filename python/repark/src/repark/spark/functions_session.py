@@ -124,7 +124,7 @@ def uuid() -> Column:
     Non-deterministic. Pin Arrow string type + uniqueness, not a golden value.
     """
     return Column(
-        _native.PyColumn.sql("uuid()"),
+        _native.PyColumnParts.uuid()[0],
         spark_display="uuid()",
         projection_name="uuid()",
         sql_expr="uuid()",

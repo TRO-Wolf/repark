@@ -29,6 +29,32 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `case_when` moves `.expr` out of its arm pairs like `PyColumn::case_when`, and every
   `wrap_*` builder pre-sizes its `String` instead of `format!`.
   pins: facade-2/C-008, C-009, C-010, C-011, C-012, C-013
+  **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call —
+  the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple
+  `(PyColumn, spark_display, sql_expr, join_sql_expr)` with an optional display
+  override for the bespoke-name callers. Argument part lists arrive as
+  `Bound<PyList>` items extracted in one pass to `PyBackedStr` handles — owned
+  zero-copy refs to the Python `str` data (the step-2b lesson: the growing fragments
+  never copy across the boundary). Operand `Expr`s move out of the extracted
+  `PyColumn`s into `call_scalar_expr`'s owned `Vec<Expr>` — no second clone on top
+  of the operational one (S2-21 P2-1). The step-3 `#[pymethods]` wrappers for the
+  Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split
+  across files — while their `Expr` construction stays in `display/construct.rs`.
+  pins: facade-2/C-014, C-016, C-017, C-019, C-020
+- [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
+  Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
+  `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`
+  submodule because `mod.rs` is at its exact line baseline. Each builds the `Expr` the
+  analyzed SQL text produced and renders the display/SQL fragments in Rust.
+  `lit_timestamp` mirrors the analyzer's fold decision: text that parses inside the
+  nanosecond `i64` range folds to `Literal(TimestampMicrosecond(µs, UTC))`; out-of-range
+  or unparsable text (measured: Arrow's cast yields a null element, never an error)
+  keeps the `to_timestamp(__repark_decimal_cast_nullable__(Utf8))` call form the SQL
+  path stored. `lit_date` / `lit_time` store `Cast(Utf8, Date32)` /
+  `Cast(Utf8, Time64(Nanosecond))`; `lit_array_cast` stores `Cast(array-call,
+  List<item: <element>, nullable>)` — `VARCHAR` maps to `Utf8View` internally and the
+  Arrow exporter coerces views to `string` at the door.
+  pins: facade-2/C-014, C-015, C-016
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
   **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
   take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display

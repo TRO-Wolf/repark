@@ -56,39 +56,36 @@ def lit(value: Any) -> Column:
         if value.tzinfo is not None:
             value = value.astimezone(datetime.UTC).replace(tzinfo=None)
         text = value.strftime("%Y-%m-%d %H:%M:%S.%f").rstrip("0").rstrip(".")
-        sql = f"TIMESTAMP '{text}'"
-        display = text
+        parts = _native.PyColumnParts.lit_timestamp(text)
         return Column(
-            _native.PyColumn.sql(sql),
-            spark_display=display,
-            projection_name=display,
+            parts[0],
+            spark_display=text,
+            projection_name=text,
             stable_name=False,
-            sql_expr=sql,
+            sql_expr=parts[1],
             is_foldable=True,
         )
     if isinstance(value, datetime.date):
-        sql = f"DATE '{value.isoformat()}'"
-        display = value.isoformat()
+        parts = _native.PyColumnParts.lit_date(value.isoformat())
         return Column(
-            _native.PyColumn.sql(sql),
-            spark_display=display,
-            projection_name=display,
+            parts[0],
+            spark_display=value.isoformat(),
+            projection_name=value.isoformat(),
             stable_name=False,
-            sql_expr=sql,
+            sql_expr=parts[1],
             is_foldable=True,
         )
     if isinstance(value, datetime.time):
         text = value.strftime("%H:%M:%S")
         if value.microsecond:
             text = value.strftime("%H:%M:%S.%f").rstrip("0").rstrip(".")
-        sql = f"TIME '{text}'"
-        display = text
+        parts = _native.PyColumnParts.lit_time(text)
         return Column(
-            _native.PyColumn.sql(sql),
-            spark_display=display,
-            projection_name=display,
+            parts[0],
+            spark_display=text,
+            projection_name=text,
             stable_name=False,
-            sql_expr=sql,
+            sql_expr=parts[1],
             is_foldable=True,
         )
     ndarray_column = _lit_numpy_ndarray(value)
@@ -274,14 +271,15 @@ def _lit_numpy_ndarray(value: Any) -> Column | None:
         "boolean": "BOOLEAN",
         "string": "VARCHAR",
     }.get(element_type, element_type.upper())
-    cast_sql = f"CAST({result.sql_expr_part()} AS ARRAY<{spark_cast_type}>)"
-    display = f"array<{element_type}>"
+    parts = _native.PyColumnParts.lit_array_cast(
+        result._inner, result.sql_expr_part(), element_type, spark_cast_type
+    )
     return Column(
-        _native.PyColumn.sql(cast_sql),
-        spark_display=display,
-        projection_name=display,
+        parts[0],
+        spark_display=parts[1],
+        projection_name=parts[1],
         stable_name=False,
-        sql_expr=cast_sql,
+        sql_expr=parts[2],
         is_foldable=True,
     )
 
@@ -1220,6 +1218,7 @@ def _scalar(
     columns: list[Column] = []
     display_parts: list[str] = []
     sql_parts: list[str] = []
+    join_parts: list[str] = []
     for index, argument in enumerate(args):
         column = _as_column_arg(argument, as_lit=index in force_lit)
         column._reject_nested_generator(f"function {name}")
@@ -1229,7 +1228,7 @@ def _scalar(
         else:
             display_parts.append(column.spark_wrap_display_part())
         sql_parts.append(column.sql_expr_part())
-    shown = display if display is not None else f"{name}({', '.join(display_parts)})"
+        join_parts.append(column.join_sql_part())
     # Nullary: do NOT treat vacuous all([]) as foldable — F.rand→random() is non-foldable
     is_aggregate = any(column._is_aggregate for column in columns)
     if foldable is not None:
@@ -1245,15 +1244,16 @@ def _scalar(
     else:
         ungroupable_flag = child_ungroupable
     # WindowSpec so adjacent withColumn(s) can still merge. Other scalars clear it.
-    window_spec = None
-    if name == "round" and columns:
-        window_spec = getattr(columns[0], "_window_spec", None)
+    window_spec = columns[0]._window_spec if name == "round" and columns else None
+    parts = _native.PyColumnParts.call_scalar(
+        name, [column._inner for column in columns], display_parts, sql_parts, join_parts, display
+    )
     return Column(
-        _native.PyColumn.call_scalar(name, [column._inner for column in columns]),
-        spark_display=shown,
-        projection_name=shown,
-        sql_expr=f"{name}({', '.join(sql_parts)})",
-        join_sql_expr=f"{name}({', '.join(column.join_sql_part() for column in columns)})",
+        parts[0],
+        spark_display=parts[1],
+        projection_name=parts[1],
+        sql_expr=parts[2],
+        join_sql_expr=parts[3],
         stable_name=False,
         is_aggregate=is_aggregate,
         is_foldable=is_foldable,

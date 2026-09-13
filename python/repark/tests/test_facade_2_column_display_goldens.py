@@ -31,6 +31,7 @@ from repark.spark.types import (
 
 RECORD_ENV = "REPARK_FACADE_2_RECORD_GOLDENS"
 GOLDEN_PATH = Path(__file__).with_name("facade_2_column_display_goldens.json")
+GENERIC_GOLDEN_PATH = Path(__file__).with_name("facade_2_generic_builder_goldens.json")
 NESTED_SCHEMA = (
     "x int, y int, s string, flag boolean, "
     "st struct<a:int,b:string>, m map<string,int>, arr array<int>"
@@ -332,6 +333,63 @@ def _all_cases() -> dict[str, Column]:
     return out
 
 
+def _generic_builder_cases() -> dict[str, Column]:
+    """`F.<fn>` builders routed through the shared `name(args)` helper (`_scalar`)."""
+    x = F.col("x")
+    y = F.col("y")
+    s = F.col("s")
+    flag = F.col("flag")
+    arr = F.col("arr")
+    out: dict[str, Column] = {}
+    _put(out, "gb_arity0__current_date", F.current_date())
+    _put(out, "gb_arity0__rand", F.rand())
+    _put(out, "gb_arity0__randn", F.randn())
+    _put(out, "gb_arity1__sqrt", F.sqrt(x))
+    _put(out, "gb_arity1__lower", F.lower(s))
+    _put(out, "gb_arity1__upper_str", F.upper("s"))
+    _put(out, "gb_arity1__trim", F.trim(s))
+    _put(out, "gb_arity1__length", F.length(s))
+    _put(out, "gb_arity1__expm1", F.expm1(x))
+    _put(out, "gb_arity1__md5", F.md5(s))
+    _put(out, "gb_arity1__floor", F.floor(x))
+    _put(out, "gb_arity1__exp", F.exp(x))
+    _put(out, "gb_arity1__lower_lit", F.lower(F.lit("a")))
+    _put(out, "gb_arity2__atan2", F.atan2(x, y))
+    _put(out, "gb_arity2__pow_lit", F.pow(x, 2))
+    _put(out, "gb_arity2__hypot", F.hypot(x, y))
+    _put(out, "gb_arity2__instr", F.instr(s, "b"))
+    _put(out, "gb_arity2__repeat", F.repeat(s, 3))
+    _put(out, "gb_arity2__shiftleft", F.shiftleft(x, 2))
+    _put(out, "gb_arity2__log_two_args", F.log(x, 2))
+    _put(out, "gb_arity2__get_json_object", F.get_json_object(s, "$.a"))
+    _put(out, "gb_arity2__array_join", F.array_join(arr, ","))
+    _put(out, "gb_arity2__format_string", F.format_string("%d", x))
+    _put(out, "gb_arity3__lpad", F.lpad(s, 10, "x"))
+    _put(out, "gb_arity3__rpad_str", F.rpad("s", 5, "y"))
+    _put(out, "gb_arity3__substring_index", F.substring_index(s, "a", 1))
+    _put(out, "gb_arity3__translate", F.translate(s, "a", "z"))
+    _put(out, "gb_arity3__assert_true", F.assert_true(flag, "bad"))
+    _put(out, "gb_arity3__make_date", F.make_date(x, y, x))
+    _put(out, "gb_variadic__concat_ws", F.concat_ws("-", s, s, s))
+    _put(out, "gb_variadic__create_map", F.create_map(x, y))
+    _put(out, "gb_variadic__str_to_map", F.str_to_map(s, F.lit(","), F.lit(":")))
+    _put(out, "gb_nested__sqrt_floor_add", F.sqrt(F.floor(x) + 1))
+    _put(out, "gb_nested__lower_trim", F.lower(F.trim(s)))
+    _put(out, "gb_nested__sqrt_sqrt", F.sqrt(F.sqrt(x)))
+    _put(out, "gb_nested__lpad_lower", F.lpad(F.lower(s), 5, "*"))
+    _put(out, "gb_alias__outer", F.sqrt(x).alias("root"))
+    _put(out, "gb_alias__inner", F.sqrt(x.alias("v")))
+    _put(out, "gb_alias__lower_inner", F.lower(s.alias("t")))
+    return out
+
+
+def _build_generic_payload(spark: ReparkSession) -> dict[str, dict[str, object]]:
+    """Snapshot every generic-builder case against the nested in-memory frame."""
+    frame = _nested_frame(spark)
+    cases = _generic_builder_cases()
+    return {case_id: _snapshot(column, frame, case_id) for case_id, column in cases.items()}
+
+
 def _build_payload(spark: ReparkSession) -> dict[str, dict[str, object]]:
     """Snapshot every case against the nested in-memory frame."""
     frame = _nested_frame(spark)
@@ -339,17 +397,19 @@ def _build_payload(spark: ReparkSession) -> dict[str, dict[str, object]]:
     return {case_id: _snapshot(column, frame, case_id) for case_id, column in cases.items()}
 
 
-def test_column_display_goldens_match_committed_bytes(spark: ReparkSession) -> None:
-    """Byte-identical Group-1/2 display goldens. pins: facade-2/C-001, C-002, C-003"""
-    _assert_record_mode_allowed()
-    payload = _build_payload(spark)
-    assert len(payload) >= 150, f"need 150+ cases, got {len(payload)}"
+def _check_golden_bytes(
+    payload: dict[str, dict[str, object]],
+    golden_path: Path,
+    minimum: int,
+) -> None:
+    """Record (when asked) or compare `payload` against `golden_path` byte-for-byte."""
+    assert len(payload) >= minimum, f"need {minimum}+ cases, got {len(payload)}"
     encoded = _canonical_json(payload)
     if _record_requested():
-        GOLDEN_PATH.write_text(encoded, encoding="utf-8")
-    if not GOLDEN_PATH.is_file():
-        raise AssertionError(f"missing golden {GOLDEN_PATH.name}; set {RECORD_ENV}=1 to record")
-    expected = GOLDEN_PATH.read_text(encoding="utf-8")
+        golden_path.write_text(encoded, encoding="utf-8")
+    if not golden_path.is_file():
+        raise AssertionError(f"missing golden {golden_path.name}; set {RECORD_ENV}=1 to record")
+    expected = golden_path.read_text(encoding="utf-8")
     if encoded != expected:
         actual_ids = set(payload)
         want = json.loads(expected)
@@ -364,6 +424,18 @@ def test_column_display_goldens_match_committed_bytes(spark: ReparkSession) -> N
         raise AssertionError(
             f"golden byte mismatch missing={missing[:12]} extra={extra[:12]} changed={changed[:12]}"
         )
+
+
+def test_column_display_goldens_match_committed_bytes(spark: ReparkSession) -> None:
+    """Byte-identical Group-1/2 display goldens. pins: facade-2/C-001, C-002, C-003"""
+    _assert_record_mode_allowed()
+    _check_golden_bytes(_build_payload(spark), GOLDEN_PATH, 150)
+
+
+def test_generic_builder_goldens_match_committed_bytes(spark: ReparkSession) -> None:
+    """Byte-identical generic `name(args)` builder goldens. pins: facade-2/C-015"""
+    _assert_record_mode_allowed()
+    _check_golden_bytes(_build_generic_payload(spark), GENERIC_GOLDEN_PATH, 30)
 
 
 def test_isinstance_column_is_repark_column() -> None:
