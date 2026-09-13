@@ -1,0 +1,1406 @@
+{
+  "bin_bytearray": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'\\x00\\x01')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "bin_bytes": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'\\x00\\x01')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "bin_memoryview": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'\\x00\\x01')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "bin_none_mix": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=b'ab')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "dec_explicit_ddl": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(dc=Decimal('1.25'))"
+    ],
+    "schema": "struct<dc:decimal(10,2)>"
+  },
+  "dec_explicit_struct": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(dc=Decimal('1.25'))"
+    ],
+    "schema": "struct<dc:decimal(10,2)>"
+  },
+  "dec_infinity": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame does not support non-finite Decimal values (got Infinity)"
+    }
+  },
+  "dec_large_in_envelope": {
+    "refused": {
+      "class": "InvalidOperation",
+      "message": "[<class 'decimal.InvalidOperation'>]"
+    }
+  },
+  "dec_magnitude_over": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame Decimal value 100000000000000000000 exceeds DECIMAL(38, 18) magnitude (|value| must be < 10**20)"
+    }
+  },
+  "dec_mixed_scales": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=Decimal('1.500000000000000000'))",
+      "Row(_1=Decimal('2.125000000000000000'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dec_nan": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame does not support non-finite Decimal values (got NaN)"
+    }
+  },
+  "dec_negative": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=Decimal('-7.750000000000000000'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dec_scale18": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=Decimal('1.234567890123456789'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dec_scale2": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=Decimal('1.230000000000000000'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dec_scale_over": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame Decimal value 0.1234567890123456789 is outside DECIMAL(38, 18) scale (fractional digits beyond 18 are not representable without rounding; refuse rather than silent zero/round)"
+    }
+  },
+  "dec_with_none": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=Decimal('1.500000000000000000'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dec_zero": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=Decimal('0E-18'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "dict_all_none_then_value": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(a=None)",
+      "Row(a=1)"
+    ],
+    "schema": "struct<a:bigint>"
+  },
+  "dict_basic": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='x')",
+      "Row(a=2, b='y')"
+    ],
+    "schema": "struct<a:bigint,b:string>"
+  },
+  "dict_hetero_element": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame dict lists must be homogeneous; got element type tuple at index 1"
+    }
+  },
+  "dict_key_union": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=2, c=1, b=None, d=None)",
+      "Row(a=4, c=None, b=3, d=None)",
+      "Row(a=None, c=6, b=None, d=5)"
+    ],
+    "schema": "struct<a:bigint,c:bigint,b:bigint,d:bigint>"
+  },
+  "dict_missing_null_fill": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b=None)",
+      "Row(a=None, b=2)"
+    ],
+    "schema": "struct<a:bigint,b:bigint>"
+  },
+  "dict_nested_empty": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'a': None})",
+      "Row(m={'a': 1})"
+    ],
+    "schema": "struct<m:struct<a:bigint>>"
+  },
+  "dict_nested_map_conf": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'x': '1', 'y': 's'})",
+      "Row(m={'x': '2', 'z': 'True'})"
+    ],
+    "schema": "struct<m:map<string,string>>"
+  },
+  "dict_nested_map_conf_uniform": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'x': 1, 'y': 2})"
+    ],
+    "schema": "struct<m:map<string,bigint>>"
+  },
+  "dict_nested_none_values": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'a': None})",
+      "Row(m={'a': 1})"
+    ],
+    "schema": "struct<m:struct<a:bigint>>"
+  },
+  "dict_nested_struct_conf": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'x': 1, 'y': 's', 'z': None})",
+      "Row(m={'x': 2, 'y': None, 'z': True})"
+    ],
+    "schema": "struct<m:struct<x:bigint,y:string,z:boolean>>"
+  },
+  "dict_non_str_key": {
+    "refused": {
+      "class": "TypeError",
+      "message": "expected bytes, int found"
+    }
+  },
+  "dict_none_value": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=None, b=1)"
+    ],
+    "schema": "struct<a:string,b:bigint>"
+  },
+  "dict_schema_ddl": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='x')"
+    ],
+    "schema": "struct<a:int,b:string>"
+  },
+  "dict_schema_partial": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame schema partially overlaps dict column names ['a']; pass a pure rename (disjoint names) or a pure reorder (same names in a different order) \u2014 mixed bind is not supported"
+    }
+  },
+  "dict_schema_rename": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(x=1, y=2)"
+    ],
+    "schema": "struct<x:bigint,y:bigint>"
+  },
+  "dict_schema_reorder": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(b=2, a=1)"
+    ],
+    "schema": "struct<b:bigint,a:bigint>"
+  },
+  "dict_schema_struct": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b=None)",
+      "Row(a=2, b='x')"
+    ],
+    "schema": "struct<a:int,b:string>"
+  },
+  "dict_sorted_order": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=2, z=1)"
+    ],
+    "schema": "struct<a:bigint,z:bigint>"
+  },
+  "misc_dict_input": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame expects a list of rows, a pandas DataFrame, or a polars DataFrame, got dict"
+    }
+  },
+  "misc_empty_no_schema": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame on empty data requires a schema (column name list)"
+    }
+  },
+  "misc_scalar_list": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame expects a list of tuples/lists, dicts, or Row, got element type int"
+    }
+  },
+  "misc_set_input": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame expects a list of rows, a pandas DataFrame, or a polars DataFrame, got set"
+    }
+  },
+  "misc_str_input": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame expects a list of rows, a pandas DataFrame, or a polars DataFrame, got str"
+    }
+  },
+  "nest_array_ddl": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(a=[1, 2])"
+    ],
+    "schema": "struct<a:array<int>>"
+  },
+  "nest_dict_cell_map_conf": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'a': '1', 'b': 'x'})"
+    ],
+    "schema": "struct<_1:map<string,string>>"
+  },
+  "nest_dict_cell_map_conf_uniform": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'a': 1, 'b': 2})"
+    ],
+    "schema": "struct<_1:map<string,bigint>>"
+  },
+  "nest_dict_cell_struct": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'a': 1, 'b': 'x'})"
+    ],
+    "schema": "struct<_1:struct<a:bigint,b:string>>"
+  },
+  "nest_list_all_empty": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[])",
+      "Row(_1=[])"
+    ],
+    "schema": "struct<_1:array<string>>"
+  },
+  "nest_list_empty_then_value": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[])",
+      "Row(_1=[1])"
+    ],
+    "schema": "struct<_1:array<bigint>>"
+  },
+  "nest_list_float_dense": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[1.0, 2.0])"
+    ],
+    "schema": "struct<_1:array<double>>"
+  },
+  "nest_list_int": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[1, 2, 3])"
+    ],
+    "schema": "struct<_1:array<bigint>>"
+  },
+  "nest_list_int_float_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type LongType and DoubleType (column '_1')"
+    }
+  },
+  "nest_list_mixed_width": {
+    "refused": {
+      "class": "AnalysisException",
+      "message": "repark.ml v1 vector columns are fixed-width only; column '_1' has mixed widths (expected 2, row 1 has 1). Do not fall back to List<Float64> \u2014 that silently loses the width guarantee (dense FixedSizeList only; see repark.ml.linalg)."
+    }
+  },
+  "nest_list_none_elements": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[None, 1])"
+    ],
+    "schema": "struct<_1:array<bigint>>"
+  },
+  "nest_list_of_dict": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[{'a': 1, 'b': None}, {'a': None, 'b': 2}])"
+    ],
+    "schema": "struct<_1:array<struct<a:bigint,b:bigint>>>"
+  },
+  "nest_list_of_list": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[[1, 2], [3]])"
+    ],
+    "schema": "struct<_1:array<array<bigint>>>"
+  },
+  "nest_list_of_row": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=[{'x': 1}, {'x': 2}])"
+    ],
+    "schema": "struct<_1:array<struct<x:bigint>>>"
+  },
+  "nest_list_str_int_merge": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=['1', 'x'])"
+    ],
+    "schema": "struct<_1:array<string>>"
+  },
+  "nest_map_ddl": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(m={'k': 1})"
+    ],
+    "schema": "struct<m:map<string,int>>"
+  },
+  "nest_map_int_keys": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "field name 1 should be a string"
+    }
+  },
+  "nest_row_cell": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'x': 1, 'y': 2})"
+    ],
+    "schema": "struct<_1:struct<x:bigint,y:bigint>>"
+  },
+  "nest_sparse_vector": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'size': 3, 'indices': [0, 2], 'values': [1.0, 2.5]})"
+    ],
+    "schema": "struct<_1:struct<size:int,indices:array<int>,values:array<double>>>"
+  },
+  "nest_struct_ddl": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(st={'x': 1, 'y': 's'})"
+    ],
+    "schema": "struct<st:struct<x:int,y:string>>"
+  },
+  "nest_struct_schema": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame struct expects 1 field(s), got 2"
+    }
+  },
+  "nest_tuple_cell": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'_1': 1, '_2': 'a'})"
+    ],
+    "schema": "struct<_1:struct<_1:bigint,_2:string>>"
+  },
+  "nest_tuple_empty": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={})"
+    ],
+    "schema": "struct<_1:struct<>>"
+  },
+  "nest_tuple_mixed": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1={'_1': 1, '_2': 2.5, '_3': 's'})"
+    ],
+    "schema": "struct<_1:struct<_1:bigint,_2:double,_3:string>>"
+  },
+  "pd_basic": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='a', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.500000000000000000'))",
+      "Row(i=2, f=2.5, s='b', b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.250000000000000000'))",
+      "Row(i=3, f=3.5, s='c', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.750000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp_ntz,dc:decimal(38,18)>"
+  },
+  "pd_empty": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "[CANNOT_INFER_EMPTY_SCHEMA] Can not infer schema for empty pandas DataFrame; pass a non-empty frame or a typed StructType schema (repark createDataFrame is VALUES-only and has no StructType path yet)"
+    }
+  },
+  "pd_schema_ddl": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='a', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.50'))",
+      "Row(i=2, f=2.5, s='b', b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.25'))",
+      "Row(i=3, f=3.5, s='c', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.75'))"
+    ],
+    "schema": "struct<i:int,f:double,s:string,b:boolean,d:date,t:timestamp,dc:decimal(10,2)>"
+  },
+  "pd_schema_names": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='a', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.500000000000000000'))",
+      "Row(i=2, f=2.5, s='b', b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.250000000000000000'))",
+      "Row(i=3, f=3.5, s='c', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.750000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp_ntz,dc:decimal(38,18)>"
+  },
+  "pd_schema_reorder": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(s='a', i=1, f=1.5, b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.500000000000000000'))",
+      "Row(s='b', i=2, f=2.5, b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.250000000000000000'))",
+      "Row(s='c', i=3, f=3.5, b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.750000000000000000'))"
+    ],
+    "schema": "struct<s:string,i:bigint,f:double,b:boolean,d:date,t:timestamp_ntz,dc:decimal(38,18)>"
+  },
+  "pl_basic": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='a', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.500000000000000000'))",
+      "Row(i=2, f=2.5, s='b', b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.250000000000000000'))",
+      "Row(i=3, f=3.5, s='c', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.750000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp_ntz,dc:decimal(38,18)>"
+  },
+  "pl_empty": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "[CANNOT_INFER_EMPTY_SCHEMA] Can not infer schema for empty polars DataFrame; pass a non-empty frame or a typed StructType schema (repark createDataFrame is VALUES-only and has no StructType path yet)"
+    }
+  },
+  "pl_nested": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(arr=[1, 2], st={'x': 1, 'y': 'a'})",
+      "Row(arr=[3], st={'x': 2, 'y': 'b'})"
+    ],
+    "schema": "struct<arr:array<bigint>,st:struct<x:bigint,y:string>>"
+  },
+  "pl_schema_names": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='a', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.500000000000000000'))",
+      "Row(i=2, f=2.5, s='b', b=False, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('2.250000000000000000'))",
+      "Row(i=3, f=3.5, s='c', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('3.750000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp_ntz,dc:decimal(38,18)>"
+  },
+  "row_basic": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='x')",
+      "Row(a=2, b='y')"
+    ],
+    "schema": "struct<a:bigint,b:string>"
+  },
+  "row_decimal": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(a=Decimal('1.250000000000000000'))",
+      "Row(a=Decimal('2.500000000000000000'))"
+    ],
+    "schema": "struct<a:decimal(38,18)>"
+  },
+  "row_deep_nested": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(inner={'inner': {'v': 1}})"
+    ],
+    "schema": "struct<inner:struct<inner:struct<v:bigint>>>"
+  },
+  "row_hetero_element": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame Row lists must be homogeneous; got element type tuple at index 1"
+    }
+  },
+  "row_in_tuple_cell": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1={'x': 1, 'y': 2}, _2=5)"
+    ],
+    "schema": "struct<_1:struct<x:bigint,y:bigint>,_2:bigint>"
+  },
+  "row_missing_field": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame Row row has unexpected field(s) ['b'] (expected keys ['a']; silent drop is not supported)"
+    }
+  },
+  "row_nested": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, inner={'x': 2, 'y': 's'})",
+      "Row(a=3, inner={'x': 4, 'y': 't'})"
+    ],
+    "schema": "struct<a:bigint,inner:struct<x:bigint,y:string>>"
+  },
+  "row_none_cell": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=None, b=1)"
+    ],
+    "schema": "struct<a:string,b:bigint>"
+  },
+  "row_positional": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "<Row(1, 2)>"
+    ],
+    "schema": "struct<_0:bigint,_1:bigint>"
+  },
+  "row_schema_ddl": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='x')"
+    ],
+    "schema": "struct<a:int,b:string>"
+  },
+  "row_schema_partial": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "createDataFrame schema partially overlaps Row column names ['a']; pass a pure rename (disjoint names) or a pure reorder (same names in a different order) \u2014 mixed bind is not supported"
+    }
+  },
+  "row_schema_rename": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(x=1, y=2)"
+    ],
+    "schema": "struct<x:bigint,y:bigint>"
+  },
+  "row_schema_reorder": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(b=2, a=1)"
+    ],
+    "schema": "struct<b:bigint,a:bigint>"
+  },
+  "row_schema_struct": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='x')"
+    ],
+    "schema": "struct<a:int,b:string>"
+  },
+  "sch_bad_ddl_string": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame schema string must be a DDL field list like 'a INT, b STRING' (got 'colname'; a bare non-DDL string would be character-iterated into column names)"
+    }
+  },
+  "sch_bare_datatype": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(value=1.0)",
+      "Row(value=2.5)"
+    ],
+    "schema": "struct<value:double>"
+  },
+  "sch_bare_long": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(value=1)",
+      "Row(value=2)"
+    ],
+    "schema": "struct<value:bigint>"
+  },
+  "sch_bare_nonscalar_cell": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame scalar-schema path expects scalar cells; got element type tuple at index 1"
+    }
+  },
+  "sch_ddl": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='x', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.250000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp,dc:decimal(38,18)>"
+  },
+  "sch_empty_bare_datatype": {
+    "nullable": [
+      true
+    ],
+    "rows": [],
+    "schema": "struct<value:double>"
+  },
+  "sch_empty_ddl": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [],
+    "schema": "struct<a:int,b:string>"
+  },
+  "sch_empty_names": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [],
+    "schema": "struct<a:string,b:string>"
+  },
+  "sch_empty_struct": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp,dc:decimal(38,18)>"
+  },
+  "sch_int32_preserved": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(i=1)"
+    ],
+    "schema": "struct<i:int>"
+  },
+  "sch_names": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, s='a')"
+    ],
+    "schema": "struct<i:bigint,s:string>"
+  },
+  "sch_names_long": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "schema length 2 does not match row width 1"
+    }
+  },
+  "sch_names_nonstr": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame schema names must be str; got int at index 0"
+    }
+  },
+  "sch_names_short": {
+    "nullable": [
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, _2='a', _3=2.5)"
+    ],
+    "schema": "struct<i:bigint,_2:string,_3:double>"
+  },
+  "sch_sampling_ratio": {
+    "refused": {
+      "class": "TypeError",
+      "message": "ReparkSession.create_dataframe() takes from 2 to 3 positional arguments but 4 were given"
+    }
+  },
+  "sch_schema_int": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame schema must be a list/tuple of column name strings, a StructType, a DDL string, or a scalar DataType; got int"
+    }
+  },
+  "sch_struct": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(i=1, f=1.5, s='x', b=True, d=datetime.date(2024, 1, 2), t=datetime.datetime(2024, 1, 2, 3, 4, 5), dc=Decimal('1.250000000000000000'))"
+    ],
+    "schema": "struct<i:bigint,f:double,s:string,b:boolean,d:date,t:timestamp,dc:decimal(38,18)>"
+  },
+  "sch_verify_schema_false": {
+    "refused": {
+      "class": "TypeError",
+      "message": "ReparkSession.create_dataframe() got an unexpected keyword argument 'verifySchema'"
+    }
+  },
+  "sch_verify_schema_true": {
+    "refused": {
+      "class": "TypeError",
+      "message": "ReparkSession.create_dataframe() got an unexpected keyword argument 'verifySchema'"
+    }
+  },
+  "ts_date": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<_1:date>"
+  },
+  "ts_explicit_ddl": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(t=datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "schema": "struct<t:timestamp>"
+  },
+  "ts_explicit_ntz": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(t=datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "schema": "struct<t:timestamp_ntz>"
+  },
+  "ts_mixed_naive_tz": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.datetime(2024, 1, 2, 3, 4, 5))",
+      "Row(_1=datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "schema": "struct<_1:timestamp>"
+  },
+  "ts_naive": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.datetime(2024, 1, 2, 3, 4, 5))",
+      "Row(_1=datetime.datetime(2024, 1, 2, 4, 4, 5))"
+    ],
+    "schema": "struct<_1:timestamp>"
+  },
+  "ts_none_date": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<_1:date>"
+  },
+  "ts_time": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1='03:04:05')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "ts_tz_ny": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.datetime(2024, 1, 2, 13, 4, 5))"
+    ],
+    "schema": "struct<_1:timestamp>"
+  },
+  "ts_tz_utc": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "schema": "struct<_1:timestamp>"
+  },
+  "tup_all_none": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=None, _2=None)",
+      "Row(_1=None, _2=None)"
+    ],
+    "schema": "struct<_1:string,_2:string>"
+  },
+  "tup_bool_int_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type BooleanType and LongType (column '_1')"
+    }
+  },
+  "tup_bool_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=True)",
+      "Row(_1=False)"
+    ],
+    "schema": "struct<_1:boolean>"
+  },
+  "tup_bytearray_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'ab')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_bytes_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'ab')",
+      "Row(_1=b'cd')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_date_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=datetime.date(2024, 1, 2))",
+      "Row(_1=datetime.date(2024, 1, 3))"
+    ],
+    "schema": "struct<_1:date>"
+  },
+  "tup_date_timestamp_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type DateType and TimestampType (column '_1')"
+    }
+  },
+  "tup_decimal_float_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type DoubleType and DecimalType (column '_1')"
+    }
+  },
+  "tup_empty_row": {
+    "nullable": [],
+    "rows": [],
+    "schema": "struct<>"
+  },
+  "tup_float_bool_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type BooleanType and DoubleType (column '_1')"
+    }
+  },
+  "tup_float_inf": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame does not support infinite float values"
+    }
+  },
+  "tup_float_int_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type LongType and DoubleType (column '_1')"
+    }
+  },
+  "tup_float_nan": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=nan)",
+      "Row(_1=1.5)"
+    ],
+    "schema": "struct<_1:double>"
+  },
+  "tup_float_neg_inf": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame does not support infinite float values"
+    }
+  },
+  "tup_hetero_row_element": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame tuple/list rows must be homogeneous list/tuple rows; got element type str at index 1"
+    }
+  },
+  "tup_int_bool_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type BooleanType and LongType (column '_1')"
+    }
+  },
+  "tup_int_decimal_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type LongType and DecimalType (column '_1')"
+    }
+  },
+  "tup_int_float_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type LongType and DoubleType (column '_1')"
+    }
+  },
+  "tup_int_string_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "createDataFrame cannot build Arrow column '_1': Could not convert 'x' with type str: tried to convert to int64"
+    }
+  },
+  "tup_large_int": {
+    "refused": {
+      "class": "OverflowError",
+      "message": "Python int too large to convert to C long"
+    }
+  },
+  "tup_list_rows": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=1, _2='a')",
+      "Row(_1=2, _2='b')"
+    ],
+    "schema": "struct<_1:bigint,_2:string>"
+  },
+  "tup_memoryview_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'ab')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_mixed_bytes_bytearray": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=b'ab')",
+      "Row(_1=b'cd')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_namedtuple": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(a=1, b='a')",
+      "Row(a=2, b='b')"
+    ],
+    "schema": "struct<a:bigint,b:string>"
+  },
+  "tup_namedtuple_schema_reorder": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(b='a', a=1)"
+    ],
+    "schema": "struct<b:string,a:bigint>"
+  },
+  "tup_none_bool": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=True)"
+    ],
+    "schema": "struct<_1:boolean>"
+  },
+  "tup_none_bytes": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=b'x')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_none_date": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=datetime.date(2024, 1, 2))"
+    ],
+    "schema": "struct<_1:date>"
+  },
+  "tup_none_decimal": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=Decimal('1.500000000000000000'))"
+    ],
+    "schema": "struct<_1:decimal(38,18)>"
+  },
+  "tup_none_float": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=1.5)"
+    ],
+    "schema": "struct<_1:double>"
+  },
+  "tup_none_lead": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=None, _2='a')",
+      "Row(_1=1, _2='b')"
+    ],
+    "schema": "struct<_1:bigint,_2:string>"
+  },
+  "tup_none_mid": {
+    "nullable": [
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=1, _2=None)",
+      "Row(_1=2, _2=3)"
+    ],
+    "schema": "struct<_1:bigint,_2:bigint>"
+  },
+  "tup_none_tail": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=1)",
+      "Row(_1=None)"
+    ],
+    "schema": "struct<_1:bigint>"
+  },
+  "tup_none_timestamp": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1=None)",
+      "Row(_1=datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "schema": "struct<_1:timestamp>"
+  },
+  "tup_ragged": {
+    "refused": {
+      "class": "PySparkValueError",
+      "message": "ragged rows are not supported by createDataFrame (row 0 width 2, row 1 width 1)"
+    }
+  },
+  "tup_scalars": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=1, _2=1.5, _3='x', _4=True)"
+    ],
+    "schema": "struct<_1:bigint,_2:double,_3:string,_4:boolean>"
+  },
+  "tup_seven": {
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "rows": [
+      "Row(_1=7, _2=7.5, _3='s7', _4=True, _5=datetime.date(2024, 1, 2), _6=datetime.datetime(2024, 1, 2, 3, 4, 5), _7=Decimal('7.500000000000000000'))",
+      "Row(_1=8, _2=8.5, _3='s8', _4=False, _5=datetime.date(2024, 1, 2), _6=datetime.datetime(2024, 1, 2, 3, 4, 5), _7=Decimal('8.250000000000000000'))"
+    ],
+    "schema": "struct<_1:bigint,_2:double,_3:string,_4:boolean,_5:date,_6:timestamp,_7:decimal(38,18)>"
+  },
+  "tup_string_int_merge": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1='x')",
+      "Row(_1='1')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_time_only": {
+    "nullable": [
+      true
+    ],
+    "rows": [
+      "Row(_1='03:04:05')"
+    ],
+    "schema": "struct<_1:string>"
+  },
+  "tup_timestamp_date_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type DateType and TimestampType (column '_1')"
+    }
+  },
+  "tup_timestamp_int_merge": {
+    "refused": {
+      "class": "PySparkTypeError",
+      "message": "[CANNOT_MERGE_TYPE] Can not merge type LongType and TimestampType (column '_1')"
+    }
+  }
+}
