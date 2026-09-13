@@ -118,3 +118,5 @@ COVERAGE_ATTESTATION:
 ```
 
 **Errata (orchestrator, 2026-09-12 22:50):** the first `workflow_dispatch` of the matrix (run 34733285566) proved manylinux-aarch64 on `ubuntu-24.04-arm`, macos-arm64 and windows-x86_64 green; the macos-x86_64 leg was cancelled with zero steps because the `macos-15-intel` runner label is retired. The leg now runs on `macos-15-intel`; the pin names the new label; the second dispatch is the proof.
+
+**Errata 2 (orchestrator, 2026-09-13 00:20):** the second dispatch (run 34736741165) had all four legs running — ten steps each, `macos-15-intel` included — when a push to `main` cancelled it: `wheels.yml` keyed its concurrency group on workflow + ref only, so any merge cancels a scheduled or dispatched matrix on `main` (which is also what cancelled the first run's macOS x86_64 leg, not the runner label). The group now includes `github.event_name`; the pin asserts it; the third dispatch is the proof.
