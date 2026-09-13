@@ -171,6 +171,17 @@ eager.unpersist()
 (False, 3)
 ```
 
+**How long an eager or cached result lives.** Every materialized result is held by a
+shared handle, not by one frame: it lives while any frame built from it lives — a
+`.lazy()` copy, a `filter` or `select`, a join or union side — and is released when the
+last such frame is gone. `unpersist()` on the frame that materialized it and
+`spark.catalog.clearCache()` drop the registration at once; frames already built over
+it keep answering from their plans. Objects you exported — `to_arrow()`, `to_pandas()`,
+`to_polars()`, `collect()` — stay valid after the registration is gone. Calling
+`.eager()` on an eager frame reuses the same materialization instead of building a
+second one; calling `.eager()` twice on a lazy frame still evaluates it twice, so a
+changed source is seen by the second call while the first snapshot keeps its data.
+
 Neither surface changes meaning: `df.pl.collect()` still returns a real `polars.DataFrame`,
 and `df.pl.eager()` wraps the Spark `.eager()`:
 

@@ -62,6 +62,9 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 - [dfcore/](dfcore/map.md) — the DataFrame core decomposition slate (2026-09-07, one day): the
   plan with its evidence ledger, owner rulings and outcome table — `core.py` 6,302 → 4,539 lines over
   five move slices and two perf units (DFCORE-1…6, PRs #414–#421), every one critic-reviewed.
+- [eager-own-1/](eager-own-1/map.md) — the EAGER-OWN-1 record (2026-09-13): the owner's source
+  review of eager-materialization retention, archived when the refcounted-handle fix and its
+  lifecycle tests landed.
 
 ## Debug
 
@@ -72,4 +75,5 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 | A link into `briefs/frontdoor-campaign.md`, `docs/design/agent-agnostic-frontdoor.md` or `task/fd3-ledger.md` does not resolve | Those moved to [frontdoor/](frontdoor/map.md) on 2026-08-10 (same basename) |
 | A link into `task/h1*-ledger.md`, `task/g*-ledger.md`, `task/n2-merge-ledger.md`, or `task/g4-artifacts/` does not resolve | Those moved to [hardening-h1/](hardening-h1/map.md) on 2026-08-11 (same basename; mid-campaign) |
 | A ledger cites `task/roadmap/epic-term/dataframe-core-decomposition-plan-2026-09-07.md` | It moved to [dfcore/](dfcore/map.md) on 2026-09-07 when the slate closed (same basename) |
+| A link into `task/roadmap/mid-term/eager-materialization-retention-review-2026-09-13.md` does not resolve | It moved to [eager-own-1/](eager-own-1/map.md) on 2026-09-13 at the unit's close (same basename) |
 | An archived claim contradicts today's behavior | The archive is dated; [STATUS.md](../../STATUS.md) wins |

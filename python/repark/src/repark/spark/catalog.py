@@ -247,6 +247,10 @@ class Catalog:
         from repark.spark.dataframe import _CACHE_VIEW_PREFIX
 
         token = self._session._alive_token
+        handles = token.get("cache_view_handles")
+        if isinstance(handles, weakref.WeakSet):
+            for handle in list(handles):
+                handle.release()
         registry = token.get("cache_frames")
         if isinstance(registry, weakref.WeakSet):
             # Snapshot: unpersist mutates marks; WeakSet iteration tolerates removals.

@@ -326,6 +326,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
   query. `unpersist()` clears the shape with the view, so a shape never outlives its
   materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
+  EAGER-OWN-1 step 1 (2026-09-13): `eager()` on a frame that already scans a live
+  cache view returns a wrapper sharing the view, the `CacheViewHandle`, and the
+  shape — no collection, no new registration (D-4). A frame whose view was
+  explicitly dropped materializes afresh. pins: eager-own-1/C-004
+- `cache_handle.py` owns the refcounted `CacheViewHandle` for `__repark_cache_*`
+  registrations (EAGER-OWN-1 step 1, 2026-09-13). The registering frame is the
+  owner; every frame whose plan scans the view carries the handle in its
+  immutable `_handles` tuple, propagated O(1) per `_spawn` (shared empty tuple
+  when none, unioned only when another parent carries handles). The registration
+  drops when the last holder dies — `weakref.finalize(handle, fn, session,
+  alive_token, view_name)` with `atexit=False`; the callback skips a stopped
+  session and never raises — or when `unpersist` / `clearCache` / checkpoint
+  truncation releases it explicitly. `unpersist` on the owner drops the view; on
+  an eager-on-eager wrapper it releases only that wrapper's hold. A frame whose
+  plan still scans a dropped view keeps answering — the native plan holds the
+  resolved provider. `cache()` / `persist()` views follow the same handle (D-3).
+  `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
+  `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-010, C-011
   REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
   frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
   interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint
@@ -433,6 +452,71 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Streaming UDF bridges preserve plan stability and close Arrow resources on failure.
 - `printSchema` stdout is Spark's tree plus the blank line (`treeString`'s newline and
   `print`'s). pins: df-printschema-1-trailing-newline/C-001, C-004
+
+## cache-view ownership (EAGER-OWN-1)
+
+Every `__repark_cache_*` MemTable registration is owned by exactly one refcounted
+`CacheViewHandle` ([`cache_handle.py`](cache_handle.py)). Before this unit a bare
+`temp_df.eager()` registered a view that nothing owned: the frame registry is a
+`WeakSet`, `unpersist` knew only its own frame, and only `catalog.clearCache()`
+swept the orphans by prefix, so repeated calls accumulated full result sets.
+
+- **Owner vs sharing holder (R11-D-1).** The frame whose
+  `_materialize_cache_if_needed` registered the view keeps the handle in
+  `_cache_view_owned_handle`; `bind_registered_view` wires both that owner link
+  and the frame's `_handles` entry, and drops the registration if the
+  `SELECT *` over the new view fails, so a post-registration failure leaves no
+  view and no live handle. `unpersist` on the owner drops the registration and
+  marks the handle released; `unpersist` on a D-4 wrapper clears only that
+  wrapper's view reference, shape, and hold — a registration other holders use
+  is never dropped under it. A frame whose native plan still scans a dropped
+  view keeps answering: the plan holds the resolved table provider, and the
+  registration was only a name (measured on the base tree).
+- **Holder propagation (R11-D-2).** Every frame carries an immutable `_handles`
+  tuple — the shared empty tuple when there is nothing to hold, so frames
+  without handles pay no per-spawn allocation. `_spawn(inner, *others)` gives
+  the child `self._handles` and calls `union_handles` only for an `other` whose
+  tuple is non-empty. The audited sites: core join / union / set-op paths and
+  `polars.py` already pass `other`; `_identity_child` and
+  `_spawn_preserving_identity` carry `self`'s handles by construction;
+  `parent_for_stream` copies the parent's tuple so a `mapInArrow` parent keeps
+  its view alive; `joins_columns.py`'s mixed-aggregation temp views embed plans
+  derived from the same source frame, whose `_handles` already covers them.
+- **Finalizer contract (R11-D-3).**
+  `weakref.finalize(handle, _drop_cache_view_registration, session,
+  alive_token, view_name)` with `atexit=False`; the callback is module-level,
+  references neither the handle nor any frame, returns immediately when
+  `alive_token["alive"]` is false (a stopped session is never called — pinned
+  by the `drop_temp_view` spy test), and never raises: a `drop_temp_view`
+  failure inside the GC callback is logged at debug and swallowed there only.
+  Explicit `release()` calls `drop_temp_view` directly, so `unpersist` /
+  `clearCache` errors still propagate.
+- **`clearCache()` order (R11-D-4).** Handles self-register in a per-session
+  `WeakSet` under `alive_token["cache_view_handles"]`. `clearCache` releases
+  every live handle first, then runs the unchanged registry `unpersist` loop
+  and the `_CACHE_VIEW_PREFIX` orphan sweep. Idempotent; `__repark_ckpt_*`
+  views are a different family and stay outside the model.
+- **D-3.** `cache()` / `persist()` views use the same handle: ownership moved,
+  explicit-drop policy unchanged — they now also die with the last holder.
+- **D-4.** `eager()` on a frame whose `_cache_view` is backed by a live handle
+  returns an `_identity_child` wrapper sharing the view, the handle, and the
+  known `_eager_shape` — no collection, no new registration. A frame whose
+  view was explicitly dropped is not already-eager and materializes afresh.
+- **D-5.** No plan-equivalence caching: two `eager()` calls on the same lazy
+  source evaluate twice, so source changes and nondeterminism stay observable;
+  each result is an independent snapshot.
+- **`eager()` on a cache-backed derived frame.** `derived.eager()` keeps the
+  parent's handle alongside its own new one, so the parent snapshot lives until
+  the rematerialized child dies — bounded, conservative retention, accepted
+  (review L-004).
+- **The cosmetic-warning move.** `_warn_storage_level_cosmetic_once` moved from
+  `core.py` to `cache_handle.py` verbatim and is re-imported by `core` — with
+  `core.py` at its exact ceiling the ownership wiring had to be a net minus,
+  and this was the smallest unrelated block that could leave without
+  condensing code mid-fix (ledger R11-D-5, orchestrator-accepted).
+
+pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+C-010, C-011, C-012
 
 ## core.py rationale (COMMENT-CORE-1)
 
@@ -699,6 +783,7 @@ that held the comment (pins: comment-core-1/C-003).
 | Sampling bodies | [`sampling.py`](sampling.py) |
 | Display bodies | [`display.py`](display.py) |
 | Eager materialization bodies | [`eager.py`](eager.py) |
+| Cache-view ownership handle | [`cache_handle.py`](cache_handle.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -751,5 +836,8 @@ that held the comment (pins: comment-core-1/C-003).
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
   COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4117; comments removed, no code change
   (pins: comment-core-1/C-004, C-005, C-006).
+  EAGER-OWN-1 step 1 (2026-09-13): `core.py` 4117→4094 — the ownership wiring is a
+  net minus because `_warn_storage_level_cosmetic_once` moved to `cache_handle.py`
+  (169 lines, below the source-size default). pins: eager-own-1/C-002
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

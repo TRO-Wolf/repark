@@ -62,7 +62,23 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
 
 def _eager_materialize(frame: DataFrame) -> DataFrame:
     """Materialize the frame plan through the cache view and return a new eager frame."""
+    from repark.spark.dataframe import cache_handle
+
     frame._ensure_alive()
+    if (
+        frame._eager_shape is not None
+        and frame._cache_view is not None
+        and cache_handle.find_live_handle(frame, frame._cache_view) is not None
+    ):
+        sibling = frame._identity_child()
+        sibling._persist_requested = True
+        sibling._lineage_inner = sibling._inner
+        sibling._cache_view = frame._cache_view
+        sibling._eager_shape = frame._eager_shape
+        from repark.spark.dataframe.core import _register_cache_frame
+
+        _register_cache_frame(frame._alive_token, sibling)
+        return sibling
     sibling = frame._identity_child()
     sibling._persist_requested = True
     try:

@@ -28,6 +28,8 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
+from repark.spark.dataframe import cache_handle
+from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once
 from repark.spark.dataframe.explain import _EXPLAIN_SECTION_PLAN, _render_explain_sections
 from repark.spark.dataframe.udf_bridge import (
     _apply_ordered_window_pandas_udf,
@@ -206,38 +208,6 @@ def _register_cache_frame(alive_token: dict[str, Any], frame: DataFrame) -> None
     registry.add(frame)
 
 
-def _warn_storage_level_cosmetic_once(
-    alive_token: dict[str, Any],
-    level: Any,
-    *,
-    stacklevel: int = 3,
-) -> None:
-    """Warn once per session when StorageLevel flags claim disk/off-heap/replication.
-
-    repark always pins to an in-process MemTable; those flags are signature parity only
-    ``MEMORY_ONLY`` with replication 1 is honest and does not warn.
-    """
-    if alive_token.get("storage_level_cosmetic_warned"):
-        return
-    use_disk = bool(getattr(level, "useDisk", False))
-    use_off_heap = bool(getattr(level, "useOffHeap", False))
-    try:
-        replication = int(getattr(level, "replication", 1))
-    except (TypeError, ValueError):
-        replication = 1
-    if not (use_disk or use_off_heap or replication != 1):
-        return
-    warnings.warn(
-        "repark StorageLevel disk / off-heap / replication flags are accepted for PySpark "
-        "signature parity but ignored — cache/persist always materializes to a single-node "
-        "in-process MemTable (no disk spill, no off-heap, no replication). "
-        "Set repark.cache.max_bytes to refuse oversized materialize (OTH-005/014).",
-        UserWarning,
-        stacklevel=stacklevel,
-    )
-    alive_token["storage_level_cosmetic_warned"] = True
-
-
 def _is_numeric_type_key(type_key: str) -> bool:
     """Whether a native logical type key is a Spark ``NumericType`` (int / long / double / decimal).
 
@@ -301,11 +271,13 @@ class DataFrame:
         "__weakref__",
         "_alive_token",
         "_cache_view",
+        "_cache_view_owned_handle",
         "_checkpoint_lazy",
         "_collapse_base",
         "_display_names",
         "_eager_shape",
         "_engine_names",
+        "_handles",
         "_ingest_report",
         "_inner",
         "_layer_defined",
@@ -344,6 +316,8 @@ class DataFrame:
         )
         self._persist_requested = False
         self._cache_view: str | None = None
+        self._cache_view_owned_handle: Any | None = None
+        self._handles: tuple[Any, ...] = ()
         self._eager_shape: tuple[int, int] | None = None
         self._lineage_inner: Any | None = None
         self._storage_level: Any | None = None
@@ -383,6 +357,10 @@ class DataFrame:
         child._tighten_derived = self._tighten_derived or any(
             other._tighten_derived for other in others
         )
+        child._handles = self._handles
+        for other in others:
+            if other._handles:
+                child._handles = cache_handle.union_handles(child._handles, other._handles)
         return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
@@ -437,16 +415,14 @@ class DataFrame:
             max_bytes = _resolve_cache_max_bytes(self._alive_token)
             lineage = self._inner
             self._session.materialize_as_cache_view(view_name, lineage, max_bytes)
-            self._inner = self._session.sql(f"SELECT * FROM {view_name}")
-            self._lineage_inner = lineage
-            self._cache_view = view_name
+            cache_handle.bind_registered_view(self, view_name, lineage)
             _register_cache_frame(self._alive_token, self)
             return
         old_cache_view = self._cache_view
         self._session.materialize_as_temp_view(view_name, self._inner)
         self._inner = self._session.sql(f"SELECT * FROM {view_name}")
         if old_cache_view is not None and old_cache_view != view_name:
-            self._session.drop_temp_view(old_cache_view)
+            cache_handle.release_view_hold(self, old_cache_view)
         self._checkpoint_lazy = False
         self._persist_requested = False
         self._storage_level = None
@@ -557,6 +533,7 @@ class DataFrame:
         if parent._map_bridge is not None:
             nested_inner = parent._action_inner()
             parent_for_stream = DataFrame(nested_inner, parent._session, parent._alive_token)
+            parent_for_stream._handles = parent._handles
 
         try:
             input_reader = pa.RecordBatchReader.from_stream(parent_for_stream)
@@ -868,7 +845,7 @@ class DataFrame:
         _ = blocking
         self._ensure_alive()
         if self._cache_view is not None:
-            self._session.drop_temp_view(self._cache_view)
+            cache_handle.release_view_hold(self, self._cache_view)
             self._cache_view = None
         if self._lineage_inner is not None:
             self._inner = self._lineage_inner

@@ -189,11 +189,7 @@ def test_clear_cache_clears_lazy_mark_before_materialize(spark: ReparkSession) -
 
 
 def test_clear_cache_drops_orphan_cache_views(spark: ReparkSession) -> None:
-    """clearCache drops __repark_cache_* even when the handle was GC'd (orphan path).
-
-    Mutation: remove the orphan prefix loop in Catalog.clear_cache → this REDS while
-    live-handle clearCache pins stay green.
-    """
+    """A GC'd frame's cache view dies with it; clearCache still sweeps foreign orphans."""
     import gc
     import weakref
 
@@ -206,9 +202,11 @@ def test_clear_cache_drops_orphan_cache_views(spark: ReparkSession) -> None:
     del frame
     gc.collect()
     assert proxy() is None, "handle must be GC'd so only the orphan MemTable remains"
-    assert view_name in spark.list_temp_view_names()
-    spark.catalog.clearCache()
     assert view_name not in spark.list_temp_view_names()
+    spark.sql("SELECT 4 AS id").createOrReplaceTempView("__repark_cache_handmade")
+    assert "__repark_cache_handmade" in spark.list_temp_view_names()
+    spark.catalog.clearCache()
+    assert "__repark_cache_handmade" not in spark.list_temp_view_names()
 
 
 def test_clear_cache_leaves_checkpoint_views(spark: ReparkSession) -> None:

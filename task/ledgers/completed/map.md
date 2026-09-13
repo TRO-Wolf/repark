@@ -210,6 +210,20 @@ else. The next pickup's `make ledger-archive` files everything here under
   `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
   NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
   pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [eager-own-1-ledger.md](eager-own-1-ledger.md) —
+  **EAGER-OWN-1 steps 0+1 (2026-09-13), in flight:** the bare-`eager()`
+  retention defect measured at `8936346a`
+  ([docs/perf/eager-own-1-2026-09-13/base.json](../../../docs/perf/eager-own-1-2026-09-13/base.json))
+  then fixed by the refcounted `CacheViewHandle`
+  (`spark/dataframe/cache_handle.py`): frames carry `_handles`, the registering
+  frame owns, `unpersist`/`clearCache` release explicitly, and the
+  `weakref.finalize` drops the view when the last holder dies — step 1's
+  after-run shows zero registrations and a ~1.2 GB RSS plateau
+  ([after.json](../../../docs/perf/eager-own-1-2026-09-13/after.json)). All
+  clauses C-001…C-012 PROVEN; the R11-D-1…4 rulings and the `_spawn`/constructor
+  audit sit in the ledger's Decisions section. Step 2 (docs paragraph, review
+  archival) remains. `risk_tier: standard`. Branch `fix/eager-own-1`.
+  pins: eager-own-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [ex-15-dataframe-a-ledger.md](ex-15-dataframe-a-ledger.md) — Unit ledger — EX-15 · v1.1 example backfill, `DataFrame.*` (a)
 - [ex-16-dataframe-b-ledger.md](ex-16-dataframe-b-ledger.md) — Unit ledger — EX-16 · v1.1 example backfill, `DataFrame.*` (b)
 - [ex-17-column-a-ledger.md](ex-17-column-a-ledger.md) — Unit ledger — EX-17 · v1.1 example backfill, `Column.*` (a)

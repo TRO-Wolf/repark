@@ -38,6 +38,16 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   budget (1.5× the measured median), and the strict-xfail linear-from-50 pin
   on CAST-over-aggregate planning. Needs the native module.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+- [eager_own/](eager_own/map.md) — **EAGER-OWN-1 steps 0+1 (2026-09-13):** the
+  bare-`eager()` retention harness — a subprocess worker running N bare
+  `eager()` calls on a deterministic TA `withColumns` fixture while recording
+  wall / VmRSS / VmHWM and `__repark_cache_*` registration counts, an
+  always-on small pin (2,000 rows × 3), and the `REPARK_EAGER_OWN_BENCH=1`-gated
+  million-row × 10 pin. Both pins assert the post-fix owned shape — zero
+  registrations after each call, post-loop, post-gc and post-clearCache — and
+  wrote `docs/perf/eager-own-1-2026-09-13/{base,after}.json`.
+  Needs the native module.
+  pins: eager-own-1/C-001, C-012
 - [spill/](spill/map.md) — **NEVEROOM-1 steps 1–3 (2026-09-10/11):** the spill-coverage
   matrix harness, the full-tier run, and the CI golden: the subprocess-per-cell runner
   with an address-space cap, the in-engine `range()` generators sized to the limit
