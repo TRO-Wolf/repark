@@ -42,9 +42,9 @@ document; the orchestrator files it).
 | C-003 | The superlinearity is located: which phase grows faster than linear in the cast count, with the exponent fit from the three sizes. | C-003 exponent table; over_aggregate plan exponent **1.535**; standalone and projection_over_aggregate ≤ 1. | **PROVEN** |
 | C-004 | The cost is pinned as it stands: a test in `python/repark-parity/tests/` asserting the 2500-cast standalone projection under a budget 1.5× the measured median on this box, marked so a future fix or DataFusion bump that speeds it up flips a second, tighter pin (spill-golden shape). | `test_cast_2500_standalone_under_regression_budget` (budget 155.115 s); `test_cast_2500_over_aggregate_plan_under_linear_budget` (strict xfail, linear-from-50 plan 5.04 s vs measured 38.969 s). | **PROVEN** |
 | C-005 | The nine-cell bench re-measured on a RELEASE native (`__debug_assertions__ is False`): the release table, the exponents per shape and phase, and whether the superlinear phase is still superlinear on release. | `docs/perf/cast-cost-2026-09-12-release.csv` (nine rows, `native_debug=false`); C-005 section of `docs/perf/cast-cost-2026-09-12.md` — over_aggregate plan exponent **1.511** on release, still superlinear. | **PROVEN** |
-| C-006 | The owner of the superlinear phase located, measured: per-phase and per-analyzer-rule / per-optimizer-rule wall times of the 2500-cast over-aggregate statement on a stock `SessionContext` vs a `ReparkSession` context (Rust micro-bench `crates/repark-core/tests/cast_plan_profile.rs`, `#[ignore]`d, release). | Stock and RePark arms agree to ~1%: `sql_to_rel` (`SqlToRel::statement_to_plan`) is the superlinear phase (0.0024 / 0.031 / 2.75 s at 50 / 250 / 2500, exponent ~1.54); analyzer `execute_and_check` 0.089 s, `type_coercion` 0.078 s, optimizer 0.26 s — all near-linear. Verdict UPSTREAM → draft issue in `docs/perf/cast-cost-2026-09-12.md` §"Upstream issue". | **OPEN** |
+| C-006 | The owner of the superlinear phase located, measured: per-phase and per-analyzer-rule / per-optimizer-rule wall times of the 2500-cast over-aggregate statement on a stock `SessionContext` vs a `ReparkSession` context (Rust micro-bench `crates/repark-core/tests/cast_plan_profile.rs`, `#[ignore]`d, release). | Stock and RePark arms agree to ~1% on every phase: `sql_to_rel` (`SqlToRel::statement_to_plan`) is the superlinear phase (0.0024 / 0.0307 / 2.7434 s stock at 50 / 250 / 2500, exponent 1.81); analyzer 0.090 s, optimizer 0.252 s — near-linear. Variants: same-width `DataFrame::aggregate` builder 0.012 s, bare `sum(id+i)` aggregate without CAST 2.69 s, standalone CAST projection 0.038 s → the cost is `SqlToRel`'s expression path for a wide `Aggregate`, not CAST, not the plan node, not a repark rule. Verdict UPSTREAM → ready-to-file issue in `docs/perf/cast-cost-2026-09-12.md` §"Upstream issue". Run: `test result: ok. 1 passed; 0 failed; finished in 80.88s`. | **PROVEN** |
 
-`LOGIC_SCORE` = **5/6 `PROVEN` (C-006 open pending the committed micro-bench run record)**.
+`LOGIC_SCORE` = **6/6 `PROVEN`**.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
@@ -90,12 +90,22 @@ walk, `TypeCoercionRewriter`; `perf record` refused (`perf_event_paranoid=4`).
 | `make check-ledger-grammar` | 0 — 111 live ledgers clean (709 clauses, 1339 pinned clause ids) |
 | `make verify` | 0 — fmt/clippy/panic-ban/file-size/conventions/docs/owner-ruling/parity-live dual-wire/ruff/rust tests all green |
 | `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' \| grep -P '^\+\s*(//\|#(?! noqa))'` | clean — no added comments |
+| step 2 — `repark._native.__debug_assertions__` after `maturin develop --release` | `False` (module 167,383,944 B) |
+| step 2 — nine-cell bench on release (one process per cell, box-idle wait before each) | `docs/perf/cast-cost-2026-09-12-release.csv` — nine rows; over_aggregate plan exponent 1.511, still superlinear |
+| step 2 — `./target/release/deps/cast_plan_profile-* --ignored --nocapture` | 0 — `1 passed; finished in 80.88s`; stock ≈ repark to ~1%, `sql_to_rel` exponent 1.81 |
+| step 2 — `.venv/bin/python -m pytest python/repark-parity/tests/cast -q` (release module) | 0 — 2 passed, 1 xfailed in 52.86s |
+| step 2 — `make develop` then `repark._native.__debug_assertions__` | `True` — normal debug build restored |
+| step 2 — `make verify` | 0 — all gates green |
+| step 2 — `make py-test` | 0 — 749 passed, 1 skipped (no native module in the uv env), 12 xfailed in 575.13s |
 
 ## Cost
 
-Step 1 only: tracked bench, nine-cell CSV, attribution, py-spy of the 2500-cast
+Step 1: tracked bench, nine-cell CSV, attribution, py-spy of the 2500-cast
 over_aggregate `session.sql`, two pins (regression budget + strict-xfail linear
-flip), draft DataFusion issue in the perf document. No engine edit.
+flip), draft DataFusion issue in the perf document. Step 2: release re-measure
+(nine cells, `cast-cost-2026-09-12-release.csv`), the `cast_plan_profile.rs`
+stock-vs-repark phase micro-bench, the ready-to-file upstream issue, pins
+unchanged (CI never runs them on release). No engine edit.
 
 ## Disk
 
