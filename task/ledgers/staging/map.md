@@ -5,17 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [platform-1-ledger.md](platform-1-ledger.md) —
-  **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
-  `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux
-  aarch64, macOS arm64, macOS x86_64, Windows x86_64) on a nightly cron plus
-  `workflow_dispatch`, never `pull_request`; `release.yml` `build-wheel` is the
-  five-leg tag matrix publishing all five through one trusted-publishing call;
-  per-PR CI untouched. Workflow-only unit — pins in
-  `python/repark-parity/tests/test_platform_1_wheel_matrix.py`, leg proof is the
-  orchestrator's post-merge dispatch. `risk_tier: standard`. Branch
-  `ci/platform-1-wheel-matrix`.
-  pins: platform-1/C-001, C-002, C-003, C-004, C-005
+- [silver-s1-ledger.md](silver-s1-ledger.md) —
+  **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
+  — TOML parse with key-path refusals, closed operation enums, parse-time structural
+  validation, canonical identity bytes, deterministic `explain()`. No data execution.
+  `risk_tier: standard`. Branch `feat/silver-s1`.
+  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [silver-s0-ledger.md](silver-s0-ledger.md) —
   **SILVER-S0 (2026-09-12), in flight:** READING unit — contract and storage
   feasibility for the deterministic silver-layer compiler (epic §17 S-0).
@@ -336,6 +331,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pinned (1.5× standalone 2500 median) plus a strict-xfail linear flip pin.
   No product change. `risk_tier: standard`. Branch `perf/cast-1`.
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+- [platform-1-ledger.md](platform-1-ledger.md) —
+  **PLATFORM-1 step 1 (2026-09-12), in flight:** the abi3 wheel matrix —
+  `wheels.yml` `platform-matrix` runs the four legs PRs never see (manylinux
+  aarch64, macOS arm64, macOS x86_64, Windows x86_64) on a nightly cron plus
+  `workflow_dispatch`, never `pull_request`; `release.yml` `build-wheel` is the
+  five-leg tag matrix publishing all five through one trusted-publishing call;
+  per-PR CI untouched. Workflow-only unit — pins in
+  `python/repark-parity/tests/test_platform_1_wheel_matrix.py`, leg proof is the
+  orchestrator's post-merge dispatch. `risk_tier: standard`. Branch
+  `ci/platform-1-wheel-matrix`.
+  pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - [profiles-1-ledger.md](../completed/profiles-1-ledger.md) —
   **PROFILES-1 steps 1–3 (2026-09-10/12), in flight:** the measurement bed step 2
   sweeps: three D-2 datasets, five reads + three writes, knob × value CSV harness,

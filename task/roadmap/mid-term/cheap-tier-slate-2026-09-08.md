@@ -835,6 +835,8 @@ PROFILES-1 has shown at least one knob moving a measurement by more than 5 %; ot
 unit stays deferred, because the 2026-09-04 performance analysis found the large costs in code
 paths, not settings. Cut as one I unit after PROFILES-1 reports; no card until then.
 
+**Intake 2026-09-12:** cut into [dyncfg-1-cards-2026-09-12.md](dyncfg-1-cards-2026-09-12.md).
+
 ## 4. Sequence, dependencies, cost
 
 | # | Unit | Depends on | Tiers | Rounds | Worker cost (GLM ≈ $0.005/round; Muse ≈ ½ point of its period quota per round — S2-15; Devin free) |
