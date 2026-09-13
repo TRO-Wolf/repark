@@ -87,6 +87,19 @@ else. The next pickup's `make ledger-archive` files everything here under
   travel; encode-time rebuild-and-compare guard retired; BALLISTA-M2-A-R-001 closed.
   Wire `RPIC` v2. `risk_tier: standard`. Branch `feat/ballista-m2-b`.
   pins: ballista-m2-b/C-001, C-002, C-003, C-004, C-005
+- [cfg-2-ledger.md](cfg-2-ledger.md) —
+  **CFG-2 steps 1–2 (2026-09-13):** named database sources — parsed `SourceSpec`s
+  ride `FileConfig` into the built session, `register_configured_sources` installs a
+  refusing catalog provider per auto-registered name (`SELECT` under the name answers
+  the D-1 connector message, `1.10`), `sources()` / `source(name).ping()` expose the
+  declared set lazily, and `auto_register = false` lists without registering. Step 2
+  lands the Python surface: `ReparkSession.sources()` / `.source(name)` over a new
+  `session_sources` pyo3 door, the `SourceMetadata` row type, the `NamedSource`
+  handle, and the config mirror's typed `auto_register`; `listCatalogs()` is measured
+  unchanged (D-11). The CFG-1 load-time refusal retires. `risk_tier: standard`.
+  Branches `feat/cfg-2-step1`, `feat/cfg-2-step2`.
+  pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
 - [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
   **CONF-UNREAD-1 steps 1–2 (2026-09-11), in flight:** the wiring/refusals for
   the four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses
