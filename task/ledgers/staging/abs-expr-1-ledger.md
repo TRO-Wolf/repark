@@ -148,3 +148,50 @@ growing; both legs collect fine at depth 40 uncapped and under a 12 GB cap.
   `test_cap_1_source_file_line_cap.py` moved in lockstep. `function_dispatch.rs` lands at
   exactly 1000 — the `concat_ws` arm's two temporary `let` bindings inlined to keep the
   table under the default ceiling without touching the exception table.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: abs-expr-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-005 walked one by one against behavior — the oracle cells were measured on live PySpark 4.1.2, the lowering verified against them, the memory pin run red-first on the base tree, the when() audit measured per site, and the existing-pin sweep re-run; every clause is PROVEN and cited from the maps.
+      artifacts: [task/ledgers/staging/abs-expr-1-ledger.md, python/repark/tests/test_abs_expr_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary cells actually exercised — NULL, int32/int64/int8/int16 minimums, -0.0, decimal(10,3) and decimal(10,0), float32, boolean, uncastable string, and chain depths 1..40; the answer pins assert Arrow value AND type per cell.
+      artifacts: [python/repark/tests/test_abs_expr_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Integer-min raises PySparkException with 'overflow' on all four signed widths; bool and string refuse with AnalysisException; the memory worker exits cleanly (rc 2) at the bound-crossing instead of aborting — the base-tree red was the bound exit at level 10, not an OOM.
+      artifacts: [python/repark/tests/test_abs_expr_1.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The _scalar path carries _thread_origin, aggregate, foldable and ungroupable flags unchanged; the join-origin and naming pins stayed green in the facade suite, and each pin session is created and stopped inside its own fixture while the memory legs run in isolated subprocesses.
+      artifacts: [python/repark/tests/test_g4b_semi_join.py, python/repark/tests/test_abs_expr_1.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, no secret, no injection or deserialization surface — the dispatch arms are literal name matches over a closed table.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Arrow value AND type pinned per oracle cell; display names, sql_expr and join_sql fragments render identically through call_scalar; the door-kernel divergence the lowering exposed is recorded in EXPECTED_DIVERGENCES, not papered over.
+      artifacts: [python/repark/tests/test_abs_expr_1.py, crates/repark-python/src/column/door_parity_tests.rs]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The unit is the AT-7 fix — the exponential facade rewrite is replaced by one native call each; the depth-40 pin measures RSS deltas in a capped subprocess (abs 1.4 MB, cbrt 2.6 MB, nullif 2.4 MB vs the 64 MB bound), and the audit measured depth-12 memory per remaining when() rewrite (array_append ~x2.2/level, replace ~x3.3/entry — both filed for their own cards).
+      artifacts: [python/repark/tests/test_abs_expr_1.py, task/ledgers/staging/abs-expr-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: DataFusion 54.1.0 expr_fn signatures verified against the crate source; the door-parity ratchet held (abs recorded in EXPECTED_DIVERGENCES 21 -> 22, cbrt/nullif resolve the same kernel on both doors); file-size baselines ratcheted DOWN only (functions.py 1985 -> 1962, functions_expr.py 2255 -> 2247, CAP-1 mirror in lockstep, function_dispatch.rs at exactly 1000 with no exception raised).
+      artifacts: [crates/repark-python/src/column/function_dispatch.rs, crates/repark-python/src/column/door_parity_tests.rs, scripts/check_lib_py.py]
+    - id: AT-9
+      status: N/A
+      justification: No log-format or diagnosis-path change; every failure path raises the same typed exception family as before (PySparkException / AnalysisException), and the cap-pressure panic/segv observations are recorded in C-004 for their own cards.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first held — the depth-40 memory pin and the answer pins failed on the base tree (bound crossed at level 10; int8 widening, tinyint-min silence, cbrt inexactness all red) and pass after the lowering; the bound-exit branch has a named input (the base tree at depth 10) so no dead branch ships.
+      artifacts: [python/repark/tests/test_abs_expr_1.py, task/ledgers/staging/abs-expr-1-ledger.md]
+```
