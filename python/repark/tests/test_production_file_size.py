@@ -137,7 +137,7 @@ EXPECTED_SYMBOL_HASHES = {
         "2277a1cce4c5229beaa00ba669197a45a4ec1ef551bd50fabee387bb2aa61df8"
     ),
     "_arrow_table_from_raw_tuples": (
-        "37f0e6f380080cd0a794b7792e813128dd311e23efb78f1dd12049b8e0368d5d"
+        "706cca201aaf2415de7dd0eaacec08712c80989e49ed6180e6123cf672bfdded"
     ),
     "_arrow_table_from_raw_tuples_fast": (
         "40b8a21d4f1baad5577a9da5c93e20055c6ea1e0f0d752e68cdfa0a4052ad7f9"

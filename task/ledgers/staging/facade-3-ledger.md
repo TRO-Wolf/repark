@@ -1,6 +1,6 @@
-# Unit ledger — FACADE-3 · `createDataFrame` inference in Rust — step 1 (measure + pins)
+# Unit ledger — FACADE-3 · `createDataFrame` inference in Rust — steps 1–2
 
-**Date:** 2026-09-13 · **Branch:** `feat/facade-3-s1` · **Base:** `23bd047b`
+**Date:** 2026-09-13 · **Branches:** `feat/facade-3-s1` (C-001..C-008), `feat/facade-3-s2` (C-009..C-013) · **Base:** `23bd047b`
 **Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
@@ -104,9 +104,142 @@ measure).
 - Staged-diff comment scan (`git diff --cached … | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'`)
   prints nothing.
 
+## PROPOSITION LEDGER — FACADE-3 step 2 — 2026-09-13
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-009 | The golden corpus is byte-identical to `main` and green; the pickle pin is green. | `git diff origin/main -- python/repark/tests/facade_3_create_dataframe_goldens.json` empty; both tests pass. | **PROVEN** | Diff is empty (0 lines) at head `65530936`. `test_facade_3_create_dataframe_goldens.py` 10 passed; `test_pickle_round_trip_on_inferred_frames` green inside the 152-passed pin batch. The goldens drove three real parity fixes before they passed: non-str dict keys under struct inference fall back so Python raises `field name 1 should be a string`; `_LEGACY_FIRST_ELEMENT_COERCE` scans only the first relevant nested element; duplicate schema names fall back so the `unique expression names required` refusal text survives. |
+| C-010 | Dispatch pin: the shapes that take the Rust path are named and pinned — red first on `main`. | `test_facade_3_cdf_dispatch.py`; red output recorded. | **PROVEN** | Red-first on `main` (`927fa4d3`): six failures, `AttributeError: module 'repark.spark.session.create_dataframe_columns' has no attribute '_rust_cdf_arrow_table'`. Green after implementation: plain tuples, `Row`, dicts, nested cells, tuples + DDL and tuples + `StructType` all invoke `_native.cdf_arrow_export`; pandas takes its own `_arrow_table_from_pandas` path and never reaches the helper; a `None` return or native error falls back. `_arrow_table_from_raw_tuples` tries Rust first, then explicit-schema legacy, then the CDF-1 fast path. |
+| C-011 | Release re-measure with the step-1 runner method (warmup + 3 reps, medians, idle-box wait per cell) at 1e4 and 1e5 for all eight shapes vs the step-1 table. Bar: every targeted shape faster; no untargeted shape slower than 5 %. | `maturin develop --release`, `__debug_assertions__` False, per-cell `prlimit --as=8589934592`. | **PROVEN** | Release native re-measured 2026-09-13 (same box, load 3.2–3.8): nested 2,852.45 → **206.96 ms (−92.7 %)**; tuples+StructType 2,089.21 → **450.21 (−78.5 %)**; tuples+DDL 2,057.67 → **448.31 (−78.2 %)**; rows 1,060.81 → **793.48 (−25.2 %)**; dicts 947.00 → **641.20 (−32.3 %)**; tuples 735.61 → **437.50 (−40.5 %)**; pandas control 433.66 → 445.99 (**+2.8 %**, inside 5 %). 1e4 cells mirror: every targeted shape −25 % to −93 %, pandas +1.8 %. **Finding (INC-R9-1 class):** the polars control cannot be measured under the mandated 8 GiB cap — polars/jemalloc reserves ≈7.7 GiB of address space and the repark session adds ≈5.5 GiB (≈13 GiB VmSize combined, measured via `/proc/self/status`), so the process aborts during fixture build even at 1e4. The cap was not raised; the polars dispatch branch is untouched by this change (same untouched-path class as pandas, which sits +2.8 %). Full runner in one process also hits the cap at the polars cell because the session retains each created MemTable view; the re-measure therefore ran one fresh capped process per shape with the runner's own `measure_cell` — identical warmup/reps/idle-wait method. |
+| C-012 | The card's named pins are unchanged and green, and the whole facade suite is green. | `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`, `test_csv_infer_perf_1.py` unedited; `.venv/bin/python -m pytest python/repark/tests -q`. | **PROVEN** | The three pin files carry no edits (`git diff origin/main` names only `test_production_file_size.py` among touched tests, and only its `_arrow_table_from_raw_tuples` baseline hash — the sanctioned body change the pin's own docstring allows: "frozen parent plus current-main behavior changes", new hash `706cca20…`). Pin batch (goldens + dispatch + the three named files + materialize): **152 passed, 4 skipped**. Whole facade suite: **5,972 passed, 369 skipped, 0 failed** in 762 s. During the sweep one real divergence surfaced and was fixed in Rust: a null struct parent must write each child's `pa.array` type default (`CellKind::Fill`), not a child null — otherwise pandas' NaN coercion floats an int64 child and `toPandas` returned `20.0` for the pinned `struct_topandas_cell_shape` boundary row. |
+| C-013 | Gates: `cargo test -p repark-python`, `make verify`, the whole parity suite. | Commands and counts in Evidence. | **PROVEN** | `cargo test -p repark-python` → 91 passed (66 lib + 25 bindings). `make verify` → exit 0 (fmt, workspace clippy, panic+async ban, all structural gates, ledger lifecycle + grammar, docs-links, whole workspace rust-test — one iceberg listing-cost timing test red under parity-suite load, green isolated and green on the verify re-run). Parity suite → 756 passed, 1 skipped, 12 xfailed. Debug native restored via `make develop` after the release measure. |
+
+### Step-2 remediation (S2-21 review, `/tmp/oc-worker/grok-rev-facade3s2/report.md`)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-014 | F-FALLBACK fixed: a native `None` no longer pays the doomed extract before Python re-runs the refusal. No refusal or fallback shape slower than `main` by more than 5 %, release-measured on `object()` @ row 90 000 and int→float mix @ row 90 000 under `prlimit --as=8589934592` + `OPENBLAS_NUM_THREADS=8`. Fallback pin (spy counting native extraction) red-first on `1599e8ed`, green after. Refusal class/message byte-identical (46 refusal goldens green). | `screen.rs` tag pass + mask rules before `extract_cell`; `test_fallback_extract_stops_at_first_uncovered_cell` + `test_fallback_extract_stops_on_merge_refusal`; both measurements. | **PROVEN** | `screen.rs` runs a kind-tag pass per cell (exact-type pointer hits; probe chain only for subclasses/Row/exotics; containers recurse) accumulating per-column kind masks plus the list-element merge mask; a mask that already predicts the `None` (uncovered kind, scalar-merge or list-element-merge refusal, kind the inferred/explicit field type cannot build, non-str or null dict key under struct inference) returns `None` after ~15 ms of tagging instead of ~440 ms of extraction — Python then owns the identical refusal. Pin red-first on `1599e8ed`: `assert 900 == 0` (object() @ row 900 of 1 000 probe rows) and `assert 1000 == 0` (int→float @ 900); green after (`calls == 0` — only `extract_decimal` calls `as_tuple`, which Python's envelope check never does). Release measure (warmup + 5, medians, same poison fixtures as the review): object() @90k branch **462.09 ms** vs main-simulated **444.03 ms** (**+4.1 %**, was +85 %); int→float @90k branch **361.58 ms** vs main-simulated **347.00 ms** (**+4.2 %**). Main-simulated = `_native.cdf_arrow_export` patched to `None` in the same process — byte-identical Python path to `main`. Residual (recorded, not in the measured set): value-dependent refusals (decimal envelope, `float('inf')`, NaT, non-UTC `utcoffset`) still pay one extract before falling back — bounded by a single extraction, never the old extract+re-walk. |
+| C-015 | P2s landed or deferred: F-STRCOPY and F-DECIMAL, each its own commit. | Commits + green pins. | **PROVEN** | F-DECIMAL `fd856bf9`: `extract_decimal` computes the scale-18 unscaled `i128` once; `CellKind::Dec` carries it; `build.rs` `dec_unscaled` reads it — the second mantissa walk is gone. F-STRCOPY `1f9f8247`: `CellKind::Str` holds a `PyBackedStr` borrowed UTF-8 view (abi3 `PyUnicode_AsUTF8AndSize`); `build_utf8` appends `&str` through a `StringBuilder` — one copy into Arrow instead of extract → clone → array; `Cell.obj` is now `Option` and stays `None` for `Str`/`Null` kinds (only the `str()` fallback arm of `build_utf8` reads it). Goldens + dispatch + named pins + `test_production_file_size.py` green on both. |
+| C-016 | Review findings table recorded; step-3 target list named. | Table + targets below. | **PROVEN** | See the findings table and the step-3 list below. F-FUNNEL and F-TIMETUPLE are step-3 targets (not done this round); F-TIMETUPLE carries the abi3 constraint — PyO3's `PyDateTime`/`PyDate` getters are unavailable under `Py_LIMITED_API`, so step 3 needs an abi3-compatible route (e.g. `PyDateTime_CAPI`-free accessors or caching the `timetuple` result structurally). P3 ledger-only: F-SLOTS, F-RESCAN. |
+| C-017 | Remediation gates green: goldens + dispatch + fallback pin + named pins + `test_production_file_size.py`; `cargo test -p repark-python`; `make verify`; whole parity suite. | Commands and counts in Evidence. | **PROVEN** | See Remediation gates in Evidence. |
+
+### Step-2 evidence
+
+**Red first (base `927fa4d3`, production unchanged).**
+`test_facade_3_cdf_dispatch.py` on `main` before the implementation:
+
+```
+FAILED test_rust_dispatch_reaches_native_for_plain_tuples - AttributeError:
+  module 'repark.spark.session.create_dataframe_columns' has no attribute '_rust_cdf_arrow_table'
+FAILED test_rust_dispatch_reaches_native_for_nested_cells - AttributeError: … same
+FAILED test_rust_dispatch_reaches_native_for_row_objects - AttributeError: … same
+FAILED test_rust_dispatch_reaches_native_for_dicts - AttributeError: … same
+FAILED test_rust_dispatch_reaches_native_for_ddl_schema - AttributeError: … same
+FAILED test_rust_dispatch_reaches_native_for_struct_schema - AttributeError: … same
+6 failed, 1 passed in 0.4s
+```
+
+**Implementation shape.** `_native.cdf_arrow_export(names, rows, pa.Schema|None,
+session_tz_utc, timestamp_ntz, infer_dict_as_struct, legacy_first_element,
+decimal_prec)` classifies every cell into a typed `Cell`, infers (or imports) the
+Arrow schema, builds the `RecordBatch` in Rust, and returns a `PyCdfArrowExport`
+whose `__arrow_c_stream__` capsule `pa.table` drains. Any unsupported cell, merge,
+or shape returns `None` → `_arrow_table_from_raw_tuples` falls back to the legacy
+or CDF-1 column-wise path, which reproduces the pinned refusal class/message.
+Files: `crates/repark-python/src/cdf_infer.rs` + `cdf_infer/{cells,infer,build}.rs`
+(maps: `src/map.md`, `src/cdf_infer/map.md`), dispatch in
+`create_dataframe_columns.py` (`_rust_cdf_arrow_table`), pin
+`test_facade_3_cdf_dispatch.py`.
+
+**Parity defects the goldens and suite caught, each fixed by narrowing the Rust
+coverage — never by editing a golden:**
+
+1. Non-str dict keys under struct inference: Rust first stringified the key
+   (`{'1': None}`) where Python refuses `field name 1 should be a string` —
+   `dict_key_name` now accepts only `CellKind::Str`, else `Fallback`.
+2. `_LEGACY_FIRST_ELEMENT_COERCE`: Rust merged nested dict fields across all rows
+   (`list<struct<a,b>>` vs pinned `list<struct<a>>`) — `infer_list_column` now
+   stops at the first relevant nested element in legacy mode.
+3. Duplicate schema names: native registration produced a DataFusion
+   `duplicate qualified field name` where Python raises `unique expression names
+   required` — `cdf_arrow_export` returns `None` on a duplicate name.
+4. Null struct parent children: Rust wrote child nulls where `pa.array` writes
+   the child's type default (int→0, string→"", decimal→0.00, list→[],
+   timestamp→epoch, nested struct→recursive defaults, all non-null). `toPandas`
+   then NaN-coerced the int64 child to float64 and the pinned boundary row read
+   `x: 20.0` instead of `20`. `CellKind::Fill` now carries the default through
+   every builder (`build_struct`, `build_fixed_list`, `build_list`, `build_map`,
+   all scalar builders). Missing dict keys still produce a genuine child null,
+   matching `pa.array`.
+
+**C-011 measure.** `uvx maturin@1.14.1 develop --release`,
+`__debug_assertions__` False. The committed runner in one process aborted at the
+polars cell under the mandatory `prlimit --as=8589934592` (address-space cap;
+the session retains every created MemTable view and polars/jemalloc alone
+reserves ≈7.7 GiB). The re-measure therefore spawned one fresh capped process
+per shape (`prlimit` + `OPENBLAS_NUM_THREADS=8`, the runner's own `measure_cell`
+and `build_session`, medians of 3 after 1 warmup, `wait_for_idle` per cell).
+Raw JSON `/tmp/facade-3-cdf-s2.json`; table above. `make develop` restored the
+debug native before gates.
+
+**Step-2 gates.**
+
+- `.venv/bin/python -m pytest python/repark/tests/test_facade_3_create_dataframe_goldens.py
+  python/repark/tests/test_facade_3_cdf_dispatch.py
+  python/repark/tests/test_perf_facade_cdf_1.py
+  python/repark/tests/test_create_dataframe_materialize.py
+  python/repark/tests/test_csv_infer_perf_1.py -q` → **152 passed, 4 skipped**.
+- `.venv/bin/python -m pytest python/repark/tests -q` → **5,972 passed, 369
+  skipped, 0 failed** in 762.51 s.
+- `cargo test -p repark-python` → **91 passed** (66 lib, 25 bindings).
+- `make verify` → exit 0 (fmt, workspace clippy, panic+async ban, crate-dag,
+  lib-rs, rust-file-size 493 clean, lib-py 668 clean, conventions,
+  docstring-presence, manifest, ledger lifecycle + grammar).
+- `make py-test` (parity harness) → **756 passed, 1 skipped, 12 xfailed** in
+  561 s. No JVM started; `REPARK_PARITY_LIVE` never set. (The one red in the
+  first run was `test_dl_6_docs_links.py` catching the not-yet-committed step-2
+  perf doc mid-run; green after `git add` — no code change.)
+- Staged-diff comment scan prints nothing.
+
+#### Remediation evidence (S2-21 review)
+
+**Review findings table** (`/tmp/oc-worker/grok-rev-facade3s2/report.md`, "Fallback redo",
+"`cdf_infer` per-cell work", "Findings"):
+
+| Finding | Class | Status |
+|---|---|---|
+| F-FALLBACK — late native `None` pays the extract, then Python re-walks (`object()` @90k 839 ms vs main 453 ms, +85 %; int→float @90k 759 ms) | P1 regression | Fixed (`c51ec936`): `screen.rs` tag pass predicts the `None` and returns before extraction; +4.1 % / +4.2 % vs main-simulated, inside the 5 % cap |
+| F-DECIMAL — mantissa walked twice (extract stores digits, build re-accumulates) | P2 | Fixed (`fd856bf9`): scale-18 unscaled `i128` computed once in `extract_decimal`; `CellKind::Dec` carries it |
+| F-STRCOPY — string extracted to `String`, cloned into the cell, copied into `StringArray` | P2 | Fixed (`1f9f8247`): `CellKind::Str` holds `PyBackedStr`; `build_utf8` appends `&str` via `StringBuilder`; `Cell.obj` is `Option`, `None` for `Str`/`Null` |
+| F-FUNNEL — `rows`/`dicts` still pay a Python-side walk + identity permutation before the native call | Step 3 target | Deferred — pass `Row`/dict lists into native, drop the Python preprocessing |
+| F-TIMETUPLE — per-cell `timetuple()` Python callback on every date/datetime | Step 3 target | Deferred — PyO3's `PyDateTime`/`PyDate` getters are unavailable under `Py_LIMITED_API` (this wheel is abi3); step 3 must find an abi3-compatible route |
+| F-SLOTS — extra `Vec<Option<&Cell>>` + validity allocations per column | P3 | Ledger only |
+| F-RESCAN — extra O(n) merge-kind pass over extracted cells | P3 | Ledger only |
+
+**Fallback pin (red-first on `1599e8ed`).** `_AsTupleProbeDecimal` (a `Decimal`
+subclass counting `as_tuple()` calls) at every row of a 1 000-row table, cell 900
+poisoned: `assert calls == 0` after `createDataFrame` raises — `extract_decimal`
+is the only `as_tuple` caller, so a nonzero count measures native extraction on a
+fallback path. Red on `1599e8ed` (`900 == 0`, `1000 == 0`); green after the
+screen.
+
+**Remediation gates** (debug native via `make develop`; re-run after the ledger edit):
+
+- `.venv/bin/python -m pytest python/repark/tests/test_facade_3_create_dataframe_goldens.py
+  python/repark/tests/test_facade_3_cdf_dispatch.py -q` → **12 passed**.
+- Named pins + production file size:
+  `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`,
+  `test_csv_infer_perf_1.py`, `test_production_file_size.py` → green.
+- `cargo test -p repark-python` → **91 passed**.
+- `make verify` → exit 0.
+- `make py-test` (whole parity suite) → **756 passed, 1 skipped, 12 xfailed**.
+- Release fallback re-measure: object() @90k **462.09 vs 444.03 ms (+4.1 %)**;
+  int→float @90k **361.58 vs 347.00 ms (+4.2 %)** — medians of warmup + 5,
+  per-process `prlimit --as=8589934592`, `OPENBLAS_NUM_THREADS=8`.
+
 ```yaml
 COVERAGE_ATTESTATION:
-  pr_unit: facade-3-step-1
+  pr_unit: facade-3
   categories:
     - id: AT-1
       status: ATTACKED
@@ -121,29 +254,30 @@ COVERAGE_ATTESTATION:
       evidence: Record mode is refused when CI or GITHUB_ACTIONS is set; pin monkeypatches both.
       artifacts: [python/repark/tests/test_facade_3_create_dataframe_goldens.py]
     - id: AT-4
-      status: N/A
-      justification: Pins-only step. No new shared mutable state, lock, or async spawn.
+      status: ATTACKED
+      evidence: Step 2 added no shared mutable state, lock, or async spawn; each cdf_arrow_export call builds an independent batch, and the whole facade suite ran green (5,972 passed) on the new path.
+      artifacts: [crates/repark-python/src/cdf_infer.rs]
     - id: AT-5
       status: N/A
-      justification: No privileged action, secret, or path handling. Goldens are committed JSON next to the test.
+      justification: No privileged action, secret, or path handling. Goldens are committed JSON next to the test; the export is an in-process Arrow batch.
     - id: AT-6
       status: ATTACKED
-      evidence: Row A2 freeze held — no public name added or removed; verifySchema/samplingRatio pinned as the TypeError refusals they are today.
-      artifacts: [python/repark/tests/facade_3_create_dataframe_goldens.json]
+      evidence: Row A2 freeze held — createDataFrame signature and dispatch names unchanged; Row O1 held — every refusal the port does not reproduce falls back to the Python path that raises the pinned class/message (46 golden refusals green); verifySchema/samplingRatio pinned as the TypeError refusals they are today.
+      artifacts: [python/repark/tests/facade_3_create_dataframe_goldens.json, python/repark/src/repark/spark/session/create_dataframe_columns.py]
     - id: AT-7
       status: ATTACKED
-      evidence: C-001 measured on a RELEASE native (__debug_assertions__ False); debug restored via make develop before gates.
-      artifacts: [docs/perf/facade-3-cdf-baseline-2026-09-13.md]
+      evidence: C-001 and C-011 both measured on a RELEASE native (__debug_assertions__ False); the polars-control cap abort is recorded as a finding, not worked around; debug native restored via make develop before gates.
+      artifacts: [docs/perf/facade-3-cdf-baseline-2026-09-13.md, docs/perf/facade-3-cdf-step2-2026-09-13.md]
     - id: AT-8
       status: ATTACKED
-      evidence: New test is 721 lines under the default 1000 ceiling; runner lives under docs/perf (outside the check_lib_py scan roots). No baseline raised in check_lib_py.py, check_rust_file_size.py, or the CAP-1 mirror. No comment bytes in the code diff.
-      artifacts: [python/repark/tests/test_facade_3_create_dataframe_goldens.py]
+      evidence: New Rust files 174/269/435/561 lines and the 172-line dispatch test under the 1000 default; create_dataframe_columns.py 322 under its ceiling; no baseline raised in check_rust_file_size.py, check_lib_py.py, or the CAP-1 mirror; the only edited pin baseline is the sanctioned _arrow_table_from_raw_tuples body hash. No comment bytes in the code diff.
+      artifacts: [crates/repark-python/src/cdf_infer.rs, python/repark/tests/test_production_file_size.py]
     - id: AT-9
       status: N/A
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
-      evidence: Golden compare failed without the JSON and after the inference mutation; it passes on the recorded file. The three named pin files re-run green.
-      artifacts: [python/repark/tests/test_facade_3_create_dataframe_goldens.py]
+      evidence: The dispatch pin was red-first on main (six AttributeError failures) and green after; the goldens stayed byte-identical; the four Rust-side parity defects (non-str dict keys, legacy-first-element scan, duplicate names, null-struct-parent fill) each re-fail if their fix is reverted; named pins and the whole facade suite re-run green.
+      artifacts: [python/repark/tests/test_facade_3_cdf_dispatch.py, python/repark/tests/test_boundary_shapes_parity.py]
   complete: true
 ```

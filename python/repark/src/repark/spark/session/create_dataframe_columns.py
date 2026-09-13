@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
+from decimal import Decimal, getcontext
 from typing import Any
 
+from repark import _native
 from repark.errors import PySparkTypeError, PySparkValueError
 from repark.spark._pyarrow import require_pyarrow
 from repark.spark.session.create_dataframe_inference import (
+    _INFER_NESTED_DICT_AS_STRUCT,
+    _LEGACY_FIRST_ELEMENT_COERCE,
     _prepare_nested_cell,
+    _sql_type_to_arrow,
     _validate_decimal_envelope,
 )
 from repark.spark.session.create_dataframe_schema import (
@@ -23,7 +27,59 @@ from repark.spark.session.create_dataframe_tuples import (
     _refuse_duplicate_tuple_column_names,
 )
 from repark.spark.session.create_dataframe_values import _normalize_create_dataframe_cell
-from repark.spark.session.timestamp_type import default_timestamp_arrow_type
+from repark.spark.session.session_time_zone import active_session_time_zone
+from repark.spark.session.timestamp_type import (
+    default_timestamp_arrow_type,
+    is_default_timestamp_ntz,
+)
+
+
+def _rust_cdf_arrow_table(
+    names: list[str],
+    raw_tuples: list[tuple[Any, ...]],
+    engine_types: list[str] | None,
+) -> Any:
+    """Build the Arrow table through the native inference builder, or None to fall back."""
+    export_rows = getattr(_native, "cdf_arrow_export", None)
+    if export_rows is None or not raw_tuples:
+        return None
+
+    pa = require_pyarrow()
+    arrow_schema = None
+    if engine_types is not None:
+        if len(engine_types) != len(names):
+            return None
+
+        try:
+            arrow_schema = pa.schema(
+                [
+                    pa.field(name, _sql_type_to_arrow(sql_type))
+                    for name, sql_type in zip(names, engine_types, strict=True)
+                ]
+            )
+
+        except Exception:
+            return None
+
+    try:
+        export = export_rows(
+            names,
+            raw_tuples,
+            arrow_schema,
+            active_session_time_zone() == "UTC",
+            is_default_timestamp_ntz(),
+            _INFER_NESTED_DICT_AS_STRUCT.get(),
+            _LEGACY_FIRST_ELEMENT_COERCE.get(),
+            getcontext().prec,
+        )
+
+    except Exception:
+        return None
+
+    if export is None:
+        return None
+
+    return pa.table(export)
 
 
 def _arrow_table_from_raw_tuples(
@@ -32,7 +88,11 @@ def _arrow_table_from_raw_tuples(
     *,
     engine_types: list[str] | None,
 ) -> Any:
-    """Build the Arrow table through the column-wise path or the legacy path."""
+    """Build the Arrow table through the native path, the column-wise path, or legacy."""
+    rust_table = _rust_cdf_arrow_table(names, raw_tuples, engine_types)
+    if rust_table is not None:
+        return rust_table
+
     if engine_types is not None:
         from repark.spark.session.create_dataframe_rows import (
             _arrow_table_from_raw_tuples_legacy,
