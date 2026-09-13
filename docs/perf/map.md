@@ -18,6 +18,13 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   (exponent 1.535). CSV:
   [cast-cost-2026-09-12.csv](cast-cost-2026-09-12.csv).
   pins: perf-cast-1/C-001, C-002, C-003, C-004
+  **Step 2 (2026-09-12):** release-module re-measure
+  (`__debug_assertions__ is False`) — CSV
+  [cast-cost-2026-09-12-release.csv](cast-cost-2026-09-12-release.csv); the
+  phase is still superlinear on release (plan exponent 1.511) and the owner is
+  located in stock-DataFusion `SqlToRel` (`statement_to_plan`), stock vs
+  RePark arms measured identical; draft upstream issue in the document.
+  pins: perf-cast-1/C-005, C-006
 - [engine-iceberg-analysis-2026-09-04.md](engine-iceberg-analysis-2026-09-04.md) — **PERF-ANALYSIS
   (2026-09-04, Fable 5.1 session):** the query-engine + Iceberg-integration performance analysis on
   a release module at 8-thread parity — eleven measured candidates ranked by isolated cost over the

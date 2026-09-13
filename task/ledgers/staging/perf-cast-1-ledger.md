@@ -4,19 +4,22 @@
 orchestrator's departure move). This file closes when PERF-CAST-1 merges, or when the
 owner closes the slate row.
 
-**Unit:** PERF-CAST-1 · **Date:** 2026-09-12 · **Model:** grok-4.6 · **Branch:** `perf/cast-1` · **Base:** `dae79c40` (branch point at dispatch; no merge performed — the orchestrator merges)
-**Slate:** card PERF-CAST-1, `perf/cast-1` build lane, step 1 of 2 (measurement; no fix).
+**Unit:** PERF-CAST-1 · **Date:** 2026-09-12 · **Model:** swe-2-high (step 2; step 1 was grok-4.6) · **Branch:** `perf/cast-1-s2` · **Base:** `65202f25` (main at dispatch; step 1 merged as #535)
+**Slate:** card PERF-CAST-1, `perf/cast-1` build lane, step 2 of 2 (release re-measure; locate owner; fix or file upstream).
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
 **Writable paths:** `python/repark-parity/bench/cast/` (new),
 `python/repark-parity/tests/cast/` (new), `docs/perf/cast-cost-2026-09-12.md`,
-`docs/perf/cast-cost-2026-09-12.csv`, lockstep `map.md` files
+`docs/perf/cast-cost-2026-09-12.csv`, `docs/perf/cast-cost-2026-09-12-release.csv`,
+`crates/repark-core/tests/cast_plan_profile.rs`, lockstep `map.md` files
 (`python/repark-parity/bench/map.md`, `python/repark-parity/bench/cast/map.md`,
 `python/repark-parity/tests/map.md`, `python/repark-parity/tests/cast/map.md`,
-`docs/perf/map.md`, `task/ledgers/staging/map.md`), this ledger. Closed: `crates/`,
-`scripts/` baselines, `.github/`, `STATUS.md`, `briefs/next-sequence.md`, every
-other ledger, Cargo.toml / lockfiles.
+`docs/perf/map.md`, `task/ledgers/staging/map.md`,
+`crates/repark-core/tests/map.md`), this ledger. Step 2 opens
+`crates/repark-core/tests/` for the `#[ignore]`d phase micro-bench only; closed:
+the rest of `crates/`, `scripts/` baselines, `.github/`, `STATUS.md`,
+`briefs/next-sequence.md`, every other ledger, Cargo.toml / lockfiles.
 
 ## Scope
 
@@ -38,8 +41,10 @@ document; the orchestrator files it).
 | C-002 | The attribution table: for each shape, where the wall goes — SQL parse, logical planning, each optimizer pass (name the pass), physical expression creation, per-batch evaluation — from `EXPLAIN ANALYZE`, the session's plan-time probes, and a `py-spy`/`perf` profile of the 2500-cast cell. | C-002 tables in `docs/perf/cast-cost-2026-09-12.md`; `bench/cast/attribute.py`; py-spy note (perf refused). | **PROVEN** |
 | C-003 | The superlinearity is located: which phase grows faster than linear in the cast count, with the exponent fit from the three sizes. | C-003 exponent table; over_aggregate plan exponent **1.535**; standalone and projection_over_aggregate ≤ 1. | **PROVEN** |
 | C-004 | The cost is pinned as it stands: a test in `python/repark-parity/tests/` asserting the 2500-cast standalone projection under a budget 1.5× the measured median on this box, marked so a future fix or DataFusion bump that speeds it up flips a second, tighter pin (spill-golden shape). | `test_cast_2500_standalone_under_regression_budget` (budget 155.115 s); `test_cast_2500_over_aggregate_plan_under_linear_budget` (strict xfail, linear-from-50 plan 5.04 s vs measured 38.969 s). | **PROVEN** |
+| C-005 | The nine-cell bench re-measured on a RELEASE native (`__debug_assertions__ is False`): the release table, the exponents per shape and phase, and whether the superlinear phase is still superlinear on release. | `docs/perf/cast-cost-2026-09-12-release.csv` (nine rows, `native_debug=false`); C-005 section of `docs/perf/cast-cost-2026-09-12.md` — over_aggregate plan exponent **1.511** on release, still superlinear. | **PROVEN** |
+| C-006 | The owner of the superlinear phase located, measured: per-phase and per-analyzer-rule / per-optimizer-rule wall times of the 2500-cast over-aggregate statement on a stock `SessionContext` vs a `ReparkSession` context (Rust micro-bench `crates/repark-core/tests/cast_plan_profile.rs`, `#[ignore]`d, release). | Stock and RePark arms agree to ~1%: `sql_to_rel` (`SqlToRel::statement_to_plan`) is the superlinear phase (0.0024 / 0.031 / 2.75 s at 50 / 250 / 2500, exponent ~1.54); analyzer `execute_and_check` 0.089 s, `type_coercion` 0.078 s, optimizer 0.26 s — all near-linear. Verdict UPSTREAM → draft issue in `docs/perf/cast-cost-2026-09-12.md` §"Upstream issue". | **OPEN** |
 
-`LOGIC_SCORE` = **4/4 `PROVEN`**.
+`LOGIC_SCORE` = **5/6 `PROVEN` (C-006 open pending the committed micro-bench run record)**.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
