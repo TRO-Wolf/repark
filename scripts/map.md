@@ -1,5 +1,8 @@
 # map — scripts/
 
+COMMENT-CORE-1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4468 → 4118
+(comments removed, no code change). The CAP-1 mirror row moves in the same commit.
+pins: comment-core-1/C-004
 FACADE-2 step 2b (2026-09-12): `check_lib_py.py` `spark/column.py` 1549 → 1548
 (the `alias` `sql_expr` arg dropped for a passthrough). The CAP-1 mirror row
 moves in the same commit. pins: facade-2/C-013

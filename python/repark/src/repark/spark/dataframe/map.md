@@ -434,6 +434,242 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `printSchema` stdout is Spark's tree plus the blank line (`treeString`'s newline and
   `print`'s). pins: df-printschema-1-trailing-newline/C-001, C-004
 
+## core.py rationale (COMMENT-CORE-1)
+
+In-code comments left `core.py` in this unit. Docstrings and `# noqa` / `# type:` pragmas
+stay. The AST equals `origin/main` (pins: comment-core-1/C-001, C-002). Each
+`moved-to-map` row in the unit ledger has its sentence here, grouped under the function
+that held the comment (pins: comment-core-1/C-003).
+
+- `(module)`: Vertical `show` is Spark-style only; styled displays stay horizontal and
+  warn once. WriterV2 `option`/`options` warn once per process and tests reset the flag.
+  `_STOPPED_MESSAGE` must match `ReparkSession.stop`. The filter rewriter never binds
+  SQL keywords `true` / `false` / `null` as columns — Spark's grammar reads the keyword.
+  Semi/anti engine tokens emit the left schema only. Cache MemTable names are
+  object-identity and exclude checkpoints, CDF, and mapInArrow. Re-exports keep
+  `plan_collapse` first so sibling modules import its helpers.
+- `_emit_join_side_columns`: Walk by position so chained-join duplicate displays do not
+  hit `AMBIGUOUS_REFERENCE`. Engine ordinals stay unique across chained duplicates.
+  Direct binds last-write on display dups; nested origin maps propagate.
+- `_by_name_casefold_map`: Exact duplicate names must not silently overwrite the prior
+  entry.
+- `_normalize_subset`: PySpark's error class is per-surface, not derivable from
+  `accept_str` (dropDuplicates + fillna → `NOT_LIST_OR_TUPLE`, dropna →
+  `NOT_LIST_OR_STR_OR_TUPLE`). Keep `enumerate` for position-aware diagnostics.
+- `DataFrame`: Sticky window-merge metadata, display/origin maps, smartCsv diagnostics,
+  declared-sort source, and the tighten-nulls flag live on the instance.
+  `_semi_anti_right_plan_ids` holds right-side plan ids a semi/anti join did not emit.
+  `dynamicFlatten` is a disclosed repark spelling. `repartition` validates arguments;
+  execution is single-node. `unionAll` is Spark's historical alias of `union`. `except_`
+  is the Python keyword escape and is not shipped. Arrow export uses the facade
+  exception taxonomy and positional display names. `toArrowBatches` is a disclosed
+  camelCase extension.
+- `__init__`: Cache is object-identity and lazy until the first action. Action-ephemeral
+  views are replaced on the next action; plan-stable views remain valid for children.
+  One plan-stable bridge snapshot serves all plan children. The facade plan token
+  resolves join sides. Duplicate displays map to unique engine fields. Declared-sort is
+  source-only. Tighten-nulls propagates to derived frames.
+- `_identity_child`: Identity-preserving operations keep display, engine, and origin
+  maps. pins: perf-facade-1/C-004, C-005
+- `_materialize_cache_if_needed`: Cache keeps `_map_bridge` so `unpersist` restores
+  re-run; checkpoint truncates lineage. Never route VALUES / `createDataFrame` through
+  this entry. Commit handle state only after a successful materialize. Converting an
+  already-cached pin drops the old `__repark_cache_*` view after the checkpoint view
+  registers. Checkpoint does not advertise as cached (`is_cached` is False).
+- `_prepare_for_plan`: An already-pinned child uses the MemTable and does not clear the
+  bridge.
+- `_action_inner`: An already-pinned action does not re-run the UDF. Fresh bridge
+  execution leaves `_map_bridge` in place. After `replace_ephemeral` drops a prior
+  action view, rebind `_inner` so later readers cannot use a dangling MemTable. Leave
+  `_inner` alone when `_mia_plan_ready` — that view is plan-stable.
+- `_execute_map_in_arrow_bridge`: Fall back to the IPC path when the native C-stream
+  register is absent (version-skew). Output batches drain in Python first: a live
+  `RecordBatchReader` over the generator would re-enter `__arrow_c_stream__` while Rust
+  holds the GIL and abort. pins: facade-1/C-001, C-002, C-006
+- `_execute_map_in_arrow_bridge_ipc`: An empty iterator writes a schema-only IPC stream
+  (zero batches).
+- `_register_ipc_bytes_as_inner`: Own the view before `sql()` so finalize drops it even
+  if SELECT fails.
+- `unpersist`: `blocking` is signature parity; a single-node drop is always synchronous.
+- `localCheckpoint`: `eager` is signature parity; the pin is a single-node MemTable.
+- `sameSemantics`: Best-effort identity of the native `PyDataFrame` object, not full
+  semantic equality.
+- `declare_sorted`: Caching redirects the scan; declare the source before caching. Bind
+  with the same case-insensitive overlay as `select`. Re-resolve the table source after
+  re-register, or the declaring frame never sees the elision.
+- `with_column`: Scalar UDF markers use the `withColumns` → `select` bridge. Aggregates
+  are rejected here — a native `with_column` would fail engine-side, and a pure-global
+  select would collapse N→1 rows. Generators must go through the select unnest rewrite
+  or the array placeholder projects without multiplying rows. The ordinary path routes
+  through `with_columns` so alias-chain squash and adjacent same-spec window merge
+  apply.
+- `with_columns`: Validate keys and values before any `.alias` so a bad map raises
+  early. Aggregates are rejected (same N→1 collapse). Adjacent same-spec window merge
+  runs only when the immediately-prior sticky layer used the same structural window and
+  no new column reads a name that layer defined; `filter` / `drop` / `select` never copy
+  sticky meta. Multi-name frames iterate engine/display bindings and preserve origin on
+  replacement. The new layer writes sticky meta for a later merge.
+- `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan
+  the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion
+  fuses one `WindowAggr`.
+- `filter`: A generator predicate would target the array placeholder. Compounds clear
+  origin but keep join_sql QCOL tokens — rewrite to local engine fields and use
+  `filter_sql`. Pure origin Columns rebind to engine fields before native filter.
+- `select`: Multi-name frames cannot re-resolve bare display strings (`AMBIGUOUS_REFERENCE`);
+  expand via engine fields plus display identity. DataFusion requires unique engine
+  projection names; Spark allows duplicate displays. Origin-qualified duplicates keep
+  bare display names; non-origin duplicates use synthetic engine aliases. Keep composed
+  `join_sql` so a QCOL select does not fall back to a bare leaf. Classify projections
+  from Column metadata, not expression text. A generator and an aggregate cannot share
+  one grouping stage. Pure global requires every projection aggregate and/or foldable,
+  with no free attributes and no sticky ungroupable (`row_number().over` is neither).
+  Bare aggregates use the native aggregate path; composed post-agg ops need SQL because
+  DataFusion `aggregate` rejects non-AggregateFunction exprs. Attach the display overlay
+  before the early return so `sum,sum` does not leak `__repark_sel_h2_*`. Mixed
+  aggregate and free companion without GROUP BY is Spark `[MISSING_GROUP_BY]`. Duplicate
+  displays cannot pass the generator SQL rewrite. Compounds that still carry QCOL
+  tokens cannot use unrebound native exprs on multi-name frames.
+- `_select_global_aggregate_sql`: One plan-stable snapshot for uncached mapInArrow.
+  Register the prepared plan — never the empty MIA placeholder and never a second
+  action re-run. Do not call `self.group_by()` (that would `_prepare_for_plan` again).
+  Case-preserving rebind covers bare AF builders including post-`.alias` pure AFs that
+  clear `_agg_name` but keep structural `sql_expr`.
+- `_select_with_generator`: The private array field is a uuid so it cannot collide with
+  user projection names. Project from `_plan()` not raw `_inner` so an uncached
+  mapInArrow parent materializes before unnest — raw `_inner` is the empty schema
+  placeholder and would yield zero rows. The second SQL projection refers only to
+  quoted identifiers from the intermediate schema. Length is top-level only. Spark
+  `explode` drops null/empty arrays; `explode_outer` uses CASE + NULL element. Take
+  the element type from the intermediate field (covers coalesce/compounds); never
+  fail-open to BIGINT. Keep `make_array(NULL)` untyped so the engine infers. A NULL
+  list becomes one null-element row; an empty list stays empty and drops. Element
+  cast after unnest is a sticky chain (innermost first) from chained `.cast()`.
+- `_array_element_sql_type`: Bind uses `array_sql` only (no display substring match).
+  Prefer exact spelling; otherwise require a unique casefold hit. A bound field with
+  an unsupported element type (map / nested-void) still refuses.
+- `__getattr__`: Half-built instances (copy/pickle) must not recurse through
+  `_ensure_alive` reading `self._inner`. A bare `AttributeError` handles those probes;
+  user misses use the classified error. Permanent out-of-scope surfaces use named
+  errors. Exact membership is case-sensitive like PySpark; quoted bind keeps
+  non-lowercase schema fields re-selectable.
+- `_resolve_getitem_column_name`: De-dupe preserving order for case-insensitive
+  multi-hit reporting. Same-display join duplicates are handled above the casefold
+  multi path.
+- `_select_via_qcol_sql`: Token resolution requires a post-join origin map. Prefer
+  multi-name engine aliases when the outer select already assigned them. A unique
+  display is safe as an engine name; a CAST display needs an alias.
+- `_rebind_origin_column`: Only pure leaf refs rebind (no `join_sql`, or a bare QCOL
+  token, or a quoted ident). `coalesce` / `CAST` / binary ops keep native + origin.
+  Keep join rewrite tokens so further composition is not required. Preserve sort
+  markers through origin rebind.
+- `_bind_schema_column`: Quote the engine schema field for free-SQL embeds. Join ON
+  rewrite uses `origin_plan_id` and `origin_field`, not this fragment.
+- `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and
+  null literals. Protect single-quoted SQL string literals, then double-quoted idents
+  inside the rest.
+- `_rebind_stable_name_column`: Origin pins a specific side/engine field — skip
+  bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the
+  bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved
+  names such as `order`. Keep origin and `join_sql` through sort-marker rebind.
+- `__getitem__`: `df["*"]` is the star projection token for `count` and `select`.
+  Live PySpark 4.1.2: CI getitem is a NamedExpression with the requested spelling
+  (same display identity as `F.col("X")`), not `Alias(canonical AS item)`. Quoted
+  schema bind keeps the field re-selectable after a non-lowercase projection.
+- `schema`: `"Null"` is the Arrow Debug spelling and reaches every flat void column,
+  a plain NULL literal included (W-1). Overlay Spark-legal display names while engine
+  fields stay unique.
+- `printSchema`: `treeString` ends with a newline and `print` adds Spark's second one.
+  pins: df-printschema-1-trailing-newline/C-001, C-004
+- `toDF`: Multi-name frames cannot re-bind bare display strings; rename positionally
+  via engine/display bindings.
+- `selectExpr`: A bare `*` keeps multi-name display identity. Use a plan-stable
+  bridge snapshot rather than action registration.
+- `alias`: Register one plan-stable bridge snapshot so post-prepare alias agrees with
+  `selectExpr` / `select` / `filter`. The NAME stays one-part (the user chose it) but
+  the read is home-pinned — a bare one-part reference re-resolves against the live
+  default catalog. SQL `SELECT *` surfaces engine field names; re-attach display
+  identity so multi-name joins keep duplicate display columns positionally.
+- `replace`: Multi-name frames bind by engine/display pairs. Preserve origin for
+  multi-name select identity.
+- `repartition`: Spark: first position is int count, or a Column/str partition expr
+  when the call is `repartition(*cols)`. A list/bool/float always raises
+  `NOT_COLUMN_OR_STR`. Reject a sole-argument list instead of treating it as no
+  columns.
+- `repartitionById`: Type-check simple name refs so non-int partition columns fail
+  loud (Spark analysis). Bare attribute only — casts and expressions stay deferred
+  to the engine seed.
+- `offset`: Fetch a very large tail after skip (practical unbounded offset on one
+  node).
+- `drop`: Live Spark 4.1.2: `drop(right["k"])` after leftsemi/leftanti is a no-op.
+  Name-based drop removes every engine field whose display matches.
+- `order_by`: Sort does not change column identity; keep display and engine maps.
+- `join`: Normalize Spark aliases to engine tokens. The semi family folds
+  `left_semi` / `left_anti` after stripping underscores. A conditionless semi/anti
+  join is not a Cartesian product: Spark keeps every left row iff the right side is
+  non-empty (semi) / empty (anti), with no m×n fan-out; both `on=None` and `on=[]`
+  would otherwise fall through to `crossJoin`, so they refuse here. Cartesian
+  product requires `crossJoin` or `spark.sql.crossJoin.enabled`, read the same
+  effective value as `RuntimeConfig.get`. Name equi-join SubqueryAlias both sides
+  only when names collide or the join is a self-join — unconditional alias leaked
+  permanent session views. An empty key list is a cartesian product (same gate as
+  `on=None`); a vacuous all-str would otherwise skip the conf check.
+- `_join_on_condition_h1`: Register both plans as temp views (plan-stable), analyze
+  the SQL join, then drop the views. A semi/anti join emits the left side only, so a
+  right-hand name that merely shares a left name is not a duplicate in the output —
+  counting it would mangle the left engine field. Always attach identity when any
+  display name collides or an origin map is needed.
+- `group_by`: Generators lower through select unnest, not as grouping keys.
+- `grouping_sets`: Full Spark `groupingSets` is multi-list; v1 is one set per col.
+- `union`: Keep left-side display identity (union-by-position inherits left engine
+  field names — Spark keeps left display names). Origin map is left-only; right-parent
+  Columns no longer resolve (disclosed).
+- `_sql_binary_set_op`: Materialize and register both under `try`/`finally` so a
+  right-side mapInArrow failure after left registration cannot leak the left staging
+  MemTable. Re-attach left multi-name display maps after the SQL set-op.
+- `crossJoin`: Materialize and register both under `try`/`finally`, same as set-ops.
+- `drop_duplicates`: Ambiguous display names in a subset expand to every matching
+  engine field (Spark keeps one row per distinct key multiset). Empty subset is
+  full-row distinct (avoids DataFusion empty ORDER BY). Use `row_number` keep-first
+  rather than `groupBy`+`first` so non-key columns survive.
+- `with_column_renamed`: Multi-name frames bind by engine/display pairs (bare name
+  rebind raises `AMBIGUOUS_REFERENCE` on duplicate displays).
+- `with_columns_renamed`: Multi-name frames already carry Spark-legal duplicate
+  displays; allow them and rename via engine bindings. Ordinary frames still refuse
+  duplicate names. Keep origin so multi-name select identity survives the rename.
+- `_column_of`: Stable-name rebind (`F.col` / requested spelling) then origin rebind
+  so `orderBy` / `groupBy` / `select` parent Columns hit the correct post-join engine
+  field.
+- `_cross_join_enabled`: Spark default is true (Cartesian allowed unless conf
+  disables).
+- `_sort_specs`: Generators lower through select unnest; ordering by the placeholder
+  is invalid. `.asc()` / `.desc()` keep the sticky generator marker. PySpark
+  `DataFrame._sort_cols`: a falsy `ascending` entry replaces that column's marker
+  with `desc()` (descending, nulls last); a truthy entry is a no-op and the column
+  keeps whatever it arrived carrying. RePark rejects a short list instead of silently
+  truncating it. Tuples are accepted as a sequence.
+- `_ascending_remark_flags`: PySpark raises `NOT_BOOL_OR_LIST` here
+  (`PySparkTypeError`); a wrong TYPE for the keyword must not arrive as a value
+  error.
+- `collect`: Convert batches directly so collect does not hold a second full Arrow
+  table.
+- `take`: Re-run the map bridge but only keep `num` output rows.
+- `tail`: Live PySpark routes `tail` through JVM `tailToPython` and accepts a
+  negative as empty (unlike `take` / `head` / `limit`, which raise
+  `AnalysisException`). Gate stopped sessions even when `num<=0` short-circuits —
+  returning `[]` after stop would be a silent wrong lifecycle outcome.
+- `isEmpty`: Stop after the first output row.
+- `toLocalIterator`: `prefetchPartitions` is signature parity only. Honest streaming
+  pulls RecordBatches via the C-stream and converts one batch at a time.
+- `_iter_rows_from_record_batch`: RecordBatch shares column/schema APIs with Table —
+  skip the `Table.from_batches` wrap.
+- `_require_non_negative_limit`: Live PySpark 4.1.2 raises `AnalysisException`
+  `[INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE]` with SQLSTATE and a plan dump.
+  repark drops SQLSTATE and the plan dump (no repark error carries SQLSTATE; plan
+  text is engine-internal).
+- `to_arrow_batches`: Capture schema before drain — empty streams yield no batches
+  from the reader, but the C-stream still declares a schema (same source `to_arrow`
+  uses). Preserve the declared schema when the stream has no rows.
+
 ## Navigation
 
 | Need | Home |
@@ -502,5 +738,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   stay below the source-size default (pins: facade-1/C-001, C-002, C-006).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
+  COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4118; comments removed, no code change
+  (pins: comment-core-1/C-004, C-005, C-006).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

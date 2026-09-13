@@ -31,14 +31,38 @@ the exact new `wc -l`.
 
 | ID | Clause | Proof obligation | Verdict |
 |---|---|---|---|
-| C-001 | `core.py`'s AST on the branch equals base. | Paste of the `AST-IDENTICAL` run against `origin/main`. | **OPEN** |
-| C-002 | No non-pragma comment remains in `core.py`; the 74 pragmas are preserved. | Paste of the `tokenize` counts on the new file. | **OPEN** |
-| C-003 | Every removed comment is classified in the table (row count = 347) and every `moved-to-map` row has its sentence in `dataframe/map.md`. | This table (347 rows) plus the `## core.py rationale (COMMENT-CORE-1)` section. | **OPEN** |
-| C-004 | Both ceilings equal the exact new line count (`wc -l`) and moved down. | `scripts/check_lib_py.py` and `test_cap_1_source_file_line_cap.py` rows plus `wc -l`. | **OPEN** |
+| C-001 | `core.py`'s AST on the branch equals base. | Paste of the `AST-IDENTICAL` run against `origin/main`. | **PROVEN** |
+| C-002 | No non-pragma comment remains in `core.py`; the 74 pragmas are preserved. | Paste of the `tokenize` counts on the new file. | **PROVEN** |
+| C-003 | Every removed comment is classified in the table (row count = 347) and every `moved-to-map` row has its sentence in `dataframe/map.md`. | This table (347 rows) plus the `## core.py rationale (COMMENT-CORE-1)` section. | **PROVEN** |
+| C-004 | Both ceilings equal the exact new line count (`wc -l`) and moved down. | `scripts/check_lib_py.py` and `test_cap_1_source_file_line_cap.py` rows plus `wc -l`. | **PROVEN** |
 | C-005 | The facade suite count before and after are identical. BEFORE, measured by the orchestrator on this clone at base: `5985 passed, 369 skipped, 48 warnings in 805.63s`. | AFTER run of `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark/tests -q` summary line. | **OPEN** |
 | C-006 | Gates green. | Tail of each gate command in the Gates section. | **OPEN** |
 
-`LOGIC_SCORE` = 0/6 (commit 1: table skeleton; proofs land with the strip and the gates).
+`LOGIC_SCORE` = 4/6 (C-005 / C-006 wait on the gate runs).
+
+## AST identity (C-001)
+
+```bash
+python3 -c "import ast,subprocess;p='python/repark/src/repark/spark/dataframe/core.py';o=subprocess.check_output(['git','show','origin/main:'+p]).decode();n=open(p).read();print('AST-IDENTICAL' if ast.dump(ast.parse(o))==ast.dump(ast.parse(n)) else 'AST-DIFFERENT')"
+```
+
+```text
+AST-IDENTICAL
+```
+
+Nine extra blank lines left by full-line comment deletion were removed so `ruff format --check` accepts the file. No other whitespace or code changed.
+
+## tokenize counts (C-002)
+
+On the new file: **0** non-pragma comments, **74** pragmas (`# noqa` / `# type:`), all trailing. `wc -l` = **4118**.
+
+## Classification (C-003)
+
+347 rows below. moved-to-map **310** (66 enclosing names, each with one bullet under `## core.py rationale (COMMENT-CORE-1)`). deleted-as-narration **37**.
+
+## Ceilings (C-004)
+
+`scripts/check_lib_py.py` `core.py` 4468 → 4118. CAP-1 mirror 4468 → 4118. Both equal `wc -l` = 4118 and moved down.
 
 ## Removed-comment table
 
