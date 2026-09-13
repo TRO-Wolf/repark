@@ -117,6 +117,46 @@ Unknown keys refuse at construction: `DisplayConfig(style="spark", nonesuch="x")
 `sqlserver` / `trino`, a dotted catalog name, an empty catalog block, and a name carried by
 both a catalog and a database source.
 
+### Named database sources
+
+`repark.sources()` lists every `[<profile>.database.<kind>.<name>]` source the session's
+file declared, in declaration order — secrets masked the same way the conf dump redacts
+them (`password` reads back `***`, never the value). `repark.source(name)` returns a
+read-only handle for one entry; an undeclared name refuses naming the declared set.
+Measured under `REPARK_ENV=write` against the file above:
+
+```python
+repark = ReparkSession.builder.configFile("repark.toml").getOrCreate()
+print(repark.sources())
+```
+
+```text
+[SourceMetadata(name='company_db', kind='postgres', key_path='write.database.postgres.company_db', auto_register=True, properties={'dbname': 'analytics', 'host': 'db.example.com'})]
+```
+
+`ping()` is the handle's only operation — the connector itself lands with roadmap 1.10,
+so it answers the pending message:
+
+```python
+repark.source("company_db").ping()
+```
+
+```text
+UnsupportedOperationException: database source
+`write.database.postgres.company_db` (kind `postgres`) is declared but cannot be used
+yet — its connector arrives with roadmap 1.10 (Postgres, SQL Server, Trino)
+```
+
+```text
+PySparkException: datafusion engine error: unknown database source 'nope' — declared
+sources: company_db
+```
+
+`auto_register = false` inside the source table keeps the source listed while leaving
+its name unregistered — SQL under the name then answers the engine's ordinary not-found
+error rather than the connector message. The `repark.config` mirror accepts
+`auto_register` as a typed boolean on `DatabaseSource` and renders it only when set.
+
 ## Discovery and profiles
 
 The loader looks for a file in this order and takes the first hit: the path named by

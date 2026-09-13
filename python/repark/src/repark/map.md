@@ -29,6 +29,10 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `ValidationError`; duplicate names refuse across every catalog and every database
   source together, naming both key paths; `to_toml()` emits `[<profile>]` for every
   profile so an empty overlay round-trips. pins: review-fix-1/C-001, C-002, C-003
+  **CFG-2 step 2 (2026-09-13):** `DatabaseSource.auto_register` is a typed
+  `StrictBool | None` field (not an extra): a non-bool value refuses as
+  `ValidationError`, `true`/`false` renders only when set, and every other property
+  stays a string extra. pins: cfg-2/C-018
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).

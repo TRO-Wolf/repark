@@ -46,6 +46,10 @@ CatalogMetadata = namedtuple(
     "CatalogMetadata",
     ["name", "description"],
 )
+SourceMetadata = namedtuple(
+    "SourceMetadata",
+    ["name", "kind", "key_path", "auto_register", "properties"],
+)
 
 # Default strings match live Spark when conf is untouched (oracle: currentCatalog /
 # currentDatabase / spark.sql.defaultCatalog).

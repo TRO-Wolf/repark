@@ -192,3 +192,46 @@ def test_rendered_database_source_loads(tmp_path: Path) -> None:
     path = built.save(tmp_path / "repark.toml")
     spark = ReparkSession.builder.configFile(str(path)).getOrCreate()
     spark.stop()
+
+
+def test_config_mirror_auto_register_round_trips(tmp_path: Path) -> None:
+    built = ReparkConfig(
+        profiles={
+            "default": ProfileConfig(
+                database={
+                    "postgres": {
+                        "company_db": DatabaseSource(host="db.example.com", auto_register=False)
+                    }
+                }
+            )
+        }
+    )
+    text = built.to_toml()
+    assert "auto_register = false" in text
+    assert tomllib.loads(text)["default"]["database"]["postgres"]["company_db"] == {
+        "host": "db.example.com",
+        "auto_register": False,
+    }
+    path = built.save(tmp_path / "repark.toml")
+    spark = ReparkSession.builder.configFile(str(path)).getOrCreate()
+    try:
+        rows = spark.sources()
+    finally:
+        spark.stop()
+    assert [row.name for row in rows] == ["company_db"]
+    assert rows[0].auto_register is False
+
+
+def test_config_mirror_auto_register_non_bool_refuses() -> None:
+    with pytest.raises(ValidationError):
+        DatabaseSource.model_validate({"host": "h", "auto_register": "yes"})
+    with pytest.raises(ValidationError):
+        DatabaseSource(host="h", auto_register="yes")
+    built = ReparkConfig(
+        profiles={
+            "default": ProfileConfig(
+                database={"postgres": {"company_db": DatabaseSource(host="h")}}
+            )
+        }
+    )
+    assert "auto_register" not in built.to_toml()
