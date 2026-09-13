@@ -78,6 +78,21 @@ and hand execution, SQL, and ML semantics to the engine crates.
   `Vec<Bound<PyTuple>>` is gone.
   pins: perf-facade-1/C-002
   pins: h3-spill-residue-1/C-001 |
+| [`cdf_infer.rs`](cdf_infer.rs) + [`cdf_infer/`](cdf_infer/) | **FACADE-3 step 2
+  (2026-09-13):** `createDataFrame` rows/tuple/dict inference and cell conversion in Rust.
+  `cdf_arrow_export` extracts each tuple cell into a typed `Cell` (cells.rs), infers the
+  Arrow schema with Spark's merge rules or imports the caller's explicit `pa.Schema` through
+  `__arrow_c_schema__` (infer.rs), builds the `RecordBatch` with typed arrays (build.rs), and
+  hands it back as a `PyCdfArrowExport` whose `__arrow_c_stream__` capsule `pa.table` drains —
+  the same FACADE-1 seam used for export, here run in the import direction. Every cell kind,
+  merge outcome, or nested shape the port does not reproduce returns `None`, and the Python
+  wrapper falls back to the column-wise or legacy converter, which reproduces the pinned
+  refusal class and message. Timestamp localization covers only the session-UTC case and
+  explicit `tzinfo.utcoffset` offsets; NTZ honors `is_default_timestamp_ntz`. The decimal
+  envelope mirrors `_validate_decimal_envelope` (precision ceiling, scale-18 truncation only
+  when discarded digits are zero). Null struct parents write each child's type default
+  (`CellKind::Fill`: 0, `""`, epoch, empty list/map, recursive defaults) rather than a child
+  null, matching `pa.array` fill so pandas NaN-coercion parity holds. pins: facade-3/C-010 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins

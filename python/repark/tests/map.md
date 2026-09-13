@@ -1545,6 +1545,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   helpers (`lit`, `_lit_numpy_ndarray`, `_scalar`, `pi`, `uuid`), and an AST pin
   asserts `F.expr` is the sole `_native.PyColumn.sql` caller left.
   pins: facade-2/C-009, C-010, C-012, C-014, C-016
+- `test_facade_3_cdf_dispatch.py` — **FACADE-3 step 2 (2026-09-13):** dispatch pin
+  for the Rust createDataFrame path. `_rust_cdf_arrow_table` must exist in
+  `create_dataframe_columns` and must be invoked for plain tuples, nested cells,
+  `Row` objects, dicts, tuples + DDL and tuples + `StructType`; the pandas control
+  must not take it (its own `_arrow_table_from_pandas` path wins). Red-first on
+  `main`: six failures, `AttributeError: module 'repark.spark.session.create_dataframe_columns'
+  has no attribute '_rust_cdf_arrow_table'`.
+  pins: facade-3/C-010
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

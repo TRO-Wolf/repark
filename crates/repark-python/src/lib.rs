@@ -4,6 +4,7 @@
 mod allocator;
 mod arrow_export;
 mod catalog_census;
+mod cdf_infer;
 mod collect_rows;
 mod column;
 mod dataframe;
@@ -106,6 +107,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     dataframe_stack::register(module)?;
     catalog_census::register(module)?;
+    cdf_infer::register(module)?;
     collect_rows::register(module)?;
     logical_names::register(module)?;
     ml::register(module)?;
