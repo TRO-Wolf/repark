@@ -44,6 +44,29 @@ pub fn apply_stack(
     Ok(DataFrame::new(session_state, plan))
 }
 
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "errors are Spark AnalysisException text; the reason lives in stack/map.md"
+)]
+pub fn apply_labeled_stack(
+    frame: DataFrame,
+    labels: StackLabels,
+    output_names: Option<&[String]>,
+) -> Result<DataFrame> {
+    let (session_state, plan) = frame.into_parts();
+    let node = UnpivotNode::try_new_labeled(plan, labels, output_names).map_err(engine_err)?;
+    let plan = LogicalPlan::Extension(Extension {
+        node: Arc::new(node),
+    });
+    Ok(DataFrame::new(session_state, plan))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StackLabels {
+    pub names: Vec<String>,
+    pub cells: Vec<usize>,
+}
+
 pub(crate) fn parse_stack_n(n: i64) -> Result<usize> {
     if n <= 0 || n > i64::from(i32::MAX) {
         return Err(Error::Analysis(format!(
@@ -88,6 +111,7 @@ pub(crate) struct UnpivotNode {
     n: usize,
     passthrough_count: usize,
     stack_count: usize,
+    labels: Option<StackLabels>,
     schema: DFSchemaRef,
 }
 
@@ -147,6 +171,58 @@ impl UnpivotNode {
             n,
             passthrough_count,
             stack_count,
+            labels: None,
+            schema,
+        })
+    }
+
+    pub(crate) fn try_new_labeled(
+        input: LogicalPlan,
+        labels: StackLabels,
+        output_names: Option<&[String]>,
+    ) -> DataFusionResult<Self> {
+        let n = labels.names.len();
+        if n == 0 {
+            return plan_err!(
+                "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve stack due to data type \
+                 mismatch: The `n` must be between (0, 2147483647] (current value = 0). \
+                 SQLSTATE: 42K09"
+            );
+        }
+        if !labels.cells.len().is_multiple_of(n) {
+            return plan_err!(
+                "stack labeled cell count {} is not a multiple of the label count {n}",
+                labels.cells.len()
+            );
+        }
+        let n_cols = labels.cells.len() / n;
+        let input_fields = input.schema().fields();
+        for source in &labels.cells {
+            if *source >= input_fields.len() {
+                return plan_err!(
+                    "stack labeled cell index {source} exceeds input width {}",
+                    input_fields.len()
+                );
+            }
+        }
+        let output_names = output_names.filter(|names| names.len() == n_cols + 1);
+        let mut fields: Vec<Field> = Vec::with_capacity(n_cols.saturating_add(1));
+        for column_index in 0..=n_cols {
+            let name = output_names
+                .and_then(|names| names.get(column_index).cloned())
+                .unwrap_or_else(|| format!("col{column_index}"));
+            fields.push(Field::new(name, DataType::Utf8, true));
+        }
+        let schema = Arc::new(DFSchema::from_unqualified_fields(
+            fields.into(),
+            HashMap::new(),
+        )?);
+        Ok(Self {
+            input,
+            n,
+            passthrough_count: 0,
+            stack_count: labels.cells.len(),
+            labels: Some(labels),
             schema,
         })
     }
@@ -163,6 +239,10 @@ impl UnpivotNode {
         self.stack_count
     }
 
+    pub(crate) fn labels(&self) -> Option<&StackLabels> {
+        self.labels.as_ref()
+    }
+
     pub(crate) fn arrow_schema(&self) -> arrow::datatypes::SchemaRef {
         Arc::clone(self.schema.inner())
     }
@@ -173,6 +253,7 @@ impl PartialEq for UnpivotNode {
         self.n == other.n
             && self.passthrough_count == other.passthrough_count
             && self.stack_count == other.stack_count
+            && self.labels == other.labels
             && self.schema == other.schema
             && self.input == other.input
     }
@@ -183,6 +264,7 @@ impl std::hash::Hash for UnpivotNode {
         self.n.hash(state);
         self.passthrough_count.hash(state);
         self.stack_count.hash(state);
+        self.labels.hash(state);
         self.schema.hash(state);
         self.input.hash(state);
     }
@@ -195,12 +277,14 @@ impl PartialOrd for UnpivotNode {
                 self.n,
                 self.passthrough_count,
                 self.stack_count,
+                &self.labels,
                 self.schema.field_names(),
             )
                 .cmp(&(
                     other.n,
                     other.passthrough_count,
                     other.stack_count,
+                    &other.labels,
                     other.schema.field_names(),
                 )),
         )
@@ -253,12 +337,15 @@ impl UserDefinedLogicalNodeCore for UnpivotNode {
             .skip(self.passthrough_count)
             .map(|field| field.name().clone())
             .collect::<Vec<_>>();
-        Self::try_new(
-            input,
-            self.n,
-            self.passthrough_count,
-            Some(names.as_slice()),
-        )
+        match &self.labels {
+            Some(labels) => Self::try_new_labeled(input, labels.clone(), Some(names.as_slice())),
+            None => Self::try_new(
+                input,
+                self.n,
+                self.passthrough_count,
+                Some(names.as_slice()),
+            ),
+        }
     }
 }
 
