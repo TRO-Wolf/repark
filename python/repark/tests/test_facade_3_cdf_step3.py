@@ -212,9 +212,7 @@ def test_dict_union_appends_new_key_mid_list(
     assert tuple(collected[22]) == (10, None, None, 9)
 
 
-def test_row_list_never_calls_asdict(
-    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_row_list_never_calls_asdict(spark: ReparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
     """A covered homogeneous Row list never pays Row.asDict (facade-3/C-026 P2-1)."""
     calls = {"asdict": 0}
     delegate = Row.asDict

@@ -360,7 +360,9 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   the F-TIMETUPLE abi3-route micro-benchmark that picks the shipped extraction
   (`timetuple` replaced by interned getattr walls, an epoch subtract for
   `date`, and a `datetime.timezone`-gated `utcoffset` cache), and the final
-  step-2 vs step-3 release table. pins: facade-3/C-018, C-022
+  step-2 vs step-3 release table — `rows`/`dicts` rows re-measured after the
+  S2-21 review remediation (C-026: `Row` index route, dict-union fast path,
+  interned timedelta names). pins: facade-3/C-018, C-022, C-026
 - [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
   steps 0+1 (2026-09-13):** the bare-`eager()` retention before/after pair —
   ten bare `eager()` calls on the deterministic 1e6-row × 25-column TA

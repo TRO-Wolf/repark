@@ -81,8 +81,8 @@ Bar: `rows` and `dicts` faster; every other shape not slower than 5 %.
 |---|---:|---:|---:|---:|---:|---:|
 | | s2 → s3 | Δ | s2 → s3 | Δ | s2 → s3 | Δ |
 | tuples | 42.08 → 22.31 | −47.0 % | 437.50 → 230.00 | −47.4 % | 429.26 → 233.18 | −45.7 % |
-| rows | 73.99 → 36.11 | −51.2 % | 793.48 → 371.00 | −53.2 % | 768.00 → 377.19 | −50.9 % |
-| dicts | 61.20 → 27.92 | −54.4 % | 641.20 → 286.78 | −55.3 % | 633.92 → 285.75 | −54.9 % |
+| rows † | 73.99 → 23.10 | −68.8 % | 793.48 → 248.54 | −68.7 % | 768.00 → 251.98 | −67.2 % |
+| dicts † | 61.20 → 24.41 | −60.1 % | 641.20 → 255.72 | −60.1 % | 633.92 → 250.64 | −60.5 % |
 | tuples + DDL | 42.71 → 22.93 | −46.3 % | 448.31 → 242.15 | −46.0 % | 443.44 → 234.95 | −47.0 % |
 | tuples + StructType | 43.28 → 22.66 | −47.6 % | 450.21 → 239.57 | −46.8 % | 455.28 → 234.22 | −48.6 % |
 | nested | 16.91 → 18.84 | +11.4 % | 206.96 → 236.54 | +14.3 % | 205.85 → 234.14 | +13.7 % |
@@ -105,11 +105,18 @@ reservation and systematically lowered allocation-heavy cells (nested
 allocates a small container per cell; pandas/polars use bulk Arrow buffers and
 moved only ~0–3 %).
 
-**Bar: met.** `rows` −53 % and `dicts` −55 % at 1e5 create — the Python
-named-row funnel (~60 % of both walls in the baseline split) and the
-`timetuple` per-cell cost are gone. Tuples and the explicit-schema pair drop a
-further ~46–48 % on top of step 2 (their date/timestamp columns rode the
-F-TIMETUPLE route). Controls are flat to +2.9 %.
+**Bar: met.** `rows` −69 % and `dicts` −60 % at 1e5 create — the Python
+named-row funnel (~60 % of both walls in the baseline split), the per-row
+`asDict` dict allocation, the per-row union sort, and the `timetuple` per-cell
+cost are gone. Tuples and the explicit-schema pair drop a further ~46–48 % on
+top of step 2 (their date/timestamp columns rode the F-TIMETUPLE route).
+Controls are flat to +2.9 %.
+
+† `rows`/`dicts` re-measured after the S2-21 review remediation (C-026):
+`1d039a38` reads `_Row__field_values` by index through per-distinct-fields
+maps instead of paying `asDict()` per row; `8608cb5c` skips the union
+extract/sort for mappings whose keys are all already seen; `4996f6fd` interns
+the `timedelta` attribute names. Same runner, same cap, same box.
 
 ## Fallback shapes @ row 90 000 (release native)
 
@@ -122,9 +129,9 @@ process (the C-014 method); `main-sim` patches `cdf_arrow_export_named` too
 |---|---:|---:|---:|---|
 | `object()` cell in a dict list | 607.12 | +1.6 % | +7.3 % | PySparkTypeError |
 | int→float in a tuple list | 355.29 | +4.1 % | +4.0 % | PySparkTypeError |
-| non-`Row` element in a `Row` list | 88.59 | +0.4 % | +3.4 % | PySparkTypeError |
-| non-dict element in a dict list | 9.81 | +0.4 % | +9.2 % | PySparkTypeError |
-| strict key-set mismatch in a `Row` list | 218.02 | −4.8 % | +9.5 % | PySparkValueError |
+| non-`Row` element in a `Row` list † | 89.81 | −0.1 % | +3.4 % | PySparkTypeError |
+| non-dict element in a dict list † | 10.33 | −0.5 % | +8.1 % | PySparkTypeError |
+| strict key-set mismatch in a `Row` list † | 220.36 | +2.8 % | +10.0 % | PySparkValueError |
 
 Under the clause's stated method every shape is within +5 % (the refusal class
 is unchanged — Python owns each raise). The main-sim column records the honest
