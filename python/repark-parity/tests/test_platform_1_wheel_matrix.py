@@ -14,13 +14,13 @@ EXPECTED_RELEASE_LEGS: dict[str, str] = {
     "manylinux-x86_64": "ubuntu-latest",
     "manylinux-aarch64": "ubuntu-24.04-arm",
     "macos-arm64": "macos-latest",
-    "macos-x86_64": "macos-13",
+    "macos-x86_64": "macos-15-intel",
     "windows-x86_64": "windows-latest",
 }
 EXPECTED_NIGHTLY_LEGS: dict[str, str] = {
     "manylinux-aarch64": "ubuntu-24.04-arm",
     "macos-arm64": "macos-latest",
-    "macos-x86_64": "macos-13",
+    "macos-x86_64": "macos-15-intel",
     "windows-x86_64": "windows-latest",
 }
 EXPECTED_MATRIX_CONDITION = (
@@ -116,7 +116,7 @@ def test_doctored_release_matrix_fails() -> None:
     renamed = text.replace("          - leg: macos-arm64\n", "          - leg: mac-arm64\n", 1)
     assert _release_findings(renamed) != []
     runs_on = text.replace(
-        "            runs-on: macos-13\n", "            runs-on: macos-latest\n", 1
+        "            runs-on: macos-15-intel\n", "            runs-on: macos-latest\n", 1
     )
     assert _release_findings(runs_on) != []
     merged_off = text.replace("          merge-multiple: true\n", "", 1)
