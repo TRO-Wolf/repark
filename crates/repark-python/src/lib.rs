@@ -85,6 +85,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyReparkSession>()?;
     module.add_class::<PyDataFrame>()?;
     module.add_class::<PyColumn>()?;
+    module.add_class::<column::display::PyColumnParts>()?;
     module.add(
         "PySparkException",
         module.py().get_type::<PySparkException>(),
