@@ -115,8 +115,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [facade-2-ledger.md](facade-2-ledger.md) —
   **FACADE-2 step 2 (2026-09-12), in flight:** Group-2 `column.py` families render
   in `crates/repark-python/src/column/display.rs` (`PyColumnParts` 4-tuple).
-  Goldens byte-identical vs `524e9edc`. C-009 AST pin green. C-011 op-chain
-  +10.12% (HALT bar is 5%). Branch `feat/facade-2-s2`.
+  Goldens byte-identical vs `524e9edc`. C-009 AST pin green. C-011 release op-chain
+  +2.77% (bar 5%; S2-21 re-check). Branch `feat/facade-2-s2`.
   pins: facade-2/C-008, C-009, C-010, C-011, C-012
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
