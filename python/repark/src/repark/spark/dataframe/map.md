@@ -862,3 +862,7 @@ that held the comment (pins: comment-core-1/C-003).
   (169 lines, below the source-size default). pins: eager-own-1/C-002
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
+
+EAGER-BUDGET-1 review round (2026-09-13): `eager.py::_cache_conf_lookup` matches cache budget keys
+case-insensitively, like the `repark.cache.retained_bytes` intercept: any spelling in the unset tomb disables the key,
+and when two spellings coexist the last one set wins (runtime layer over builder). pins: eager-budget-1/C-004
