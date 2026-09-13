@@ -1,0 +1,242 @@
+<title>Silver SIL Rulings</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F2F5F7; --card:#FFFFFF; --ink:#16232B; --ink-2:#4A5D68; --line:#D8E2E8;
+    --teal:#0E6C88; --teal-2:#0B5065; --teal-wash:#E4F0F4;
+    --call-bg:#FBF1DF; --call-ink:#7A5310; --call-line:#E9D3A3;
+    --trap-bg:#FBE7E4; --trap-ink:#8A2E23; --trap-line:#EEC2BB;
+    --ok-bg:#E3F2E8; --ok-ink:#1E6B3A;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+      --teal:#4DB1CF; --teal-2:#7CC7DD; --teal-wash:#14303B;
+      --call-bg:#33290F; --call-ink:#F0CF7E; --call-line:#5A4718;
+      --trap-bg:#3A1D19; --trap-ink:#F3A79B; --trap-line:#5E2E27;
+      --ok-bg:#173324; --ok-ink:#7CD9A0;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1418; --card:#162027; --ink:#E4ECF1; --ink-2:#9AB0BC; --line:#243440;
+    --teal:#4DB1CF; --teal-2:#7CC7DD; --teal-wash:#14303B;
+    --call-bg:#33290F; --call-ink:#F0CF7E; --call-line:#5A4718;
+    --trap-bg:#3A1D19; --trap-ink:#F3A79B; --trap-line:#5E2E27;
+    --ok-bg:#173324; --ok-ink:#7CD9A0;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;margin:0;}
+  main{max-width:78ch;margin:0 auto;padding:40px 20px 72px;}
+  h1,h2,h3{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;text-wrap:balance;margin:0;}
+  h1{font-size:34px;font-weight:700;line-height:1.15;letter-spacing:-0.01em;}
+  h2{font-size:22px;font-weight:600;margin-top:44px;padding-bottom:8px;border-bottom:2px solid var(--teal);}
+  h3{font-size:19px;font-weight:600;}
+  p{margin:0;}
+  code{font-family:var(--mono);font-size:0.9em;background:var(--teal-wash);padding:1px 5px;border-radius:3px;}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--teal);font-weight:500;}
+  .lede{color:var(--ink-2);font-size:16px;margin-top:12px;max-width:66ch;}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:18px;font-size:13px;color:var(--ink-2);}
+  .meta span b{color:var(--ink);font-weight:600;}
+  .strip{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px;}
+  .strip .tile{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--teal);padding:14px 16px;}
+  .tile .eyebrow{color:var(--ink-2);}
+  .tile p{margin-top:6px;}
+  .tile.block{border-left-color:var(--call-ink);}
+  .card{background:var(--card);border:1px solid var(--line);padding:20px 22px;margin-top:18px;display:grid;gap:14px;}
+  .card header{display:flex;align-items:baseline;gap:14px;}
+  .card header .id{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--teal);white-space:nowrap;}
+  .card header .tag{margin-left:auto;font-size:12px;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+  .tag.quick{background:var(--ok-bg);color:var(--ok-ink);}
+  .tag.real{background:var(--call-bg);color:var(--call-ink);}
+  .card dl{display:grid;grid-template-columns:11ch 1fr;gap:6px 16px;margin:0;}
+  .card dt{font-family:var(--mono);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-2);padding-top:3px;}
+  .card dd{margin:0;}
+  .call{background:var(--call-bg);border:1px solid var(--call-line);color:var(--call-ink);padding:12px 14px;}
+  .call .eyebrow{color:var(--call-ink);}
+  .call ul{margin:6px 0 0;padding-left:20px;}
+  .call li{margin-top:4px;}
+  .call li b{font-weight:600;}
+  .trap{background:var(--trap-bg);border:1px solid var(--trap-line);color:var(--trap-ink);padding:12px 14px;margin-top:18px;}
+  .trap .eyebrow{color:var(--trap-ink);}
+  .trap p{margin-top:6px;}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px;}
+  .tablewrap{overflow-x:auto;}
+  th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line);}
+  th{font-family:var(--mono);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-2);font-weight:500;}
+  td:first-child{font-family:var(--mono);white-space:nowrap;}
+  .sources{margin-top:36px;font-size:13px;color:var(--ink-2);}
+  .sources code{background:transparent;padding:0;}
+  ul.plain{margin:8px 0 0;padding-left:20px;}
+  ul.plain li{margin-top:4px;}
+  @media (max-width:640px){.strip{grid-template-columns:1fr;} .card dl{grid-template-columns:1fr;} h1{font-size:28px;}}
+</style>
+<main>
+  <div class="eyebrow">RePark · deterministic silver-layer compiler · owner review</div>
+  <h1>Ten rulings the silver track is waiting on</h1>
+  <p class="lede">Silver S-0 ran ten probe tests against the pinned iceberg-rust fork and mapped every SIL item to what exists, what is missing, and what only you can decide. S-1 shipped the plan contract on top. S-2 does not open until these are ruled. Eight items accept a one-word answer. Two need real input.</p>
+  <div class="meta">
+    <span>Filed <b>2026-09-13</b></span>
+    <span>Evidence <b>silver-s0 ledger, 11 clauses PROVEN</b></span>
+    <span>Fork pin <b>3ebf7d36</b>, branch <code>probe/silver-s0</code></span>
+    <span>Status <b>tabled by the owner 2026-09-13</b></span>
+  </div>
+
+  <div class="strip">
+    <div class="tile block">
+      <div class="eyebrow">Minimum to unblock S-2</div>
+      <p><b>SIL-1</b> name the first bronze table. <b>SIL-4</b> choose opt-in validation or a fork change. Everything else can take its recommended default.</p>
+    </div>
+    <div class="tile">
+      <div class="eyebrow">How to read a card</div>
+      <p>Each card says what the decision is, what S-0 measured, the recommendation, and the exact question left for you. A green tag means the default is safe to accept as written.</p>
+    </div>
+  </div>
+
+  <div class="trap">
+    <div class="eyebrow">The one measured trap</div>
+    <p>RePark's default overwrite isolation is <code>snapshot</code>. Under it, an overwrite that lands after a concurrent append silently deletes the appended file, and setting <code>commit.retry.num-retries=0</code> does not stop the first-attempt rebase. That is correct Spark parity for ordinary overwrites. It is wrong for silver publication, so whatever you rule on SIL-4, the publish path arms <code>validate_no_conflicting_data</code>. Probes: overwrite without validation committed <code>deleted-data-files=2</code>; with validation it refused as non-retryable <code>DataInvalid</code> and the concurrent head stayed.</p>
+  </div>
+
+  <h2>The rulings</h2>
+
+  <section class="card">
+    <header><span class="id">SIL-1</span><h3>First dataset and the supported type matrix</h3><span class="tag real">needs your input</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>Which bronze table silver classifies first, and the finite set of types and operations the first plans may use.</dd>
+      <dt>Measured</dt><dd>Seven types round-trip Iceberg to Arrow and back at the pin: int32, int64, utf8, bool, date32, timestamp-microseconds UTC, decimal128. Keys and source order on int32, int64 and utf8 (bytewise) sort totally. Four of the five plan operations already exist as engine functions: Trim as <code>btrim(col, ' ')</code>, EmptyToNull as <code>nullif</code>, RequireNonNull as <code>isnotnull</code>, CheckAllowedValues as <code>in_list</code>. ParseTimestamp with a parse-success flag is missing; the engine has no format parse that reports success separately from null.</dd>
+      <dt>Recommend</dt><dd>Start with exactly that matrix. Keep ParseTimestamp out of the first plans until S-2 builds the kernel.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul>
+      <li><b>Which bronze table</b> goes first, with its key field, source-order field and stable record-id field named.</li>
+      <li><b>Decimal cap:</b> accept Decimal128 with precision up to 38, or restrict further.</li>
+      <li><b>ParseTimestamp:</b> waits for S-2, or the first table must not need it.</li>
+    </ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-2</span><h3>Invalid latest version</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>What happens when the newest version of a keyed record fails classification.</dd>
+      <dt>Measured</dt><dd>Nothing to probe in storage; this is plan semantics from the proposal's section 10.</dd>
+      <dt>Recommend</dt><dd>Latest-source-version wins. An invalid latest version quarantines the key. Silver never falls back to an older valid row, because that would publish a state the source no longer asserts.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul><li>Yes to that default, or you want fallback to the last valid version.</li></ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-3</span><h3>Ordering conflicts and repeats</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>What silver does when two rows tie for greatest version, when keyed history cannot be ordered, and when identical payloads repeat.</dd>
+      <dt>Measured</dt><dd>Plan semantics only; no storage probe.</dd>
+      <dt>Recommend</dt><dd>Fail the run on a conflicting tie or an unorderable history. Identical repeats resolve to the lowest bronze record id.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul>
+      <li>Accept fail-on-conflict.</li>
+      <li><b>Canonical payload equality:</b> compare every non-key field exactly, or compare a hash of them. Exact is recommended until S-9 sets a budget.</li>
+    </ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-4</span><h3>Publication primitive</h3><span class="tag real">needs your input</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>How a silver run stages files, gates them, commits them conditionally, and later proves it published.</dd>
+      <dt>Measured</dt><dd>All four steps work at the pin with no fork change. Data files write with no catalog commit and can be handed to a later commit. One overwrite-by-always-true replaces the whole table in one snapshot. A run key rides that snapshot's summary and is findable from metadata alone. The commit-outcome taxonomy is clean: conflict is retryable, a validation refusal is non-retryable, a lost response is <code>CommitStateUnknown</code> and is never auto-retried. Two traps: the rebase above, and the fork will not let a caller pin an expected-base snapshot independently of refresh.</dd>
+      <dt>Recommend</dt><dd>Build the publish function in the existing write adapter beside <code>overwrite_commit.rs</code>: hold the expected-base table, stage, gate, then overwrite with <code>validate_no_conflicting_data</code>, <code>validate_from_snapshot(base)</code> and the run key as a snapshot property. On an unknown outcome, walk snapshots for the run key and never retry a replace. No fork change.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul>
+      <li><b>Opt-in validation is enough</b> (recommended), or you want a first-class expected-base commit in the fork, card <code>F-SILVER-PIN-BASE</code>.</li>
+      <li><b>The run-key property name.</b> The probe used <code>repark.silver.run-key</code>.</li>
+    </ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-5</span><h3>Consumer interface</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>What readers see and how they pin a run.</dd>
+      <dt>Measured</dt><dd>The single-snapshot full replace is proven, so one committed snapshot id is a complete publication point.</dd>
+      <dt>Recommend</dt><dd>One classified physical table. The committed snapshot id is the read handle.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul><li><b>How plain SQL consumers bind a run:</b> by snapshot id (recommended, it already works through time travel), by a branch per run, or by filtering on the run key as a column.</li></ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-6</span><h3>Retention and quarantine</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>How long a run stays provable and where quarantined rows live.</dd>
+      <dt>Measured</dt><dd>Expiring a snapshot removes its summary, so a run key that lives only there disappears with it. A replay window longer than snapshot retention cannot resolve an ambiguous commit from metadata alone.</dd>
+      <dt>Recommend</dt><dd>Set snapshot retention to cover the retry and replay window, or dual-write the run key into table properties in the same transaction. Physical file cleanup stays a separate maintenance step.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul>
+      <li><b>The replay and retry window</b> in days.</li>
+      <li><b>Dual-write</b> the run key into table properties: yes or no.</li>
+      <li>Where quarantined rows are readable from.</li>
+    </ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-7</span><h3>Quality gate limits</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>When a run is allowed to publish.</dd>
+      <dt>Measured</dt><dd>Staging without commit makes it possible to run every gate on the exact files that would publish, so a failed gate leaves the last accepted snapshot current with nothing to roll back.</dd>
+      <dt>Recommend</dt><dd>Gates run on staged files before commit; a failure publishes nothing.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul>
+      <li>Denominators for rates: all bronze rows, or classified rows only.</li>
+      <li>Thresholds for the first table.</li>
+      <li>Empty input: publish an empty table, or refuse.</li>
+      <li>Whether losing evidence rows blocks publication.</li>
+    </ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-8</span><h3>Module ownership</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>Which crate owns the plan, the compiler and the publisher.</dd>
+      <dt>Measured</dt><dd>The crate graph puts <code>repark-core</code> at tier 2 above <code>repark-iceberg</code> at tier 1. S-1 already landed the plan contract under <code>repark-core/src/silver/</code> on that basis.</dd>
+      <dt>Recommend</dt><dd>Plan, policy and compile in <code>repark-core</code>; the publish adapter in <code>repark-iceberg</code>'s write module; Python stays a thin authoring door. No new crate.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul><li>Module under <code>repark-core</code> now (recommended), or wait for a later crate split.</li></ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-9</span><h3>Performance budget</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>What silver must cost before an implementation is judged.</dd>
+      <dt>Measured</dt><dd>Nothing yet; S-0 deliberately asserted no target.</dd>
+      <dt>Recommend</dt><dd>Set the methodology first: the hardware, the corpus and how a run is timed. Only then set memory and latency budgets.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul><li>The corpus. The proposal names a 190-column set; confirm it or name another.</li><li>Budgets can wait until the first measured run.</li></ul></div>
+  </section>
+
+  <section class="card">
+    <header><span class="id">SIL-10</span><h3>Schema evolution</h3><span class="tag quick">accept the default</span></header>
+    <dl>
+      <dt>Deciding</dt><dd>What happens to consumers when a plan's output shape changes.</dd>
+      <dt>Measured</dt><dd>Proposal section 13; no storage probe.</dd>
+      <dt>Recommend</dt><dd>A fixed output contract per accepted plan. A breaking change needs either a versioned target table or a reviewed migration.</dd>
+    </dl>
+    <div class="call"><div class="eyebrow">Your call</div><ul><li>Versioned target (recommended, it keeps every published snapshot readable as-is) or reviewed migration.</li></ul></div>
+  </section>
+
+  <h2>Fork cards you can decline</h2>
+  <p class="lede" style="margin-top:10px">None of these is required if SIL-4 takes the opt-in route. They exist so the choice is explicit.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Card</th><th>What it would add</th><th>Needed when</th></tr></thead>
+    <tbody>
+      <tr><td>F-SILVER-PIN-BASE</td><td>A first-class expected-base snapshot that the fork's commit does not rewrite into the live head.</td><td>You want the base pinned in the protocol rather than by the adapter holding the table.</td></tr>
+      <tr><td>F-SILVER-NO-REBASE</td><td>A commit option that skips refresh-and-re-apply outright.</td><td>You distrust validation as the only guard.</td></tr>
+      <tr><td>F-SILVER-MARKER-RETENTION</td><td>Expire that knows about run keys.</td><td>Not recommended; SIL-6's retention policy covers it on the RePark side.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>What happens after you rule</h2>
+  <ul class="plain">
+    <li>One docs PR records every ruling in the S-0 ledger and the proposal's section 18.</li>
+    <li>Silver S-2 opens: batch semantics over bounded Arrow fixtures, the first classified table from SIL-1, the ParseTimestamp kernel if you asked for it.</li>
+    <li>Any fork card you accepted is filed on the owned fork and pinned before S-4, the publish step.</li>
+  </ul>
+
+  <div class="sources">
+    Sources: <code>task/ledgers/staging/silver-s0-ledger.md</code> (C-001 to C-011 and the SIL table), <code>task/roadmap/epic-term/deterministic-silver-layer-compiler-2026-09-12.md</code> sections 10 to 14 and 18, <code>task/roadmap/mid-term/overnight-report-2026-09-12-run9.md</code> section 4, fork probes in <code>fork/crates/iceberg/src/transaction/silver_s0_probe.rs</code> at pin 3ebf7d36. The sources stay authoritative; this page is a rendering.
+  </div>
+</main>
