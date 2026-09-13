@@ -7,7 +7,7 @@
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 **Why now.** The owner's
-[eager materialization retention review](../../roadmap/mid-term/eager-materialization-retention-review-2026-09-13.md)
+[eager materialization retention review](../../../docs/history/eager-own-1/eager-materialization-retention-review-2026-09-13.md)
 confirms in source that a bare `temp_df.eager()` (result not assigned) registers a
 `__repark_cache_*` MemTable that nothing owns: the frame registry is a `WeakSet`,
 `unpersist()` on the source does not know the dropped child, and only
@@ -53,7 +53,7 @@ count.
 
 ## Decisions
 
-Orchestrator rulings R11-D-1…R11-D-4 from the step-1 brief, and how the tree
+Orchestrator rulings R11-D-1…R11-D-5 from the step-1 and step-2 briefs, and how the tree
 honours them:
 
 | ID | Ruling | Honoured by |
@@ -62,6 +62,7 @@ honours them:
 | R11-D-2 | Frames carry an immutable tuple of handles, shared empty tuple when none; `_spawn(inner, *others)` unions each other frame's handles only when it carries some; no per-spawn allocation on frames without handles; audit every `_spawn` and every direct `DataFrame(...)` that embeds another frame's plan. | `DataFrame.__slots__` grows `_handles` (+ `_cache_view_owned_handle` for the owner link); `_spawn` assigns `child._handles = self._handles` (shared tuple, no allocation) and calls `union_handles` only for an `other` whose `_handles` is non-empty; the audit table below lists every site and its verdict. |
 | R11-D-3 | `weakref.finalize(handle, <module-level fn>, session, alive_token, view_name)` with `atexit=False`; callback references no handle/frame, returns when `alive_token["alive"]` is false, never raises; drop failures debug-logged and swallowed only inside the GC callback; explicit `unpersist`/`clearCache` errors still propagate; no nested defs, no lambdas, no dataclasses. | `cache_handle.py::_drop_cache_view_registration` is the module-level callback — signature `(session, alive_token, view_name)`, early return on `not alive_token.get("alive")`, `except Exception` around `session.drop_temp_view` logged through `_LOGGER.debug`; `CacheViewHandle.release()` calls `drop_temp_view` directly so explicit-path errors propagate; no nested def/lambda/dataclass anywhere in the module; the spy pin (C-006) proves zero calls on a stopped session. |
 | R11-D-4 | `clearCache()` releases every live handle of the session (drop + mark released) before today's registry loop and prefix sweep, both of which stay. | `CacheViewHandle.__init__` self-registers into a per-session `WeakSet` under `alive_token["cache_view_handles"]`; `catalog.py::clear_cache` iterates that set calling `handle.release()` first, then runs the unchanged registry `unpersist` loop and the `_CACHE_VIEW_PREFIX` sweep; idempotent (`release()` no-ops once released); checkpoint views untouched (C-006, C-011 prefix-sweep pin). |
+| R11-D-5 | `_warn_storage_level_cosmetic_once` moves verbatim from `core.py` to `cache_handle.py`, re-imported into `core.py` by identity, to keep `core.py` under its 4117-line ceiling without condensing unrelated code. | `cache_handle.py` carries the helper byte-identical; `core.py` does `from repark.spark.dataframe.cache_handle import _warn_storage_level_cosmetic_once` so both module surfaces keep the name (the frozen `EXPECTED_*` tables in `_dfcore_1_expected.py` pass unchanged); `core.py` ends at 4094 lines and both CAP-1 baselines were ratcheted down to the exact count; orchestrator-accepted in the step-2 brief. |
 
 R11-D-2 audit — every `_spawn` call site and every `DataFrame(...)`
 construction that embeds another frame's plan, with verdict:
@@ -244,4 +245,21 @@ reps each side; medians of medians:
 Every `build_only` cell — the direct per-`_spawn` measure — lands within ±2.1 %
 of base, inside run-to-run noise (e.g. `chain/10` spread 1.82–2.37 ms across
 base reps alone); the handle adds no measurable per-spawn cost.
+
+**Step 2 (docs close).** Every multi-line docstring the unit added or grew
+trimmed to one line — `cache_handle.py` (module, `CacheViewHandle`,
+`bind_registered_view`), `eager.py::_eager_materialize` (restored),
+`test_eager_own_1.py`, `python/repark-parity/tests/eager_own/`,
+`_dfcore_1_expected.py`, `test_cache_persist.py`; the removed prose lives in the
+new `## cache-view ownership (EAGER-OWN-1)` section of
+[python/repark/src/repark/spark/dataframe/map.md](../../../python/repark/src/repark/spark/dataframe/map.md).
+One lifetime paragraph added to
+[docs/guide/dataframe-guide.md](../../../docs/guide/dataframe-guide.md). The
+owner's review `git mv`'d to
+[docs/history/eager-own-1/](../../../docs/history/eager-own-1/map.md) with a
+dated closure note; inbound links repaired in the card,
+[task/roadmap/mid-term/map.md](../../roadmap/mid-term/map.md), and this ledger.
+Gates: focused pins `54 passed, 1 skipped`; `check-docs-links`,
+`check-map-sync`, `check-ledger-grammar`, `check-lib-py`, `make verify` — see
+the step-2 commit.
 

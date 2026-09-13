@@ -1,7 +1,4 @@
-"""EAGER-OWN-1 step-1 pins: bare ``eager()`` registrations die with their dropped child.
-
-pins: eager-own-1/C-001, C-012
-"""
+"""EAGER-OWN-1 step-1 pins: bare ``eager()`` registrations die with their dropped child."""
 
 from __future__ import annotations
 

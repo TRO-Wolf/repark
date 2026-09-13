@@ -1,7 +1,7 @@
 # Card EAGER-OWN-1 — eager results own their materialization (2026-09-13)
 
 Chartered by the owner on 2026-09-13 from the filed
-[eager materialization retention review](eager-materialization-retention-review-2026-09-13.md).
+[eager materialization retention review](../../../docs/history/eager-own-1/eager-materialization-retention-review-2026-09-13.md).
 Run by an Opus orchestrator (run 11) with a Devin actor, a Grok critic-logic round and the S2-21
 Python perf reviewer. Product code only in `python/repark/src/repark/spark/dataframe/` (`core.py`
 is no longer fenced — COMMENT-CORE-1 merged as #561), `python/repark/src/repark/spark/catalog.py`

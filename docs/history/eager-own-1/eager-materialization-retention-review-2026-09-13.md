@@ -1,7 +1,10 @@
 # Eager materialization: cache retention and repeated execution
 
+> Closed 2026-09-13 by EAGER-OWN-1 (#PR pending); see the
+> [ledger](../../../task/ledgers/staging/eager-own-1-ledger.md).
+
 > Owner's source review, filed verbatim on 2026-09-13 with the reported symptom appended at the
-> end. The unit that acts on it is [EAGER-OWN-1](eager-own-1-card-2026-09-13.md). Closure per
+> end. The unit that acted on it is [EAGER-OWN-1](../../../task/roadmap/mid-term/eager-own-1-card-2026-09-13.md). Closure per
 > the review's own rule: archive to `docs/history/` when the fix and its lifecycle tests merge, or
 > when an explicit decision declines the change.
 

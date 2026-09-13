@@ -1,12 +1,4 @@
-"""Refcounted ownership of ``__repark_cache_*`` MemTable registrations (EAGER-OWN-1).
-
-The frame whose materialize registered a cache view owns one :class:`CacheViewHandle`;
-every frame whose plan scans the view carries it in its ``_handles`` tuple. The
-registration dies with the last holder (the ``weakref.finalize`` below) or by an
-explicit ``release()`` from ``unpersist`` / ``clearCache`` / checkpoint truncation,
-whichever comes first. ``__repark_ckpt_*`` views are a different family and stay
-outside this ownership model.
-"""
+"""Refcounted ownership of ``__repark_cache_*`` MemTable registrations (EAGER-OWN-1)."""
 
 from __future__ import annotations
 
@@ -33,13 +25,7 @@ def _drop_cache_view_registration(
 
 
 class CacheViewHandle:
-    """Shared ownership of one ``__repark_cache_*`` view registration.
-
-    Frames hold this handle in ``_handles``; the registering frame also keeps it in
-    ``_cache_view_owned_handle`` so ``unpersist`` can tell owner from sharing
-    wrapper. The finalizer never touches a stopped session and never raises out of
-    a GC callback — explicit ``release()`` errors still propagate.
-    """
+    """Shared ownership of one ``__repark_cache_*`` view registration."""
 
     __slots__ = (
         "__weakref__",
@@ -109,11 +95,7 @@ def find_live_handle(frame: Any, view_name: str) -> CacheViewHandle | None:
 
 
 def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
-    """Point ``frame`` at a freshly registered cache view and adopt its handle.
-
-    A failed ``SELECT *`` over the new view drops the registration, so a
-    post-registration failure leaves no orphan view and no live handle.
-    """
+    """Point ``frame`` at a freshly registered cache view and adopt its handle."""
     try:
         frame._inner = frame._session.sql(f"SELECT * FROM {view_name}")
     except Exception:

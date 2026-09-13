@@ -67,6 +67,7 @@ Measured facts this harness is built on (base `8936346a`, release native,
 - `test_eager_own.py` — the pins: `_run_worker` subprocess wrapper, the
   `_assert_owned_shape` post-fix assertion block (all-zero registrations), the
   always-on small pin, and the `REPARK_EAGER_OWN_BENCH=1`-gated million-row pin.
+  Step 2 trimmed the module docstring to one line — the `pins:` citation lives here.
 - `map.md` — this file.
 
 pins: eager-own-1/C-001, C-012

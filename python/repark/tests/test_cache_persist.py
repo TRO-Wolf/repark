@@ -189,14 +189,7 @@ def test_clear_cache_clears_lazy_mark_before_materialize(spark: ReparkSession) -
 
 
 def test_clear_cache_drops_orphan_cache_views(spark: ReparkSession) -> None:
-    """A GC'd frame's cache view dies with it; clearCache still sweeps foreign orphans.
-
-    EAGER-OWN-1 inverts the old orphan pin: the registration is owned by a refcounted
-    handle, so ``del`` + ``gc`` drops it — no clearCache needed. The prefix sweep still
-    has to drop ``__repark_cache_*`` names registered without a handle (hand-made here).
-    Mutation: remove the orphan prefix loop in Catalog.clear_cache → the hand-made row
-    REDS while live-handle clearCache pins stay green.
-    """
+    """A GC'd frame's cache view dies with it; clearCache still sweeps foreign orphans."""
     import gc
     import weakref
 

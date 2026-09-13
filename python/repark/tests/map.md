@@ -81,7 +81,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   C-009 a rewritten CSV source is observed by the second `eager()` while the first
   snapshot keeps old data; C-010 `to_arrow` / `to_pandas` / `to_polars` / `collect`
   exports read unchanged after the registration dies, and a `cache()`d view dies with
-  its last holder (D-3).
+  its last holder (D-3). Step 2 trimmed the module docstring to one line — the `pins:`
+  citation lives here.
   pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   REVIEW-FIX-4 (2026-09-10): the eager frame's checkpoint paths. `lazy()` on a
   checkpointed eager frame answers a shape-less copy over the same inner plan

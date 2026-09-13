@@ -453,6 +453,67 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `printSchema` stdout is Spark's tree plus the blank line (`treeString`'s newline and
   `print`'s). pins: df-printschema-1-trailing-newline/C-001, C-004
 
+## cache-view ownership (EAGER-OWN-1)
+
+Every `__repark_cache_*` MemTable registration is owned by exactly one refcounted
+`CacheViewHandle` ([`cache_handle.py`](cache_handle.py)). Before this unit a bare
+`temp_df.eager()` registered a view that nothing owned: the frame registry is a
+`WeakSet`, `unpersist` knew only its own frame, and only `catalog.clearCache()`
+swept the orphans by prefix, so repeated calls accumulated full result sets.
+
+- **Owner vs sharing holder (R11-D-1).** The frame whose
+  `_materialize_cache_if_needed` registered the view keeps the handle in
+  `_cache_view_owned_handle`; `bind_registered_view` wires both that owner link
+  and the frame's `_handles` entry, and drops the registration if the
+  `SELECT *` over the new view fails, so a post-registration failure leaves no
+  view and no live handle. `unpersist` on the owner drops the registration and
+  marks the handle released; `unpersist` on a D-4 wrapper clears only that
+  wrapper's view reference, shape, and hold — a registration other holders use
+  is never dropped under it. A frame whose native plan still scans a dropped
+  view keeps answering: the plan holds the resolved table provider, and the
+  registration was only a name (measured on the base tree).
+- **Holder propagation (R11-D-2).** Every frame carries an immutable `_handles`
+  tuple — the shared empty tuple when there is nothing to hold, so frames
+  without handles pay no per-spawn allocation. `_spawn(inner, *others)` gives
+  the child `self._handles` and calls `union_handles` only for an `other` whose
+  tuple is non-empty. The audited sites: core join / union / set-op paths and
+  `polars.py` already pass `other`; `_identity_child` and
+  `_spawn_preserving_identity` carry `self`'s handles by construction;
+  `parent_for_stream` copies the parent's tuple so a `mapInArrow` parent keeps
+  its view alive; `joins_columns.py`'s mixed-aggregation temp views embed plans
+  derived from the same source frame, whose `_handles` already covers them.
+- **Finalizer contract (R11-D-3).**
+  `weakref.finalize(handle, _drop_cache_view_registration, session,
+  alive_token, view_name)` with `atexit=False`; the callback is module-level,
+  references neither the handle nor any frame, returns immediately when
+  `alive_token["alive"]` is false (a stopped session is never called — pinned
+  by the `drop_temp_view` spy test), and never raises: a `drop_temp_view`
+  failure inside the GC callback is logged at debug and swallowed there only.
+  Explicit `release()` calls `drop_temp_view` directly, so `unpersist` /
+  `clearCache` errors still propagate.
+- **`clearCache()` order (R11-D-4).** Handles self-register in a per-session
+  `WeakSet` under `alive_token["cache_view_handles"]`. `clearCache` releases
+  every live handle first, then runs the unchanged registry `unpersist` loop
+  and the `_CACHE_VIEW_PREFIX` orphan sweep. Idempotent; `__repark_ckpt_*`
+  views are a different family and stay outside the model.
+- **D-3.** `cache()` / `persist()` views use the same handle: ownership moved,
+  explicit-drop policy unchanged — they now also die with the last holder.
+- **D-4.** `eager()` on a frame whose `_cache_view` is backed by a live handle
+  returns an `_identity_child` wrapper sharing the view, the handle, and the
+  known `_eager_shape` — no collection, no new registration. A frame whose
+  view was explicitly dropped is not already-eager and materializes afresh.
+- **D-5.** No plan-equivalence caching: two `eager()` calls on the same lazy
+  source evaluate twice, so source changes and nondeterminism stay observable;
+  each result is an independent snapshot.
+- **The cosmetic-warning move.** `_warn_storage_level_cosmetic_once` moved from
+  `core.py` to `cache_handle.py` verbatim and is re-imported by `core` — with
+  `core.py` at its exact ceiling the ownership wiring had to be a net minus,
+  and this was the smallest unrelated block that could leave without
+  condensing code mid-fix (ledger R11-D-5, orchestrator-accepted).
+
+pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+C-010, C-011, C-012
+
 ## core.py rationale (COMMENT-CORE-1)
 
 In-code comments left `core.py` in this unit. Docstrings and `# noqa` / `# type:` pragmas

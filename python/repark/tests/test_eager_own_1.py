@@ -1,7 +1,4 @@
-"""EAGER-OWN-1 step-1 pins: a refcounted handle owns every ``__repark_cache_*`` view.
-
-pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
-"""
+"""EAGER-OWN-1 step-1 pins: a refcounted handle owns every ``__repark_cache_*`` view."""
 
 from __future__ import annotations
 

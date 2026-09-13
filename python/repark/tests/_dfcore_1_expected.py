@@ -1,8 +1,4 @@
-"""Frozen expectation tables for ``test_dfcore_1_exports.py`` (EAGER-OWN-1 split).
-
-These ``EXPECTED_*`` lists/sets are the pre-slice surface snapshot the export pins
-diff against; they moved here verbatim when the test file crossed its line ceiling.
-"""
+"""Frozen expectation tables for ``test_dfcore_1_exports.py`` (EAGER-OWN-1 split)."""
 
 from __future__ import annotations
 

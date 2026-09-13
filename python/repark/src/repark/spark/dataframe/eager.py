@@ -61,13 +61,7 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
 
 
 def _eager_materialize(frame: DataFrame) -> DataFrame:
-    """Materialize the frame plan through the cache view and return a new eager frame.
-
-    On an already-eager frame (live cache view and shape) this returns a wrapper
-    sharing the backing view, its handle, and the known shape — no collection, no
-    new registration (D-4). A frame whose view was explicitly dropped materializes
-    afresh.
-    """
+    """Materialize the frame plan through the cache view and return a new eager frame."""
     from repark.spark.dataframe import cache_handle
 
     frame._ensure_alive()
