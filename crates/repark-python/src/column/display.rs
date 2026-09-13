@@ -2,6 +2,7 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::{Case, Cast, Expr, TryCast, lit};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyList;
 
 use super::PyColumn;
 use super::expr_build::parse_data_type;
@@ -172,6 +173,28 @@ fn wrap_cast(keyword: &str, child: &str, spark_type: &str) -> String {
     out.push_str(spark_type);
     out.push(')');
     out
+}
+
+fn wrap_call(name: &str, parts: &[&str]) -> String {
+    let size = name.len() + 2 + parts.iter().map(|part| part.len() + 2).sum::<usize>();
+    let mut out = String::with_capacity(size);
+    out.push_str(name);
+    out.push('(');
+    for (index, part) in parts.iter().enumerate() {
+        if index > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(part);
+    }
+    out.push(')');
+    out
+}
+
+fn str_list<'a>(items: &'a [Bound<'a, PyAny>]) -> PyResult<Vec<&'a str>> {
+    items
+        .iter()
+        .map(PyAnyMethods::extract::<&'a str>)
+        .collect::<PyResult<Vec<&'a str>>>()
 }
 
 fn format_case_body(arms: Vec<(String, String)>, else_part: Option<&str>) -> String {
@@ -539,6 +562,42 @@ impl PyColumnParts {
     }
 
     #[staticmethod]
+    fn call_scalar(
+        name: &str,
+        inners: Vec<PyColumn>,
+        display_list: &Bound<'_, PyList>,
+        sql_list: &Bound<'_, PyList>,
+        join_list: &Bound<'_, PyList>,
+        display: Option<&str>,
+    ) -> PyResult<RenderedParts> {
+        fenced!("ColumnParts.call_scalar", {
+            let display_items: Vec<_> = display_list.iter().collect();
+            let sql_items: Vec<_> = sql_list.iter().collect();
+            let join_items: Vec<_> = join_list.iter().collect();
+            let display_parts = str_list(&display_items)?;
+            let sql_parts = str_list(&sql_items)?;
+            let join_parts = str_list(&join_items)?;
+            if display_parts.len() != inners.len()
+                || sql_parts.len() != inners.len()
+                || join_parts.len() != inners.len()
+            {
+                return Err(PyValueError::new_err(
+                    "call_scalar part lists must match the argument count",
+                ));
+            }
+            let exprs = inners.iter().map(PyColumn::expr).collect();
+            let inner = PyColumn::from_expr(call_scalar_expr(name, exprs)?);
+            let shown = display.map_or_else(|| wrap_call(name, &display_parts), str::to_string);
+            Ok((
+                inner,
+                shown,
+                wrap_call(name, &sql_parts),
+                Some(wrap_call(name, &join_parts)),
+            ))
+        })
+    }
+
+    #[staticmethod]
     fn lit_timestamp(text: &str) -> PyResult<(PyColumn, String)> {
         fenced!("ColumnParts.lit_timestamp", {
             construct::lit_timestamp(text)
@@ -660,6 +719,13 @@ mod tests {
     fn cast_and_try_cast_keywords() {
         assert_eq!(wrap_cast("CAST", "x", "DOUBLE"), "CAST(x AS DOUBLE)");
         assert_eq!(wrap_cast("TRY_CAST", "x", "INT"), "TRY_CAST(x AS INT)");
+    }
+
+    #[test]
+    fn call_renders_name_comma_parts() {
+        assert_eq!(wrap_call("sqrt", &["x"]), "sqrt(x)");
+        assert_eq!(wrap_call("lpad", &["s", "10", "'x'"]), "lpad(s, 10, 'x')");
+        assert_eq!(wrap_call("rand", &[]), "rand()");
     }
 
     #[test]

@@ -30,8 +30,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `wrap_*` builder pre-sizes its `String` instead of `format!`.
   pins: facade-2/C-008, C-009, C-010, C-011, C-012, C-013
   **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call —
-  the shared helper every `F.<fn>(...)` builder routes through. Argument part lists arrive
-  as `Bound<PyList>` items extracted to borrowed `&str` (the step-2b lesson: the growing
+  the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple
+  `(PyColumn, spark_display, sql_expr, join_sql_expr)` with an optional display
+  override for the bespoke-name callers. Argument part lists arrive as
+  `Bound<PyList>` items extracted to borrowed `&str` (the step-2b lesson: the growing
   fragments never copy across the boundary). The step-3 `#[pymethods]` wrappers for the
   Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split
   across files — while their `Expr` construction stays in `display/construct.rs`.

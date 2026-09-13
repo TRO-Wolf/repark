@@ -55,7 +55,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FACADE-2 step 3 (2026-09-13):** `lit` temporal arms and the numpy-array cast path
   use typed `_native.PyColumnParts` constructors (`lit_timestamp` / `lit_date` /
   `lit_time` / `lit_array_cast`); `_scalar` ships child display/SQL/join fragments to
-  `PyColumnParts.call_scalar`, which renders `name(args)` in Rust. `F.expr` stays the
+  `PyColumnParts.call_scalar`, which renders `name(args)` in Rust while foldability,
+  aggregate and ungroupable flags stay Python-side bookkeeping. `F.expr` stays the
   one `_native.PyColumn.sql` caller — its text is the caller's. pins: facade-2/C-014,
   C-016
 - `functions_agg.py` — aggregate-function re-exports.
