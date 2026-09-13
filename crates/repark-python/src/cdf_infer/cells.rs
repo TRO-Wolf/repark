@@ -38,7 +38,7 @@ pub(crate) struct Ctx<'py> {
     pub time_type: Bound<'py, PyType>,
     pub timezone_type: Bound<'py, PyType>,
     pub epoch_date: Bound<'py, PyAny>,
-    pub utcoffset_cache: RefCell<HashMap<usize, i64>>,
+    pub utcoffset_cache: RefCell<HashMap<usize, (Py<PyAny>, i64)>>,
     pub session_tz_utc: bool,
     pub timestamp_ntz: bool,
     pub infer_dict_as_struct: bool,
@@ -152,6 +152,9 @@ fn extract_decimal<'py>(obj: &Bound<'py, PyAny>, cx: &Ctx<'py>) -> Result<CellKi
 }
 
 fn extract_datetime<'py>(dt: &Bound<'py, PyDateTime>, cx: &Ctx<'py>) -> Result<CellKind<'py>, Cdf> {
+    if dt.get_type().as_ptr() != cx.datetime_type.as_ptr() {
+        return extract_datetime_subclass(dt);
+    }
     let py = dt.py();
     let year = dt.getattr(pyo3::intern!(py, "year"))?.extract::<i32>()?;
     let month = dt.getattr(pyo3::intern!(py, "month"))?.extract::<u32>()?;
@@ -174,6 +177,29 @@ fn extract_datetime<'py>(dt: &Bound<'py, PyDateTime>, cx: &Ctx<'py>) -> Result<C
     Ok(CellKind::Dt { wall_us, off_us })
 }
 
+fn extract_datetime_subclass<'py>(dt: &Bound<'py, PyDateTime>) -> Result<CellKind<'py>, Cdf> {
+    let parts = dt.call_method0(pyo3::intern!(dt.py(), "timetuple"))?;
+    let days = days_from_civil(
+        parts.get_item(0)?.extract::<i32>()?,
+        parts.get_item(1)?.extract::<u32>()?,
+        parts.get_item(2)?.extract::<u32>()?,
+    );
+    let wall_us = days * 86_400_000_000
+        + (parts.get_item(3)?.extract::<i64>()? * 3600
+            + parts.get_item(4)?.extract::<i64>()? * 60
+            + parts.get_item(5)?.extract::<i64>()?)
+            * 1_000_000
+        + dt.getattr(pyo3::intern!(dt.py(), "microsecond"))?
+            .extract::<i64>()?;
+    let tzinfo = dt.getattr(pyo3::intern!(dt.py(), "tzinfo"))?;
+    let off_us = if tzinfo.is_none() {
+        None
+    } else {
+        Some(utcoffset_call_us(&tzinfo, dt)?)
+    };
+    Ok(CellKind::Dt { wall_us, off_us })
+}
+
 fn datetime_utcoffset_us(
     tzinfo: &Bound<'_, PyAny>,
     dt: &Bound<'_, PyDateTime>,
@@ -183,11 +209,13 @@ fn datetime_utcoffset_us(
         return utcoffset_call_us(tzinfo, dt);
     }
     let key = tzinfo.as_ptr() as usize;
-    if let Some(us) = cx.utcoffset_cache.borrow().get(&key) {
+    if let Some((_, us)) = cx.utcoffset_cache.borrow().get(&key) {
         return Ok(*us);
     }
     let us = utcoffset_call_us(tzinfo, dt)?;
-    cx.utcoffset_cache.borrow_mut().insert(key, us);
+    cx.utcoffset_cache
+        .borrow_mut()
+        .insert(key, (tzinfo.clone().unbind(), us));
     Ok(us)
 }
 
@@ -270,11 +298,20 @@ fn classify<'py>(obj: &Bound<'py, PyAny>, cx: &Ctx<'py>, depth: u32) -> Result<C
     if obj.is_instance_of::<PyTime>() {
         return Ok(CellKind::Str(py_str(obj)?));
     }
-    if obj.cast::<PyDate>().is_ok() {
-        let delta = obj.sub(cx.epoch_date.clone())?;
-        let days = delta
-            .getattr(pyo3::intern!(obj.py(), "days"))?
-            .extract::<i64>()?;
+    if let Ok(value) = obj.cast::<PyDate>() {
+        if value.get_type().as_ptr() == cx.date_type.as_ptr() {
+            let delta = obj.sub(cx.epoch_date.clone())?;
+            let days = delta
+                .getattr(pyo3::intern!(obj.py(), "days"))?
+                .extract::<i64>()?;
+            return Ok(CellKind::Date(days.try_into().map_err(|_| Cdf::Fallback)?));
+        }
+        let parts = value.call_method0(pyo3::intern!(obj.py(), "timetuple"))?;
+        let days = days_from_civil(
+            parts.get_item(0)?.extract::<i32>()?,
+            parts.get_item(1)?.extract::<u32>()?,
+            parts.get_item(2)?.extract::<u32>()?,
+        );
         return Ok(CellKind::Date(days.try_into().map_err(|_| Cdf::Fallback)?));
     }
     if obj.is_instance(&cx.decimal_type)? {

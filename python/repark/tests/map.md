@@ -1680,7 +1680,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `Row` list, each poisoned at index 50 with `object()`, keep the pinned
   `cannot build Arrow column 'i'` refusal while the tuple-export counter stays 0
   (red-first on `c04d6c24`: `assert 1 == 0` for both).
-  pins: facade-3/C-019, C-020, C-026
+  Plus the C-027 temporal widened pin: every corpus case now runs through the tuple, dict
+  and `Row` doors, and the subclass corpus gained `__sub__`-lying `_SubDateSub`,
+  `toordinal`-lying `_SubDateToordinal` and `year`-lying `_SubDtYear` (red-first on
+  `a246df41`: `subclass_date_sub`/`subclass_dt_year` mismatched on all three doors);
+  `test_fresh_tzinfo_property_applies_per_access_offset` pins L-003's fresh-`timezone`
+  per-access offsets against the literal base-native series (the Python fallback is not
+  an oracle there — `astimezone` reads the C `tzinfo` field, never the property).
+  pins: facade-3/C-019, C-020, C-026, C-027
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

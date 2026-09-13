@@ -361,6 +361,40 @@ class _ProbeDatetime(datetime.datetime):
     """A plain ``datetime.datetime`` subclass for the value-parity pin."""
 
 
+class _SubDateSub(datetime.date):
+    """``__sub__`` lies — a calendar oracle must not trust it (L-001)."""
+
+    def __sub__(self, other: Any) -> Any:
+        return datetime.timedelta(days=0)
+
+
+class _SubDateToordinal(datetime.date):
+    """``toordinal`` lies — extraction must not consult it."""
+
+    def toordinal(self) -> int:
+        return 1
+
+
+class _SubDtYear(datetime.datetime):
+    """``year`` lies — the wall clock must come from the C struct (L-002)."""
+
+    @property
+    def year(self) -> int:  # type: ignore[override]
+        return 1999
+
+
+class _FreshTZDatetime(datetime.datetime):
+    """``tzinfo`` returns a new ``timezone`` per access — a pointer-keyed cache
+    would read a stale offset once the dead object's address is reused (L-003)."""
+
+    accesses = 0
+
+    @property
+    def tzinfo(self) -> datetime.tzinfo:  # type: ignore[override]
+        _FreshTZDatetime.accesses += 1
+        return datetime.timezone(datetime.timedelta(hours=(_FreshTZDatetime.accesses % 5) + 1))
+
+
 def _temporal_case_rows() -> dict[str, list[tuple[Any, ...]]]:
     """The C-020 value-parity corpus: one column per case family."""
     fixed_offset = datetime.timezone(datetime.timedelta(hours=-5, minutes=-30))
@@ -396,6 +430,17 @@ def _temporal_case_rows() -> dict[str, list[tuple[Any, ...]]]:
             (_ProbeDatetime(2024, 3, 4, 5, 6, 7, 890123),),
             (_ProbeDatetime(9999, 12, 31, 23, 59, 59, 999999),),
         ],
+        "subclass_date_sub": [
+            (_SubDateSub(2024, 6, 15),),
+            (_SubDateSub(1969, 12, 31),),
+        ],
+        "subclass_date_toordinal": [
+            (_SubDateToordinal(2024, 6, 15),),
+        ],
+        "subclass_dt_year": [
+            (_SubDtYear(2024, 6, 15, 12, 0, 0),),
+            (_SubDtYear(1969, 12, 31, 23, 59, 59),),
+        ],
     }
     try:
         from zoneinfo import ZoneInfo
@@ -422,22 +467,63 @@ def _temporal_case_rows() -> dict[str, list[tuple[Any, ...]]]:
 def test_temporal_cells_keep_fallback_values(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Native extraction equals the forced-fallback Python path, byte for byte (C-020)."""
+    """Native extraction equals the forced-fallback Python path, byte for byte (C-020).
+
+    Every case runs through the tuple, dict and ``Row`` doors — the subclass
+    corpus (``__sub__`` / ``toordinal`` / ``year``) pins the critic-logic
+    findings L-001/L-002/L-004. L-003's fresh-``timezone`` case sits in its own
+    pin: the Python fallback is not a valid oracle there (``astimezone`` reads
+    the C ``tzinfo`` field, never the property).
+    """
     import repark._native as native
 
     for name, data in _temporal_case_rows().items():
-        rust_frame = spark.createDataFrame(data)
-        rust_rows = [tuple(row) for row in rust_frame.collect()]
-        rust_schema = rust_frame.schema.simpleString()
-        monkeypatch.setattr(native, "cdf_arrow_export", lambda *args: None)
-        monkeypatch.setattr(
-            native, "cdf_arrow_export_named", lambda *args, **kwargs: None, raising=False
+        doors = (
+            data,
+            [{"d": row[0]} for row in data],
+            [Row(d=row[0]) for row in data],
         )
-        fallback_frame = spark.createDataFrame(data)
-        fallback_rows = [tuple(row) for row in fallback_frame.collect()]
-        fallback_schema = fallback_frame.schema.simpleString()
-        monkeypatch.undo()
-        assert (rust_schema, rust_rows) == (fallback_schema, fallback_rows), name
+        for door_index, door_data in enumerate(doors):
+            rust_frame = spark.createDataFrame(door_data)
+            rust_rows = [tuple(row) for row in rust_frame.collect()]
+            rust_schema = rust_frame.schema.simpleString()
+            monkeypatch.setattr(native, "cdf_arrow_export", lambda *args: None)
+            monkeypatch.setattr(
+                native, "cdf_arrow_export_named", lambda *args, **kwargs: None, raising=False
+            )
+            fallback_frame = spark.createDataFrame(door_data)
+            fallback_rows = [tuple(row) for row in fallback_frame.collect()]
+            fallback_schema = fallback_frame.schema.simpleString()
+            monkeypatch.undo()
+            assert (rust_schema, rust_rows) == (fallback_schema, fallback_rows), (
+                f"{name} door {door_index}"
+            )
+
+
+def test_fresh_tzinfo_property_applies_per_access_offset(spark: ReparkSession) -> None:
+    """L-003: a ``tzinfo`` property returning a new ``timezone`` per access must read
+    each access's own offset — a pointer-keyed cache without a held reference lets a
+    freed address reuse alias a stale entry.
+
+    The expected series is the base-native contract (``wall - offset`` per access,
+    offsets +2/+3/+4/+5/+1/+2 h); the Python fallback is not a valid oracle here —
+    ``astimezone`` reads the C ``tzinfo`` field (NULL), so it treats these cells as
+    system-local naive.
+    """
+    expected = [(datetime.datetime(2023, 12, 31, 22, 0),)] * 4 + [
+        (datetime.datetime(2024, 1, 1, 3, 0),),
+        (datetime.datetime(2024, 1, 1, 3, 0),),
+    ]
+    walls = [_FreshTZDatetime(2024, 1, 1, hour, 0, 0) for hour in range(6)]
+    doors: tuple[list[Any], ...] = (
+        [(wall,) for wall in walls],
+        [{"d": wall} for wall in walls],
+        [Row(d=wall) for wall in walls],
+    )
+    for door_index, door_data in enumerate(doors):
+        _FreshTZDatetime.accesses = 0
+        frame = spark.createDataFrame(door_data)
+        assert [tuple(row) for row in frame.collect()] == expected, f"door {door_index}"
 
 
 def test_nat_still_falls_back_to_python_normalizer(
