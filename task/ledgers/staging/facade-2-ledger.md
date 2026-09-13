@@ -1,19 +1,19 @@
 # Unit ledger — FACADE-2 · Column display strings rendered in Rust
 
-**Date:** 2026-09-12 · **Branch:** `feat/facade-2-s1` · **Base:** `d3a20d53`
-**Model:** grok-4.6 · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-09-12 · **Branch:** `feat/facade-2-s2` · **Base:** `524e9edc`
+**Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 **Why now.** Card FACADE-2 (audit §8): Spark display strings (`spark_display`,
 `projection_name`, `sql_expr`, `join_sql_expr`) move from Python string assembly in
-`column.py` / `functions*` into Rust on the native `PyColumn`. Step 1 is pins only:
-goldens, `isinstance`, mutation proof. No product change.
+`column.py` / `functions*` into Rust on the native `PyColumn`. Step 2 moves every
+§4 Group-2 `column.py` family into `crates/repark-python/src/column/display.rs`.
 
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.toml`,
-`Cargo.lock`, `pyproject.toml`, `uv.lock`. No JVM. Step 2/3 product moves are later
-commits on later branches.
+`Cargo.lock`, `pyproject.toml`, `uv.lock`. No JVM. Step 3 Group-1 constructors are a
+later branch.
 
 ## PROPOSITION LEDGER — FACADE-2 — 2026-09-12
 
@@ -26,8 +26,14 @@ commits on later branches.
 | C-005 | Mutation proof: one-character change in one rendered string in `column.py` turns the golden test red; restore leaves it green. | Scratch edit of `spark/column.py`; pytest red output pasted here; `git checkout` restore. | **PROVEN** | `negative(` → `negativx(` at `column.py:399`. Red: `golden byte mismatch ... changed=['g2_unary__neg', 'g2_unary__neg_add', 'g2_unary__neg_neg']`. `git checkout -- python/repark/src/repark/spark/column.py`; 3 passed. Product tree unchanged. |
 | C-006 | The audit's five pin files stay green unchanged: `test_columns.py`, `test_column_access.py`, `test_column_x1_census.py`, `test_examples_column_a.py`, `test_fnp_9_collections_json.py`. | Those files, same commit, no edits. | **PROVEN** | Combined with the new golden file: 225 passed in 5.32s. Those five files were not edited. |
 | C-007 | Named gates green: golden+audit pytest, `make verify`, parity suite. | Commands and counts in Evidence. | **PROVEN** | See Evidence. |
+| C-008 | Goldens file is byte-identical and unedited vs step-1 commit `524e9edc`, and the compare pin is green. | `git diff 524e9edc -- python/repark/tests/facade_2_column_display_goldens.json` empty; `test_column_display_goldens_match_committed_bytes`. | **PROVEN** | `git diff` empty. Golden pin green on the Group-2 Rust renderer (3 passed with the isinstance and CI-guard pins). |
+| C-009 | No Python text assembly remains in the Group-2 families (f-string / concat / `format` / `join` of display/SQL/join text). | `test_facade_2_group2_no_python_assembly.py`; red first on the step-1 tree. | **PROVEN** | Red on `524e9edc` (1 failed, 1 passed in 0.08s): 54 sites across `_binary`, `__neg__`, `__ne__`, `__invert__`, `eqNullSafe`, `substr`, `_string_predicate`, `_bitwise`, `is_null`, `is_not_null`, `_from_when_pairs`, `alias`, `__getitem__`, `cast`, `try_cast`. Green after the move: 2 passed. Refusals/`raise` f-strings stay allowed. `_with_sort_order` / `getItem` / `getField` had no assembly on the step-1 tree. |
+| C-010 | The audit's five pin files and the whole facade suite green; counts compared with step-1. | `make py-test-facade` (or the Makefile facade target). | **PROVEN** | Five audit files + goldens + C-009: 227 passed in 4.96s (step-1 225 in 5.32s; +2 C-009 tests). Whole facade `python/repark/tests`: **5961 passed, 369 skipped** in 804.73s. |
+| C-011 | Depth-100 binary+cast+alias chain (built, not executed) and depth-100 `withColumn` chain; 3+ reps after warmup; medians; no regression beyond 5%. | RELEASE `maturin develop --release` on step-1 vs this branch (R9-D-6: a debug build is not a ranking measurement). | **PROVEN** | Release re-measure after F1/F2/F5: depth-100 chain **+2.77%** (paired reps +1.45 … +4.07%), depth-500 **+2.55%**, `withColumn`-100 **−1.38%** on the stationary interleaved pass of the orchestrator's S2-21 re-check (release natives both trees). The Step-2b passes in the evidence (−34.44% / −42.31%) ran against a drifting base worker (3.55 → 6.2 ms) and are not a speedup. Bar ≤ +5%: met on every deciding case. Earlier debug-build read was +10.12%/−1.55%; the reviewer's release read on the pre-remediation branch was +8.65%/+8.48% depth-100, +4.93% depth-500, −3.65% withColumn. |
+| C-012 | Gates: `cargo test -p repark-python`, `make verify`, whole parity suite. | Commands and counts in Evidence. | **PROVEN** | `cargo test -p repark-python` exit 0. `make verify` exit 0 (workspace cargo test 55 suites). Parity: **749 passed, 1 skipped, 12 xfailed** in 562.97s (step-1 749/1/12 in 573.07s). Re-run in step 2b: see Step-2b evidence. |
+| C-013 | Review S2-21 findings F1–F5 dispositioned: F1 owned part tuples → borrowed `&str` on every named entry point and `needless_pass_by_value` dropped; F2 `alias` no longer round-trips `sql_expr` through Rust (Python passes the existing string through); F5 `wrap_*` builders pre-size with `String::with_capacity`; F3 `case_when` moves `.expr`; F4 generator `cast` returns the same `PyColumn` handle via `Bound`/`unbind`. | `display.rs` diff; byte-identical goldens pin; C-011 release re-measure under 5%. | **PROVEN** | All five FIXED. F1 `display.rs:252` (+ every sibling signature); F2 `display.rs:491` + `column.py:955`; F3 `display.rs:468`; F4 `display.rs:543`; F5 `display.rs:12-196`. `case_when` arm vectors stay owned `(String, String)` — `Vec<(&str, &str)>` cannot satisfy `for<'a> FromPyObject`; the Vecs are consumed by `format_case_body`, so the impl-level allow still drops. C-009 pin green on the `sql_expr` passthrough (a bare `sql_expr_part()` call is reuse, not assembly). Goldens byte-identical; release chain −34.44%. |
 
-VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 13 clauses, 13 PROVEN, 0 OPEN, 0 REJECTED. Step-2b release re-measure clears the C-011 bar on every deciding case.
 
 ## Case ids by family (221 cases)
 
@@ -121,8 +127,9 @@ COVERAGE_ATTESTATION:
       evidence: isinstance(c, repark.Column) holds; repark.Column is the exported spark.column.Column class. No public name added or removed.
       artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py]
     - id: AT-7
-      status: N/A
-      justification: Pins-only. No performance claim in this step.
+      status: ATTACKED
+      evidence: C-011 re-measured on RELEASE natives after the step-2b string-FFI remediation. Stationary re-check pass: depth-100 op chain +2.77%, depth-500 +2.55%, withColumn-100 −1.38% — all under the 5% bar; the actor's −34.44%/−42.31% passes had a drifting base and are not a speedup.
+      artifacts: [task/ledgers/staging/facade-2-ledger.md]
     - id: AT-8
       status: ATTACKED
       evidence: New test is 391 lines under the default 1000 ceiling. No baseline raised in check_lib_py.py, check_rust_file_size.py, or the CAP-1 mirror. No comment bytes in the code diff.
@@ -136,3 +143,89 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_facade_2_column_display_goldens.py, python/repark/tests/facade_2_column_display_goldens.json]
   complete: true
 ```
+
+## Step 2 evidence (2026-09-12)
+
+**Change.** Group-2 families in `column.py` call `_native.PyColumnParts.*` and unpack a
+`(PyColumn, spark_display, sql_expr, join_sql_expr)` tuple. Rendering lives in
+`crates/repark-python/src/column/display.rs`. `column.py` 1589 → 1549 (ratchet down in
+`scripts/check_lib_py.py` and the CAP-1 mirror). Goldens JSON unedited vs `524e9edc`.
+
+**C-009 red first** on `524e9edc` (product unchanged):
+
+```
+FAILED test_group2_methods_do_not_assemble_display_sql_or_join_text
+AssertionError: Group-2 Python text assembly remains: ['__getitem__:1037', … 54 sites]
+1 failed, 1 passed in 0.08s
+```
+
+Green after the move: 2 passed.
+
+**C-011** `maturin develop` (dev/debug), 1 warmup + 5 reps, same box, rebuild each side.
+
+| chain | step-1 median ms | step-2 median ms | delta |
+|---|---|---|---|
+| depth-100 `(c+1).cast("double").alias(...)` built, not executed | 19.000 | 20.924 | **+10.12%** |
+| depth-100 `withColumn` built, not executed | 2894.651 | 2849.876 | −1.55% |
+
+**Gates.** Facade `python/repark/tests`: 5961 passed, 369 skipped in 804.73s.
+`make verify` exit 0. Parity: 749 passed, 1 skipped, 12 xfailed in 562.97s.
+pins: facade-2/C-010, C-012
+
+## Step 2b evidence (2026-09-12, review S2-21 remediation)
+
+**Change.** `display.rs`: all operand part tuples take borrowed `&str` (F1 — the impl-level
+`clippy::needless_pass_by_value` allow is dropped; remaining owned args are consumed);
+`alias` returns `(PyColumn, spark_display)` and `column.py` keeps `sql_expr` as a
+passthrough (F2); `case_when` moves `.expr` out of its arm pairs (F3); the generator arm
+of `cast` takes `Bound<PyColumn>` and returns the same handle via `unbind` (F4); every
+`wrap_*` builder and `format_case_body` pre-sizes with `String::with_capacity` + `push_str`
+instead of `format!` (F5). `column.py` 1549 → 1548 (ratchet down in `check_lib_py.py` and
+the CAP-1 mirror). Goldens JSON unedited.
+
+**C-011 — RELEASE** (`uvx maturin@1.14.1 develop --release`; `__debug_assertions__` False on
+both sides). Step-1 base `/tmp/grok-rev-facade2/base` (read-only) vs this clone. Same
+interleaved-worker harness as the reviewer (`/tmp/facade2-measure/`), 1 warmup + 7 reps,
+base/branch order alternated per rep, `gc.disable()` around `perf_counter`.
+
+Superseded as the ranking measurement by the S2-21 re-check's stationary pass (depth-100 +2.77%, depth-500 +2.55%, 1000× depth-1 +3.56%, `withColumn`-100 −1.38%); the two passes below are kept as recorded.
+
+Pass 1 (`run_interleaved.py`):
+
+| case | base median ms | branch median ms | delta |
+|---|---:|---:|---:|
+| (a) depth-100 op chain | 6.490 | 3.744 | **−42.31%** |
+| (a) depth-500 op chain | 75.589 | 77.890 | **+3.04%** |
+| 1000× depth-1 triples | 13.611 | 13.952 | +2.51% |
+| (b) depth-100 `withColumn` | 288.856 | 281.510 | **−2.54%** |
+
+Pass 2 (`run_confirm.py`):
+
+| case | base median ms | branch median ms | delta |
+|---|---:|---:|---:|
+| (a) depth-100 op chain | 6.072 | 3.981 | **−34.44%** |
+| `select` of 16 plain names | 0.308 | 0.204 | −33.83% |
+| `collect()` 50 000 rows | 22.996 | 20.062 | −12.76% |
+| `select`+`collect` 50 000 rows | 17.597 | 18.209 | +3.48% |
+
+Base worker drifted upward inside pass 1 (reps 3.905 → 6.951 while branch stayed ~3.7);
+even against the base's fastest rep the branch is at parity or better. The deciding
+depth-100 chain is **faster than step-1** on release: borrowing `&str` removed the
+per-triple inbound UTF-8 copies (9 `String` extracts, up to ~1.9 KB each at depth 100)
+and F2 removed the alias `sql_expr` round-trip. `ops100_alloc` tracemalloc peak is
+byte-identical to the reviewer's (13 279 bytes) on both trees.
+
+Non-deciding note: the 2 000-row `select_collect` read +48% at the ~1 ms noise floor in
+pass 1; re-measured at 50 000 rows it is +3.48% — the same sub-5% noise the reviewer saw
+(+0.72%). No regression on non-column paths.
+
+**Gates.** Golden file + C-009 pin + the audit's five pin files: 227 passed in 5.62s.
+`cargo test -p repark-python` 91 passed. `make verify` exit 0 (workspace cargo test 3053
+across 55 suites; ledger-grammar 119 live ledgers clean). Facade `python/repark/tests`:
+**5961 passed, 369 skipped** in 895.06s (round-1 5961/369). Parity:
+**749 passed, 1 skipped, 12 xfailed** in 603.76s (round-1 749/1/12). `git diff
+origin/main` on the goldens JSON is empty. One transient flake in the first `verify`
+run — `repark-iceberg` `listing_cost_list_tables_cheaper_than_provider_rebuild`, a
+wall-clock cost assertion unrelated to this diff — passed in isolation and on the
+`verify` re-run.
+pins: facade-2/C-011, C-013

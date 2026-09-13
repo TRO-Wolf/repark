@@ -1,0 +1,55 @@
+plan_format_version = 1
+dataset_id = "crm.strict.silver"
+
+[source]
+source_system_id = "crm-production"
+catalog = "application"
+schema = "crm"
+table = "contacts"
+
+[input_contract]
+kind = "versioned_rows_without_deletes"
+bronze_record_id_field = 90
+
+[[columns]]
+source_field_id = 1
+target_name = "contact_id"
+target_type = { kind = "int64" }
+nullable = false
+transforms = []
+validators = [{ rule_id = "contact_id_required", kind = "require_non_null" }]
+
+[[columns]]
+source_field_id = 91
+target_name = "source_version"
+target_type = { kind = "int64" }
+nullable = false
+transforms = []
+validators = [{ rule_id = "source_version_required", kind = "require_non_null" }]
+
+[selection]
+strategy = "latest_source_version"
+key_fields = [1]
+order_fields = [{ source_field_id = 91, direction = "ascending" }]
+conflicting_tie = "fail_run"
+identical_source_payload_tie = "lowest_bronze_record_id"
+
+[[quality]]
+rule_id = "row_accounting"
+kind = "exact_disposition_accounting"
+
+[[quality]]
+rule_id = "accepted_keys"
+kind = "accepted_key_uniqueness"
+
+[[quality]]
+rule_id = "invalid_winners"
+kind = "ratio_at_most"
+numerator = "quarantined_keyed_winners"
+denominator = "keyed_winners"
+threshold = 0.0
+on_empty = "fail"
+
+[publication]
+strategy = "single_classified_table"
+empty_input = "require_explicit_empty_replace_option"

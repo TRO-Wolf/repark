@@ -80,6 +80,17 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   reconciliation / live `index` of Muse run dirs when `/tmp/muse-worker` is present.
   pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fixtures/](fixtures/map.md) — sanitized collector run dirs (no home paths).
+- `test_platform_1_wheel_matrix.py` — **PLATFORM-1 (2026-09-12):** the abi3 wheel-matrix
+  pins over the two workflows and the release doc — `release.yml` `build-wheel` names
+  exactly the five legs (`manylinux-x86_64`/`ubuntu-latest`, `manylinux-aarch64`/
+  `ubuntu-24.04-arm`, `macos-arm64`/`macos-latest`, `macos-x86_64`/`macos-13`,
+  `windows-x86_64`/`windows-latest`) and `publish-pypi` merges `release-wheel-*`;
+  `wheels.yml` `platform-matrix` names the four legs PRs never see behind the
+  schedule-or-dispatch `if:` plus the cron/`workflow_dispatch` triggers; the PR `smoke`
+  job keeps its gate and host; `docs/release.md` names all five legs. Doctored leg
+  lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
+  reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
+  pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,
@@ -179,6 +190,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   table name and any string override into the `CALL … run_maintenance(…)` text through the helper
   rather than an f-string, so the one place a caller's value reaches SQL stays inside the audited
   set. pins: h3-spill-1/C-001, maint-policy-1/C-030
+- `test_cap_1_source_file_line_cap.py` — **FACADE-2 step 2b (2026-09-12):** `spark/column.py` 1549 → 1548 with the script baseline. pins: facade-2/C-013
+- `test_cap_1_source_file_line_cap.py` — **FACADE-2 step 2 (2026-09-12):** `spark/column.py` 1589 → 1549 with the script baseline. pins: facade-2/C-008, C-009
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline. pins: dfcore-1/C-007
 - `test_cap_1_source_file_line_cap.py` — DFCORE-2 (2026-09-07): `dataframe/core.py` row 5954 → 5263 with the script baseline; the two new UDF projection modules carry no row. pins: dfcore-2/C-006

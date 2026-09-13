@@ -12,6 +12,18 @@ behavior only reachable end-to-end.
 
 ## Contents
 
+- `cast_plan_profile.rs` — PERF-CAST-1 step 2 (pins: perf-cast-1/C-006): an
+  `#[ignore]`d release micro-bench that phases `session.sql` of the 2500-cast
+  over-aggregate statement — parse, `SqlToRel::statement_to_plan`, analyzer
+  `execute_and_check` plus per-analyzer-rule walls, optimizer `optimize` plus
+  per-optimizer-rule walls, `create_physical_plan` — on a stock
+  `SessionContext` versus a `ReparkSession` context, with three variant
+  probes (a `DataFrame::aggregate` builder aggregate of the same width, a
+  bare `sum(id + i)` aggregate without CAST, a same-width standalone CAST
+  projection). Verdict measured upstream: `sql_to_rel` is the superlinear
+  phase and the arms agree to ~1%; numbers in
+  `docs/perf/cast-cost-2026-09-12.md` §C-006. Run:
+  `cargo test -p repark-core --test cast_plan_profile --release -- --ignored --nocapture`.
 - `declared_sorted.rs` — SE-1 declared-sorted temp views: plan pins (window `SortExec`
   count 0 with a declaration / ≥1 without, at tp=1 and default), results-identity
   (elision changes no value), and the verification refusal battery (unsorted rows named by

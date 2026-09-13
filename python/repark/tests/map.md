@@ -1521,6 +1521,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
   pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `test_facade_2_group2_no_python_assembly.py` — **FACADE-2 step 2 (2026-09-12):**
+  AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
+  `join` of display/SQL/join text is refused (refusals and raises are allowed).
+  pins: facade-2/C-009, C-010, C-012
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

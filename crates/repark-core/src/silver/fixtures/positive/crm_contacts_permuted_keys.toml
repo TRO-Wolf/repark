@@ -1,0 +1,84 @@
+dataset_id = "crm.contacts.silver"
+plan_format_version = 1
+
+[publication]
+empty_input = "require_explicit_empty_replace_option"
+strategy = "single_classified_table"
+
+[selection]
+identical_source_payload_tie = "lowest_bronze_record_id"
+conflicting_tie = "fail_run"
+order_fields = [{ direction = "descending", source_field_id = 91 }]
+key_fields = [1]
+strategy = "latest_source_version"
+
+[source]
+table = "contacts"
+schema = "crm"
+catalog = "application"
+source_system_id = "crm-production"
+
+[input_contract]
+bronze_record_id_field = 90
+kind = "versioned_rows_without_deletes"
+
+[[columns]]
+validators = [{ kind = "require_non_null", rule_id = "contact_id_required" }]
+transforms = []
+nullable = false
+target_type = { kind = "int64" }
+target_name = "contact_id"
+source_field_id = 1
+
+[[columns]]
+validators = []
+transforms = [
+  { characters = ["U+0020"], kind = "trim" },
+  { kind = "empty_to_null" },
+]
+nullable = true
+target_type = { kind = "utf8" }
+target_name = "first_name"
+source_field_id = 2
+
+[[columns]]
+validators = []
+transforms = [
+  { invalid_value = "quarantine_record", format_id = "iso8601_seconds_offset_v1", kind = "parse_timestamp" },
+]
+nullable = true
+target_type = { timezone = "UTC", unit = "microsecond", kind = "timestamp" }
+target_name = "created_at"
+source_field_id = 3
+
+[[columns]]
+validators = [{ kind = "require_non_null", rule_id = "source_version_required" }]
+transforms = []
+nullable = false
+target_type = { kind = "int64" }
+target_name = "source_version"
+source_field_id = 91
+
+[[quality]]
+kind = "exact_disposition_accounting"
+rule_id = "row_accounting"
+
+[[quality]]
+kind = "accepted_key_uniqueness"
+rule_id = "accepted_keys"
+
+[[quality]]
+on_empty = "pass"
+threshold = 0.01
+denominator = "keyed_winners"
+numerator = "quarantined_keyed_winners"
+kind = "ratio_at_most"
+rule_id = "invalid_winners"
+
+[[quality]]
+on_empty = "pass"
+threshold = 0.0
+denominator = "input_rows"
+numerator = "unkeyed_quarantined_rows"
+kind = "ratio_at_most"
+rule_id = "invalid_keys"

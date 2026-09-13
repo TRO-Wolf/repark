@@ -7,6 +7,9 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  schedule:
+    - cron: "43 6 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -95,3 +98,61 @@ jobs:
           WHEEL=$(ls python/repark/dist/repark-*.whl)
           /tmp/wheeltest/bin/pip install "$WHEEL"
           /tmp/wheeltest/bin/python -c "import repark; print('repark', repark.__version__)"
+
+  platform-matrix:
+    name: abi3 wheel (${{ matrix.leg }})
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: manylinux-aarch64
+            runs-on: ubuntu-24.04-arm
+            manylinux: auto
+          - leg: macos-arm64
+            runs-on: macos-latest
+          - leg: macos-x86_64
+            runs-on: macos-13
+          - leg: windows-x86_64
+            runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        if: matrix.manylinux == 'auto'
+        with:
+          maturin-version: "v1.14.1"
+          command: build
+          args: --release --out dist
+          working-directory: python/repark
+          manylinux: auto
+          sccache: "false"
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        if: matrix.manylinux != 'auto'
+        with:
+          maturin-version: "v1.14.1"
+          command: build
+          args: --release --out dist
+          working-directory: python/repark
+          container: "off"
+          sccache: "false"
+      - name: import + collect smoke (wheel, explicit path)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/wheeltest
+          if [ -x /tmp/wheeltest/bin/python ]; then PY=/tmp/wheeltest/bin/python; else PY=/tmp/wheeltest/Scripts/python; fi
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install python/repark/dist/repark-*.whl
+          "$PY" -c "import repark; from repark.spark import ReparkSession; s = ReparkSession.builder.appName('wheel-matrix-smoke').getOrCreate(); assert [r.id for r in s.range(3).collect()] == [0, 1, 2]; print('wheel OK', repark.__version__)"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: wheels-${{ matrix.leg }}
+          path: python/repark/dist/*.whl
+          if-no-files-found: error
