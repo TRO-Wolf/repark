@@ -32,6 +32,10 @@ honestly"). SQL routing and session-build registration are seam-inverted
   S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
   runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
+- `src/silver.rs` + [src/silver/](src/silver/map.md) — typed `SilverPlan` (SILVER-S1):
+  strict TOML parse, closed enums, canonical identity, deterministic explain. Public from
+  this crate, not wired to Python. Unstable until SIL-1..SIL-10.
+  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `src/config_file.rs` + [src/config_file/](src/config_file/map.md) — the `repark.toml` loader
   (CFG-1, seed 2026-09-09): `ConfigFile`, the ruled `load()` entry, and the `toml` reader. The
   crate's dependency list gains `serde` (derive) and `toml` in the same commit — the workspace's
@@ -102,6 +106,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 
 | ...do this | go to |
 |---|---|
+| Parse or explain a typed silver plan | `src/silver.rs` (`SilverPlan::parse` / `canonical` / `explain`) |
 | Add a `ReparkSession` method / config knob | `src/session.rs` |
 | Register a catalog / namespace | `register_iceberg_catalog` / `create_namespace` in `src/session.rs` |
 | Map a `spark.sql.catalog.*` config block | `src/catalog_config.rs` (`parse_catalog_specs`) |

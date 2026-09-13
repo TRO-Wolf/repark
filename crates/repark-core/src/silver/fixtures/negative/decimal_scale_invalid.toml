@@ -1,0 +1,31 @@
+plan_format_version = 1
+dataset_id = "ops.codes.silver"
+
+[source]
+source_system_id = "ops"
+catalog = "application"
+schema = "ops"
+table = "codes"
+
+[input_contract]
+kind = "row_snapshot"
+bronze_record_id_field = 1
+
+[[columns]]
+source_field_id = 1
+target_name = "amount"
+target_type = { kind = "decimal", precision = 4, scale = 8 }
+nullable = true
+transforms = []
+validators = []
+
+[selection]
+strategy = "disabled"
+
+[[quality]]
+rule_id = "row_accounting"
+kind = "exact_disposition_accounting"
+
+[publication]
+strategy = "single_classified_table"
+empty_input = "require_explicit_empty_replace_option"
