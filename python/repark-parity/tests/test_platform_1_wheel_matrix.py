@@ -167,4 +167,3 @@ def test_platform_1_dispatch_runs_are_not_cancelled_by_pushes() -> None:
     """The wheels concurrency group keys on the event: a push never cancels a matrix run."""
     text = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
     assert "group: wheels-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}" in text
-
