@@ -203,7 +203,7 @@ def test_cbrt_oracle_answer_cells(spark: ReparkSession) -> None:
 
 
 def test_cbrt_returns_double_for_every_numeric_input(spark: ReparkSession) -> None:
-    """pins: abs-expr-1/C-001, C-002 — ``F.cbrt`` is double for every input (Spark UnaryMathExpression)."""
+    """pins: abs-expr-1/C-001, C-002 — ``F.cbrt`` is double for every numeric input."""
     cases = [
         ("x float", [(27.5,)]),
         ("x tinyint", [(27,)]),
@@ -227,7 +227,7 @@ def test_cbrt_non_numeric_refuses(spark: ReparkSession) -> None:
 
 
 def test_abs_door_parity_integer_min(spark: ReparkSession) -> None:
-    """pins: abs-expr-1/C-002 — facade ``F.abs`` raises at int-min; the SQL door wraps (divergence pinned)."""
+    """pins: abs-expr-1/C-002 — facade ``F.abs`` raises at int-min; the SQL door wraps."""
     for ddl, minimum in (
         ("tinyint", -128),
         ("smallint", -32768),

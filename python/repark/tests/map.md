@@ -40,7 +40,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PySpark 4.1.2 oracle cells on the Arrow path (value AND type: tinyint keeps int8
   and raises at min, decimal keeps (10,3), `cbrt` int exact / `-0.0` signed /
   double for every numeric input). `test_abs_door_parity_integer_min` value-pins the
-  recorded divergence — facade raises at int-min, `SELECT abs(x)` wraps.
+  recorded divergence — facade raises at int-min, `SELECT abs(x)` wraps. Pin docstrings
+  stay one line under the 100-column ruff limit (clause ids first, then the claim).
   pins: abs-expr-1/C-001, C-002, C-003, C-004
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
   native `stack()` pins (SQL/F.stack oracle cells, linearity exponent ≤ 1.1 at 50/250/500,
