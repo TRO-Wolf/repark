@@ -22,6 +22,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
 
+pub(crate) mod display;
 #[cfg(test)]
 mod door_parity_tests;
 mod expr_build;
@@ -315,7 +316,6 @@ impl PyColumn {
                 Box::new(datafusion::functions::expr_fn::concat(exprs.clone())),
                 DataType::Utf8,
             ));
-            // Guard every argument because Spark propagates NULL.
             let any_null = exprs.into_iter().map(Expr::is_null).reduce(Expr::or);
             Ok(match any_null {
                 None => Self::from_expr(concatenated),

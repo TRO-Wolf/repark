@@ -311,21 +311,23 @@ class Column:
         self._reject_nested_generator(f"binary op {spark_op!r}")
         right = self._to_column(other)
         right._reject_nested_generator(f"binary op {spark_op!r}")
-        native = getattr(self._inner, op_method)(right._inner)
-        display = f"({self.spark_wrap_display_part()} {spark_op} {right.spark_wrap_display_part()})"
-        sql_expr = f"({self.sql_expr_part()} {spark_op} {right.sql_expr_part()})"
-        join_sql_expr = f"({self.join_sql_part()} {spark_op} {right.join_sql_part()})"
-        # Sticky aggregate identity (OR): ``sum(x) + 1`` remains an aggregate for select routing.
-        # Sticky free attribute (OR): ``sum(x) + id`` is both aggregate and free → MISSING_GROUP_BY.
+        parts = _native.PyColumnParts.binary(
+            self._inner,
+            right._inner,
+            op_method,
+            spark_op,
+            (self.spark_wrap_display_part(), self.sql_expr_part(), self.join_sql_part()),
+            (right.spark_wrap_display_part(), right.sql_expr_part(), right.join_sql_part()),
+        )
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
         has_ungroupable = self._has_ungroupable or right._has_ungroupable
         return Column(
-            native,
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
             has_free_attribute=has_free_attribute,
@@ -392,18 +394,17 @@ class Column:
         ``df.select(-df.x).columns == ['negative(x)']`` and nested forms compose
         (``-(-x)`` → ``negative(negative(x))``, ``F.sum(-df.x)`` → ``sum(negative(x))``).
         """
-        from repark.spark.functions import lit  # local import avoids circular at module load
-
         self._reject_nested_generator("unary minus")
-        native = lit(0)._inner.sub(self._inner)
-        display = f"negative({self.spark_wrap_display_part()})"
-        sql_expr = f"(-({self.sql_expr_part()}))"
-        # Alias native so even pre-Group-H paths see the Spark name; projection_name too.
+        parts = _native.PyColumnParts.unary_neg(
+            self._inner,
+            self.spark_wrap_display_part(),
+            self.sql_expr_part(),
+        )
         return Column(
-            native.alias(display),
-            spark_display=display,
-            projection_name=display,
-            sql_expr=sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            projection_name=parts[1],
+            sql_expr=parts[2],
             stable_name=False,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -429,19 +430,21 @@ class Column:
         self._reject_nested_generator("!=")
         right = self._to_column(other)  # type: ignore[arg-type]
         right._reject_nested_generator("!=")
-        native = self._inner.ne(right._inner)
-        display = f"(NOT ({self.spark_wrap_display_part()} = {right.spark_wrap_display_part()}))"
-        sql_expr = f"(NOT ({self.sql_expr_part()} = {right.sql_expr_part()}))"
-        join_sql_expr = f"(NOT ({self.join_sql_part()} = {right.join_sql_part()}))"
+        parts = _native.PyColumnParts.not_equal(
+            self._inner,
+            right._inner,
+            (self.spark_wrap_display_part(), self.sql_expr_part(), self.join_sql_part()),
+            (right.spark_wrap_display_part(), right.sql_expr_part(), right.join_sql_part()),
+        )
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
         has_ungroupable = self._has_ungroupable or right._has_ungroupable
         return Column(
-            native,
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
@@ -521,18 +524,21 @@ class Column:
         self._reject_nested_generator("eqNullSafe")
         right = self._to_column(other)
         right._reject_nested_generator("eqNullSafe")
-        display = f"({self.spark_wrap_display_part()} <=> {right.spark_wrap_display_part()})"
-        sql_expr = f"({self.sql_expr_part()} IS NOT DISTINCT FROM {right.sql_expr_part()})"
-        join_sql_expr = f"({self.join_sql_part()} IS NOT DISTINCT FROM {right.join_sql_part()})"
+        parts = _native.PyColumnParts.eq_null_safe(
+            self._inner,
+            right._inner,
+            (self.spark_wrap_display_part(), self.sql_expr_part(), self.join_sql_part()),
+            (right.spark_wrap_display_part(), right.sql_expr_part(), right.join_sql_part()),
+        )
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
         has_ungroupable = self._has_ungroupable or right._has_ungroupable
         return Column(
-            _native.PyColumn.call_scalar("eq_null_safe", [self._inner, right._inner]),
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
@@ -585,17 +591,17 @@ class Column:
                     "arg_type": type(start).__name__,
                 },
             )
-        display = f"substr({self.spark_wrap_display_part()}, {start_display}, {length_display})"
+        parts = _native.PyColumnParts.substr(
+            self._inner,
+            start_col._inner,
+            length_col._inner,
+            (self.spark_wrap_display_part(), str(start_display), str(length_display)),
+            (self.sql_expr_part(), start_col.sql_expr_part(), length_col.sql_expr_part()),
+        )
         return Column(
-            _native.PyColumn.call_scalar(
-                "substr",
-                [self._inner, start_col._inner, length_col._inner],
-            ),
-            spark_display=display,
-            sql_expr=(
-                f"substr({self.sql_expr_part()}, {start_col.sql_expr_part()}, "
-                f"{length_col.sql_expr_part()})"
-            ),
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
             has_free_attribute=self._has_free_attribute,
             is_foldable=self._is_foldable and not self._is_aggregate,
             is_aggregate=self._is_aggregate,
@@ -634,16 +640,22 @@ class Column:
         self._reject_nested_generator(shown)
         right = self._to_column(other)
         right._reject_nested_generator(shown)
-        display = f"{self.spark_wrap_display_part()}.{shown}({right.spark_wrap_display_part()})"
-        sql_expr = f"{call_name}({self.sql_expr_part()}, {right.sql_expr_part()})"
+        parts = _native.PyColumnParts.string_predicate(
+            self._inner,
+            right._inner,
+            call_name,
+            shown,
+            (self.spark_wrap_display_part(), right.spark_wrap_display_part()),
+            (self.sql_expr_part(), right.sql_expr_part()),
+        )
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
         has_ungroupable = self._has_ungroupable or right._has_ungroupable
         return Column(
-            _native.PyColumn.call_scalar(call_name, [self._inner, right._inner]),
-            spark_display=display,
-            sql_expr=sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
             stable_name=False,
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
@@ -669,16 +681,22 @@ class Column:
         self._reject_nested_generator(f"bitwise {spark_op}")
         right = self._to_column(other)
         right._reject_nested_generator(f"bitwise {spark_op}")
-        display = f"({self.spark_wrap_display_part()} {spark_op} {right.spark_wrap_display_part()})"
-        sql_expr = f"({self.sql_expr_part()} {spark_op} {right.sql_expr_part()})"
+        parts = _native.PyColumnParts.bitwise(
+            self._inner,
+            right._inner,
+            call_name,
+            spark_op,
+            (self.spark_wrap_display_part(), right.spark_wrap_display_part()),
+            (self.sql_expr_part(), right.sql_expr_part()),
+        )
         is_aggregate = self._is_aggregate or right._is_aggregate
         is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
         has_free_attribute = self._has_free_attribute or right._has_free_attribute
         has_ungroupable = self._has_ungroupable or right._has_ungroupable
         return Column(
-            _native.PyColumn.call_scalar(call_name, [self._inner, right._inner]),
-            spark_display=display,
-            sql_expr=sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
             stable_name=False,
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
@@ -690,14 +708,17 @@ class Column:
     def __invert__(self) -> Column:
         """``~self`` — boolean NOT (PySpark ``Column.__invert__``)."""
         self._reject_nested_generator("boolean NOT")
-        display = f"(NOT {self.spark_wrap_display_part()})"
-        sql_expr = f"(NOT {self.sql_expr_part()})"
-        join_sql_expr = f"(NOT {self.join_sql_part()})"
+        parts = _native.PyColumnParts.invert(
+            self._inner,
+            self.spark_wrap_display_part(),
+            self.sql_expr_part(),
+            self.join_sql_part(),
+        )
         return Column(
-            self._inner.not_(),
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -732,14 +753,17 @@ class Column:
     def is_null(self) -> Column:
         """``IS NULL`` (PySpark ``Column.isNull``)."""
         self._reject_nested_generator("isNull")
-        display = f"({self.spark_wrap_display_part()} IS NULL)"
-        sql_expr = f"({self.sql_expr_part()} IS NULL)"
-        join_sql_expr = f"({self.join_sql_part()} IS NULL)"
+        parts = _native.PyColumnParts.is_null(
+            self._inner,
+            self.spark_wrap_display_part(),
+            self.sql_expr_part(),
+            self.join_sql_part(),
+        )
         return Column(
-            self._inner.is_null(),
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -753,14 +777,17 @@ class Column:
     def is_not_null(self) -> Column:
         """``IS NOT NULL`` (PySpark ``Column.isNotNull``)."""
         self._reject_nested_generator("isNotNull")
-        display = f"({self.spark_wrap_display_part()} IS NOT NULL)"
-        sql_expr = f"({self.sql_expr_part()} IS NOT NULL)"
-        join_sql_expr = f"({self.join_sql_part()} IS NOT NULL)"
+        parts = _native.PyColumnParts.is_not_null(
+            self._inner,
+            self.spark_wrap_display_part(),
+            self.sql_expr_part(),
+            self.join_sql_part(),
+        )
         return Column(
-            self._inner.is_not_null(),
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
@@ -787,30 +814,34 @@ class Column:
             otherwise._reject_nested_generator("when/CASE otherwise")
         when_thens = [(condition._inner, value._inner) for condition, value in pairs]
         else_inner = None if otherwise is None else otherwise._inner
-        # Track Spark-style CASE text so agg names do not leak native DF CASE rendering.
-        arms = " ".join(
-            f"WHEN {condition.spark_wrap_display_part()} THEN {value.spark_wrap_display_part()}"
+        display_arms = [
+            (condition.spark_wrap_display_part(), value.spark_wrap_display_part())
             for condition, value in pairs
-        )
-        sql_arms = " ".join(
-            f"WHEN {condition.sql_expr_part()} THEN {value.sql_expr_part()}"
-            for condition, value in pairs
-        )
-        join_arms = " ".join(
-            f"WHEN {condition.join_sql_part()} THEN {value.join_sql_part()}"
-            for condition, value in pairs
-        )
+        ]
+        sql_arms = [
+            (condition.sql_expr_part(), value.sql_expr_part()) for condition, value in pairs
+        ]
+        join_arms = [
+            (condition.join_sql_part(), value.join_sql_part()) for condition, value in pairs
+        ]
         if otherwise is None:
-            display = f"CASE {arms} END"
-            sql_expr = f"CASE {sql_arms} END"
-            join_sql_expr = f"CASE {join_arms} END"
-            # Open when-chain: further .when() allowed.
+            else_parts = None
             retained_pairs: list[tuple[Column, Column]] | None = list(pairs)
         else:
-            display = f"CASE {arms} ELSE {otherwise.spark_wrap_display_part()} END"
-            sql_expr = f"CASE {sql_arms} ELSE {otherwise.sql_expr_part()} END"
-            join_sql_expr = f"CASE {join_arms} ELSE {otherwise.join_sql_part()} END"
+            else_parts = (
+                otherwise.spark_wrap_display_part(),
+                otherwise.sql_expr_part(),
+                otherwise.join_sql_part(),
+            )
             retained_pairs = None
+        parts = _native.PyColumnParts.case_when(
+            when_thens,
+            else_inner,
+            display_arms,
+            sql_arms,
+            join_arms,
+            else_parts,
+        )
         arm_columns = [col for pair in pairs for col in pair] + (
             [otherwise] if otherwise is not None else []
         )
@@ -823,12 +854,12 @@ class Column:
         has_free_attribute = any(col._has_free_attribute for col in arm_columns)
         has_ungroupable = any(col._has_ungroupable for col in arm_columns)
         return cls(
-            _native.PyColumn.case_when(when_thens, else_inner),
+            parts[0],
             when_pairs=retained_pairs,
             partition_transform=transform,
-            spark_display=display,
-            sql_expr=sql_expr,
-            join_sql_expr=join_sql_expr,
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             stable_name=False,
             is_aggregate=is_aggregate,
             is_foldable=is_foldable,
@@ -919,42 +950,21 @@ class Column:
                 errorClass="ONLY_ALLOWED_FOR_SINGLE_COLUMN",
                 messageParameters={"arg_name": "metadata"},
             )
-        # metadata accepted on single-name alias (schema store deferred — error-surface only).
         _ = metadata
         name = alias[0]
-        if self._generator is not None:
-            # Generators keep the *array* SQL in sql_expr; only the output name changes.
-            # Sticky aggregate / free / ungroupable / AF must survive ``.alias`` so select
-            # Keep aggregate metadata so synthesized aliases still reach the select gate.
-            return Column(
-                self._inner.alias(name),
-                spark_display=f"{self.spark_wrap_display_part()} AS {name}",
-                sql_expr=self.sql_expr_part(),
-                projection_name=name,
-                stable_name=True,
-                partition_transform=self._partition_transform,
-                is_aggregate=self._is_aggregate,
-                is_foldable=self._is_foldable and not self._is_aggregate,
-                has_free_attribute=self._has_free_attribute,
-                has_ungroupable=self._has_ungroupable,
-                is_aggregate_function=self._is_aggregate_function,
-                generator=self._generator,
-                generator_cast=self._generator_cast,
-                origin_plan_id=self._origin_plan_id,
-                origin_field=self._origin_field,
-                join_sql_expr=self._join_sql_expr,
-                g2_range_order_names=self._g2_range_order_names,
-                window_spec=self._window_spec,
-            )
+        parts = _native.PyColumnParts.alias(
+            self._inner,
+            self.spark_wrap_display_part(),
+            self.sql_expr_part(),
+            name,
+        )
         return Column(
-            self._inner.alias(name),
-            spark_display=f"{self.spark_wrap_display_part()} AS {name}",
-            # Do not embed ``AS name`` into sql_expr — composition and CAST would break.
-            sql_expr=self.sql_expr_part(),
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
             projection_name=name,
             stable_name=True,
             partition_transform=self._partition_transform,
-            # Keep aggregate identity; clear default name via omitting agg_name.
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
             has_free_attribute=self._has_free_attribute,
@@ -993,116 +1003,65 @@ class Column:
         from repark.spark.functions import lit
 
         if isinstance(key, slice):
-            # Apache classic (4.1.2 classic/column.py): step → SLICE_WITH_STEP; else
-            # return self.substr(k.start, k.stop) with *no* open-bound defaults
-            # col[:n]/col[i:]/col[:] silently evaluate wrong substr.
             if key.step is not None:
                 raise PySparkValueError(
                     errorClass="SLICE_WITH_STEP",
                     messageParameters={},
                 )
-            start = key.start
-            length = key.stop
-            # Mirror classic Column.substr type checks exactly.
-            if type(start) is not type(length):
-                raise PySparkTypeError(
-                    errorClass="NOT_SAME_TYPE",
-                    messageParameters={
-                        "arg_name1": "startPos",
-                        "arg_name2": "length",
-                        "arg_type1": type(start).__name__,
-                        "arg_type2": type(length).__name__,
-                    },
-                )
-            if isinstance(start, int):
-                start_col = lit(int(start))
-                length_col = lit(int(length))
-                start_display: Any = start
-                length_display: Any = length
-            elif isinstance(start, Column):
-                start_col = start
-                # type(start) is type(length) and start is Column ⇒ length is Column.
-                length_col = length  # type: ignore[assignment]
-                start_display = start.spark_wrap_display_part()
-                length_display = length_col.spark_wrap_display_part()
-            else:
-                raise PySparkTypeError(
-                    errorClass="NOT_COLUMN_OR_INT",
-                    messageParameters={
-                        "arg_name": "startPos",
-                        "arg_type": type(start).__name__,
-                    },
-                )
-            # call_scalar("substr") embeds owned Spark substring_udf (pos 0 ≡ 1), not DF
-            display = f"substr({self.spark_wrap_display_part()}, {start_display}, {length_display})"
-            return Column(
-                _native.PyColumn.call_scalar(
-                    "substr",
-                    [self._inner, start_col._inner, length_col._inner],
-                ),
-                spark_display=display,
-                sql_expr=(
-                    f"substr({self.sql_expr_part()}, {start_col.sql_expr_part()}, "
-                    f"{length_col.sql_expr_part()})"
-                ),
-                has_free_attribute=self._has_free_attribute,
-                is_foldable=self._is_foldable and not self._is_aggregate,
-                is_aggregate=self._is_aggregate,
-                has_ungroupable=self._has_ungroupable,
-            )
+            return self.substr(key.start, key.stop)
 
         key_column = key if isinstance(key, Column) else lit(key)
-        # Integer: Spark Python ``Column[i]`` is 0-based element extract (not a 1-element slice).
         if isinstance(key, int) and not isinstance(key, bool):
-            display = f"{self.spark_wrap_display_part()}[{key}]"
-            index_lit = lit(key)
-            native = _native.PyColumn.call_scalar(
-                "array_element",
-                [self._inner, index_lit._inner],
+            key_text = str(key)
+            parts = _native.PyColumnParts.getitem(
+                self._inner,
+                key_column._inner,
+                "index",
+                (self.spark_wrap_display_part(), key_text),
+                (self.sql_expr_part(), key_text),
             )
             return Column(
-                native,
-                spark_display=display,
-                sql_expr=f"({self.sql_expr_part()})[{key}]",
+                parts[0],
+                spark_display=parts[1],
+                sql_expr=parts[2],
                 has_free_attribute=self._has_free_attribute,
                 is_foldable=self._is_foldable and not self._is_aggregate,
                 is_aggregate=self._is_aggregate,
                 has_ungroupable=self._has_ungroupable,
             )
 
-        # get_field also resolves map[str] (Apache field_accessor / access_nested_types);
-        display = f"{self.spark_wrap_display_part()}[{key!r}]"
         if isinstance(key, str):
-            key_lit = lit(key)
-            native = _native.PyColumn.call_scalar(
-                "get_field",
-                [self._inner, key_lit._inner],
+            parts = _native.PyColumnParts.getitem(
+                self._inner,
+                key_column._inner,
+                "field",
+                (self.spark_wrap_display_part(), repr(key)),
+                (self.sql_expr_part(), _quote_sql_field_ident(key)),
             )
-            sql = f"({self.sql_expr_part()}).{_quote_sql_field_ident(key)}"
             return Column(
-                native,
-                spark_display=display,
-                sql_expr=sql,
-                projection_name=display,
+                parts[0],
+                spark_display=parts[1],
+                sql_expr=parts[2],
+                projection_name=parts[1],
                 has_free_attribute=self._has_free_attribute,
                 is_foldable=self._is_foldable and not self._is_aggregate,
                 is_aggregate=self._is_aggregate,
                 has_ungroupable=self._has_ungroupable,
             )
 
-        # Column / other key — polymorphic GetItem (array 0-based or map-by-key). Never
-        if isinstance(key, Column):
-            display = f"{self.spark_wrap_display_part()}[{key.spark_wrap_display_part()}]"
-        native = _native.PyColumn.call_scalar(
-            "getitem",
-            [self._inner, key_column._inner],
+        key_display = key.spark_wrap_display_part() if isinstance(key, Column) else repr(key)
+        parts = _native.PyColumnParts.getitem(
+            self._inner,
+            key_column._inner,
+            "key",
+            (self.spark_wrap_display_part(), key_display),
+            (self.sql_expr_part(), key_column.sql_expr_part()),
         )
-        sql = f"({self.sql_expr_part()})[{key_column.sql_expr_part()}]"
         return Column(
-            native,
-            spark_display=display,
-            sql_expr=sql,
-            projection_name=display,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            projection_name=parts[1],
             has_free_attribute=self._has_free_attribute,
             is_foldable=self._is_foldable and not self._is_aggregate,
             is_aggregate=self._is_aggregate,
@@ -1166,20 +1125,23 @@ class Column:
         """
         engine_type = _engine_type_from_cast_arg(data_type)
         normalized = _normalize_type_string(engine_type)
-        # Allowlist Spark CAST tokens — never fail-open unknown/hostile type text into SQL
         spark_type = _spark_cast_type_name(normalized)
-        cast_display = f"CAST({self.spark_wrap_display_part()} AS {spark_type})"
-        # Live PySpark 4.1.2: cast of a NamedExpression (bare col / alias) keeps the child
-        # name in a plain select; cast of a compound expression uses the CAST(...) text.
+        keep_child_sql = self._generator is not None
+        parts = _native.PyColumnParts.cast(
+            self._inner,
+            (self.spark_wrap_display_part(), self.sql_expr_part(), self.join_sql_part()),
+            normalized,
+            spark_type,
+            "CAST",
+            (not keep_child_sql, keep_child_sql),
+        )
         if self._stable_name and self._projection_name is not None:
             projection = self._projection_name
             stable = True
         else:
-            projection = cast_display
+            projection = parts[1]
             stable = False
         if self._generator is not None:
-            # Element cast after unnest: keep the *array* native + sql_expr + generator
-            # Chained ``.cast().cast()`` *composes* (innermost first), never overwrites —
             previous = self._generator_cast
             if previous is None:
                 composed_cast: str | tuple[str, ...] = spark_type
@@ -1188,14 +1150,12 @@ class Column:
             else:
                 composed_cast = (*previous, spark_type)
             return Column(
-                self._inner,
-                spark_display=cast_display,
-                sql_expr=self.sql_expr_part(),
+                parts[0],
+                spark_display=parts[1],
+                sql_expr=parts[2],
                 projection_name=projection,
                 stable_name=stable,
                 partition_transform=self._partition_transform,
-                # Sticky aggregate, free, and ungroupable flags across generator casts.
-                # is cleared by cast (SQL path), matching the non-generator branch.
                 is_aggregate=self._is_aggregate,
                 is_foldable=self._is_foldable and not self._is_aggregate,
                 has_free_attribute=self._has_free_attribute,
@@ -1203,18 +1163,13 @@ class Column:
                 generator=self._generator,
                 generator_cast=composed_cast,
             )
-        cast_sql = f"CAST({self.sql_expr_part()} AS {spark_type})"
-        # cast to the correct engine field. Origin is *not* preserved — pure origin rebind
-        # would drop the cast and project the uncast leaf.
-        join_sql_expr = f"CAST({self.join_sql_part()} AS {spark_type})"
         return Column(
-            self._inner.cast(normalized),
-            spark_display=cast_display,
-            sql_expr=cast_sql,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             projection_name=projection,
             stable_name=stable,
-            # Sticky aggregate identity: ``F.sum("x").cast("double")`` is still global-agg.
             is_aggregate=self._is_aggregate,
             is_foldable=self._is_foldable and not self._is_aggregate,
             has_free_attribute=self._has_free_attribute,
@@ -1234,20 +1189,25 @@ class Column:
         engine_type = _engine_type_from_cast_arg(data_type)
         normalized = _normalize_type_string(engine_type)
         spark_type = _spark_cast_type_name(normalized)
-        cast_display = f"TRY_CAST({self.spark_display_part()} AS {spark_type})"
+        parts = _native.PyColumnParts.cast(
+            self._inner,
+            (self.spark_display_part(), self.sql_expr_part(), self.join_sql_part()),
+            normalized,
+            spark_type,
+            "TRY_CAST",
+            (True, False),
+        )
         if self._stable_name and self._projection_name is not None:
             projection = self._projection_name
             stable = True
         else:
-            projection = cast_display
+            projection = parts[1]
             stable = False
-        cast_sql = f"TRY_CAST({self.sql_expr_part()} AS {spark_type})"
-        join_sql_expr = f"TRY_CAST({self.join_sql_part()} AS {spark_type})"
         return Column(
-            self._inner.try_cast(normalized),
-            spark_display=cast_display,
-            sql_expr=cast_sql,
-            join_sql_expr=join_sql_expr,
+            parts[0],
+            spark_display=parts[1],
+            sql_expr=parts[2],
+            join_sql_expr=parts[3],
             projection_name=projection,
             stable_name=stable,
             is_aggregate=self._is_aggregate,

@@ -1,5 +1,8 @@
 # map — scripts/
 
+FACADE-2 step 2 (2026-09-12): `check_lib_py.py` `spark/column.py` 1589 → 1549
+(Group-2 display assembly moved to Rust). The CAP-1 mirror row moves in the
+same commit. pins: facade-2/C-008, C-009
 PERF-UNPIVOT-1 (2026-09-12): `check_lib_py.py` `dataframe/core.py` 4485 → 4483;
 `check_example_coverage.py` installer sources gain `functions_stack.py` / `STACK_NAMES`;
 inventory 927 → 928 (`F.stack`). pins: perf-unpivot-1/C-004

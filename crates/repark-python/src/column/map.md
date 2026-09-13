@@ -13,6 +13,13 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 ## Modules
 
+- [`display.rs`](display.rs) — **FACADE-2 step 2 (2026-09-12):** `PyColumnParts` is a
+  static-method namespace. Each Group-2 op is one native call that builds the `Expr` and
+  returns a 4-tuple `(PyColumn, spark_display, sql_expr, join_sql_expr)` so the `Expr` is
+  moved, not cloned, back to Python. Child fragments (including Python `str`/`repr` and
+  `_idents` quoting) are inputs; Rust only concatenates. Byte identity with the pre-move
+  Python f-strings is the contract (card D-1).
+  pins: facade-2/C-008, C-009, C-010, C-012
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
   **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
   take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display

@@ -42,6 +42,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.
+  **FACADE-2 step 2 (2026-09-12):** Group-2 operator/method families make one
+  `_native.PyColumnParts` call per operation; display/SQL/join text is rendered in
+  `crates/repark-python/src/column/display.rs`. The public `Column` class, `__slots__`,
+  and `isinstance(c, repark.Column)` stay. pins: facade-2/C-009
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.
