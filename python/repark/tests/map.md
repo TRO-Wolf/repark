@@ -105,6 +105,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DISPLAY-LAZY-1 step 1** (2026-09-10): `test_repr_of_eager_frame_skips_count_and_matches_lazy_table`
   asserts the lazy schema header with zero counts and the eager data table over the same
   header box, also with zero counts. pins: display-lazy-1/C-002
+- [test_eager_budget_1.py](test_eager_budget_1.py) — **EAGER-BUDGET-1 step 1 (2026-09-13):**
+  the D-2 retained-bytes and read-only-conf pins. C-002 `conf.get` reports the native
+  distinct-buffer total: `cache()` alone leaves it at 0, the first action raises it, an
+  eager-on-eager `b = a.eager()` shares the view and leaves it unchanged, `unpersist()` /
+  last-holder `del` + `gc` return it to the prior value, and `clearCache()` returns it to
+  0. The pyarrow cross-check asserts `retained >= logical` (allocation capacity vs logical
+  buffer size) and `retained <= 2 * logical + 64 * buffer_count` — the measured capacity
+  bound of MutableBuffer-grown buffers (measured: 160 vs 34 bytes on the two-row fixture,
+  16_000 vs 4_890 across 600 buffers on a 200-row fixture; dedupe is by allocation base
+  pointer, so shared views and slices count once). C-003 the readback parses as `int`,
+  `getAll` carries it, `isModifiable` is `False`, `set`/`unset` refuse with
+  `INVALID_CONF_VALUE.REQUIREMENT`, and a stopped session raises `RuntimeError`.
+  pins: eager-budget-1/C-002, C-003
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
   step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +

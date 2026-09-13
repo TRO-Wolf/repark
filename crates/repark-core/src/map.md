@@ -124,6 +124,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the query path never reads the environment. `catalogs_snapshot` is `pub` so doors
   outside this crate can route over the session's registry.
   pins: review-fix-5/C-006
+  **EAGER-BUDGET-1 step 1 (2026-09-13):** the file gained one `mod cache_budget;` line —
+  the D-2 retained-bytes accounting (`retained_cache_bytes` /
+  `distinct_buffer_bytes`) lives in `session/cache_budget.rs`, keeping this file under
+  the default ceiling at 988.
+  pins: eager-budget-1/C-002
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the

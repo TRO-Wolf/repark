@@ -8,7 +8,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
-`spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
+`spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
 `conf_unread.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
@@ -32,6 +32,17 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `datafusion.catalog.default_catalog = <a name a catalog is later registered under>` has no
   session-local home at all, and the whole family refuses loud rather than write that catalog
   (round-6 critic S1, MEASURED).
+- `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
+  `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
+  tables, downcasts each provider to `MemTable`, clones each partition's batch list under a
+  short read guard (never held across an `.await`), and sums the capacity of every distinct
+  Arrow buffer. `distinct_buffer_bytes(&[RecordBatch], &mut HashSet<usize>)` is the reusable
+  walk step-2 incremental admission reuses: `ArrayData` buffers, null bitmaps, and child data
+  recursively, deduped by `Buffer::data_ptr()` — the allocation base, not `as_ptr()`, because
+  arrow-58 `Array::slice` pushes the offset into the `Buffer` itself and only `data_ptr()`
+  makes a slice share its parent's key (the sliced-array pin proves it). Checkpoint
+  (`__repark_ckpt_*`), user views, and non-`MemTable` providers are skipped.
+  pins: eager-budget-1/C-002, C-003
 - `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg
   cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` calls, so a
   memory catalog is always built with the session's `CatalogCaches`; `trim_iceberg_caches` runs at

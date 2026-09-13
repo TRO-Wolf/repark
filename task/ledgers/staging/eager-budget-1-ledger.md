@@ -1,4 +1,4 @@
-# Unit ledger — EAGER-BUDGET-1 · a session cache budget and retained-bytes accounting — step 0
+# Unit ledger — EAGER-BUDGET-1 · a session cache budget and retained-bytes accounting — steps 0–1
 
 **Date:** 2026-09-13 · **Branch:** `fix/eager-budget-1` · **Base:** `acc9b550` (`main`,
 run 11 report merge; EAGER-OWN-1 `#565` delivered at `abed32c9`)
@@ -23,13 +23,13 @@ No product code changes in this step.
 `briefs/next-sequence.md`, `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`,
 `uv.lock`.
 
-## PROPOSITION LEDGER — EAGER-BUDGET-1 step 0 — 2026-09-13
+## PROPOSITION LEDGER — EAGER-BUDGET-1 steps 0–1 — 2026-09-13
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The step-0 measurement is committed: the EAGER-OWN-1 worker at `--rows 1000000 --iterations 30` under `systemd-run --user --scope -p MemoryMax={2G,4G,8G} -p MemorySwapMax=0`, on base `8936346a` (bare `eager()`, leaked results are the retention) and on `main` (bare `eager()` released; results appended to a list = retained), release natives with `__debug_assertions__` False on both trees; per-iteration wall / VmRSS / VmHWM / `ru_majflt`, the cgroup outcome per cell, and the `Table.nbytes` vs distinct-`buffer.address` probe for one retained result. | Committed JSON per cell under `docs/perf/eager-budget-1-2026-09-13/`, the per-cap iteration-band tables and the probe numbers in Evidence, the machine header and both shas. | PROVEN | Nine cells run 2026-09-13 (box idle before each, `OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8`): base-bare and main-retained OOM-killed at iter 5 under 2G and ~16 under 4G (journal `oom-kill`, rc 137), both survive 30 at 8G (~6.7 GB VmHWM); main-bare survives all caps (VmHWM ~1.37 GB). Probe: `nbytes` 199,008,178 vs distinct-buffer 188,196,432 (385 buffers, ratio 0.9457), identical both trees. No per-call slowdown as a function of live views; `ru_majflt` 0 everywhere. Full tables in Evidence; files in [docs/perf/eager-budget-1-2026-09-13/](../../../docs/perf/eager-budget-1-2026-09-13/map.md). |
-| C-002 | D-2 distinct-buffer accounting: retained bytes = the sum of distinct Arrow buffers across the session's live `__repark_cache_*` MemTable registrations, deduped by buffer data pointer — a buffer shared by two views or by sliced arrays counts once; zero with no live view; the count drops back when a view is released; `__repark_ckpt_*` and user temp views are not counted. | Step-1 pins: shared buffers across two views count once; zero with no view; drops on release. | OPEN | Step 1. |
-| C-003 | The read-only `repark.cache.retained_bytes` conf readback: `spark.conf.get` returns the native sum as a decimal string; `spark.conf.set` and `unset` on that key refuse. | Step-1 pins: get returns a decimal string; set/unset refuse. | OPEN | Step 1. |
+| C-002 | D-2 distinct-buffer accounting: retained bytes = the sum of distinct Arrow buffers across the session's live `__repark_cache_*` MemTable registrations, deduped by buffer data pointer — a buffer shared by two views or by sliced arrays counts once; zero with no live view; the count drops back when a view is released; `__repark_ckpt_*` and user temp views are not counted. | Step-1 pins: shared buffers across two views count once; zero with no view; drops on release. | PROVEN | `ReparkSession::retained_cache_bytes` + `distinct_buffer_bytes` in `crates/repark-core/src/session/cache_budget.rs`; dedupe key is `Buffer::data_ptr()` (allocation base) — `as_ptr()` double-counts an arrow-58 slice because `PrimitiveArray::slice` pushes the offset into the `Buffer` (measured: 16→32 before the fix). Rust: 6/6 `cargo test -p repark-core cache_budget`. Python pin red→green in `test_eager_budget_1.py`; measured 160 vs 34 logical bytes (2-row) and 16,000 vs 4,890 over 600 buffers (200-row). Evidence below. |
+| C-003 | The read-only `repark.cache.retained_bytes` conf readback: `spark.conf.get` returns the native sum as a decimal string; `spark.conf.set` and `unset` on that key refuse. | Step-1 pins: get returns a decimal string; set/unset refuse. | PROVEN | `get` recomputes natively per call (decimal string), `getAll` carries the key, `isModifiable` is `False`, `set`/`unset` refuse with `IllegalArgumentException` `[INVALID_CONF_VALUE.REQUIREMENT]` "read-only", stopped session raises `RuntimeError` via `_ensure_alive`. Binding is a free `_native.retained_cache_bytes` pyfunction (session.rs at its exact CAP-1 baseline; one `#[pymethods]` block per type — the `catalog_census` out). Pin red→green below. |
 | C-004 | D-1 conf parse: `repark.cache.max_total_bytes` unset or `0` = no budget; negative, non-integer or over-u64 values refuse with `[INVALID_CONF_VALUE.REQUIREMENT]` exactly as `repark.cache.max_bytes` does; settable at runtime (`spark.conf.set`) and at build (`.config`), read at materialize time. | Step-2 pins per value class, mirroring the `max_bytes` parse pin. | OPEN | Step 2. |
 | C-005 | The D-1 refusal message carries the budget, the retained bytes at admission, the bytes admitted so far for the refused result, and the fix (`unpersist()` a cached/eager frame or `spark.catalog.clearCache()`, or raise the conf); the error is a named error, and nothing is evicted. | Step-2 pin on the message fields and the error class. | OPEN | Step 2. |
 | C-006 | D-3 refusal before the full collection peak: admission is incremental (each batch's distinct-buffer bytes join a running total checked against `budget - retained` before the next pull), so a capped subprocess refuses with VmHWM under the uncapped peak. | Step-2 capped-subprocess VmHWM pin. | OPEN | Step 2. |
@@ -94,6 +94,80 @@ the cap edge, not a view-count effect: `main-retained` dies at the same iteratio
 with wall flat. `ru_majflt` is 0 in every cell (swap off; deaths are
 anonymous-memory OOM kills, not thrashing). Absolute per-iteration level varies
 0.8–2.9 s across cells with box load; only within-cell shape is comparable.
+
+### C-002 / C-003 pins — step 1 (2026-09-13)
+
+Red first, on this branch before any product code
+(`python/repark/tests/test_eager_budget_1.py`, debug native built by `make
+develop`):
+
+```
+.venv/bin/python -m pytest python/repark/tests/test_eager_budget_1.py -q
+FAILED test_retained_bytes_track_cache_lifecycle
+FAILED test_eager_on_eager_reuse_leaves_retained_unchanged
+FAILED test_retained_returns_to_prior_value_when_last_holder_dies
+FAILED test_clear_cache_returns_retained_to_zero
+FAILED test_retained_bytes_conf_is_read_only
+5 failed in 0.17s
+```
+
+All five red identically: `Exception: Configuration property
+repark.cache.retained_bytes is not set.` (`builder_conf.py:267`).
+
+Green after implementation:
+
+```
+cargo test -p repark-core cache_budget
+test session::tests::cache_budget::distinct_buffer_bytes_ignores_pointers_already_in_the_set ... ok
+test session::tests::cache_budget::no_cache_view_returns_zero ... ok
+test session::tests::cache_budget::dropped_cache_view_no_longer_counts ... ok
+test session::tests::cache_budget::non_cache_temp_views_are_ignored ... ok
+test session::tests::cache_budget::two_cache_views_sharing_one_buffer_count_it_once ... ok
+test session::tests::cache_budget::sliced_array_counts_its_parent_buffer_once ... ok
+test result: ok. 6 passed; 0 failed
+.venv/bin/python -m pytest python/repark/tests/test_eager_budget_1.py -q
+5 passed, 1 warning in 0.33s
+```
+
+Dedupe-key measurement (the one divergence from the card's literal text): the
+card names `Buffer::as_ptr()`; under arrow-58 `Array::slice` pushes the offset
+into the `Buffer` itself (`PrimitiveArray::slice` → `Buffer::slice` → advanced
+`ptr`), so `as_ptr()` counted a slice's parent twice — measured 16 → 32 retained
+when registering a sliced batch beside its parent. `Buffer::data_ptr()` is the
+allocation base without offset and satisfies the card's actual semantic ("a
+buffer shared … or by sliced arrays counts once"); the `data_ptr()`-as-key
+slice pin is green.
+
+Capacity-vs-logical tolerance (written into the C-002 pin per the brief):
+`retained` counts `Buffer::capacity()` (the allocation the session retains),
+while a pyarrow distinct-`buffer.address` sum counts logical `buffer.size`.
+Measured on this step's debug native: two-row fixture retained 160 vs logical
+34 across 3 buffers; 200-row fixture retained 16,000 vs logical 4,890 across
+600 buffers — small collected buffers carry the ~64-byte MutableBuffer floor,
+so the pin asserts `retained >= logical` and `retained <= 2 * logical +
+64 * buffer_count` rather than byte equality. The step-0 probe's 0.9457 ratio
+was `nbytes`-vs-logical inside one table, a different comparison; no
+Rust-vs-pyarrow identity existed to inherit 0-tolerance from.
+
+Stopped session: `conf.get("repark.cache.retained_bytes")` after `stop()`
+raises `RuntimeError`, the same `_ensure_alive` door every other conf read uses.
+
+Orchestrator audit of the step-1 diff (2026-09-13, accepted; recorded here per
+the audit):
+
+- **R12b-D-1:** the readback key is `repark.cache.retained_bytes`, computed
+  read-only — the orchestrator's choice under D-2.
+- **R12b-D-3:** the conf intercepts live in `builder_conf.RuntimeConfig` plus
+  `session_configuration.py`, which is the real conf seam; accepted as Home.
+- **C-002 note:** the figure is buffer `capacity()` keyed by `data_ptr()` — the
+  allocation, not the logical length — the honest number for a memory budget.
+  The small-frame ratio is allocation overhead, measured retained 16,000 vs
+  logical 4,890 at 200 rows (and 160 vs 34 on the two-row fixture); it
+  approaches 1 on large results — the step-0 probe measured a 0.9457
+  logical-sum ratio on a 1e6-row result.
+- **Out of scope, recorded:** the intermittent debug-native crash while
+  planning a 2000-branch UNION (`spark.sql` before any step-1 code runs); does
+  not reproduce on release natives.
 
 ## Gates run
 

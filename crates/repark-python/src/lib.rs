@@ -3,6 +3,7 @@
 #[cfg(feature = "allocator-mimalloc")]
 mod allocator;
 mod arrow_export;
+mod cache_budget;
 mod catalog_census;
 mod cdf_infer;
 mod collect_rows;
@@ -106,6 +107,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.py().get_type::<IllegalArgumentException>(),
     )?;
     dataframe_stack::register(module)?;
+    cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;
     collect_rows::register(module)?;

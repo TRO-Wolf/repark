@@ -35,6 +35,14 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   a runtime resize keeps the very same log (`Arc::ptr_eq`) and the new pool records into it,
   and a runtime `= '0'` drops the log with the pool.
   pins: h3-spill-residue-1/C-002
+- `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 pins. Two cache views
+  registered over the same `RecordBatch` count one buffer set; a sliced array counts its
+  parent's buffer once (dedupe is `Buffer::data_ptr()`, the allocation base — `as_ptr()`
+  double-counts because arrow-58 slices the `Buffer` itself); no view answers 0; a dropped
+  view stops counting; `user_view` and `__repark_ckpt_*` names are ignored. One function-level
+  pin holds the reuse contract: a second `distinct_buffer_bytes` call over the same batches
+  with the same pointer set returns 0.
+  pins: eager-budget-1/C-002, C-003
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway
   `winslide_probe_sum` UDAF exists only here: it has no `retract_batch`, so it proves the fallback
