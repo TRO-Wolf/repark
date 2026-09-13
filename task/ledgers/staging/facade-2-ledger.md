@@ -38,8 +38,10 @@ later branch.
 | C-017 | Release measurement ≤ +5% on deciding cases: depth-100 `F.sqrt(c + 1)` chain, depth-100 generic-builder chain (`exp`/`floor`/`rint`/`signum` rotation — each probed linear-RSS on base at depth 10/40; `cbrt` excluded, superlinear like `abs`), 1000× `F.lit(datetime)`, `withColumn`-100. `F.abs` appears only at depth ≤ 6 (`abschain6`, informational). | Release natives both trees (`23bd047b` scratch clone vs branch), `prlimit --as=8589934592` + `MIMALLOC_ARENA_RESERVE=67108864` per worker (baseline VSZ 9.5 GB needs the smaller arena reserve to fit the 8 GB cap), idle-box wait before each pass, 1 warmup + 7 interleaved reps, medians + paired deltas, base-drift discard. | **PROVEN** | `chain_sqrt100` **+1.21%** (3.353 → 3.394 ms), `chain_fn100` **+1.25%** (4.154 → 4.206 ms), `litdt1000` **−98.37%** (293.279 → 4.771 ms — no engine re-parse, as predicted), `withcol100` **−0.30%** (333.528 → 332.534 ms), `abschain6` −34.69% informational (1.631 → 1.065 ms; one drifted pass discarded and rerun). Bar ≤ +5% met on every deciding case. **OOM note:** the first pass used a depth-100 `F.sqrt(F.abs(c) + 1)` chain; the base worker was OOM-killed at 84 GB anonymous RSS. Orchestrator measurement (recorded, not re-measured): chaining `F.abs` triples native memory per level (705 MB @12 → 1 963 MB @13 → 5 742 MB @14 → alloc failure) on main AND branch; `+1`/`.cast("double")`/`F.sqrt` chains stay flat at 76 MB through depth 40 — a pre-existing defect in `F.abs`, outside step-3 scope, carded separately. |
 | C-018 | Step-4 inventory: remaining Python display assembly by module/helper is enumerable and intentional (bespoke display rules), or not Column render text at all. | AST sweep of `python/repark/src/repark/spark/*.py` with the C-009/C-016 detector. | **PROVEN** | Inventory table below. `functions.py`: `expr` (allowed parser caller), `coalesce`, `concat` (null-guard CASE), `abs`, aggregates `sum/count/count_distinct/avg/min/max/first/last/collect_list/collect_set`, `ntile`, `_date_fn` + `add_months`/`date_add`/`date_format`/`trunc`/`date_trunc`, `_partition_transform`/`bucket`. `functions_expr.py`: `dayname`, `monthname`, `isnull`, `struct`, `array_contains`, `overlay`, `stddev`/`stddev_pop`/`variance`/`var_pop`/`median`/`grouping`/`approx_count_distinct`/`_binary_aggregate`, `bit_and`/`bit_or`/`bit_xor`, `percentile_approx`, `explode`/`explode_outer`, `pmod`. `functions_collections.py`: `named_struct`, `create_map` (display override only). `functions_window.py`: `lag`/`lead`/`nth_value`. `functions_try.py`: `try_sum`/`try_avg`. `functions_bitwise.py`: `bitwise_not`. `functions_session.py`: `version` (foldable value text, fixed `version()` display). `column.py`: `join_sql_part` QCOL ref token, `sql_expr_without_alias`/`spark_wrap_display_part` suffix comparisons (not assembly), `__repr__`, `_normalize_type_string`/`_spark_cast_type_name` cast-arg normalization. Non-Column modules swept and excluded (`types.py` DDL trees, `merge.py`/`polars.py` join SQL, `row.py`/`storage.py` reprs, `udtf.py`, `catalog.py`, `_csv_smart.py`, `_integral.py`, `_temp_views.py`, `_idents.py` quoting helpers, `functions_lambda.py`/`functions_udf.py`/`functions_declared.py`). |
 | C-019 | Gates: goldens + pins + the audit's five pin files; `cargo test -p repark-python`; `make verify`; whole facade suite; whole parity suite. | Commands and counts in Step-3 evidence. | **PROVEN** | Focused (goldens + pins + five audit files): **230 passed** in 5.36s. `cargo test -p repark-python`: **99 passed** (74 lib + 25 bindings). `make verify`: exit 0 — workspace cargo test **3061 passed across 55 suites**, fmt/clippy/lib-py/ledger-grammar clean (first run red on missing C-017/C-018/C-019 `pins:` citations; fixed in `task/ledgers/staging/map.md`, `column/map.md`, `spark/map.md`). Facade `python/repark/tests`: **5964 passed, 369 skipped** in 994.91s (baseline 5961/369; +3 = generic golden + two step-3 pins). Parity: see Step-3 evidence. |
+| C-020 | P2-1 fixed exactly as step 2 fixed `binary`: operand `Expr`s move out of the extracted `PyColumn`s (`inners.into_iter().map(|c| c.expr)`) into `call_scalar_expr`'s owned `Vec<Expr>` — no second clone on top of the operational one; each part list extracts in one pass to `PyBackedStr` handles (three vecs, zero-copy); the fix is not slower than `cfa8ad2e`. | `display.rs` diff; goldens byte-identical (both files unedited); before/after release measurement on the same capped harness. | **PROVEN** | `cfa8ad2e` vs fix, `chain_sqrt100` **−17.50%** (3.369 → 2.780 ms), `chain_fn100` **−17.56%** (4.161 → 3.431 ms). Extract-clone + `expr()`-clone removed → only the `Vec<PyColumn>` extraction clone and `call_scalar_expr`'s operational clone remain. Focused goldens+pins green on the fix. |
+| C-021 | Review S2-21 findings dispositioned: no P1; P2-1 fixed (C-020); P3-1/P3-2 recorded, no change. | Review report `/tmp/oc-worker/grok-rev-facade2s3/report.md` read whole; findings table below. | **PROVEN** | P3-1: numpy array literals still walk elements in Python (`_lit_numpy_ndarray`, `functions.py:252-275`) — pre-existing; a later unit could accept the numpy buffer in Rust and build one `ScalarValue::List`. P3-2: `lit_timestamp` parses through a one-element Arrow array — already −97%; optional chrono-parse micros + `"UTC"` intern is not ranking-class. Reviewer `abschain6` clean pass −4.30% vs actor's −34.69% — the actor's pass sat on a drifted base (1.154 → 2.475 ms); `abschain6` stays informational only, not a deciding case. |
 
-VERDICT: 19 clauses, 19 PROVEN, 0 OPEN, 0 REJECTED. Step-3 release re-measure clears the C-017 bar on every deciding case.
+VERDICT: 21 clauses, 21 PROVEN, 0 OPEN, 0 REJECTED. Step-3 release re-measure clears the C-017 bar on every deciding case; the P2-1 remediation re-measure is faster than `cfa8ad2e` on both deciding chains.
 
 ## Case ids by family (221 cases)
 
@@ -342,3 +344,55 @@ suites**; fmt/clippy/lib-py/ledger-grammar clean). Facade `python/repark/tests`:
 **755 passed, 1 skipped, 12 xfailed** in 561.67s (768 collected, 0 failed;
 step-2b recorded 749/1/12 — same suite and skip/xfail counts).
 pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019
+
+## Step 3 remediation evidence (2026-09-13, review S2-21 of `cfa8ad2e`)
+
+**Review.** `/tmp/oc-worker/grok-rev-facade2s3/report.md` (Grok 4.6, read-only clone at
+`cfa8ad2e`). No P1 — actor C-017 deltas confirmed within ±3 pp on every deciding case;
+non-column `select`/`collect` do not regress; `lit_array_cast` on 1e5 ints O(n) and
+−85.70% vs base. One P2, two P3.
+
+**Reviewer C-017 re-measure** (same harness shape, interleaved vs `/tmp/facade2-s3-base`):
+
+| case | base median ms | branch median ms | delta | vs actor |
+|---|---:|---:|---:|---|
+| `chain_sqrt100` | 3.333 | 3.365 | **+0.97%** | 0.24 pp |
+| `chain_fn100` | 4.137 | 4.199 | **+1.51%** | 0.26 pp |
+| `litdt1000` | 285.907 | 8.237 | **−97.12%** | 1.25 pp |
+| `litdate1000` (asked; not in actor table) | 271.130 | 5.588 | **−97.94%** | — |
+| `withcol100` | 328.148 | 331.524 | **+1.03%** | 1.33 pp |
+| `abschain6` informational | 1.289 | 1.234 | **−4.30%** | actor −34.69% did not hold (drifted base pass); informational only |
+
+**P2-1 fix.** `call_scalar` (`display.rs`): `inners.into_iter().map(|column| column.expr)`
+moves the `Expr` out of each extracted `PyColumn` — the `.iter().map(PyColumn::expr)`
+clone is gone; `call_scalar_expr` already takes owned `Vec<Expr>` so no signature change.
+Each part list extracts in one pass: `list.iter().map(extract::<PyBackedStr>)` — three
+`Vec<PyBackedStr>` (owned zero-copy refs) replace three `Vec<Bound<PyAny>>` + three
+`Vec<&str>`. `wrap_call` is now generic over `S: AsRef<str>`. Remaining clones per child:
+the `Vec<PyColumn>` extraction clone and `call_scalar_expr`'s operational clone — the
+borrow path (`Vec<Bound<PyColumn>>` + `borrow().expr.clone()`) would clone the same
+`Expr` once, so owned extract + move is the minimal shape without touching the
+`call_scalar_expr` dispatch table or its other callers (`mod.rs` `PyColumn.call_scalar`,
+`call_two`). No behaviour change; both golden JSON files unedited.
+
+**C-020 before/after** — release natives, same capped harness (`prlimit --as=8589934592`,
+`MIMALLOC_ARENA_RESERVE=67108864`), before = `/tmp/facade2-s3-before` at `cfa8ad2e`,
+after = this branch, 1 warmup + 7 interleaved reps, idle-box wait, drift-band discard:
+
+| case | `cfa8ad2e` median ms | fix median ms | delta |
+|---|---:|---:|---:|
+| `chain_sqrt100` | 3.369 | 2.780 | **−17.50%** |
+| `chain_fn100` | 4.161 | 3.431 | **−17.56%** |
+
+Faster on both deciding chains — the removed per-level `Expr` clone and the three
+eliminated vec allocations show up end-to-end. Bar "not slower": met.
+
+**Gates.** Focused goldens + pins + the audit's five pin files on the fix: **230
+passed** in 5.78s; both golden JSON files byte-identical (unedited). `cargo test -p
+repark-python`: **99 passed** (74 lib + 25 bindings). `make verify`: exit 0 — workspace
+cargo test **3061 passed across 55 suites**, ledger-grammar clean after citing C-021 in
+`spark/map.md`. Parity `python/repark-parity/tests`: **755 passed, 1 skipped, 12
+xfailed** in 566.01s. Facade suite not re-run — the Rust diff touches only
+`call_scalar` and its private helpers (`str_list`, `wrap_call`), inside the brief's
+scope for the focused set.
+pins: facade-2/C-020, C-021

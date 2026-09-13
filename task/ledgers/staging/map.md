@@ -140,8 +140,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `PyColumnParts.call_scalar`; `F.expr` stays the sole parser caller. 39
   generic-builder goldens proven byte-identical to a base release re-record.
   C-017 release: depth-100 chains +1.2%, `lit(datetime)` −98% (no engine re-parse).
+  S2-21 remediation: `call_scalar` drops the second `Expr` clone and extracts part
+  lists in one `PyBackedStr` pass; cfa8ad2e→fix −17.5% on both deciding chains.
   Branch `feat/facade-2-s3`.
-  pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019
+  pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

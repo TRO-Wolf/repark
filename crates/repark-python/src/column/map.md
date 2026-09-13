@@ -33,11 +33,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple
   `(PyColumn, spark_display, sql_expr, join_sql_expr)` with an optional display
   override for the bespoke-name callers. Argument part lists arrive as
-  `Bound<PyList>` items extracted to borrowed `&str` (the step-2b lesson: the growing
-  fragments never copy across the boundary). The step-3 `#[pymethods]` wrappers for the
+  `Bound<PyList>` items extracted in one pass to `PyBackedStr` handles — owned
+  zero-copy refs to the Python `str` data (the step-2b lesson: the growing fragments
+  never copy across the boundary). Operand `Expr`s move out of the extracted
+  `PyColumn`s into `call_scalar_expr`'s owned `Vec<Expr>` — no second clone on top
+  of the operational one (S2-21 P2-1). The step-3 `#[pymethods]` wrappers for the
   Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split
   across files — while their `Expr` construction stays in `display/construct.rs`.
-  pins: facade-2/C-014, C-016, C-017, C-019
+  pins: facade-2/C-014, C-016, C-017, C-019, C-020
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`
