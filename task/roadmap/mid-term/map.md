@@ -6,6 +6,17 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1
+  (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted
+  handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing
+  (D-4), no plan-equivalence caching (D-5), budget deferred to EAGER-BUDGET-1 (D-6); step 0
+  measures the million-row TA loop first; owner questions Q-E1 (cache()/persist() lifetime) and
+  Q-E2 (session budget policy).
+- [eager-materialization-retention-review-2026-09-13.md](eager-materialization-retention-review-2026-09-13.md)
+  — **the owner's source review behind EAGER-OWN-1 (2026-09-13, verbatim):** bare `eager()`
+  calls each register an unowned `__repark_cache_*` MemTable, the findings table, usage guidance,
+  the three proposed corrections and the validation table the unit's pins follow. Archives to
+  `docs/history/` when the unit merges.
 - [dyncfg-1-cards-2026-09-12.md](dyncfg-1-cards-2026-09-12.md) — **the DYNCFG-1 intake cut
   (2026-09-12, Devin reading round at `0233d96f`):** the sweep verdict — the entry criterion is
   met (three re-measure-confirmed read-profile wins, ten regression-only knobs, five no-effect,
@@ -60,6 +71,7 @@ declines it (a dated ruling in the intake, then the archive).
   §1 rows 1–11 plus M-0 and O-1, with every size-baseline question answered by a comment-funded
   ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
 - [overnight-report-2026-09-11-run7.md](overnight-report-2026-09-11-run7.md) — run 7 (2026-09-11, Devin-first): REVIEW-FIX-15b, TORTURE-1 steps 3–5, AP-1 step 2, BALLISTA-M2-A steps 1–2 merged (#496–#501, #503); NEVEROOM-1 step 2 merged (#503, 24 of 27 cells stable); owner questions on uncompressed INSERT, typed scan accessors, the secrets flag scope.
+- [overnight-report-2026-09-13-run10.md](overnight-report-2026-09-13-run10.md) — run 10 (2026-09-13, Grok actor + Grok critic-logic): COMMENT-CORE-1 (#561) removes the 347 non-pragma comments from `dataframe/core.py` with no code change (AST-identical, 4468 → 4117 lines, facade 5985/369 before and after); 312 reasons moved to the dataframe map, 35 narration lines deleted; the critic’s 11 findings (2 lost rationale, 9 distorted paraphrases) fixed before the PR.
 - [overnight-report-2026-09-12-run9b.md](overnight-report-2026-09-12-run9b.md) — run 9b (2026-09-12/13, orchestrator B beside run 9, Devin actors + Grok S2-21 reviewers): CFG-2 named sources in two steps (#551 Rust seam, #556 Python door; `[<profile>.database]` loads, lists, refuses on use naming roadmap 1.10) and the DYNCFG-1 intake (#547: five measure-first cards, DQ-1..DQ-7 parked for the owner).
 - [overnight-report-2026-09-11-run8.md](overnight-report-2026-09-11-run8.md) — run 8 (2026-09-11, Grok-only workers): NEVEROOM-1 step 3 and the v1.3.0 release PR, fork F-MINIO-QUAY and F-WRITE-COMPRESS-1, BALLISTA-M2-B, RP-16 with PERF-CATALOG-CACHE-WEIGHT-1 closed, AP-2, and the AP-1 re-measure (#507–#514 plus fork #276/#277); findings: Docker Hub dropped the MinIO images, `rewrite_data_files` writes uncompressed files (card F-WRITE-COMPRESS-2), owner question Q-1 on the byte-ratio model.
 - [overnight-report-2026-09-12-run9.md](overnight-report-2026-09-12-run9.md) — run 9 (2026-09-12, the v1.5 track; Grok before 20:40, Devin after): FACADE-2 complete (#544, #549, #557), Silver S-0 and S-1 (#543, #546), PERF-UNPIVOT-1 and PERF-CAST-1 complete (#553, #550 → apache/datafusion#25248), FACADE-3 steps 1–2 merged (#555, #559); findings: nesting `F.abs` is exponential in native memory (P1, a global OOM kill), SIL-4 needs armed conflict validation, SIL-1..10 recommendations for the owner.
