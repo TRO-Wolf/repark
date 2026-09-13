@@ -523,6 +523,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
+  FACADE-3 step 3 F-PY-2 added the rows→`_arrow_table_from_raw_tuples_fast` edge (77 bindings)
+  and re-hashed `_create_dataframe_from_rows_inner` for the named-decline dispatch.
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
   and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
@@ -1671,6 +1673,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and the P2-2 pin: a new dict key appearing mid-list appends last (`a,b,c,d` columns with
   null-fill before), which bites on a one-line `==` → `>=` mutation of the seen-keys probe
   (`['a','b','d']` ≠ `['a','b','c','d']`). Both green in the 6,037-test facade run.
+  Plus the C-026 F-PY-2 pins: a `cdf_arrow_export` spy proves the tuple door is never
+  retried once `cdf_arrow_export_named` returned `None` — a `spy`-counted dict list and a
+  `Row` list, each poisoned at index 50 with `object()`, keep the pinned
+  `cannot build Arrow column 'i'` refusal while the tuple-export counter stays 0
+  (red-first on `c04d6c24`: `assert 1 == 0` for both).
   pins: facade-3/C-019, C-020, C-026
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter

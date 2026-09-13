@@ -173,7 +173,7 @@ EXPECTED_SYMBOL_HASHES = {
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
     "_create_dataframe_from_rows_inner": (
-        "2357ead234765f3ac41ad16c70e7695a07b5462773dd71b3cff36cf3a4c500f5"
+        "da2e9ea58faf29ec3444a6244f6fc7b046dbbafddb4277ece7220f46364b4e97"
     ),
     "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
     "_datetime64_unit_from_dtype": (
@@ -943,7 +943,7 @@ def test_cross_owner_globals_resolve_to_their_canonical_binding() -> None:
             canonical_module = sys.modules[f"repark.spark.session.{canonical_owner}"]
             assert global_name in value.__globals__
             assert value.__globals__[global_name] is getattr(canonical_module, global_name)
-    assert len(required_bindings) == 76
+    assert len(required_bindings) == 77
 
 
 def test_split_files_stay_within_default_source_ceiling() -> None:

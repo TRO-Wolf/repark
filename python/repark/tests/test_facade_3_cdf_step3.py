@@ -302,6 +302,57 @@ def test_named_fallback_owns_uncovered_cell(
     assert str(frame.collect()[0]["b"]).startswith("<object object at 0x")
 
 
+def _tuple_export_spy(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
+    """Count calls to the tuple-door native export."""
+    from repark import _native
+
+    calls = {"tuple_export": 0}
+    delegate = _native.cdf_arrow_export
+
+    def spy(*args: Any, **kwargs: Any) -> Any:
+        calls["tuple_export"] += 1
+        return delegate(*args, **kwargs)
+
+    monkeypatch.setattr(_native, "cdf_arrow_export", spy)
+    return calls
+
+
+def test_named_decline_never_retries_tuple_export_dicts(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A declined dict list goes straight to Python; the tuple door is not retried (C-026)."""
+    calls = _tuple_export_spy(monkeypatch)
+    exports = _named_export_spy(monkeypatch)
+    data = _seven_col_dicts(60)
+    data[50]["i"] = object()
+    with pytest.raises(PySparkTypeError, match="cannot build Arrow column 'i': Could not convert"):
+        spark.createDataFrame(data)
+    assert exports == [(False, 60)]
+    assert calls["tuple_export"] == 0
+
+
+def test_named_decline_never_retries_tuple_export_rows(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A declined Row list goes straight to Python; the tuple door is not retried (C-026)."""
+    calls = _tuple_export_spy(monkeypatch)
+    exports = _named_export_spy(monkeypatch)
+    rows = _seven_col_named_rows(60)
+    rows[50] = Row(
+        i=object(),
+        f=50.5,
+        s="s50",
+        b=True,
+        d=datetime.date(2024, 1, 2),
+        t=datetime.datetime(2024, 1, 2, 3, 4, 5),
+        dc=Decimal("50.25"),
+    )
+    with pytest.raises(PySparkTypeError, match="cannot build Arrow column 'i': Could not convert"):
+        spark.createDataFrame(rows)
+    assert exports == [(True, 60)]
+    assert calls["tuple_export"] == 0
+
+
 class _ProbeDate(datetime.date):
     """A plain ``datetime.date`` subclass for the value-parity pin."""
 

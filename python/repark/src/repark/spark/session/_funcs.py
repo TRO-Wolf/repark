@@ -148,6 +148,9 @@ vars(_create_dataframe_rows).update(
         "_schema_names_and_permutation": (_create_dataframe_schema._schema_names_and_permutation),
         "_arrow_table_from_tuples": (_create_dataframe_tuples._arrow_table_from_tuples),
         "_arrow_table_from_raw_tuples": (_create_dataframe_columns._arrow_table_from_raw_tuples),
+        "_arrow_table_from_raw_tuples_fast": (
+            _create_dataframe_columns._arrow_table_from_raw_tuples_fast
+        ),
         "_rust_cdf_named_arrow_table": (_create_dataframe_columns._rust_cdf_named_arrow_table),
         "_TYPED_NULL_SQL": (_create_dataframe_values._TYPED_NULL_SQL),
         "_is_pandas_dataframe": (_create_dataframe_values._is_pandas_dataframe),
