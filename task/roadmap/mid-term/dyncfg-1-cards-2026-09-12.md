@@ -30,7 +30,7 @@ this evidence.
 
 One row per swept spelling. "Baseline" is that knob's own `@default` median on the cited
 cell, "best" is the most favourable non-control spelling measured there; a knob whose only
-movement was worse is marked regression, matching the guide's "kept at default" list. Ratios
+movement was worse is marked regression, matching the guide's "stays at the default" list. Ratios
 are medians of three repetitions (repetition 1 cold, per the step-2 method).
 
 ### Read-side knobs (affected cells include the seven read cells; join/scan knobs reach `merge_updates` too)
@@ -77,7 +77,7 @@ read cells are the noise set the guide names, and no profile entry rests on one.
 Measured cost basis for the matrix: the no-knob bed pass totals 30.3 s of timed cells
 (`baseline.csv`, 30 rows); each three-value knob sweep totals ~83–110 s (per-knob CSVs, 90
 rows each; `prefer_hash_join`'s 157.5 s includes its own regression cells) and the eight-value
-`compression` sweep 241.2 s; the whole 19-spelling sweep is 1 995.4 s of timed cells. A
+`compression` sweep 241.2 s; the whole 19-spelling sweep plus its baseline pass is 1 995.4 s of timed cells. A
 three-knob matrix over the full bed is therefore ~4.5 minutes of timed work; a sampled
 dataset only lowers the per-cell times.
 
@@ -153,7 +153,7 @@ dataset only lowers the per-cell times.
   plausibly scale-dependent (their decisive cells are the big tpch shapes); the measurements
   do not bound a sample. *Lean:* cap by files/rows rather than time, keeping the sample in
   the measured regime (a `target_partitions` trial needs enough files for partitioning to
-  act); the budget cap of DQ-8 bounds the tail.
+  act); the budget cap of DQ-7 bounds the tail.
 - **DQ-5 Do the ten regression-only knobs re-enter the matrix?** *Premise:* every non-default
   spelling of theirs measured flat-to-worse on every reachable cell of this bed
   (`prefer_hash_join` 10.2×, `repartition_aggregations` 4.2×, `repartition_file_scans` 6.7×,
