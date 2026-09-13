@@ -1512,15 +1512,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   version-skew IPC fallback stays; export-door signatures and answers hold.
   pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `test_facade_2_column_display_goldens.py` + `facade_2_column_display_goldens.json`
+  + `facade_2_generic_builder_goldens.json`
   — **FACADE-2 step 1 (2026-09-12):** byte-identical `spark_display` / `sql_expr` /
   `sql_expr_without_alias` / `join_sql` / projection name / `select(...).columns`
   goldens for every audit §4 Group-1 and Group-2 site, recorded from main.
+  **Step 3 (2026-09-13):** a second JSON pins 39 generic `F.<fn>(args)` builder cases
+  across arities 0–3, nested and aliased, recorded from the step-2 tree and proven
+  byte-identical to a re-record under the base release interpreter.
   Record mode is `REPARK_FACADE_2_RECORD_GOLDENS=1` and is refused when `CI` or
   `GITHUB_ACTIONS` is set. `isinstance(c, repark.Column)` is pinned. Cast/try_cast
   of a named attribute currently answers `select` with a
   `datafusion.public.__repark_cdf_<id>.<field>` qualifier; the golden stores the
   trailing field only (the UUID is session-local, not a display-string contract).
-  pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: facade-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015
 - `test_facade_2_group2_no_python_assembly.py` — **FACADE-2 step 2 (2026-09-12):**
   AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
   `join` of display/SQL/join text is refused (refusals and raises are allowed).
@@ -1537,6 +1541,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   collected `Row` objects and frame schemas. The same corpus and the release
   baseline drive the step-2 target list.
   pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **Step 3 (2026-09-13):** the same walk now covers the moved Group-1/generic
+  helpers (`lit`, `_lit_numpy_ndarray`, `_scalar`, `pi`, `uuid`), and an AST pin
+  asserts `F.expr` is the sole `_native.PyColumn.sql` caller left.
+  pins: facade-2/C-009, C-010, C-012, C-014, C-016
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

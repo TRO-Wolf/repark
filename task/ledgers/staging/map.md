@@ -134,11 +134,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   fallback. `risk_tier: standard`. Branch `feat/facade-1`.
   pins: facade-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [facade-2-ledger.md](facade-2-ledger.md) —
-  **FACADE-2 step 2 (2026-09-12), in flight:** Group-2 `column.py` families render
-  in `crates/repark-python/src/column/display.rs` (`PyColumnParts` 4-tuple).
-  Goldens byte-identical vs `524e9edc`. C-009 AST pin green. C-011 release op-chain
-  +2.77% (bar 5%; S2-21 re-check). Branch `feat/facade-2-s2`.
-  pins: facade-2/C-008, C-009, C-010, C-011, C-012
+  **FACADE-2 step 3 (2026-09-13), in flight:** Group-1 `PyColumn.sql` sites are typed
+  native constructors (`lit_timestamp`/`lit_date`/`lit_time`/`lit_array_cast`/`pi`/`uuid`
+  in `column/display/construct.rs`); the generic `name(args)` render moved to
+  `PyColumnParts.call_scalar`; `F.expr` stays the sole parser caller. 39
+  generic-builder goldens proven byte-identical to a base release re-record.
+  C-017 release: depth-100 chains +1.2%, `lit(datetime)` −98% (no engine re-parse).
+  Branch `feat/facade-2-s3`.
+  pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

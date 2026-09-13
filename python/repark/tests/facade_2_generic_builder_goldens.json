@@ -1,0 +1,392 @@
+{
+  "gb_alias__inner": {
+    "join_sql": "sqrt(\"x\")",
+    "projection_name": "sqrt(v)",
+    "select_columns": [
+      "sqrt(v)"
+    ],
+    "spark_display": "sqrt(v)",
+    "sql_expr": "sqrt(\"x\")",
+    "sql_expr_without_alias": "sqrt(\"x\")"
+  },
+  "gb_alias__lower_inner": {
+    "join_sql": "lower(\"s\")",
+    "projection_name": "lower(t)",
+    "select_columns": [
+      "lower(t)"
+    ],
+    "spark_display": "lower(t)",
+    "sql_expr": "lower(\"s\")",
+    "sql_expr_without_alias": "lower(\"s\")"
+  },
+  "gb_alias__outer": {
+    "join_sql": "sqrt(\"x\")",
+    "projection_name": "root",
+    "select_columns": [
+      "root"
+    ],
+    "spark_display": "sqrt(x) AS root",
+    "sql_expr": "sqrt(\"x\")",
+    "sql_expr_without_alias": "sqrt(\"x\")"
+  },
+  "gb_arity0__current_date": {
+    "join_sql": "current_date()",
+    "projection_name": "current_date()",
+    "select_columns": [
+      "current_date()"
+    ],
+    "spark_display": "current_date()",
+    "sql_expr": "current_date()",
+    "sql_expr_without_alias": "current_date()"
+  },
+  "gb_arity0__rand": {
+    "join_sql": "rand()",
+    "projection_name": "rand()",
+    "select_columns": [
+      "rand()"
+    ],
+    "spark_display": "rand()",
+    "sql_expr": "rand()",
+    "sql_expr_without_alias": "rand()"
+  },
+  "gb_arity0__randn": {
+    "join_sql": "randn()",
+    "projection_name": "randn()",
+    "select_columns": [
+      "randn()"
+    ],
+    "spark_display": "randn()",
+    "sql_expr": "randn()",
+    "sql_expr_without_alias": "randn()"
+  },
+  "gb_arity1__exp": {
+    "join_sql": "exp(\"x\")",
+    "projection_name": "exp(x)",
+    "select_columns": [
+      "exp(x)"
+    ],
+    "spark_display": "exp(x)",
+    "sql_expr": "exp(\"x\")",
+    "sql_expr_without_alias": "exp(\"x\")"
+  },
+  "gb_arity1__expm1": {
+    "join_sql": "expm1(\"x\")",
+    "projection_name": "expm1(x)",
+    "select_columns": [
+      "expm1(x)"
+    ],
+    "spark_display": "expm1(x)",
+    "sql_expr": "expm1(\"x\")",
+    "sql_expr_without_alias": "expm1(\"x\")"
+  },
+  "gb_arity1__floor": {
+    "join_sql": "floor(\"x\")",
+    "projection_name": "floor(x)",
+    "select_columns": [
+      "floor(x)"
+    ],
+    "spark_display": "floor(x)",
+    "sql_expr": "floor(\"x\")",
+    "sql_expr_without_alias": "floor(\"x\")"
+  },
+  "gb_arity1__length": {
+    "join_sql": "length(\"s\")",
+    "projection_name": "length(s)",
+    "select_columns": [
+      "length(s)"
+    ],
+    "spark_display": "length(s)",
+    "sql_expr": "length(\"s\")",
+    "sql_expr_without_alias": "length(\"s\")"
+  },
+  "gb_arity1__lower": {
+    "join_sql": "lower(\"s\")",
+    "projection_name": "lower(s)",
+    "select_columns": [
+      "lower(s)"
+    ],
+    "spark_display": "lower(s)",
+    "sql_expr": "lower(\"s\")",
+    "sql_expr_without_alias": "lower(\"s\")"
+  },
+  "gb_arity1__lower_lit": {
+    "join_sql": "lower('a')",
+    "projection_name": "lower(a)",
+    "select_columns": [
+      "lower(a)"
+    ],
+    "spark_display": "lower(a)",
+    "sql_expr": "lower('a')",
+    "sql_expr_without_alias": "lower('a')"
+  },
+  "gb_arity1__md5": {
+    "join_sql": "md5(\"s\")",
+    "projection_name": "md5(s)",
+    "select_columns": [
+      "md5(s)"
+    ],
+    "spark_display": "md5(s)",
+    "sql_expr": "md5(\"s\")",
+    "sql_expr_without_alias": "md5(\"s\")"
+  },
+  "gb_arity1__sqrt": {
+    "join_sql": "sqrt(\"x\")",
+    "projection_name": "sqrt(x)",
+    "select_columns": [
+      "sqrt(x)"
+    ],
+    "spark_display": "sqrt(x)",
+    "sql_expr": "sqrt(\"x\")",
+    "sql_expr_without_alias": "sqrt(\"x\")"
+  },
+  "gb_arity1__trim": {
+    "join_sql": "trim(\"s\")",
+    "projection_name": "trim(s)",
+    "select_columns": [
+      "trim(s)"
+    ],
+    "spark_display": "trim(s)",
+    "sql_expr": "trim(\"s\")",
+    "sql_expr_without_alias": "trim(\"s\")"
+  },
+  "gb_arity1__upper_str": {
+    "join_sql": "upper(\"s\")",
+    "projection_name": "upper(s)",
+    "select_columns": [
+      "upper(s)"
+    ],
+    "spark_display": "upper(s)",
+    "sql_expr": "upper(\"s\")",
+    "sql_expr_without_alias": "upper(\"s\")"
+  },
+  "gb_arity2__array_join": {
+    "join_sql": "array_join(\"arr\", ',')",
+    "projection_name": "array_join(arr, ',')",
+    "select_columns": [
+      "array_join(arr, ',')"
+    ],
+    "spark_display": "array_join(arr, ',')",
+    "sql_expr": "array_join(\"arr\", ',')",
+    "sql_expr_without_alias": "array_join(\"arr\", ',')"
+  },
+  "gb_arity2__atan2": {
+    "join_sql": "atan2(\"x\", \"y\")",
+    "projection_name": "atan2(x, y)",
+    "select_columns": [
+      "atan2(x, y)"
+    ],
+    "spark_display": "atan2(x, y)",
+    "sql_expr": "atan2(\"x\", \"y\")",
+    "sql_expr_without_alias": "atan2(\"x\", \"y\")"
+  },
+  "gb_arity2__format_string": {
+    "join_sql": "format_string('%d', \"x\")",
+    "projection_name": "format_string('%d', x)",
+    "select_columns": [
+      "format_string('%d', x)"
+    ],
+    "spark_display": "format_string('%d', x)",
+    "sql_expr": "format_string('%d', \"x\")",
+    "sql_expr_without_alias": "format_string('%d', \"x\")"
+  },
+  "gb_arity2__get_json_object": {
+    "join_sql": "get_json_object(\"s\", '$.a')",
+    "projection_name": "get_json_object(s, '$.a')",
+    "select_columns": [
+      "get_json_object(s, '$.a')"
+    ],
+    "spark_display": "get_json_object(s, '$.a')",
+    "sql_expr": "get_json_object(\"s\", '$.a')",
+    "sql_expr_without_alias": "get_json_object(\"s\", '$.a')"
+  },
+  "gb_arity2__hypot": {
+    "join_sql": "hypot(\"x\", \"y\")",
+    "projection_name": "hypot(x, y)",
+    "select_columns": [
+      "hypot(x, y)"
+    ],
+    "spark_display": "hypot(x, y)",
+    "sql_expr": "hypot(\"x\", \"y\")",
+    "sql_expr_without_alias": "hypot(\"x\", \"y\")"
+  },
+  "gb_arity2__instr": {
+    "join_sql": "instr(\"s\", 'b')",
+    "projection_name": "instr(s, 'b')",
+    "select_columns": [
+      "instr(s, 'b')"
+    ],
+    "spark_display": "instr(s, 'b')",
+    "sql_expr": "instr(\"s\", 'b')",
+    "sql_expr_without_alias": "instr(\"s\", 'b')"
+  },
+  "gb_arity2__log_two_args": {
+    "join_sql": "log(\"x\", 2)",
+    "projection_name": "log(x, 2)",
+    "select_columns": [
+      "log(x, 2)"
+    ],
+    "spark_display": "log(x, 2)",
+    "sql_expr": "log(\"x\", 2)",
+    "sql_expr_without_alias": "log(\"x\", 2)"
+  },
+  "gb_arity2__pow_lit": {
+    "join_sql": "pow(\"x\", 2)",
+    "projection_name": "pow(x, 2)",
+    "select_columns": [
+      "pow(x, 2)"
+    ],
+    "spark_display": "pow(x, 2)",
+    "sql_expr": "pow(\"x\", 2)",
+    "sql_expr_without_alias": "pow(\"x\", 2)"
+  },
+  "gb_arity2__repeat": {
+    "join_sql": "repeat(\"s\", 3)",
+    "projection_name": "repeat(s, 3)",
+    "select_columns": [
+      "repeat(s, 3)"
+    ],
+    "spark_display": "repeat(s, 3)",
+    "sql_expr": "repeat(\"s\", 3)",
+    "sql_expr_without_alias": "repeat(\"s\", 3)"
+  },
+  "gb_arity2__shiftleft": {
+    "join_sql": "shiftleft(\"x\", 2)",
+    "projection_name": "shiftleft(x, 2)",
+    "select_columns": [
+      "shiftleft(x, 2)"
+    ],
+    "spark_display": "shiftleft(x, 2)",
+    "sql_expr": "shiftleft(\"x\", 2)",
+    "sql_expr_without_alias": "shiftleft(\"x\", 2)"
+  },
+  "gb_arity3__assert_true": {
+    "join_sql": "assert_true(\"flag\", 'bad')",
+    "projection_name": "assert_true(flag, 'bad')",
+    "select_columns": [
+      "assert_true(flag, 'bad')"
+    ],
+    "spark_display": "assert_true(flag, 'bad')",
+    "sql_expr": "assert_true(\"flag\", 'bad')",
+    "sql_expr_without_alias": "assert_true(\"flag\", 'bad')"
+  },
+  "gb_arity3__lpad": {
+    "join_sql": "lpad(\"s\", 10, 'x')",
+    "projection_name": "lpad(s, 10, 'x')",
+    "select_columns": [
+      "lpad(s, 10, 'x')"
+    ],
+    "spark_display": "lpad(s, 10, 'x')",
+    "sql_expr": "lpad(\"s\", 10, 'x')",
+    "sql_expr_without_alias": "lpad(\"s\", 10, 'x')"
+  },
+  "gb_arity3__make_date": {
+    "join_sql": "make_date(\"x\", \"y\", \"x\")",
+    "projection_name": "make_date(x, y, x)",
+    "select_columns": [
+      "make_date(x, y, x)"
+    ],
+    "spark_display": "make_date(x, y, x)",
+    "sql_expr": "make_date(\"x\", \"y\", \"x\")",
+    "sql_expr_without_alias": "make_date(\"x\", \"y\", \"x\")"
+  },
+  "gb_arity3__rpad_str": {
+    "join_sql": "rpad(\"s\", 5, 'y')",
+    "projection_name": "rpad(s, 5, 'y')",
+    "select_columns": [
+      "rpad(s, 5, 'y')"
+    ],
+    "spark_display": "rpad(s, 5, 'y')",
+    "sql_expr": "rpad(\"s\", 5, 'y')",
+    "sql_expr_without_alias": "rpad(\"s\", 5, 'y')"
+  },
+  "gb_arity3__substring_index": {
+    "join_sql": "substring_index(\"s\", 'a', 1)",
+    "projection_name": "substring_index(s, 'a', 1)",
+    "select_columns": [
+      "substring_index(s, 'a', 1)"
+    ],
+    "spark_display": "substring_index(s, 'a', 1)",
+    "sql_expr": "substring_index(\"s\", 'a', 1)",
+    "sql_expr_without_alias": "substring_index(\"s\", 'a', 1)"
+  },
+  "gb_arity3__translate": {
+    "join_sql": "translate(\"s\", 'a', 'z')",
+    "projection_name": "translate(s, 'a', 'z')",
+    "select_columns": [
+      "translate(s, 'a', 'z')"
+    ],
+    "spark_display": "translate(s, 'a', 'z')",
+    "sql_expr": "translate(\"s\", 'a', 'z')",
+    "sql_expr_without_alias": "translate(\"s\", 'a', 'z')"
+  },
+  "gb_nested__lower_trim": {
+    "join_sql": "lower(trim(\"s\"))",
+    "projection_name": "lower(trim(s))",
+    "select_columns": [
+      "lower(trim(s))"
+    ],
+    "spark_display": "lower(trim(s))",
+    "sql_expr": "lower(trim(\"s\"))",
+    "sql_expr_without_alias": "lower(trim(\"s\"))"
+  },
+  "gb_nested__lpad_lower": {
+    "join_sql": "lpad(lower(\"s\"), 5, '*')",
+    "projection_name": "lpad(lower(s), 5, '*')",
+    "select_columns": [
+      "lpad(lower(s), 5, '*')"
+    ],
+    "spark_display": "lpad(lower(s), 5, '*')",
+    "sql_expr": "lpad(lower(\"s\"), 5, '*')",
+    "sql_expr_without_alias": "lpad(lower(\"s\"), 5, '*')"
+  },
+  "gb_nested__sqrt_floor_add": {
+    "join_sql": "sqrt((floor(\"x\") + 1))",
+    "projection_name": "sqrt((floor(x) + 1))",
+    "select_columns": [
+      "sqrt((floor(x) + 1))"
+    ],
+    "spark_display": "sqrt((floor(x) + 1))",
+    "sql_expr": "sqrt((floor(\"x\") + 1))",
+    "sql_expr_without_alias": "sqrt((floor(\"x\") + 1))"
+  },
+  "gb_nested__sqrt_sqrt": {
+    "join_sql": "sqrt(sqrt(\"x\"))",
+    "projection_name": "sqrt(sqrt(x))",
+    "select_columns": [
+      "sqrt(sqrt(x))"
+    ],
+    "spark_display": "sqrt(sqrt(x))",
+    "sql_expr": "sqrt(sqrt(\"x\"))",
+    "sql_expr_without_alias": "sqrt(sqrt(\"x\"))"
+  },
+  "gb_variadic__concat_ws": {
+    "join_sql": "concat_ws('-', \"s\", \"s\", \"s\")",
+    "projection_name": "concat_ws('-', s, s, s)",
+    "select_columns": [
+      "concat_ws('-', s, s, s)"
+    ],
+    "spark_display": "concat_ws('-', s, s, s)",
+    "sql_expr": "concat_ws('-', \"s\", \"s\", \"s\")",
+    "sql_expr_without_alias": "concat_ws('-', \"s\", \"s\", \"s\")"
+  },
+  "gb_variadic__create_map": {
+    "join_sql": "create_map(\"x\", \"y\")",
+    "projection_name": "map(x, y)",
+    "select_columns": [
+      "map(x, y)"
+    ],
+    "spark_display": "map(x, y)",
+    "sql_expr": "create_map(\"x\", \"y\")",
+    "sql_expr_without_alias": "create_map(\"x\", \"y\")"
+  },
+  "gb_variadic__str_to_map": {
+    "join_sql": "str_to_map(\"s\", ',', ':')",
+    "projection_name": "str_to_map(s, ,, :)",
+    "select_columns": [
+      "str_to_map(s, ,, :)"
+    ],
+    "spark_display": "str_to_map(s, ,, :)",
+    "sql_expr": "str_to_map(\"s\", ',', ':')",
+    "sql_expr_without_alias": "str_to_map(\"s\", ',', ':')"
+  }
+}

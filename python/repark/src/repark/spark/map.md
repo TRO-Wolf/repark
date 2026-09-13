@@ -58,7 +58,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `PyColumnParts.call_scalar`, which renders `name(args)` in Rust while foldability,
   aggregate and ungroupable flags stay Python-side bookkeeping. `F.expr` stays the
   one `_native.PyColumn.sql` caller — its text is the caller's. pins: facade-2/C-014,
-  C-016
+  C-016, C-018
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9

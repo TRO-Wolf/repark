@@ -37,7 +37,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   fragments never copy across the boundary). The step-3 `#[pymethods]` wrappers for the
   Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split
   across files — while their `Expr` construction stays in `display/construct.rs`.
-  pins: facade-2/C-014, C-016
+  pins: facade-2/C-014, C-016, C-017, C-019
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`
