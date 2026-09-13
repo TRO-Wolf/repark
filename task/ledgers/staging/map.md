@@ -36,7 +36,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the 156-case golden corpus (schema + nullability + values + refusal class/message),
   the D-3 pickle round-trip pin, the mutation proof, and the step-2 target list.
   No product code. `risk_tier: standard`. Branch `feat/facade-3-s1`.
-  pins: facade-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: facade-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-025
 - [silver-s1-ledger.md](silver-s1-ledger.md) —
   **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
   — TOML parse with key-path refusals, closed operation enums, parse-time structural

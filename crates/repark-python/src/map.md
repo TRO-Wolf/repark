@@ -127,7 +127,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   cached by `tzinfo` identity armed only for exact `datetime.timezone`. `Ctx` gains
   `timezone_type`, `epoch_date` and the `utcoffset_cache`, built once per export call in the
   shared `make_ctx`.
-  pins: facade-3/C-010, C-013, C-014, C-016, C-017, C-019, C-020 |
+  pins: facade-3/C-010, C-013, C-014, C-016, C-017, C-019, C-020, C-024, C-025 |
 | [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. Step 2 (2026-09-13): unchanged — the session-total budget flows through `session.rs::materialize_as_cache_view`'s `(max_bytes, max_total_bytes)` budgets tuple. pins: eager-budget-1/C-002, C-003 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,

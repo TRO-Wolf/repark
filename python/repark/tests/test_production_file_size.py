@@ -173,7 +173,7 @@ EXPECTED_SYMBOL_HASHES = {
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
     "_create_dataframe_from_rows_inner": (
-        "8cdae71aa80a2be992e1b66f24b2273faa467a15e31112b0943799e1481cb4b9"
+        "2357ead234765f3ac41ad16c70e7695a07b5462773dd71b3cff36cf3a4c500f5"
     ),
     "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
     "_datetime64_unit_from_dtype": (

@@ -1637,8 +1637,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   byte-identical to `main` and green on the Rust path; the step-2 pin batch
   (goldens + dispatch + `test_create_dataframe_materialize.py` +
   `test_perf_facade_cdf_1.py` + `test_csv_infer_perf_1.py`, all unedited) and the
-  whole `python/repark/tests` suite (5,972 passed) gate the move.
-  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
+  whole `python/repark/tests` suite (5,972 passed) gate the move. **Step 3
+  (2026-09-13):** byte-identical and green again on the named-funnel +
+  abi3-temporal path; the step-3 pin batch and the whole suite gate the move.
+  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-021, C-023
 - `test_facade_3_cdf_dispatch.py` — **FACADE-3 step 2 (2026-09-13):** dispatch pin
   for the Rust createDataFrame path. `_rust_cdf_arrow_table` must exist in
   `create_dataframe_columns` and must be invoked for plain tuples, nested cells,

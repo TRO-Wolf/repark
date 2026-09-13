@@ -154,7 +154,9 @@ def test_named_export_registered() -> None:
     assert callable(getattr(columns_module, "_rust_cdf_named_arrow_table", None))
 
 
-def test_dict_list_skips_python_funnel(spark: ReparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dict_list_skips_python_funnel(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A dict list reaches the named export and never calls the Python funnel."""
     calls = _funnel_spies(monkeypatch)
     exports = _named_export_spy(monkeypatch)
@@ -166,7 +168,9 @@ def test_dict_list_skips_python_funnel(spark: ReparkSession, monkeypatch: pytest
     assert collected[5]["dc"] == Decimal("5.25")
 
 
-def test_row_list_skips_python_funnel(spark: ReparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_row_list_skips_python_funnel(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A repark Row list reaches the named export and never calls the Python funnel."""
     calls = _funnel_spies(monkeypatch)
     exports = _named_export_spy(monkeypatch)
@@ -183,9 +187,7 @@ def test_dict_key_union_still_orders_natively(
 ) -> None:
     """Spark dict key-union order holds on the native path (a,c,b,d)."""
     calls = _funnel_spies(monkeypatch)
-    frame = spark.createDataFrame(
-        [{"c": 1, "a": 2}, {"b": 3, "a": 4}, {"d": 5, "c": 6}]
-    )
+    frame = spark.createDataFrame([{"c": 1, "a": 2}, {"b": 3, "a": 4}, {"d": 5, "c": 6}])
     assert calls == {"bind": 0, "perm": 0, "mapping_list": 0}
     assert frame.columns == ["a", "c", "b", "d"]
     assert frame.collect()[2]["c"] == 6
@@ -275,7 +277,7 @@ class _ProbeDatetime(datetime.datetime):
 def _temporal_case_rows() -> dict[str, list[tuple[Any, ...]]]:
     """The C-020 value-parity corpus: one column per case family."""
     fixed_offset = datetime.timezone(datetime.timedelta(hours=-5, minutes=-30))
-    utc = datetime.timezone.utc
+    utc = datetime.UTC
     cases: dict[str, list[tuple[Any, ...]]] = {
         "dates": [
             (datetime.date(1, 1, 1),),

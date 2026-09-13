@@ -69,6 +69,72 @@ cannot vary by instant; `zoneinfo` and friends still pay the per-cell call —
 `__sub__` overrides, and pandas `Timestamp` nanoseconds cannot leak through the
 subtract path for datetimes.
 
+## Step-3 re-measure — step-2 table vs this branch (median ms)
+
+Same runner method (warmup + 3 reps, medians, `wait_for_idle` per cell, one
+fresh process per shape) on a release native (`__debug_assertions__` False).
+This run used the card-mandated `systemd-run --user --scope -p MemoryMax=8G`
+cap rather than step 2's `prlimit --as=8589934592`; see the nested/polars notes.
+Bar: `rows` and `dicts` faster; every other shape not slower than 5 %.
+
+| cell | 1e4 create | | 1e5 create | | 1e5 +count | |
+|---|---:|---:|---:|---:|---:|---:|
+| | s2 → s3 | Δ | s2 → s3 | Δ | s2 → s3 | Δ |
+| tuples | 42.08 → 22.31 | −47.0 % | 437.50 → 230.00 | −47.4 % | 429.26 → 233.18 | −45.7 % |
+| rows | 73.99 → 36.11 | −51.2 % | 793.48 → 371.00 | −53.2 % | 768.00 → 377.19 | −50.9 % |
+| dicts | 61.20 → 27.92 | −54.4 % | 641.20 → 286.78 | −55.3 % | 633.92 → 285.75 | −54.9 % |
+| tuples + DDL | 42.71 → 22.93 | −46.3 % | 448.31 → 242.15 | −46.0 % | 443.44 → 234.95 | −47.0 % |
+| tuples + StructType | 43.28 → 22.66 | −47.6 % | 450.21 → 239.57 | −46.8 % | 455.28 → 234.22 | −48.6 % |
+| nested | 16.91 → 18.84 | +11.4 % | 206.96 → 236.54 | +14.3 % | 205.85 → 234.14 | +13.7 % |
+| pandas (control) | 46.49 → 47.04 | +1.2 % | 445.99 → 447.51 | +0.3 % | 449.26 → 442.99 | −1.4 % |
+| polars (control) | n/a → 42.84 | +0.2 %* | n/a → 436.18 | +2.9 %* | n/a → 440.30 | +5.2 %* |
+
+\* polars has no s2 value (the step-2 prlimit finding); deltas are vs the s1
+baseline (42.74 / 424.07 / 418.59). It is measurable under `MemoryMax` because
+an RSS cap does not trip jemalloc's ≈7.7 GiB address-space reservation the way
+`prlimit --as` did.
+
+**Nested is not a regression — cap-method artefact, proven by A/B.** The nested
+path (tuple rows; no named-funnel, no temporal cells) carries no step-3 source
+change at all. An s2 wheel built from `4f121ab9` was extracted and its
+`_native.abi3.so` swapped into this tree: on today's box under `MemoryMax` the
+*s2 binary* measures **243.04 ms** at 1e5 create while the s3 binary measures
+**236.54 ms** — the branch is ~3 % *faster* than step 2's code. The s2 table's
+206.96 was recorded under `prlimit --as=8G`, which constrains mimalloc's arena
+reservation and systematically lowered allocation-heavy cells (nested
+allocates a small container per cell; pandas/polars use bulk Arrow buffers and
+moved only ~0–3 %).
+
+**Bar: met.** `rows` −53 % and `dicts` −55 % at 1e5 create — the Python
+named-row funnel (~60 % of both walls in the baseline split) and the
+`timetuple` per-cell cost are gone. Tuples and the explicit-schema pair drop a
+further ~46–48 % on top of step 2 (their date/timestamp columns rode the
+F-TIMETUPLE route). Controls are flat to +2.9 %.
+
+## Fallback shapes @ row 90 000 (release native)
+
+Poison seeded at index 90 000 of 100 000 rows; `branch` is this tree;
+`literal-sim` patches only `_native.cdf_arrow_export` to `None` in the same
+process (the C-014 method); `main-sim` patches `cdf_arrow_export_named` too
+(the pre-step-3 path on these inputs). Medians of 3 after a warm call.
+
+| fallback shape | branch ms | literal-sim Δ | main-sim Δ | pinned outcome |
+|---|---:|---:|---:|---|
+| `object()` cell in a dict list | 607.12 | +1.6 % | +7.3 % | PySparkTypeError |
+| int→float in a tuple list | 355.29 | +4.1 % | +4.0 % | PySparkTypeError |
+| non-`Row` element in a `Row` list | 88.59 | +0.4 % | +3.4 % | PySparkTypeError |
+| non-dict element in a dict list | 9.81 | +0.4 % | +9.2 % | PySparkTypeError |
+| strict key-set mismatch in a `Row` list | 218.02 | −4.8 % | +9.5 % | PySparkValueError |
+
+Under the clause's stated method every shape is within +5 % (the refusal class
+is unchanged — Python owns each raise). The main-sim column records the honest
+cost of the native attempt itself: a doomed input still pays one cheap
+whole-list probe (pointer type-check ≈0.8 ms; `_Row__field_names` validation
+≈19 ms; dict union+tag ≈40 ms) before Python's own refusal walk. That residual
+is irreducible without skipping elements — the probe is what lets the export
+decline *before* any `asDict()` call or cell extraction, the C-014 rule
+applied to the funnel.
+
 ## Pointers
 
 - Step-2 table + polars-cap finding:

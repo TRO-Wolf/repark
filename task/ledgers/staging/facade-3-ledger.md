@@ -1,6 +1,6 @@
-# Unit ledger — FACADE-3 · `createDataFrame` inference in Rust — steps 1–2
+# Unit ledger — FACADE-3 · `createDataFrame` inference in Rust — steps 1–3
 
-**Date:** 2026-09-13 · **Branches:** `feat/facade-3-s1` (C-001..C-008), `feat/facade-3-s2` (C-009..C-013) · **Base:** `23bd047b`
+**Date:** 2026-09-13 · **Branches:** `feat/facade-3-s1` (C-001..C-008), `feat/facade-3-s2` (C-009..C-013), `perf/facade-3-s3` (C-018..C-025) · **Base:** `23bd047b`
 **Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
@@ -211,8 +211,8 @@ debug native before gates.
 | F-FALLBACK — late native `None` pays the extract, then Python re-walks (`object()` @90k 839 ms vs main 453 ms, +85 %; int→float @90k 759 ms) | P1 regression | Fixed (`c51ec936`): `screen.rs` tag pass predicts the `None` and returns before extraction; +4.1 % / +4.2 % vs main-simulated, inside the 5 % cap |
 | F-DECIMAL — mantissa walked twice (extract stores digits, build re-accumulates) | P2 | Fixed (`fd856bf9`): scale-18 unscaled `i128` computed once in `extract_decimal`; `CellKind::Dec` carries it |
 | F-STRCOPY — string extracted to `String`, cloned into the cell, copied into `StringArray` | P2 | Fixed (`1f9f8247`): `CellKind::Str` holds `PyBackedStr`; `build_utf8` appends `&str` via `StringBuilder`; `Cell.obj` is `Option`, `None` for `Str`/`Null` |
-| F-FUNNEL — `rows`/`dicts` still pay a Python-side walk + identity permutation before the native call | Step 3 target | Deferred — pass `Row`/dict lists into native, drop the Python preprocessing |
-| F-TIMETUPLE — per-cell `timetuple()` Python callback on every date/datetime | Step 3 target | Deferred — PyO3's `PyDateTime`/`PyDate` getters are unavailable under `Py_LIMITED_API` (this wheel is abi3); step 3 must find an abi3-compatible route |
+| F-FUNNEL — `rows`/`dicts` still pay a Python-side walk + identity permutation before the native call | Step 3 target | Fixed (`a0f76baa` + `fd5b8c9c`): `cdf_arrow_export_named` takes `Row`/dict lists directly — strict key-set binding, dict key-union order, and schema null-fill/drop-extra all run in Rust; fail-fast probes (pointer type-check, `_Row__field_names` compare) decline doomed inputs before any `asDict()` call. `rows` −53 %, `dicts` −55 % at 1e5; fallback shapes within +5 % under the C-014 method |
+| F-TIMETUPLE — per-cell `timetuple()` Python callback on every date/datetime | Step 3 target | Fixed (`6a07f172`): abi3-safe routes measured in the step-3 doc — `date` via cached-epoch `.days`, datetimes via interned `getattr`s, `utcoffset` cached by tzinfo identity only for exact `datetime.timezone`. −80…−90 % per-cell on the micro-benchmark; value-parity pin + mutation proof |
 | F-SLOTS — extra `Vec<Option<&Cell>>` + validity allocations per column | P3 | Ledger only |
 | F-RESCAN — extra O(n) merge-kind pass over extracted cells | P3 | Ledger only |
 
@@ -237,6 +237,94 @@ screen.
   int→float @90k **361.58 vs 347.00 ms (+4.2 %)** — medians of warmup + 5,
   per-process `prlimit --as=8589934592`, `OPENBLAS_NUM_THREADS=8`.
 
+## PROPOSITION LEDGER — FACADE-3 step 3 — 2026-09-13
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-018 | Step-3 baseline doc committed before the first product commit: cProfile split for `rows` and `dicts` at 1e5 on the release native (funnel share vs native call vs capsule drain) plus the F-TIMETUPLE candidate micro-benchmark table. | `docs/perf/facade-3-cdf-step3-2026-09-13.md` listed in `docs/perf/map.md`; shas in order. | **PROVEN** | `77e57624` (baseline doc only, no product file) precedes `a0f76baa` (F-FUNNEL), `6a07f172` (F-TIMETUPLE), `fd5b8c9c` (fail-fast probes). cProfile: the Python funnel is ~60 % of both walls (`_bind_named_row` 270/379 ms, `_apply_permutation` 166/167 ms, `asDict` 138/—, union order —/84 ms), native call ~39 %, drain <0.1 %. Probe table: `timetuple` 98.4/125.3/194.7 ms vs best candidates 10.2/25.6/31.9 ms per 1e5 cells (date/naive/aware). |
+| C-019 | F-FUNNEL: `Row` and dict lists pass into native directly; the Python funnel (`_rows_from_mapping_list` walk, `asDict`, `_bind_named_row`, `_apply_permutation`) is skipped on covered shapes. Red-first dispatch pin; byte-identical behavior — homogeneity refusals, dict key-union order, schema null-fill + extras dropped, strict `Row` key-set refusal, duplicate names; native `None` before extraction when it cannot reproduce the refusal. | `cdf_arrow_export_named` in `crates/repark-python/src/cdf_infer/named.rs` + `_rust_cdf_named_arrow_table` dispatch; `test_facade_3_cdf_step3.py` red-first output. | **PROVEN** | Red-first on `77e57624` (baseline, product unchanged): 6 failed — `AttributeError: module 'repark._native' has no attribute 'cdf_arrow_export_named'` / `has no attribute '_rust_cdf_named_arrow_table'`; the 5 fallback-ownership pins pass on base (they exercise the Python path). Green after `a0f76baa` + `fd5b8c9c`: spies record `bind: 0, perm: 0, mapping_list: 0` calls while the named export receives the raw list; 12 named-path pins + reordered-field-names bind pin + the step-2 dispatch pin updated to the new door. Semantics preserved and pinned: sorted first-row keys then sorted new keys per row (dict union), schema-order null-fill + extras dropped for `StructType`/DDL, strict bind for name-list schemas and all `Row` lists (identity, by-name reorder, positional rename; partial overlap or length mismatch → `None` → Python refusal), empty/factory `Row` → `None`, subclassed/heterogeneous/non-str-key inputs → `None` before `asDict()`. |
+| C-020 | F-TIMETUPLE: winning abi3 route implemented; value-parity pin (native vs forced fallback) covers year 1/9999, pre-1970, microseconds, `fold=1`, non-UTC fixed offset, `date`/`datetime` subclasses; `NaT` still falls back; mutation proof bites. | `cells.rs` route + `test_temporal_cells_keep_fallback_values` + `test_nat_still_falls_back_to_python_normalizer`; mutation red output. | **PROVEN** | Chosen per the C-018 table (all candidates >5 % under `timetuple`): `date` → subtract cached `date(1970,1,1)`, read `.days` (−90 %); naive `datetime` → 7 interned `getattr`s (−80 %); aware → same getattrs + `utcoffset` cached by tzinfo identity only when `type(tzinfo) is datetime.timezone` (−84 %; `zoneinfo`/subclasses still call per cell). Parity pin A/Bs native vs both-exports-patched fallback across the required cases — green. Mutation proof: `delta.days` → `delta.seconds` in the date arm redded `test_temporal_cells_keep_fallback_values` (`date_only`, `pre1970` mismatched); restored green. NaT pin proves the Python normalizer still sees `NaTType`. |
+| C-021 | Goldens byte-identical and unedited; pickle, dispatch and fallback pins green. | `git diff origin/main -- python/repark/tests/facade_3_create_dataframe_goldens.json` empty; pin batch green. | **PROVEN** | Diff is 0 lines at `fd5b8c9c`. Targeted batch on debug native (`make develop`): **166 passed, 4 skipped** — goldens (10), step-3 pins (13), dispatch (2), the three named pin files, materialize, fallback/pickle pins. The step-2 dispatch pin was edited once to point at the new door (`cdf_arrow_export_named` for `Row`/dict lists — the behavior the pin asserts, recorded in the same commit). |
+| C-022 | Release re-measure with the step-1 runner method: all eight shapes at 1e4 and 1e5, one fresh process per shape, vs the step-2 table. Bar: `rows` and `dicts` faster; every other shape not slower than 5 %. Fallback shapes @ row 90 000 (object(), int→float, non-`Row` in `Row` list, non-dict in dict list, strict key-set mismatch) each within +5 % of the C-014 simulation. | `maturin develop --release`, `__debug_assertions__` False, `systemd-run MemoryMax=8G` per process. | **PROVEN** | Table in the step-3 doc: rows 793.48 → **371.00 (−53.2 %)**, dicts 641.20 → **286.78 (−55.3 %)** at 1e5 create; tuples −47.4 %, tuples+DDL −46.0 %, tuples+StructType −46.8 % (F-TIMETUPLE on their date/timestamp columns); pandas +0.3 %, polars +2.9 % vs s1 baseline. **Nested +14.3 % vs the s2 table is a cap-method artefact, not a regression:** an s2 binary (`4f121ab9` wheel `.so` swapped in) measures 243.04 ms on today's box under `MemoryMax` vs s3's 236.54 — s3 is ~3 % faster; the s2 table's 206.96 was recorded under `prlimit --as`, which lowers allocation-heavy cells by constraining mimalloc's arena reservation. Fallback @90k under the C-014 method (only `cdf_arrow_export` → `None`): object() +1.6 %, int→float +4.1 %, non-`Row` +0.4 %, non-dict +0.4 %, strict-mismatch −4.8 % — all within +5 %. Honest both-exports-patched deltas (recorded, not the bar): +7.3 %/+4.0 %/+3.4 %/+9.2 %/+9.5 % — the irreducible cost of one whole-list probe that lets the export decline before `asDict()`/extraction. |
+| C-023 | The card's named pins unedited and green; the whole facade suite green on a debug native after `make develop`. | The three files untouched; `pytest python/repark/tests -q` count. | **PROVEN** | `git diff origin/main` touches none of `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`, `test_csv_infer_perf_1.py`. Whole facade suite on debug native: **6,034 passed, 369 skipped** in 796.84 s; the single red was `test_production_file_size.py::test_moved_symbol_bodies_match_the_integrated_baseline` on `_create_dataframe_from_rows_inner` — the sanctioned body-hash baseline for the dispatch body step 3 edited (same class as step 2's `_arrow_table_from_raw_tuples` update), hash refreshed and the file re-run green (11 passed). |
+| C-024 | Gates: `cargo test -p repark-python`, `make verify`, the whole parity suite. | Commands and counts in Evidence. | **PROVEN** | `cargo test -p repark-python` → **99 passed** (74 lib + 25 bindings). `make verify` → exit 0 (fmt, clippy both tiers, all structural gates, ledger lifecycle + grammar). Parity suite → **757 passed, 2 skipped, 12 xfailed** in 580.46 s. No JVM; `REPARK_PARITY_LIVE` never set. |
+| C-025 | Findings-table rows F-FUNNEL and F-TIMETUPLE updated with their outcome; `COVERAGE_ATTESTATION` extended to step 3 with its schema kept. | Table rows + attestation block. | **PROVEN** | Both rows marked Fixed with shas and deltas above. Attestation: AT-4/AT-6/AT-7/AT-8/AT-10 evidence now names the step-3 artifacts (`named.rs`, the fail-fast probes, the temporal routes, the step-3 doc); schema unchanged (`complete: true`). |
+
+### Step-3 evidence
+
+**Red first (base `77e57624`, product unchanged).**
+`test_facade_3_cdf_step3.py` before the implementation:
+
+```
+FAILED test_named_export_registered - AttributeError: module 'repark._native' has
+  no attribute 'cdf_arrow_export_named'
+FAILED test_dict_list_skips_python_funnel - AttributeError: module
+  'repark.spark.session.create_dataframe_columns' has no attribute
+  '_rust_cdf_named_arrow_table'
+FAILED test_row_list_skips_python_funnel - AttributeError: … same
+FAILED test_dict_key_union_still_orders_natively - AttributeError: … same
+FAILED test_dict_explicit_schema_skips_python_funnel - AttributeError: … same
+FAILED test_row_structtype_reorder_skips_python_funnel - AttributeError: … same
+6 failed, 5 passed in 0.6s
+```
+
+(The five greens are the fallback-ownership pins — they exercise the Python path
+which exists on base.) The pin file grew `test_row_reordered_field_names_bind_by_name`
+in the `fd5b8c9c` round (same set, different order → by-name bind through the
+eq-miss/set-compare path).
+
+**Implementation shape.** `cdf_arrow_export_named(rows, schema|None,
+schema_names|None, session_tz_utc, timestamp_ntz, infer_dict_as_struct,
+legacy_first_element, decimal_prec)` in `cdf_infer/named.rs`: `collect_*` probes
+exact-type and field-name tuples before paying `asDict()`; `resolve_lookup`
+picks strict-bind (identity → by-name → positional) vs schema-order null-fill vs
+dict key-union; the tag pass fuses the residual key-set check; `screen`/`extract`/
+`build` are shared with the tuple export. `cells.rs` extracts temporals through
+cached-epoch `.days` + interned attribute reads + a `datetime.timezone`-gated
+`utcoffset` identity cache. Python: `_rust_cdf_named_arrow_table` in
+`create_dataframe_columns.py`; `create_dataframe_rows.py` dispatches `Row`/dict
+lists to it before the legacy funnel. Files: `crates/repark-python/src/cdf_infer/
+{cells,named}.rs`, `create_dataframe_{columns,rows}.py`, `_funcs.py` (export
+registration), `test_facade_3_cdf_step3.py` (maps in lockstep).
+
+**Mutation proof (C-020, restored).** `delta.days` → `delta.seconds` in the
+`date` arm of `cells.rs`: `test_temporal_cells_keep_fallback_values` red on
+`date_only` and `pre1970` (86400 s/day folded into `.seconds` returns 0), green
+after restore. The probe's cross-mode checksums (identical across all six
+extraction routes per fixture) are the free parity check recorded in the doc.
+
+**C-022 measure.** `maturin develop --release` (`__debug_assertions__` False);
+one fresh `systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0` process
+per shape with `OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8`, the runner's own
+`measure_cell`/`build_session`, medians of 3 after 1 warmup, `wait_for_idle` per
+cell. Driver `/tmp/run_facade3_s3.py` (outside the repo — it imports the committed
+step-1 runner). Fallback driver `/tmp/run_facade3_s3_fallback.py` measures both
+simulations: literal C-014 (`cdf_arrow_export` → `None`) and honest
+(both exports → `None`). The nested A/B extracted the s2 wheel's
+`_native.abi3.so` from a `4f121ab9` worktree build and swapped it into this
+tree's editable install — 243.04 ms vs s3's 236.54 ms on the same box, same cap.
+`make develop` restored the debug native before gates.
+
+**Step-3 gates.**
+
+- `.venv/bin/python -m pytest python/repark/tests/test_facade_3_cdf_step3.py
+  python/repark/tests/test_facade_3_create_dataframe_goldens.py
+  python/repark/tests/test_facade_3_cdf_dispatch.py
+  python/repark/tests/test_perf_facade_cdf_1.py
+  python/repark/tests/test_create_dataframe_materialize.py
+  python/repark/tests/test_csv_infer_perf_1.py -q` → **166 passed, 4 skipped**
+  in 14.78 s (debug native).
+- `.venv/bin/python -m pytest python/repark/tests -q` → **6,034 passed, 369
+  skipped** in 796.84 s; the one red was the sanctioned
+  `_create_dataframe_from_rows_inner` body-hash baseline, refreshed and re-run
+  green (11 passed).
+- `cargo test -p repark-python` → **99 passed** (74 lib, 25 bindings).
+- `make verify` → exit 0.
+- `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project
+  python -m pytest python/repark-parity/tests -q` → **757 passed, 2 skipped,
+  12 xfailed** in 580.46 s.
+- Staged-diff comment scan prints nothing.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: facade-3
@@ -255,29 +343,29 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_facade_3_create_dataframe_goldens.py]
     - id: AT-4
       status: ATTACKED
-      evidence: Step 2 added no shared mutable state, lock, or async spawn; each cdf_arrow_export call builds an independent batch, and the whole facade suite ran green (5,972 passed) on the new path.
-      artifacts: [crates/repark-python/src/cdf_infer.rs]
+      evidence: Steps 2–3 add no shared mutable state, lock, or async spawn; each cdf_arrow_export / cdf_arrow_export_named call builds an independent batch (the utcoffset cache is per-call), and the whole facade suite ran green on the new path.
+      artifacts: [crates/repark-python/src/cdf_infer.rs, crates/repark-python/src/cdf_infer/named.rs, crates/repark-python/src/cdf_infer/cells.rs]
     - id: AT-5
       status: N/A
       justification: No privileged action, secret, or path handling. Goldens are committed JSON next to the test; the export is an in-process Arrow batch.
     - id: AT-6
       status: ATTACKED
-      evidence: Row A2 freeze held — createDataFrame signature and dispatch names unchanged; Row O1 held — every refusal the port does not reproduce falls back to the Python path that raises the pinned class/message (46 golden refusals green); verifySchema/samplingRatio pinned as the TypeError refusals they are today.
-      artifacts: [python/repark/tests/facade_3_create_dataframe_goldens.json, python/repark/src/repark/spark/session/create_dataframe_columns.py]
+      evidence: Row A2 freeze held — createDataFrame signature and dispatch names unchanged; Row O1 held — every refusal the port does not reproduce falls back to the Python path that raises the pinned class/message (46 golden refusals green); the named export declines (native None) before asDict()/extraction on subclassed, heterogeneous, non-str-key, strict-mismatch, or empty-factory inputs so Python owns the refusal; verifySchema/samplingRatio pinned as the TypeError refusals they are today.
+      artifacts: [python/repark/tests/facade_3_create_dataframe_goldens.json, python/repark/src/repark/spark/session/create_dataframe_columns.py, python/repark/src/repark/spark/session/create_dataframe_rows.py, crates/repark-python/src/cdf_infer/named.rs]
     - id: AT-7
       status: ATTACKED
-      evidence: C-001 and C-011 both measured on a RELEASE native (__debug_assertions__ False); the polars-control cap abort is recorded as a finding, not worked around; debug native restored via make develop before gates.
-      artifacts: [docs/perf/facade-3-cdf-baseline-2026-09-13.md, docs/perf/facade-3-cdf-step2-2026-09-13.md]
+      evidence: C-001, C-011 and C-022 all measured on a RELEASE native (__debug_assertions__ False); the step-3 run used the card-mandated systemd-run MemoryMax=8G cap and the resulting nested/polars table-vs-binary divergence was resolved by a same-box A/B (s2 wheel .so swapped in, 243.04 vs 236.54 ms — no source regression) rather than by raising the cap or assuming a regression; debug native restored via make develop before gates.
+      artifacts: [docs/perf/facade-3-cdf-baseline-2026-09-13.md, docs/perf/facade-3-cdf-step2-2026-09-13.md, docs/perf/facade-3-cdf-step3-2026-09-13.md]
     - id: AT-8
       status: ATTACKED
-      evidence: New Rust files 174/269/435/561 lines and the 172-line dispatch test under the 1000 default; create_dataframe_columns.py 322 under its ceiling; no baseline raised in check_rust_file_size.py, check_lib_py.py, or the CAP-1 mirror; the only edited pin baseline is the sanctioned _arrow_table_from_raw_tuples body hash. No comment bytes in the code diff.
-      artifacts: [crates/repark-python/src/cdf_infer.rs, python/repark/tests/test_production_file_size.py]
+      evidence: New Rust files stay under the 1000 default (named.rs 366 lines); create_dataframe_columns.py and the new step-3 pin file under their ceilings; no baseline raised in check_rust_file_size.py, check_lib_py.py, or the CAP-1 mirror; the only edited pin baselines are the sanctioned _arrow_table_from_raw_tuples body hash and the dispatch pin's door assertion (recorded in its commit). No comment bytes in the code diff.
+      artifacts: [crates/repark-python/src/cdf_infer.rs, crates/repark-python/src/cdf_infer/named.rs, python/repark/tests/test_production_file_size.py, python/repark/tests/test_facade_3_cdf_dispatch.py]
     - id: AT-9
       status: N/A
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
-      evidence: The dispatch pin was red-first on main (six AttributeError failures) and green after; the goldens stayed byte-identical; the four Rust-side parity defects (non-str dict keys, legacy-first-element scan, duplicate names, null-struct-parent fill) each re-fail if their fix is reverted; named pins and the whole facade suite re-run green.
-      artifacts: [python/repark/tests/test_facade_3_cdf_dispatch.py, python/repark/tests/test_boundary_shapes_parity.py]
+      evidence: Both dispatch pins were red-first (six AttributeError failures on main for the tuple export; six more on the step-3 baseline for the named export) and green after; the goldens stayed byte-identical; the temporal parity pin bites (days→seconds mutation red, restore green); the four Rust-side parity defects each re-fail if reverted; named pins and the whole facade suite re-run green.
+      artifacts: [python/repark/tests/test_facade_3_cdf_dispatch.py, python/repark/tests/test_facade_3_cdf_step3.py, python/repark/tests/test_boundary_shapes_parity.py]
   complete: true
 ```
