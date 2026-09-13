@@ -175,4 +175,4 @@ decline *before* any `asDict()` call or cell extraction.
   [facade-3-cdf-step2-2026-09-13.md](facade-3-cdf-step2-2026-09-13.md)
 - Step-1 baseline + runner:
   [facade-3-cdf-baseline-2026-09-13.md](facade-3-cdf-baseline-2026-09-13.md)
-- Ledger: [../../task/ledgers/staging/facade-3-ledger.md](../../task/ledgers/staging/facade-3-ledger.md)
+- Ledger: [../../task/ledgers/completed/facade-3-ledger.md](../../task/ledgers/completed/facade-3-ledger.md)

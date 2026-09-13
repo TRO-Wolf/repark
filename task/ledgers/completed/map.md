@@ -323,6 +323,15 @@ else. The next pickup's `make ledger-archive` files everything here under
   PySpark 4.1.2 (ANSI on, UTC). `risk_tier: standard`. Branch
   `docs/ex-28-scalar-remainder`.
   pins: ex-28-scalar-remainder/C-001, C-002, C-003, C-004, C-005, C-006
+- [facade-3-ledger.md](facade-3-ledger.md) —
+  **FACADE-3 (2026-09-13), complete:** `createDataFrame` row, tuple and dict inference in Rust over three steps.
+  Step 1 (#555) recorded the release baseline for eight dispatch shapes, the 156-case golden corpus and the pickle pin.
+  Step 2 (#559) added `cdf_arrow_export` typed builders with the kind-tag fallback screen. Step 3 sends `Row` and
+  dict lists straight into `cdf_arrow_export_named` and replaces `timetuple()` with an abi3 temporal route: at 1e5
+  against step 2, rows −54 %, dicts −55 %, tuples −47 %, and every fallback shape stays within +5 % of the real
+  `main` tree ([docs/perf/facade-3-cdf-step3-2026-09-13.md](../../../docs/perf/facade-3-cdf-step3-2026-09-13.md)).
+  `risk_tier: standard`.
+  pins: facade-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
 - [facade-audit-0-ledger.md](facade-audit-0-ledger.md) — Unit ledger — FACADE-AUDIT-0 step 1 · Half A: the Rust-backed facade facts
 - [fn-fix-2-ctrl-1-controls-ledger.md](fn-fix-2-ctrl-1-controls-ledger.md) — **FN-FIX-2-CTRL-1
   (2026-09-04), in flight:** the seven incidental controls FN-FIX-2's critic found
