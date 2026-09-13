@@ -11,6 +11,59 @@ use crate::cdf_infer::{PyCdfArrowExport, build_batch, make_ctx, read_schema};
 
 type Mappings<'py> = Vec<Bound<'py, PyDict>>;
 
+type RowIndexMaps = (Vec<Vec<usize>>, Vec<usize>);
+
+enum CollectedRows<'py> {
+    Mappings(Mappings<'py>),
+    Fields {
+        field_tuples: Vec<Bound<'py, PyTuple>>,
+        value_tuples: Vec<Bound<'py, PyTuple>>,
+    },
+}
+
+enum NamedCells<'py> {
+    Mappings(Mappings<'py>),
+    Rows {
+        value_tuples: Vec<Bound<'py, PyTuple>>,
+        index_maps: Vec<Vec<usize>>,
+        row_map: Vec<usize>,
+    },
+}
+
+impl<'py> NamedCells<'py> {
+    fn row_count(&self) -> usize {
+        match self {
+            Self::Mappings(mappings) => mappings.len(),
+            Self::Rows { value_tuples, .. } => value_tuples.len(),
+        }
+    }
+
+    fn width_matches(&self, row: usize, expected: usize) -> bool {
+        match self {
+            Self::Mappings(mappings) => mappings[row].len() == expected,
+            Self::Rows { .. } => true,
+        }
+    }
+
+    fn item(
+        &self,
+        row: usize,
+        column: usize,
+        lookup_keys: &[Bound<'py, PyString>],
+    ) -> PyResult<Option<Bound<'py, PyAny>>> {
+        match self {
+            Self::Mappings(mappings) => mappings[row].get_item(&lookup_keys[column]),
+            Self::Rows {
+                value_tuples,
+                index_maps,
+                row_map,
+            } => Ok(Some(
+                value_tuples[row].get_item(index_maps[row_map[row]][column])?,
+            )),
+        }
+    }
+}
+
 fn mapping_names(mapping: &Bound<'_, PyDict>, sorted: bool) -> Option<Vec<String>> {
     let mut keys: Vec<String> = Vec::with_capacity(mapping.len());
     for key in mapping.keys().iter() {
@@ -77,53 +130,56 @@ fn strict_bind(
     }
 }
 
-fn row_key_sets_match<'py>(
+fn field_name_order(fields: &Bound<'_, PyTuple>) -> Option<Vec<String>> {
+    let mut names: Vec<String> = Vec::with_capacity(fields.len());
+    for field in fields.iter() {
+        let name = field.extract::<String>().ok()?;
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    }
+    Some(names)
+}
+
+fn row_field_tuples<'py>(
     py: Python<'py>,
     elements: &Bound<'py, PyList>,
     source: &HashSet<&str>,
     source_fields: &Bound<'py, PyTuple>,
-) -> PyResult<bool> {
+) -> PyResult<Option<Vec<Bound<'py, PyTuple>>>> {
     let attr = pyo3::intern!(py, "_Row__field_names");
+    let mut field_tuples: Vec<Bound<'py, PyTuple>> = Vec::with_capacity(elements.len());
+    field_tuples.push(source_fields.clone());
     for element in elements.iter().skip(1) {
         let Ok(fields) = element.getattr(attr)?.cast_into::<PyTuple>() else {
-            return Ok(false);
+            return Ok(None);
         };
-        if fields.eq(source_fields)? {
-            continue;
-        }
-        if fields.len() != source.len() {
-            return Ok(false);
-        }
-        let mut all_known = true;
-        for field in fields.iter() {
-            let Ok(name) = field.extract::<String>() else {
-                return Ok(false);
-            };
-            if !source.contains(name.as_str()) {
-                all_known = false;
-                break;
+        if !fields.eq(source_fields)? {
+            if fields.len() != source.len() {
+                return Ok(None);
+            }
+            let mut all_known = true;
+            for field in fields.iter() {
+                let Ok(name) = field.extract::<String>() else {
+                    return Ok(None);
+                };
+                if !source.contains(name.as_str()) {
+                    all_known = false;
+                    break;
+                }
+            }
+            if !all_known {
+                return Ok(None);
             }
         }
-        if !all_known {
-            return Ok(false);
-        }
+        field_tuples.push(fields);
     }
-    Ok(true)
+    Ok(Some(field_tuples))
 }
 
-fn collect_row_mappings<'py>(
-    py: Python<'py>,
+fn collect_row_dicts<'py>(
     rows: &Bound<'py, PyList>,
 ) -> PyResult<Option<(Mappings<'py>, Vec<String>)>> {
-    let row_type = py
-        .import("repark.spark.row")?
-        .getattr("Row")?
-        .cast_into::<PyType>()?;
-    for element in rows.iter() {
-        if element.get_type().as_ptr() != row_type.as_ptr() {
-            return Ok(None);
-        }
-    }
     let Ok(first_mapping) = rows
         .get_item(0)?
         .call_method0("asDict")?
@@ -134,17 +190,6 @@ fn collect_row_mappings<'py>(
     let Some(source) = mapping_names(&first_mapping, false) else {
         return Ok(None);
     };
-    let Ok(source_fields) = rows
-        .get_item(0)?
-        .getattr(pyo3::intern!(py, "_Row__field_names"))?
-        .cast_into::<PyTuple>()
-    else {
-        return Ok(None);
-    };
-    let source_set: HashSet<&str> = source.iter().map(String::as_str).collect();
-    if !row_key_sets_match(py, rows, &source_set, &source_fields)? {
-        return Ok(None);
-    }
     let mut mappings: Mappings<'py> = Vec::with_capacity(rows.len());
     mappings.push(first_mapping);
     for element in rows.iter().skip(1) {
@@ -154,6 +199,63 @@ fn collect_row_mappings<'py>(
         mappings.push(mapping);
     }
     Ok(Some((mappings, source)))
+}
+
+fn collect_row_cells<'py>(
+    py: Python<'py>,
+    rows: &Bound<'py, PyList>,
+) -> PyResult<Option<(CollectedRows<'py>, Vec<String>)>> {
+    let row_type = py
+        .import("repark.spark.row")?
+        .getattr("Row")?
+        .cast_into::<PyType>()?;
+    for element in rows.iter() {
+        if element.get_type().as_ptr() != row_type.as_ptr() {
+            return Ok(None);
+        }
+    }
+    let Ok(source_fields) = rows
+        .get_item(0)?
+        .getattr(pyo3::intern!(py, "_Row__field_names"))?
+        .cast_into::<PyTuple>()
+    else {
+        return Ok(None);
+    };
+    let Some(source) = field_name_order(&source_fields) else {
+        let Some((mappings, source)) = collect_row_dicts(rows)? else {
+            return Ok(None);
+        };
+        return Ok(Some((CollectedRows::Mappings(mappings), source)));
+    };
+    let source_set: HashSet<&str> = source.iter().map(String::as_str).collect();
+    let Some(field_tuples) = row_field_tuples(py, rows, &source_set, &source_fields)? else {
+        return Ok(None);
+    };
+    let values_attr = pyo3::intern!(py, "_Row__field_values");
+    let mut value_tuples: Vec<Bound<'py, PyTuple>> = Vec::with_capacity(rows.len());
+    let mut index_route = true;
+    for (element, fields) in rows.iter().zip(field_tuples.iter()) {
+        match element.getattr(values_attr)?.cast_into::<PyTuple>() {
+            Ok(values) if values.len() == fields.len() => value_tuples.push(values),
+            _ => {
+                index_route = false;
+                break;
+            }
+        }
+    }
+    if !index_route {
+        let Some((mappings, source)) = collect_row_dicts(rows)? else {
+            return Ok(None);
+        };
+        return Ok(Some((CollectedRows::Mappings(mappings), source)));
+    }
+    Ok(Some((
+        CollectedRows::Fields {
+            field_tuples,
+            value_tuples,
+        },
+        source,
+    )))
 }
 
 fn collect_dict_mappings<'py>(
@@ -179,13 +281,61 @@ fn collect_dict_mappings<'py>(
     Some((mappings, source))
 }
 
+fn build_row_cells<'py>(
+    field_tuples: &[Bound<'py, PyTuple>],
+    lookup_names: &[String],
+) -> PyResult<Option<RowIndexMaps>> {
+    let mut index_maps: Vec<(Bound<'py, PyTuple>, Vec<usize>)> = Vec::new();
+    let mut row_map: Vec<usize> = Vec::with_capacity(field_tuples.len());
+    for fields in field_tuples {
+        let mut found: Option<usize> = None;
+        for (index, (cached, _)) in index_maps.iter().enumerate() {
+            if fields.eq(cached)? {
+                found = Some(index);
+                break;
+            }
+        }
+        let map_index = if let Some(index) = found {
+            index
+        } else {
+            let mut last_pos: HashMap<String, usize> = HashMap::with_capacity(fields.len());
+            for (position, field) in fields.iter().enumerate() {
+                let Ok(name) = field.extract::<String>() else {
+                    return Ok(None);
+                };
+                last_pos.insert(name, position);
+            }
+            if last_pos.len() != lookup_names.len()
+                || lookup_names.iter().any(|name| !last_pos.contains_key(name))
+            {
+                return Ok(None);
+            }
+            index_maps.push((
+                fields.clone(),
+                lookup_names
+                    .iter()
+                    .map(|name| last_pos[name.as_str()])
+                    .collect(),
+            ));
+            index_maps.len() - 1
+        };
+        row_map.push(map_index);
+    }
+    Ok(Some((
+        index_maps
+            .into_iter()
+            .map(|(_, index_map)| index_map)
+            .collect(),
+        row_map,
+    )))
+}
+
 fn resolve_lookup(
     strict: bool,
-    is_row: bool,
     source_names: Option<&[String]>,
     schema: Option<&arrow::datatypes::SchemaRef>,
     schema_names: Option<&[String]>,
-    mappings: &[Bound<'_, PyDict>],
+    collected: &CollectedRows<'_>,
 ) -> Option<(Vec<String>, Vec<String>)> {
     if strict {
         let source = source_names?;
@@ -196,9 +346,6 @@ fn resolve_lookup(
             .collect();
         return Some((names, lookup));
     }
-    if is_row {
-        return None;
-    }
     if let Some(schema_ref) = schema {
         let names = schema_ref
             .fields()
@@ -207,32 +354,35 @@ fn resolve_lookup(
             .collect::<Vec<String>>();
         return Some((names.clone(), names));
     }
+    let CollectedRows::Mappings(mappings) = collected else {
+        return None;
+    };
     let union = dict_key_union_order(mappings)?;
     Some((union.clone(), union))
 }
 
 fn tag_named(
-    mappings: &[Bound<'_, PyDict>],
+    cells: &NamedCells<'_>,
     lookup_keys: &[Bound<'_, PyString>],
     strict: bool,
     cx: &Ctx<'_>,
 ) -> PyResult<Option<Vec<ColumnScreen>>> {
     let mut screens = vec![ColumnScreen::default(); lookup_keys.len()];
-    for mapping in mappings {
-        if strict && mapping.len() != lookup_keys.len() {
+    for row in 0..cells.row_count() {
+        if strict && !cells.width_matches(row, lookup_keys.len()) {
             return Ok(None);
         }
-        for (index, key) in lookup_keys.iter().enumerate() {
+        for (index, screen) in screens.iter_mut().enumerate() {
             let mut elem_merge = 0u16;
-            let Some(item) = mapping.get_item(key)? else {
+            let Some(item) = cells.item(row, index, lookup_keys)? else {
                 if strict {
                     return Ok(None);
                 }
-                screens[index].record(TAG_NULL, 0);
+                screen.record(TAG_NULL, 0);
                 continue;
             };
             match tag_cell(&item, cx, 0, &mut elem_merge) {
-                Ok(tag) => screens[index].record(tag, elem_merge),
+                Ok(tag) => screen.record(tag, elem_merge),
                 Err(Cdf::Fallback) => return Ok(None),
                 Err(Cdf::Err(err)) => return Err(err),
             }
@@ -242,16 +392,16 @@ fn tag_named(
 }
 
 fn extract_named<'py>(
-    mappings: &[Bound<'py, PyDict>],
+    cells: &NamedCells<'py>,
     lookup_keys: &[Bound<'py, PyString>],
     cx: &Ctx<'py>,
 ) -> PyResult<Option<Vec<Vec<Cell<'py>>>>> {
     let mut columns: Vec<Vec<Cell<'py>>> = (0..lookup_keys.len())
-        .map(|_| Vec::with_capacity(mappings.len()))
+        .map(|_| Vec::with_capacity(cells.row_count()))
         .collect();
-    for mapping in mappings {
-        for (index, key) in lookup_keys.iter().enumerate() {
-            let cell = match mapping.get_item(key)? {
+    for row in 0..cells.row_count() {
+        for (index, column) in columns.iter_mut().enumerate() {
+            let cell = match cells.item(row, index, lookup_keys)? {
                 Some(item) => match extract_cell(&item, cx, 0) {
                     Ok(cell) => cell,
                     Err(Cdf::Fallback) => return Ok(None),
@@ -262,7 +412,7 @@ fn extract_named<'py>(
                     kind: CellKind::Null,
                 },
             };
-            columns[index].push(cell);
+            column.push(cell);
         }
     }
     Ok(Some(columns))
@@ -300,24 +450,23 @@ pub fn cdf_arrow_export_named<'py>(
         None => None,
     };
     let strict = is_row || (schema_names.is_some() && schema.is_none());
-    let (mappings, source_names) = if is_row {
-        let Some((collected, source)) = collect_row_mappings(py, &rows)? else {
+    let (collected, source_names) = if is_row {
+        let Some((collected, source)) = collect_row_cells(py, &rows)? else {
             return Ok(None);
         };
         (collected, Some(source))
     } else {
-        let Some(collected) = collect_dict_mappings(&rows, strict) else {
+        let Some((mappings, source)) = collect_dict_mappings(&rows, strict) else {
             return Ok(None);
         };
-        collected
+        (CollectedRows::Mappings(mappings), source)
     };
     let Some((names, lookup_names)) = resolve_lookup(
         strict,
-        is_row,
         source_names.as_deref(),
         schema.as_ref(),
         schema_names.as_deref(),
-        &mappings,
+        &collected,
     ) else {
         return Ok(None);
     };
@@ -333,11 +482,27 @@ pub fn cdf_arrow_export_named<'py>(
     {
         return Ok(None);
     }
+    let cells = match collected {
+        CollectedRows::Mappings(mappings) => NamedCells::Mappings(mappings),
+        CollectedRows::Fields {
+            field_tuples,
+            value_tuples,
+        } => {
+            let Some((index_maps, row_map)) = build_row_cells(&field_tuples, &lookup_names)? else {
+                return Ok(None);
+            };
+            NamedCells::Rows {
+                value_tuples,
+                index_maps,
+                row_map,
+            }
+        }
+    };
     let lookup_keys: Vec<Bound<'py, PyString>> = lookup_names
         .iter()
         .map(|name| PyString::new(py, name))
         .collect();
-    let Some(screens) = tag_named(&mappings, &lookup_keys, strict, &cx)? else {
+    let Some(screens) = tag_named(&cells, &lookup_keys, strict, &cx)? else {
         return Ok(None);
     };
     match &schema {
@@ -356,7 +521,7 @@ pub fn cdf_arrow_export_named<'py>(
             }
         }
     }
-    let Some(columns) = extract_named(&mappings, &lookup_keys, &cx)? else {
+    let Some(columns) = extract_named(&cells, &lookup_keys, &cx)? else {
         return Ok(None);
     };
     match build_batch(&names, &columns, schema, &cx)? {

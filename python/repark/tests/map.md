@@ -1666,7 +1666,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   microseconds, `fold=1`, non-UTC fixed offset, `date`/`datetime` subclasses) and the
   `NaT`-stays-a-fallback proof via the Python normalizer spy. Red-first on `77e57624`:
   `AttributeError: ... '_rust_cdf_named_arrow_table'` and funnel-call counters `> 0`.
-  pins: facade-3/C-019, C-020
+  Plus the C-026 P2-1 pin: a `Row.asDict` spy proves a covered homogeneous `Row` list never
+  calls it (red-first `assert 40 == 0`, green `0` after the `_Row__field_values` index route).
+  pins: facade-3/C-019, C-020, C-026
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

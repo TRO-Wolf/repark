@@ -193,6 +193,25 @@ def test_dict_key_union_still_orders_natively(
     assert frame.collect()[2]["c"] == 6
 
 
+def test_row_list_never_calls_asdict(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A covered homogeneous Row list never pays Row.asDict (facade-3/C-026 P2-1)."""
+    calls = {"asdict": 0}
+    delegate = Row.asDict
+
+    def asdict_spy(self: Any, recursive: bool = False) -> dict[str, Any]:
+        calls["asdict"] += 1
+        return delegate(self, recursive=recursive)
+
+    monkeypatch.setattr(Row, "asDict", asdict_spy)
+    frame = spark.createDataFrame(_seven_col_named_rows(40))
+    assert calls["asdict"] == 0
+    collected = frame.collect()
+    assert collected[5]["i"] == 5
+    assert collected[5]["dc"] == Decimal("5.25")
+
+
 def test_dict_explicit_schema_skips_python_funnel(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
