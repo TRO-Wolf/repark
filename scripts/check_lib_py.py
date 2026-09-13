@@ -55,7 +55,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split worker isolation from classification and report cases.",
     ),
     "python/repark/src/repark/spark/column.py": (
-        1549,
+        1548,
         "Column expression methods remain on one facade class.",
         "Extract a cohesive method family behind re-export bindings.",
     ),

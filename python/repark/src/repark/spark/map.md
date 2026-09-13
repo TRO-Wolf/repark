@@ -46,6 +46,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_native.PyColumnParts` call per operation; display/SQL/join text is rendered in
   `crates/repark-python/src/column/display.rs`. The public `Column` class, `__slots__`,
   and `isinstance(c, repark.Column)` stay. pins: facade-2/C-009
+  **FACADE-2 step 2b (2026-09-12):** `alias` keeps `sql_expr` as a Python passthrough
+  (`self.sql_expr_part()` — reuse, not assembly) instead of round-tripping the string
+  through Rust; the native `alias` returns `(PyColumn, spark_display)`. pins: facade-2/C-013
 - `functions.py` — scalar, collection, date/time, aggregate, generator, UDF, and
   window function exports. SQL fragments use centralized escaping helpers and
   unsupported operations fail explicitly.

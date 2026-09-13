@@ -955,13 +955,12 @@ class Column:
         parts = _native.PyColumnParts.alias(
             self._inner,
             self.spark_wrap_display_part(),
-            self.sql_expr_part(),
             name,
         )
         return Column(
             parts[0],
             spark_display=parts[1],
-            sql_expr=parts[2],
+            sql_expr=self.sql_expr_part(),
             projection_name=name,
             stable_name=True,
             partition_transform=self._partition_transform,

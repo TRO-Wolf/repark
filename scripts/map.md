@@ -1,5 +1,8 @@
 # map — scripts/
 
+FACADE-2 step 2b (2026-09-12): `check_lib_py.py` `spark/column.py` 1549 → 1548
+(the `alias` `sql_expr` arg dropped for a passthrough). The CAP-1 mirror row
+moves in the same commit. pins: facade-2/C-013
 FACADE-2 step 2 (2026-09-12): `check_lib_py.py` `spark/column.py` 1589 → 1549
 (Group-2 display assembly moved to Rust). The CAP-1 mirror row moves in the
 same commit. pins: facade-2/C-008, C-009

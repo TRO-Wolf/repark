@@ -19,7 +19,16 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   moved, not cloned, back to Python. Child fragments (including Python `str`/`repr` and
   `_idents` quoting) are inputs; Rust only concatenates. Byte identity with the pre-move
   Python f-strings is the contract (card D-1).
-  pins: facade-2/C-008, C-009, C-010, C-012
+  **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed
+  `&str` tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the
+  growing SQL fragments across the boundary per op. `alias` returns a 2-tuple
+  `(PyColumn, spark_display)`: its `sql_expr` is the child's unchanged string, so Python
+  passes the existing `sql_expr_part()` through rather than round-tripping a copy through
+  Rust. The generator arm of `cast` (`apply_engine=false`) takes `Bound<PyColumn>` and
+  returns the same handle via `unbind` — step-1 reused `self._inner`, so no `Expr` clone.
+  `case_when` moves `.expr` out of its arm pairs like `PyColumn::case_when`, and every
+  `wrap_*` builder pre-sizes its `String` instead of `format!`.
+  pins: facade-2/C-008, C-009, C-010, C-011, C-012, C-013
 - [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
   **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
   take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display

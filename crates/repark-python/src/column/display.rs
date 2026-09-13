@@ -10,83 +10,189 @@ use crate::AnalysisException;
 use crate::fence::fenced;
 
 fn wrap_binary(left: &str, spark_op: &str, right: &str) -> String {
-    format!("({left} {spark_op} {right})")
+    let mut out = String::with_capacity(left.len() + spark_op.len() + right.len() + 4);
+    out.push('(');
+    out.push_str(left);
+    out.push(' ');
+    out.push_str(spark_op);
+    out.push(' ');
+    out.push_str(right);
+    out.push(')');
+    out
 }
 
 fn wrap_not_equal(left: &str, right: &str) -> String {
-    format!("(NOT ({left} = {right}))")
+    let mut out = String::with_capacity(left.len() + right.len() + 11);
+    out.push_str("(NOT (");
+    out.push_str(left);
+    out.push_str(" = ");
+    out.push_str(right);
+    out.push_str("))");
+    out
 }
 
 fn wrap_negative_display(child: &str) -> String {
-    format!("negative({child})")
+    let mut out = String::with_capacity(child.len() + 10);
+    out.push_str("negative(");
+    out.push_str(child);
+    out.push(')');
+    out
 }
 
 fn wrap_negative_sql(child: &str) -> String {
-    format!("(-({child}))")
+    let mut out = String::with_capacity(child.len() + 5);
+    out.push_str("(-(");
+    out.push_str(child);
+    out.push_str("))");
+    out
 }
 
 fn wrap_null_safe_display(left: &str, right: &str) -> String {
-    format!("({left} <=> {right})")
+    let mut out = String::with_capacity(left.len() + right.len() + 7);
+    out.push('(');
+    out.push_str(left);
+    out.push_str(" <=> ");
+    out.push_str(right);
+    out.push(')');
+    out
 }
 
 fn wrap_null_safe_sql(left: &str, right: &str) -> String {
-    format!("({left} IS NOT DISTINCT FROM {right})")
+    let mut out = String::with_capacity(left.len() + right.len() + 24);
+    out.push('(');
+    out.push_str(left);
+    out.push_str(" IS NOT DISTINCT FROM ");
+    out.push_str(right);
+    out.push(')');
+    out
 }
 
 fn wrap_substr(child: &str, start: &str, length: &str) -> String {
-    format!("substr({child}, {start}, {length})")
+    let mut out = String::with_capacity(child.len() + start.len() + length.len() + 12);
+    out.push_str("substr(");
+    out.push_str(child);
+    out.push_str(", ");
+    out.push_str(start);
+    out.push_str(", ");
+    out.push_str(length);
+    out.push(')');
+    out
 }
 
 fn wrap_string_predicate_display(left: &str, shown: &str, right: &str) -> String {
-    format!("{left}.{shown}({right})")
+    let mut out = String::with_capacity(left.len() + shown.len() + right.len() + 3);
+    out.push_str(left);
+    out.push('.');
+    out.push_str(shown);
+    out.push('(');
+    out.push_str(right);
+    out.push(')');
+    out
 }
 
 fn wrap_string_predicate_sql(call_name: &str, left: &str, right: &str) -> String {
-    format!("{call_name}({left}, {right})")
+    let mut out = String::with_capacity(call_name.len() + left.len() + right.len() + 4);
+    out.push_str(call_name);
+    out.push('(');
+    out.push_str(left);
+    out.push_str(", ");
+    out.push_str(right);
+    out.push(')');
+    out
 }
 
 fn wrap_invert(child: &str) -> String {
-    format!("(NOT {child})")
+    let mut out = String::with_capacity(child.len() + 6);
+    out.push_str("(NOT ");
+    out.push_str(child);
+    out.push(')');
+    out
 }
 
 fn wrap_is_null(child: &str) -> String {
-    format!("({child} IS NULL)")
+    let mut out = String::with_capacity(child.len() + 10);
+    out.push('(');
+    out.push_str(child);
+    out.push_str(" IS NULL)");
+    out
 }
 
 fn wrap_is_not_null(child: &str) -> String {
-    format!("({child} IS NOT NULL)")
+    let mut out = String::with_capacity(child.len() + 14);
+    out.push('(');
+    out.push_str(child);
+    out.push_str(" IS NOT NULL)");
+    out
 }
 
 fn wrap_alias(child: &str, name: &str) -> String {
-    format!("{child} AS {name}")
+    let mut out = String::with_capacity(child.len() + name.len() + 4);
+    out.push_str(child);
+    out.push_str(" AS ");
+    out.push_str(name);
+    out
 }
 
 fn wrap_index_display(child: &str, key: &str) -> String {
-    format!("{child}[{key}]")
+    let mut out = String::with_capacity(child.len() + key.len() + 2);
+    out.push_str(child);
+    out.push('[');
+    out.push_str(key);
+    out.push(']');
+    out
 }
 
 fn wrap_index_sql(child: &str, key: &str) -> String {
-    format!("({child})[{key}]")
+    let mut out = String::with_capacity(child.len() + key.len() + 4);
+    out.push('(');
+    out.push_str(child);
+    out.push_str(")[");
+    out.push_str(key);
+    out.push(']');
+    out
 }
 
 fn wrap_field_sql(child: &str, quoted_field: &str) -> String {
-    format!("({child}).{quoted_field}")
+    let mut out = String::with_capacity(child.len() + quoted_field.len() + 4);
+    out.push('(');
+    out.push_str(child);
+    out.push_str(").");
+    out.push_str(quoted_field);
+    out
 }
 
 fn wrap_cast(keyword: &str, child: &str, spark_type: &str) -> String {
-    format!("{keyword}({child} AS {spark_type})")
+    let mut out = String::with_capacity(keyword.len() + child.len() + spark_type.len() + 6);
+    out.push_str(keyword);
+    out.push('(');
+    out.push_str(child);
+    out.push_str(" AS ");
+    out.push_str(spark_type);
+    out.push(')');
+    out
 }
 
-fn format_case_body(arms: &[(String, String)], else_part: Option<&str>) -> String {
-    let when_then = arms
+fn format_case_body(arms: Vec<(String, String)>, else_part: Option<&str>) -> String {
+    let size = arms
         .iter()
-        .map(|(condition, value)| format!("WHEN {condition} THEN {value}"))
-        .collect::<Vec<_>>()
-        .join(" ");
-    match else_part {
-        None => format!("CASE {when_then} END"),
-        Some(else_part) => format!("CASE {when_then} ELSE {else_part} END"),
+        .map(|(condition, value)| condition.len() + value.len() + 12)
+        .sum::<usize>()
+        + else_part.map_or(0, |part| part.len() + 6)
+        + 8;
+    let mut out = String::with_capacity(size);
+    out.push_str("CASE");
+    for (condition, value) in arms {
+        out.push_str(" WHEN ");
+        out.push_str(&condition);
+        out.push_str(" THEN ");
+        out.push_str(&value);
     }
+    if let Some(part) = else_part {
+        out.push_str(" ELSE ");
+        out.push_str(part);
+    }
+    out.push_str(" END");
+    out
 }
 
 fn apply_binary_op(left: &PyColumn, right: &PyColumn, op_method: &str) -> PyResult<Expr> {
@@ -139,11 +245,7 @@ type RenderedParts = (PyColumn, String, String, Option<String>);
 #[pyclass(name = "PyColumnParts", module = "repark._native")]
 pub struct PyColumnParts;
 
-#[allow(
-    clippy::must_use_candidate,
-    clippy::needless_pass_by_value,
-    clippy::missing_errors_doc
-)]
+#[allow(clippy::must_use_candidate, clippy::missing_errors_doc)]
 #[pymethods]
 impl PyColumnParts {
     #[staticmethod]
@@ -152,8 +254,8 @@ impl PyColumnParts {
         right: &PyColumn,
         op_method: &str,
         spark_op: &str,
-        left_parts: (String, String, String),
-        right_parts: (String, String, String),
+        left_parts: (&str, &str, &str),
+        right_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.binary", {
             let inner = PyColumn::from_expr(apply_binary_op(left, right, op_method)?);
@@ -161,9 +263,9 @@ impl PyColumnParts {
             let (right_display, right_sql, right_join) = right_parts;
             Ok((
                 inner,
-                wrap_binary(&left_display, spark_op, &right_display),
-                wrap_binary(&left_sql, spark_op, &right_sql),
-                Some(wrap_binary(&left_join, spark_op, &right_join)),
+                wrap_binary(left_display, spark_op, right_display),
+                wrap_binary(left_sql, spark_op, right_sql),
+                Some(wrap_binary(left_join, spark_op, right_join)),
             ))
         })
     }
@@ -172,8 +274,8 @@ impl PyColumnParts {
     fn not_equal(
         left: &PyColumn,
         right: &PyColumn,
-        left_parts: (String, String, String),
-        right_parts: (String, String, String),
+        left_parts: (&str, &str, &str),
+        right_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.not_equal", {
             let inner = PyColumn::from_expr(left.expr().not_eq(right.expr()));
@@ -181,9 +283,9 @@ impl PyColumnParts {
             let (right_display, right_sql, right_join) = right_parts;
             Ok((
                 inner,
-                wrap_not_equal(&left_display, &right_display),
-                wrap_not_equal(&left_sql, &right_sql),
-                Some(wrap_not_equal(&left_join, &right_join)),
+                wrap_not_equal(left_display, right_display),
+                wrap_not_equal(left_sql, right_sql),
+                Some(wrap_not_equal(left_join, right_join)),
             ))
         })
     }
@@ -205,8 +307,8 @@ impl PyColumnParts {
     fn eq_null_safe(
         left: &PyColumn,
         right: &PyColumn,
-        left_parts: (String, String, String),
-        right_parts: (String, String, String),
+        left_parts: (&str, &str, &str),
+        right_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.eq_null_safe", {
             let inner = call_two("eq_null_safe", left, right)?;
@@ -214,9 +316,9 @@ impl PyColumnParts {
             let (right_display, right_sql, right_join) = right_parts;
             Ok((
                 inner,
-                wrap_null_safe_display(&left_display, &right_display),
-                wrap_null_safe_sql(&left_sql, &right_sql),
-                Some(wrap_null_safe_sql(&left_join, &right_join)),
+                wrap_null_safe_display(left_display, right_display),
+                wrap_null_safe_sql(left_sql, right_sql),
+                Some(wrap_null_safe_sql(left_join, right_join)),
             ))
         })
     }
@@ -226,8 +328,8 @@ impl PyColumnParts {
         inner: &PyColumn,
         start: &PyColumn,
         length: &PyColumn,
-        display_parts: (String, String, String),
-        sql_parts: (String, String, String),
+        display_parts: (&str, &str, &str),
+        sql_parts: (&str, &str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.substr", {
             let native = PyColumn::from_expr(call_scalar_expr(
@@ -238,8 +340,8 @@ impl PyColumnParts {
             let (child_sql, start_sql, length_sql) = sql_parts;
             Ok((
                 native,
-                wrap_substr(&child_display, &start_display, &length_display),
-                wrap_substr(&child_sql, &start_sql, &length_sql),
+                wrap_substr(child_display, start_display, length_display),
+                wrap_substr(child_sql, start_sql, length_sql),
                 None,
             ))
         })
@@ -251,8 +353,8 @@ impl PyColumnParts {
         other: &PyColumn,
         call_name: &str,
         shown: &str,
-        display_parts: (String, String),
-        sql_parts: (String, String),
+        display_parts: (&str, &str),
+        sql_parts: (&str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.string_predicate", {
             let native = call_two(call_name, inner, other)?;
@@ -260,8 +362,8 @@ impl PyColumnParts {
             let (left_sql, right_sql) = sql_parts;
             Ok((
                 native,
-                wrap_string_predicate_display(&left_display, shown, &right_display),
-                wrap_string_predicate_sql(call_name, &left_sql, &right_sql),
+                wrap_string_predicate_display(left_display, shown, right_display),
+                wrap_string_predicate_sql(call_name, left_sql, right_sql),
                 None,
             ))
         })
@@ -273,8 +375,8 @@ impl PyColumnParts {
         other: &PyColumn,
         call_name: &str,
         spark_op: &str,
-        display_parts: (String, String),
-        sql_parts: (String, String),
+        display_parts: (&str, &str),
+        sql_parts: (&str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.bitwise", {
             let native = call_two(call_name, inner, other)?;
@@ -282,8 +384,8 @@ impl PyColumnParts {
             let (left_sql, right_sql) = sql_parts;
             Ok((
                 native,
-                wrap_binary(&left_display, spark_op, &right_display),
-                wrap_binary(&left_sql, spark_op, &right_sql),
+                wrap_binary(left_display, spark_op, right_display),
+                wrap_binary(left_sql, spark_op, right_sql),
                 None,
             ))
         })
@@ -365,39 +467,33 @@ impl PyColumnParts {
             }
             let when_then_expr = when_thens
                 .into_iter()
-                .map(|(condition, value)| (Box::new(condition.expr()), Box::new(value.expr())))
+                .map(|(condition, value)| (Box::new(condition.expr), Box::new(value.expr)))
                 .collect();
-            let else_expr = otherwise.map(|column| Box::new(column.expr()));
+            let else_expr = otherwise.map(|column| Box::new(column.expr));
             let inner = PyColumn::from_expr(Expr::Case(Case {
                 expr: None,
                 when_then_expr,
                 else_expr,
             }));
-            let else_display = else_parts.as_ref().map(|parts| parts.0.as_str());
-            let else_sql = else_parts.as_ref().map(|parts| parts.1.as_str());
-            let else_join = else_parts.as_ref().map(|parts| parts.2.as_str());
+            let (else_display, else_sql, else_join) = match else_parts {
+                Some((display, sql, join)) => (Some(display), Some(sql), Some(join)),
+                None => (None, None, None),
+            };
             Ok((
                 inner,
-                format_case_body(&display_arms, else_display),
-                format_case_body(&sql_arms, else_sql),
-                Some(format_case_body(&join_arms, else_join)),
+                format_case_body(display_arms, else_display.as_deref()),
+                format_case_body(sql_arms, else_sql.as_deref()),
+                Some(format_case_body(join_arms, else_join.as_deref())),
             ))
         })
     }
 
     #[staticmethod]
-    fn alias(
-        inner: &PyColumn,
-        child_display: &str,
-        child_sql: &str,
-        name: &str,
-    ) -> PyResult<RenderedParts> {
+    fn alias(inner: &PyColumn, child_display: &str, name: &str) -> PyResult<(PyColumn, String)> {
         fenced!("ColumnParts.alias", {
             Ok((
                 PyColumn::from_expr(inner.expr().alias(name)),
                 wrap_alias(child_display, name),
-                child_sql.to_string(),
-                None,
             ))
         })
     }
@@ -407,8 +503,8 @@ impl PyColumnParts {
         inner: &PyColumn,
         key: &PyColumn,
         kind: &str,
-        display_parts: (String, String),
-        sql_parts: (String, String),
+        display_parts: (&str, &str),
+        sql_parts: (&str, &str),
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.getitem", {
             let (child_display, key_display) = display_parts;
@@ -416,18 +512,18 @@ impl PyColumnParts {
             let (call_name, spark_display, sql_expr) = match kind {
                 "index" => (
                     "array_element",
-                    wrap_index_display(&child_display, &key_display),
-                    wrap_index_sql(&child_sql, &key_sql),
+                    wrap_index_display(child_display, key_display),
+                    wrap_index_sql(child_sql, key_sql),
                 ),
                 "field" => (
                     "get_field",
-                    wrap_index_display(&child_display, &key_display),
-                    wrap_field_sql(&child_sql, &key_sql),
+                    wrap_index_display(child_display, key_display),
+                    wrap_field_sql(child_sql, key_sql),
                 ),
                 "key" => (
                     "getitem",
-                    wrap_index_display(&child_display, &key_display),
-                    wrap_index_sql(&child_sql, &key_sql),
+                    wrap_index_display(child_display, key_display),
+                    wrap_index_sql(child_sql, key_sql),
                 ),
                 other => {
                     return Err(PyValueError::new_err(format!(
@@ -442,30 +538,31 @@ impl PyColumnParts {
 
     #[staticmethod]
     fn cast(
-        inner: &PyColumn,
-        child_parts: (String, String, String),
+        py: Python<'_>,
+        inner: Bound<'_, PyColumn>,
+        child_parts: (&str, &str, &str),
         engine_type: &str,
         spark_type: &str,
         keyword: &str,
         flags: (bool, bool),
-    ) -> PyResult<RenderedParts> {
+    ) -> PyResult<(Py<PyColumn>, String, String, Option<String>)> {
         fenced!("ColumnParts.cast", {
             let (apply_engine, keep_child_sql) = flags;
             let native = if apply_engine {
-                engine_cast(inner, engine_type, keyword)?
+                Py::new(py, engine_cast(&inner.borrow(), engine_type, keyword)?)?
             } else {
-                inner.clone()
+                inner.unbind()
             };
             let (child_display, child_sql, child_join) = child_parts;
-            let spark_display = wrap_cast(keyword, &child_display, spark_type);
+            let spark_display = wrap_cast(keyword, child_display, spark_type);
             if keep_child_sql {
-                Ok((native, spark_display, child_sql, None))
+                Ok((native, spark_display, child_sql.to_string(), None))
             } else {
                 Ok((
                     native,
                     spark_display,
-                    wrap_cast(keyword, &child_sql, spark_type),
-                    Some(wrap_cast(keyword, &child_join, spark_type)),
+                    wrap_cast(keyword, child_sql, spark_type),
+                    Some(wrap_cast(keyword, child_join, spark_type)),
                 ))
             }
         })
@@ -509,11 +606,11 @@ mod tests {
             ("(x < 0)".to_string(), "-1".to_string()),
         ];
         assert_eq!(
-            format_case_body(&arms, None),
+            format_case_body(arms.clone(), None),
             "CASE WHEN (x > 0) THEN 1 WHEN (x < 0) THEN -1 END"
         );
         assert_eq!(
-            format_case_body(&arms[..1], Some("0")),
+            format_case_body(arms[..1].to_vec(), Some("0")),
             "CASE WHEN (x > 0) THEN 1 ELSE 0 END"
         );
     }
