@@ -503,7 +503,9 @@ and no unit in the card's sequence claims them: `dataframe/plan_collapse.py` (1,
 `dataframe/udf_schema.py` (64), `dataframe/grouped_udf.py` (145), the conversion core of
 `spark/types.py` (1,834; weighed under FACADE-4 above), and the session SQL-UDF modules
 (`sql_udf*.py`, ~2,600 combined). They are not sequenced here: D-2 names five units, and
-the audit does not invent a sixth. The UDF-bridge pyarrow modules are the most likely next
+the audit does not invent a sixth. _Owner charter 2026-09-12: once FACADE-5 lands, this
+roll-call is the FACADE-6+ candidate list, opened measure-first in the order the isolating
+measurements rank them (release-roadmap 1.5 row and Q&A log)._ The UDF-bridge pyarrow modules are the most likely next
 weighing target once FACADE-1 gives them a capsule door on both sides. D-3 keeps ML
 transformers (2,717 lines in `ml/feature/_transformers.py` alone) and the
 library-wrapping parts of `ta.py` (1,818) out of the weighing entirely.
