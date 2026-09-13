@@ -47,6 +47,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [cfg-2-ledger.md](cfg-2-ledger.md) —
+  **CFG-2 step 1 (2026-09-13), in flight:** named database sources — parsed
+  `SourceSpec`s ride `FileConfig` into the built session, `register_configured_sources`
+  installs a refusing catalog provider per auto-registered name (`SELECT` under the
+  name answers the D-1 connector message, `1.10`), `sources()` /
+  `source(name).ping()` expose the declared set lazily, and `auto_register = false`
+  lists without registering. The CFG-1 load-time refusal retires; the Python door is
+  step 2 and appends to this ledger. `risk_tier: standard`. Branch `feat/cfg-2-step1`.
+  pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
   **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
   ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`

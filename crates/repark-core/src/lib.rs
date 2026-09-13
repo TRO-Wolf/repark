@@ -10,6 +10,7 @@ mod error_map;
 mod extension;
 mod idents;
 mod lineage_columns;
+mod named_sources;
 mod namespace_create;
 mod object_store_s3;
 mod pool_refusals;
@@ -52,6 +53,7 @@ pub use config_file::config_file_pairs;
 pub use config_file::maintenance::{
     MaintenancePolicy, TablePolicy, parse_duration, parse_maintenance_policy,
 };
+pub use named_sources::{NamedSource, SourceRow};
 pub use namespace_create::refuse_contradictory_namespace_location;
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 

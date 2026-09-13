@@ -2,8 +2,8 @@ mod discovery;
 mod interpolate;
 pub(crate) mod maintenance;
 mod profile;
-mod redact;
-mod sources;
+pub(crate) mod redact;
+pub(crate) mod sources;
 #[cfg(test)]
 mod tests;
 pub(crate) mod wiring;

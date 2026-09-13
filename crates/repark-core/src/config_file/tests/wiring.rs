@@ -359,18 +359,12 @@ async fn file_built_session_registers_the_same_catalogs_as_config_calls() {
 }
 
 #[test]
-fn database_sources_refuse_until_named_registration_lands() {
-    let error = try_loaded_file(
+fn database_source_block_loads() {
+    try_loaded_file(
         "[default.database.postgres.company_db]\nurl = \"postgresql://localhost/db\"\n",
         &[],
     )
-    .expect_err("database source must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("default.database.postgres.company_db"),
-        "{message}"
-    );
-    assert!(message.contains("CFG-2"), "{message}");
+    .expect("database source must load");
 }
 
 #[test]

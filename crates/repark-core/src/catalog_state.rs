@@ -8,6 +8,7 @@ use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
 use crate::config_file::maintenance::MaintenancePolicy;
+use crate::config_file::sources::SourceSpec;
 
 /// How a registered catalog resolves a staged-CTAS location when the target namespace has none.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,6 +72,7 @@ struct CatalogEntry {
 #[derive(Clone, Default)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
+    database_sources: HashMap<String, SourceSpec>,
     /// Read-only (postgres) catalog names for P11 DML routing.
     read_only_catalogs: std::collections::HashSet<String>,
     /// Local filesystem warehouse roots for SEC-02 grandfather (memory / `LocalFs` catalogs).
@@ -161,6 +163,15 @@ impl CatalogRegistry {
     #[must_use]
     pub fn get(&self, name: &str) -> Option<&Arc<dyn Catalog>> {
         self.entries.get(name).map(|entry| &entry.catalog)
+    }
+
+    pub(crate) fn insert_database_source(&mut self, spec: SourceSpec) {
+        self.database_sources.insert(spec.name.clone(), spec);
+    }
+
+    #[must_use]
+    pub fn is_registered(&self, name: &str) -> bool {
+        self.entries.contains_key(name) || self.database_sources.contains_key(name)
     }
 
     /// The [`LocationPolicy`] registered under `name`, if any.
