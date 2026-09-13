@@ -1,0 +1,10 @@
+shape,cast_count,rows,native_debug,rep0_seconds,rep1_seconds,rep2_seconds,median_seconds,median_plan_seconds,median_execute_seconds,sql_bytes,cast_in_sql,execute_kind
+standalone,50,200000,false,0.164417,0.159983,0.202509,0.164417,0.016152,0.153792,1749,50,explain_analyze
+standalone,250,200000,false,0.929966,0.965080,0.946509,0.946509,0.070520,0.861313,9049,250,explain_analyze
+standalone,2500,200000,false,10.984942,10.444705,10.853648,10.853648,1.387078,9.466570,95299,2500,explain_analyze
+over_aggregate,50,200000,false,0.080296,0.085452,0.080640,0.080640,0.012768,0.067872,1899,50,explain_analyze
+over_aggregate,250,200000,false,0.386811,0.394989,0.382750,0.386811,0.088328,0.298483,9799,250,explain_analyze
+over_aggregate,2500,200000,false,16.258166,15.749796,15.767708,15.767708,4.452237,11.365202,102799,2500,explain_analyze
+projection_over_aggregate,50,200000,false,0.033235,0.033671,0.033771,0.033671,0.009488,0.024022,1930,50,explain_analyze
+projection_over_aggregate,250,200000,false,0.154116,0.154904,0.154681,0.154681,0.044381,0.110196,9830,250,explain_analyze
+projection_over_aggregate,2500,200000,false,1.656774,1.758867,1.625251,1.656774,0.466676,1.181078,102830,2500,explain_analyze

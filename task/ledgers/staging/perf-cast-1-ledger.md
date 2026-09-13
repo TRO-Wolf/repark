@@ -4,19 +4,22 @@
 orchestrator's departure move). This file closes when PERF-CAST-1 merges, or when the
 owner closes the slate row.
 
-**Unit:** PERF-CAST-1 · **Date:** 2026-09-12 · **Model:** grok-4.6 · **Branch:** `perf/cast-1` · **Base:** `dae79c40` (branch point at dispatch; no merge performed — the orchestrator merges)
-**Slate:** card PERF-CAST-1, `perf/cast-1` build lane, step 1 of 2 (measurement; no fix).
+**Unit:** PERF-CAST-1 · **Date:** 2026-09-12 · **Model:** swe-2-high (step 2; step 1 was grok-4.6) · **Branch:** `perf/cast-1-s2` · **Base:** `65202f25` (main at dispatch; step 1 merged as #535)
+**Slate:** card PERF-CAST-1, `perf/cast-1` build lane, step 2 of 2 (release re-measure; locate owner; fix or file upstream).
 
 **Rubric:** STANDARD. Floor S1. `risk_tier: standard`.
 
 **Writable paths:** `python/repark-parity/bench/cast/` (new),
 `python/repark-parity/tests/cast/` (new), `docs/perf/cast-cost-2026-09-12.md`,
-`docs/perf/cast-cost-2026-09-12.csv`, lockstep `map.md` files
+`docs/perf/cast-cost-2026-09-12.csv`, `docs/perf/cast-cost-2026-09-12-release.csv`,
+`crates/repark-core/tests/cast_plan_profile.rs`, lockstep `map.md` files
 (`python/repark-parity/bench/map.md`, `python/repark-parity/bench/cast/map.md`,
 `python/repark-parity/tests/map.md`, `python/repark-parity/tests/cast/map.md`,
-`docs/perf/map.md`, `task/ledgers/staging/map.md`), this ledger. Closed: `crates/`,
-`scripts/` baselines, `.github/`, `STATUS.md`, `briefs/next-sequence.md`, every
-other ledger, Cargo.toml / lockfiles.
+`docs/perf/map.md`, `task/ledgers/staging/map.md`,
+`crates/repark-core/tests/map.md`), this ledger. Step 2 opens
+`crates/repark-core/tests/` for the `#[ignore]`d phase micro-bench only; closed:
+the rest of `crates/`, `scripts/` baselines, `.github/`, `STATUS.md`,
+`briefs/next-sequence.md`, every other ledger, Cargo.toml / lockfiles.
 
 ## Scope
 
@@ -38,8 +41,10 @@ document; the orchestrator files it).
 | C-002 | The attribution table: for each shape, where the wall goes — SQL parse, logical planning, each optimizer pass (name the pass), physical expression creation, per-batch evaluation — from `EXPLAIN ANALYZE`, the session's plan-time probes, and a `py-spy`/`perf` profile of the 2500-cast cell. | C-002 tables in `docs/perf/cast-cost-2026-09-12.md`; `bench/cast/attribute.py`; py-spy note (perf refused). | **PROVEN** |
 | C-003 | The superlinearity is located: which phase grows faster than linear in the cast count, with the exponent fit from the three sizes. | C-003 exponent table; over_aggregate plan exponent **1.535**; standalone and projection_over_aggregate ≤ 1. | **PROVEN** |
 | C-004 | The cost is pinned as it stands: a test in `python/repark-parity/tests/` asserting the 2500-cast standalone projection under a budget 1.5× the measured median on this box, marked so a future fix or DataFusion bump that speeds it up flips a second, tighter pin (spill-golden shape). | `test_cast_2500_standalone_under_regression_budget` (budget 155.115 s); `test_cast_2500_over_aggregate_plan_under_linear_budget` (strict xfail, linear-from-50 plan 5.04 s vs measured 38.969 s). | **PROVEN** |
+| C-005 | The nine-cell bench re-measured on a RELEASE native (`__debug_assertions__ is False`): the release table, the exponents per shape and phase, and whether the superlinear phase is still superlinear on release. | `docs/perf/cast-cost-2026-09-12-release.csv` (nine rows, `native_debug=false`); C-005 section of `docs/perf/cast-cost-2026-09-12.md` — over_aggregate plan exponent **1.511** on release, still superlinear. | **PROVEN** |
+| C-006 | The owner of the superlinear phase located, measured: per-phase and per-analyzer-rule / per-optimizer-rule wall times of the 2500-cast over-aggregate statement on a stock `SessionContext` vs a `ReparkSession` context (Rust micro-bench `crates/repark-core/tests/cast_plan_profile.rs`, `#[ignore]`d, release). | Stock and RePark arms agree to ~1% on every phase: `sql_to_rel` (`SqlToRel::statement_to_plan`) is the superlinear phase (0.0024 / 0.0307 / 2.7434 s stock at 50 / 250 / 2500, exponent 1.81); analyzer 0.090 s, optimizer 0.252 s — near-linear. Variants: same-width `DataFrame::aggregate` builder 0.012 s, bare `sum(id+i)` aggregate without CAST 2.69 s, standalone CAST projection 0.038 s → the cost is `SqlToRel`'s expression path for a wide `Aggregate`, not CAST, not the plan node, not a repark rule. Verdict UPSTREAM → ready-to-file issue in `docs/perf/cast-cost-2026-09-12.md` §"Upstream issue". Run: `test result: ok. 1 passed; 0 failed; finished in 80.88s`. | **PROVEN** |
 
-`LOGIC_SCORE` = **4/4 `PROVEN`**.
+`LOGIC_SCORE` = **6/6 `PROVEN`**.
 
 ## Red-first (docs/testing.md "Gate provocation proofs")
 
@@ -85,12 +90,22 @@ walk, `TypeCoercionRewriter`; `perf record` refused (`perf_event_paranoid=4`).
 | `make check-ledger-grammar` | 0 — 111 live ledgers clean (709 clauses, 1339 pinned clause ids) |
 | `make verify` | 0 — fmt/clippy/panic-ban/file-size/conventions/docs/owner-ruling/parity-live dual-wire/ruff/rust tests all green |
 | `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' \| grep -P '^\+\s*(//\|#(?! noqa))'` | clean — no added comments |
+| step 2 — `repark._native.__debug_assertions__` after `maturin develop --release` | `False` (module 167,383,944 B) |
+| step 2 — nine-cell bench on release (one process per cell, box-idle wait before each) | `docs/perf/cast-cost-2026-09-12-release.csv` — nine rows; over_aggregate plan exponent 1.511, still superlinear |
+| step 2 — `./target/release/deps/cast_plan_profile-* --ignored --nocapture` | 0 — `1 passed; finished in 80.88s`; stock ≈ repark to ~1%, `sql_to_rel` exponent 1.81 |
+| step 2 — `.venv/bin/python -m pytest python/repark-parity/tests/cast -q` (release module) | 0 — 2 passed, 1 xfailed in 52.86s |
+| step 2 — `make develop` then `repark._native.__debug_assertions__` | `True` — normal debug build restored |
+| step 2 — `make verify` | 0 — all gates green |
+| step 2 — `make py-test` | 0 — 749 passed, 1 skipped (no native module in the uv env), 12 xfailed in 575.13s |
 
 ## Cost
 
-Step 1 only: tracked bench, nine-cell CSV, attribution, py-spy of the 2500-cast
+Step 1: tracked bench, nine-cell CSV, attribution, py-spy of the 2500-cast
 over_aggregate `session.sql`, two pins (regression budget + strict-xfail linear
-flip), draft DataFusion issue in the perf document. No engine edit.
+flip), draft DataFusion issue in the perf document. Step 2: release re-measure
+(nine cells, `cast-cost-2026-09-12-release.csv`), the `cast_plan_profile.rs`
+stock-vs-repark phase micro-bench, the ready-to-file upstream issue, pins
+unchanged (CI never runs them on release). No engine edit.
 
 ## Disk
 
