@@ -114,6 +114,15 @@ measure).
 | C-012 | The card's named pins are unchanged and green, and the whole facade suite is green. | `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`, `test_csv_infer_perf_1.py` unedited; `.venv/bin/python -m pytest python/repark/tests -q`. | **PROVEN** | The three pin files carry no edits (`git diff origin/main` names only `test_production_file_size.py` among touched tests, and only its `_arrow_table_from_raw_tuples` baseline hash — the sanctioned body change the pin's own docstring allows: "frozen parent plus current-main behavior changes", new hash `706cca20…`). Pin batch (goldens + dispatch + the three named files + materialize): **152 passed, 4 skipped**. Whole facade suite: **5,972 passed, 369 skipped, 0 failed** in 762 s. During the sweep one real divergence surfaced and was fixed in Rust: a null struct parent must write each child's `pa.array` type default (`CellKind::Fill`), not a child null — otherwise pandas' NaN coercion floats an int64 child and `toPandas` returned `20.0` for the pinned `struct_topandas_cell_shape` boundary row. |
 | C-013 | Gates: `cargo test -p repark-python`, `make verify`, the whole parity suite. | Commands and counts in Evidence. | **PROVEN** | `cargo test -p repark-python` → 91 passed (66 lib + 25 bindings). `make verify` → exit 0 (fmt, workspace clippy, panic+async ban, all structural gates, ledger lifecycle + grammar, docs-links, whole workspace rust-test — one iceberg listing-cost timing test red under parity-suite load, green isolated and green on the verify re-run). Parity suite → 756 passed, 1 skipped, 12 xfailed. Debug native restored via `make develop` after the release measure. |
 
+### Step-2 remediation (S2-21 review, `/tmp/oc-worker/grok-rev-facade3s2/report.md`)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-014 | F-FALLBACK fixed: a native `None` no longer pays the doomed extract before Python re-runs the refusal. No refusal or fallback shape slower than `main` by more than 5 %, release-measured on `object()` @ row 90 000 and int→float mix @ row 90 000 under `prlimit --as=8589934592` + `OPENBLAS_NUM_THREADS=8`. Fallback pin (spy counting native extraction) red-first on `1599e8ed`, green after. Refusal class/message byte-identical (46 refusal goldens green). | `screen.rs` tag pass + mask rules before `extract_cell`; `test_fallback_extract_stops_at_first_uncovered_cell` + `test_fallback_extract_stops_on_merge_refusal`; both measurements. | **PROVEN** | `screen.rs` runs a kind-tag pass per cell (exact-type pointer hits; probe chain only for subclasses/Row/exotics; containers recurse) accumulating per-column kind masks plus the list-element merge mask; a mask that already predicts the `None` (uncovered kind, scalar-merge or list-element-merge refusal, kind the inferred/explicit field type cannot build, non-str or null dict key under struct inference) returns `None` after ~15 ms of tagging instead of ~440 ms of extraction — Python then owns the identical refusal. Pin red-first on `1599e8ed`: `assert 900 == 0` (object() @ row 900 of 1 000 probe rows) and `assert 1000 == 0` (int→float @ 900); green after (`calls == 0` — only `extract_decimal` calls `as_tuple`, which Python's envelope check never does). Release measure (warmup + 5, medians, same poison fixtures as the review): object() @90k branch **462.09 ms** vs main-simulated **444.03 ms** (**+4.1 %**, was +85 %); int→float @90k branch **361.58 ms** vs main-simulated **347.00 ms** (**+4.2 %**). Main-simulated = `_native.cdf_arrow_export` patched to `None` in the same process — byte-identical Python path to `main`. Residual (recorded, not in the measured set): value-dependent refusals (decimal envelope, `float('inf')`, NaT, non-UTC `utcoffset`) still pay one extract before falling back — bounded by a single extraction, never the old extract+re-walk. |
+| C-015 | P2s landed or deferred: F-STRCOPY and F-DECIMAL, each its own commit. | Commits + green pins. | **PROVEN** | F-DECIMAL `fd856bf9`: `extract_decimal` computes the scale-18 unscaled `i128` once; `CellKind::Dec` carries it; `build.rs` `dec_unscaled` reads it — the second mantissa walk is gone. F-STRCOPY `1f9f8247`: `CellKind::Str` holds a `PyBackedStr` borrowed UTF-8 view (abi3 `PyUnicode_AsUTF8AndSize`); `build_utf8` appends `&str` through a `StringBuilder` — one copy into Arrow instead of extract → clone → array; `Cell.obj` is now `Option` and stays `None` for `Str`/`Null` kinds (only the `str()` fallback arm of `build_utf8` reads it). Goldens + dispatch + named pins + `test_production_file_size.py` green on both. |
+| C-016 | Review findings table recorded; step-3 target list named. | Table + targets below. | **PROVEN** | See the findings table and the step-3 list below. F-FUNNEL and F-TIMETUPLE are step-3 targets (not done this round); F-TIMETUPLE carries the abi3 constraint — PyO3's `PyDateTime`/`PyDate` getters are unavailable under `Py_LIMITED_API`, so step 3 needs an abi3-compatible route (e.g. `PyDateTime_CAPI`-free accessors or caching the `timetuple` result structurally). P3 ledger-only: F-SLOTS, F-RESCAN. |
+| C-017 | Remediation gates green: goldens + dispatch + fallback pin + named pins + `test_production_file_size.py`; `cargo test -p repark-python`; `make verify`; whole parity suite. | Commands and counts in Evidence. | **PROVEN** | See Remediation gates in Evidence. |
+
 ### Step-2 evidence
 
 **Red first (base `927fa4d3`, production unchanged).**
@@ -191,6 +200,42 @@ debug native before gates.
   first run was `test_dl_6_docs_links.py` catching the not-yet-committed step-2
   perf doc mid-run; green after `git add` — no code change.)
 - Staged-diff comment scan prints nothing.
+
+#### Remediation evidence (S2-21 review)
+
+**Review findings table** (`/tmp/oc-worker/grok-rev-facade3s2/report.md`, "Fallback redo",
+"`cdf_infer` per-cell work", "Findings"):
+
+| Finding | Class | Status |
+|---|---|---|
+| F-FALLBACK — late native `None` pays the extract, then Python re-walks (`object()` @90k 839 ms vs main 453 ms, +85 %; int→float @90k 759 ms) | P1 regression | Fixed (`c51ec936`): `screen.rs` tag pass predicts the `None` and returns before extraction; +4.1 % / +4.2 % vs main-simulated, inside the 5 % cap |
+| F-DECIMAL — mantissa walked twice (extract stores digits, build re-accumulates) | P2 | Fixed (`fd856bf9`): scale-18 unscaled `i128` computed once in `extract_decimal`; `CellKind::Dec` carries it |
+| F-STRCOPY — string extracted to `String`, cloned into the cell, copied into `StringArray` | P2 | Fixed (`1f9f8247`): `CellKind::Str` holds `PyBackedStr`; `build_utf8` appends `&str` via `StringBuilder`; `Cell.obj` is `Option`, `None` for `Str`/`Null` |
+| F-FUNNEL — `rows`/`dicts` still pay a Python-side walk + identity permutation before the native call | Step 3 target | Deferred — pass `Row`/dict lists into native, drop the Python preprocessing |
+| F-TIMETUPLE — per-cell `timetuple()` Python callback on every date/datetime | Step 3 target | Deferred — PyO3's `PyDateTime`/`PyDate` getters are unavailable under `Py_LIMITED_API` (this wheel is abi3); step 3 must find an abi3-compatible route |
+| F-SLOTS — extra `Vec<Option<&Cell>>` + validity allocations per column | P3 | Ledger only |
+| F-RESCAN — extra O(n) merge-kind pass over extracted cells | P3 | Ledger only |
+
+**Fallback pin (red-first on `1599e8ed`).** `_AsTupleProbeDecimal` (a `Decimal`
+subclass counting `as_tuple()` calls) at every row of a 1 000-row table, cell 900
+poisoned: `assert calls == 0` after `createDataFrame` raises — `extract_decimal`
+is the only `as_tuple` caller, so a nonzero count measures native extraction on a
+fallback path. Red on `1599e8ed` (`900 == 0`, `1000 == 0`); green after the
+screen.
+
+**Remediation gates** (debug native via `make develop`; re-run after the ledger edit):
+
+- `.venv/bin/python -m pytest python/repark/tests/test_facade_3_create_dataframe_goldens.py
+  python/repark/tests/test_facade_3_cdf_dispatch.py -q` → **12 passed**.
+- Named pins + production file size:
+  `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`,
+  `test_csv_infer_perf_1.py`, `test_production_file_size.py` → green.
+- `cargo test -p repark-python` → **91 passed**.
+- `make verify` → exit 0.
+- `make py-test` (whole parity suite) → **756 passed, 1 skipped, 12 xfailed**.
+- Release fallback re-measure: object() @90k **462.09 vs 444.03 ms (+4.1 %)**;
+  int→float @90k **361.58 vs 347.00 ms (+4.2 %)** — medians of warmup + 5,
+  per-process `prlimit --as=8589934592`, `OPENBLAS_NUM_THREADS=8`.
 
 ```yaml
 COVERAGE_ATTESTATION:

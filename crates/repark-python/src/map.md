@@ -100,7 +100,11 @@ and hand execution, SQL, and ML semantics to the engine crates.
   list-element-merge refusal, a kind the inferred or explicit field type cannot build,
   non-str or null dict keys under struct inference) the export returns `None` after the tag
   pass alone — the doomed extraction is never paid and Python owns the identical refusal.
-  pins: facade-3/C-010, C-013, C-014 |
+  Step-3 targets recorded in the ledger findings table: F-FUNNEL (feed `Row`/dict lists into
+  native without the Python-side walk) and F-TIMETUPLE (the per-cell `timetuple` callback —
+  needs an abi3-compatible route since `Py_LIMITED_API` hides the `PyDateTime`/`PyDate`
+  getters); F-SLOTS and F-RESCAN are ledger-only P3s.
+  pins: facade-3/C-010, C-013, C-014, C-016, C-017 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
