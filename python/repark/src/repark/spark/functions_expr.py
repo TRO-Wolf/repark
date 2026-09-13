@@ -1809,7 +1809,7 @@ def e() -> Column:
 def pi() -> Column:
     """π (PySpark ``functions.pi``). Foldable DataFusion ``pi()``."""
     return Column(
-        _native.PyColumn.sql("pi()"),
+        _native.PyColumnParts.pi()[0],
         spark_display="pi()",
         projection_name="pi()",
         sql_expr="pi()",

@@ -9,6 +9,8 @@ use super::function_dispatch::call_scalar_expr;
 use crate::AnalysisException;
 use crate::fence::fenced;
 
+mod construct;
+
 fn wrap_binary(left: &str, spark_op: &str, right: &str) -> String {
     let mut out = String::with_capacity(left.len() + spark_op.len() + right.len() + 4);
     out.push('(');
@@ -534,6 +536,45 @@ impl PyColumnParts {
             let native = call_two(call_name, inner, key)?;
             Ok((native, spark_display, sql_expr, None))
         })
+    }
+
+    #[staticmethod]
+    fn lit_timestamp(text: &str) -> PyResult<(PyColumn, String)> {
+        fenced!("ColumnParts.lit_timestamp", {
+            construct::lit_timestamp(text)
+        })
+    }
+
+    #[staticmethod]
+    fn lit_date(text: &str) -> PyResult<(PyColumn, String)> {
+        fenced!("ColumnParts.lit_date", { Ok(construct::lit_date(text)) })
+    }
+
+    #[staticmethod]
+    fn lit_time(text: &str) -> PyResult<(PyColumn, String)> {
+        fenced!("ColumnParts.lit_time", { Ok(construct::lit_time(text)) })
+    }
+
+    #[staticmethod]
+    fn lit_array_cast(
+        inner: &PyColumn,
+        child_sql: &str,
+        element_type: &str,
+        cast_type: &str,
+    ) -> PyResult<(PyColumn, String, String)> {
+        fenced!("ColumnParts.lit_array_cast", {
+            construct::lit_array_cast(inner, child_sql, element_type, cast_type)
+        })
+    }
+
+    #[staticmethod]
+    fn pi() -> PyResult<(PyColumn, String)> {
+        fenced!("ColumnParts.pi", { Ok(construct::pi()) })
+    }
+
+    #[staticmethod]
+    fn uuid() -> PyResult<(PyColumn, String)> {
+        fenced!("ColumnParts.uuid", { Ok(construct::uuid()) })
     }
 
     #[staticmethod]
