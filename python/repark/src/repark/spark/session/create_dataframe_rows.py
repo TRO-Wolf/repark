@@ -163,25 +163,29 @@ def _rows_from_mapping_list(
 
     """
 
+    if kind == "Row":
+        from repark.spark.row import Row
+
     mappings: list[dict[str, Any]] = []
 
-    for row_index, row in enumerate(data):
-        if kind == "dict" and not isinstance(row, dict):
-            raise PySparkTypeError(
-                "createDataFrame dict lists must be homogeneous; "
-                f"got element type {type(row).__name__} at index {row_index}"
-            )
+    if kind == "dict":
+        for row_index, row in enumerate(data):
+            if not isinstance(row, dict):
+                raise PySparkTypeError(
+                    "createDataFrame dict lists must be homogeneous; "
+                    f"got element type {type(row).__name__} at index {row_index}"
+                )
 
-        if kind == "Row":
-            from repark.spark.row import Row
-
-            if not isinstance(row, Row):
+        mappings = [as_mapping(row) for row in data]
+    else:
+        for row_index, row in enumerate(data):
+            if kind == "Row" and not isinstance(row, Row):
                 raise PySparkTypeError(
                     "createDataFrame Row lists must be homogeneous; "
                     f"got element type {type(row).__name__} at index {row_index}"
                 )
 
-        mappings.append(as_mapping(row))
+            mappings.append(as_mapping(row))
 
     if key_union and kind == "dict" and schema is None:
         # Spark-parity: sorted first-row keys, then append newly seen keys (sorted per row).

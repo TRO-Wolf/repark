@@ -170,7 +170,6 @@ fn field_name_order(fields: &Bound<'_, PyTuple>) -> Option<Vec<String>> {
 fn row_field_tuples<'py>(
     py: Python<'py>,
     elements: &Bound<'py, PyList>,
-    source: &HashSet<&str>,
     source_fields: &Bound<'py, PyTuple>,
 ) -> PyResult<Option<Vec<Bound<'py, PyTuple>>>> {
     let attr = pyo3::intern!(py, "_Row__field_names");
@@ -180,23 +179,8 @@ fn row_field_tuples<'py>(
         let Ok(fields) = element.getattr(attr)?.cast_into::<PyTuple>() else {
             return Ok(None);
         };
-        if !fields.eq(source_fields)? {
-            if fields.len() != source.len() {
-                return Ok(None);
-            }
-            let mut all_known = true;
-            for field in fields.iter() {
-                let Ok(name) = field.extract::<String>() else {
-                    return Ok(None);
-                };
-                if !source.contains(name.as_str()) {
-                    all_known = false;
-                    break;
-                }
-            }
-            if !all_known {
-                return Ok(None);
-            }
+        if fields.len() != source_fields.len() {
+            return Ok(None);
         }
         field_tuples.push(fields);
     }
@@ -253,8 +237,7 @@ fn collect_row_cells<'py>(
         };
         return Ok(Some((CollectedRows::Mappings(mappings), source)));
     };
-    let source_set: HashSet<&str> = source.iter().map(String::as_str).collect();
-    let Some(field_tuples) = row_field_tuples(py, rows, &source_set, &source_fields)? else {
+    let Some(field_tuples) = row_field_tuples(py, rows, &source_fields)? else {
         return Ok(None);
     };
     let values_attr = pyo3::intern!(py, "_Row__field_values");

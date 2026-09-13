@@ -308,7 +308,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_reset_dropin_warnings_for_tests": (
         "2cf60e5958dd8ae526edceb5e99de10a6de447a278b141a6198978c474ee3ac6"
     ),
-    "_rows_from_mapping_list": ("f0e6d804ec160f2d41f524f947d07676fa2f291fcfd0e46fef5b29896639a94d"),
+    "_rows_from_mapping_list": ("b83429b033cd7009af10403e611ae4f758ce31761f7b9049bc102edd5d24edf2"),
     "_rows_from_pandas": ("793ee7519856503c01bf3afcd30b0aff09503a39a2e3c14c9b72e0c1ed665b69"),
     "_rows_from_polars": ("9b85f5efbe8418db0295ccd5e6e4c6f3350c6871c9146dd0bce26eef320f757c"),
     "_scan_sql_table_identifier_end": (

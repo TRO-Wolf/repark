@@ -524,7 +524,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
   FACADE-3 step 3 F-PY-2 added the rows→`_arrow_table_from_raw_tuples_fast` edge (77 bindings)
-  and re-hashed `_create_dataframe_from_rows_inner` for the named-decline dispatch.
+  and re-hashed `_create_dataframe_from_rows_inner` for the named-decline dispatch and
+  `_rows_from_mapping_list` for the funnel split (dict scan-then-comprehend, hoisted `Row`
+  import — doomed-path cheapening for the real-base fallback bar).
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
   and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
