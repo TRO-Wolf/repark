@@ -738,7 +738,7 @@ that held the comment (pins: comment-core-1/C-003).
   stay below the source-size default (pins: facade-1/C-001, C-002, C-006).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
-  COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4118; comments removed, no code change
+  COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4117; comments removed, no code change
   (pins: comment-core-1/C-004, C-005, C-006).
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.

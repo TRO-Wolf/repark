@@ -25,7 +25,6 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for

@@ -35,10 +35,10 @@ the exact new `wc -l`.
 | C-002 | No non-pragma comment remains in `core.py`; the 74 pragmas are preserved. | Paste of the `tokenize` counts on the new file. | **PROVEN** |
 | C-003 | Every removed comment is classified in the table (row count = 347) and every `moved-to-map` row has its sentence in `dataframe/map.md`. | This table (347 rows) plus the `## core.py rationale (COMMENT-CORE-1)` section. | **PROVEN** |
 | C-004 | Both ceilings equal the exact new line count (`wc -l`) and moved down. | `scripts/check_lib_py.py` and `test_cap_1_source_file_line_cap.py` rows plus `wc -l`. | **PROVEN** |
-| C-005 | The facade suite count before and after are identical. BEFORE, measured by the orchestrator on this clone at base: `5985 passed, 369 skipped, 48 warnings in 805.63s`. | AFTER run of `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark/tests -q` summary line. | **OPEN** |
-| C-006 | Gates green. | Tail of each gate command in the Gates section. | **OPEN** |
+| C-005 | The facade suite count before and after are identical. BEFORE, measured by the orchestrator on this clone at base: `5985 passed, 369 skipped, 48 warnings in 805.63s`. | AFTER run of `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark/tests -q` summary line. | **PROVEN** |
+| C-006 | Gates green. | Tail of each gate command in the Gates section. | **PROVEN** |
 
-`LOGIC_SCORE` = 4/6 (C-005 / C-006 wait on the gate runs).
+`LOGIC_SCORE` = 6/6.
 
 ## AST identity (C-001)
 
@@ -50,11 +50,11 @@ python3 -c "import ast,subprocess;p='python/repark/src/repark/spark/dataframe/co
 AST-IDENTICAL
 ```
 
-Nine extra blank lines left by full-line comment deletion were removed so `ruff format --check` accepts the file. No other whitespace or code changed.
+Nine extra blank lines left by full-line comment deletion were removed so `ruff format --check` accepts the file. One further blank between first-party import groups was removed so ruff I001 accepts the file (the deleted `# SQL identifier helpers.` comment had been the isort split). No import names moved. AST still identical.
 
 ## tokenize counts (C-002)
 
-On the new file: **0** non-pragma comments, **74** pragmas (`# noqa` / `# type:`), all trailing. `wc -l` = **4118**.
+On the new file: **0** non-pragma comments, **74** pragmas (`# noqa` / `# type:`), all trailing. `wc -l` = **4117**.
 
 ## Classification (C-003)
 
@@ -62,7 +62,7 @@ On the new file: **0** non-pragma comments, **74** pragmas (`# noqa` / `# type:`
 
 ## Ceilings (C-004)
 
-`scripts/check_lib_py.py` `core.py` 4468 → 4118. CAP-1 mirror 4468 → 4118. Both equal `wc -l` = 4118 and moved down.
+`scripts/check_lib_py.py` `core.py` 4468 → 4117. CAP-1 mirror 4468 → 4117. Both equal `wc -l` = 4117 and moved down. Nine extra blank lines from full-line comment deletion were removed for `ruff format`; one further blank between first-party import groups was removed for ruff I001 (the deleted `# SQL identifier helpers.` section comment had been the isort split).
 
 ## Removed-comment table
 
@@ -423,3 +423,75 @@ Removed-comment table: **347 rows** (moved-to-map **310**, deleted-as-narration 
 | 4297 | `DataFrame` | # CamelCase alias for the repark batch iterator (disclosed extension; not PySpark). | moved-to-map | `DataFrame` |
 | 4333 | `DataFrame` | # PySpark spells this ``toPandas``; expose both so the one-line import swap just works. | deleted-as-narration |  |
 | 4353 | `(module)` | # Re-export bindings. Keep plan_collapse first because sibling modules import its helpers. | moved-to-map | `(module)` |
+
+## Facade suite (C-005)
+
+BEFORE (orchestrator, this clone at base): `5985 passed, 369 skipped, 48 warnings in 805.63s`.
+
+AFTER (`PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark/tests -q`):
+
+```text
+5985 passed, 369 skipped, 48 warnings in 1011.67s (0:16:51)
+```
+
+Counts match. The I001 import-group blank was removed after this run; AST remained identical so no test could observe it.
+
+## Gates (C-006)
+
+| Command | Result |
+|---|---|
+| `make check-lib-py` | **clean** — 670 files, `core.py` held at 4117 |
+| `make check-python-conventions` | **clean** — 332 files |
+| `make check-docstring-presence` | **clean** — 268 files |
+| `make check-docs-links` | **clean** — 815 files, 5189 links |
+| `make check-ledger-grammar` | **clean** — 123 live ledgers, 837 clauses |
+| `.venv/bin/ruff format --check …/core.py` | **1 file already formatted** |
+| facade pytest (C-005 command) | **5985 passed, 369 skipped, 48 warnings** in 1011.67s |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | **756 passed, 1 skipped, 12 xfailed** in 560.33s |
+| `make verify` | **exit 0** — fmt, clippy, panic-ban, py-lint, Rust tests, doc-tests all green |
+
+`git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' \| grep -P '^\+\s*(//\|#(?!\[|!\[| noqa))'` printed nothing on every commit.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: comment-core-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: AST-IDENTICAL vs origin/main; tokenize 0 non-pragma / 74 pragmas; facade suite 5985 passed, 369 skipped identical to the base count.
+      artifacts: [python/repark/src/repark/spark/dataframe/core.py, python/repark/tests]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Full facade suite plus parity suite 756 passed, 1 skipped, 12 xfailed and make verify Rust tests, all green on the stripped tree.
+      artifacts: [python/repark/tests, python/repark-parity/tests]
+    - id: AT-3
+      status: N/A
+      justification: No error-path code changed; comments only. Existing suite covers the error contracts the moved reasons describe.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state and no new concurrency; comment deletion only.
+    - id: AT-5
+      status: ATTACKED
+      evidence: No AWS, IAM, secrets, .github, or dependency-file change. Home files only.
+      artifacts: [python/repark/src/repark/spark/dataframe/core.py, scripts/check_lib_py.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: AST-IDENTICAL to origin/main; no public signature change; pragma comments preserved.
+      artifacts: [python/repark/src/repark/spark/dataframe/core.py]
+    - id: AT-7
+      status: N/A
+      justification: No live-Spark leg; behaviour is proven by AST identity plus the facade count match.
+    - id: AT-8
+      status: ATTACKED
+      evidence: check_lib_py and CAP-1 ceilings ratcheted 4468 to 4117; docstring presence, python conventions, ruff format, ledger grammar green.
+      artifacts: [scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
+    - id: AT-9
+      status: N/A
+      justification: No new log or metric surface.
+    - id: AT-10
+      status: ATTACKED
+      evidence: 347-row table in this ledger; 66 rationale bullets in dataframe/map.md; all six clauses pinned from python/ and scripts/ maps.
+      artifacts: [task/ledgers/staging/comment-core-1-ledger.md, python/repark/src/repark/spark/dataframe/map.md, scripts/map.md, python/repark-parity/tests/map.md]
+```
+
