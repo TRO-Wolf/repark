@@ -16,7 +16,10 @@ from repark.spark._temp_views import scratch_view_name
 
 
 if TYPE_CHECKING:
-    from repark.spark.session.create_dataframe_columns import _arrow_table_from_raw_tuples
+    from repark.spark.session.create_dataframe_columns import (
+        _arrow_table_from_raw_tuples,
+        _rust_cdf_named_arrow_table,
+    )
     from repark.spark.session.create_dataframe_inference import (
         _INFER_NESTED_DICT_AS_STRUCT,
         _LEGACY_FIRST_ELEMENT_COERCE,
@@ -555,6 +558,12 @@ def _create_dataframe_from_rows_inner(
         first = data[0]
 
         if isinstance(first, dict):
+            arrow_table = _rust_cdf_named_arrow_table(
+                data, schema, is_row=False, engine_types=engine_types
+            )
+            if arrow_table is not None:
+                return _materialize_arrow_as_memtable_frame(session, arrow_table)
+
             # schema=None → Spark key-union; StructType/DDL → null-fill field names.
             names, tuples = _rows_from_mapping_list(
                 data,
@@ -566,6 +575,12 @@ def _create_dataframe_from_rows_inner(
             )
 
         elif isinstance(first, Row):
+            arrow_table = _rust_cdf_named_arrow_table(
+                data, schema, is_row=True, engine_types=engine_types
+            )
+            if arrow_table is not None:
+                return _materialize_arrow_as_memtable_frame(session, arrow_table)
+
             # Row stays fail-loud on key mismatch (Spark STRUCT_ARRAY_LENGTH_MISMATCH class).
 
             names, tuples = _rows_from_mapping_list(

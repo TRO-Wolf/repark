@@ -1652,6 +1652,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `as_tuple` (Python's envelope check uses `is_finite`/`quantize`). Red-first on `1599e8ed`:
   `assert 900 == 0` and `assert 1000 == 0`.
   pins: facade-3/C-010, C-014
+- `test_facade_3_cdf_step3.py` — **FACADE-3 step 3 (2026-09-13):** dispatch pin for the
+  native named-rows funnel: `cdf_arrow_export_named` must exist and take `Row` and `dict`
+  lists (bare, dict + DDL null-fill, Row + reordered StructType) without calling
+  `_rows_from_mapping_list` / `_bind_named_row` / `_apply_permutation` — a spy asserts zero
+  calls — while the dict key-union order (`a,c,b,d`) is preserved natively; homogeneity,
+  strict key-set, and uncovered-cell refusals still fall back and keep their pinned
+  class/message. Plus the F-TIMETUPLE value-parity corpus (native vs forced-fallback
+  collect and `simpleString` for the required temporal cases: year 1/9999, pre-1970,
+  microseconds, `fold=1`, non-UTC fixed offset, `date`/`datetime` subclasses) and the
+  `NaT`-stays-a-fallback proof via the Python normalizer spy. Red-first on `77e57624`:
+  `AttributeError: ... '_rust_cdf_named_arrow_table'` and funnel-call counters `> 0`.
+  pins: facade-3/C-019, C-020
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

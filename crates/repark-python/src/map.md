@@ -107,8 +107,20 @@ and hand execution, SQL, and ML semantics to the engine crates.
   Step-3 targets recorded in the ledger findings table: F-FUNNEL (feed `Row`/dict lists into
   native without the Python-side walk) and F-TIMETUPLE (the per-cell `timetuple` callback —
   needs an abi3-compatible route since `Py_LIMITED_API` hides the `PyDateTime`/`PyDate`
-  getters); F-SLOTS and F-RESCAN are ledger-only P3s.
-  pins: facade-3/C-010, C-013, C-014, C-016, C-017 |
+  getters); F-SLOTS and F-RESCAN are ledger-only P3s. **F-FUNNEL (step 3, 2026-09-13):**
+  `cdf_infer/named.rs` adds `cdf_arrow_export_named(is_row, rows, schema_names, schema, …)` —
+  `Row` and `dict` lists enter native directly; the module collects per-row mappings
+  (`asDict()` for exact-type `Row`, the dict itself for exact-type `dict`), resolves the bind
+  the Python funnel owned — dict key-union (sorted first-row keys, then newly seen keys
+  sorted per row), explicit-schema null-fill (extras dropped, absent keys `Null`), or the
+  strict bind (`_schema_names_and_permutation` parity: identity / by-name reorder /
+  positional rename / fail-loud partial or length mismatch, plus the per-row key-set check
+  `_bind_named_row` owned) — then runs the same tag-screen → extract → `build_batch` tail,
+  fetching cells by interned `PyString` keys. Any refusal it cannot reproduce (heterogeneous
+  elements, non-str keys, subclassed `dict`/`Row`, strict key-set mismatch, dup names)
+  returns `None` before extraction and Python's `_rows_from_mapping_list` owns the pinned
+  class/message/index.
+  pins: facade-3/C-010, C-013, C-014, C-016, C-017, C-019 |
 | [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. Step 2 (2026-09-13): unchanged — the session-total budget flows through `session.rs::materialize_as_cache_view`'s `(max_bytes, max_total_bytes)` budgets tuple. pins: eager-budget-1/C-002, C-003 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,

@@ -82,6 +82,58 @@ def _rust_cdf_arrow_table(
     return pa.table(export)
 
 
+def _rust_cdf_named_arrow_table(
+    data: list[Any],
+    schema: list[str] | None,
+    *,
+    is_row: bool,
+    engine_types: list[str] | None,
+) -> Any:
+    """Build the Arrow table for dict/Row lists through the native named funnel, or None."""
+    export_named = getattr(_native, "cdf_arrow_export_named", None)
+    if export_named is None or not data:
+        return None
+
+    pa = require_pyarrow()
+    arrow_schema = None
+    if engine_types is not None:
+        names = list(schema) if schema is not None else []
+        if len(engine_types) != len(names):
+            return None
+
+        try:
+            arrow_schema = pa.schema(
+                [
+                    pa.field(name, _sql_type_to_arrow(sql_type))
+                    for name, sql_type in zip(names, engine_types, strict=True)
+                ]
+            )
+
+        except Exception:
+            return None
+
+    try:
+        export = export_named(
+            is_row,
+            data,
+            None if schema is None else list(schema),
+            arrow_schema,
+            active_session_time_zone() == "UTC",
+            is_default_timestamp_ntz(),
+            _INFER_NESTED_DICT_AS_STRUCT.get(),
+            _LEGACY_FIRST_ELEMENT_COERCE.get(),
+            getcontext().prec,
+        )
+
+    except Exception:
+        return None
+
+    if export is None:
+        return None
+
+    return pa.table(export)
+
+
 def _arrow_table_from_raw_tuples(
     names: list[str],
     raw_tuples: list[tuple[Any, ...]],
