@@ -161,3 +161,10 @@ def test_release_doc_lists_the_five_wheels() -> None:
     doc = _RELEASE_DOC.read_text(encoding="utf-8")
     for token in EXPECTED_RELEASE_LEGS:
         assert token in doc, token
+
+
+def test_platform_1_dispatch_runs_are_not_cancelled_by_pushes() -> None:
+    """The wheels concurrency group keys on the event, so a push to main never cancels a scheduled or dispatched matrix run."""
+    text = (_REPO / ".github" / "workflows" / "wheels.yml").read_text(encoding="utf-8")
+    assert "group: wheels-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}" in text
+
