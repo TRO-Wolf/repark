@@ -442,7 +442,8 @@ stay. The AST equals `origin/main` (pins: comment-core-1/C-001, C-002). Each
 that held the comment (pins: comment-core-1/C-003).
 
 - `(module)`: Vertical `show` is Spark-style only; styled displays stay horizontal and
-  warn once. WriterV2 `option`/`options` warn once per process and tests reset the flag.
+  warn once. WriterV2 `option`/`options` are accepted for signature parity but ignored
+  beyond `tableProperty`. Warn once per process; tests reset the flag.
   `_STOPPED_MESSAGE` must match `ReparkSession.stop`. The filter rewriter never binds
   SQL keywords `true` / `false` / `null` as columns — Spark's grammar reads the keyword.
   Semi/anti engine tokens emit the left schema only. Cache MemTable names are
@@ -450,7 +451,8 @@ that held the comment (pins: comment-core-1/C-003).
   `plan_collapse` first so sibling modules import its helpers.
 - `_emit_join_side_columns`: Walk by position so chained-join duplicate displays do not
   hit `AMBIGUOUS_REFERENCE`. Engine ordinals stay unique across chained duplicates.
-  Direct binds last-write on display dups; nested origin maps propagate.
+  Last-write on display duplicates applies to the internal origin map only; bare
+  `joined["b"]` stays `AMBIGUOUS`. Nested origin maps propagate.
 - `_by_name_casefold_map`: Exact duplicate names must not silently overwrite the prior
   entry.
 - `_normalize_subset`: PySpark's error class is per-surface, not derivable from
@@ -459,23 +461,27 @@ that held the comment (pins: comment-core-1/C-003).
 - `DataFrame`: Sticky window-merge metadata, display/origin maps, smartCsv diagnostics,
   declared-sort source, and the tighten-nulls flag live on the instance.
   `_semi_anti_right_plan_ids` holds right-side plan ids a semi/anti join did not emit.
-  `dynamicFlatten` is a disclosed repark spelling. `repartition` validates arguments;
-  execution is single-node. `unionAll` is Spark's historical alias of `union`. `except_`
-  is the Python keyword escape and is not shipped. Arrow export uses the facade
-  exception taxonomy and positional display names. `toArrowBatches` is a disclosed
-  camelCase extension.
+  `declareSorted` is the disclosed repark camelCase spelling of `declare_sorted` (no
+  PySpark equivalent). `is_empty` and `to_local_iterator` are disclosed snake_case
+  aliases, not PySpark names. `repartition` validates arguments; execution is
+  single-node. `unionAll` is Spark's historical alias of `union`. `except_` is the
+  Python keyword escape and is not shipped. Arrow export uses the facade exception
+  taxonomy and positional display names. `toArrowBatches` is a disclosed camelCase
+  extension.
 - `__init__`: Cache is object-identity and lazy until the first action. Action-ephemeral
   views are replaced on the next action; plan-stable views remain valid for children.
   One plan-stable bridge snapshot serves all plan children. The facade plan token
   resolves join sides. Duplicate displays map to unique engine fields. Declared-sort is
-  source-only. Tighten-nulls propagates to derived frames.
+  source-only. Tighten-nulls propagates to derived frames. `_mia_temp_views` holds
+  MemTable names for deferred bridge results; they are dropped during finalization.
 - `_identity_child`: Identity-preserving operations keep display, engine, and origin
   maps. pins: perf-facade-1/C-004, C-005
 - `_materialize_cache_if_needed`: Cache keeps `_map_bridge` so `unpersist` restores
   re-run; checkpoint truncates lineage. Never route VALUES / `createDataFrame` through
   this entry. Commit handle state only after a successful materialize. Converting an
   already-cached pin drops the old `__repark_cache_*` view after the checkpoint view
-  registers. Checkpoint does not advertise as cached (`is_cached` is False).
+  registers. Checkpoint keeps the VALUES seam and is not a session cache-registry
+  entry. Checkpoint does not advertise as cached (`is_cached` is False).
 - `_prepare_for_plan`: An already-pinned child uses the MemTable and does not clear the
   bridge.
 - `_action_inner`: An already-pinned action does not re-run the UDF. Fresh bridge
@@ -491,7 +497,8 @@ that held the comment (pins: comment-core-1/C-003).
 - `_register_ipc_bytes_as_inner`: Own the view before `sql()` so finalize drops it even
   if SELECT fails.
 - `unpersist`: `blocking` is signature parity; a single-node drop is always synchronous.
-- `localCheckpoint`: `eager` is signature parity; the pin is a single-node MemTable.
+- `localCheckpoint`: `storageLevel` is accepted for signature parity and ignored
+  (single-node MemTable only). `eager` is live.
 - `sameSemantics`: Best-effort identity of the native `PyDataFrame` object, not full
   semantic equality.
 - `declare_sorted`: Caching redirects the scan; declare the source before caching. Bind
@@ -538,12 +545,15 @@ that held the comment (pins: comment-core-1/C-003).
   user projection names. Project from `_plan()` not raw `_inner` so an uncached
   mapInArrow parent materializes before unnest — raw `_inner` is the empty schema
   placeholder and would yield zero rows. The second SQL projection refers only to
-  quoted identifiers from the intermediate schema. Length is top-level only. Spark
-  `explode` drops null/empty arrays; `explode_outer` uses CASE + NULL element. Take
-  the element type from the intermediate field (covers coalesce/compounds); never
-  fail-open to BIGINT. Keep `make_array(NULL)` untyped so the engine infers. A NULL
-  list becomes one null-element row; an empty list stays empty and drops. Element
-  cast after unnest is a sticky chain (innermost first) from chained `.cast()`.
+  quoted identifiers from the intermediate schema. Length is top-level only. Three
+  generator kinds: `explode` drops null and empty arrays, and the element type is not
+  needed — do not call outer-type resolution (struct arrays are legal);
+  `explode_outer` turns null and empty into one null-element row; `explode_keep_null`
+  turns a NULL list into one null-element row while an EMPTY list stays empty and
+  drops. Take the element type from the intermediate field for the outer CASE (covers
+  coalesce/compounds); never fail-open to BIGINT. Keep `make_array(NULL)` untyped so
+  the engine infers. Element cast after unnest is a sticky chain (innermost first)
+  from chained `.cast()`.
 - `_array_element_sql_type`: Bind uses `array_sql` only (no display substring match).
   Prefer exact spelling; otherwise require a unique casefold hit. A bound field with
   an unsupported element type (map / nested-void) still refuses.
@@ -619,7 +629,8 @@ that held the comment (pins: comment-core-1/C-003).
   counting it would mangle the left engine field. Always attach identity when any
   display name collides or an origin map is needed.
 - `group_by`: Generators lower through select unnest, not as grouping keys.
-- `grouping_sets`: Full Spark `groupingSets` is multi-list; v1 is one set per col.
+- `grouping_sets`: The full Spark `groupingSets` API is multi-list; v1 is one set per
+  column plus the grand-total empty set `()`.
 - `union`: Keep left-side display identity (union-by-position inherits left engine
   field names — Spark keeps left display names). Origin map is left-only; right-parent
   Columns no longer resolve (disclosed).

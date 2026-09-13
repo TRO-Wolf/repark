@@ -58,7 +58,7 @@ On the new file: **0** non-pragma comments, **74** pragmas (`# noqa` / `# type:`
 
 ## Classification (C-003)
 
-347 rows below. moved-to-map **310** (66 enclosing names, each with one bullet under `## core.py rationale (COMMENT-CORE-1)`). deleted-as-narration **37**.
+347 rows below. moved-to-map **312** (66 enclosing names, each with one bullet under `## core.py rationale (COMMENT-CORE-1)`). deleted-as-narration **35**.
 
 ## Ceilings (C-004)
 
@@ -72,7 +72,7 @@ PySpark spelling already visible on the `def`) or `moved-to-map` (hazard, invari
 Spark-parity quirk, fallback reason). The map.md anchor is the backticked function name under
 `## core.py rationale (COMMENT-CORE-1)`.
 
-Removed-comment table: **347 rows** (moved-to-map **310**, deleted-as-narration **37**).
+Removed-comment table: **347 rows** (moved-to-map **312**, deleted-as-narration **35**).
 
 | base line | enclosing function | comment text (verbatim, truncate at 100 chars) | disposition | map.md anchor |
 |---|---|---|---|---|
@@ -406,10 +406,10 @@ Removed-comment table: **347 rows** (moved-to-map **310**, deleted-as-narration 
 | 4150 | `tail` | # Must gate stopped sessions even when num<=0 short-circuits (take(0)/isEmpty fail loud | moved-to-map | `tail` |
 | 4151 | `tail` | # via limit/collect; returning [] after stop would be a silent wrong lifecycle outcome). | moved-to-map | `tail` |
 | 4168 | `isEmpty` | # Stop after the first output row. | moved-to-map | `isEmpty` |
-| 4173 | `DataFrame` | # Snake_case alias — not a PySpark name; convenient for Python call sites. | deleted-as-narration |  |
+| 4173 | `DataFrame` | # Snake_case alias — not a PySpark name; convenient for Python call sites. | moved-to-map | `DataFrame` |
 | 4185 | `toLocalIterator` | # signature parity only | moved-to-map | `toLocalIterator` |
 | 4186 | `toLocalIterator` | # Honest streaming: pull RecordBatches via the C-stream, convert one batch at a time. | moved-to-map | `toLocalIterator` |
-| 4189 | `DataFrame` | # Snake_case alias — not a PySpark name; convenient for Python call sites. | deleted-as-narration |  |
+| 4189 | `DataFrame` | # Snake_case alias — not a PySpark name; convenient for Python call sites. | moved-to-map | `DataFrame` |
 | 4200 | `_iter_rows_from_record_batch` | # Collect rows directly from each batch. | deleted-as-narration |  |
 | 4201 | `_iter_rows_from_record_batch` | # RecordBatch shares column/schema APIs with Table — skip Table.from_batches wrap. | moved-to-map | `_iter_rows_from_record_batch` |
 | 4239 | `_require_non_negative_limit` | # Live PySpark 4.1.2 (zulu-17): AnalysisException | moved-to-map | `_require_non_negative_limit` |
@@ -423,6 +423,134 @@ Removed-comment table: **347 rows** (moved-to-map **310**, deleted-as-narration 
 | 4297 | `DataFrame` | # CamelCase alias for the repark batch iterator (disclosed extension; not PySpark). | moved-to-map | `DataFrame` |
 | 4333 | `DataFrame` | # PySpark spells this ``toPandas``; expose both so the one-line import swap just works. | deleted-as-narration |  |
 | 4353 | `(module)` | # Re-export bindings. Keep plan_collapse first because sibling modules import its helpers. | moved-to-map | `(module)` |
+
+## Critic round 1 (2026-09-13)
+
+Grok critic-logic on `c2beb6b7`; the orchestrator adopted all 11. Each is FIXED in
+`dataframe/map.md` `## core.py rationale (COMMENT-CORE-1)` and, for F-001/F-002, the
+table rows 4173/4189. Split is now moved-to-map 312 / deleted-as-narration 35. C-003
+stays **PROVEN**.
+
+```yaml
+FINDING:
+  id: F-001
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: Line 4173 `is_empty` snake_case alias was deleted-as-narration; it is a disclosed non-PySpark name.
+  evidence: python/repark/src/repark/spark/dataframe/map.md DataFrame bullet; ledger row 4173
+  disposition: REMEDIATED (moved-to-map, DataFrame bullet names is_empty)
+```
+
+```yaml
+FINDING:
+  id: F-002
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: Line 4189 `to_local_iterator` snake_case alias was deleted-as-narration; it is a disclosed non-PySpark name.
+  evidence: python/repark/src/repark/spark/dataframe/map.md DataFrame bullet; ledger row 4189
+  disposition: REMEDIATED (moved-to-map, DataFrame bullet names to_local_iterator)
+```
+
+```yaml
+FINDING:
+  id: F-003
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: localCheckpoint bullet called `eager` signature parity; `eager` is live and `storageLevel` is the ignored parity arg.
+  evidence: python/repark/src/repark/spark/dataframe/map.md localCheckpoint bullet
+  disposition: REMEDIATED (bullet restated)
+```
+
+```yaml
+FINDING:
+  id: F-004
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: DataFrame bullet named `dynamicFlatten` as the disclosed camelCase repark spelling; line 1181 is `declareSorted`.
+  evidence: python/repark/src/repark/spark/dataframe/map.md DataFrame bullet
+  disposition: REMEDIATED (bullet names declareSorted)
+```
+
+```yaml
+FINDING:
+  id: F-005
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `_select_with_generator` collapsed three explode kinds into one sentence.
+  evidence: python/repark/src/repark/spark/dataframe/map.md _select_with_generator bullet
+  disposition: REMEDIATED (explode / explode_outer / explode_keep_null distinguished)
+```
+
+```yaml
+FINDING:
+  id: F-006
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `(module)` bullet omitted that WriterV2 option/options are ignored beyond tableProperty.
+  evidence: python/repark/src/repark/spark/dataframe/map.md (module) bullet
+  disposition: REMEDIATED (parity-ignored and warn-once are separate sentences)
+```
+
+```yaml
+FINDING:
+  id: F-007
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `_emit_join_side_columns` last-write was stated without the AMBIGUOUS bare-getitem guard.
+  evidence: python/repark/src/repark/spark/dataframe/map.md _emit_join_side_columns bullet
+  disposition: REMEDIATED (internal origin map only; bare joined["b"] stays AMBIGUOUS)
+```
+
+```yaml
+FINDING:
+  id: F-008
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `_materialize_cache_if_needed` omitted that checkpoint keeps the VALUES seam and is not a cache-registry entry.
+  evidence: python/repark/src/repark/spark/dataframe/map.md _materialize_cache_if_needed bullet
+  disposition: REMEDIATED (VALUES seam sentence added)
+```
+
+```yaml
+FINDING:
+  id: F-009
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `_select_with_generator` omitted that explode must not call outer-type resolution (struct arrays are legal).
+  evidence: python/repark/src/repark/spark/dataframe/map.md _select_with_generator bullet
+  disposition: REMEDIATED (explode skips outer-type resolution)
+```
+
+```yaml
+FINDING:
+  id: F-010
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `__init__` omitted that `_mia_temp_views` holds deferred-bridge MemTable names dropped at finalization.
+  evidence: python/repark/src/repark/spark/dataframe/map.md __init__ bullet
+  disposition: REMEDIATED (_mia_temp_views sentence added)
+```
+
+```yaml
+FINDING:
+  id: F-011
+  severity: S3
+  category: AT-10
+  clause: C-003
+  claim: `grouping_sets` v1 description omitted the grand-total empty set `()`.
+  evidence: python/repark/src/repark/spark/dataframe/map.md grouping_sets bullet
+  disposition: REMEDIATED (one set per column plus ())
+```
 
 ## Facade suite (C-005)
 
