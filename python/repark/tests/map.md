@@ -4361,3 +4361,8 @@ pins: fnp-8-review/C-009, C-010
   unpinned session makes the pin machine-dependent. Seed files are excluded by
   set-diff so the count is the rewrite's alone.
   pins: review-fix-8/C-004
+
+EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
+`eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
+`_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
+through `core` or the package. pins: eager-budget-1/C-010
