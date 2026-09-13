@@ -19,13 +19,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `docs/silver-s0`.
   pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
-  **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
-  `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent
-  0.91 at 50/250/500. Step-1 remediation (2026-09-12): `interleave` once per
-  stacked column and stream each input batch (C-006, C-007). `describe` stays
-  on the bridge until step 2.
-  `risk_tier: standard`. Branch `perf/unpivot-1`.
-  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
+  **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
+  `stack(n, expr…)` / `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`,
+  linearity exponent 0.91 at 50/250/500; `interleave` once per stacked column and
+  stream each input batch (C-006, C-007). Step 2 (`perf/unpivot-1-s2`) moves
+  `describe`/`summary` back to a pure plan — chunked aggregates → one stack-order
+  string-cast projection → `UnpivotExec`; the `mapInArrow` bridge and
+  `_summary_unpivot` are deleted.
+  `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
 - [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
   **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
   upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),

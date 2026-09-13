@@ -1,7 +1,7 @@
-"""PERF-UNPIVOT-1 step 1 — native stack() unpivot.
+"""PERF-UNPIVOT-1 — native stack() unpivot; step 2 puts describe back on a pure plan.
 
 pins: perf-unpivot-1/C-001, perf-unpivot-1/C-002, perf-unpivot-1/C-003, perf-unpivot-1/C-004,
-perf-unpivot-1/C-005
+perf-unpivot-1/C-005, perf-unpivot-1/C-008
 """
 
 from __future__ import annotations
@@ -161,3 +161,26 @@ def test_stack_name_is_exported(spark: ReparkSession) -> None:
     assert hasattr(F, "stack")
     assert "stack" in F.__all__
     _ = spark
+
+
+def test_describe_plan_is_scan_aggregate_unpivot(spark: ReparkSession) -> None:
+    """describe()/summary() lower to scan → aggregate → unpivot; no Arrow bridge.
+
+    pins: perf-unpivot-1/C-008
+    """
+    frame = spark.range(1000).select(
+        F.col("id").alias("k"),
+        (F.col("id") % F.lit(100)).cast("double").alias("v"),
+    )
+    described = frame.describe()
+    assert described._map_bridge is None
+    explained = described._explain_text(extended=True)
+    assert "UnpivotExec" in explained, explained
+    assert "AggregateExec" in explained
+    assert explained.count("TableScan") == 1, explained
+    assert "mapInArrow" not in explained
+    summarized = frame.summary("count", "max")
+    assert summarized._map_bridge is None
+    explained_summary = summarized._explain_text(extended=True)
+    assert "UnpivotExec" in explained_summary, explained_summary
+    assert "mapInArrow" not in explained_summary
