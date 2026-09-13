@@ -1964,9 +1964,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   strings while booleans refuse in every table, database kinds outside the three spellings
   refuse, dotted catalog names / empty catalog blocks / cross-family collisions refuse, the
   rendered text parses back to the same tables, a rendered file builds a session answering
-  the file values, and a rendered database source refuses at load naming CFG-2. The guide
+  the file values, and — since CFG-2 step 1 — a rendered database source builds a session
+  (the lazy-registration load; the CFG-1 refusal is retired). The guide
   (`docs/guide/repark-toml.md`) quotes only outputs this file and the step-3 pins ran.
   pins: cfg-1/C-028, C-029, C-030
+  pins: cfg-2/C-010
   **REVIEW-FIX-7 step 1 (2026-09-10):** the D-1 pins — header-breaking profile, catalog
   and source names refuse, and a spaced profile name renders one quoted header reading
   back as one profile. pins: review-fix-7/C-001

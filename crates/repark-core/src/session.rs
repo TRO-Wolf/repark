@@ -15,11 +15,12 @@ use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 use crate::config_file::maintenance::MaintenancePolicy;
+use crate::config_file::sources::SourceSpec;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
-use crate::temp_view::TempViewHome;
+use crate::temp_view::{TempViewHome, build_temp_view_home};
 use crate::time_travel::{self, TimeTravelOpts};
 // Test-only re-exports follow the production imports.
 #[cfg(test)]
@@ -99,6 +100,7 @@ pub struct ReparkSessionBuilder {
     config: HashMap<String, String>,
     config_file: Option<PathBuf>,
     maintenance: Option<(String, Option<MaintenancePolicy>)>,
+    source_specs: Vec<Arc<SourceSpec>>,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -183,6 +185,11 @@ impl ReparkSessionBuilder {
         }
         let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
         self.maintenance.clone_from(&file.maintenance);
+        self.source_specs = file
+            .source_specs
+            .iter()
+            .map(|spec| Arc::new(spec.clone()))
+            .collect();
         for (key, value) in file.pairs_for_map() {
             self.config.entry(key).or_insert(value);
         }
@@ -284,20 +291,7 @@ impl ReparkSessionBuilder {
         let context =
             context_with_df_54_1_rule_guards(config, runtime, ext.as_ref()).map_err(engine_err)?;
         // Capture the final build-time home and its provider identity once; calls re-check it.
-        let temp_view_home = {
-            let options = context.copied_config();
-            let catalog_options = &options.options().catalog;
-            let catalog_name = catalog_options.default_catalog.clone();
-            let schema_name = catalog_options.default_schema.clone();
-            let provider = context
-                .catalog(&catalog_name)
-                .and_then(|catalog| catalog.schema(&schema_name));
-            TempViewHome {
-                catalog: catalog_name,
-                schema: schema_name,
-                provider,
-            }
-        };
+        let temp_view_home = build_temp_view_home(&context);
         ext.register(&context).map_err(engine_err)?;
         let dialect = self
             .sql_dialect
@@ -308,6 +302,7 @@ impl ReparkSessionBuilder {
             dialect,
             catalogs: Arc::new(RwLock::new(CatalogRegistry::with_cache_settings(caches))),
             catalog_specs: Arc::new(catalog_specs),
+            source_specs: Arc::new(self.source_specs),
             conf_dump: Arc::new(conf_dump),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
@@ -333,11 +328,12 @@ pub struct ReparkSession {
     /// Session-default `SqlDialect` for every `sql` call unless the builder installs another.
     dialect: Arc<dyn SqlDialect>,
     /// iceberg `Catalog` handles by registered name.
-    catalogs: Arc<RwLock<CatalogRegistry>>,
+    pub(crate) catalogs: Arc<RwLock<CatalogRegistry>>,
     /// Names of registered postgres read catalogs.
     postgres_catalog_names: Arc<RwLock<HashSet<String>>>,
     /// Catalogs from `spark.sql.catalog.<name>.*`, parsed at build and registered asynchronously.
     catalog_specs: Arc<Vec<CatalogSpec>>,
+    pub(crate) source_specs: Arc<Vec<Arc<SourceSpec>>>,
     conf_dump: Arc<Vec<(String, String, String)>>,
     /// S3 buckets whose object store is already registered on the `RuntimeEnv`.
     registered_s3_buckets: Arc<Mutex<HashSet<String>>>,
@@ -446,7 +442,7 @@ impl ReparkSession {
         let duplicate = || Error::DataFusion(format!("catalog '{name}' is already registered"));
         let already_registered = {
             let catalogs = RwLock::read(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
-            catalogs.get(name).is_some()
+            catalogs.is_registered(name)
         };
         if already_registered {
             return Err(duplicate());
@@ -455,7 +451,7 @@ impl ReparkSession {
             .await
             .map_err(engine_err)?;
         let mut catalogs = RwLock::write(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
-        if catalogs.get(name).is_some() {
+        if catalogs.is_registered(name) {
             return Err(duplicate());
         }
         self.context().register_catalog(name, provider);
@@ -736,7 +732,12 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if `name` is registered or the catalog cannot be built.
     pub async fn register_memory_catalog(&self, name: &str, warehouse: &str) -> Result<()> {
-        if self.catalog_handle(name).is_ok() {
+        if self
+            .catalogs
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_registered(name)
+        {
             return Err(Error::DataFusion(format!(
                 "catalog '{name}' is already registered — re-registering an in-memory catalog \
                  would orphan its tables (their metadata lives in the replaced handle)"

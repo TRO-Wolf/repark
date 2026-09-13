@@ -47,18 +47,20 @@ host = "db.example.com"
 
 Two constraints apply to this file today, stated plainly:
 
-1. **A profile carrying a non-empty `[<profile>.database]` table refuses at load.** Named
-   sources arrive with the CFG-2 card, so the `[write]` profile above cannot open a session
-   yet. The refusal names the source and the card:
+1. **A database source loads and registers lazily — it refuses only on use.** The `[write]`
+   profile above opens a session today: the source parses, validates, and its name
+   registers on the engine's catalog without opening a connection. Reaching for it in SQL
+   answers the connector message (run here under `REPARK_ENV=write`):
 
    ```text
-   IllegalArgumentException: repark config error: database sources
-   (default.database.postgres.company_db) are parsed but named-source registration arrives
-   with CFG-2 — drop the `[<profile>.database]` tables until that card lands
+   UnsupportedOperationException: This feature is not implemented: database source
+   `write.database.postgres.company_db` (kind `postgres`) is declared but cannot be used
+   yet — its connector arrives with roadmap 1.10 (Postgres, SQL Server, Trino)
    ```
 
-   Until CFG-2 lands, drop the database tables and the file loads. Everything below was run
-   against that loadable variant.
+   The connectors themselves land with roadmap 1.10. A per-source `auto_register = false`
+   inside the source table opts out of registration: the source still parses and stays
+   declared, and SQL under its name answers the engine's ordinary not-found error.
 
 2. **`[<profile>.conf]` keys apply in sorted-key order, not file order.** The TOML table the
    loader reads does not retain file order, so the application order is the deterministic

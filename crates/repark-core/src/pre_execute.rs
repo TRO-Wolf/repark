@@ -41,7 +41,8 @@ impl<'a> PreExecute<'a> {
     /// [`DataFusionError::Plan`] carrying the refusal message.
     pub fn guard(&self, plan: &LogicalPlan) -> DfResult<()> {
         refuse_iceberg_create_of_tightened_ddl(plan, self.ctx, self.catalogs)
-            .map_err(|error| DataFusionError::Plan(error.to_string()))
+            .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+        crate::named_sources::refuse_source_ddl(plan, self.catalogs)
     }
 
     /// Execute an already-guarded plan.
