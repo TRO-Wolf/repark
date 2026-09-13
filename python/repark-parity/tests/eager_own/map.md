@@ -76,5 +76,5 @@ pins: eager-own-1/C-001, C-012
 
 - Up: [../map.md](../map.md)
 - Sibling harness style: [../spill/map.md](../spill/map.md)
-- Ledger: [../../../../task/ledgers/staging/eager-own-1-ledger.md](../../../../task/ledgers/staging/eager-own-1-ledger.md)
+- Ledger: [../../../../task/ledgers/staging/eager-own-1-ledger.md](../../../../task/ledgers/completed/eager-own-1-ledger.md)
 - Committed measurement: [../../../../docs/perf/eager-own-1-2026-09-13/map.md](../../../../docs/perf/eager-own-1-2026-09-13/map.md)

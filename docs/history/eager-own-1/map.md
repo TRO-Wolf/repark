@@ -5,7 +5,7 @@ The EAGER-OWN-1 record (2026-09-13): the owner's source review of eager-material
 retention, archived when the refcounted `CacheViewHandle` fix and its lifecycle tests landed.
 Current state is [STATUS.md](../../../STATUS.md); the unit ledger — held in staging while review
 findings may still reopen it — is
-[task/ledgers/staging/eager-own-1-ledger.md](../../../task/ledgers/staging/eager-own-1-ledger.md);
+[task/ledgers/staging/eager-own-1-ledger.md](../../../task/ledgers/completed/eager-own-1-ledger.md);
 the card stays at
 [task/roadmap/mid-term/eager-own-1-card-2026-09-13.md](../../../task/roadmap/mid-term/eager-own-1-card-2026-09-13.md).
 

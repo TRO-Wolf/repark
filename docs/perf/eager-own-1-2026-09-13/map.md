@@ -52,4 +52,4 @@ pins: eager-own-1/C-001, C-012
 
 - Up: [../map.md](../map.md)
 - Harness: [../../../python/repark-parity/tests/eager_own/map.md](../../../python/repark-parity/tests/eager_own/map.md)
-- Ledger: [../../../task/ledgers/staging/eager-own-1-ledger.md](../../../task/ledgers/staging/eager-own-1-ledger.md)
+- Ledger: [../../../task/ledgers/staging/eager-own-1-ledger.md](../../../task/ledgers/completed/eager-own-1-ledger.md)
