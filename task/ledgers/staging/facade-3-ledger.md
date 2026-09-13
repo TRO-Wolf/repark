@@ -226,6 +226,15 @@ on the rebased branch — report's `named.rs` line numbers refer to `5d766bfe`):
 | S2-21 P3-1 — extra `Vec<Option<&Cell>>` per column (`cdf_infer.rs:98`) | P3 | Ledger only — this is the already-deferred F-SLOTS row, re-confirmed |
 | S2-21 P3-2 — `utcoffset` miss path does `getattr("days"/"seconds"/"microseconds")` uninterned (`cells.rs:200-203`) | P3 | Fixed (`4996f6fd`): three names interned; the suggested one-slot tz cache declined — `HashMap` hit is already ~12 ns |
 
+**S2-21 Python review findings** (`/tmp/oc-worker/f-rev3-py/report.md`, remediated in the
+same C-026 clause; F-PY-1 and F-PY-3 are the same defects as the Rust review's P2-1/P2-2):
+
+| Finding | Class | Status |
+|---|---|---|
+| F-PY-1 — `Row` happy path pays `asDict()` per row (~100 000 calls measured; significant create-time gap) | P2 | Already fixed — identical defect to S2-21 P2-1 (`1d039a38`): index route over `_Row__field_values`, `asDict` spy green at 0 |
+| F-PY-2 — a declined named export still pays the Python mapping funnel *and* retries the tuple-door native export on the rebuilt tuples (`object()` at 90 000/100 000 dicts: base 671.48 ms, branch 748.42 ms, +11.5 %) | P2 | Fixed (`b1c8b90f` + `named_declined` dispatch): once `cdf_arrow_export_named` exists and returned `None`, rebuilt tuples go straight to `_arrow_table_from_raw_tuples_fast`/`_legacy` — the tuple door is never retried (symbol-absent skew keeps the old retry). Spy pins prove `cdf_arrow_export` stays at 0 calls on declined dict and Row lists with the pinned refusal intact (red-first `assert 1 == 0` on `c04d6c24`). Real-base re-measure (all six fallback shapes @90k, `/tmp/f-rev3/base` at `9efb6a65`) passes the +5 % bar — table below |
+| F-PY-3 — homogeneous dict lists pay full key extraction/sorting per row | P2 | Already fixed — identical defect to S2-21 P2-2 (`8608cb5c`): seen-keys fast path, mutation-proven |
+
 **Fallback pin (red-first on `1599e8ed`).** `_AsTupleProbeDecimal` (a `Decimal`
 subclass counting `as_tuple()` calls) at every row of a 1 000-row table, cell 900
 poisoned: `assert calls == 0` after `createDataFrame` raises — `extract_decimal`
@@ -259,7 +268,7 @@ screen.
 | C-023 | The card's named pins unedited and green; the whole facade suite green on a debug native after `make develop`. | The three files untouched; `pytest python/repark/tests -q` count. | **PROVEN** | `git diff origin/main` touches none of `test_create_dataframe_materialize.py`, `test_perf_facade_cdf_1.py`, `test_csv_infer_perf_1.py`. Whole facade suite on debug native: **6,034 passed, 369 skipped** in 796.84 s; the single red was `test_production_file_size.py::test_moved_symbol_bodies_match_the_integrated_baseline` on `_create_dataframe_from_rows_inner` — the sanctioned body-hash baseline for the dispatch body step 3 edited (same class as step 2's `_arrow_table_from_raw_tuples` update), hash refreshed and the file re-run green (11 passed). |
 | C-024 | Gates: `cargo test -p repark-python`, `make verify`, the whole parity suite. | Commands and counts in Evidence. | **PROVEN** | `cargo test -p repark-python` → **99 passed** (74 lib + 25 bindings). `make verify` → exit 0 (fmt, clippy both tiers, all structural gates, ledger lifecycle + grammar). Parity suite → **757 passed, 2 skipped, 12 xfailed** in 580.46 s. No JVM; `REPARK_PARITY_LIVE` never set. |
 | C-025 | Findings-table rows F-FUNNEL and F-TIMETUPLE updated with their outcome; `COVERAGE_ATTESTATION` extended to step 3 with its schema kept. | Table rows + attestation block. | **PROVEN** | Both rows marked Fixed with shas and deltas above. Attestation: AT-4/AT-6/AT-7/AT-8/AT-10 evidence now names the step-3 artifacts (`named.rs`, the fail-fast probes, the temporal routes, the step-3 doc); schema unchanged (`complete: true`). |
-| C-026 | S2-21 Rust perf review (`/tmp/oc-worker/f-rev3-rs/report.md`) remediated: no P1; P2-1 `asDict`-per-row and P2-2 per-row union sort fixed; P3-2 interned; P3-1 stays ledger-only. Pins: `Row.asDict` spy is red-first (`assert 40 == 0`) then green at 0; mid-list new-key union pin passes on both trees and bites on a `==` → `>=` mutation (`['a','b','d']` ≠ `['a','b','c','d']`). `rows`/`dicts` re-measured at 1e4/1e5 and the three `Row`/dict fallback shapes @ 90k after the reviewer's timing gate opened (`ls /tmp/grok-worker/f-rev3-py/*/exit`). | Three commits `1d039a38`/`8608cb5c`/`4996f6fd`; pin reds/greens; re-measure table in the step-3 doc. | **PROVEN** | `1d039a38`: `NamedCells::Rows` reads `_Row__field_values` by index through per-distinct-fields maps (`build_row_cells`, last-occurrence positions reproduce `dict(zip())` on duplicate names); `asDict` spy green at 0 calls (red `assert 40 == 0` on `5d766bfe`). `8608cb5c`: `dict_key_union_order` skips a mapping whose `len()` equals the union count with all keys already seen; mutation `==` → `>=` redded the pin by dropping mid-list key `c`. `4996f6fd`: `intern!` on `days`/`seconds`/`microseconds`. Re-measure (release, `MemoryMax=8G`, same box, after the reviewer's `exit`): rows 248.54 (−68.7 % vs s2), dicts 255.72 (−60.1 %); fallback @90k literal deltas −0.1 %/−0.5 %/+2.8 %, honest +3.4 %/+8.1 %/+10.0 %. P3-1 = ledger F-SLOTS, deferred unchanged; P3-2's one-slot tz cache suggestion declined — the `HashMap` hit is already ~12 ns. |
+| C-026 | S2-21 Rust perf review (`/tmp/oc-worker/f-rev3-rs/report.md`) remediated: no P1; P2-1 `asDict`-per-row and P2-2 per-row union sort fixed; P3-2 interned; P3-1 stays ledger-only. Pins: `Row.asDict` spy is red-first (`assert 40 == 0`) then green at 0; mid-list new-key union pin passes on both trees and bites on a `==` → `>=` mutation (`['a','b','d']` ≠ `['a','b','c','d']`). `rows`/`dicts` re-measured at 1e4/1e5 and the three `Row`/dict fallback shapes @ 90k after the reviewer's timing gate opened (`ls /tmp/grok-worker/f-rev3-py/*/exit`). **Follow-up 2 (S2-21 Python review, `/tmp/oc-worker/f-rev3-py/report.md`):** F-PY-2 fixed — after `cdf_arrow_export_named` returns `None` the tuple-door export is never retried on rebuilt tuples; pin: a `cdf_arrow_export` spy stays at 0 calls on declined dict and Row lists (red-first `assert 1 == 0`); all six fallback shapes @ 90k re-measured against the real base `/tmp/f-rev3/base` (`9efb6a65`), each within +5 %. | Four commits `1d039a38`/`8608cb5c`/`4996f6fd`/`b1c8b90f`; pin reds/greens; re-measure tables in the step-3 doc. | **PROVEN** | `1d039a38`: `NamedCells::Rows` reads `_Row__field_values` by index through per-distinct-fields maps (`build_row_cells`, last-occurrence positions reproduce `dict(zip())` on duplicate names); `asDict` spy green at 0 calls (red `assert 40 == 0` on `5d766bfe`). `8608cb5c`: `dict_key_union_order` skips a mapping whose `len()` equals the union count with all keys already seen; mutation `==` → `>=` redded the pin by dropping mid-list key `c`. `4996f6fd`: `intern!` on `days`/`seconds`/`microseconds`. Re-measure (release, `MemoryMax=8G`, same box, after the reviewer's `exit`): rows 248.54 (−68.7 % vs s2), dicts 255.72 (−60.1 %); fallback @90k literal deltas −0.1 %/−0.5 %/+2.8 %, honest +3.4 %/+8.1 %/+10.0 %. P3-1 = ledger F-SLOTS, deferred unchanged; P3-2's one-slot tz cache suggestion declined — the `HashMap` hit is already ~12 ns. **F-PY-2:** `b1c8b90f` — `named_declined` (set only when the named symbol exists and returned `None`) routes rebuilt tuples to `_arrow_table_from_raw_tuples_fast`/`_legacy` directly; tuple-door spy green at 0 calls on both declined kinds, refusal text pinned by `match=`. The first real-base sweep still showed `row_hetero` +5.8 %, `row_strict` +5.5 %, `dict_hetero` +14.6 % over the bar, so the doomed-path probes were cheapened without moving a refusal: `row_field_tuples` now len-checks only (set coverage still enforced per distinct tuple in `build_row_cells`) and `_rows_from_mapping_list` hoists the per-iteration `import Row` and splits the dict arm into scan-then-comprehend. Final real-base table: dict_object +1.5 %, int_float +0.5 %, row_hetero −15.8 %, dict_hetero −51.3 %, row_strict −5.4 %, row_object −0.4 % — all six within +5 % of the real `9efb6a65` base; refusal class/message/index unchanged. |
 
 ### Step-3 evidence
 
@@ -376,6 +385,44 @@ no cargo/rustc/maturin during cells): rows 23.10 @1e4 / **248.54 @1e5**
 dict_hetero 10.33 ms literal −0.5 % / honest +8.1 %, row_strict 220.36 ms
 literal +2.8 % / honest +10.0 % (all refusal classes unchanged:
 PySparkTypeError, PySparkTypeError, PySparkValueError).
+
+**C-026 follow-up evidence (S2-21 Python review, F-PY-2, branch `c04d6c24`).**
+
+Red-first on `c04d6c24` (product unchanged at pin-add time):
+
+```
+FAILED test_named_decline_never_retries_tuple_export_dicts - assert 1 == 0
+FAILED test_named_decline_never_retries_tuple_export_rows - assert 1 == 0
+  (cdf_arrow_export called once on the rebuilt tuples after the named
+  export had already declined — the double-pay F-PY-2 names)
+```
+
+Green after `b1c8b90f` at 0 calls; the pins also `match=` the pinned
+refusal text (`cannot build Arrow column 'i': Could not convert`) so
+class/message/index are bound, and a symbol-absent `cdf_arrow_export_named`
+leaves `named_declined` False — version skew keeps the old tuple-door retry.
+
+Real-base re-measure — all six fallback shapes, poison at index 90 000 of
+100 000 rows, branch vs `/tmp/f-rev3/base` (release, `main` @ `9efb6a65`,
+read-only), interleaved cells, warmup + 5, medians, `systemd-run
+MemoryMax=8G`:
+
+| shape | base ms | branch ms | Δ |
+|---|---:|---:|---:|
+| `dict_object` | 570.05 | 578.63 | +1.5 % |
+| `int_float` | 358.25 | 360.01 | +0.5 % |
+| `row_hetero` | 85.24 | 71.74 | −15.8 % |
+| `dict_hetero` | 9.20 | 4.48 | −51.3 % |
+| `row_strict` | 209.00 | 197.61 | −5.4 % |
+| `row_object` | 637.95 | 635.38 | −0.4 % |
+
+Every shape under the +5 % bar against the real base; refusal class,
+message and index unchanged (PySparkTypeError ×5, PySparkValueError ×1 —
+the strict key-set mismatch). The first sweep (before the probe/funnel
+tightening) recorded `row_hetero` +5.8 %, `row_strict` +5.5 %,
+`dict_hetero` +14.6 % — fixed by the len-check gather and the funnel
+restructure, not by weakening a refusal. Simulated-export numbers stay
+below as history only; this real-base table is the bar.
 
 **C-026 gates** (debug native via `make develop`, restored to release after):
 

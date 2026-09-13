@@ -118,29 +118,56 @@ maps instead of paying `asDict()` per row; `8608cb5c` skips the union
 extract/sort for mappings whose keys are all already seen; `4996f6fd` interns
 the `timedelta` attribute names. Same runner, same cap, same box.
 
-## Fallback shapes @ row 90 000 (release native)
+## Fallback shapes @ row 90 000 — real-base bar (release native)
 
-Poison seeded at index 90 000 of 100 000 rows; `branch` is this tree;
-`literal-sim` patches only `_native.cdf_arrow_export` to `None` in the same
-process (the C-014 method); `main-sim` patches `cdf_arrow_export_named` too
-(the pre-step-3 path on these inputs). Medians of 3 after a warm call.
+The S2-21 Python-review re-measure (C-026 follow-up) — this table is the
+bar. Poison seeded at index 90 000 of 100 000 rows; `base` is
+`/tmp/f-rev3/base` (release, `main` @ `9efb6a65`, read-only); `branch` is
+this tree. Interleaved cells per shape, warmup + 5, medians,
+`systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0`.
+
+| fallback shape | base ms | branch ms | Δ | pinned outcome |
+|---|---:|---:|---:|---|
+| `object()` cell in a dict list | 570.05 | 578.63 | +1.5 % | PySparkTypeError |
+| int→float in a tuple list | 358.25 | 360.01 | +0.5 % | PySparkTypeError |
+| non-`Row` element in a `Row` list | 85.24 | 71.74 | −15.8 % | PySparkTypeError |
+| non-dict element in a dict list | 9.20 | 4.48 | −51.3 % | PySparkTypeError |
+| strict key-set mismatch in a `Row` list | 209.00 | 197.61 | −5.4 % | PySparkValueError |
+| `object()` cell in a `Row` list | 637.95 | 635.38 | −0.4 % | PySparkTypeError |
+
+Every shape is within +5 % of the real base; refusal class, message and
+index are unchanged (Python owns each raise). F-PY-2's fix (`b1c8b90f`)
+skips the tuple-door native export once `cdf_arrow_export_named` has
+declined — `named_declined` routes the rebuilt tuples straight to
+`_arrow_table_from_raw_tuples_fast`/`_legacy`, and a spy pin proves
+`cdf_arrow_export` stays at 0 calls on declined dict and Row lists. The
+negative deltas come from cheapening the doomed path, not weakening a
+refusal: `row_field_tuples` len-checks mid-list field tuples (set coverage
+still enforced per distinct tuple in `build_row_cells`) and
+`_rows_from_mapping_list` no longer pays a per-iteration `import Row` or
+an identity `as_mapping` copy on dict rows.
+
+### Simulated-export history (C-014 method)
+
+Recorded before the real-base re-measure; kept for provenance only — the
+real-base table above is the bar. `literal-sim` patches only
+`_native.cdf_arrow_export` to `None` in the same process; `main-sim`
+patches `cdf_arrow_export_named` too (the pre-step-3 path on these
+inputs). Medians of 3 after a warm call.
 
 | fallback shape | branch ms | literal-sim Δ | main-sim Δ | pinned outcome |
 |---|---:|---:|---:|---|
 | `object()` cell in a dict list | 607.12 | +1.6 % | +7.3 % | PySparkTypeError |
 | int→float in a tuple list | 355.29 | +4.1 % | +4.0 % | PySparkTypeError |
-| non-`Row` element in a `Row` list † | 89.81 | −0.1 % | +3.4 % | PySparkTypeError |
-| non-dict element in a dict list † | 10.33 | −0.5 % | +8.1 % | PySparkTypeError |
-| strict key-set mismatch in a `Row` list † | 220.36 | +2.8 % | +10.0 % | PySparkValueError |
+| non-`Row` element in a `Row` list | 89.81 | −0.1 % | +3.4 % | PySparkTypeError |
+| non-dict element in a dict list | 10.33 | −0.5 % | +8.1 % | PySparkTypeError |
+| strict key-set mismatch in a `Row` list | 220.36 | +2.8 % | +10.0 % | PySparkValueError |
 
-Under the clause's stated method every shape is within +5 % (the refusal class
-is unchanged — Python owns each raise). The main-sim column records the honest
-cost of the native attempt itself: a doomed input still pays one cheap
-whole-list probe (pointer type-check ≈0.8 ms; `_Row__field_names` validation
-≈19 ms; dict union+tag ≈40 ms) before Python's own refusal walk. That residual
-is irreducible without skipping elements — the probe is what lets the export
-decline *before* any `asDict()` call or cell extraction, the C-014 rule
-applied to the funnel.
+The main-sim column records the honest cost of the native attempt itself:
+a doomed input still pays one cheap whole-list probe (pointer type-check
+≈0.8 ms; `_Row__field_names` validation ≈19 ms; dict union+tag ≈40 ms)
+before Python's own refusal walk — the probe is what lets the export
+decline *before* any `asDict()` call or cell extraction.
 
 ## Pointers
 
