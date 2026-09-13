@@ -5,6 +5,17 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
+  **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
+  native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
+  rewrite embedded its child 3×/2× per level, so nested chains were exponential in native
+  memory (run 9 OBS-R9-6 / INC-R9-1: aborting at depth ~14, 84 GB uncapped). The depth-40
+  memory pin runs in a subprocess under `RLIMIT_AS` with a per-level bound exit. The
+  `when(...)` audit table covers `nullif` (lowered), `array_append`'s `_glue_element` and
+  the `DataFrame.replace` dict loop (2× embeds, no one-call native answer — each needs
+  its own card; `dataframe/core.py` is fenced to another lane).
+  `risk_tier: standard`. Branch `fix/abs-expr-1`.
+  pins: abs-expr-1/C-001, C-002, C-003, C-004, C-005
 - [facade-3-ledger.md](facade-3-ledger.md) —
   **FACADE-3 step 1 (2026-09-13), in flight:** `createDataFrame` inference measure +
   pins — the release baseline table across eight dispatch shapes at 1e4/1e5 × 7

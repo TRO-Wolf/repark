@@ -1,5 +1,9 @@
 # map — scripts/
 
+ABS-EXPR-1 (2026-09-13): `check_lib_py.py` `spark/functions.py` 1985 → 1962 and
+`spark/functions_expr.py` 2255 → 2247 (the facade `when(...)` bodies deleted for native
+`abs`/`cbrt`/`nullif`). The CAP-1 mirror rows move in the same commit.
+pins: abs-expr-1/C-005
 COMMENT-CORE-1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4468 → 4117
 (comments removed, no code change). The CAP-1 mirror row moves in the same commit.
 pins: comment-core-1/C-004

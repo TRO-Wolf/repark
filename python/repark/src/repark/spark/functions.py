@@ -547,31 +547,8 @@ def _aggregate_argument(col: Column | str) -> tuple[Column, str]:
 
 
 def abs(col: Column | str) -> Column:
-    """Absolute value (PySpark ``functions.abs``).
-
-    Implemented facade-side as ``CASE WHEN col < 0 THEN -col ELSE col`` (no new Rust) so compound
-    aggregate names can pin ``sum(abs(x))`` bit-for-bit against the live PySpark oracle. The
-    ``spark_display`` is forced to ``abs(...)`` regardless of the CASE plan shape.
-    """
-    column = _column_argument(col)
-    # 0 - column for negation (avoids a unary-minus native API).
-    negated = lit(0) - column
-    result = when(column < 0, negated).otherwise(column)
-    display = f"abs({column.spark_wrap_display_part()})"
-    return Column(
-        result._inner,
-        spark_display=display,
-        projection_name=display,
-        sql_expr=f"abs({column.sql_expr_part()})",
-        join_sql_expr=f"abs({column.join_sql_part()})",
-        stable_name=False,
-        is_aggregate=column._is_aggregate,
-        is_foldable=column._is_foldable and not column._is_aggregate,
-        has_free_attribute=column._has_free_attribute,
-        has_ungroupable=column._has_ungroupable,
-        partition_transform=column._partition_transform,
-        **_thread_origin(column),
-    )
+    """Absolute value (PySpark ``functions.abs``)."""
+    return _scalar("abs", col)
 
 
 def sum(col: Column | str) -> Column:

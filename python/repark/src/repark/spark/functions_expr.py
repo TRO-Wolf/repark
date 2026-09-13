@@ -1884,9 +1884,7 @@ def nvl2(col1: Column | str, col2: Column | str, col3: Column | str) -> Column:
 
 def nullif(col1: Column | str, col2: Column | str) -> Column:
     """NULL if the arguments compare equal, else ``col1`` (PySpark ``functions.nullif``)."""
-    left = _as_column_arg(col1, as_lit=False)
-    right = _as_column_arg(col2, as_lit=False)
-    return when(left == right, lit(None)).otherwise(left)
+    return _scalar("nullif", col1, col2)
 
 
 def equal_null(col1: Column | str, col2: Column | str) -> Column:
@@ -1910,14 +1908,8 @@ def isnotnull(col: Column | str) -> Column:
 
 
 def cbrt(col: Column | str) -> Column:
-    """Cube root (PySpark ``functions.cbrt``).
-
-    ``pow(col, 1/3)`` is NaN on negatives (IEEE); Spark returns the real root.
-    Negatives use ``-pow(-col, 1/3)`` so the named hazard is not a lie.
-    """
-    column = _as_column_arg(col, as_lit=False)
-    third = lit(1.0 / 3.0)
-    return when(column < lit(0), -pow(-column, third)).otherwise(pow(column, third))
+    """Cube root (PySpark ``functions.cbrt``)."""
+    return _scalar("cbrt", col)
 
 
 # ---- FN-B: strings ----------------------------------------------------------------------------

@@ -63,11 +63,20 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   one `_native.PyColumn.sql` caller — its text is the caller's. `_lit_numpy_ndarray`
   still walks NumPy elements in Python (recorded P3, no change). pins: facade-2/C-014,
   C-016, C-018, C-021
+  **ABS-EXPR-1 (2026-09-13):** `abs` is one native `_scalar("abs", …)` call — the old
+  `when(c < 0, 0 - c).otherwise(c)` rewrite embedded its child 3× per level, so nested
+  `F.abs` chains were exponential in native memory and aborted the process at depth ~14
+  (run 9 OBS-R9-6 / INC-R9-1). pins: abs-expr-1/C-002, C-003
 - `functions_agg.py` — aggregate-function re-exports.
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
+  **ABS-EXPR-1 audit (2026-09-13):** `_glue_element`'s `when(isnull(a), NULL).otherwise(built)`
+  embeds `array_col` 2× per level (≈19 MB at depth 12, ~×2.2/level) and stays — DataFusion
+  `array_append`/`array_prepend` drop the input's null buffer, so the guard is load-bearing
+  for Spark's NULL-array→NULL answer; no one-call native answer exists (needs its own card).
+  pins: abs-expr-1/C-004
   **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
   Live co-collect `test_live_fn_fix_1_arrays`.
   pins: fn-fix-1-registry-rows/C-002
@@ -79,6 +88,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10
   (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
   pins: fnp-9-collections-json/C-003, C-006
+  **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
+  (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
+  more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
+  embedded exactly once (linear). pins: abs-expr-1/C-002, C-004
 - `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
   `select_with_stack_if_present`. Installed last onto `functions.py`. pins: perf-unpivot-1/C-004
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,

@@ -21,6 +21,13 @@ enum FacadeShape {
 
 const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     (
+        "abs",
+        FacadeShape::Kernel(1),
+        "facade expr_fn::abs is checked_abs — raises on integer-min, matching Spark ANSI-on; \
+         the door's datafusion-spark SparkAbs reads execution.enable_ansi_mode, which repark \
+         never sets, so the door wraps (measured: spark.sql abs(-2147483648) -> -2147483648)",
+    ),
+    (
         "ascii",
         FacadeShape::Kernel(1),
         "facade expr_fn::ascii vs datafusion-spark ascii — codepoint vs byte on non-ASCII",
@@ -189,8 +196,9 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        21,
-        "TYPES-1 closed from_unixtime: both doors return Spark STRING; ratchet 22 → 21"
+        22,
+        "ABS-EXPR-1 lowered F.abs to a real kernel, exposing the door's wrapping SparkAbs; \
+         ratchet 21 → 22"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();
