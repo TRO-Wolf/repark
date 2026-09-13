@@ -548,3 +548,11 @@ def _normalize_display_int(key: str, value: str | int | object) -> int:
             f"at most {_DISPLAY_MAX_ROWS_CEILING}."
         )
     return parsed
+
+
+def _builder_config_get_master(config: dict[str, str | None]) -> str:
+    """Return spark.master from builder config (case-insensitive key), default local[repark]."""
+    for key, value in config.items():
+        if key.lower() == "spark.master" and value is not None:
+            return value
+    return "local[repark]"

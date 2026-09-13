@@ -6,7 +6,15 @@ import re
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
 
 DatabaseKind = Literal["postgres", "sqlserver", "trino"]
 
@@ -161,6 +169,8 @@ class DatabaseSource(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    auto_register: StrictBool | None = Field(default=None)
+
     @model_validator(mode="after")
     def check_props(self) -> Self:
         """Refuse non-string connection properties."""
@@ -172,6 +182,8 @@ class DatabaseSource(BaseModel):
     def render_lines(self, header: str) -> list[str]:
         """Render this block under one TOML header."""
         lines: list[str] = [header]
+        if self.auto_register is not None:
+            lines.append(f"auto_register = {'true' if self.auto_register else 'false'}")
         for prop in sorted(self.model_extra or {}):
             value = (self.model_extra or {})[prop]
             assert isinstance(value, str)

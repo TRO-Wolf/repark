@@ -12,6 +12,7 @@ mod fence;
 mod logical_names;
 mod ml;
 mod session;
+mod session_sources;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
@@ -108,6 +109,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     collect_rows::register(module)?;
     logical_names::register(module)?;
     ml::register(module)?;
+    session_sources::register(module)?;
     Ok(())
 }
 

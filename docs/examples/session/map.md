@@ -59,6 +59,10 @@ network.
 - [run_maintenance.py](run_maintenance.py) — `SparkSession.run_maintenance`:
   dry-run the maintenance plan over a memory-catalog table with inline policy
   keys; every row plans. pins: maint-policy-1/C-021
+- [named_sources.py](named_sources.py) — `SparkSession.sources` /
+  `SparkSession.source`: one `repark.toml`-declared database source lists with its
+  password masked, and the handle's `ping()` answers the connector-pending refusal
+  (CFG-2 step 2). pins: cfg-2/C-013
 - [display_style.py](display_style.py) — `SparkSession.display_style`: the
   `polars` default, the `spark` switch, and the `conf` mirror. DISPLAY-POLARS-1 (2026-09-09):
   the default flipped `spark` → `polars`, so this example's default assertion and the direction

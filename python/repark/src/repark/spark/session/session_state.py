@@ -196,3 +196,12 @@ def _reset_active_session_for_tests() -> None:
         _active_session._inner = None  # type: ignore[attr-defined]
 
         _active_session = None
+
+
+def _promote_active(session: ReparkSession) -> None:
+    """Mark this session as the process-wide active session (Spark action promotion)."""
+
+    global _active_session
+
+    if session._inner is not None:
+        _active_session = session

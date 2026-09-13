@@ -771,6 +771,8 @@ session	SparkSession.registerTempTable
 session	SparkSession.register_memory_catalog
 session	SparkSession.resolve_table_name
 session	SparkSession.run_maintenance
+session	SparkSession.source
+session	SparkSession.sources
 session	SparkSession.sparkContext
 session	SparkSession.sql
 session	SparkSession.stop
