@@ -19,6 +19,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `docs/silver-s0`.
   pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
+  S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
   **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
   `stack(n, expr…)` / `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`,
   linearity exponent 0.91 at 50/250/500; `interleave` once per stacked column and

@@ -201,6 +201,18 @@ sources a partition count or add a scoped repartition hint; no change here.
 | P3 — `UnpivotExec` has no metrics | Fixed — `elapsed_compute`/`output_rows` via `ExecutionPlanMetricsSet` |
 | P3 — `arrow::compute::cast` is not the engine formatter | Resolved — coerce uses `cast_with_options` + `DEFAULT_FORMAT_OPTIONS` (the `CastExpr` path); identity test vs live `CAST` oracle |
 
+### S2-21 re-check of the remediation (Grok, 2026-09-12)
+
+Release native, idle box, warmup + three reps: 500 × 200k `describe().collect()` median **8.16 s** (the 8.25 s claim
+holds), `describe()` call 0.42 → 0.08 s, 20 × 200k 0.045 s. `EXPLAIN ANALYZE`: `CAST(` count 0, `UnpivotExec`
+`elapsed_compute` 2.96 / 7.93 / 10.04 ms; `RepartitionExec` 5.02 s and `AggregateExec` 1.65 s are the wall (residue
+R-001). Cell-index bounds are checked once at plan time. SQL `stack` / `F.stack` pay an `Option` match and a metrics
+timer only (`SELECT stack(2, 1, 2, 3, 4)` 0.32 ms). No P1, no new P2.
+
+P3 observed (no change): the labeled path casts 2 500 one-element arrays (`exec.rs` `labeled_batch` /
+`coerce_stack_cell`) and interleaves 500 five-element columns; grouping cells by source type (describe: one Int64 and
+four Float64 stat columns) would cut kernel launches about 100× but only milliseconds of an 8 s action.
+
 ### Remediation gates
 
 JVM was not started for these gates.
