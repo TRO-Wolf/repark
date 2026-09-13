@@ -5,7 +5,7 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [replace-linear-1-ledger.md](replace-linear-1-ledger.md) —
+- [replace-linear-1-ledger.md](replace-linear-1-ledger.md) — Parked on owner question Q-R1 after step 0 (2026-09-13).
   **REPLACE-LINEAR-1 step 0 (2026-09-13), in flight:** `DataFrame.replace` dict loop
   is exponential — `when(expression == lit(old), lit(new)).otherwise(expression)`
   embeds the running expression twice per entry (measured ~×3.4/entry: 21.9 MB at 12,

@@ -22,6 +22,12 @@ ruling before step 1. The divergent cells are enumerated under Evidence → C-00
 **Not in this step:** `STATUS.md`, `briefs/next-sequence.md`, `.github/`, `Cargo.toml`,
 `Cargo.lock`, `pyproject.toml`, `uv.lock`, and every product file — the rewrite is step 1.
 
+**Parked 2026-09-13 (run 12b orchestrator):** step 0 HALTed on D-3 with nine non-mapping-order divergences (C-001).
+Whether step 1 also brings those cells to Spark's answers is a semantic change beyond the owner's "semantics identical
+to today's" instruction, so it is owner question Q-R1 in
+`task/roadmap/mid-term/overnight-report-2026-09-13-run12b.md` (docs PR). Step 1 waits
+for that ruling; C-002..C-005 stay OPEN.
+
 ## PROPOSITION LEDGER — REPLACE-LINEAR-1 step 0 — 2026-09-13
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
