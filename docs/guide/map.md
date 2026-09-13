@@ -97,7 +97,7 @@ illustrative. A claim with no verified basis does not go in.
   inference under the FA-4 default; struct-field addressing; `dynamicFlatten` flags
   (including `empty_as_null`) and mixed-case `explode`; and the limits worth knowing
   (FA-1, ID-1, ID-3, G10-1, TY-4/TY-5, FA-3).
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** the cache-guard section now covers the
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** the cache-guard section now covers the
   session-wide `repark.cache.max_total_bytes` alongside per-result
   `repark.cache.max_bytes` — incremental admission, REFUSE-never-evict, and the
   read-only `repark.cache.retained_bytes` readback.

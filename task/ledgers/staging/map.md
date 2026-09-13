@@ -6,7 +6,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 
 ## Contents
 - [eager-budget-1-ledger.md](eager-budget-1-ledger.md) —
-  **EAGER-BUDGET-1 steps 0–2 (2026-09-14), all ten clauses PROVEN:** a session cache
+  **EAGER-BUDGET-1 steps 0–2 (2026-09-13), all ten clauses PROVEN:** a session cache
   budget and retained-bytes accounting — `repark.cache.max_total_bytes` refuses (never
   evicts, Q-E2) when a materialization would push the sum of distinct Arrow buffers
   across live `__repark_cache_*` MemTables past the budget (D-1/D-2, read back via the

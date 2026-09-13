@@ -43,7 +43,7 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pin holds the reuse contract: a second `distinct_buffer_bytes` call over the same batches
   with the same pointer set returns 0.
   pins: eager-budget-1/C-002, C-003
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** D-1/D-3/D-4 admission pins. A three-batch source
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** D-1/D-3/D-4 admission pins. A three-batch source
   under a one-batch budget refuses at batch two with the tag, budget, `retained`, and
   `admitted` in the message — `admitted` lands strictly below the unbudgeted result, so the
   stream was dropped mid-collection and nothing registered. A scan over a live cache view

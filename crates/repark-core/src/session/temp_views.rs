@@ -48,7 +48,6 @@ impl ReparkSession {
     }
 
     // === cache-honesty ===
-    /// Stream-collect into a [`MemTable`] under the `max_bytes` and session-total guards.
     /// # Errors
     /// # Errors Returns [`Error::DataFusion`] if collect or registration fails.
     pub async fn materialize_dataframe_as_cache_view(
@@ -132,7 +131,6 @@ impl ReparkSession {
         self.replace_view(name, Arc::new(table))
     }
 
-    /// Stream `frame` into a [`MemTable`], admitting each batch against the size guards.
     async fn register_collected_memtable(
         &self,
         name: &str,

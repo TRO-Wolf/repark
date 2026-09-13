@@ -129,7 +129,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `distinct_buffer_bytes`) lives in `session/cache_budget.rs`, keeping this file under
   the default ceiling at 988.
   pins: eager-budget-1/C-002
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** the D-1/D-3 incremental admission loop and the
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** the D-1/D-3 incremental admission loop and the
   live-buffer seed (`live_cache_buffer_set`) live in `session/temp_views.rs` and
   `session/cache_budget.rs` — this file is unchanged.
   pins: eager-budget-1/C-005, C-007

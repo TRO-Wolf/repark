@@ -335,7 +335,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   cache view returns a wrapper sharing the view, the `CacheViewHandle`, and the
   shape — no collection, no new registration (D-4). A frame whose view was
   explicitly dropped materializes afresh. pins: eager-own-1/C-004
-  EAGER-BUDGET-1 step 2 (2026-09-14): `repark.cache.max_total_bytes` is the session-wide
+  EAGER-BUDGET-1 step 2 (2026-09-13): `repark.cache.max_total_bytes` is the session-wide
   retained-bytes budget (D-1, Q-E2 REFUSE): the native admission loop checks
   `retained + admitted` after every streamed batch and refuses with
   `[REPARK_CACHE_BUDGET_EXCEEDED]` — budget, retained, admitted, and the

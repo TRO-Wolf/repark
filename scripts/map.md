@@ -1,6 +1,6 @@
 # map — scripts/
 
-EAGER-BUDGET-1 step 2 (2026-09-14): `check_lib_py.py`
+EAGER-BUDGET-1 step 2 (2026-09-13): `check_lib_py.py`
 `dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
 `eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).
 The CAP-1 mirror row moves in the same commit; `repark-python/src/session.rs`

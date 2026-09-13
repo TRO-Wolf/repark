@@ -33,7 +33,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `datafusion.catalog.default_catalog = <a name a catalog is later registered under>` has no
   session-local home at all, and the whole family refuses loud rather than write that catalog
   (round-6 critic S1, MEASURED).
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** `register_collected_memtable` now streams
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** `register_collected_memtable` now streams
   (`execute_stream`) instead of `collect()`: each batch's distinct-buffer bytes join a running
   `admitted` total seeded with the live cache pointer set, `max_bytes` is checked incrementally
   with its unchanged message, and `max_total_bytes` refuses with
@@ -53,7 +53,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   makes a slice share its parent's key (the sliced-array pin proves it). Checkpoint
   (`__repark_ckpt_*`), user views, and non-`MemTable` providers are skipped.
   pins: eager-budget-1/C-002, C-003
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** the enumeration body became
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** the enumeration body became
   `live_cache_buffer_set()`, which returns the `(pointer set, total)` pair so incremental
   admission seeds its `seen` set with the live cache buffers — a new view's buffers already
   held by a live `__repark_cache_*` MemTable add zero to `admitted`. `retained_cache_bytes`

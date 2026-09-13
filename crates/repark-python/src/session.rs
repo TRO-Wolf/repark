@@ -354,9 +354,8 @@ impl PyReparkSession {
         })
     }
 
-    /// Cache-path materialize under the per-result and session-total byte guards.
     /// # Errors
-    /// Returns a PySpark-shaped error if collect/registration fails or a budget is exceeded.
+    /// Returns a PySpark-shaped error if collect/registration fails or `max_bytes` is exceeded.
     #[pyo3(signature = (name, frame, budgets=(None, None)))]
     pub fn materialize_as_cache_view(
         &self,

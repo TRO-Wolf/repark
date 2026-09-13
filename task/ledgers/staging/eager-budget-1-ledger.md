@@ -19,7 +19,7 @@ natives: per-iteration wall / VmRSS / VmHWM / `ru_majflt`, the cgroup outcome, a
 Python-side `Table.nbytes` vs distinct-`buffer.address` probe for one retained result.
 No product code changes in this step.
 
-**Step 2 (2026-09-14)** delivered the rest: D-1 `repark.cache.max_total_bytes`
+**Step 2 (2026-09-13)** delivered the rest: D-1 `repark.cache.max_total_bytes`
 (session-wide retained-bytes budget, admission-only REFUSE per Q-E2), D-3
 incremental admission (`register_collected_memtable` streams batches and checks
 `retained + admitted` after each — refusing before the result's peak and before
@@ -30,7 +30,7 @@ refusal or a mid-collection failure.
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `.github/`,
 `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`, eviction of any kind.
 
-## PROPOSITION LEDGER — EAGER-BUDGET-1 steps 0–2 — 2026-09-14
+## PROPOSITION LEDGER — EAGER-BUDGET-1 steps 0–2 — 2026-09-13
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
@@ -176,7 +176,7 @@ the audit):
   planning a 2000-branch UNION (`spark.sql` before any step-1 code runs); does
   not reproduce on release natives.
 
-### C-004…C-009 pins — step 2 (2026-09-14)
+### C-004…C-009 pins — step 2 (2026-09-13)
 
 Red first, on this branch before any step-2 product code (the step-1 tree plus
 the new pin file — 8 failed, 7 passed; `test_no_registration_survives_collection_failure`
@@ -306,7 +306,7 @@ Step 1 (2026-09-13):
   python-conventions, docstring-presence, manifest, ledger lifecycle + grammar,
   docs-compaction, docs-links, owner-ruling, parity-live dual-wire, rust tests).
 
-Step 2 (2026-09-14):
+Step 2 (2026-09-13):
 
 - `cargo test -p repark-core` — green; the 10 `session::tests::cache_budget`
   admission pins included.

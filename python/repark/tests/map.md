@@ -118,7 +118,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `getAll` carries it, `isModifiable` is `False`, `set`/`unset` refuse with
   `INVALID_CONF_VALUE.REQUIREMENT`, and a stopped session raises `RuntimeError`.
   pins: eager-budget-1/C-002, C-003
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** the D-1/D-3/D-4/D-6 session-total-budget pins.
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** the D-1/D-3/D-4/D-6 session-total-budget pins.
   C-004 `repark.cache.max_total_bytes` parses at materialization: unset/`0`/`""` disable,
   invalid/negative/`>u64` refuse `INVALID_CONF_VALUE.REQUIREMENT`, runtime `set` and builder
   `config` both reach the resolver, and `unset` clears a runtime value. C-005 a budget below
@@ -1819,7 +1819,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   conf.unset tomb (no builder resurrect); cache entry-point vs VALUES temp-view branch pin;
   localCheckpoint-after-cache truncates lineage; child-plan cache sharing OUT pin;
   object-identity only; type error on bad level.
-  **EAGER-BUDGET-1 step 2 (2026-09-14):** this file plus `test_eager_own_1.py` and the
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** this file plus `test_eager_own_1.py` and the
   `python/repark-parity/tests/eager_own/` harness are C-010's unchanged-behavior gate —
   the whole cohort stays green on the final step-2 tree.
   pins: eager-budget-1/C-010
