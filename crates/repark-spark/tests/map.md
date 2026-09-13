@@ -15,7 +15,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `tightenNulls` elides `SortExec` for nullable `ORDER BY ts` keys, while hint mode keeps it.
   Tightened-source CTAS, derived expressions, EXISTS subqueries, cache remints, lazy `into_view`,
   and bare/two-part catalog names refuse without publishing the sink. All-nullable projection
-  CREATE and INSERT remain allowed.
+  CREATE and INSERT remain allowed. EAGER-BUDGET-1 step 2 (2026-09-14): the
+  cache-materialize call site passes `None` for the new `max_total_bytes` parameter; the
+  pinned refusal is unchanged. pins: eager-budget-1/C-005
 - [ddl_sessions.rs](ddl_sessions.rs) — CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

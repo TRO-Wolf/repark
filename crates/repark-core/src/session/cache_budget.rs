@@ -39,9 +39,13 @@ fn walk_array_data(data: &arrow::array::ArrayData, seen: &mut HashSet<usize>, to
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     pub async fn retained_cache_bytes(&self) -> Result<u64> {
+        Ok(self.live_cache_buffer_set().await?.1)
+    }
+
+    pub(crate) async fn live_cache_buffer_set(&self) -> Result<(HashSet<usize>, u64)> {
         crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
         let Some(schema) = self.temp_view_home.provider.as_ref() else {
-            return Ok(0);
+            return Ok((HashSet::new(), 0));
         };
         let mut seen = HashSet::new();
         let mut total = 0_u64;
@@ -61,6 +65,6 @@ impl ReparkSession {
                 total = total.saturating_add(distinct_buffer_bytes(&batches, &mut seen));
             }
         }
-        Ok(total)
+        Ok((seen, total))
     }
 }

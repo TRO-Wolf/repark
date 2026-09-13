@@ -412,9 +412,9 @@ class DataFrame:
         prefix = "__repark_ckpt_" if is_checkpoint else _CACHE_VIEW_PREFIX
         view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
-            max_bytes = _resolve_cache_max_bytes(self._alive_token)
+            budgets = _resolve_cache_budgets(self._alive_token)
             lineage = self._inner
-            self._session.materialize_as_cache_view(view_name, lineage, max_bytes)
+            self._session.materialize_as_cache_view(view_name, lineage, budgets)
             cache_handle.bind_registered_view(self, view_name, lineage)
             _register_cache_frame(self._alive_token, self)
             return
@@ -795,9 +795,8 @@ class DataFrame:
 
         **Loud memory contract:** materialize is a full collect into an in-process
         MemTable — peak memory O(result). Despite the Spark default name
-        ``MEMORY_AND_DISK_DESER``, repark does **not** spill to disk. Optional size guard:
-        ``spark.conf.set("repark.cache.max_bytes", N)`` (or builder ``.config``) refuses
-        materialize when collected Arrow array memory exceeds ``N`` bytes.
+        ``MEMORY_AND_DISK_DESER``, repark does **not** spill to disk. Optional size guards:
+        ``repark.cache.max_bytes`` / ``repark.cache.max_total_bytes`` refuse oversized materialize.
 
         **Object-identity only (not Spark plan-matching cache):** ``df.cache().filter(…).count()``
         does **not** materialize ``df`` or share a MemTable with the child — only actions on the
@@ -815,8 +814,8 @@ class DataFrame:
         materializes to a single-node MemTable when an action runs — **loud memory contract**
         Full collect, O(result) peak, no disk spill. Disk / off-heap / replication
         flags are signature parity only; the first time a level claims those behaviors in a
-        session, a :class:`UserWarning` fires once. Optional
-        ``repark.cache.max_bytes`` refuses oversized materialize.
+        session, a :class:`UserWarning` fires once. Optional ``repark.cache.max_bytes`` /
+        ``repark.cache.max_total_bytes`` refuse oversized materialize.
         """
         from repark.spark.storage import StorageLevel
 
@@ -4077,11 +4076,7 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
 from repark.spark.dataframe import sampling  # noqa: E402
 from repark.spark.dataframe import display  # noqa: E402
-from repark.spark.dataframe.eager import (  # noqa: E402
-    _CACHE_MAX_BYTES_KEY,
-    _cache_conf_lookup,
-    _resolve_cache_max_bytes,
-)
+from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 
 __all__ = [

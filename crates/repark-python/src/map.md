@@ -26,6 +26,10 @@ and hand execution, SQL, and ML semantics to the engine crates.
   **NULLABILITY-2 (2026-09-05):** `finish_session` installs
   `repark_functions::install_shared_analyzer_rules` (integer overflow plus boolean-to-decimal
   casts, both doors) in place of the integer-only call — one line for one line, same count.
+  **EAGER-BUDGET-1 step 2 (2026-09-14):** `materialize_as_cache_view`'s third
+  argument is now the `(max_bytes, max_total_bytes)` budgets tuple, forwarded
+  to the core admission loop; the one-argument signature keeps the file's exact
+  CAP-1 baseline. pins: eager-budget-1/C-005 |
   pins: nullability-2/C-003 |
   `PyReparkSession.sql` runs the FNP-15/16 declared-function valve so the native
   `repark.sql()` callable (DataFusionDialect) refuses with the registry reason.
@@ -105,7 +109,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   needs an abi3-compatible route since `Py_LIMITED_API` hides the `PyDateTime`/`PyDate`
   getters); F-SLOTS and F-RESCAN are ledger-only P3s.
   pins: facade-3/C-010, C-013, C-014, C-016, C-017 |
-| [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. pins: eager-budget-1/C-002, C-003 |
+| [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. Step 2 (2026-09-14): unchanged — the session-total budget flows through `session.rs::materialize_as_cache_view`'s `(max_bytes, max_total_bytes)` budgets tuple. pins: eager-budget-1/C-002, C-003 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins

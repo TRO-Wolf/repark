@@ -160,6 +160,21 @@ Over `repark.cache.max_bytes` the existing guard refuses, and the message names 
 .eager() cannot materialize this plan: repark config error: cache materialize size 312 bytes exceeds repark.cache.max_bytes=1; raise the conf or avoid cache()/persist() on this plan (single-node MemTable pin; no disk spill)
 ```
 
+`repark.cache.max_total_bytes` is the session-wide sibling: the summed distinct Arrow-buffer
+bytes held by **all** live `cache()`/`eager()` results may not exceed it. Admission is checked
+incrementally as each batch streams in — the materialize refuses the first time
+`retained + admitted` would cross the budget, before the result's peak footprint, and nothing is
+registered on the session. Refusal, never eviction:
+
+```text
+repark config error: [REPARK_CACHE_BUDGET_EXCEEDED] cache materialize refused: repark.cache.max_total_bytes=4194304, retained 2097152 bytes, admitted 3145728 bytes before refusal; release cached/eager frames with unpersist() or spark.catalog.clearCache(), or raise repark.cache.max_total_bytes
+```
+
+Both keys take a non-negative integer byte count, accept `spark.conf.set` and builder
+`.config(...)`, and treat `0`/unset as "no guard"; invalid values refuse with
+`[INVALID_CONF_VALUE.REQUIREMENT]` naming the key. `spark.conf.get("repark.cache.retained_bytes")`
+reports the current retained total (read-only; `set`/`unset` refuse).
+
 `unpersist()` drops the view and clears the shape; the frame keeps answering from its plan:
 
 ```python

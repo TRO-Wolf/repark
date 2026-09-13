@@ -118,6 +118,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `getAll` carries it, `isModifiable` is `False`, `set`/`unset` refuse with
   `INVALID_CONF_VALUE.REQUIREMENT`, and a stopped session raises `RuntimeError`.
   pins: eager-budget-1/C-002, C-003
+  **EAGER-BUDGET-1 step 2 (2026-09-14):** the D-1/D-3/D-4/D-6 session-total-budget pins.
+  C-004 `repark.cache.max_total_bytes` parses at materialization: unset/`0`/`""` disable,
+  invalid/negative/`>u64` refuse `INVALID_CONF_VALUE.REQUIREMENT`, runtime `set` and builder
+  `config` both reach the resolver, and `unset` clears a runtime value. C-005 a budget below
+  one result refuses `df.cache(); df.count()` and `df.eager()` with
+  `REPARK_CACHE_BUDGET_EXCEEDED`, the budget, retained and admitted figures, and the
+  unpersist/clearCache fix; an existing cache counts toward `retained`; `unpersist()` frees
+  budget and a second cache succeeds; `retained_bytes` rises by the admitted bytes of each
+  admitted cache. C-007 a refusal and an ANSI-overflow collection failure each leave
+  `__repark_cache_*` table names and `cache_view_handles` untouched on `cache()`+action and
+  `eager()`. C-008 `repark.cache.max_bytes` keeps its legacy message and exactly-at-limit
+  boundary. C-009 a refused and an admitted cache write nothing under the configured
+  `datafusion.runtime.temp_directory`. C-006 a subprocess worker (`--mode refuse|full`)
+  materializes 1e6 rows × 6 Float64 in ~10 batches under a 12MB budget (~25% of one result):
+  refusal is asserted and refused VmHWM growth measured 21,622,784 vs 42,586,112 unbudgeted
+  (~50.8%, under the 60% bound) — refusal before the result's peak.
+  pins: eager-budget-1/C-004, C-005, C-006, C-007, C-008, C-009
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the
   step-2 split. Clause discharge: C-001 `test_explain_prints_plan_text_without_row_repr` +
@@ -1802,6 +1819,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   conf.unset tomb (no builder resurrect); cache entry-point vs VALUES temp-view branch pin;
   localCheckpoint-after-cache truncates lineage; child-plan cache sharing OUT pin;
   object-identity only; type error on bad level.
+  **EAGER-BUDGET-1 step 2 (2026-09-14):** this file plus `test_eager_own_1.py` and the
+  `python/repark-parity/tests/eager_own/` harness are C-010's unchanged-behavior gate —
+  the whole cohort stays green on the final step-2 tree.
+  pins: eager-budget-1/C-010
 - `test_merge_into.py` — **R-MERGEINTO**: builder upsert equals SQL-MERGE (COW + MoR); delete /
   partial update / insert dict; Column condition; temp-view cleanup (success + failure);
   no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource().delete()` and

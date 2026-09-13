@@ -1,5 +1,11 @@
 # map — scripts/
 
+EAGER-BUDGET-1 step 2 (2026-09-14): `check_lib_py.py`
+`dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
+`eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).
+The CAP-1 mirror row moves in the same commit; `repark-python/src/session.rs`
+holds its 1128 baseline (the budgets tuple is one argument).
+pins: eager-budget-1/C-005
 ABS-EXPR-1 (2026-09-13): `check_lib_py.py` `spark/functions.py` 1985 → 1962 and
 `spark/functions_expr.py` 2255 → 2247 (the facade `when(...)` bodies deleted for native
 `abs`/`cbrt`/`nullif`). The CAP-1 mirror rows move in the same commit.

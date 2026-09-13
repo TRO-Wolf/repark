@@ -316,8 +316,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   a pending checkpoint sticky with lineage untruncated — checkpoint-after-cache must
   still run. pins: display-lazy-1/C-007
 - `eager.py` owns the eager materialization bodies behind the public wrappers (DF-EAGER-1
-  step 2, moved from `core.py`): the `repark.cache.max_bytes` guard pair plus the key, and
-  the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`. `eager()` materializes
+  step 2, moved from `core.py`): the `repark.cache.max_bytes` /
+  `repark.cache.max_total_bytes` budget resolvers over the shared
+  `_resolve_cache_byte_budget(alive_token, key)` parser (one
+  `[INVALID_CONF_VALUE.REQUIREMENT]` message family for both keys; `_resolve_cache_budgets`
+  returns the `(max_bytes, max_total_bytes)` pair `core.py` forwards to the native
+  materialize call), and the frame-first `_eager_materialize` / `_to_lazy` / `_count_rows`.
+  `eager()` materializes
   the plan through the existing cache-view call on an `_identity_child` sibling (the source
   frame is untouched), then fills `_eager_shape` once with a count over the built MemTable
   and the column count from the schema — no Arrow copy crosses to Python (D-7 ruling
@@ -330,6 +335,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   cache view returns a wrapper sharing the view, the `CacheViewHandle`, and the
   shape — no collection, no new registration (D-4). A frame whose view was
   explicitly dropped materializes afresh. pins: eager-own-1/C-004
+  EAGER-BUDGET-1 step 2 (2026-09-14): `repark.cache.max_total_bytes` is the session-wide
+  retained-bytes budget (D-1, Q-E2 REFUSE): the native admission loop checks
+  `retained + admitted` after every streamed batch and refuses with
+  `[REPARK_CACHE_BUDGET_EXCEEDED]` — budget, retained, admitted, and the
+  unpersist/clearCache fix — before the result's peak and before any registration, so a
+  refusal leaves no view, no `CacheViewHandle`, no `cache_view_handles` member and no
+  `cache_frames` entry (D-6; `bind_registered_view` and `_register_cache_frame` still run
+  only after the native call returns). `repark.cache.max_bytes` keeps its per-result
+  meaning and message family, now evaluated on the same running admitted total (D-4).
+  pins: eager-budget-1/C-004, C-005, C-007, C-008
 - `cache_handle.py` owns the refcounted `CacheViewHandle` for `__repark_cache_*`
   registrations (EAGER-OWN-1 step 1, 2026-09-13). The registering frame is the
   owner; every frame whose plan scans the view carries the handle in its

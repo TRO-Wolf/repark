@@ -43,20 +43,21 @@ impl ReparkSession {
         name: &str,
         frame: DataFrame,
     ) -> Result<()> {
-        self.register_collected_memtable(name, frame, None).await
+        self.register_collected_memtable(name, frame, None, None)
+            .await
     }
 
     // === cache-honesty ===
-    /// Collect once into a [`MemTable`] with an optional post-collect `max_bytes` guard.
+    /// Stream-collect into a [`MemTable`] under the `max_bytes` and session-total guards.
     /// # Errors
     /// # Errors Returns [`Error::DataFusion`] if collect or registration fails.
     pub async fn materialize_dataframe_as_cache_view(
         &self,
         name: &str,
         frame: DataFrame,
-        max_bytes: Option<u64>,
+        budgets: (Option<u64>, Option<u64>),
     ) -> Result<()> {
-        self.register_collected_memtable(name, frame, max_bytes)
+        self.register_collected_memtable(name, frame, budgets.0, budgets.1)
             .await
     }
 
@@ -131,29 +132,56 @@ impl ReparkSession {
         self.replace_view(name, Arc::new(table))
     }
 
-    /// Collect `frame` once, re-stamp tighten provenance, then register a `MemTable`.
+    /// Stream `frame` into a [`MemTable`], admitting each batch against the size guards.
     async fn register_collected_memtable(
         &self,
         name: &str,
         frame: DataFrame,
         max_bytes: Option<u64>,
+        max_total_bytes: Option<u64>,
     ) -> Result<()> {
         let plan = frame.logical_plan().clone();
         let schema = Arc::new(frame.schema().as_arrow().clone());
-        let batches = frame.collect().await.map_err(engine_err)?;
-        if let Some(limit) = max_bytes {
-            let total: u64 = batches
-                .iter()
-                .map(|batch| u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX))
-                .fold(0_u64, u64::saturating_add);
-            if total > limit {
+        let (mut seen, retained) = if max_total_bytes.is_some() {
+            self.live_cache_buffer_set().await?
+        } else {
+            (std::collections::HashSet::new(), 0)
+        };
+        let mut stream = frame.execute_stream().await.map_err(engine_err)?;
+        let mut batches = Vec::new();
+        let mut admitted = 0_u64;
+        let budgeted = max_bytes.is_some() || max_total_bytes.is_some();
+        while let Some(item) = futures::StreamExt::next(&mut stream).await {
+            let batch = item.map_err(engine_err)?;
+            if budgeted {
+                admitted = admitted.saturating_add(super::cache_budget::distinct_buffer_bytes(
+                    std::slice::from_ref(&batch),
+                    &mut seen,
+                ));
+            }
+            batches.push(batch);
+            if let Some(limit) = max_bytes
+                && admitted > limit
+            {
                 return Err(Error::Config(format!(
-                    "cache materialize size {total} bytes exceeds repark.cache.max_bytes={limit}; \
-                     raise the conf or avoid cache()/persist() on this plan (single-node MemTable \
-                     pin; no disk spill)"
+                    "cache materialize size {admitted} bytes exceeds \
+                     repark.cache.max_bytes={limit}; raise the conf or avoid \
+                     cache()/persist() on this plan (single-node MemTable pin; no disk spill)"
+                )));
+            }
+            if let Some(budget) = max_total_bytes
+                && retained.saturating_add(admitted) > budget
+            {
+                return Err(Error::Config(format!(
+                    "[REPARK_CACHE_BUDGET_EXCEEDED] cache materialize refused: \
+                     repark.cache.max_total_bytes={budget}, retained {retained} bytes, \
+                     admitted {admitted} bytes before refusal; release cached/eager frames \
+                     with unpersist() or spark.catalog.clearCache(), or raise \
+                     repark.cache.max_total_bytes"
                 )));
             }
         }
+        drop(stream);
         let (schema, batches) =
             crate::sorted_view::apply_tighten_provenance_on_materialize(&plan, schema, batches)?;
         let partitions = if batches.is_empty() {

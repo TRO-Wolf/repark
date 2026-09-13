@@ -43,6 +43,15 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   pin holds the reuse contract: a second `distinct_buffer_bytes` call over the same batches
   with the same pointer set returns 0.
   pins: eager-budget-1/C-002, C-003
+  **EAGER-BUDGET-1 step 2 (2026-09-14):** D-1/D-3/D-4 admission pins. A three-batch source
+  under a one-batch budget refuses at batch two with the tag, budget, `retained`, and
+  `admitted` in the message — `admitted` lands strictly below the unbudgeted result, so the
+  stream was dropped mid-collection and nothing registered. A scan over a live cache view
+  admits zero new bytes (shared buffers seed `seen`) and leaves `retained` unchanged, while a
+  fresh-buffered frame under `budget = retained` refuses naming that retained figure.
+  `max_bytes` keeps its legacy message and registers nothing; an admitted cache registers and
+  its `retained` equals the admitted distinct bytes.
+  pins: eager-budget-1/C-005, C-007, C-008
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway
   `winslide_probe_sum` UDAF exists only here: it has no `retract_batch`, so it proves the fallback
