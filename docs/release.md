@@ -74,7 +74,7 @@ They are recorded — not re-opened — so a later change is a deliberate one.
   (design §4 Q6). Every shipped tag has produced exactly this.
 - **Wheel matrix — settled 2026-09-12 (PLATFORM-1).** Five `cp312-abi3` wheels, one per
   platform leg: `manylinux-x86_64` (`ubuntu-latest`), `manylinux-aarch64`
-  (`ubuntu-24.04-arm`), `macos-arm64` (`macos-latest`), `macos-x86_64` (`macos-13`),
+  (`ubuntu-24.04-arm`), `macos-arm64` (`macos-latest`), `macos-x86_64` (`macos-15-intel`),
   `windows-x86_64` (`windows-latest`). `release.yml`'s `build-wheel` is the five-leg
   matrix — each leg builds `--release`, re-checks tag/version consistency, installs its
   wheel into a fresh venv, imports `repark`, and runs one `ReparkSession` collect — and

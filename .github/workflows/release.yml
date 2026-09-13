@@ -25,7 +25,7 @@ jobs:
           - leg: macos-arm64
             runs-on: macos-latest
           - leg: macos-x86_64
-            runs-on: macos-13
+            runs-on: macos-15-intel
           - leg: windows-x86_64
             runs-on: windows-latest
     runs-on: ${{ matrix.runs-on }}
