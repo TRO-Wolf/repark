@@ -337,6 +337,17 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   document carries the closing note at the top.
   pins: rp-18/C-002, C-003
   pins: ap-1-close-1/C-001, C-002
+- [facade-3-cdf-baseline-2026-09-13.md](facade-3-cdf-baseline-2026-09-13.md) —
+  **FACADE-3 step 1 (2026-09-13):** the `createDataFrame` release baseline —
+  eight dispatch shapes (tuples, `Row`, dicts, tuples + DDL, tuples +
+  `StructType`, nested, pandas and polars controls) at 1e4 and 1e5 rows × 7
+  columns (int, float, string, bool, date, timestamp, decimal), timed as
+  `createDataFrame` alone and `createDataFrame(...).count()`, plus the cProfile
+  split for the three slowest shapes and the step-2 target list. Richer fixture
+  than facade-boundary §4 — date/timestamp/decimal columns are the per-cell wall
+  on every path, pandas included. Runnable method beside it in
+  [facade-3-cdf-baseline-2026-09-13/map.md](facade-3-cdf-baseline-2026-09-13/map.md).
+  pins: facade-3/C-001, C-007
 
 ## Pointers
 
