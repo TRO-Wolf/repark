@@ -1,0 +1,55 @@
+plan_format_version = 1
+dataset_id = "finance.ledger.silver"
+
+[source]
+source_system_id = "finance"
+catalog = "application"
+schema = "finance"
+table = "ledger"
+
+[input_contract]
+kind = "row_snapshot"
+bronze_record_id_field = 10
+
+[[columns]]
+source_field_id = 10
+target_name = "entry_id"
+target_type = { kind = "int64" }
+nullable = false
+transforms = []
+validators = [{ rule_id = "entry_id_required", kind = "require_non_null" }]
+
+[[columns]]
+source_field_id = 11
+target_name = "amount"
+target_type = { kind = "decimal", precision = 18, scale = 4 }
+nullable = true
+transforms = []
+validators = []
+
+[[columns]]
+source_field_id = 12
+target_name = "posted"
+target_type = { kind = "boolean" }
+nullable = true
+transforms = []
+validators = []
+
+[[columns]]
+source_field_id = 13
+target_name = "book_date"
+target_type = { kind = "date" }
+nullable = true
+transforms = []
+validators = []
+
+[selection]
+strategy = "disabled"
+
+[[quality]]
+rule_id = "row_accounting"
+kind = "exact_disposition_accounting"
+
+[publication]
+strategy = "single_classified_table"
+empty_input = "require_explicit_empty_replace_option"
