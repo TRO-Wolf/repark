@@ -21,9 +21,9 @@ reviewer, no Muse or GLM; G-5 (seeds a card requires — none were needed). Rele
 | 4 | PERF-UNPIVOT-1 step 2 — `describe` / `summary` on a pure plan; 500-column describe 10.19 s → 8.2 s | #553 | `65abfd46` | Devin 2 (+1 launcher slip), Grok review + re-check |
 | 5 | PERF-CAST-1 step 2 — release re-measure; owner is stock DataFusion `SqlToRel` → apache/datafusion#25248 | #550 | `c7fb4ce5` | Devin 1 |
 | + | FACADE-3 step 1 — `createDataFrame` release baseline per shape, 156 goldens, pickle pin | #555 | `927fa4d3` | Devin 1 |
-| + | FACADE-3 step 2 — rows / tuple / dict inference in Rust (nested −92.7 %, explicit schema −78 %) | #559 | merge chain in flight at report time (rebased onto `main`, gated green) | Devin 1, Grok review |
+| + | FACADE-3 step 2 — rows / tuple / dict inference in Rust (nested −92.7 %, explicit schema −78 %) | #559 | `4f121ab9` | Devin 1, Grok review |
 
-**Complete tonight:** FACADE-2 (all three steps), Silver S-0 and S-1, PERF-UNPIVOT-1, PERF-CAST-1. Every merge went
+**Complete tonight:** FACADE-2 (all three steps), Silver S-0 and S-1, PERF-UNPIVOT-1, PERF-CAST-1; FACADE-3 steps 1 and 2 merged (step 3 next). Nine product PRs merged, none parked. Every merge went
 through update-branch → checks → squash `--match-head-commit` → tree equality; every product PR had its S2-21 review.
 Fork evidence branch: `probe/silver-s0` @ `ac2d6ab8` on TRO-Wolf/iceberg-rust (no PR).
 
