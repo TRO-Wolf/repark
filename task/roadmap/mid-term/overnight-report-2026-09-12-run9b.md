@@ -30,6 +30,7 @@
 - DYNCFG-1 DQ-1..DQ-7 (write-back target, `[<profile>.autotune]` key names, writes allowed, sample definition, regression-only knobs, live session vs file, overrun semantics): premises and leans in `task/roadmap/mid-term/dyncfg-1-cards-2026-09-12.md` §2. DYNCFG-1-BED (M×2) needs no ruling and can start.
 
 - CFG-2 D-5: a profile-level (global) `auto_register` key — the release roadmap text says "per entry or global", the key's location is an unruled public name; only the per-entry key ships.
+  **Owner ruling (2026-09-13):** the step-2 public shape stands (`SourceMetadata` rows beside `CatalogMetadata`, the `NamedSource` handle with `ping()`); the global `auto_register` key is a later card, not a change to #556.
 
 ## Timeline
 
