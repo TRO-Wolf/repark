@@ -28,9 +28,11 @@ illustrative. A claim with no verified basis does not go in.
   database source, the display, session, and maintenance tables); discovery order, `REPARK_ENV`,
   `REPARK_CONFIG` with the set-but-empty disable, `${VAR}` with `$$` escaping and the loud
   refusals, the builder > profile > default chain, and the redacted dump with its `source`
-  column. States both live constraints: a non-empty `[<profile>.database]` table refuses at
-  load until CFG-2, and `[<profile>.conf]` keys apply in sorted-key order. Every block and
-  error was run in the clone. pins: cfg-1/C-030. **PROFILES-1 step 3 (2026-09-12):** adds
+  column. States both live constraints: a `[<profile>.database]` source loads and
+  registers lazily but refuses on use until its connector lands (roadmap 1.10,
+  `auto_register = false` opts out), and `[<profile>.conf]` keys apply in sorted-key
+  order. Every block and error was run in the clone. pins: cfg-1/C-030.
+  **PROFILES-1 step 3 (2026-09-12):** adds
   the measured `read` and `write` profile tables — one row per winning knob with the
   measured ratio and the cell it was measured on, the near-misses, the no-effect list,
   and the `batch_size` / `target_partitions` alias notes; values trace to the step-2

@@ -62,7 +62,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   setters + core defaults so an explicit conf wins, before the extension hook; an unknown key is
   an `Error::Config`, never silently inert — this is what makes
   `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
-  `information_schema.*` live in BOTH SQL doors), carries the **two DF-54.1 regression guards**
+  `information_schema.*` live in BOTH SQL doors), carries the parsed `SourceSpec`s from a
+  loaded `repark.toml` on `source_specs` (CFG-2 step 1 — one `Arc<SourceSpec>` per spec so
+  the registry and the per-query registry snapshot clone atomics, not deep specs;
+  `register_configured_sources` and the `sources()` / `source(name)` doors live in
+  `named_sources.rs`), carries the
+  **two DF-54.1 regression guards**
   (`session/df_guards.rs`) at two different altitudes — a config default,
   `optimizer.enable_physical_uncorrelated_scalar_subquery = false` (the 54.1 physical
   scalar-subquery path drops a top-level Sort), and, since DEFECT-2 2026-08-18, a **scoped
@@ -288,7 +293,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
 - `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
-  pre-execute refusals; today the tighten DDL-sink refuse) → `execute`. The native door
+  pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
+  which refuses `LogicalPlan::Ddl` naming a registered database source — DataFusion's
+  `drop_table`/`drop_view` swallow provider errors into "doesn't exist", and `CREATE CATALOG`
+  would silently replace the source's provider, so the guard is the seam that refuses loud)
+  → `execute`. The native door
   (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
   `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
   call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
@@ -343,6 +352,32 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `repark.toml` at `build()` (active profile name plus the resolved policy, `None` when the
   profile carries no table); a build with no config file leaves the registry unstamped, so
   existing sessions behave exactly as before.
+  **CFG-2 step 1 (2026-09-13):** the registry also carries `database_sources` — the
+  auto-registered `Arc<SourceSpec>`s keyed by source name (Arc'd so the per-query
+  `catalogs_snapshot()` clone stays keys-plus-Arcs, S2-21 P2-1) — `is_registered`, the
+  catalog-or-source claim check `register_memory_catalog` /
+  `register_iceberg_catalog` consult for the duplicate-name refusal, and
+  `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
+  the D-1 refusal for a DDL plan naming a source.
+  pins: cfg-2/C-012
+- `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
+  (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
+  `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
+  auto-registered `SourceSpec` — a `CatalogProvider`/`SchemaProvider` whose every table
+  lookup answers the D-1 `NotImplemented` message (source key path, kind, "its connector
+  arrives with roadmap 1.10 (Postgres, SQL Server, Trino)") — records the spec on the
+  registry, and opens no connection. `sources()` returns one `SourceRow` per declared
+  source (name, kind spelling, key path, `auto_register`, props redacted through
+  `redact_value`); `source(name)` returns a `NamedSource` handle whose `ping()` answers
+  the same refusal and whose unknown name refuses listing the declared sources.
+  `auto_register = false` specs list but never register, so SQL under the name answers
+  the engine's ordinary not-found. The schema provider also overrides
+  `register_table`/`deregister_table` with the same refusal, and `refuse_source_ddl`
+  (wired into `PreExecute::guard`, both doors) refuses DDL naming a registered source —
+  the only seam that can carry D-1 through DROP, since `SessionContext::drop_table`
+  discards provider errors, and the only thing stopping SQL `CREATE CATALOG` from
+  silently replacing the source's provider.
+  pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
@@ -431,7 +466,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   stay residual. Ledger: `task/r4-tz8-ledger.md`.
 - `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
   `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
-  once) + `temp_view_ref`, which every temp-view entry point resolves names through. A QUALIFIED
+  once), `build_temp_view_home` (the one `build()`-time capture, moved here from `session.rs`
+  in CFG-2 step 1 to hold `build()` under the function-length lint) + `temp_view_ref`,
+  which every temp-view entry point resolves names through. A QUALIFIED
   name refuses loud (`Error::Analysis` → facade `AnalysisException`, mirroring PySpark's class):
   `createOrReplaceTempView("ice.sales.v")` used to forward the raw name to `register_table`,
   which resolved into the Iceberg catalog provider and PERSISTED a real table — a `tightenNulls`

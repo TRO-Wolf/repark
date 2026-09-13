@@ -10,15 +10,17 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
 
 - `mod.rs` — the 46 stage pins (the seed's three, step-1 discovery/merge/interpolation,
   step-1b `$`-edge flips, step 2's catalog/database/redaction pins, the 6 step-1
-  maintenance pins) plus the shared fixtures (`stub_environment`, `write_file`,
-  `maintenance_policy_fixture`). Untouched by the split.
+  maintenance pins), CFG-2 step 1's `auto_register` non-boolean refusal, and the shared
+  fixtures (`stub_environment`, `write_file`, `maintenance_policy_fixture`). Untouched
+  by the split.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017
+  pins: cfg-2/C-002
 - `wiring.rs` — the 8 step-3 wiring pins (display/session/`conf` translation, nested-`conf`
   dot-join flattening, the builder-profile-default precedence table, the redacted
-  source-column dump, the byte-identical catalog done condition, the loud CFG-2 database
-  refusal). Tempdir fixtures with stub environments throughout, so no pin mutates the
-  process environment. **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
+  source-column dump, the byte-identical catalog done condition, the database-source
+  block that loads since CFG-2 step 1). Tempdir fixtures with stub environments
+  throughout, so no pin mutates the process environment. **MAINT-POLICY-1 step 3 (2026-09-10):** three stamp pins (file
   policy resolves with its profile name, `REPARK_ENV` names a non-default stamp with and
   without a table, the file-built session carries the stamp on its registry).
   **REVIEW-FIX-7 step 1 (2026-09-10):** `mod.rs` gains the parse-error sanitization pin
@@ -38,6 +40,7 @@ the battery passed the 1,000-line file ceiling — stage pins versus wiring pins
   that pin's body rather than a new `#[test]` fn because the round's comment
   fence matches every added `#[…]` attribute line.
   pins: cfg-1/C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: cfg-2/C-001
   pins: profiles-1/C-010
   pins: maint-policy-1/C-020
   pins: review-fix-7/C-002, C-003

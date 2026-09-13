@@ -39,7 +39,13 @@ and hand execution, SQL, and ML semantics to the engine crates.
   into `from_config_file`) and the `config_file_pairs` static exposes the translated pairs
   for the facade fold, paid for by moving `drain_arrow_c_stream` to `arrow_export.rs`.
   Baseline 1177 → 1128, a ratchet DOWN.
-  pins: cfg-1/C-026, C-027 |
+  pins: cfg-1/C-026, C-027
+  **CFG-2 step 1 (2026-09-13):** `finish_session` calls
+  `register_configured_sources()` beside `register_configured_catalogs()`, so a loaded
+  `repark.toml`'s database sources register their refusing providers at session build —
+  no Python source surface lands until step 2. The added line was made line-neutral
+  (the file sits on its exact 1128 baseline) by joining two `use` items in the test
+  block. pins: cfg-2/C-010 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
 | [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`; the internal `row_labels`/`cell_indices` kwargs bind `apply_labeled_stack` for the describe grid. pins: perf-unpivot-1/C-002, C-014 |
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.
