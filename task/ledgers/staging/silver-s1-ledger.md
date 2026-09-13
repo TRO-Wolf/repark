@@ -24,10 +24,12 @@ digest (owner question below), STATUS.md, briefs/next-sequence.md, any dependenc
 | C-004 | D-4: `canonical()` bytes are independent of key order, whitespace, comments, equivalent numeric spellings (`0.01` vs `1e-2`) and table-vs-inline layout, and change when any semantic field changes. No digest. | `permutation_whitespace_and_inline_spellings_share_canonical_bytes`, `scientific_threshold_matches_decimal_canonical_bytes`, `a_semantic_field_change_changes_canonical_bytes` | **PROVEN** | Permuted keys, extra blank lines, inline tables, and a TOML comment suffix share bytes with `crm_contacts.toml`. `1e-2` matches `0.01`. Changing `dataset_id` or trim characters changes bytes. Identity is `SilverPlanIdentity` over those bytes. |
 | C-005 | D-5: `explain()` is a stable human-readable text of identity, input, columns (ordered transforms and validators), selection, quality gates, and publication; the same plan in any spelling explains byte-identically. | `equivalent_spellings_explain_byte_identically`; golden `crm_contacts.explain.txt` | **PROVEN** | Five spellings of the §8 plan explain byte-identically and match the golden. |
 | C-006 | D-6: S-1 has no data execution, no DataFusion `Expr` lowering, no Iceberg calls, and no Python binding. | `silver_rust_sources_do_not_name_datafusion_iceberg_or_pyo3`; `lib.rs` has `pub mod silver` and no crate-root `pub use` of silver names | **PROVEN** | The pin reads `silver.rs` and `silver/{plan,policy,identity,explain,refusal}.rs` and asserts those needles are absent. |
-| C-007 | D-7: fixtures live as `.toml` files under `silver/fixtures/`; at least 6 positive and 20 negative, one negative per refusal variant. | `fixture_counts_meet_the_floor`; 23 `SilverRefusal` variants, 24 negative files (23 `.toml` plus the nested unknown-key path), 10 positive `.toml` | **PROVEN** | Count pin: 10 positive, 24 negative `.toml`. `toml_syntax.toml` is excluded from taplo because it is intentionally invalid. |
+| C-007 | D-7: fixtures live as `.toml` files under `silver/fixtures/`; at least 6 positive and 20 negative, one negative per refusal variant. | `fixture_counts_meet_the_floor`; 23 `SilverRefusal` variants; 23 negative `.toml` plus inline `TomlSyntax`; 10 positive `.toml` | **PROVEN** | Count pin: 10 positive, 23 negative `.toml` (floor 20). A-1: `toml_syntax.toml` deleted; `toml_syntax_refuses` parses inline invalid text. `.taplo.toml` matches `origin/main` byte-for-byte. |
 | C-008 | Gates: `cargo test -p repark-core silver` green; `make verify` green; parity suite green; no code comments; maps in lockstep; no dependency or STATUS.md edits. | Commands in Gates. | **PROVEN** | See Gates. |
+| C-009 | An `#[ignore]`d 50- and 500-column printer records median wall and output size for `canonical()` and `explain()` (three reps after warmup), before and after the P2-1 rewrite. | `measure_canonical_and_explain_at_50_and_500_columns` | **PROVEN** | Debug, 2026-09-12. Before: 50-col canonical 592089 ns / 6798 B, explain 676680 ns / 15249 B; 500-col canonical 5460331 ns / 63399 B, explain 6203166 ns / 146601 B. After: 50-col 413752 ns / 6798 B, explain 487221 ns / 15249 B; 500-col 3570619 ns / 63399 B, explain 4413240 ns / 146601 B. Output sizes unchanged. |
+| C-010 | Review findings: P2-1 and P2-2 fixed with evidence; P3-1 recorded. | `canonical_bytes_match_the_committed_golden`, `explain_with_identity_matches_explain`; P3 observed below | **PROVEN** | P2-1: `canonical()` writes a reserved `Vec<u8>` in sorted key order; golden 1882 B of `crm_contacts.toml` matches pre-rewrite bytes. P2-2: `explain_with_identity` takes `SilverPlanIdentity`; `explain()` builds identity once then wraps. P3-1 recorded, not fully fixed. |
 
-VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 10 clauses, 10 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Owner question (logged per D-4, not a halt)
 
@@ -67,12 +69,35 @@ error: could not compile `repark-core` (lib test) due to 5 previous errors
 
 After the types landed: `test result: ok. 31 passed; 0 failed`.
 
+Remediation (A-1 / P2): `canonical_bytes_match_the_committed_golden` was green on the AST encoder, then stayed green after the direct `Vec<u8>` rewrite. `.taplo.toml` restored from `origin/main`.
+
+## P3 observed (review P3-1, 2026-09-12)
+
+Success-path path-string allocations remain on parse. Reviewer: parse 67 allocs/column, mostly `toml`; these extras are short key paths / enum tags.
+
+| Site (post-remediation) | What still allocates on success |
+|---|---|
+| `plan.rs` `decode_enum` (696) | `toml::Value::String(text.to_string())` per closed enum |
+| `plan.rs` `index_path` (853) | `format!("{prefix}[{index}]")` per column / transform / validator |
+| `plan.rs` `check_rule_ids` (568) | `BTreeSet<String>` via `rule_id().to_string()` per id |
+| `plan.rs` `required_i32_array` | `index_path` + `integer_i32` still take an owned path on success |
+
+Two-line `join_path` move done: `required_i32` (742) and `required_f64` (766) now call `join_path` only in the error arm.
+
+## Findings table (C-010)
+
+| ID | Disposition | Evidence |
+|---|---|---|
+| P2-1 | fixed | Direct `Vec<u8>` encoder; golden pin; C-009 sizes identical |
+| P2-2 | fixed | `explain_with_identity`; `explain()` is a thin wrapper; map.md notes later slices call canonical once |
+| P3-1 | recorded | Table above; `required_i32` / `required_f64` join_path moved to error arms |
+
 ## Gates
 
 | Command | Result |
 |---|---|
-| `cargo test -p repark-core silver` | 31 passed; 0 failed |
-| `make verify` | exit 0 (clippy workspace `-D warnings`, panic-ban, rust-test workspace, lib-rs 10 roots, rust-file-size 484 files, ledger-grammar 117 live ledgers / 743 clauses) |
+| `cargo test -p repark-core silver` | 33 passed; 0 failed; 1 ignored (C-009 printer) |
+| `make verify` | exit 0 (clippy workspace `-D warnings`, panic-ban, rust-test workspace, lib-rs 10 roots, rust-file-size 485 files) |
 | parity `pytest python/repark-parity/tests -q` | 749 passed, 1 skipped, 12 xfailed |
 | comment fence `git diff --cached … grep` | no hits |
 
@@ -113,7 +138,7 @@ COVERAGE_ATTESTATION:
       justification: No Spark-visible surface and no STATUS.md mention.
     - id: AT-10
       status: ATTACKED
-      evidence: Eight clauses cited from crates/repark-core/src/silver/map.md.
+      evidence: Ten clauses cited from crates/repark-core/src/silver/map.md.
       artifacts: [crates/repark-core/src/silver/map.md]
   complete: true
 ```

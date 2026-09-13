@@ -8,7 +8,6 @@ Negative SilverPlan TOML fixtures: one file per `SilverRefusal` variant. See [..
 
 | File | Variant |
 |---|---|
-| `toml_syntax.toml` | `TomlSyntax` |
 | `unknown_key.toml` | `UnknownKey` at the document root |
 | `unknown_column_key.toml` | `UnknownKey` at `columns[0].nonesuch` |
 | `unknown_transform_kind.toml` | `UnknownKind` at `columns[0].transforms[0].kind` |
@@ -34,7 +33,7 @@ Negative SilverPlan TOML fixtures: one file per `SilverRefusal` variant. See [..
 | `invalid_parameter_type.toml` | `InvalidParameter` |
 
 `unknown_column_key.toml` is a second `UnknownKey` path pin, not a new variant.
-`toml_syntax.toml` is intentionally invalid TOML; `.taplo.toml` excludes it from format/lint.
+`TomlSyntax` is pinned in `tests/parse.rs` with inline invalid text so taplo never sees a `.toml` file.
 
 pins: silver-s1/C-001, C-002, C-003, C-007
 

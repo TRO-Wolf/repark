@@ -18,8 +18,9 @@ Positive SilverPlan TOML fixtures for SILVER-S1. See [../map.md](../map.md).
 - `allowed_values.toml` — `check_allowed_values`.
 - `quality_zero_threshold.toml` — `threshold = 0.0`, `on_empty = fail`.
 - `crm_contacts.explain.txt` — golden `explain()` text for `crm_contacts.toml`.
+- `crm_contacts.canonical.txt` — golden `canonical()` bytes recorded before the P2-1 rewrite.
 
-pins: silver-s1/C-002, C-004, C-005, C-007
+pins: silver-s1/C-002, C-004, C-005, C-007, C-010
 
 ## Pointers
 

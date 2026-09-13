@@ -1,4 +1,17 @@
+use std::path::PathBuf;
+
 use super::{parse_fixture, read_fixture};
+
+#[test]
+fn canonical_bytes_match_the_committed_golden() {
+    let plan = parse_fixture("positive/crm_contacts.toml").expect("base");
+    let golden = std::fs::read(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("src/silver/fixtures/positive/crm_contacts.canonical.txt"),
+    )
+    .expect("canonical golden");
+    assert_eq!(plan.canonical(), golden);
+}
 
 #[test]
 fn permutation_whitespace_and_inline_spellings_share_canonical_bytes() {
@@ -44,6 +57,13 @@ fn a_semantic_field_change_changes_canonical_bytes() {
         read_fixture("positive/crm_contacts.toml").replace("\"U+0020\"", "\"U+0009\"");
     let trim_changed = crate::silver::SilverPlan::parse(&trim_mutated).expect("trim mutated");
     assert_ne!(base.canonical(), trim_changed.canonical());
+}
+
+#[test]
+fn explain_with_identity_matches_explain() {
+    let plan = parse_fixture("positive/crm_contacts.toml").expect("base");
+    let identity = plan.identity();
+    assert_eq!(plan.explain(), plan.explain_with_identity(&identity));
 }
 
 #[test]

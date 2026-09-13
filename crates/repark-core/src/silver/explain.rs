@@ -8,9 +8,16 @@ use super::policy::{
 };
 
 pub(crate) fn explain_plan(plan: &SilverPlan) -> String {
+    let identity = plan.identity();
+    explain_with_identity(plan, &identity)
+}
+
+pub(crate) fn explain_with_identity(
+    plan: &SilverPlan,
+    identity: &super::SilverPlanIdentity,
+) -> String {
     let mut out = String::new();
-    let canonical = plan.canonical();
-    let canonical_text = std::str::from_utf8(&canonical).unwrap_or("invalid-utf8");
+    let canonical_text = std::str::from_utf8(identity.canonical()).unwrap_or("invalid-utf8");
     write_line(&mut out, format_args!("silver_plan"));
     write_line(&mut out, format_args!("canonical={canonical_text}"));
     write_line(

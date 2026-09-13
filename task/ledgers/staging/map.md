@@ -10,7 +10,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   — TOML parse with key-path refusals, closed operation enums, parse-time structural
   validation, canonical identity bytes, deterministic `explain()`. No data execution.
   `risk_tier: standard`. Branch `feat/silver-s1`.
-  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
   **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
   `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent

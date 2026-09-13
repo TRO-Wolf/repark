@@ -3,11 +3,7 @@
 # reordered (Cargo.toml section order is meaningful and hand-arranged).
 
 include = ["**/*.toml"]
-exclude = [
-  "target/**",
-  ".venv/**",
-  "crates/repark-core/src/silver/fixtures/negative/toml_syntax.toml",
-]
+exclude = ["target/**", ".venv/**"]
 
 [formatting]
 align_entries = false

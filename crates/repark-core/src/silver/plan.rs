@@ -82,6 +82,11 @@ impl SilverPlan {
     }
 
     #[must_use]
+    pub fn explain_with_identity(&self, identity: &SilverPlanIdentity) -> String {
+        explain::explain_with_identity(self, identity)
+    }
+
+    #[must_use]
     pub fn identity(&self) -> SilverPlanIdentity {
         SilverPlanIdentity::from_bytes(self.canonical())
     }
@@ -735,7 +740,17 @@ fn required_bool(path: &str, table: &toml::Table, key: &str) -> Result<bool, Sil
 }
 
 fn required_i32(path: &str, table: &toml::Table, key: &str) -> Result<i32, SilverRefusal> {
-    integer_i32(&join_path(path, key), required_value(path, table, key)?)
+    let value = required_value(path, table, key)?;
+    let Some(integer) = value.as_integer() else {
+        return Err(SilverRefusal::InvalidParameter {
+            path: join_path(path, key),
+            message: "expected integer".to_string(),
+        });
+    };
+    i32::try_from(integer).map_err(|_| SilverRefusal::InvalidParameter {
+        path: join_path(path, key),
+        message: format!("{integer} does not fit i32"),
+    })
 }
 
 fn required_i64(path: &str, table: &toml::Table, key: &str) -> Result<i64, SilverRefusal> {
@@ -749,13 +764,12 @@ fn required_i64(path: &str, table: &toml::Table, key: &str) -> Result<i64, Silve
 }
 
 fn required_f64(path: &str, table: &toml::Table, key: &str) -> Result<f64, SilverRefusal> {
-    let value_path = join_path(path, key);
     match required_value(path, table, key)? {
         toml::Value::Float(float) => Ok(*float),
         toml::Value::Integer(0) => Ok(0.0),
         toml::Value::Integer(1) => Ok(1.0),
         _ => Err(SilverRefusal::InvalidParameter {
-            path: value_path,
+            path: join_path(path, key),
             message: "expected number".to_string(),
         }),
     }

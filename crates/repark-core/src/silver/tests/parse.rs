@@ -63,7 +63,8 @@ fn missing_dataset_id_names_the_field() {
 
 #[test]
 fn toml_syntax_refuses() {
-    let error = refuse("negative/toml_syntax.toml");
+    let error = crate::silver::SilverPlan::parse("this is { not valid toml")
+        .expect_err("invalid TOML must refuse");
     assert!(
         matches!(error, SilverRefusal::TomlSyntax { .. }),
         "{error:?}"

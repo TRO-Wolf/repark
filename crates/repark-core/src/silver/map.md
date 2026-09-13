@@ -16,7 +16,7 @@ D-3 requires selection keys and order fields to be mapped source ids, so the pos
 `crm_contacts` fixture maps 91 as `source_version`. Bronze record id 90 stays on
 `input_contract` and is not a silver column.
 
-pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 
 ## Contents
 
@@ -25,8 +25,11 @@ pins: silver-s1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   validation.
 - `policy.rs` — closed enums: transforms, validators, quality, selection, publication, target
   types, input contract.
-- `identity.rs` — `canonical()` bytes and `SilverPlanIdentity`.
-- `explain.rs` — `explain()` stable text.
+- `identity.rs` — `canonical()` bytes written directly into a reserved `Vec<u8>` (no
+  intermediate tree). `SilverPlanIdentity` holds those bytes.
+- `explain.rs` — `explain()` stable text. `explain_with_identity` takes already-built
+  canonical bytes so later slices walk the plan once: call `canonical()` / `identity()`,
+  then `explain_with_identity`. `explain()` is a thin wrapper that builds identity first.
 - `refusal.rs` — `SilverRefusal` variants with Display paths.
 - [fixtures/](fixtures/map.md) — positive and negative TOML.
 - [tests/](tests/map.md) — contract pins.
