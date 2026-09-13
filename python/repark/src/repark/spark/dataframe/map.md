@@ -505,6 +505,10 @@ swept the orphans by prefix, so repeated calls accumulated full result sets.
 - **D-5.** No plan-equivalence caching: two `eager()` calls on the same lazy
   source evaluate twice, so source changes and nondeterminism stay observable;
   each result is an independent snapshot.
+- **`eager()` on a cache-backed derived frame.** `derived.eager()` keeps the
+  parent's handle alongside its own new one, so the parent snapshot lives until
+  the rematerialized child dies — bounded, conservative retention, accepted
+  (review L-004).
 - **The cosmetic-warning move.** `_warn_storage_level_cosmetic_once` moved from
   `core.py` to `cache_handle.py` verbatim and is re-imported by `core` — with
   `core.py` at its exact ceiling the ownership wiring had to be a net minus,

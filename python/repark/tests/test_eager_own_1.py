@@ -11,6 +11,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import IllegalArgumentException
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark._temp_views import local_view_name
 
 _TWO_ROW_SQL = "SELECT 1 AS id, 'x' AS label UNION ALL SELECT 2, 'y'"
@@ -206,6 +207,82 @@ def test_survivors_keep_the_registration_until_the_last_dies(
     assert _cache_view_names(spark) == []
 
 
+def _arrow_passthrough(batches: Iterator[Any]) -> Iterator[Any]:
+    """Yield each incoming Arrow record batch unchanged."""
+    yield from batches
+
+
+def _build_holder_child(frame: Any, kind: str, spark: ReparkSession) -> Any:
+    """Build a D-2 derived child of ``kind`` over an eager ``frame``."""
+    if kind == "withColumn":
+        return frame.withColumn("extra", F.col("id") + 1)
+    if kind == "withColumns":
+        return frame.withColumns({"extra": F.col("id") + 1})
+    if kind == "limit":
+        return frame.limit(1)
+    if kind == "offset":
+        return frame.offset(1)
+    if kind in ("orderBy", "sort"):
+        return getattr(frame, kind)("id")
+    if kind == "groupBy.agg":
+        return frame.groupBy().agg(F.count("*").alias("n"))
+    if kind == "distinct":
+        return frame.distinct()
+    if kind == "drop":
+        return frame.drop("label")
+    if kind == "sample":
+        return frame.sample(False, 1.0, seed=1)
+    if kind == "intersect":
+        return frame.intersect(spark.sql("SELECT 1 AS id, 'x' AS label"))
+    if kind == "subtract":
+        return frame.subtract(spark.sql("SELECT 1 AS id, 'x' AS label"))
+    if kind == "crossJoin":
+        return frame.crossJoin(spark.sql("SELECT 9 AS rid"))
+    if kind == "mapInArrow":
+        return frame.mapInArrow(_arrow_passthrough, "id BIGINT, label STRING")
+    raise AssertionError(f"unknown holder kind {kind}")
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "withColumn",
+        "withColumns",
+        "limit",
+        "offset",
+        "orderBy",
+        "sort",
+        "groupBy.agg",
+        "distinct",
+        "drop",
+        "sample",
+        "intersect",
+        "subtract",
+        "crossJoin",
+        "mapInArrow",
+    ],
+)
+def test_every_derived_holder_kind_keeps_the_registration(spark: ReparkSession, kind: str) -> None:
+    """C-005 (L-001): every D-2 holder kind keeps the view until the child dies."""
+    eager = spark.sql(_TWO_ROW_SQL).eager()
+    view = local_view_name(eager._cache_view)
+    owner_handle = eager._cache_view_owned_handle
+    child = _build_holder_child(eager, kind, spark)
+    assert owner_handle in child._handles
+    expected = child.to_arrow()
+    del eager, owner_handle
+    gc.collect()
+    assert view in spark.list_temp_view_names()
+    after = child.to_arrow()
+    assert after.schema == expected.schema
+    assert sorted(tuple(sorted(row.items())) for row in after.to_pylist()) == sorted(
+        tuple(sorted(row.items())) for row in expected.to_pylist()
+    )
+    del child
+    gc.collect()
+    assert view not in spark.list_temp_view_names()
+
+
 def test_unpersist_and_clear_cache_are_idempotent(spark: ReparkSession) -> None:
     """C-006: double unpersist and double clearCache both no-op cleanly."""
     eager = spark.sql(_TWO_ROW_SQL).eager()
@@ -249,10 +326,23 @@ def test_finalizer_never_calls_a_stopped_session(spark: ReparkSession) -> None:
     assert spy.drop_calls == [probe_view]
 
     held = lazy.eager()
+    assert held._cache_view_owned_handle._finalizer.atexit is False
     spark.stop()
     del lazy, held
     gc.collect()
     assert spy.drop_calls == [probe_view]
+
+
+def test_release_twice_drops_once(spark: ReparkSession) -> None:
+    """C-006 (L-005): a second explicit release() makes no drop_temp_view call."""
+    eager = spark.sql(_TWO_ROW_SQL).eager()
+    handle = eager._cache_view_owned_handle
+    eager.unpersist()
+    spy = _DropViewSpy(handle._session)
+    handle._session = spy
+    handle.release()
+    assert spy.drop_calls == []
+    assert handle.released
 
 
 def test_max_bytes_refusal_leaves_no_registration_or_handle(

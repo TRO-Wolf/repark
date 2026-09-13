@@ -82,7 +82,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   snapshot keeps old data; C-010 `to_arrow` / `to_pandas` / `to_polars` / `collect`
   exports read unchanged after the registration dies, and a `cache()`d view dies with
   its last holder (D-3). Step 2 trimmed the module docstring to one line — the `pins:`
-  citation lives here.
+  citation lives here. Review round: `test_every_derived_holder_kind_keeps_the_registration`
+  (L-001, parametrized over withColumn/withColumns/limit/offset/orderBy/sort/
+  groupBy-agg/distinct/drop/sample/intersect/subtract/crossJoin/mapInArrow —
+  each asserts the owner's handle in `child._handles`, the view listed after the
+  owner dies, unchanged values + Arrow schema, and zero registrations after the
+  child dies), `test_finalizer_never_calls_a_stopped_session` extended with the
+  `_finalizer.atexit is False` assert (L-002), and `test_release_twice_drops_once`
+  (L-005, spy proves a second `release()` makes no `drop_temp_view` call).
   pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   REVIEW-FIX-4 (2026-09-10): the eager frame's checkpoint paths. `lazy()` on a
   checkpointed eager frame answers a shape-less copy over the same inner plan
