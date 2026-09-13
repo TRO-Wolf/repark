@@ -1522,6 +1522,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   AST walk of the named Group-2 methods on `column.py`; f-string / concat / `format` /
   `join` of display/SQL/join text is refused (refusals and raises are allowed).
   pins: facade-2/C-009, C-010, C-012
+- `test_facade_3_create_dataframe_goldens.py` + `facade_3_create_dataframe_goldens.json`
+  — **FACADE-3 step 1 (2026-09-13):** byte-identical `schema.simpleString()` /
+  field-nullability / `repr(collect())` goldens plus refusal class+message for every
+  `createDataFrame` dispatch shape (156 cases: tuples, `Row`, dicts, nested,
+  decimals, timestamps with and without tz, dates, bytes, maps, arrays, structs,
+  explicit DDL / `StructType` / name-list / bare-DataType schemas, `verifySchema`
+  refusals, empty inputs, pandas and polars controls), recorded from main. Record
+  mode is `REPARK_FACADE_3_RECORD_GOLDENS=1` and is refused when `CI` or
+  `GITHUB_ACTIONS` is set. The same file carries the D-3 pickle round-trip pin on
+  collected `Row` objects and frame schemas. The same corpus and the release
+  baseline drive the step-2 target list.
+  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
