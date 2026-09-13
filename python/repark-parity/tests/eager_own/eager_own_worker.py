@@ -6,6 +6,7 @@ import argparse
 import gc
 import json
 import os
+import resource
 import sys
 import time
 from pathlib import Path
@@ -24,6 +25,11 @@ def read_status_bytes(field: str) -> int:
         if line.startswith(f"{field}:"):
             return int(line.split()[1]) * 1024
     raise OSError(f"/proc/self/status has no {field} line")
+
+
+def read_major_faults() -> int:
+    """The process's cumulative major page faults (``ru_majflt``)."""
+    return resource.getrusage(resource.RUSAGE_SELF).ru_majflt
 
 
 def read_mem_total_bytes() -> int | None:
@@ -129,37 +135,78 @@ def snapshot(session: Any) -> dict[str, Any]:
     }
 
 
-def measure(session: Any, frame: Any, iterations: int) -> dict[str, Any]:
-    """Run ``iterations`` bare ``frame.eager()`` calls (results not assigned)."""
+def flush_partial(partial_path: Path, record: dict[str, Any]) -> None:
+    """Append one per-iteration JSON line to the partial file and fsync it."""
+    with partial_path.open("a", encoding="utf-8") as partial:
+        partial.write(json.dumps(record) + "\n")
+        partial.flush()
+        os.fsync(partial.fileno())
+
+
+def measure(
+    session: Any, frame: Any, iterations: int, retain: bool, partial_path: Path
+) -> dict[str, Any]:
+    """Run ``iterations`` ``frame.eager()`` calls; retained results append to a list."""
     records: list[dict[str, Any]] = []
+    results: list[Any] = []
+    partial_path.write_text("", encoding="utf-8")
     for iteration in range(iterations):
         gc.collect()
+        major_faults_before = read_major_faults()
         started = time.perf_counter()
-        frame.eager()
+        if retain:
+            results.append(frame.eager())
+        else:
+            frame.eager()
         seconds = time.perf_counter() - started
+        major_faults_after = read_major_faults()
         after_call = snapshot(session)
         gc.collect()
-        records.append(
-            {
-                "iteration": iteration,
-                "seconds": seconds,
-                "registrations_after_call": after_call["registrations"],
-                "temp_view_registrations_after_call": after_call["temp_view_registrations"],
-                "rss_after_call_bytes": after_call["rss_bytes"],
-                "rss_after_gc_bytes": read_status_bytes("VmRSS"),
-                "peak_rss_bytes": after_call["peak_rss_bytes"],
-            }
-        )
+        record = {
+            "iteration": iteration,
+            "seconds": seconds,
+            "registrations_after_call": after_call["registrations"],
+            "temp_view_registrations_after_call": after_call["temp_view_registrations"],
+            "rss_after_call_bytes": after_call["rss_bytes"],
+            "rss_after_gc_bytes": read_status_bytes("VmRSS"),
+            "peak_rss_bytes": after_call["peak_rss_bytes"],
+            "major_faults_before_call": major_faults_before,
+            "major_faults_after_call": major_faults_after,
+            "major_faults_delta": major_faults_after - major_faults_before,
+        }
+        records.append(record)
+        flush_partial(partial_path, record)
     post_loop = snapshot(session)
+    results.clear()
     gc.collect()
     post_gc = snapshot(session)
     session.catalog.clearCache()
     post_clear_cache = snapshot(session)
     return {
+        "retain": retain,
         "iterations": records,
         "post_loop": post_loop,
         "post_gc": post_gc,
         "post_clear_cache": post_clear_cache,
+    }
+
+
+def retained_probe(frame: Any) -> dict[str, Any]:
+    """``Table.nbytes`` vs the distinct-``buffer.address`` byte sum of one retained eager result."""
+    result = frame.eager()
+    table = result.toArrow()
+    distinct: dict[int, int] = {}
+    for column in table.columns:
+        for chunk in column.chunks:
+            for buffer in chunk.buffers():
+                if buffer is not None:
+                    distinct.setdefault(buffer.address, buffer.size)
+    distinct_bytes = sum(distinct.values())
+    return {
+        "table_nbytes": table.nbytes,
+        "distinct_buffer_bytes": distinct_bytes,
+        "distinct_buffer_count": len(distinct),
+        "distinct_over_nbytes": (distinct_bytes / table.nbytes) if table.nbytes else None,
     }
 
 
@@ -176,7 +223,7 @@ def environment() -> dict[str, Any]:
 
 
 def run(args: argparse.Namespace) -> int:
-    """Build the fixture, run the bare-eager loop, and write the JSON payload."""
+    """Build the fixture, run the eager loop, and write the JSON payload."""
     from repark import ReparkSession
 
     session = ReparkSession.builder.appName("eager-own-1-step0").getOrCreate()
@@ -184,8 +231,15 @@ def run(args: argparse.Namespace) -> int:
         source = build_source_frame(session, args.rows)
         frame = build_ta_frame(source)
         total_columns = len(frame.columns)
+        probe = retained_probe(frame) if args.retained_probe else None
         started = time.perf_counter()
-        outcome = measure(session, frame, args.iterations)
+        outcome = measure(
+            session,
+            frame,
+            args.iterations,
+            args.retain,
+            Path(str(args.json_out) + ".partial"),
+        )
         total_seconds = time.perf_counter() - started
     finally:
         session.stop()
@@ -201,6 +255,8 @@ def run(args: argparse.Namespace) -> int:
         "total_seconds": total_seconds,
         **outcome,
     }
+    if probe is not None:
+        payload["retained_probe"] = probe
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return 0
@@ -212,6 +268,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rows", type=int, required=True)
     parser.add_argument("--iterations", type=int, required=True)
     parser.add_argument("--json-out", type=Path, required=True)
+    parser.add_argument(
+        "--retain",
+        action="store_true",
+        help="append each eager() result to a list (the retained pressure case)",
+    )
+    parser.add_argument(
+        "--retained-probe",
+        action="store_true",
+        help="probe one retained eager result: Table.nbytes vs distinct buffer.address sum",
+    )
     return parser.parse_args(argv)
 
 

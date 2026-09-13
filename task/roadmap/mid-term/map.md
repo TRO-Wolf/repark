@@ -6,6 +6,14 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [eager-budget-1-card-2026-09-13.md](eager-budget-1-card-2026-09-13.md) — **card EAGER-BUDGET-1
+  (2026-09-13, run 11 §7; worked by run 12b):** a session cache budget and retained-bytes
+  accounting — `repark.cache.max_total_bytes` refuses (never evicts, Q-E2) when a
+  materialization would push the sum of distinct Arrow buffers across live
+  `__repark_cache_*` MemTables past the budget (D-1/D-2), admission checked incrementally
+  per batch before the next pull (D-3), `repark.cache.max_bytes` unchanged in meaning (D-4),
+  no spill (D-5), no registration or handle after a refusal or collection failure (D-6);
+  step 0 measures the 30-iteration loop under 2/4/8 GiB cgroup caps, base vs main.
 - [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1
   (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted
   handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing
