@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow::array::{
     ArrayRef, BinaryArray, BooleanArray, Date32Array, Decimal128Array, FixedSizeListArray,
-    Float64Array, Int64Array, ListArray, MapArray, StringArray, StructArray,
+    Float64Array, Int64Array, ListArray, MapArray, StringBuilder, StructArray,
     TimestampMicrosecondArray, TimestampMillisecondArray, TimestampNanosecondArray,
     TimestampSecondArray,
 };
@@ -82,7 +82,7 @@ fn struct_child_cell<'c, 'py>(
         CellKind::Dict(pairs) => {
             for (key, value) in pairs {
                 if let CellKind::Str(key_name) = &key.kind
-                    && key_name == name
+                    && key_name.as_str() == name
                 {
                     return Ok(Some(value));
                 }
@@ -110,7 +110,7 @@ fn build_struct<'py>(
     depth: u32,
 ) -> Result<ArrayRef, Cdf> {
     let fill = Cell {
-        obj: cx.decimal_type.clone().into_any(),
+        obj: None,
         kind: CellKind::Fill,
     };
     let mut children: Vec<ArrayRef> = Vec::with_capacity(fields.len());
@@ -181,7 +181,7 @@ fn build_fixed_list<'py>(
 ) -> Result<ArrayRef, Cdf> {
     let width = usize::try_from(size).map_err(|_| Cdf::Fallback)?;
     let fill = Cell {
-        obj: cx.decimal_type.clone().into_any(),
+        obj: None,
         kind: CellKind::Fill,
     };
     let mut slots = Vec::new();
@@ -340,18 +340,23 @@ fn build_float64(col: &[Slot<'_, '_>]) -> Result<ArrayRef, Cdf> {
 }
 
 fn build_utf8(col: &[Slot<'_, '_>]) -> Result<ArrayRef, Cdf> {
-    let mut values: Vec<Option<String>> = Vec::with_capacity(col.len());
+    let mut builder = StringBuilder::new();
     for slot in col {
-        values.push(match slot_cell(*slot) {
-            None => None,
-            Some(cell) => Some(match &cell.kind {
-                CellKind::Str(value) => value.clone(),
-                CellKind::Fill => String::new(),
-                _ => py_str(&cell.obj)?,
-            }),
-        });
+        match slot_cell(*slot) {
+            None => builder.append_null(),
+            Some(cell) => match &cell.kind {
+                CellKind::Str(value) => builder.append_value(value.as_str()),
+                CellKind::Fill => builder.append_value(""),
+                _ => {
+                    let Some(obj) = &cell.obj else {
+                        return Err(Cdf::Fallback);
+                    };
+                    builder.append_value(py_str(obj)?.as_str());
+                }
+            },
+        }
     }
-    Ok(Arc::new(StringArray::from(values)))
+    Ok(Arc::new(builder.finish()))
 }
 
 fn build_binary(col: &[Slot<'_, '_>]) -> Result<ArrayRef, Cdf> {

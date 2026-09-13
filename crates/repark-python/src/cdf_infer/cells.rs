@@ -1,5 +1,6 @@
 use pyo3::Bound;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 use pyo3::types::{
     PyBool, PyByteArray, PyBytes, PyDate, PyDateTime, PyDelta, PyDict, PyFloat, PyInt, PyList,
     PyMemoryView, PyString, PyTime, PyTuple, PyType,
@@ -44,7 +45,7 @@ pub(crate) enum CellKind<'py> {
     Bool(bool),
     Int(i64),
     Float(f64),
-    Str(String),
+    Str(PyBackedStr),
     Bin(Vec<u8>),
     Date(i32),
     Dt {
@@ -65,7 +66,7 @@ pub(crate) enum CellKind<'py> {
 }
 
 pub(crate) struct Cell<'py> {
-    pub obj: Bound<'py, PyAny>,
+    pub obj: Option<Bound<'py, PyAny>>,
     pub kind: CellKind<'py>,
 }
 
@@ -85,9 +86,9 @@ fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
     era * 146_097 + doe - 719_468
 }
 
-pub(crate) fn py_str(obj: &Bound<'_, PyAny>) -> Result<String, Cdf> {
+pub(crate) fn py_str(obj: &Bound<'_, PyAny>) -> Result<PyBackedStr, Cdf> {
     let rendered = obj.str()?;
-    Ok(rendered.to_str()?.to_owned())
+    Ok(rendered.try_into()?)
 }
 
 fn extract_decimal<'py>(obj: &Bound<'py, PyAny>, cx: &Ctx<'py>) -> Result<CellKind<'py>, Cdf> {
@@ -185,7 +186,11 @@ pub(crate) fn extract_cell<'py>(
     }
     let kind = classify(obj, cx, depth)?;
     Ok(Cell {
-        obj: obj.clone(),
+        obj: if matches!(kind, CellKind::Str(_) | CellKind::Null) {
+            None
+        } else {
+            Some(obj.clone())
+        },
         kind,
     })
 }
@@ -209,7 +214,7 @@ fn classify<'py>(obj: &Bound<'py, PyAny>, cx: &Ctx<'py>, depth: u32) -> Result<C
         return Ok(CellKind::Float(value));
     }
     if obj.is_instance_of::<PyString>() {
-        return Ok(CellKind::Str(obj.extract::<String>()?));
+        return Ok(CellKind::Str(obj.extract::<PyBackedStr>()?));
     }
     if let Ok(value) = obj.cast::<PyBytes>() {
         return Ok(CellKind::Bin(value.as_bytes().to_vec()));

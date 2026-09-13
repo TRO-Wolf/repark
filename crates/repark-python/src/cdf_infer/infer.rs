@@ -249,13 +249,13 @@ fn dict_pairs_is_sparse(pairs: &[(Cell<'_>, Cell<'_>)]) -> bool {
     let mut values = false;
     for (key, value) in pairs {
         match &key.kind {
-            CellKind::Str(name) if name == "size" => {
+            CellKind::Str(name) if name.as_str() == "size" => {
                 size = matches!(value.kind, CellKind::Int(_));
             }
-            CellKind::Str(name) if name == "indices" => {
+            CellKind::Str(name) if name.as_str() == "indices" => {
                 indices = matches!(value.kind, CellKind::List(_) | CellKind::Tup(_));
             }
-            CellKind::Str(name) if name == "values" => {
+            CellKind::Str(name) if name.as_str() == "values" => {
                 values = matches!(value.kind, CellKind::List(_) | CellKind::Tup(_));
             }
             _ => {}
