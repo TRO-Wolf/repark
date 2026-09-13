@@ -20,12 +20,10 @@ import repark.spark.session.create_dataframe_columns as columns_module
 from repark import ReparkSession
 from repark.spark.row import Row
 from repark.spark.types import (
-    ArrayType,
     BooleanType,
     DateType,
     DecimalType,
     DoubleType,
-    IntegerType,
     LongType,
     StringType,
     StructField,
@@ -84,9 +82,7 @@ def _recording_rust_path(
     return calls
 
 
-def test_rust_path_takes_tuples_ddl(
-    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rust_path_takes_tuples_ddl(spark: ReparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
     """The explicit-schema DDL tuple shape dispatches into the Rust builder."""
     calls = _recording_rust_path(monkeypatch)
     frame = spark.createDataFrame(
@@ -118,9 +114,7 @@ def test_rust_path_takes_tuples_structtype(
     assert frame.count() == 50
 
 
-def test_rust_path_takes_nested(
-    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rust_path_takes_nested(spark: ReparkSession, monkeypatch: pytest.MonkeyPatch) -> None:
     """The nested shape (list / dict / tuple cells) dispatches into the Rust builder."""
     calls = _recording_rust_path(monkeypatch)
     data = [(index, [index, index + 1], {"k": index}, (index, f"n{index}")) for index in range(40)]

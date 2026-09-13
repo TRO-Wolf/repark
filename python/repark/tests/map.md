@@ -1545,6 +1545,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   helpers (`lit`, `_lit_numpy_ndarray`, `_scalar`, `pi`, `uuid`), and an AST pin
   asserts `F.expr` is the sole `_native.PyColumn.sql` caller left.
   pins: facade-2/C-009, C-010, C-012, C-014, C-016
+  baseline drive the step-2 target list. **Step 2 (2026-09-13):** the corpus is
+  byte-identical to `main` and green on the Rust path; the step-2 pin batch
+  (goldens + dispatch + `test_create_dataframe_materialize.py` +
+  `test_perf_facade_cdf_1.py` + `test_csv_infer_perf_1.py`, all unedited) and the
+  whole `python/repark/tests` suite (5,972 passed) gate the move.
+  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
 - `test_facade_3_cdf_dispatch.py` — **FACADE-3 step 2 (2026-09-13):** dispatch pin
   for the Rust createDataFrame path. `_rust_cdf_arrow_table` must exist in
   `create_dataframe_columns` and must be invoked for plain tuples, nested cells,

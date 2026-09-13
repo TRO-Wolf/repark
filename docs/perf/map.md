@@ -348,6 +348,12 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   on every path, pandas included. Runnable method beside it in
   [facade-3-cdf-baseline-2026-09-13/map.md](facade-3-cdf-baseline-2026-09-13/map.md).
   pins: facade-3/C-001, C-007
+- [facade-3-cdf-step2-2026-09-13.md](facade-3-cdf-step2-2026-09-13.md) — FACADE-3
+  step-2 release re-measure vs the step-1 table: every targeted shape faster
+  (nested −92.7 %, explicit-schema pair −78 %, rows/dicts/tuples −25…−41 %);
+  pandas control +2.8 % inside the 5 % band; the polars control is unmeasurable
+  under the 8 GiB cap (jemalloc ≈7.7 GiB + session ≈5.5 GiB of address space) —
+  recorded as a finding, cap not raised. pins: facade-3/C-011
 
 ## Pointers
 

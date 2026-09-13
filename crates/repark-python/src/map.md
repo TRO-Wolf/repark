@@ -92,7 +92,8 @@ and hand execution, SQL, and ML semantics to the engine crates.
   envelope mirrors `_validate_decimal_envelope` (precision ceiling, scale-18 truncation only
   when discarded digits are zero). Null struct parents write each child's type default
   (`CellKind::Fill`: 0, `""`, epoch, empty list/map, recursive defaults) rather than a child
-  null, matching `pa.array` fill so pandas NaN-coercion parity holds. pins: facade-3/C-010 |
+  null, matching `pa.array` fill so pandas NaN-coercion parity holds.
+  pins: facade-3/C-010, C-013 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
