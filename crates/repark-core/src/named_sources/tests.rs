@@ -41,6 +41,28 @@ async fn configured_source_select_refuses_with_connector_message() {
     assert!(!message.contains("does not exist"), "{message}");
 }
 
+#[tokio::test]
+async fn configured_source_create_table_refuses_with_connector_message() {
+    let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);
+    session
+        .register_configured_sources()
+        .expect("source registration");
+    for sql in [
+        "CREATE TABLE company_db.public.t (a INT)",
+        "DROP TABLE company_db.public.t",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .expect_err("a write shape under a source name must refuse");
+        let message = error.to_string();
+        assert!(message.contains("company_db"), "{sql}: {message}");
+        assert!(message.contains("postgres"), "{sql}: {message}");
+        assert!(message.contains("1.10"), "{sql}: {message}");
+        assert!(!message.contains("not found"), "{sql}: {message}");
+    }
+}
+
 #[test]
 fn source_registration_opens_no_connection() {
     let (_directory, session) = session_with_source(UNROUTABLE_SOURCE);

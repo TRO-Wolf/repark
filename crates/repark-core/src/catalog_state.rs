@@ -174,6 +174,10 @@ impl CatalogRegistry {
         self.entries.contains_key(name) || self.database_sources.contains_key(name)
     }
 
+    pub(crate) fn database_source(&self, name: &str) -> Option<&SourceSpec> {
+        self.database_sources.get(name)
+    }
+
     /// The [`LocationPolicy`] registered under `name`, if any.
     #[must_use]
     pub fn location_policy(&self, name: &str) -> Option<LocationPolicy> {

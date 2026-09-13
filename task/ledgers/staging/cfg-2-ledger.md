@@ -31,9 +31,10 @@ sources (D-3: sources come only from the TOML file), the connectors themselves
 | C-005 | `source(name).ping()` returns the D-1 refusal (source path, kind, `1.10`) until connectors land (D-6). | `source_ping_refuses_until_connector` | **PROVEN** | Compile red first (below): `session.source` absent on base (E0599). Green in the same `named_sources` run — `ping()` answers `Error::NotImplemented` carrying `company_db`, `postgres`, `1.10`. |
 | C-006 | `sources()` returns one row per declared source — name, kind spelling, profile path, `auto_register`, properties redacted through `redact_value` (a `password` prop is masked). | `sources_listing_names_kind_profile_and_redacts_secrets` | **PROVEN** | Compile red first (below): `session.sources` absent on base (E0599). Green in the same `named_sources` run — the row asserts `name`/`kind`/`key_path`/`auto_register`, `host` verbatim, `password` masked `***` through `config_file::redact::redact_value`. |
 | C-007 | `auto_register = false` lists the source but does not register its name: SQL under the name gets the engine's normal not-found error, not the connector refusal. | `auto_register_false_lists_but_does_not_register` | **PROVEN** | Compile red first (below). Green in the same `named_sources` run — `sources()` lists the row with `auto_register == false`, and `SELECT * FROM company_db.public.t` answers an error naming `company_db` that does NOT contain `1.10` (the engine's not-found, not the connector refusal). |
-| C-008 | A catalog registered later under a source's name refuses as a duplicate, same as two catalogs (D-4). | `catalog_named_like_source_refuses_as_duplicate` | **PROVEN** | Compile red first (below). Green in the same `named_sources` run — `register_memory_catalog("company_db", …)` after source registration answers `catalog 'company_db' is already registered`, because `CatalogRegistry::is_registered` claims both families' names. |
+| C-008 | A catalog registered later under a source's name refuses as a duplicate, same as two catalogs (D-4). | `catalog_named_like_source_refuses_as_duplicate` | **PROVEN** | Compile red first (below). Green in the same `named_sources` run — `register_memory_catalog("company_db", …)` after source registration answers `catalog 'company_db' is already registered`, because `CatalogRegistry::is_registered` claims both families' names. F-3 audit — every `register_catalog` path checked: `register_iceberg_catalog_with_policy` (covers `register_memory_catalog`, `register_iceberg_catalog`, `register_catalog_spec` Memory/Glue/S3Tables, `late_catalogs`) double-checks `is_registered` → refuses; `register_configured_sources` checks `is_registered` + `context().catalog` → refuses; `refresh_catalog_provider` → `reregister_catalog_provider` → `rebuild_catalog_provider` is gated by `catalog_handle` (iceberg `entries` only — a source name errors as unknown catalog before `register_catalog`); the OOB path (`session.rs`) consults `catalogs.get` (entries only) → source name skips; `CatalogKind::Postgres` returns `NotImplemented` and never registers (repark-python `read_postgres` refuses via `deferred_reader_error`; nothing inserts into `postgres_catalog_names`); repark-python has zero `register_catalog` call sites; `deregister_catalog` is never called and DataFusion has no DROP CATALOG plan. One path DID silently replace: SQL `CREATE CATALOG`/`CREATE DATABASE` reaches `SessionContext::create_catalog` → `register_catalog` unconditionally — now refused by `refuse_source_ddl`'s `CreateCatalog` arm through the registry's `database_source` lookup (C-011). |
 | C-009 | `source(name)` on an undeclared name refuses naming the declared sources (D-6). | `unknown_source_handle_refuses_naming_declared_sources` | **PROVEN** | Compile red first (below). Green in the same `named_sources` run — `source("nope")` answers `unknown database source 'nope' — declared sources: company_db`, naming both the asked name and the declared list. |
 | C-010 | Python: a rendered `repark.toml` carrying a database source builds a session (the `match="CFG-2"` pin flips to loads); the guide's constraint 1 states the new truth. | `test_rendered_database_source_loads` | **PROVEN** | Red first (below): the flipped pin failed on the unimplemented wheel at `fold_config_file_into_builder` with the CFG-2 refusal. Green: `make develop` rebuilt the wheel and `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` reports `21 passed` — the rendered `[default.database.postgres.company_db]` file builds a session end to end through `register_configured_sources` in `finish_session`. `docs/guide/repark-toml.md` constraint 1 now states the lazy-register/refuse-on-use truth with the measured `write` profile output. |
+| C-011 | Write shapes under a source name refuse with the D-1 connector message, not a generic "not supported"/"doesn't exist": `CREATE TABLE company_db.public.t` and `DROP TABLE company_db.public.t` both carry the source path and `1.10` (audit F-2). | `configured_source_create_table_refuses_with_connector_message` | **PROVEN** | Red first (below): `DROP TABLE` answered ``Execution error: Table 'company_db.public.t' doesn't exist.`` — DataFusion's `drop_table` swallows the provider error from `find_and_deregister` and substitutes "doesn't exist" (context.rs:1052-1064), so the `deregister_table` override alone can never surface D-1 for DROP. Green: `configured_source_create_table_refuses_with_connector_message ... ok` in `cargo test -p repark-core named_sources` — 8 passed, 0 failed. `RefusingSourceSchemaProvider` now overrides `register_table`/`deregister_table` with the same `NotImplemented` refusal (covers `ctx.register_table("company_db.x.y")` direct calls), and `PreExecute::guard` runs `refuse_source_ddl` — shared by both doors via `PreExecute` — which refuses `CreateExternalTable`/`CreateMemoryTable`/`CreateView`/`CreateIndex`/`DropTable`/`DropView`/`CreateCatalog`/`DropCatalogSchema` plans naming a registered source before execution, closing the swallow. |
 
 ## Red first
 
@@ -78,12 +79,27 @@ test_rendered_database_source_loads — IllegalArgumentException: repark config 
      fold_config_file_into_builder → config_file_pairs)
 ```
 
+The audit follow-up pin's red ran on the step-1 tree (provider overriding only `table()`):
+
+```text
+$ cargo test -p repark-core configured_source_create_table
+
+test named_sources::tests::configured_source_create_table_refuses_with_connector_message ... FAILED
+
+failures:
+---- configured_source_create_table_refuses_with_connector_message stdout ----
+DROP TABLE company_db.public.t: datafusion engine error: Execution error:
+    Table 'company_db.public.t' doesn't exist.
+    (CREATE TABLE already carried D-1 — its existence probe reaches table();
+     DROP's find_and_deregister error is swallowed upstream into "doesn't exist")
+```
+
 ## Gates
 
 | Command | Result |
 |---|---|
-| `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 64 passed; 0 failed; 0 ignored; 0 measured; 268 filtered out` |
-| `cargo test -p repark-core named_sources` | exit 0 — `test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 325 filtered out` |
+| `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 64 passed; 0 failed; 0 ignored; 0 measured; 269 filtered out` (re-run after the audit fixes) |
+| `cargo test -p repark-core named_sources` | exit 0 — `test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 325 filtered out` (re-run after the audit fixes) |
 | `make verify` | exit 0 — fmt, clippy (all-targets + panic-ban + repark-python), crate-dag, lib-rs, rust-file-size (477 clean), lib-py, conventions, docstring, manifest, ledgers, docs-links, ruff, taplo, typos, `cargo test --locked --workspace` all green |
 | `make develop` | exit 0 — `Built wheel for abi3 Python ≥ 3.12`; `Installed repark-1.4.0` |
 | `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` | exit 0 — `21 passed` |
@@ -102,6 +118,7 @@ test_rendered_database_source_loads — IllegalArgumentException: repark config 
 | `catalog_named_like_source_refuses_as_duplicate` | C-008 | `crates/repark-core/src/named_sources/tests.rs` |
 | `unknown_source_handle_refuses_naming_declared_sources` | C-009 | `crates/repark-core/src/named_sources/tests.rs` |
 | `test_rendered_database_source_loads` | C-010 | `python/repark/tests/test_config_mirror.py` |
+| `configured_source_create_table_refuses_with_connector_message` | C-011 | `crates/repark-core/src/named_sources/tests.rs` |
 
 ## Decisions
 
@@ -126,11 +143,28 @@ test_rendered_database_source_loads — IllegalArgumentException: repark config 
 - `crates/repark-python/src/session.rs` is at an exact 1128-line file-size baseline, so the
   one added line was made line-neutral by joining two `use` items inside the same file's
   test block (imports grouped, no behaviour change).
-- The three `///` `# Errors` docs on the public `Result` fns (`register_configured_sources`,
-  `source`, `ping`) are the comment-fence's sanctioned exception: `clippy::pedantic`'s
-  `missing_errors_doc` is deny-by-default on externally reachable `Result` fns. No other
-  comment was added; `ping` carries `#[allow(clippy::unnecessary_wraps)]` because its
-  `Result` signature is the card's stable door while it can only fail.
+- Audit F-1: the three `///` `# Errors` docs on the public `Result` fns
+  (`register_configured_sources`, `source`, `ping`) were removed — `///` is a comment under
+  the owner ruling — and pedantic clippy is satisfied the repository's way:
+  `#[allow(clippy::missing_errors_doc)]` on each item (the convention used in 32 places,
+  e.g. `repark-distributed/src/cluster.rs`). `ping` also carries
+  `#[allow(clippy::unnecessary_wraps)]` because its `Result` signature is the card's stable
+  door while it can only fail.
+- Audit F-2: provider overrides alone cannot refuse a `DROP TABLE` with the D-1 message —
+  `SessionContext::drop_table` routes through `find_and_deregister`, whose `schema.table()`
+  refusal propagates into a `match` arm that discards any `Err` and substitutes
+  `Table '…' doesn't exist` (datafusion `context.rs` `(_, _) =>` arm; `(_, true)` even
+  succeeds silently under `IF EXISTS`). So `RefusingSourceSchemaProvider` overrides
+  `register_table`/`deregister_table` with the same `NotImplemented` refusal (direct
+  `ctx.register_table`/`deregister_table` calls and every exec path that does reach them),
+  and `PreExecute::guard` additionally runs `named_sources::refuse_source_ddl`, which
+  refuses any `LogicalPlan::Ddl` naming a registered source — covering the swallowed
+  `DropTable`/`DropView`/`DropCatalogSchema` shapes, the `register_table`-reaching creates
+  (`CreateMemoryTable`/`CreateExternalTable`/`CreateView`/`CreateIndex`), and `CreateCatalog`,
+  which would otherwise silently replace the source's provider (F-3's one live hole). The
+  guard sits in `PreExecute` so both SQL doors (`sql()` and the Spark facade, which calls
+  `PreExecute::guard` from `spark_ast.rs`) refuse identically, and the refusal is
+  `DataFusionError::NotImplemented` — the same class the provider itself returns.
 
 ## Attestation (actor, step 1)
 
@@ -140,7 +174,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every ruled behaviour is pinned in both directions — a database source LOADS (not merely stops refusing), `auto_register = false` is asserted to list AND to answer the engine not-found (not the connector refusal), the SQL refusal asserts the presence of source/kind/1.10 AND the absence of the engine's not-found wording, the listing asserts a secret prop renders `***` while a non-secret stays verbatim, and the unknown-handle refusal asserts the declared list appears.
+      evidence: Every ruled behaviour is pinned in both directions — a database source LOADS (not merely stops refusing), `auto_register = false` is asserted to list AND to answer the engine not-found (not the connector refusal), the SQL refusal asserts the presence of source/kind/1.10 AND the absence of the engine's not-found wording on both read (SELECT) and write (CREATE TABLE, DROP TABLE) shapes, the listing asserts a secret prop renders `***` while a non-secret stays verbatim, and the unknown-handle refusal asserts the declared list appears.
       artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, crates/repark-core/src/config_file/tests/mod.rs, python/repark/tests/test_config_mirror.py]
     - id: AT-2
       status: N/A
@@ -174,7 +208,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/named_sources/tests.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Reds were captured on the base tree before implementation — two runtime failures on untouched wiring/parser code (the CFG-2 load refusal verbatim; `auto_register = "yes"` silently accepted), the E0599 ×9 compile red for the three missing session methods, and the Python pin failing through `config_file_pairs` on the base-behavior wheel. No pin was edited to fit the implementation.
+      evidence: Reds were captured before each implementation — two runtime failures on untouched wiring/parser code (the CFG-2 load refusal verbatim; `auto_register = "yes"` silently accepted), the E0599 ×9 compile red for the three missing session methods, the Python pin failing through `config_file_pairs` on the base-behavior wheel, and the audit follow-up pin failing on the step-1 tree with `DROP TABLE` answering the generic ``Table 'company_db.public.t' doesn't exist.`` No pin was edited to fit the implementation.
       artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, python/repark/tests/test_config_mirror.py]
   complete: true
 ```
@@ -191,6 +225,15 @@ COVERAGE_ATTESTATION:
   `crates/repark-python` plus the facade methods — no core work needed. `SourceRow` uses
   plain fields (not getters) matching `CatalogSpec`'s shape; if step 2 prefers a
   dict-shaped row it maps directly.
+- F-2 surfaced a DataFusion behaviour worth keeping: `SessionContext::drop_table` /
+  `drop_view` discard any provider error from `find_and_deregister` and report
+  ``Table '…' doesn't exist`` (or succeed silently under `IF EXISTS`) — no provider
+  override can carry a message through those plans. `refuse_source_ddl` in
+  `PreExecute::guard` is therefore the only seam that makes DROP refuse loud; it also
+  covers `CREATE CATALOG`, the one remaining `register_catalog` path that silently
+  replaced a source provider (F-3). If a future card wants only the two pin shapes
+  covered, narrowing the match is a one-line change, but the broader coverage is the
+  honest reading of "cannot be used yet".
 - `ReparkSession::register_configured_sources` is called today from `finish_session`
   (repark-python) and from the named_sources pins; `repark-spark/tests/ddl_sessions.rs`
   builds its own session and does NOT register sources — sources only exist from a config

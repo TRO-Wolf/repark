@@ -285,7 +285,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
 - `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
-  pre-execute refusals; today the tighten DDL-sink refuse) → `execute`. The native door
+  pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
+  which refuses `LogicalPlan::Ddl` naming a registered database source — DataFusion's
+  `drop_table`/`drop_view` swallow provider errors into "doesn't exist", and `CREATE CATALOG`
+  would silently replace the source's provider, so the guard is the seam that refuses loud)
+  → `execute`. The native door
   (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
   `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
   call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
@@ -341,9 +345,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   profile carries no table); a build with no config file leaves the registry unstamped, so
   existing sessions behave exactly as before.
   **CFG-2 step 1 (2026-09-13):** the registry also carries `database_sources` — the
-  auto-registered `SourceSpec`s keyed by source name — and `is_registered`, the
+  auto-registered `SourceSpec`s keyed by source name — `is_registered`, the
   catalog-or-source claim check `register_memory_catalog` /
-  `register_iceberg_catalog` consult for the duplicate-name refusal.
+  `register_iceberg_catalog` consult for the duplicate-name refusal, and
+  `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
+  the D-1 refusal for a DDL plan naming a source.
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
@@ -355,8 +361,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `redact_value`); `source(name)` returns a `NamedSource` handle whose `ping()` answers
   the same refusal and whose unknown name refuses listing the declared sources.
   `auto_register = false` specs list but never register, so SQL under the name answers
-  the engine's ordinary not-found.
-  pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  the engine's ordinary not-found. The schema provider also overrides
+  `register_table`/`deregister_table` with the same refusal, and `refuse_source_ddl`
+  (wired into `PreExecute::guard`, both doors) refuses DDL naming a registered source —
+  the only seam that can carry D-1 through DROP, since `SessionContext::drop_table`
+  discards provider errors, and the only thing stopping SQL `CREATE CATALOG` from
+  silently replacing the source's provider.
+  pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,

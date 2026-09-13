@@ -3,16 +3,52 @@ use std::sync::{Arc, PoisonError};
 
 use async_trait::async_trait;
 use datafusion::catalog::{CatalogProvider, SchemaProvider};
+use datafusion::common::SchemaReference;
 use datafusion::datasource::TableProvider;
 use datafusion::error::DataFusionError;
+use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use repark_common::{Error, Result};
 
+use crate::catalog_state::CatalogRegistry;
 use crate::config_file::redact::redact_value;
 use crate::config_file::sources::SourceSpec;
 use crate::session::ReparkSession;
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) fn refuse_source_ddl(
+    plan: &LogicalPlan,
+    catalogs: &CatalogRegistry,
+) -> std::result::Result<(), DataFusionError> {
+    let LogicalPlan::Ddl(ddl) = plan else {
+        return Ok(());
+    };
+    let claimed = |name: Option<&str>| name.and_then(|name| catalogs.database_source(name));
+    let spec = match ddl {
+        DdlStatement::CreateExternalTable(create) => claimed(create.name.catalog()),
+        DdlStatement::CreateMemoryTable(create) => claimed(create.name.catalog()),
+        DdlStatement::CreateView(create) => claimed(create.name.catalog()),
+        DdlStatement::CreateIndex(create) => claimed(create.table.catalog()),
+        DdlStatement::DropTable(drop) => claimed(drop.name.catalog()),
+        DdlStatement::DropView(drop) => claimed(drop.name.catalog()),
+        DdlStatement::CreateCatalog(create) => claimed(Some(create.catalog_name.as_str())),
+        DdlStatement::DropCatalogSchema(drop) => match &drop.name {
+            SchemaReference::Full { catalog, .. } => claimed(Some(catalog.as_ref())),
+            SchemaReference::Bare { .. } => None,
+        },
+        DdlStatement::CreateCatalogSchema(_)
+        | DdlStatement::CreateFunction(_)
+        | DdlStatement::DropFunction(_) => None,
+    };
+    if let Some(spec) = spec {
+        return Err(DataFusionError::NotImplemented(connector_pending_message(
+            &spec.key_path(),
+            spec.kind.spelling(),
+        )));
+    }
+    Ok(())
+}
 
 fn connector_pending_message(key_path: &str, kind: &str) -> String {
     format!(
@@ -33,6 +69,21 @@ impl SchemaProvider for RefusingSourceSchemaProvider {
     }
 
     async fn table(
+        &self,
+        _name: &str,
+    ) -> std::result::Result<Option<Arc<dyn TableProvider>>, DataFusionError> {
+        Err(DataFusionError::NotImplemented(self.message.clone()))
+    }
+
+    fn register_table(
+        &self,
+        _name: String,
+        _table: Arc<dyn TableProvider>,
+    ) -> std::result::Result<Option<Arc<dyn TableProvider>>, DataFusionError> {
+        Err(DataFusionError::NotImplemented(self.message.clone()))
+    }
+
+    fn deregister_table(
         &self,
         _name: &str,
     ) -> std::result::Result<Option<Arc<dyn TableProvider>>, DataFusionError> {
@@ -125,8 +176,7 @@ impl NamedSource {
         &self.key_path
     }
 
-    /// # Errors
-    /// Always [`Error::NotImplemented`] until the source's connector lands.
+    #[allow(clippy::missing_errors_doc)]
     #[allow(clippy::unnecessary_wraps)]
     pub fn ping(&self) -> Result<()> {
         Err(Error::NotImplemented(connector_pending_message(
@@ -142,8 +192,7 @@ impl ReparkSession {
         self.source_specs.iter().map(SourceRow::from_spec).collect()
     }
 
-    /// # Errors
-    /// Returns [`Error::DataFusion`] naming the declared sources when `name` is undeclared.
+    #[allow(clippy::missing_errors_doc)]
     pub fn source(&self, name: &str) -> Result<NamedSource> {
         self.source_specs
             .iter()
@@ -166,8 +215,7 @@ impl ReparkSession {
             })
     }
 
-    /// # Errors
-    /// Returns [`Error::DataFusion`] when a source name collides with a registered name.
+    #[allow(clippy::missing_errors_doc)]
     pub fn register_configured_sources(&self) -> Result<()> {
         for spec in self.source_specs.iter() {
             if !spec.auto_register {
