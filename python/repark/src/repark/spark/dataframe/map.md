@@ -343,7 +343,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   refusal leaves no view, no `CacheViewHandle`, no `cache_view_handles` member and no
   `cache_frames` entry (D-6; `bind_registered_view` and `_register_cache_frame` still run
   only after the native call returns). `repark.cache.max_bytes` keeps its per-result
-  meaning and message family, now evaluated on the same running admitted total (D-4).
+  meaning and byte-identical message (D-4, corrected in the review round: an own
+  `get_array_memory_size` running sum, not the distinct-buffer `admitted` total).
+  **Review round (2026-09-13, R12b-D-5):** `_cache_conf_lookup` resolves both budget
+  keys case-insensitively — tomb, runtime store and builder snapshot scanned newest
+  first on the lowercased key, last spelling set wins — sharing
+  `_resolve_cache_byte_budget` for both keys. SQL `SET repark.cache.*` still raises
+  the DataFusion `config namespace "repark"` error, now pinned.
   pins: eager-budget-1/C-004, C-005, C-007, C-008
 - `cache_handle.py` owns the refcounted `CacheViewHandle` for `__repark_cache_*`
   registrations (EAGER-OWN-1 step 1, 2026-09-13). The registering frame is the

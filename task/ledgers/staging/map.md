@@ -11,10 +11,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   evicts, Q-E2) when a materialization would push the sum of distinct Arrow buffers
   across live `__repark_cache_*` MemTables past the budget (D-1/D-2, read back via the
   read-only `repark.cache.retained_bytes`), admission incremental per batch through
-  `execute_stream` (D-3), `max_bytes` unchanged in meaning and message family on the
-  same running total (D-4), no spill (D-5), no registration or handle after a refusal
-  or collection failure (D-6). Step 0 measured the 30-iteration loop under 2/4/8 GiB
-  cgroup caps (retention OOM-kills, never slows by view count). `risk_tier: standard`.
+  `execute_stream` (D-3), `max_bytes` byte-identical to `main` — an own per-result
+  `get_array_memory_size` sum on its own counter (D-4, corrected in the review round
+  R12b-D-4; budget keys resolve case-insensitively per R12b-D-5), no spill (D-5), no
+  registration or handle after a refusal or collection failure (D-6). Step 0 measured
+  the 30-iteration loop under 2/4/8 GiB cgroup caps (retention OOM-kills, never slows
+  by view count). `risk_tier: standard`.
   Branch `fix/eager-budget-1`.
   pins: eager-budget-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010

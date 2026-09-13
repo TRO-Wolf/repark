@@ -134,6 +134,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   materializes 1e6 rows × 6 Float64 in ~10 batches under a 12MB budget (~25% of one result):
   refusal is asserted and refused VmHWM growth measured 21,622,784 vs 42,586,112 unbudgeted
   (~50.8%, under the 60% bound) — refusal before the result's peak.
+  **Review round (2026-09-13):** C-008 repinned to `main`'s exact contract — the 3-row
+  UNION refuses at `max_bytes=100` with the main-measured `312` integer, admits at 312,
+  refuses at 311; a live-cache-view scan under both budgets refuses with the per-result
+  message. C-004 gains case-insensitive budget-key pins (mixed-case `set`/`unset`,
+  last-set-wins, runtime-over-builder). L-004 pins SQL `SET repark.cache.*` raising
+  `config namespace "repark"`.
   pins: eager-budget-1/C-004, C-005, C-006, C-007, C-008, C-009
 - [test_df_explain_1.py](test_df_explain_1.py) — **DF-EXPLAIN-1 (2026-09-08):** the red-first
   `explain` pins, red on base `f00ed9ea` (the run is recorded in the ledger) and green on the

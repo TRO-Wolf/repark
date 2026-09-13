@@ -41,6 +41,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the moment `retained + admitted` would cross — before the result's peak and before any
   registration. Stream errors propagate with nothing registered; checkpoint/temp-view
   materialization passes both limits `None` and stays unbudgeted.
+  **Review round (2026-09-13, R12b-D-4):** `max_bytes` measures exactly what `main`
+  measures — its own running `batch.get_array_memory_size()` sum evaluated after each
+  batch, never seeded from live views and independent of `max_total_bytes`; the pointer
+  set is built only when `max_total_bytes` is set. The message integer is the complete
+  sum (the monotonic counter makes per-batch checking boundary-identical to `main`), so
+  once the limit is crossed the loop stops retaining batches but keeps pulling to finish
+  the count, then refuses with `main`'s byte-identical message.
   pins: eager-budget-1/C-005, C-007, C-008
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`

@@ -14,20 +14,28 @@ _CACHE_MAX_TOTAL_BYTES_KEY = "repark.cache.max_total_bytes"
 
 
 def _cache_conf_lookup(alive_token: dict[str, Any], key: str) -> str | None:
-    """Runtime conf then builder snapshot for a cache-related conf key."""
+    """Runtime conf then builder snapshot for a cache-related conf key.
+
+    Matching is case-insensitive like the ``repark.cache.retained_bytes``
+    intercept: any spelling in the unset tomb disables the key, and when two
+    spellings coexist the last one set wins (runtime layer over builder).
+    """
+    lowered = key.lower()
     tomb = alive_token.get("runtime_conf_unset")
-    if isinstance(tomb, set) and key in tomb:
+    if isinstance(tomb, set) and any(entry.lower() == lowered for entry in tomb):
         return None
-    store = alive_token.get("runtime_conf")
-    if isinstance(store, dict):
-        raw = store.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
-    builder = alive_token.get("builder_config") or {}
-    if isinstance(builder, dict):
-        raw = builder.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
+    for layer in (
+        alive_token.get("runtime_conf"),
+        alive_token.get("builder_config") or {},
+    ):
+        if not isinstance(layer, dict):
+            continue
+        for stored_key in reversed(list(layer)):
+            if stored_key.lower() == lowered:
+                raw = layer[stored_key]
+                if raw is not None and str(raw) != "":
+                    return str(raw)
+                break
     return None
 
 

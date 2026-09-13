@@ -148,24 +148,21 @@ impl ReparkSession {
         let mut stream = frame.execute_stream().await.map_err(engine_err)?;
         let mut batches = Vec::new();
         let mut admitted = 0_u64;
-        let budgeted = max_bytes.is_some() || max_total_bytes.is_some();
+        let mut total = 0_u64;
+        let mut over_limit = false;
         while let Some(item) = futures::StreamExt::next(&mut stream).await {
             let batch = item.map_err(engine_err)?;
-            if budgeted {
+            if max_total_bytes.is_some() {
                 admitted = admitted.saturating_add(super::cache_budget::distinct_buffer_bytes(
                     std::slice::from_ref(&batch),
                     &mut seen,
                 ));
             }
-            batches.push(batch);
-            if let Some(limit) = max_bytes
-                && admitted > limit
-            {
-                return Err(Error::Config(format!(
-                    "cache materialize size {admitted} bytes exceeds \
-                     repark.cache.max_bytes={limit}; raise the conf or avoid \
-                     cache()/persist() on this plan (single-node MemTable pin; no disk spill)"
-                )));
+            if let Some(limit) = max_bytes {
+                total = total.saturating_add(
+                    u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX),
+                );
+                over_limit = over_limit || total > limit;
             }
             if let Some(budget) = max_total_bytes
                 && retained.saturating_add(admitted) > budget
@@ -178,6 +175,18 @@ impl ReparkSession {
                      repark.cache.max_total_bytes"
                 )));
             }
+            if !over_limit {
+                batches.push(batch);
+            }
+        }
+        if let Some(limit) = max_bytes
+            && over_limit
+        {
+            return Err(Error::Config(format!(
+                "cache materialize size {total} bytes exceeds \
+                 repark.cache.max_bytes={limit}; raise the conf or avoid \
+                 cache()/persist() on this plan (single-node MemTable pin; no disk spill)"
+            )));
         }
         drop(stream);
         let (schema, batches) =

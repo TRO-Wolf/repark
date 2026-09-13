@@ -26,6 +26,10 @@ for _name in dir(_session_funcs):
     globals()[_name] = getattr(_session_funcs, _name)
 del _name, _session_funcs
 
+_CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
+    {"repark.cache.max_bytes", "repark.cache.max_total_bytes"}
+)
+
 
 class SparkContext:
     """Minimal ``spark.sparkContext`` surface for near-drop-in jobs.
@@ -211,6 +215,18 @@ class RuntimeConfig:
             store[canonical] = str(parsed)
             self._session._alive_token[_display_token_key(canonical)] = parsed
             _sync_display_int_into_builder_config(self._session._builder_config, canonical, parsed)
+            return
+        lowered = key.lower()
+        if lowered in _CACHE_BYTE_BUDGET_KEYS_LOWER:
+            tombs = self._unset_keys()
+            for existing in list(tombs):
+                if existing.lower() == lowered:
+                    tombs.discard(existing)
+            store = self._store()
+            for existing in list(store):
+                if existing.lower() == lowered:
+                    del store[existing]
+            store[key] = text
             return
         self._unset_keys().discard(key)
         self._store()[key] = text

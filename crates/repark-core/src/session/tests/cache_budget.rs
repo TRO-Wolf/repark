@@ -215,6 +215,31 @@ async fn max_bytes_keeps_its_message_and_registers_nothing() {
 }
 
 #[tokio::test]
+async fn max_bytes_measures_this_result_even_when_buffers_are_shared() {
+    let session = ReparkSession::new().unwrap();
+    let batch = sample_batch(4);
+    let expected = u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX);
+    session
+        .register_record_batches_as_temp_view("__repark_cache_a", batch.schema(), vec![batch])
+        .unwrap();
+    let frame = session.sql("SELECT * FROM __repark_cache_a").await.unwrap();
+    let error = session
+        .materialize_dataframe_as_cache_view("__repark_cache_b", frame, (Some(1), Some(u64::MAX)))
+        .await
+        .unwrap_err();
+    let message = error.to_string();
+    assert!(
+        message.contains(&format!("size {expected} bytes")),
+        "{message}"
+    );
+    assert!(
+        message.contains("exceeds repark.cache.max_bytes=1"),
+        "{message}"
+    );
+    assert!(!session.drop_temp_view("__repark_cache_b").unwrap());
+}
+
+#[tokio::test]
 async fn admitted_cache_registers_and_retained_matches_admitted() {
     let session = ReparkSession::new().unwrap();
     let batch = sample_batch(4);

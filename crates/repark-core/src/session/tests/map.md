@@ -51,6 +51,10 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   fresh-buffered frame under `budget = retained` refuses naming that retained figure.
   `max_bytes` keeps its legacy message and registers nothing; an admitted cache registers and
   its `retained` equals the admitted distinct bytes.
+  **Review round (2026-09-13, R12b-D-4):** `max_bytes_measures_this_result_even_when_buffers_are_shared`
+  pins the per-result metric — a scan of a live cache view under `(max_bytes=1,
+  max_total_bytes=u64::MAX)` refuses with this result's `get_array_memory_size` integer even
+  though every buffer is shared.
   pins: eager-budget-1/C-005, C-007, C-008
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway

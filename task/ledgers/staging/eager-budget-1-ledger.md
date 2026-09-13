@@ -24,8 +24,17 @@ No product code changes in this step.
 incremental admission (`register_collected_memtable` streams batches and checks
 `retained + admitted` after each — refusing before the result's peak and before
 any registration), D-4 `repark.cache.max_bytes` unchanged in meaning and
-message family on the same running total, and D-6 nothing registered on a
+message family, and D-6 nothing registered on a
 refusal or a mid-collection failure.
+
+**Review round (2026-09-13):** the critic pass (ruling S2-21) found three P2s;
+the S2-21 Rust+Python perf pass found no P1/P2 and three P3 notes. Rulings
+R12b-D-4 and R12b-D-5 are implemented and pinned below: `max_bytes` measures
+exactly what `main` measures — this result's own
+`batch.get_array_memory_size()` running sum, never seeded from live views and
+independent of the distinct-buffer `admitted` total — and both budget keys
+resolve case-insensitively at materialize time. The findings table is under
+Evidence → Review findings.
 
 **Not in this unit:** `STATUS.md`, `briefs/next-sequence.md`, `.github/`,
 `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`, eviction of any kind.
@@ -37,11 +46,11 @@ refusal or a mid-collection failure.
 | C-001 | The step-0 measurement is committed: the EAGER-OWN-1 worker at `--rows 1000000 --iterations 30` under `systemd-run --user --scope -p MemoryMax={2G,4G,8G} -p MemorySwapMax=0`, on base `8936346a` (bare `eager()`, leaked results are the retention) and on `main` (bare `eager()` released; results appended to a list = retained), release natives with `__debug_assertions__` False on both trees; per-iteration wall / VmRSS / VmHWM / `ru_majflt`, the cgroup outcome per cell, and the `Table.nbytes` vs distinct-`buffer.address` probe for one retained result. | Committed JSON per cell under `docs/perf/eager-budget-1-2026-09-13/`, the per-cap iteration-band tables and the probe numbers in Evidence, the machine header and both shas. | PROVEN | Nine cells run 2026-09-13 (box idle before each, `OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8`): base-bare and main-retained OOM-killed at iter 5 under 2G and ~16 under 4G (journal `oom-kill`, rc 137), both survive 30 at 8G (~6.7 GB VmHWM); main-bare survives all caps (VmHWM ~1.37 GB). Probe: `nbytes` 199,008,178 vs distinct-buffer 188,196,432 (385 buffers, ratio 0.9457), identical both trees. No per-call slowdown as a function of live views; `ru_majflt` 0 everywhere. Full tables in Evidence; files in [docs/perf/eager-budget-1-2026-09-13/](../../../docs/perf/eager-budget-1-2026-09-13/map.md). |
 | C-002 | D-2 distinct-buffer accounting: retained bytes = the sum of distinct Arrow buffers across the session's live `__repark_cache_*` MemTable registrations, deduped by buffer data pointer — a buffer shared by two views or by sliced arrays counts once; zero with no live view; the count drops back when a view is released; `__repark_ckpt_*` and user temp views are not counted. | Step-1 pins: shared buffers across two views count once; zero with no view; drops on release. | PROVEN | `ReparkSession::retained_cache_bytes` + `distinct_buffer_bytes` in `crates/repark-core/src/session/cache_budget.rs`; dedupe key is `Buffer::data_ptr()` (allocation base) — `as_ptr()` double-counts an arrow-58 slice because `PrimitiveArray::slice` pushes the offset into the `Buffer` (measured: 16→32 before the fix). Rust: 6/6 `cargo test -p repark-core cache_budget`. Python pin red→green in `test_eager_budget_1.py`; measured 160 vs 34 logical bytes (2-row) and 16,000 vs 4,890 over 600 buffers (200-row). Evidence below. |
 | C-003 | The read-only `repark.cache.retained_bytes` conf readback: `spark.conf.get` returns the native sum as a decimal string; `spark.conf.set` and `unset` on that key refuse. | Step-1 pins: get returns a decimal string; set/unset refuse. | PROVEN | `get` recomputes natively per call (decimal string), `getAll` carries the key, `isModifiable` is `False`, `set`/`unset` refuse with `IllegalArgumentException` `[INVALID_CONF_VALUE.REQUIREMENT]` "read-only", stopped session raises `RuntimeError` via `_ensure_alive`. Binding is a free `_native.retained_cache_bytes` pyfunction (session.rs at its exact CAP-1 baseline; one `#[pymethods]` block per type — the `catalog_census` out). Pin red→green below. |
-| C-004 | D-1 conf parse: `repark.cache.max_total_bytes` unset or `0` = no budget; negative, non-integer or over-u64 values refuse with `[INVALID_CONF_VALUE.REQUIREMENT]` exactly as `repark.cache.max_bytes` does; settable at runtime (`spark.conf.set`) and at build (`.config`), read at materialize time. | Step-2 pins per value class, mirroring the `max_bytes` parse pin. | PROVEN | `_resolve_cache_byte_budget(alive_token, key)` is the one parser both keys share (same `IllegalArgumentException` `[INVALID_CONF_VALUE.REQUIREMENT]` message family); resolved at materialize time, so runtime `set` and builder `config` both reach it and `unset` clears. Pin red→green below. |
+| C-004 | D-1 conf parse (as corrected by R12b-D-5): `repark.cache.max_total_bytes` unset or `0` = no budget; negative, non-integer or over-u64 values refuse with `[INVALID_CONF_VALUE.REQUIREMENT]` exactly as `repark.cache.max_bytes` does; settable at runtime (`spark.conf.set`) and at build (`.config`), read at materialize time; both budget keys resolve **case-insensitively** across the runtime store, the unset tomb and the builder snapshot, last set winning. | Step-2 pins per value class, plus review-round pins: mixed-case `set` binds, mixed-case `unset` removes, last-set-wins across spellings and over the builder. | PROVEN | `_resolve_cache_byte_budget(alive_token, key)` is the one parser both keys share (same `IllegalArgumentException` `[INVALID_CONF_VALUE.REQUIREMENT]` message family); `_cache_conf_lookup` matches `key.lower()` against tomb, store and builder entries (last insertion-order match wins — the same `key.lower()` dispatch `repark.cache.retained_bytes` uses), and `RuntimeConfig.set` clears tomb entries and store spellings case-insensitively for the two budget keys so a later differently-cased `set` always wins. Pin red→green below. |
 | C-005 | The D-1 refusal message carries the budget, the retained bytes at admission, the bytes admitted so far for the refused result, and the fix (`unpersist()` a cached/eager frame or `spark.catalog.clearCache()`, or raise the conf); the error is a named error, and nothing is evicted. | Step-2 pin on the message fields and the error class. | PROVEN | `Error::Config` text `[REPARK_CACHE_BUDGET_EXCEEDED] cache materialize refused: repark.cache.max_total_bytes=<b>, retained <r> bytes, admitted <a> bytes before refusal; release cached/eager frames with unpersist() or spark.catalog.clearCache(), or raise repark.cache.max_total_bytes` — maps to `IllegalArgumentException` exactly as `max_bytes` refusals do (no new error class). Pinned on `cache();count()` and `eager()`; an existing cache counts toward `retained`; `unpersist()` frees budget and a second cache succeeds. Nothing is evicted — admission-only. |
 | C-006 | D-3 refusal before the full collection peak: admission is incremental (each batch's distinct-buffer bytes join a running total checked against `budget - retained` before the next pull), so a capped subprocess refuses with VmHWM under the uncapped peak. | Step-2 capped-subprocess VmHWM pin. | PROVEN | Subprocess worker (1e6 rows × 6 Float64, `repark.batch.size=100000` → ~10 batches, `repark.target.partitions=1`, budget 12,000,000 ≈ 25% of the 48 MB result): refusal asserted; VmHWM growth over baseline 21,622,784 refused vs 42,586,112 unbudgeted — 50.8 %, under the 60 % bound. The `admitted` figure in the refusal message stops at ~9.6 MB; a single-partition plan makes `execute_stream` strictly pull-based (multi-partition `CoalescePartitionsExec` prefetches ~90 MB — recorded in Evidence). |
 | C-007 | D-6: a refusal or a collection failure leaves no `__repark_cache_*` registration and no Python handle, on both the `cache()` + action path and `eager()`. | Step-2 pins on both entry paths. | PROVEN | `catalog.listTables()` `__repark_cache_*` names and `alive_token["cache_view_handles"]` membership snapshotted before/after: unchanged after a budget refusal on `cache()`+`count()` and on `eager()`, and unchanged after an ANSI-overflow (`[ARITHMETIC_OVERFLOW]`) mid-collection failure on both paths — collect-before-register makes stream errors propagate with nothing registered; `bind_registered_view`/`_register_cache_frame` still run only after the native call returns. |
-| C-008 | D-4: `repark.cache.max_bytes` keeps its per-result meaning and message family, now also checked incrementally on the same running total. | Step-2 pins: existing `max_bytes` pins green plus the incremental check. | PROVEN | Same `Error::Config` text as before (message family unchanged — checked against the running `admitted` total per batch instead of post-collection); exactly-at-limit still succeeds and one byte under still refuses; the `test_cache_persist.py` `max_bytes` cohort stays green (C-010). |
+| C-008 | D-4 (as corrected by R12b-D-4): `repark.cache.max_bytes` measures exactly what `main` measures — this result's own `batch.get_array_memory_size()` running sum, checked per batch, never seeded from live cache views, independent of `max_total_bytes`; the refusal message is byte-identical to `main` including the summed integer. | Step-2 pins plus the review-round reproductions: the main-measured integer refuses byte-identically, the boundary admits at exactly the sum, and a scan of a live cache view under both budgets still refuses per-result. | PROVEN | The 3-row `SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3` facade plan measures 312 bytes on `main` (`9efb6a65`, `/tmp/g-rev/base` release native); `max_bytes=100` refuses `cache materialize size 312 bytes exceeds repark.cache.max_bytes=100; raise the conf or avoid cache()/persist() on this plan (single-node MemTable pin; no disk spill)`, `=312` admits, `=311` refuses with the same integer. The counter is monotonic, so evaluating it per batch preserves the exact `main` boundary while the message reports the full-result sum; once the limit is crossed the loop stops retaining batches but keeps counting so the integer is the complete sum. Both-budgets pin: a cache of `SELECT * FROM <live cache view>` under `max_bytes=1` refuses the per-result message even though every buffer is shared (a new `max_bytes_measures_this_result_even_when_buffers_are_shared` Rust pin asserts the same at the boundary layer). `test_cache_persist.py` `max_bytes` cohort stays green (C-010). |
 | C-009 | D-5: no spill — a refused or admitted materialization writes no disk file. | Step-2 pin: no file appears under any spill/tmp dir during the loop. | PROVEN | Session built with `datafusion.runtime.temp_directory=<tmp>`; the directory's file set is snapshotted after build (the DiskManager's own subdir is created at build, not per materialization) and asserted identical after an admitted cache and after a refused one. |
 | C-010 | Existing cache pins stay green: `python/repark/tests/test_cache_persist.py`, `python/repark/tests/test_eager_own_1.py`, and the `python/repark-parity/tests/eager_own/` harness pins all pass on the final tree. | The named suites green in Gates. | PROVEN | `test_eager_budget_1.py` + `test_cache_persist.py` + `test_eager_own_1.py`: 68 passed; `python/repark-parity/tests/eager_own` + `test_cap_1_source_file_line_cap.py` + `test_ex_0_example_coverage.py`: 50 passed, 1 skipped; `cargo test -p repark-core` green (10 cache_budget unit tests). Gates below. |
 
@@ -249,13 +258,81 @@ Decisions under §6, step 2:
   argument because the named-parameter call exceeded the 100-column chain
   width and rustfmt's vertical layout would have grown the file.
 
+### Review-round pins (2026-09-13, rebased branch `4ccb1ea3`)
+
+Red first on this branch before any fix (debug native; the L-004 SQL `SET` pin
+is green by construction — it pins existing fail-loud behavior):
+
+```
+.venv/bin/python -m pytest python/repark/tests/test_eager_budget_1.py -q \
+  -k "max_bytes_contract or stays_per_result or case_insensitive or last_set_wins or sql_set"
+FAILED test_max_bytes_contract_unchanged            (DID NOT RAISE — admitted at max_bytes=100)
+FAILED test_max_bytes_stays_per_result_with_total_budget (DID NOT RAISE — shared-buffer scan admitted)
+FAILED test_budget_keys_resolve_case_insensitively  (DID NOT RAISE — REPARK.CACHE.MAX_TOTAL_BYTES ignored)
+FAILED test_budget_key_case_last_set_wins           (DID NOT RAISE)
+4 failed, 1 passed (test_sql_set_repark_cache_keys_refused)
+```
+
+The `312` integer was measured on `main` (`/tmp/g-rev/base/.venv/bin/python`,
+`9efb6a65`, release native) — `cache materialize size 312 bytes exceeds
+repark.cache.max_bytes=100` — not guessed. One instrumentation note: the facade
+plan streams three 1-row Int64 batches (104 bytes each); a naive per-batch
+early return reports the partial sum (104) rather than `main`'s full-result
+312, so the loop keeps a per-batch-evaluated flag, stops retaining batches once
+the limit is crossed, and reports the complete sum after the stream drains —
+the monotonic counter makes the refuse/admit boundary identical to `main` and
+the reported integer byte-identical.
+
+Green after the fixes:
+
+```
+cargo test -p repark-core cache_budget — 11 passed (incl. the new
+  max_bytes_measures_this_result_even_when_buffers_are_shared pin)
+.venv/bin/python -m pytest python/repark/tests/test_eager_budget_1.py -q
+19 passed
+```
+
+### Review findings
+
+| id | severity | finding | disposition |
+|---|---|---|---|
+| L-001 | P2 | `max_bytes` measured distinct-buffer `admitted` capacity, not `main`'s `get_array_memory_size` sum — a `main`-refusing limit admitted (3-row UNION: `main` 312, branch 24) | FIXED (R12b-D-4): own per-result counter on `get_array_memory_size`, checked per batch, reported as the full sum; pinned byte-identically |
+| L-002 | P2 | With `max_total_bytes` set, `max_bytes` compared against the live-view-seeded `admitted` — a shared-buffer scan bypassed the per-result guard | FIXED (R12b-D-4): the two counters are independent; the pointer set is built only when `max_total_bytes` is set; pinned on the live-cache-view scan |
+| L-003 | P2 | `_cache_conf_lookup` matched the canonical lowercase key only — `REPARK.CACHE.MAX_TOTAL_BYTES`/`MAX_BYTES` fail-opened | FIXED (R12b-D-5): case-insensitive tomb/store/builder resolution, last-set-wins; `RuntimeConfig.set` clears tomb and store spellings case-insensitively for the two budget keys |
+| L-004 | P3 | SQL `SET repark.cache.*` bypasses the facade intercept and raises the DataFusion namespace error instead | PINNED, no product change: `spark.sql("SET repark.cache.retained_bytes=1")` and `...=max_total_bytes` raise `PySparkException` containing `config namespace "repark"` so a later engine change cannot start storing them silently |
+| P3-1 | P3 | `to_data()` rebuilds an `ArrayData` tree per column per batch on a budgeted admission | ACCEPTED: walk unmeasurable against collect (53.0 vs 56.3 ms); a typed-downcast buffer visit is a future optimization |
+| P3-2 | P3 | `live_cache_buffer_set` is O(live cache buffers) per budgeted admission and every `retained_bytes` get/`getAll` | ACCEPTED: 20–56 µs at 100 views, off the unbudgeted path; an incremental session map is feasible only if every register/drop path updates it |
+| P3-3 | P3 | Refusal HWM remains a large fraction of the full peak even at `target.partitions=1` | ACCEPTED: producers stop on drop (RSS flat after return); multi-partition prefetch is a DataFusion executor property — the C-006 worker pins `target.partitions=1` for the honest measurement |
+
+Decisions under §6, review round:
+
+- **R12b-D-4:** `max_bytes` keeps `main`'s exact contract — a per-result
+  `get_array_memory_size` running sum on its own counter, evaluated after each
+  batch, never seeded from live views, independent of `max_total_bytes`. The
+  reported integer is the complete sum (the counter is monotonic, so the
+  per-batch check and the post-drain report are the same refuse/admit
+  boundary); the loop drops batches once the limit is crossed but drains the
+  stream for the count — matching `main`'s full-collect memory profile for
+  `max_bytes`-only refusals while holding less. When both budgets are set, a
+  `max_total_bytes` breach still refuses mid-stream with its own message.
+- **R12b-D-5:** budget-key resolution is case-insensitive at materialize time
+  in all three layers (runtime store, unset tomb, builder snapshot), matching
+  the `repark.cache.retained_bytes` `key.lower()` dispatch; the last spelling
+  set wins, and a runtime `set` overrides the builder snapshot as today.
+  `RuntimeConfig.set` additionally clears case-variant tomb entries and store
+  spellings for the two budget keys so `set` after a differently-cased `unset`
+  cannot fail open.
+- **L-004 ruling:** SQL `SET` is out of scope for `repark.*` keys; the
+  DataFusion namespace error is pinned rather than rerouted to the read-only
+  conf refusal.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: eager-budget-1
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Step 0 measured the retention end to end under cgroup caps; step 1 and step 2 close every clause — all ten C-001..C-010 are PROVEN, each step-1/step-2 pin red-first on its own branch (5 failed then 8 failed) then green on the implementation, and the red runs are pasted in Evidence.
+      evidence: Step 0 measured the retention end to end under cgroup caps; step 1, step 2 and the review round close every clause — all ten C-001..C-010 are PROVEN, each step-1/step-2/review pin red-first on its own branch (5 failed, then 8 failed, then 4 failed) then green on the implementation, and the red runs are pasted in Evidence.
       artifacts: [python/repark/tests/test_eager_budget_1.py, crates/repark-core/src/session/tests/cache_budget.rs]
     - id: AT-2
       status: ATTACKED
@@ -285,11 +362,11 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/eager-budget-1-ledger.md]
     - id: AT-9
       status: ATTACKED
-      evidence: The user-visible change is refusal timing and a new conf key: existing behavior is pinned unchanged — max_bytes message family and boundary (C-008), the whole cache/eager suite green (C-010), checkpoint/temp-view materialization stays unbudgeted (both limits None on that path).
+      evidence: The user-visible change is refusal timing and a new conf key: existing behavior is pinned unchanged — max_bytes message byte-identical to main including the measured 312-byte integer and the exact boundary (C-008), the whole cache/eager suite green (C-010), checkpoint/temp-view materialization stays unbudgeted (both limits None on that path).
       artifacts: [python/repark/tests/test_cache_persist.py, python/repark/tests/test_eager_own_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Mutation coverage: an admission loop that collected fully before checking reds C-006's VmHWM bound; a loop that registered before the stream finished reds C-007's no-registration assertions; a seeded set that missed live buffers reds the Rust shared-view pin (admitted would count shared bytes); a dedupe key of as_ptr() reds the sliced-array pin.
+      evidence: Mutation coverage: an admission loop that collected fully before checking reds C-006's VmHWM bound; a loop that registered before the stream finished reds C-007's no-registration assertions; a seeded set that missed live buffers reds the Rust shared-view pin (admitted would count shared bytes); a dedupe key of as_ptr() reds the sliced-array pin; a max_bytes compared to the live-view-seeded admitted total reds the both-budgets live-view pin (L-002); a case-sensitive conf lookup reds the mixed-case set/unset pins (L-003).
       artifacts: [crates/repark-core/src/session/tests/cache_budget.rs, python/repark/tests/test_eager_budget_1.py]
   complete: true
 ```
@@ -318,3 +395,17 @@ Step 2 (2026-09-13):
   python/repark-parity/tests/test_ex_0_example_coverage.py -q` — green.
 - `make verify` — clean.
 - `make check-ledger-grammar` — clean.
+
+Review round (2026-09-13, rebased on `origin/main` `9efb6a65`, orchestrator
+commit `4ccb1ea3` on top):
+
+- `cargo test -p repark-core` — green; 11 `session::tests::cache_budget` pins
+  including `max_bytes_measures_this_result_even_when_buffers_are_shared`.
+- `.venv/bin/python -m pytest python/repark/tests/test_eager_budget_1.py
+  python/repark/tests/test_cache_persist.py python/repark/tests/test_eager_own_1.py -q`
+  — green (the pin file now carries 19 tests).
+- `.venv/bin/python -m pytest python/repark-parity/tests/eager_own
+  python/repark-parity/tests/test_cap_1_source_file_line_cap.py -q` — green.
+- `make verify` — clean.
+- `make check-ledger-grammar` — clean.
+- Comment fence on the staged diff — no output.

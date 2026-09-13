@@ -259,25 +259,54 @@ def test_no_registration_survives_collection_failure(spark: ReparkSession) -> No
 
 
 def test_max_bytes_contract_unchanged(spark: ReparkSession) -> None:
-    """C-008: per-result max_bytes keeps its message and its boundary semantics."""
-    frame = spark.sql(_TWO_ROW_SQL).cache()
-    frame.count()
-    admitted = _retained(spark)
-    assert admitted > 0
-    frame.unpersist()
-    spark.conf.set(_MAX_BYTES_KEY, str(admitted))
-    boundary = spark.sql(_TWO_ROW_SQL).cache()
-    assert boundary.count() == 2
-    boundary.unpersist()
-    spark.conf.set(_MAX_BYTES_KEY, str(admitted - 1))
-    refused = spark.sql(_TWO_ROW_SQL).cache()
+    """C-008: per-result max_bytes keeps the main metric, message and boundary.
+
+    The 312-byte figure is the ``get_array_memory_size`` sum measured on the
+    main tree for the three-row UNION plan (not the distinct-buffer metric).
+    """
+    three_row = "SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3"
+    spark.conf.set(_MAX_BYTES_KEY, "100")
+    refused = spark.sql(three_row).cache()
     with pytest.raises(IllegalArgumentException) as excinfo:
         refused.count()
     message = str(excinfo.value)
-    assert "cache materialize size" in message
-    assert f"exceeds repark.cache.max_bytes={admitted - 1}" in message
+    assert "cache materialize size 312 bytes exceeds repark.cache.max_bytes=100" in message
+    assert "raise the conf or avoid cache()/persist() on this plan" in message
+    assert "no disk spill" in message
     assert "REPARK_CACHE_BUDGET_EXCEEDED" not in message
     assert refused.is_cached is True
+    spark.conf.set(_MAX_BYTES_KEY, "312")
+    boundary = spark.sql(three_row).cache()
+    assert boundary.count() == 3
+    boundary.unpersist()
+    spark.conf.set(_MAX_BYTES_KEY, "311")
+    refused = spark.sql(three_row).cache()
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        refused.count()
+    assert "cache materialize size 312 bytes exceeds repark.cache.max_bytes=311" in str(
+        excinfo.value
+    )
+
+
+def test_max_bytes_stays_per_result_with_total_budget(spark: ReparkSession) -> None:
+    """C-008/R12b-D-4: ``max_bytes`` measures this result even when it shares live buffers."""
+    live = spark.sql(_TWO_ROW_SQL).cache()
+    live.count()
+    retained = _retained(spark)
+    assert retained > 0
+    spark.conf.set(_TOTAL_KEY, str(retained + 10_000_000))
+    spark.conf.set(_MAX_BYTES_KEY, "1")
+    scan = spark.sql(f"SELECT * FROM {live._cache_view}").cache()
+    with pytest.raises(IllegalArgumentException) as excinfo:
+        scan.count()
+    message = str(excinfo.value)
+    assert "cache materialize size" in message
+    assert "exceeds repark.cache.max_bytes=1" in message
+    assert "REPARK_CACHE_BUDGET_EXCEEDED" not in message
+    assert scan._cache_view is None
+    assert len(_cache_view_table_names(spark)) == 1
+    spark.conf.unset(_MAX_BYTES_KEY)
+    assert scan.count() == 2
 
 
 def test_retained_delta_matches_each_admitted_cache(spark: ReparkSession) -> None:
@@ -407,3 +436,51 @@ def test_refusal_happens_before_result_peak() -> None:
         f"(baseline {result['baseline']}, hwm_refused {result['hwm_refused']}, "
         f"hwm_full {result['hwm_full']}, retained {result['retained']})"
     )
+
+
+def test_budget_keys_resolve_case_insensitively(spark: ReparkSession) -> None:
+    """R12b-D-5: mixed-case runtime spellings bind at materialize; tomb is case-insensitive."""
+    spark.conf.set("REPARK.CACHE.MAX_TOTAL_BYTES", "1")
+    cached = spark.sql(_TWO_ROW_SQL).cache()
+    with pytest.raises(IllegalArgumentException, match=r"REPARK_CACHE_BUDGET_EXCEEDED"):
+        cached.count()
+    spark.conf.unset("repark.cache.max_total_bytes")
+    spark.conf.set("REPARK.CACHE.MAX_BYTES", "1")
+    cached = spark.sql(_TWO_ROW_SQL).cache()
+    with pytest.raises(IllegalArgumentException, match=r"cache materialize size"):
+        cached.count()
+    spark.conf.unset("Repark.Cache.Max_Bytes")
+    assert spark.sql(_TWO_ROW_SQL).cache().count() == 2
+
+
+def test_budget_key_case_last_set_wins(spark: ReparkSession) -> None:
+    """R12b-D-5: a later differently-cased set overrides; runtime beats the builder."""
+    spark.conf.set("REPARK.CACHE.MAX_TOTAL_BYTES", "1")
+    spark.conf.set("repark.cache.max_total_bytes", "0")
+    assert spark.sql(_TWO_ROW_SQL).cache().count() == 2
+    spark.conf.set("REPARK.CACHE.MAX_TOTAL_BYTES", "1")
+    cached = spark.sql(_TWO_ROW_SQL).cache()
+    with pytest.raises(IllegalArgumentException, match=r"REPARK_CACHE_BUDGET_EXCEEDED"):
+        cached.count()
+    spark.stop()
+    built = (
+        ReparkSession.builder.appName("pytest-budget-case")
+        .config("RePark.Cache.Max_Total_Bytes", "1")
+        .getOrCreate()
+    )
+    try:
+        cached = built.sql(_TWO_ROW_SQL).cache()
+        with pytest.raises(IllegalArgumentException, match=r"REPARK_CACHE_BUDGET_EXCEEDED"):
+            cached.count()
+        built.conf.set("REPARK.CACHE.MAX_TOTAL_BYTES", "0")
+        assert built.sql(_TWO_ROW_SQL).cache().count() == 2
+    finally:
+        built.stop()
+
+
+def test_sql_set_repark_cache_keys_refused(spark: ReparkSession) -> None:
+    """L-004: SQL ``SET`` on repark.cache keys raises the DataFusion namespace error."""
+    for key in (_RETAINED_KEY, _TOTAL_KEY, _MAX_BYTES_KEY):
+        with pytest.raises(PySparkException) as excinfo:
+            spark.sql(f"SET {key}=1")
+        assert 'config namespace "repark"' in str(excinfo.value)
