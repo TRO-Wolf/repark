@@ -25,8 +25,6 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-
-# SQL identifier helpers.
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
@@ -50,30 +48,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# ``show(vertical=True)`` is supported under the Spark display style. Styled displays remain
-# horizontal and warn once when vertical output is requested.
 _vertical_show_warned = False
 
-# WriterV2.option/options are accepted for signature parity but ignored beyond tableProperty.
-# Warn ONCE per process so migrated scripts learn the options are not applied, without spamming.
-# Reset by `_reset_writer_v2_option_warnings_for_tests` / `_reset_dropin_warnings_for_tests`.
 _writer_v2_option_warned = False
 
-# Shared with ReparkSession.stop — must match session._STOPPED_MESSAGE wording.
 _STOPPED_MESSAGE = "Cannot call methods on a stopped ReparkSession"
 
-# SQL keywords the filter-predicate rewriter never treats as a column reference, even when a
-# column casefolds to one of them: Spark's grammar reads the keyword, so ``filter("true")`` is
-# the boolean literal and ``b IS NOT NULL`` is the null test — never a bind to a column named
-# ``true`` / ``null``. Every member has a nameable input: ``createDataFrame([(1, 2)], [kw, "b"])``
-# builds a frame whose column is literally named ``true`` / ``false`` / ``null``, and each is
-# pinned with its discriminator in test_filter_predicate_rewrite.py (live PySpark 4.1.2 agrees:
-# on a ["false", "b"] frame, filter("false") is zero rows and filter("true") is every row).
 _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
 
-# Semi/anti joins filter the left side and emit no right-side columns.
-# Engine `how` tokens whose output schema is the LEFT side alone. Semi/anti joins are filters
-# spelled as joins: the right side decides which left rows survive and contributes no columns.
 _SEMI_JOIN_HOWS = frozenset({"leftsemi", "leftanti"})
 
 
@@ -130,16 +112,12 @@ def _emit_join_side_columns(
     origin_map: dict[tuple[str, str], str],
 ) -> None:
     """Project one join side into ``proj_parts`` / origin map (walk by position)."""
-    # Walk by position so frames that already carry duplicate display names
-    # (chained joins) do not hit AMBIGUOUS_REFERENCE on name lookup.
     if side_frame._display_names is not None and side_frame._engine_names is not None:
         pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
     else:
         pairs = [(name, name) for name in side_frame.columns]
     for display_name, source_engine in pairs:
         if display_counts.get(display_name, 0) > 1:
-            # Ordinal = len(engine_names) so chained joins that already carry
-            # Duplicate display names on one side use distinct engine fields.
             engine_out = (
                 f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display_name}"
             )
@@ -150,10 +128,7 @@ def _emit_join_side_columns(
         )
         display_names.append(display_name)
         engine_names.append(engine_out)
-        # Direct binds from this side's plan_id (last-write if display dups —
-        # bare joined["b"] stays AMBIGUOUS; parent origins use nested map).
         origin_map[(side_frame._plan_id, display_name)] = engine_out
-        # Propagate nested origin map (chained joins / prior selects).
         if side_frame._origin_map is not None:
             for (plan_id, field), nested_engine in side_frame._origin_map.items():
                 if nested_engine == source_engine:
@@ -181,7 +156,6 @@ def _by_name_casefold_map(columns: list[str], *, surface: str) -> dict[str, str]
                     f"ambiguous {surface} column name {column!r} collides with {prior!r} "
                     f"under case-insensitive matching (spark.sql.caseSensitive=false)"
                 )
-            # Exact duplicate names must not silently overwrite the prior entry.
             raise AnalysisException(
                 f"duplicate {surface} column name {column!r} "
                 f"(case-insensitive matching, spark.sql.caseSensitive=false)"
@@ -218,7 +192,6 @@ def _warn_writer_v2_option_once(*, stacklevel: int = 2) -> None:
     _writer_v2_option_warned = True
 
 
-# Object-identity MemTable names created by cache/persist (not checkpoints, not CDF/MIA).
 _CACHE_VIEW_PREFIX = "__repark_cache_"
 
 
@@ -306,10 +279,8 @@ def _normalize_subset(
                     },
                 )
             names.append(item)
-            _ = index  # keep enumerate for future position-aware diagnostics
+            _ = index
         return names
-    # PySpark's class is per-surface, NOT derivable from accept_str (oracle 4.1.2:
-    # dropDuplicates + fillna → NOT_LIST_OR_TUPLE, dropna → NOT_LIST_OR_STR_OR_TUPLE).
     raise PySparkTypeError(
         errorClass=error_class,
         messageParameters={
@@ -331,14 +302,10 @@ class DataFrame:
         "_alive_token",
         "_cache_view",
         "_checkpoint_lazy",
-        # Sticky metadata for adjacent same-spec window merging.
         "_collapse_base",
         "_display_names",
         "_eager_shape",
-        # Display and origin metadata for join identity.
         "_engine_names",
-        # Smart CSV diagnostics.
-        # Diagnostics from smartCsv (describe_ingest); None for ordinary frames.
         "_ingest_report",
         "_inner",
         "_layer_defined",
@@ -351,14 +318,12 @@ class DataFrame:
         "_mia_plan_ready",
         "_mia_temp_views",
         "_origin_map",
-        "_origin_not_emitted",  # right-side plan ids a semi/anti join did not emit
+        "_origin_not_emitted",
         "_persist_requested",
         "_plan_id",
         "_session",
-        # Source view eligible for declared-sort registration.
         "_source_view_name",
         "_storage_level",
-        # True after tightenNulls=True on this source or an ancestor.
         "_tighten_derived",
     )
 
@@ -377,7 +342,6 @@ class DataFrame:
         self._alive_token: dict[str, bool] = (
             alive_token if alive_token is not None else {"alive": True}
         )
-        # Cache is object-identity based and lazy until first action.
         self._persist_requested = False
         self._cache_view: str | None = None
         self._eager_shape: tuple[int, int] | None = None
@@ -385,18 +349,12 @@ class DataFrame:
         self._storage_level: Any | None = None
         self._checkpoint_lazy = False
         self._ingest_report: dict[str, Any] | None = None
-        # Deferred facade bridge, or None for ordinary frames.
         self._map_bridge: dict[str, Any] | None = None
-        # MemTable names for deferred bridge results; dropped during finalization.
         self._mia_temp_views: list[str] = []
-        # Action views are replaced on the next action; plan views remain valid for children.
         self._mia_action_views: list[str] = []
-        # One plan-stable bridge snapshot serves all plan children.
         self._mia_plan_ready = False
         self._mia_cleanup_registered = False
-        # Schema-bound Columns use this facade plan token to resolve join sides.
         self._plan_id: str = uuid.uuid4().hex[:12]
-        # Join outputs may map duplicate display names to unique engine fields.
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
@@ -405,9 +363,7 @@ class DataFrame:
         self._layer_window_key: tuple[Any, ...] | None = None
         self._layer_map: dict[str, Any] | None = None
         self._layer_defined: frozenset[str] | None = None
-        # Set only on source frames. Transformed frames cannot declare the source view sorted.
         self._source_view_name: str | None = None
-        # Propagate the tighten-null property when a derived frame combines parents.
         self._tighten_derived: bool = False
 
     def _ensure_alive(self) -> None:
@@ -451,7 +407,6 @@ class DataFrame:
         if self._map_bridge is not None and self._cache_view is None:
             child._map_bridge = dict(self._map_bridge)
             child._mia_plan_ready = self._mia_plan_ready
-        # Identity-preserving operations keep display, engine, and origin maps.
         if self._display_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = (
@@ -465,7 +420,6 @@ class DataFrame:
 
         Cache size limits apply after collection. This single-node path does not spill to disk.
         """
-        # Cache materialization.
         needs = self._persist_requested or self._checkpoint_lazy
         if not needs:
             return
@@ -474,8 +428,6 @@ class DataFrame:
         self._ensure_alive()
         is_checkpoint = self._checkpoint_lazy
         if self._map_bridge is not None:
-            # Run bridge into ``_inner``; keep ``_map_bridge`` for cache so ``unpersist``
-            # restores re-run. Checkpoint truncates lineage.
             self._inner = self._execute_map_in_arrow_bridge(replace_ephemeral_views=True)
             if is_checkpoint:
                 self._map_bridge = None
@@ -483,24 +435,18 @@ class DataFrame:
         view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
             max_bytes = _resolve_cache_max_bytes(self._alive_token)
-            # Cache path only — never route VALUES/createDataFrame through this entry point.
             lineage = self._inner
             self._session.materialize_as_cache_view(view_name, lineage, max_bytes)
-            # Commit handle state only after successful materialize.
             self._inner = self._session.sql(f"SELECT * FROM {view_name}")
             self._lineage_inner = lineage
             self._cache_view = view_name
             _register_cache_frame(self._alive_token, self)
             return
-        # Checkpoint: lineage truncate; keep VALUES seam (not a session cache registry entry).
-        # If converting an already-cached pin, drop the old __repark_cache_* view after the
-        # ckpt view is registered so clearCache no longer owns this handle's MemTable.
         old_cache_view = self._cache_view
         self._session.materialize_as_temp_view(view_name, self._inner)
         self._inner = self._session.sql(f"SELECT * FROM {view_name}")
         if old_cache_view is not None and old_cache_view != view_name:
             self._session.drop_temp_view(old_cache_view)
-        # Truncate lineage; do not advertise as cached (oracle: is_cached False).
         self._checkpoint_lazy = False
         self._persist_requested = False
         self._storage_level = None
@@ -516,7 +462,6 @@ class DataFrame:
         """
         if self._map_bridge is not None:
             if self._cache_view is not None:
-                # Already pinned — child plans use the MemTable; do not clear bridge.
                 return
             if self._persist_requested or self._checkpoint_lazy:
                 self._materialize_cache_if_needed()
@@ -538,19 +483,11 @@ class DataFrame:
         self._ensure_alive()
         if self._map_bridge is not None:
             if self._cache_view is not None:
-                # Already pinned — do not re-run the UDF.
                 return self._inner
             if self._persist_requested or self._checkpoint_lazy:
                 self._materialize_cache_if_needed()
                 return self._inner
-            # Fresh bridge execution each action; leave ``_map_bridge`` in place for re-run.
             result = self._execute_map_in_arrow_bridge(replace_ephemeral_views=True)
-            # When no plan-stable snapshot is live, ``_inner`` may still point at a prior
-            # action-ephemeral (e.g. post-unpersist lineage restore). ``replace_ephemeral``
-            # just dropped that view — rebind so direct ``_inner`` readers and a later
-            # ``_prepare_for_plan`` cannot use a dangling MemTable.
-            # Leave ``_inner`` alone when ``_mia_plan_ready``: it is a plan-stable view that
-            # action tracking deliberately preserves.
             if not self._mia_plan_ready:
                 self._inner = result
             return result
@@ -732,7 +669,6 @@ class DataFrame:
                 table, replace_ephemeral=replace_ephemeral_views
             )
 
-        # Fallback: IPC path when native C-stream register is absent (version-skew).
         return self._execute_map_in_arrow_bridge_ipc(
             replace_ephemeral_views=replace_ephemeral_views
         )
@@ -760,7 +696,6 @@ class DataFrame:
                 writer.close()
 
         if writer is None:
-            # Empty iterator: schema-only IPC stream (zero batches).
             with pa_ipc.new_stream(sink, expected_arrow):
                 pass
 
@@ -797,7 +732,6 @@ class DataFrame:
         tracked = False
         try:
             self._session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
-            # Own the view before sql() so finalize drops it even if SELECT fails.
             self._track_mia_view(view_name, replace_ephemeral=replace_ephemeral)
             tracked = True
             return self._session.sql(f"SELECT * FROM {view_name}")
@@ -876,10 +810,6 @@ class DataFrame:
 
     map_in_pandas = mapInPandas
 
-    # Cache and persist.
-
-    # Cache materialization.
-
     def cache(self) -> DataFrame:
         """Mark this DataFrame for lazy MemTable materialization (PySpark ``cache``).
 
@@ -935,7 +865,7 @@ class DataFrame:
 
         ``blocking`` is accepted for signature parity and ignored (single-node drop is sync).
         """
-        _ = blocking  # signature parity; single-node drop is always synchronous
+        _ = blocking
         self._ensure_alive()
         if self._cache_view is not None:
             self._session.drop_temp_view(self._cache_view)
@@ -975,7 +905,7 @@ class DataFrame:
         checkpoint does **not** set :attr:`is_cached` (live Spark 4.1.2 oracle). Returns self.
         ``storageLevel`` is accepted for signature parity and ignored (always MemTable).
         """
-        _ = storageLevel  # signature parity; single-node MemTable only
+        _ = storageLevel
         self._ensure_alive()
         self._checkpoint_lazy = True
         self._persist_requested = False
@@ -1021,7 +951,6 @@ class DataFrame:
             )
         self._ensure_alive()
         other._ensure_alive()
-        # Best-effort: same native PyDataFrame object only (not full semantic equality).
         return self._inner is other._inner
 
     same_semantics = sameSemantics
@@ -1055,10 +984,8 @@ class DataFrame:
         """
         self._session.create_or_replace_temp_view(name, self._native_for_registration())
 
-    # PySpark spells this ``createOrReplaceTempView``; expose both so the import swap just works.
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
-    # Declared-sort registration.
     def declare_sorted(
         self,
         *cols: str,
@@ -1137,7 +1064,6 @@ class DataFrame:
                 "transform of one (or a cache/SQL result); declare on the source frame and "
                 "transform afterwards."
             )
-        # Caching redirects the scan to another view. Declare the source before caching.
         if self._cache_view is not None or self._persist_requested or self._checkpoint_lazy:
             raise PySparkValueError(
                 "declareSorted must run before cache()/persist()/checkpoint on this frame "
@@ -1150,15 +1076,10 @@ class DataFrame:
                 raise PySparkTypeError(
                     f"declareSorted column names must be str, got {type(name).__name__}"
                 )
-            # Same bind machinery select/explode use: case-insensitive canonicalization
-            # (raises listing the available columns), then the display-to-engine overlay.
             canonical = self._resolve_getitem_column_name(name)
             engine_keys.append(self._engine_field_for_display(canonical))
         view = self._source_view_name
         self._session.declare_temp_view_sorted(view, engine_keys, tightenNulls)
-        # The declaration re-registers the view's MemTable, but this frame's logical plan
-        # still holds the table source captured when the scan was planned — re-resolve it,
-        # or the frame that declared would be the one frame that never sees the elision.
         self._inner = self._session.sql(f"SELECT * FROM {view}")
         self._tighten_derived = tightenNulls
         return self
@@ -1178,10 +1099,7 @@ class DataFrame:
             "create-path relax."
         )
 
-    # repark extension (no PySpark equivalent); camelCase is the disclosed repark spelling.
     declareSorted = declare_sorted  # noqa: N815 — repark-extra camelCase surface
-
-    # ---- transform surface (PySpark DataFrame ops) ------------------------------------------
 
     def with_column(self, col_name: str, column: Column) -> DataFrame:
         """Add or replace a column (PySpark ``DataFrame.withColumn``).
@@ -1198,7 +1116,6 @@ class DataFrame:
             )
         from repark.spark.functions import PandasUDFColumn, PythonUDFColumn
 
-        # Scalar UDF markers use the withColumns→select bridge.
         if isinstance(column, (PandasUDFColumn, PythonUDFColumn)):
             return self.with_columns({col_name: column})
         if not isinstance(column, Column):
@@ -1207,23 +1124,12 @@ class DataFrame:
                 f"got {type(column).__name__}"
             )
         _reject_partition_transform(column)
-        # Aggregates only lower via select/agg — withColumn→native would fail engine-side
-        # (or withColumns→select pure_global would collapse N→1 rows). Spark rejects
-        # Aggregates are rejected in withColumn.
         _reject_aggregate_in_with_column(column, surface="withColumn")
-        # Window, random, and stratified-sampling validation.
         _reject_non_numeric_range_order(self, column)
-        # Generators must go through the select unnest rewrite — native with_column would
-        # project the array placeholder without multiplying rows.
         if getattr(column, "_generator", None) is not None:
             return self.with_columns({col_name: column})
-        # Plan-collapse.
-        # Route the ordinary path through with_columns→select so alias-chain squash and
-        # adjacent same-spec window merge apply to both withColumn and withColumns.
-        # Multi-name identity is handled on the with_columns/select path.
         return self.with_columns({col_name: column})
 
-    # PySpark spells this ``withColumn``; expose both.
     withColumn = with_column  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def with_columns(self, colsMap: dict[str, Column]) -> DataFrame:  # noqa: N803 — PySpark camelCase
@@ -1247,8 +1153,6 @@ class DataFrame:
             raise PySparkTypeError(
                 f"colsMap should be a dict of column name to Column, got {type(colsMap).__name__}"
             )
-        # Validate keys + values before any `.alias` so bad maps raise TypeError early
-        # Validate keys and values before aliasing.
         for name, column in colsMap.items():
             if not isinstance(name, str):
                 raise PySparkTypeError(
@@ -1266,21 +1170,11 @@ class DataFrame:
                     f"withColumns values must be Column, udf result, or pandas_udf result, "
                     f"got {type(column).__name__} for {name!r}"
                 )
-            # Aggregates only lower via select/agg — withColumns always select(*) and
-            # pure_global would collapse N rows → 1 for all-agg/foldable maps (Spark
-            # rejects aggregates in withColumns.
             _reject_aggregate_in_with_column(column, surface="withColumns")
-        # Adjacent same-spec window merge.
-        # Only when the immediately-prior layer (sticky meta on this frame) used the same
-        # structural window AND no new column may read a name defined in that prior layer.
-        # filter/drop/select never copy sticky meta → intervening ops block merge.
-        # When in doubt, fall through to a new stacked layer.
         merged = self._try_merge_adjacent_window_layer(colsMap)
         if merged is not None:
             return merged
-        # Select accepts Column and scalar UDF markers.
         projected: list[Any] = []
-        # Multi-name frames iterate engine/display bindings.
         seen_display: set[str] = set()
         for bound in self._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
@@ -1289,7 +1183,6 @@ class DataFrame:
                 replacement = colsMap[display]
                 if isinstance(replacement, Column):
                     replacement = self._rebind_origin_column(replacement)
-                # Preserve origin on replacement when multi-name so select keeps identity.
                 aliased = replacement.alias(display)
                 if (
                     isinstance(replacement, Column)
@@ -1321,14 +1214,12 @@ class DataFrame:
                 else:
                     projected.append(column.alias(name))
         child = self.select(*projected)
-        # Sticky layer meta for a subsequent adjacent same-spec merge.
         child._collapse_base = self
         child._layer_map = dict(colsMap)
         child._layer_defined = frozenset(colsMap.keys())
         child._layer_window_key = _uniform_window_key_from_map(colsMap)
         return child
 
-    # PySpark spells this ``withColumns``.
     withColumns = with_columns  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def _try_merge_adjacent_window_layer(self, cols_map: dict[str, Any]) -> DataFrame | None:
@@ -1344,7 +1235,6 @@ class DataFrame:
         prior_defined = self._layer_defined
         if base is None or prior_key is None or prior_map is None or prior_defined is None:
             return None
-        # Do not merge past a cache mark; that would orphan the intermediate MemTable pin.
         if self._persist_requested or self._cache_view is not None:
             return None
         new_key = _uniform_window_key_from_map(cols_map)
@@ -1355,7 +1245,6 @@ class DataFrame:
                 return None
             if _column_may_reference_names(column, prior_defined):
                 return None
-        # Replay both maps on the pre-layer frame → one WindowAggr (DataFusion fuses).
         combined: dict[str, Any] = {**prior_map, **cols_map}
         return base.with_columns(combined)
 
@@ -1387,18 +1276,12 @@ class DataFrame:
         """
         if isinstance(condition, Column):
             _reject_partition_transform(condition)
-            # Generators only lower via select unnest — filter on a generator would
-            # A generator predicate would target the array placeholder.
             condition._reject_nested_generator("filter")
-            # Compounds clear origin but keep join_sql QCOL
-            # tokens — rewrite to local engine fields and use filter_sql (native Column
-            # path cannot re-apply ops without stored children).
             join_sql = condition.join_sql_part()
             if "__REPARK_QCOL_" in join_sql and self._origin_map is not None:
                 local_sql = _rewrite_qcol_tokens_local(join_sql, self)
                 if "__REPARK_QCOL_" not in local_sql:
                     return self._spawn_preserving_identity(self._plan().filter_sql(local_sql))
-            # Pure origin Columns rebind to engine fields before native filter.
             predicate = self._rebind_origin_column(condition)
             return self._spawn_preserving_identity(self._plan().filter(predicate._inner))
         if isinstance(condition, str):
@@ -1412,7 +1295,6 @@ class DataFrame:
             },
         )
 
-    # PySpark aliases ``where`` to ``filter``.
     where = filter
 
     def select(self, *cols: Column | str) -> DataFrame:
@@ -1454,8 +1336,6 @@ class DataFrame:
             if isinstance(item, RegexColumn):
                 expanded.extend(expand_col_regex(self, item))
             elif isinstance(item, str) and item == "*":
-                # Multi-name frames cannot re-resolve bare display strings (duplicate
-                # "b" → AMBIGUOUS_REFERENCE). Expand via engine fields + display identity.
                 if self._display_names is not None and self._engine_names is not None:
                     for display, engine in zip(
                         self._display_names, self._engine_names, strict=True
@@ -1496,11 +1376,6 @@ class DataFrame:
                 "Only one generator allowed per select list "
                 "(Spark: only one explode/posexplode family generator)"
             )
-        # DataFusion requires unique *engine* projection names; live PySpark allows duplicate
-        # *display* names (join both sides / select(x, x.cast(...))). Origin-qualified
-        # duplicates keep bare display names via the facade identity map. Non-origin duplicates
-        # (cast / year / compound same display) use the same multi-name map with synthetic
-        # engine aliases — DataFusion never sees colliding field names.
         projection_names = [
             (
                 column._projection_name
@@ -1520,7 +1395,6 @@ class DataFrame:
         h1_engine_names: list[str] | None = None
         h1_origin_map: dict[tuple[str, str], str] | None = None
         if duplicates:
-            # Join identity and multi-name select share display/engine maps.
             dup_set = set(duplicates)
             h1_multi_name = True
             h1_display_names = []
@@ -1537,7 +1411,6 @@ class DataFrame:
                             f"{column._origin_field}_{name_counts[name]}"
                         )
                     else:
-                        # Non-origin columns use a synthetic engine id.
                         engine = f"__repark_sel_h2_{len(h1_engine_names)}_{name_counts[name]}"
                     rewritten.append(
                         Column(
@@ -1552,9 +1425,6 @@ class DataFrame:
                             is_aggregate_function=column._is_aggregate_function,
                             origin_plan_id=column._origin_plan_id,
                             origin_field=column._origin_field,
-                            # Keep composed join_sql (fillna coalesce / cast) so the
-                            # QCOL SQL select path does not fall back to a bare leaf
-                            # token without stripping the operation.
                             join_sql_expr=column._join_sql_expr,
                             sql_expr=column._sql_expr,
                         )
@@ -1564,7 +1434,6 @@ class DataFrame:
                     if column._origin_plan_id is not None and column._origin_field is not None:
                         h1_origin_map[(column._origin_plan_id, column._origin_field)] = engine
                 else:
-                    # Identity alias squash.
                     rewritten.append(_collapse_identity_projection_alias(column))
                     engine_name = (
                         column._projection_name
@@ -1579,25 +1448,14 @@ class DataFrame:
             if not h1_origin_map:
                 h1_origin_map = None
         else:
-            # Identity alias squash.
             projected = [_collapse_identity_projection_alias(column) for column in projected]
-        # All-aggregate or aggregate-plus-foldable select lists use the global aggregate path.
-        # Classify projections from Column metadata, not expression text.
-        # Mixed aggregate and generator projections raise MISSING_GROUP_BY because they cannot
-        # share one grouping stage.
         aggregate_flags = [bool(column._is_aggregate) for column in projected]
         if aggregate_flags and any(aggregate_flags):
-            # A generator and aggregate cannot share one projection grouping stage.
             if generators:
                 raise AnalysisException(
                     "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. "
                     "Add GROUP BY or turn it into the window functions using OVER clauses."
                 )
-            # Pure global: every projection is aggregate and/or foldable, with no free
-            # attributes and no sticky ungroupable. ``all(not free)`` alone was incomplete —
-            # ``row_number().over(...)`` is neither free nor foldable nor aggregate and must
-            # raise. Nested ``sum+over`` / ``coalesce(sum,window)`` need
-            # ``_has_ungroupable``; ``F.rand`` is non-foldable.
             pure_global = all(
                 (bool(column._is_aggregate) or bool(column._is_foldable))
                 and not bool(column._has_free_attribute)
@@ -1605,34 +1463,22 @@ class DataFrame:
                 for column in projected
             )
             if pure_global:
-                # Pure bare aggregates use the native aggregate
-                # path for name/type fidelity with ``df.agg``. Composed post-agg ops
-                # (``sum(x)+1``, ``cast``, ``abs(sum)``) and non-agg companions need SQL —
-                # DataFusion's ``DataFrame.aggregate`` rejects non-AggregateFunction exprs
-                # and bare literals.
                 if all(aggregate_flags) and all(
                     _is_native_pure_global_aggregate(column) for column in projected
                 ):
                     child = self.group_by().agg(*projected)
                 else:
                     child = self._select_global_aggregate_sql(projected)
-                # Multi-name rewrite assigns unique engines before
-                # this early return — attach the display/engine overlay so ``sum,sum``
-                # surfaces Spark-legal ``sum(v)`` x2 (not ``__repark_sel_h2_*`` leaks).
                 if h1_multi_name and h1_display_names is not None and h1_engine_names is not None:
                     child._display_names = list(h1_display_names)
                     child._engine_names = list(h1_engine_names)
                     child._origin_map = dict(h1_origin_map) if h1_origin_map is not None else None
                 return child
-            # Mixed aggregate and free companion without GROUP BY — Spark
-            # ``[MISSING_GROUP_BY]`` (live PySpark 4.1.2).
             raise AnalysisException(
                 "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. "
                 "Add GROUP BY or turn it into the window functions using OVER clauses."
             )
         if len(generators) == 1:
-            # Duplicate display names cannot pass through the generator SQL rewrite because
-            # engine aliases would become ambiguous. Keep this refusal explicit.
             if h1_multi_name:
                 raise AnalysisException(
                     "select would produce duplicate column names alongside a generator "
@@ -1640,8 +1486,6 @@ class DataFrame:
                     "generator rewrite path. Use .alias(...) to make names unique."
                 )
             return self._select_with_generator(projected, generators[0])
-        # Compounds that still carry QCOL tokens (cast / arithmetic of parent Columns)
-        # cannot use unrebound native exprs on multi-name frames — SQL-project via rewrite.
         if any("__REPARK_QCOL_" in column.join_sql_part() for column in projected):
             sql_child = self._select_via_qcol_sql(
                 projected,
@@ -1677,21 +1521,13 @@ class DataFrame:
         from repark.spark._idents import quote_ident as _quote_ident
 
         self._ensure_alive()
-        # One plan-stable snapshot for uncached mapInArrow (and no-op for ordinary frames).
         plan = self._plan()
         view = scratch_view_name(self._session, "__repark_select_agg_")
-        # Register the prepared plan — never the empty MIA placeholder (raw ``_inner``
-        # before prepare) and never a second action re-run via DF createOrReplaceTempView.
         self._session.create_or_replace_temp_view(view, plan)
         try:
-            # Empty group-by only for the shared rebind helper (schema bind). Already
-            # prepared above — do not call ``self.group_by()`` (second ``_prepare_for_plan``).
             rebind_host = GroupedData(self, [])
             parts: list[str] = []
             for column in projected:
-                # Case-preserving rebind for bare AF builders (``F.sum("X")`` + lit),
-                # including post-``.alias`` pure AFs that clear ``_agg_name`` but keep
-                # structural ``sql_expr``.
                 if column._is_aggregate_function and (
                     column._agg_name is not None or column._sql_expr is not None
                 ):
@@ -1731,50 +1567,33 @@ class DataFrame:
             )
         self._ensure_alive()
         out_name = generator._projection_name or "col"
-        # Private array field — uuid so it cannot collide with user projection names.
         array_temp = f"__repark_arr_{uuid.uuid4().hex}"
 
         mid_natives: list[Any] = []
         for column in projected:
             if column is generator or getattr(column, "_generator", None):
-                # Array expression only (cast after unnest via _generator_cast).
                 mid_natives.append(_bound_generator_array(self, generator).alias(array_temp))
             else:
-                # for_select already applied Spark projection names on the native expr.
                 mid_natives.append(column._inner)
-        # Project from ``_plan()`` (not raw ``_inner``) so uncached ``mapInArrow`` parents
-        # materialize the bridge before unnest — raw ``_inner`` is the empty schema
-        # placeholder and would silently yield zero rows. Ordinary select/filter also use
-        # ``_plan()``.
         mid = self._spawn(self._plan().select(mid_natives))
 
-        # The second SQL projection refers only to quoted identifiers from the intermediate schema.
         array_sql = _quote_ident_sql(array_temp)
-        # Top-level length only (not multi-dim cardinality product) —.
         length_expr = f"coalesce(array_length({array_sql}), 0)"
         if kind == "explode":
-            # Drop null/empty arrays (Spark explode). Element type is not needed —
-            # do not call outer-type resolution (struct arrays are legal;).
             where = f"({array_sql}) IS NOT NULL AND {length_expr} > 0"
             unnest_expr = f"unnest({array_sql})"
         else:
-            # explode_outer / explode_keep_null: CASE + NULL element.
-            # Type is taken from the intermediate field (covers coalesce/compounds —
-            # ); never fail-open to BIGINT. Void / Null elements have
-            # Keep make_array(NULL) untyped so the engine infers its element type.
             element_sql_type = mid._array_element_sql_type(array_sql, generator)
             if element_sql_type == _UNTYPED_NULL_ELEMENT:
                 null_array_sql = "make_array(NULL)"
             else:
                 null_array_sql = f"make_array(CAST(NULL AS {element_sql_type}))"
             if kind == "explode_keep_null":
-                # NULL list → one null-element row; EMPTY list stays empty and drops.
                 guarded = (
                     f"CASE WHEN ({array_sql}) IS NULL THEN {null_array_sql} ELSE ({array_sql}) END"
                 )
                 where = f"({array_sql}) IS NULL OR {length_expr} > 0"
             else:
-                # explode_outer: null/empty → single-element array of NULL of element type.
                 guarded = (
                     f"CASE WHEN ({array_sql}) IS NULL OR {length_expr} = 0 "
                     f"THEN {null_array_sql} "
@@ -1782,10 +1601,6 @@ class DataFrame:
                 )
                 where = None
             unnest_expr = f"unnest({guarded})"
-        # Element cast after unnest (explode(...).cast(...)) — sticky via _generator_cast.
-        # Re-validate each Spark token before SQL embed (defense-in-depth; Column.cast already
-        # allowlists — /). A tuple is a cast *chain* (innermost first)
-        # from chained ``.cast().cast()`` — apply nested CAST wrappers.
         element_cast = getattr(generator, "_generator_cast", None)
         if element_cast is not None:
             from repark.spark.column import _require_allowlisted_spark_cast_token
@@ -1829,7 +1644,7 @@ class DataFrame:
         Unresolved / unmapped types raise — never fail-open to ``BIGINT`` (corrupts
         VARCHAR/TIMESTAMP null guards under CASE unification; /).
         """
-        _ = generator  # bind uses array_sql only (no display substring match)
+        _ = generator
         try:
             fields = self._inner.logical_schema_fields()
         except Exception:
@@ -1849,7 +1664,6 @@ class DataFrame:
             raise AnalysisException(
                 f"explode_outer cannot resolve array column {bare!r} in the frame schema"
             )
-        # Prefer exact spelling; otherwise require a unique casefold hit.
         exact = [(name, type_key) for name, type_key in matches if name == bare]
         chosen = exact[0] if exact else (matches[0] if len(matches) == 1 else None)
         if chosen is None:
@@ -1861,13 +1675,11 @@ class DataFrame:
         parsed = _parse_list_element_sql_type(type_key)
         if parsed is not None:
             return parsed
-        # Field bound but element type unsupported (map / nested-void / …).
         raise AnalysisException(
             f"explode_outer cannot resolve SQL element type for array column {bare!r} "
             f"(engine type {type_key!r}); cast the array or use a supported element type"
         )
 
-    # Smart CSV diagnostics.
     def describe_ingest(self) -> dict[str, Any]:
         """Return smartCsv ingest diagnostics (repark extension; empty dict if not smart-loaded).
 
@@ -1918,18 +1730,11 @@ class DataFrame:
         type and never hit this method; a missing dunder still falls through here and raises
         ``ATTRIBUTE_NOT_SUPPORTED`` (membership-only, same as live PySpark classic).
         """
-        # Half-built instances (copy/pickle protocols create the object before filling
-        # __dict__) must not recurse: `_ensure_alive` reads `self._inner`, which re-enters
-        # Bail to a plain AttributeError for half-built instances.
         try:
             object.__getattribute__(self, "_inner")
         except AttributeError:
-            # A bare AttributeError handles copy, pickle, and hasattr probes before initialization.
-            # not user misuse of a DataFrame attribute — PySpark's PySparkAttributeError models
-            # User attribute misses use the classified error below.
             raise AttributeError(name) from None
         self._ensure_alive()
-        # Permanent out-of-scope surfaces use named errors.
         _oos = {
             "rdd": "RDD is out of scope for repark (use DataFrame API / Arrow collect)",
             "writeStream": "Structured Streaming is out of scope (batch DataFrame writes only)",
@@ -1945,8 +1750,6 @@ class DataFrame:
             raise PySparkAttributeError(
                 f"[ATTRIBUTE_NOT_SUPPORTED] Attribute `{name}` is not supported."
             )
-        # Exact membership only (case-sensitive, like PySpark attr). Quoted bind so
-        # non-lowercase schema fields remain re-selectable.
         return self._bind_schema_column(name)
 
     def _resolve_getitem_column_name(self, item: str) -> str:
@@ -1973,13 +1776,11 @@ class DataFrame:
             return item
         item_folded = item.casefold()
         matches = [name for name in names if name.casefold() == item_folded]
-        # De-dupe preserving order for case-insensitive multi-hit reporting.
         unique_matches: list[str] = []
         for match in matches:
             if match not in unique_matches:
                 unique_matches.append(match)
         if len(matches) > 1 and len(unique_matches) == 1:
-            # Same display repeated (join dup) already handled above; casefold multi.
             could_be = ", ".join(f"`{name}`" for name in matches)
             raise AnalysisException(
                 f"[AMBIGUOUS_REFERENCE] Reference `{item}` is ambiguous, could be: [{could_be}]."
@@ -2029,7 +1830,6 @@ class DataFrame:
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
-        # Token resolution requires a post-join origin map.
         if self._origin_map is None:
             return None
 
@@ -2050,7 +1850,6 @@ class DataFrame:
                 else column.spark_display_part()
             )
             name_counts[display] = name_counts.get(display, 0) + 1
-            # Prefer multi-name engine aliases when the outer select already assigned them.
             if h1_engine_names is not None and len(engine_names) < len(h1_engine_names):
                 engine = h1_engine_names[len(engine_names)]
                 display = (
@@ -2061,7 +1860,6 @@ class DataFrame:
             }:
                 engine = f"__repark_sel_q_{len(engine_names)}_{display}"
             else:
-                # Unique display — use as engine name when safe; CAST display needs alias.
                 if display.startswith("CAST(") or any(
                     ch in display for ch in (" ", "(", ")", "+", "-", "*", "/")
                 ):
@@ -2206,8 +2004,6 @@ class DataFrame:
             or self._origin_map is None
         ):
             return column
-        # Only pure leaf refs: join_sql is absent, a bare QCOL token, or a quoted ident.
-        # ``coalesce(...)`` / ``CAST(...)`` / binary ops keep native + origin for select.
         if join_sql is not None:
             stripped = join_sql.strip()
             pure_qcol = stripped.startswith("__REPARK_QCOL_") and stripped.endswith("__")
@@ -2238,10 +2034,7 @@ class DataFrame:
             sql_expr=quoted,
             origin_plan_id=column._origin_plan_id,
             origin_field=column._origin_field,
-            # Keep join rewrite tokens so further composition (filter compounds built
-            # *before* rebind) is not required; pure rebound is already engine-local.
             join_sql_expr=quoted,
-            # Preserve sort markers through origin rebind (orderBy(parent.col.desc())).
             sort_ascending=column._sort_ascending,
             sort_nulls_first=column._sort_nulls_first,
         )
@@ -2264,8 +2057,6 @@ class DataFrame:
             projection_name=name,
             stable_name=True,
             has_free_attribute=True,
-            # Quote the *engine* schema field for free-SQL embeds.
-            # Join ON rewrite uses origin_plan_id and origin_field, not this fragment.
             sql_expr=quoted,
             origin_plan_id=self._plan_id,
             origin_field=canonical,
@@ -2290,10 +2081,8 @@ class DataFrame:
         columns_by_fold: dict[str, list[str]] = {}
         for column in columns:
             columns_by_fold.setdefault(column.casefold(), []).append(column)
-        # Do not rewrite function names or SQL boolean and null literals.
         ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
-        # Protect single-quoted SQL string literals, then double-quoted idents inside the rest.
         pieces = re.split(r"('(?:[^']|'')*')", sql)
         rebuilt: list[str] = []
         for piece in pieces:
@@ -2329,7 +2118,6 @@ class DataFrame:
         """
         if not column._stable_name:
             return column
-        # Origin pins a specific side/engine field — skip bare-name rebind.
         if column._origin_plan_id is not None and column._origin_field is not None:
             return column
         name = column._projection_name
@@ -2343,10 +2131,6 @@ class DataFrame:
             return column
         if column._sort_ascending is None and column._sort_nulls_first is None:
             return bound
-        # Sort markers force a new Column: preserve sticky bits like ``Column.asc`` /
-        # ``desc`` (sql_expr / generator / is_aggregate_function). Prefer bound's
-        # schema-quoted ``sql_expr`` so cube/rollup free-SQL SELECT keeps reserved
-        # Names such as ``order`` are quoted.
         return Column(
             bound._inner,
             sort_ascending=column._sort_ascending,
@@ -2365,7 +2149,6 @@ class DataFrame:
             generator=column._generator,
             generator_cast=column._generator_cast,
             when_pairs=column._when_pairs,
-            # Keep origin and join_sql through sort-marker rebind.
             origin_plan_id=bound._origin_plan_id or column._origin_plan_id,
             origin_field=bound._origin_field or column._origin_field,
             join_sql_expr=bound._join_sql_expr or column._join_sql_expr,
@@ -2396,15 +2179,10 @@ class DataFrame:
         """
         self._ensure_alive()
         if isinstance(item, str):
-            # Star projection token used by count(df["*"]) and select(df["*"]).
             if item == "*":
                 from repark.spark.functions import col as col_fn
 
                 return col_fn("*")
-            # Live PySpark 4.1.2: CI getitem is a NamedExpression with the *requested*
-            # spelling (same display identity as F.col("X")), not Alias(canonical AS item)
-            # text pollution. Quoted schema bind also keeps the field
-            # re-selectable after a non-lowercase projection.
             return self._bind_schema_column(item)
         if isinstance(item, Column):
             return self.filter(item)
@@ -2478,13 +2256,9 @@ class DataFrame:
                 data_type = DateType()
             elif type_key in ("timestamp", "timestamp_ntz"):
                 data_type = ReparkDataType.fromDDL(type_key)
-            # "Null" is the Arrow Debug spelling, which reaches every flat void column —
-            # a plain NULL literal included, not just a void explode (engine spells every
-            # other standard type lowercase) — W-1.
             elif type_key in ("void", "null", "Null"):
                 data_type = NullType()
             elif type_key.startswith("decimal("):
-                # decimal(p,s)
                 inner = type_key[len("decimal(") : -1]
                 precision_str, scale_str = inner.split(",", 1)
                 data_type = DecimalType(int(precision_str), int(scale_str))
@@ -2496,7 +2270,6 @@ class DataFrame:
             else:
                 data_type = StringType()
             fields.append(StructField(name, data_type, nullable))
-        # Overlay Spark-legal display names while engine fields stay unique.
         overlay = self._display_overlay_names()
         if overlay is not None and len(overlay) == len(fields):
             fields = [
@@ -2521,7 +2294,6 @@ class DataFrame:
         """
         self._ensure_alive()
         max_depth = -1 if level is None else int(level)
-        # treeString ends with a newline and print adds Spark's second one.
         print(self.schema.treeString(max_depth))
 
     print_schema = printSchema
@@ -2564,8 +2336,6 @@ class DataFrame:
             raise PySparkValueError(f"toDF expects {len(current)} column names, got {len(names)}")
         if not names:
             return self._identity_child()
-        # Multi-name frames cannot re-bind bare display strings; rename
-        # positionally via engine/display bindings.
         return self.select(
             *[
                 bound.alias(new)
@@ -2591,11 +2361,9 @@ class DataFrame:
                 raise PySparkTypeError(
                     f"selectExpr expressions must be str, got {type(item).__name__}"
                 )
-        # A bare ``*`` keeps multi-name display identity.
         if len(expr) == 1 and expr[0].strip() == "*":
             return self.select("*")
         view = scratch_view_name(self._session, "__repark_selx_")
-        # Use a plan-stable bridge snapshot rather than action registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
             projection = ", ".join(expr)
@@ -2620,15 +2388,9 @@ class DataFrame:
             raise AnalysisException(
                 f"DataFrame.alias requires a bare SQL identifier, got {alias!r}"
             )
-        # Register one plan-stable bridge snapshot.
-        # Mirrors selectExpr / select / filter so post-prepare alias agrees with peers.
         self._session.create_or_replace_temp_view(name, self._plan())
-        # -1: the NAME stays one-part (the user chose it), but the read is home-pinned —
-        # a bare/quoted one-part reference is re-resolved against the live default catalog.
         home_ref = home_view_ref(self._session, name)
         child = self._spawn(self._session.sql(f"SELECT * FROM {home_ref}"))
-        # SQL SELECT * surfaces engine field names; re-attach display identity so
-        # Multi-name joins keep duplicate display columns positionally.
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
@@ -2740,7 +2502,6 @@ class DataFrame:
         from repark.spark.functions import lit as lit_fn
         from repark.spark.functions import when
 
-        # Multi-name frames bind by engine/display pairs.
         projected: list[Column] = []
         for bound in self._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
@@ -2750,7 +2511,6 @@ class DataFrame:
             expression: Column = bound
             for old, new in mapping.items():
                 expression = when(expression == lit_fn(old), lit_fn(new)).otherwise(expression)
-            # Preserve origin for multi-name select identity.
             if bound._origin_plan_id is not None and bound._origin_field is not None:
                 projected.append(
                     Column(
@@ -2769,7 +2529,6 @@ class DataFrame:
                 projected.append(expression.alias(display))
         return self.select(*projected)
 
-    # Repartition argument validation; execution is single-node.
     def repartition(self, numPartitions: Any, *cols: Any) -> DataFrame:  # noqa: N803
         """Accept ``repartition`` as a no-op (single-node; plan unchanged — disclosed).
 
@@ -2779,9 +2538,6 @@ class DataFrame:
         ``*cols`` is present (Spark parity — sole-arg list must not silently no-op).
         """
         self._ensure_alive()
-        # Spark: first position is int count, or a Column/str partition expr when the
-        # call is ``repartition(*cols)``. List/bool/float/… → NOT_COLUMN_OR_STR always
-        # Reject a sole-argument list instead of treating it as no columns.
         if isinstance(numPartitions, bool) or (
             not isinstance(numPartitions, (int, str)) and not isinstance(numPartitions, Column)
         ):
@@ -2858,13 +2614,11 @@ class DataFrame:
                     "arg_value": str(numPartitions),
                 },
             )
-        # Type-check simple name refs so non-int partition columns fail loud (Spark analysis).
         column_name: str | None = None
         if isinstance(partitionIdExpr, str):
             column_name = partitionIdExpr
         elif isinstance(partitionIdExpr, Column):
             display = partitionIdExpr.spark_display_part()
-            # Bare attribute only — casts / expressions stay deferred to the engine seed.
             if display.isidentifier() and display in self.columns:
                 column_name = display
         if column_name is not None:
@@ -2912,7 +2666,6 @@ class DataFrame:
             raise PySparkValueError(f"offset must be >= 0, got {n}")
         if n == 0:
             return self._identity_child()
-        # Fetch a very large tail after skip (practical unbounded offset for single-node).
         return self._spawn_preserving_identity(self._plan().limit_with_skip(n, 2**31 - 1))
 
     def drop(self, *cols: Column | str) -> DataFrame:
@@ -2924,7 +2677,6 @@ class DataFrame:
         correct side's engine field only, not every display-name match. Dropping an
         unemitted semi/anti right origin is a Spark 4.1.2 no-op.
         """
-        # Join identity.
         engine_drop: list[str] = []
         for item in cols:
             if (
@@ -2933,7 +2685,6 @@ class DataFrame:
                 and item._origin_field is not None
             ):
                 if item._origin_plan_id in self._origin_not_emitted:
-                    # Live Spark 4.1.2: drop(right["k"]) after leftsemi/leftanti is a no-op.
                     continue
                 if self._origin_map is not None:
                     key = (item._origin_plan_id, item._origin_field)
@@ -2942,7 +2693,6 @@ class DataFrame:
                         continue
             name = self._name_of(item)
             if self._display_names is not None and self._engine_names is not None:
-                # Name-based: drop every engine field whose display matches.
                 for display, engine in zip(self._display_names, self._engine_names, strict=True):
                     if display == name:
                         engine_drop.append(engine)
@@ -2977,12 +2727,10 @@ class DataFrame:
         follows Spark: ascending → nulls first, descending → nulls last.
         """
         columns, ascending_flags, nulls_first_flags = self._sort_specs(cols, ascending)
-        # Sort does not change column identity; keep display and engine maps.
         return self._spawn_preserving_identity(
             self._plan().sort(columns, ascending_flags, nulls_first_flags)
         )
 
-    # PySpark spells this ``orderBy`` and also aliases ``sort`` to it.
     orderBy = order_by  # noqa: N815 — deliberate PySpark-compatible camelCase alias
     sort = order_by
 
@@ -2998,7 +2746,6 @@ class DataFrame:
         """
         return self.order_by(*cols, ascending=ascending)
 
-    # PySpark camelCase.
     sortWithinPartitions = sort_within_partitions  # noqa: N815 — PySpark camelCase alias
 
     def join(
@@ -3033,9 +2780,7 @@ class DataFrame:
         the ``df.alias("l").join(df.alias("r"), …)`` workaround — alternation would
         silently mis-bind.
         """
-        # Join identity and self-join handling.
         join_how = "inner" if how is None else str(how).lower().replace("_", "")
-        # Normalize Spark aliases to engine tokens.
         how_aliases = {
             "inner": "inner",
             "cross": "cross",
@@ -3046,7 +2791,6 @@ class DataFrame:
             "full": "full",
             "outer": "full",
             "fullouter": "full",
-            # semi family. `.replace("_", "")` already folded `left_semi`/`left_anti` in.
             "semi": "leftsemi",
             "leftsemi": "leftsemi",
             "anti": "leftanti",
@@ -3063,10 +2807,6 @@ class DataFrame:
         if engine_how in _SEMI_JOIN_HOWS and (
             on is None or (isinstance(on, (list, tuple)) and not on)
         ):
-            # A conditionless semi/anti join is NOT a Cartesian product: Spark keeps every left
-            # row iff the right side is non-empty (semi) / empty (anti), with no m*n fan-out.
-            # Both conditionless shapes (`on=None`, `on=[]`) fall through to crossJoin below, so
-            # they are refused loud here rather than silently answering with a cross join's rows.
             raise AnalysisException(
                 f"join type '{how}' requires an `on` condition. A conditionless {engine_how} "
                 "join is not a Cartesian product, so repark refuses it rather than returning a "
@@ -3074,8 +2814,6 @@ class DataFrame:
                 "Column."
             )
         if on is None:
-            # Cartesian product requires crossJoin or conf spark.sql.crossJoin.enabled.
-            # Read the same effective value as RuntimeConfig.get (runtime map, then builder).
             if engine_how != "cross" and not self._cross_join_enabled():
                 raise AnalysisException(
                     "Detected implicit cartesian product for INNER join between logical plans. "
@@ -3085,8 +2823,6 @@ class DataFrame:
         if isinstance(on, Column):
             _reject_partition_transform(on)
             return self._join_on_condition_h1(other, on, engine_how)
-        # Name equi-join: SubqueryAlias both sides only when names collide or self-join
-        # — unconditional alias leaked permanent session views.
         if self is other or set(self.columns) & set(other.columns):
             left: DataFrame = self.alias(f"_repark_jl_{uuid.uuid4().hex[:12]}")
             right: DataFrame = other.alias(f"_repark_jr_{uuid.uuid4().hex[:12]}")
@@ -3100,8 +2836,6 @@ class DataFrame:
             )
             return child
         if isinstance(on, (list, tuple)) and all(isinstance(key, str) for key in on):
-            #: empty key list is a cartesian product — same gate as on=None
-            # (vacuous all-str would otherwise call join_on_names([]) and skip the conf check).
             keys = list(on)
             if not keys:
                 if engine_how != "cross" and not left._cross_join_enabled():
@@ -3142,7 +2876,6 @@ class DataFrame:
             "leftanti": "LEFT ANTI",
         }.get(engine_how, "INNER")
         left_only = engine_how in _SEMI_JOIN_HOWS
-        # Register both plans as temp views (plan-stable), analyze SQL join, then drop views.
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
         try:
@@ -3155,9 +2888,6 @@ class DataFrame:
             )
             left_cols = list(self.columns)
             right_cols = list(other.columns)
-            #: a semi/anti join emits the left side only, so a right-hand name that merely
-            # SHARES a left name is not a duplicate in the output — counting it would mangle the
-            # left engine field for no reason (and `k` is shared on essentially every semi join).
             all_display = left_cols if left_only else left_cols + right_cols
             display_counts: dict[str, int] = {}
             for name in all_display:
@@ -3201,7 +2931,6 @@ class DataFrame:
                 )
             planned = self._session.sql(join_sql)
             child = self._spawn(planned, other)
-            # Always attach identity when any display name collides OR origin map needed.
             child._display_names = display_names
             child._engine_names = engine_names
             child._origin_map = origin_map
@@ -3210,8 +2939,6 @@ class DataFrame:
         finally:
             self._session.drop_temp_view(left_alias)
             self._session.drop_temp_view(right_alias)
-
-    # Aggregation.
 
     def group_by(self, *cols: Column | str) -> GroupedData:
         """Group by columns and return a ``GroupedData`` handle.
@@ -3223,11 +2950,9 @@ class DataFrame:
         group_columns = [self._column_of(item) for item in cols]
         for column in group_columns:
             _reject_partition_transform(column)
-            # Generators lower through select unnest, not as grouping keys.
             column._reject_nested_generator("groupBy")
         return GroupedData(self, group_columns)
 
-    # PySpark spells this ``groupBy`` and also accepts the lowercase ``groupby``.
     groupBy = group_by  # noqa: N815 — deliberate PySpark-compatible camelCase alias
     groupby = group_by
 
@@ -3241,7 +2966,6 @@ class DataFrame:
 
     def grouping_sets(self, *cols: Column | str) -> GroupedData:
         """Return grouping sets for each column and the grand total."""
-        # Full Spark groupingSets API is multi-list; v1: one set per col +.
         names = [self._grouping_col_sql(item) for item in cols]
         if not names:
             raise AnalysisException("groupingSets requires at least one column")
@@ -3442,8 +3166,6 @@ class DataFrame:
         """
         return self.group_by().agg(*exprs)
 
-    # Set operations.
-
     def union(self, other: DataFrame) -> DataFrame:
         """Union by **position** (PySpark ``DataFrame.union`` / ``unionAll``).
 
@@ -3452,16 +3174,12 @@ class DataFrame:
         number of columns.
         """
         child = self._spawn(self._plan().union(other._plan(), False), other)
-        # Keep left-side display identity when present (union-by-position inherits
-        # left engine field names — Spark keeps left display names).
         if self._display_names is not None and self._engine_names is not None:
             child._display_names = list(self._display_names)
             child._engine_names = list(self._engine_names)
-            # Origin map is left-only; right-parent Columns no longer resolve (disclosed).
             child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
         return child
 
-    # PySpark keeps ``unionAll`` as a historical alias of ``union``.
     unionAll = union  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def union_by_name(self, other: DataFrame, allowMissingColumns: bool = False) -> DataFrame:  # noqa: N803 — PySpark camelCase kwarg
@@ -3484,7 +3202,6 @@ class DataFrame:
                 )
         return self._spawn(self._plan().union(other._plan(), True), other)
 
-    # PySpark spells this ``unionByName``.
     unionByName = union_by_name  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def _sql_binary_set_op(self, other: DataFrame, op_sql: str) -> DataFrame:
@@ -3493,15 +3210,11 @@ class DataFrame:
         other._ensure_alive()
         left = scratch_view_name(self._session, "__repark_set_l_")
         right = scratch_view_name(self._session, "__repark_set_r_")
-        # Materialize + register both under try/finally so a right-side MIA failure after
-        # left registration cannot leak the left staging MemTable.
-        # Register plan-stable bridge snapshots.
         try:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}")
             child = self._spawn(planned, other)
-            # Re-attach left multi-name display maps after SQL set-op.
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
                 child._engine_names = list(self._engine_names)
@@ -3551,8 +3264,6 @@ class DataFrame:
         """Rows in this frame not in ``other``, deduplicated (PySpark ``subtract`` / ``except``)."""
         return self._sql_binary_set_op(other, "EXCEPT")
 
-    # PySpark also exposes ``exceptAll``; ``except_`` is the Python keyword escape (not shipped).
-
     def crossJoin(  # noqa: N802 — PySpark method name
         self, other: DataFrame
     ) -> DataFrame:
@@ -3561,8 +3272,6 @@ class DataFrame:
         other._ensure_alive()
         left = scratch_view_name(self._session, "__repark_x_l_")
         right = scratch_view_name(self._session, "__repark_x_r_")
-        # Materialize + register both under try/finally (; same as set-ops).
-        # Register plan-stable bridge snapshots.
         try:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
@@ -3597,8 +3306,6 @@ class DataFrame:
         names = _normalize_subset(subset, accept_str=False, allowed_phrase="a list or tuple")
         if names is None:
             return self._spawn_preserving_identity(self._plan().distinct())
-        # Ambiguous display names in a subset expand to every matching engine field.
-        # (Spark keeps one row per distinct key multiset of those columns).
         resolved: list[str] = []
         if self._display_names is not None and self._engine_names is not None:
             want = {self._name_of(item) for item in names}
@@ -3611,15 +3318,11 @@ class DataFrame:
         else:
             for item in names:
                 resolved.append(self._resolve_getitem_column_name(self._name_of(item)))
-        # Empty subset → full-row distinct (avoids DataFusion empty ORDER BY internal error;
-        # Same outcome as subset == all columns.
         all_engine = (
             list(self._engine_names) if self._engine_names is not None else list(self.columns)
         )
         if not resolved or set(resolved) == set(all_engine):
             return self._spawn_preserving_identity(self._plan().distinct())
-        # Use row_number keep-first rather than groupBy+first.
-        # (preserves non-key columns without collapsing via first()).
         from repark.spark.window import Window
 
         order_cols: list[Column] = []
@@ -3641,7 +3344,6 @@ class DataFrame:
         filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))
         return filtered.drop("__repark_dd_rn")
 
-    # PySpark spells this ``dropDuplicates``.
     dropDuplicates = drop_duplicates  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def with_column_renamed(self, existing: str, new: str) -> DataFrame:
@@ -3667,8 +3369,6 @@ class DataFrame:
             canonical = self._resolve_getitem_column_name(existing)
         except AnalysisException:
             return self
-        # Multi-name frames bind by engine/display pairs (bare name rebind
-        # raises AMBIGUOUS_REFERENCE on duplicate display names.
         projected: list[Column] = []
         for bound in self._iter_bound_columns():
             display = bound._projection_name or bound.spark_display_part()
@@ -3678,7 +3378,6 @@ class DataFrame:
                 projected.append(bound)
         return self.select(*projected)
 
-    # PySpark spells this ``withColumnRenamed``.
     withColumnRenamed = with_column_renamed  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def with_columns_renamed(self, colsMap: dict[str, str]) -> DataFrame:  # noqa: N803 — PySpark
@@ -3717,8 +3416,6 @@ class DataFrame:
                     "(empty/whitespace names are rejected — Group F / octo r3)"
                 )
             names = [new_name if name == old_name else name for name in names]
-        # Multi-name frames already carry Spark-legal duplicate displays; allow them
-        # and rename via engine bindings. Ordinary frames still refuse duplicate names.
         multi_name = self._display_names is not None and self._engine_names is not None
         if not multi_name and len(names) != len(set(names)):
             raise AnalysisException(
@@ -3732,7 +3429,6 @@ class DataFrame:
             if final == display:
                 projected.append(bound)
                 continue
-            # Keep origin so multi-name select identity survives the rename.
             projected.append(
                 Column(
                     bound._inner.alias(final),
@@ -3748,7 +3444,6 @@ class DataFrame:
             )
         return self.select(*projected)
 
-    # PySpark spells this ``withColumnsRenamed``.
     withColumnsRenamed = with_columns_renamed  # noqa: N815 — deliberate PySpark-compatible camelCase
 
     def transform(
@@ -3830,8 +3525,6 @@ class DataFrame:
 
     dynamic_flatten = dynamicFlatten
 
-    # Null handling.
-
     @property
     def na(self) -> DataFrameNaFunctions:
         """The missing-data surface (PySpark ``DataFrame.na``): ``fill`` / ``drop``."""
@@ -3853,8 +3546,6 @@ class DataFrame:
     ) -> DataFrame:
         """Drop rows containing NULLs; this aliases ``df.na.drop``."""
         return self.na.drop(how, thresh, subset)
-
-    # Write surfaces.
 
     @property
     def write(self) -> DataFrameWriter:
@@ -3913,8 +3604,6 @@ class DataFrame:
         through unchanged.
         """
         if isinstance(item, Column):
-            # Stable-name rebind (F.col / requested spelling) then origin rebind so
-            # orderBy/groupBy/select parent Columns hit the correct post-join engine field.
             return self._rebind_origin_column(self._rebind_stable_name_column(item))
         if isinstance(item, str):
             return self._bind_schema_column(item)
@@ -3931,7 +3620,6 @@ class DataFrame:
             raw = builder.get("spark.sql.crossJoin.enabled")
             if raw is not None:
                 return str(raw).lower() in {"1", "true", "yes", "on"}
-        # Spark default is true (Cartesian allowed unless conf disables).
         return True
 
     @staticmethod
@@ -3972,22 +3660,11 @@ class DataFrame:
         for item in cols:
             column = self._column_of(item)
             _reject_partition_transform(column)
-            # Generators lower through select unnest; ordering by the placeholder is invalid.
-            # ``.asc()`` and ``.desc()`` keep the sticky generator marker.
             column._reject_nested_generator("orderBy")
             is_ascending = True if column._sort_ascending is None else column._sort_ascending
             columns.append(column._inner)
             ascending_flags.append(is_ascending)
             order_columns.append(column)
-        # PySpark's `DataFrame._sort_cols`:
-        #     if isinstance(ascending, (bool, int)):
-        #         if not ascending: jcols = [jc.desc() for jc in jcols]
-        #     elif isinstance(ascending, list):
-        #         jcols = [jc if asc else jc.desc() for asc, jc in zip(ascending, jcols)]
-        # A FALSY entry replaces that column's marker with `desc()` — descending, nulls last. A
-        # TRUTHY entry is a NO-OP: the column keeps whatever it arrived carrying, marker and all.
-        # Falsy entries apply descending markers. RePark rejects a short list instead of silently
-        # truncating it. Tuples are accepted as a sequence for compatibility.
         remark = self._ascending_remark_flags(len(order_columns), ascending)
         directions: list[bool] = []
         nulls_first_flags: list[bool] = []
@@ -3995,7 +3672,6 @@ class DataFrame:
             order_columns, ascending_flags, remark, strict=True
         ):
             if remarked:
-                # `.desc()` — descending, nulls last.
                 directions.append(False)
                 nulls_first_flags.append(False)
             else:
@@ -4017,8 +3693,6 @@ class DataFrame:
                     f"({len(ascending)} != {count})"
                 )
             return [not flag for flag in ascending]
-        # PySpark raises NOT_BOOL_OR_LIST here, which is a `PySparkTypeError`; a wrong TYPE for
-        # the keyword must not arrive as a value error.
         raise PySparkTypeError(
             f"ascending must be a bool or a list of bools, got {type(ascending).__name__}"
         )
@@ -4056,8 +3730,6 @@ class DataFrame:
         """Return the last ``n`` rows for display without collecting the full result."""
         return display._preview_tail_rows(self, n, total_rows=total_rows)
 
-    # Arrow export errors use the facade exception taxonomy and display names stay positional.
-
     def _apply_export_display_names(self, table: Any) -> Any:
         """Apply display names at the Arrow boundary while preserving duplicate positions."""
         table = _strip_internal_tighten_metadata(table)
@@ -4076,7 +3748,6 @@ class DataFrame:
         Map cells become dictionaries. Calendar intervals raise ``PySparkNotImplementedError``.
         The result uses O(rows) Python memory; use ``toLocalIterator`` for streaming.
         """
-        # Convert batches directly so collect does not hold a second full Arrow table.
         rows: list[Row] = []
         for batch in self.to_arrow_batches():
             rows.extend(DataFrame._rows_from_arrow_table(batch))
@@ -4091,7 +3762,6 @@ class DataFrame:
         if self._map_bridge is not None and not (
             self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
         ):
-            # Re-run map bridge but only keep ``num`` output rows.
             limit_count = self._require_non_negative_limit(num)
             if limit_count == 0:
                 return []
@@ -4143,12 +3813,8 @@ class DataFrame:
 
         The full result is collected before slicing. Non-positive values return an empty list.
         """
-        # Live PySpark routes ``tail`` through JVM ``tailToPython`` and accepts a negative as
-        # empty (unlike ``take``/``head``/``limit``, which raise AnalysisException). Match that.
         if isinstance(num, bool) or not isinstance(num, int):
             raise PySparkTypeError(f"Argument `num` should be a int, got {type(num).__name__}.")
-        # Must gate stopped sessions even when num<=0 short-circuits (take(0)/isEmpty fail loud
-        # via limit/collect; returning [] after stop would be a silent wrong lifecycle outcome).
         self._ensure_alive()
         if num <= 0:
             return []
@@ -4165,12 +3831,10 @@ class DataFrame:
         if self._map_bridge is not None and not (
             self._persist_requested or self._checkpoint_lazy or self._cache_view is not None
         ):
-            # Stop after the first output row.
             return self._consume_map_in_arrow_batches(max_output_rows=1).num_rows == 0
         self._materialize_cache_if_needed()
         return self.limit(1).count() == 0
 
-    # Snake_case alias — not a PySpark name; convenient for Python call sites.
     is_empty = isEmpty
 
     def toLocalIterator(  # noqa: N802 — PySpark camelCase surface
@@ -4182,11 +3846,9 @@ class DataFrame:
         Arrow memory stays O(batch) while the iterator is consumed. Converting it to a list uses
         O(rows) Python memory. ``prefetchPartitions`` is accepted and ignored.
         """
-        del prefetchPartitions  # signature parity only
-        # Honest streaming: pull RecordBatches via the C-stream, convert one batch at a time.
+        del prefetchPartitions
         yield from self._iter_rows_streaming()
 
-    # Snake_case alias — not a PySpark name; convenient for Python call sites.
     to_local_iterator = toLocalIterator
 
     def _iter_rows_streaming(self) -> Iterator[Row]:
@@ -4197,8 +3859,6 @@ class DataFrame:
     @staticmethod
     def _iter_rows_from_record_batch(batch: Any) -> Iterator[Row]:
         """Convert one ``pyarrow.RecordBatch`` into :class:`~repark.row.Row` (collect parity)."""
-        # Collect rows directly from each batch.
-        # RecordBatch shares column/schema APIs with Table — skip Table.from_batches wrap.
         yield from DataFrame._rows_from_arrow_table(batch)
 
     @staticmethod
@@ -4236,11 +3896,6 @@ class DataFrame:
         if isinstance(num, bool) or not isinstance(num, int):
             raise PySparkTypeError(f"Argument `num` should be a int, got {type(num).__name__}.")
         if num < 0:
-            # Live PySpark 4.1.2 (zulu-17): AnalysisException
-            # [INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE] The limit like expression "-1" is
-            # invalid. The limit expression must be equal to or greater than 0, but got -1.
-            # SQLSTATE: 42K0E; + a plan dump. repark drops SQLSTATE and the plan dump (no repark
-            # error carries SQLSTATE; plan text is engine-internal).
             raise AnalysisException(
                 f"[INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE] The limit like expression "
                 f'"{num}" is invalid. The limit expression must be equal to or greater than 0, '
@@ -4279,8 +3934,6 @@ class DataFrame:
             reader = pa.RecordBatchReader.from_stream(self)
         except pa.lib.ArrowException as arrow_error:
             raise _export_engine_error(arrow_error) from arrow_error
-        # Capture schema before drain — empty streams yield no batches from the reader, but the
-        # C-stream still declares a schema (same source :meth:`to_arrow` uses).
         stream_schema = reader.schema
         yielded_batch = False
         try:
@@ -4290,11 +3943,9 @@ class DataFrame:
         except pa.lib.ArrowException as arrow_error:
             raise _export_engine_error(arrow_error) from arrow_error
         if not yielded_batch:
-            # Preserve the declared schema when the stream has no rows.
             empty = pa.RecordBatch.from_pylist([], schema=stream_schema)
             yield self._apply_export_display_names(empty)
 
-    # CamelCase alias for the repark batch iterator (disclosed extension; not PySpark).
     toArrowBatches = to_arrow_batches  # noqa: N815 — deliberate camelCase twin of to_arrow_batches
 
     def to_polars(self) -> pl.DataFrame:
@@ -4330,7 +3981,6 @@ class DataFrame:
         """
         return self.to_arrow().to_pandas()
 
-    # PySpark spells this ``toPandas``; expose both so the one-line import swap just works.
     toPandas = to_pandas  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 
     def to_numpy(self) -> np.ndarray:
@@ -4350,7 +4000,6 @@ class DataFrame:
         return np.column_stack([column.to_numpy(zero_copy_only=False) for column in table.columns])
 
 
-# Re-export bindings. Keep plan_collapse first because sibling modules import its helpers.
 from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _G2_RANGE_NUMERIC_DTYPES,
     _global_agg_sql_parts,

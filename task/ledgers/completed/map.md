@@ -100,6 +100,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branches `feat/cfg-2-step1`, `feat/cfg-2-step2`.
   pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+- [comment-core-1-ledger.md](comment-core-1-ledger.md) —
+  **COMMENT-CORE-1 (2026-09-13), in flight:** remove the 341 full-line comments and 6
+  trailing comments from `python/repark/src/repark/spark/dataframe/core.py`; keep the
+  74 `# noqa` / `# type:` pragmas and every docstring; move each reason into
+  `python/repark/src/repark/spark/dataframe/map.md` under `## core.py rationale
+  (COMMENT-CORE-1)`. AST-identical, ceilings ratchet down. `risk_tier: standard`.
+  Branch `chore/comment-core-1`.
+  pins: comment-core-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [conf-unread-1-ledger.md](conf-unread-1-ledger.md) —
   **CONF-UNREAD-1 steps 1–2 (2026-09-11), in flight:** the wiring/refusals for
   the four accepted-but-unread `datafusion.*` keys — `coalesce_batches` refuses
