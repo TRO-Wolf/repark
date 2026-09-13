@@ -5,14 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [comment-core-1-ledger.md](comment-core-1-ledger.md) —
-  **COMMENT-CORE-1 (2026-09-13), in flight:** remove the 341 full-line comments and 6
-  trailing comments from `python/repark/src/repark/spark/dataframe/core.py`; keep the
-  74 `# noqa` / `# type:` pragmas and every docstring; move each reason into
-  `python/repark/src/repark/spark/dataframe/map.md` under `## core.py rationale
-  (COMMENT-CORE-1)`. AST-identical, ceilings ratchet down. `risk_tier: standard`.
-  Branch `chore/comment-core-1`.
-  pins: comment-core-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [facade-3-ledger.md](facade-3-ledger.md) —
   **FACADE-3 step 1 (2026-09-13), in flight:** `createDataFrame` inference measure +
   pins — the release baseline table across eight dispatch shapes at 1e4/1e5 × 7
