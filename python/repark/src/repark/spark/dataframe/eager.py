@@ -10,29 +10,33 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
 _CACHE_MAX_BYTES_KEY = "repark.cache.max_bytes"
+_CACHE_MAX_TOTAL_BYTES_KEY = "repark.cache.max_total_bytes"
 
 
 def _cache_conf_lookup(alive_token: dict[str, Any], key: str) -> str | None:
     """Runtime conf then builder snapshot for a cache-related conf key."""
+    lowered = key.lower()
     tomb = alive_token.get("runtime_conf_unset")
-    if isinstance(tomb, set) and key in tomb:
+    if isinstance(tomb, set) and any(entry.lower() == lowered for entry in tomb):
         return None
-    store = alive_token.get("runtime_conf")
-    if isinstance(store, dict):
-        raw = store.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
-    builder = alive_token.get("builder_config") or {}
-    if isinstance(builder, dict):
-        raw = builder.get(key)
-        if raw is not None and str(raw) != "":
-            return str(raw)
+    for layer in (
+        alive_token.get("runtime_conf"),
+        alive_token.get("builder_config") or {},
+    ):
+        if not isinstance(layer, dict):
+            continue
+        for stored_key in reversed(list(layer)):
+            if stored_key.lower() == lowered:
+                raw = layer[stored_key]
+                if raw is not None and str(raw) != "":
+                    return str(raw)
+                break
     return None
 
 
-def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
-    """Parse ``repark.cache.max_bytes``; ``None`` when unset or zero (no size guard)."""
-    raw = _cache_conf_lookup(alive_token, _CACHE_MAX_BYTES_KEY)
+def _resolve_cache_byte_budget(alive_token: dict[str, Any], key: str) -> int | None:
+    """Parse a cache byte-budget conf key; ``None`` when unset or zero (no guard)."""
+    raw = _cache_conf_lookup(alive_token, key)
     if raw is None:
         return None
     try:
@@ -40,13 +44,13 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
     except ValueError as error:
         raise IllegalArgumentException(
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
+            f"{key!r} is invalid. Expected a non-negative integer byte budget "
             f"(0 = no size guard)."
         ) from error
     if value < 0:
         raise IllegalArgumentException(
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
+            f"{key!r} is invalid. Expected a non-negative integer byte budget "
             f"(0 = no size guard)."
         )
     if value == 0:
@@ -54,10 +58,28 @@ def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
     if value > 0xFFFF_FFFF_FFFF_FFFF:
         raise IllegalArgumentException(
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {raw!r} in the config "
-            f"{_CACHE_MAX_BYTES_KEY!r} is invalid. Expected a non-negative integer byte budget "
+            f"{key!r} is invalid. Expected a non-negative integer byte budget "
             f"fitting u64 (0 = no size guard)."
         )
     return value
+
+
+def _resolve_cache_max_bytes(alive_token: dict[str, Any]) -> int | None:
+    """Parse ``repark.cache.max_bytes``; ``None`` when unset or zero (no size guard)."""
+    return _resolve_cache_byte_budget(alive_token, _CACHE_MAX_BYTES_KEY)
+
+
+def _resolve_cache_max_total_bytes(alive_token: dict[str, Any]) -> int | None:
+    """Parse ``repark.cache.max_total_bytes``; ``None`` when unset or zero (no budget)."""
+    return _resolve_cache_byte_budget(alive_token, _CACHE_MAX_TOTAL_BYTES_KEY)
+
+
+def _resolve_cache_budgets(alive_token: dict[str, Any]) -> tuple[int | None, int | None]:
+    """``(max_bytes, max_total_bytes)`` limits for one cache materialization."""
+    return (
+        _resolve_cache_max_bytes(alive_token),
+        _resolve_cache_max_total_bytes(alive_token),
+    )
 
 
 def _eager_materialize(frame: DataFrame) -> DataFrame:

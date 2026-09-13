@@ -367,6 +367,17 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   Harness:
   [../../python/repark-parity/tests/eager_own/map.md](../../python/repark-parity/tests/eager_own/map.md).
   pins: eager-own-1/C-001, C-012
+- [eager-budget-1-2026-09-13/](eager-budget-1-2026-09-13/map.md) — **EAGER-BUDGET-1
+  step 0 (2026-09-13):** the same 1e6-row TA fixture at 30 iterations under
+  `systemd-run` cgroup caps 2G/4G/8G (swap off), base `8936346a` bare vs `main`
+  bare vs `main` retained — per-iteration wall / VmRSS / VmHWM / `ru_majflt`,
+  the cgroup outcome per cell. Base-bare and main-retained OOM at iter 5 (2G)
+  and ~16 (4G) and survive at 8G with ~6.7 GB VmHWM; main-bare survives
+  everywhere (VmHWM ~1.37 GB). The retained-buffer probe: `Table.nbytes`
+  199,008,178 vs distinct-`buffer.address` sum 188,196,432 (385 buffers, ratio
+  0.9457) — the shape D-2 dedupes. No per-call slowdown reproduces as a
+  function of live cache views; `ru_majflt` 0 everywhere.
+  pins: eager-budget-1/C-001
 
 ## Pointers
 

@@ -370,7 +370,7 @@ async fn materialize_dataframe_as_cache_view_respects_max_bytes() {
         .expect("values plan");
     // One-byte budget must refuse (collected Arrow arrays are far larger).
     let err = session
-        .materialize_dataframe_as_cache_view("cache_too_big", values, Some(1))
+        .materialize_dataframe_as_cache_view("cache_too_big", values, (Some(1), None))
         .await
         .expect_err("max_bytes=1 must refuse a multi-row materialize");
     let message = err.to_string();
@@ -398,7 +398,7 @@ async fn materialize_dataframe_as_cache_view_without_budget_pins_memtable() {
         .await
         .expect("values plan");
     session
-        .materialize_dataframe_as_cache_view("cache_ok", values, None)
+        .materialize_dataframe_as_cache_view("cache_ok", values, (None, None))
         .await
         .expect("cache materialize without budget");
     let count = session

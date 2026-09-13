@@ -94,7 +94,7 @@ fn shared_runtime() -> PyResult<Arc<Runtime>> {
 #[pyclass(name = "PyReparkSession", module = "repark._native")]
 pub struct PyReparkSession {
     pub(crate) session: ReparkSession,
-    runtime: Arc<Runtime>,
+    pub(crate) runtime: Arc<Runtime>,
 }
 
 #[pymethods]
@@ -354,23 +354,22 @@ impl PyReparkSession {
         })
     }
 
-    /// Cache-path materialize with an optional `repark.cache.max_bytes` guard.
     /// # Errors
     /// Returns a PySpark-shaped error if collect/registration fails or `max_bytes` is exceeded.
-    #[pyo3(signature = (name, frame, max_bytes=None))]
+    #[pyo3(signature = (name, frame, budgets=(None, None)))]
     pub fn materialize_as_cache_view(
         &self,
         py: Python<'_>,
         name: &str,
         frame: &PyDataFrame,
-        max_bytes: Option<u64>,
+        budgets: (Option<u64>, Option<u64>),
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.materialize_as_cache_view", {
             let frame = frame.inner().clone();
             py.detach(|| {
                 self.runtime.block_on(
                     self.session
-                        .materialize_dataframe_as_cache_view(name, frame, max_bytes),
+                        .materialize_dataframe_as_cache_view(name, frame, budgets),
                 )
             })
             .map_err(to_py_err)

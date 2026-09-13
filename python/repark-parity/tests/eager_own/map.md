@@ -22,10 +22,26 @@ Arrow path), then the card's 19-column `withColumns` chain — three `ema`, thre
 `round`, a `coalesce` null replacement, and a `when`/`otherwise` string
 condition. Ten bare `eager()` calls follow (results not assigned). Per
 iteration the worker records wall time, `VmRSS` after the call and after
-`gc.collect()`, `VmHWM`, and the `__repark_cache_*` name count in
+`gc.collect()`, `VmHWM`, `ru_majflt` before/after the call
+(`resource.getrusage(RUSAGE_SELF)`), and the `__repark_cache_*` name count in
 `catalog.listTables()`; it also records the count post-loop, post-gc, and
 post-`clearCache()`, cross-checked against `session.list_temp_view_names()`.
+Each iteration record is flushed as one JSON line to `<json-out>.partial`
+(fsync) so a cgroup-killed cell still yields the iterations it reached.
 The JSON goes to the `--json-out` argv path.
+
+EAGER-BUDGET-1 step 0 (2026-09-13) added two argv flags; existing argv and
+JSON shape are unchanged:
+
+- `--retain` appends each `eager()` result to a list held through the loop —
+  the honest retained-pressure case on `main` (on base `8936346a` bare
+  `eager()` already leaks, so base cells run without the flag).
+- `--retained-probe` materializes one retained eager result before the loop,
+  calls `.toArrow()` on it, and records `table_nbytes` beside the sum of
+  `buffer.size` over DISTINCT `buffer.address` across every column chunk's
+  `buffers()` (the flat 25-column fixture has no nested arrays), plus the
+  ratio — the Python-side rehearsal of D-2's distinct-buffer accounting (the
+  Rust-side MemTable figure is step 1's).
 
 The bench pin (`test_bare_eager_registrations_released_million_rows`) is
 opt-in through `REPARK_EAGER_OWN_BENCH=1` so CI never runs the million-row
@@ -71,6 +87,7 @@ Measured facts this harness is built on (base `8936346a`, release native,
 - `map.md` — this file.
 
 pins: eager-own-1/C-001, C-012
+pins: eager-budget-1/C-001
 
 ## Pointers
 

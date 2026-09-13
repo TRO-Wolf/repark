@@ -32,6 +32,7 @@ use crate::{
     parse_table_identifier_segments, resolve_s3_region_override,
 };
 
+mod cache_budget;
 mod df_guards;
 mod iceberg_caches;
 mod late_catalogs;

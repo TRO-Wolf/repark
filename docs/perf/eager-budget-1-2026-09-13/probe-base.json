@@ -1,0 +1,55 @@
+{
+  "fixture": {
+    "rows": 1000000,
+    "seed": 20260913,
+    "source_columns": 6,
+    "added_columns": 19,
+    "total_columns": 25
+  },
+  "environment": {
+    "python": "3.12.3",
+    "cpu_count": 64,
+    "mem_total_bytes": 134922371072,
+    "native_debug_assertions": false
+  },
+  "total_seconds": 2.3012008840451017,
+  "retain": false,
+  "iterations": [
+    {
+      "iteration": 0,
+      "seconds": 2.199860983993858,
+      "registrations_after_call": 2,
+      "temp_view_registrations_after_call": 2,
+      "rss_after_call_bytes": 801558528,
+      "rss_after_gc_bytes": 801558528,
+      "peak_rss_bytes": 1239453696,
+      "major_faults_before_call": 0,
+      "major_faults_after_call": 0,
+      "major_faults_delta": 0
+    }
+  ],
+  "post_loop": {
+    "registrations": 2,
+    "temp_view_registrations": 2,
+    "rss_bytes": 801558528,
+    "peak_rss_bytes": 1239453696
+  },
+  "post_gc": {
+    "registrations": 2,
+    "temp_view_registrations": 2,
+    "rss_bytes": 801558528,
+    "peak_rss_bytes": 1239453696
+  },
+  "post_clear_cache": {
+    "registrations": 0,
+    "temp_view_registrations": 0,
+    "rss_bytes": 801558528,
+    "peak_rss_bytes": 1239453696
+  },
+  "retained_probe": {
+    "table_nbytes": 199008178,
+    "distinct_buffer_bytes": 188196432,
+    "distinct_buffer_count": 385,
+    "distinct_over_nbytes": 0.945671850731682
+  }
+}

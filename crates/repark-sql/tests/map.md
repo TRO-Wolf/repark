@@ -22,6 +22,9 @@ holds behavior observed from outside the crate.
 - `declared_sorted_tighten.rs` — ANSI CREATE, VIEW, and SELECT INTO refuse tightened plans
   before publication. Derived expressions, subqueries, cached views, default-catalog names,
   and lazy view hops are covered. Nullable projections and ordinary CTAS remain allowed.
+  EAGER-BUDGET-1 step 2 (2026-09-13): the cache-materialize call site passes `None` for the
+  new `max_total_bytes` parameter; the pinned refusal is unchanged.
+  pins: eager-budget-1/C-005
 - `ctas_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS over a non-null parquet read
   commits every Iceberg field optional and reads every Arrow field nullable, Spark-equal;
   the tighten-derived refusal still fires on a genuinely non-nullable source.

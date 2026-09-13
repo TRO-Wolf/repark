@@ -269,7 +269,7 @@ async fn iceberg_create_from_cached_derived_frame_refuses() {
         .await
         .unwrap();
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .unwrap();
     let refused = session

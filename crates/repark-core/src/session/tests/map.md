@@ -35,6 +35,27 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   a runtime resize keeps the very same log (`Arc::ptr_eq`) and the new pool records into it,
   and a runtime `= '0'` drops the log with the pool.
   pins: h3-spill-residue-1/C-002
+- `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 pins. Two cache views
+  registered over the same `RecordBatch` count one buffer set; a sliced array counts its
+  parent's buffer once (dedupe is `Buffer::data_ptr()`, the allocation base — `as_ptr()`
+  double-counts because arrow-58 slices the `Buffer` itself); no view answers 0; a dropped
+  view stops counting; `user_view` and `__repark_ckpt_*` names are ignored. One function-level
+  pin holds the reuse contract: a second `distinct_buffer_bytes` call over the same batches
+  with the same pointer set returns 0.
+  pins: eager-budget-1/C-002, C-003
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** D-1/D-3/D-4 admission pins. A three-batch source
+  under a one-batch budget refuses at batch two with the tag, budget, `retained`, and
+  `admitted` in the message — `admitted` lands strictly below the unbudgeted result, so the
+  stream was dropped mid-collection and nothing registered. A scan over a live cache view
+  admits zero new bytes (shared buffers seed `seen`) and leaves `retained` unchanged, while a
+  fresh-buffered frame under `budget = retained` refuses naming that retained figure.
+  `max_bytes` keeps its legacy message and registers nothing; an admitted cache registers and
+  its `retained` equals the admitted distinct bytes.
+  **Review round (2026-09-13, R12b-D-4):** `max_bytes_measures_this_result_even_when_buffers_are_shared`
+  pins the per-result metric — a scan of a live cache view under `(max_bytes=1,
+  max_total_bytes=u64::MAX)` refuses with this result's `get_array_memory_size` integer even
+  though every buffer is shared.
+  pins: eager-budget-1/C-005, C-007, C-008
 - `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** six capability pins for the
   `sliding_frame_rescan` rule in [../df_guards/window_rescan.rs](../df_guards/window_rescan.rs). The throwaway
   `winslide_probe_sum` UDAF exists only here: it has no `retract_batch`, so it proves the fallback

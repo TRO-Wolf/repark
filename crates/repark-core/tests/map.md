@@ -49,6 +49,9 @@ behavior only reachable end-to-end.
   element and a nullable map value stay allowed, the accepted scope). The `export_strip` node's
   claim was narrowed: it is a UNIT pin on the helper; the export boundary it guards
   (`analyzed_arrow_schema`) is pinned facade-side.
+  EAGER-BUDGET-1 step 2 (2026-09-13): the cache-materialize call sites pass `None` for the
+  new `max_total_bytes` parameter; the pinned remint behavior is unchanged.
+  pins: eager-budget-1/C-005
   Round-5: the NATIVE-door battery — `native_door_ddl_sink_over_tightened_source_refuses`
   (Z-2: `ReparkSession::sql` on the default dialect persisted `CREATE VIEW ice.ns.v` /
   `SELECT … INTO ice.ns.t` with required columns, measured on BASE),

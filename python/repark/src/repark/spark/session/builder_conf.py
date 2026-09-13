@@ -9,9 +9,12 @@ from typing import Any
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_configuration import (
     _DISPLAY_INT_DEFAULTS,
+    _RETAINED_CACHE_BYTES_KEY,
     _builder_display_int,
     _display_token_key,
     _normalize_display_int,
+    _refuse_read_only_conf_key,
+    _retained_cache_bytes_value,
     _sync_display_int_into_builder_config,
 )
 from repark.spark.session.session_time_zone import warn_runtime_session_time_zone_not_applied
@@ -22,6 +25,10 @@ for _name in dir(_session_funcs):
         continue
     globals()[_name] = getattr(_session_funcs, _name)
 del _name, _session_funcs
+
+_CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
+    {"repark.cache.max_bytes", "repark.cache.max_total_bytes"}
+)
 
 
 class SparkContext:
@@ -152,6 +159,8 @@ class RuntimeConfig:
             raise IllegalArgumentException(f"value cannot be None for config key {key!r}")
         if key in _SQLCONF_STATIC_KEYS:
             raise Exception(f"Cannot modify the value of static config: {key}")
+        if key.lower() == _RETAINED_CACHE_BYTES_KEY:
+            _refuse_read_only_conf_key(key)
         # A collation SQLConf key would otherwise be stored and ignored.
         from repark.spark.types import refuse_collation_session_key
 
@@ -207,6 +216,18 @@ class RuntimeConfig:
             self._session._alive_token[_display_token_key(canonical)] = parsed
             _sync_display_int_into_builder_config(self._session._builder_config, canonical, parsed)
             return
+        lowered = key.lower()
+        if lowered in _CACHE_BYTE_BUDGET_KEYS_LOWER:
+            tombs = self._unset_keys()
+            for existing in list(tombs):
+                if existing.lower() == lowered:
+                    tombs.discard(existing)
+            store = self._store()
+            for existing in list(store):
+                if existing.lower() == lowered:
+                    del store[existing]
+            store[key] = text
+            return
         self._unset_keys().discard(key)
         self._store()[key] = text
 
@@ -229,6 +250,8 @@ class RuntimeConfig:
                 errorClass="NOT_STR",
                 messageParameters={"arg_name": "key", "arg_type": type(key).__name__},
             )
+        if key.lower() == _RETAINED_CACHE_BYTES_KEY:
+            return _retained_cache_bytes_value(self._session)
         # Honor the unset tomb for display style before any store read, so get and getAll agree.
         if key.lower() == _DISPLAY_STYLE_KEY:
             if self._display_style_is_unset() and default is not _CONF_GET_UNSET:
@@ -281,6 +304,8 @@ class RuntimeConfig:
         ``polars`` so ``conf.get`` / ``session.display_style`` / ``show()`` stay lockstep.
         """
         self._session._ensure_alive()
+        if isinstance(key, str) and key.lower() == _RETAINED_CACHE_BYTES_KEY:
+            _refuse_read_only_conf_key(key)
         # The zone always has a value (resolved at build), so there is nothing to unset;
         # tombstoning would make conf.get report a zone the live session does not have.
         # Accepted, warned once, no state change — same as `set`.
@@ -345,6 +370,7 @@ class RuntimeConfig:
         for key, value in self._store().items():
             if key not in tomb:
                 merged[key] = value
+        merged[_RETAINED_CACHE_BYTES_KEY] = _retained_cache_bytes_value(self._session)
         return {
             key: ("***" if _prop_key_is_secret(key) else value) for key, value in merged.items()
         }
@@ -357,4 +383,4 @@ class RuntimeConfig:
                 errorClass="NOT_STR",
                 messageParameters={"arg_name": "key", "arg_type": type(key).__name__},
             )
-        return key not in _SQLCONF_STATIC_KEYS
+        return key not in _SQLCONF_STATIC_KEYS and key.lower() != _RETAINED_CACHE_BYTES_KEY

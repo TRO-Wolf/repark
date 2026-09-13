@@ -176,7 +176,7 @@ async fn ansi_ctas_from_cached_derived_frame_refuses() {
         .await
         .expect("derived plan");
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .expect("cache remint");
     let refused = session

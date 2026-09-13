@@ -54,6 +54,9 @@ _SQLCONF_STATIC_KEYS: frozenset[str] = frozenset(
 logger = logging.getLogger(__name__)
 
 
+_RETAINED_CACHE_BYTES_KEY = "repark.cache.retained_bytes"
+
+
 _MEMORY_LIMIT_KEYS: tuple[str, ...] = (
     "repark.memory.limit.gb",
     "spark.repark.memory.limit.gb",
@@ -148,6 +151,22 @@ def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> No
             f"[INVALID_CONF_VALUE.REQUIREMENT] The value {value!r} in the config "
             f"{key!r} is invalid. {message}"
         ) from engine_error
+
+
+def _retained_cache_bytes_value(session: ReparkSession) -> str:
+    """Live retained cache-byte total from the native session (EAGER-BUDGET-1 D-2)."""
+    from repark import _native
+
+    return str(_native.retained_cache_bytes(session._ensure_alive()))
+
+
+def _refuse_read_only_conf_key(key: str) -> None:
+    """Refuse ``set``/``unset`` of a computed read-only conf key."""
+    raise IllegalArgumentException(
+        f"[INVALID_CONF_VALUE.REQUIREMENT] The value in the config {key!r} is invalid. "
+        f"Config {_RETAINED_CACHE_BYTES_KEY} is read-only: it reports the live session's "
+        "retained cache bytes and cannot be set or unset."
+    )
 
 
 def _builder_has_memory_limit_key(config: dict[str, str | None]) -> bool:

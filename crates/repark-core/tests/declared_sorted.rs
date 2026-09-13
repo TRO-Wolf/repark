@@ -577,7 +577,7 @@ async fn materialize_of_derived_plan_restamps_tighten_provenance() {
         "computed columns drop field metadata — the materialize stamp is the seam"
     );
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .unwrap();
     let cached = view_schema(&session, "cached").await;
@@ -708,7 +708,7 @@ async fn remint_hint_restore_does_not_leave_required_untagged_fields() {
         .await
         .unwrap();
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .unwrap();
     session
@@ -951,7 +951,7 @@ async fn remint_hint_unflips_name_colliding_computed_column() {
         .await
         .unwrap();
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .unwrap();
     session
@@ -986,7 +986,7 @@ async fn remint_hint_restore_unflips_nested_required_child() {
         .await
         .unwrap_or_else(|_| panic!("named_struct must parse so the nested remint pin can run"));
     session
-        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .materialize_dataframe_as_cache_view("cached", derived, (None, None))
         .await
         .unwrap();
     session
