@@ -686,6 +686,8 @@ fn a_source_spec_debug_masks_secret_props() {
     let source = SourceSpec {
         name: "company_db".to_string(),
         kind: SourceKind::Postgres,
+        profile: "default".to_string(),
+        auto_register: true,
         props: BTreeMap::from([
             ("url".to_string(), "postgresql://localhost/db".to_string()),
             ("password".to_string(), secret.to_string()),
@@ -733,6 +735,24 @@ port = 5432
             .contains("prod.database.postgres.company_db.port"),
         "{error}"
     );
+}
+
+#[test]
+fn auto_register_non_boolean_refuses_naming_key_path() {
+    let profile = single_profile(
+        r#"
+[prod.database.postgres.company_db]
+url = "postgresql://localhost/db"
+auto_register = "yes"
+"#,
+    );
+    let error = profile_sources("prod", &profile).expect_err("non-boolean must refuse");
+    let message = error.to_string();
+    assert!(
+        message.contains("prod.database.postgres.company_db.auto_register"),
+        "{message}"
+    );
+    assert!(message.contains("boolean"), "{message}");
 }
 
 #[test]

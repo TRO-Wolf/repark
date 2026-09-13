@@ -35,7 +35,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
   native `stack()` pins (SQL/F.stack oracle cells, linearity exponent ≤ 1.1 at 50/250/500,
-  EXPLAIN UnpivotExec, red-first name). pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005
+  EXPLAIN UnpivotExec, red-first name). Step 2 (2026-09-12) adds
+  `test_describe_plan_is_scan_aggregate_unpivot`: `describe()`/`summary()` return a pure
+  plan (`_map_bridge is None`, `UnpivotExec` over `AggregateExec` over one `TableScan`,
+  no `mapInArrow`). pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-008
 - [test_df_eager_1.py](test_df_eager_1.py) — **DF-EAGER-1 (2026-09-09):** the red-first
   `.eager()` / `.compute()` / `.lazy()` pins, red on the base tree (the marker-less run is
   recorded in the ledger). Step 2 (2026-09-09) deleted every `_XFAIL_STEP_2` marker and the
@@ -1976,9 +1979,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   strings while booleans refuse in every table, database kinds outside the three spellings
   refuse, dotted catalog names / empty catalog blocks / cross-family collisions refuse, the
   rendered text parses back to the same tables, a rendered file builds a session answering
-  the file values, and a rendered database source refuses at load naming CFG-2. The guide
+  the file values, and — since CFG-2 step 1 — a rendered database source builds a session
+  (the lazy-registration load; the CFG-1 refusal is retired). The guide
   (`docs/guide/repark-toml.md`) quotes only outputs this file and the step-3 pins ran.
   pins: cfg-1/C-028, C-029, C-030
+  pins: cfg-2/C-010
   **REVIEW-FIX-7 step 1 (2026-09-10):** the D-1 pins — header-breaking profile, catalog
   and source names refuse, and a spaced profile name renders one quoted header reading
   back as one profile. pins: review-fix-7/C-001
@@ -2389,20 +2394,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   three named mutations red.
   pins: perf-agg-avg-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_perf_describe_1.py](test_perf_describe_1.py) — **PERF-DESCRIBE-1 (2026-09-12):**
-  `describe()` aggregates the source lazily. The returned frame is a `mapInArrow`
-  bridge; the pin explains its `_map_bridge["parent"]` and asserts one `TableScan` /
-  one `DataSourceExec` under one `AggregateExec` with no `UnionExec` or sort node —
-  the DF-DESCRIBE-STR-1 ordinal wrapper is gone because the bridge emits rows in
-  requested order. `test_describe_runs_nothing_until_an_action` pins laziness
+  `describe()` aggregates the source lazily. PERF-UNPIVOT-1 step 2 (2026-09-12) moved
+  the frame back to a pure plan: the pin explains `describe()` itself and asserts one
+  `TableScan` / one `DataSourceExec` under one `AggregateExec` with no `UnionExec` or
+  sort node, `UnpivotExec` directly on top of the aggregate (the S2-21 remediation
+  removed the 2505-expression cast projection — labeled-mode `UnpivotExec` emits the
+  stat labels and coerces cells to the engine's `CAST AS STRING` bytes itself),
+  `_map_bridge is None` — the DF-DESCRIBE-STR-1 ordinal wrapper stays
+  gone because the unpivot emits rows in requested order.
+  `test_describe_runs_nothing_until_an_action` pins laziness
   (DISPLAY-LAZY-1): `describe()` on a source whose scan raises (`CAST('abc' AS INT)`)
   returns a frame with the right columns and surfaces the failure only at `collect`,
   with an Arrow-export spy proving nothing ran inside the call.
   `test_summary_duplicate_stats_keep_requested_order` pins a repeated stat answering
-  one row per occurrence in the requested order. The same scan-count pin asserts the
-  cast inventory: `CAST(count` never appears and `min`/`max` casts exist only for the
-  double column (500-column × 10k perf evidence lives in the staging ledger's C-006
-  table — 35.19 → 21.50 s).
+  one row per occurrence in the requested order. (500-column × 10k perf evidence lives
+  in the staging ledger's C-006 table — 35.19 → 21.50 s; the step-2 release-build
+  medians live in perf-unpivot-1's C-012 table.)
   pins: perf-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: perf-unpivot-1/C-009, C-010, C-012, C-013, C-015, C-018
 - `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
   `createDataFrame` path against the legacy row-wise path, kept callable as
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the

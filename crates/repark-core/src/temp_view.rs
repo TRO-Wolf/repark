@@ -16,6 +16,21 @@ pub(crate) struct TempViewHome {
     pub(crate) provider: Option<Arc<dyn SchemaProvider>>,
 }
 
+pub(crate) fn build_temp_view_home(context: &SessionContext) -> TempViewHome {
+    let options = context.copied_config();
+    let catalog_options = &options.options().catalog;
+    let catalog_name = catalog_options.default_catalog.clone();
+    let schema_name = catalog_options.default_schema.clone();
+    let provider = context
+        .catalog(&catalog_name)
+        .and_then(|catalog| catalog.schema(&schema_name));
+    TempViewHome {
+        catalog: catalog_name,
+        schema: schema_name,
+        provider,
+    }
+}
+
 /// Refuse when a catalog has replaced the provider captured as the session's temp-view home.
 /// # Errors
 /// [`Error::Analysis`] when the home schema is absent or is not the build-time provider.

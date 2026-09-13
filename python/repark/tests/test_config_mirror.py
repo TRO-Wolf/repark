@@ -181,7 +181,7 @@ def test_empty_overlay_profile_survives_round_trip() -> None:
     assert parsed["default"]["conf"] == {"a": "b"}
 
 
-def test_rendered_database_source_refuses_at_load_until_cfg_2(tmp_path: Path) -> None:
+def test_rendered_database_source_loads(tmp_path: Path) -> None:
     built = ReparkConfig(
         profiles={
             "default": ProfileConfig(
@@ -190,5 +190,5 @@ def test_rendered_database_source_refuses_at_load_until_cfg_2(tmp_path: Path) ->
         }
     )
     path = built.save(tmp_path / "repark.toml")
-    with pytest.raises(Exception, match="CFG-2"):
-        ReparkSession.builder.configFile(str(path)).getOrCreate()
+    spark = ReparkSession.builder.configFile(str(path)).getOrCreate()
+    spark.stop()

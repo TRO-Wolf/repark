@@ -56,6 +56,7 @@ fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyR
     let runtime = shared_runtime()?;
     py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;
+    session.register_configured_sources().map_err(to_py_err)?;
     Ok(PyReparkSession { session, runtime })
 }
 
@@ -389,9 +390,8 @@ impl PyReparkSession {
             "py.action",
             "PyReparkSession.register_ipc_stream_as_temp_view",
             {
-                use std::io::Cursor;
-
                 use arrow::ipc::reader::StreamReader;
+                use std::io::Cursor;
 
                 let bytes = ipc_bytes.to_vec();
                 py.detach(|| {

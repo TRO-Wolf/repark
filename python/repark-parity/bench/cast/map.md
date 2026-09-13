@@ -2,10 +2,12 @@
 
 ## Purpose
 
-PERF-CAST-1 step 1: a tracked harness that rebuilds the S2-21 reviewers' CAST
+PERF-CAST-1: a tracked harness that rebuilds the S2-21 reviewers' CAST
 shapes — a 200k-row eager MemTable, CAST counts 50 / 250 / 2500, three plan
 shapes — and writes one CSV row per cell (warmup, three timed repetitions,
-medians). Measurement only; no product change.
+medians). Measurement only; no product change. Step 2 re-ran the same nine
+cells on a release native (`cast-cost-2026-09-12-release.csv`); the owner
+isolation lives in `crates/repark-core/tests/cast_plan_profile.rs`.
 
 This file closes when PERF-CAST-1 merges, or when the owner closes the slate
 row.
@@ -16,8 +18,9 @@ row.
 - [run_cast.py](run_cast.py) — CLI: `--out` CSV, `--shapes`, `--sizes`,
   `--rows` (default 200000), `--warmup` (1), `--repeats` (3), `--attribute`
   for the largest requested size of each shape. Prints per-cell medians and
-  the log-log exponent fit across the requested sizes.
-  pins: perf-cast-1/C-001
+  the log-log exponent fit across the requested sizes. Step 2 drove it
+  per-cell on the release module so each cell's box-idle wait could run.
+  pins: perf-cast-1/C-001, C-005
 - [measure.py](measure.py) — session + source view, `session.sql` (plan) then
   `EXPLAIN ANALYZE` (execute, output discarded so a 2500-column projection is
   not copied into Python), CSV writer, exponent fit. The pin imports

@@ -8,7 +8,7 @@ use super::interpolate::interpolate_table;
 use super::maintenance::MaintenancePolicy;
 use super::profile::{DEFAULT_PROFILE_NAME, effective_table, profile_as_table, profile_from_table};
 use super::redact::redact_value;
-use super::sources::{CATALOG_KEY_PREFIX, ProfileSources, profile_sources};
+use super::sources::{CATALOG_KEY_PREFIX, SourceSpec, profile_sources};
 use super::{ConfigFile, EnvironmentLookup, Profile, read_and_parse};
 
 pub(crate) const ENV_PROFILE_VARIABLE: &str = "REPARK_ENV";
@@ -34,6 +34,7 @@ pub(crate) struct FileConfig {
     pub batch_size: Option<usize>,
     pub target_partitions: Option<usize>,
     pub maintenance: Option<(String, Option<MaintenancePolicy>)>,
+    pub source_specs: Vec<SourceSpec>,
     pub warnings: Vec<String>,
 }
 
@@ -128,28 +129,6 @@ fn cloud_catalog_warning(path: &Path, catalog: &toml::Table) -> Option<String> {
     ))
 }
 
-fn refuse_pending_sources(label: &str, sources: &ProfileSources) -> Result<()> {
-    if sources.sources.is_empty() {
-        return Ok(());
-    }
-    let names: Vec<String> = sources
-        .sources
-        .iter()
-        .map(|source| {
-            format!(
-                "{label}.database.{}.{}",
-                source.kind.spelling(),
-                source.name
-            )
-        })
-        .collect();
-    Err(Error::Config(format!(
-        "database sources ({}) are parsed but named-source registration arrives with \
-         CFG-2 — drop the `[<profile>.database]` tables until that card lands",
-        names.join(", ")
-    )))
-}
-
 fn discovery_warnings(path: &Path, profile: &Profile, trusted: bool) -> Vec<String> {
     if trusted {
         return Vec::new();
@@ -174,7 +153,6 @@ fn translate_document(
     let label = profile_name.unwrap_or(DEFAULT_PROFILE_NAME);
     let profile = profile_from_table(label, &interpolated)?;
     let sources = profile_sources(label, &profile)?;
-    refuse_pending_sources(label, &sources)?;
     let mut pairs = Vec::new();
     let mut origins = HashMap::new();
     let selected_keys = match profile_name {
@@ -252,6 +230,7 @@ fn translate_document(
         batch_size,
         target_partitions,
         maintenance: Some((label.to_string(), resolve_maintenance(label, &profile)?)),
+        source_specs: sources.sources,
         warnings,
     })
 }

@@ -27,13 +27,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `docs/silver-s0`.
   pins: silver-s0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [perf-unpivot-1-ledger.md](perf-unpivot-1-ledger.md) —
-  **PERF-UNPIVOT-1 step 1 (2026-09-12), in flight:** native `stack(n, expr…)` /
-  `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`, linearity exponent
-  0.91 at 50/250/500. Step-1 remediation (2026-09-12): `interleave` once per
-  stacked column and stream each input batch (C-006, C-007). `describe` stays
-  on the bridge until step 2.
-  `risk_tier: standard`. Branch `perf/unpivot-1`.
-  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  S2-21 re-check of the step-2 remediation: 500-column describe 8.16 s, no P1 / P2.
+  **PERF-UNPIVOT-1 (2026-09-12), in flight:** step 1 (#542) shipped native
+  `stack(n, expr…)` / `UnpivotExec` in `repark-core`, Spark SQL rewrite, `F.stack`,
+  linearity exponent 0.91 at 50/250/500; `interleave` once per stacked column and
+  stream each input batch (C-006, C-007). Step 2 (`perf/unpivot-1-s2`) moves
+  `describe`/`summary` back to a pure plan — chunked aggregates → one stack-order
+  string-cast projection → `UnpivotExec`; the `mapInArrow` bridge and
+  `_summary_unpivot` are deleted.
+  `risk_tier: standard`. Branch `perf/unpivot-1` / `perf/unpivot-1-s2`.
+  pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
 - [ap-1-close-1-ledger.md](ap-1-close-1-ledger.md) —
   **AP-1-CLOSE-1 (2026-09-12), in flight:** `projected_files_at_target` re-read as an
   upper bound from the inputs' compressed bytes — the 20 % target retires (S2-27),
@@ -61,6 +65,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   PROVEN, 24 pins in `config_file/tests.rs`; `sources.rs` / `redact.rs` stay placeholders
   for step 2. `risk_tier: standard`. Branch `feat/cfg-1`.
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [cfg-2-ledger.md](cfg-2-ledger.md) —
+  **CFG-2 step 1 (2026-09-13), in flight:** named database sources — parsed
+  `SourceSpec`s ride `FileConfig` into the built session, `register_configured_sources`
+  installs a refusing catalog provider per auto-registered name (`SELECT` under the
+  name answers the D-1 connector message, `1.10`), `sources()` /
+  `source(name).ping()` expose the declared set lazily, and `auto_register = false`
+  lists without registering. The CFG-1 load-time refusal retires; the Python door is
+  step 2 and appends to this ledger. `risk_tier: standard`. Branch `feat/cfg-2-step1`.
+  pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [df-describe-str-1-ledger.md](df-describe-str-1-ledger.md) —
   **DF-DESCRIBE-STR-1 (2026-09-11), in flight:** `describe`/`summary` answer Spark's
   ordered stat rows on string columns — `mean`/`stddev` over `try_cast(col AS DOUBLE)`

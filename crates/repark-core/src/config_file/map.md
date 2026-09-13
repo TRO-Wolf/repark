@@ -45,7 +45,13 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   families; a collision refuses naming both key paths. Wrong shapes refuse naming the key
   path: a non-string prop, a non-table slot, an empty catalog block, and a dotted catalog
   name that would silently re-split through the flat-key bridge. Step 2.
+  **CFG-2 step 1 (2026-09-13):** `SourceSpec` also carries `profile` and
+  `auto_register` — a per-entry TOML boolean defaulting to true, refused non-boolean
+  naming `<profile>.database.<kind>.<name>.auto_register`, and kept out of `props`
+  (D-5). `key_path()` renders the `<profile>.database.<kind>.<name>` spelling the
+  refusal messages and the collision error share.
   pins: cfg-1/C-010, C-011, C-012, C-013, C-014, C-016, C-017
+  pins: cfg-2/C-002
 - `redact.rs` — `redact_value` / `redact_config` over `../../catalog_config.rs`'s
   `prop_key_is_secret` (widened to `pub(crate)` this step, the one authorized edit outside
   the family; the predicate is not re-implemented). The `***` mask matches the `CatalogSpec`
@@ -67,8 +73,10 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   (the `toml::Table` here is `BTreeMap`-backed, so file order is not recoverable — pinned
   as sorted, ledger C-024 carries the D-1 wording), `catalog` blocks → the same
   `repark.sql.catalog.*` keys `parse_catalog_specs` reads. `profile_sources` still runs on
-  every load (collision and shape refusals stay single-implementation); a non-empty
-  `[<profile>.database]` table refuses loud until CFG-2 registers named sources. `KeyOrigin`
+  every load (collision and shape refusals stay single-implementation), and since CFG-2
+  step 1 the parsed `SourceSpec`s ride `FileConfig.source_specs` into the built session —
+  the CFG-1 load-time refusal is retired, and a non-empty `[<profile>.database]` table
+  loads. `KeyOrigin`
   (`Profile` / `Default`) records which table each pair survived from; `conf_dump_rows`
   renders `(key, redacted value, source)` with `builder`, `file:<path>#<profile>`, or
   `default` — the three precedence levels, nothing else. `load_for_build` is the thin
@@ -101,7 +109,9 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `#[allow(dead_code)]` is gone now that `plan_steps` calls `resolve` through the stamp.
 - `tests/` — `mod.rs` keeps the 40 stage pins untouched (the seed's three, step-1
   discovery/merge/interpolation, step-1b `$`-edge flips, step 2's catalog/database/redaction
-  pins); `wiring.rs` carries the 8 step-3 pins. Split from the single `tests.rs` when the
+  pins) plus CFG-2 step 1's `auto_register` non-boolean refusal; `wiring.rs` carries the
+  step-3 pins, with `database_source_block_loads` replacing the retired CFG-2
+  load-refusal pin. Split from the single `tests.rs` when the
   battery passed the 1,000-line file ceiling — stage pins versus wiring pins, no pin moved
   or edited in the split. The environment arrives as a stub closure throughout, so no pin
   mutates the process environment (build-level pins use forced temp paths and assume the
@@ -111,6 +121,7 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   file-built session carries the stamp on its registry).
   pins: cfg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011,
   C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
+  pins: cfg-2/C-001, C-002
   pins: maint-policy-1/C-020
   **REVIEW-FIX-2 (2026-09-10):** the seed no-file pin drives `discover` /
   `load_file_config` with `home: None` and a stub environment instead of the public

@@ -10,6 +10,7 @@ mod error_map;
 mod extension;
 mod idents;
 mod lineage_columns;
+mod named_sources;
 mod namespace_create;
 mod object_store_s3;
 mod pool_refusals;
@@ -53,6 +54,7 @@ pub use config_file::config_file_pairs;
 pub use config_file::maintenance::{
     MaintenancePolicy, TablePolicy, parse_duration, parse_maintenance_policy,
 };
+pub use named_sources::{NamedSource, SourceRow};
 pub use namespace_create::refuse_contradictory_namespace_location;
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 
@@ -83,7 +85,10 @@ pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
-pub use stack::{StackQueryPlanner, StackRewrite, apply_stack, register_stack, stack_udf};
+pub use stack::{
+    StackLabels, StackQueryPlanner, StackRewrite, apply_labeled_stack, apply_stack, register_stack,
+    stack_udf,
+};
 
 #[must_use]
 pub fn built_with_debug_assertions() -> bool {

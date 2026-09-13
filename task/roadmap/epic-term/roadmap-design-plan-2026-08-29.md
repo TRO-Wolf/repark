@@ -244,6 +244,21 @@ crates and the CLI must depend on `repark-server`.
   v1.6.
 - **Pins:** a configured Postgres source appears in `repark.sources()` and
   `SELECT … FROM company_db.public.t` refuses with the v1.6 message, not "table not found".
+- **Rounds (orchestrator B, run 9b, 2026-09-12, under G-2).** Step 1 (I, Devin): the Rust seam,
+  the load refusal retired, the guide's constraint 1 rewritten. Step 2 (I, Devin): the Python door
+  and the config mirror, the ledger departs. One PR per step; ledger `task/ledgers/staging/cfg-2-ledger.md`.
+- **D-1** The refusal on use names the source path, its kind, and "its connector arrives with roadmap
+  1.10" — v1.6 above is the pre-renumber number (database connections moved 1.6 → 1.10 on 2026-09-03).
+- **D-2** A non-empty `[<profile>.database]` table loads; no load-time warning (R-19's warning retires
+  unlanded); every CFG-1 validation keeps refusing.
+- **D-3** Sources come only from `repark.toml`; no flat `.config()` source key family.
+- **D-4** `register_configured_sources()` registers a refusing catalog provider per auto-registered
+  source; no I/O, no kind-specific required keys; a later catalog of the same name is a duplicate.
+- **D-5** `auto_register` is a per-entry TOML boolean (default true), not a connection property;
+  `false` lists the source without registering its name. A profile-level `auto_register` is parked
+  (unruled key location).
+- **D-6** Rust `sources()` rows (name, kind, profile path, auto_register, redacted properties) and
+  `source(name).ping()` answering the D-1 refusal, in a module of their own beside `session.rs`.
 
 ---
 

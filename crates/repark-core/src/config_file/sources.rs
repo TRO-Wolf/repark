@@ -35,12 +35,24 @@ impl SourceKind {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct SourceSpec {
     pub name: String,
     pub kind: SourceKind,
+    pub profile: String,
+    pub auto_register: bool,
     pub props: BTreeMap<String, String>,
+}
+
+impl SourceSpec {
+    pub(crate) fn key_path(&self) -> String {
+        format!(
+            "{}.database.{}.{}",
+            self.profile,
+            self.kind.spelling(),
+            self.name
+        )
+    }
 }
 
 impl std::fmt::Debug for SourceSpec {
@@ -53,6 +65,8 @@ impl std::fmt::Debug for SourceSpec {
         f.debug_struct("SourceSpec")
             .field("name", &self.name)
             .field("kind", &self.kind)
+            .field("profile", &self.profile)
+            .field("auto_register", &self.auto_register)
             .field("props", &props)
             .finish()
     }
@@ -132,7 +146,18 @@ fn source_specs(profile_name: &str, database: &toml::Table) -> Result<Vec<Source
                 )));
             };
             let mut converted = BTreeMap::new();
+            let mut auto_register = true;
             for (prop, value) in props {
+                if prop == "auto_register" {
+                    let toml::Value::Boolean(flag) = value else {
+                        return Err(Error::Config(format!(
+                            "key `{profile_name}.database.{kind_name}.{name}.auto_register` \
+                             must be a boolean"
+                        )));
+                    };
+                    auto_register = *flag;
+                    continue;
+                }
                 let toml::Value::String(text) = value else {
                     return Err(Error::Config(format!(
                         "key `{profile_name}.database.{kind_name}.{name}.{prop}` must be a string"
@@ -143,6 +168,8 @@ fn source_specs(profile_name: &str, database: &toml::Table) -> Result<Vec<Source
             sources.push(SourceSpec {
                 name: name.clone(),
                 kind,
+                profile: profile_name.to_string(),
+                auto_register,
                 props: converted,
             });
         }
@@ -164,16 +191,11 @@ fn refuse_duplicate_names(
             )
         })
         .collect();
-    named.extend(sources.iter().map(|spec| {
-        (
-            spec.name.clone(),
-            format!(
-                "{profile_name}.database.{}.{}",
-                spec.kind.spelling(),
-                spec.name
-            ),
-        )
-    }));
+    named.extend(
+        sources
+            .iter()
+            .map(|spec| (spec.name.clone(), spec.key_path())),
+    );
     for (index, (name, path)) in named.iter().enumerate() {
         let prior = named[..index]
             .iter()
