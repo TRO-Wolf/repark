@@ -11,8 +11,24 @@ permissions:
 
 jobs:
   build-wheel:
-    name: build release wheel (manylinux)
-    runs-on: ubuntu-latest
+    name: build release wheel (${{ matrix.leg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: manylinux-x86_64
+            runs-on: ubuntu-latest
+            manylinux: auto
+          - leg: manylinux-aarch64
+            runs-on: ubuntu-24.04-arm
+            manylinux: auto
+          - leg: macos-arm64
+            runs-on: macos-latest
+          - leg: macos-x86_64
+            runs-on: macos-13
+          - leg: windows-x86_64
+            runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -21,15 +37,26 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
-      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        if: matrix.manylinux == 'auto'
         with:
-          maturin-version: "v1.14.1" # Makefile MATURIN pin
+          maturin-version: "v1.14.1"
           command: build
           args: --release --out dist
           working-directory: python/repark
           manylinux: auto
           sccache: "false"
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        if: matrix.manylinux != 'auto'
+        with:
+          maturin-version: "v1.14.1"
+          command: build
+          args: --release --out dist
+          working-directory: python/repark
+          container: "off"
+          sccache: "false"
       - name: tag/version consistency
+        shell: bash
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME#v}"
@@ -39,17 +66,19 @@ jobs:
             *) echo "TAG/VERSION MISMATCH: tag v${tag} vs wheel $wheel (bump the workspace version in Cargo.toml before tagging)" >&2; exit 1 ;;
           esac
       - name: import smoke (release wheel, explicit path)
+        shell: bash
         run: |
           set -euo pipefail
           python -m venv /tmp/smoke-venv
-          /tmp/smoke-venv/bin/pip install --quiet python/repark/dist/repark-*.whl
-          /tmp/smoke-venv/bin/python -c "import repark; assert callable(repark.sql); from repark.spark import ReparkSession; print('release wheel OK', repark.__version__)"
-          if /tmp/smoke-venv/bin/python -c "import repark.sql" 2>/dev/null; then
+          if [ -x /tmp/smoke-venv/bin/python ]; then PY=/tmp/smoke-venv/bin/python; else PY=/tmp/smoke-venv/Scripts/python; fi
+          "$PY" -m pip install --quiet python/repark/dist/repark-*.whl
+          "$PY" -c "import repark; assert callable(repark.sql); from repark.spark import ReparkSession; s = ReparkSession.builder.appName('release-smoke').getOrCreate(); assert [r.id for r in s.range(3).collect()] == [0, 1, 2]; print('release wheel OK', repark.__version__)"
+          if "$PY" -c "import repark.sql" 2>/dev/null; then
             echo "release checklist violation: import repark.sql must fail" >&2; exit 1
           fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1 (node24)
         with:
-          name: release-wheel
+          name: release-wheel-${{ matrix.leg }}
           path: python/repark/dist/repark-*.whl
           if-no-files-found: error
 
@@ -62,10 +91,11 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1 (node24)
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: release-wheel
+          pattern: release-wheel-*
           path: dist
+          merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist

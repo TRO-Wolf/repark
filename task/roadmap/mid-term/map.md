@@ -6,6 +6,14 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [dyncfg-1-cards-2026-09-12.md](dyncfg-1-cards-2026-09-12.md) — **the DYNCFG-1 intake cut
+  (2026-09-12, Devin reading round at `0233d96f`):** the sweep verdict — the entry criterion is
+  met (three re-measure-confirmed read-profile wins, ten regression-only knobs, five no-effect,
+  per-knob table traced to the committed CSVs) — rulings DC-1…9 the numbers decide (matrix
+  membership, exclusions, the derivation rule, the measured per-cell budget), owner questions
+  DQ-1…7 (write-back target, key names, writes, the sample, regression knobs, live-session
+  semantics, overrun behaviour), and five cards: DYNCFG-1-BED (the reproducible, budgeted
+  harness first), then TOML / RUNNER / WRITEBACK / DOCS behind the DQ rulings.
 - [rest-catalogs-intake-2026-09-12.md](rest-catalogs-intake-2026-09-12.md) — **generic Iceberg
   REST catalog support (Lakekeeper, Apache Polaris), scoped 2026-09-12 by an Opus reading agent at
   fork pin `9e3522e3`:** the owned fork already ships a complete `iceberg-catalog-rest` (OAuth2 client
