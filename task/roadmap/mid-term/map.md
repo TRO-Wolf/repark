@@ -6,6 +6,17 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1
+  (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted
+  handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing
+  (D-4), no plan-equivalence caching (D-5), budget deferred to EAGER-BUDGET-1 (D-6); step 0
+  measures the million-row TA loop first; owner questions Q-E1 (cache()/persist() lifetime) and
+  Q-E2 (session budget policy).
+- [eager-materialization-retention-review-2026-09-13.md](eager-materialization-retention-review-2026-09-13.md)
+  — **the owner's source review behind EAGER-OWN-1 (2026-09-13, verbatim):** bare `eager()`
+  calls each register an unowned `__repark_cache_*` MemTable, the findings table, usage guidance,
+  the three proposed corrections and the validation table the unit's pins follow. Archives to
+  `docs/history/` when the unit merges.
 - [dyncfg-1-cards-2026-09-12.md](dyncfg-1-cards-2026-09-12.md) — **the DYNCFG-1 intake cut
   (2026-09-12, Devin reading round at `0233d96f`):** the sweep verdict — the entry criterion is
   met (three re-measure-confirmed read-profile wins, ten regression-only knobs, five no-effect,
