@@ -123,7 +123,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   live on this row.
   pins: review-fix-5/C-002, C-006
 - `stack.rs` (+ [stack/](stack/map.md)) — **PERF-UNPIVOT-1:** `Unpivot` logical node,
-  `UnpivotExec`, `apply_stack`, marker `stack` UDF, Spark-door `StackRewrite`.
+  `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
+  `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe

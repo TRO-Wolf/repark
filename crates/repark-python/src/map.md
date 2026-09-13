@@ -41,7 +41,7 @@ and hand execution, SQL, and ML semantics to the engine crates.
   Baseline 1177 → 1128, a ratchet DOWN.
   pins: cfg-1/C-026, C-027 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
-| [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`. pins: perf-unpivot-1/C-002 |
+| [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`; the internal `row_labels`/`cell_indices` kwargs bind `apply_labeled_stack` for the describe grid. pins: perf-unpivot-1/C-002, C-014 |
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.
   Nested DDL element tokens come from `repark-spark::spark_ddl_type_name_at_depth`
   (SQL-DESCRIBE-1 D-3); `long` stays local for `printSchema`. pins: sql-describe-1/C-003 |

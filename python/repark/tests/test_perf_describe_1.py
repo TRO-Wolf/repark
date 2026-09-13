@@ -27,15 +27,17 @@ def spark() -> Iterator[ReparkSession]:
 def test_describe_scans_the_source_once(spark: ReparkSession) -> None:
     """describe() returns a frame whose plan scans the source once.
 
-    The returned frame is a pure plan: ``UnpivotExec`` over a projection of
-    string-cast cells over the single ``AggregateExec`` computing
-    count/avg/stddev/min/max per column (one ``TableScan`` / one
-    ``DataSourceExec``, no union, no sort, no ``mapInArrow`` bridge), and the
-    unpivot emits the five summary rows in literal order — no ordinal column,
-    no ORDER BY.
+    The returned frame is a pure plan: ``UnpivotExec`` directly over the single
+    ``AggregateExec`` computing count/avg/stddev/min/max per column (one
+    ``TableScan`` / one ``DataSourceExec``, no wide expression projection, no
+    union, no sort, no ``mapInArrow`` bridge); the exec emits the stat-name
+    labels and coerces each cell to the engine's own ``CAST AS STRING`` bytes,
+    so the five summary rows come out in literal order — no ordinal column, no
+    ORDER BY.
 
     pins: perf-describe-1/C-002
     pins: perf-unpivot-1/C-008
+    pins: perf-unpivot-1/C-014
     """
     frame = (
         spark.range(1_000)
@@ -55,7 +57,8 @@ def test_describe_scans_the_source_once(spark: ReparkSession) -> None:
     assert "mapInArrow" not in explained
     for forbidden in ("UnionExec", "SortExec", "SortPreservingMergeExec"):
         assert forbidden not in explained, forbidden
-    assert explained.count("CAST(__repark_stat_") == 20
+    assert "__repark_arg" not in explained
+    assert "UnpivotExec: stack(n=5, columns=10)\n  AggregateExec" in explained
     assert described.collect() == [
         ("count", "1000", "1000"),
         ("mean", "499.5", "49.5"),

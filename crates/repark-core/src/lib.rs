@@ -82,7 +82,10 @@ pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
-pub use stack::{StackQueryPlanner, StackRewrite, apply_stack, register_stack, stack_udf};
+pub use stack::{
+    StackLabels, StackQueryPlanner, StackRewrite, apply_labeled_stack, apply_stack, register_stack,
+    stack_udf,
+};
 
 #[must_use]
 pub fn built_with_debug_assertions() -> bool {

@@ -141,18 +141,13 @@ def _summary(
     joined = chunk_plans[0]
     for extra in chunk_plans[1:]:
         joined = joined.join_on_condition(extra, _native.PyColumn.literal(True), "inner")
-    stack_exprs: list[Any] = []
-    for stat in stats:
-        stack_exprs.append(_native.PyColumn.literal(stat).alias(f"__repark_arg_{len(stack_exprs)}"))
-        for column_index in range(len(target_pairs)):
-            alias = f"__repark_stat_{cell_position[(column_index, stat)]}"
-            stack_exprs.append(
-                _native.PyColumn.column(_quote_ident_sql(alias))
-                .cast("string")
-                .alias(f"__repark_arg_{len(stack_exprs)}")
-            )
     field_names = ["summary"] + [f"f{index}" for index in range(len(target_pairs))]
-    stacked = _native.stack_dataframe(joined.select(stack_exprs), len(stats), 0, field_names)
+    cell_order = [
+        cell_position[(column_index, stat)]
+        for stat in stats
+        for column_index in range(len(target_pairs))
+    ]
+    stacked = _native.stack_dataframe(joined, len(stats), 0, field_names, list(stats), cell_order)
     child = frame._spawn(stacked)
     child._display_names = ["summary"] + [display for display, _engine in target_pairs]
     child._engine_names = field_names

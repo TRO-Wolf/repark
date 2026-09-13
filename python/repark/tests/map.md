@@ -2379,8 +2379,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `describe()` aggregates the source lazily. PERF-UNPIVOT-1 step 2 (2026-09-12) moved
   the frame back to a pure plan: the pin explains `describe()` itself and asserts one
   `TableScan` / one `DataSourceExec` under one `AggregateExec` with no `UnionExec` or
-  sort node, `UnpivotExec` on top, `_map_bridge is None`, and every cell string-cast
-  once in the stack-order projection — the DF-DESCRIBE-STR-1 ordinal wrapper stays
+  sort node, `UnpivotExec` directly on top of the aggregate (the S2-21 remediation
+  removed the 2505-expression cast projection — labeled-mode `UnpivotExec` emits the
+  stat labels and coerces cells to the engine's `CAST AS STRING` bytes itself),
+  `_map_bridge is None` — the DF-DESCRIBE-STR-1 ordinal wrapper stays
   gone because the unpivot emits rows in requested order.
   `test_describe_runs_nothing_until_an_action` pins laziness
   (DISPLAY-LAZY-1): `describe()` on a source whose scan raises (`CAST('abc' AS INT)`)
@@ -2391,7 +2393,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   in the staging ledger's C-006 table — 35.19 → 21.50 s; the step-2 release-build
   medians live in perf-unpivot-1's C-012 table.)
   pins: perf-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-  pins: perf-unpivot-1/C-009, C-010, C-012, C-013
+  pins: perf-unpivot-1/C-009, C-010, C-012, C-013, C-015, C-018
 - `test_perf_facade_cdf_1.py` — **PERF-FACADE-CDF-1** (2026-09-05): the column-wise
   `createDataFrame` path against the legacy row-wise path, kept callable as
   `create_dataframe_rows._arrow_table_from_raw_tuples_legacy`. Both dispatchers run on the

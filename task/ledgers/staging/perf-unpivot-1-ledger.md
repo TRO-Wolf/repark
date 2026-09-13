@@ -35,19 +35,28 @@ is not in the tree yet; the superlinear planner is the one PERF-DESCRIBE-1 measu
 | C-011 | `_summary_unpivot` and the bridge helpers are deleted (no dead code); `statistics.py` stays under its ceiling with baselines honest. | The C-011 note below: file 372→337 under the 1000 default; no EXCEPTIONS row exists in `scripts/check_lib_py.py` or the CAP-1 mirror to ratchet. | **PROVEN** |
 | C-012 | `describe()` measured on a RELEASE module (`__debug_assertions__` False): 500-column × 200k and 20-column × 200k, warmup + three reps, medians, base (bridge) vs branch (plan). | The C-012 table below; raw reps in `scratch/perf-unpivot-1/describe_{base,branch}.json`. | **PROVEN** |
 | C-013 | Gates: the two named suites + the laziness pin + the plan-shape pin + `test_perf_unpivot_1.py`; `make verify`; the whole parity suite. | The step-2 gates table below. | **PROVEN** |
+| C-014 | S2-21 P1 fix: `describe`/`summary` feed `UnpivotExec` the raw chunked aggregate — row-label literals + a row-major cell index map (`StackLabels`/`apply_labeled_stack`), no expression projection; the exec coerces every cell to Utf8 with the engine's own `CAST(x AS STRING)` kernel/options and emits the label column itself. String byte-identity pinned against a `SessionContext` `CAST` oracle. | `exec::labeled::labeled_stack_coerces_cells_like_engine_cast` (Rust); `test_describe_scans_the_source_once` mechanism lines (`UnpivotExec` directly over `AggregateExec`, no `__repark_arg`); every answer assertion unchanged. | **PROVEN** |
+| C-015 | C-012 re-measured on RELEASE for the labeled shape: 500-column × 200k and 20-column × 200k, warmup + three reps, medians — must beat the bridge's 10.19 s at 500 columns. | The remediation C-012 table below; raw reps in `scratch/perf-unpivot-1/describe_labeled.json`. | **PROVEN** |
+| C-016 | S2-21 P2 disposition: measure whether `RepartitionExec: RoundRobinBatch(64)` over the single-partition eager source is needed; fix only if small. | The R-001 residue note below — measured, not a small fix, recorded. | **PROVEN** |
+| C-017 | S2-21 review findings table: every P1/P2/P3 finding has a fix, a residue, or a recorded resolution. | The review-findings table below. | **PROVEN** |
+| C-018 | Gates: `cargo test -p repark-core stack`, `make verify`, the describe + unpivot pytest files, the whole parity suite. | The remediation gates table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **13/13 `PROVEN`**.
+`LOGIC_SCORE` = **18/18 `PROVEN`**.
 
 ## Step 2 (swe-2-high, `perf/unpivot-1-s2`, 2026-09-12)
 
 `describe`/`summary` lower to `stack` over the single aggregate row: the chunked
-aggregates (unchanged, one per ~50 columns, cross-joined) now emit raw cells, one
-projection lays out stat-name literals plus one `CAST(cell AS Utf8)` per column per
-stat row in row-major order, and `stack_dataframe` (`UnpivotExec`) emits the grid.
-Every cell is cast because a describe column mixes count/mean/stddev/min/max — the
-cast moved OUT of the aggregate into the projection because `docs/perf/cast-cost-2026-09-12.md`
-measures projection-side casts ~13× cheaper than in-aggregate at 2500 (13.8 s vs
-175.9 s). All-string cells keep every answer byte-identical (D-3).
+aggregates (unchanged, one per ~50 columns, cross-joined) emit raw cells, and
+`stack_dataframe`'s labeled mode (`StackLabels`: stat-name row literals + a
+row-major input-column index per cell) feeds them straight into `UnpivotExec` —
+no expression projection at all. The exec emits the label column and coerces
+every cell to Utf8 inside the batch with `cast_with_options` under
+`CastOptions { safe: false, format_options: DEFAULT_FORMAT_OPTIONS }`, the exact
+kernel/options DataFusion's `CAST(x AS STRING)` physical expression uses, so the
+grid is byte-identical to the engine cast (D-3). The first cut of this step used
+a 2505-expression cast projection instead; the S2-21 review measured it +27 %
+over the bridge at 500 columns (superlinear physical planning, exponent 1.48)
+and this labeled mode is the remediation — see the remediation section.
 
 ### C-008 red-first
 
@@ -113,6 +122,96 @@ JVM was not started for these gates.
 | `python3 scripts/check_ledger_grammar.py` | 0 — 118 live ledgers clean |
 | `make verify` | 0 |
 | `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 — 749 passed, 1 skipped, 12 xfailed (669 s) |
+
+## Step-2 remediation (swe-2-high, S2-21 review of `fe25a751`, 2026-09-12)
+
+The S2-21 reviewer (`/tmp/oc-worker/grok-rev-unpivot2/report.md`) measured the
+2505-expression cast projection, not cast evaluation, as the +27 % at 500
+columns: 5 stat-name literals + 2500 `CAST(cell AS Utf8)` plan superlinearly
+(exponent 1.48), while the CASTs themselves evaluate in ~4 ms and `UnpivotExec`
+is tens of ms. The fix is the reviewer's shape 1 — `UnpivotExec` reads the raw
+chunked aggregate with the stat names and per-cell input indices as plan
+metadata, coercing cells inside the exec.
+
+### C-014 — labeled mode, and the engine's own cast kernel
+
+`StackLabels { names, cells }` on `UnpivotNode`/`UnpivotExec`:
+`names` are the per-row label literals (`len == n`), `cells` is the flat
+row-major input-column index per stacked cell (`len == n × output cell
+columns`). `apply_labeled_stack` is the entry; `_native.stack_dataframe` gained
+the internal `row_labels`/`cell_indices` kwargs (both-or-neither, `n` must equal
+`len(row_labels)`). `statistics.py` passes the cross-joined aggregate directly —
+the `select(2505 exprs)` is gone; `UnpivotExec` sits directly on the
+`AggregateExec`/`CrossJoinExec` tree. `STACK_COLUMN_DIFF_TYPES` cannot fire in
+labeled mode because every output cell is Utf8 by construction; the SQL and
+`F.stack` doors (`apply_stack`, `unify_stack_type`) are unchanged and their
+refusal pins stay green (the `-k "describe or summary or stack"` run).
+
+Byte identity (D-3): the coerce calls `cast_with_options` with
+`CastOptions { safe: false, format_options: DEFAULT_FORMAT_OPTIONS }` — read off
+`datafusion-physical-expr 54.1.0`'s `CastExpr::evaluate`, which evaluates
+`value.cast_to(ty, Some(&cast_options))` with exactly that constant. The
+reviewer's P3 claim that Arrow formats `0.0` as `0` measured pyarrow's C++
+kernel; `exec::labeled::labeled_stack_coerces_cells_like_engine_cast` asserts
+the exec's coerced strings equal `CAST(x AS STRING)` collected from a live
+`SessionContext` for Float64 `0.0`, `-0.0`, `1.0`, `1e16`, `1e-20`, `0.1+0.2`,
+NaN, ±inf, a NULL Float64, Int64, Decimal128(10,2), Date32,
+Timestamp(Millisecond), Boolean, and Utf8 — green.
+
+`UnpivotExec` also reports `elapsed_compute`/`output_rows` now
+(`ExecutionPlanMetricsSet` + `BaselineMetrics::record_poll`, the
+`ProjectionExec` pattern) — the reviewer's no-metrics P3, a few lines.
+
+### C-015 — re-measure on RELEASE (2026-09-12)
+
+Same fixture/harness (`scratch/perf-unpivot-1/describe_bench.py`, tag
+`labeled`; `__debug_assertions__` False; warmup + three reps, medians).
+
+| Shape | Bridge base collect (s) | First-cut plan collect (s) | Labeled collect (s) | Labeled call (s) |
+|---|---:|---:|---:|---:|
+| 20 cols × 200k | 0.047 | 0.051 | **0.035** | 0.001 |
+| 500 cols × 200k | 10.19 | 12.94 | **8.25** | 0.053 |
+
+Raw 500-col collects: 6.518 / 8.248 / 8.489 s — median 8.25 s beats the bridge's
+10.19 s (the reviewer's isolation table predicted ≈ aggregate-only 6.51 s +
+sub-100 ms unpivot; the gap is the 10-scan aggregate path the projection hid
+behind). Call build is 0.42 → 0.053 s. `make develop` (debug) restored before
+the gates.
+
+### C-016 / PERF-UNPIVOT-1-R-001 — RoundRobinBatch(64) on the eager source (residue)
+
+Measured on the same release fixture: `describe().collect()` median 8.119 s
+(default) vs 7.671 s with
+`datafusion.optimizer.repartition_aggregations=false` (3 reps each after
+warmup; rep spread 7.1–9.4 s). The ~0.45 s delta is inside run-to-run noise, and
+the toggle is session-global read at physical-planning time — there is no
+per-plan door to scope it to the chunk aggregates, so it fails the "small fix"
+bar regardless of size. The ~700 MB spill per action (review's ANALYZE) and the
+10 scans are inherent to the pre-existing 50-column chunk loop (collapsing to
+one 2500-expression aggregate measured 18.72 s — the review's shape 4). Recorded
+as residue **PERF-UNPIVOT-1-R-001**: a later unit can give eager MemTable
+sources a partition count or add a scoped repartition hint; no change here.
+
+### C-017 — S2-21 findings disposition
+
+| Finding | Disposition |
+|---|---|
+| P1 — 2505-expression projection is the +27 % | Fixed — labeled mode, no expression projection (C-014); 8.25 s < bridge 10.19 s (C-015) |
+| P2 — 10 scans + RR64, ~700 MB spill | Residue PERF-UNPIVOT-1-R-001 — measured 8.12→7.67 s with repartition off, session-global only, not a small fix (C-016) |
+| P3 — `UnpivotExec` has no metrics | Fixed — `elapsed_compute`/`output_rows` via `ExecutionPlanMetricsSet` |
+| P3 — `arrow::compute::cast` is not the engine formatter | Resolved — coerce uses `cast_with_options` + `DEFAULT_FORMAT_OPTIONS` (the `CastExpr` path); identity test vs live `CAST` oracle |
+
+### Remediation gates
+
+JVM was not started for these gates.
+
+| Command | Exit |
+|---|---|
+| `cargo test -p repark-core stack` | 0 — 9 passed incl. `labeled_stack_coerces_cells_like_engine_cast` |
+| `.venv/bin/python -m pytest -q python/repark/tests/test_perf_unpivot_1.py $(ls python/repark/tests/*describe*.py)` | 0 — 32 passed, 1 skipped |
+| `.venv/bin/python -m pytest python/repark/tests -q -k "describe or summary or stack"` | 0 — 46 passed, 6 skipped (both `STACK_COLUMN_DIFF_TYPES` refusal doors green) |
+| `make verify` | 0 (one timing-sensitive `repark-iceberg` listing-cost test flaked once under parity-suite load; green in isolation and in the quiet re-run) |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 — 749 passed, 1 skipped, 12 xfailed (711 s) |
 
 ## P3 observed (no change this round)
 

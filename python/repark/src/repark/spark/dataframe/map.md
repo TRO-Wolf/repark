@@ -166,13 +166,15 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   requested statistic for every target column in chunked native aggregate passes over
   the frame's own plan (`aggregate([], exprs)` on quoted engine-field refs — no SQL
   text, no temp view — one plan per ~50 columns, chunk results cross-joined on a
-  literal-true condition), then one projection lays the cells out in row-major stack
-  order — a stat-name literal then one `CAST(cell AS Utf8)` per column per stat row —
-  and `stack_dataframe` (`UnpivotExec`, PERF-UNPIVOT-1) emits the summary rows at
-  action time. The describe grid is all-string, so every cell is cast; casting in the
-  projection over the aggregate instead of inside it keeps the PERF-CAST-1 wall off
-  the plan (2500 projection-side casts ≈ 14 s vs ~176 s in-aggregate —
-  `docs/perf/cast-cost-2026-09-12.md`). Order is carried by construction, so
+  literal-true condition), then `stack_dataframe`'s labeled mode
+  (`apply_labeled_stack`/`StackLabels`, PERF-UNPIVOT-1 step-2 remediation) feeds the
+  raw one-row aggregate straight into `UnpivotExec` with the stat names as row-label
+  literals and a row-major cell index map — no expression projection at all (the
+  2505-expression projection that replaced the bridge cost ~3 s of superlinear
+  physical planning at 500 columns, S2-21). The exec emits the label column and
+  coerces every cell to Utf8 inside the batch with the engine's own
+  `CAST AS STRING` kernel/options, so the grid is byte-identical to the engine
+  cast. Order is carried by construction, so
   duplicate stats keep their requested slots; no Python runs at action time — the
   PERF-DESCRIBE-1 `mapInArrow` bridge and its `_summary_unpivot` callback are gone
   because every plan-side unpivot shape they dodged was superlinear while `stack` is
@@ -490,9 +492,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   C-005).
   PERF-DESCRIBE-1 (2026-09-12): `statistics.py` 318→372, no new module, no ceiling
   row; stays below the source-size default (pins: perf-describe-1/C-002, C-005).
-  PERF-UNPIVOT-1 step 2 (2026-09-12): `statistics.py` 372→337, no new module, no
-  ceiling row; stays below the source-size default (pins: perf-unpivot-1/C-008,
-  C-011).
+  PERF-UNPIVOT-1 step 2 (2026-09-12): `statistics.py` 372→337→334, no new module,
+  no ceiling row; stays below the source-size default (pins: perf-unpivot-1/C-008,
+  C-011). The chunk loop's ten `RoundRobinBatch(64)` repartitions over the eager
+  source measured inside run noise when toggled off and the switch is
+  session-global — residue PERF-UNPIVOT-1-R-001 in the unit ledger.
+  pins: perf-unpivot-1/C-014, C-016
   FACADE-1 (2026-09-12): `core.py` 4485→4473→4470; `_pyarrow.py` and `_arrow_stream.py`
   stay below the source-size default (pins: facade-1/C-001, C-002, C-006).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new
