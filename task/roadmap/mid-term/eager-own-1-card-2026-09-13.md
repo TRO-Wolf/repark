@@ -115,3 +115,10 @@ PR.
   or keep the explicit-only lifetime and leave the handle to `eager()` alone?
 - **Q-E2** EAGER-BUDGET-1: a session-wide `repark.cache.max_total_bytes` that refuses (default) or
   evicts oldest un-held snapshots?
+
+## Owner rulings (2026-09-13)
+
+- **Q-E1 — yes.** `cache()` / `persist()` views die with their last holder; D-3 stands as built in #565.
+- **Q-E2 — refuse, never evict.** Chosen as the polars-like behaviour: a materialized result lives
+  exactly as long as the objects that hold it, and a limit raises a named error instead of silently
+  dropping something still held. EAGER-BUDGET-1 runs as seeded in the run-11 report with D-1 refuse.

@@ -157,6 +157,10 @@ fork reconciles it by searching the reloaded snapshot set.
 
 ### Parked owner questions (§4)
 
+**Owner rulings (2026-09-13):** Q-R9-1 — `sha2` may be a direct `repark-core` dependency (the S-1 digest
+seed); Q-R9-2 — TOML stays the S-1 authoring format for now; Q-R9-3 — ABS-EXPR-1 was opened at once
+(merged #564); SIL-1..SIL-10 — **tabled**; silver S-2 stays parked until the owner returns to them.
+
 - Q-R9-1 (S-1): a cryptographic plan-identity digest needs a dependency seed (`sha2` is already in
   `Cargo.lock` transitively; adding it to `repark-core` is still a dependency change) — S-1 ships canonical
   bytes as the identity, digest deferred.
