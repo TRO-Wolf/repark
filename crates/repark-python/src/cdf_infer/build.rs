@@ -65,29 +65,10 @@ fn ts_us(cell: &Cell<'_>, utc_zero: bool) -> Result<i64, Cdf> {
 }
 
 fn dec_unscaled(cell: &Cell<'_>) -> Result<i128, Cdf> {
-    let CellKind::Dec { neg, digits, exp } = &cell.kind else {
+    let CellKind::Dec { unscaled, .. } = &cell.kind else {
         return Err(Cdf::Fallback);
     };
-    let mut mantissa: i128 = 0;
-    for digit in digits {
-        mantissa = mantissa
-            .checked_mul(10)
-            .and_then(|value| value.checked_add(i128::from(*digit)))
-            .ok_or(Cdf::Fallback)?;
-    }
-    let shift = exp + 18;
-    let scaled = if shift >= 0 {
-        mantissa
-            .checked_mul(
-                10_i128
-                    .checked_pow(u32::try_from(shift).map_err(|_| Cdf::Fallback)?)
-                    .ok_or(Cdf::Fallback)?,
-            )
-            .ok_or(Cdf::Fallback)?
-    } else {
-        mantissa / 10_i128.pow(u32::try_from(-shift).map_err(|_| Cdf::Fallback)?)
-    };
-    Ok(if *neg { -scaled } else { scaled })
+    Ok(*unscaled)
 }
 
 fn struct_child_cell<'c, 'py>(

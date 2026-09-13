@@ -52,9 +52,7 @@ pub(crate) enum CellKind<'py> {
         off_us: Option<i64>,
     },
     Dec {
-        neg: bool,
-        digits: Vec<u8>,
-        exp: i64,
+        unscaled: i128,
     },
     List(Vec<Cell<'py>>),
     Tup(Vec<Cell<'py>>),
@@ -122,7 +120,28 @@ fn extract_decimal<'py>(obj: &Bound<'py, PyAny>, cx: &Ctx<'py>) -> Result<CellKi
             return Err(Cdf::Fallback);
         }
     }
-    Ok(CellKind::Dec { neg, digits, exp })
+    let mut mantissa: i128 = 0;
+    for digit in &digits {
+        mantissa = mantissa
+            .checked_mul(10)
+            .and_then(|value| value.checked_add(i128::from(*digit)))
+            .ok_or(Cdf::Fallback)?;
+    }
+    let shift = exp + 18;
+    let scaled = if shift >= 0 {
+        mantissa
+            .checked_mul(
+                10_i128
+                    .checked_pow(u32::try_from(shift).map_err(|_| Cdf::Fallback)?)
+                    .ok_or(Cdf::Fallback)?,
+            )
+            .ok_or(Cdf::Fallback)?
+    } else {
+        mantissa / 10_i128.pow(u32::try_from(-shift).map_err(|_| Cdf::Fallback)?)
+    };
+    Ok(CellKind::Dec {
+        unscaled: if neg { -scaled } else { scaled },
+    })
 }
 
 fn extract_datetime<'py>(dt: &Bound<'py, PyDateTime>) -> Result<CellKind<'py>, Cdf> {
