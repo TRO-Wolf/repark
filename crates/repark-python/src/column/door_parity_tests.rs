@@ -25,7 +25,9 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         FacadeShape::Kernel(1),
         "facade expr_fn::abs is checked_abs — raises on integer-min, matching Spark ANSI-on; \
          the door's datafusion-spark SparkAbs reads execution.enable_ansi_mode, which repark \
-         never sets, so the door wraps (measured: spark.sql abs(-2147483648) -> -2147483648)",
+         never sets, so the door wraps on every signed minimum — measured on typed int8/int16/\
+         int32/int64 columns and CASTs: abs(x) returns the input minimum unchanged \
+         (-128 / -32768 / -2147483648 / -9223372036854775808)",
     ),
     (
         "ascii",

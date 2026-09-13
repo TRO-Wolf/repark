@@ -112,7 +112,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "cbrt" => {
             need(1)?;
-            expr_fn::cbrt(exprs[0].clone())
+            expr_fn::cbrt(exprs[0].clone() * lit(1.0f64))
         }
         "sqrt" => {
             need(1)?;

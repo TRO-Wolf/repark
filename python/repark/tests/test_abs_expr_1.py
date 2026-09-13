@@ -202,12 +202,43 @@ def test_cbrt_oracle_answer_cells(spark: ReparkSession) -> None:
     assert str(table.schema.field("c").type) == "double"
 
 
+def test_cbrt_returns_double_for_every_numeric_input(spark: ReparkSession) -> None:
+    """pins: abs-expr-1/C-001, C-002 — ``F.cbrt`` is double for every input (Spark UnaryMathExpression)."""
+    cases = [
+        ("x float", [(27.5,)]),
+        ("x tinyint", [(27,)]),
+        ("x int", [(64,)]),
+        ("x bigint", [(1000,)]),
+        ("x decimal(10,0)", [(decimal.Decimal("-8"),)]),
+    ]
+    for ddl, rows in cases:
+        table = spark.createDataFrame(rows, ddl).select(F.cbrt("x").alias("c")).to_arrow()
+        assert str(table.schema.field("c").type) == "double", ddl
+    table = spark.createDataFrame([(27.5,)], "x float").select(F.cbrt("x").alias("c")).to_arrow()
+    assert table.column("c").to_pylist() == [3.018405368398843]
+
+
 def test_cbrt_non_numeric_refuses(spark: ReparkSession) -> None:
     """pins: abs-expr-1/C-001, C-002 — ``F.cbrt`` on boolean and string columns raises."""
     with pytest.raises(AnalysisException):
         spark.createDataFrame([(True,)], "x boolean").select(F.cbrt("x")).to_arrow()
     with pytest.raises(AnalysisException):
         spark.createDataFrame([("a",)], "x string").select(F.cbrt("x")).to_arrow()
+
+
+def test_abs_door_parity_integer_min(spark: ReparkSession) -> None:
+    """pins: abs-expr-1/C-002 — facade ``F.abs`` raises at int-min; the SQL door wraps (divergence pinned)."""
+    for ddl, minimum in (
+        ("tinyint", -128),
+        ("smallint", -32768),
+        ("int", -2147483648),
+        ("bigint", -9223372036854775808),
+    ):
+        with pytest.raises(PySparkException, match="overflow"):
+            spark.createDataFrame([(minimum,)], f"x {ddl}").select(F.abs("x")).to_arrow()
+        spark.createDataFrame([(minimum,)], f"x {ddl}").createOrReplaceTempView("v")
+        assert spark.sql("SELECT abs(x) AS a FROM v").collect()[0]["a"] == minimum, ddl
+    assert spark.sql("SELECT abs(CAST(-2147483648 AS INT)) AS a").collect()[0]["a"] == -2147483648
 
 
 def test_nullif_oracle_answer_cells(spark: ReparkSession) -> None:
