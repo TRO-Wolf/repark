@@ -11,11 +11,7 @@ if TYPE_CHECKING:
 
 
 class NamedSource:
-    """Read-only handle for one declared database source (RePark extension).
-
-    Obtained via :meth:`repark.session.ReparkSession.source`. The connector itself lands
-    with roadmap 1.10, so every use refuses through the engine's pending message.
-    """
+    """Read-only handle for one declared database source (RePark extension)."""
 
     __slots__ = ("_key_path", "_kind", "_name", "_session")
 

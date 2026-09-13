@@ -370,3 +370,15 @@ E   Failed: DID NOT RAISE ValidationError
   `repark = ReparkSession.builder.configFile("repark.toml").getOrCreate()` (D-12), and the
   example `docs/examples/session/named_sources.py` covers `SparkSession.source` /
   `SparkSession.sources` — the two names the coverage enumerator added to the inventory.
+
+## Performance review (S2-21), step 2
+
+Reviewer: Grok 4.6, read-only, critic-quality, on `c03eeb8b` (report `/tmp/oc-worker/b-rev-cfg2s2/report.md`, 21 turns). Verdict: **no P1, no P2.** A session build with no declared source makes zero native source calls and never imports `session_sources.py`. `sources()` is one native crossing for all rows (debug native: 48 µs empty, 128 µs at one source, 894 µs at 64), and Python does not re-redact.
+
+| Id | Severity | Site | Note |
+|---|---|---|---|
+| P3-1 | P3 | `python/repark/src/repark/spark/session/session_sources.py` `sources()` | `dict(properties)` copies the dict pyo3 already built; ~190 ns per row, ~1.3 % of `sources()` at 64 rows. |
+| P3-2 | P3 | `crates/repark-core/src/named_sources.rs` `SourceRow::from_spec` | The step-1 P3-2 listing cost, wrapped unchanged: every call clones and redacts each property. |
+| P3-3 | P3 | `named_sources.rs` `source()`, `crates/repark-python/src/session_sources.rs` `session_source_ping` | `source(name)` is a linear scan; `ping()` re-resolves by name; +4.5 µs first-vs-last of 64 names. |
+
+Orchestrator audit (run 9b): the `_promote_active` / `_builder_config_get_master` moves were measured behaviour-neutral. After `sql()` and `createDataFrame()`, the active session switches exactly as on the step-1 tree. The `NamedSource` class docstring was trimmed to one line.
