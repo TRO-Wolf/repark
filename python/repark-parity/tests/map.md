@@ -80,6 +80,17 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   reconciliation / live `index` of Muse run dirs when `/tmp/muse-worker` is present.
   pins: sepmo-e0-e1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fixtures/](fixtures/map.md) — sanitized collector run dirs (no home paths).
+- `test_platform_1_wheel_matrix.py` — **PLATFORM-1 (2026-09-12):** the abi3 wheel-matrix
+  pins over the two workflows and the release doc — `release.yml` `build-wheel` names
+  exactly the five legs (`manylinux-x86_64`/`ubuntu-latest`, `manylinux-aarch64`/
+  `ubuntu-24.04-arm`, `macos-arm64`/`macos-latest`, `macos-x86_64`/`macos-13`,
+  `windows-x86_64`/`windows-latest`) and `publish-pypi` merges `release-wheel-*`;
+  `wheels.yml` `platform-matrix` names the four legs PRs never see behind the
+  schedule-or-dispatch `if:` plus the cron/`workflow_dispatch` triggers; the PR `smoke`
+  job keeps its gate and host; `docs/release.md` names all five legs. Doctored leg
+  lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
+  reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
+  pins: platform-1/C-001, C-002, C-003, C-004, C-005
 - `test_ex_0_example_coverage.py` — **EX-0 (2026-08-31):** the v0.7 example-drift
   gate: five-family enumerator, uncovered / stale-backlog / covered-in-backlog
   reds, backlog and exceptions baselines, COVERS-must-be-used, seed `COVERS`,

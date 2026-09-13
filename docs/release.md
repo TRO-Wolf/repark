@@ -72,6 +72,16 @@ They are recorded — not re-opened — so a later change is a deliberate one.
 
 - **abi3 — settled.** One `cp312-abi3` wheel per platform, from the `abi3-py312` PyO3 pin
   (design §4 Q6). Every shipped tag has produced exactly this.
+- **Wheel matrix — settled 2026-09-12 (PLATFORM-1).** Five `cp312-abi3` wheels, one per
+  platform leg: `manylinux-x86_64` (`ubuntu-latest`), `manylinux-aarch64`
+  (`ubuntu-24.04-arm`), `macos-arm64` (`macos-latest`), `macos-x86_64` (`macos-13`),
+  `windows-x86_64` (`windows-latest`). `release.yml`'s `build-wheel` is the five-leg
+  matrix — each leg builds `--release`, re-checks tag/version consistency, installs its
+  wheel into a fresh venv, imports `repark`, and runs one `ReparkSession` collect — and
+  `publish-pypi` merges the five per-leg artifacts before upload. `wheels.yml`'s
+  `platform-matrix` job rebuilds the four non-`ubuntu-latest` legs nightly plus on
+  `workflow_dispatch` (never on `pull_request`) as the broken-leg tripwire; the leg run
+  after a merge is the proof, recorded in the platform-1 ledger.
 - **Python floor — settled at ≥ 3.12**, the direct consequence of the `abi3-py312` pin.
 - **Version SSOT — settled.** `[workspace.package] version` in the root `Cargo.toml`, injected
   into the wheel by maturin (`dynamic = ["version"]`), with the tag/version consistency check in
@@ -94,8 +104,8 @@ every row decided at its recommendation. The **frozen-surface register** is
 
 ## Open items
 
-- **Wheel matrix** — which platforms/architectures get prebuilt wheels beyond the manylinux
-  x86_64 floor that ships today (macOS arm64, Windows, musllinux TBD).
+- **Wheel matrix** — the five-leg abi3 set is settled (see "Settled at the first tags");
+  musllinux and further architectures stay open.
 - **Cadence** — feature work cuts a minor, fixes cut a patch. The versioning rule that
   governs what may change in either is "Versioning policy" above, written 2026-09-02.
   1.0.1 was the first patch (2026-09-04).
