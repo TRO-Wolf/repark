@@ -96,9 +96,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "concat_ws" => {
             need_at_least(1)?;
-            let delimiter = exprs[0].clone();
-            let rest = exprs[1..].to_vec();
-            expr_fn::concat_ws(delimiter, rest)
+            expr_fn::concat_ws(exprs[0].clone(), exprs[1..].to_vec())
         }
         "regexp_replace" => {
             need_at_least(3)?;
@@ -107,6 +105,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 exprs[1].clone(),
                 exprs[2].clone(),
             )
+        }
+        "abs" => {
+            need(1)?;
+            expr_fn::abs(exprs[0].clone())
+        }
+        "cbrt" => {
+            need(1)?;
+            expr_fn::cbrt(exprs[0].clone() * lit(1.0f64))
         }
         "sqrt" => {
             need(1)?;
@@ -290,6 +296,10 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         "nanvl" => {
             need(2)?;
             expr_fn::nanvl(exprs[0].clone(), exprs[1].clone())
+        }
+        "nullif" => {
+            need(2)?;
+            expr_fn::nullif(exprs[0].clone(), exprs[1].clone())
         }
         "greatest" => {
             need_at_least(1)?;

@@ -289,11 +289,12 @@ The dispatch table grows past the source-line default in the process and splits 
 
 ### 4.4 The 53 names
 
-`PY_COMPOSED` (45) —
-`abs`, `array_append`, `array_prepend`, `array_sort`, `arrays_overlap`, `bin`, `broadcast`,
-`btrim`, `cbrt`, `count`, `count_distinct`, `count_if`, `date_from_unix_date`, `date_sub`,
+`PY_COMPOSED` (45 at the 2026-08-20 census; 42 after ABS-EXPR-1 lowered `abs`, `cbrt` and
+`nullif` to native calls on 2026-09-13) —
+`array_append`, `array_prepend`, `array_sort`, `arrays_overlap`, `bin`, `broadcast`,
+`btrim`, `count`, `count_distinct`, `count_if`, `date_from_unix_date`, `date_sub`,
 `dayname`, `degrees`, `e`, `isnotnull`, `left`, `lit`, `log2`,
-`make_dt_interval`, `make_interval`, `map_contains_key`, `monthname`, `nullif`, `nullifzero`,
+`make_dt_interval`, `make_interval`, `map_contains_key`, `monthname`, `nullifzero`,
 `nvl2`, `overlay`, `parse_url`, `pmod`, `quote`, `radians`, `rand`, `randn`, `replace`, `right`,
 `rint`, `sequence`, `shuffle`, `str_to_map`, `try_parse_url`, `unix_millis`, `unix_seconds`,
 `zeroifnull`.
@@ -310,6 +311,13 @@ Two of these carry named divergence pins already worth calling out:
   native plan and the SQL text are different expressions with only presumed-equal semantics; they
   differ at minimum on `MIN_VALUE` integer overflow. The docstring records the choice as
   deliberate ("no new Rust"). It is the clearest single argument for this campaign.
+  *(2026-09-13, ABS-EXPR-1: superseded — `abs`, `cbrt` and `nullif` now lower to the single
+  DataFusion `expr_fn` calls; the three-embeds-per-level CASE made nested chains exponential in
+  native memory, aborting the process at depth ~14 (run 9 OBS-R9-6 / INC-R9-1). The lowering
+  also trued the answers up: tinyint/smallint keep their width and raise at min, decimal keeps
+  its precision, `cbrt` of ints is exact and `cbrt(-0.0)` keeps the sign. `array_append`'s
+  `_glue_element` when-guard and the `DataFrame.replace` dict loop still embed twice — audited
+  in `task/ledgers/staging/abs-expr-1-ledger.md`, each needs its own card.)*
 - **`concat`** implements Spark's any-null→NULL rule **three times**: once in Rust
   (`PyColumn::concat`, a `Case` + `Cast` to `Utf8`), once again as Python-built SQL text for
   `sql_expr`, and a third spelling in `join_sql_expr` that carries **no null guard at all** — so a

@@ -33,6 +33,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
+  `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
+  runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
+  exit, bounded by 2× the flat `F.sqrt` delta; the answer pins encode the live
+  PySpark 4.1.2 oracle cells on the Arrow path (value AND type: tinyint keeps int8
+  and raises at min, decimal keeps (10,3), `cbrt` int exact / `-0.0` signed /
+  double for every numeric input). `test_abs_door_parity_integer_min` value-pins the
+  recorded divergence — facade raises at int-min, `SELECT abs(x)` wraps. Pin docstrings
+  stay one line under the 100-column ruff limit (clause ids first, then the claim).
+  pins: abs-expr-1/C-001, C-002, C-003, C-004
 - [test_perf_unpivot_1.py](test_perf_unpivot_1.py) — **PERF-UNPIVOT-1 step 1 (2026-09-12):**
   native `stack()` pins (SQL/F.stack oracle cells, linearity exponent ≤ 1.1 at 50/250/500,
   EXPLAIN UnpivotExec, red-first name). Step 2 (2026-09-12) adds

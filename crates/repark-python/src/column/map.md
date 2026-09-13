@@ -85,6 +85,15 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   pins: fn-regexp-extract-1/C-001
   **TYPES-1 (2026-09-05):** the `from_unixtime` arm takes the optional format arg.
   pins: types-1/C-006
+  **ABS-EXPR-1 (2026-09-13):** `abs` / `cbrt` / `nullif` arms — plain `expr_fn` calls —
+  replace the facade `when(...)` rewrites that embedded the child 3×/2× per level
+  (exponential native memory; run 9 OBS-R9-6). `expr_fn::abs` is `checked_abs` on the
+  signed ints: integer-min raises `Int*NArray overflow on abs(…)` (Spark raises
+  `ARITHMETIC_OVERFLOW`; the class differs, the raise is pinned). `cbrt` wraps its
+  argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a UnaryMathExpression (always
+  DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
+  bool/string still refuse (no numeric coercion).
+  pins: abs-expr-1/C-001, C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
@@ -114,6 +123,12 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `ROWS` / `GROUPS` bounds stay `UInt64`, which is already the coercion target.
   Registry: `WIN-RANGE-DF-1`. pins: win-slide-1/C-003
 - [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
+  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
+  `checked_abs` raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs`
+  wraps because repark never sets `execution.enable_ansi_mode` — measured on typed
+  int8/16/32/64 columns (each minimum returns unchanged) and value-pinned by
+  `test_abs_door_parity_integer_min`. Table 21 → 22.
+  pins: abs-expr-1/C-002
   **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
   pins: types-1/C-006
 
