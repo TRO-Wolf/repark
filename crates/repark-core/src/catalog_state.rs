@@ -72,7 +72,7 @@ struct CatalogEntry {
 #[derive(Clone, Default)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
-    database_sources: HashMap<String, SourceSpec>,
+    database_sources: HashMap<String, Arc<SourceSpec>>,
     /// Read-only (postgres) catalog names for P11 DML routing.
     read_only_catalogs: std::collections::HashSet<String>,
     /// Local filesystem warehouse roots for SEC-02 grandfather (memory / `LocalFs` catalogs).
@@ -165,7 +165,7 @@ impl CatalogRegistry {
         self.entries.get(name).map(|entry| &entry.catalog)
     }
 
-    pub(crate) fn insert_database_source(&mut self, spec: SourceSpec) {
+    pub(crate) fn insert_database_source(&mut self, spec: Arc<SourceSpec>) {
         self.database_sources.insert(spec.name.clone(), spec);
     }
 
@@ -174,7 +174,7 @@ impl CatalogRegistry {
         self.entries.contains_key(name) || self.database_sources.contains_key(name)
     }
 
-    pub(crate) fn database_source(&self, name: &str) -> Option<&SourceSpec> {
+    pub(crate) fn database_source(&self, name: &str) -> Option<&Arc<SourceSpec>> {
         self.database_sources.get(name)
     }
 

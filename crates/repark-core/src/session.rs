@@ -100,7 +100,7 @@ pub struct ReparkSessionBuilder {
     config: HashMap<String, String>,
     config_file: Option<PathBuf>,
     maintenance: Option<(String, Option<MaintenancePolicy>)>,
-    source_specs: Vec<SourceSpec>,
+    source_specs: Vec<Arc<SourceSpec>>,
 }
 
 impl std::fmt::Debug for ReparkSessionBuilder {
@@ -185,7 +185,11 @@ impl ReparkSessionBuilder {
         }
         let conf_dump = crate::config_file::conf_dump_rows(&file, &self.config);
         self.maintenance.clone_from(&file.maintenance);
-        self.source_specs.clone_from(&file.source_specs);
+        self.source_specs = file
+            .source_specs
+            .iter()
+            .map(|spec| Arc::new(spec.clone()))
+            .collect();
         for (key, value) in file.pairs_for_map() {
             self.config.entry(key).or_insert(value);
         }
@@ -329,7 +333,7 @@ pub struct ReparkSession {
     postgres_catalog_names: Arc<RwLock<HashSet<String>>>,
     /// Catalogs from `spark.sql.catalog.<name>.*`, parsed at build and registered asynchronously.
     catalog_specs: Arc<Vec<CatalogSpec>>,
-    pub(crate) source_specs: Arc<Vec<SourceSpec>>,
+    pub(crate) source_specs: Arc<Vec<Arc<SourceSpec>>>,
     conf_dump: Arc<Vec<(String, String, String)>>,
     /// S3 buckets whose object store is already registered on the `RuntimeEnv`.
     registered_s3_buckets: Arc<Mutex<HashSet<String>>>,
@@ -728,7 +732,12 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if `name` is registered or the catalog cannot be built.
     pub async fn register_memory_catalog(&self, name: &str, warehouse: &str) -> Result<()> {
-        if self.catalog_handle(name).is_ok() {
+        if self
+            .catalogs
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_registered(name)
+        {
             return Err(Error::DataFusion(format!(
                 "catalog '{name}' is already registered — re-registering an in-memory catalog \
                  would orphan its tables (their metadata lives in the replaced handle)"

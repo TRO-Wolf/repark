@@ -58,8 +58,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   an `Error::Config`, never silently inert — this is what makes
   `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
   `information_schema.*` live in BOTH SQL doors), carries the parsed `SourceSpec`s from a
-  loaded `repark.toml` on `source_specs` (CFG-2 step 1 — `register_configured_sources` and
-  the `sources()` / `source(name)` doors live in `named_sources.rs`), carries the
+  loaded `repark.toml` on `source_specs` (CFG-2 step 1 — one `Arc<SourceSpec>` per spec so
+  the registry and the per-query registry snapshot clone atomics, not deep specs;
+  `register_configured_sources` and the `sources()` / `source(name)` doors live in
+  `named_sources.rs`), carries the
   **two DF-54.1 regression guards**
   (`session/df_guards.rs`) at two different altitudes — a config default,
   `optimizer.enable_physical_uncorrelated_scalar_subquery = false` (the 54.1 physical
@@ -345,11 +347,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   profile carries no table); a build with no config file leaves the registry unstamped, so
   existing sessions behave exactly as before.
   **CFG-2 step 1 (2026-09-13):** the registry also carries `database_sources` — the
-  auto-registered `SourceSpec`s keyed by source name — `is_registered`, the
+  auto-registered `Arc<SourceSpec>`s keyed by source name (Arc'd so the per-query
+  `catalogs_snapshot()` clone stays keys-plus-Arcs, S2-21 P2-1) — `is_registered`, the
   catalog-or-source claim check `register_memory_catalog` /
   `register_iceberg_catalog` consult for the duplicate-name refusal, and
   `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
   the D-1 refusal for a DDL plan naming a source.
+  pins: cfg-2/C-012
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per

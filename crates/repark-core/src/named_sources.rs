@@ -189,7 +189,10 @@ impl NamedSource {
 impl ReparkSession {
     #[must_use]
     pub fn sources(&self) -> Vec<SourceRow> {
-        self.source_specs.iter().map(SourceRow::from_spec).collect()
+        self.source_specs
+            .iter()
+            .map(|spec| SourceRow::from_spec(spec))
+            .collect()
     }
 
     #[allow(clippy::missing_errors_doc)]
@@ -197,7 +200,7 @@ impl ReparkSession {
         self.source_specs
             .iter()
             .find(|spec| spec.name == name)
-            .map(NamedSource::from_spec)
+            .map(|spec| NamedSource::from_spec(spec))
             .ok_or_else(|| {
                 let declared: Vec<&str> = self
                     .source_specs
@@ -234,7 +237,7 @@ impl ReparkSession {
             }
             self.context()
                 .register_catalog(spec.name.clone(), Arc::new(provider));
-            catalogs.insert_database_source(spec.clone());
+            catalogs.insert_database_source(Arc::clone(spec));
         }
         Ok(())
     }

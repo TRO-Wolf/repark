@@ -35,6 +35,7 @@ sources (D-3: sources come only from the TOML file), the connectors themselves
 | C-009 | `source(name)` on an undeclared name refuses naming the declared sources (D-6). | `unknown_source_handle_refuses_naming_declared_sources` | **PROVEN** | Compile red first (below). Green in the same `named_sources` run — `source("nope")` answers `unknown database source 'nope' — declared sources: company_db`, naming both the asked name and the declared list. |
 | C-010 | Python: a rendered `repark.toml` carrying a database source builds a session (the `match="CFG-2"` pin flips to loads); the guide's constraint 1 states the new truth. | `test_rendered_database_source_loads` | **PROVEN** | Red first (below): the flipped pin failed on the unimplemented wheel at `fold_config_file_into_builder` with the CFG-2 refusal. Green: `make develop` rebuilt the wheel and `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` reports `21 passed` — the rendered `[default.database.postgres.company_db]` file builds a session end to end through `register_configured_sources` in `finish_session`. `docs/guide/repark-toml.md` constraint 1 now states the lazy-register/refuse-on-use truth with the measured `write` profile output. |
 | C-011 | Write shapes under a source name refuse with the D-1 connector message, not a generic "not supported"/"doesn't exist": `CREATE TABLE company_db.public.t` and `DROP TABLE company_db.public.t` both carry the source path and `1.10` (audit F-2). | `configured_source_create_table_refuses_with_connector_message` | **PROVEN** | Red first (below): `DROP TABLE` answered ``Execution error: Table 'company_db.public.t' doesn't exist.`` — DataFusion's `drop_table` swallows the provider error from `find_and_deregister` and substitutes "doesn't exist" (context.rs:1052-1064), so the `deregister_table` override alone can never surface D-1 for DROP. Green: `configured_source_create_table_refuses_with_connector_message ... ok` in `cargo test -p repark-core named_sources` — 8 passed, 0 failed. `RefusingSourceSchemaProvider` now overrides `register_table`/`deregister_table` with the same `NotImplemented` refusal (covers `ctx.register_table("company_db.x.y")` direct calls), and `PreExecute::guard` runs `refuse_source_ddl` — shared by both doors via `PreExecute` — which refuses `CreateExternalTable`/`CreateMemoryTable`/`CreateView`/`CreateIndex`/`DropTable`/`DropView`/`CreateCatalog`/`DropCatalogSchema` plans naming a registered source before execution, closing the swallow. |
+| C-012 | The per-query `catalogs_snapshot()` clone stays "keys + Arcs": `database_sources` values are `Arc<SourceSpec>`, not deep-copied `SourceSpec`s (S2-21 P2-1). | Existing pins + gates (no behaviour change) | **PROVEN** | The reviewer measured the step-1 shape at ~296 ns per `sql_with` for one source and ~1 ms at 1024 — `CatalogRegistry` is `#[derive(Clone)]` and cloned on every SQL call. Now `database_sources: HashMap<String, Arc<SourceSpec>>`, `insert_database_source(Arc<SourceSpec>)`, `database_source -> Option<&Arc<SourceSpec>>`, and the session carries `source_specs: Arc<Vec<Arc<SourceSpec>>>` so `register_configured_sources` hands the registry an `Arc::clone` (atomic bump, no deep copy). Green: `cargo test -p repark-core config_file` 64, `named_sources` 8, `session` 121+2, `make verify` exit 0 — every existing pin unchanged and passing. Also folded in (S2-21 out-of-scope note): `register_memory_catalog`'s first duplicate check now goes through `is_registered`, so a memory catalog over a source name refuses before building instead of building then failing. |
 
 ## Red first
 
@@ -100,6 +101,7 @@ DROP TABLE company_db.public.t: datafusion engine error: Execution error:
 |---|---|
 | `cargo test -p repark-core config_file` | exit 0 — `test result: ok. 64 passed; 0 failed; 0 ignored; 0 measured; 269 filtered out` (re-run after the audit fixes) |
 | `cargo test -p repark-core named_sources` | exit 0 — `test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 325 filtered out` (re-run after the audit fixes) |
+| `cargo test -p repark-core session` | exit 0 — `test result: ok. 121 passed` + `2 passed` across the matched targets (re-run after the S2-21 fixes) |
 | `make verify` | exit 0 — fmt, clippy (all-targets + panic-ban + repark-python), crate-dag, lib-rs, rust-file-size (477 clean), lib-py, conventions, docstring, manifest, ledgers, docs-links, ruff, taplo, typos, `cargo test --locked --workspace` all green |
 | `make develop` | exit 0 — `Built wheel for abi3 Python ≥ 3.12`; `Installed repark-1.4.0` |
 | `.venv/bin/python -m pytest python/repark/tests/test_config_mirror.py -q` | exit 0 — `21 passed` |
@@ -165,6 +167,17 @@ DROP TABLE company_db.public.t: datafusion engine error: Execution error:
   guard sits in `PreExecute` so both SQL doors (`sql()` and the Spark facade, which calls
   `PreExecute::guard` from `spark_ast.rs`) refuse identically, and the refusal is
   `DataFusionError::NotImplemented` — the same class the provider itself returns.
+- S2-21 P2-1: the session stores `source_specs: Arc<Vec<Arc<SourceSpec>>>` — one `Arc`
+  per spec built once at `prepare_build_state` — so `register_configured_sources` hands
+  `CatalogRegistry::insert_database_source` an `Arc::clone` and the per-`sql_with`
+  `catalogs_snapshot()` clone stays keys-plus-Arcs (the registry's documented contract).
+  `database_source(name)` returns `Option<&Arc<SourceSpec>>` for `refuse_source_ddl`.
+- S2-21 out-of-scope row folded in: `register_memory_catalog`'s first duplicate check
+  switched from `catalog_handle(name).is_ok()` (iceberg entries only — a source name fell
+  through and built a memory catalog before the later refusal) to `is_registered(name)`
+  under the registry read lock, same `already registered` message, refusing before the
+  build. `is_registered` subsumes `catalog_handle` (entries ∪ sources), so no second
+  check is needed.
 
 ## Attestation (actor, step 1)
 
@@ -212,6 +225,26 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, python/repark/tests/test_config_mirror.py]
   complete: true
 ```
+
+## Performance review (S2-21)
+
+**Reviewer:** Grok 4.6, read-only, critic-quality (S2-21 Rust performance reviewer) — report at
+`/tmp/oc-worker/b-rev-cfg2/report.md` (reviewed `d0a27dea`, 24-file diff).
+
+**Verdict:** no P1. Session build with zero sources does not measurably regress; no registry
+write lock is held across `.await`; a refusing catalog cannot turn `SHOW TABLES` /
+`information_schema` into an error (empty `schema_names`/`table_names` gate listing) and adds
+no per-query planner work on the default path.
+
+**Findings:**
+
+| Id | Severity | Finding | Disposition |
+|---|---|---|---|
+| P2-1 | P2 | `CatalogRegistry` snapshot cloned full `SourceSpec` values (incl. secret props) on every `sql_with` — ~296 ns @ 1 source, ~1 ms @ 1024 (isolated `-O` clone bench). | **Fixed** — registry holds `Arc<SourceSpec>`; session specs are `Arc<Vec<Arc<SourceSpec>>>`; snapshot clone is keys + atomic bumps again (C-012). |
+| P3-1 | P3 | `table()` clones the refusal `String` per lookup — refusal path only, not planning. | Noted, no change: the refusal is the intended cold path; `Arc<str>` is available if the message ever warms up. |
+| P3-2 | P3 | `sources()` clones and re-redacts every property per call — listing API only, not `sql()`. | Noted, no change: listing is on-demand; a cached redacted row is only worth it if a caller loops. |
+| P3-3 | P3 | CFG-1's parse-time duplicate-name check is O(n²) in named entries per profile — unchanged this unit. | Noted, no change: n is TOML entries; a `HashSet` is available if generated configs grow. |
+| — | P3-adjacent | `register_memory_catalog`'s first duplicate check used `catalog_handle` (iceberg entries only) — a source name fell through, built the catalog, then failed the later `is_registered`. | **Fixed** — first check now consults `is_registered`, same message, refuses before building (C-012). |
 
 ## Notes for the orchestrator
 
