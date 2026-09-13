@@ -193,6 +193,25 @@ def test_dict_key_union_still_orders_natively(
     assert frame.collect()[2]["c"] == 6
 
 
+def test_dict_union_appends_new_key_mid_list(
+    spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dict first seen mid-list appends its new key last; null-fill before (C-026)."""
+    calls = _funnel_spies(monkeypatch)
+    data: list[dict[str, Any]] = [{"b": 1, "a": 2} for _ in range(20)]
+    data.append({"c": 3, "a": 4, "b": 5})
+    data.append({"a": 6, "b": 7, "c": 8})
+    data.extend({"d": 9, "a": 10} for _ in range(3))
+    frame = spark.createDataFrame(data)
+    assert calls == {"bind": 0, "perm": 0, "mapping_list": 0}
+    assert frame.columns == ["a", "b", "c", "d"]
+    collected = frame.collect()
+    assert tuple(collected[0]) == (2, 1, None, None)
+    assert tuple(collected[20]) == (4, 5, 3, None)
+    assert tuple(collected[21]) == (6, 7, 8, None)
+    assert tuple(collected[22]) == (10, None, None, 9)
+
+
 def test_row_list_never_calls_asdict(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:

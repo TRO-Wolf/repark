@@ -75,17 +75,43 @@ fn mapping_names(mapping: &Bound<'_, PyDict>, sorted: bool) -> Option<Vec<String
     Some(keys)
 }
 
-fn dict_key_union_order(mappings: &[Bound<'_, PyDict>]) -> Option<Vec<String>> {
-    let mut names = mapping_names(mappings.first()?, true)?;
+fn dict_key_union_order<'py>(
+    py: Python<'py>,
+    mappings: &[Bound<'py, PyDict>],
+) -> PyResult<Option<Vec<String>>> {
+    let Some(first) = mappings.first() else {
+        return Ok(None);
+    };
+    let Some(mut names) = mapping_names(first, true) else {
+        return Ok(None);
+    };
     let mut seen: HashSet<String> = names.iter().cloned().collect();
+    let mut seen_keys: Vec<Bound<'py, PyString>> =
+        names.iter().map(|name| PyString::new(py, name)).collect();
     for mapping in mappings.iter().skip(1) {
-        for key in mapping_names(mapping, true)? {
+        let mut all_seen = mapping.len() == seen.len();
+        if all_seen {
+            for key in &seen_keys {
+                if mapping.get_item(key)?.is_none() {
+                    all_seen = false;
+                    break;
+                }
+            }
+        }
+        if all_seen {
+            continue;
+        }
+        let Some(row_names) = mapping_names(mapping, true) else {
+            return Ok(None);
+        };
+        for key in row_names {
             if seen.insert(key.clone()) {
+                seen_keys.push(PyString::new(py, &key));
                 names.push(key);
             }
         }
     }
-    Some(names)
+    Ok(Some(names))
 }
 
 fn strict_bind(
@@ -331,20 +357,25 @@ fn build_row_cells<'py>(
 }
 
 fn resolve_lookup(
+    py: Python<'_>,
     strict: bool,
     source_names: Option<&[String]>,
     schema: Option<&arrow::datatypes::SchemaRef>,
     schema_names: Option<&[String]>,
     collected: &CollectedRows<'_>,
-) -> Option<(Vec<String>, Vec<String>)> {
+) -> PyResult<Option<(Vec<String>, Vec<String>)>> {
     if strict {
-        let source = source_names?;
-        let (names, permutation) = strict_bind(source, schema_names)?;
+        let Some(source) = source_names else {
+            return Ok(None);
+        };
+        let Some((names, permutation)) = strict_bind(source, schema_names) else {
+            return Ok(None);
+        };
         let lookup: Vec<String> = permutation
             .iter()
             .map(|index| source[*index].clone())
             .collect();
-        return Some((names, lookup));
+        return Ok(Some((names, lookup)));
     }
     if let Some(schema_ref) = schema {
         let names = schema_ref
@@ -352,13 +383,15 @@ fn resolve_lookup(
             .iter()
             .map(|field| field.name().clone())
             .collect::<Vec<String>>();
-        return Some((names.clone(), names));
+        return Ok(Some((names.clone(), names)));
     }
     let CollectedRows::Mappings(mappings) = collected else {
-        return None;
+        return Ok(None);
     };
-    let union = dict_key_union_order(mappings)?;
-    Some((union.clone(), union))
+    let Some(union) = dict_key_union_order(py, mappings)? else {
+        return Ok(None);
+    };
+    Ok(Some((union.clone(), union)))
 }
 
 fn tag_named(
@@ -462,12 +495,14 @@ pub fn cdf_arrow_export_named<'py>(
         (CollectedRows::Mappings(mappings), source)
     };
     let Some((names, lookup_names)) = resolve_lookup(
+        py,
         strict,
         source_names.as_deref(),
         schema.as_ref(),
         schema_names.as_deref(),
         &collected,
-    ) else {
+    )?
+    else {
         return Ok(None);
     };
     if names.is_empty() {
