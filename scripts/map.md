@@ -4,6 +4,10 @@ ABS-EXPR-1 (2026-09-13): `check_lib_py.py` `spark/functions.py` 1985 → 1962 an
 `spark/functions_expr.py` 2255 → 2247 (the facade `when(...)` bodies deleted for native
 `abs`/`cbrt`/`nullif`). The CAP-1 mirror rows move in the same commit.
 pins: abs-expr-1/C-005
+EAGER-OWN-1 step 1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4117 → 4094
+(the cache-ownership handle and the cosmetic-warning helper moved to the new
+`dataframe/cache_handle.py`). The CAP-1 mirror row moves in the same commit.
+pins: eager-own-1/C-002
 COMMENT-CORE-1 (2026-09-13): `check_lib_py.py` `dataframe/core.py` 4468 → 4117
 (comments removed, no code change). The CAP-1 mirror row moves in the same commit.
 pins: comment-core-1/C-004

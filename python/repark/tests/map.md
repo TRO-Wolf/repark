@@ -67,6 +67,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_guard_pl_collect_still_returns_polars_dataframe` +
   `test_polars_frame_eager_wraps_spark_eager`.
   pins: df-eager-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [test_eager_own_1.py](test_eager_own_1.py) — **EAGER-OWN-1 step 1 (2026-09-13):** the
+  shared-ownership pins for `__repark_cache_*` registrations. C-002 ten bare `eager()`
+  calls release all registrations on drop + `gc` (red on base: 10 left); C-003 reuse
+  across actions registers once (guard, green on base); C-004 eager-on-eager shares the
+  view, handle, and shape — either wrapper's death leaves the other answering, and a
+  dropped view is not "already eager"; C-005 `.lazy()` copy / derived / join / union
+  survivors keep the registration until the last dies; C-006 idempotent `unpersist` ×2 /
+  `clearCache` ×2, the `_DropViewSpy` proof that the finalizer never calls a stopped
+  session, and wrapper-`unpersist` releasing only its own hold; C-007 the
+  `repark.cache.max_bytes` refusal and a post-registration `.sql` failure both leave no
+  registration and no live handle; C-008 two simultaneous eager results independent;
+  C-009 a rewritten CSV source is observed by the second `eager()` while the first
+  snapshot keeps old data; C-010 `to_arrow` / `to_pandas` / `to_polars` / `collect`
+  exports read unchanged after the registration dies, and a `cache()`d view dies with
+  its last holder (D-3).
+  pins: eager-own-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   REVIEW-FIX-4 (2026-09-10): the eager frame's checkpoint paths. `lazy()` on a
   checkpointed eager frame answers a shape-less copy over the same inner plan
   with no `_cache_view` interpolation, so a temp view named `none` stays
@@ -1073,6 +1089,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   function-local, so `core` gains no binding); the set row grows by one member,
   funded line-neutrally at the default ceiling.
   pins: df-colregex-1/C-003
+  EAGER-OWN-1 step 1 (2026-09-13): the class gains two slots
+  (`_cache_view_owned_handle`, `_handles`); package and core each gain exactly
+  `cache_handle` (the ownership module); `_warn_storage_level_cosmetic_once`
+  moves to `cache_handle.py` re-imported by identity. The file sat at the
+  default ceiling, so the `EXPECTED_*` tables split into
+  [_dfcore_1_expected.py](_dfcore_1_expected.py) — the gate's sanctioned out.
+  pins: eager-own-1/C-002
 - `test_dfcore_4b_exports.py` — DFCORE-4b ownership pin: `MOVED_DISPLAY_HELPERS`
   pins the ten bodies as `display.py`'s own frame-first functions, the six
   leavers as gone from the class, and the four wrappers as kept.
@@ -1751,7 +1774,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: df-printschema-1-trailing-newline/C-002, C-003, C-004
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
-  clearCache real drop (live + orphan GC path + leaves `__repark_ckpt_*`); StorageLevel cosmetic
+  clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves
+  `__repark_ckpt_*`); EAGER-OWN-1 flipped the orphan pin — a GC'd frame's cache view now
+  dies with it via the ownership handle (C-011); StorageLevel cosmetic
   warn-once; `repark.cache.max_bytes` refuse / zero-off / invalid+>u64 conf / builder.config path /
   conf.unset tomb (no builder resurrect); cache entry-point vs VALUES temp-view branch pin;
   localCheckpoint-after-cache truncates lineage; child-plan cache sharing OUT pin;

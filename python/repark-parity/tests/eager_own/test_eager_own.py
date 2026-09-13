@@ -1,6 +1,6 @@
-"""EAGER-OWN-1 step-0 pins: each bare ``eager()`` call leaves one orphan ``__repark_cache_*`` view.
+"""EAGER-OWN-1 step-1 pins: bare ``eager()`` registrations die with their dropped child.
 
-pins: eager-own-1/C-001
+pins: eager-own-1/C-001, C-012
 """
 
 from __future__ import annotations
@@ -48,31 +48,33 @@ def _run_worker(rows: int, iterations: int, json_out: Path, timeout_s: float) ->
     return json.loads(json_out.read_text(encoding="utf-8"))
 
 
-def _assert_accumulation_shape(payload: dict[str, Any], iterations: int) -> None:
-    """The base-tree defect: one orphan ``__repark_cache_*`` registration per bare eager()."""
-    assert len(payload["iterations"]) == iterations
+def _assert_owned_shape(payload: dict[str, Any]) -> None:
+    """The owned contract: every bare eager() registration dies with its dropped child."""
     assert payload["fixture"]["total_columns"] == _TOTAL_COLUMNS
     for record in payload["iterations"]:
-        assert record["registrations_after_call"] == record["iteration"] + 1
-    assert payload["post_loop"]["registrations"] == iterations
-    assert payload["post_gc"]["registrations"] == iterations
-    assert payload["post_gc"]["temp_view_registrations"] == iterations
+        assert record["registrations_after_call"] == 0
+        assert record["temp_view_registrations_after_call"] == 0
+    assert payload["post_loop"]["registrations"] == 0
+    assert payload["post_gc"]["registrations"] == 0
+    assert payload["post_gc"]["temp_view_registrations"] == 0
     assert payload["post_clear_cache"]["registrations"] == 0
     assert payload["post_clear_cache"]["temp_view_registrations"] == 0
 
 
-def test_bare_eager_registrations_accumulate_small(tmp_path: Path) -> None:
-    """2,000 rows x 3 bare eager() calls: three orphan registrations on the base tree."""
+def test_bare_eager_registrations_released_small(tmp_path: Path) -> None:
+    """2,000 rows x 3 bare eager() calls: zero registrations survive each dropped child."""
     payload = _run_worker(_SMALL_ROWS, _SMALL_ITERATIONS, tmp_path / "small.json", _SMALL_TIMEOUT_S)
-    _assert_accumulation_shape(payload, _SMALL_ITERATIONS)
+    assert len(payload["iterations"]) == _SMALL_ITERATIONS
+    _assert_owned_shape(payload)
 
 
 @pytest.mark.skipif(
     os.environ.get(_BENCH_ENV) != "1",
     reason="the 1e6-row x 10-iteration loop is opt-in; set REPARK_EAGER_OWN_BENCH=1",
 )
-def test_bare_eager_registrations_accumulate_million_rows(tmp_path: Path) -> None:
-    """The card fixture: 1e6 rows x 10 bare eager() calls leave ten registrations."""
+def test_bare_eager_registrations_released_million_rows(tmp_path: Path) -> None:
+    """The card fixture after the fix: 1e6 rows x 10 bare eager() calls leave nothing."""
     json_out = Path(os.environ.get(_BENCH_JSON_ENV, str(tmp_path / "bench.json")))
     payload = _run_worker(_BENCH_ROWS, _BENCH_ITERATIONS, json_out, _BENCH_TIMEOUT_S)
-    _assert_accumulation_shape(payload, _BENCH_ITERATIONS)
+    assert len(payload["iterations"]) == _BENCH_ITERATIONS
+    _assert_owned_shape(payload)

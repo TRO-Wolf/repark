@@ -27,14 +27,16 @@ iteration the worker records wall time, `VmRSS` after the call and after
 post-`clearCache()`, cross-checked against `session.list_temp_view_names()`.
 The JSON goes to the `--json-out` argv path.
 
-The bench pin (`test_bare_eager_registrations_accumulate_million_rows`) is
+The bench pin (`test_bare_eager_registrations_released_million_rows`) is
 opt-in through `REPARK_EAGER_OWN_BENCH=1` so CI never runs the million-row
 loop; `REPARK_EAGER_OWN_BENCH_JSON` redirects the JSON output path (used to
-write `docs/perf/eager-own-1-2026-09-13/base.json`). The small pin (2,000 rows,
-3 iterations) always runs so the default suite exercises the worker. On the
-base tree both assert `registrations == iterations` — the defect pinned;
-step 1 flips the small pin's post-gc count to 0 once the shared-ownership
-handle lands (D-2).
+write `docs/perf/eager-own-1-2026-09-13/base.json` and `after.json`). The small
+pin (2,000 rows, 3 iterations) always runs so the default suite exercises the
+worker. Step 0 asserted `registrations == iterations` — the defect pinned;
+step 1 (the shared-ownership handle, D-2) flipped both pins to the
+`_assert_owned_shape` contract: `registrations_after_call == 0` per iteration
+(the returned child is freed at statement end and the finalizer drops the view
+synchronously), and post-loop / post-gc / post-clearCache all zero.
 
 Measured facts this harness is built on (base `8936346a`, release native,
 `__debug_assertions__` False):
@@ -63,11 +65,11 @@ Measured facts this harness is built on (base `8936346a`, release native,
   bare-eager loop, `/proc/self/status` reads, JSON payload with the
   per-iteration table and the post-loop / post-gc / post-clearCache snapshots.
 - `test_eager_own.py` — the pins: `_run_worker` subprocess wrapper, the
-  `_assert_accumulation_shape` base-tree assertion block, the always-on small
-  pin, and the `REPARK_EAGER_OWN_BENCH=1`-gated million-row pin.
+  `_assert_owned_shape` post-fix assertion block (all-zero registrations), the
+  always-on small pin, and the `REPARK_EAGER_OWN_BENCH=1`-gated million-row pin.
 - `map.md` — this file.
 
-pins: eager-own-1/C-001
+pins: eager-own-1/C-001, C-012
 
 ## Pointers
 

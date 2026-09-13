@@ -39,6 +39,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   views, and schema tables; supports current catalog/database state, function
   registration, cache clearing, and table/view existence operations. Engine-private
   temporary names remain hidden from listing APIs.
+  **EAGER-OWN-1 step 1 (2026-09-13):** `clearCache` releases the session's live
+  `CacheViewHandle`s (registered in a WeakSet under the alive token) before the
+  unchanged registry `unpersist` loop and the `__repark_cache_*` prefix sweep —
+  idempotent, checkpoint views untouched.
+  pins: eager-own-1/C-006, C-011
   **CFG-2 step 2 (2026-09-13):** `SourceMetadata` (the `name` / `kind` / `key_path` /
   `auto_register` / `properties` namedtuple) lives beside `CatalogMetadata` — the
   `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013

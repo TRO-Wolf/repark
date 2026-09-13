@@ -326,6 +326,25 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   scan on eager ones (no re-execution, no drop). `count()` answers a known shape with no
   query. `unpersist()` clears the shape with the view, so a shape never outlives its
   materialization. pins: df-eager-1/C-001, C-002, C-003, C-004
+  EAGER-OWN-1 step 1 (2026-09-13): `eager()` on a frame that already scans a live
+  cache view returns a wrapper sharing the view, the `CacheViewHandle`, and the
+  shape — no collection, no new registration (D-4). A frame whose view was
+  explicitly dropped materializes afresh. pins: eager-own-1/C-004
+- `cache_handle.py` owns the refcounted `CacheViewHandle` for `__repark_cache_*`
+  registrations (EAGER-OWN-1 step 1, 2026-09-13). The registering frame is the
+  owner; every frame whose plan scans the view carries the handle in its
+  immutable `_handles` tuple, propagated O(1) per `_spawn` (shared empty tuple
+  when none, unioned only when another parent carries handles). The registration
+  drops when the last holder dies — `weakref.finalize(handle, fn, session,
+  alive_token, view_name)` with `atexit=False`; the callback skips a stopped
+  session and never raises — or when `unpersist` / `clearCache` / checkpoint
+  truncation releases it explicitly. `unpersist` on the owner drops the view; on
+  an eager-on-eager wrapper it releases only that wrapper's hold. A frame whose
+  plan still scans a dropped view keeps answering — the native plan holds the
+  resolved provider. `cache()` / `persist()` views follow the same handle (D-3).
+  `_warn_storage_level_cosmetic_once` moved here unchanged and is re-imported by
+  `core`, keeping the frozen surfaces. pins: eager-own-1/C-002, C-003, C-004,
+  C-005, C-006, C-007, C-008, C-010, C-011
   REVIEW-FIX-4 (2026-09-10, closes Q-12, Q-13, Q-50): `lazy()` on an eager
   frame is `_spawn_preserving_identity(frame._inner)` with no `_cache_view`
   interpolation — a set `_eager_shape` with no `_cache_view` (the checkpoint
@@ -699,6 +718,7 @@ that held the comment (pins: comment-core-1/C-003).
 | Sampling bodies | [`sampling.py`](sampling.py) |
 | Display bodies | [`display.py`](display.py) |
 | Eager materialization bodies | [`eager.py`](eager.py) |
+| Cache-view ownership handle | [`cache_handle.py`](cache_handle.py) |
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Parent navigation | [`../map.md`](../map.md) |
@@ -751,5 +771,8 @@ that held the comment (pins: comment-core-1/C-003).
   `colregex.py` (52) stays below the source-size default (pins: df-colregex-1/C-003).
   COMMENT-CORE-1 (2026-09-13): `core.py` 4468→4117; comments removed, no code change
   (pins: comment-core-1/C-004, C-005, C-006).
+  EAGER-OWN-1 step 1 (2026-09-13): `core.py` 4117→4094 — the ownership wiring is a
+  net minus because `_warn_storage_level_cosmetic_once` moved to `cache_handle.py`
+  (169 lines, below the source-size default). pins: eager-own-1/C-002
 - Scratch-view failures: inspect `_temp_views.py`. Facade-owned views are home-qualified; engine-
   owned scratch registration has its own lifecycle.
