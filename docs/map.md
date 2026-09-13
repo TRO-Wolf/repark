@@ -149,7 +149,10 @@ repo.
   change at any minor with a changelog line) naming
   [design/v1-0-api-freeze.json](design/v1-0-api-freeze.json) as the frozen-surface register.
   1.0.1 was the first patch (2026-09-04).
-  pins: api-freeze/C-002
+  **PLATFORM-1 (2026-09-12):** the wheel-matrix open item settles — "Settled at the first
+  tags" now lists the five `cp312-abi3` wheels (`manylinux-x86_64`, `manylinux-aarch64`,
+  `macos-arm64`, `macos-x86_64`, `windows-x86_64` with their runners); musllinux stays open.
+  pins: api-freeze/C-002; platform-1/C-005
   `FNP8-NULLABILITY` names the padded outer-join shape since FNP-8-REVIEW r3 (2026-09-07).
 
 ## I want to...
