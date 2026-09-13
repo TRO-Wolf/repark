@@ -101,4 +101,6 @@ anonymous-memory OOM kills, not thrashing). Absolute per-iteration level varies
   1 skipped (the bench pin stays opt-in).
 - `make check-docs-links` — clean (827 files, 5,263 links).
 - `make check-ledger-grammar` — clean (126 live ledgers).
-- `make verify` — pending at commit time.
+- `make verify` — clean (clippy, panic-ban, crate-dag, lib-rs, rust/py file-size,
+  python-conventions, docstring-presence, manifest, ledger lifecycle + grammar,
+  docs-compaction, docs-links, owner-ruling, parity-live dual-wire, rust tests).
