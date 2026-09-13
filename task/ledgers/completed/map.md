@@ -210,6 +210,21 @@ else. The next pickup's `make ledger-archive` files everything here under
   `read.parquet` + `dynamicFlatten` matches Spark including `user_properties` int32
   NULLs. `risk_tier: standard`. Branch `fix/dynflatten-listnull-1`.
   pins: dynflatten-listnull-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [eager-budget-1-ledger.md](eager-budget-1-ledger.md) —
+  **EAGER-BUDGET-1 steps 0–2 (2026-09-13), all ten clauses PROVEN:** a session cache
+  budget and retained-bytes accounting — `repark.cache.max_total_bytes` refuses (never
+  evicts, Q-E2) when a materialization would push the sum of distinct Arrow buffers
+  across live `__repark_cache_*` MemTables past the budget (D-1/D-2, read back via the
+  read-only `repark.cache.retained_bytes`), admission incremental per batch through
+  `execute_stream` (D-3), `max_bytes` byte-identical to `main` — an own per-result
+  `get_array_memory_size` sum on its own counter (D-4, corrected in the review round
+  R12b-D-4; budget keys resolve case-insensitively per R12b-D-5), no spill (D-5), no
+  registration or handle after a refusal or collection failure (D-6). Step 0 measured
+  the 30-iteration loop under 2/4/8 GiB cgroup caps (retention OOM-kills, never slows
+  by view count). `risk_tier: standard`.
+  Branch `fix/eager-budget-1`.
+  pins: eager-budget-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [eager-own-1-ledger.md](eager-own-1-ledger.md) —
   **EAGER-OWN-1 steps 0+1 (2026-09-13), in flight:** the bare-`eager()`
   retention defect measured at `8936346a`

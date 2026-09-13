@@ -94,5 +94,5 @@ pins: eager-budget-1/C-001
 
 - Up: [../map.md](../map.md)
 - Harness: [../../../python/repark-parity/tests/eager_own/map.md](../../../python/repark-parity/tests/eager_own/map.md)
-- Ledger: [../../../task/ledgers/staging/eager-budget-1-ledger.md](../../../task/ledgers/staging/eager-budget-1-ledger.md)
+- Ledger: [../../../task/ledgers/staging/eager-budget-1-ledger.md](../../../task/ledgers/completed/eager-budget-1-ledger.md)
 - Prior pair: [../eager-own-1-2026-09-13/map.md](../eager-own-1-2026-09-13/map.md)
