@@ -18,6 +18,7 @@ import pytest
 
 import repark.spark.session.create_dataframe_columns as columns_module
 from repark import ReparkSession
+from repark.errors import PySparkTypeError
 from repark.spark.row import Row
 from repark.spark.types import (
     BooleanType,
@@ -164,3 +165,56 @@ def test_python_fallback_keeps_pandas_shape(spark: ReparkSession) -> None:
 
     frame = spark.createDataFrame(pd.DataFrame({"a": [1, 2], "b": ["x", "y"]}))
     assert frame.count() == 2
+
+
+class _AsTupleProbeDecimal(Decimal):
+    """Decimal subclass whose ``as_tuple`` counter observes native cell extraction."""
+
+    calls: int = 0
+
+    def as_tuple(self) -> Any:
+        """Count the call, then behave exactly like ``Decimal.as_tuple``."""
+        _AsTupleProbeDecimal.calls += 1
+        return super().as_tuple()
+
+
+def _seven_col_probe_rows(count: int) -> list[tuple[Any, ...]]:
+    """The step-1 fixture shape with a decimal column that records extraction."""
+    base_date = datetime.date(2024, 1, 2)
+    base_ts = datetime.datetime(2024, 1, 2, 3, 4, 5)
+    return [
+        (
+            index,
+            index + 0.5,
+            f"s{index}",
+            index % 2 == 0,
+            base_date,
+            base_ts,
+            _AsTupleProbeDecimal(f"{index}.25"),
+        )
+        for index in range(count)
+    ]
+
+
+def test_fallback_extract_stops_at_first_uncovered_cell(spark: ReparkSession) -> None:
+    """An uncovered cell at row 900 returns None before any extraction (facade-3/C-014)."""
+    rows = _seven_col_probe_rows(1_000)
+    poisoned = list(rows[900])
+    poisoned[0] = object()
+    rows[900] = tuple(poisoned)
+    _AsTupleProbeDecimal.calls = 0
+    with pytest.raises(PySparkTypeError):
+        spark.createDataFrame(rows)
+    assert _AsTupleProbeDecimal.calls == 0
+
+
+def test_fallback_extract_stops_on_merge_refusal(spark: ReparkSession) -> None:
+    """A late scalar-merge refusal also returns before extraction (facade-3/C-014)."""
+    rows = _seven_col_probe_rows(1_000)
+    poisoned = list(rows[900])
+    poisoned[0] = 1.5
+    rows[900] = tuple(poisoned)
+    _AsTupleProbeDecimal.calls = 0
+    with pytest.raises(PySparkTypeError):
+        spark.createDataFrame(rows)
+    assert _AsTupleProbeDecimal.calls == 0

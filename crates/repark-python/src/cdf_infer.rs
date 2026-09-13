@@ -1,6 +1,7 @@
 mod build;
 mod cells;
 mod infer;
+mod screen;
 
 use std::ffi::CStr;
 use std::sync::Arc;
@@ -11,11 +12,17 @@ use arrow::ffi::FFI_ArrowSchema;
 use arrow::ffi_stream::FFI_ArrowArrayStream;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyCapsule, PyCapsuleMethods, PyList, PyTuple, PyType};
+use pyo3::types::{
+    PyBool, PyByteArray, PyBytes, PyCapsule, PyCapsuleMethods, PyDict, PyFloat, PyInt, PyList,
+    PyMemoryView, PyString, PyTuple, PyType,
+};
 
 use crate::cdf_infer::build::build_column;
 use crate::cdf_infer::cells::{Cdf, Cell, Ctx, extract_cell};
 use crate::cdf_infer::infer::infer_column_type;
+use crate::cdf_infer::screen::{
+    ColumnScreen, screen_accepts_field, screen_accepts_inferred, tag_cell,
+};
 
 const STREAM_CAPSULE: &CStr = c"arrow_array_stream";
 
@@ -135,14 +142,61 @@ pub fn cdf_arrow_export<'py>(
         .import("decimal")?
         .getattr("Decimal")?
         .cast_into::<PyType>()?;
+    let datetime_mod = py.import("datetime")?;
     let cx = Ctx {
         decimal_type,
+        bool_type: py.get_type::<PyBool>(),
+        int_type: py.get_type::<PyInt>(),
+        float_type: py.get_type::<PyFloat>(),
+        str_type: py.get_type::<PyString>(),
+        bytes_type: py.get_type::<PyBytes>(),
+        bytearray_type: py.get_type::<PyByteArray>(),
+        memoryview_type: py.get_type::<PyMemoryView>(),
+        list_type: py.get_type::<PyList>(),
+        tuple_type: py.get_type::<PyTuple>(),
+        dict_type: py.get_type::<PyDict>(),
+        datetime_type: datetime_mod.getattr("datetime")?.cast_into::<PyType>()?,
+        date_type: datetime_mod.getattr("date")?.cast_into::<PyType>()?,
+        time_type: datetime_mod.getattr("time")?.cast_into::<PyType>()?,
         session_tz_utc,
         timestamp_ntz,
         infer_dict_as_struct,
         legacy_first_element,
         decimal_prec,
     };
+    let mut screens = vec![ColumnScreen::default(); names.len()];
+    for row in rows.iter() {
+        let Ok(tuple) = row.cast::<PyTuple>() else {
+            return Ok(None);
+        };
+        if tuple.len() != names.len() {
+            return Ok(None);
+        }
+        for (index, item) in tuple.iter().enumerate() {
+            let mut elem_merge = 0u16;
+            match tag_cell(&item, &cx, 0, &mut elem_merge) {
+                Ok(tag) => screens[index].record(tag, elem_merge),
+                Err(Cdf::Fallback) => return Ok(None),
+                Err(Cdf::Err(err)) => return Err(err),
+            }
+        }
+    }
+    match &schema {
+        Some(schema_ref) => {
+            for (index, field) in schema_ref.fields().iter().enumerate() {
+                if !screen_accepts_field(screens[index], field.data_type()) {
+                    return Ok(None);
+                }
+            }
+        }
+        None => {
+            for screen in &screens {
+                if !screen_accepts_inferred(*screen) {
+                    return Ok(None);
+                }
+            }
+        }
+    }
     let mut columns: Vec<Vec<Cell<'py>>> = (0..names.len())
         .map(|_| Vec::with_capacity(rows.len()))
         .collect();

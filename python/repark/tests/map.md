@@ -1557,8 +1557,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `Row` objects, dicts, tuples + DDL and tuples + `StructType`; the pandas control
   must not take it (its own `_arrow_table_from_pandas` path wins). Red-first on
   `main`: six failures, `AttributeError: module 'repark.spark.session.create_dataframe_columns'
-  has no attribute '_rust_cdf_arrow_table'`.
-  pins: facade-3/C-010
+  has no attribute '_rust_cdf_arrow_table'`. **F-FALLBACK remediation:** two fallback pins
+  use a `Decimal` subclass counting `as_tuple` calls to prove a refusal seeded at row 900
+  (an uncovered `object()` cell and an int+float merge) returns `None` before the native
+  extract pass runs — the counter stays at 0 because only `extract_decimal` calls
+  `as_tuple` (Python's envelope check uses `is_finite`/`quantize`). Red-first on `1599e8ed`:
+  `assert 900 == 0` and `assert 1000 == 0`.
+  pins: facade-3/C-010, C-014
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

@@ -92,8 +92,15 @@ and hand execution, SQL, and ML semantics to the engine crates.
   envelope mirrors `_validate_decimal_envelope` (precision ceiling, scale-18 truncation only
   when discarded digits are zero). Null struct parents write each child's type default
   (`CellKind::Fill`: 0, `""`, epoch, empty list/map, recursive defaults) rather than a child
-  null, matching `pa.array` fill so pandas NaN-coercion parity holds.
-  pins: facade-3/C-010, C-013 |
+  null, matching `pa.array` fill so pandas NaN-coercion parity holds. **F-FALLBACK
+  remediation:** before extraction, `screen.rs` runs a kind-tag pass per cell (exact-type
+  pointer hits, probe-chain only for subclasses/Row/exotics, no payload) accumulating a
+  per-column kind mask plus the list-element merge mask; when the mask already predicts the
+  `None` the extract/infer/build path would return (uncovered kind anywhere, scalar-merge or
+  list-element-merge refusal, a kind the inferred or explicit field type cannot build,
+  non-str or null dict keys under struct inference) the export returns `None` after the tag
+  pass alone — the doomed extraction is never paid and Python owns the identical refusal.
+  pins: facade-3/C-010, C-013, C-014 |
 | [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins

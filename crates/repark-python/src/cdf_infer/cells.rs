@@ -19,6 +19,19 @@ impl From<PyErr> for Cdf {
 #[allow(clippy::struct_excessive_bools)]
 pub(crate) struct Ctx<'py> {
     pub decimal_type: Bound<'py, PyType>,
+    pub bool_type: Bound<'py, PyType>,
+    pub int_type: Bound<'py, PyType>,
+    pub float_type: Bound<'py, PyType>,
+    pub str_type: Bound<'py, PyType>,
+    pub bytes_type: Bound<'py, PyType>,
+    pub bytearray_type: Bound<'py, PyType>,
+    pub memoryview_type: Bound<'py, PyType>,
+    pub list_type: Bound<'py, PyType>,
+    pub tuple_type: Bound<'py, PyType>,
+    pub dict_type: Bound<'py, PyType>,
+    pub datetime_type: Bound<'py, PyType>,
+    pub date_type: Bound<'py, PyType>,
+    pub time_type: Bound<'py, PyType>,
     pub session_tz_utc: bool,
     pub timestamp_ntz: bool,
     pub infer_dict_as_struct: bool,
@@ -58,7 +71,7 @@ pub(crate) struct Cell<'py> {
     pub kind: CellKind<'py>,
 }
 
-const MAX_DEPTH: u32 = 100;
+pub(crate) const MAX_DEPTH: u32 = 100;
 
 fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
     let adjusted = i64::from(year) - i64::from(month <= 2);
