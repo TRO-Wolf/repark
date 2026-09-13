@@ -1,6 +1,7 @@
 """PERF-DESCRIBE-1 — describe()/summary() aggregate the source in one lazy pass.
 
 pins: perf-describe-1/C-002, perf-describe-1/C-003, perf-describe-1/C-005, perf-describe-1/C-007
+pins: perf-unpivot-1/C-009, C-010
 """
 
 from __future__ import annotations
@@ -24,15 +25,17 @@ def spark() -> Iterator[ReparkSession]:
 
 
 def test_describe_scans_the_source_once(spark: ReparkSession) -> None:
-    """describe() returns a frame whose aggregate parent scans the source once.
+    """describe() returns a frame whose plan scans the source once.
 
-    The returned frame is a lazy mapInArrow bridge: its ``_map_bridge.parent``
-    is the single ``AggregateExec`` plan computing count/avg/stddev/min/max per
-    column (one ``TableScan`` / one ``DataSourceExec``, no union, no sort), and
-    the bridge's Python unpivot emits the five summary rows in literal order —
-    no ordinal column, no ORDER BY.
+    The returned frame is a pure plan: ``UnpivotExec`` over a projection of
+    string-cast cells over the single ``AggregateExec`` computing
+    count/avg/stddev/min/max per column (one ``TableScan`` / one
+    ``DataSourceExec``, no union, no sort, no ``mapInArrow`` bridge), and the
+    unpivot emits the five summary rows in literal order — no ordinal column,
+    no ORDER BY.
 
     pins: perf-describe-1/C-002
+    pins: perf-unpivot-1/C-008
     """
     frame = (
         spark.range(1_000)
@@ -43,15 +46,16 @@ def test_describe_scans_the_source_once(spark: ReparkSession) -> None:
         .eager()
     )
     described = frame.describe()
-    assert described._map_bridge is not None
-    explained = described._map_bridge["parent"]._explain_text(extended=True)
+    assert described._map_bridge is None
+    explained = described._explain_text(extended=True)
     assert explained.count("TableScan") == 1, explained
     assert explained.count("DataSourceExec") == 1, explained
     assert "AggregateExec" in explained
+    assert "UnpivotExec" in explained
+    assert "mapInArrow" not in explained
     for forbidden in ("UnionExec", "SortExec", "SortPreservingMergeExec"):
         assert forbidden not in explained, forbidden
-    assert "CAST(count" not in explained
-    assert explained.count("CAST(min(") == 2 and explained.count("CAST(max(") == 2
+    assert explained.count("CAST(__repark_stat_") == 20
     assert described.collect() == [
         ("count", "1000", "1000"),
         ("mean", "499.5", "49.5"),
@@ -72,6 +76,7 @@ def test_describe_runs_nothing_until_an_action(
     the call (DISPLAY-LAZY-1 / R-22 contract).
 
     pins: perf-describe-1/C-005
+    pins: perf-unpivot-1/C-010
     """
     frame = spark.createDataFrame([("abc", 1), ("def", 2)], ["s", "k"])
     bad = frame.withColumn("n", F.col("s").cast("int"))

@@ -166,30 +166,26 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   requested statistic for every target column in chunked native aggregate passes over
   the frame's own plan (`aggregate([], exprs)` on quoted engine-field refs — no SQL
   text, no temp view — one plan per ~50 columns, chunk results cross-joined on a
-  literal-true condition), then wraps the aggregate in a lazy `mapInArrow` bridge whose
-  Python unpivot emits the five summary rows in requested order at action time — the
-  DF-DESCRIBE-STR-1 stat ordinal and its `ORDER BY` are gone because order is carried
-  by construction, so duplicate stats keep their requested slots (PERF-DESCRIBE-1:
-  0.120 → ~0.078 s on 200k numeric, 1.15 → ~0.89 s on 50×10k wide, 35.2 → ~21.5 s on
-  500×10k; the earlier five-leg UNION ALL ran one source scan per statistic). The
-  bridge exists because the call must be lazy (DISPLAY-LAZY-1): an eager first cut ran
-  `to_arrow` inside `summary`, and every plan-side unpivot shape measured — struct-grid
-  `unnest`, multi-column `UNNEST`, CASE over a joined literal grid, chained
-  projections — pays superlinear per-expression cost at width (~2500 leaf cells cost
-  ~70 s over the 500-column aggregate). `CAST(agg AS VARCHAR)` is emitted only where
-  engine formatting is load-bearing (`avg`/`stddev`, and `min`/`max` on
-  Float/Double/Decimal — engine Float64 presentation `1e16`/`1.0`/`0.0` is a custom
-  formatter neither Arrow `pc.cast` nor Python `repr` reproduces) while `count` and
-  integer/string `min`/`max` stay raw Int64/Utf8 and the bridge formats them trivially
-  (`str(int)`, the string itself). The column set is Spark's numeric+string
-  rule: `mean`/`stddev` run `try_cast(col AS DOUBLE)` on string columns (matching
-  Spark's silent cast — `"10","2","a"` answers `6.0`), non-numeric non-string columns
-  are skipped by the bare forms and refused with `PySparkValueError` when named
-  (DF-DESCRIBE-STR-1). Bare `summary()` still refuses because Spark percentile rows are
-  an engine gap. Multi-name frames aggregate on unique engine fields — a display name
-  can be ambiguous or absent from the schema. Engine aliases stay unique; the facade
-  overlays Spark-legal display names afterwards.
-  pins: df-describe-str-1/C-001, perf-describe-1/C-002
+  literal-true condition), then one projection lays the cells out in row-major stack
+  order — a stat-name literal then one `CAST(cell AS Utf8)` per column per stat row —
+  and `stack_dataframe` (`UnpivotExec`, PERF-UNPIVOT-1) emits the summary rows at
+  action time. The describe grid is all-string, so every cell is cast; casting in the
+  projection over the aggregate instead of inside it keeps the PERF-CAST-1 wall off
+  the plan (2500 projection-side casts ≈ 14 s vs ~176 s in-aggregate —
+  `docs/perf/cast-cost-2026-09-12.md`). Order is carried by construction, so
+  duplicate stats keep their requested slots; no Python runs at action time — the
+  PERF-DESCRIBE-1 `mapInArrow` bridge and its `_summary_unpivot` callback are gone
+  because every plan-side unpivot shape they dodged was superlinear while `stack` is
+  linear in columns (PERF-UNPIVOT-1 step 1). The column set is Spark's
+  numeric+string rule: `mean`/`stddev` run `try_cast(col AS DOUBLE)` on string
+  columns (matching Spark's silent cast — `"10","2","a"` answers `6.0`),
+  non-numeric non-string columns are skipped by the bare forms and refused with
+  `PySparkValueError` when named (DF-DESCRIBE-STR-1). Bare `summary()` still refuses
+  because Spark percentile rows are an engine gap. Multi-name frames aggregate on
+  unique engine fields — a display name can be ambiguous or absent from the schema.
+  Engine aliases stay unique; the facade overlays Spark-legal display names
+  afterwards.
+  pins: df-describe-str-1/C-001, perf-describe-1/C-002, perf-unpivot-1/C-008
   `approxQuantile` validates `relativeError` first (non-numeric is a type error, NaN or
   negative is a value error — NaN is not `< 0` in IEEE so it needs an explicit check)
   and treats out-of-range probabilities as value errors, not type errors. DFCORE-5
@@ -494,6 +490,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   C-005).
   PERF-DESCRIBE-1 (2026-09-12): `statistics.py` 318→372, no new module, no ceiling
   row; stays below the source-size default (pins: perf-describe-1/C-002, C-005).
+  PERF-UNPIVOT-1 step 2 (2026-09-12): `statistics.py` 372→337, no new module, no
+  ceiling row; stays below the source-size default (pins: perf-unpivot-1/C-008,
+  C-011).
   FACADE-1 (2026-09-12): `core.py` 4485→4473→4470; `_pyarrow.py` and `_arrow_stream.py`
   stay below the source-size default (pins: facade-1/C-001, C-002, C-006).
   DF-COLREGEX-1 (2026-09-11): `core.py` stays at its exact baseline; the new

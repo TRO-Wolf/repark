@@ -49,8 +49,6 @@ def _summary(
         LongType,
         ShortType,
         StringType,
-        StructField,
-        StructType,
     )
 
     if _columns:
@@ -114,7 +112,6 @@ def _summary(
     needed = list(dict.fromkeys(stats))
     plan = frame._plan()
     cell_position: dict[tuple[int, str], int] = {}
-    engine_stringified = (FloatType, DoubleType, DecimalType)
     chunk_plans: list[Any] = []
     position = 0
     for chunk_start in range(0, len(target_pairs), 50):
@@ -137,10 +134,6 @@ def _summary(
                     else base_column
                 )
                 aggregated = stat_functions[stat](operand)._inner
-                if stat in ("mean", "stddev") or (
-                    stat in ("min", "max") and isinstance(data_type, engine_stringified)
-                ):
-                    aggregated = aggregated.cast("string")
                 chunk_exprs.append(aggregated.alias(f"__repark_stat_{position}"))
                 cell_position[(column_index, stat)] = position
                 position += 1
@@ -148,50 +141,22 @@ def _summary(
     joined = chunk_plans[0]
     for extra in chunk_plans[1:]:
         joined = joined.join_on_condition(extra, _native.PyColumn.literal(True), "inner")
-    positions = [
-        [cell_position[(column_index, stat)] for column_index in range(len(target_pairs))]
-        for stat in stats
-    ]
-    import functools
-
-    import pyarrow as pa
-
+    stack_exprs: list[Any] = []
+    for stat in stats:
+        stack_exprs.append(_native.PyColumn.literal(stat).alias(f"__repark_arg_{len(stack_exprs)}"))
+        for column_index in range(len(target_pairs)):
+            alias = f"__repark_stat_{cell_position[(column_index, stat)]}"
+            stack_exprs.append(
+                _native.PyColumn.column(_quote_ident_sql(alias))
+                .cast("string")
+                .alias(f"__repark_arg_{len(stack_exprs)}")
+            )
     field_names = ["summary"] + [f"f{index}" for index in range(len(target_pairs))]
-    arrow_schema = pa.schema([pa.field(name, pa.string()) for name in field_names])
-    out_schema = StructType([StructField(name, StringType()) for name in field_names])
-    aggregated_frame = frame._spawn(joined)
-    child = aggregated_frame.mapInArrow(
-        functools.partial(
-            _summary_unpivot, stats=stats, positions=positions, arrow_schema=arrow_schema
-        ),
-        out_schema,
-    )
+    stacked = _native.stack_dataframe(joined.select(stack_exprs), len(stats), 0, field_names)
+    child = frame._spawn(stacked)
     child._display_names = ["summary"] + [display for display, _engine in target_pairs]
     child._engine_names = field_names
     return child
-
-
-def _summary_unpivot(
-    batches: Any, *, stats: list[str], positions: list[list[int]], arrow_schema: Any
-) -> Any:
-    """Unpivot one aggregate row into the summary grid inside the lazy bridge."""
-    import pyarrow as pa
-
-    for batch in batches:
-        for row_index in range(batch.num_rows):
-            cells: list[str | None] = []
-            for column_index in range(batch.num_columns):
-                value = batch.column(column_index)[row_index].as_py()
-                cells.append(value if value is None or isinstance(value, str) else str(value))
-            arrays = [pa.array(list(stats), type=pa.string())]
-            for column_index in range(len(positions[0])):
-                arrays.append(
-                    pa.array(
-                        [cells[positions[row][column_index]] for row in range(len(stats))],
-                        type=pa.string(),
-                    )
-                )
-            yield pa.RecordBatch.from_arrays(arrays, schema=arrow_schema)
 
 
 def _approx_quantile(

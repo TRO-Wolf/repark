@@ -1,11 +1,13 @@
-# Unit ledger — PERF-UNPIVOT-1 step 1 · native `stack()` unpivot
+# Unit ledger — PERF-UNPIVOT-1 · native `stack()` unpivot; `describe` back on a pure plan
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit (step 2).
 This file closes when PERF-UNPIVOT-1 merges, or when the owner closes the slate row.
 
-**Unit:** PERF-UNPIVOT-1 · **Date:** 2026-09-12 · **Model:** grok-4.6 · **Branch:** `perf/unpivot-1`
-**Slate:** card PERF-UNPIVOT-1, step 1 of 2 (the primitive + pins; `describe` stays on the
-bridge until step 2).
+**Unit:** PERF-UNPIVOT-1 · **Date:** 2026-09-12 · **Branch:** `perf/unpivot-1`
+**Model:** grok-4.6 (step 1, `perf/unpivot-1`) · swe-2-high (step 2, `perf/unpivot-1-s2`)
+**Slate:** card PERF-UNPIVOT-1. Step 1 of 2 shipped the primitive + pins (#542); step 2
+of 2 (this round) moves `describe`/`summary` back to a pure plan (aggregate →
+stack-order projection → `UnpivotExec`) and deletes the `mapInArrow` bridge.
 
 **Rubric:** STANDARD. `risk_tier: standard`.
 
@@ -27,8 +29,90 @@ is not in the tree yet; the superlinear planner is the one PERF-DESCRIBE-1 measu
 | C-005 | Red-first: on the base tree the name is unsupported. | Red output below; the FNP-9 absence pin listed `stack`. | **PROVEN** |
 | C-006 | `stack` over the reviewer's shapes uses one `interleave` per stacked column (shared `(piece, row)` index per batch), not `concat`+`take`. Three reps, medians, 500-col × 1 row → 5 rows and 200k × 20. | Measurement table below (before/after, 2026-09-12). | **PROVEN** |
 | C-007 | `UnpivotExec` emits the first output batch before the input stream is exhausted. Peak memory is one input batch + one output batch. | Red `produced=8` on collect-then-emit; pin `unpivot_exec_emits_first_batch_before_input_is_exhausted`. | **PROVEN** |
+| C-008 | `describe`/`summary` plan = scan → one aggregate → one unpivot node, no `mapInArrow`/Python bridge anywhere in the physical plan. | `test_describe_plan_is_scan_aggregate_unpivot` (`_map_bridge is None`, `UnpivotExec` + `AggregateExec`, `TableScan`=1, no `mapInArrow`); red-first output below. | **PROVEN** |
+| C-009 | The DF-DESCRIBE-STR-1 and PERF-DESCRIBE-1 suites pass with every accepted-answer assertion unchanged (D-3). | The C-009 note below; the `-k "describe or summary"` run in the gates table. | **PROVEN** |
+| C-010 | The laziness pin stays green unchanged: constructing `describe()` runs no scan. | `test_describe_runs_nothing_until_an_action` — unchanged, green in the gates table. | **PROVEN** |
+| C-011 | `_summary_unpivot` and the bridge helpers are deleted (no dead code); `statistics.py` stays under its ceiling with baselines honest. | The C-011 note below: file 372→337 under the 1000 default; no EXCEPTIONS row exists in `scripts/check_lib_py.py` or the CAP-1 mirror to ratchet. | **PROVEN** |
+| C-012 | `describe()` measured on a RELEASE module (`__debug_assertions__` False): 500-column × 200k and 20-column × 200k, warmup + three reps, medians, base (bridge) vs branch (plan). | The C-012 table below; raw reps in `scratch/perf-unpivot-1/describe_{base,branch}.json`. | **PROVEN** |
+| C-013 | Gates: the two named suites + the laziness pin + the plan-shape pin + `test_perf_unpivot_1.py`; `make verify`; the whole parity suite. | The step-2 gates table below. | **PROVEN** |
 
-`LOGIC_SCORE` = **7/7 `PROVEN`**.
+`LOGIC_SCORE` = **13/13 `PROVEN`**.
+
+## Step 2 (swe-2-high, `perf/unpivot-1-s2`, 2026-09-12)
+
+`describe`/`summary` lower to `stack` over the single aggregate row: the chunked
+aggregates (unchanged, one per ~50 columns, cross-joined) now emit raw cells, one
+projection lays out stat-name literals plus one `CAST(cell AS Utf8)` per column per
+stat row in row-major order, and `stack_dataframe` (`UnpivotExec`) emits the grid.
+Every cell is cast because a describe column mixes count/mean/stddev/min/max — the
+cast moved OUT of the aggregate into the projection because `docs/perf/cast-cost-2026-09-12.md`
+measures projection-side casts ~13× cheaper than in-aggregate at 2500 (13.8 s vs
+175.9 s). All-string cells keep every answer byte-identical (D-3).
+
+### C-008 red-first
+
+On the base tree the bridge is present, so the pin fails:
+
+```
+described = frame.describe()
+>       assert described._map_bridge is None
+E       AssertionError: assert {'parent': DataFrame[__repark_stat_0: bigint, ...
+'arrow_schema': summary: string\nf0: string\nf1: string} is None
+FAILED python/repark/tests/test_perf_unpivot_1.py::test_describe_plan_is_scan_aggregate_unpivot
+1 failed in 0.66s
+```
+
+### C-009 — the mechanism line moved; every answer pin is byte-identical
+
+`test_describe_scans_the_source_once` pinned the old mechanism
+(`described._map_bridge is not None`, `_map_bridge["parent"]._explain_text`, and the
+in-aggregate cast inventory `CAST(min(`/`CAST(max(`). A pin asserting the bridge
+exists cannot coexist with the card's own "no `mapInArrow` bridge" deliverable, so
+the test's mechanism assertions were rewritten to the new shape (`_map_bridge is
+None`, `UnpivotExec`, `mapInArrow` absent, one `CAST(__repark_stat_` per cell in each
+plan rendering); every answer assertion (`collect() == [...]`, the laziness spy, the
+duplicate-stat rows) is unchanged, and DF-DESCRIBE-STR-1's pins in
+`test_examples_dataframe_{a,c,d}.py` are untouched.
+
+### C-011 — no baseline row to ratchet
+
+`_summary_unpivot`, `positions`, `functools`/`pyarrow` imports, `arrow_schema`,
+`out_schema`, `engine_stringified` and the `mapInArrow` call are deleted; the
+`StructField`/`StructType` imports went with them. `statistics.py` 372→337 stays under
+the 1000-line default — it holds no EXCEPTIONS row in `scripts/check_lib_py.py`, so
+the CAP-1 mirror (`_PYTHON_BASELINES`) has no row either; both tables are unchanged
+and `test_cap_1_exception_tables_equal_the_measured_debt` stays green.
+
+### C-012 — release-module medians (2026-09-12)
+
+`.venv/bin/maturin develop --release` in `python/repark`; `repark._native.__debug_assertions__`
+is False. Frame: `spark.range(200_000)` + `id % 997 + i` double columns `.eager()`;
+one warmup + three timed reps per shape; `call` = `describe()` plan build, `collect`
+= the action; medians. Raw: `scratch/perf-unpivot-1/describe_{base,branch}.json`.
+
+| Shape | Base call (s) | Base collect (s) | Branch call (s) | Branch collect (s) |
+|---|---:|---:|---:|---:|
+| 20 cols × 200k | 0.002 | 0.047 | 0.004 | 0.051 |
+| 500 cols × 200k | 0.100 | 10.19 | 0.42 | 12.94 |
+
+The pure plan is ~27 % slower at 500 columns — the 2500 projection-side casts cost
+what the cast-cost doc measured — and level at 20 columns. Not the PERF-CAST-1 wall
+(the superlinear shapes that measured 35–176 s); the bridge's 21.5 s figure was a
+debug build — on release it is 10.19 s. Both shapes stay far inside the linear
+regime; `make develop` (debug) was restored before the gates.
+
+### Step-2 gates
+
+JVM was not started for these gates.
+
+| Command | Exit |
+|---|---|
+| `.venv/bin/python -m pytest python/repark/tests/test_perf_describe_1.py python/repark/tests/test_perf_unpivot_1.py -q` | 0 — 12 passed (both named suites + laziness + plan-shape pin) |
+| `.venv/bin/python -m pytest python/repark/tests -q -k "describe or summary"` | 0 — 37 passed, 6 skipped |
+| `.venv/bin/python -m pytest python/repark/tests/test_facade_2_column_display_goldens.py -q` (in the combined run) | 0 — 3 passed |
+| `python3 scripts/check_ledger_grammar.py` | 0 — 118 live ledgers clean |
+| `make verify` | 0 |
+| `PYTHONPATH=python/repark-parity/src VIRTUAL_ENV=$PWD/.venv uv run --no-project python -m pytest python/repark-parity/tests -q` | 0 — 749 passed, 1 skipped, 12 xfailed (669 s) |
 
 ## P3 observed (no change this round)
 
