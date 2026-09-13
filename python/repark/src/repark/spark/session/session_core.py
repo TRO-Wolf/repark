@@ -82,7 +82,7 @@ class ReparkSession:
             # Classic scalar Python UDF registry (name → entry); dies with stop().
             "udf_registry": {},
         }
-        master = self._builder_config_get_master()
+        master = _builder_config_get_master(self._builder_config)
         # Stable per-session id (PySpark uses local-<epochms><seq>); repark uses a uuid suffix.
         application_id = f"local-repark-{uuid.uuid4().hex[:12]}"
         self._spark_context = SparkContext(application_id=application_id, master=master)
@@ -120,13 +120,6 @@ class ReparkSession:
         if isinstance(tomb, set):
             tomb.discard(_DISPLAY_STYLE_KEY)
             tomb.discard("repark.display.style")
-
-    def _builder_config_get_master(self) -> str:
-        """Return spark.master from builder config (case-insensitive key), default local[repark]."""
-        for key, value in self._builder_config.items():
-            if key.lower() == "spark.master" and value is not None:
-                return value
-        return "local[repark]"
 
     def _ensure_alive(self) -> _native.PyReparkSession:
         """Return the native handle, or raise if :meth:`stop` has already run."""
@@ -179,7 +172,7 @@ class ReparkSession:
         ``SELECT * FROM name(lit_args)``; LATERAL stays blocked.
         """
         inner = self._ensure_alive()
-        self._promote_active()
+        _promote_active(self)
         # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
         from repark.spark.udtf import try_sql_registered_udtf
 
@@ -1016,6 +1009,18 @@ class ReparkSession:
 
         return session_maintenance.run_maintenance(self, table, dry_run=dry_run, **overrides)
 
+    def sources(self) -> list[SourceMetadata]:
+        """Declared database sources as ``SourceMetadata`` rows (RePark extension)."""
+        from repark.spark.session import session_sources
+
+        return session_sources.sources(self)
+
+    def source(self, name: str) -> NamedSource:
+        """The :class:`NamedSource` handle for one declared source (RePark extension)."""
+        from repark.spark.session import session_sources
+
+        return session_sources.source(self, name)
+
     def registerTempTable(self, name: str, table: Any) -> None:  # noqa: N802
         """Unsupported legacy alias of createOrReplaceTempView (R-FACADE-HYGIENE W7)."""
         from repark.errors import UnsupportedOperationException
@@ -1162,7 +1167,7 @@ class ReparkSession:
         time/binary still refuse.
         """
         self._ensure_alive()
-        self._promote_active()
+        _promote_active(self)
         return _create_dataframe_from_rows(self, data, schema)
 
     createDataFrame = create_dataframe  # noqa: N815 — deliberate PySpark-compatible camelCase alias
@@ -1240,11 +1245,6 @@ class ReparkSession:
             # Always restore prior active — including BaseException paths. getOrCreate
             # may have registered ``new`` as active; newSession must not steal it.
             _sf._active_session = previous
-
-    def _promote_active(self) -> None:
-        """Mark this session as the process-wide active session (Spark action promotion)."""
-        if self._inner is not None:
-            _sf._active_session = self
 
     def __enter__(self) -> ReparkSession:
         """Context-manager enter (PySpark ``with SparkSession… as spark``)."""

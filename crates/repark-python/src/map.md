@@ -46,6 +46,14 @@ and hand execution, SQL, and ML semantics to the engine crates.
   no Python source surface lands until step 2. The added line was made line-neutral
   (the file sits on its exact 1128 baseline) by joining two `use` items in the test
   block. pins: cfg-2/C-010 |
+| [`session_sources.rs`](session_sources.rs) | **CFG-2 step 2 (2026-09-13):** the named-source
+  door — three free `#[pyfunction]`s taking `PyRef<'_, PyReparkSession>` (the
+  `catalog_census` shape, since pyo3 allows one `#[pymethods]` block per type):
+  `session_sources` answers `(name, kind, key_path, auto_register, redacted properties)`
+  tuples, `session_source` resolves one name through `ReparkSession::source` (the
+  undeclared-name refusal maps through `to_py_err`), and `session_source_ping` re-resolves
+  then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
+  pins: cfg-2/C-013, C-014, C-015 |
 | [`dataframe.rs`](dataframe.rs) | Lazy plans, actions, transforms, schema, and Arrow C Stream export. |
 | [`dataframe_stack.rs`](dataframe_stack.rs) | **PERF-UNPIVOT-1:** `stack_dataframe` binds `repark_core::apply_stack`. pins: perf-unpivot-1/C-002 |
   `filter_sql` bypasses the statement router, so it applies parse-altitude valves itself.

@@ -179,7 +179,7 @@ DROP TABLE company_db.public.t: datafusion engine error: Execution error:
   build. `is_registered` subsumes `catalog_handle` (entries ∪ sources), so no second
   check is needed.
 
-## Attestation (actor, step 1)
+## Attestation (actor, steps 1–2)
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -187,42 +187,42 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every ruled behaviour is pinned in both directions — a database source LOADS (not merely stops refusing), `auto_register = false` is asserted to list AND to answer the engine not-found (not the connector refusal), the SQL refusal asserts the presence of source/kind/1.10 AND the absence of the engine's not-found wording on both read (SELECT) and write (CREATE TABLE, DROP TABLE) shapes, the listing asserts a secret prop renders `***` while a non-secret stays verbatim, and the unknown-handle refusal asserts the declared list appears.
-      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, crates/repark-core/src/config_file/tests/mod.rs, python/repark/tests/test_config_mirror.py]
+      evidence: Every ruled behaviour is pinned in both directions — a database source LOADS (not merely stops refusing), `auto_register = false` is asserted to list AND to answer the engine not-found (not the connector refusal), the SQL refusal asserts the presence of source/kind/1.10 AND the absence of the engine's not-found wording on both read (SELECT) and write (CREATE TABLE, DROP TABLE) shapes, the listing asserts a secret prop renders `***` while a non-secret stays verbatim, and the unknown-handle refusal asserts the declared list appears. Step 2 pins the same axes through the Python surface: `sources()` rows assert redaction and `auto_register` both ways, `ping()` and `repark.sql` assert the connector wording present and the not-found wording absent, and the config mirror round-trips a rendered file through the Rust loader.
+      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, crates/repark-core/src/config_file/tests/mod.rs, python/repark/tests/test_config_mirror.py, python/repark/tests/test_session_sources.py]
     - id: AT-2
       status: N/A
-      justification: No numeric or performance claim; step 1 is registration and refusal plumbing.
+      justification: No numeric or performance claim; the unit is registration, refusal and listing plumbing.
     - id: AT-3
       status: ATTACKED
-      evidence: The failure paths ARE the subject — non-boolean `auto_register` (key path named), catalog-over-source-name duplicate (same message as two catalogs), undeclared handle (declared list named), SQL use of an unimplemented source (NotImplemented, not not-found) — each pinned on message content. Secret leakage is pinned: `password` renders `***` in the listing and `SourceSpec`'s `Debug` masks through `redact_value`.
-      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/named_sources.rs]
+      evidence: The failure paths ARE the subject — non-boolean `auto_register` (key path named; the mirror refuses it as `ValidationError`), catalog-over-source-name duplicate (same message as two catalogs), undeclared handle (declared list named, on both the Rust and the facade `source()`), SQL use of an unimplemented source (NotImplemented, not not-found, on `sql()`, the facade `spark.sql` and the `repark.sql` door) — each pinned on message content. Secret leakage is pinned at both layers: `password` renders `***` in the Rust listing and in the Python `SourceMetadata.properties`, with the secret string asserted absent from the repr.
+      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/named_sources.rs, python/repark/tests/test_session_sources.py]
     - id: AT-4
       status: ATTACKED
-      evidence: Registration order is pinned where load-bearing: `register_configured_sources` holds the registry write lock while checking `is_registered` AND the context's live catalog set before installing, so a source name and a catalog name linearize to one winner — the same discipline `register_memory_catalog` keeps on the other side (the duplicate pin registers the source first, then loses the catalog). `source_specs` is an immutable `Arc<Vec>` snapshot from build; `sources()`/`source()` read it without locking.
-      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/catalog_state.rs]
+      evidence: Registration order is pinned where load-bearing: `register_configured_sources` holds the registry write lock while checking `is_registered` AND the context's live catalog set before installing, so a source name and a catalog name linearize to one winner — the same discipline `register_memory_catalog` keeps on the other side (the duplicate pin registers the source first, then loses the catalog). `source_specs` is an immutable `Arc<Vec>` snapshot from build; `sources()`/`source()` read it without locking. Step 2 adds no shared state: the facade `NamedSource` handle stores name/kind/key_path and re-resolves through `ReparkSession::source` on each `ping()`.
+      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/catalog_state.rs, python/repark/src/repark/spark/session/session_sources.py]
     - id: AT-5
       status: ATTACKED
-      evidence: Two security properties are pinned, not assumed — the listing and `SourceSpec` `Debug` route every value through `redact_value` (`password` renders `***`, a non-secret `host` stays verbatim), and registration opens no connection: the provider is an in-process `CatalogProvider` whose only outward act is `register_catalog` on the session context (the unroutable `203.0.113.1` host proves build + registration succeed with no socket). `auto_register` is kept OUT of `props`, so a credential map never carries a control flag.
-      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/config_file/sources.rs, crates/repark-core/src/config_file/redact.rs]
+      evidence: Two security properties are pinned, not assumed — the listing and `SourceSpec` `Debug` route every value through `redact_value` (`password` renders `***`, a non-secret `host` stays verbatim), and registration opens no connection: the provider is an in-process `CatalogProvider` whose only outward act is `register_catalog` on the session context (the unroutable `203.0.113.1` host proves build + registration succeed with no socket). `auto_register` is kept OUT of `props`, so a credential map never carries a control flag; the Python `SourceMetadata` row carries only the already-redacted properties the Rust door hands it.
+      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/config_file/sources.rs, crates/repark-core/src/config_file/redact.rs, crates/repark-python/src/session_sources.rs]
     - id: AT-6
       status: ATTACKED
-      evidence: The silent-acceptance holes this step could open are closed at each seam — a non-boolean `auto_register` refuses naming the key path (it would otherwise have parsed as a string prop), a catalog registered over a source name refuses as a duplicate rather than shadowing the source, `source()` on an undeclared name refuses naming the declared set rather than answering an empty handle, and every CFG-1 validation (unknown kind, non-string prop, cross-family collision) still refuses in the same `config_file` run.
-      artifacts: [crates/repark-core/src/config_file/sources.rs, crates/repark-core/src/named_sources.rs, crates/repark-core/src/catalog_state.rs]
+      evidence: The silent-acceptance holes this unit could open are closed at each seam — a non-boolean `auto_register` refuses naming the key path in the TOML loader AND as `ValidationError` in the Python mirror (it would otherwise have parsed as a string prop / string extra), a catalog registered over a source name refuses as a duplicate rather than shadowing the source, `source()` on an undeclared name refuses naming the declared set rather than answering an empty handle, every CFG-1 validation (unknown kind, non-string prop, cross-family collision) still refuses in the same `config_file` run, and `SparkSession.source`/`SparkSession.sources` entered the example inventory so the coverage gate watches them.
+      artifacts: [crates/repark-core/src/config_file/sources.rs, crates/repark-core/src/named_sources.rs, crates/repark-core/src/catalog_state.rs, python/repark/src/repark/config.py, docs/examples/inventory.txt]
     - id: AT-7
       status: N/A
-      justification: No hot path — registration runs once per session construction over a handful of specs; `sources()` materializes a `SourceRow` per declared source on demand.
+      justification: No hot path — registration runs once per session construction over a handful of specs; `sources()` materializes a `SourceRow` per declared source on demand, and the facade wraps the same rows without copying beyond the namedtuple.
     - id: AT-8
       status: ATTACKED
-      evidence: No dependency file, manifest, workflow or STATUS.md was touched; the new public surface is exactly the three session methods plus `NamedSource`/`SourceRow` re-exports the card names (step 2's Python door consumes them; no `.config()` key family was added per D-3). `session.rs` shrank net eight lines (986 → 978: the five source-carry lines minus the thirteen-line `TempViewHome` extraction); the `build()`-length overflow was resolved by moving the capture next to its struct in `temp_view.rs`, not by an `#[allow]`.
-      artifacts: [crates/repark-core/src/lib.rs, crates/repark-core/src/session.rs, crates/repark-core/src/temp_view.rs]
+      evidence: No dependency file, manifest, workflow or STATUS.md was touched in either step; the new public surface is exactly what the card names — Rust's three session methods plus `NamedSource`/`SourceRow`, then step 2's `ReparkSession.sources()`/`.source()`, the `NamedSource` handle, `SourceMetadata`, and `DatabaseSource.auto_register` (no `.config()` key family per D-3). `session.rs` shrank net eight lines; `session_core.py` held its exact 2304 baseline by moving `_promote_active`/`_builder_config_get_master` into their owning modules rather than raising the ceiling.
+      artifacts: [crates/repark-core/src/lib.rs, crates/repark-core/src/session.rs, crates/repark-core/src/temp_view.rs, python/repark/src/repark/spark/session/session_core.py, python/repark/src/repark/spark/session/session_state.py, python/repark/src/repark/spark/session/session_configuration.py]
     - id: AT-9
       status: ATTACKED
-      evidence: Diagnosability is the refusal's content: the D-1 message names the full `<profile>.database.<kind>.<name>` path, the kind and the roadmap version; the unknown-handle refusal names both the asked name and every declared source; the duplicate refusal reuses the catalog family's `already registered` wording so the failure reads identically on either family. Each pin asserts those strings.
-      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/named_sources/tests.rs]
+      evidence: Diagnosability is the refusal's content: the D-1 message names the full `<profile>.database.<kind>.<name>` path, the kind and the roadmap version; the unknown-handle refusal names both the asked name and every declared source; the duplicate refusal reuses the catalog family's `already registered` wording. The Python pins assert those strings through `UnsupportedOperationException`/`PySparkException` — the existing mapping, no new exception class — and the guide shows the measured messages verbatim.
+      artifacts: [crates/repark-core/src/named_sources.rs, crates/repark-core/src/named_sources/tests.rs, python/repark/tests/test_session_sources.py, docs/guide/repark-toml.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Reds were captured before each implementation — two runtime failures on untouched wiring/parser code (the CFG-2 load refusal verbatim; `auto_register = "yes"` silently accepted), the E0599 ×9 compile red for the three missing session methods, the Python pin failing through `config_file_pairs` on the base-behavior wheel, and the audit follow-up pin failing on the step-1 tree with `DROP TABLE` answering the generic ``Table 'company_db.public.t' doesn't exist.`` No pin was edited to fit the implementation.
-      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, python/repark/tests/test_config_mirror.py]
+      evidence: Reds were captured before each implementation — step 1: two runtime failures on untouched wiring/parser code (the CFG-2 load refusal verbatim; `auto_register = "yes"` silently accepted), the E0599 ×9 compile red for the three missing session methods, the Python pin failing through `config_file_pairs` on the base-behavior wheel, and the audit follow-up pin failing on the step-1 tree with `DROP TABLE` answering the generic ``Table 'company_db.public.t' doesn't exist.`` Step 2: six pins red on the base tree (four `AttributeError` on the missing facade surface, `auto_register` rejected as a non-string extra, non-bool `auto_register` silently accepted); the two pins that passed on base measure step-1 behaviour through the shared SQL path and stand as regression guards. No pin was edited to fit the implementation.
+      artifacts: [crates/repark-core/src/named_sources/tests.rs, crates/repark-core/src/config_file/tests/wiring.rs, python/repark/tests/test_config_mirror.py, python/repark/tests/test_session_sources.py]
   complete: true
 ```
 
@@ -271,3 +271,102 @@ no per-query planner work on the default path.
   (repark-python) and from the named_sources pins; `repark-spark/tests/ddl_sessions.rs`
   builds its own session and does NOT register sources — sources only exist from a config
   file, which that harness does not load, so no call was added there.
+
+## PROPOSITION LEDGER — CFG-2 step 2 — 2026-09-13
+
+**Step 2 actor model:** swe-2-high · **Branch:** `feat/cfg-2-step2` · **Base:** `origin/main`
+at `25707c46` (step 1 merged). Step 2 appends to this ledger per the card's departure note;
+the file moves to `completed/` only with step 2's last commit. Step 2 lands the Python
+surface: `ReparkSession.sources()` / `.source(name).ping()` on the facade, the
+`SourceMetadata` row type, and the config mirror's typed `auto_register` — over the step-1
+Rust door, unchanged.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-013 | `ReparkSession.sources()` returns `list[SourceMetadata]` — `SourceMetadata` is the namedtuple (`name`, `kind`, `key_path`, `auto_register`, `properties`) beside `CatalogMetadata` in `catalog.py` (D-7); one row per declared source in the order Rust returns; `properties` is `dict[str, str]` with `password` masked `***` and no secret value in its repr. | `test_sources_lists_declared_source_with_redacted_properties` | **PROVEN** | Red first (below): `AttributeError: 'ReparkSession' object has no attribute 'sources'` on the base tree. Green: `.venv/bin/python -m pytest python/repark/tests/test_session_sources.py python/repark/tests/test_config_mirror.py -q` — 29 passed. The pyo3 door `session_sources` maps `ReparkSession::sources()` rows verbatim, so redaction is the Rust `redact_value` path; measured row: `SourceMetadata(name='company_db', kind='postgres', key_path='default.database.postgres.company_db', auto_register=True, properties={'dbname': 'analytics', 'host': 'db.example.com', 'password': '***'})`. |
+| C-014 | `ReparkSession.source("company_db")` returns a `NamedSource` handle with read-only `name`/`kind`/`key_path` and a `ping()` that raises the D-1 refusal as `UnsupportedOperationException` naming the key path, the kind and `1.10` — the existing error mapping, no new exception class (D-8). | `test_source_ping_raises_connector_refusal` | **PROVEN** | Red first (below): `AttributeError: 'ReparkSession' object has no attribute 'source'` on the base tree. Green in the same 29-passed run — measured message: ``database source `default.database.postgres.company_db` (kind `postgres`) is declared but cannot be used yet — its connector arrives with roadmap 1.10 (Postgres, SQL Server, Trino)``. `session_source_ping` re-resolves the name then calls `NamedSource::ping`, so the refusal keeps its `Error::NotImplemented` → `UnsupportedOperationException` mapping. |
+| C-015 | `source(name)` on an undeclared name raises through the existing error mapping naming the declared sources (D-8). | `test_unknown_source_raises_naming_declared_sources` | **PROVEN** | Red first (below): `AttributeError: 'ReparkSession' object has no attribute 'source'` on the base tree. Green in the same run — measured `PySparkException: datafusion engine error: unknown database source 'nope' — declared sources: company_db`, asserted to contain both `nope` and `company_db`. |
+| C-016 | `repark.sql("SELECT * FROM company_db.public.t")` against a `REPARK_CONFIG`-discovered file raises the connector refusal — `UnsupportedOperationException` naming the source path, the kind and `1.10`, not the engine's not-found wording (through `repark.sql`, the native door). | `test_select_under_source_name_raises_connector_refusal` | **PROVEN** | Written and run first; it PASSED on the base tree — step 1's `PreExecute::guard`/`refuse_source_ddl` already covers the facade SQL path and `REPARK_CONFIG` discovery already reaches `finish_session`, so the pin is a regression guard over landed behaviour, not new wiring. Green in the same 29-passed run: asserts `company_db`, `postgres`, `1.10` present and `not found`/`does not exist` absent. |
+| C-017 | `auto_register = false` lists the source via `sources()` (`auto_register=False`) but does not register it: `spark.sql` under the name answers the engine's not-found naming `company_db`, with no `1.10` (D-5). | `test_auto_register_false_listed_not_registered` | **PROVEN** | Red first (below): `AttributeError: 'ReparkSession' object has no attribute 'sources'` on the base tree. Green in the same run — `sources()` reports `auto_register is False` while `SELECT * FROM company_db.public.t` raises an error containing `company_db` and not `1.10`. |
+| C-018 | `DatabaseSource.auto_register` is a typed `StrictBool \| None` field (D-10): a non-bool refuses as `ValidationError`, `auto_register = true\|false` renders only when set, every other property stays a string extra, and a rendered `ReparkConfig` carrying `auto_register=False` loads through the Rust loader and lists `auto_register=False`. | `test_config_mirror_auto_register_round_trips` + `test_config_mirror_auto_register_non_bool_refuses` | **PROVEN** | Red first (below): the round-trip failed with `Value error, connection property 'auto_register' must be a string` (it parsed as an ordinary extra) and the non-bool pin `DID NOT RAISE ValidationError`. Green in the same run — `to_toml()` emits `auto_register = false`, `tomllib.loads` reads it back as `False`, `ReparkSession.builder.configFile(...).getOrCreate().sources()` lists `auto_register is False`, and an unset field renders no key. |
+| C-019 | D-11 measured, not changed: `spark.catalog.listCatalogs()` on a session with one auto-registered source returns `[CatalogMetadata(name='spark_catalog', description=None)]` — the source name does NOT appear; `currentCatalog` behaviour untouched. | `test_list_catalogs_with_auto_registered_source` | **PROVEN** | Written and run first; PASSED on the base tree — step 1 registers sources into `CatalogRegistry.database_sources`, a separate family from the iceberg entries `listCatalogs` walks, so the observation holds by construction and needed no code. Pinned so a future regression that lists source names trips loud. |
+
+## Red first (step 2)
+
+The pins were written and run on the base tree (Python facade changes stashed; the wheel
+then installed carried no facade surface) before the implementation landed. Six failed,
+two passed — the two passes (`test_select_under_source_name_raises_connector_refusal`,
+`test_list_catalogs_with_auto_registered_source`) measure behaviour step 1 already owns
+through the facade's shared SQL path, so they stand as regression guards.
+
+```text
+$ .venv/bin/python -m pytest python/repark/tests/test_session_sources.py \
+      python/repark/tests/test_config_mirror.py -q
+
+E   AttributeError: 'ReparkSession' object has no attribute 'sources'
+    (test_sources_lists_declared_source_with_redacted_properties, session_sources.py:34)
+E   AttributeError: 'ReparkSession' object has no attribute 'source'
+    (test_source_ping_raises_connector_refusal, session_sources.py:51)
+E   AttributeError: 'ReparkSession' object has no attribute 'source'
+    (test_unknown_source_raises_naming_declared_sources, session_sources.py:69)
+E   AttributeError: 'ReparkSession' object has no attribute 'sources'
+    (test_auto_register_false_listed_not_registered)
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for DatabaseSource
+      Value error, connection property 'auto_register' must be a string
+    (test_config_mirror_auto_register_round_trips — the key fell through to the
+     string-extras validator)
+E   Failed: DID NOT RAISE ValidationError
+    (test_config_mirror_auto_register_non_bool_refuses)
+
+6 failed, 23 passed in 0.25s
+```
+
+## Gates (step 2)
+
+| Command | Result |
+|---|---|
+| `make develop` | exit 0 — `Built wheel for abi3 Python ≥ 3.12`; `Installed repark-1.4.0` |
+| `.venv/bin/python -m pytest python/repark/tests/test_session_sources.py python/repark/tests/test_config_mirror.py -q` | exit 0 — `29 passed in 0.19s` |
+| `make check-example-coverage` | exit 0 — `923 public names (catalog=28, column=34, dataframe=153, functions=452, io=42, ml=28, session=46, ta=86, types=32, window=22); 809 covered; 112 backlog; 2 exceptions; 216 examples` |
+| `cargo test -p repark-core named_sources` | exit 0 — `test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 359 filtered out` |
+| `make py-test-facade` | exit 0 — `5969 passed, 369 skipped, 48 warnings in 1086.97s` |
+| `make verify` | exit 0 — fmt, clippy (all-targets + panic-ban + repark-python), crate-dag, lib-rs, rust-file-size (490 clean), lib-py (668 clean), conventions, docstring, manifest, ledgers, docs-links, ruff, taplo, typos, `cargo test --locked --workspace` all green |
+
+## Pins (step 2)
+
+| Pin | Clause | Home |
+|---|---|---|
+| `test_sources_lists_declared_source_with_redacted_properties` | C-013 | `python/repark/tests/test_session_sources.py` |
+| `test_source_ping_raises_connector_refusal` | C-014 | `python/repark/tests/test_session_sources.py` |
+| `test_unknown_source_raises_naming_declared_sources` | C-015 | `python/repark/tests/test_session_sources.py` |
+| `test_select_under_source_name_raises_connector_refusal` | C-016 | `python/repark/tests/test_session_sources.py` |
+| `test_auto_register_false_listed_not_registered` | C-017 | `python/repark/tests/test_session_sources.py` |
+| `test_config_mirror_auto_register_round_trips` | C-018 | `python/repark/tests/test_config_mirror.py` |
+| `test_config_mirror_auto_register_non_bool_refuses` | C-018 | `python/repark/tests/test_config_mirror.py` |
+| `test_list_catalogs_with_auto_registered_source` | C-019 | `python/repark/tests/test_session_sources.py` |
+
+## Decisions (step 2)
+
+- The pyo3 door is three free `#[pyfunction]`s taking `PyRef<'_, PyReparkSession>` in the
+  new `session_sources.rs` — the `catalog_census.rs` shape — because pyo3 allows one
+  `#[pymethods]` block per type and `session.rs` sits on its exact 1128-line baseline.
+  `lib.rs` registers the three functions on the native module.
+- `session_core.py` sits on its exact 2304-line baseline, so the two thin delegators were
+  paid for line-neutrally: `_promote_active` moved byte-identical to `session_state.py`
+  (the `_active_session` owner) and `_builder_config_get_master` to
+  `session_configuration.py` (as a config-dict function, the CFG-1-step-3 shape). Both
+  ride `_funcs.py`'s compatibility router back into `session_core` globals, so moved-symbol
+  hash and ownership pins hold.
+- `session_source_ping` re-resolves the name through `ReparkSession::source` on each call
+  rather than caching the handle, so `ping()` keeps the engine's `NotImplemented` class —
+  the same class an unknown name would raise, resolved once per call at handle material.
+- `DatabaseSource.auto_register` is `StrictBool | None = None`, not `bool = True`: unset
+  must stay distinguishable from an explicit `true` so `to_toml()` only emits the key the
+  author wrote — the Rust loader already defaults `auto_register` to `true`.
+- D-11 was measured, not changed: `listCatalogs()` walks the catalog-entries family;
+  step-1 sources live in `database_sources`, so an auto-registered source name does not
+  appear. `test_list_catalogs_with_auto_registered_source` pins the observation.
+- The guide subsection shows measured `REPARK_ENV=write` output with
+  `repark = ReparkSession.builder.configFile("repark.toml").getOrCreate()` (D-12), and the
+  example `docs/examples/session/named_sources.py` covers `SparkSession.source` /
+  `SparkSession.sources` — the two names the coverage enumerator added to the inventory.

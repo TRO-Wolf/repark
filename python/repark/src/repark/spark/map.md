@@ -39,6 +39,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   views, and schema tables; supports current catalog/database state, function
   registration, cache clearing, and table/view existence operations. Engine-private
   temporary names remain hidden from listing APIs.
+  **CFG-2 step 2 (2026-09-13):** `SourceMetadata` (the `name` / `kind` / `key_path` /
+  `auto_register` / `properties` namedtuple) lives beside `CatalogMetadata` — the
+  `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

@@ -32,6 +32,10 @@ illustrative. A claim with no verified basis does not go in.
   registers lazily but refuses on use until its connector lands (roadmap 1.10,
   `auto_register = false` opts out), and `[<profile>.conf]` keys apply in sorted-key
   order. Every block and error was run in the clone. pins: cfg-1/C-030.
+  **CFG-2 step 2 (2026-09-13):** the "Named database sources" subsection shows
+  `repark.sources()`, `repark.source("company_db").ping()` (measured under
+  `REPARK_ENV=write`), the unknown-name refusal, and `auto_register = false`.
+  pins: cfg-2/C-013, C-014, C-015, C-018
   **PROFILES-1 step 3 (2026-09-12):** adds
   the measured `read` and `write` profile tables — one row per winning knob with the
   measured ratio and the cell it was measured on, the near-misses, the no-effect list,

@@ -1977,6 +1977,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `postgres.acme`/`trino.acme` pair refuses naming both key paths, and an empty
   `prod` overlay round-trips through `to_toml()` and `tomllib.loads`.
   pins: review-fix-1/C-001, C-002, C-003
+  **CFG-2 step 2 (2026-09-13):** `auto_register` round-trips — `False` renders
+  `auto_register = false`, loads through the Rust loader, and lists with
+  `auto_register=False`; a non-bool value refuses as `ValidationError`, and the key
+  stays absent when unset. pins: cfg-2/C-018
+- `test_session_sources.py` — **CFG-2 step 2 (2026-09-13):** the named-source facade
+  pins — `sources()` lists the declared source as a `SourceMetadata` row with
+  `password` masked `***`, `source(name).ping()` raises `UnsupportedOperationException`
+  naming the key path and `1.10`, an undeclared name refuses naming the declared set,
+  `repark.sql` on a `REPARK_CONFIG`-discovered file answers the connector refusal for a
+  select under the source name, `auto_register = false` lists-but-does-not-register
+  (engine not-found, no `1.10`), and the `listCatalogs` observation stays pinned
+  (the source name does not appear — D-11 measured, not changed).
+  pins: cfg-2/C-013, C-014, C-015, C-016, C-017, C-019
 - `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
   lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
   live style + conf.get to default `spark` (show spark-like; no split-brain); default
