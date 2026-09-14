@@ -13,6 +13,11 @@ the committed landing zone, not a generation target.
 
 - [v3_dv/](v3_dv/map.md) — a Spark-written format-v3 merge-on-read Iceberg table with
   live deletion vectors and its `truth.json` record.
+- [ice_spark_table_1/](ice_spark_table_1/map.md) — a Spark-written format-v2
+  copy-on-write Iceberg table with the production properties, Spark's own CoW MERGE
+  and a `hash` distribution stamp in its history, and its `truth.json` record
+  (ICE-SPARK-TABLE-1; 67,799 bytes, second committed-data exception alongside
+  `v3_dv`).
 
 ## Pointers
 

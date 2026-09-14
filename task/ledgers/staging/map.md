@@ -22,6 +22,25 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
   `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice-spark-table-1-ledger.md](ice-spark-table-1-ledger.md) —
+  **ICE-SPARK-TABLE-1 (2026-09-14), in flight:** evidence unit — RePark writes into a
+  **Spark-created** Iceberg v2 copy-on-write table (inventory §8 ruling 6, G-3 / the
+  Spark half of G-4). Measured on PySpark 4.1.2 + iceberg-runtime 1.11.0 over a Hadoop
+  catalog (`InMemoryCatalog` tried first, writes no local bytes): `register_table`
+  adoption, the production `UPDATE SET * / INSERT *` MERGE twice, the weekly
+  maintenance CALLs, and Spark read-back (`EXCEPT ALL` both ways against the
+  independently derived rows, counts, metadata tables). Hardened by a Grok 4.6
+  critic-logic round: full five-column pins at every stage, a load-bearing
+  `older_than`, a planted orphan sweep, and the measured stale-cache shape — stale
+  READS need a Spark-side `refreshTable` after repark commits (catalog-agnostic; C4
+  is Glue), while a same-session stale WRITE scan-forwards and commits cleanly;
+  `bucket` sort orders refuse loudly (WRITE-ORDER-TRANSFORM-1); Spark-stamped
+  `owner`/codec/`write.distribution-mode` are carried forward verbatim; an evolved
+  partition spec is honoured (`spec_id 1` writes). A 67.8 KB Spark-written fixture
+  lands under `fixtures/torture/data/ice_spark_table_1/` for JVM-free CI.
+  No product change.
+  `risk_tier: standard`. Branch `test/ice-spark-table-1`.
+  pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

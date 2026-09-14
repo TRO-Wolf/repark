@@ -5214,6 +5214,38 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   of its own, and this unit's `range` is the hash shape plus the per-writer sort, stated here
   rather than silent.
 
+- **ICE-SPARK-TABLE-1** — measured 2026-09-14 (ICE-SPARK-TABLE-1; live PySpark 4.1.2 +
+  iceberg-runtime 1.11.0 on a Hadoop catalog, ledger C-001..C-011; round 2
+  dispositioned a Grok 4.6 critic-logic review). RePark writing into a
+  **Spark-created** v2 copy-on-write table works end to end — `register_table`
+  adoption, the production `UPDATE SET * / INSERT *` MERGE twice, the weekly
+  maintenance CALLs, and Spark reading the result back with `EXCEPT ALL` empty both
+  ways — with these named shape differences versus a RePark-created twin: Spark stamps
+  `owner`, `write.parquet.compression-codec` and `write.distribution-mode` repark never
+  writes itself but **honours and carries forward** verbatim through `v9` (a
+  `snappy`-stamped table gets SNAPPY repark files, footer-pinned); Spark-written
+  `overwrite` history and a second partition spec are **honoured** — repark MERGEs and
+  maintains over Spark's own overwrite manifests, and on an evolved spec
+  (`ADD PARTITION FIELD days(…)` → spec-id 1 default) repark writes the new file with
+  `spec_id 1` under the two-level partition dir; the **stale-cache** shape is a stale
+  READ, not a write hazard — after repark commits, Spark's cached table serves the old
+  snapshot (20) until `spark.catalog.refreshTable` (36) or a fresh `register_table`,
+  while a same-session `INSERT` scan-forwards and commits `v10` cleanly (no
+  `CommitFailedException`, no clobber); production C4 is Glue, which has no version
+  hint, so the runbook action is refreshing Spark's table cache after a repark commit,
+  catalog-agnostic — and the reverse direction is the residue: repark (fork R167) has
+  no exists-fail on a Hadoop `vN` collision; repark continues the adopted table's `vN`
+  metadata naming (v6…v9) where its own tables use `NNNNN-uuid`; snapshot summaries
+  mix vocabularies (Spark's `spark.app.id`/`engine-name`/`iceberg-version` family vs
+  repark's `engine.operation-id`/`deleted-*` family) and Spark reads both;
+  `statistics`/`partition-statistics` keys are absent from repark commits; and a
+  `bucket(4,id)` sort order refuses the MERGE loudly with nothing committed — the
+  WRITE-ORDER-TRANSFORM-1 residual, stated not silent. Pins:
+  `python/repark/tests/test_ice_spark_table_1.py::test_live_spark_created_table_roundtrip`,
+  `python/repark/tests/test_ice_spark_table_1.py::test_live_transform_sort_residual`,
+  `python/repark/tests/test_ice_spark_table_1.py::test_spark_created_fixture_adopted_merged_and_maintained`,
+  `python/repark/tests/test_ice_spark_table_1.py::test_spark_created_and_repark_created_metadata_shapes`.
+
 - **PERF-ICE-WRITEPAR-1** — **FIXED 2026-09-05 (PERF-ICE-WRITEPATH-1)**. A CTAS's data files were
   written by K cooperative futures joined in ONE task
   (`write/merge/mod.rs::write_stream_into_parallel`), so the CPU-bound zstd and parquet encoding of
