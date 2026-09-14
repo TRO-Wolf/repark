@@ -1,5 +1,18 @@
 # map — scripts/
 
+REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
+`dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
+sites so `replace` binds duplicate-name equi-join output by relation qualifier
+— P2-3; the join-side aliasing, qualifier assignment, and plan-metadata
+propagation live in `dataframe/replace_expr.py`). The CAP-1 parity mirror row
+moved with it.
+pins: replace-linear-1/C-004
+REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
+`dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
+key-family filtering, and the flat searched-CASE build — moved to the new
+`dataframe/replace_expr.py`). The `python/` map rows and ledger move in the
+same commit.
+pins: replace-linear-1/C-001, C-002
 EAGER-BUDGET-1 step 2 (2026-09-13): `check_lib_py.py`
 `dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
 `eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).

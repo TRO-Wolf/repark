@@ -57,6 +57,10 @@ core/package surfaces keep it. The same commit splits the ``EXPECTED_*`` tables
 into ``_dfcore_1_expected.py`` (imported below) — the file sat exactly at the
 default source ceiling and the new names crossed it; the tables are the
 cohesive seam.
+REPLACE-LINEAR-1 step 1 (2026-09-14): the ``DataFrame.replace`` body moves to
+``replace_expr.py`` (validation and the flat searched-CASE build); ``replace``
+stays a one-line wrapper so ``EXPECTED_DATAFRAME_DIR`` is unchanged; ``core``
+and the package each gain exactly the one new module name ``replace_expr``.
 """
 
 from __future__ import annotations

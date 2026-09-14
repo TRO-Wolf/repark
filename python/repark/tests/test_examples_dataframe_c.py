@@ -9,7 +9,7 @@ from collections.abc import Iterator
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import UnsupportedOperationException
 
 SIX_ROWS = [
     ("a", 1, 10.0),
@@ -37,13 +37,15 @@ def test_same_semantics_alias_divergence(spark: ReparkSession) -> None:
 
 
 def test_replace_unsubset_arms(spark: ReparkSession) -> None:
-    """replace without subset casts or raises; Spark replaces typed cells per column (EX-DF-12)."""
+    """replace without subset replaces typed cells per column (EX-DF-12, FIXED REPLACE-LINEAR-1)."""
     frame = spark.createDataFrame([(1, "x"), (2, "y")], ["n", "s"])
-    with pytest.raises(PySparkException, match="Cast error"):
-        frame.replace("x", "xx").collect()
+    assert frame.replace("x", "xx").collect() == [(1, "xx"), (2, "y")]
     numeric = spark.createDataFrame([(1, 10.0), (2, 20.0)], ["k", "v"])
-    replaced = numeric.replace(20.0, 99.0)
-    assert set(replaced.collect()) == {(1.0, 10.0), (2.0, 99.0)}
+    replaced = numeric.replace(20.0, 99.0).to_arrow()
+    assert replaced.column("k").to_pylist() == [1, 2]
+    assert str(replaced.schema.field("k").type) == "int64"
+    assert replaced.column("v").to_pylist() == [10.0, 99.0]
+    assert str(replaced.schema.field("v").type) == "double"
 
 
 def test_sample_plan_seed_stable(spark: ReparkSession) -> None:

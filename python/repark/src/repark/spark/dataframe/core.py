@@ -280,6 +280,7 @@ class DataFrame:
         "_handles",
         "_ingest_report",
         "_inner",
+        "_join_qualifiers",
         "_layer_defined",
         "_layer_map",
         "_layer_window_key",
@@ -331,6 +332,7 @@ class DataFrame:
         self._plan_id: str = uuid.uuid4().hex[:12]
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
+        self._join_qualifiers: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
         self._origin_not_emitted: frozenset[str] = frozenset()
         self._collapse_base: DataFrame | None = None
@@ -371,13 +373,7 @@ class DataFrame:
         parents remain resolvable via the copied map.
         """
         child = self._spawn(inner)
-        if self._display_names is not None:
-            child._display_names = list(self._display_names)
-            child._engine_names = (
-                list(self._engine_names) if self._engine_names is not None else None
-            )
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-        return child
+        return replace_expr._inherit_plan_metadata(self, child)
 
     def _identity_child(self) -> DataFrame:
         """Spawn a same-plan child and preserve deferred bridge state."""
@@ -385,13 +381,7 @@ class DataFrame:
         if self._map_bridge is not None and self._cache_view is None:
             child._map_bridge = dict(self._map_bridge)
             child._mia_plan_ready = self._mia_plan_ready
-        if self._display_names is not None:
-            child._display_names = list(self._display_names)
-            child._engine_names = (
-                list(self._engine_names) if self._engine_names is not None else None
-            )
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-        return child
+        return replace_expr._inherit_plan_metadata(self, child)
 
     def _materialize_cache_if_needed(self) -> None:
         """Materialize a pending cache, persist, or lazy checkpoint request.
@@ -2463,47 +2453,11 @@ class DataFrame:
     ) -> DataFrame:
         """Replace value(s) across columns (PySpark ``DataFrame.replace``).
 
-        Supports scalar ``to_replace``/``value`` or a ``dict`` mapping. Subset limits columns.
+        Supports scalar ``to_replace``/``value``, a ``list``/``tuple`` pair, or a ``dict``
+        mapping. Subset limits columns; columns whose type does not match the replacement
+        key family are ignored, and each replacement value is cast to the column type.
         """
-        self._ensure_alive()
-        mapping = to_replace if isinstance(to_replace, dict) else {to_replace: value}
-        if not mapping:
-            return self._identity_child()
-        if subset is None:
-            targets = set(self.columns)
-        elif isinstance(subset, str):
-            targets = {subset}
-        else:
-            targets = set(subset)
-        from repark.spark.functions import lit as lit_fn
-        from repark.spark.functions import when
-
-        projected: list[Column] = []
-        for bound in self._iter_bound_columns():
-            display = bound._projection_name or bound.spark_display_part()
-            if display not in targets:
-                projected.append(bound)
-                continue
-            expression: Column = bound
-            for old, new in mapping.items():
-                expression = when(expression == lit_fn(old), lit_fn(new)).otherwise(expression)
-            if bound._origin_plan_id is not None and bound._origin_field is not None:
-                projected.append(
-                    Column(
-                        expression._inner.alias(display),
-                        spark_display=display,
-                        projection_name=display,
-                        stable_name=True,
-                        has_free_attribute=True,
-                        origin_plan_id=bound._origin_plan_id,
-                        origin_field=bound._origin_field,
-                        join_sql_expr=expression.join_sql_part(),
-                        sql_expr=expression._sql_expr,
-                    )
-                )
-            else:
-                projected.append(expression.alias(display))
-        return self.select(*projected)
+        return replace_expr._replace(self, to_replace, value, subset)
 
     def repartition(self, numPartitions: Any, *cols: Any) -> DataFrame:  # noqa: N803
         """Accept ``repartition`` as a no-op (single-node; plan unchanged — disclosed).
@@ -2800,13 +2754,12 @@ class DataFrame:
             _reject_partition_transform(on)
             return self._join_on_condition_h1(other, on, engine_how)
         if self is other or set(self.columns) & set(other.columns):
-            left: DataFrame = self.alias(f"_repark_jl_{uuid.uuid4().hex[:12]}")
-            right: DataFrame = other.alias(f"_repark_jr_{uuid.uuid4().hex[:12]}")
+            left, right, side_names = replace_expr._aliased_join_sides(self, other)
         else:
-            left = self
-            right = other
+            left, right, side_names = self, other, None
         if isinstance(on, str):
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
+            replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2821,6 +2774,7 @@ class DataFrame:
                     )
                 return left.crossJoin(right)
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
+            replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -4076,6 +4030,7 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
 from repark.spark.dataframe import statistics, udf_projection, udf_window_projection  # noqa: E402
 from repark.spark.dataframe import sampling  # noqa: E402
 from repark.spark.dataframe import display  # noqa: E402
+from repark.spark.dataframe import replace_expr  # noqa: E402
 from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 

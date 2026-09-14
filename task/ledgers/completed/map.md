@@ -558,6 +558,19 @@ else. The next pickup's `make ledger-archive` files everything here under
   orchestrator bumps the pin. No RePark production code, no dependency move.
   `risk_tier: standard`. Branch `fix/rdf-schema-evo-1`.
   pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [replace-linear-1-ledger.md](replace-linear-1-ledger.md) — Parked on owner question Q-R1 after step 0 (2026-09-13).
+  **REPLACE-LINEAR-1 step 0 (2026-09-13), in flight:** `DataFrame.replace` dict loop
+  is exponential — `when(expression == lit(old), lit(new)).otherwise(expression)`
+  embeds the running expression twice per entry (measured ~×3.4/entry: 21.9 MB at 12,
+  277 MB at 16; a 40-entry dict dies in `case_when` under `RLIMIT_AS`). Step 0 measured
+  the D-2 oracle cells on live PySpark 4.1.2 beside today's answers and landed the
+  red-first env-gated 40-entry memory pin. **D-3 HALT:** nine cells beyond the
+  sanctioned `{1: 2, 2: 3}` mapping-order correction diverge from the oracle (NULL key
+  silent no-op vs refusal, list `to_replace` unsupported, non-matching key crash/refusal
+  vs no-match, `value` not cast to the column type, missing-subset silent no-op) —
+  awaiting the orchestrator ruling before step 1.
+  `risk_tier: standard`. Branch `fix/replace-linear-1`.
+  pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
 - [review-fix-1-ledger.md](review-fix-1-ledger.md) — Unit ledger — REVIEW-FIX-1 · the CFG-1 mirror agrees with the loader
 - [review-fix-10-ledger.md](review-fix-10-ledger.md) —
   **REVIEW-FIX-10 (2026-09-10), in flight:** `is_reading` parses the `Path` header field —

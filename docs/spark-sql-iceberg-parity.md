@@ -5881,23 +5881,20 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   covered by the agreeing arms; this row records the alias arm until repark compares plans the
   way Spark does.
 
-### EX-DF-12 — `replace` outside the subset arm casts or raises; Spark replaces typed cells
+### EX-DF-12 — `replace` outside the subset arm casts or raises; Spark replaces typed cells — **FIXED 2026-09-14, REPLACE-LINEAR-1**
 
-- **repark** — `replace` rewrites every target column through `when(col == to_replace, value)`:
-  with `subset` unset on a mixed frame the string column enters the comparison and raises
-  `PySparkException` (`Cast error: Cannot cast string 'x' to ... Int64/Int32 type`), and on an
-  all-numeric frame the compared `int` column is recast to double (`(1, 10.0)` becomes
-  `(1.0, 10.0)`). The `subset`-scoped scalar and dict arms measured Spark-equal and are the
-  covered example.
+- **repark** — `replace` now replaces typed cells per column the way the JVM does: target
+  columns are chosen by the key's type family and each value casts to the column type, so
+  `replace("x", "xx")` on a mixed frame answers `[(1, 'xx'), (2, 'y')]` and
+  `replace(20.0, 99.0)` on a numeric frame keeps `k` `bigint` while `v` reads `[10.0, 99.0]`.
 - **Apache Spark** — `replace("x", "xx")` on a frame with an `int` and a `string` column answers
   `[(1, 'xx'), (1, 'xx'), (2, 'y'), (2, 'y'), (3, 'z')]`; `replace(20.0, 99.0)` with no subset
   replaces matching cells in numeric columns only and keeps each column's type (`k` stays
   `bigint`). *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-04, EX-18 DataFrame-c batch, six-row
   `g/k/v` and five-row `k/v` frames.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_c.py::test_replace_unsubset_arms`
-- **Rationale** — BACKLOG ARM, filed 2026-09-04 from the EX-18 measurement. The name stays
-  covered by the subset arms; this row records the no-subset and string-value arms until
-  `replace` is typed per column the way Spark does it.
+- **Rationale** — FIXED (2026-09-14, REPLACE-LINEAR-1): the linear `replace_expr` rewrite made
+  target columns key-family-typed, so the no-subset and string-value arms answer like Spark.
 
 ### EX-DF-13 — `sample` below fraction 1.0 keeps a different seeded set; Spark's `sample(0.5, seed=…)` spelling silently drops the keyword seed
 
