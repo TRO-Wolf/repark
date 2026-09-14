@@ -202,8 +202,7 @@ the rebased head.
 
 ### D-3. FACADE-5 step 0
 
-**State: PR #583. The merge chain was running at the report push**, gated on CI and the critic PASS; the result is
-in the campaign log. Devin session `sugar-sauce`: step 0 08:22–09:24, follow-up 09:55–11:17. There was no second build:
+**State: merged as `e5cc10e1` (#583), tree-equal**, after CI and the critic PASS. Devin session `sugar-sauce`: step 0 08:22–09:24, follow-up 09:55–11:17. There was no second build:
 the lane ran on the release native of `main`'s product in `/tmp/f-types4/.venv` (R13-D-7).
 
 Fetch and format timed separately, over 96 cells: six renderers, n = 20 and n = 1000, truncate on and off, and flat,
@@ -289,5 +288,5 @@ Incidents, all recovered:
 
 - Up: [map.md](map.md) · Ledger: [../../ledgers/staging/facade-4-ledger.md](../../ledgers/staging/facade-4-ledger.md)
 - Perf: [../../../docs/perf/facade-4-types-baseline-2026-09-14.md](../../../docs/perf/facade-4-types-baseline-2026-09-14.md)
-- FACADE-5 (on #583 until it merges): `task/ledgers/staging/facade-5-ledger.md` · `docs/perf/facade-5-display-baseline-2026-09-14.md`
+- FACADE-5: [../../ledgers/staging/facade-5-ledger.md](../../ledgers/staging/facade-5-ledger.md) · [../../../docs/perf/facade-5-display-baseline-2026-09-14.md](../../../docs/perf/facade-5-display-baseline-2026-09-14.md)
 - Audit: [../epic-term/facade-audit-2026-09-10.md](../epic-term/facade-audit-2026-09-10.md) · Previous: [overnight-report-2026-09-13-run12.md](overnight-report-2026-09-13-run12.md)
