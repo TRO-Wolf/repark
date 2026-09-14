@@ -1686,7 +1686,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `a246df41`: `subclass_date_sub`/`subclass_dt_year` mismatched on all three doors);
   `test_fresh_tzinfo_property_applies_per_access_offset` pins L-003's fresh-`timezone`
   per-access offsets against the literal base-native series (the Python fallback is not
-  an oracle there — `astimezone` reads the C `tzinfo` field, never the property).
+  an oracle there — `astimezone` reads the C `tzinfo` field, never the property). L-004's
+  lesson: an empty subclass pins acceptance only — override classes are required to make a
+  fast-path bypass visible.
   pins: facade-3/C-019, C-020, C-026, C-027
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter

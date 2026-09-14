@@ -379,7 +379,7 @@ class _SubDtYear(datetime.datetime):
     """``year`` lies — the wall clock must come from the C struct (L-002)."""
 
     @property
-    def year(self) -> int:  # type: ignore[override]
+    def year(self) -> int:
         return 1999
 
 
@@ -390,7 +390,7 @@ class _FreshTZDatetime(datetime.datetime):
     accesses = 0
 
     @property
-    def tzinfo(self) -> datetime.tzinfo:  # type: ignore[override]
+    def tzinfo(self) -> datetime.tzinfo:
         _FreshTZDatetime.accesses += 1
         return datetime.timezone(datetime.timedelta(hours=(_FreshTZDatetime.accesses % 5) + 1))
 
