@@ -111,18 +111,18 @@ def _snapshot_type(data_type: DataType) -> dict[str, object]:
             lambda: _type_shape(DataType.fromDDL(data_type.simpleString()))
         ),
         "json_roundtrip": _attempt(
-            lambda: _type_shape(
-                _parse_datatype_json_value(json.loads(data_type.json()))
-            )
+            lambda: _type_shape(_parse_datatype_json_value(json.loads(data_type.json())))
         ),
         "arrow": _attempt(lambda: str(repark_type_to_arrow(data_type))),
     }
     if isinstance(data_type, StructType):
         entry["toddl"] = _attempt(lambda: data_type.toDDL())
         entry["toddl_roundtrip"] = _attempt(
-            lambda: _struct_shape(DataType.fromDDL(data_type.toDDL()))
-            if isinstance(DataType.fromDDL(data_type.toDDL()), StructType)
-            else _type_shape(DataType.fromDDL(data_type.toDDL()))
+            lambda: (
+                _struct_shape(DataType.fromDDL(data_type.toDDL()))
+                if isinstance(DataType.fromDDL(data_type.toDDL()), StructType)
+                else _type_shape(DataType.fromDDL(data_type.toDDL()))
+            )
         )
         entry["arrow_schema_back"] = _attempt(
             lambda: _struct_shape(
@@ -174,7 +174,9 @@ def _nested_depth3() -> StructType:
     """struct<array<map>> nesting three levels deep."""
     inner = MapType(
         StringType(),
-        StructType([StructField("leaf", DecimalType(10, 2), False)],),
+        StructType(
+            [StructField("leaf", DecimalType(10, 2), False)],
+        ),
         False,
     )
     return StructType(
@@ -385,7 +387,10 @@ def _build_payload() -> dict[str, dict[str, object]]:
 
 
 def test_type_goldens_match_committed_bytes() -> None:
-    """Byte-identical conversion goldens. pins: facade-4/C-002, C-003, C-004"""
+    """Byte-identical conversion goldens.
+
+    pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+    """
     _assert_record_mode_allowed()
     payload = _build_payload()
     encoded = _canonical_json(payload)
@@ -415,15 +420,15 @@ def test_conversion_answers_are_public_type_classes() -> None:
     import pyarrow as pa
 
     for data_type in {**_atomic_cases(), **_complex_cases()}.values():
-        parsed = _attempt(lambda: DataType.fromDDL(data_type.simpleString()))
+        parsed = _attempt(lambda dt=data_type: DataType.fromDDL(dt.simpleString()))
         if isinstance(parsed, DataType):
             assert type(parsed).__module__ == "repark.spark.types"
         round_tripped = _attempt(
-            lambda: _parse_datatype_json_value(json.loads(data_type.json()))
+            lambda dt=data_type: _parse_datatype_json_value(json.loads(dt.json()))
         )
         if isinstance(round_tripped, DataType):
             assert type(round_tripped).__module__ == "repark.spark.types"
-        arrow = _attempt(lambda: repark_type_to_arrow(data_type))
+        arrow = _attempt(lambda dt=data_type: repark_type_to_arrow(dt))
         if arrow is not None and not isinstance(arrow, dict):
             assert isinstance(arrow, pa.DataType)
     for schema in (_flat_seven(), _wide_fifty(), _nested_depth3(), _decimal_variants()):

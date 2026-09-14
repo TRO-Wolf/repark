@@ -21,8 +21,9 @@ reports medians of 5 reps after one warmup.
   `df.schema`, `createDataFrame(pandas)` and `spark.read.csv(inferSchema)` at
   1e5 rows. Prints JSON to stdout:
   `OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 .venv/bin/python docs/perf/facade-4-types-baseline-2026-09-14/run_baseline.py`
-- [census_probe.py](census_probe.py) — the three-table agreement census:
-  calls the facade `types.py` conversions, the `_csv_smart` rungs, and the
+- [census_probe.py](census_probe.py) — the three-table agreement census
+  (verdict: 8 agree rows, 21 measured disagreements D1–D21): calls the facade
+  `types.py` conversions, the `_csv_smart` rungs, and the
   reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key` surfaces
   (including `DESCRIBE TABLE` vs `session.table(...).dtypes` on the same
   Iceberg CTAS bed) and prints every answer as JSON. Feeds the census table in

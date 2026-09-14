@@ -64,8 +64,7 @@ def wait_for_idle() -> float:
         if busy.returncode != 0:
             break
         time.sleep(5)
-    with open("/proc/loadavg", encoding="ascii") as handle:
-        return float(handle.read().split()[0])
+    return float(Path("/proc/loadavg").read_text(encoding="ascii").split()[0])
 
 
 def _swallow(fn: Any) -> Any:
@@ -270,9 +269,7 @@ def cell_a(session: Any, schemas: dict[str, Any]) -> dict[str, Any]:
     t.repark_type_to_arrow = spy
     try:
         frame_pd = session.createDataFrame(_pandas_frame())
-        nested_rows = [
-            ([1, 2], {"k": index}, (index, "s")) for index in range(ROWS)
-        ]
+        nested_rows = [([1, 2], {"k": index}, (index, "s")) for index in range(ROWS)]
         ops = {
             "createDataFrame_pandas_1e5": lambda: session.createDataFrame(_pandas_frame()),
             "createDataFrame_nested_1e5": lambda: session.createDataFrame(
@@ -304,6 +301,7 @@ def cell_a(session: Any, schemas: dict[str, Any]) -> dict[str, Any]:
 def cell_b(schemas: dict[str, Any]) -> dict[str, Any]:
     """struct_type_from_arrow round-trip per schema."""
     import pyarrow as pa
+
     from repark.spark import types as t
 
     out = {}
@@ -321,9 +319,7 @@ def cell_b(schemas: dict[str, Any]) -> dict[str, Any]:
 
         def round_trip(s: Any = arrow_schema) -> Any:
             rebuilt = t.struct_type_from_arrow(s)
-            return [
-                t.repark_type_to_arrow(field.dataType) for field in rebuilt.fields
-            ]
+            return [t.repark_type_to_arrow(field.dataType) for field in rebuilt.fields]
 
         out[name] = {
             "struct_type_from_arrow_us": per_call_us(
@@ -356,9 +352,7 @@ def cell_c(schemas: dict[str, Any]) -> dict[str, Any]:
         }
     for atomic_name in ("timestamp", "decimal(38,18)", "char(8)", "interval day to second"):
         out[f"atomic_{atomic_name}"] = {
-            "fromddl_us": per_call_us(
-                lambda text=atomic_name: t.DataType.fromDDL(text)
-            ),
+            "fromddl_us": per_call_us(lambda text=atomic_name: t.DataType.fromDDL(text)),
         }
     return out
 
@@ -380,9 +374,7 @@ def cell_d(session: Any, tmpdir: Path) -> dict[str, Any]:
         runs = [_profile_op(op) for _ in range(REPS)]
         out[op_name] = {
             "wall_ms": statistics.median(run["wall_ms"] for run in runs),
-            "conversion_cum_ms": statistics.median(
-                run["conversion_cum_ms"] for run in runs
-            ),
+            "conversion_cum_ms": statistics.median(run["conversion_cum_ms"] for run in runs),
         }
     return out
 

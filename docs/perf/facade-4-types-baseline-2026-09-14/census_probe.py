@@ -112,8 +112,7 @@ def _facade_answers() -> dict[str, Any]:
             for name in spark_probes
         },
         "fromddl": {
-            ddl: _attempt(lambda text=ddl: _shape(t.DataType.fromDDL(text)))
-            for ddl in ddl_probes
+            ddl: _attempt(lambda text=ddl: _shape(t.DataType.fromDDL(text))) for ddl in ddl_probes
         },
         "toddl": _attempt(
             lambda: t.StructType(
@@ -315,9 +314,7 @@ def _reader_csv_answers(session: Any, tmpdir: Path) -> dict[str, Any]:
         path = tmpdir / f"{name}.csv"
         path.write_text(f"c\n{literal}\n{literal}\n", encoding="utf-8")
         out[name] = _attempt(
-            lambda p=str(path): session.read.csv(
-                p, header=True, inferSchema=True
-            ).dtypes
+            lambda p=str(path): session.read.csv(p, header=True, inferSchema=True).dtypes
         )
     return out
 
