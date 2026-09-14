@@ -145,7 +145,7 @@ run resumed at 06:27 from where §1 stopped.
 | Devin follow-up (session `amused-albacore`) | 06:49–07:46 | 4 commits: census D1–D24 re-measured with 18 single-input agree rows; goldens re-recorded (45 cases) with each critic mutation proven red; six-name spy; CI refusal for any non-empty `CI` |
 | Grok critic-logic, re-check | 07:47–07:51 | **PASS.** Five P3 notes filed in the ledger (R2-P3-1..5) |
 | orchestrator gates | 07:48 | nine pin files 184 passed / 7 skipped, `make verify` exit 0 |
-| merge | 08:24 | #579 squash `30ca2ba1`, tree-equal |
+| merge | 08:24 | #579 squash `30ca2ba1c342adde677d479f03148f9cad5e5058`, tree-equal |
 
 What changed in the census after the critic: the unsigned-int row splits (D10 `uint8`/`uint16`/`uint32` → `int`, D22
 `uint64` → `bigint`), and two new rows D23 and D24 appear. Q-R13-1 now reads "CSV infer disagrees with both other
