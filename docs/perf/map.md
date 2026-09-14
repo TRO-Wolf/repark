@@ -391,6 +391,17 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   in
   [facade-4-types-baseline-2026-09-14/map.md](facade-4-types-baseline-2026-09-14/map.md).
   pins: facade-4/C-005
+- [facade-4-types-step1-2026-09-14.md](facade-4-types-step1-2026-09-14.md) —
+  **FACADE-4 step 1 (2026-09-14):** the before/after re-measure of the same
+  runner on the consolidated Rust type table — every end-to-end cell inside
+  ±5 % (worst +3.5 %, most negative), every per-call conversion under the
+  1 ms bar (worst +196.5 µs on the 50-column round-trip), DDL parse now
+  faster than the Python regex path on every schema, and the thinned line
+  counts for `types.py` (−1 net), `_csv_smart.py` (−31),
+  `create_dataframe_values.py` (−56), `create_dataframe_inference.py` (−26),
+  `timestamp_type.py` (+2). Records the regex-compile regression found and
+  fixed inside the step.
+  pins: facade-4/C-014
 - [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
   steps 0+1 (2026-09-13):** the bare-`eager()` retention before/after pair —
   ten bare `eager()` calls on the deterministic 1e6-row × 25-column TA
