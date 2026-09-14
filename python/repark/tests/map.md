@@ -574,7 +574,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 5 re-hashed `_promote_csv_string_types` (boolean fail is Spark `true`/`false` tokens,
   not Arrow `try_cast`). TORTURE-1 step 3 re-hashed `_CSV_NATIVE_OPTION_KEYS` and
   `_JSON_NATIVE_OPTION_KEYS` (`flag_secret_columns`).
-  pins: csv-infer-perf-1/C-002, C-005
+  FACADE-4 step 1 re-hashed `_data_type_to_sql_type` and `_sql_type_to_arrow` —
+  the only two bodies that moved (flat atomic tokens now resolve through the
+  shared Rust table; decimal, nested and collation-refusal paths stay Python).
+  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE

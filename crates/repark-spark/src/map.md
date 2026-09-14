@@ -237,7 +237,25 @@ pins: rp-4-fork-repin/C-005, C-006
   (`spark_ddl_type_name`, depth-bounded): `bigint` for 64-bit ints, the way `DESCRIBE`
   prints them (SQL-DESCRIBE-1 D-3, owner ruling R-9). The Python binding calls it for
   nested element tokens; `long` stays in `repark-python` for `printSchema`.
+  **FACADE-4 step 1 (2026-09-14):** a delegation shim — every answer now comes from
+  `type_table::arrow_name` on the `Describe` surface; spellings unchanged.
   pins: sql-describe-1/C-003
+- `type_table.rs` — **FACADE-4 step 1 (2026-09-14):** the shared conversion table —
+  one `SparkDataType`/`SparkField` descriptor mirroring the 25 public
+  `repark.spark.types` classes, Arrow ↔ descriptor conversion in both directions,
+  DDL/simpleString parse and write, and the distinct name surfaces the census found
+  disagreeing (`ArrowNameSurface::Describe` vs `::LogicalKey`, engine cast token, DDL
+  token, SQL marker, CSV rung row). Every surface keeps its step-0 answer
+  byte-for-byte; no D1–D21 row is unified. Depth-bounded at 32 with a `"..."`
+  fallback. Pure Rust, no PyO3; `repark-python::type_bridge` is the only consumer
+  over the FFI boundary.
+  pins: facade-4/C-010
+- `type_table/parse.rs` — the text→descriptor half of the table, split out at the
+  file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
+  `sql_type_from_token`, field lists, `decimal(p,s)` and interval spellings) with
+  Python-faithful trim/int semantics and a `OnceLock`-cached regex set —
+  `type_table.rs` re-exports the two public entries so call sites are unchanged.
+  pins: facade-4/C-010
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then

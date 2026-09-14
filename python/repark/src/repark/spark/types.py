@@ -16,7 +16,7 @@ import calendar
 import datetime
 import json
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
@@ -33,7 +33,7 @@ class DataType:
 
     def _engine_type(self) -> str:
         """Return the canonical engine type string (e.g. ``"string"``, ``"decimal(10,4)"``)."""
-        return self.simpleString()
+        return _descriptor_token(self, "engine_token_from_descriptor", _engine_token_python)
 
     @classmethod
     def typeName(cls) -> str:  # noqa: N802 — PySpark camelCase
@@ -53,7 +53,7 @@ class DataType:
         Default is :meth:`typeName`; atomic types that Spark shortens (``int`` not ``integer``)
         override this.
         """
-        return type(self).typeName()
+        return _descriptor_token(self, "simple_string_from_descriptor", _simple_string_python)
 
     def jsonValue(self) -> str | dict[str, Any]:  # noqa: N802 — PySpark camelCase
         """PySpark ``DataType.jsonValue()`` — JSON-serializable type descriptor.
@@ -132,10 +132,6 @@ class NullType(DataType):
         """Spark uses ``void`` not ``null``."""
         return "void"
 
-    def _engine_type(self) -> str:
-        """Engine tag for null/void."""
-        return "void"
-
 
 class StringType(DataType):
     """UTF-8 string (Arrow ``Utf8``). Optional collation (Spark 4+)."""
@@ -147,16 +143,6 @@ class StringType(DataType):
     def isUTF8BinaryCollation(self) -> bool:  # noqa: N802 — PySpark camelCase
         """True when collation is the default binary."""
         return self.collation == "UTF8_BINARY"
-
-    def _engine_type(self) -> str:
-        """The engine string ``"string"`` (collation is schema metadata only)."""
-        return "string"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``string`` or ``string collate NAME``."""
-        if self.isUTF8BinaryCollation():
-            return "string"
-        return f"string collate {self.collation}"
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form matches simpleString for collated strings."""
@@ -176,14 +162,6 @@ class CharType(DataType):
         """Store ``length`` limitation."""
         self.length = length
 
-    def _engine_type(self) -> str:
-        """Engine string (stored as string)."""
-        return "string"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``char(n)``."""
-        return f"char({self.length})"
-
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``char(n)``."""
         return self.simpleString()
@@ -200,14 +178,6 @@ class VarcharType(DataType):
         """Store ``length`` limitation."""
         self.length = length
 
-    def _engine_type(self) -> str:
-        """Engine string (stored as string)."""
-        return "string"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``varchar(n)``."""
-        return f"varchar({self.length})"
-
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``varchar(n)``."""
         return self.simpleString()
@@ -223,20 +193,12 @@ class BinaryType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
-    def _engine_type(self) -> str:
-        """The engine string ``"binary"``."""
-        return "binary"
-
 
 class BooleanType(DataType):
     """Boolean (Arrow ``Boolean``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"boolean"``."""
-        return "boolean"
 
 
 class DateType(DataType):
@@ -246,10 +208,6 @@ class DateType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"date"``."""
-        return "date"
 
     def needConversion(self) -> bool:  # noqa: N802
         """Dates convert between ``datetime.date`` and day ordinals."""
@@ -273,10 +231,6 @@ class TimestampType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"timestamp"`` (native parse maps to µs+UTC)."""
-        return "timestamp"
 
     def needConversion(self) -> bool:  # noqa: N802
         """Timestamps convert to microsecond epoch ints."""
@@ -314,10 +268,6 @@ class TimestampNTZType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
-    def _engine_type(self) -> str:
-        """Engine tag."""
-        return "timestamp_ntz"
-
     @classmethod
     def typeName(cls) -> str:  # noqa: N802
         """``timestamp_ntz``."""
@@ -350,14 +300,6 @@ class TimeType(DataType):
         """Store fractional-second ``precision`` (default 6)."""
         self.precision = precision
 
-    def _engine_type(self) -> str:
-        """Engine tag."""
-        return f"time({self.precision})"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``time(n)``."""
-        return f"time({self.precision})"
-
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``time(n)``."""
         return self.simpleString()
@@ -380,14 +322,6 @@ class DecimalType(DataType):
         self.scale = scale
         self.hasPrecisionInfo = True  # public Spark attribute
 
-    def _engine_type(self) -> str:
-        """The engine string ``"decimal(precision,scale)"``."""
-        return f"decimal({self.precision},{self.scale})"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark form ``decimal(p,s)``."""
-        return f"decimal({self.precision},{self.scale})"
-
     def jsonValue(self) -> str:  # noqa: N802
         """Spark returns the simpleString form for decimals."""
         return self.simpleString()
@@ -403,24 +337,12 @@ class DoubleType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
-    def _engine_type(self) -> str:
-        """The engine string ``"double"``."""
-        return "double"
-
 
 class FloatType(DataType):
     """32-bit IEEE-754 float (Arrow ``Float32``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"float"``."""
-        return "float"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark short form ``float``."""
-        return "float"
 
 
 class ByteType(DataType):
@@ -429,28 +351,12 @@ class ByteType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
-    def _engine_type(self) -> str:
-        """The engine string ``"byte"`` / tinyint."""
-        return "byte"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark short form ``tinyint``."""
-        return "tinyint"
-
 
 class IntegerType(DataType):
     """32-bit signed integer (Arrow ``Int32``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"int"``."""
-        return "int"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark short form ``"int"`` (``typeName`` remains ``"integer"``)."""
-        return "int"
 
 
 class LongType(DataType):
@@ -463,28 +369,12 @@ class LongType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
-    def _engine_type(self) -> str:
-        """The engine string ``"long"``."""
-        return "long"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark short form ``"bigint"`` (``typeName`` remains ``"long"``)."""
-        return "bigint"
-
 
 class ShortType(DataType):
     """16-bit signed integer (Arrow ``Int16``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """The engine string ``"short"``."""
-        return "short"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark short form ``smallint``."""
-        return "smallint"
 
 
 class CalendarIntervalType(DataType):
@@ -496,14 +386,6 @@ class CalendarIntervalType(DataType):
     @classmethod
     def typeName(cls) -> str:  # noqa: N802
         """Spark typeName is ``interval`` (not ``calendarinterval``)."""
-        return "interval"
-
-    def _engine_type(self) -> str:
-        """Engine tag."""
-        return "interval"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark display ``interval``."""
         return "interval"
 
 
@@ -569,16 +451,8 @@ class DayTimeIntervalType(DataType):
             return f"interval {start_name}"
         return f"interval {start_name} to {end_name}"
 
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark ``interval day to second`` / ``interval hour`` form."""
-        return self._str_repr()
-
     def jsonValue(self) -> str:  # noqa: N802
         """JSON value is the simpleString (Spark 4)."""
-        return self._str_repr()
-
-    def _engine_type(self) -> str:
-        """Engine tag for cast surface."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -640,16 +514,8 @@ class YearMonthIntervalType(DataType):
             return f"interval {start_name}"
         return f"interval {start_name} to {end_name}"
 
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark ``interval year to month`` / ``interval year`` form."""
-        return self._str_repr()
-
     def jsonValue(self) -> str:  # noqa: N802
         """JSON value is the simpleString (Spark 4)."""
-        return self._str_repr()
-
-    def _engine_type(self) -> str:
-        """Engine tag for cast surface."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -661,14 +527,6 @@ class VariantType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
-
-    def _engine_type(self) -> str:
-        """Engine tag."""
-        return "variant"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``variant``."""
-        return "variant"
 
 
 # ==================================================================================================
@@ -685,14 +543,6 @@ class ArrayType(DataType):
             raise TypeError(f"elementType {elementType!r} should be an instance of {DataType}")
         self.elementType = elementType
         self.containsNull = containsNull
-
-    def _engine_type(self) -> str:
-        """Engine array string."""
-        return f"array<{self.elementType._engine_type()}>"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``array<elementSimple>``."""
-        return f"array<{self.elementType.simpleString()}>"
 
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark array JSON descriptor."""
@@ -736,14 +586,6 @@ class MapType(DataType):
         self.keyType = keyType
         self.valueType = valueType
         self.valueContainsNull = valueContainsNull
-
-    def _engine_type(self) -> str:
-        """Engine map string."""
-        return f"map<{self.keyType._engine_type()},{self.valueType._engine_type()}>"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``map<key,value>``."""
-        return f"map<{self.keyType.simpleString()},{self.valueType.simpleString()}>"
 
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark map JSON descriptor."""
@@ -794,14 +636,6 @@ class StructField(DataType):
         self.dataType = dataType
         self.nullable = nullable
         self.metadata: dict[str, Any] = metadata if metadata is not None else {}
-
-    def _engine_type(self) -> str:
-        """Field is not a cast target; used only in struct engine strings."""
-        return f"{self.name}:{self.dataType._engine_type()}"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """``name:type``."""
-        return f"{self.name}:{self.dataType.simpleString()}"
 
     def typeName(self) -> str:  # type: ignore[override]  # noqa: N802
         """Spark raises when ``typeName`` is called on a field (not a type)."""
@@ -869,18 +703,6 @@ class StructType(DataType):
             if not all(isinstance(field, StructField) for field in self.fields):
                 raise TypeError("fields should be a list of StructField")
 
-    def _engine_type(self) -> str:
-        """Struct engine string ``struct<field:type,...>``."""
-        return (
-            "struct<"
-            + ",".join(f"{field.name}:{field.dataType._engine_type()}" for field in self.fields)
-            + ">"
-        )
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Spark ``StructType.simpleString()`` — ``struct<field:type,...>``."""
-        return "struct<" + ",".join(field.simpleString() for field in self.fields) + ">"
-
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark ``StructType.jsonValue()`` — type plus fields list."""
         return {
@@ -935,12 +757,16 @@ class StructType(DataType):
 
     def toDDL(self) -> str:  # noqa: N802 — PySpark camelCase
         """DDL field list (``a INT,b STRING NOT NULL``) — pure Python Spark 4 shape."""
-        parts: list[str] = []
-        for field in self.fields:
-            type_sql = _datatype_to_ddl_token(field.dataType)
-            null_suffix = "" if field.nullable else " NOT NULL"
-            parts.append(f"{field.name} {type_sql}{null_suffix}")
-        return ",".join(parts)
+        descriptor = _datatype_to_descriptor(self)
+        if _descriptor_tree_has_none(descriptor):
+            return ",".join(
+                f"{field.name} {_datatype_to_ddl_token(field.dataType)}"
+                f"{'' if field.nullable else ' NOT NULL'}"
+                for field in self.fields
+            )
+        from repark import _native
+
+        return _native.struct_field_ddl_from_descriptor(descriptor)
 
     def treeString(  # noqa: N802 — PySpark camelCase
         self,
@@ -1120,57 +946,227 @@ def _parse_complex_or_atomic(text: str) -> DataType:
     raise ValueError(f"cannot parse datatype: {text!r}")
 
 
-def _parse_field_list(text: str) -> StructType:
-    """Parse ``a int, b string`` or ``a: int, b: string`` into a StructType.
-
-    Colon form only when the *name* is immediately followed by ``:`` (``a: int``). Do not
-    split on colons inside nested ``STRUCT<field: type>`` when the outer form is
-    space-separated (``c2 STRUCT<c3: INT>`` — Apache ``test_tree_string``).
-    """
-    fields: list[StructField] = []
-    name_colon = re.compile(r"^([A-Za-z_][\w]*)\s*:\s*(.+)$")
-    for part in _split_top_level(text, ","):
-        part = part.strip()
-        if not part:
-            continue
-        colon_match = name_colon.match(part)
-        if colon_match is not None:
-            name = colon_match.group(1).strip().strip('`"')
-            type_text = colon_match.group(2)
-            fields.append(StructField(name, _parse_complex_or_atomic(type_text), True))
-            continue
-        tokens = part.split(None, 1)
-        if len(tokens) != 2:
-            raise ValueError(f"cannot parse field: {part!r}")
-        name, type_text = tokens[0].strip().strip('`"'), tokens[1]
-        fields.append(StructField(name, _parse_complex_or_atomic(type_text), True))
-    return StructType(fields)
-
-
 def _parse_datatype_string(text: str) -> DataType:
     """Parse a DDL / simpleString type or field list (Spark ``_parse_datatype_string`` shape)."""
-    stripped = text.strip()
-    if not stripped:
-        return StructType([])
-    lower = stripped.lower()
-    # Parameterized atomics / complex types without a field name — parse as types first.
-    if (
-        _FIXED_DECIMAL.fullmatch(stripped)
-        or _LENGTH_CHAR.fullmatch(stripped)
-        or _LENGTH_VARCHAR.fullmatch(stripped)
-        or _TIME.fullmatch(stripped)
-        or lower.startswith(("array<", "map<", "struct<"))
-        or lower in _ATOMIC_TYPE_NAMES
-        or _STRING_COLLATE.fullmatch(stripped)
+    from repark import _native
+
+    return _descriptor_to_datatype(_native.spark_descriptor_from_ddl(text))
+
+
+_ATOMIC_DESCRIPTOR_TYPES: dict[str, type[DataType]] = {
+    "null": NullType,
+    "binary": BinaryType,
+    "boolean": BooleanType,
+    "date": DateType,
+    "timestamp": TimestampType,
+    "timestamp_ntz": TimestampNTZType,
+    "double": DoubleType,
+    "float": FloatType,
+    "byte": ByteType,
+    "integer": IntegerType,
+    "long": LongType,
+    "short": ShortType,
+    "calendar_interval": CalendarIntervalType,
+    "variant": VariantType,
+}
+_ATOMIC_DESCRIPTOR_KINDS = {cls: kind for kind, cls in _ATOMIC_DESCRIPTOR_TYPES.items()}
+
+
+def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
+    """Build the Rust type-table descriptor for a :class:`DataType`; ``None`` when unknown."""
+    atomic_kind = _ATOMIC_DESCRIPTOR_KINDS.get(type(data_type))
+    if atomic_kind is not None:
+        return {"kind": atomic_kind}
+    if isinstance(data_type, StringType):
+        return {"kind": "string", "collation": data_type.collation}
+    if isinstance(data_type, CharType):
+        return {"kind": "char", "length": data_type.length}
+    if isinstance(data_type, VarcharType):
+        return {"kind": "varchar", "length": data_type.length}
+    if isinstance(data_type, TimeType):
+        return {"kind": "time", "precision": data_type.precision}
+    if isinstance(data_type, DecimalType):
+        return {"kind": "decimal", "precision": data_type.precision, "scale": data_type.scale}
+    if isinstance(data_type, (DayTimeIntervalType, YearMonthIntervalType)):
+        interval_fields = type(data_type)._fields
+        if isinstance(data_type, DayTimeIntervalType):
+            interval_kind = "day_time_interval"
+        else:
+            interval_kind = "year_month_interval"
+        return {
+            "kind": interval_kind,
+            "start": interval_fields[data_type.startField],
+            "end": interval_fields[data_type.endField],
+        }
+    if isinstance(data_type, ArrayType):
+        return {
+            "kind": "array",
+            "element": _datatype_to_descriptor(data_type.elementType),
+            "contains_null": data_type.containsNull,
+        }
+    if isinstance(data_type, MapType):
+        return {
+            "kind": "map",
+            "key": _datatype_to_descriptor(data_type.keyType),
+            "value": _datatype_to_descriptor(data_type.valueType),
+            "value_contains_null": data_type.valueContainsNull,
+        }
+    if isinstance(data_type, StructField):
+        return {
+            "kind": "field",
+            "name": data_type.name,
+            "type": _datatype_to_descriptor(data_type.dataType),
+            "nullable": data_type.nullable,
+            "metadata": None,
+        }
+    if isinstance(data_type, StructType):
+        return {
+            "kind": "struct",
+            "fields": [_datatype_to_descriptor(field) for field in data_type.fields],
+        }
+    return None
+
+
+def _descriptor_to_datatype(descriptor: dict[str, Any]) -> DataType:
+    """Construct the public Spark type for a Rust type-table descriptor."""
+    kind = descriptor["kind"]
+    atomic_class = _ATOMIC_DESCRIPTOR_TYPES.get(kind)
+    if atomic_class is not None:
+        return atomic_class()
+    if kind == "string":
+        return StringType(descriptor["collation"])
+    if kind == "char":
+        return CharType(descriptor["length"])
+    if kind == "varchar":
+        return VarcharType(descriptor["length"])
+    if kind == "time":
+        return TimeType(descriptor["precision"])
+    if kind == "decimal":
+        return DecimalType(descriptor["precision"], descriptor["scale"])
+    if kind in ("day_time_interval", "year_month_interval"):
+        if kind == "day_time_interval":
+            interval_class = DayTimeIntervalType
+        else:
+            interval_class = YearMonthIntervalType
+        inverted_fields = interval_class._inverted_fields
+        return interval_class(
+            inverted_fields[descriptor["start"]],
+            inverted_fields[descriptor["end"]],
+        )
+    if kind == "array":
+        return ArrayType(
+            _descriptor_to_datatype(descriptor["element"]),
+            descriptor["contains_null"],
+        )
+    if kind == "map":
+        return MapType(
+            _descriptor_to_datatype(descriptor["key"]),
+            _descriptor_to_datatype(descriptor["value"]),
+            descriptor["value_contains_null"],
+        )
+    if kind == "struct":
+        return StructType([_descriptor_to_datatype(field) for field in descriptor["fields"]])
+    if kind == "field":
+        metadata_text = descriptor.get("metadata")
+        return StructField(
+            descriptor["name"],
+            _descriptor_to_datatype(descriptor["type"]),
+            descriptor["nullable"],
+            json.loads(metadata_text) if metadata_text else {},
+        )
+    raise TypeError(f"unsupported type-table descriptor kind {kind!r}")
+
+
+def _descriptor_tree_has_none(descriptor: dict[str, Any] | None) -> bool:
+    """True when a descriptor tree contains an unknown (``None``) subtype slot."""
+    if descriptor is None:
+        return True
+    for key in ("element", "key", "value", "type"):
+        if key in descriptor and _descriptor_tree_has_none(descriptor[key]):
+            return True
+    return any(_descriptor_tree_has_none(field) for field in descriptor.get("fields", ()))
+
+
+def _descriptor_has_wide_decimal(descriptor: dict[str, Any]) -> bool:
+    """True when a decimal node falls outside the Arrow FFI storage envelope."""
+    if descriptor.get("kind") == "decimal":
+        return not (1 <= descriptor["precision"] <= 38) or not (-128 <= descriptor["scale"] <= 127)
+    for key in ("element", "key", "value", "type"):
+        if key in descriptor and _descriptor_has_wide_decimal(descriptor[key]):
+            return True
+    return any(_descriptor_has_wide_decimal(field) for field in descriptor.get("fields", ()))
+
+
+def _arrow_tree_has_wide_decimal(arrow_type: Any) -> bool:
+    """True when a ``pyarrow`` type tree holds a decimal the FFI envelope cannot carry."""
+    import pyarrow as pa
+
+    if pa.types.is_decimal(arrow_type):
+        return not (-128 <= arrow_type.scale <= 127)
+    if any(
+        check(arrow_type)
+        for check in (pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list)
     ):
-        return _parse_complex_or_atomic(stripped)
-    # Field list: ``a: int``, ``a int, b string``, ``a time(6)`` (single field).
-    if "," in stripped or ":" in stripped or " " in stripped:
-        try:
-            return _parse_field_list(stripped)
-        except ValueError:
-            pass
-    return _parse_complex_or_atomic(stripped)
+        return _arrow_tree_has_wide_decimal(arrow_type.value_type)
+    if pa.types.is_map(arrow_type):
+        return _arrow_tree_has_wide_decimal(arrow_type.key_type) or _arrow_tree_has_wide_decimal(
+            arrow_type.item_type
+        )
+    if pa.types.is_struct(arrow_type):
+        return any(_arrow_tree_has_wide_decimal(field.type) for field in arrow_type)
+    return False
+
+
+def _descriptor_token(data_type: Any, native_name: str, fallback: Callable[[Any], str]) -> str:
+    """Token answer from the shared type table (Python fallback on unknown)."""
+    descriptor = _datatype_to_descriptor(data_type)
+    if descriptor is None or _descriptor_tree_has_none(descriptor):
+        return fallback(data_type)
+    from repark import _native
+
+    return getattr(_native, native_name)(descriptor)
+
+
+def _nested_token_python(
+    data_type: Any,
+    child: Callable[[Any], str],
+    leaf: Callable[[Any], str],
+    *,
+    upper: bool = False,
+) -> str:
+    """Container-token walker for descriptor trees the table cannot see."""
+    if upper:
+        array_name, map_name, struct_name = "ARRAY", "MAP", "STRUCT"
+    else:
+        array_name, map_name, struct_name = "array", "map", "struct"
+    if isinstance(data_type, ArrayType):
+        return f"{array_name}<{child(data_type.elementType)}>"
+    if isinstance(data_type, MapType):
+        return f"{map_name}<{child(data_type.keyType)},{child(data_type.valueType)}>"
+    if isinstance(data_type, StructType):
+        inner = ",".join(f"{field.name}:{child(field.dataType)}" for field in data_type.fields)
+        return f"{struct_name}<{inner}>"
+    if not upper and isinstance(data_type, StructField):
+        return f"{data_type.name}:{child(data_type.dataType)}"
+    return leaf(data_type)
+
+
+def _simple_string_python(data_type: Any) -> str:
+    """``simpleString`` for descriptors the table cannot see (unknown subtype inside)."""
+    return _nested_token_python(
+        data_type,
+        lambda item: item.simpleString(),
+        lambda item: type(item).typeName(),
+    )
+
+
+def _engine_token_python(data_type: Any) -> str:
+    """``_engine_type`` for descriptors the table cannot see (unknown subtype inside)."""
+    return _nested_token_python(
+        data_type,
+        lambda item: item._engine_type(),
+        lambda item: item.simpleString(),
+    )
 
 
 _COLLATIONS_METADATA_KEY = "__COLLATIONS"
@@ -1317,57 +1313,17 @@ def _append_datatype_tree(
 
 def _datatype_to_ddl_token(data_type: DataType) -> str:
     """Uppercase DDL type token for :meth:`StructType.toDDL`."""
-    if isinstance(data_type, NullType):
-        return "VOID"
-    if isinstance(data_type, StringType):
-        return "STRING"
-    if isinstance(data_type, BinaryType):
-        return "BINARY"
-    if isinstance(data_type, BooleanType):
-        return "BOOLEAN"
-    if isinstance(data_type, ByteType):
-        return "TINYINT"
-    if isinstance(data_type, ShortType):
-        return "SMALLINT"
-    if isinstance(data_type, IntegerType):
-        return "INT"
-    if isinstance(data_type, LongType):
-        return "BIGINT"
-    if isinstance(data_type, FloatType):
-        return "FLOAT"
-    if isinstance(data_type, DoubleType):
-        return "DOUBLE"
-    if isinstance(data_type, DateType):
-        return "DATE"
-    if isinstance(data_type, TimestampType):
-        return "TIMESTAMP"
-    if isinstance(data_type, TimestampNTZType):
-        return "TIMESTAMP_NTZ"
-    if isinstance(data_type, TimeType):
-        return f"TIME({data_type.precision})"
-    if isinstance(data_type, DecimalType):
-        return f"DECIMAL({data_type.precision},{data_type.scale})"
-    if isinstance(data_type, ArrayType):
-        return f"ARRAY<{_datatype_to_ddl_token(data_type.elementType)}>"
-    if isinstance(data_type, MapType):
-        return (
-            f"MAP<{_datatype_to_ddl_token(data_type.keyType)},"
-            f"{_datatype_to_ddl_token(data_type.valueType)}>"
-        )
-    if isinstance(data_type, StructType):
-        inner = ",".join(
-            f"{field.name}:{_datatype_to_ddl_token(field.dataType)}" for field in data_type.fields
-        )
-        return f"STRUCT<{inner}>"
-    if isinstance(data_type, VariantType):
-        return "VARIANT"
-    if isinstance(data_type, CalendarIntervalType):
-        return "INTERVAL"
-    if isinstance(data_type, CharType):
-        return f"CHAR({data_type.length})"
-    if isinstance(data_type, VarcharType):
-        return f"VARCHAR({data_type.length})"
-    return data_type.simpleString().upper()
+    return _descriptor_token(data_type, "ddl_token_from_descriptor", _ddl_token_python)
+
+
+def _ddl_token_python(data_type: DataType) -> str:
+    """DDL token for descriptors the table cannot see (unknown subtype inside)."""
+    return _nested_token_python(
+        data_type,
+        _datatype_to_ddl_token,
+        lambda item: item.simpleString().upper(),
+        upper=True,
+    )
 
 
 # ==================================================================================================
@@ -1379,20 +1335,34 @@ def _arrow_type_to_repark(arrow_type: object) -> DataType:
     """Map a ``pyarrow.DataType`` onto the closest repark :class:`DataType` (schema surface)."""
     import pyarrow as pa
 
-    if pa.types.is_int8(arrow_type):
-        return ByteType()
-    if pa.types.is_int16(arrow_type):
-        return ShortType()
-    if pa.types.is_int32(arrow_type):
-        return IntegerType()
-    if pa.types.is_int64(arrow_type):
-        return LongType()
-    if pa.types.is_float32(arrow_type):
-        return FloatType()
-    if pa.types.is_floating(arrow_type):
-        return DoubleType()
-    if pa.types.is_boolean(arrow_type):
-        return BooleanType()
+    if not isinstance(arrow_type, pa.DataType):
+        return StringType()
+    if _arrow_tree_has_wide_decimal(arrow_type):
+        return _arrow_type_to_repark_python(arrow_type)
+    from repark import _native
+
+    try:
+        descriptor = _native.spark_descriptor_from_arrow_type(arrow_type.__arrow_c_schema__())
+    except Exception:
+        return _arrow_type_to_repark_python(arrow_type)
+    return _descriptor_to_datatype(descriptor)
+
+
+def _arrow_type_to_repark_python(arrow_type: object) -> DataType:
+    """Python Arrow→facade mapping for types the FFI envelope cannot carry."""
+    import pyarrow as pa
+
+    for check, data_class in (
+        (pa.types.is_int8, ByteType),
+        (pa.types.is_int16, ShortType),
+        (pa.types.is_int32, IntegerType),
+        (pa.types.is_int64, LongType),
+        (pa.types.is_float32, FloatType),
+        (pa.types.is_floating, DoubleType),
+        (pa.types.is_boolean, BooleanType),
+    ):
+        if check(arrow_type):
+            return data_class()
     if pa.types.is_string(arrow_type) or pa.types.is_large_string(arrow_type):
         return StringType()
     if pa.types.is_binary(arrow_type) or pa.types.is_large_binary(arrow_type):
@@ -1434,6 +1404,24 @@ def struct_type_from_arrow(schema: object) -> StructType:
     import pyarrow as pa
 
     assert isinstance(schema, pa.Schema)
+    if any(_arrow_tree_has_wide_decimal(field.type) for field in schema):
+        return _struct_type_from_arrow_python(schema)
+    from repark import _native
+
+    try:
+        descriptor = _native.spark_descriptor_from_arrow_schema(schema.__arrow_c_schema__())
+    except Exception:
+        return _struct_type_from_arrow_python(schema)
+    result = _descriptor_to_datatype(descriptor)
+    assert isinstance(result, StructType)
+    return result
+
+
+def _struct_type_from_arrow_python(schema: object) -> StructType:
+    """Python schema→StructType walk for trees the FFI envelope cannot carry."""
+    import pyarrow as pa
+
+    assert isinstance(schema, pa.Schema)
     fields = [
         StructField(field.name, _arrow_type_to_repark(field.type), field.nullable)
         for field in schema
@@ -1445,28 +1433,39 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
     """Map a repark :class:`DataType` to a ``pyarrow.DataType`` (createDataFrame nested)."""
     import pyarrow as pa
 
-    if isinstance(data_type, NullType):
-        return pa.null()
-    if isinstance(data_type, BooleanType):
-        return pa.bool_()
-    if isinstance(data_type, ByteType):
-        return pa.int8()
-    if isinstance(data_type, ShortType):
-        return pa.int16()
-    if isinstance(data_type, IntegerType):
-        return pa.int32()
-    if isinstance(data_type, LongType):
-        return pa.int64()
-    if isinstance(data_type, FloatType):
-        return pa.float32()
-    if isinstance(data_type, DoubleType):
-        return pa.float64()
-    if isinstance(data_type, (StringType, CharType, VarcharType)):
-        return pa.string()
-    if isinstance(data_type, BinaryType):
-        return pa.binary()
-    if isinstance(data_type, DateType):
-        return pa.date32()
+    descriptor = _datatype_to_descriptor(data_type)
+    if (
+        descriptor is None
+        or _descriptor_tree_has_none(descriptor)
+        or _descriptor_has_wide_decimal(descriptor)
+    ):
+        return _repark_type_to_arrow_python(data_type)
+    from repark import _native
+
+    return pa.DataType._import_from_c_capsule(
+        _native.arrow_type_capsule_from_descriptor(descriptor)
+    )
+
+
+def _repark_type_to_arrow_python(data_type: DataType) -> Any:
+    """Python facade→Arrow mapping for descriptors the table cannot see or carry."""
+    import pyarrow as pa
+
+    for type_classes, arrow_factory in (
+        (NullType, pa.null),
+        (BooleanType, pa.bool_),
+        (ByteType, pa.int8),
+        (ShortType, pa.int16),
+        (IntegerType, pa.int32),
+        (LongType, pa.int64),
+        (FloatType, pa.float32),
+        (DoubleType, pa.float64),
+        ((StringType, CharType, VarcharType), pa.string),
+        (BinaryType, pa.binary),
+        (DateType, pa.date32),
+    ):
+        if isinstance(data_type, type_classes):
+            return arrow_factory()
     if isinstance(data_type, TimestampType):
         return pa.timestamp("us", tz="UTC")
     if isinstance(data_type, TimestampNTZType):

@@ -13,6 +13,13 @@ key-family filtering, and the flat searched-CASE build — moved to the new
 `dataframe/replace_expr.py`). The `python/` map rows and ledger move in the
 same commit.
 pins: replace-linear-1/C-001, C-002
+FACADE-4 step 1 (2026-09-14): `check_lib_py.py` `spark/types.py` 1834 → 1833
+(the conversion functions thin to checks plus one native call over the shared
+Rust table; ~280 lines of per-class `simpleString`/`_engine_type` overrides and
+the Python DDL parser came out, descriptor helpers and residue paths went in);
+`check_rust_file_size.py` `repark-python/src/dataframe.rs` 1084 → 1019
+(`arrow_type_key` delegates to `repark_spark::type_table::logical_type_key`).
+pins: facade-4/C-014
 EAGER-BUDGET-1 step 2 (2026-09-13): `check_lib_py.py`
 `dataframe/core.py` 4094 → 4089 (the cache-budget resolver consolidated to
 `eager.py`'s shared parser and the `cache()`/`persist()` docstrings trimmed).

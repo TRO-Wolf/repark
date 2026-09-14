@@ -290,6 +290,12 @@ name the entry points left on their Python path.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-009 | S1-0 pins first: one parametrised characterization case per census Agree row AND per D1–D21 row, measuring the answer each table gives today (facade `_arrow_type_to_repark`/`repark_type_to_arrow`/`fromDDL`/`toDDL`/`struct_type_from_arrow`, `_csv_smart` rungs, reader `logical_schema_fields`/`df.schema`/`dtypes`/csv `inferSchema`/`DESCRIBE`, NTZ session conf). Green on the step-0 base; a scratch mutation per family (timestamp, decimal, nullability) turns a row red. | `test_facade_4_census_pins.py` green on base; three pasted reds; restore green. | **PROVEN** | 29 rows green on the s0 base. Mutations: `TimestampNTZType()`→`TimestampType()` reds D1 (`'TimestampType:timestamp' != 'TimestampNTZType:timestamp_ntz'`); `DecimalType(p,s)`→`DecimalType(10,2)` reds D6; `field.nullable`→`True` reds D15. All restored. |
+| C-010 | S1a table + shims: `crates/repark-spark/src/type_table.rs` owns the `SparkDataType`/`SparkField` descriptor (mirrors the 25 public facade classes), Arrow↔descriptor conversion in both directions, DDL/simpleString parse and write, and the distinct surfaces (`Describe` vs `LogicalKey` Arrow names, engine cast token, DDL token, SQL marker, CSV rung row, timestamp defaults). `spark_ddl_type_name`/`spark_ddl_type_name_at_depth` and `arrow_type_key` delegate to it; pure Rust, no PyO3, no `repark-sql` edge. | `cargo test -p repark-spark -p repark-python` green unedited; DAG check green. | **PROVEN** | `cargo test -p repark-spark` → 942+5+13+1+1+7+23+10 passed, 0 failed; `cargo test -p repark-python` → 74+25 passed. Existing `spark_type_names`/`arrow_type_key` assertions unedited — byte-identical outputs. |
+| C-011 | S1a Arrow legs through the table: `type_bridge.rs` binds descriptor↔dict and Arrow↔`"arrow_schema"` capsules both directions; `types._arrow_type_to_repark`, `struct_type_from_arrow`, `repark_type_to_arrow` route through `spark_descriptor_from_arrow_type`/`_schema`/`arrow_type_capsule_from_descriptor`. Public classes and `isinstance` identity unchanged; FFI-uncarriable inputs keep Python paths (C-015). | Step-0 goldens + census pins + `test_types_*` green unedited on the rewired path. | **PROVEN** | `test_facade_4_ddl_round_trip` (3) + `test_facade_4_census_pins` (29) + `test_types_1` + `test_types_simple_string` + `test_types_x2_census` + `test_cast_failure_parity` + `test_a3_cast_vocab` + FACADE-2 guard: 202 passed, 7 skipped on the release native. |
+| C-012 | S1b DDL parse/write through the table: `_parse_datatype_string`/`DataType.fromDDL`, `simpleString`, `_engine_type`, `_datatype_to_ddl_token`, `StructType.toDDL` and `create_dataframe_values._data_type_to_sql_type` delegate to `spark_descriptor_from_ddl`/`simple_string`/`engine_token`/`ddl_token`/`struct_field_ddl`/`sql_marker`. Every refusal keeps its class and message; `json`/`fromJson`/`_parse_datatype_json_value` stays Python (residue — C-015). | Golden bytes + census refusal rows green unedited; error-path probes match base spellings. | **PROVEN** | 47-case golden corpus byte-identical; probes: `'a int, b string not null'`, `'bogus'`, `'map<int>'`, ``'`weird name` int'``, `'a:x'`, `'a b c'` all refuse `ValueError: cannot parse datatype: …` / `cannot parse map type: …` exactly as base; `'a int'` → `struct<a:int>`, `''` → `struct<>` as base. |
+| C-013 | S1c the other two tables read it: `_csv_smart.rung_to_spark_type`/`rung_to_engine_cast`/`rung_to_sql_cast` read `csv_rung_descriptor`/`csv_sql_cast_token`; `timestamp_type.default_timestamp_arrow_type`/`default_timestamp_data_type` read `default_timestamp_descriptor` + Arrow capsule; `create_dataframe_inference._sql_type_to_arrow` resolves flat atomic tokens through `sql_token_to_arrow_capsule`. D3–D5/D1–D2 pins stay green. | Census pins + facade suite green. | **PROVEN** | Rung probes: `int64` → spark `bigint`/engine `long`/sql `bigint` (D3); `decimal128` p38s18 → `decimal(38,18)`; `bool`/`int32`/`float64`/`date`/`timestamp`/unknown all match base. `default_timestamp_arrow_type` → `timestamp[us, tz=UTC]` under LTZ. |
+| C-014 | S1d no regression: `run_baseline.py` re-run on this branch and on the base `/tmp/f-types4` release native, same box, back to back, idle builders before each cell, 8 GiB scope. Bar: no end-to-end cell slower by >5 %, no per-call conversion slower by >1 ms. Thinned line counts of `types.py`/`_csv_smart.py`/`timestamp_type.py` recorded; the two refreshed `test_production_file_size` body-hash baselines named (`_data_type_to_sql_type`, `_sql_type_to_arrow`). | `docs/perf/facade-4-types-step1-2026-09-14.md` before/after table; bars hold. | **PROVEN** | `docs/perf/facade-4-types-step1-2026-09-14.md`: both runs under the 8 GiB scope on one box, medians of 5 behind idle-box waits. Every end-to-end wall within ±5 % (worst +3.5 % `to_arrow`, most negative); worst per-call conversion +196.5 µs (wide50 round-trip) vs the 1 ms bar; DDL parse faster than base on every schema. Line counts: `types.py` 1834→1833, `_csv_smart.py` 899→868, `timestamp_type.py` 97→99. Body-hash baselines refreshed for the two moved bodies only. First-pass `fromDDL` 100–300× regression traced to per-call regex compilation, fixed with a `OnceLock` pattern cache inside the step. |
+| C-015 | Residue rows — every entry point left on its Python path, with the reason byte-identity cannot ride the table: (1) `json`/`jsonValue`/`fromJson`/`_parse_datatype_json_value` — JSON shape plus `__COLLATIONS` metadata walk is facade policy; (2) descriptor trees containing a foreign `DataType` subtype — `_nested_token_python`/`_ddl_token_python`/`_sql_type_token_python` keep today's container spellings and leaf fallbacks; (3) decimals outside the Arrow FFI scale envelope (`pa.decimal128(10,300)` accepts where arrow-rs cannot represent) — `_arrow_type_to_repark_python`/`_struct_type_from_arrow_python`/`_repark_type_to_arrow_python` keep pyarrow's own acceptance/refusal bytes; (4) collation refusal — `refuse_evaluated_collation` stays Python policy in `_data_type_to_sql_type`; (5) `_sql_type_to_arrow` decimal and nested spellings — the `PySparkTypeError` wrap stays on the Python parse route. | Census pins cover each residue class; fallbacks named in the residue table below. | **PROVEN** | D16 (`list<item: int32 not null>` arrow-in), D6/D9 (decimal edges) and the unknown-subtype `toDDL`/`simpleString` paths are pinned and green; no refusal class or message moved. |
 
 ## Evidence
 
@@ -332,7 +338,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every deliverable of the step-0 brief maps to a clause C-001..C-008, each PROVEN with pasted evidence; the branch diff holds no file under python/repark/src or crates.
+      evidence: Step 0's deliverables map to C-001..C-008 and step 1's to C-009..C-015 (pins, table, Arrow legs, DDL legs, CSV/timestamp tables, residue, perf bar), each PROVEN with pasted evidence.
       artifacts: [task/ledgers/staging/facade-4-ledger.md]
     - id: AT-2
       status: ATTACKED
@@ -343,8 +349,9 @@ COVERAGE_ATTESTATION:
       evidence: Refusals are recorded as golden answers (fromDDL of its own NOT NULL output, interval day to second, repark_type_to_arrow of decimal256), and record mode is refused under any non-empty CI or GITHUB_ACTIONS value (CI=1 pinned).
       artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
     - id: AT-4
-      status: N/A
-      justification: Step 0 adds tests, docs and a measurement runner only; no shared or mutable state changes.
+      status: ATTACKED
+      evidence: Step 1's only shared mutable state is the table's process-local OnceLock<Mutex<BTreeMap>> regex cache — a pure-function memo behind one lock, poison-recovering, carrying no session state and reading no env; no global mutable state in the Session sense.
+      artifacts: [crates/repark-spark/src/type_table.rs]
     - id: AT-5
       status: N/A
       justification: No privileged action, secret or path handling; goldens are committed JSON beside the test.
@@ -352,14 +359,16 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The three-table census measures 18 agreements and 24 disagreements (D1-D24) including silent containsNull/valueContainsNull loss in both directions, the uint64 bigint split, csv_smart honoring NTZ while infer does not, and the offset-literal string/timestamp split; none fixed, each an owner question for step 1.
       artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json]
+      evidence: The three-table census measures 8 agreements and 21 disagreements (D1-D21); step 1 pins every Agree and D-row by calling each surface today and changing no answer, refusal class or spelling.
+      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, python/repark/tests/test_facade_4_census_pins.py]
     - id: AT-7
       status: ATTACKED
-      evidence: Release baseline, warmup plus 5 reps, medians under an 8 GiB scope; the dearest conversion is 134 us per call and the largest share of a 1e5 wall is 0.008 %, so no wall.
-      artifacts: [docs/perf/facade-4-types-baseline-2026-09-14.md, docs/perf/facade-4-types-baseline-2026-09-14/run_baseline.py]
+      evidence: Step-1 before/after on the real base release native, same box back to back, medians of 5 under an 8 GiB scope: every end-to-end wall within ±5 % and the worst per-call conversion +196.5 us vs the 1 ms bar.
+      artifacts: [docs/perf/facade-4-types-step1-2026-09-14.md, docs/perf/facade-4-types-baseline-2026-09-14/run_baseline.py]
     - id: AT-8
       status: ATTACKED
-      evidence: The F1-frozen names repark_type_to_arrow and struct_type_from_arrow are pinned by answer, and an isinstance pin asserts every answer is a public repark.spark.types class.
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+      evidence: The F1-frozen names are pinned by answer; descriptor-to-class reconstruction in types.py preserves isinstance identity for every public class including VariantType.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/test_facade_4_census_pins.py]
     - id: AT-9
       status: N/A
       justification: No log-format or diagnosis-path change.
@@ -367,5 +376,7 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Dropping the tz from pa.timestamp in repark_type_to_arrow redded four golden cases and the restore greened them; the committed mutation_probe.py additionally proves fromJson flag-forcing, inbound int8/int16 widening, Arrow item-nullability preservation, and inner-struct nullability drops each red; the card's existing pins stay unedited and green.
       artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+      evidence: Step-0 golden mutation redded four cases; step-1 scratch mutations redded the pins in each family — timestamp tz (D1), decimal (D6), list nullability (D15) — and restores greened them.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/test_facade_4_census_pins.py]
   complete: true
 ```
