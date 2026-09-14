@@ -29,14 +29,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   its own card; `dataframe/core.py` is fenced to another lane).
   `risk_tier: standard`. Branch `fix/abs-expr-1`.
   pins: abs-expr-1/C-001, C-002, C-003, C-004, C-005
-- [facade-3-ledger.md](facade-3-ledger.md) —
-  **FACADE-3 step 1 (2026-09-13), in flight:** `createDataFrame` inference measure +
-  pins — the release baseline table across eight dispatch shapes at 1e4/1e5 × 7
-  ([docs/perf/facade-3-cdf-baseline-2026-09-13.md](../../../docs/perf/facade-3-cdf-baseline-2026-09-13.md)),
-  the 156-case golden corpus (schema + nullability + values + refusal class/message),
-  the D-3 pickle round-trip pin, the mutation proof, and the step-2 target list.
-  No product code. `risk_tier: standard`. Branch `feat/facade-3-s1`.
-  pins: facade-3/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [silver-s1-ledger.md](silver-s1-ledger.md) —
   **SILVER-S1 (2026-09-12), in flight:** typed `SilverPlan` in `crates/repark-core/src/silver/`
   — TOML parse with key-path refusals, closed operation enums, parse-time structural

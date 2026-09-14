@@ -6,6 +6,7 @@ import contextlib
 
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.spark._idents import quote_ident as _quote_ident
 
 from repark.spark.dataframe import DataFrame
@@ -16,7 +17,11 @@ from repark.spark._temp_views import scratch_view_name
 
 
 if TYPE_CHECKING:
-    from repark.spark.session.create_dataframe_columns import _arrow_table_from_raw_tuples
+    from repark.spark.session.create_dataframe_columns import (
+        _arrow_table_from_raw_tuples,
+        _arrow_table_from_raw_tuples_fast,
+        _rust_cdf_named_arrow_table,
+    )
     from repark.spark.session.create_dataframe_inference import (
         _INFER_NESTED_DICT_AS_STRUCT,
         _LEGACY_FIRST_ELEMENT_COERCE,
@@ -158,25 +163,29 @@ def _rows_from_mapping_list(
 
     """
 
+    if kind == "Row":
+        from repark.spark.row import Row
+
     mappings: list[dict[str, Any]] = []
 
-    for row_index, row in enumerate(data):
-        if kind == "dict" and not isinstance(row, dict):
-            raise PySparkTypeError(
-                "createDataFrame dict lists must be homogeneous; "
-                f"got element type {type(row).__name__} at index {row_index}"
-            )
+    if kind == "dict":
+        for row_index, row in enumerate(data):
+            if not isinstance(row, dict):
+                raise PySparkTypeError(
+                    "createDataFrame dict lists must be homogeneous; "
+                    f"got element type {type(row).__name__} at index {row_index}"
+                )
 
-        if kind == "Row":
-            from repark.spark.row import Row
-
-            if not isinstance(row, Row):
+        mappings = [as_mapping(row) for row in data]
+    else:
+        for row_index, row in enumerate(data):
+            if kind == "Row" and not isinstance(row, Row):
                 raise PySparkTypeError(
                     "createDataFrame Row lists must be homogeneous; "
                     f"got element type {type(row).__name__} at index {row_index}"
                 )
 
-        mappings.append(as_mapping(row))
+            mappings.append(as_mapping(row))
 
     if key_union and kind == "dict" and schema is None:
         # Spark-parity: sorted first-row keys, then append newly seen keys (sorted per row).
@@ -554,7 +563,17 @@ def _create_dataframe_from_rows_inner(
 
         first = data[0]
 
+        named_declined = False
+
         if isinstance(first, dict):
+            arrow_table = _rust_cdf_named_arrow_table(
+                data, schema, is_row=False, engine_types=engine_types
+            )
+            if arrow_table is not None:
+                return _materialize_arrow_as_memtable_frame(session, arrow_table)
+
+            named_declined = getattr(_native, "cdf_arrow_export_named", None) is not None
+
             # schema=None → Spark key-union; StructType/DDL → null-fill field names.
             names, tuples = _rows_from_mapping_list(
                 data,
@@ -566,6 +585,14 @@ def _create_dataframe_from_rows_inner(
             )
 
         elif isinstance(first, Row):
+            arrow_table = _rust_cdf_named_arrow_table(
+                data, schema, is_row=True, engine_types=engine_types
+            )
+            if arrow_table is not None:
+                return _materialize_arrow_as_memtable_frame(session, arrow_table)
+
+            named_declined = getattr(_native, "cdf_arrow_export_named", None) is not None
+
             # Row stays fail-loud on key mismatch (Spark STRUCT_ARRAY_LENGTH_MISMATCH class).
 
             names, tuples = _rows_from_mapping_list(
@@ -689,7 +716,13 @@ def _create_dataframe_from_rows_inner(
 
         return _materialize_values_as_memtable_frame(session, _empty_frame_sql(names))
 
-    arrow_table = _arrow_table_from_raw_tuples(names, tuples, engine_types=engine_types)
+    if named_declined:
+        if engine_types is not None:
+            arrow_table = _arrow_table_from_raw_tuples_legacy(names, tuples, engine_types)
+        else:
+            arrow_table = _arrow_table_from_raw_tuples_fast(names, tuples)
+    else:
+        arrow_table = _arrow_table_from_raw_tuples(names, tuples, engine_types=engine_types)
 
     return _materialize_arrow_as_memtable_frame(session, arrow_table)
 

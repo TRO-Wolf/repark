@@ -241,4 +241,4 @@ seed); Q-R9-2 — TOML stays the S-1 authoring format for now; Q-R9-3 — ABS-EX
 
 ## Pointers
 - Up: [map.md](map.md) · Runbook: [overnight-orchestrator-runbook-2026-09-08.md](overnight-orchestrator-runbook-2026-09-08.md)
-- Ledgers: [facade-2](../../ledgers/staging/facade-2-ledger.md), [facade-3](../../ledgers/staging/facade-3-ledger.md), [silver-s0](../../ledgers/staging/silver-s0-ledger.md), [silver-s1](../../ledgers/staging/silver-s1-ledger.md), [perf-unpivot-1](../../ledgers/staging/perf-unpivot-1-ledger.md), [perf-cast-1](../../ledgers/staging/perf-cast-1-ledger.md)
+- Ledgers: [facade-2](../../ledgers/staging/facade-2-ledger.md), [facade-3](../../ledgers/completed/facade-3-ledger.md), [silver-s0](../../ledgers/staging/silver-s0-ledger.md), [silver-s1](../../ledgers/staging/silver-s1-ledger.md), [perf-unpivot-1](../../ledgers/staging/perf-unpivot-1-ledger.md), [perf-cast-1](../../ledgers/staging/perf-cast-1-ledger.md)

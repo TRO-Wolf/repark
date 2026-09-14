@@ -354,6 +354,21 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   pandas control +2.8 % inside the 5 % band; the polars control is unmeasurable
   under the 8 GiB cap (jemalloc ≈7.7 GiB + session ≈5.5 GiB of address space) —
   recorded as a finding, cap not raised. pins: facade-3/C-011
+- [facade-3-cdf-step3-2026-09-13.md](facade-3-cdf-step3-2026-09-13.md) — FACADE-3
+  step-3 baseline and re-measure: the cProfile split for `rows`/`dicts` at 1e5
+  (the Python named-row funnel is ~60 % of both walls — the F-FUNNEL target),
+  the F-TIMETUPLE abi3-route micro-benchmark that picks the shipped extraction
+  (`timetuple` replaced by interned getattr walls, an epoch subtract for
+  `date`, and a `datetime.timezone`-gated `utcoffset` cache), and the final
+  step-2 vs step-3 release table — `rows`/`dicts` rows re-measured after the
+  S2-21 review remediation (C-026: `Row` index route, dict-union fast path,
+  interned timedelta names), and the six-shape fallback bar re-measured
+  against the real `/tmp/f-rev3/base` at `9efb6a65` after the F-PY-2
+  named-decline dispatch (simulated-export numbers kept as history); the C-027
+  correction notes the temporal routes are armed on exact `date`/`datetime`
+  types only (subclasses ride the step-2 `timetuple()` route natively) with an
+  owned-reference `utcoffset` cache, plus its re-measure.
+  pins: facade-3/C-018, C-022, C-026, C-027
 - [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
   steps 0+1 (2026-09-13):** the bare-`eager()` retention before/after pair —
   ten bare `eager()` calls on the deterministic 1e6-row × 25-column TA

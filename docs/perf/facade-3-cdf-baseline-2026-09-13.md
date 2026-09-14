@@ -127,4 +127,4 @@ helpers, so they are covered by the same move if it is engine-generic.
 
 - Up: [map.md](map.md)
 - Runner: [facade-3-cdf-baseline-2026-09-13/map.md](facade-3-cdf-baseline-2026-09-13/map.md)
-- Ledger: [../../task/ledgers/staging/facade-3-ledger.md](../../task/ledgers/staging/facade-3-ledger.md)
+- Ledger: [../../task/ledgers/completed/facade-3-ledger.md](../../task/ledgers/completed/facade-3-ledger.md)

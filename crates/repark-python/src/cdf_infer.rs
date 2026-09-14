@@ -1,6 +1,7 @@
 mod build;
 mod cells;
 mod infer;
+mod named;
 mod screen;
 
 use std::ffi::CStr;
@@ -30,7 +31,7 @@ const SCHEMA_CAPSULE: &CStr = c"arrow_schema";
 
 #[pyclass(name = "PyCdfArrowExport", module = "repark._native")]
 pub struct PyCdfArrowExport {
-    batch: RecordBatch,
+    pub(crate) batch: RecordBatch,
 }
 
 #[pymethods]
@@ -56,7 +57,7 @@ impl PyCdfArrowExport {
     }
 }
 
-fn read_schema(schema_obj: &Bound<'_, PyAny>) -> PyResult<Option<SchemaRef>> {
+pub(crate) fn read_schema(schema_obj: &Bound<'_, PyAny>) -> PyResult<Option<SchemaRef>> {
     if schema_obj.is_none() {
         return Ok(None);
     }
@@ -69,7 +70,7 @@ fn read_schema(schema_obj: &Bound<'_, PyAny>) -> PyResult<Option<SchemaRef>> {
     Ok(Some(Arc::new(schema)))
 }
 
-fn build_batch<'py>(
+pub(crate) fn build_batch<'py>(
     names: &[String],
     columns: &[Vec<Cell<'py>>],
     schema: Option<SchemaRef>,
@@ -107,6 +108,46 @@ fn build_batch<'py>(
     Ok(Some(batch))
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
+pub(crate) fn make_ctx(
+    py: Python<'_>,
+    session_tz_utc: bool,
+    timestamp_ntz: bool,
+    infer_dict_as_struct: bool,
+    legacy_first_element: bool,
+    decimal_prec: i64,
+) -> PyResult<Ctx<'_>> {
+    let decimal_type = py
+        .import("decimal")?
+        .getattr("Decimal")?
+        .cast_into::<PyType>()?;
+    let datetime_mod = py.import("datetime")?;
+    Ok(Ctx {
+        decimal_type,
+        bool_type: py.get_type::<PyBool>(),
+        int_type: py.get_type::<PyInt>(),
+        float_type: py.get_type::<PyFloat>(),
+        str_type: py.get_type::<PyString>(),
+        bytes_type: py.get_type::<PyBytes>(),
+        bytearray_type: py.get_type::<PyByteArray>(),
+        memoryview_type: py.get_type::<PyMemoryView>(),
+        list_type: py.get_type::<PyList>(),
+        tuple_type: py.get_type::<PyTuple>(),
+        dict_type: py.get_type::<PyDict>(),
+        datetime_type: datetime_mod.getattr("datetime")?.cast_into::<PyType>()?,
+        date_type: datetime_mod.getattr("date")?.cast_into::<PyType>()?,
+        time_type: datetime_mod.getattr("time")?.cast_into::<PyType>()?,
+        timezone_type: datetime_mod.getattr("timezone")?.cast_into::<PyType>()?,
+        epoch_date: datetime_mod.getattr("date")?.call1((1970, 1, 1))?,
+        utcoffset_cache: std::cell::RefCell::new(std::collections::HashMap::new()),
+        session_tz_utc,
+        timestamp_ntz,
+        infer_dict_as_struct,
+        legacy_first_element,
+        decimal_prec,
+    })
+}
+
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::needless_pass_by_value)]
@@ -138,32 +179,14 @@ pub fn cdf_arrow_export<'py>(
     {
         return Ok(None);
     }
-    let decimal_type = py
-        .import("decimal")?
-        .getattr("Decimal")?
-        .cast_into::<PyType>()?;
-    let datetime_mod = py.import("datetime")?;
-    let cx = Ctx {
-        decimal_type,
-        bool_type: py.get_type::<PyBool>(),
-        int_type: py.get_type::<PyInt>(),
-        float_type: py.get_type::<PyFloat>(),
-        str_type: py.get_type::<PyString>(),
-        bytes_type: py.get_type::<PyBytes>(),
-        bytearray_type: py.get_type::<PyByteArray>(),
-        memoryview_type: py.get_type::<PyMemoryView>(),
-        list_type: py.get_type::<PyList>(),
-        tuple_type: py.get_type::<PyTuple>(),
-        dict_type: py.get_type::<PyDict>(),
-        datetime_type: datetime_mod.getattr("datetime")?.cast_into::<PyType>()?,
-        date_type: datetime_mod.getattr("date")?.cast_into::<PyType>()?,
-        time_type: datetime_mod.getattr("time")?.cast_into::<PyType>()?,
+    let cx = make_ctx(
+        py,
         session_tz_utc,
         timestamp_ntz,
         infer_dict_as_struct,
         legacy_first_element,
         decimal_prec,
-    };
+    )?;
     let mut screens = vec![ColumnScreen::default(); names.len()];
     for row in rows.iter() {
         let Ok(tuple) = row.cast::<PyTuple>() else {
@@ -224,5 +247,6 @@ pub fn cdf_arrow_export<'py>(
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyCdfArrowExport>()?;
     module.add_function(wrap_pyfunction!(cdf_arrow_export, module)?)?;
+    module.add_function(wrap_pyfunction!(named::cdf_arrow_export_named, module)?)?;
     Ok(())
 }

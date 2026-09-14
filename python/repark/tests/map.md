@@ -523,6 +523,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   PERF-FACADE-CDF-1 joined the inventory: `create_dataframe_columns.py`, the six new router
   bindings with their owners and hashes, and 76 cross-owner edges (the rows→columns dispatcher
   edge pins the new router binding); round 2 re-hashed the three docstring-only helpers.
+  FACADE-3 step 3 F-PY-2 added the rows→`_arrow_table_from_raw_tuples_fast` edge (77 bindings)
+  and re-hashed `_create_dataframe_from_rows_inner` for the named-decline dispatch and
+  `_rows_from_mapping_list` for the funnel split (dict scan-then-comprehend, hoisted `Row`
+  import — doomed-path cheapening for the real-base fallback bar).
   NULLABILITY-2 round 3 re-hashed `_promote_csv_string_types` (timestamp candidate + clock guard).
   FACADE-1 re-hashed `_arrow_table_from_raw_tuples_fast`, `_create_dataframe_from_rows_inner`,
   and `_materialize_arrow_as_memtable_frame`. pins: facade-1/C-001, C-002
@@ -1637,8 +1641,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   byte-identical to `main` and green on the Rust path; the step-2 pin batch
   (goldens + dispatch + `test_create_dataframe_materialize.py` +
   `test_perf_facade_cdf_1.py` + `test_csv_infer_perf_1.py`, all unedited) and the
-  whole `python/repark/tests` suite (5,972 passed) gate the move.
-  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
+  whole `python/repark/tests` suite (5,972 passed) gate the move. **Step 3
+  (2026-09-13):** byte-identical and green again on the named-funnel +
+  abi3-temporal path; the step-3 pin batch and the whole suite gate the move.
+  pins: facade-3/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012, C-021, C-023
 - `test_facade_3_cdf_dispatch.py` — **FACADE-3 step 2 (2026-09-13):** dispatch pin
   for the Rust createDataFrame path. `_rust_cdf_arrow_table` must exist in
   `create_dataframe_columns` and must be invoked for plain tuples, nested cells,
@@ -1652,6 +1658,38 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `as_tuple` (Python's envelope check uses `is_finite`/`quantize`). Red-first on `1599e8ed`:
   `assert 900 == 0` and `assert 1000 == 0`.
   pins: facade-3/C-010, C-014
+- `test_facade_3_cdf_step3.py` — **FACADE-3 step 3 (2026-09-13):** dispatch pin for the
+  native named-rows funnel: `cdf_arrow_export_named` must exist and take `Row` and `dict`
+  lists (bare, dict + DDL null-fill, Row + reordered StructType, a Row whose field order
+  differs from row 0 — by-name bind) without calling
+  `_rows_from_mapping_list` / `_bind_named_row` / `_apply_permutation` — a spy asserts zero
+  calls — while the dict key-union order (`a,c,b,d`) is preserved natively; homogeneity,
+  strict key-set, and uncovered-cell refusals still fall back and keep their pinned
+  class/message. Plus the F-TIMETUPLE value-parity corpus (native vs forced-fallback
+  collect and `simpleString` for the required temporal cases: year 1/9999, pre-1970,
+  microseconds, `fold=1`, non-UTC fixed offset, `date`/`datetime` subclasses) and the
+  `NaT`-stays-a-fallback proof via the Python normalizer spy. Red-first on `77e57624`:
+  `AttributeError: ... '_rust_cdf_named_arrow_table'` and funnel-call counters `> 0`.
+  Plus the C-026 P2-1 pin: a `Row.asDict` spy proves a covered homogeneous `Row` list never
+  calls it (red-first `assert 40 == 0`, green `0` after the `_Row__field_values` index route);
+  and the P2-2 pin: a new dict key appearing mid-list appends last (`a,b,c,d` columns with
+  null-fill before), which bites on a one-line `==` → `>=` mutation of the seen-keys probe
+  (`['a','b','d']` ≠ `['a','b','c','d']`). Both green in the 6,037-test facade run.
+  Plus the C-026 F-PY-2 pins: a `cdf_arrow_export` spy proves the tuple door is never
+  retried once `cdf_arrow_export_named` returned `None` — a `spy`-counted dict list and a
+  `Row` list, each poisoned at index 50 with `object()`, keep the pinned
+  `cannot build Arrow column 'i'` refusal while the tuple-export counter stays 0
+  (red-first on `c04d6c24`: `assert 1 == 0` for both).
+  Plus the C-027 temporal widened pin: every corpus case now runs through the tuple, dict
+  and `Row` doors, and the subclass corpus gained `__sub__`-lying `_SubDateSub`,
+  `toordinal`-lying `_SubDateToordinal` and `year`-lying `_SubDtYear` (red-first on
+  `a246df41`: `subclass_date_sub`/`subclass_dt_year` mismatched on all three doors);
+  `test_fresh_tzinfo_property_applies_per_access_offset` pins L-003's fresh-`timezone`
+  per-access offsets against the literal base-native series (the Python fallback is not
+  an oracle there — `astimezone` reads the C `tzinfo` field, never the property). L-004's
+  lesson: an empty subclass pins acceptance only — override classes are required to make a
+  fast-path bypass visible.
+  pins: facade-3/C-019, C-020, C-026, C-027
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 import repark.spark.session.create_dataframe_columns as columns_module
+import repark.spark.session.create_dataframe_rows as rows_module
 from repark import ReparkSession
 from repark.errors import PySparkTypeError
 from repark.spark.row import Row
@@ -137,11 +138,18 @@ def test_rust_path_takes_plain_tuples(
 def test_rust_path_takes_rows_and_dicts(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Row objects and dict rows reach the same Rust builder through the tuple funnel."""
-    calls = _recording_rust_path(monkeypatch)
+    """Row objects and dict rows reach the native named-rows funnel (facade-3/C-019)."""
+    calls: list[tuple[bool, int]] = []
+    delegate = rows_module._rust_cdf_named_arrow_table
+
+    def spy(data: list[Any], schema: Any, *, is_row: bool, engine_types: Any) -> Any:
+        calls.append((is_row, len(data)))
+        return delegate(data, schema, is_row=is_row, engine_types=engine_types)
+
+    monkeypatch.setattr(rows_module, "_rust_cdf_named_arrow_table", spy)
     spark.createDataFrame([Row(a=index, b=f"s{index}") for index in range(30)])
     spark.createDataFrame([{"a": index, "b": f"s{index}"} for index in range(30)])
-    assert len(calls) == 2
+    assert calls == [(True, 30), (False, 30)]
 
 
 def test_rust_path_takes_explicit_nested_schema(

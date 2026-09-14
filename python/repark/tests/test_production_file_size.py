@@ -173,7 +173,7 @@ EXPECTED_SYMBOL_HASHES = {
         "957e98392c344c4d3f8125a5f4282cb05f63d8ee27d1871b1476b19a9809f2a8"
     ),
     "_create_dataframe_from_rows_inner": (
-        "8cdae71aa80a2be992e1b66f24b2273faa467a15e31112b0943799e1481cb4b9"
+        "da2e9ea58faf29ec3444a6244f6fc7b046dbbafddb4277ece7220f46364b4e97"
     ),
     "_data_type_to_sql_type": ("1633f6159213794bb60b2c6c6bfb633273d9b9242ac991365d1685b8613a78a4"),
     "_datetime64_unit_from_dtype": (
@@ -308,7 +308,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_reset_dropin_warnings_for_tests": (
         "2cf60e5958dd8ae526edceb5e99de10a6de447a278b141a6198978c474ee3ac6"
     ),
-    "_rows_from_mapping_list": ("f0e6d804ec160f2d41f524f947d07676fa2f291fcfd0e46fef5b29896639a94d"),
+    "_rows_from_mapping_list": ("b83429b033cd7009af10403e611ae4f758ce31761f7b9049bc102edd5d24edf2"),
     "_rows_from_pandas": ("793ee7519856503c01bf3afcd30b0aff09503a39a2e3c14c9b72e0c1ed665b69"),
     "_rows_from_polars": ("9b85f5efbe8418db0295ccd5e6e4c6f3350c6871c9146dd0bce26eef320f757c"),
     "_scan_sql_table_identifier_end": (
@@ -943,7 +943,7 @@ def test_cross_owner_globals_resolve_to_their_canonical_binding() -> None:
             canonical_module = sys.modules[f"repark.spark.session.{canonical_owner}"]
             assert global_name in value.__globals__
             assert value.__globals__[global_name] is getattr(canonical_module, global_name)
-    assert len(required_bindings) == 76
+    assert len(required_bindings) == 77
 
 
 def test_split_files_stay_within_default_source_ceiling() -> None:
