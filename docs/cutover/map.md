@@ -16,6 +16,12 @@ named only as "the cutover pipeline" here.
   `DBT-1`; shadow namespace `<ns>_silver_repark`, 14-day retention; the daily diff as an
   Airflow task → pipeline-side `SHADOW-1`). C6 (gold on RePark) measured green on Glue on
   2026-09-05 through DBT-1's acceptance leg.
+- [production-iceberg-status-2026-09-14.md](production-iceberg-status-2026-09-14.md) — **the
+  production Iceberg assessment at `c9b03c67` / fork `3ebf7d36` (2026-09-14):** 36 capability
+  rows (25 PROVEN, 3 DECLARED, 9 NOT ESTABLISHED), what moved since the 2026-09-06 assessment,
+  the C0–C6 state, eleven ranked gaps (G-1: Glue has no replace-publish path, so a second gold
+  `dbt run` fails), and §10 the owner's rulings Q-ICE-1..7 with the nightly-run correction.
+  Inventory §8 carries the rulings.
 
 ## Pointers
 

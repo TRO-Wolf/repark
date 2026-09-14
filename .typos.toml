@@ -24,6 +24,7 @@ extend-exclude = [
 repark = "repark"
 9e3522e3 = "9e3522e3"
 41e25ba2 = "41e25ba2"
+c81ba043 = "c81ba043"
 _preapare_args_for_sample = "_preapare_args_for_sample" # verbatim PySpark name: the sample overload shim is misspelled upstream
 
 [default.extend-words]
