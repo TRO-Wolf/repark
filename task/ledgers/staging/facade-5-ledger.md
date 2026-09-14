@@ -41,13 +41,13 @@ recorded beside the cell.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | Provenance: release native (`__debug_assertions__` False), types4 product tree equals `main`, no JVM, memory-capped timing harness. | Header block above; `docs/perf/facade-5-display-baseline-2026-09-14.md` machine header. | **PROVEN** | Release native re-asserted inside the runner (`native_is_release()`); the run carried `release_proof: true` and a 167,915,168-byte module. |
-| C-002 | Fetch/format baseline: FETCH (capped rows to Arrow) and FORMAT (formatter over the pre-materialized table) timed separately for ASCII `show`, vertical `show`, `_repr_html_`, duckdb show, polars show, and `repr`, at n ∈ {20, 1000} × truncate on/off × {flat 7-type, 50-column wide, nested struct/array/map}, warmup + 5 reps, medians, idle box + load<6 per cell; each leg's share of the wall stated. | `docs/perf/facade-5-display-baseline-2026-09-14.md` + committed runner. | **PROVEN** | 96 cells, 96/96 `door_check` byte-equal, loads 4.96–5.52. Every cell is a wall: n=20 format 0.4–3.2 ms at 14–57% share; n=1000 format 17–107 ms at 90–98% share. |
-| C-003 | Census: every renderer × truncation-rule pair names the §8 pin that binds its bytes today, and every unbound pair is a row of its own; the `test_dfcore_6_eager_preview.py` scan counts recorded. | Census section below. | **PROVEN** | Census section below: 9-rule taxonomy, bound table, 30 unbound rows, scan-count notes. |
-| C-004 | Missing goldens only: every unbound pair gets a golden recorded from this base tree under `python/repark/tests/`; record mode refused under CI. | `test_facade_5_display_goldens.py` + committed JSON golden. | **PROVEN** | 30 cases → `facade_5_display_goldens.json` recorded via `REPARK_FACADE_5_RECORD_GOLDENS=1` on the release interpreter; `test_record_mode_fails_when_ci_is_set` pins the CI refusal. |
-| C-005 | Mutation proof: a one-line mutation turns the new goldens red; restore leaves them green. | Scratch edit, red output, `git checkout` restore, all recorded here. | **PROVEN** | 12 one-line mutations M1–M12 below; every case id red ≥ once; `git status` clean on `python/repark/src/` after restore. |
+| C-002 | Fetch/format baseline: FETCH (capped rows to Arrow) and FORMAT (formatter over the pre-materialized table) timed separately for ASCII `show`, vertical `show`, `_repr_html_`, duckdb show, polars show, and `repr`, at n ∈ {20, 1000} × truncate on/off × {flat 7-type, 50-column wide, nested struct/array/map}, warmup + 5 reps, medians, idle box + load<6 per cell; each leg's share of the wall stated. | `docs/perf/facade-5-display-baseline-2026-09-14.md` + committed runner. | **PROVEN** | 96 cells, 96/96 `door_check` byte-equal, loads 4.96–5.52. Every cell is a wall: n=20 format 0.4–3.2 ms at 14–57% share; n=1000 format 17–107 ms at 90–98% share. Note (critic L-005): the styled-door format timer includes `_display_session_ints` and `list(frame.columns)` conf reads that step 1 keeps in Python — microseconds against the measured wall; cells not re-timed. |
+| C-003 | Census: every renderer × truncation-rule pair names the §8 pin that binds its bytes today, and every unbound pair is a row of its own; the `test_dfcore_6_eager_preview.py` scan counts recorded. | Census section below. | **PROVEN** | Census section below: 9-rule taxonomy, bound table, 33 unbound rows (30 round 1 + 3 critic remediation), scan-count notes. |
+| C-004 | Missing goldens only: every unbound pair gets a golden recorded from this base tree under `python/repark/tests/`; record mode refused under CI. | `test_facade_5_display_goldens.py` + committed JSON golden. | **PROVEN** | 34 cases → `facade_5_display_goldens.json` recorded via `REPARK_FACADE_5_RECORD_GOLDENS=1` on the release interpreter; `test_record_mode_fails_when_ci_is_set` pins refusal under any non-empty `CI`/`GITHUB_ACTIONS` (`CI=1` refuses, `CI=""` allows). |
+| C-005 | Mutation proof: a one-line mutation turns the new goldens red; restore leaves them green. | Scratch edit, red output, `git checkout` restore, all recorded here. | **PROVEN** | 16 one-line mutations M1–M16 below; every case id red ≥ once; `git status` clean on `python/repark/src/` after restore. |
 | C-006 | The §8 named pins stay green and unedited: `test_dfcore_4b_eager_goldens.py`, `test_dfcore_4b_show_goldens.py`, `test_df_eager_1.py`, `test_dfcore_6_eager_preview.py`, `test_display_styles.py`, `test_display_polars_default.py`. | Those files, same commit, no edits; run counts. | **PROVEN** | `pytest` on the six files: 99 passed; `git diff` on all six: empty. |
 | C-007 | Step-1 target named from C-002's numbers: (A) a measured format wall and the Rust move that removes it byte-identically, or (B) "no format wall: ship the smallest byte-identical consolidation", naming which formatters move and what stays because it touches `eager.py`. | Step-1 target section. | **PROVEN** | Option (A) — measured format wall; see "Step-1 target" in the baseline doc and below. |
-| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **PROVEN** | §8 99 passed; new goldens 2 passed; file-size 11 passed; `make verify` exit 0 (ruff check + format clean, ledger-grammar clean); comment scan empty on every commit. |
+| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **PROVEN** | §8 99 passed; new goldens 3 passed; file-size 11 passed; `make verify` exit 0 (ruff check + format clean, ledger-grammar clean); comment scan empty on every commit. |
 
 ## Census — renderer × truncation rule (C-003)
 
@@ -251,6 +251,8 @@ release native) is green byte-identical on `c9b03c67`.
 | L-002 | P2 | `_repr_html_` × zero-column unbound; `maxNumRows` phantom `<tr>` rows | REMEDIATED — `html` door pinned on both frames |
 | L-003 | P2 | C-003 sentence overclaimed the HTML footer test (footer only, never counts rows) | REMEDIATED — sentence narrowed; `test_html_row_count_matches_min_size_cap` added |
 | L-004 | P2 | polars × nested × truncate cap unbound | REMEDIATED — `polars_nested_true/trunc10/trunc2`; M15/M16 red all three |
+| L-005 | P3 | styled format timer includes `_display_session_ints` + `list(frame.columns)`, which step 1 does not move | REMEDIATED — note recorded on C-002; cells not re-timed |
+| L-006 | P3 | record-mode CI refusal keyed on `=="true"` only | REMEDIATED — any non-empty `CI`/`GITHUB_ACTIONS` refuses; `CI=1`/`CI=""` pinned |
 
 ```yaml
 FINDING:
@@ -296,6 +298,28 @@ FINDING:
   disposition: REMEDIATED — polars_nested_true/trunc10/trunc2 pin the nested frame at all three caps; M15 (struct brace) and M16 (truncate_at=None -> truncate_at=1) red all three. The critic's suggested mutation truncate_at=truncate_at is byte-equivalent and cannot red: the outer cap truncates the composite at c, while the inner cut at c only alters composite positions >= c+1.
 ```
 
+```yaml
+FINDING:
+  id: F-L5
+  severity: S3
+  category: AT-7
+  clause: C-002
+  claim: The styled format timer includes _display_session_ints and list(frame.columns), which step 1 does not move — format share is inflated by microseconds.
+  evidence: run_facade_5_display.py format_styled + the truncate-on wrapper resolve confs inside the timed region; spark-door splits apply conf before the timer.
+  disposition: REMEDIATED — note recorded on C-002; cells not re-timed (microseconds vs the 17–107 ms n=1000 wall).
+```
+
+```yaml
+FINDING:
+  id: F-L6
+  severity: S3
+  category: AT-3
+  clause: C-004
+  claim: _running_in_ci refused record mode only for CI/GITHUB_ACTIONS == "true"; CI=1 or any other non-empty value allowed a rewrite.
+  evidence: test_facade_5_display_goldens.py _running_in_ci before the fix compared == "true".
+  disposition: REMEDIATED — bool(os.environ.get(...)) on both names; CI=1 refusal and CI="" allowance pinned in test_record_mode_fails_when_ci_is_set.
+```
+
 ## Step-1 target (C-007) — option (A): measured format wall
 
 C-002's numbers put the format leg at 90–98% of the wall at n=1000 and above
@@ -318,13 +342,26 @@ anything touching `eager.py` — stays in Python. Full move list in
 - `2764511c` — step-1 target: option A, format leg to Rust byte-identical.
 - `a877dfab` — gate close-out: full `pins:` citations in the tests map; ruff
   lint/format fixes.
+- `915bd208` — C-008 PROVEN + coverage attestation (pre-rebase shas; the
+  orchestrator's rebase onto `c9b03c67` renumbered them — current log is
+  authoritative).
+- Critic remediation (rebased shas): `18b52a8b` — L-001/L-002 zero-column
+  vertical + HTML goldens (M13/M14 red both cases); `a0359da8` — L-004
+  polars nested truncate goldens (M15/M16 red all three); `85982eed` —
+  L-003 C-003 narrowing + `test_html_row_count_matches_min_size_cap`;
+  and the L-005/L-006 close-out in this same commit series.
 - Baseline runner output `/tmp/facade-5-display-baseline.json` (not
   committed): 96 cells, all `door_check` equal, loads 4.96–5.52, run loads
   8.42→5.18.
-- `REPARK_FACADE_5_RECORD_GOLDENS=1` record run: 2 passed, 30 cases written.
-- Mutation runs M1–M12: every run `1 failed` with the `changed=` list above;
-  `git status --short python/repark/src/` empty after each restore.
-- Gates: §8 pins `pytest` 99 passed, all six files unedited; new goldens 2
+- `REPARK_FACADE_5_RECORD_GOLDENS=1` record runs: 30 cases round 1, then
+  +1 case (+3 doors on `spark_zero_cols`) and +3 cases in remediation —
+  34 cases in the committed JSON.
+- Mutation runs M1–M16: every run `1 failed` with the `changed=` list above;
+  `git status --short python/repark/src/` empty after each restore. The
+  critic's literal `truncate_at=truncate_at` mutant survives — byte-
+  equivalent by construction (outer composite cap dominates); M15/M16 are
+  the biting proofs for the inner-nested path.
+- Gates: §8 pins `pytest` 99 passed, all six files unedited; new goldens 3
   passed; `test_production_file_size.py` 11 passed; staged comment scan
   empty on every commit; `make verify` exit 0 — ruff `check .` all checks
   passed, `format --check .` 902 files already formatted, ledger-grammar
@@ -339,15 +376,15 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every charter clause walked — census enumerates all 6 renderers × 6 truncation rules, each unbound pair maps to exactly one golden case id, and the step-1 target names the formatters the C-002 numbers select.
+      evidence: Every charter clause walked — census enumerates all 6 renderers × 9 truncation rules, each unbound pair maps to exactly one golden case id, and the step-1 target names the formatters the C-002 numbers select. Critic findings L-001..L-006 all filed and remediated; F-L2 carried OPEN to the owner.
       artifacts: [task/ledgers/staging/facade-5-ledger.md, python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14.md]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundary inputs exercised in the golden corpus — zero-column frames, inf/nan doubles through the SQL door, nested struct/array/map scalars, truncate=2/5 edges, truncate=False, 50-column wide frames, styled max_rows caps.
+      evidence: Boundary inputs exercised in the golden corpus — zero-column frames (1-row and 0-row, across ASCII/vertical/HTML doors pinning the Table.slice phantom rows), inf/nan doubles through the SQL door, nested struct/array/map scalars, polars nested cells under truncate=True/10/2, truncate=2/5 edges, truncate=False, 50-column wide frames, styled max_rows caps; the HTML <tr> row count for caps {1,20} × sizes {0,cap,cap+1} is covered by test_html_row_count_matches_min_size_cap.
       artifacts: [python/repark/tests/facade_5_display_goldens.json, python/repark/tests/test_facade_5_display_goldens.py]
     - id: AT-3
       status: ATTACKED
-      evidence: Record mode refused when CI or GITHUB_ACTIONS is set (pinned by test); every mutation run was followed by a git-clean verify on python/repark/src; the runner cross-checks leg-composed bytes against the real door on all 96 cells.
+      evidence: Record mode refused under any non-empty CI or GITHUB_ACTIONS token (CI=1 refuses, CI="" allows — pinned by test); every mutation run was followed by a git-clean verify on python/repark/src; the runner cross-checks leg-composed bytes against the real door on all 96 cells.
       artifacts: [python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py]
     - id: AT-4
       status: ATTACKED
@@ -373,7 +410,7 @@ COVERAGE_ATTESTATION:
       justification: No failure path or diagnosis surface added — the runner reports to stdout/JSON and exits nonzero on a door mismatch.
     - id: AT-10
       status: ATTACKED
-      evidence: All 30 goldens proven red by twelve one-line mutations (M1–M12) with per-case changed lists; restore leaves the suite green; the §8 pin corpus (99 tests) re-run green; record-mode CI refusal tested.
+      evidence: All 34 goldens proven red by sixteen one-line mutations (M1–M16) with per-case changed lists; the critic's literal truncate_at pass-through mutant is byte-equivalent and survives — M15/M16 are the biting proofs on the inner-nested path; restore leaves the suite green; the §8 pin corpus (99 tests) re-run green; record-mode CI refusal tested.
       artifacts: [python/repark/tests/test_facade_5_display_goldens.py, python/repark/tests/facade_5_display_goldens.json, task/ledgers/staging/facade-5-ledger.md]
   complete: true
 ```

@@ -544,8 +544,8 @@ def _all_cases() -> dict[str, Case]:
 
 
 def _running_in_ci() -> bool:
-    """True when GitHub Actions or generic CI is set."""
-    return os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+    """True when ``CI`` or ``GITHUB_ACTIONS`` is set to any non-empty value."""
+    return bool(os.environ.get("CI")) or bool(os.environ.get("GITHUB_ACTIONS"))
 
 
 def _record_requested() -> bool:
@@ -619,12 +619,17 @@ def test_html_row_count_matches_min_size_cap(spark: ReparkSession) -> None:
 
 
 def test_record_mode_fails_when_ci_is_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Record env is refused in CI. pins: facade-5/C-004"""
+    """Record env is refused under any non-empty CI token. pins: facade-5/C-004"""
     monkeypatch.setenv(RECORD_ENV, "1")
     monkeypatch.setenv("CI", "true")
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     with pytest.raises(AssertionError, match="refusing to rewrite goldens"):
         _assert_record_mode_allowed()
+    monkeypatch.setenv("CI", "1")
+    with pytest.raises(AssertionError, match="refusing to rewrite goldens"):
+        _assert_record_mode_allowed()
+    monkeypatch.setenv("CI", "")
+    _assert_record_mode_allowed()
     monkeypatch.delenv("CI")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     with pytest.raises(AssertionError, match="refusing to rewrite goldens"):

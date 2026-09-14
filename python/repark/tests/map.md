@@ -1752,7 +1752,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   caps {1, 20} x sizes {0, cap, cap+1} (the §8 footer test asserts
   presence only — this is the row-count binding). Record mode is
   `REPARK_FACADE_5_RECORD_GOLDENS=1` and is refused when `CI` or
-  `GITHUB_ACTIONS` is set to any non-empty value. Each case is proven to bite
+  `GITHUB_ACTIONS` is set to any non-empty value (`CI=1` refuses; `CI=""`
+  alone allows). Each case is proven to bite
   by a one-line mutation recorded in
   `task/ledgers/staging/facade-5-ledger.md`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
