@@ -93,8 +93,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_timestamp_array_plus_timestamp_plans_without_array_cast` pins the S2-21
   perf guard: `array<timestamp[us]>` + timestamp keeps the plan free of any
   array CAST. `test_array_all_null_input_returns_typed_null` pins the all-null
-  short-circuit on both doors.
-  pins: array-null-1/L-1, L-2, L-5, L-6, L-7, L-8, L-9, L-10, P3-1
+  short-circuit on both doors. Round 5:
+  `test_float16_array_plus_int_resolves_as_float32` pins L-12 over polars
+  `pa.list_(pa.float16())` ingest — Spark has no half-float, so float16 ranks
+  as FLOAT on the ladder and `100000` stores `100000.0`, never Inf (red-first
+  `Inf` recorded in the ledger); `test_struct_field_matching_ignores_case_sensitive`
+  pins L-13 — field names match case-insensitively even under
+  `spark.sql.caseSensitive=true` (product rule, residue row in the ledger).
+  pins: array-null-1/L-1, L-2, L-5, L-6, L-7, L-8, L-9, L-10, L-12, L-13, P3-1
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
   `test_replace_oracle_cells_matching` pins the already-matching cells and

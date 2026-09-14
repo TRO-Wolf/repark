@@ -16,18 +16,24 @@ use datafusion::logical_expr::{ColumnarValue, ReturnFieldArgs};
 use crate::datetime::localize_wall_micros_in_zone;
 use crate::instant_ts::{ltz_timestamp_type, ntz_timestamp_type};
 
-const NUMERIC_ORDER: [DataType; 7] = [
+const NUMERIC_ORDER: [DataType; 6] = [
     DataType::Int8,
     DataType::Int16,
     DataType::Int32,
     DataType::Int64,
-    DataType::Float16,
     DataType::Float32,
     DataType::Float64,
 ];
 
 fn numeric_rank(data_type: &DataType) -> Option<usize> {
     NUMERIC_ORDER.iter().position(|t| t == data_type)
+}
+
+fn ladder_type(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Float16 => &DataType::Float32,
+        other => other,
+    }
 }
 
 fn is_ntz(data_type: &DataType) -> bool {
@@ -143,7 +149,10 @@ pub(super) fn spark_common_element(
     if matches!(element, DataType::Null) {
         return Some(array_element.clone());
     }
-    if let (Some(a), Some(e)) = (numeric_rank(array_element), numeric_rank(element)) {
+    if let (Some(a), Some(e)) = (
+        numeric_rank(ladder_type(array_element)),
+        numeric_rank(ladder_type(element)),
+    ) {
         return Some(NUMERIC_ORDER[a.max(e)].clone());
     }
     match (array_element, element) {

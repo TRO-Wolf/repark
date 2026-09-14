@@ -13,6 +13,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+import polars as pl
 import pyarrow as pa
 import pytest
 
@@ -657,3 +658,54 @@ def test_array_all_null_input_returns_typed_null(
         table = _coercion_door_table(spark, "a array<int>", rows, func, "9")
         want_type = "int32"
     _check(table, [None, None], want_type)
+
+
+@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
+def test_float16_array_plus_int_resolves_as_float32(spark: ReparkSession, func: str) -> None:
+    """pins: array-null-1/L-12 — Spark has no half-float; float16 takes part on the
+    numeric ladder as FLOAT (float32), so 100000 stores 100000.0, never Inf."""
+    arrow = pa.array([[1.0, 2.0], [None]], type=pa.list_(pa.float16()))
+    frame = spark.createDataFrame(pl.from_arrow(pa.table({"a": arrow})))
+    table = frame.select(getattr(F, func)("a", F.lit(100000)).alias("r")).to_arrow()
+    assert str(table.schema.field("r").type.value_type) == "float"
+    want = (
+        [[1.0, 2.0, 100000.0], [None, 100000.0]]
+        if func == "array_append"
+        else [[100000.0, 1.0, 2.0], [100000.0, None]]
+    )
+    assert table.column("r").to_pylist() == want
+
+
+@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
+@pytest.mark.parametrize("door", ["facade", "sql"])
+def test_struct_field_matching_ignores_case_sensitive(door: str, func: str) -> None:
+    """pins: array-null-1/L-13 — struct field names match case-insensitively even
+    with spark.sql.caseSensitive=true (the product rule; the oracle's default is
+    false and this UDF does not read the conf)."""
+    spark = (
+        ReparkSession.builder.appName("pytest-array-null-1-casesensitive")
+        .config("spark.sql.caseSensitive", "true")
+        .getOrCreate()
+    )
+    rows = [([(1, "a")],)]
+    if door == "facade":
+        element = F.struct(F.lit(2).alias("X"), F.lit("b").alias("y"))
+        table = (
+            spark.createDataFrame(rows, "a array<struct<x:int,y:string>>")
+            .select(getattr(F, func)("a", element).alias("r"))
+            .to_arrow()
+        )
+    else:
+        table = _coercion_door_table(
+            spark,
+            "a array<struct<x:int,y:string>>",
+            rows,
+            func,
+            "named_struct('X', CAST(2 AS INT), 'y', 'b')",
+        )
+    want = (
+        [[{"x": 1, "y": "a"}, {"x": 2, "y": "b"}]]
+        if func == "array_append"
+        else [[{"x": 2, "y": "b"}, {"x": 1, "y": "a"}]]
+    )
+    _check(table, want, "struct<x: int32, y: string>")

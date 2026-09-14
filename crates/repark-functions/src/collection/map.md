@@ -74,7 +74,8 @@ needed.
   CAST is ever inserted, so an `array<timestamp[us]>` stays un-cast (the S2-21 perf
   guard) and temporal leaves convert at invoke time in the session zone. The
   coercion/conversion machinery lives in [`array_append/coerce.rs`](array_append/coerce.rs)
-  (numeric ladder higher-of-two, list/map/struct recursion, µs temporal commons,
+  (numeric ladder higher-of-two with `Float16` ranking as `Float32`, list/map/struct
+  recursion, µs temporal commons,
   `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` refusals naming both Spark type
   names). Registered after DF's defaults so the same names serve both doors; the
   DF-only aliases (`list_append`, `array_push_back`, `list_prepend`, …) keep DF's
