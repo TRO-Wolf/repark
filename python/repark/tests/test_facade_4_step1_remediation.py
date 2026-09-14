@@ -485,3 +485,249 @@ def test_csv_rung_cast_tokens_agree_with_rust_table() -> None:
         assert rung_to_sql_cast(resolution) == _native.csv_sql_cast_token(
             rung_to_spark_type(resolution)._engine_type()
         ), resolution.rung
+
+
+def test_struct_field_simple_string_override_survives_in_containers() -> None:
+    """Container ``simpleString`` joins ``field.simpleString()``, not ``name:child``.
+
+    pins: facade-4/C-029
+    """
+    my_field = type(
+        "MyField",
+        (StructField,),
+        {"simpleString": lambda self: "OVERRIDE_FIELD"},
+    )
+    assert StructType([my_field("a", IntegerType())]).simpleString() == "struct<OVERRIDE_FIELD>"
+    assert (
+        ArrayType(StructType([my_field("a", IntegerType())]), True).simpleString()
+        == "array<struct<OVERRIDE_FIELD>>"
+    )
+    assert (
+        MapType(StringType(), StructType([my_field("a", IntegerType())]), True).simpleString()
+        == "map<string,struct<OVERRIDE_FIELD>>"
+    )
+    assert StructType([my_field("a", IntegerType())])._engine_type() == "struct<a:int>"
+    assert StructType([my_field("a", IntegerType())]).toDDL() == "a INT"
+    from repark.spark.session.create_dataframe_values import _data_type_to_sql_type
+
+    assert _data_type_to_sql_type(StructType([my_field("a", IntegerType())])) == "STRUCT<a:INT>"
+
+
+@pytest.mark.parametrize("base_class", [DayTimeIntervalType, YearMonthIntervalType])
+def test_interval_simple_string_override_reaches_toddl(base_class: type) -> None:
+    """No-arm DDL leaves take ``simpleString().upper()`` — the subclass override.
+
+    pins: facade-4/C-030
+    """
+    override = type("MyInterval", (base_class,), {"simpleString": lambda self: "OVERRIDE_SIMPLE"})
+    assert StructType([StructField("f", override())]).toDDL() == "f OVERRIDE_SIMPLE"
+    assert (
+        StructType([StructField("x", ArrayType(override(), True))]).toDDL()
+        == "x ARRAY<OVERRIDE_SIMPLE>"
+    )
+    assert (
+        StructType([StructField("m", MapType(StringType(), override(), True))]).toDDL()
+        == "m MAP<STRING,OVERRIDE_SIMPLE>"
+    )
+    assert ArrayType(override(), True).simpleString() == "array<OVERRIDE_SIMPLE>"
+
+
+@pytest.mark.parametrize(
+    "base_class,engine",
+    [
+        (DayTimeIntervalType, "interval day to second"),
+        (YearMonthIntervalType, "interval year to month"),
+    ],
+)
+def test_interval_override_keeps_engine_sql_marker(base_class: type, engine: str) -> None:
+    """The SQL leaf falls back to ``_engine_type`` — the parent token, not the override.
+
+    pins: facade-4/C-030
+    """
+    from repark.spark.session.create_dataframe_values import _data_type_to_sql_type
+
+    override = type("MyInterval", (base_class,), {"simpleString": lambda self: "OVERRIDE_SIMPLE"})
+    assert _data_type_to_sql_type(override()) == engine
+    assert _data_type_to_sql_type(ArrayType(override(), True)) == f"ARRAY<{engine}>"
+
+
+@pytest.mark.parametrize(
+    "dynamic_class",
+    [BinaryType, BooleanType, DateType, TimestampType, DoubleType],
+)
+def test_dynamic_class_simple_string_override_dispatches(dynamic_class: type) -> None:
+    """An overriding subclass of a dynamic-answer class keeps its own ``simpleString``.
+
+    pins: facade-4/C-031
+    """
+    override = type(
+        "MyDynamic", (dynamic_class,), {"simpleString": lambda self: "OVERRIDE_DYNAMIC"}
+    )
+    assert override().simpleString() == "OVERRIDE_DYNAMIC"
+    assert ArrayType(override(), True).simpleString() == "array<OVERRIDE_DYNAMIC>"
+    assert StructType([StructField("f", override())]).simpleString() == (
+        "struct<f:OVERRIDE_DYNAMIC>"
+    )
+
+
+_MI_CLASSES = {
+    "Dual": type("Dual", (IntegerType, StringType), {}),
+    "Dual2": type("Dual2", (BinaryType, IntegerType), {}),
+    "Dual3": type("Dual3", (StringType, IntegerType), {}),
+    "Dual4": type("Dual4", (StringType, BinaryType), {}),
+    "Dual5": type("Dual5", (LongType, IntegerType), {}),
+    "ArrInt": type("ArrInt", (ArrayType, IntegerType), {}),
+    "NullInt": type("NullInt", (NullType, IntegerType), {}),
+}
+
+
+def _mi_instance(name: str) -> Any:
+    cls = _MI_CLASSES[name]
+    if cls.__mro__[1] is ArrayType:
+        return cls(IntegerType())
+    return cls()
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "int"),
+        ("Dual2", "int"),
+        ("Dual3", "string"),
+        ("Dual4", "string"),
+        ("Dual5", "bigint"),
+        ("ArrInt", "array<int>"),
+        ("NullInt", "int"),
+    ],
+)
+def test_mi_simple_string_mro(name: str, expected: str) -> None:
+    """``simpleString`` follows method resolution (first ancestor with the method).
+
+    pins: facade-4/C-031
+    """
+    assert _mi_instance(name).simpleString() == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "int"),
+        ("Dual2", "binary"),
+        ("Dual3", "string"),
+        ("Dual4", "string"),
+        ("Dual5", "long"),
+        ("ArrInt", "array<int>"),
+        ("NullInt", "void"),
+    ],
+)
+def test_mi_engine_type_mro(name: str, expected: str) -> None:
+    """``_engine_type`` follows method resolution independently of ``simpleString``.
+
+    pins: facade-4/C-031
+    """
+    assert _mi_instance(name)._engine_type() == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "int"),
+        ("Dual2", "dual2"),
+        ("Dual3", "string"),
+        ("Dual4", "string"),
+        ("Dual5", "dual5"),
+        ("NullInt", "void"),
+    ],
+)
+def test_mi_json_value_and_json(name: str, expected: str) -> None:
+    """``jsonValue``/``json`` resolve through the MRO method, including collation-free.
+
+    pins: facade-4/C-031
+    """
+    instance = _mi_instance(name)
+    assert instance.jsonValue() == expected
+    assert instance.json() == f'"{expected}"'
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "INT"),
+        ("Dual2", "INT"),
+        ("Dual3", "INT"),
+        ("Dual4", "STRING"),
+        ("Dual5", "INT"),
+        ("ArrInt", "INT"),
+        ("NullInt", "INT"),
+    ],
+)
+def test_mi_sql_marker_isinstance_order(name: str, expected: str) -> None:
+    """``_data_type_to_sql_type`` keeps base's isinstance order (integer family first).
+
+    pins: facade-4/C-031
+    """
+    from repark.spark.session.create_dataframe_values import _data_type_to_sql_type
+
+    assert _data_type_to_sql_type(_mi_instance(name)) == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "f STRING"),
+        ("Dual2", "f BINARY"),
+        ("Dual3", "f STRING"),
+        ("Dual4", "f STRING"),
+        ("Dual5", "f INT"),
+        ("ArrInt", "f INT"),
+        ("NullInt", "f VOID"),
+    ],
+)
+def test_mi_ddl_isinstance_order(name: str, expected: str) -> None:
+    """``StructType.toDDL`` keeps base's DDL isinstance order (string/binary before int).
+
+    pins: facade-4/C-031
+    """
+    assert StructType([StructField("f", _mi_instance(name))]).toDDL() == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "int32"),
+        ("Dual2", "int32"),
+        ("Dual3", "int32"),
+        ("Dual4", "string"),
+        ("Dual5", "int32"),
+        ("ArrInt", "int32"),
+        ("NullInt", "null"),
+    ],
+)
+def test_mi_arrow_isinstance_order(name: str, expected: str) -> None:
+    """``repark_type_to_arrow`` keeps base's Arrow isinstance order.
+
+    pins: facade-4/C-031
+    """
+    assert str(repark_type_to_arrow(_mi_instance(name))) == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dual", "struct<value:int>"),
+        ("Dual2", "struct<value:int>"),
+        ("Dual3", "struct<value:int>"),
+        ("Dual4", "struct<value:string>"),
+        ("Dual5", "struct<value:int>"),
+        ("NullInt", "struct<value:int>"),
+    ],
+)
+def test_mi_create_dataframe_schema(name: str, expected: str) -> None:
+    """``createDataFrame([(1,)], cls()).schema`` keeps base's end-to-end answer.
+
+    pins: facade-4/C-031
+    """
+    from repark import ReparkSession
+
+    session = ReparkSession.builder.appName("facade-4-mi").getOrCreate()
+    assert session.createDataFrame([(1,)], _mi_instance(name)).schema.simpleString() == expected

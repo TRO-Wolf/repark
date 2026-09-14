@@ -44,15 +44,27 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   five per-class answers (descriptor head, `simpleString`, `_engine_type`, SQL
   marker, DDL marker) resolved by an MRO scan so pass-through subclasses keep
   the base answer (`_inherited_type_name` reproduces the dynamic
-  `type(self).typeName()` fallback); `_leaf_simple`/`_leaf_engine`/`_leaf_ddl`
-  dispatch nested leaves the same way. `_parse_datatype_string` keeps a Python
+  `type(self).typeName()` fallback); `_leaf_ddl` dispatches nested DDL leaves
+  the same way. `_parse_datatype_string` keeps a Python
   residue (`_parse_datatype_string_python` + `_parse_field_list`) for integer
   parameters beyond i64 and non-printable text whose refusal `repr` bytes
   differ from Rust's; `_native_function` caches lazy native lookups.
   **Round 2 (PY-P2-002):** `_descriptor_to_datatype` decodes the tagged-tuple
   wire shape (`("kind", …)`) the bridge now emits — positional indexing, no
   per-node dict lookups.
-  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026
+  **Round 4 (2026-09-14, L-008/L-009):** base answers each surface with a
+  different resolution — MRO for `simpleString`-style answers, an
+  integer-first `isinstance` order for Arrow and SQL markers, and a
+  string-first order for DDL. `_arrow_order`/`_sql_order`/`_ddl_order` cache
+  the three orders; `_primary_class` picks the first matching class in an
+  order (exact tabled classes and exact containers short-circuit);
+  `_atomic_token`'s `order` parameter switches its subclass scan from MRO to
+  the surface order; `_datatype_to_descriptor` propagates `None` upward so
+  unknown subtrees reach the Python fallbacks in one walk, and struct members
+  build through `_field_descriptor`. `_leaf_ddl`/`_ddl_token_python` keep the
+  DDL fallback on `data_type.simpleString().upper()` so `simpleString`
+  overrides (intervals and every other leaf) survive nested.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -253,7 +265,18 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   surface bar. `_atomic_token` still answers for nested composition, foreign
   subclasses and the SQL/DDL marker columns; the MRO mutation still turns the
   marker pins red.
-  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028
+  **Remediation round 4 (2026-09-14, L-007/L-008/L-009):** `DataType.simpleString`
+  answers from `_SIMPLE_STRING_FAST` for exact classes then falls back to
+  `type(self).typeName()` — the five dynamic-answer classes lose their literal
+  methods so multiple-inheritance MRO matches base; `DataType._engine_type`
+  delegates to `self.simpleString()`. `ArrayType`/`MapType`/`StructField`/
+  `StructType` get base's `simpleString`/`_engine_type` bodies back so child
+  and field overrides compose (a `StructField.simpleString` override survives
+  inside `StructType`, `ArrayType` and `MapType`); the parameterized
+  `jsonValue`s dispatch through `self.simpleString()` again. `StructType.toDDL`
+  and `repark_type_to_arrow` pass their surface orders into
+  `_type_table`'s descriptor build.
+  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-031
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and

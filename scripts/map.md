@@ -1,5 +1,12 @@
 # map — scripts/
 
+FACADE-4 step-1 remediation round 4 (2026-09-14, L-007..L-009):
+`check_lib_py.py` `spark/types.py` 1772 → 1793 (increase — base's container
+`simpleString`/`_engine_type`/`jsonValue` dispatch bodies and the
+`_SIMPLE_STRING_FAST` table came back for byte-identical MRO/override
+answers; still below main's 1834 ceiling). The CAP-1 parity mirror row moved
+with it.
+pins: facade-4/C-029, C-031
 FACADE-4 step-1 remediation round 3 (2026-09-14, ruling R14b-D-2):
 `check_lib_py.py` `spark/types.py` 1610 → 1772 (increase — the per-class
 literal `simpleString`/`_engine_type` methods came back for the `dtypes`

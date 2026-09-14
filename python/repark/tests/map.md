@@ -1830,7 +1830,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   messages for control and non-printable code points, Arrow nesting-depth
   fallbacks at 63/64/70 on both directions, the wide-decimal FFI-envelope
   fallback, and the csv rung engine/SQL-cast token agreement.
-  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028
+  **Round 4 (2026-09-14):** byte-identity repro pins for the critic-logic
+  re-check findings L-007/L-008/L-009 — `StructField` subclass `simpleString`
+  overrides composing inside `StructType`/`ArrayType`/`MapType` and nested
+  trees, `simpleString` overrides on `DayTimeIntervalType`/
+  `YearMonthIntervalType` and generic leaves reaching the `toDDL` leaf and
+  nested containers, and the multiple-inheritance matrix (`Dual`,
+  `Dual2`, `Dual3`, `ArrInt` and friends) across `simpleString`/`typeName`/
+  `_engine_type`/`jsonValue`/`json`/`toDDL`/`_data_type_to_sql_type`/
+  `repark_type_to_arrow`/`createDataFrame` schema — every answer recorded
+  from the base release, plus an override pin on each of the five
+  dynamic-answer classes. Each fix carries a pasted scratch-mutation red.
+  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028, C-029..C-031
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

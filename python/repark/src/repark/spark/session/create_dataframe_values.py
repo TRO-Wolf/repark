@@ -458,33 +458,83 @@ def _parse_create_dataframe_schema(
 def _data_type_to_sql_type(data_type: Any) -> str:
     """Map a repark :class:`~repark.types.DataType` to a SQL cast target for VALUES cells."""
 
+    from repark.spark._type_table import (
+        _atomic_token,
+        _native_function,
+        _primary_class,
+        _sql_order,
+    )
+    from repark.spark.types import (
+        ArrayType,
+        CharType,
+        MapType,
+        StringType,
+        StructType,
+        VarcharType,
+        _datatype_to_descriptor,
+        refuse_evaluated_collation,
+    )
+
+    primary = _primary_class(data_type, _sql_order())
+
+    if primary is StringType or primary is CharType or primary is VarcharType:
+        if isinstance(data_type, StringType):
+            refuse_evaluated_collation(data_type)
+        return "STRING"
+
+    if primary is ArrayType or primary is MapType or primary is StructType:
+        _sql_refuse_collation(data_type)
+        descriptor = _datatype_to_descriptor(data_type, _sql_order())
+        if descriptor is not None:
+            return _native_function("sql_marker_from_descriptor")(descriptor)
+        return _sql_type_token_python(data_type)
+
+    marker = _atomic_token(data_type, 2, _sql_order())
+
+    if marker is not None:
+        return marker
+
+    engine = getattr(data_type, "_engine_type", None)
+
+    if callable(engine):
+        return str(engine())
+
+    raise PySparkTypeError(
+        f"createDataFrame schema field type {type(data_type).__name__} is not supported"
+    )
+
+
+def _sql_refuse_collation(data_type: Any) -> None:
+    """Refuse nested non-binary collations along base's SQL-marker isinstance order."""
+
+    from repark.spark._type_table import _primary_class, _sql_order
     from repark.spark.types import (
         ArrayType,
         MapType,
         StringType,
         StructType,
-        _datatype_to_descriptor,
-        _descriptor_tree_has_none,
         refuse_evaluated_collation,
     )
 
-    if isinstance(data_type, (StringType, ArrayType, MapType, StructType)):
+    primary = _primary_class(data_type, _sql_order())
+
+    if primary is StringType and isinstance(data_type, StringType):
         refuse_evaluated_collation(data_type)
 
-    descriptor = _datatype_to_descriptor(data_type)
-
-    if descriptor is not None and not _descriptor_tree_has_none(descriptor):
-        from repark.spark._type_table import _native_function
-
-        return _native_function("sql_marker_from_descriptor")(descriptor)
-
-    return _sql_type_token_python(data_type)
+    if primary is ArrayType:
+        _sql_refuse_collation(data_type.elementType)
+    elif primary is MapType:
+        _sql_refuse_collation(data_type.keyType)
+        _sql_refuse_collation(data_type.valueType)
+    elif primary is StructType:
+        for field in data_type.fields:
+            _sql_refuse_collation(field.dataType)
 
 
 def _sql_type_token_python(data_type: Any) -> str:
     """SQL cast marker for descriptors the table cannot see (unknown subtype inside)."""
 
-    from repark.spark._type_table import _atomic_token
+    from repark.spark._type_table import _atomic_token, _sql_order
     from repark.spark.types import ArrayType, MapType, StructType
 
     if isinstance(data_type, ArrayType):
@@ -503,7 +553,7 @@ def _sql_type_token_python(data_type: Any) -> str:
 
         return f"STRUCT<{inner}>"
 
-    marker = _atomic_token(data_type, 2)
+    marker = _atomic_token(data_type, 2, _sql_order())
 
     if marker is not None:
         return marker

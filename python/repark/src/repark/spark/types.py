@@ -21,15 +21,13 @@ from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from repark.spark._type_table import (
-    _atomic_token,
+    _arrow_order,
     _datatype_to_ddl_token,
     _datatype_to_descriptor,
+    _ddl_order,
     _descriptor_to_datatype,
-    _descriptor_tree_has_none,
-    _engine_token_python,
     _native_function,
     _parse_datatype_string,
-    _simple_string_python,
 )
 
 # ==================================================================================================
@@ -45,10 +43,7 @@ class DataType:
 
     def _engine_type(self) -> str:
         """Return the canonical engine type string (e.g. ``"string"``, ``"decimal(10,4)"``)."""
-        answer = _atomic_token(self, 1)
-        if answer is not None:
-            return answer
-        return _engine_token_python(self)
+        return self.simpleString()
 
     @classmethod
     def typeName(cls) -> str:  # noqa: N802 — PySpark camelCase
@@ -68,10 +63,10 @@ class DataType:
         Default is :meth:`typeName`; atomic types that Spark shortens (``int`` not ``integer``)
         override this.
         """
-        answer = _atomic_token(self, 0)
+        answer = _SIMPLE_STRING_FAST.get(type(self))
         if answer is not None:
             return answer
-        return _simple_string_python(self)
+        return type(self).typeName()
 
     def jsonValue(self) -> str | dict[str, Any]:  # noqa: N802 — PySpark camelCase
         """PySpark ``DataType.jsonValue()`` — JSON-serializable type descriptor.
@@ -178,9 +173,7 @@ class StringType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form matches simpleString for collated strings."""
-        if self.isUTF8BinaryCollation():
-            return "string"
-        return f"string collate {self.collation}"
+        return self.simpleString()
 
     def __repr__(self) -> str:
         """``StringType()`` or ``StringType('COLLATION')``."""
@@ -206,7 +199,7 @@ class CharType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``char(n)``."""
-        return f"char({self.length})"
+        return self.simpleString()
 
     def __repr__(self) -> str:
         """``CharType(n)``."""
@@ -230,7 +223,7 @@ class VarcharType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``varchar(n)``."""
-        return f"varchar({self.length})"
+        return self.simpleString()
 
     def __repr__(self) -> str:
         """``VarcharType(n)``."""
@@ -247,10 +240,6 @@ class BinaryType(DataType):
         """The engine string ``"binary"``."""
         return "binary"
 
-    def simpleString(self) -> str:  # noqa: N802
-        """Concrete-class ``typeName`` (dynamic under subclasses)."""
-        return type(self).typeName()
-
 
 class BooleanType(DataType):
     """Boolean (Arrow ``Boolean``)."""
@@ -261,10 +250,6 @@ class BooleanType(DataType):
     def _engine_type(self) -> str:
         """The engine string ``"boolean"``."""
         return "boolean"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Concrete-class ``typeName`` (dynamic under subclasses)."""
-        return type(self).typeName()
 
 
 class DateType(DataType):
@@ -278,10 +263,6 @@ class DateType(DataType):
     def _engine_type(self) -> str:
         """The engine string ``"date"``."""
         return "date"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Concrete-class ``typeName`` (dynamic under subclasses)."""
-        return type(self).typeName()
 
     def needConversion(self) -> bool:  # noqa: N802
         """Dates convert between ``datetime.date`` and day ordinals."""
@@ -309,10 +290,6 @@ class TimestampType(DataType):
     def _engine_type(self) -> str:
         """The engine string ``"timestamp"`` (native parse maps to µs+UTC)."""
         return "timestamp"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Concrete-class ``typeName`` (dynamic under subclasses)."""
-        return type(self).typeName()
 
     def needConversion(self) -> bool:  # noqa: N802
         """Timestamps convert to microsecond epoch ints."""
@@ -396,7 +373,7 @@ class TimeType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``time(n)``."""
-        return f"time({self.precision})"
+        return self.simpleString()
 
     def __repr__(self) -> str:
         """``TimeType(n)``."""
@@ -426,7 +403,7 @@ class DecimalType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """Spark returns the simpleString form for decimals."""
-        return f"decimal({self.precision},{self.scale})"
+        return self.simpleString()
 
     def __repr__(self) -> str:
         """Render as ``DecimalType(precision,scale)`` (PySpark's repr shape)."""
@@ -442,10 +419,6 @@ class DoubleType(DataType):
     def _engine_type(self) -> str:
         """The engine string ``"double"``."""
         return "double"
-
-    def simpleString(self) -> str:  # noqa: N802
-        """Concrete-class ``typeName`` (dynamic under subclasses)."""
-        return type(self).typeName()
 
 
 class FloatType(DataType):
@@ -726,6 +699,14 @@ class ArrayType(DataType):
         self.elementType = elementType
         self.containsNull = containsNull
 
+    def _engine_type(self) -> str:
+        """Engine array string."""
+        return f"array<{self.elementType._engine_type()}>"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``array<elementSimple>``."""
+        return f"array<{self.elementType.simpleString()}>"
+
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark array JSON descriptor."""
         return {
@@ -768,6 +749,14 @@ class MapType(DataType):
         self.keyType = keyType
         self.valueType = valueType
         self.valueContainsNull = valueContainsNull
+
+    def _engine_type(self) -> str:
+        """Engine map string."""
+        return f"map<{self.keyType._engine_type()},{self.valueType._engine_type()}>"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``map<key,value>``."""
+        return f"map<{self.keyType.simpleString()},{self.valueType.simpleString()}>"
 
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark map JSON descriptor."""
@@ -818,6 +807,14 @@ class StructField(DataType):
         self.dataType = dataType
         self.nullable = nullable
         self.metadata: dict[str, Any] = metadata if metadata is not None else {}
+
+    def _engine_type(self) -> str:
+        """Field is not a cast target; used only in struct engine strings."""
+        return f"{self.name}:{self.dataType._engine_type()}"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``name:type``."""
+        return f"{self.name}:{self.dataType.simpleString()}"
 
     def typeName(self) -> str:  # type: ignore[override]  # noqa: N802
         """Spark raises when ``typeName`` is called on a field (not a type)."""
@@ -885,6 +882,18 @@ class StructType(DataType):
             if not all(isinstance(field, StructField) for field in self.fields):
                 raise TypeError("fields should be a list of StructField")
 
+    def _engine_type(self) -> str:
+        """Struct engine string ``struct<field:type,...>``."""
+        return (
+            "struct<"
+            + ",".join(f"{field.name}:{field.dataType._engine_type()}" for field in self.fields)
+            + ">"
+        )
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark ``StructType.simpleString()`` — ``struct<field:type,...>``."""
+        return "struct<" + ",".join(field.simpleString() for field in self.fields) + ">"
+
     def jsonValue(self) -> dict[str, Any]:  # noqa: N802
         """Spark ``StructType.jsonValue()`` — type plus fields list."""
         return {
@@ -939,8 +948,8 @@ class StructType(DataType):
 
     def toDDL(self) -> str:  # noqa: N802 — PySpark camelCase
         """DDL field list (``a INT,b STRING NOT NULL``) — pure Python Spark 4 shape."""
-        descriptor = _datatype_to_descriptor(self)
-        if _descriptor_tree_has_none(descriptor):
+        descriptor = _datatype_to_descriptor(self, _ddl_order())
+        if descriptor is None:
             return ",".join(
                 f"{field.name} {_datatype_to_ddl_token(field.dataType)}"
                 f"{'' if field.nullable else ' NOT NULL'}"
@@ -1375,8 +1384,8 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
         not (1 <= data_type.precision <= 38) or not (-128 <= data_type.scale <= 127)
     ):
         return _repark_type_to_arrow_python(data_type)
-    descriptor = _datatype_to_descriptor(data_type)
-    if descriptor is None or _descriptor_tree_has_none(descriptor):
+    descriptor = _datatype_to_descriptor(data_type, _arrow_order())
+    if descriptor is None:
         return _repark_type_to_arrow_python(data_type)
     try:
         return pa.DataType._import_from_c_capsule(
@@ -1738,6 +1747,17 @@ def refuse_collated_type_string(type_text: str) -> None:
     from repark.errors import UnsupportedOperationException
 
     raise UnsupportedOperationException(collation_refusal_message(name))
+
+
+_SIMPLE_STRING_FAST: dict[type, str] = {
+    NullType: "void",
+    BinaryType: "binary",
+    BooleanType: "boolean",
+    DateType: "date",
+    TimestampType: "timestamp",
+    TimestampNTZType: "timestamp_ntz",
+    DoubleType: "double",
+}
 
 
 __all__ = [

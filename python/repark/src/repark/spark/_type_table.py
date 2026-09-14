@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from typing import Any
 
 _AtomicRow = tuple[
@@ -193,61 +193,229 @@ def _descriptor_heads() -> dict[type, str | Callable[[Any], dict[str, Any]]]:
     return _DESCRIPTOR_HEADS
 
 
-def _atomic_token(data_type: Any, index: int) -> str | None:
+_ARROW_ORDER: tuple[type, ...] | None = None
+_SQL_ORDER: tuple[type, ...] | None = None
+_DDL_ORDER: tuple[type, ...] | None = None
+
+
+def _arrow_order() -> tuple[type, ...]:
+    """Base's ``repark_type_to_arrow`` isinstance order (integer family before string)."""
+    global _ARROW_ORDER
+    if _ARROW_ORDER is None:
+        t = _types()
+        _ARROW_ORDER = (
+            t.NullType,
+            t.BooleanType,
+            t.ByteType,
+            t.ShortType,
+            t.IntegerType,
+            t.LongType,
+            t.FloatType,
+            t.DoubleType,
+            t.StringType,
+            t.CharType,
+            t.VarcharType,
+            t.BinaryType,
+            t.DateType,
+            t.TimestampType,
+            t.TimestampNTZType,
+            t.DecimalType,
+            t.ArrayType,
+            t.MapType,
+            t.StructType,
+        )
+    return _ARROW_ORDER
+
+
+def _sql_order() -> tuple[type, ...]:
+    """Base's ``_data_type_to_sql_type`` isinstance order (integer family first)."""
+    global _SQL_ORDER
+    if _SQL_ORDER is None:
+        t = _types()
+        _SQL_ORDER = (
+            t.IntegerType,
+            t.LongType,
+            t.ShortType,
+            t.ByteType,
+            t.DoubleType,
+            t.FloatType,
+            t.BooleanType,
+            t.StringType,
+            t.CharType,
+            t.VarcharType,
+            t.BinaryType,
+            t.DateType,
+            t.TimestampType,
+            t.TimestampNTZType,
+            t.DecimalType,
+            t.NullType,
+            t.ArrayType,
+            t.MapType,
+            t.StructType,
+        )
+    return _SQL_ORDER
+
+
+def _ddl_order() -> tuple[type, ...]:
+    """Base's ``_datatype_to_ddl_token`` isinstance order (string/binary before int)."""
+    global _DDL_ORDER
+    if _DDL_ORDER is None:
+        t = _types()
+        _DDL_ORDER = (
+            t.NullType,
+            t.StringType,
+            t.BinaryType,
+            t.BooleanType,
+            t.ByteType,
+            t.ShortType,
+            t.IntegerType,
+            t.LongType,
+            t.FloatType,
+            t.DoubleType,
+            t.DateType,
+            t.TimestampType,
+            t.TimestampNTZType,
+            t.TimeType,
+            t.DecimalType,
+            t.ArrayType,
+            t.MapType,
+            t.StructType,
+            t.VariantType,
+            t.CalendarIntervalType,
+            t.CharType,
+            t.VarcharType,
+        )
+    return _DDL_ORDER
+
+
+def _primary_class(data_type: Any, order: tuple[type, ...] | None = None) -> type | None:
+    """First ``order`` class ``data_type`` is an instance of (base's isinstance chains)."""
+    cls = type(data_type)
+    if cls in _descriptor_heads():
+        return cls
+    t = _types()
+    if cls is t.ArrayType or cls is t.MapType or cls is t.StructType:
+        return cls
+    if order is None or not isinstance(data_type, t.DataType):
+        return None
+    for klass in order:
+        if isinstance(data_type, klass):
+            return klass
+    return None
+
+
+def _atomic_token(data_type: Any, index: int, order: tuple[type, ...] | None = None) -> str | None:
     """Table token answer by column (0=simpleString, 1=_engine_type, 2=SQL, 3=DDL).
 
-    The MRO scan mirrors base's method/inheritance resolution: a pass-through subclass of a
-    tabled class inherits its answer. ``None`` means no tabled ancestor (nested type or a
-    foreign ``DataType``) or no marker arm for the class.
+    For subclasses the first ``order`` class the instance is an ``isinstance`` of supplies
+    the row — base's per-surface isinstance-chain order. ``order=None`` scans the class MRO
+    instead (base's method-resolution order). ``None`` means no matching tabled class or no
+    marker arm for it.
     """
     rows = _atomic_rows()
     cls = type(data_type)
     row = rows.get(cls)
     if row is None:
-        for parent in cls.__mro__[1:]:
-            row = rows.get(parent)
-            if row is not None:
-                break
+        candidates = cls.__mro__[1:] if order is None else order
+        for parent in candidates:
+            if isinstance(data_type, parent):
+                row = rows.get(parent)
+                if row is not None:
+                    break
     if row is None:
         return None
     answer = row[index + 1]
     return answer if isinstance(answer, str) or answer is None else answer(data_type)
 
 
-def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
+def _datatype_to_descriptor(
+    data_type: Any, order: tuple[type, ...] | None = None
+) -> dict[str, Any] | None:
     """Build the Rust type-table descriptor for a :class:`DataType`; ``None`` when unknown."""
-    head = _descriptor_heads().get(type(data_type))
-    if head is not None:
-        return {"kind": head} if isinstance(head, str) else head(data_type)
     t = _types()
+    heads = _descriptor_heads()
+    head = heads.get(type(data_type))
+    if head is not None:
+        if isinstance(head, str):
+            return {"kind": head}
+        try:
+            return head(data_type)
+        except AttributeError:
+            return None
+    primary = _primary_class(data_type, order)
 
-    if isinstance(data_type, t.ArrayType):
-        return {
-            "kind": "array",
-            "element": _datatype_to_descriptor(data_type.elementType),
-            "contains_null": data_type.containsNull,
-        }
-    if isinstance(data_type, t.MapType):
+    if primary is t.ArrayType:
+        element = _datatype_to_descriptor(data_type.elementType, order)
+        if element is None:
+            return None
+        return {"kind": "array", "element": element, "contains_null": data_type.containsNull}
+    if primary is t.MapType:
+        key = _datatype_to_descriptor(data_type.keyType, order)
+        value = _datatype_to_descriptor(data_type.valueType, order)
+        if key is None or value is None:
+            return None
         return {
             "kind": "map",
-            "key": _datatype_to_descriptor(data_type.keyType),
-            "value": _datatype_to_descriptor(data_type.valueType),
+            "key": key,
+            "value": value,
             "value_contains_null": data_type.valueContainsNull,
         }
-    if isinstance(data_type, t.StructField):
-        return {
-            "kind": "field",
-            "name": data_type.name,
-            "type": _datatype_to_descriptor(data_type.dataType),
-            "nullable": data_type.nullable,
-            "metadata": None,
-        }
-    if isinstance(data_type, t.StructType):
-        return {
-            "kind": "struct",
-            "fields": [_datatype_to_descriptor(field) for field in data_type.fields],
-        }
+    if primary is t.StructType:
+        fields = [_field_descriptor(field, order) for field in data_type.fields]
+        if any(field is None for field in fields):
+            return None
+        return {"kind": "struct", "fields": fields}
+    if primary is None and isinstance(data_type, t.StructField):
+        return _field_descriptor(data_type, order)
+    if primary is not None:
+        head = heads[primary]
+        if isinstance(head, str):
+            return {"kind": head}
+        try:
+            return head(data_type)
+        except AttributeError:
+            return None
+    if order is None:
+        if isinstance(data_type, t.ArrayType):
+            element = _datatype_to_descriptor(data_type.elementType)
+            if element is None:
+                return None
+            return {
+                "kind": "array",
+                "element": element,
+                "contains_null": data_type.containsNull,
+            }
+        if isinstance(data_type, t.MapType):
+            key = _datatype_to_descriptor(data_type.keyType)
+            value = _datatype_to_descriptor(data_type.valueType)
+            if key is None or value is None:
+                return None
+            return {
+                "kind": "map",
+                "key": key,
+                "value": value,
+                "value_contains_null": data_type.valueContainsNull,
+            }
+        if isinstance(data_type, t.StructType):
+            fields = [_field_descriptor(field, None) for field in data_type.fields]
+            if any(field is None for field in fields):
+                return None
+            return {"kind": "struct", "fields": fields}
     return None
+
+
+def _field_descriptor(field: Any, order: tuple[type, ...] | None) -> dict[str, Any] | None:
+    """Descriptor for a struct member; ``None`` when its data type is unknown."""
+    child = _datatype_to_descriptor(field.dataType, order)
+    if child is None:
+        return None
+    return {
+        "kind": "field",
+        "name": field.name,
+        "type": child,
+        "nullable": field.nullable,
+        "metadata": None,
+    }
 
 
 def _descriptor_to_datatype(descriptor: Any) -> Any:
@@ -302,116 +470,55 @@ def _descriptor_to_datatype(descriptor: Any) -> Any:
     raise TypeError(f"unsupported type-table descriptor kind {kind!r}")
 
 
-def _descriptor_children(descriptor: dict[str, Any]) -> Iterator[Any]:
-    """Yield the child descriptor slots (``element``/``key``/``value``/``type``/``fields``)."""
-    for key in ("element", "key", "value", "type"):
-        if key in descriptor:
-            yield descriptor[key]
-    yield from descriptor.get("fields", ())
-
-
-def _descriptor_tree_has_none(descriptor: dict[str, Any] | None) -> bool:
-    """True when a descriptor tree contains an unknown (``None``) subtype slot."""
-    if descriptor is None:
-        return True
-    return any(_descriptor_tree_has_none(child) for child in _descriptor_children(descriptor))
-
-
-def _descriptor_token(data_type: Any, native_name: str, fallback: Callable[[Any], str]) -> str:
+def _descriptor_token(
+    data_type: Any,
+    native_name: str,
+    fallback: Callable[[Any], str],
+    order: tuple[type, ...] | None = None,
+) -> str:
     """Token answer from the shared type table (Python fallback on unknown)."""
-    descriptor = _datatype_to_descriptor(data_type)
-    if descriptor is None or _descriptor_tree_has_none(descriptor):
+    descriptor = _datatype_to_descriptor(data_type, order)
+    if descriptor is None:
         return fallback(data_type)
     return _native_function(native_name)(descriptor)
 
 
-def _nested_token_python(
-    data_type: Any,
-    child: Callable[[Any], str],
-    leaf: Callable[[Any], str],
-    *,
-    upper: bool = False,
-) -> str:
-    """Container-token walker for descriptor trees the table cannot see."""
-    t = _types()
-
-    if upper:
-        array_name, map_name, struct_name = "ARRAY", "MAP", "STRUCT"
-    else:
-        array_name, map_name, struct_name = "array", "map", "struct"
-    if isinstance(data_type, t.ArrayType):
-        return f"{array_name}<{child(data_type.elementType)}>"
-    if isinstance(data_type, t.MapType):
-        return f"{map_name}<{child(data_type.keyType)},{child(data_type.valueType)}>"
-    if isinstance(data_type, t.StructType):
-        inner = ",".join(f"{field.name}:{child(field.dataType)}" for field in data_type.fields)
-        return f"{struct_name}<{inner}>"
-    if not upper and isinstance(data_type, t.StructField):
-        return f"{data_type.name}:{child(data_type.dataType)}"
-    return leaf(data_type)
-
-
-def _leaf_simple(data_type: Any) -> str:
-    """``simpleString`` for a leaf with no tabled answer (custom override, else ``typeName``)."""
-    token = _atomic_token(data_type, 0)
-    if token is not None:
-        return token
-    cls = type(data_type)
-    if cls.simpleString is not _types().DataType.simpleString:
-        return data_type.simpleString()
-    return cls.typeName()
-
-
-def _leaf_engine(data_type: Any) -> str:
-    """``_engine_type`` for a leaf with no tabled answer (else ``simpleString``)."""
-    token = _atomic_token(data_type, 1)
-    if token is not None:
-        return token
-    engine = getattr(type(data_type), "_engine_type", None)
-    if engine is not None and engine is not _types().DataType._engine_type:
-        return data_type._engine_type()
-    return _leaf_simple(data_type)
-
-
 def _leaf_ddl(data_type: Any) -> str:
-    """``_datatype_to_ddl_token`` leaf: marker arm, else base's ``simpleString().upper()``."""
-    token = _atomic_token(data_type, 3)
-    if token is not None:
-        return token
-    return _leaf_simple(data_type).upper()
-
-
-def _simple_string_python(data_type: Any) -> str:
-    """``simpleString`` for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        lambda item: item.simpleString(),
-        _leaf_simple,
-    )
-
-
-def _engine_token_python(data_type: Any) -> str:
-    """``_engine_type`` for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        lambda item: item._engine_type(),
-        _leaf_engine,
-    )
+    """``_datatype_to_ddl_token`` leaf: ordered marker arm, else ``simpleString().upper()``."""
+    marker = _atomic_token(data_type, 3, _ddl_order())
+    if marker is not None:
+        return marker
+    return data_type.simpleString().upper()
 
 
 def _datatype_to_ddl_token(data_type: Any) -> str:
     """Uppercase DDL type token for ``StructType.toDDL``."""
-    return _descriptor_token(data_type, "ddl_token_from_descriptor", _ddl_token_python)
+    t = _types()
+    primary = _primary_class(data_type, _ddl_order())
+    if primary is t.ArrayType or primary is t.MapType or primary is t.StructType:
+        return _descriptor_token(
+            data_type, "ddl_token_from_descriptor", _ddl_token_python, _ddl_order()
+        )
+    return _leaf_ddl(data_type)
 
 
 def _ddl_token_python(data_type: Any) -> str:
     """DDL token for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        _datatype_to_ddl_token,
-        _leaf_ddl,
-        upper=True,
-    )
+    t = _types()
+    primary = _primary_class(data_type, _ddl_order())
+    if primary is t.ArrayType:
+        return f"ARRAY<{_datatype_to_ddl_token(data_type.elementType)}>"
+    if primary is t.MapType:
+        return (
+            f"MAP<{_datatype_to_ddl_token(data_type.keyType)},"
+            f"{_datatype_to_ddl_token(data_type.valueType)}>"
+        )
+    if primary is t.StructType:
+        inner = ",".join(
+            f"{field.name}:{_datatype_to_ddl_token(field.dataType)}" for field in data_type.fields
+        )
+        return f"STRUCT<{inner}>"
+    return _leaf_ddl(data_type)
 
 
 def _parse_field_list(text: str) -> Any:
