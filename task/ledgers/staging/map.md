@@ -5,6 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [rp-20-ledger.md](rp-20-ledger.md) —
+  **RP-20 (2026-09-14), in flight:** the `edc38c6a` repin consumer — F-GLUE-REPLACE-1
+  (#282) gives `GlueCatalog::publish_replace_table` a version-id-checked `UpdateTable`
+  through the Glue commit transport, staged metadata read-validated before the send.
+  Pin verified by grep (orchestrator's bump commit `f1630f5a` carried the fork-sync row
+  and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
+  stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
+  pins: rp-20/C-001, C-002, C-003
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

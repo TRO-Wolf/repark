@@ -81,11 +81,14 @@ Recorded from [production-iceberg-status-2026-09-14.md](production-iceberg-statu
 
 | # | Question | Ruling | Follow-through |
 |---|---|---|---|
-| 5 | Gold rebuild on Glue: the fork's Glue catalog has no replace-publish path, so a second `dbt run` fails | **Block C6 on the fork fix and a repin.** No interim route. | `F-GLUE-REPLACE-1` + `RP-20`; `ICE-GOLD-TWICE-1` runs the Glue gold leg twice and puts it in `aws-acceptance.yml`. |
+| 5 | Gold rebuild on Glue: the fork's Glue catalog has no replace-publish path, so a second `dbt run` fails | **Block C6 on the fork fix and a repin.** No interim route. | `F-GLUE-REPLACE-1` + `RP-20` — **FIXED 2026-09-14 at `edc38c6a`**: `GlueCatalog::publish_replace_table` is a version-id-checked `UpdateTable`; `ICE-GOLD-TWICE-1` put the replace-twice legs and the gold module (unique stem, two `dbt run` passes, `dbt test`) in `aws-acceptance.yml`. The dispatch's run id and per-leg counts record here when it lands. |
 | 6 | Who creates the shadow tables | **Spark**, from the production DDL and properties, so RePark meets Spark-created metadata before C4. Writing into Spark-created tables is a standing requirement beyond this cutover. | `SHADOW-1` (pipeline side) creates the shadow tables with Spark; `ICE-SPARK-TABLE-1` pins the shape here. |
 | 7 | Candidate revision and live acceptance | `main` after the Glue replace fix lands; aws-acceptance dispatch approved, the dbt Glue module joins the workflow. | Run ids recorded in this file when they land. |
 | 8 | Readers, optimizers, retries | Spark and Trino read silver and gold; Glue optimizers off; Airflow may retry MERGE and CTAS IF NOT EXISTS only, never an append, and alerts on `CommitStateUnknown`. | Check 4 re-scoped above; `ICE-COMMIT-UNKNOWN-1` gives the ambiguous commit its own exception class. |
 
 The nightly `aws-acceptance` schedule has passed on `main` every night from 2026-09-07 to
 2026-09-14 (run 34824917757 on `2bebc9da`); it covers the silver shapes, not the gold dbt leg.
+ICE-GOLD-TWICE-1 (2026-09-14) added the `CREATE OR REPLACE … AS` twice legs on Glue and S3 Tables
+and the dbt gold module to the workflow; the first run's id and per-leg counts land in this
+section after the post-merge dispatch.
 
