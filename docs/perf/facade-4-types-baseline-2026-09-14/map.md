@@ -12,7 +12,7 @@ reports medians of 5 reps after one warmup.
 
 ## Contents
 
-- [run_baseline.py](run_baseline.py) — the four baseline cells: (a)
+- [run_baseline.py](run_baseline.py) — the four baseline cells, verdict NO WALL: (a)
   `repark_type_to_arrow` per-call µs on the F1 schema set plus a spy count of
   calls per `createDataFrame` / `collect` / `to_arrow` / `show` / `df.schema`
   of a 1e5 frame; (b) `struct_type_from_arrow` round-trip; (c) DDL parse
