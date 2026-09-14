@@ -14,6 +14,18 @@ declines it (a dated ruling in the intake, then the archive).
   per batch before the next pull (D-3), `repark.cache.max_bytes` unchanged in meaning (D-4),
   no spill (D-5), no registration or handle after a refusal or collection failure (D-6);
   step 0 measures the 30-iteration loop under 2/4/8 GiB cgroup caps, base vs main.
+- [replace-linear-1-card-2026-09-13.md](replace-linear-1-card-2026-09-13.md) — **card
+  REPLACE-LINEAR-1 (2026-09-13, run 12b under G-5; ABS-EXPR-1's C-004 audit residue):**
+  `DataFrame.replace`'s dict loop nests the running expression once per mapping entry —
+  `when(expression == lit(old), lit(new)).otherwise(expression)` embeds the previous
+  expression twice, so N entries reference the column 2^N times (28 MB at 12, 297 MB at
+  16). D-1 builds ONE searched `CASE WHEN col = a THEN b … ELSE col END` per target
+  column (linear in entries); D-2 pins the live PySpark 4.1.2 oracle cells first (NULL
+  key/value, subset shapes, a missing column, type coercion, list vs scalar `value`,
+  the `{1: 2, 2: 3}` mapping-order case); D-3 rules that if the oracle answers 2 the
+  CASE follows Spark; D-4 keeps `core.py`'s ceiling and puts any helper in a sibling
+  module. Step 0 measures the oracle cells and lands the red-first 40-entry memory
+  pin; step 1 rewrites.
 - [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1
   (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted
   handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing
