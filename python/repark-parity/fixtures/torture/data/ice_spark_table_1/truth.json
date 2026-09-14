@@ -130,16 +130,16 @@
     ],
     [
       19,
-      "seed-19",
-      "19.25",
-      "2026-09-14 10:19:00",
+      "spark-19",
+      "119.01",
+      "2026-09-14 07:00:00",
       "2026-09-14"
     ],
     [
       20,
-      "seed-20",
-      "20.25",
-      "2026-09-14 10:20:00",
+      "spark-20",
+      "120.01",
+      "2026-09-14 07:00:01",
       "2026-09-14"
     ]
   ],
@@ -147,7 +147,7 @@
   "format_version": 2,
   "table": "ns.facts",
   "table_location": "/tmp/repark-ice-spark-table-1/ns/facts",
-  "metadata_file": "metadata/v3.metadata.json",
+  "metadata_file": "metadata/v5.metadata.json",
   "schema": "struct<id:bigint,name:string,amount:decimal(12,2),ingestion_timestamp:timestamptz,ds:string>",
   "partition_spec": "identity(ds)"
 }

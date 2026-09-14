@@ -13,7 +13,7 @@ import shutil
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -44,6 +44,7 @@ _TBLPROPERTIES = (
     "'write.merge.mode' = 'copy-on-write', "
     "'write.target-file-size-bytes' = '268435456'"
 )
+_TWIN_TBLPROPERTIES = _TBLPROPERTIES + ", 'write.distribution-mode' = 'hash'"
 _SPARK_ONLY_PROPERTY_KEYS = ("owner", "write.parquet.compression-codec")
 _REPARK_ONLY_SUMMARY_KEY = "engine.operation-id"
 _SPARK_ONLY_SUMMARY_KEYS = (
@@ -58,7 +59,6 @@ _SPARK_ONLY_SUMMARY_KEYS = (
     "spark.app.id",
 )
 _REPARK_METADATA_NAME = re.compile(r"^\d{5}-[0-9a-f-]{36}\.metadata\.json$")
-_SPARK_METADATA_NAME = re.compile(r"^v\d+\.metadata\.json$")
 _TRANSFORM_REFUSAL = (
     "sorting by the table's default sort order uses transform `bucket[4]` on source id 1, "
     "only identity sort fields are supported"
@@ -69,31 +69,20 @@ _MERGE_SQL = (
     "WHEN MATCHED THEN UPDATE SET * "
     "WHEN NOT MATCHED THEN INSERT *"
 )
-_MAINTENANCE_CALLS = (
-    (
-        "expire_snapshots",
-        f"CALL {_CATALOG}.system.expire_snapshots(table => '{_TABLE_ARG}', "
-        "older_than => TIMESTAMP '2999-01-01 00:00:00', retain_last => 3)",
-    ),
-    (
-        "rewrite_manifests",
-        f"CALL {_CATALOG}.system.rewrite_manifests(table => '{_TABLE_ARG}')",
-    ),
-    (
-        "rewrite_data_files",
-        f"CALL {_CATALOG}.system.rewrite_data_files(table => '{_TABLE_ARG}', "
-        "strategy => 'binpack')",
-    ),
-    (
-        "remove_orphan_files",
-        f"CALL {_CATALOG}.system.remove_orphan_files(table => '{_TABLE_ARG}', "
-        "older_than => TIMESTAMP '2020-01-01 00:00:00', dry_run => false)",
-    ),
-    (
-        "rewrite_position_delete_files",
-        f"CALL {_CATALOG}.system.rewrite_position_delete_files(table => '{_TABLE_ARG}')",
-    ),
-)
+_SPARK_OWNED_ROWS = {
+    19: (19, "spark-19", Decimal("119.01"), datetime(2026, 9, 14, 7, 0, 0), "2026-09-14"),
+    20: (20, "spark-20", Decimal("120.01"), datetime(2026, 9, 14, 7, 0, 1), "2026-09-14"),
+}
+_ADOPTED_METADATA = "v5.metadata.json"
+_FINAL_METADATA_COUNT = 9
+_ADOPTED_HINT = "5"
+_EXPECTED_SNAPSHOT_OPS = ["append", "overwrite", "overwrite", "overwrite", "replace"]
+_EXPECTED_PARTITION_COUNTS = {
+    "2026-09-13": 4,
+    "2026-09-14": 10,
+    "2026-09-15": 11,
+    "2026-09-16": 10,
+}
 
 
 class _DirLock:
@@ -130,6 +119,9 @@ def _materialize() -> Iterator[Path]:
         shutil.copytree(_FIXTURE_SRC, _TABLE_ROOT, copy_function=shutil.copy)
         yield _TABLE_ROOT
     finally:
+        with suppress(OSError):
+            if _TABLE_ROOT.exists():
+                shutil.rmtree(_TABLE_ROOT)
         lock.close()
 
 
@@ -169,6 +161,27 @@ def _seed_rows() -> list[tuple[int, str, Decimal, datetime, str]]:
             )
         )
     return rows
+
+
+def _spark_merge_sql() -> str:
+    """Spark's own CoW MERGE before adoption: updates ids 19 and 20 only."""
+    selects = " UNION ALL ".join(
+        f"SELECT {row[0]} AS id, '{row[1]}' AS name, "
+        f"CAST('{row[2]}' AS DECIMAL(12,2)) AS amount, "
+        f"TIMESTAMP '{row[3]:%Y-%m-%d %H:%M:%S}' AS ingestion_timestamp, "
+        f"'{row[4]}' AS ds"
+        for row in _SPARK_OWNED_ROWS.values()
+    )
+    return (
+        f"MERGE INTO {_FQ_TABLE} AS Target USING ({selects}) AS Source "
+        "ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * "
+        "WHEN NOT MATCHED THEN INSERT *"
+    )
+
+
+def _hash_distribution_sql() -> str:
+    """Stamp the production distribution mode before adoption."""
+    return f"ALTER TABLE {_FQ_TABLE} SET TBLPROPERTIES ('write.distribution-mode'='hash')"
 
 
 def _merge_source_one() -> list[tuple[int, str, Decimal, datetime, str]]:
@@ -225,14 +238,56 @@ def _merge_source_two() -> list[tuple[int, str, Decimal, datetime, str]]:
     return rows
 
 
-def _expected_final_rows() -> list[tuple[int, str, str]]:
-    """``(id, name, ds)`` after both production MERGEs, in id order."""
-    rows = [(index, f"seed-{index}", "2026-09-13") for index in range(1, 5)]
-    rows += [(index, f"m1-{index}", "2026-09-15") for index in range(5, 11)]
-    rows += [(index, f"seed-{index}", "2026-09-14") for index in range(11, 21)]
-    rows += [(index, f"m2-{index}", "2026-09-16") for index in range(21, 26)]
-    rows += [(index, f"new-{index}", "2026-09-15") for index in range(26, 31)]
-    rows += [(index, f"new-{index}", "2026-09-16") for index in range(31, 36)]
+def _dedup_latest(
+    rows: list[tuple[int, str, Decimal, datetime, str]],
+) -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The row_number-over-ingestion_timestamp dedup applied to a staging batch."""
+    best: dict[int, tuple[int, str, Decimal, datetime, str]] = {}
+    for row in rows:
+        if row[0] not in best or row[3] > best[row[0]][3]:
+            best[row[0]] = row
+    return list(best.values())
+
+
+def _merged_rows(
+    base: list[tuple[int, str, Decimal, datetime, str]],
+    source: list[tuple[int, str, Decimal, datetime, str]],
+) -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The UPDATE SET * / INSERT * outcome of one deduped staging batch."""
+    merged = {row[0]: row for row in base}
+    merged.update({row[0]: row for row in _dedup_latest(source)})
+    return [merged[key] for key in sorted(merged)]
+
+
+def _expected_seed_rows() -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The adopted state: Spark's seed plus its own CoW MERGE updates."""
+    return _merged_rows(_seed_rows(), list(_SPARK_OWNED_ROWS.values()))
+
+
+def _expected_merge1_rows() -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The independently derived 30-row state after the first production MERGE."""
+    return _merged_rows(_expected_seed_rows(), _merge_source_one())
+
+
+def _expected_final_rows() -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The independently derived 35-row state after the second production MERGE."""
+    return _merged_rows(_expected_merge1_rows(), _merge_source_two())
+
+
+def _truth_seed_rows() -> list[tuple[int, str, Decimal, datetime, str]]:
+    """The checked-in fixture's seed oracle, parsed from truth.json."""
+    truth = json.loads((_FIXTURE_SRC / "truth.json").read_text(encoding="utf-8"))
+    rows: list[tuple[int, str, Decimal, datetime, str]] = []
+    for row_id, name, amount, stamp, ds in truth["seed_rows"]:
+        rows.append(
+            (
+                int(row_id),
+                str(name),
+                Decimal(str(amount)),
+                datetime.fromisoformat(str(stamp)),
+                str(ds),
+            )
+        )
     return rows
 
 
@@ -247,15 +302,16 @@ def _values_sql(rows: list[tuple[int, str, Decimal, datetime, str]]) -> str:
     return ", ".join(literals)
 
 
-def _write_merge_source(path: Path, rows: list[tuple[int, str, Decimal, datetime, str]]) -> None:
-    """Write a staging parquet with the table's exact Arrow schema."""
+def _write_rows_parquet(path: Path, rows: list[tuple[int, str, Decimal, datetime, str]]) -> None:
+    """Write rows as a parquet with the table's exact Arrow schema."""
     table = pa.table(
         {
             "id": pa.array([row[0] for row in rows], type=pa.int64()),
             "name": pa.array([row[1] for row in rows], type=pa.string()),
             "amount": pa.array([row[2] for row in rows], type=pa.decimal128(12, 2)),
             "ingestion_timestamp": pa.array(
-                [row[3] for row in rows], type=pa.timestamp("us", tz="UTC")
+                [row[3].replace(tzinfo=UTC) for row in rows],
+                type=pa.timestamp("us", tz="UTC"),
             ),
             "ds": pa.array([row[4] for row in rows], type=pa.string()),
         }
@@ -263,14 +319,26 @@ def _write_merge_source(path: Path, rows: list[tuple[int, str, Decimal, datetime
     pq.write_table(table, str(path))
 
 
-def _id_name_ds_rows(table: pa.Table) -> list[tuple[int, str, str]]:
-    """``(id, name, ds)`` rows from an Arrow table, sorted by id."""
-    ids = table.column("id").to_pylist()
-    names = table.column("name").to_pylist()
-    partitions = table.column("ds").to_pylist()
-    rows = list(zip(ids, names, partitions, strict=True))
-    rows.sort(key=lambda row: row[0])
-    return [(int(one), str(two), str(three)) for one, two, three in rows]
+def _full_rows(table: pa.Table) -> list[tuple[int, str, Decimal, datetime, str]]:
+    """All five columns of an Arrow table as tuples, sorted by id."""
+    rows = sorted(table.to_pylist(), key=lambda row: row["id"])
+    return [
+        (
+            int(row["id"]),
+            str(row["name"]),
+            row["amount"],
+            row["ingestion_timestamp"],
+            str(row["ds"]),
+        )
+        for row in rows
+    ]
+
+
+def _expected_typed(
+    rows: list[tuple[int, str, Decimal, datetime, str]],
+) -> list[tuple[int, str, Decimal, datetime, str]]:
+    """Expected rows with the UTC tz the Arrow read-back carries."""
+    return [(row[0], row[1], row[2], row[3].replace(tzinfo=UTC), row[4]) for row in rows]
 
 
 def _schema_field_key(field: dict[str, Any]) -> tuple[Any, ...]:
@@ -293,6 +361,21 @@ def _assert_table_schema(table: pa.Table) -> None:
     assert table.schema.field("ds").type == pa.string(), table.schema
 
 
+def _assert_table_rows(
+    table: pa.Table, expected: list[tuple[int, str, Decimal, datetime, str]]
+) -> None:
+    """Fail unless the Arrow value AND type state equals the derived rows."""
+    _assert_table_schema(table)
+    assert _full_rows(table) == _expected_typed(expected)
+
+
+def _select_all(session: Any) -> pa.Table:
+    """The current table contents in id order."""
+    return session.sql(
+        f"SELECT id, name, amount, ingestion_timestamp, ds FROM {_FQ_TABLE} ORDER BY id"
+    ).to_arrow()
+
+
 def _stage_and_merge(session: Any, source: Path, staging_sql: str) -> None:
     """The production staging leg: parquet source, row_number dedup, temp view, MERGE."""
     from repark import Window
@@ -309,23 +392,74 @@ def _stage_and_merge(session: Any, source: Path, staging_sql: str) -> None:
     session.sql(staging_sql).collect()
 
 
-def _repark_write_phase(
-    session: Any, src_dir: Path, merge_sql: str = _MERGE_SQL
-) -> dict[str, pa.Table]:
-    """Both production MERGEs and the weekly maintenance CALLs; returns CALL outputs."""
+def _stage_merge_batch(
+    session: Any,
+    src_dir: Path,
+    index: int,
+    rows: list[tuple[int, str, Decimal, datetime, str]],
+    merge_sql: str = _MERGE_SQL,
+) -> None:
+    """Stage one parquet batch and run the production MERGE shape against it."""
     src_dir.mkdir(parents=True, exist_ok=True)
-    for index, rows in enumerate((_merge_source_one(), _merge_source_two()), start=1):
-        source = src_dir / f"merge{index}.parquet"
-        _write_merge_source(source, rows)
-        _stage_and_merge(session, source, merge_sql)
+    source = src_dir / f"merge{index}.parquet"
+    _write_rows_parquet(source, rows)
+    _stage_and_merge(session, source, merge_sql)
+
+
+def _plant_orphan(table_root: Path) -> Path:
+    """An unreferenced pre-dated file only remove_orphan_files may sweep."""
+    planted = table_root / "data" / "ds=2026-09-13" / "orphan-000.parquet"
+    planted.parent.mkdir(parents=True, exist_ok=True)
+    planted.write_bytes(b"orphan")
+    stale = datetime(2020, 1, 1).timestamp()
+    os.utime(planted, (stale, stale))
+    return planted
+
+
+def _maintenance_calls(session: Any, table_root: Path) -> tuple[dict[str, pa.Table], Path]:
+    """The weekly CALLs in production order, then the extra CoW no-op CALL."""
+    snaps = session.sql(
+        f"SELECT committed_at FROM {_FQ_TABLE}.snapshots ORDER BY committed_at"
+    ).to_arrow()
+    first, second = snaps.column("committed_at").to_pylist()[:2]
+    midpoint = first + (second - first) / 2
+    orphan_cutoff = datetime.now() - timedelta(hours=48)
+    planted = _plant_orphan(table_root)
+    statements = (
+        (
+            "expire_snapshots",
+            f"CALL {_CATALOG}.system.expire_snapshots(table => '{_TABLE_ARG}', "
+            f"older_than => TIMESTAMP '{midpoint:%Y-%m-%d %H:%M:%S.%f}', "
+            "retain_last => 1)",
+        ),
+        (
+            "rewrite_manifests",
+            f"CALL {_CATALOG}.system.rewrite_manifests(table => '{_TABLE_ARG}')",
+        ),
+        (
+            "rewrite_data_files",
+            f"CALL {_CATALOG}.system.rewrite_data_files(table => '{_TABLE_ARG}', "
+            "strategy => 'binpack')",
+        ),
+        (
+            "remove_orphan_files",
+            f"CALL {_CATALOG}.system.remove_orphan_files(table => '{_TABLE_ARG}', "
+            f"older_than => TIMESTAMP '{orphan_cutoff:%Y-%m-%d %H:%M:%S}', "
+            "dry_run => false)",
+        ),
+        (
+            "rewrite_position_delete_files",
+            f"CALL {_CATALOG}.system.rewrite_position_delete_files(table => '{_TABLE_ARG}')",
+        ),
+    )
     outputs: dict[str, pa.Table] = {}
-    for name, statement in _MAINTENANCE_CALLS:
+    for name, statement in statements:
         outputs[name] = session.sql(statement).to_arrow()
-    return outputs
+    return outputs, planted
 
 
-def _assert_maintenance_outputs(outputs: dict[str, pa.Table]) -> None:
-    """The measured CALL results on the Spark-created two-partition seed."""
+def _assert_maintenance_outputs(outputs: dict[str, pa.Table], planted: Path) -> None:
+    """The measured CALL results on the Spark-created adopted table."""
     expire = outputs["expire_snapshots"].to_pylist()
     assert expire == [
         {
@@ -349,7 +483,9 @@ def _assert_maintenance_outputs(outputs: dict[str, pa.Table]) -> None:
             "removed_delete_files_count": 0,
         }
     ], data_files
-    assert outputs["remove_orphan_files"].num_rows == 0
+    orphans = outputs["remove_orphan_files"].to_pylist()
+    assert orphans == [{"orphan_file_location": str(planted)}], orphans
+    assert not planted.exists()
     deletes = outputs["rewrite_position_delete_files"].to_pylist()
     assert deletes == [
         {
@@ -361,38 +497,45 @@ def _assert_maintenance_outputs(outputs: dict[str, pa.Table]) -> None:
     ], deletes
 
 
-def _assert_final_state(session: Any, table_root: Path) -> pa.Table:
-    """Row set, snapshot log, file naming and version-hint after the write phase."""
-    answer = session.sql(
-        f"SELECT id, name, amount, ingestion_timestamp, ds FROM {_FQ_TABLE} ORDER BY id"
-    ).to_arrow()
-    _assert_table_schema(answer)
-    assert _id_name_ds_rows(answer) == _expected_final_rows()
+def _repark_data_files(table_root: Path) -> list[Path]:
+    """Data files RePark wrote: uuid-named, unlike Spark's task-prefixed names."""
+    files = []
+    for path in sorted((table_root / "data").rglob("*.parquet")):
+        if not path.name.startswith("00000-"):
+            files.append(path)
+    return files
+
+
+def _assert_final_state(session: Any, table_root: Path, adopted_props: dict[str, str]) -> pa.Table:
+    """Rows, snapshot log, file naming, hint, properties and codec after writes."""
+    answer = _select_all(session)
+    _assert_table_rows(answer, _expected_final_rows())
     counts = session.sql(
         f"SELECT ds, COUNT(*) AS c FROM {_FQ_TABLE} GROUP BY ds ORDER BY ds"
     ).to_arrow()
     by_ds = dict(zip(counts.column("ds").to_pylist(), counts.column("c").to_pylist(), strict=True))
-    assert by_ds == {
-        "2026-09-13": 4,
-        "2026-09-14": 10,
-        "2026-09-15": 11,
-        "2026-09-16": 10,
-    }, by_ds
+    assert by_ds == _EXPECTED_PARTITION_COUNTS, by_ds
     deletes = session.sql(f"SELECT COUNT(*) AS c FROM {_FQ_TABLE}.delete_files").to_arrow()
     assert deletes.column("c")[0].as_py() == 0
     snapshots = session.sql(
         f"SELECT operation FROM {_FQ_TABLE}.snapshots ORDER BY committed_at"
     ).to_arrow()
-    assert snapshots.column("operation").to_pylist() == [
-        "append",
-        "overwrite",
-        "overwrite",
-        "replace",
-    ]
+    assert snapshots.column("operation").to_pylist() == _EXPECTED_SNAPSHOT_OPS
     metadata_names = sorted(path.name for path in (table_root / "metadata").glob("*.metadata.json"))
-    assert metadata_names == [f"v{index}.metadata.json" for index in range(1, 8)]
+    assert metadata_names == [
+        f"v{index}.metadata.json" for index in range(1, _FINAL_METADATA_COUNT + 1)
+    ]
     hint = (table_root / "metadata" / "version-hint.text").read_text(encoding="utf-8")
-    assert hint.strip() == "3"
+    assert hint.strip() == _ADOPTED_HINT
+    final_doc = json.loads(
+        (table_root / "metadata" / metadata_names[-1]).read_text(encoding="utf-8")
+    )
+    assert final_doc["properties"] == adopted_props
+    codecs = {
+        pq.ParquetFile(path).metadata.row_group(0).column(0).compression
+        for path in _repark_data_files(table_root)
+    }
+    assert codecs == {"ZSTD"}, codecs
     return answer
 
 
@@ -405,7 +548,7 @@ def _register_spark_table(session: Any, metadata_file: Path) -> None:
 
 
 def test_spark_created_fixture_adopted_merged_and_maintained(tmp_path: Path) -> None:
-    """The checked-in Spark-written fixture: register, MERGE twice, five CALLs."""
+    """The checked-in Spark-written fixture: register, MERGE twice, weekly CALLs."""
     from repark import ReparkSession
 
     spark = ReparkSession.builder.appName("ice-spark-table-1-fixture").getOrCreate()
@@ -413,21 +556,19 @@ def test_spark_created_fixture_adopted_merged_and_maintained(tmp_path: Path) -> 
         spark.register_memory_catalog(_CATALOG, tmp_path / "warehouse")
         spark.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
         with _materialize():
-            _register_spark_table(spark, _TABLE_ROOT / "metadata" / "v3.metadata.json")
-            seed = spark.sql(
-                f"SELECT id, name, amount, ingestion_timestamp, ds FROM {_FQ_TABLE} ORDER BY id"
-            ).to_arrow()
-            _assert_table_schema(seed)
-            assert _id_name_ds_rows(seed) == [(row[0], row[1], row[4]) for row in _seed_rows()]
-            amounts = seed.column("amount").to_pylist()
-            assert amounts[:3] == [
-                Decimal("1.25"),
-                Decimal("2.25"),
-                Decimal("3.25"),
-            ], amounts
-            outputs = _repark_write_phase(spark, tmp_path / "staging")
-            _assert_maintenance_outputs(outputs)
-            _assert_final_state(spark, _TABLE_ROOT)
+            adopted_meta = _TABLE_ROOT / "metadata" / _ADOPTED_METADATA
+            adopted_props = json.loads(adopted_meta.read_text(encoding="utf-8"))["properties"]
+            _register_spark_table(spark, adopted_meta)
+            seed = _select_all(spark)
+            _assert_table_rows(seed, _truth_seed_rows())
+            assert _full_rows(seed) == _expected_typed(_expected_seed_rows())
+            _stage_merge_batch(spark, tmp_path / "staging", 1, _merge_source_one())
+            _assert_table_rows(_select_all(spark), _expected_merge1_rows())
+            _stage_merge_batch(spark, tmp_path / "staging", 2, _merge_source_two())
+            _assert_table_rows(_select_all(spark), _expected_final_rows())
+            outputs, planted = _maintenance_calls(spark, _TABLE_ROOT)
+            _assert_maintenance_outputs(outputs, planted)
+            _assert_final_state(spark, _TABLE_ROOT, adopted_props)
     finally:
         spark.stop()
 
@@ -437,13 +578,13 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
     from repark import ReparkSession
 
     spark_doc = json.loads(
-        (_FIXTURE_SRC / "metadata" / "v3.metadata.json").read_text(encoding="utf-8")
+        (_FIXTURE_SRC / "metadata" / _ADOPTED_METADATA).read_text(encoding="utf-8")
     )
     spark = ReparkSession.builder.appName("ice-spark-table-1-twin").getOrCreate()
     try:
         spark.register_memory_catalog(_CATALOG, tmp_path / "twin-warehouse")
         spark.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
-        spark.sql(f"CREATE TABLE {_FQ_TABLE} {_DDL} TBLPROPERTIES ({_TBLPROPERTIES})")
+        spark.sql(f"CREATE TABLE {_FQ_TABLE} {_DDL} TBLPROPERTIES ({_TWIN_TBLPROPERTIES})")
         rows = _seed_rows()
         spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[:10])}")
         spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[10:])}")
@@ -460,10 +601,10 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
     finally:
         spark.stop()
     spark_names = sorted(path.name for path in (_FIXTURE_SRC / "metadata").glob("*.metadata.json"))
-    assert spark_names == ["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"]
+    assert spark_names == [f"v{index}.metadata.json" for index in range(1, int(_ADOPTED_HINT) + 1)]
     assert (_FIXTURE_SRC / "metadata" / "version-hint.text").read_text(
         encoding="utf-8"
-    ).strip() == "3"
+    ).strip() == _ADOPTED_HINT
     spark_props = spark_doc["properties"]
     twin_props = twin_doc["properties"]
     assert twin_props == {
@@ -471,6 +612,7 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
         "write.delete.mode": "copy-on-write",
         "write.update.mode": "copy-on-write",
         "write.target-file-size-bytes": "268435456",
+        "write.distribution-mode": "hash",
     }, twin_props
     assert spark_props == {
         **twin_props,
@@ -511,15 +653,23 @@ def test_live_spark_created_table_roundtrip(tmp_path: Path) -> None:
     rows = _seed_rows()
     spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[:10])}")
     spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[10:])}")
+    spark.sql(_spark_merge_sql())
+    spark.sql(_hash_distribution_sql())
     seeded = spark.sql(f"SELECT COUNT(*) AS c FROM {_FQ_TABLE}").toArrow()
     assert seeded.column("c")[0].as_py() == 20
     table_root = warehouse / _NAMESPACE / _TABLE
     spark_meta = _newest_metadata_file(table_root)
-    assert spark_meta.name == "v3.metadata.json"
+    assert spark_meta.name == _ADOPTED_METADATA
     spark_doc = json.loads(spark_meta.read_text(encoding="utf-8"))
     props = spark_doc["properties"]
     for key in _SPARK_ONLY_PROPERTY_KEYS:
         assert props[key], props
+    assert props["write.distribution-mode"] == "hash"
+    assert [s["summary"]["operation"] for s in spark_doc["snapshots"]] == [
+        "append",
+        "append",
+        "overwrite",
+    ]
     assert spark_doc["default-sort-order-id"] == 0
     assert (table_root / "metadata" / "version-hint.text").exists()
 
@@ -528,43 +678,59 @@ def test_live_spark_created_table_roundtrip(tmp_path: Path) -> None:
         repark.register_memory_catalog(_CATALOG, tmp_path / "repark-warehouse")
         repark.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
         _register_spark_table(repark, spark_meta)
-        adopted = repark.sql(f"SELECT id, name, ds FROM {_FQ_TABLE} ORDER BY id").to_arrow()
-        assert _id_name_ds_rows(adopted) == [(row[0], row[1], row[4]) for row in _seed_rows()]
-        outputs = _repark_write_phase(repark, tmp_path / "staging")
-        _assert_maintenance_outputs(outputs)
-        answer = _assert_final_state(repark, table_root)
+        _assert_table_rows(_select_all(repark), _expected_seed_rows())
+        _stage_merge_batch(repark, tmp_path / "staging", 1, _merge_source_one())
+        _assert_table_rows(_select_all(repark), _expected_merge1_rows())
+        _stage_merge_batch(repark, tmp_path / "staging", 2, _merge_source_two())
+        _assert_table_rows(_select_all(repark), _expected_final_rows())
+        outputs, planted = _maintenance_calls(repark, table_root)
+        _assert_maintenance_outputs(outputs, planted)
+        answer = _assert_final_state(repark, table_root, props)
         answer_path = tmp_path / "repark-answer.parquet"
         pq.write_table(answer, str(answer_path))
+        expected_path = tmp_path / "expected-answer.parquet"
+        _write_rows_parquet(expected_path, _expected_final_rows())
+        _assert_live_extra_legs(repark, spark, warehouse, tmp_path)
     finally:
         repark.stop()
 
     stale = spark.sql(f"SELECT COUNT(*) AS c FROM {_FQ_TABLE}").toArrow()
     assert stale.column("c")[0].as_py() == 20
+    spark.sql(
+        f"INSERT INTO {_FQ_TABLE} VALUES (99, 'stale-write', "
+        "CAST('99.99' AS DECIMAL(12,2)), TIMESTAMP '2026-09-17 00:00:00', '2026-09-17')"
+    )
+    assert (table_root / "metadata" / "v10.metadata.json").exists()
     spark.catalog.refreshTable(_FQ_TABLE)
     refreshed = spark.sql(f"SELECT COUNT(*) AS c FROM {_FQ_TABLE}").toArrow()
-    assert refreshed.column("c")[0].as_py() == 35
-    newest = _newest_metadata_file(table_root)
-    assert newest.name == "v7.metadata.json"
+    assert refreshed.column("c")[0].as_py() == 36
+    spark.sql(
+        f"INSERT INTO {_FQ_TABLE} VALUES (100, 'post-refresh', "
+        "CAST('100.00' AS DECIMAL(12,2)), TIMESTAMP '2026-09-17 00:00:00', '2026-09-17')"
+    )
+    assert (table_root / "metadata" / "v11.metadata.json").exists()
+    repark_meta = table_root / "metadata" / "v9.metadata.json"
     spark.sql(
         f"CALL {_CATALOG}.system.register_table("
-        f"table => 'ns.facts_repark', metadata_file => '{newest}')"
+        f"table => 'ns.facts_repark', metadata_file => '{repark_meta}')"
     )
     spark.read.parquet(str(answer_path)).createOrReplaceTempView("repark_answer")
+    spark.read.parquet(str(expected_path)).createOrReplaceTempView("expected_answer")
     columns = "id, name, amount, ingestion_timestamp, ds"
-    forward = spark.sql(
-        f"SELECT {columns} FROM {_CATALOG}.ns.facts_repark "
-        f"EXCEPT ALL SELECT {columns} FROM repark_answer"
-    ).toArrow()
-    assert forward.num_rows == 0
-    backward = spark.sql(
-        f"SELECT {columns} FROM repark_answer "
-        f"EXCEPT ALL SELECT {columns} FROM {_CATALOG}.ns.facts_repark"
-    ).toArrow()
-    assert backward.num_rows == 0
-    counted = spark.sql(f"SELECT COUNT(*) AS c FROM {_CATALOG}.ns.facts_repark").toArrow()
+    readback = f"{_CATALOG}.ns.facts_repark"
+    for other in ("repark_answer", "expected_answer"):
+        forward = spark.sql(
+            f"SELECT {columns} FROM {readback} EXCEPT ALL SELECT {columns} FROM {other}"
+        ).toArrow()
+        assert forward.num_rows == 0, other
+        backward = spark.sql(
+            f"SELECT {columns} FROM {other} EXCEPT ALL SELECT {columns} FROM {readback}"
+        ).toArrow()
+        assert backward.num_rows == 0, other
+    counted = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}").toArrow()
     assert counted.column("c")[0].as_py() == 35
     partition_counts = spark.sql(
-        f"SELECT ds, COUNT(*) AS c FROM {_CATALOG}.ns.facts_repark GROUP BY ds ORDER BY ds"
+        f"SELECT ds, COUNT(*) AS c FROM {readback} GROUP BY ds ORDER BY ds"
     ).toArrow()
     by_ds = dict(
         zip(
@@ -573,18 +739,81 @@ def test_live_spark_created_table_roundtrip(tmp_path: Path) -> None:
             strict=True,
         )
     )
-    assert by_ds == {
-        "2026-09-13": 4,
-        "2026-09-14": 10,
-        "2026-09-15": 11,
-        "2026-09-16": 10,
-    }, by_ds
-    readback = f"{_CATALOG}.ns.facts_repark"
-    for meta_table in ("snapshots", "history", "files"):
-        frame = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}.{meta_table}").toArrow()
-        assert frame.column("c")[0].as_py() == 4, meta_table
+    assert by_ds == _EXPECTED_PARTITION_COUNTS, by_ds
+    snaps = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}.snapshots").toArrow()
+    assert snaps.column("c")[0].as_py() == 5
+    history = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}.history").toArrow()
+    assert history.column("c")[0].as_py() == 5
+    live_files = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}.files").toArrow()
+    assert live_files.column("c")[0].as_py() == 4
     deletes = spark.sql(f"SELECT COUNT(*) AS c FROM {readback}.delete_files").toArrow()
     assert deletes.column("c")[0].as_py() == 0
+
+
+def _assert_live_extra_legs(repark: Any, spark: Any, warehouse: Path, tmp_path: Path) -> None:
+    """The snappy-codec and spec-evolution legs against fresh Spark tables."""
+    snappy_fq = f"{_CATALOG}.ns.snappy"
+    spark.sql(
+        f"CREATE TABLE {snappy_fq} {_DDL} TBLPROPERTIES ({_TBLPROPERTIES}, "
+        "'write.parquet.compression-codec'='snappy')"
+    )
+    spark.sql(
+        f"INSERT INTO {snappy_fq} VALUES (1, 's1', CAST('1.99' AS DECIMAL(12,2)), "
+        "TIMESTAMP '2026-09-13 08:00:00', '2026-09-13')"
+    )
+    repark.sql(
+        f"CALL {_CATALOG}.system.register_table(table => 'ns.snappy', "
+        f"metadata_file => '{_newest_metadata_file(warehouse / 'ns' / 'snappy')}')"
+    )
+    _stage_merge_batch(
+        repark,
+        tmp_path / "staging-snappy",
+        1,
+        [(2, "s2", Decimal("2.22"), datetime(2026, 9, 15, 8, 0, 0), "2026-09-15")],
+        (
+            f"MERGE INTO {snappy_fq} AS Target USING ice1_staging AS Source "
+            "ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * "
+            "WHEN NOT MATCHED THEN INSERT *"
+        ),
+    )
+    repark_files = _repark_data_files(warehouse / "ns" / "snappy")
+    assert repark_files, "no repark-written data file on the snappy table"
+    for path in repark_files:
+        codec = pq.ParquetFile(path).metadata.row_group(0).column(0).compression
+        assert codec == "SNAPPY", (path, codec)
+
+    evo_fq = f"{_CATALOG}.ns.evo"
+    spark.sql(f"CREATE TABLE {evo_fq} {_DDL} TBLPROPERTIES ({_TBLPROPERTIES})")
+    spark.sql(
+        f"INSERT INTO {evo_fq} VALUES (1, 'e1', CAST('1.11' AS DECIMAL(12,2)), "
+        "TIMESTAMP '2026-09-13 08:00:00', '2026-09-13')"
+    )
+    spark.sql(f"ALTER TABLE {evo_fq} ADD PARTITION FIELD days(ingestion_timestamp)")
+    evo_meta = _newest_metadata_file(warehouse / "ns" / "evo")
+    evo_doc = json.loads(evo_meta.read_text(encoding="utf-8"))
+    assert evo_doc["default-spec-id"] == 1
+    assert len(evo_doc["partition-specs"]) == 2
+    repark.sql(
+        f"CALL {_CATALOG}.system.register_table(table => 'ns.evo', metadata_file => '{evo_meta}')"
+    )
+    _stage_merge_batch(
+        repark,
+        tmp_path / "staging-evo",
+        1,
+        [(2, "e2", Decimal("2.22"), datetime(2026, 9, 14, 8, 0, 0), "2026-09-14")],
+        (
+            f"MERGE INTO {evo_fq} AS Target USING ice1_staging AS Source "
+            "ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * "
+            "WHEN NOT MATCHED THEN INSERT *"
+        ),
+    )
+    evo_rows = repark.sql(f"SELECT * FROM {evo_fq} ORDER BY id").to_arrow().to_pylist()
+    assert [(r["id"], r["name"]) for r in evo_rows] == [(1, "e1"), (2, "e2")]
+    evo_files = repark.sql(f"SELECT file_path, spec_id FROM {evo_fq}.files").to_arrow().to_pylist()
+    assert sorted(row["spec_id"] for row in evo_files) == [0, 1], evo_files
+    spark.catalog.refreshTable(evo_fq)
+    evo_count = spark.sql(f"SELECT COUNT(*) AS c FROM {evo_fq}").toArrow()
+    assert evo_count.column("c")[0].as_py() == 2
 
 
 @pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
@@ -638,35 +867,29 @@ def test_live_transform_sort_residual(tmp_path: Path) -> None:
             {"id": 2, "name": "b"},
             {"id": 3, "name": "c"},
         ]
-        source = tmp_path / "sorted-merge.parquet"
-        _write_merge_source(
-            source,
-            [
-                (
-                    2,
-                    "zz",
-                    Decimal("2.00"),
-                    datetime(2026, 9, 17, 8, 0, 0),
-                    "2026-09-17",
-                ),
-                (
-                    9,
-                    "n9",
-                    Decimal("9.00"),
-                    datetime(2026, 9, 17, 8, 0, 0),
-                    "2026-09-17",
-                ),
-            ],
-        )
-        merge_sql = _MERGE_SQL.replace(_FQ_TABLE, fq_sorted)
         with pytest.raises(Exception, match=re.escape(_TRANSFORM_REFUSAL)):
-            _stage_and_merge(repark, source, merge_sql)
-        still = repark.sql(f"SELECT COUNT(*) AS c FROM {fq_sorted}").to_arrow()
-        assert still.column("c")[0].as_py() == 3
+            _stage_and_merge(
+                repark,
+                _residual_source(tmp_path),
+                f"MERGE INTO {fq_sorted} AS Target USING ice1_staging AS Source "
+                "ON Target.id = Source.id WHEN MATCHED THEN UPDATE SET * "
+                "WHEN NOT MATCHED THEN INSERT *",
+            )
     finally:
         repark.stop()
+
     snapshots_after = spark.sql(
         f"SELECT snapshot_id FROM {fq_sorted}.snapshots ORDER BY committed_at"
     ).toArrow()
-    ids_after = [int(v) for v in snapshots_after.column("snapshot_id").to_pylist()]
-    assert ids_after == ids_before
+    assert [int(v) for v in snapshots_after.column("snapshot_id").to_pylist()] == ids_before
+
+
+def _residual_source(tmp_path: Path) -> Path:
+    """A one-row staging parquet for the refusal leg."""
+    source = tmp_path / "residual-src" / "src.parquet"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    _write_rows_parquet(
+        source,
+        [(4, "d", Decimal("4.00"), datetime(2026, 9, 13, 8, 3, 0), "2026-09-13")],
+    )
+    return source

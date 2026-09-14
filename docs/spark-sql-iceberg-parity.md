@@ -5215,18 +5215,27 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   rather than silent.
 
 - **ICE-SPARK-TABLE-1** — measured 2026-09-14 (ICE-SPARK-TABLE-1; live PySpark 4.1.2 +
-  iceberg-runtime 1.11.0 on a Hadoop catalog, ledger C-001..C-007). RePark writing into
-  a **Spark-created** v2 copy-on-write table works end to end — `register_table`
+  iceberg-runtime 1.11.0 on a Hadoop catalog, ledger C-001..C-011; round 2
+  dispositioned a Grok 4.6 critic-logic review). RePark writing into a
+  **Spark-created** v2 copy-on-write table works end to end — `register_table`
   adoption, the production `UPDATE SET * / INSERT *` MERGE twice, the weekly
   maintenance CALLs, and Spark reading the result back with `EXCEPT ALL` empty both
   ways — with these named shape differences versus a RePark-created twin: Spark stamps
-  `owner` and `write.parquet.compression-codec` repark never writes itself but
-  **honours and carries forward** verbatim on commit (a `snappy`-stamped table gets
-  SNAPPY repark files); Spark maintains `version-hint.text` and repark **never
-  rewrites it**, so a Hadoop-catalog reread serves the stale snapshot (20) until
-  `spark.catalog.refreshTable` or a fresh `register_table` at the newest file (35) —
-  the one behavior C4 must schedule around; repark continues the adopted table's `vN`
-  metadata naming (v4…v7) where its own tables use `NNNNN-uuid`; snapshot summaries
+  `owner`, `write.parquet.compression-codec` and `write.distribution-mode` repark never
+  writes itself but **honours and carries forward** verbatim through `v9` (a
+  `snappy`-stamped table gets SNAPPY repark files, footer-pinned); Spark-written
+  `overwrite` history and a second partition spec are **honoured** — repark MERGEs and
+  maintains over Spark's own overwrite manifests, and on an evolved spec
+  (`ADD PARTITION FIELD days(…)` → spec-id 1 default) repark writes the new file with
+  `spec_id 1` under the two-level partition dir; the **stale-cache** shape is a stale
+  READ, not a write hazard — after repark commits, Spark's cached table serves the old
+  snapshot (20) until `spark.catalog.refreshTable` (36) or a fresh `register_table`,
+  while a same-session `INSERT` scan-forwards and commits `v10` cleanly (no
+  `CommitFailedException`, no clobber); production C4 is Glue, which has no version
+  hint, so the runbook action is refreshing Spark's table cache after a repark commit,
+  catalog-agnostic — and the reverse direction is the residue: repark (fork R167) has
+  no exists-fail on a Hadoop `vN` collision; repark continues the adopted table's `vN`
+  metadata naming (v6…v9) where its own tables use `NNNNN-uuid`; snapshot summaries
   mix vocabularies (Spark's `spark.app.id`/`engine-name`/`iceberg-version` family vs
   repark's `engine.operation-id`/`deleted-*` family) and Spark reads both;
   `statistics`/`partition-statistics` keys are absent from repark commits; and a
