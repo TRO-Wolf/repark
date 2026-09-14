@@ -1749,7 +1749,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   phantom rows on 1-row and 0-row zero-column frames while ASCII `show` prints
   the real row count (owner question for step 1, ledger F-L2).
   `test_html_row_count_matches_min_size_cap` counts `<tr>` over
-  caps {1, 20} x sizes {0, cap, cap+1}. Record mode is
+  caps {1, 20} x sizes {0, cap, cap+1} (the §8 footer test asserts
+  presence only — this is the row-count binding). Record mode is
   `REPARK_FACADE_5_RECORD_GOLDENS=1` and is refused when `CI` or
   `GITHUB_ACTIONS` is set to any non-empty value. Each case is proven to bite
   by a one-line mutation recorded in

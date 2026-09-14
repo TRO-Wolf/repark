@@ -596,6 +596,28 @@ def test_display_goldens_match_committed_bytes(spark: ReparkSession) -> None:
         )
 
 
+def _sized_frame(session: ReparkSession, size: int) -> Any:
+    """A one-column frame of exactly ``size`` rows."""
+    if size == 0:
+        return session.sql("SELECT CAST(0 AS INT) AS id WHERE 1 = 0")
+    return session.createDataFrame([(index,) for index in range(size)], "id INT")
+
+
+def test_html_row_count_matches_min_size_cap(spark: ReparkSession) -> None:
+    """``_repr_html_`` emits a header plus ``min(size, cap)`` body rows.
+    pins: facade-5/C-003"""
+    for cap in (1, 20):
+        for size in (0, cap, cap + 1):
+            frame = _sized_frame(spark, size)
+            rendered = _under_eager(
+                spark, cap, 20, lambda bound=frame: dict([_door("h", bound._repr_html_)])
+            )["h"]["rendered"]
+            assert rendered is not None
+            assert rendered.count("<tr>") == 1 + min(size, cap), (
+                f"cap={cap} size={size}: {rendered!r}"
+            )
+
+
 def test_record_mode_fails_when_ci_is_set(monkeypatch: pytest.MonkeyPatch) -> None:
     """Record env is refused in CI. pins: facade-5/C-004"""
     monkeypatch.setenv(RECORD_ENV, "1")

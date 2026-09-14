@@ -150,10 +150,14 @@ Rule taxonomy (what reaches the formatter, from `_cell_text` /
 - `test_mapinarrow_preview_bounds_udf_rows` — the bridge yields **≤ 21**
   (`maxNumRows + 1`) rows on `repr` and `_repr_html_` at cap 20 (row-at-a-time
   bridge over a 100-row frame).
-- `test_repr_footer_presence_matches_row_count` /
-  `test_html_footer_presence_matches_row_count` — rendered data rows
+- `test_repr_footer_presence_matches_row_count` — rendered data rows
   `== min(size, cap)`; footer iff `size > cap`; caps {1, 20} × sizes
   {0, cap, cap+1}, plain and bridged.
+- `test_html_footer_presence_matches_row_count` — footer presence iff
+  `size > cap` only (it never counts `<tr>`); the HTML row count is bound
+  instead by `test_html_row_count_matches_min_size_cap` in
+  `test_facade_5_display_goldens.py` (caps {1, 20} × sizes
+  {0, cap, cap+1}).
 - `test_max_num_rows_edge_shapes_preserved` — cap `"0"`/`"-3"` render the
   `top 0 rows` footer; `"abc"` falls back to 20; `truncate` conf `3` honoured
   on both repr and HTML.
@@ -245,6 +249,7 @@ release native) is green byte-identical on `c9b03c67`.
 |---|---|---|---|
 | L-001 | P2 | vertical `show` × zero-column unbound; `Table.slice` pads `n` phantom `-RECORD`s | REMEDIATED — `show_vertical` pinned on 1-row + 0-row frames |
 | L-002 | P2 | `_repr_html_` × zero-column unbound; `maxNumRows` phantom `<tr>` rows | REMEDIATED — `html` door pinned on both frames |
+| L-003 | P2 | C-003 sentence overclaimed the HTML footer test (footer only, never counts rows) | REMEDIATED — sentence narrowed; `test_html_row_count_matches_min_size_cap` added |
 | L-004 | P2 | polars × nested × truncate cap unbound | REMEDIATED — `polars_nested_true/trunc10/trunc2`; M15/M16 red all three |
 
 ```yaml
@@ -267,6 +272,17 @@ FINDING:
   claim: The doors disagree on zero-column frames — ASCII show prints the real row count while vertical show, eager repr and _repr_html_ print n / maxNumRows phantom records from the Table.slice pad.
   evidence: spark_zero_cols + spark_zero_cols_empty goldens — show: 1 and 0 rows; show_vertical: 5 RECORDs both; repr_eager: 20 ghost rows both; html: 20 ghost <tr> both.
   disposition: OPEN — owner question for step 1: pin the phantom bytes as the byte-identical contract, or fix the slice pad first (would change bytes; not this step's call).
+```
+
+```yaml
+FINDING:
+  id: F-L3
+  severity: S2
+  category: AT-10
+  clause: C-003
+  claim: The ledger's C-003 scan-count sentence claimed the HTML footer test asserts rendered data rows == min(size, cap); it asserts footer presence only and never counts <tr>.
+  evidence: test_dfcore_6_eager_preview.py:152-167 — no <tr>/<td> count; a formatter dropping every body row with the footer rule intact stays green.
+  disposition: REMEDIATED — sentence narrowed to footer-presence; test_html_row_count_matches_min_size_cap counts <tr> over caps {1, 20} x sizes {0, cap, cap+1}.
 ```
 
 ```yaml
