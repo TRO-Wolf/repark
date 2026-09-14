@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from _acceptance import ICEBERG_TABLE_PROPERTIES, _sql, fq_table, snapshot_ids_oldest_first
+from _acceptance import (
+    ICEBERG_TABLE_PROPERTIES,
+    _sql,
+    fq_table,
+    snapshot_log_oldest_first,
+)
 
 from repark import ReparkSession
 
@@ -24,19 +29,22 @@ REPLACE_SECOND_ROWS: tuple[tuple[int, str], ...] = (
 )
 
 
+class StepObservation(NamedTuple):
+    """Rows, Arrow field types, and the ordered ``.snapshots`` log after one statement."""
+
+    rows: list[dict[str, object]]
+    field_types: dict[str, str]
+    snapshot_ids: list[int]
+    snapshot_operations: dict[int, str]
+
+
 class ReplaceTwiceOutcome(NamedTuple):
-    """Ordered rows, ``.snapshots`` count and current snapshot id after each of the three writes."""
+    """Observations after the seed CTAS and each of the two replaces."""
 
     table: str
-    created_rows: list[dict[str, object]]
-    created_snapshot_count: int
-    created_current_snapshot_id: int
-    first_replace_rows: list[dict[str, object]]
-    first_replace_snapshot_count: int
-    first_replace_current_snapshot_id: int
-    second_replace_rows: list[dict[str, object]]
-    second_replace_snapshot_count: int
-    second_replace_current_snapshot_id: int
+    created: StepObservation
+    first_replace: StepObservation
+    second_replace: StepObservation
 
 
 def _values_select(rows: tuple[tuple[int, str], ...]) -> str:
@@ -64,10 +72,15 @@ def _expected_rows(rows: tuple[tuple[int, str], ...]) -> list[dict[str, object]]
     return [{"id": identifier, "name": name} for identifier, name in rows]
 
 
-def _observe(spark: ReparkSession, table: str) -> tuple[list[dict[str, object]], int, int]:
-    rows = spark.sql(f"SELECT * FROM {table} ORDER BY id").to_arrow().to_pylist()
-    snapshot_ids = snapshot_ids_oldest_first(spark, table)
-    return rows, len(snapshot_ids), snapshot_ids[-1]
+def _observe(spark: ReparkSession, table: str) -> StepObservation:
+    arrow = spark.sql(f"SELECT * FROM {table} ORDER BY id").to_arrow()
+    log = snapshot_log_oldest_first(spark, table)
+    return StepObservation(
+        rows=arrow.to_pylist(),
+        field_types={field.name: str(field.type) for field in arrow.schema},
+        snapshot_ids=[snapshot_id for snapshot_id, _operation in log],
+        snapshot_operations=dict(log),
+    )
 
 
 def run_create_or_replace_twice(
@@ -76,43 +89,47 @@ def run_create_or_replace_twice(
     """Seed 3 rows by CTAS, then run CREATE OR REPLACE twice (4 rows, then 5)."""
     target = fq_table(catalog, namespace, table)
     _sql(spark, create_or_replace_seed_sql(target))
-    created_rows, created_count, created_current = _observe(spark, target)
+    created = _observe(spark, target)
     _sql(spark, create_or_replace_sql(target, REPLACE_FIRST_ROWS))
-    first_rows, first_count, first_current = _observe(spark, target)
+    first_replace = _observe(spark, target)
     _sql(spark, create_or_replace_sql(target, REPLACE_SECOND_ROWS))
-    second_rows, second_count, second_current = _observe(spark, target)
+    second_replace = _observe(spark, target)
     return ReplaceTwiceOutcome(
         table=target,
-        created_rows=created_rows,
-        created_snapshot_count=created_count,
-        created_current_snapshot_id=created_current,
-        first_replace_rows=first_rows,
-        first_replace_snapshot_count=first_count,
-        first_replace_current_snapshot_id=first_current,
-        second_replace_rows=second_rows,
-        second_replace_snapshot_count=second_count,
-        second_replace_current_snapshot_id=second_current,
+        created=created,
+        first_replace=first_replace,
+        second_replace=second_replace,
     )
 
 
 def assert_replace_twice_outcome(
     outcome: ReplaceTwiceOutcome, *, exact_counts: bool = True
 ) -> None:
-    """The measured shape: rows equal the last SELECT and history grows one snapshot per replace."""
-    assert outcome.created_rows == _expected_rows(REPLACE_SEED_ROWS)
-    assert outcome.first_replace_rows == _expected_rows(REPLACE_FIRST_ROWS)
-    assert outcome.second_replace_rows == _expected_rows(REPLACE_SECOND_ROWS)
+    """The measured shape: last-SELECT rows, measured types, history retained, all ``append``."""
+    created = outcome.created
+    first_replace = outcome.first_replace
+    second_replace = outcome.second_replace
+    assert created.rows == _expected_rows(REPLACE_SEED_ROWS)
+    assert first_replace.rows == _expected_rows(REPLACE_FIRST_ROWS)
+    assert second_replace.rows == _expected_rows(REPLACE_SECOND_ROWS)
+    for step in (created, first_replace, second_replace):
+        assert step.field_types == {"id": "int32", "name": "string"}
     if exact_counts:
-        assert outcome.created_snapshot_count == 1
-        assert outcome.first_replace_snapshot_count == 2
-        assert outcome.second_replace_snapshot_count == 3
+        assert len(created.snapshot_ids) == 1
+        assert len(first_replace.snapshot_ids) == 2
+        assert len(second_replace.snapshot_ids) == 3
     else:
-        assert outcome.created_snapshot_count >= 1
-        assert outcome.first_replace_snapshot_count > outcome.created_snapshot_count
-        assert outcome.second_replace_snapshot_count > outcome.first_replace_snapshot_count
-    snapshot_ids = {
-        outcome.created_current_snapshot_id,
-        outcome.first_replace_current_snapshot_id,
-        outcome.second_replace_current_snapshot_id,
+        assert len(created.snapshot_ids) >= 1
+        assert len(first_replace.snapshot_ids) > len(created.snapshot_ids)
+        assert len(second_replace.snapshot_ids) > len(first_replace.snapshot_ids)
+    assert set(created.snapshot_ids) <= set(first_replace.snapshot_ids)
+    assert set(first_replace.snapshot_ids) <= set(second_replace.snapshot_ids)
+    current_ids = {
+        created.snapshot_ids[-1],
+        first_replace.snapshot_ids[-1],
+        second_replace.snapshot_ids[-1],
     }
-    assert len(snapshot_ids) == 3
+    assert len(current_ids) == 3
+    assert created.snapshot_operations[created.snapshot_ids[-1]] == "append"
+    assert first_replace.snapshot_operations[first_replace.snapshot_ids[-1]] == "append"
+    assert second_replace.snapshot_operations[second_replace.snapshot_ids[-1]] == "append"

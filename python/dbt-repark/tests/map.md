@@ -58,7 +58,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   measures: 1 → 2 `append` snapshots per model) — then `dbt test` (10 results, success).
   The module joined `aws-acceptance.yml` as a `dbt gold acceptance` step after the silver
   module (`if: !cancelled()`, same env block, `-rA`); the Makefile `DBT_PINS` install in
-  the pre-credentials build step; docs/tier2-aws.md §7 is the operator note.
+  the pre-credentials build step; docs/tier2-aws.md §7 is the operator note. The fixture's
+  `finally` runs `release_session()` plus `_stop_any_session()` (imported from
+  `test_gold_models`) so a fixture-time failure cannot leave a Glue session process-wide.
   pins: dbt-1-adapter/C-005
   pins: ice-gold-twice-1/C-003, C-004, C-005, C-006
 

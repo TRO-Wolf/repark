@@ -20,9 +20,9 @@ named only as "the cutover pipeline" here.
   production Iceberg assessment at `c9b03c67` / fork `3ebf7d36` (2026-09-14):** 36 capability
   rows, what moved since the 2026-09-06 assessment, the C0–C6 state, eleven ranked gaps, and §10
   the owner's rulings Q-ICE-1..7 with the nightly-run correction. Row C2 / gap G-1 (Glue had no
-  replace-publish path, so a second gold `dbt run` failed) is stamped **FIXED 2026-09-14 at
-  `edc38c6a`** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml`
-  (ICE-GOLD-TWICE-1) are the live proof, first run pending the post-merge dispatch.
+  replace-publish path, so a second gold `dbt run` failed) is **FIXED at pin `edc38c6a`, live
+  pending** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml`
+  (ICE-GOLD-TWICE-1) await their first run — the post-merge dispatch.
   Inventory §8 carries the rulings.
 
 ## Pointers

@@ -138,6 +138,9 @@ repo.
   measured stays in STATUS. **LIVE-v3-M (2026-09-02):** the two v3 rows now state the answer
   ("answered 2026-09-02") rather than the open question — Glue reproduces the local v3 numbers,
   S3 Tables accepts `format-version = 3` at CREATE — and the run id itself stays out of §6.
+  **ICE-GOLD-TWICE-1 (2026-09-14):** §6 also carries the two `replace2` legs (Glue exact counts,
+  S3 Tables relaxed counts with identical retention/type/`append` pins) and §7 the dbt gold
+  module — the workflow's second pytest step, per-run stems, two `dbt run` passes and `dbt test`.
   pins: live-v3-aws-legs/C-004; live-v3-first-measurement/C-002
 - [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags

@@ -132,9 +132,9 @@ that the pin passes today.
 |---|---|---|
 | Per PR | `ci.yml`: `cargo test --workspace`; every `repark-iceberg` test is AWS-free on `MemoryCatalog`. `wheels.yml` `smoke`: the full facade suite `python/repark/tests` and the dbt suite `python/dbt-repark/tests`, against the built wheel. | No secrets; memory catalog only |
 | Nightly and dispatch | `parity-live.yml`: the facade suite with `REPARK_PARITY_LIVE=1` against PySpark 4.1.2 and Iceberg 1.11.0. This includes the v3 live oracle, the v3 statement coverage and the SQL-HARDEN cutover cells. | Merged code only |
-| Nightly and dispatch, environment approval | `aws-acceptance.yml`: `python/repark/tests/test_aws_acceptance.py` only, which holds the Glue and S3 Tables legs | OIDC role; `TABLE_BUCKET_ARN` secret; scratch namespace |
+| Nightly and dispatch, environment approval | `aws-acceptance.yml`: `python/repark/tests/test_aws_acceptance.py` (the Glue and S3 Tables legs) and `python/dbt-repark/tests/test_aws_acceptance_gold.py` (the Glue gold module — ICE-GOLD-TWICE-1 joined it 2026-09-14; first run pending the post-merge dispatch) | OIDC role; `TABLE_BUCKET_ARN` secret; scratch namespace |
 | Tag, and a nightly platform matrix | `release.yml` and `wheels.yml` `platform-matrix`: five abi3 wheels, import and one collect | No Iceberg acceptance |
-| No workflow | `make py-test-spill-matrix`, `make py-test-torture`, and `python/dbt-repark/tests/test_aws_acceptance_gold.py` (the Glue gold leg) | Run by hand |
+| No workflow | `make py-test-spill-matrix` and `make py-test-torture` | Run by hand |
 
 Live runs recorded in the tree:
 
@@ -162,7 +162,7 @@ sections 5–7. "Doors" means the native ANSI SQL door, the Spark SQL door and t
 | Id | Capability | Evidence | Qualification | Status |
 |---|---|---|---|---|
 | C1 | **Glue.** Register a Glue catalog, resolve `glue_catalog.ns.table`, then create, read, write, run DML and run the maintenance CALLs through the session. | `crates/repark-core/src/session.rs` (Glue arm of `register_catalog_spec`). Runs 33635288918 (2026-09-02) and 33699342417 (2026-09-03). SQL-HARDEN-2 AWS legs, 2026-09-04 ([ledger](../../task/ledgers/completed/sql-harden-2-cow-shapes-ledger.md) §5): S1–S9 replayed on Glue; copy-on-write MERGE left 0 delete files and 1 data file. | The evidence is for 1.0.1-era revisions only. Glue gets no metadata or manifest cache (`PERF-CATALOG-AWS-CACHE-1`, BACKLOG, performance only). Credentials resolve inside the fork through the AWS SDK default chain. Replacing an existing table is row C2. | PROVEN |
-| C2 | **Glue replace of an existing table.** `CREATE OR REPLACE TABLE … AS`, `writeTo().createOrReplace()` and `writeTo().replace()`. | **FIXED 2026-09-14 at fork pin `edc38c6a`** (F-GLUE-REPLACE-1, fork #282, repin RP-20): `GlueCatalog::publish_replace_table` is a version-id-checked `UpdateTable` of the metadata location through the Glue commit transport — the staged metadata is read back and uuid-matched before the send, a stale expected base is a retryable `CatalogCommitConflicts`, a lost response a typed `CommitStateUnknown`. Pre-fix record (kept): `execute_ctas` calls `StagedTableTransaction::begin_replace` (`crates/repark-spark/src/ctas.rs:243`) and `commit`; the trait default returned `FeatureUnsupported`, reached Python as `UnsupportedOperationException`, and the streamed SELECT left unreferenced files. | The fork's offline commit-transport pins prove the publish path; the live cell is `test_create_or_replace_twice_against_glue` plus the gold-twice module in `aws-acceptance.yml` (ICE-GOLD-TWICE-1), whose first run is the post-merge dispatch. The memory catalog proves the leg shape offline. | PROVEN |
+| C2 | **Glue replace of an existing table.** `CREATE OR REPLACE TABLE … AS`, `writeTo().createOrReplace()` and `writeTo().replace()`. | **FIXED 2026-09-14 at fork pin `edc38c6a`** (F-GLUE-REPLACE-1, fork #282, repin RP-20): `GlueCatalog::publish_replace_table` is a version-id-checked `UpdateTable` of the metadata location through the Glue commit transport — the staged metadata is read back and uuid-matched before the send, a stale expected base is a retryable `CatalogCommitConflicts`, a lost response a typed `CommitStateUnknown`. Pre-fix record (kept): `execute_ctas` calls `StagedTableTransaction::begin_replace` (`crates/repark-spark/src/ctas.rs:243`) and `commit`; the trait default returned `FeatureUnsupported`, reached Python as `UnsupportedOperationException`, and the streamed SELECT left unreferenced files. | The fork's offline commit-transport pins prove the publish path; the live cell is `test_create_or_replace_twice_against_glue` plus the gold-twice module in `aws-acceptance.yml` (ICE-GOLD-TWICE-1), whose first run is the post-merge dispatch. The memory catalog proves the leg shape offline. | FIXED at `edc38c6a`, live pending |
 | C3 | **S3 Tables.** The same session surface; the service assigns the table location. | Runs 33333274383, 33635288918 and 33699342417. SQL-HARDEN-2 AWS legs, 2026-09-04. Registry `S3T-V3-1` FIXED. | `register_table` refuses before any AWS call (`S3T-1`, DECLARED service gap). `remove_orphan_files` refuses before any IO (`ORPHAN-S3TABLES-1`, DECLARED, 2026-09-12). The service's own compaction and expiry commit concurrently (fork `docs/ENGINE_CONTRACT.md` §8). The fork implements replace publish; the `replace2` leg joins the nightly under ICE-GOLD-TWICE-1 (first run pending the post-merge dispatch). Production silver is on Glue, so this row is outside the admitted workload. | PROVEN |
 | C4 | **REST, Hive, SQL/JDBC and Hadoop catalogs.** Not offered. | `CatalogKind` has Memory, Glue, S3Tables and a refused Postgres kind (`crates/repark-core/src/catalog_config.rs:22`, `:220-223`). `type = "rest"` refuses ([REST intake](../../task/roadmap/mid-term/rest-catalogs-intake-2026-09-12.md) §1). | The fork ships REST, SQL and HMS catalogs (GAP_MATRIX R126), but RePark consumes none of them. REST is tentatively slated for 1.8; release-roadmap row 1.14 makes multi-writer and REST first-class. The memory catalog serves development and tests. A Hadoop `vN.metadata.json` table can be adopted with `register_table` (`V3-ADOPT-1` FIXED). | NOT ESTABLISHED |
 
@@ -245,9 +245,10 @@ column is the admitted path.
 | I3 | **RePark reads and changes Spark-written v3 tables.** | Spark-written v3 fixtures with DV DELETE, time travel and refs (`crates/repark-spark/src/tests/v3e3.rs`, `v3e4.rs`); the nightly live oracle; `register_table` adoption (`crates/repark-spark/src/tests/call_register.rs`); the Spark-generated TORTURE-1 `v3_dv` fixture. | These are small fixtures. | PROVEN |
 | I4 | **RePark MERGE and maintenance on a Spark-created v2 copy-on-write table with production properties.** | None found. | The C2 shadow plan has RePark create its own shadow tables (inventory §6, §7 ruling 3). The first RePark write into a Spark-created production table would be the C4 switch. A Spark-created table with a transform sort order refuses writes (`WRITE-ORDER-TRANSFORM-1`). | NOT ESTABLISHED |
 | D1 | **dbt-repark on the memory catalog.** | `python/dbt-repark/tests/test_gold_models.py`: `dbt run` builds both gold models with the S6 rows; `dbt test` passes ten blocks; a second `dbt run` replaces the tables in place (`test_dbt_run_is_idempotent`); `--full-refresh` works. Also 30 statement-surface cases. Runs per PR in `wheels.yml` `smoke`. | Only `materialized='table'` with `file_format='iceberg'`. `view`, `incremental` and `snapshot` refuse (`DBT-VIEW-1`, `DBT-TEMPVIEW-1`), as do `persist_docs`, `location_root`, `options` and `clustered_by` (registry §2.5). The memory catalog implements replace, so the rebuild pin does not cover Glue (row C2). | PROVEN |
-| D2 | **dbt-repark gold on Glue.** | Inventory §6 C6 and §7 ruling 2 (commit `897151dd`, #372) record that `dbt run` built both models over Glue and `dbt test` passed ten blocks, dated 2026-09-05. The module is `python/dbt-repark/tests/test_aws_acceptance_gold.py`. | No run output, run id, wheel or revision is recorded. The DBT-1 ledger (C-005) records the Glue leg as written and skipped. The recording commit is dated 2026-09-04 −04:00. The module uses a constant table stem and a plain `CREATE TABLE` seed, so it can only have exercised a first build, and it runs in no workflow. The daily rebuild depends on row C2. | DECLARED |
+| D2 | **dbt-repark gold on Glue.** | Inventory §6 C6 and §7 ruling 2 (commit `897151dd`, #372) record that `dbt run` built both models over Glue and `dbt test` passed ten blocks, dated 2026-09-05. The module is `python/dbt-repark/tests/test_aws_acceptance_gold.py`. | No run output, run id, wheel or revision is recorded. The DBT-1 ledger (C-005) records the Glue leg as written and skipped. The recording commit is dated 2026-09-04 −04:00; the module then used a constant stem and one `dbt run`, so that build can only have exercised a first build. The module now uses per-run stems, two `dbt run` passes and `dbt test` (ICE-GOLD-TWICE-1) and joined `aws-acceptance.yml` — first run pending the post-merge dispatch. The daily rebuild depended on row C2, FIXED at the pin, live pending. | DECLARED |
 
-**Row counts:** 36 rows — 25 PROVEN, 2 DECLARED, 9 NOT ESTABLISHED.
+**Row counts:** 36 rows — 24 PROVEN, 2 DECLARED, 9 NOT ESTABLISHED, 1 FIXED at pin
+pending its live cell (C2, the post-merge `aws-acceptance` dispatch).
 
 ## 4. What changed since the 2026-09-06 assessment
 
@@ -424,7 +425,7 @@ the weekly maintenance.
 
 | Rank | Gap | Blocks the admitted cutover? |
 |---|---|---|
-| G-1 | Glue replace of an existing table has no publish path (row C2) — **FIXED 2026-09-14 at `edc38c6a`** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml` (ICE-GOLD-TWICE-1) are the live proof | Was: C6 (gold only per Q-ICE-2). Closed |
+| G-1 | Glue replace of an existing table has no publish path (row C2) — **FIXED at pin `edc38c6a`** (F-GLUE-REPLACE-1 + RP-20); the twice legs and gold twice in `aws-acceptance.yml` (ICE-GOLD-TWICE-1) await their first run | FIXED at pin, live pending — the post-merge dispatch |
 | G-2 | No live acceptance at a current candidate revision | Yes: the C4 switch; recommended before C2 |
 | G-3 | The first RePark write onto Spark-created production tables happens at the switch (row I4) | Yes: C4, unless the shadow covers it (Q-ICE-3) |
 | G-4 | No cross-reader acceptance: Spark and Athena reading RePark writes (rows I1, I2) | Yes: check 4, which gates C2–C4 |
@@ -438,7 +439,7 @@ the weekly maintenance.
 
 **G-1 — Glue replace publish.**
 
-**RESOLVED 2026-09-14 (F-GLUE-REPLACE-1 + RP-20):** fork #282 landed
+**FIXED AT PIN 2026-09-14 (F-GLUE-REPLACE-1 + RP-20), live pending:** fork #282 landed
 `GlueCatalog::publish_replace_table` as a version-id-checked `UpdateTable` through the Glue
 commit transport with the staged metadata read-validated, and the repin to `edc38c6a` consumed
 it. ICE-GOLD-TWICE-1 added the `CREATE OR REPLACE … AS` twice legs and the two-`dbt run` gold
@@ -477,6 +478,8 @@ the pre-fix record, kept.
   aws-acceptance needs environment approval, and the Glue gold leg is in no workflow.
   **Corrected in the addendum (§10):** the nightly aws-acceptance schedule has run green on `main`
   every night through 2026-09-14; the gold leg's absence from that workflow is the part that stands.
+  *(Updated 2026-09-14: the gold module joined `aws-acceptance.yml` under ICE-GOLD-TWICE-1; its
+  first run is the post-merge dispatch.)*
 - *Smallest closing unit.* Dispatch `aws-acceptance.yml` on the candidate revision and record the
   run id and per-leg counts in the inventory. Add the dbt Glue module to that workflow; it is a
   `.github` change, which the owner approves.

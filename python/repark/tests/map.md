@@ -3787,13 +3787,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `_acceptance_replace.py` — **ICE-GOLD-TWICE-1 (2026-09-14):** the `CREATE OR REPLACE TABLE … AS`
   twice leg body, a non-`test_` module like `_acceptance`. `run_create_or_replace_twice` CTASes a
   3-row seed under the publish job's `ICEBERG_TABLE_PROPERTIES`, then runs
-  `CREATE OR REPLACE TABLE … AS` twice (a 4-row answer, then a 5-row answer), recording ordered
-  `to_arrow().to_pylist()` rows, the `<t>.snapshots` count and the current snapshot id after each
-  statement into `ReplaceTwiceOutcome`. `assert_replace_twice_outcome` asserts the shape measured
-  on the memory catalog (2026-09-14): rows equal the last SELECT, history retained — snapshot
-  count 1 → 2 → 3, every commit `append`, three distinct current ids. `exact_counts=False`
-  relaxes only the absolute counts (strict growth still asserted) for S3 Tables' own service
-  commits, the `assert_v3_acceptance_outcome` precedent.
+  `CREATE OR REPLACE TABLE … AS` twice (a 4-row answer, then a 5-row answer), recording after
+  each statement a `StepObservation` — ordered `to_arrow().to_pylist()` rows, the Arrow
+  `{field.name: str(field.type)}` map, and the full ordered `(snapshot_id, operation)` log from
+  `<t>.snapshots` — into `ReplaceTwiceOutcome`. `assert_replace_twice_outcome` asserts the shape
+  measured on the memory catalog (2026-09-14): rows equal the last SELECT; `id: int32`,
+  `name: string`; history retained — every earlier snapshot-id set is a subset of the next, so a
+  truncated replace fails even when a service commit adds snapshots; counts derived from the id
+  lists (exact path 1 → 2 → 3; `exact_counts=False` asserts strict growth only, for S3 Tables'
+  own service commits — the `assert_v3_acceptance_outcome` precedent); three distinct current
+  ids, each committed `operation == "append"` (on the relaxed path the three current ids' ops
+  only, extra service snapshots ignored). Type pin proven load-bearing by mutation (`int64` →
+  red).
   pins: ice-gold-twice-1/C-001
 - `test_acceptance_v3_helpers.py` — **LIVE-v3 (2026-09-02):** AWS-free structural pins for
   `_acceptance_v3` and the two live legs. The never-teardown guard over that module (no DROP,

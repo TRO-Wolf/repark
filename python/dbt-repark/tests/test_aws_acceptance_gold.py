@@ -26,6 +26,7 @@ from test_gold_models import (
     FCT_ROWS,
     PROPERTIES,
     _invoke,
+    _stop_any_session,
     _write_project,
 )
 
@@ -87,6 +88,7 @@ def glue_project(tmp_path: Path) -> Iterator[tuple[Path, str]]:
         yield root, stem
     finally:
         release_session()
+        _stop_any_session()
 
 
 def _repoint_profile(root: Path, stem: str) -> None:
