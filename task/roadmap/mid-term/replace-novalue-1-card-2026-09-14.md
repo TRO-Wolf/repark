@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-14 · **Filed by:** run 13b under owner ruling Q-13b-2 (card only, no implementation) · **Source:**
 REPLACE-LINEAR-1 step 1's disclosed residue
-([replace-linear-1-ledger.md](../../ledgers/staging/replace-linear-1-ledger.md)).
+([replace-linear-1-ledger.md](../../ledgers/completed/replace-linear-1-ledger.md)).
 
 ## Why
 
