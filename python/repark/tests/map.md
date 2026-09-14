@@ -3784,6 +3784,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   nothing else. S3 Tables decision table: `classify_v3_create_outcome` /
   `is_format_version_3_refusal` / `format_v3_refusal_record` (`S3T-V3-1`; the engine's own opt-in
   message never classifies). pins: live-v3-aws-legs/C-001
+- `_acceptance_replace.py` — **ICE-GOLD-TWICE-1 (2026-09-14):** the `CREATE OR REPLACE TABLE … AS`
+  twice leg body, a non-`test_` module like `_acceptance`. `run_create_or_replace_twice` CTASes a
+  3-row seed under the publish job's `ICEBERG_TABLE_PROPERTIES`, then runs
+  `CREATE OR REPLACE TABLE … AS` twice (a 4-row answer, then a 5-row answer), recording after
+  each statement a `StepObservation` — ordered `to_arrow().to_pylist()` rows, the Arrow
+  `{field.name: str(field.type)}` map, and the full ordered `(snapshot_id, operation)` log from
+  `<t>.snapshots` — into `ReplaceTwiceOutcome`. `assert_replace_twice_outcome` asserts the shape
+  measured on the memory catalog (2026-09-14): rows equal the last SELECT; `id: int32`,
+  `name: string`; history retained — every earlier snapshot-id set is a subset of the next, so a
+  truncated replace fails even when a service commit adds snapshots; counts derived from the id
+  lists (exact path 1 → 2 → 3; `exact_counts=False` asserts strict growth only, for S3 Tables'
+  own service commits — the `assert_v3_acceptance_outcome` precedent); three distinct current
+  ids, each committed `operation == "append"` (on the relaxed path the three current ids' ops
+  only, extra service snapshots ignored). Type pin proven load-bearing by mutation (`int64` →
+  red).
+  pins: ice-gold-twice-1/C-001
 - `test_acceptance_v3_helpers.py` — **LIVE-v3 (2026-09-02):** AWS-free structural pins for
   `_acceptance_v3` and the two live legs. The never-teardown guard over that module (no DROP,
   exactly one `DELETE FROM`, AST-pinned inside `v3_row_delete_sql` with its `WHERE`);
@@ -3824,6 +3840,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   inside MERGE and the runner; `create_namespace` has no `location` keyword; denial
   path is `pytest.fail(format_denial_failure(...))` (pins: mw-10-s3tables-mor/C-001,
   C-002, C-003, C-004).
+- `test_acceptance_replace_offline.py` — **ICE-GOLD-TWICE-1 (2026-09-14):** the always-run pin
+  for `_acceptance_replace` — `run_create_or_replace_twice` +
+  `assert_replace_twice_outcome` on `register_memory_catalog`, no gate, no AWS, no skip.
+  It is the proof the helper's measured assertions are right before the live legs run them.
+  pins: ice-gold-twice-1/C-001
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level** **S6 leak guard (2026-09-04):** the "not leaked into `cut`" half reads the leak namespace through `_leaked_table_is_reachable`, which treats the CI role's Glue `AccessDenied` on `database/cut` as the stronger proof (the role cannot reach that database at all, so nothing could have been created there); run 33916856419 failed on the raw `tableExists` call.
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -3866,6 +3887,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `warnings.warn`, and passes; anything else → raised (a storage-delete denial still fails loud
   first). Neither leg has run yet — the first measurement is the nightly or a dispatch on merged
   `main` (pins: live-v3-aws-legs/C-003).
+  **ICE-GOLD-TWICE-1 (2026-09-14):** `test_create_or_replace_twice_against_glue` and
+  `test_create_or_replace_twice_against_s3tables` — twins of the MW-4 / MW-10 legs over
+  `run_create_or_replace_twice`, `testing_replace2_<uuid12>` per run, Glue runs the
+  namespace-location guard and exact snapshot counts, S3 Tables skips without `TABLE_BUCKET_ARN`
+  and relaxes counts for service commits. The Glue leg is the live cell of the F-GLUE-REPLACE-1
+  publish path the RP-20 repin consumed at `edc38c6a` (the pin moved in the orchestrator's bump
+  commit `f1630f5a`; fork-sync row and root `map.md` sentence carried there; the cutover
+  registry/inventory rows naming the refusal are stamped FIXED at `edc38c6a` in this change).
+  pins: ice-gold-twice-1/C-002
+  pins: rp-20/C-001, C-002, C-003
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
