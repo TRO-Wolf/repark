@@ -51,6 +51,10 @@ doors carry value+type pins for every D-2 cell.
 | L-9 | `timestamp_ntz` + timestamp (either side) → LTZ µs via the session zone; `timestamp_ntz` + date → `timestamp_ntz`; ntz+ntz → ntz. The oracle answers — the critic's "refuse" is NOT Spark's behaviour. | Temporal common arms + the ntz oracle rows pinned on both doors. | PROVEN | Zoned/LTZ participation pulls the pair to `Timestamp(Microsecond, UTC)` with NTZ walls localized in the session zone; NTZ+date/NTZ stays `Timestamp(Microsecond, None)`. `test_ntz_array_plus_timestamp_localizes_in_session_zone` and the ntz+date/ntz+ntz cell rows pin the oracle answers on both doors. |
 | L-10 | Refusal pins match the full quoted pair token `["X", "Y"]`, not a substring; the SQL door pins the token it actually emits for its literal width. | Cell expectations carry the exact `["ARRAY<STRING>", "INT"]` (facade) / `["ARRAY<STRING>", "BIGINT"]` (door) tokens; the door's BIGINT is the int64-literal-width residue. | PROVEN | `test_array_element_coercion_cells` asserts the complete pair token per door — facade emits `"INT"` (Int32 literal), the door emits `"BIGINT"` (Int64 literal at coerce time, narrowed to Int32 post-resolution). |
 | L-11 | Refusal messages name struct and map types in Spark DDL (`STRUCT<x: INT>`, `MAP<STRING, INT>`) — FIX if cheap, else residue. | `spark_type_name` recursion or a crate-local helper. | PROVEN | `spark_type_name` renders `STRUCT<x: INT, y: STRING>` and `MAP<STRING, INT>` recursively in `coerce.rs`; no new crate edge was needed. Refusal cells assert the DDL token. |
+| L-12 | `Float16` takes part on the numeric ladder as Spark FLOAT (float32): any pair with `Float16` and a different numeric resolves as if the `Float16` side were `Float32` — `array<float16>` + int 100000 answers `float32` 100000.0, never Inf; `Float16` + `Float16` keeps its type. | `ladder_type` maps Float16→Float32 before ranking; the stale `Float16+Int32 → Float16` pin replaced; Rust tests for float16 × {int32, int64, float32, float64, float16}; facade pin over polars `pa.list_(pa.float16())` ingest, both functions. | PROVEN | Red-first: `array<float16>` + `F.lit(100000)` answered `[[1,2,inf],[null,inf]]` `large_list<halffloat>` on f28c7dee's native (pasted below). After the fix the pin answers `large_list<item: float>` with `100000.0` on both functions; `Float16+Float16` keeps `halffloat` via the identity arm. |
+| L-13 | Struct field names match case-insensitively regardless of `spark.sql.caseSensitive` — pinned as the product rule with a `caseSensitive=true` session. | `test_struct_field_matching_ignores_case_sensitive` (both doors × both functions). | PROVEN | `named_struct('X', …)` against `struct<x:int,y:string>` answers keeping the array's `x`/`y` names under `caseSensitive=true`, identical to the default. Residue row recorded. |
+| L-14 | The SQL door cannot spell a `TIMESTAMP_NTZ'…'` literal (`UnsupportedOperationException`); NTZ cells run through the `array<timestamp_ntz>` schema path. | Residue row — a door spelling gap outside this unit. | RESIDUE | Recorded; the schema-path pins cover the NTZ cells. |
+| L-15 | DF-only aliases keep the null-dropping kernel — identical to round-1 L-4. | Already residue. | RESIDUE | Same row as L-4; no change. |
 
 ## Evidence
 
@@ -286,6 +290,23 @@ e.g. test_array_element_coercion_cells[float+int-facade-array_append]:
 Every one of the 96 failures was confirmed to be an expected red (wrong type,
 wrong instant, missing recursion, substring-free token mismatch) — not a test
 harness defect — before the fix was written.
+
+### L-12 red-first (release native of f28c7dee)
+
+`array<float16>` + `F.lit(100000)` through polars `pa.list_(pa.float16())`
+ingest on the unmodified round-4 build:
+
+```
+r: large_list<item: halffloat>
+r: [[[1,2,inf],[null,inf]]]            # array_append
+r: [[[inf,1,2],[inf,null]]]            # array_prepend
+```
+
+IEEE float16 max is 65504, so 100000 becomes `Inf`. Spark has no float16 and
+`spark_type_name` already labels it `FLOAT` — the ruling resolves `Float16` as
+`Float32` on the ladder (except `Float16` + `Float16`, which keeps its type via
+the identity arm). After the fix the same pin answers
+`large_list<item: float>` `[[1.0, 2.0, 100000.0], [null, 100000.0]]`.
 
 ### Round-4 design — validate-only `coerce_types`, invoke-side conversion
 
@@ -552,6 +573,7 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
 - Q-13b-7: critics receive oracle answers as fixtures; the actor/orchestrator measures — applied (oracle measured by the orchestrator, table above).
 - Q-13b-8: Grok S2-21 reviewer units run at 64 G with in-process RLIMIT_AS caps — applied.
 - Critic re-check L-5..L-11 (orchestrator, measured on the oracle): match Spark's recursive tightest common type; L-9 follows the oracle (widen to LTZ), not the critic's refusal.
+- Critic round 3 L-12 (orchestrator): Float16 participates as Spark FLOAT (float32) on the ladder; L-13 pinned as a product rule, L-14 residue.
 
 ### Findings (run 14b)
 
@@ -572,6 +594,10 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
 | L-10 refusal pins were substring matches; door names `BIGINT` where Spark names `INT` | FIXED — pins assert the full `["X", "Y"]` pair token per door (facade `INT`, door `BIGINT` at coerce time); 0d4e40cf |
 | L-11 struct/map refusal names were Arrow Debug, not Spark DDL | FIXED — `spark_type_name` renders `STRUCT<x: INT>`/`MAP<STRING, INT>` recursively; 78d95565 |
 | P3-A door planner-inserted `CAST(List<Int32> AS List<Int64>)` ran before the all-null short-circuit (S2-21 re-check, same CAST on main) | RESOLVED by the round-4 design — validate-only `coerce_types` means no plan CAST exists; verified `array_append(a@0, 9)` plan + `list<int32>` result; 78d95565 |
+| L-12 `array<float16>` + int 100000 stored `Inf` (float16 max 65504); Spark has no half-float and the name was already FLOAT | FIXED — `ladder_type` resolves `Float16` as `Float32` on the ladder; `Float16+Float16` keeps `halffloat` via identity; facade pin over polars float16 ingest both functions; 3e788282 |
+| L-13 struct field names matched case-insensitively under `spark.sql.caseSensitive=true` (product rule, unpinned) | PINNED — `test_struct_field_matching_ignores_case_sensitive` on both doors × both functions; residue row recorded; 3e788282 |
+| L-14 SQL `TIMESTAMP_NTZ'…'` literal is unimplemented (`UnsupportedOperationException`) | RESIDUE — door spelling gap outside this unit; NTZ cells pinned through the `array<timestamp_ntz>` schema path |
+| L-15 DF aliases still drop NULL arrays | RESIDUE — identical to L-4; no change |
 
 ### Residue
 
@@ -586,6 +612,13 @@ planner CAST, removed under validate-only `coerce_types`; see P3-A).
   `list_push_back`, `list_prepend`, `array_push_front`, `list_push_front`) keep
   DataFusion's null-dropping kernel — the shim declares no aliases and no
   PySpark 4.1.2 surface exposes them.
+- L-13 residue: struct field matching ignores `spark.sql.caseSensitive=true` —
+  the UDF matches field names case-insensitively (and keeps the array's names)
+  regardless of the conf. Pinned as the product rule; the oracle's default is
+  `false` and no oracle cell exercises `true`.
+- L-14 residue: the SQL door cannot spell a `TIMESTAMP_NTZ'…'` literal
+  (`UnsupportedOperationException`); the NTZ cells are pinned through the
+  `array<timestamp_ntz>` schema path. A door parser gap, not a coerce bug.
 - Refusals raise repark's existing `AnalysisException`/`PySparkException`
   classes (unchanged, as pinned for the string-into-`array<int>` cell); the
   Spark error class rides inside the message text
@@ -644,6 +677,16 @@ Run 14b round 4 (L-5..L-11 + P3-A, on ead1f60e + this round's changes):
 - `make verify` → green (incl. `rust-file-size` after the `coerce.rs` split: `array_append.rs` 629 + `coerce.rs` 529).
 - Comment scan `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'` → printed nothing before each commit.
 
+Run 14b round 5 (L-12..L-15, on f28c7dee + this round's changes):
+
+- Red-first: `array<float16>` + `F.lit(100000)` on f28c7dee's native → `Inf` both functions (pasted above).
+- `cargo test -p repark-functions` → green (the `spark_common_element` table now covers float16 × {int32, int64, float32, float64, float16}; 11 array_append tests).
+- `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
+- `cd python/repark && maturin develop --release` → rebuilt with the `ladder_type` change.
+- `.venv/bin/python -m pytest` on both `test_array_null_1*.py` + every `grep -rln "array_append\|array_prepend"` file → green, 188 tests.
+- `make verify` → green.
+- Comment scan `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'` → printed nothing before each commit.
+
 ## Coverage attestation
 
 ```yaml
@@ -657,7 +700,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/array-null-1-ledger.md, task/ledgers/staging/array-null-1-spikes/before_after.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; the round-4 oracle adds recursive cells (array<float>+int incl. the 16777217 float-rounding value, nested arrays, map key/value widening, struct name/count/order/case, ntz↔ltz/date, 0001-01-01/9999-12-31 in an LA session compared as unix micros); chain depths 1..100 measured.
+      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; the round-4 oracle adds recursive cells (array<float>+int incl. the 16777217 float-rounding value, nested arrays, map key/value widening, struct name/count/order/case, ntz↔ltz/date, 0001-01-01/9999-12-31 in an LA session compared as unix micros); round 5 adds the float16-as-FLOAT ladder pin (100000 → 100000.0, never Inf, over polars halffloat ingest) and the spark.sql.caseSensitive=true struct-matching pin; chain depths 1..100 measured.
       artifacts: [python/repark/tests/test_array_null_1.py, python/repark/tests/test_array_null_1_coercion.py, crates/repark-functions/src/collection/array_append.rs, crates/repark-functions/src/collection/array_append/coerce.rs]
     - id: AT-3
       status: ATTACKED
