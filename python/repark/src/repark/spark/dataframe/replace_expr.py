@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -199,6 +200,38 @@ def _iter_replace_bound_columns(frame: DataFrame) -> list[Column]:
             for name, qualifier in zip(frame.columns, qualifiers, strict=True)
         ]
     return frame._iter_bound_columns()
+
+
+def _aliased_join_sides(
+    left: DataFrame, right: DataFrame
+) -> tuple[DataFrame, DataFrame, tuple[str, str]]:
+    """Alias both join inputs under generated `_repark_jl_*`/`_repark_jr_*` names."""
+    left_name = f"_repark_jl_{uuid.uuid4().hex[:12]}"
+    right_name = f"_repark_jr_{uuid.uuid4().hex[:12]}"
+    return left.alias(left_name), right.alias(right_name), (left_name, right_name)
+
+
+def _assign_join_qualifiers(
+    child: DataFrame, left_column_count: int, side_names: tuple[str, str] | None
+) -> None:
+    """Record which generated side alias qualifies each field of multi-name join output."""
+    if side_names is not None:
+        child._join_qualifiers = [side_names[0]] * left_column_count + [side_names[1]] * (
+            len(child.columns) - left_column_count
+        )
+
+
+def _inherit_plan_metadata(parent: DataFrame, child: DataFrame) -> DataFrame:
+    """Carry the display/engine overlay, origin map, and join qualifiers to a same-schema child."""
+    if parent._display_names is not None:
+        child._display_names = list(parent._display_names)
+        child._engine_names = (
+            list(parent._engine_names) if parent._engine_names is not None else None
+        )
+        child._origin_map = dict(parent._origin_map) if parent._origin_map is not None else None
+    if parent._join_qualifiers is not None:
+        child._join_qualifiers = list(parent._join_qualifiers)
+    return child
 
 
 def _replace_case(bound: Column, pairs: list[tuple[Any, Any]], type_key: str) -> Column:

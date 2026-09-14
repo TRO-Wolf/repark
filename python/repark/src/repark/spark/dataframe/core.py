@@ -373,15 +373,7 @@ class DataFrame:
         parents remain resolvable via the copied map.
         """
         child = self._spawn(inner)
-        if self._display_names is not None:
-            child._display_names = list(self._display_names)
-            child._engine_names = (
-                list(self._engine_names) if self._engine_names is not None else None
-            )
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-        if self._join_qualifiers is not None:
-            child._join_qualifiers = list(self._join_qualifiers)
-        return child
+        return replace_expr._inherit_plan_metadata(self, child)
 
     def _identity_child(self) -> DataFrame:
         """Spawn a same-plan child and preserve deferred bridge state."""
@@ -389,15 +381,7 @@ class DataFrame:
         if self._map_bridge is not None and self._cache_view is None:
             child._map_bridge = dict(self._map_bridge)
             child._mia_plan_ready = self._mia_plan_ready
-        if self._display_names is not None:
-            child._display_names = list(self._display_names)
-            child._engine_names = (
-                list(self._engine_names) if self._engine_names is not None else None
-            )
-            child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
-        if self._join_qualifiers is not None:
-            child._join_qualifiers = list(self._join_qualifiers)
-        return child
+        return replace_expr._inherit_plan_metadata(self, child)
 
     def _materialize_cache_if_needed(self) -> None:
         """Materialize a pending cache, persist, or lazy checkpoint request.
@@ -2770,22 +2754,12 @@ class DataFrame:
             _reject_partition_transform(on)
             return self._join_on_condition_h1(other, on, engine_how)
         if self is other or set(self.columns) & set(other.columns):
-            left_name = f"_repark_jl_{uuid.uuid4().hex[:12]}"
-            right_name = f"_repark_jr_{uuid.uuid4().hex[:12]}"
-            left: DataFrame = self.alias(left_name)
-            right: DataFrame = other.alias(right_name)
-            side_names: tuple[str, str] | None = (left_name, right_name)
+            left, right, side_names = replace_expr._aliased_join_sides(self, other)
         else:
-            left = self
-            right = other
-            side_names = None
+            left, right, side_names = self, other, None
         if isinstance(on, str):
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
-            if side_names is not None:
-                split = len(left.columns)
-                child._join_qualifiers = [side_names[0]] * split + [side_names[1]] * (
-                    len(child.columns) - split
-                )
+            replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2800,11 +2774,7 @@ class DataFrame:
                     )
                 return left.crossJoin(right)
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
-            if side_names is not None:
-                split = len(left.columns)
-                child._join_qualifiers = [side_names[0]] * split + [side_names[1]] * (
-                    len(child.columns) - split
-                )
+            replace_expr._assign_join_qualifiers(child, len(left.columns), side_names)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )

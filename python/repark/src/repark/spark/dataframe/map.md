@@ -122,8 +122,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   Duplicate-name equi-join output binds by relation qualifier through
   `_join_qualifiers` (captured by `join` when it auto-aliases overlapping inputs) instead
   of re-resolving display names, so `replace(10, 99)` rewrites both `x` columns while a
-  `subset=["x"]` still raises `AMBIGUOUS_REFERENCE`. `DataFrame.replace` is a
-  one-line wrapper.
+  `subset=["x"]` still raises `AMBIGUOUS_REFERENCE`. The module also owns the
+  join-side plumbing that feeds it — `_aliased_join_sides` (the generated
+  `_repark_jl_*`/`_repark_jr_*` aliases), `_assign_join_qualifiers` (the
+  position-aligned qualifier list), and `_inherit_plan_metadata` (the
+  display/engine overlay + origin map + qualifier propagation shared by
+  `core.py`'s identity spawns) — so `core.py` keeps only the slot and the call
+  sites. `DataFrame.replace` is a one-line wrapper.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the

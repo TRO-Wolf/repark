@@ -204,8 +204,12 @@ native. Dispositions below are the binding orchestrator rulings.
   through its qualifier (`"rel"."x"`) when qualifiers are present and no display
   overlay is set, so `replace(10, 99)` rewrites both `x` columns by attribute
   identity while `subset=["x"]` still raises `AMBIGUOUS_REFERENCE` (Spark's
-  answer for a name subset on multi-name output). `core.py` ratcheted
-  4054 → 4074; the CAP-1 mirror row moved with it.
+  answer for a name subset on multi-name output). Round-2 audit correction:
+  ceilings only move down, so the join-side plumbing moved into
+  `replace_expr.py` (`_aliased_join_sides`, `_assign_join_qualifiers`) and the
+  shared propagation block was extracted as `replace_expr._inherit_plan_metadata`
+  (the sanctioned equal-lines offset); `core.py` keeps the slot, the init, and
+  four call sites — final count 4054 → 4044, both baselines moved.
   Pin: `test_replace_duplicate_name_join_columns` (overlay join AND
   alias + name equi-join, no subset, `columns` unchanged).
 - **P2-4 PINNED + DISCLOSED — nested-field subset.** `replace(1, 9, ["s.x"])` on a
@@ -283,7 +287,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/staging/replace-linear-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: The one upstream behavior the rewrite could have silently presumed — that DataFusion would refuse cross-type comparisons instead of matching by coercion — was probed directly (int col = float lit, bool key on int col, decimal col = double lit) before the key-family filter was written; no new public name; D-4's core.py ratchet recorded at the exact new baseline 4054, re-recorded 4054 → 4074 in the same round's both-tables update when the `_join_qualifiers` slot landed (P2-3). The critic round's second presumed-cheap claim — that the collapsed type key is the column's real family — was falsified on `binary` and the filter moved to physical Arrow types.
+      evidence: The one upstream behavior the rewrite could have silently presumed — that DataFusion would refuse cross-type comparisons instead of matching by coercion — was probed directly (int col = float lit, bool key on int col, decimal col = double lit) before the key-family filter was written; no new public name; D-4's core.py ratchet recorded at the exact new baseline 4054, re-recorded 4054 → 4044 when the `_join_qualifiers` plumbing moved into `replace_expr.py` (P2-3; the audit's first pass tried 4074 and the down-only ceiling rule rejected it — the equal-lines extraction landed it at 4044). The critic round's second presumed-cheap claim — that the collapsed type key is the column's real family — was falsified on `binary` and the filter moved to physical Arrow types.
       artifacts: [python/repark/src/repark/spark/dataframe/replace_expr.py, scripts/check_lib_py.py]
     - id: AT-9
       status: ATTACKED
