@@ -6,6 +6,24 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
+  cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and
+  never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not
+  reproduce under 2/4/8 GB caps). REPLACE-LINEAR-1 step 0 merged (#571), with step 1 parked on owner question Q-R1 (nine
+  Spark divergences). ARRAY-NULL-1 and ANSI-DOOR-1 filed as cards. Owner questions Q-B1, Q-B2, Q-R1, Q-R2 with
+  recommendations.
+- [array-null-1-card-2026-09-13.md](array-null-1-card-2026-09-13.md) — **card ARRAY-NULL-1 (2026-09-13, run 12b
+  under G-5; ABS-EXPR-1's C-004 audit residue):** `F.array_append` / `F.array_prepend` compose
+  `when(isnull(arr), NULL).otherwise(flatten(array(arr, array(x))))`, embedding the array twice per level
+  (19 MB at depth 12, 66 MB at 14), because DataFusion's kernels drop the input null buffer. D-1 a
+  null-preserving native arm measured first between a wrapping `ScalarUDF` and a Rust-built single-reference CASE
+  (HALT if neither is linear); D-2 Spark oracle cells (NULL array, NULL element, empty, nested, coercion); D-3 the
+  SQL door's divergence row; step 0 measures and lands the red-first depth-40 memory pin. Not started.
+- [ansi-door-1-card-2026-09-13.md](ansi-door-1-card-2026-09-13.md) — **card ANSI-DOOR-1 (2026-09-13, run 12b,
+  card only):** the SQL door's datafusion-spark kernels read `execution.enable_ansi_mode`, which repark never sets,
+  so `spark.sql("SELECT abs(x)")` wraps on signed minimums while the facade raises `ARITHMETIC_OVERFLOW` as Spark
+  does with ANSI on. D-1 wire `spark.sql.ansi.enabled` (session build and runtime set) to that option; D-2 measure
+  every ANSI-aware door kernel against the oracle first; D-3 the `abs` row leaves `EXPECTED_DIVERGENCES`. Not started.
 - [eager-budget-1-card-2026-09-13.md](eager-budget-1-card-2026-09-13.md) — **card EAGER-BUDGET-1
   (2026-09-13, run 11 §7; worked by run 12b):** a session cache budget and retained-bytes
   accounting — `repark.cache.max_total_bytes` refuses (never evicts, Q-E2) when a
