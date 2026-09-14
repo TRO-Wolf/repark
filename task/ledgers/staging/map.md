@@ -193,15 +193,20 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Branch `feat/facade-2-s3`.
   pins: facade-2/C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 - [facade-4-ledger.md](facade-4-ledger.md) —
-  **FACADE-4 step 0 (2026-09-14), in flight:** measurement and pins only — release
-  baseline cells isolating `repark_type_to_arrow` / `struct_type_from_arrow` / DDL
-  parse+write per schema plus conversion's share of end-to-end walls, the
-  three-table agreement census (facade `types.py` vs `_csv_smart` rungs vs the
-  reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key`), DDL/Arrow goldens
-  for every F1 type class with a mutation proof, and the step-1 target list. No
-  product code under `python/repark/src/` or `crates/` in this step.
-  `risk_tier: standard`. Branch `perf/facade-4-s0`.
-  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  **FACADE-4 steps 0–1 (2026-09-14), in flight:** step 0 is measurement and pins
+  only — release baseline cells isolating `repark_type_to_arrow` /
+  `struct_type_from_arrow` / DDL parse+write per schema plus conversion's share
+  of end-to-end walls, the three-table agreement census (facade `types.py` vs
+  `_csv_smart` rungs vs the reader lattice + Rust
+  `spark_ddl_type_name`/`arrow_type_key`), DDL/Arrow goldens for every F1 type
+  class with a mutation proof, and the step-1 target list. Step 1 is the
+  correctness consolidation — one Rust `type_table` owns Arrow ↔ Spark
+  descriptor ↔ DDL semantics with every surface keeping its step-0 answer
+  byte-for-byte — plus the S2-21 remediation findings table (P1-DTYPES, P2-DICT,
+  P3-*) and the round-2 census alignment (corrected D1–D24 pins, R2-P3
+  dispositions marked).
+  `risk_tier: standard`. Branch `perf/facade-4-s1`.
+  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

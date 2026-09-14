@@ -1,4 +1,4 @@
-"""FACADE-4 step-1 census pins: every Agree and D1-D21 row's measured answer."""
+"""FACADE-4 step-1 census pins: every Agree and D1-D24 row's measured answer."""
 
 from __future__ import annotations
 
@@ -11,32 +11,20 @@ from repark import ReparkSession
 from repark.spark.types import (
     ArrayType,
     BinaryType,
-    BooleanType,
-    ByteType,
-    CalendarIntervalType,
     CharType,
     DataType,
-    DateType,
     DayTimeIntervalType,
     DecimalType,
-    DoubleType,
-    FloatType,
     IntegerType,
     LongType,
     MapType,
     NullType,
-    ShortType,
     StringType,
     StructField,
     StructType,
-    TimestampNTZType,
-    TimestampType,
-    TimeType,
     VarcharType,
-    VariantType,
     YearMonthIntervalType,
     _arrow_type_to_repark,
-    _datatype_to_descriptor,
     repark_type_to_arrow,
     struct_type_from_arrow,
 )
@@ -363,15 +351,50 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             ],
         ),
         (
+            "A9",
+            "timestamp[s, tz=UTC] agree",
+            [
+                ("arrow_in", pa.timestamp("s", tz="UTC"), "TimestampType:timestamp"),
+                (
+                    "reader",
+                    _pa(pa.timestamp("s", tz="UTC")),
+                    ([("c", "timestamp", True)], "struct<c:timestamp>", [("c", "timestamp")]),
+                ),
+            ],
+        ),
+        (
+            "A10",
+            "Arrow string agree",
+            [
+                ("arrow_in", pa.string(), "StringType:string"),
+                (
+                    "reader",
+                    _pa(pa.string()),
+                    ([("c", "string", True)], "struct<c:string>", [("c", "string")]),
+                ),
+            ],
+        ),
+        (
+            "A11",
+            "csv literal 39-digit integer agree",
+            [
+                (
+                    "rung",
+                    "999999999999999999999999999999999999999",
+                    ("float64", "DoubleType:double", "double", "double"),
+                ),
+                (
+                    "csv_infer",
+                    "999999999999999999999999999999999999999",
+                    [("c", "double")],
+                ),
+            ],
+        ),
+        (
             "D1",
             "Arrow timestamp[us] tz-naive",
             [
                 ("arrow_in", pa.timestamp("us"), "TimestampNTZType:timestamp_ntz"),
-                (
-                    "rung",
-                    "2024-01-02 03:04:05",
-                    ("timestamp", "TimestampType:timestamp", "timestamp", "timestamp"),
-                ),
                 (
                     "reader",
                     _pa(pa.timestamp("us")),
@@ -381,7 +404,6 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                         [("c", "timestamp_ntz")],
                     ),
                 ),
-                ("csv_infer", "2024-01-02 03:04:05", [("c", "timestamp")]),
             ],
         ),
         (
@@ -389,6 +411,16 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
             "session spark.sql.timestampType=TIMESTAMP_NTZ",
             [
                 ("ntz_default", "", "TimestampNTZType:timestamp_ntz"),
+                (
+                    "rung_ntz",
+                    "2024-01-02 03:04:05",
+                    (
+                        "timestamp",
+                        "TimestampNTZType:timestamp_ntz",
+                        "timestamp_ntz",
+                        "varchar",
+                    ),
+                ),
                 ("csv_infer_ntz", "2024-01-02 03:04:05", [("c", "timestamp")]),
             ],
         ),
@@ -503,12 +535,11 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
         ),
         (
             "D10",
-            "Arrow uint8/uint16/uint32/uint64",
+            "Arrow uint8/uint16/uint32",
             [
                 ("arrow_in", pa.uint8(), "StringType:string"),
                 ("arrow_in", pa.uint16(), "StringType:string"),
                 ("arrow_in", pa.uint32(), "StringType:string"),
-                ("arrow_in", pa.uint64(), "StringType:string"),
                 (
                     "reader",
                     _pa(pa.uint8()),
@@ -516,8 +547,13 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 ),
                 (
                     "reader",
-                    _pa(pa.uint64()),
-                    ([("c", "long", True)], "struct<c:bigint>", [("c", "bigint")]),
+                    _pa(pa.uint16()),
+                    ([("c", "int", True)], "struct<c:int>", [("c", "int")]),
+                ),
+                (
+                    "reader",
+                    _pa(pa.uint32()),
+                    ([("c", "int", True)], "struct<c:int>", [("c", "int")]),
                 ),
             ],
         ),
@@ -629,6 +665,11 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 ("arrow_out", _pa_map_novcn_hint(), "map<string, int32>"),
                 ("arrow_in_vcn", _pa_map_hint(), ("MapType:map<string,int>", True)),
                 (
+                    "arrow_in_vcn",
+                    _pa_map_nonnull_value_hint(),
+                    ("MapType:map<string,int>", True),
+                ),
+                (
                     "reader",
                     _pa_map_field_hint(),
                     (
@@ -680,6 +721,56 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
                 ("arrow_in", pa.null(), "NullType:void"),
                 ("arrow_out", _pa_null_hint(), "null"),
                 ("fromddl", "void", "NullType:void"),
+                (
+                    "reader",
+                    _pa(pa.null()),
+                    ([("c", "Null", True)], "struct<c:void>", [("c", "void")]),
+                ),
+            ],
+        ),
+        (
+            "D22",
+            "Arrow uint64",
+            [
+                ("arrow_in", pa.uint64(), "StringType:string"),
+                (
+                    "reader",
+                    _pa(pa.uint64()),
+                    ([("c", "long", True)], "struct<c:bigint>", [("c", "bigint")]),
+                ),
+            ],
+        ),
+        (
+            "D23",
+            "csv literal '2024-01-02 03:04:05+05:00'",
+            [
+                (
+                    "rung",
+                    "2024-01-02 03:04:05+05:00",
+                    ("string", "StringType:string", "string", "varchar"),
+                ),
+                ("csv_infer", "2024-01-02 03:04:05+05:00", [("c", "timestamp")]),
+            ],
+        ),
+        (
+            "D24",
+            "csv literal 38-digit integer",
+            [
+                (
+                    "rung",
+                    "99999999999999999999999999999999999999",
+                    (
+                        "decimal128",
+                        "DecimalType:decimal(38,0)",
+                        "decimal(38,0)",
+                        "decimal(38,0)",
+                    ),
+                ),
+                (
+                    "csv_infer",
+                    "99999999999999999999999999999999999999",
+                    [("c", "double")],
+                ),
             ],
         ),
     ]
@@ -687,19 +778,16 @@ def _build_rows() -> list[tuple[str, str, list[tuple[str, str, Any]]]]:
 
 
 def _pa_long_hint() -> Any:
-    from repark.spark.types import LongType
 
     return LongType()
 
 
 def _pa_char8_hint() -> Any:
-    from repark.spark.types import CharType
 
     return CharType(8)
 
 
 def _pa_varchar32_hint() -> Any:
-    from repark.spark.types import VarcharType
 
     return VarcharType(32)
 
@@ -725,7 +813,6 @@ def _pa_map_novcn_hint() -> Any:
 
 
 def _pa_null_hint() -> Any:
-    from repark.spark.types import NullType
 
     return NullType()
 
@@ -758,6 +845,12 @@ def _pa_map_hint() -> Any:
     import pyarrow as pa
 
     return pa.map_(pa.string(), pa.int32())
+
+
+def _pa_map_nonnull_value_hint() -> Any:
+    import pyarrow as pa
+
+    return pa.map_(pa.string(), pa.field("value", pa.int32(), nullable=False))
 
 
 def _pa_map_field_hint() -> Any:
@@ -802,6 +895,17 @@ def _csv_infer_ntz(session: Any, tmp_path: Path, literal: str) -> Any:
         session.conf.set(TIMESTAMP_TYPE_KEY, "TIMESTAMP_LTZ")
 
 
+def _rung_ntz(session: Any, literal: str) -> Any:
+    """CSV table (ii): rung answers for one literal under an NTZ session conf."""
+    from repark.spark.session.timestamp_type import TIMESTAMP_TYPE_KEY
+
+    session.conf.set(TIMESTAMP_TYPE_KEY, "TIMESTAMP_NTZ")
+    try:
+        return _rung(literal)
+    finally:
+        session.conf.set(TIMESTAMP_TYPE_KEY, "TIMESTAMP_LTZ")
+
+
 def _run_check(check: tuple[str, str, Any], session: Any, tmp_path: Path) -> Any:
     """Measure one census surface for a row spec entry."""
     surface, argument, _expected = check
@@ -823,6 +927,8 @@ def _run_check(check: tuple[str, str, Any], session: Any, tmp_path: Path) -> Any
         return _schema_back(argument)
     if surface == "rung":
         return _rung(argument)
+    if surface == "rung_ntz":
+        return _rung_ntz(session, argument)
     if surface == "reader":
         return _reader(session, argument)
     if surface == "csv_infer":
@@ -841,7 +947,16 @@ def _run_check(check: tuple[str, str, Any], session: Any, tmp_path: Path) -> Any
 
 
 _SESSION_SURFACES = frozenset(
-    {"reader", "csv_infer", "csv_infer_ntz", "describe", "table_dtypes", "table_key", "ntz_default"}
+    {
+        "reader",
+        "csv_infer",
+        "csv_infer_ntz",
+        "describe",
+        "table_dtypes",
+        "table_key",
+        "ntz_default",
+        "rung_ntz",
+    }
 )
 
 
@@ -864,48 +979,3 @@ def test_census_row(
             session = request.getfixturevalue("census_session")
         measured = _run_check(check, session, tmp_path)
         assert measured == expected, f"{row_id} {surface}: {measured!r} != {expected!r}"
-
-
-_ATOMIC_INSTANCES: list[DataType] = [
-    NullType(),
-    StringType(),
-    StringType("fr"),
-    CharType(5),
-    VarcharType(7),
-    BinaryType(),
-    BooleanType(),
-    DateType(),
-    TimestampType(),
-    TimestampNTZType(),
-    TimeType(0),
-    TimeType(6),
-    DecimalType(10, 2),
-    DecimalType(38, 18),
-    DoubleType(),
-    FloatType(),
-    ByteType(),
-    IntegerType(),
-    LongType(),
-    ShortType(),
-    CalendarIntervalType(),
-    DayTimeIntervalType(),
-    DayTimeIntervalType(DayTimeIntervalType.HOUR, DayTimeIntervalType.MINUTE),
-    YearMonthIntervalType(),
-    YearMonthIntervalType(YearMonthIntervalType.YEAR, YearMonthIntervalType.MONTH),
-    VariantType(),
-]
-
-
-def test_atomic_tokens_agree_with_rust_table() -> None:
-    """Every atomic class's Python token equals the shared table's answer.
-
-    pins: facade-4/C-009
-    """
-    from repark import _native
-
-    for data_type in _ATOMIC_INSTANCES:
-        descriptor = _datatype_to_descriptor(data_type)
-        assert descriptor is not None
-        label = type(data_type).__name__
-        assert data_type.simpleString() == _native.simple_string_from_descriptor(descriptor), label
-        assert data_type._engine_type() == _native.engine_token_from_descriptor(descriptor), label

@@ -274,11 +274,11 @@ notes, carried to step 1 and not fixed here:
 
 | Finding | Severity | Note | Disposition |
 |---|---|---|---|
-| R2-P3-1 | P3 | D1 annotates a naive CSV literal in column (ii) of an Arrow `timestamp[us]` row; under LTZ that literal's `_csv_smart` and infer answers agree, and the NTZ split is D2 | step 1 rewrites D1 to one input |
-| R2-P3-2 | P3 | D20 dictionary is still not probed through the reader lattice; the facade and golden pin inbound `StringType` | step 1 census pins add a dictionary reader case |
+| R2-P3-1 | P3 | D1 annotates a naive CSV literal in column (ii) of an Arrow `timestamp[us]` row; under LTZ that literal's `_csv_smart` and infer answers agree, and the NTZ split is D2 | done — step-1 D1 pins only the Arrow `timestamp[us]` input; the naive literal's NTZ legs are pinned on D2 (`rung_ntz`, `csv_infer_ntz`) |
+| R2-P3-2 | P3 | D20 dictionary is still not probed through the reader lattice; the facade and golden pin inbound `StringType` | done — the step-1 D20 pin probes `pa.dictionary` through the reader lattice (type_key `Dictionary(Int32, Utf8)`, `df.schema`/`dtypes` `string`) |
 | R2-P3-3 | P3 | Q2 still names `_csv_smart` `string` beside Arrow `binary`; the hex literal is a different input | wording fixed with the Q2 ruling |
 | R2-P3-4 | P3 | the step-1 blurb claimed zero calls on `df.schema` | fixed in this commit |
-| R2-P3-5 | P3 | inbound `valueContainsNull=False` is pinned on the Spark `MapType` JSON path, not on a raw Arrow non-null map value field | step 1 census pins add the raw Arrow case |
+| R2-P3-5 | P3 | inbound `valueContainsNull=False` is pinned on the Spark `MapType` JSON path, not on a raw Arrow non-null map value field | done — the step-1 D17 pin adds a raw `pa.map_` whose value field is non-nullable and asserts the inbound `valueContainsNull=True` drop |
 
 ## PROPOSITION LEDGER — FACADE-4 step 1 — 2026-09-14
 
@@ -298,6 +298,7 @@ name the entry points left on their Python path.
 | C-015 | Residue rows — every entry point left on its Python path, with the reason byte-identity cannot ride the table: (1) `json`/`jsonValue`/`fromJson`/`_parse_datatype_json_value` — JSON shape plus `__COLLATIONS` metadata walk is facade policy; (2) descriptor trees containing a foreign `DataType` subtype — `_nested_token_python`/`_ddl_token_python`/`_sql_type_token_python` keep today's container spellings and leaf fallbacks; (3) decimals outside the Arrow FFI scale envelope (`pa.decimal128(10,300)` accepts where arrow-rs cannot represent) — `_arrow_type_to_repark_python`/`_struct_type_from_arrow_python`/`_repark_type_to_arrow_python` keep pyarrow's own acceptance/refusal bytes; (4) collation refusal — `refuse_evaluated_collation` stays Python policy in `_data_type_to_sql_type`; (5) `_sql_type_to_arrow` decimal and nested spellings — the `PySparkTypeError` wrap stays on the Python parse route. | Census pins cover each residue class; fallbacks named in the residue table below. | **PROVEN** | D16 (`list<item: int32 not null>` arrow-in), D6/D9 (decimal edges) and the unknown-subtype `toDDL`/`simpleString` paths are pinned and green; no refusal class or message moved. |
 
 | C-016 | S1-remediation P1-DTYPES (Grok S2-21): `dtypes` regressed +106 % wide50 / +80 % flat7 / +16.7 % nested3 because every `simpleString()` paid a descriptor-dict build + PyO3 crossing + Rust re-parse. Fix: the atomic classes' `simpleString`/`_engine_type` answers are Python-side constants and parameter derivations in `_type_table.py::_ATOMIC_TYPE_ROWS`, byte-identical to the Rust table (MRO scan so foreign subclasses keep the inherited base answer); nested trees compose in Python over the same answers because one nested descriptor FFI (~15 µs on nested3 `mid`) alone breaks the +5 % bar. Agreement pin: `test_atomic_tokens_agree_with_rust_table` checks every atomic class against `simple_string_from_descriptor`/`engine_token_from_descriptor`. | `dtypes`/`df.schema`/`printSchema`/DESCRIBE within +5 % of base on flat7/wide50/nested3 (measured in the step-1 perf doc surface table); the agreement pin green. | **PROVEN** | Surfaces re-measured base vs branch back to back (see the S1d doc's surface table): flat7 dtypes 10.45→10.35 µs (−1 %), wide50 60.48→61.67 µs (+2 %), nested3 32.00→26.69 µs (−17 %); `df.schema` and `printSchema` within +5 % on all three; DESCRIBE unchanged (Rust-side). 30 census pins + focused type gates green; `types.py` baseline ratcheted 1833→1639 after the bridge moved to `_type_table.py`. |
+| C-017 | Step-0 round-2 dispositions R2-P3-1/2/5 land on the corrected D1–D24 census: D1 rewritten to the single Arrow `timestamp[us]` input; D2 gains the `_csv_smart` rung leg measured under an NTZ session (`rung_ntz` surface); `uint64` moved out of D10 into new D22 (reader `bigint`/type_key `long` vs facade `StringType`); D17 gains the raw `pa.map_` non-null-value-field leg (inbound `valueContainsNull=True`); D20's dictionary column is probed through the reader lattice; D21 gains its reader leg (`Null` type_key, `void` schema); new D23 (offset literal `'2024-01-02 03:04:05+05:00'`: `string` rung vs `timestamp` infer) and D24 (38-digit literal: `decimal(38,0)` rung vs `double` infer); missing Agree rows added for `timestamp[s, tz=UTC]`, Arrow `string` and the 39-digit literal (A9–A11). | All 36 census-pin tests green (11 Agree + 24 disagree + the atomic agreement pin); every expected answer measured live on this branch. | **PROVEN** | `test_facade_4_census_pins.py` — 36 passed; every expected tuple measured against the release native before pinning. |
 
 ## Step-1 remediation findings — Grok S2-21 (`/tmp/oc-worker/f-rev4-rs/report.md`)
 
@@ -365,10 +366,8 @@ COVERAGE_ATTESTATION:
       justification: No privileged action, secret or path handling; goldens are committed JSON beside the test.
     - id: AT-6
       status: ATTACKED
-      evidence: The three-table census measures 18 agreements and 24 disagreements (D1-D24) including silent containsNull/valueContainsNull loss in both directions, the uint64 bigint split, csv_smart honoring NTZ while infer does not, and the offset-literal string/timestamp split; none fixed, each an owner question for step 1.
-      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json]
-      evidence: The three-table census measures 8 agreements and 21 disagreements (D1-D21); step 1 pins every Agree and D-row by calling each surface today and changing no answer, refusal class or spelling.
-      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, python/repark/tests/test_facade_4_census_pins.py]
+      evidence: The three-table census measures 18 agreements and 24 disagreements (D1-D24) including silent containsNull/valueContainsNull loss in both directions, the uint64 bigint split, csv_smart honoring NTZ while infer does not, and the offset-literal string/timestamp split; none fixed, each an owner question. Step 1 pins every Agree and D-row — 11 agree rows plus D1-D24 — by calling each surface today and changing no answer, refusal class or spelling.
+      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json, python/repark/tests/test_facade_4_census_pins.py]
     - id: AT-7
       status: ATTACKED
       evidence: Step-1 before/after on the real base release native, same box back to back, medians of 5 under an 8 GiB scope: every end-to-end wall within ±5 % and the worst per-call conversion +196.5 us vs the 1 ms bar.
@@ -382,9 +381,7 @@ COVERAGE_ATTESTATION:
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
-      evidence: Dropping the tz from pa.timestamp in repark_type_to_arrow redded four golden cases and the restore greened them; the committed mutation_probe.py additionally proves fromJson flag-forcing, inbound int8/int16 widening, Arrow item-nullability preservation, and inner-struct nullability drops each red; the card's existing pins stay unedited and green.
-      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
-      evidence: Step-0 golden mutation redded four cases; step-1 scratch mutations redded the pins in each family — timestamp tz (D1), decimal (D6), list nullability (D15) — and restores greened them.
+      evidence: Dropping the tz from pa.timestamp in repark_type_to_arrow redded four golden cases and the restore greened them; the committed mutation_probe.py additionally proves fromJson flag-forcing, inbound int8/int16 widening, Arrow item-nullability preservation, and inner-struct nullability drops each red; step-1 scratch mutations redded the pins in each family — timestamp tz (D1), decimal (D6), list nullability (D15) — and restores greened them; the card's existing pins stay unedited and green.
       artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/test_facade_4_census_pins.py]
   complete: true
 ```

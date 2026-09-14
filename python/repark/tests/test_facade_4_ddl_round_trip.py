@@ -494,3 +494,49 @@ def test_record_mode_fails_when_ci_is_set(monkeypatch: pytest.MonkeyPatch) -> No
         _assert_record_mode_allowed()
     monkeypatch.setenv("CI", "")
     _assert_record_mode_allowed()
+
+
+_ATOMIC_INSTANCES: list[DataType] = [
+    NullType(),
+    StringType(),
+    StringType("fr"),
+    CharType(5),
+    VarcharType(7),
+    BinaryType(),
+    BooleanType(),
+    DateType(),
+    TimestampType(),
+    TimestampNTZType(),
+    TimeType(0),
+    TimeType(6),
+    DecimalType(10, 2),
+    DecimalType(38, 18),
+    DoubleType(),
+    FloatType(),
+    ByteType(),
+    IntegerType(),
+    LongType(),
+    ShortType(),
+    CalendarIntervalType(),
+    DayTimeIntervalType(),
+    DayTimeIntervalType(DayTimeIntervalType.HOUR, DayTimeIntervalType.MINUTE),
+    YearMonthIntervalType(),
+    YearMonthIntervalType(YearMonthIntervalType.YEAR, YearMonthIntervalType.MONTH),
+    VariantType(),
+]
+
+
+def test_atomic_tokens_agree_with_rust_table() -> None:
+    """Every atomic class's Python token equals the shared table's answer.
+
+    pins: facade-4/C-016
+    """
+    from repark import _native
+    from repark.spark.types import _datatype_to_descriptor
+
+    for data_type in _ATOMIC_INSTANCES:
+        descriptor = _datatype_to_descriptor(data_type)
+        assert descriptor is not None
+        label = type(data_type).__name__
+        assert data_type.simpleString() == _native.simple_string_from_descriptor(descriptor), label
+        assert data_type._engine_type() == _native.engine_token_from_descriptor(descriptor), label

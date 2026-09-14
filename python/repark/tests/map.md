@@ -1789,9 +1789,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   by a one-line mutation recorded in
   `task/ledgers/staging/facade-5-ledger.md`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Remediation (2026-09-14): `test_atomic_tokens_agree_with_rust_table` pins every
+  atomic class's Python `simpleString`/`_engine_type` answer to the shared Rust
+  table's (P1-DTYPES); lives here because the census-pin file sits at the
+  file-size ceiling.
+  pins: facade-4/C-016
 - `test_facade_4_census_pins.py` — **FACADE-4 step 1 (2026-09-14):** one
-  parametrised case per census row — all 8 Agree rows and every disagreement
-  D1–D21 — asserting the answer each conversion table gives TODAY across every
+  parametrised case per census row — all 11 Agree rows and every disagreement
+  D1–D24 — asserting the answer each conversion table gives TODAY across every
   surface the row names: facade `_arrow_type_to_repark` / `repark_type_to_arrow`
   / `fromDDL` / `toDDL` / `struct_type_from_arrow` (including `containsNull`,
   `valueContainsNull` and field-nullability answers), `_csv_smart` rung +
@@ -1804,10 +1809,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   D1; `DecimalType(arrow_type.precision, arrow_type.scale)` → `DecimalType(10,
   2)` reds D6; `field.nullable` → `True` reds D15.
   pins: facade-4/C-009
-  Remediation (2026-09-14): `test_atomic_tokens_agree_with_rust_table` pins every
-  atomic class's Python `simpleString`/`_engine_type` answer to the shared Rust
-  table's (P1-DTYPES).
-  pins: facade-4/C-016
+  Round-2 census alignment (2026-09-14, R2-P3-1/2/5): D1 carries only the Arrow
+  `timestamp[us]` input; D2 gains the `_csv_smart` rung leg measured under an
+  NTZ session (`rung_ntz`); `uint64` moves from D10 to new D22; D17 gains a raw
+  Arrow `map` with a non-null value field; D20 already probes `dictionary`
+  through the reader lattice; D21 gains the reader leg; D23 pins the offset
+  literal `string`-rung vs `timestamp`-infer split and D24 the 38-digit
+  `decimal(38,0)`-rung vs `double`-infer split; A9–A11 pin the `timestamp[s]`,
+  Arrow `string` and 39-digit-literal agrees.
+  pins: facade-4/C-017
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
