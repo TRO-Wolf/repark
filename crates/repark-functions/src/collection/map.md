@@ -66,12 +66,20 @@ needed.
   the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL
   array wrongly answered `[x]`. Spark `(array, element)` order on both names (prepend
   swaps args for the kernel call), the result element field is forced nullable
-  (`containsNull=True` like Spark), and a `DataType::Null` input yields an all-null
-  result. Registered after DF's defaults so the same names serve both doors; the
-  DF-only aliases (`list_append`, `array_push_back`, `list_prepend`, …) keep DF's
-  kernel — the shim claims no aliases. Rust tests cover a sliced (non-zero offset)
-  input's null graft.
-  pins: array-null-1/C-003, C-004, C-005
+  (`containsNull=True` like Spark), an all-null input short-circuits to a null array of
+  the result type without calling the kernel, and a `DataType::Null` input yields an
+  all-null result. The `Signature::user_defined` signature routes argument coercion
+  through `coerce_types`, which applies Spark's `findTightestCommonType`: int8→int16→
+  int32→int64, integer/float32→float64, date↔timestamp→timestamp (array's unit kept —
+  existing elements are never recast to a non-widened type), NULL passes, nested types
+  require equality; every other pair refuses at planning with
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` naming both types. Registered after DF's
+  defaults so the same names serve both doors; the DF-only aliases (`list_append`,
+  `array_push_back`, `list_prepend`, …) keep DF's kernel — the shim claims no aliases.
+  Rust tests cover a sliced (non-zero offset) input's null graft, every widening pair,
+  every refusal family, NULL element/array, nested equal types and the all-null
+  short-circuit.
+  pins: array-null-1/C-003, C-004, C-005, L-1, P3-1
 
 ## I want to...
 

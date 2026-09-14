@@ -68,12 +68,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
   path (value AND type, `containsNull` widening); `test_array_*_door_oracle_cells`
   pin the same cells through the SQL door (`spark.sql`, Spark `(array, element)`
-  order on both names). `test_array_append_depth40_memory_linear[append|prepend]`
-  runs by default: a subprocess worker under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8)
-  builds the 40-level nested chain with a per-level bound exit, bound =
-  `max(8 MB, 2 × flat 40-append select delta)` — measured ~2.0 MB per leg across
-  five consecutive runs.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005
+  order on both names). `test_array_element_coercion_cells` parametrises the run-14b
+  coercion oracle (widening pairs, every refusal family with its
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` message and both type names, the
+  date↔timestamp cells) over both functions × both doors;
+  `test_array_element_coercion_door_only_cells` pins the bare-SQL `1.5`
+  DECIMAL(2,1) refusals. `test_array_all_null_input_returns_typed_null` pins the
+  all-null short-circuit on both doors; `test_array_append_depth3_plan_shape` pins
+  one UDF call per level and no CASE in the physical plan.
+  `test_array_append_depth40_memory_linear[append|prepend]` runs by default: a
+  subprocess worker under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8) builds the
+  40-level nested chain with a per-level bound exit, bound =
+  `max(2 × flat 40-append select delta, 2 × same-tree depth-4 chain delta)` —
+  measured ~2.0 MB per leg across ten consecutive runs.
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, P2-1, P3-1
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
   `test_replace_oracle_cells_matching` pins the already-matching cells and
