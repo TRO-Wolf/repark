@@ -1690,6 +1690,27 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   lesson: an empty subclass pins acceptance only — override classes are required to make a
   fast-path bypass visible.
   pins: facade-3/C-019, C-020, C-026, C-027
+- `test_facade_4_ddl_round_trip.py` + `facade_4_type_goldens.json`
+  — **FACADE-4 step 0 (2026-09-14):** byte-identical conversion goldens for every
+  F1 type class — `simpleString` / `typeName` / `json` / `repr` / `_engine_type`,
+  `fromDDL` round-trip (parse → simpleString → parse), `json` →
+  `_parse_datatype_json_value` round-trip, `StructType.toDDL` re-parse, and the
+  `repark_type_to_arrow` / `struct_type_from_arrow` answers for the schema set
+  (flat 7-type, 50-column wide, `struct<array<map>>` depth 3, decimal
+  (10,2)/(38,18)/(38,0)/(76,10), timestamp tz/ntz/session-tz, interval, char,
+  varchar, a raw-Arrow probe schema of types the repark table cannot produce).
+  Record mode is `REPARK_FACADE_4_RECORD_GOLDENS=1` and is refused when `CI` or
+  `GITHUB_ACTIONS` is set. The same file carries the `isinstance` pin: every
+  conversion answer is a public `repark.spark.types` class. Measured-on-base
+  answers the goldens now pin: `DayTimeIntervalType` / `YearMonthIntervalType`
+  degrade to `pa.string()` and their simpleString refuses `fromDDL`;
+  `DecimalType(76,10)` refuses `pa.decimal128` but round-trips DDL/json;
+  `StructType.toDDL` output (`NOT NULL`) refuses `fromDDL`; `uint8`/`uint64`/
+  `time64`/`duration`/`month_day_nano_interval`/`dictionary` answer `StringType`
+  through `struct_type_from_arrow`; `decimal256(76,10)` answers
+  `DecimalType(76,10)`. Mutation proof: `pa.timestamp("us", tz="UTC")` →
+  `pa.timestamp("us")` reds four cases; restore greens.
+  pins: facade-4/C-002, C-003, C-004
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
