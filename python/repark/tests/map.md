@@ -577,7 +577,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   FACADE-4 step 1 re-hashed `_data_type_to_sql_type` and `_sql_type_to_arrow` —
   the only two bodies that moved (flat atomic tokens now resolve through the
   shared Rust table; decimal, nested and collation-refusal paths stay Python).
-  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014
+  Round 2 re-hashed the same two bodies (`_data_type_to_sql_type` gained the
+  SQL-marker leaf; `_sql_type_to_arrow` binds through `_native_function`).
+  pins: csv-infer-perf-1/C-002, C-005; facade-4/C-014, C-022, C-026
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
@@ -1818,6 +1820,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `decimal(38,0)`-rung vs `double`-infer split; A9–A11 pin the `timestamp[s]`,
   Arrow `string` and 39-digit-literal agrees.
   pins: facade-4/C-017
+- `test_facade_4_step1_remediation.py` — **FACADE-4 step-1 remediation round 2
+  (2026-09-14):** byte-identity repro pins for the critic-logic findings
+  L-001..L-005 and the Python-reviewer agreement checks — a 25-class
+  pass-through-subclass golden recorded from the base release
+  (`simpleString`/`typeName`/`_engine_type`/`jsonValue`/`toDDL`-leaf per
+  class), beyond-i64 DDL integer parameters (atomic and field-list spellings),
+  `isinstance` SQL-marker leaves for foreign subclasses, `repr`-byte refusal
+  messages for control and non-printable code points, Arrow nesting-depth
+  fallbacks at 63/64/70 on both directions, the wide-decimal FFI-envelope
+  fallback, and the csv rung engine/SQL-cast token agreement.
+  pins: facade-4/C-020, C-021, C-022, C-023, C-024, C-027, C-028
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

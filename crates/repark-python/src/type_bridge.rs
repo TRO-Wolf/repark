@@ -3,7 +3,7 @@ use std::ffi::CStr;
 
 use arrow::datatypes::{DataType as ArrowDataType, Schema};
 use arrow::ffi::FFI_ArrowSchema;
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyOverflowError, PyValueError};
 use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyCapsule, PyCapsuleMethods, PyDict, PyList, PyString};
@@ -15,7 +15,10 @@ use repark_spark::type_table::{
 const SCHEMA_CAPSULE: &CStr = c"arrow_schema";
 
 fn table_error_to_py(error: &TypeTableError) -> PyErr {
-    PyValueError::new_err(error.to_string())
+    match error {
+        TypeTableError::IntegerOverflow => PyOverflowError::new_err(error.to_string()),
+        _ => PyValueError::new_err(error.to_string()),
+    }
 }
 
 fn spark_field_to_py(py: Python<'_>, field: &SparkField) -> PyResult<Py<PyAny>> {

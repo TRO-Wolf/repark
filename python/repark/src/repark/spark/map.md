@@ -37,7 +37,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   class→head maps and the `types` module handle — the first landing rebuilt a
   19-row map per recursive node and re-imported `types` per call (~30 µs on a
   7-node nested decode, regressing `df.schema` +50 %).
-  pins: facade-4/C-010, C-012, C-016, C-018
+  **FACADE-4 step-1 remediation round 2 (2026-09-14):** the row table grows to
+  five per-class answers (descriptor head, `simpleString`, `_engine_type`, SQL
+  marker, DDL marker) resolved by an MRO scan so pass-through subclasses keep
+  the base answer (`_inherited_type_name` reproduces the dynamic
+  `type(self).typeName()` fallback); `_leaf_simple`/`_leaf_engine`/`_leaf_ddl`
+  dispatch nested leaves the same way. `_parse_datatype_string` keeps a Python
+  residue (`_parse_datatype_string_python` + `_parse_field_list`) for integer
+  parameters beyond i64 and non-printable text whose refusal `repr` bytes
+  differ from Rust's; `_native_function` caches lazy native lookups.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -223,7 +232,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `dtypes` +106 % on wide50). Python residue: descriptor trees containing a
   foreign `DataType` subtype, decimals outside the Arrow FFI scale envelope,
   collation refusal policy, and the `json`/`fromJson` surface.
-  pins: facade-4/C-011, C-012, C-014, C-015, C-016
+  **Remediation round 2 (2026-09-14):** `_parse_datatype_string` moved to
+  `_type_table.py` (Python parse for beyond-i64 parameters and non-printable
+  text); parameterised `jsonValue` formats locally; `repark_type_to_arrow`
+  checks the decimal FFI bound first and falls back to
+  `_repark_type_to_arrow_python` on any FFI export failure (Arrow nesting-depth
+  ceilings); the FFI-covered wide-decimal pre-walks are gone; native calls bind
+  through the cached `_type_table._native_function`.
+  pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and

@@ -121,7 +121,7 @@ fn parse_py_int(text: &str) -> Result<i64, TypeTableError> {
         value = value
             .checked_mul(10)
             .and_then(|v| v.checked_add(i64::from(digit)))
-            .unwrap_or(i64::MAX);
+            .ok_or(TypeTableError::IntegerOverflow)?;
     }
     if !digits_seen || expect_digit {
         return Err(invalid());
@@ -185,60 +185,63 @@ fn atomic_type_names_contains(lower: &str) -> bool {
     atomic_type_from_name(lower).is_some()
 }
 
-fn parse_atomic_token(token: &str) -> Option<SparkDataType> {
+fn parse_atomic_token(token: &str) -> Result<Option<SparkDataType>, TypeTableError> {
     let stripped = py_trim(token);
     if stripped.is_empty() {
-        return None;
+        return Ok(None);
     }
     let lower = stripped.to_lowercase();
     if let Some(data_type) = atomic_type_from_name(lower.as_str()) {
-        return Some(data_type);
+        return Ok(Some(data_type));
     }
     if let Some(captures) =
         regex_fullmatch(r"(?i)\Adecimal\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\z", stripped)
     {
-        let precision = captures
-            .get(1)
-            .and_then(|m| parse_py_int(m.as_str()).ok())?;
-        let scale = captures
-            .get(2)
-            .and_then(|m| parse_py_int(m.as_str()).ok())?;
-        return Some(SparkDataType::Decimal { precision, scale });
+        let (Some(precision_match), Some(scale_match)) = (captures.get(1), captures.get(2)) else {
+            return Ok(None);
+        };
+        let precision = parse_py_int(precision_match.as_str())?;
+        let scale = parse_py_int(scale_match.as_str())?;
+        return Ok(Some(SparkDataType::Decimal { precision, scale }));
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Achar\s*\(\s*(\d+)\s*\)\z", stripped) {
-        let length = captures
-            .get(1)
-            .and_then(|m| parse_py_int(m.as_str()).ok())?;
-        return Some(SparkDataType::Char { length });
+        let Some(length_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        let length = parse_py_int(length_match.as_str())?;
+        return Ok(Some(SparkDataType::Char { length }));
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Avarchar\s*\(\s*(\d+)\s*\)\z", stripped) {
-        let length = captures
-            .get(1)
-            .and_then(|m| parse_py_int(m.as_str()).ok())?;
-        return Some(SparkDataType::Varchar { length });
+        let Some(length_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        let length = parse_py_int(length_match.as_str())?;
+        return Ok(Some(SparkDataType::Varchar { length }));
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Atime\s*\(\s*(\d+)\s*\)\z", stripped) {
-        let precision = captures
-            .get(1)
-            .and_then(|m| parse_py_int(m.as_str()).ok())?;
-        return Some(SparkDataType::Time { precision });
+        let Some(precision_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        let precision = parse_py_int(precision_match.as_str())?;
+        return Ok(Some(SparkDataType::Time { precision }));
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Astring\s+collate\s+(\w+)\z", stripped) {
-        let collation = captures
-            .get(1)
-            .map(|m| Cow::Owned(m.as_str().to_string()))?;
-        return Some(SparkDataType::SparkString { collation });
+        let Some(collation_match) = captures.get(1) else {
+            return Ok(None);
+        };
+        let collation = Cow::Owned(collation_match.as_str().to_string());
+        return Ok(Some(SparkDataType::SparkString { collation }));
     }
     if lower == "decimal" {
-        return Some(SparkDataType::Decimal {
+        return Ok(Some(SparkDataType::Decimal {
             precision: 10,
             scale: 0,
-        });
+        }));
     }
     if lower.starts_with("time") {
-        return Some(SparkDataType::Time { precision: 6 });
+        return Ok(Some(SparkDataType::Time { precision: 6 }));
     }
-    None
+    Ok(None)
 }
 
 fn split_top_level(text: &str, separator: char) -> Vec<String> {
@@ -345,7 +348,7 @@ fn parse_complex_or_atomic(text: &str) -> Result<SparkDataType, TypeTableError> 
         }
         return Ok(SparkDataType::Struct(fields));
     }
-    if let Some(atomic) = parse_atomic_token(stripped) {
+    if let Some(atomic) = parse_atomic_token(stripped)? {
         return Ok(atomic);
     }
     Err(TypeTableError::Message(format!(
@@ -412,10 +415,14 @@ pub fn parse_ddl(text: &str) -> Result<SparkDataType, TypeTableError> {
     {
         return parse_complex_or_atomic(stripped);
     }
-    if (stripped.contains(',') || stripped.contains(':') || stripped.contains(' '))
-        && let Ok(value) = parse_field_list(stripped)
-    {
-        return Ok(value);
+    if stripped.contains(',') || stripped.contains(':') || stripped.contains(' ') {
+        match parse_field_list(stripped) {
+            Ok(value) => return Ok(value),
+            Err(TypeTableError::IntegerOverflow) => {
+                return Err(TypeTableError::IntegerOverflow);
+            }
+            Err(_) => {}
+        }
     }
     parse_complex_or_atomic(stripped)
 }

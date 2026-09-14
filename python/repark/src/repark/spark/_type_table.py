@@ -9,6 +9,7 @@ a one-directional import of this module.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -16,11 +17,16 @@ _AtomicRow = tuple[
     str | Callable[[Any], dict[str, Any]],
     str | Callable[[Any], str] | None,
     str | Callable[[Any], str] | None,
+    str | Callable[[Any], str] | None,
+    str | Callable[[Any], str] | None,
 ]
 _ATOMIC_ROWS: dict[type, _AtomicRow] | None = None
 _DESCRIPTOR_TYPES: dict[str, type] | None = None
 _DESCRIPTOR_HEADS: dict[type, str | Callable[[Any], dict[str, Any]]] | None = None
 _TYPES_MODULE: Any = None
+_NATIVE_MODULE: Any = None
+_NATIVE_FNS: dict[str, Any] = {}
+_FIELD_NAME_COLON = re.compile(r"^([A-Za-z_][\w]*)\s*:\s*(.+)$")
 
 
 def _types() -> Any:
@@ -33,14 +39,42 @@ def _types() -> Any:
     return _TYPES_MODULE
 
 
+def _native() -> Any:
+    """The ``repark._native`` extension module, bound once after package load."""
+    global _NATIVE_MODULE
+    if _NATIVE_MODULE is None:
+        from repark import _native
+
+        _NATIVE_MODULE = _native
+    return _NATIVE_MODULE
+
+
+def _native_function(name: str) -> Callable[..., Any]:
+    """One ``repark._native`` function, bound once."""
+    function = _NATIVE_FNS.get(name)
+    if function is None:
+        function = getattr(_native(), name)
+        _NATIVE_FNS[name] = function
+    return function
+
+
+def _inherited_type_name(data_type: Any) -> str:
+    """Base ``simpleString`` for classes without an override: ``type(self).typeName()``."""
+    return type(data_type).typeName()
+
+
 def _atomic_rows() -> dict[type, _AtomicRow]:
-    """Class→row table: ``(descriptor head or builder, simpleString, _engine_type)``."""
+    """Class→row table: ``(descriptor head or builder, simpleString, _engine_type, SQL, DDL)``.
+
+    ``None`` in the SQL/DDL marker columns means base's ``isinstance`` chain has no arm for the
+    class — the leaf falls to base's own ``_engine_type()`` / ``simpleString().upper()``.
+    """
     global _ATOMIC_ROWS
     if _ATOMIC_ROWS is None:
         from repark.spark import types as t
 
         _ATOMIC_ROWS = {
-            t.NullType: ("null", "void", "void"),
+            t.NullType: ("null", _inherited_type_name, "void", "VOID", "VOID"),
             t.StringType: (
                 lambda data_type: {"kind": "string", "collation": data_type.collation},
                 lambda data_type: (
@@ -49,26 +83,46 @@ def _atomic_rows() -> dict[type, _AtomicRow]:
                     else f"string collate {data_type.collation}"
                 ),
                 "string",
+                "STRING",
+                "STRING",
             ),
             t.CharType: (
                 lambda data_type: {"kind": "char", "length": data_type.length},
                 lambda data_type: f"char({data_type.length})",
                 "string",
+                "STRING",
+                lambda data_type: f"CHAR({data_type.length})",
             ),
             t.VarcharType: (
                 lambda data_type: {"kind": "varchar", "length": data_type.length},
                 lambda data_type: f"varchar({data_type.length})",
                 "string",
+                "STRING",
+                lambda data_type: f"VARCHAR({data_type.length})",
             ),
-            t.BinaryType: ("binary", "binary", "binary"),
-            t.BooleanType: ("boolean", "boolean", "boolean"),
-            t.DateType: ("date", "date", "date"),
-            t.TimestampType: ("timestamp", "timestamp", "timestamp"),
-            t.TimestampNTZType: ("timestamp_ntz", "timestamp_ntz", "timestamp_ntz"),
+            t.BinaryType: ("binary", _inherited_type_name, "binary", "BINARY", "BINARY"),
+            t.BooleanType: ("boolean", _inherited_type_name, "boolean", "BOOLEAN", "BOOLEAN"),
+            t.DateType: ("date", _inherited_type_name, "date", "DATE", "DATE"),
+            t.TimestampType: (
+                "timestamp",
+                _inherited_type_name,
+                "timestamp",
+                "TIMESTAMP",
+                "TIMESTAMP",
+            ),
+            t.TimestampNTZType: (
+                "timestamp_ntz",
+                _inherited_type_name,
+                "timestamp_ntz",
+                "TIMESTAMP_NTZ",
+                "TIMESTAMP_NTZ",
+            ),
             t.TimeType: (
                 lambda data_type: {"kind": "time", "precision": data_type.precision},
                 lambda data_type: f"time({data_type.precision})",
                 lambda data_type: f"time({data_type.precision})",
+                None,
+                lambda data_type: f"TIME({data_type.precision})",
             ),
             t.DecimalType: (
                 lambda data_type: {
@@ -78,14 +132,22 @@ def _atomic_rows() -> dict[type, _AtomicRow]:
                 },
                 lambda data_type: f"decimal({data_type.precision},{data_type.scale})",
                 lambda data_type: f"decimal({data_type.precision},{data_type.scale})",
+                lambda data_type: f"DECIMAL({data_type.precision},{data_type.scale})",
+                lambda data_type: f"DECIMAL({data_type.precision},{data_type.scale})",
             ),
-            t.DoubleType: ("double", "double", "double"),
-            t.FloatType: ("float", "float", "float"),
-            t.ByteType: ("byte", "tinyint", "byte"),
-            t.IntegerType: ("integer", "int", "int"),
-            t.LongType: ("long", "bigint", "long"),
-            t.ShortType: ("short", "smallint", "short"),
-            t.CalendarIntervalType: ("calendar_interval", "interval", "interval"),
+            t.DoubleType: ("double", _inherited_type_name, "double", "DOUBLE", "DOUBLE"),
+            t.FloatType: ("float", "float", "float", "FLOAT", "FLOAT"),
+            t.ByteType: ("byte", "tinyint", "byte", "TINYINT", "TINYINT"),
+            t.IntegerType: ("integer", "int", "int", "INT", "INT"),
+            t.LongType: ("long", "bigint", "long", "BIGINT", "BIGINT"),
+            t.ShortType: ("short", "smallint", "short", "SMALLINT", "SMALLINT"),
+            t.CalendarIntervalType: (
+                "calendar_interval",
+                "interval",
+                "interval",
+                None,
+                "INTERVAL",
+            ),
             t.DayTimeIntervalType: (
                 lambda data_type: {
                     "kind": "day_time_interval",
@@ -94,6 +156,8 @@ def _atomic_rows() -> dict[type, _AtomicRow]:
                 },
                 lambda data_type: data_type._str_repr(),
                 lambda data_type: data_type._str_repr(),
+                None,
+                None,
             ),
             t.YearMonthIntervalType: (
                 lambda data_type: {
@@ -103,8 +167,10 @@ def _atomic_rows() -> dict[type, _AtomicRow]:
                 },
                 lambda data_type: data_type._str_repr(),
                 lambda data_type: data_type._str_repr(),
+                None,
+                None,
             ),
-            t.VariantType: ("variant", "variant", "variant"),
+            t.VariantType: ("variant", "variant", "variant", None, "VARIANT"),
         }
     return _ATOMIC_ROWS
 
@@ -128,7 +194,12 @@ def _descriptor_heads() -> dict[type, str | Callable[[Any], dict[str, Any]]]:
 
 
 def _atomic_token(data_type: Any, index: int) -> str | None:
-    """Table ``simpleString``/``_engine_type`` answer; ``None`` for nested types."""
+    """Table token answer by column (0=simpleString, 1=_engine_type, 2=SQL, 3=DDL).
+
+    The MRO scan mirrors base's method/inheritance resolution: a pass-through subclass of a
+    tabled class inherits its answer. ``None`` means no tabled ancestor (nested type or a
+    foreign ``DataType``) or no marker arm for the class.
+    """
     rows = _atomic_rows()
     cls = type(data_type)
     row = rows.get(cls)
@@ -246,21 +317,12 @@ def _descriptor_tree_has_none(descriptor: dict[str, Any] | None) -> bool:
     return any(_descriptor_tree_has_none(child) for child in _descriptor_children(descriptor))
 
 
-def _descriptor_has_wide_decimal(descriptor: dict[str, Any]) -> bool:
-    """True when a decimal node falls outside the Arrow FFI storage envelope."""
-    if descriptor.get("kind") == "decimal":
-        return not (1 <= descriptor["precision"] <= 38) or not (-128 <= descriptor["scale"] <= 127)
-    return any(_descriptor_has_wide_decimal(child) for child in _descriptor_children(descriptor))
-
-
 def _descriptor_token(data_type: Any, native_name: str, fallback: Callable[[Any], str]) -> str:
     """Token answer from the shared type table (Python fallback on unknown)."""
     descriptor = _datatype_to_descriptor(data_type)
     if descriptor is None or _descriptor_tree_has_none(descriptor):
         return fallback(data_type)
-    from repark import _native
-
-    return getattr(_native, native_name)(descriptor)
+    return _native_function(native_name)(descriptor)
 
 
 def _nested_token_python(
@@ -289,12 +351,42 @@ def _nested_token_python(
     return leaf(data_type)
 
 
+def _leaf_simple(data_type: Any) -> str:
+    """``simpleString`` for a leaf with no tabled answer (custom override, else ``typeName``)."""
+    token = _atomic_token(data_type, 0)
+    if token is not None:
+        return token
+    cls = type(data_type)
+    if cls.simpleString is not _types().DataType.simpleString:
+        return data_type.simpleString()
+    return cls.typeName()
+
+
+def _leaf_engine(data_type: Any) -> str:
+    """``_engine_type`` for a leaf with no tabled answer (else ``simpleString``)."""
+    token = _atomic_token(data_type, 1)
+    if token is not None:
+        return token
+    engine = getattr(type(data_type), "_engine_type", None)
+    if engine is not None and engine is not _types().DataType._engine_type:
+        return data_type._engine_type()
+    return _leaf_simple(data_type)
+
+
+def _leaf_ddl(data_type: Any) -> str:
+    """``_datatype_to_ddl_token`` leaf: marker arm, else base's ``simpleString().upper()``."""
+    token = _atomic_token(data_type, 3)
+    if token is not None:
+        return token
+    return _leaf_simple(data_type).upper()
+
+
 def _simple_string_python(data_type: Any) -> str:
     """``simpleString`` for descriptors the table cannot see (unknown subtype inside)."""
     return _nested_token_python(
         data_type,
         lambda item: item.simpleString(),
-        lambda item: type(item).typeName(),
+        _leaf_simple,
     )
 
 
@@ -303,7 +395,7 @@ def _engine_token_python(data_type: Any) -> str:
     return _nested_token_python(
         data_type,
         lambda item: item._engine_type(),
-        lambda item: item.simpleString(),
+        _leaf_engine,
     )
 
 
@@ -317,6 +409,67 @@ def _ddl_token_python(data_type: Any) -> str:
     return _nested_token_python(
         data_type,
         _datatype_to_ddl_token,
-        lambda item: item.simpleString().upper(),
+        _leaf_ddl,
         upper=True,
     )
+
+
+def _parse_field_list(text: str) -> Any:
+    """Parse ``a int, b string`` or ``a: int, b: string`` into a :class:`StructType`."""
+    t = _types()
+    fields: list[Any] = []
+    for part in t._split_top_level(text, ","):
+        part = part.strip()
+        if not part:
+            continue
+        colon_match = _FIELD_NAME_COLON.match(part)
+        if colon_match is not None:
+            name = colon_match.group(1).strip().strip('`"')
+            type_text = colon_match.group(2)
+            fields.append(t.StructField(name, t._parse_complex_or_atomic(type_text), True))
+            continue
+        tokens = part.split(None, 1)
+        if len(tokens) != 2:
+            raise ValueError(f"cannot parse field: {part!r}")
+        name, type_text = tokens[0].strip().strip('`"'), tokens[1]
+        fields.append(t.StructField(name, t._parse_complex_or_atomic(type_text), True))
+    return t.StructType(fields)
+
+
+def _parse_datatype_string_python(text: str) -> Any:
+    """Base's pure-Python ``_parse_datatype_string`` (residue for unbounded integers)."""
+    t = _types()
+    stripped = text.strip()
+    if not stripped:
+        return t.StructType([])
+    lower = stripped.lower()
+    if (
+        t._FIXED_DECIMAL.fullmatch(stripped)
+        or t._LENGTH_CHAR.fullmatch(stripped)
+        or t._LENGTH_VARCHAR.fullmatch(stripped)
+        or t._TIME.fullmatch(stripped)
+        or lower.startswith(("array<", "map<", "struct<"))
+        or lower in t._ATOMIC_TYPE_NAMES
+        or t._STRING_COLLATE.fullmatch(stripped)
+    ):
+        return t._parse_complex_or_atomic(stripped)
+    if "," in stripped or ":" in stripped or " " in stripped:
+        try:
+            return _parse_field_list(stripped)
+        except ValueError:
+            pass
+    return t._parse_complex_or_atomic(stripped)
+
+
+def _parse_datatype_string(text: str) -> Any:
+    """Parse a DDL / simpleString type or field list via the Rust type table.
+
+    Parameters beyond ``i64`` and non-printable text leave the Rust path for base's Python
+    parse, so value, ``simpleString`` and refusal bytes equal base.
+    """
+    if not text.isprintable():
+        return _parse_datatype_string_python(text)
+    try:
+        return _descriptor_to_datatype(_native_function("spark_descriptor_from_ddl")(text))
+    except OverflowError:
+        return _parse_datatype_string_python(text)

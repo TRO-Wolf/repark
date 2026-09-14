@@ -1,5 +1,9 @@
 # map — scripts/
 
+FACADE-4 step-1 remediation round 2 (2026-09-14): `check_lib_py.py`
+`spark/types.py` 1639 → 1610 (the parse residue and conversion fallbacks
+moved to `spark/_type_table.py`).
+pins: facade-4/C-020
 FACADE-4 step-1 remediation (2026-09-14): `check_lib_py.py` `spark/types.py`
 1833 → 1639 (the descriptor bridge — encode/decode, tree walks, token
 fallbacks, and the atomic answer table — moved to `spark/_type_table.py` for

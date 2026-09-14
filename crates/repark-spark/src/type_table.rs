@@ -17,6 +17,7 @@ pub const DEFAULT_COLLATION: &str = "UTF8_BINARY";
 #[derive(Debug, Clone)]
 pub enum TypeTableError {
     Message(String),
+    IntegerOverflow,
     DecimalPrecision { precision: i64 },
     DecimalScale { precision: i64, scale: i64 },
 }
@@ -25,6 +26,7 @@ impl Display for TypeTableError {
     fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Message(message) => out.write_str(message),
+            Self::IntegerOverflow => out.write_str("integer parameter beyond i64 range"),
             Self::DecimalPrecision { .. } => out.write_str("precision should be between 1 and 38"),
             Self::DecimalScale { scale, .. } => {
                 write!(out, "scale {scale} is outside the Arrow i8 storage range")

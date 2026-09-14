@@ -474,9 +474,9 @@ def _data_type_to_sql_type(data_type: Any) -> str:
     descriptor = _datatype_to_descriptor(data_type)
 
     if descriptor is not None and not _descriptor_tree_has_none(descriptor):
-        from repark import _native
+        from repark.spark._type_table import _native_function
 
-        return _native.sql_marker_from_descriptor(descriptor)
+        return _native_function("sql_marker_from_descriptor")(descriptor)
 
     return _sql_type_token_python(data_type)
 
@@ -484,6 +484,7 @@ def _data_type_to_sql_type(data_type: Any) -> str:
 def _sql_type_token_python(data_type: Any) -> str:
     """SQL cast marker for descriptors the table cannot see (unknown subtype inside)."""
 
+    from repark.spark._type_table import _atomic_token
     from repark.spark.types import ArrayType, MapType, StructType
 
     if isinstance(data_type, ArrayType):
@@ -501,6 +502,11 @@ def _sql_type_token_python(data_type: Any) -> str:
         )
 
         return f"STRUCT<{inner}>"
+
+    marker = _atomic_token(data_type, 2)
+
+    if marker is not None:
+        return marker
 
     engine = getattr(data_type, "_engine_type", None)
 

@@ -24,10 +24,11 @@ from repark.spark._type_table import (
     _atomic_token,
     _datatype_to_ddl_token,
     _datatype_to_descriptor,
-    _descriptor_has_wide_decimal,
     _descriptor_to_datatype,
     _descriptor_tree_has_none,
     _engine_token_python,
+    _native_function,
+    _parse_datatype_string,
     _simple_string_python,
 )
 
@@ -163,7 +164,9 @@ class StringType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form matches simpleString for collated strings."""
-        return self.simpleString()
+        if self.isUTF8BinaryCollation():
+            return "string"
+        return f"string collate {self.collation}"
 
     def __repr__(self) -> str:
         """``StringType()`` or ``StringType('COLLATION')``."""
@@ -181,7 +184,7 @@ class CharType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``char(n)``."""
-        return self.simpleString()
+        return f"char({self.length})"
 
     def __repr__(self) -> str:
         """``CharType(n)``."""
@@ -197,7 +200,7 @@ class VarcharType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``varchar(n)``."""
-        return self.simpleString()
+        return f"varchar({self.length})"
 
     def __repr__(self) -> str:
         """``VarcharType(n)``."""
@@ -319,7 +322,7 @@ class TimeType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``time(n)``."""
-        return self.simpleString()
+        return f"time({self.precision})"
 
     def __repr__(self) -> str:
         """``TimeType(n)``."""
@@ -341,7 +344,7 @@ class DecimalType(DataType):
 
     def jsonValue(self) -> str:  # noqa: N802
         """Spark returns the simpleString form for decimals."""
-        return self.simpleString()
+        return f"decimal({self.precision},{self.scale})"
 
     def __repr__(self) -> str:
         """Render as ``DecimalType(precision,scale)`` (PySpark's repr shape)."""
@@ -781,9 +784,7 @@ class StructType(DataType):
                 f"{'' if field.nullable else ' NOT NULL'}"
                 for field in self.fields
             )
-        from repark import _native
-
-        return _native.struct_field_ddl_from_descriptor(descriptor)
+        return _native_function("struct_field_ddl_from_descriptor")(descriptor)
 
     def treeString(  # noqa: N802 — PySpark camelCase
         self,
@@ -963,33 +964,6 @@ def _parse_complex_or_atomic(text: str) -> DataType:
     raise ValueError(f"cannot parse datatype: {text!r}")
 
 
-def _parse_datatype_string(text: str) -> DataType:
-    """Parse a DDL / simpleString type or field list (Spark ``_parse_datatype_string`` shape)."""
-    from repark import _native
-
-    return _descriptor_to_datatype(_native.spark_descriptor_from_ddl(text))
-
-
-def _arrow_tree_has_wide_decimal(arrow_type: Any) -> bool:
-    """True when a ``pyarrow`` type tree holds a decimal the FFI envelope cannot carry."""
-    import pyarrow as pa
-
-    if pa.types.is_decimal(arrow_type):
-        return not (-128 <= arrow_type.scale <= 127)
-    if any(
-        check(arrow_type)
-        for check in (pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list)
-    ):
-        return _arrow_tree_has_wide_decimal(arrow_type.value_type)
-    if pa.types.is_map(arrow_type):
-        return _arrow_tree_has_wide_decimal(arrow_type.key_type) or _arrow_tree_has_wide_decimal(
-            arrow_type.item_type
-        )
-    if pa.types.is_struct(arrow_type):
-        return any(_arrow_tree_has_wide_decimal(field.type) for field in arrow_type)
-    return False
-
-
 _COLLATIONS_METADATA_KEY = "__COLLATIONS"
 
 
@@ -1143,12 +1117,10 @@ def _arrow_type_to_repark(arrow_type: object) -> DataType:
 
     if not isinstance(arrow_type, pa.DataType):
         return StringType()
-    if _arrow_tree_has_wide_decimal(arrow_type):
-        return _arrow_type_to_repark_python(arrow_type)
-    from repark import _native
-
     try:
-        descriptor = _native.spark_descriptor_from_arrow_type(arrow_type.__arrow_c_schema__())
+        descriptor = _native_function("spark_descriptor_from_arrow_type")(
+            arrow_type.__arrow_c_schema__()
+        )
     except Exception:
         return _arrow_type_to_repark_python(arrow_type)
     return _descriptor_to_datatype(descriptor)
@@ -1210,12 +1182,10 @@ def struct_type_from_arrow(schema: object) -> StructType:
     import pyarrow as pa
 
     assert isinstance(schema, pa.Schema)
-    if any(_arrow_tree_has_wide_decimal(field.type) for field in schema):
-        return _struct_type_from_arrow_python(schema)
-    from repark import _native
-
     try:
-        descriptor = _native.spark_descriptor_from_arrow_schema(schema.__arrow_c_schema__())
+        descriptor = _native_function("spark_descriptor_from_arrow_schema")(
+            schema.__arrow_c_schema__()
+        )
     except Exception:
         return _struct_type_from_arrow_python(schema)
     result = _descriptor_to_datatype(descriptor)
@@ -1239,18 +1209,19 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
     """Map a repark :class:`DataType` to a ``pyarrow.DataType`` (createDataFrame nested)."""
     import pyarrow as pa
 
-    descriptor = _datatype_to_descriptor(data_type)
-    if (
-        descriptor is None
-        or _descriptor_tree_has_none(descriptor)
-        or _descriptor_has_wide_decimal(descriptor)
+    if isinstance(data_type, DecimalType) and (
+        not (1 <= data_type.precision <= 38) or not (-128 <= data_type.scale <= 127)
     ):
         return _repark_type_to_arrow_python(data_type)
-    from repark import _native
-
-    return pa.DataType._import_from_c_capsule(
-        _native.arrow_type_capsule_from_descriptor(descriptor)
-    )
+    descriptor = _datatype_to_descriptor(data_type)
+    if descriptor is None or _descriptor_tree_has_none(descriptor):
+        return _repark_type_to_arrow_python(data_type)
+    try:
+        return pa.DataType._import_from_c_capsule(
+            _native_function("arrow_type_capsule_from_descriptor")(descriptor)
+        )
+    except Exception:
+        return _repark_type_to_arrow_python(data_type)
 
 
 def _repark_type_to_arrow_python(data_type: DataType) -> Any:

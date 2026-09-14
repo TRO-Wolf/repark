@@ -660,7 +660,7 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
     import pyarrow as pa
 
-    from repark import _native
+    from repark.spark._type_table import _native_function
     from repark.spark.types import DataType, repark_type_to_arrow
 
     stripped = sql_type.strip()
@@ -703,7 +703,9 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
 
         return pa.decimal128(precision, scale)
 
-    capsule, decimal_precision, decimal_scale = _native.sql_token_to_arrow_capsule(stripped)
+    capsule, decimal_precision, decimal_scale = _native_function("sql_token_to_arrow_capsule")(
+        stripped
+    )
 
     if capsule is None:
         return pa.decimal128(decimal_precision, decimal_scale)

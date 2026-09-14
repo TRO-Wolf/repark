@@ -252,13 +252,19 @@ pins: rp-4-fork-repin/C-005, C-006
   is `Cow<'static, str>` — the `UTF8_BINARY` default borrows the
   `pub const DEFAULT_COLLATION` everywhere (Arrow, DDL fallback, CSV rungs) and
   only a parsed custom collation owns.
-  pins: facade-4/C-010, C-019
+  Round-2 remediation: `TypeTableError::IntegerOverflow` marks integer
+  parameters beyond i64 so the bridge can route them to Python's unbounded
+  parse (`PyOverflowError`).
+  pins: facade-4/C-010, C-019, C-020
 - `type_table/parse.rs` — the text→descriptor half of the table, split out at the
   file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
   `sql_type_from_token`, field lists, `decimal(p,s)` and interval spellings) with
   Python-faithful trim/int semantics and a `OnceLock`-cached regex set —
   `type_table.rs` re-exports the two public entries so call sites are unchanged.
-  pins: facade-4/C-010
+  Round-2 remediation: `parse_py_int` is checked multiply/add and overflows to
+  `TypeTableError::IntegerOverflow` (propagated through `parse_atomic_token`
+  and the field-list parse rather than swallowed into a refusal).
+  pins: facade-4/C-010, C-020
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
