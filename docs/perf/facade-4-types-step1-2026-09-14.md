@@ -49,19 +49,24 @@ R14b-D-2).
 Per-call µs, medians of 7 ABAB reps (100–300 inner calls; DESCRIBE in ms,
 one call per rep). Faster-than-base is fine.
 
+Round-4 (post-L-007..L-009) re-measure — medians of 7 ABAB reps on the
+release native, idle_load 2.63 (pass 2 at load ~7 reproduced every sign
+within noise):
+
 | surface | flat7 base | flat7 branch | Δ | wide50 base | wide50 branch | Δ | nested3 base | nested3 branch | Δ |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `dtypes` | 10.92 | 10.45 | −4.3 % | 62.30 | 60.14 | −3.5 % | 47.26 | 33.24 | −29.7 % |
-| `df.schema` | 8.47 | 7.86 | −7.3 % | 46.78 | 44.48 | −4.9 % | 41.17 | 20.28 | −50.8 % |
-| `printSchema` | 17.14 | 16.52 | −3.6 % | 99.92 | 98.10 | −1.8 % | 59.80 | 38.87 | −35.0 % |
-| DESCRIBE (ms) | 0.258 | 0.254 | −1.4 % | 0.282 | 0.280 | −0.8 % | 0.254 | 0.256 | +0.7 % |
+| `dtypes` | 10.66 | 9.07 | −14.9 % | 61.47 | 51.71 | −15.9 % | 46.51 | 25.63 | −44.9 % |
+| `df.schema` | 8.26 | 7.83 | −5.1 % | 46.13 | 43.62 | −5.4 % | 40.35 | 20.82 | −48.4 % |
+| `printSchema` | 19.07 | 17.04 | −10.7 % | 99.35 | 96.60 | −2.8 % | 58.98 | 38.97 | −33.9 % |
+| DESCRIBE (ms) | 0.255 | 0.256 | +0.7 % | 0.279 | 0.280 | +0.5 % | 0.257 | 0.257 | +0.1 % |
 
 Every surface cell is inside ±5 % — most are faster than base because the
 Rust table beats the Python parse that `df.schema`/`dtypes`/`printSchema`
-used to run per access. `flat7.printSchema` and `frame_pd.schema` were
-timer-noise-unstable at single-call granularity (−16 %/+35 % and
-+17 %/−7 % across passes); batched third measurements gave −3.6 % and
-+0.4 % (3.84 → 3.86 µs/call) — both inside.
+used to run per access, and the round-4 `_SIMPLE_STRING_FAST` table plus
+the restored container `simpleString` joins removed the per-leaf dispatch
+cost entirely. `flat7.printSchema` and `frame_pd.schema` were
+timer-noise-unstable at single-call granularity in round 3; the batched
+measurements settled them inside.
 
 nested3's base is itself anomalous (47 µs `dtypes` vs flat7's 11 µs —
 the Python composition walk); the table's cached decode makes the branch
@@ -186,19 +191,21 @@ return value verified, not just timed:
 
 µs, medians of 7 ABAB reps:
 
+Round-4 (post-L-007..L-009) re-measure — same protocol:
+
 | cell | flat7 base | flat7 branch | wide50 base | wide50 branch | nested3 base | nested3 branch |
 |---|---:|---:|---:|---:|---:|---:|
-| `repark_type_to_arrow` | 9.56 | 19.64 | 58.70 | 118.22 | 22.60 | 30.52 |
-| `struct_type_from_arrow` | 14.96 | 11.81 | 101.64 | 69.08 | 28.96 | 18.96 |
-| `fromDDL` | 20.51 | 15.03 | 148.07 | 86.98 | 53.57 | 29.52 |
-| `toDDL` | 3.74 | 15.30 | 26.34 | 99.48 | 9.78 | 23.20 |
-| `simpleString` | 3.02 | 3.88 | 19.40 | 20.27 | 4.59 | 9.71 |
+| `repark_type_to_arrow` | 11.77 | 15.23 | 60.42 | 58.50 | 22.87 | 19.10 |
+| `struct_type_from_arrow` | 15.12 | 17.20 | 100.65 | 68.21 | 28.88 | 19.07 |
+| `fromDDL` | 20.39 | 16.99 | 146.69 | 76.98 | 53.42 | 21.69 |
+| `toDDL` | 3.76 | 6.89 | 26.18 | 40.10 | 10.00 | 12.09 |
+| `simpleString` | 3.06 | 2.01 | 19.46 | 13.21 | 4.49 | 3.88 |
+| `jsonValue` | 0.129 | 0.132 | 0.129 | 0.134 | 0.130 | 0.131 |
 
 Outbound (`repark_type_to_arrow`, `toDDL`) pays the descriptor-build plus
-native-call design cost — worst +59.5 µs on wide50 — while inbound is
-faster than base everywhere. Every per-call figure is an order under the
-1 ms bar; per-call leaf `simpleString` is back at base's ~0.05 µs (the
-literal methods), which is what the surface table reflects.
+native-call design cost — worst +13.9 µs on wide50 `toDDL` this round —
+while inbound and `simpleString`/`jsonValue` are faster than or at base.
+Every per-call figure is an order under the 1 ms bar.
 
 ## Round-3 remediation record (R14b-D-2)
 
@@ -226,26 +233,64 @@ nested3 (surface table above); leaf `simpleString` measures 0.052 µs vs
 base's 0.053 µs. `types.py` exact baseline moved 1610 → 1772, still
 below main's 1834.
 
+## Round-4 remediation record (L-007..L-009)
+
+The critic-logic re-check (`/tmp/oc-worker/f-crit4s1b/report.md`) filed
+three P1 byte-identity breaks, all fixed this round:
+
+- **L-007** — `StructType.simpleString` bypassed `field.simpleString()`;
+  base's `ArrayType`/`MapType`/`StructField`/`StructType`
+  `simpleString`/`_engine_type` bodies are restored so a `StructField`
+  subclass override composes inside every container.
+- **L-008** — the `toDDL` leaf consulted the engine token, not the
+  `simpleString` override; `_leaf_ddl` now answers the ordered DDL
+  marker then `data_type.simpleString().upper()`, exactly as base did.
+- **L-009** — multiple inheritance collapsed to one resolution where
+  base used three: `_arrow_order`/`_sql_order`/`_ddl_order` cache each
+  surface's `isinstance` chain, `_primary_class` picks through them,
+  `DataType.simpleString` answers from `_SIMPLE_STRING_FAST` for exact
+  classes then `type(self).typeName()`, the five dynamic-answer classes
+  lost their literal methods so MRO matches base, the parameterised
+  `jsonValue`s dispatch through `self.simpleString()` again, and the
+  collation refusal runs only after the SQL-order pick.
+
+`_datatype_to_descriptor` propagates `None` upward (one walk instead of
+the build-plus-`has_none` pair) and struct members build through
+`_field_descriptor`, so the ordered-dispatch additions cost the
+descriptor paths only ~20 µs on wide50 — the numbers above are the
+re-measure on the release native.
+
+Measurement caveat: two earlier ABAB passes this round ran against a
+debug native (`__debug_assertions__` true — a 663 MB `.so` written into
+the source tree by a post-review `maturin develop` at 18:19) and showed
+uniform 3–6× inflation on every native-touching cell including
+untouched ones (DESCRIBE +543 %). The release `lib_native.so` (168 MB,
+built 18:11 from the same source) was restored by file copy; the tables
+above are the third and fourth passes on it.
+
+`types.py` exact baseline moved 1772 → 1792, still below main's 1834.
+
 ## Thinned line counts
 
 | file | step-0 lines | step-1 lines | Δ |
 |---|---:|---:|---:|
-| `spark/types.py` | 1834 | 1772 | −62 |
-| `spark/_type_table.py` | — | 475 | +475 (new) |
+| `spark/types.py` | 1834 | 1792 | −42 |
+| `spark/_type_table.py` | — | 582 | +582 (new) |
 | `spark/_csv_smart.py` | 899 | 875 | −24 |
 | `session/timestamp_type.py` | 97 | 94 | −3 |
-| `session/create_dataframe_values.py` | 569 | 518 | −51 |
+| `session/create_dataframe_values.py` | 569 | 568 | −1 |
 | `session/create_dataframe_inference.py` | 737 | 713 | −24 |
 | `crates/repark-spark/src/type_table.rs` | — | 563 | +563 (new) |
 | `crates/repark-spark/src/type_table/parse.rs` | — | 473 | +473 (new) |
 | `crates/repark-python/src/type_bridge.rs` | — | 408 | +408 (new) |
 
-`types.py` net is −62 against main's 1834 ceiling: the per-class literal
-methods returned under R14b-D-2 (~160 lines) after the descriptor bridge
-and token table moved to `_type_table.py`. `check_lib_py.py` and the
-CAP-1 mirror record the exact baseline 1772. Body-hash baselines were
-refreshed only for the functions whose bodies moved
-(`_data_type_to_sql_type`, `_sql_type_to_arrow`).
+`types.py` net is −42 against main's 1834 ceiling: the per-class literal
+methods returned under R14b-D-2 (~160 lines) and the container dispatch
+bodies plus `_SIMPLE_STRING_FAST` returned under L-007..L-009 (~20 more)
+after the descriptor bridge and token table moved to `_type_table.py`.
+`check_lib_py.py` and the CAP-1 mirror record the exact baseline 1792.
+Body-hash baselines were refreshed only for the functions whose bodies
+moved (`_data_type_to_sql_type`, `_sql_type_to_arrow`).
 
 ## Notes for the record
 
