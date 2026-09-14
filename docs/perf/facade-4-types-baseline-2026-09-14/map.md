@@ -32,6 +32,14 @@ reports medians of 5 reps after one warmup.
   the remediated run (all four unsigned widths, `pa.null()`, the offset
   timestamp literal, and `csv_smart_rungs_ntz` measured after the NTZ flip);
   the ledger's census table is distilled from it.
+- [mutation_probe.py](mutation_probe.py) — the golden mutation proof: loads
+  `test_facade_4_ddl_round_trip.py` and `facade_4_type_goldens.json`, applies
+  each critic counterexample in process (fromJson forcing
+  `containsNull`/`valueContainsNull` `True`; inbound `int8`/`int16` →
+  `IntegerType`; preserving Arrow list/map item nullability; dropping inner
+  struct field nullability), and prints whether each rebuild differs from the
+  committed bytes plus which case ids moved. All four go red on this tree;
+  restore goes green. Same memory-scope invocation as the runner.
 
 ## Pointers
 

@@ -1698,18 +1698,34 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `repark_type_to_arrow` / `struct_type_from_arrow` answers for the schema set
   (flat 7-type, 50-column wide, `struct<array<map>>` depth 3, decimal
   (10,2)/(38,18)/(38,0)/(76,10), timestamp tz/ntz/session-tz, interval, char,
-  varchar, a raw-Arrow probe schema of types the repark table cannot produce).
-  Record mode is `REPARK_FACADE_4_RECORD_GOLDENS=1` and is refused when `CI` or
-  `GITHUB_ACTIONS` is set. The same file carries the `isinstance` pin: every
-  conversion answer is a public `repark.spark.types` class. Measured-on-base
-  answers the goldens now pin: `DayTimeIntervalType` / `YearMonthIntervalType`
-  degrade to `pa.string()` and their simpleString refuses `fromDDL`;
-  `DecimalType(76,10)` refuses `pa.decimal128` but round-trips DDL/json;
-  `StructType.toDDL` output (`NOT NULL`) refuses `fromDDL`; `uint8`/`uint64`/
-  `time64`/`duration`/`month_day_nano_interval`/`dictionary` answer `StringType`
-  through `struct_type_from_arrow`; `decimal256(76,10)` answers
-  `DecimalType(76,10)`. Mutation proof: `pa.timestamp("us", tz="UTC")` →
-  `pa.timestamp("us")` reds four cases; restore greens.
+  varchar, a 23-field raw-Arrow probe schema of types the repark table cannot
+  produce). Every recorded answer carries its nullability flags: `containsNull`
+  and `valueContainsNull` on json/fromDDL answers and on array/map fields, and
+  recursive field `nullable` through nested struct/array/map shapes.
+  `arrow_schema_back` snapshots `struct_type_from_arrow` of the F1 structs'
+  own fields (field-level `pa.field(nullable=…)` included). The session-tz
+  case builds a fresh `America/New_York` + `TIMESTAMP_NTZ` session after the
+  UTC session stops and records `active_session_time_zone()` plus a
+  session-zone wall-clock answer. Record mode is
+  `REPARK_FACADE_4_RECORD_GOLDENS=1` and is refused when `CI` or
+  `GITHUB_ACTIONS` has any non-empty value (`CI=1` pinned). The same file
+  carries the `isinstance` pin: every conversion answer is a public
+  `repark.spark.types` class. Measured-on-base answers the goldens now pin:
+  `DayTimeIntervalType` / `YearMonthIntervalType` degrade to `pa.string()`
+  and their simpleString refuses `fromDDL`; `DecimalType(76,10)` refuses
+  `pa.decimal128` but round-trips DDL/json; `StructType.toDDL` output
+  (`NOT NULL`) refuses `fromDDL`; `uint8`/`uint64`/`time64`/`duration`/
+  `month_day_nano_interval`/`dictionary` answer `StringType` through
+  `struct_type_from_arrow`; `decimal256(76,10)` answers `DecimalType(76,10)`;
+  inbound Arrow list/map item non-nullability degrades to
+  `containsNull`/`valueContainsNull = True` while inner struct field
+  `nullable=False` survives. Mutation proofs (committed
+  `docs/perf/facade-4-types-baseline-2026-09-14/mutation_probe.py`):
+  `pa.timestamp("us", tz="UTC")` → `pa.timestamp("us")` reds four cases;
+  fromJson forcing the flags `True` reds `array_int_no_null` /
+  `map_str_int_no_null` / `struct_nested3`; inbound `int8`/`int16` →
+  `IntegerType`, preserving Arrow item nullability, and dropping inner
+  struct nullability each red `arrow_probe_schema_back`; restore greens.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter

@@ -47,8 +47,8 @@ GOLDEN_PATH = Path(__file__).with_name("facade_4_type_goldens.json")
 
 
 def _running_in_ci() -> bool:
-    """True when GitHub Actions or generic CI is set."""
-    return os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true"
+    """True when GitHub Actions or generic CI has any non-empty value."""
+    return bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
 
 
 def _record_requested() -> bool:
@@ -81,21 +81,33 @@ def _attempt(thunk: Any) -> Any:
 
 
 def _type_shape(data_type: Any) -> dict[str, object]:
-    """Class name plus simpleString for one parsed answer."""
-    return {"class": type(data_type).__name__, "simpleString": data_type.simpleString()}
+    """Class name, simpleString and nullability flags for one parsed answer."""
+    shape: dict[str, object] = {
+        "class": type(data_type).__name__,
+        "simpleString": data_type.simpleString(),
+    }
+    if isinstance(data_type, ArrayType):
+        shape["containsNull"] = data_type.containsNull
+        shape["element"] = _type_shape(data_type.elementType)
+    if isinstance(data_type, MapType):
+        shape["valueContainsNull"] = data_type.valueContainsNull
+        shape["key"] = _type_shape(data_type.keyType)
+        shape["value"] = _type_shape(data_type.valueType)
+    if isinstance(data_type, StructType):
+        shape["fields"] = _struct_shape(data_type)
+    return shape
+
+
+def _field_shape(field: StructField) -> dict[str, object]:
+    """Name, nullability and the recursive type shape for one struct field."""
+    shape: dict[str, object] = {"name": field.name, "nullable": field.nullable}
+    shape.update(_type_shape(field.dataType))
+    return shape
 
 
 def _struct_shape(struct_type: StructType) -> list[dict[str, object]]:
-    """Per-field class, simpleString and nullability for a StructType answer."""
-    return [
-        {
-            "name": field.name,
-            "class": type(field.dataType).__name__,
-            "simpleString": field.dataType.simpleString(),
-            "nullable": field.nullable,
-        }
-        for field in struct_type.fields
-    ]
+    """Recursive per-field shapes for a StructType answer."""
+    return [_field_shape(field) for field in struct_type.fields]
 
 
 def _snapshot_type(data_type: DataType) -> dict[str, object]:
@@ -128,7 +140,14 @@ def _snapshot_type(data_type: DataType) -> dict[str, object]:
             lambda: _struct_shape(
                 struct_type_from_arrow(
                     __import__("pyarrow").schema(
-                        [__import__("pyarrow").field("v", repark_type_to_arrow(data_type))]
+                        [
+                            __import__("pyarrow").field(
+                                field.name,
+                                repark_type_to_arrow(field.dataType),
+                                nullable=field.nullable,
+                            )
+                            for field in data_type.fields
+                        ]
                     )
                 )
             )
@@ -311,8 +330,13 @@ def _arrow_probe_schema() -> Any:
             pa.field("ts_s", pa.timestamp("s", tz="UTC")),
             pa.field("dec256", pa.decimal256(76, 10)),
             pa.field("u8", pa.uint8()),
+            pa.field("u16", pa.uint16()),
+            pa.field("u32", pa.uint32()),
             pa.field("u64", pa.uint64()),
+            pa.field("i8", pa.int8()),
+            pa.field("i16", pa.int16()),
             pa.field("f16", pa.float16()),
+            pa.field("f32", pa.float32()),
             pa.field("null_col", pa.null()),
             pa.field("time64", pa.time64("us")),
             pa.field("dur", pa.duration("us")),
@@ -335,24 +359,33 @@ def _arrow_probe_schema() -> Any:
 
 
 def _session_conf_cases() -> dict[str, object]:
-    """Session-dependent timestamp-type answers under a non-UTC session zone."""
+    """Session-dependent timestamp answers under a fresh non-UTC session."""
+    import datetime
+
     session = (
-        ReparkSession.builder.appName("facade-4-types")
+        ReparkSession.builder.appName("facade-4-types-ny")
         .config("spark.sql.session.timeZone", "America/New_York")
         .config("spark.sql.timestampType", "TIMESTAMP_NTZ")
         .getOrCreate()
     )
     try:
-        session.conf.set("spark.sql.session.timeZone", "America/New_York")
-        session.conf.set("spark.sql.timestampType", "TIMESTAMP_NTZ")
+        from repark.spark.session.session_time_zone import (
+            active_session_time_zone,
+            collect_timestamp_as_session_wall,
+        )
         from repark.spark.session.timestamp_type import (
             default_timestamp_arrow_type,
             default_timestamp_data_type,
         )
 
+        utc_instant = datetime.datetime(2024, 1, 2, 3, 4, 5, tzinfo=datetime.UTC)
         return {
+            "session_time_zone": active_session_time_zone(),
             "default_timestamp_data_type": _type_shape(default_timestamp_data_type()),
             "default_timestamp_arrow_type": str(default_timestamp_arrow_type()),
+            "collect_wall_in_session_zone": collect_timestamp_as_session_wall(
+                utc_instant
+            ).isoformat(),
         }
     finally:
         session.stop()
@@ -366,7 +399,6 @@ def _build_payload_inner() -> dict[str, dict[str, object]]:
     payload["arrow_probe_schema_back"] = {
         "fields": _struct_shape(struct_type_from_arrow(_arrow_probe_schema()))
     }
-    payload["session_conf_ny_ntz"] = _session_conf_cases()
     return payload
 
 
@@ -379,11 +411,12 @@ def _build_payload() -> dict[str, dict[str, object]]:
         .getOrCreate()
     )
     try:
-        session.conf.set("spark.sql.session.timeZone", "UTC")
         session.conf.set("spark.sql.timestampType", "TIMESTAMP_LTZ")
-        return _build_payload_inner()
+        payload = _build_payload_inner()
     finally:
         session.stop()
+    payload["session_conf_ny_ntz"] = _session_conf_cases()
+    return payload
 
 
 def test_type_goldens_match_committed_bytes() -> None:
@@ -455,3 +488,9 @@ def test_record_mode_fails_when_ci_is_set(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     with pytest.raises(AssertionError, match="refusing to rewrite goldens"):
         _assert_record_mode_allowed()
+    monkeypatch.delenv("GITHUB_ACTIONS")
+    monkeypatch.setenv("CI", "1")
+    with pytest.raises(AssertionError, match="refusing to rewrite goldens"):
+        _assert_record_mode_allowed()
+    monkeypatch.setenv("CI", "")
+    _assert_record_mode_allowed()
