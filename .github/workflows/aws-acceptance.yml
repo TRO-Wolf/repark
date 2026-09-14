@@ -62,6 +62,7 @@ jobs:
           # checked-in lockfile as a side effect of a CI run (same rule as parity-live.yml).
           uv sync --locked
           (cd python/repark && uvx maturin@1.14.1 develop)
+          VIRTUAL_ENV="$PWD/.venv" uv pip install --quiet dbt-core==1.9.11 dbt-spark==1.9.3
       # Credentials mint HERE, last, immediately before the only step that needs them.
       - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
         with:
@@ -82,4 +83,17 @@ jobs:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: >
           VIRTUAL_ENV="$PWD/.venv"
-          uv run --no-project python -m pytest python/repark/tests/test_aws_acceptance.py -q
+          uv run --no-project python -m pytest python/repark/tests/test_aws_acceptance.py -q -rA
+      - name: dbt gold acceptance (REPARK_AWS_ACCEPTANCE=1)
+        if: ${{ !cancelled() }}
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
+          REPARK_ACCEPT_ENTITY: ${{ vars.REPARK_ACCEPT_ENTITY }}
+          REPARK_ACCEPT_ID_COL: ${{ vars.REPARK_ACCEPT_ID_COL }}
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: >
+          VIRTUAL_ENV="$PWD/.venv"
+          uv run --no-project python -m pytest python/dbt-repark/tests/test_aws_acceptance_gold.py -q -rA

@@ -46,11 +46,21 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   tables answer the S6 measured rows and that all ten test blocks pass. Also holds the
   materialization refusals and the mutation guard.
   pins: dbt-1-adapter/C-002, C-003, C-004
-- `test_aws_acceptance_gold.py` — the deferred Glue leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
+- `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
   the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never
-  does.**
+  does.** **ICE-GOLD-TWICE-1 (2026-09-14):** the stem is unique per run
+  (`testing_dbt1_<uuid8>`, minted in the `glue_project` fixture and passed to
+  `_repoint_profile`, no module constant), the test runs `dbt run`, checks the S6
+  `FCT_ROWS`/`AGG_ROWS` and records both gold models' snapshot counts, runs `dbt run` a
+  second time — success, the same rows, and each model's history grown by exactly one
+  snapshot (the in-place `create or replace` the memory twin `test_dbt_run_is_idempotent`
+  measures: 1 → 2 `append` snapshots per model) — then `dbt test` (10 results, success).
+  The module joined `aws-acceptance.yml` as a `dbt gold acceptance` step after the silver
+  module (`if: !cancelled()`, same env block, `-rA`); the Makefile `DBT_PINS` install in
+  the pre-credentials build step; docs/tier2-aws.md §7 is the operator note.
   pins: dbt-1-adapter/C-005
+  pins: ice-gold-twice-1/C-003, C-004, C-005, C-006
 
 ## I want to...
 

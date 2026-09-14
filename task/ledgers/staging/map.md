@@ -13,6 +13,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   and root `map.md` sentence); the cutover rows naming the Glue replace refusal are
   stamped FIXED at `edc38c6a`. `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: rp-20/C-001, C-002, C-003
+- [ice-gold-twice-1-ledger.md](ice-gold-twice-1-ledger.md) —
+  **ICE-GOLD-TWICE-1 (2026-09-14), in flight:** the replace path into the nightly —
+  `_acceptance_replace.run_create_or_replace_twice` (3-row CTAS seed, two
+  `CREATE OR REPLACE … AS` over 4- and 5-row answers) proven offline on the memory
+  catalog, Glue + S3 Tables `replace2` legs in `test_aws_acceptance.py`, the gold module
+  on unique `testing_dbt1_<uuid8>` stems with two `dbt run` passes and `dbt test`, and
+  the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
+  `risk_tier: standard`. Branch `chore/repin-rp-20`.
+  pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [facade-5-ledger.md](facade-5-ledger.md) —
   **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
   split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`

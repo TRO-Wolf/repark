@@ -53,6 +53,10 @@ from _acceptance import (
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
+from _acceptance_replace import (
+    assert_replace_twice_outcome,
+    run_create_or_replace_twice,
+)
 from _acceptance_v3 import (
     S3T_V3_REFUSED_AT_CREATE,
     V3_ALLOW_CREATE_KEY,
@@ -501,3 +505,53 @@ def test_sql_harden_cutover_against_s3tables() -> None:
             raise
     got, stems = _run_sql_harden_on_catalog(spark, S3TABLES_CATALOG)
     _assert_aws_cutover_core(spark, S3TABLES_CATALOG, got, stems)
+
+
+def test_create_or_replace_twice_against_glue() -> None:
+    """ICE-GOLD-TWICE-1: CREATE OR REPLACE TABLE … AS twice on real Glue (F-GLUE-REPLACE-1)."""
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("replace-twice-glue")
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
+
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    outcome = run_create_or_replace_twice(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
+    assert_replace_twice_outcome(outcome)
+
+
+def test_create_or_replace_twice_against_s3tables() -> None:
+    """ICE-GOLD-TWICE-1: the Glue leg's twin on S3 Tables; counts relaxed for service commits."""
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("replace-twice-s3tables")
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}replace2_{uuid.uuid4().hex[:12]}"
+    outcome = run_create_or_replace_twice(spark, S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
+    assert_replace_twice_outcome(outcome, exact_counts=False)

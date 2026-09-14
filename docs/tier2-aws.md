@@ -170,9 +170,29 @@ it went, is current state and lives in [../STATUS.md](../STATUS.md) — never he
 | `test_mor_merge_compact_expire_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | MW-10 / OD-3b: whether `s3tables:PutTableData` authorizes expire's file removal on table storage |
 | `test_v3_dv_dml_maintenance_against_glue` | Glue | — | LIVE-v3, answered 2026-09-02: Glue reproduces the local v3 numbers exactly — opt-in v3 MoR CTAS partitioned by identity `part`, 1 Puffin DV after the row `DELETE`, 2 after the `MERGE`, `rewrite_data_files` 12/2/2 leaving 0 DVs, `expire_snapshots` 14 → 1, then `register_table` of the final metadata location on a second session |
 | `test_v3_dv_dml_maintenance_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | LIVE-v3 / `S3T-V3-1`, answered 2026-09-02: S3 Tables accepts `format-version = 3` at CREATE, so the leg runs the accepted branch — the same assertions with service-commit counts relaxed; the refusal branch (no table left behind, masked refusal text recorded, leg passes) stays wired and unused. `register_table` is not attempted (`S3T-1` / fork R126) |
+| `test_create_or_replace_twice_against_glue` | Glue | — | ICE-GOLD-TWICE-1 (2026-09-14): a `testing_replace2_<uuid>` table — plain CTAS seed (3 rows), then `CREATE OR REPLACE TABLE … AS` twice (4 rows, then 5); rows equal the last SELECT and `.snapshots` grows exactly one per replace. This is the live cell of the F-GLUE-REPLACE-1 publish path (RP-20, fork `edc38c6a`) |
+| `test_create_or_replace_twice_against_s3tables` | S3 Tables | `TABLE_BUCKET_ARN` | the Glue leg's twin on a table bucket (namespace without `location`); snapshot-count assertions relaxed for the service's own commits, the replace-twice row oracles identical |
 
 The two v3 legs need **no new IAM action and no new workflow variable**: they create and update
 tables in the same scratch namespace, write and remove objects under the same warehouse scratch
 prefix, and read metadata the role can already read. The Glue leg's `register_table` creates one
 extra scratch table per run (`…_adopted`) under `glue:CreateTable`, which never-teardown already
 allows.
+
+The two replace legs need nothing new either: `CREATE OR REPLACE TABLE … AS` publishes through
+`glue:UpdateTable` / `s3tables:UpdateTableMetadataLocation`, both already granted on the scratch
+resources.
+
+## 7. The dbt gold module
+
+A second pytest step runs `python/dbt-repark/tests/test_aws_acceptance_gold.py`
+(`test_gold_stage_on_glue`, ICE-GOLD-TWICE-1) **after** the silver module, on the same
+`REPARK_AWS_ACCEPTANCE=1` gate and the same env block. The step installs nothing at run time —
+the `sync + build native module` step already installs the Makefile `DBT_PINS`
+(`dbt-core==1.9.11`, `dbt-spark==1.9.3`) before credentials are minted. The test builds a dbt
+project on a per-run `testing_dbt1_<uuid8>` stem in the scratch namespace, runs `dbt run`, checks
+the S6 fact and aggregate rows, records each gold model's snapshot count, runs `dbt run` a second
+time — the in-place `create or replace` publish must leave the same rows and grow each model's
+history by exactly one snapshot — then `dbt test` (ten blocks). It needs no new IAM action and no
+new variable: `glue:UpdateTable` and the warehouse scratch prefix are already granted, and it
+drops nothing.
