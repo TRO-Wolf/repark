@@ -71,7 +71,7 @@ After the critic-logic remediation (exact-type gates), a same-box A/B put the ga
 - R12-D-3: the `#[allow(clippy::…)]` attributes on the new `named.rs` entry point follow step 2's merged precedent in
   the same module; no convention change.
 - R12-D-4: the orchestrator repaired the `Authored-By` trailer on the actor commits whose messages carried the Devin
-  CLI's own footer (`Generated with [Devin]` plus a bot `Co-Authored-By`). The rewrite was message-only, and the tree
+  CLI's own footer (a `Generated with` line plus a bot co-author trailer). The rewrite was message-only, and the tree
   equality was checked.
 
 ## 5. What remains of the Rust switchover (measured on `main` at `4a9eb35a`)
@@ -93,7 +93,7 @@ After the critic-logic remediation (exact-type gates), a same-box A/B put the ga
   `Timestamp`-specific route (`value` nanoseconds) if a pandas-rows workload shows the cost.
 - **Q-R12-2 — the default for the per-round fallback bar.** Recommendation: every perf card measures fallback shapes
   against a real base tree built in the review bed, not an in-process patch (R12-D-1); add it to the slate preamble.
-- **Q-R12-3 — the Devin CLI appends its own `Generated with` / `Co-Authored-By` footer on some commits.** It did so on
+- **Q-R12-3 — the Devin CLI appends its own `Generated with` line and bot co-author trailer on some commits.** It did so on
   resumed rounds, even with the brief's trailer rule. Recommendation: the launcher checks every new commit's
   `Authored-By` trailer after each round and repairs or refuses before the orchestrator reads the hand-back.
 
