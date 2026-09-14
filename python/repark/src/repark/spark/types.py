@@ -150,6 +150,10 @@ class NullType(DataType):
         """Spark uses ``void`` not ``null``."""
         return "void"
 
+    def _engine_type(self) -> str:
+        """Engine tag for null/void."""
+        return "void"
+
 
 class StringType(DataType):
     """UTF-8 string (Arrow ``Utf8``). Optional collation (Spark 4+)."""
@@ -161,6 +165,16 @@ class StringType(DataType):
     def isUTF8BinaryCollation(self) -> bool:  # noqa: N802 — PySpark camelCase
         """True when collation is the default binary."""
         return self.collation == "UTF8_BINARY"
+
+    def _engine_type(self) -> str:
+        """The engine string ``"string"`` (collation is schema metadata only)."""
+        return "string"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``string`` or ``string collate NAME``."""
+        if self.isUTF8BinaryCollation():
+            return "string"
+        return f"string collate {self.collation}"
 
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form matches simpleString for collated strings."""
@@ -182,6 +196,14 @@ class CharType(DataType):
         """Store ``length`` limitation."""
         self.length = length
 
+    def _engine_type(self) -> str:
+        """Engine string (stored as string)."""
+        return "string"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``char(n)``."""
+        return f"char({self.length})"
+
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``char(n)``."""
         return f"char({self.length})"
@@ -198,6 +220,14 @@ class VarcharType(DataType):
         """Store ``length`` limitation."""
         self.length = length
 
+    def _engine_type(self) -> str:
+        """Engine string (stored as string)."""
+        return "string"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``varchar(n)``."""
+        return f"varchar({self.length})"
+
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``varchar(n)``."""
         return f"varchar({self.length})"
@@ -213,12 +243,28 @@ class BinaryType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
+    def _engine_type(self) -> str:
+        """The engine string ``"binary"``."""
+        return "binary"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Concrete-class ``typeName`` (dynamic under subclasses)."""
+        return type(self).typeName()
+
 
 class BooleanType(DataType):
     """Boolean (Arrow ``Boolean``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"boolean"``."""
+        return "boolean"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Concrete-class ``typeName`` (dynamic under subclasses)."""
+        return type(self).typeName()
 
 
 class DateType(DataType):
@@ -228,6 +274,14 @@ class DateType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"date"``."""
+        return "date"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Concrete-class ``typeName`` (dynamic under subclasses)."""
+        return type(self).typeName()
 
     def needConversion(self) -> bool:  # noqa: N802
         """Dates convert between ``datetime.date`` and day ordinals."""
@@ -251,6 +305,14 @@ class TimestampType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"timestamp"`` (native parse maps to µs+UTC)."""
+        return "timestamp"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Concrete-class ``typeName`` (dynamic under subclasses)."""
+        return type(self).typeName()
 
     def needConversion(self) -> bool:  # noqa: N802
         """Timestamps convert to microsecond epoch ints."""
@@ -288,6 +350,10 @@ class TimestampNTZType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
+    def _engine_type(self) -> str:
+        """Engine tag."""
+        return "timestamp_ntz"
+
     @classmethod
     def typeName(cls) -> str:  # noqa: N802
         """``timestamp_ntz``."""
@@ -320,6 +386,14 @@ class TimeType(DataType):
         """Store fractional-second ``precision`` (default 6)."""
         self.precision = precision
 
+    def _engine_type(self) -> str:
+        """Engine tag."""
+        return f"time({self.precision})"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``time(n)``."""
+        return f"time({self.precision})"
+
     def jsonValue(self) -> str:  # noqa: N802
         """JSON form ``time(n)``."""
         return f"time({self.precision})"
@@ -342,6 +416,14 @@ class DecimalType(DataType):
         self.scale = scale
         self.hasPrecisionInfo = True  # public Spark attribute
 
+    def _engine_type(self) -> str:
+        """The engine string ``"decimal(precision,scale)"``."""
+        return f"decimal({self.precision},{self.scale})"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark form ``decimal(p,s)``."""
+        return f"decimal({self.precision},{self.scale})"
+
     def jsonValue(self) -> str:  # noqa: N802
         """Spark returns the simpleString form for decimals."""
         return f"decimal({self.precision},{self.scale})"
@@ -357,12 +439,28 @@ class DoubleType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
+    def _engine_type(self) -> str:
+        """The engine string ``"double"``."""
+        return "double"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Concrete-class ``typeName`` (dynamic under subclasses)."""
+        return type(self).typeName()
+
 
 class FloatType(DataType):
     """32-bit IEEE-754 float (Arrow ``Float32``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"float"``."""
+        return "float"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark short form ``float``."""
+        return "float"
 
 
 class ByteType(DataType):
@@ -371,12 +469,28 @@ class ByteType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
+    def _engine_type(self) -> str:
+        """The engine string ``"byte"`` / tinyint."""
+        return "byte"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark short form ``tinyint``."""
+        return "tinyint"
+
 
 class IntegerType(DataType):
     """32-bit signed integer (Arrow ``Int32``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"int"``."""
+        return "int"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark short form ``"int"`` (``typeName`` remains ``"integer"``)."""
+        return "int"
 
 
 class LongType(DataType):
@@ -389,12 +503,28 @@ class LongType(DataType):
     def __init__(self) -> None:
         """No-arg constructor."""
 
+    def _engine_type(self) -> str:
+        """The engine string ``"long"``."""
+        return "long"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark short form ``"bigint"`` (``typeName`` remains ``"long"``)."""
+        return "bigint"
+
 
 class ShortType(DataType):
     """16-bit signed integer (Arrow ``Int16``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """The engine string ``"short"``."""
+        return "short"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark short form ``smallint``."""
+        return "smallint"
 
 
 class CalendarIntervalType(DataType):
@@ -406,6 +536,14 @@ class CalendarIntervalType(DataType):
     @classmethod
     def typeName(cls) -> str:  # noqa: N802
         """Spark typeName is ``interval`` (not ``calendarinterval``)."""
+        return "interval"
+
+    def _engine_type(self) -> str:
+        """Engine tag."""
+        return "interval"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """Spark display ``interval``."""
         return "interval"
 
 
@@ -471,8 +609,16 @@ class DayTimeIntervalType(DataType):
             return f"interval {start_name}"
         return f"interval {start_name} to {end_name}"
 
+    def simpleString(self) -> str:  # noqa: N802
+        """Interval display form (``interval day to second``)."""
+        return self._str_repr()
+
     def jsonValue(self) -> str:  # noqa: N802
         """JSON value is the simpleString (Spark 4)."""
+        return self._str_repr()
+
+    def _engine_type(self) -> str:
+        """Engine tag (same display form)."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -534,8 +680,16 @@ class YearMonthIntervalType(DataType):
             return f"interval {start_name}"
         return f"interval {start_name} to {end_name}"
 
+    def simpleString(self) -> str:  # noqa: N802
+        """Interval display form (``interval year to month``)."""
+        return self._str_repr()
+
     def jsonValue(self) -> str:  # noqa: N802
         """JSON value is the simpleString (Spark 4)."""
+        return self._str_repr()
+
+    def _engine_type(self) -> str:
+        """Engine tag (same display form)."""
         return self._str_repr()
 
     def __repr__(self) -> str:
@@ -547,6 +701,14 @@ class VariantType(DataType):
 
     def __init__(self) -> None:
         """No-arg constructor."""
+
+    def _engine_type(self) -> str:
+        """Engine tag."""
+        return "variant"
+
+    def simpleString(self) -> str:  # noqa: N802
+        """``variant``."""
+        return "variant"
 
 
 # ==================================================================================================

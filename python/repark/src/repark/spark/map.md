@@ -245,6 +245,14 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_repark_type_to_arrow_python` on any FFI export failure (Arrow nesting-depth
   ceilings); the FFI-covered wide-decimal pre-walks are gone; native calls bind
   through the cached `_type_table._native_function`.
+  **Remediation round 3 (2026-09-14, ruling R14b-D-2):** the per-class literal
+  `simpleString`/`_engine_type` methods are restored on every atomic class
+  exactly as base had them (the five dynamic-answer classes and `DataType`
+  keep `type(self).typeName()` bodies) — the row-table dict path was ~0.24 µs
+  per leaf against base's ~0.05 µs method call, and `dtypes` breached the
+  surface bar. `_atomic_token` still answers for nested composition, foreign
+  subclasses and the SQL/DDL marker columns; the MRO mutation still turns the
+  marker pins red.
   pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.

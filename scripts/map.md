@@ -1,5 +1,10 @@
 # map — scripts/
 
+FACADE-4 step-1 remediation round 3 (2026-09-14, ruling R14b-D-2):
+`check_lib_py.py` `spark/types.py` 1610 → 1772 (increase — the per-class
+literal `simpleString`/`_engine_type` methods came back for the `dtypes`
+surface bar; still below main's 1834 ceiling).
+pins: facade-4/C-016
 FACADE-4 step-1 remediation round 2 (2026-09-14): `check_lib_py.py`
 `spark/types.py` 1639 → 1610 (the parse residue and conversion fallbacks
 moved to `spark/_type_table.py`).
