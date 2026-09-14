@@ -69,17 +69,21 @@ needed.
   (`containsNull=True` like Spark), an all-null input short-circuits to a null array of
   the result type without calling the kernel, and a `DataType::Null` input yields an
   all-null result. The `Signature::user_defined` signature routes argument coercion
-  through `coerce_types`, which applies Spark's `findTightestCommonType`: int8→int16→
-  int32→int64, integer/float32→float64, date↔timestamp→timestamp (array's unit kept —
-  existing elements are never recast to a non-widened type), NULL passes, nested types
-  require equality; every other pair refuses at planning with
-  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` naming both types. Registered after DF's
-  defaults so the same names serve both doors; the DF-only aliases (`list_append`,
-  `array_push_back`, `list_prepend`, …) keep DF's kernel — the shim claims no aliases.
-  Rust tests cover a sliced (non-zero offset) input's null graft, every widening pair,
-  every refusal family, NULL element/array, nested equal types and the all-null
+  through `coerce_types`, which VALIDATES the pair against Spark's recursive
+  `findTightestCommonType` but returns the argument types unchanged — no plan-level
+  CAST is ever inserted, so an `array<timestamp[us]>` stays un-cast (the S2-21 perf
+  guard) and temporal leaves convert at invoke time in the session zone. The
+  coercion/conversion machinery lives in [`array_append/coerce.rs`](array_append/coerce.rs)
+  (numeric ladder higher-of-two, list/map/struct recursion, µs temporal commons,
+  `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` refusals naming both Spark type
+  names). Registered after DF's defaults so the same names serve both doors; the
+  DF-only aliases (`list_append`, `array_push_back`, `list_prepend`, …) keep DF's
+  kernel — the shim claims no aliases. Rust tests cover a sliced (non-zero offset)
+  input's null graft, the numeric ladder, temporal and nested common types,
+  validate-only `coerce_types`, invoke-side conversion and the all-null
   short-circuit.
   pins: array-null-1/C-003, C-004, C-005, L-1, P3-1
+- `array_append/` — the coercion child module; see [its map](array_append/map.md).
 
 ## I want to...
 
