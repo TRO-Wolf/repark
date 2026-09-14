@@ -11,16 +11,32 @@ from repark import ReparkSession
 from repark.spark.types import (
     ArrayType,
     BinaryType,
+    BooleanType,
+    ByteType,
+    CalendarIntervalType,
+    CharType,
     DataType,
+    DateType,
     DayTimeIntervalType,
     DecimalType,
+    DoubleType,
+    FloatType,
     IntegerType,
+    LongType,
     MapType,
+    NullType,
+    ShortType,
     StringType,
     StructField,
     StructType,
+    TimestampNTZType,
+    TimestampType,
+    TimeType,
+    VarcharType,
+    VariantType,
     YearMonthIntervalType,
     _arrow_type_to_repark,
+    _datatype_to_descriptor,
     repark_type_to_arrow,
     struct_type_from_arrow,
 )
@@ -848,3 +864,48 @@ def test_census_row(
             session = request.getfixturevalue("census_session")
         measured = _run_check(check, session, tmp_path)
         assert measured == expected, f"{row_id} {surface}: {measured!r} != {expected!r}"
+
+
+_ATOMIC_INSTANCES: list[DataType] = [
+    NullType(),
+    StringType(),
+    StringType("fr"),
+    CharType(5),
+    VarcharType(7),
+    BinaryType(),
+    BooleanType(),
+    DateType(),
+    TimestampType(),
+    TimestampNTZType(),
+    TimeType(0),
+    TimeType(6),
+    DecimalType(10, 2),
+    DecimalType(38, 18),
+    DoubleType(),
+    FloatType(),
+    ByteType(),
+    IntegerType(),
+    LongType(),
+    ShortType(),
+    CalendarIntervalType(),
+    DayTimeIntervalType(),
+    DayTimeIntervalType(DayTimeIntervalType.HOUR, DayTimeIntervalType.MINUTE),
+    YearMonthIntervalType(),
+    YearMonthIntervalType(YearMonthIntervalType.YEAR, YearMonthIntervalType.MONTH),
+    VariantType(),
+]
+
+
+def test_atomic_tokens_agree_with_rust_table() -> None:
+    """Every atomic class's Python token equals the shared table's answer.
+
+    pins: facade-4/C-009
+    """
+    from repark import _native
+
+    for data_type in _ATOMIC_INSTANCES:
+        descriptor = _datatype_to_descriptor(data_type)
+        assert descriptor is not None
+        label = type(data_type).__name__
+        assert data_type.simpleString() == _native.simple_string_from_descriptor(descriptor), label
+        assert data_type._engine_type() == _native.engine_token_from_descriptor(descriptor), label

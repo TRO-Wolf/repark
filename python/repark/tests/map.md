@@ -1804,6 +1804,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   D1; `DecimalType(arrow_type.precision, arrow_type.scale)` → `DecimalType(10,
   2)` reds D6; `field.nullable` → `True` reds D15.
   pins: facade-4/C-009
+  Remediation (2026-09-14): `test_atomic_tokens_agree_with_rust_table` pins every
+  atomic class's Python `simpleString`/`_engine_type` answer to the shared Rust
+  table's (P1-DTYPES).
+  pins: facade-4/C-016
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

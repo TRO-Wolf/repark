@@ -23,6 +23,17 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `rung_to_sql_cast` read the shared Rust table (`csv_rung_descriptor`,
   `csv_sql_cast_token`); the rung answers are unchanged (D3–D5 stay pinned).
   pins: facade-4/C-013
+- `_type_table.py` — Python-side descriptor bridge for the shared Rust type table:
+  the class→row answer table (descriptor head, `simpleString`, `_engine_type`),
+  descriptor encode/decode, tree walks, and the container-token fallbacks for
+  foreign `DataType` subtypes. Class references resolve lazily so `types.py` keeps
+  a one-directional import.
+  **FACADE-4 step-1 remediation (2026-09-14, P1-DTYPES):** atomic token answers are
+  Python-side constants/parameter derivations byte-identical to the Rust table
+  (pinned in `test_facade_4_census_pins.py`); nested trees compose over them in
+  Python because a per-column descriptor FFI (~15 µs for nested3's `mid`) cannot
+  meet the +5 % `dtypes` bar.
+  pins: facade-4/C-010, C-012, C-016
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -199,14 +210,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.
-  **FACADE-4 step 1 (2026-09-14):** the conversion surfaces (`simpleString`,
-  `_engine_type`, `fromDDL`/`_parse_datatype_string`, `StructType.toDDL`,
-  `_arrow_type_to_repark`, `struct_type_from_arrow`, `repark_type_to_arrow`) thin to
-  descriptor build + one `_native` call over `repark_spark::type_table`; the public
-  classes and `isinstance` identity are unchanged. Python residue: descriptor trees
-  containing a foreign `DataType` subtype, decimals outside the Arrow FFI scale
-  envelope, collation refusal policy, and the `json`/`fromJson` surface.
-  pins: facade-4/C-011, C-012, C-014, C-015
+  **FACADE-4 step 1 (2026-09-14):** the conversion surfaces
+  (`fromDDL`/`_parse_datatype_string`, `StructType.toDDL`, `_arrow_type_to_repark`,
+  `struct_type_from_arrow`, `repark_type_to_arrow`) thin to descriptor build + one
+  `_native` call over `repark_spark::type_table`; the public classes and
+  `isinstance` identity are unchanged. `simpleString`/`_engine_type` answer from
+  the `_type_table.py` row table (P1-DTYPES: per-column descriptor FFI regressed
+  `dtypes` +106 % on wide50). Python residue: descriptor trees containing a
+  foreign `DataType` subtype, decimals outside the Arrow FFI scale envelope,
+  collation refusal policy, and the `json`/`fromJson` surface.
+  pins: facade-4/C-011, C-012, C-014, C-015, C-016
 - `udtf.py` — user-defined table-function validation, registration, scalar literal
   calls, and Arrow expansion.
 - `window.py` — Window and WindowSpec construction, frame bounds, ordering, and

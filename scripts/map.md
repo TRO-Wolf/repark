@@ -1,5 +1,10 @@
 # map — scripts/
 
+FACADE-4 step-1 remediation (2026-09-14): `check_lib_py.py` `spark/types.py`
+1833 → 1639 (the descriptor bridge — encode/decode, tree walks, token
+fallbacks, and the atomic answer table — moved to `spark/_type_table.py` for
+P1-DTYPES).
+pins: facade-4/C-016
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier

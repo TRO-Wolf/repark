@@ -16,9 +16,20 @@ import calendar
 import datetime
 import json
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
+
+from repark.spark._type_table import (
+    _atomic_token,
+    _datatype_to_ddl_token,
+    _datatype_to_descriptor,
+    _descriptor_has_wide_decimal,
+    _descriptor_to_datatype,
+    _descriptor_tree_has_none,
+    _engine_token_python,
+    _simple_string_python,
+)
 
 # ==================================================================================================
 # DataType base
@@ -33,7 +44,10 @@ class DataType:
 
     def _engine_type(self) -> str:
         """Return the canonical engine type string (e.g. ``"string"``, ``"decimal(10,4)"``)."""
-        return _descriptor_token(self, "engine_token_from_descriptor", _engine_token_python)
+        answer = _atomic_token(self, 1)
+        if answer is not None:
+            return answer
+        return _engine_token_python(self)
 
     @classmethod
     def typeName(cls) -> str:  # noqa: N802 — PySpark camelCase
@@ -53,7 +67,10 @@ class DataType:
         Default is :meth:`typeName`; atomic types that Spark shortens (``int`` not ``integer``)
         override this.
         """
-        return _descriptor_token(self, "simple_string_from_descriptor", _simple_string_python)
+        answer = _atomic_token(self, 0)
+        if answer is not None:
+            return answer
+        return _simple_string_python(self)
 
     def jsonValue(self) -> str | dict[str, Any]:  # noqa: N802 — PySpark camelCase
         """PySpark ``DataType.jsonValue()`` — JSON-serializable type descriptor.
@@ -953,150 +970,6 @@ def _parse_datatype_string(text: str) -> DataType:
     return _descriptor_to_datatype(_native.spark_descriptor_from_ddl(text))
 
 
-_ATOMIC_DESCRIPTOR_TYPES: dict[str, type[DataType]] = {
-    "null": NullType,
-    "binary": BinaryType,
-    "boolean": BooleanType,
-    "date": DateType,
-    "timestamp": TimestampType,
-    "timestamp_ntz": TimestampNTZType,
-    "double": DoubleType,
-    "float": FloatType,
-    "byte": ByteType,
-    "integer": IntegerType,
-    "long": LongType,
-    "short": ShortType,
-    "calendar_interval": CalendarIntervalType,
-    "variant": VariantType,
-}
-_ATOMIC_DESCRIPTOR_KINDS = {cls: kind for kind, cls in _ATOMIC_DESCRIPTOR_TYPES.items()}
-
-
-def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
-    """Build the Rust type-table descriptor for a :class:`DataType`; ``None`` when unknown."""
-    atomic_kind = _ATOMIC_DESCRIPTOR_KINDS.get(type(data_type))
-    if atomic_kind is not None:
-        return {"kind": atomic_kind}
-    if isinstance(data_type, StringType):
-        return {"kind": "string", "collation": data_type.collation}
-    if isinstance(data_type, CharType):
-        return {"kind": "char", "length": data_type.length}
-    if isinstance(data_type, VarcharType):
-        return {"kind": "varchar", "length": data_type.length}
-    if isinstance(data_type, TimeType):
-        return {"kind": "time", "precision": data_type.precision}
-    if isinstance(data_type, DecimalType):
-        return {"kind": "decimal", "precision": data_type.precision, "scale": data_type.scale}
-    if isinstance(data_type, (DayTimeIntervalType, YearMonthIntervalType)):
-        interval_fields = type(data_type)._fields
-        if isinstance(data_type, DayTimeIntervalType):
-            interval_kind = "day_time_interval"
-        else:
-            interval_kind = "year_month_interval"
-        return {
-            "kind": interval_kind,
-            "start": interval_fields[data_type.startField],
-            "end": interval_fields[data_type.endField],
-        }
-    if isinstance(data_type, ArrayType):
-        return {
-            "kind": "array",
-            "element": _datatype_to_descriptor(data_type.elementType),
-            "contains_null": data_type.containsNull,
-        }
-    if isinstance(data_type, MapType):
-        return {
-            "kind": "map",
-            "key": _datatype_to_descriptor(data_type.keyType),
-            "value": _datatype_to_descriptor(data_type.valueType),
-            "value_contains_null": data_type.valueContainsNull,
-        }
-    if isinstance(data_type, StructField):
-        return {
-            "kind": "field",
-            "name": data_type.name,
-            "type": _datatype_to_descriptor(data_type.dataType),
-            "nullable": data_type.nullable,
-            "metadata": None,
-        }
-    if isinstance(data_type, StructType):
-        return {
-            "kind": "struct",
-            "fields": [_datatype_to_descriptor(field) for field in data_type.fields],
-        }
-    return None
-
-
-def _descriptor_to_datatype(descriptor: dict[str, Any]) -> DataType:
-    """Construct the public Spark type for a Rust type-table descriptor."""
-    kind = descriptor["kind"]
-    atomic_class = _ATOMIC_DESCRIPTOR_TYPES.get(kind)
-    if atomic_class is not None:
-        return atomic_class()
-    if kind == "string":
-        return StringType(descriptor["collation"])
-    if kind == "char":
-        return CharType(descriptor["length"])
-    if kind == "varchar":
-        return VarcharType(descriptor["length"])
-    if kind == "time":
-        return TimeType(descriptor["precision"])
-    if kind == "decimal":
-        return DecimalType(descriptor["precision"], descriptor["scale"])
-    if kind in ("day_time_interval", "year_month_interval"):
-        if kind == "day_time_interval":
-            interval_class = DayTimeIntervalType
-        else:
-            interval_class = YearMonthIntervalType
-        inverted_fields = interval_class._inverted_fields
-        return interval_class(
-            inverted_fields[descriptor["start"]],
-            inverted_fields[descriptor["end"]],
-        )
-    if kind == "array":
-        return ArrayType(
-            _descriptor_to_datatype(descriptor["element"]),
-            descriptor["contains_null"],
-        )
-    if kind == "map":
-        return MapType(
-            _descriptor_to_datatype(descriptor["key"]),
-            _descriptor_to_datatype(descriptor["value"]),
-            descriptor["value_contains_null"],
-        )
-    if kind == "struct":
-        return StructType([_descriptor_to_datatype(field) for field in descriptor["fields"]])
-    if kind == "field":
-        metadata_text = descriptor.get("metadata")
-        return StructField(
-            descriptor["name"],
-            _descriptor_to_datatype(descriptor["type"]),
-            descriptor["nullable"],
-            json.loads(metadata_text) if metadata_text else {},
-        )
-    raise TypeError(f"unsupported type-table descriptor kind {kind!r}")
-
-
-def _descriptor_tree_has_none(descriptor: dict[str, Any] | None) -> bool:
-    """True when a descriptor tree contains an unknown (``None``) subtype slot."""
-    if descriptor is None:
-        return True
-    for key in ("element", "key", "value", "type"):
-        if key in descriptor and _descriptor_tree_has_none(descriptor[key]):
-            return True
-    return any(_descriptor_tree_has_none(field) for field in descriptor.get("fields", ()))
-
-
-def _descriptor_has_wide_decimal(descriptor: dict[str, Any]) -> bool:
-    """True when a decimal node falls outside the Arrow FFI storage envelope."""
-    if descriptor.get("kind") == "decimal":
-        return not (1 <= descriptor["precision"] <= 38) or not (-128 <= descriptor["scale"] <= 127)
-    for key in ("element", "key", "value", "type"):
-        if key in descriptor and _descriptor_has_wide_decimal(descriptor[key]):
-            return True
-    return any(_descriptor_has_wide_decimal(field) for field in descriptor.get("fields", ()))
-
-
 def _arrow_tree_has_wide_decimal(arrow_type: Any) -> bool:
     """True when a ``pyarrow`` type tree holds a decimal the FFI envelope cannot carry."""
     import pyarrow as pa
@@ -1115,58 +988,6 @@ def _arrow_tree_has_wide_decimal(arrow_type: Any) -> bool:
     if pa.types.is_struct(arrow_type):
         return any(_arrow_tree_has_wide_decimal(field.type) for field in arrow_type)
     return False
-
-
-def _descriptor_token(data_type: Any, native_name: str, fallback: Callable[[Any], str]) -> str:
-    """Token answer from the shared type table (Python fallback on unknown)."""
-    descriptor = _datatype_to_descriptor(data_type)
-    if descriptor is None or _descriptor_tree_has_none(descriptor):
-        return fallback(data_type)
-    from repark import _native
-
-    return getattr(_native, native_name)(descriptor)
-
-
-def _nested_token_python(
-    data_type: Any,
-    child: Callable[[Any], str],
-    leaf: Callable[[Any], str],
-    *,
-    upper: bool = False,
-) -> str:
-    """Container-token walker for descriptor trees the table cannot see."""
-    if upper:
-        array_name, map_name, struct_name = "ARRAY", "MAP", "STRUCT"
-    else:
-        array_name, map_name, struct_name = "array", "map", "struct"
-    if isinstance(data_type, ArrayType):
-        return f"{array_name}<{child(data_type.elementType)}>"
-    if isinstance(data_type, MapType):
-        return f"{map_name}<{child(data_type.keyType)},{child(data_type.valueType)}>"
-    if isinstance(data_type, StructType):
-        inner = ",".join(f"{field.name}:{child(field.dataType)}" for field in data_type.fields)
-        return f"{struct_name}<{inner}>"
-    if not upper and isinstance(data_type, StructField):
-        return f"{data_type.name}:{child(data_type.dataType)}"
-    return leaf(data_type)
-
-
-def _simple_string_python(data_type: Any) -> str:
-    """``simpleString`` for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        lambda item: item.simpleString(),
-        lambda item: type(item).typeName(),
-    )
-
-
-def _engine_token_python(data_type: Any) -> str:
-    """``_engine_type`` for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        lambda item: item._engine_type(),
-        lambda item: item.simpleString(),
-    )
 
 
 _COLLATIONS_METADATA_KEY = "__COLLATIONS"
@@ -1309,21 +1130,6 @@ def _append_datatype_tree(
                 prefix=prefix + "    |",
                 remaining_depth=remaining_depth - 1,
             )
-
-
-def _datatype_to_ddl_token(data_type: DataType) -> str:
-    """Uppercase DDL type token for :meth:`StructType.toDDL`."""
-    return _descriptor_token(data_type, "ddl_token_from_descriptor", _ddl_token_python)
-
-
-def _ddl_token_python(data_type: DataType) -> str:
-    """DDL token for descriptors the table cannot see (unknown subtype inside)."""
-    return _nested_token_python(
-        data_type,
-        _datatype_to_ddl_token,
-        lambda item: item.simpleString().upper(),
-        upper=True,
-    )
 
 
 # ==================================================================================================
