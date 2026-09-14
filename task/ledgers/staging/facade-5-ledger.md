@@ -47,7 +47,7 @@ recorded beside the cell.
 | C-005 | Mutation proof: a one-line mutation turns the new goldens red; restore leaves them green. | Scratch edit, red output, `git checkout` restore, all recorded here. | **PROVEN** | 12 one-line mutations M1–M12 below; every case id red ≥ once; `git status` clean on `python/repark/src/` after restore. |
 | C-006 | The §8 named pins stay green and unedited: `test_dfcore_4b_eager_goldens.py`, `test_dfcore_4b_show_goldens.py`, `test_df_eager_1.py`, `test_dfcore_6_eager_preview.py`, `test_display_styles.py`, `test_display_polars_default.py`. | Those files, same commit, no edits; run counts. | **PROVEN** | `pytest` on the six files: 99 passed; `git diff` on all six: empty. |
 | C-007 | Step-1 target named from C-002's numbers: (A) a measured format wall and the Rust move that removes it byte-identically, or (B) "no format wall: ship the smallest byte-identical consolidation", naming which formatters move and what stays because it touches `eager.py`. | Step-1 target section. | **PROVEN** | Option (A) — measured format wall; see "Step-1 target" in the baseline doc and below. |
-| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **OPEN** | §8 99 passed; new goldens 2 passed; file-size 11 passed; comment scan empty on every commit; `make verify` running. |
+| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **PROVEN** | §8 99 passed; new goldens 2 passed; file-size 11 passed; `make verify` exit 0 (ruff check + format clean, ledger-grammar clean); comment scan empty on every commit. |
 
 ## Census — renderer × truncation rule (C-003)
 
@@ -216,6 +216,9 @@ anything touching `eager.py` — stays in Python. Full move list in
 - `db24a7ab` — census (taxonomy, bound table, 30 unbound rows, scan counts).
 - `ce8df001` — fetch/format baseline doc + runner + `docs/perf` maps.
 - `83a688c9` — 30 unbound-pair goldens + test + tests map.
+- `2764511c` — step-1 target: option A, format leg to Rust byte-identical.
+- `a877dfab` — gate close-out: full `pins:` citations in the tests map; ruff
+  lint/format fixes.
 - Baseline runner output `/tmp/facade-5-display-baseline.json` (not
   committed): 96 cells, all `door_check` equal, loads 4.96–5.52, run loads
   8.42→5.18.
@@ -224,4 +227,54 @@ anything touching `eager.py` — stays in Python. Full move list in
   `git status --short python/repark/src/` empty after each restore.
 - Gates: §8 pins `pytest` 99 passed, all six files unedited; new goldens 2
   passed; `test_production_file_size.py` 11 passed; staged comment scan
-  empty on every commit; `make verify` running.
+  empty on every commit; `make verify` exit 0 — ruff `check .` all checks
+  passed, `format --check .` 902 files already formatted, ledger-grammar
+  128 live ledgers clean, full rust workspace tests green. First verify
+  attempt red on `check-ledger-grammar` (five PROVEN clauses uncited —
+  citations must live under `crates/`/`python/`/`scripts/`) and then
+  `py-lint` (two E501, B905, B023); both remediated in `a877dfab`.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: facade-5
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every charter clause walked — census enumerates all 6 renderers × 6 truncation rules, each unbound pair maps to exactly one golden case id, and the step-1 target names the formatters the C-002 numbers select.
+      artifacts: [task/ledgers/staging/facade-5-ledger.md, python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary inputs exercised in the golden corpus — zero-column frames, inf/nan doubles through the SQL door, nested struct/array/map scalars, truncate=2/5 edges, truncate=False, 50-column wide frames, styled max_rows caps.
+      artifacts: [python/repark/tests/facade_5_display_goldens.json, python/repark/tests/test_facade_5_display_goldens.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Record mode refused when CI or GITHUB_ACTIONS is set (pinned by test); every mutation run was followed by a git-clean verify on python/repark/src; the runner cross-checks leg-composed bytes against the real door on all 96 cells.
+      artifacts: [python/repark/tests/test_facade_5_display_goldens.py, docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Timing cells gated on idle builders and load<6; stale-.pyc contamination in early mutation lists was detected, the runs repeated under -B, and the changed lists re-verified; the runner is one process with no shared state.
+      artifacts: [docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py, task/ledgers/staging/facade-5-ledger.md]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, deserialization, or path handling — goldens are committed JSON strings read by pytest.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Goldens recorded from the release base tree and byte-asserted; 96/96 door_check byte-equal; product files under python/repark/src and crates untouched (git status clean throughout, mutation restores verified).
+      artifacts: [python/repark/tests/facade_5_display_goldens.json, docs/perf/facade-5-display-baseline-2026-09-14.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The baseline is itself the resource measurement — systemd-run MemoryMax=8G MemorySwapMax=0, warmup + 5-rep medians, per-cell idle gating; a 17–107 ms format wall at n=1000 measured and reported, no system-breaking defect.
+      artifacts: [docs/perf/facade-5-display-baseline-2026-09-14.md, docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Release-native provenance asserted per run (native_is_release refuses a debug module); types4 product files diff-verified equal to main before goldens were recorded; the §8 named pins re-run green and unedited; no public interface changed.
+      artifacts: [docs/perf/facade-5-display-baseline-2026-09-14/run_facade_5_display.py, task/ledgers/staging/facade-5-ledger.md]
+    - id: AT-9
+      status: N/A
+      justification: No failure path or diagnosis surface added — the runner reports to stdout/JSON and exits nonzero on a door mismatch.
+    - id: AT-10
+      status: ATTACKED
+      evidence: All 30 goldens proven red by twelve one-line mutations (M1–M12) with per-case changed lists; restore leaves the suite green; the §8 pin corpus (99 tests) re-run green; record-mode CI refusal tested.
+      artifacts: [python/repark/tests/test_facade_5_display_goldens.py, python/repark/tests/facade_5_display_goldens.json, task/ledgers/staging/facade-5-ledger.md]
+  complete: true
+```
