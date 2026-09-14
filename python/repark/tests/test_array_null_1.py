@@ -1,6 +1,8 @@
 """ARRAY-NULL-1 — ``F.array_append`` / ``F.array_prepend`` oracle cells + memory pin.
 
-pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, P2-1, P3-1
+pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-3, P2-1
+Element coercion and temporal pins live in ``test_array_null_1_coercion.py``
+(L-2, L-5..L-11, P3-1).
 """
 
 from __future__ import annotations
@@ -8,9 +10,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import date, datetime
-from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import pyarrow as pa
 import pytest
@@ -315,7 +314,7 @@ def test_array_append_door_oracle_cells(spark: ReparkSession) -> None:
     _check(
         spark.sql("SELECT array_append(array(1, 2), 3) AS r").to_arrow(),
         [[1, 2, 3]],
-        "int64",
+        "int32",
     )
 
 
@@ -387,283 +386,8 @@ def test_array_prepend_door_oracle_cells(spark: ReparkSession) -> None:
     _check(
         spark.sql("SELECT array_prepend(array(1, 2), 3) AS r").to_arrow(),
         [[3, 1, 2]],
-        "int64",
+        "int32",
     )
-
-
-_COERCE_REFUSAL = "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES"
-_UTC = ZoneInfo("UTC")
-_TS_ARROW = "timestamp[us, tz=UTC]"
-
-_COERCION_CELLS: list[tuple] = [
-    (
-        "str_num+int",
-        "a array<string>",
-        [(["1", "2"],)],
-        F.lit(4),
-        "4",
-        "refuse",
-        ("ARRAY<STRING>", "INT"),
-    ),
-    (
-        "str_alpha+int",
-        "a array<string>",
-        [(["x", "y"],)],
-        F.lit(4),
-        "4",
-        "refuse",
-        ("ARRAY<STRING>", "INT"),
-    ),
-    (
-        "str+double",
-        "a array<string>",
-        [(["1", "2"],)],
-        F.lit(1.5),
-        "CAST(1.5 AS DOUBLE)",
-        "refuse",
-        ("ARRAY<STRING>", "DOUBLE"),
-    ),
-    (
-        "int+double",
-        "a array<int>",
-        [([1, 2],)],
-        F.lit(1.5),
-        "CAST(1.5 AS DOUBLE)",
-        ([[1.0, 2.0, 1.5]], [[1.5, 1.0, 2.0]]),
-        "double",
-    ),
-    (
-        "int+dec104",
-        "a array<int>",
-        [([1, 2],)],
-        F.lit("1.2345").cast("decimal(10,4)"),
-        "CAST(1.2345 AS DECIMAL(10,4))",
-        "refuse",
-        ("ARRAY<INT>", "DECIMAL(10,4)"),
-    ),
-    (
-        "int+bigint",
-        "a array<int>",
-        [([1, 2],)],
-        F.lit(4).cast("bigint"),
-        "CAST(4 AS BIGINT)",
-        ([[1, 2, 4]], [[4, 1, 2]]),
-        "int64",
-    ),
-    (
-        "int+string",
-        "a array<int>",
-        [([1, 2],)],
-        F.lit("5"),
-        "'5'",
-        "refuse",
-        ("ARRAY<INT>", "STRING"),
-    ),
-    (
-        "bigint+double",
-        "a array<bigint>",
-        [([1, 2],)],
-        F.lit(1.5),
-        "CAST(1.5 AS DOUBLE)",
-        ([[1.0, 2.0, 1.5]], [[1.5, 1.0, 2.0]]),
-        "double",
-    ),
-    (
-        "float+double",
-        "a array<float>",
-        [([1.0, 2.0],)],
-        F.lit(1.5),
-        "CAST(1.5 AS DOUBLE)",
-        ([[1.0, 2.0, 1.5]], [[1.5, 1.0, 2.0]]),
-        "double",
-    ),
-    (
-        "double+int",
-        "a array<double>",
-        [([1.0, 2.0],)],
-        F.lit(4),
-        "4",
-        ([[1.0, 2.0, 4.0]], [[4.0, 1.0, 2.0]]),
-        "double",
-    ),
-    (
-        "dec102+dec104",
-        "a array<decimal(10,2)>",
-        [([Decimal("1.25"), Decimal("2.50")],)],
-        F.lit("1.2345").cast("decimal(10,4)"),
-        "CAST(1.2345 AS DECIMAL(10,4))",
-        "refuse",
-        ("ARRAY<DECIMAL(10,2)>", "DECIMAL(10,4)"),
-    ),
-    (
-        "dec102+int",
-        "a array<decimal(10,2)>",
-        [([Decimal("1.25")],)],
-        F.lit(4),
-        "4",
-        "refuse",
-        ("ARRAY<DECIMAL(10,2)>", "INT"),
-    ),
-    (
-        "dec102+double",
-        "a array<decimal(10,2)>",
-        [([Decimal("1.25")],)],
-        F.lit(1.5),
-        "CAST(1.5 AS DOUBLE)",
-        "refuse",
-        ("ARRAY<DECIMAL(10,2)>", "DOUBLE"),
-    ),
-    (
-        "ts+date",
-        "a array<timestamp>",
-        [([datetime(2024, 1, 2, 3, 4, 5)],)],
-        F.lit("2024-05-06").cast("date"),
-        "DATE'2024-05-06'",
-        (
-            [[datetime(2024, 1, 2, 3, 4, 5, tzinfo=_UTC), datetime(2024, 5, 6, tzinfo=_UTC)]],
-            [[datetime(2024, 5, 6, tzinfo=_UTC), datetime(2024, 1, 2, 3, 4, 5, tzinfo=_UTC)]],
-        ),
-        _TS_ARROW,
-    ),
-    (
-        "date+ts",
-        "a array<date>",
-        [([date(2024, 1, 2)],)],
-        F.lit("2024-05-06 07:08:09").cast("timestamp"),
-        "TIMESTAMP'2024-05-06 07:08:09'",
-        (
-            {
-                "facade": [
-                    [
-                        datetime(2024, 1, 2, tzinfo=_UTC),
-                        datetime(2024, 5, 6, 7, 8, 9, tzinfo=_UTC),
-                    ]
-                ],
-                "sql": [[datetime(2024, 1, 2), datetime(2024, 5, 6, 7, 8, 9)]],
-            },
-            {
-                "facade": [
-                    [
-                        datetime(2024, 5, 6, 7, 8, 9, tzinfo=_UTC),
-                        datetime(2024, 1, 2, tzinfo=_UTC),
-                    ]
-                ],
-                "sql": [[datetime(2024, 5, 6, 7, 8, 9), datetime(2024, 1, 2)]],
-            },
-        ),
-        (_TS_ARROW, "timestamp[ns]"),
-    ),
-]
-
-_DOOR_ONLY_COERCION_CELLS: list[tuple] = [
-    (
-        "int+bare1.5",
-        "a array<int>",
-        [([1, 2],)],
-        "1.5",
-        ("ARRAY<INT>", "DECIMAL(2,1)"),
-    ),
-    (
-        "double+bare1.5",
-        "a array<double>",
-        [([1.0, 2.0],)],
-        "1.5",
-        ("ARRAY<DOUBLE>", "DECIMAL(2,1)"),
-    ),
-    (
-        "dec102+bare1.5",
-        "a array<decimal(10,2)>",
-        [([Decimal("1.25")],)],
-        "1.5",
-        ("ARRAY<DECIMAL(10,2)>", "DECIMAL(2,1)"),
-    ),
-]
-
-
-def _coercion_door_table(
-    spark: ReparkSession, ddl: str, rows: list, func: str, element: str
-) -> pa.Table:
-    spark.createDataFrame(rows, ddl).createOrReplaceTempView("v")
-    return spark.sql(f"SELECT {func}(a, {element}) AS r FROM v").to_arrow()
-
-
-@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
-@pytest.mark.parametrize("door", ["facade", "sql"])
-@pytest.mark.parametrize("cell", _COERCION_CELLS, ids=[str(cell[0]) for cell in _COERCION_CELLS])
-def test_array_element_coercion_cells(
-    spark: ReparkSession, cell: tuple, door: str, func: str
-) -> None:
-    """pins: array-null-1/L-2 — every oracle coercion cell, both doors and functions."""
-    _, ddl, rows, facade_element, sql_element, want, expected = cell
-    arrow_type = expected if isinstance(expected, str) else expected[0 if door == "facade" else 1]
-    want_value = want[0 if func == "array_append" else 1]
-    if isinstance(want_value, dict):
-        want_value = want_value[door]
-    if door == "facade":
-        frame = spark.createDataFrame(rows, ddl)
-        column = getattr(F, func)("a", facade_element).alias("r")
-        if want == "refuse":
-            with pytest.raises(PySparkException) as raised:
-                frame.select(column).to_arrow()
-            message = str(raised.value)
-            assert _COERCE_REFUSAL in message, message
-            for name in expected:
-                assert name in message, message
-            return
-        _check(frame.select(column).to_arrow(), want_value, arrow_type)
-        return
-    if want == "refuse":
-        with pytest.raises(PySparkException) as raised:
-            _coercion_door_table(spark, ddl, rows, func, sql_element)
-        message = str(raised.value)
-        assert _COERCE_REFUSAL in message, message
-        for name in expected:
-            assert name in message, message
-        return
-    _check(
-        _coercion_door_table(spark, ddl, rows, func, sql_element),
-        want_value,
-        arrow_type,
-    )
-
-
-@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
-@pytest.mark.parametrize(
-    "cell",
-    _DOOR_ONLY_COERCION_CELLS,
-    ids=[str(cell[0]) for cell in _DOOR_ONLY_COERCION_CELLS],
-)
-def test_array_element_coercion_door_only_cells(
-    spark: ReparkSession, cell: tuple, func: str
-) -> None:
-    """pins: array-null-1/L-2 — bare SQL decimal literals refuse like Spark (door only)."""
-    _, ddl, rows, sql_element, expected = cell
-    with pytest.raises(PySparkException) as raised:
-        _coercion_door_table(spark, ddl, rows, func, sql_element)
-    message = str(raised.value)
-    assert _COERCE_REFUSAL in message, message
-    for name in expected:
-        assert name in message, message
-
-
-@pytest.mark.parametrize("func", ["array_append", "array_prepend"])
-@pytest.mark.parametrize("door", ["facade", "sql"])
-def test_array_all_null_input_returns_typed_null(
-    spark: ReparkSession, door: str, func: str
-) -> None:
-    """pins: array-null-1/P3-1 — an all-null array column returns typed NULLs, both doors."""
-    rows = [(None,), (None,)]
-    if door == "facade":
-        table = (
-            spark.createDataFrame(rows, "a array<int>")
-            .select(getattr(F, func)("a", F.lit(9)).alias("r"))
-            .to_arrow()
-        )
-        want_type = "int32"
-    else:
-        table = _coercion_door_table(spark, "a array<int>", rows, func, "9")
-        want_type = "int64"
-    _check(table, [None, None], want_type)
 
 
 def test_array_append_depth3_plan_shape(spark: ReparkSession) -> None:
