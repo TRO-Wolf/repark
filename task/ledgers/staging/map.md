@@ -25,7 +25,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   order, and the depth-40 memory pin runs by default on both functions.
   Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
   `risk_tier: standard`. Branch `fix/array-null-1`.
-  pins: array-null-1/C-001, C-002, C-003, C-004, C-005
+  pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
+  L-7, L-8, L-9, L-10, L-11, P2-1, P3-1
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
