@@ -44,7 +44,7 @@ Measured 2026-09-04 (SQL-HARDEN-2, PR #351): the production tables' **v2 copy-on
 1. Row-set equality, silver facts: RePark MERGE vs Spark MERGE from the same bronze day (`ds`), all six entities; compare `EXCEPT ALL` both ways = 0 rows.
 2. Idempotence: the same `ds` twice → second MERGE adds 0 rows, snapshot summary `added-records = 0`.
 3. Schema: `DESCRIBE` equal (names, types, nullability) — this is where `CUTOVER-DEDUP-SCHEMA-1` and `CUTOVER-CTAS-REQ-1` bite; decide whether they are release blockers or accepted metadata differences.
-4. Reader compatibility: Spark 4.1.2 and Athena read the RePark-written snapshot (v2 CoW) with equal counts.
+4. Reader compatibility: Spark 4.1.2 and Trino read the RePark-written snapshot (v2 CoW) with equal counts (owner, 2026-09-14: Spark and Trino are the production readers; Athena is not).
 5. Gold: dbt on Spark/Glue reads the RePark-written silver tables and the two gold tables match the previous day's Spark-written run within the day's deltas.
 6. Maintenance: the weekly CALLs run on RePark against the RePark-written tables; snapshot count and file count after equal Spark's.
 
@@ -74,3 +74,18 @@ Every RePark write is one Iceberg snapshot. Rollback = `CALL rollback_to_snapsho
 | 4 | Who runs the daily shadow diff | **Recommended:** an Airflow task beside the Spark silver task, asset-triggered on the silver facts asset, failing the run on any row-set divergence. | Pipeline-side unit `SHADOW-1` (Muse Spark 1.3), launched 2026-09-04: the silver job on RePark into the shadow namespace, the diff script (counts, `EXCEPT ALL` both ways, schema with nullability reported separately until `CUTOVER-SCHEMA-1` lands, snapshot summaries), and the DAG with a retention task. |
 
 Canary step C2 starts when `SHADOW-1` is in the pipeline and `CUTOVER-SCHEMA-1` is on `main`; C3 is the seven shadow days; C6 waits on `DBT-1`.
+
+## 8. Rulings of 2026-09-14 — the Iceberg production assessment
+
+Recorded from [production-iceberg-status-2026-09-14.md](production-iceberg-status-2026-09-14.md) §10.
+
+| # | Question | Ruling | Follow-through |
+|---|---|---|---|
+| 5 | Gold rebuild on Glue: the fork's Glue catalog has no replace-publish path, so a second `dbt run` fails | **Block C6 on the fork fix and a repin.** No interim route. | `F-GLUE-REPLACE-1` + `RP-20`; `ICE-GOLD-TWICE-1` runs the Glue gold leg twice and puts it in `aws-acceptance.yml`. |
+| 6 | Who creates the shadow tables | **Spark**, from the production DDL and properties, so RePark meets Spark-created metadata before C4. Writing into Spark-created tables is a standing requirement beyond this cutover. | `SHADOW-1` (pipeline side) creates the shadow tables with Spark; `ICE-SPARK-TABLE-1` pins the shape here. |
+| 7 | Candidate revision and live acceptance | `main` after the Glue replace fix lands; aws-acceptance dispatch approved, the dbt Glue module joins the workflow. | Run ids recorded in this file when they land. |
+| 8 | Readers, optimizers, retries | Spark and Trino read silver and gold; Glue optimizers off; Airflow may retry MERGE and CTAS IF NOT EXISTS only, never an append, and alerts on `CommitStateUnknown`. | Check 4 re-scoped above; `ICE-COMMIT-UNKNOWN-1` gives the ambiguous commit its own exception class. |
+
+The nightly `aws-acceptance` schedule has passed on `main` every night from 2026-09-07 to
+2026-09-14 (run 34824917757 on `2bebc9da`); it covers the silver shapes, not the gold dbt leg.
+
