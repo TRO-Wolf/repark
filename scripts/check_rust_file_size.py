@@ -42,7 +42,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split structural cases from list and refusal cases with an identity check.",
     ),
     "crates/repark-core/src/session/tests/session.rs": (
-        1412,
+        1407,
         "Session behavior scenarios remain in one file-backed test module.",
         "Split by configuration, planning, and execution scenario families.",
     ),

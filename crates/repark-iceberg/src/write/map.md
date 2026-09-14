@@ -155,6 +155,20 @@ repark-core's error map.
   pins: rp-5-fork-repin/C-004
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
   pins: rp-5-fork-repin/C-004
+- `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** `CommitStateUnknownError`, the
+  `std::error::Error` wrapper a RePark commit site stamps with the `engine.operation-id` it
+  minted; `operation_id_and_summary` mints the id and the snapshot summary together;
+  `commit_err` / `commit_result` wrap only `ErrorKind::CommitStateUnknown` — every other kind
+  passes through the plain `DataFusionError::External` fold unchanged. repark-core's
+  `error_map` downcasts the wrapper BEFORE the bare `iceberg::Error`, which is how the id
+  reaches `Error::CommitStateUnknown`'s `operation_id` field. The mint-site set is the six
+  call sites: `commit_append` (CTAS + `append()`), `commit_overwrite` /
+  `commit_row_delta_kind` (MERGE + predicate DML), `commit_overwrite_replace_all_to`
+  (`INSERT OVERWRITE` + `TRUNCATE`), and the two `partition_overwrite.rs` commits; the
+  registry row `ICE-COMMIT-UNKNOWN-1` in `docs/spark-sql-iceberg-parity.md` §2.3 and the
+  `docs/cutover/inventory.md` §8 ruling-8 cell carry the same shape table and the Airflow
+  alert/retry guidance.
+  pins: ice-commit-unknown-1/C-003, C-005, C-006
 - `overwrite_commit.rs` — full-table overwrite commit, optional `to_branch`.
   pins: rp-5-fork-repin/C-004
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:

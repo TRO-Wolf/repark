@@ -433,6 +433,37 @@ perfectly good read.
   would be UNSOUND for the shapes whose residual under-covers the scan (audit M15); the honest
   contract is over-rejection plus the documented `snapshot` opt-down.
 
+#### ICE-COMMIT-UNKNOWN-1 — an ambiguous commit raises `CommitStateUnknownException`
+
+- **repark** — when the catalog cannot confirm or deny a commit's outcome
+  (`iceberg::ErrorKind::CommitStateUnknown`, non-retryable; the fork's reload-reconciliation
+  could not prove the snapshot landed), the caller sees
+  `repark.errors.CommitStateUnknownException`, a `PySparkException` subclass whose instance
+  carries the attempted commit's `engine.operation-id` as `exc.operation_id` (`None` on
+  commit paths that mint no id). Every definite commit failure — a `CatalogCommitConflicts`
+  retry-budget exhaustion included — still raises the base `PySparkException`.
+- **Apache Spark** — Java Iceberg raises `CommitStateUnknownException` for the same condition;
+  PySpark surfaces it as a JVM-wrapped `PySparkException` with no dedicated Python class, so
+  `except PySparkException` compatibility is the parity contract and the subclass is additive.
+  *(oracle: documented.)*
+- **Statement shapes.** The id rides every commit RePark mints `engine.operation-id` for:
+  CTAS and the repark `append` path (`commit_append`), `MERGE` and repark identity
+  DELETE/UPDATE (`snapshot_commit.rs` — predicate DML commits through the MERGE arms),
+  `INSERT OVERWRITE` (whole-table and `PARTITION` forms), `TRUNCATE`. Commits the fork owns
+  end to end — `INSERT INTO` passthrough and non-allowlisted DELETE/UPDATE through
+  `iceberg-datafusion`, plus non-data DDL — mint no id and carry `None`.
+- **Airflow guidance** — alert on the class itself; constrain automatic retry to `MERGE` and
+  `CTAS IF NOT EXISTS` (Q-ICE-7) — never an append, a replace or an overwrite, whose retry
+  duplicates rows when the unconfirmed first attempt did land.
+- **Pin** — `crates/repark-core/src/session/tests/commit_unknown.rs` (stamped + unwrapped
+  classification), `crates/repark-iceberg/src/write/merge/tests/commit_unknown.rs` (the
+  surfaced id equals the id the transaction attempted to stamp; one `update_table` attempt),
+  `crates/repark-python/src/tests.rs` (class + `operation_id` attribute),
+  `python/repark/tests/test_errors.py` (hierarchy + re-export identity).
+- **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-15). The assessment's retry contract
+  needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
+  makes the unconfirmed commit nameable in an alert.
+
 ### 2.4 Namespace and table listing statements
 
 #### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog

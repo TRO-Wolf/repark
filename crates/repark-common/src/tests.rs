@@ -31,6 +31,14 @@ fn exception_class_routes_every_variant() {
             .exception_class(),
         ErrorClass::Base
     );
+    assert_eq!(
+        Error::CommitStateUnknown {
+            message: "CommitStateUnknown => lost UpdateTable response".into(),
+            operation_id: Some("op-1".into()),
+        }
+        .exception_class(),
+        ErrorClass::CommitStateUnknown
+    );
 }
 
 /// Pins verbatim preservation for specialized diagnostics and the prefixed DataFusion bucket.

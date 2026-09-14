@@ -184,9 +184,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: perf-dynflatten-1-measure/C-002
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
-  `NotImplemented`, `External` downcast to a live `iceberg::Error` → classified by its
+  `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
+  stamp (→ `Error::CommitStateUnknown` with the minted `engine.operation-id`, ICE-COMMIT-UNKNOWN-1)
+  then to a live `iceberg::Error` → classified by its
   structured `ErrorKind` (`classify_iceberg_error`, the ONE iceberg kind→class mapping — also
-  the direct `iceberg_err` fold), wrappers peeled iteratively (bounded,
+  the direct `iceberg_err` fold; an unstamped `CommitStateUnknown` kind maps to the same
+  variant with `operation_id: None`), wrappers peeled iteratively (bounded,
   `MAX_ERROR_PEEL_DEPTH`), everything else → base `Error::DataFusion`. Postgres/excel folds are
   deferred with their crates. Also `resolve_s3_region_override` (dual-key S3 read-region
   override; identical values collapse, different values fail loud naming both keys).

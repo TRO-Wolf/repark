@@ -34,6 +34,9 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `ValidationError`, `true`/`false` renders only when set, and every other property
   stays a string extra. pins: cfg-2/C-018
 - `errors.py` — PySpark-shaped exception taxonomy (does not move).
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** re-exports `CommitStateUnknownException`
+  (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert
+  class. pins: ice-commit-unknown-1/C-002
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).
 - `py.typed` — PEP 561 marker.

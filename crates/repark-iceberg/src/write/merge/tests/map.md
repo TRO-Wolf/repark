@@ -54,6 +54,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   table unmoved. `occ.rs` / `occ_conflict.rs` keep their spellings and exercise the empty-map
   wrappers, which have no production caller left and are `#[cfg(test)]`.
   pins: rp-7-f18-repin/C-002
+- `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** a delegating catalog returns
+  `ErrorKind::CommitStateUnknown` from `update_table` after capturing the stamped
+  `engine.operation-id`; the surfaced `CommitStateUnknownError` carries exactly that id, and
+  `update_table` is attempted once (the fork never retries the ambiguous kind). Covers both
+  the `commit_overwrite` and `commit_row_delta` MERGE commit paths.
+  pins: ice-commit-unknown-1/C-003
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.
 

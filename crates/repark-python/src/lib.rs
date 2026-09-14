@@ -27,8 +27,8 @@ pub use session::PyReparkSession;
 /// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;
 pub use exceptions::{
-    AnalysisException, IllegalArgumentException, ParseException, PySparkException,
-    UnsupportedOperationException,
+    AnalysisException, CommitStateUnknownException, IllegalArgumentException, ParseException,
+    PySparkException, UnsupportedOperationException,
 };
 
 /// Convert a crate error to its PySpark-shaped Python exception.
@@ -40,6 +40,19 @@ fn to_py_err(err: repark_core::Error) -> PyErr {
         ErrorClass::Analysis => AnalysisException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
+        ErrorClass::CommitStateUnknown => {
+            let operation_id = match &err {
+                repark_core::Error::CommitStateUnknown { operation_id, .. } => operation_id.clone(),
+                _ => None,
+            };
+            let raised = CommitStateUnknownException::new_err(message);
+            Python::attach(
+                |py| match raised.value(py).setattr("operation_id", operation_id) {
+                    Ok(()) => raised,
+                    Err(failure) => failure,
+                },
+            )
+        }
         ErrorClass::Base => PySparkException::new_err(message),
     }
 }
@@ -105,6 +118,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add(
         "IllegalArgumentException",
         module.py().get_type::<IllegalArgumentException>(),
+    )?;
+    module.add(
+        "CommitStateUnknownException",
+        module.py().get_type::<CommitStateUnknownException>(),
     )?;
     dataframe_stack::register(module)?;
     cache_budget::register(module)?;

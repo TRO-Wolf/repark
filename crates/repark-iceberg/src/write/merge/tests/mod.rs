@@ -1,3 +1,4 @@
+mod commit_unknown;
 mod dv_commit_opens;
 mod lineage;
 mod merge;
