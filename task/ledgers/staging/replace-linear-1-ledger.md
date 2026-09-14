@@ -225,6 +225,12 @@ native. Dispositions below are the binding orchestrator rulings.
 - **P3-1 residue — `df.na.replace` missing.** `DataFrameNaFunctions` has no
   `replace` method; PySpark routes `df.na.replace` to the same
   `DataFrameNaFunctions.replace`. Ledger residue only (separate card).
+- **Observed residue — `crossJoin` multi-name output.** `left.crossJoin(right)`
+  with overlapping names still raises `AMBIGUOUS_REFERENCE` on `replace` —
+  `crossJoin` never enters the equi-join aliasing path, so no `_join_qualifiers`
+  exist to bind by (unnamed scans may not carry resolvable qualifiers at all).
+  The ruling pinned the two equi-join shapes only; crossJoin is a deeper
+  surface recorded here, not fixed in this round.
 - **P3-2 resolved** — see P1-1 (the collapsed-key set is gone).
 - **Q-13b-2 confirmed** — `replace(1)` with no value stays as-is (`value=None`
   treated as a null-value mapping; PySpark refuses `ARGUMENT_REQUIRED` via its
