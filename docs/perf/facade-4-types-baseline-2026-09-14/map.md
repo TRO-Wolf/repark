@@ -22,12 +22,16 @@ reports medians of 5 reps after one warmup.
   1e5 rows. Prints JSON to stdout:
   `OPENBLAS_NUM_THREADS=8 OMP_NUM_THREADS=8 systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 .venv/bin/python docs/perf/facade-4-types-baseline-2026-09-14/run_baseline.py`
 - [census_probe.py](census_probe.py) — the three-table agreement census
-  (verdict: 8 agree rows, 21 measured disagreements D1–D21): calls the facade
-  `types.py` conversions, the `_csv_smart` rungs, and the
-  reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key` surfaces
-  (including `DESCRIBE TABLE` vs `session.table(...).dtypes` on the same
-  Iceberg CTAS bed) and prints every answer as JSON. Feeds the census table in
-  the ledger.
+  (verdict: 18 agree rows, 24 measured disagreements D1–D24): calls the facade
+  `types.py` conversions, the `_csv_smart` rungs (under both LTZ and NTZ
+  sessions), and the reader lattice + Rust
+  `spark_ddl_type_name`/`arrow_type_key` surfaces (including `DESCRIBE TABLE`
+  vs `session.table(...).dtypes` on the same Iceberg CTAS bed) and prints
+  every answer as JSON. Feeds the census table in the ledger.
+- [census_answers.json](census_answers.json) — the committed probe output from
+  the remediated run (all four unsigned widths, `pa.null()`, the offset
+  timestamp literal, and `csv_smart_rungs_ntz` measured after the NTZ flip);
+  the ledger's census table is distilled from it.
 
 ## Pointers
 

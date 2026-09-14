@@ -31,7 +31,7 @@ Step 1 is a later round.
 | C-003 | Arrow answers are golden for the schema set (flat 7-type, 50-column wide mixed, `struct<array<map>>` depth 3, decimal (10,2)/(38,18)/(38,0), timestamp tz/ntz/session-tz, interval and char/varchar): `repark_type_to_arrow` Arrow spellings and `struct_type_from_arrow` class+simpleString answers; an `isinstance` pin asserts every conversion answer is a public `repark.spark.types` class. | Same test file + golden; isinstance pin. | **PROVEN** | Per-case `arrow` and `arrow_schema_back` golden fields plus an 18-field raw-Arrow probe (`uint`, `date64`, `time64`, `duration`, `month_day_nano_interval`, `decimal256`, `dictionary`, non-UTC tz). isinstance pin asserts `repark.spark.types` module identity on every answer. |
 | C-004 | Mutation proof: a one-line change to a conversion answer turns the golden red; restore leaves it green. | Scratch edit, red output pasted, `git checkout` restore. | **PROVEN** | `repark_type_to_arrow` `pa.timestamp("us", tz="UTC")` → `pa.timestamp("us")` red: `changed=['struct_flat7', 'struct_timestamp_variants', 'struct_wide50', 'timestamp']`. `git checkout` restore → 3 passed. No product file in the commit. |
 | C-005 | Release baseline: warmup + 5 reps, medians, idle-box wait (no cargo/rustc/maturin) before each cell, `systemd-run --user --scope -p MemoryMax=8G` with `OPENBLAS_NUM_THREADS=8`. Cells: (a) `repark_type_to_arrow` per schema with per-call µs plus a spy count of calls per `createDataFrame`/`collect`/`to_arrow`/`show` of a 1e5 frame; (b) `struct_type_from_arrow` round-trip; (c) DDL parse (`fromDDL`/`_parse_datatype_string`) and DDL write (`simpleString`/DDL token) walls; (d) cProfile cumulative share of conversion in `df.schema`, `createDataFrame(pandas)`, `spark.read.csv(inferSchema)` at 1e5. Plain statement whether any cell is a wall (≥5 % of an end-to-end wall, or ≥1 ms per user call). | `docs/perf/facade-4-types-baseline-2026-09-14.md` + committed runner under `docs/perf/facade-4-types-baseline-2026-09-14/`. | **PROVEN** | Release native (`__debug_assertions__ False`), loads 2.26–2.44 at cell starts. `repark_type_to_arrow` 7.1–59.9 µs/call; spy: 0 calls on pandas create/collect/to_arrow/show/df.schema, 16 calls on nested-StructType create (≈0.16 ms of a 2,089 ms wall). `struct_type_from_arrow` 8.2–99.3 µs; DDL parse ≤125 µs (wide50), write ≤25 µs. cProfile share: df.schema 0.033/0.066 ms, createDataFrame(pandas) 0/1,650 ms, csv infer 0.14/2,270 ms. **No wall.** |
-| C-006 | Three-table agreement census measured by calling each table: for timestamps (tz, ntz, session-tz non-UTC), decimals (precision/scale edges, 38 overflow), nested nullability (struct field, array element `containsNull`, map `valueContainsNull`), date, binary, char/varchar, intervals — what (i) the facade `types.py` conversions, (ii) `_csv_smart` rungs, (iii) the reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key` each answer. Every disagreement is a row with the concrete input and the three answers; none fixed. | Census section below; probe script under `docs/perf/facade-4-types-baseline-2026-09-14/`. | **PROVEN** | `census_probe.py` run under the 8 GiB scope: 8 agree rows, 21 measured disagreement rows (D1–D21) including the reader-vs-DESCRIBE split on `float32`/`binary` and the bidirectional `containsNull`/`valueContainsNull` drop. |
+| C-006 | Three-table agreement census measured by calling each table: for timestamps (tz, ntz, session-tz non-UTC), decimals (precision/scale edges, 38 overflow), nested nullability (struct field, array element `containsNull`, map `valueContainsNull`), date, binary, char/varchar, intervals — what (i) the facade `types.py` conversions, (ii) `_csv_smart` rungs, (iii) the reader lattice + Rust `spark_ddl_type_name`/`arrow_type_key` each answer. Every disagreement is a row with the concrete input and the three answers; none fixed. | Census section below; probe script under `docs/perf/facade-4-types-baseline-2026-09-14/`. | **PROVEN** | `census_probe.py` re-run under the 8 GiB scope (`census_answers.json`): 18 agree rows (one concrete input each), 24 measured disagreement rows (D1–D24) including the `uint64`→`bigint` split, `_csv_smart`→`TimestampNTZType` under NTZ, the reader `null`→`void` surface, and the offset-literal `string`/`timestamp` split. |
 | C-007 | Step-1 target list: either (A) a measured wall and the Rust move that removes it, or (B) "no wall: ship as the correctness consolidation" naming the exact conversion entry points step 1 routes through one Rust table, plus the census disagreements needing an owner ruling (each a question with the three answers and a lean). | Step-1 section below. | **PROVEN** | Option (B): no measured wall. Eleven facade + two Rust entry points named; ten owner questions (timestamps-infer, binary, float32, unsigned/small ints, decimal>38, csv literal lattice, intervals, nullability, unsupported Arrow) each with the three answers and a lean. |
 | C-008 | Gates green: the card's named pins unedited (`test_types_1.py`, `test_types_simple_string.py`, `test_types_x2_census.py`, `test_cast_failure_parity.py`, `test_a3_cast_vocab.py`), the FACADE-2 guard (`test_facade_2_column_display_goldens.py`, `test_facade_2_group2_no_python_assembly.py`), the new pins, `make verify`, `test_production_file_size.py`. | Commands and counts in Evidence. | **PROVEN** | 184 passed / 7 skipped across the nine named files; `make verify` green end-to-end (fmt, clippy ×3, structural gates, ruff check+format, Rust tests). |
 
@@ -52,42 +52,64 @@ reader lattice + Rust names (`df.schema`/`dtypes`/`arrow_type_key` from
 
 ### Agree
 
+One concrete input per row; `—` = the table has no entry point for that
+input. Full probe JSON: `census_answers.json` beside the probe.
+
 | Input | (i) facade types.py | (ii) _csv_smart | (iii) reader + Rust |
 |---|---|---|---|
-| `date32` / `date64` / `'2024-01-02'` | `DateType` | `date` rung → `DateType` | `date`; csv infer `date`; DESCRIBE `date` |
-| `float64` / `'1.5e3'` | `DoubleType` | `float64` rung → `DoubleType` | `double` |
-| `int64` / `'9999999999'` | `LongType` (`bigint`) | `int64` rung → `LongType` | `bigint` |
-| `boolean` / `'true'` | `BooleanType` | `bool` rung → `BooleanType` | `boolean` |
-| `timestamp[us, tz=UTC]` | `TimestampType` | `'…Z'` literal → `TimestampType` | `timestamp`; DESCRIBE `timestamp` |
-| `timestamp[us, tz=America/New_York]` | `TimestampType` | `'…+02:00'` literal → `string` rung | `timestamp` (any tz → `timestamp`) |
-| `decimal128(10,2)` | `DecimalType(10,2)` | `'1.23'` → `decimal(3,2)` | `decimal(10,2)`; DESCRIBE `decimal(10,2)` |
-| `char(8)` / `varchar(32)` DDL | `CharType`/`VarcharType`; `repark_type_to_arrow` → `string` | literal → `string` | no char/varchar surface; `string` |
+| Arrow `timestamp[us, tz=UTC]` | `TimestampType` | `—` | `timestamp`; DESCRIBE `timestamp` |
+| Arrow `timestamp[us, tz=America/New_York]` | `TimestampType` | `—` | `timestamp` (any tz → `timestamp`) |
+| Arrow `timestamp[s, tz=UTC]` | `TimestampType` | `—` | `timestamp` |
+| Arrow `date32` | `DateType` | `—` | `date`; DESCRIBE `date` |
+| Arrow `date64` | `DateType` | `—` | `date` |
+| Arrow `int64` | `LongType` (`bigint`) | `—` | `bigint` (type_key `long`); DESCRIBE `bigint` |
+| Arrow `float64` | `DoubleType` | `—` | `double`; DESCRIBE `double` |
+| Arrow `bool` | `BooleanType` | `—` | `boolean` |
+| Arrow `string` | `StringType` | `—` | `string` |
+| Arrow `decimal128(10,2)` | `DecimalType(10,2)` | `—` | `decimal(10,2)`; DESCRIBE `decimal(10,2)` |
+| csv literal `'2024-01-02'` | `—` | `date` rung → `DateType` | infer `date` |
+| csv literal `'true'` | `—` | `bool` rung → `BooleanType` | infer `boolean` |
+| csv literal `'1.5e3'` | `—` | `float64` rung → `DoubleType` | infer `double` |
+| csv literal `'9999999999'` | `—` | `int64` rung → `LongType` | infer `bigint` |
+| csv literal `'abcdefgh'` | `—` | `string` rung → `StringType` | infer `string` |
+| csv literal `'DEADBEEF'` | `—` | `string` rung → `StringType` | infer `string` |
+| csv literal `'interval 1 year'` | `—` | `string` rung → `StringType` | infer `string` |
+| csv literal 39-digit integer | `—` | `float64` rung → `DoubleType` (precision >38 refuses decimal) | infer `double` |
+
+`char(8)`/`varchar(32)` DDL tokens exist only on table (i) (`fromDDL` →
+`CharType`/`VarcharType`; `repark_type_to_arrow` → `string`) — `_csv_smart`
+reads such a token as string content and the reader has no char/varchar
+surface — so there is no cross-table agree row; the facade answers are bound
+by the goldens.
 
 ### Disagree — every row measured, none fixed
 
 | # | Input | (i) facade types.py | (ii) _csv_smart | (iii) reader + Rust |
 |---|---|---|---|---|
 | D1 | Arrow `timestamp[us]` (tz-naive) | `TimestampNTZType` (`timestamp_ntz`) | naive literal `'2024-01-02 03:04:05'` → `TimestampType` (`timestamp`) | `arrow_type_key`/`df.schema` `timestamp_ntz`; csv infer `timestamp` |
-| D2 | session `spark.sql.timestampType=TIMESTAMP_NTZ` | `default_timestamp_data_type()` → `TimestampNTZType` | — | csv infer still answers `timestamp` under an NTZ session |
+| D2 | session `spark.sql.timestampType=TIMESTAMP_NTZ`, naive literal `'2024-01-02 03:04:05'` | `default_timestamp_data_type()` → `TimestampNTZType` | `timestamp` rung → `TimestampNTZType` (measured under the NTZ session) | csv infer still answers `timestamp` under an NTZ session |
 | D3 | csv literal `'1.23'` | — | `decimal128` rung → `DecimalType(3,2)` | csv infer → `double` |
 | D4 | csv literal `decimal(38,18)`-shaped | — | `decimal128` rung → `DecimalType(18,18)` (precision = literal digits) | csv infer → `double` |
 | D5 | csv literal `'42'` (int32 range) | — | `int32` rung → `IntegerType` (`int`) | csv infer → `bigint` |
-| D6 | `decimal256(76,10)` (precision >38) | `_arrow_type_to_repark` → `DecimalType(76,10)`; `repark_type_to_arrow` **refuses** | 39-digit literal → `float64` rung → `DoubleType` | `arrow_type_key`/`df.schema` `decimal(76,10)` |
-| D7 | Arrow `binary` / `large_binary` | `BinaryType` (`binary`) | literal → `string` | `df.schema`/`type_key` `string`; **DESCRIBE `binary`** |
+| D6 | Arrow `decimal256(76,10)` (precision >38) | `_arrow_type_to_repark` → `DecimalType(76,10)`; `repark_type_to_arrow` **refuses** | — | `arrow_type_key`/`df.schema` `decimal(76,10)` |
+| D7 | Arrow `binary` / `large_binary` | `BinaryType` (`binary`) | — | `df.schema`/`type_key` `string`; **DESCRIBE `binary`** |
 | D8 | Arrow `float32` | `FloatType` (`float`) | — | `df.schema`/`type_key` `double`; **DESCRIBE `float`** |
 | D9 | Arrow `int8` / `int16` | `ByteType`/`ShortType` (`tinyint`/`smallint`) | — | `int` (scan and DESCRIBE collapse to `int`) |
-| D10 | Arrow `uint8`/`uint16`/`uint32`/`uint64` | `StringType` | — | `int` (type_key and df.schema) |
-| D11 | Arrow `duration[us]` | `StringType` | interval literal → `string` | `type_key` `Duration(Microsecond)`; df.schema `string` |
-| D12 | Arrow `month_day_nano_interval` | `StringType` | `string` | `type_key` `Interval(MonthDayNano)`; df.schema `string` |
+| D10 | Arrow `uint8`/`uint16`/`uint32` | `StringType` | — | `int` (type_key and df.schema) |
+| D11 | Arrow `duration[us]` | `StringType` | — | `type_key` `Duration(Microsecond)`; df.schema `string` |
+| D12 | Arrow `month_day_nano_interval` | `StringType` | — | `type_key` `Interval(MonthDayNano)`; df.schema `string` |
 | D13 | Arrow `time64[us]` | `StringType` | — | `type_key` `Time64(Microsecond)`; df.schema `string` |
-| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | `repark_type_to_arrow` → `string`; `fromDDL` **refuses** `'interval day to second'`/`'interval year to month'`; `interval` → `CalendarIntervalType` | literal → `string` | — |
+| D14 | `DayTimeIntervalType`/`YearMonthIntervalType` | `repark_type_to_arrow` → `string`; `fromDDL` **refuses** `'interval day to second'`/`'interval year to month'`; `interval` → `CalendarIntervalType` | — | — |
 | D15 | struct field `nullable=False` | preserved by `struct_type_from_arrow`; `toDDL` emits `req INT NOT NULL`; `fromDDL` **refuses** its own `NOT NULL` output | — | `type_key` preserves `false` |
 | D16 | `ArrayType(int, containsNull=False)` | `repark_type_to_arrow` → `list<item: int32>` (item nullable — flag **dropped**); arrow `list<int32 not null>` → `containsNull=True` (flag **dropped** inbound) | — | df.schema `array<int>` (flag invisible on the surface) |
 | D17 | `MapType(str,int, valueContainsNull=False)` | `repark_type_to_arrow` → `map<string, int32>` (value nullable — flag **dropped**); arrow non-null value → `valueContainsNull=True` | — | df.schema `map<string,int>` |
 | D18 | Iceberg `Float32` column read back | — | — | `DESCRIBE` `float` vs `session.table(...).dtypes` `double` — two surfaces inside (iii) disagree with each other |
 | D19 | Iceberg `Binary` column read back | — | — | `DESCRIBE` `binary` vs `session.table(...).dtypes` `string` |
 | D20 | Arrow `dictionary` | `StringType` | — | (not probed end-to-end; `arrow_type_key` retains the dictionary value type) |
-| D21 | Arrow `null` | `NullType` (`void`) | — | — |
+| D21 | Arrow `null` | `NullType` (`void`) | — | type_key `Null`; `df.schema`/`dtypes` `void` |
+| D22 | Arrow `uint64` | `StringType` | — | `bigint` (type_key `long`; df.schema `bigint`) |
+| D23 | csv literal `'2024-01-02 03:04:05+05:00'` (offset timestamp) | — | `string` rung → `StringType` | csv infer → `timestamp` |
+| D24 | csv literal 38-digit integer | — | `decimal128` rung → `DecimalType(38,0)` | csv infer → `double` |
 
 Notes on the disagreements:
 
@@ -96,17 +118,28 @@ Notes on the disagreements:
   `arrow_type_key` ever runs, while `spark_ddl_type_name` names the stored
   Iceberg type. A single Rust table must decide which of those two answers a
   given entry point is promising.
-- D1/D2: the Arrow tz-naive → `timestamp_ntz` mapping is consistent between
-  facade and reader lattice, but the CSV inference path normalizes every
-  timestamp to `timestamp` and ignores `spark.sql.timestampType=TIMESTAMP_NTZ`.
-- D3/D4/D5: the `_csv_smart` rungs (decimal/int32/int64) are strictly more
-  precise than what `spark.read.csv(inferSchema)` actually answers
+- D1/D2: under an NTZ session the facade default and the `_csv_smart`
+  timestamp rung agree (`TimestampNTZType`), and the reader lattice agrees on
+  Arrow `timestamp[us]` → `timestamp_ntz`; only the CSV `inferSchema` path
+  normalizes every timestamp literal to `timestamp`, ignoring
+  `spark.sql.timestampType=TIMESTAMP_NTZ`.
+- D3/D4/D5/D24: the `_csv_smart` rungs (decimal/int32/int64) are strictly
+  more precise than what `spark.read.csv(inferSchema)` actually answers
   (`double`/`bigint`) — the smart rungs are not the table that serves the
-  public infer path.
-- D15/D16/D17: nullability survives at the struct-field level both ways, is
+  public infer path. D23 is the same shape for timestamps: the offset
+  literal `'2024-01-02 03:04:05+05:00'` is `string` to `_csv_smart` but
+  `timestamp` to the served infer path.
+- D10/D22: the reader widens `uint8`/`uint16`/`uint32` to `int` but `uint64`
+  to `bigint` (type_key `long`) — a single "unsigned → int" answer would
+  misstate `uint64`.
+- D15/D16/D17: nullability survives inbound at every struct-field level
+  (`struct_type_from_arrow`/`_arrow_type_to_repark` keep `field.nullable`)
+  and outbound where a schema field carries `pa.field(nullable=…)`, but is
   silently dropped at the array-element and map-value level both ways, and
-  `toDDL`'s `NOT NULL` output is refused by `fromDDL` — the facade's own DDL
-  write/read pair does not round-trip.
+  for nested struct fields outbound (`repark_type_to_arrow(StructType)`
+  emits `pa.struct` tuples without nullability). `toDDL`'s `NOT NULL`
+  output is refused by `fromDDL` — the facade's own DDL write/read pair
+  does not round-trip.
 - D6: `decimal256(76,10)` survives `arrow → facade type` but cannot go back to
   `decimal128`; the reader keeps `decimal(76,10)` on the surface — a type the
   facade cannot materialize an Arrow column for.
@@ -155,13 +188,14 @@ Reader/Rust side (already Rust — becomes the table's Rust leg):
 Each question carries the three measured answers and a lean; all are
 recorded in the census table above.
 
-1. **Timestamps under CSV `inferSchema`.** Literal `'2024-01-02 03:04:05'`:
-   facade session default honors `spark.sql.timestampType` (NTZ →
-   `TimestampNTZType`); `_csv_smart` rung → `TimestampType`; served csv
-   infer → `timestamp` even under an NTZ session. *Should the unified table
-   honor `spark.sql.timestampType` on the CSV infer path?* Lean: yes —
-   both other tables distinguish ntz, and the session knob is the facade's
-   own contract.
+1. **Timestamps under CSV `inferSchema`.** Literal `'2024-01-02 03:04:05'`
+   under an NTZ session: facade session default → `TimestampNTZType`;
+   `_csv_smart` rung → `TimestampNTZType` (it calls
+   `default_timestamp_data_type()`); served csv infer → `timestamp` even
+   under an NTZ session. The split is infer vs the other two tables.
+   *Should the unified table honor `spark.sql.timestampType` on the CSV
+   infer path?* Lean: yes — both other tables distinguish ntz, and the
+   session knob is the facade's own contract.
 2. **Binary.** Arrow `binary`: facade `BinaryType`; `_csv_smart` `string`;
    `df.schema`/`dtypes` `string`; DESCRIBE `binary`. *Is `string` on the
    scan surface the contract to keep (physical utf8 decode) or a bug to
@@ -173,11 +207,12 @@ recorded in the census table above.
    scan surface `double`; DESCRIBE `float`. Same shape as Q2. Lean: same —
    `float` for the stored/logical name, `double` only where the widened
    physical column is described.
-4. **Unsigned ints.** Arrow `uint8`–`uint64`: facade `StringType`; reader
-   `int`. *Does the unified table widen unsigned to the signed family
-   (`int`/`bigint`) or keep the `string` degradation?* Lean: reader's `int`
-   for `uint8`/`uint16`/`uint32` and `bigint` for `uint64` — `string` loses
-   the numeric type the user can already see via the reader.
+4. **Unsigned ints.** Arrow `uint8`/`uint16`/`uint32`: facade `StringType`;
+   reader `int`. Arrow `uint64`: facade `StringType`; reader `bigint`
+   (type_key `long`). *Does the unified table widen unsigned to the signed
+   family (`int`/`bigint`) or keep the `string` degradation?* Lean:
+   reader's `int` for `uint8`/`uint16`/`uint32` and `bigint` for `uint64` —
+   `string` loses the numeric type the user can already see via the reader.
 5. **Signed small ints.** Arrow `int8`/`int16`: facade `tinyint`/`smallint`;
    reader `int`. *Keep Spark's `tinyint`/`smallint` or the scan's `int`?*
    Lean: `tinyint`/`smallint` — they are the Spark-visible answer for the
@@ -224,7 +259,8 @@ Step 1 stops here; implementation is a later round.
 - C-005: `run_baseline.py` JSON — cells (a)–(d) tables in the baseline doc;
   verdict NO WALL (every call ≤134 µs; conversion 0.000–0.006 % of the 1e5-row
   walls; `df.schema` 50 % share of a 66 µs op ≈ 0.03 ms per call).
-- C-006: `census_probe.py` JSON — 8 agree rows, D1–D21 disagree rows.
+- C-006: `census_probe.py` + committed `census_answers.json` — 18 agree
+  rows, D1–D24 disagree rows.
 - Gates (2026-09-14):
   `pytest test_types_1 test_types_simple_string test_types_x2_census
   test_cast_failure_parity test_a3_cast_vocab
@@ -262,8 +298,8 @@ COVERAGE_ATTESTATION:
       justification: No privileged action, secret or path handling; goldens are committed JSON beside the test.
     - id: AT-6
       status: ATTACKED
-      evidence: The three-table census measures 8 agreements and 21 disagreements (D1-D21) including silent containsNull/valueContainsNull loss in both directions; none fixed, each an owner question for step 1.
-      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py]
+      evidence: The three-table census measures 18 agreements and 24 disagreements (D1-D24) including silent containsNull/valueContainsNull loss in both directions, the uint64 bigint split, csv_smart honoring NTZ while infer does not, and the offset-literal string/timestamp split; none fixed, each an owner question for step 1.
+      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py, docs/perf/facade-4-types-baseline-2026-09-14/census_answers.json]
     - id: AT-7
       status: ATTACKED
       evidence: Release baseline, warmup plus 5 reps, medians under an 8 GiB scope; the dearest conversion is 134 us per call and the largest share of a 1e5 wall is 0.008 %, so no wall.

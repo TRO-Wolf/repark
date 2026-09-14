@@ -51,7 +51,16 @@ def _facade_answers() -> dict[str, Any]:
         "pa.date64": pa.date64(),
         "pa.binary": pa.binary(),
         "pa.large_binary": pa.large_binary(),
+        "pa.string": pa.string(),
+        "pa.bool": pa.bool_(),
+        "pa.int8": pa.int8(),
+        "pa.int16": pa.int16(),
+        "pa.int64": pa.int64(),
+        "pa.float32": pa.float32(),
+        "pa.float64": pa.float64(),
         "pa.uint8": pa.uint8(),
+        "pa.uint16": pa.uint16(),
+        "pa.uint32": pa.uint32(),
         "pa.uint64": pa.uint64(),
         "pa.float16": pa.float16(),
         "pa.time64_us": pa.time64("us"),
@@ -262,9 +271,19 @@ def _reader_lattice_answers(session: Any) -> dict[str, Any]:
         ("date32", pa.field("c", pa.date32())),
         ("date64", pa.field("c", pa.date64())),
         ("binary", pa.field("c", pa.binary())),
+        ("large_binary", pa.field("c", pa.large_binary())),
+        ("string", pa.field("c", pa.string())),
+        ("int64", pa.field("c", pa.int64())),
+        ("float64", pa.field("c", pa.float64())),
+        ("bool", pa.field("c", pa.bool_())),
         ("uint8", pa.field("c", pa.uint8())),
+        ("uint16", pa.field("c", pa.uint16())),
+        ("uint32", pa.field("c", pa.uint32())),
+        ("uint64", pa.field("c", pa.uint64())),
         ("int8", pa.field("c", pa.int8())),
+        ("int16", pa.field("c", pa.int16())),
         ("float32", pa.field("c", pa.float32())),
+        ("null", pa.field("c", pa.null())),
         ("time64", pa.field("c", pa.time64("us"))),
         ("duration", pa.field("c", pa.duration("us"))),
         ("month_day_nano", pa.field("c", pa.month_day_nano_interval())),
@@ -295,8 +314,10 @@ def _reader_lattice_answers(session: Any) -> dict[str, Any]:
 def _reader_csv_answers(session: Any, tmpdir: Path) -> dict[str, Any]:
     """``spark.read.csv(inferSchema=True)`` dtypes per literal probe."""
     literals = {
+        "csv_string": "abcdefgh",
         "csv_timestamp": "2024-01-02 03:04:05",
         "csv_timestamp_z": "2024-01-02 03:04:05Z",
+        "csv_timestamp_offset": "2024-01-02 03:04:05+05:00",
         "csv_date": "2024-01-02",
         "csv_decimal_10_2": "1.25",
         "csv_decimal_38_18": "0.123456789012345678",
@@ -375,6 +396,7 @@ def main() -> None:
             payload["session_ntz_default_timestamp"] = _attempt(
                 lambda: _shape(default_timestamp_data_type())
             )
+            payload["csv_smart_rungs_ntz"] = _csv_smart_answers()
             payload["reader_csv_infer_ntz"] = _reader_csv_answers(session, tmpdir)
     finally:
         session.stop()
