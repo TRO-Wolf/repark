@@ -6,6 +6,11 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14,
+  run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace
+  publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance),
+  ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1
+  (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
 - [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
   expressions, beside run 13; night window 05:19–06:30, day continuation to 12:00):** REPLACE-LINEAR-1 step 1 (#577):
   a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok
@@ -119,6 +124,7 @@ declines it (a dated ruling in the intake, then the archive).
   ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
 - [overnight-report-2026-09-11-run7.md](overnight-report-2026-09-11-run7.md) — run 7 (2026-09-11, Devin-first): REVIEW-FIX-15b, TORTURE-1 steps 3–5, AP-1 step 2, BALLISTA-M2-A steps 1–2 merged (#496–#501, #503); NEVEROOM-1 step 2 merged (#503, 24 of 27 cells stable); owner questions on uncompressed INSERT, typed scan accessors, the secrets flag scope.
 - [overnight-report-2026-09-13-run12.md](overnight-report-2026-09-13-run12.md) — run 12 (2026-09-13, Devin actor + Grok S2-21 Rust/Python reviewers + Grok critic-logic, beside run 12b): FACADE-3 step 3 (Row/dict lists into native, abi3 temporal route; rows −54 %, dicts −55 %, tuples −47 % at 1e5; three P1 subclass/cache bugs found and fixed before the PR), the FACADE-4/5 briefs not opened, the remaining switchover measured in lines, owner questions Q-R12-1..3.
+- [overnight-report-2026-09-14-run13.md](overnight-report-2026-09-14-run13.md) — run 13 (2026-09-14, Devin actor, beside run 13b): FACADE-4 step 0 (conversion baseline: no wall, so step 1 is a correctness consolidation; three-table census D1–D21; DDL/Arrow goldens), PR left for the per-PR critic-logic round; FACADE-5 not opened, its step-0 brief written; owner questions Q-R13-1..11.
 - [overnight-report-2026-09-13-run11.md](overnight-report-2026-09-13-run11.md) — run 11 (2026-09-13, Devin actor + Grok critic-logic + Grok S2-21 Python reviewer): EAGER-OWN-1 (#565), a refcounted handle owns every `__repark_cache_*` view (10 → 0 registrations, peak RSS 3,041 → 1,257 MB on the million-row TA loop; the slowdown did not reproduce on 125 GiB), Q-E1/Q-E2 recommendations, and card EAGER-BUDGET-1 seeded with the numbers.
 - [overnight-report-2026-09-13-run10.md](overnight-report-2026-09-13-run10.md) — run 10 (2026-09-13, Grok actor + Grok critic-logic): COMMENT-CORE-1 (#561) removes the 347 non-pragma comments from `dataframe/core.py` with no code change (AST-identical, 4468 → 4117 lines, facade 5985/369 before and after); 312 reasons moved to the dataframe map, 35 narration lines deleted; the critic’s 11 findings (2 lost rationale, 9 distorted paraphrases) fixed before the PR.
 - [overnight-report-2026-09-12-run9b.md](overnight-report-2026-09-12-run9b.md) — run 9b (2026-09-12/13, orchestrator B beside run 9, Devin actors + Grok S2-21 reviewers): CFG-2 named sources in two steps (#551 Rust seam, #556 Python door; `[<profile>.database]` loads, lists, refuses on use naming roadmap 1.10) and the DYNCFG-1 intake (#547: five measure-first cards, DQ-1..DQ-7 parked for the owner).
