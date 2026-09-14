@@ -421,12 +421,11 @@ def resolve_column_type(
 
 def rung_to_spark_type(resolution: ColumnResolution) -> Any:
     """Map a :class:`ColumnResolution` to a ``repark.types`` DataType instance."""
-    from repark import _native
+    from repark.spark._type_table import _descriptor_to_datatype, _native_function
     from repark.spark.session.timestamp_type import is_default_timestamp_ntz
-    from repark.spark.types import _descriptor_to_datatype
 
     return _descriptor_to_datatype(
-        _native.csv_rung_descriptor(
+        _native_function("csv_rung_descriptor")(
             resolution.rung,
             resolution.decimal_precision,
             resolution.decimal_scale,
@@ -437,7 +436,15 @@ def rung_to_spark_type(resolution: ColumnResolution) -> Any:
 
 def rung_to_engine_cast(resolution: ColumnResolution) -> str:
     """Canonical engine cast string for :meth:`Column.cast`."""
-    return rung_to_spark_type(resolution)._engine_type()
+    from repark.spark._type_table import _native_function
+    from repark.spark.session.timestamp_type import is_default_timestamp_ntz
+
+    return _native_function("csv_engine_token")(
+        resolution.rung,
+        resolution.decimal_precision,
+        resolution.decimal_scale,
+        is_default_timestamp_ntz(),
+    )
 
 
 def rung_to_sql_cast(resolution: ColumnResolution) -> str:
@@ -446,9 +453,9 @@ def rung_to_sql_cast(resolution: ColumnResolution) -> str:
     Differs from :func:`rung_to_engine_cast` where the SQL parser rejects the engine
     alias (notably ``long`` → ``bigint``).
     """
-    from repark import _native
+    from repark.spark._type_table import _native_function
 
-    return _native.csv_sql_cast_token(rung_to_engine_cast(resolution))
+    return _native_function("csv_sql_cast_token")(rung_to_engine_cast(resolution))
 
 
 # ==================================================================================================

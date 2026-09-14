@@ -81,14 +81,9 @@ def is_default_timestamp_ntz() -> bool:
 
 def default_timestamp_arrow_type() -> pa.DataType:
     """Arrow type for an inferred bare ``TIMESTAMP`` column."""
-    import pyarrow as pa
+    from repark.spark.types import repark_type_to_arrow
 
-    from repark import _native
-
-    descriptor = _native.default_timestamp_descriptor(is_default_timestamp_ntz())
-    return pa.DataType._import_from_c_capsule(
-        _native.arrow_type_capsule_from_descriptor(descriptor)
-    )
+    return repark_type_to_arrow(default_timestamp_data_type())
 
 
 def default_timestamp_data_type() -> DataType:

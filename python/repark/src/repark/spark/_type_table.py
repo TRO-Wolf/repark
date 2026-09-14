@@ -250,24 +250,24 @@ def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
     return None
 
 
-def _descriptor_to_datatype(descriptor: dict[str, Any]) -> Any:
-    """Construct the public Spark type for a Rust type-table descriptor."""
+def _descriptor_to_datatype(descriptor: Any) -> Any:
+    """Construct the public Spark type for a Rust type-table descriptor tuple."""
     t = _types()
 
-    kind = descriptor["kind"]
+    kind = descriptor[0]
     atomic_class = _descriptor_types().get(kind)
     if atomic_class is not None:
         return atomic_class()
     if kind == "string":
-        return t.StringType(descriptor["collation"])
+        return t.StringType(descriptor[1])
     if kind == "char":
-        return t.CharType(descriptor["length"])
+        return t.CharType(descriptor[1])
     if kind == "varchar":
-        return t.VarcharType(descriptor["length"])
+        return t.VarcharType(descriptor[1])
     if kind == "time":
-        return t.TimeType(descriptor["precision"])
+        return t.TimeType(descriptor[1])
     if kind == "decimal":
-        return t.DecimalType(descriptor["precision"], descriptor["scale"])
+        return t.DecimalType(descriptor[1], descriptor[2])
     if kind in ("day_time_interval", "year_month_interval"):
         if kind == "day_time_interval":
             interval_class = t.DayTimeIntervalType
@@ -275,28 +275,28 @@ def _descriptor_to_datatype(descriptor: dict[str, Any]) -> Any:
             interval_class = t.YearMonthIntervalType
         inverted_fields = interval_class._inverted_fields
         return interval_class(
-            inverted_fields[descriptor["start"]],
-            inverted_fields[descriptor["end"]],
+            inverted_fields[descriptor[1]],
+            inverted_fields[descriptor[2]],
         )
     if kind == "array":
         return t.ArrayType(
-            _descriptor_to_datatype(descriptor["element"]),
-            descriptor["contains_null"],
+            _descriptor_to_datatype(descriptor[1]),
+            descriptor[2],
         )
     if kind == "map":
         return t.MapType(
-            _descriptor_to_datatype(descriptor["key"]),
-            _descriptor_to_datatype(descriptor["value"]),
-            descriptor["value_contains_null"],
+            _descriptor_to_datatype(descriptor[1]),
+            _descriptor_to_datatype(descriptor[2]),
+            descriptor[3],
         )
     if kind == "struct":
-        return t.StructType([_descriptor_to_datatype(field) for field in descriptor["fields"]])
+        return t.StructType([_descriptor_to_datatype(field) for field in descriptor[1]])
     if kind == "field":
-        metadata_text = descriptor.get("metadata")
+        metadata_text = descriptor[4]
         return t.StructField(
-            descriptor["name"],
-            _descriptor_to_datatype(descriptor["type"]),
-            descriptor["nullable"],
+            descriptor[1],
+            _descriptor_to_datatype(descriptor[2]),
+            descriptor[3],
             json.loads(metadata_text) if metadata_text else {},
         )
     raise TypeError(f"unsupported type-table descriptor kind {kind!r}")

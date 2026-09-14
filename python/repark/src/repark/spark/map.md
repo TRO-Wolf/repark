@@ -22,7 +22,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FACADE-4 step 1 (2026-09-14):** `rung_to_spark_type` / `rung_to_engine_cast` /
   `rung_to_sql_cast` read the shared Rust table (`csv_rung_descriptor`,
   `csv_sql_cast_token`); the rung answers are unchanged (D3–D5 stay pinned).
-  pins: facade-4/C-013
+  **Round 2 (PY-P2-003):** `rung_to_engine_cast` answers `csv_engine_token`
+  straight from `csv_rung_type` — no `DataType` construction; all three binds
+  go through the cached `_type_table._native_function`.
+  pins: facade-4/C-013, C-027
 - `_type_table.py` — Python-side descriptor bridge for the shared Rust type table:
   the class→row answer table (descriptor head, `simpleString`, `_engine_type`),
   descriptor encode/decode, tree walks, and the container-token fallbacks for
@@ -46,7 +49,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   residue (`_parse_datatype_string_python` + `_parse_field_list`) for integer
   parameters beyond i64 and non-printable text whose refusal `repr` bytes
   differ from Rust's; `_native_function` caches lazy native lookups.
-  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024
+  **Round 2 (PY-P2-002):** `_descriptor_to_datatype` decodes the tagged-tuple
+  wire shape (`("kind", …)`) the bridge now emits — positional indexing, no
+  per-node dict lookups.
+  pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
