@@ -529,11 +529,7 @@ COVERAGE_ATTESTATION:
       justification: No log-format or diagnosis-path change.
     - id: AT-10
       status: ATTACKED
-      evidence: Both dispatch pins were red-first (six AttributeError failures on main for the tuple export; six more on the step-3 baseline for the named export) and green after; the goldens stayed byte-identical; the temporal parity pin bites (days→seconds mutation red, restore green); the four Rust-side parity defects each re-fail if reverted; named pins and the whole facade suite re-run green.
-      artifacts: [python/repark/tests/test_facade_3_cdf_dispatch.py, python/repark/tests/test_facade_3_cdf_step3.py, python/repark/tests/test_boundary_shapes_parity.py]
-    - id: AT-11
-      status: ATTACKED
-      evidence: C-027's expanded temporal corpus was red-first on the pre-fix native — the __sub__-override, year-override and fresh-tzinfo cases each failed on the tuple, dict and Row doors — and green after the exact-type gates; the fresh-tzinfo pin asserts the literal base-native series (the forced fallback is not a valid oracle — astimezone reads the C tzinfo field); repro_p1.py CASE sections byte-match against the real base venv; same-box A/B isolates the gate's cost at +0.1 % create / ≤+3.7 % per-cell.
-      artifacts: [python/repark/tests/test_facade_3_cdf_step3.py, crates/repark-python/src/cdf_infer/cells.rs, docs/perf/facade-3-cdf-step3-2026-09-13.md]
+      evidence: Both dispatch pins were red-first (six AttributeError failures on main for the tuple export; six more on the step-3 baseline for the named export) and green after; the goldens stayed byte-identical; the temporal parity pin bites (days→seconds mutation red, restore green); the four Rust-side parity defects each re-fail if reverted; named pins and the whole facade suite re-run green. C-027 extended the temporal corpus red-first on the pre-fix native — the __sub__-override, year-override and fresh-tzinfo cases each failed on the tuple, dict and Row doors — and green after the exact-type gates; the fresh-tzinfo pin asserts the literal base-native series (the forced fallback is not a valid oracle — astimezone reads the C tzinfo field); repro_p1.py CASE sections byte-match against the real base venv.
+      artifacts: [python/repark/tests/test_facade_3_cdf_dispatch.py, python/repark/tests/test_facade_3_cdf_step3.py, python/repark/tests/test_boundary_shapes_parity.py, crates/repark-python/src/cdf_infer/cells.rs]
   complete: true
 ```
