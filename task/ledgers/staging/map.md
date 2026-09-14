@@ -5,6 +5,16 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [facade-5-ledger.md](facade-5-ledger.md) —
+  **FACADE-5 step 0 (2026-09-14), in flight:** the display renderer's fetch/format
+  split baseline (`display.py` bodies + `plan_collapse.py`/`polars_cells.py`
+  formatters, the audit §6 UNMEASURED cell), the renderer × truncation-rule pin
+  census, goldens for the pairs no §8 pin binds (recorded from base, mutation
+  proven), and the step-1 target — a measured format wall and its Rust move, or
+  the smallest byte-identical consolidation naming what stays for `eager.py`.
+  No product change under `python/repark/src/` or `crates/`.
+  `risk_tier: standard`. Branch `perf/facade-5-s0`.
+  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`

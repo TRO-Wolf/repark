@@ -56,3 +56,9 @@ extend-glob = [
 
 [type.ap1remeasure.extend-words]
 ba = "ba"
+
+[type.facade5ledger]
+extend-glob = ["facade-5-ledger.md"]
+
+[type.facade5ledger.extend-words]
+ba = "ba" # base sha 30ca2ba1 in the rebase note (typos splits the short hash)
