@@ -234,14 +234,12 @@ def _inherit_plan_metadata(parent: DataFrame, child: DataFrame) -> DataFrame:
     return child
 
 
-def _replace_case(bound: Column, pairs: list[tuple[Any, Any]], type_key: str) -> Column:
-    """One searched CASE ``WHEN col = k THEN CAST(v AS coltype) … ELSE col END``."""
-    from repark.spark.functions import lit
-
-    arms: list[tuple[Column, Column]] = []
-    for key, value in pairs:
-        replacement = lit(value) if value is None else lit(value).cast(type_key)
-        arms.append((bound == lit(key), replacement))
+def _replace_case(bound: Column, key_literals: list[Column], replacements: list[Column]) -> Column:
+    """One searched CASE ``WHEN col = k THEN v … ELSE col END`` from prebuilt literals."""
+    arms = [
+        (bound == key_literal, replacement)
+        for key_literal, replacement in zip(key_literals, replacements, strict=True)
+    ]
     return Column._from_when_pairs(arms, otherwise=bound)
 
 
@@ -252,6 +250,8 @@ def _replace(
     subset: str | list[str] | tuple[str, ...] | None,
 ) -> DataFrame:
     """Replace value(s) across columns (PySpark ``DataFrame.replace``)."""
+    from repark.spark.functions import lit
+
     frame._ensure_alive()
     _validate_replace_arguments(to_replace, value, subset)
     rep_dict = _replacement_dict(to_replace, value)
@@ -264,6 +264,8 @@ def _replace(
         return frame._identity_child()
     group = _target_group(rep_dict)
     pairs = _converted_pairs(rep_dict)
+    key_literals = [lit(key) for key, _value in pairs]
+    replacements_by_type_key: dict[str, list[Column]] = {}
     bound_columns = _iter_replace_bound_columns(frame)
     type_fields = frame._inner.logical_schema_fields()
     arrow_fields = frame._analyzed_arrow_schema()
@@ -278,7 +280,13 @@ def _replace(
         if _arrow_type_family(arrow_field.type) != group:
             projected.append(bound)
             continue
-        expression = _replace_case(bound, pairs, type_key)
+        replacements = replacements_by_type_key.get(type_key)
+        if replacements is None:
+            replacements = [
+                lit(value) if value is None else lit(value).cast(type_key) for _key, value in pairs
+            ]
+            replacements_by_type_key[type_key] = replacements
+        expression = _replace_case(bound, key_literals, replacements)
         if bound._origin_plan_id is not None and bound._origin_field is not None:
             projected.append(
                 Column(

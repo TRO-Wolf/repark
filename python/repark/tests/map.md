@@ -39,7 +39,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_replace_divergent_cells_match_spark` the ruled Q-R1 answers (value AND Arrow
   type per cell). `test_replace_dict_depth40_memory_linear` is the 40-entry pin: a
   subprocess under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8), bound = 2× a flat
-  40-column select delta (floor 64 MB), running ungated since the searched-CASE
+  40-column select delta (floor 8 MiB — tightened from 64 MiB in the S2-21 round
+  so a 2× RSS regression of the linear path fails), running ungated since the searched-CASE
   rewrite made the growth linear. Critic round (same day): `test_replace_oracle_extra_cells`
   promotes the probe rows (empty-dict + missing subset, `{2: True}`/`{True: None}`/`{1.5: 9}`
   family edges, case-variant subset, tuple `to_replace`, bool+int filter),

@@ -42,7 +42,7 @@ and is out of scope for this step.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The D-2 oracle cells are measured on live PySpark 4.1.2 (one `local[1]` session, ANSI on) beside repark's answers on the same input frames: answer rows AND result schema (type, nullability) per cell, including `{1: 2, 2: 3}` order semantics, NULL key and NULL value, `subset` as str/list/tuple, a missing-column subset, the type-coercion cells, list `to_replace` with scalar/list `value`, a mixed-type dict, NaN keys, and a backtick-needed column name. | The measured table under Evidence + the pin cells encoding it in `python/repark/tests/test_replace_linear_1.py`. | PROVEN | Step-0 measurement table below (repark column re-measured after the rewrite — every ruled cell now matches, including the three error-class cells). |
-| C-002 | A 40-entry `replace` dict plans and collects under a bounded RSS delta — bound = `max(64 MB, 40 × per-entry delta of a flat 40-column select × 2)` — in a subprocess under `RLIMIT_AS = VmSize_at_apply + 3 × 8 GB` (S2-8). Red on the base tree (exponential dict loop), green after the D-1 rewrite. | `test_replace_dict_depth40_memory_linear` red output pasted in Evidence, then green ungated. | PROVEN | Red-first output below (worker died in `case_when` on the nested loop). After: flat ~5.4 MB at every N vs bound 64 MB; pin runs by default and is green. |
+| C-002 | A 40-entry `replace` dict plans and collects under a bounded RSS delta — bound = `max(8 MiB floor, 2 × flat 40-column select delta)` — in a subprocess under `RLIMIT_AS = VmSize_at_apply + 3 × 8 GB` (S2-8). Red on the base tree (exponential dict loop), green after the D-1 rewrite. | `test_replace_dict_depth40_memory_linear` red output pasted in Evidence, then green ungated. | PROVEN | Red-first output below (worker died in `case_when` on the nested loop). After (release native): 4.44 MiB at N=4 → 4.48 MiB at N=40 → 4.72 MiB at N=200, 11.05 MiB at N=400 (still linear-class; P3-1 residue) vs bound 8 MiB; pin runs by default, 10/10 consecutive passes at the tightened floor. |
 | C-003 | After the D-1 rewrite, repark's answers on every C-001 cell equal the oracle's (the `{1: 2, 2: 3}` cell takes the oracle's simultaneous answer 2, per D-3), including the nine cells ruled in by Q-R1. | The step-1 pin asserts the ruled answers per cell. | PROVEN | `test_replace_divergent_cells_match_spark` asserts all ruled answers + arrow types + error classes; `test_replace_oracle_cells_matching` keeps the already-green cells. |
 | C-004 | The projected column's naming/origin metadata is unchanged by the rewrite — the `origin_plan_id`/`origin_field` branch and the plain `alias` branch carry the same `spark_display`, `projection_name`, `stable_name`, `has_free_attribute`, `join_sql_expr`, `sql_expr` as today. | Step-1 pins on a join-origin frame and a plain frame. | PROVEN | `test_replace_projection_metadata_plain_frame` and `test_replace_projection_metadata_join_frame` assert `columns`, `select(col)` by name, and join→replace→select; `test_g1_stat_and_expander.py::test_h1_rename_replace_rsplit_dtypes_multi_name` (existing, untouched) exercises replace→select-by-name on a multi-name joined frame. |
 | C-005 | The existing `replace` pin (`python/repark/tests/test_df_easy.py::test_describe_summary_replace`, the only `df.replace(` call site in the suite) stays green. | Named pin green unchanged. | PROVEN | `test_df_easy.py` 21/21 green after the rewrite (see Gates). |
@@ -99,21 +99,34 @@ Base tree `9efb6a65` (debug native, `.venv` with the `record` extra). Worker: 10
 then `frame.replace({i: i + 1000 for i in range(N)}, subset=["x"]).collect()`, RSS delta
 = `VmHWM` after minus `VmHWM` at baseline.
 
-Before (base `9efb6a65`, measured 2026-09-13; N=16 re-measured 2026-09-14 → 290 869 248 B):
+Before (base `9efb6a65`, debug native, measured 2026-09-13; N=16 re-measured
+2026-09-14 → 290 869 248 B). After-column rows marked * were the debug-native
+numbers; the canonical release-native numbers (S2-21 round, median of 5) follow.
 
-| N | RSS delta before | RSS delta after (2026-09-14) |
+| N | RSS delta before | RSS delta after (2026-09-14, debug native) |
 |---|---|---|
-| 4 | 3 354 624 B (3.2 MB) | 5 640 192 B (5.4 MB) |
-| 8 | 3 358 720 B (3.2 MB) | 5 648 384 B (5.4 MB) |
-| 12 | 22 921 216 B (21.9 MB) | 5 652 480 B (5.4 MB) |
+| 4 | 3 354 624 B (3.2 MB) | 5 640 192 B (5.4 MB) * |
+| 8 | 3 358 720 B (3.2 MB) | 5 648 384 B (5.4 MB) * |
+| 12 | 22 921 216 B (21.9 MB) | 5 652 480 B (5.4 MB) * |
 | 14 | 81 321 984 B (77.6 MB) | — |
-| 16 | 290 607 104 B (277.1 MB) | 5 656 576 B (5.4 MB) |
-| 40 | died in `case_when` | 5 685 248 B (5.4 MB) |
-| flat 40-col select control | 1 748 992 B (1.7 MB) | 1 617 920 B (1.5 MB) |
+| 16 | 290 607 104 B (277.1 MB) | 5 656 576 B (5.4 MB) * |
+| 40 | died in `case_when` | 5 685 248 B (5.4 MB) * |
+| flat 40-col select control | 1 748 992 B (1.7 MB) | 1 617 920 B (1.5 MB) * |
+
+Release native (S2-21 reviewer `g-rev577` report-2, median of 5, one worker at a
+time): branch **4.44 MiB** at N=4, 4.44 MiB at N=8, 4.45 MiB at N=12, 4.45 MiB at
+N=16, **4.48 MiB** at N=40, 4.57 MiB at N=100, **4.72 MiB** at N=200,
+**11.05 MiB** at N=400; base **278.4 MiB** at N=16 (base N=12 = 27.3 MiB,
+N=14 = 88.0 MiB). Slope N=4→200 is ~1.5 KiB/entry (page-granular) and N=200→400
+~32.4 KiB/entry — a size-class step, not the base's ×10-per-4-entries
+exponential. On this clone's release native the pin worker measures flat =
+1.61 MB and replace-40 = 5.70 MB.
 
 ~×3.4/entry above N≈10 before — matches ABS-EXPR-1's ~×3.3 (28 MB @12, 297 MB @16).
-After the rewrite the delta is flat (~5.4 MB, dominated by one collect) across all N —
-linear, as D-1 requires. The pin bound is `max(64 MB, 2 × flat control)` = 64 MB.
+After the rewrite the delta is flat (~4.4–4.7 MiB release, dominated by one
+collect) through N=200 — linear, as D-1 requires. The pin bound is
+`max(8 MiB floor, 2 × flat control)` = 8 MiB (floor tightened from 64 MiB in the
+S2-21 round; a 2× RSS regression of the linear path now fails the pin).
 
 Armed run (`REPARK_REPLACE_LINEAR_1_MEM=1`), red on the base tree:
 
@@ -241,6 +254,45 @@ native. Dispositions below are the binding orchestrator rulings.
   `_NoValue` sentinel). Still disclosed; the orchestrator is filing a separate
   card.
 
+### S2-21 performance review round (2026-09-14) — findings and dispositions
+
+Grok S2-21 Python performance review `/tmp/oc-worker/g-rev577/report-2.md` at
+`78fd6c7a` on a release native. Verdict: no P1, two P2s. Dispositions are the
+binding orchestrator rulings.
+
+- **P2-1 FIXED — per-column literal rebuild.** `_replace_case` rebuilt every key
+  `lit`, every `lit(value).cast(type_key)`, and the conversion once per target
+  column per entry. Now `key_literals` is built once per `replace` call and the
+  replacement literals once per `type_key` (lazy `replacements_by_type_key`
+  dict); `_replace_case` only composes `bound == key_literal` and
+  `_from_when_pairs` — still ONE searched CASE per column (D-1 unchanged).
+  Measured on this clone's release native, 500 int columns × 40-entry dict,
+  `replace` wall plan-only, median of 5, one process at a time:
+  **before 2518.6 ms, after 2039.7 ms** (~480 ms / 19% off; reviewer's box saw
+  the avoidable share as ~180 ms of an 815 ms build — same shape, slower box
+  here).
+- **P2-2 FIXED — pin floor 64 MiB → 8 MiB.** `_DELTA_FLOOR` is now
+  `8 * 1024**2`, so `bound = max(2 × flat_delta, 8 MiB)` and a 2× RSS regression
+  of the linear path fails. Stability run on this release native, 10
+  consecutive pin executions via the test's own `_run_worker`: **10/10 pass**,
+  flat control 1 609 728–1 613 824 B (1.54–1.54 MiB), replace-40
+  5 693 440–5 697 536 B (5.43–5.43 MiB), bound 8 388 608 B every run.
+- **P3-1 residue — RSS step at N=400.** Flat ~4.44–4.72 MiB through N=200, then
+  11.05 MiB at N=400 — a plan-size/allocator class step (~32.4 KiB/entry above
+  N=200 vs ~1.5 KiB below), still linear-class, not the base's exponential
+  (278.4 MiB at N=16). Ledger residue only; if a later card cares, the reviewer
+  points at `_from_when_pairs` arm-string copies vs DataFusion simplify.
+- **P3-2 residue — wide+deep plan-build dominated by `select`.** On a
+  500-column × 40-entry frame the family filter is 2.25 ms of an 815 ms
+  (reviewer box) build; ~65% is `DataFrame.select` projecting 500 fat CASE
+  nodes (per-arm cost grows with column count: 19 µs at 101 cols vs 41 µs at
+  500). DataFusion plan construction cost, not Python validation — no action
+  this unit; sharing one CASE expr across same-type columns would be a
+  different design.
+- **Figure correction** — the earlier "~5.4 MB at every N" claim (debug native)
+  is corrected above to the release numbers: 4.44 MiB at N=4, 4.48 MiB at
+  N=40, 4.72 MiB at N=200, 11.05 MiB at N=400; base 278.4 MiB at N=16.
+
 ## Gates
 
 - `.venv/bin/python -m pytest python/repark/tests/test_replace_linear_1.py python/repark/tests/test_df_easy.py -q`: 21 passed.
@@ -253,6 +305,14 @@ native. Dispositions below are the binding orchestrator rulings.
   - `uvx ruff@0.15.22 check python` + `uvx ruff@0.15.22 format --check python`: clean.
   - `./scripts/check_lib_py.sh` (681 files, `core.py` baseline 4074), `./scripts/check_python_conventions.sh` (337 files), `./scripts/check_docstring_presence.sh` (270 files): all clean.
   - `pytest python/repark-parity/tests/test_cap_1_source_file_line_cap.py -q` (parity harness env): 23 passed — mirror row moved 4054 → 4074 with the script baseline.
+- Round-2 audit fix (2026-09-14): `core.py` 4074 → 4044 — join-side plumbing + plan-metadata propagation extracted to `replace_expr.py`; both baselines re-set to 4044. Same Python-only gate set re-run: 105 pins green (incl. `test_join_parity.py`), ruff/format clean, lib-py/conventions/docstring clean, CAP-1 23 passed.
+- S2-21 round (2026-09-14, Python-only slot):
+  - `.venv/bin/python -m pytest test_replace_linear_1.py test_df_easy.py test_examples_dataframe_c.py test_g1_stat_and_expander.py test_dfcore_1_exports.py test_join_*.py -q -p no:cacheprovider`: 105 passed.
+  - `uvx ruff@0.15.22 check python` + `uvx ruff@0.15.22 format --check python`: clean.
+  - `./scripts/check_lib_py.sh` (681 files, `core.py` baseline 4044), `./scripts/check_python_conventions.sh` (337 files), `./scripts/check_docstring_presence.sh` (270 files): all clean.
+  - `pytest python/repark-parity/tests/test_cap_1_source_file_line_cap.py -q` (parity harness env): 23 passed.
+  - P2-1 measurement (500 int cols × 40 entries, plan-only `replace` wall, median of 5): before 2518.6 ms → after 2039.7 ms.
+  - P2-2 stability: 10/10 pin passes at the 8 MiB floor (deltas above).
 
 ## Coverage attestation
 

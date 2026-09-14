@@ -23,7 +23,7 @@ from repark.errors import (
 
 _DEPTH = 40
 _HEADROOM = 3 * 8 * 1024**3
-_DELTA_FLOOR = 64 * 1024**2
+_DELTA_FLOOR = 8 * 1024**2
 
 _WORKER = """
 import json

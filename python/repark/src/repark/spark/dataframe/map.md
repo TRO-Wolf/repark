@@ -114,7 +114,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the JVM `contains` rule — and a missing name raises `AnalysisException`), then one searched
   `CASE WHEN col = k THEN CAST(v AS coltype) … ELSE col END` per target column built via
   `Column._from_when_pairs` — linear in mapping size where the old nested `when.otherwise`
-  chain was exponential. Target columns are chosen by the first key's type family
+  chain was exponential. Key literals are built once per call and each
+  `lit(value).cast(type_key)` once per distinct column type (S2-21: rebuilding them
+  per column × entry was ~20% of wide×deep plan-build); `_replace_case` only
+  composes `bound == key_literal` and `_from_when_pairs`. Target columns are chosen by the first key's type family
   classified from the column's physical Arrow type (numeric → numeric columns incl.
   decimal, str → `Utf8`/`LargeUtf8`/`Utf8View` only so a `binary` column never matches,
   bool → boolean); non-matching columns pass through untouched, and non-convertible arm
