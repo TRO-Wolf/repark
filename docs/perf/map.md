@@ -230,6 +230,14 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   0.821/0.845 → 0.031/0.031 s; bridged vertical show unchanged as the
   control), recorded on one release module with per-run loads, wall not gated.
   pins: dfcore-6/C-005
+- [facade-5-display-baseline-2026-09-14.md](facade-5-display-baseline-2026-09-14.md) —
+  **FACADE-5 step 0 (2026-09-14):** the display renderer's FETCH/FORMAT split —
+  six renderers (ASCII `show`, vertical `show`, `_repr_html_`, duckdb show,
+  polars show, eager `repr`) at n ∈ {20, 1000} × truncate on/off × {flat
+  7-type, 50-column wide, nested} frames, each leg's share of the wall, the
+  renderer × truncation-rule pin census, and the step-1 target it selects.
+  Runner: [facade-5-display-baseline-2026-09-14/](facade-5-display-baseline-2026-09-14/map.md).
+  pins: facade-5/C-002
 
 - [profiles-1-passthrough-probe-2026-09-09.md](profiles-1-passthrough-probe-2026-09-09.md) — **PROFILES-1
   step 0 (2026-09-09):** the `.config()` pass-through probe over the card's twenty
