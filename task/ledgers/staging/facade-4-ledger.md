@@ -149,7 +149,8 @@ Notes on the disagreements:
 **Verdict: (B) — no wall: ship as the correctness consolidation.** The
 baseline ([docs/perf/facade-4-types-baseline-2026-09-14.md](../../../docs/perf/facade-4-types-baseline-2026-09-14.md))
 measures every conversion at ≤134 µs per call, zero calls on
-`collect`/`to_arrow`/`show`/`df.schema`, and 0.000–0.006 % share of the
+`collect`/`to_arrow`/`show` across all six spied names (`df.schema` makes one `fromDDL` and one
+`_parse_datatype_string` call, L-008), and 0.000–0.006 % share of the
 1e5-row end-to-end walls. Nothing reaches the card's wall bar (≥5 % of an
 end-to-end wall or ≥1 ms per user call). Step 1 exists to unify the three
 tables' *answers*, not to remove a measured cost.
@@ -267,6 +268,17 @@ eleven findings remediated in place on this branch; product code untouched.
 | L-009 | P2 | session-tz golden never carried `America/New_York` | `02f83bf7` — fresh NY+NTZ session after the UTC stop; records `active_session_time_zone()` = `America/New_York` + a session-zone wall clock |
 | L-010 | P3 | case count `47` vs JSON's `45` keys | `02f83bf7` — C-002 corrected to 45 (30 atomic + 13 complex + 2) |
 | L-011 | P3 | CI refusal exact-`"true"` only | `02f83bf7` — any non-empty `CI`/`GITHUB_ACTIONS` counts; `CI=1` and `CI=""` legs pinned |
+
+Re-check (Grok critic-logic round 2 on `f93c6928`): **PASS**, report `/tmp/oc-worker/f-crit4/report.md`. Residual P3
+notes, carried to step 1 and not fixed here:
+
+| Finding | Severity | Note | Disposition |
+|---|---|---|---|
+| R2-P3-1 | P3 | D1 annotates a naive CSV literal in column (ii) of an Arrow `timestamp[us]` row; under LTZ that literal's `_csv_smart` and infer answers agree, and the NTZ split is D2 | step 1 rewrites D1 to one input |
+| R2-P3-2 | P3 | D20 dictionary is still not probed through the reader lattice; the facade and golden pin inbound `StringType` | step 1 census pins add a dictionary reader case |
+| R2-P3-3 | P3 | Q2 still names `_csv_smart` `string` beside Arrow `binary`; the hex literal is a different input | wording fixed with the Q2 ruling |
+| R2-P3-4 | P3 | the step-1 blurb claimed zero calls on `df.schema` | fixed in this commit |
+| R2-P3-5 | P3 | inbound `valueContainsNull=False` is pinned on the Spark `MapType` JSON path, not on a raw Arrow non-null map value field | step 1 census pins add the raw Arrow case |
 
 ## Evidence
 
