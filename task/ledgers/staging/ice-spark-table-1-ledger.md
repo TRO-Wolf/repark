@@ -75,7 +75,7 @@ critic's bytecode-derived expectation (P2-3 write side) is recorded under §C-00
 {
   "format-version": 2,
   "properties": {
-    "owner": "john",
+    "owner": "repark",
     "write.merge.mode": "copy-on-write",
     "write.delete.mode": "copy-on-write",
     "write.parquet.compression-codec": "zstd",
