@@ -16,17 +16,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `perf/facade-5-s0`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [array-null-1-ledger.md](array-null-1-ledger.md) —
-  **ARRAY-NULL-1 step 0 (2026-09-14), in flight:** `F.array_append`/`F.array_prepend`
-  `_glue_element` embeds the running expression twice per level (measured ~×3/level:
-  51 MB at depth 12, 269 MB at depth 16; a depth-40 chain cannot plan). Step 0
-  measured the D-2 oracle cells on live PySpark 4.1.2 beside facade AND SQL-door
-  answers (facade cell-correct today; door drops the NULL array on append and
-  refuses every Spark-spelled `array_prepend(a, e)`), landed the env-gated
-  red-first depth-40 memory pin (crossed the 64 MB bound at level 15), and measured
-  both D-1 routes — **route (a), a null-buffer-grafting `ScalarUDF`, is correct on
-  every cell and linear at depth 40 (~1.9 MB)**; route (b) CASE dies at depth 40
-  (no lateral plan-level alias exists in DataFusion). Door under route (a) resolves
-  the same arm. Spike scripts: [array-null-1-spikes/](array-null-1-spikes/map.md).
+  **ARRAY-NULL-1 (2026-09-14):** `F.array_append`/`F.array_prepend` lower through
+  `spark_array_append_udf`/`spark_array_prepend_udf` — a `ScalarUDF` that delegates
+  to DataFusion's kernel and grafts the input array's outer null buffer back
+  (route (a); the CASE route died at depth 40 and no lateral plan-level alias
+  exists). One native call per facade level: depth-40 RSS ~2.0 MB vs 577 MB at
+  depth 16 before; the SQL door answers the same arm in Spark `(array, element)`
+  order, and the depth-40 memory pin runs by default on both functions.
+  Measurement script: [array-null-1-spikes/](array-null-1-spikes/map.md).
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —

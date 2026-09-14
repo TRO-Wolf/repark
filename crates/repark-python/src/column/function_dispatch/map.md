@@ -14,7 +14,10 @@ unit — so a new family gets a child module and the parent's default arm falls 
   `from_json`, `array_insert`, `arrays_zip`, `map_concat`, and `create_map`. `create_map` calls
   the Spark-named `create_map` kernel, because DataFusion's `map(make_array, make_array)`
   lowering cannot mix a scalar key with a column value.
-  pins: fnp-9-collections-json/C-006, C-007
+  **ARRAY-NULL-1 (2026-09-14):** `array_append`/`array_prepend` build one
+  `ScalarFunction::new_udf` over the null-preserving `spark_array_*_udf` shims — one
+  native call per facade level, Spark `(array, element)` order.
+  pins: fnp-9-collections-json/C-006, C-007, array-null-1/C-003
 
 ## Pointers
 

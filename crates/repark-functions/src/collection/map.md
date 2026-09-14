@@ -61,6 +61,17 @@ needed.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
   `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
   pins: fn-fix-1-registry-rows/C-002
+- `array_append.rs` — **ARRAY-NULL-1 (2026-09-14):** `spark_array_append_udf` /
+  `spark_array_prepend_udf`. Each delegates to DataFusion's native kernel and then grafts
+  the input array's outer `NullBuffer` onto the result — the kernels drop it, so a NULL
+  array wrongly answered `[x]`. Spark `(array, element)` order on both names (prepend
+  swaps args for the kernel call), the result element field is forced nullable
+  (`containsNull=True` like Spark), and a `DataType::Null` input yields an all-null
+  result. Registered after DF's defaults so the same names serve both doors; the
+  DF-only aliases (`list_append`, `array_push_back`, `list_prepend`, …) keep DF's
+  kernel — the shim claims no aliases. Rust tests cover a sliced (non-zero offset)
+  input's null graft.
+  pins: array-null-1/C-003, C-004, C-005
 
 ## I want to...
 

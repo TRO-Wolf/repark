@@ -1,12 +1,11 @@
 """ARRAY-NULL-1 — ``F.array_append`` / ``F.array_prepend`` oracle cells + memory pin.
 
-pins: array-null-1/C-001, C-002, C-003
+pins: array-null-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 
@@ -21,8 +20,7 @@ from repark.spark.types import ArrayType, IntegerType, StructField, StructType
 
 _DEPTH = 40
 _HEADROOM = 3 * 8 * 1024**3
-_DELTA_FLOOR = 64 * 1024**2
-_MEM_SKIP = "REPARK_ARRAY_NULL_1_MEM != 1 — armed-only until the step-1 lowering lands"
+_DELTA_FLOOR = 8 * 1024**2
 
 _WORKER = """
 import json
@@ -242,15 +240,164 @@ def test_array_prepend_oracle_cells(spark: ReparkSession) -> None:
     )
 
 
-@pytest.mark.skipif(os.environ.get("REPARK_ARRAY_NULL_1_MEM") != "1", reason=_MEM_SKIP)
-def test_array_append_depth40_memory_linear() -> None:
+def _door_result(spark: ReparkSession, ddl: str | StructType, rows: list, sql: str) -> pa.Table:
+    spark.createDataFrame(rows, ddl).createOrReplaceTempView("v")
+    return spark.sql(sql).to_arrow()
+
+
+def test_array_append_door_oracle_cells(spark: ReparkSession) -> None:
+    """pins: array-null-1/C-004, C-005 — the SQL door answers append like the facade."""
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [(None, 4)], "SELECT array_append(a, e) AS r FROM v"
+        ),
+        [None],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [([1, 2], None)], "SELECT array_append(a, e) AS r FROM v"
+        ),
+        [[1, 2, None]],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [([], 4)], "SELECT array_append(a, e) AS r FROM v"
+        ),
+        [[4]],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark,
+            "a array<array<int>>, e array<int>",
+            [([[1], [2, 3]], [9])],
+            "SELECT array_append(a, e) AS r FROM v",
+        ),
+        [[[1], [2, 3], [9]]],
+        "list<item: int32>",
+    )
+    _check(
+        _door_result(
+            spark, "a array<bigint>, e int", [([1, 2], 4)], "SELECT array_append(a, e) AS r FROM v"
+        ),
+        [[1, 2, 4]],
+        "int64",
+    )
+    _check(
+        _door_result(
+            spark, "a array<double>, e int", [([1.0], 4)], "SELECT array_append(a, e) AS r FROM v"
+        ),
+        [[1.0, 4.0]],
+        "double",
+    )
+    with pytest.raises(PySparkException):
+        _door_result(
+            spark,
+            "a array<int>, e string",
+            [([1, 2], "x")],
+            "SELECT array_append(a, e) AS r FROM v",
+        )
+    nonnullable = StructType([StructField("a", ArrayType(IntegerType(), containsNull=False))])
+    _check(
+        _door_result(
+            spark,
+            nonnullable,
+            [([1, 2],)],
+            "SELECT array_append(a, CAST(NULL AS INT)) AS r FROM v",
+        ),
+        [[1, 2, None]],
+        "int32",
+    )
+    _check(
+        spark.sql("SELECT array_append(array(1, 2), 3) AS r").to_arrow(),
+        [[1, 2, 3]],
+        "int64",
+    )
+
+
+def test_array_prepend_door_oracle_cells(spark: ReparkSession) -> None:
+    """pins: array-null-1/C-004, C-005 — the SQL door answers prepend like the facade."""
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [(None, 4)], "SELECT array_prepend(a, e) AS r FROM v"
+        ),
+        [None],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [([1, 2], None)], "SELECT array_prepend(a, e) AS r FROM v"
+        ),
+        [[None, 1, 2]],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark, "a array<int>, e int", [([], 4)], "SELECT array_prepend(a, e) AS r FROM v"
+        ),
+        [[4]],
+        "int32",
+    )
+    _check(
+        _door_result(
+            spark,
+            "a array<array<int>>, e array<int>",
+            [([[1], [2, 3]], [9])],
+            "SELECT array_prepend(a, e) AS r FROM v",
+        ),
+        [[[9], [1], [2, 3]]],
+        "list<item: int32>",
+    )
+    _check(
+        _door_result(
+            spark, "a array<bigint>, e int", [([1, 2], 4)], "SELECT array_prepend(a, e) AS r FROM v"
+        ),
+        [[4, 1, 2]],
+        "int64",
+    )
+    _check(
+        _door_result(
+            spark, "a array<double>, e int", [([1.0], 4)], "SELECT array_prepend(a, e) AS r FROM v"
+        ),
+        [[4.0, 1.0]],
+        "double",
+    )
+    with pytest.raises(PySparkException):
+        _door_result(
+            spark,
+            "a array<int>, e string",
+            [([1, 2], "x")],
+            "SELECT array_prepend(a, e) AS r FROM v",
+        )
+    nonnullable = StructType([StructField("a", ArrayType(IntegerType(), containsNull=False))])
+    _check(
+        _door_result(
+            spark,
+            nonnullable,
+            [([1, 2],)],
+            "SELECT array_prepend(a, CAST(NULL AS INT)) AS r FROM v",
+        ),
+        [[None, 1, 2]],
+        "int32",
+    )
+    _check(
+        spark.sql("SELECT array_prepend(array(1, 2), 3) AS r").to_arrow(),
+        [[3, 1, 2]],
+        "int64",
+    )
+
+
+@pytest.mark.parametrize("mode", ["append", "prepend"])
+def test_array_append_depth40_memory_linear(mode: str) -> None:
     """pins: array-null-1/C-002 — a depth-40 chain stays under 2x a flat 40-append select."""
     control = _run_worker(_DEPTH, 0, "flat")
     assert control["returncode"] == 0, f"flat select control failed: {control['stderr_tail']}"
     bound = max(2 * control["delta"], _DELTA_FLOOR)
-    result = _run_worker(_DEPTH, bound, "append")
+    result = _run_worker(_DEPTH, bound, mode)
     assert result["returncode"] == 0, (
-        f"F.array_append depth-{_DEPTH} crossed the bound "
+        f"F.array_{mode} depth-{_DEPTH} crossed the bound "
         f"{bound} B (2x flat 40-append select delta {control['delta']} B, floor "
         f"{_DELTA_FLOOR} B): {result.get('crossed', 'died')} "
         f"at delta {result.get('delta', '?')} B; {result['stderr_tail']}"
