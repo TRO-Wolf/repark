@@ -1,25 +1,28 @@
 """REPLACE-LINEAR-1 — ``DataFrame.replace`` oracle cells and the exponential memory pin.
 
-pins: replace-linear-1/C-001, C-002, C-005
+pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
 
 import json
 import math
-import os
 import subprocess
 import sys
 
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkTypeError,
+    PySparkValueError,
+)
 
 _DEPTH = 40
 _HEADROOM = 3 * 8 * 1024**3
 _DELTA_FLOOR = 64 * 1024**2
-_MEM_SKIP = "REPARK_REPLACE_LINEAR_1_MEM != 1 — armed-only until the step-1 rewrite lands"
 
 _WORKER = """
 import json
@@ -106,7 +109,6 @@ def _run_worker(entries: int, bound: int, mode: str) -> dict:
     return result
 
 
-@pytest.mark.skipif(os.environ.get("REPARK_REPLACE_LINEAR_1_MEM") != "1", reason=_MEM_SKIP)
 def test_replace_dict_depth40_memory_linear() -> None:
     """pins: replace-linear-1/C-002 — a 40-entry dict stays under 2x a flat 40-col select."""
     control = _run_worker(_DEPTH, 0, "flat")
@@ -201,61 +203,100 @@ def test_replace_oracle_cells_matching(spark: ReparkSession) -> None:
     assert str(table.schema.field("a b").type) == "int64"
 
 
-def test_replace_divergent_cells_today(spark: ReparkSession) -> None:
-    """pins: replace-linear-1/C-001 — today's answers on the cells that differ from the oracle."""
+def test_replace_divergent_cells_match_spark(spark: ReparkSession) -> None:
+    """pins: replace-linear-1/C-001, C-003 — the ruled cells now answer like PySpark 4.1.2."""
     table = (
         spark.createDataFrame([(1,), (2,), (3,), (None,)], "x int")
         .replace({1: 2, 2: 3}, subset=["x"])
         .to_arrow()
     )
-    assert table.column("x").to_pylist() == [3, 3, 3, None]
+    assert table.column("x").to_pylist() == [2, 3, 3, None]
+    assert str(table.schema.field("x").type) == "int32"
+
+    with pytest.raises(PySparkValueError) as null_key:
+        spark.createDataFrame([(1,), (None,), (5,)], "x int").replace({None: 5}, subset=["x"])
+    assert null_key.value.getCondition() == "MIXED_TYPE_REPLACEMENT"
+
+    with pytest.raises(PySparkTypeError) as none_scalar:
+        spark.createDataFrame([(1,), (None,)], "x int").replace(None, 5, subset=["x"])
+    assert (
+        none_scalar.value.getCondition()
+        == "NOT_BOOL_OR_DICT_OR_FLOAT_OR_INT_OR_LIST_OR_STR_OR_TUPLE"
+    )
+
+    table = (
+        spark.createDataFrame([(1,), (2,), (3,)], "x int")
+        .replace([1, 2], [3, 4], subset=["x"])
+        .to_arrow()
+    )
+    assert table.column("x").to_pylist() == [3, 4, 3]
     assert str(table.schema.field("x").type) == "int32"
 
     table = (
-        spark.createDataFrame([(1,), (None,), (5,)], "x int")
-        .replace({None: 5}, subset=["x"])
+        spark.createDataFrame([(1,), (2,), (3,)], "x int")
+        .replace([1, 2], 9, subset=["x"])
         .to_arrow()
     )
-    assert table.column("x").to_pylist() == [1, None, 5]
+    assert table.column("x").to_pylist() == [9, 9, 3]
+    assert str(table.schema.field("x").type) == "int32"
+
+    with pytest.raises(PySparkValueError) as length_mismatch:
+        spark.createDataFrame([(1,), (2,), (3,)], "x int").replace([1, 2], [3], subset=["x"])
+    assert length_mismatch.value.getCondition() == "LENGTH_SHOULD_BE_THE_SAME"
+
+    rows = (
+        spark.createDataFrame([("a", 1), ("b", 2)], "s string, y int").replace("a", "b").collect()
+    )
+    assert rows == [("b", 1), ("b", 2)]
 
     table = (
-        spark.createDataFrame([(1,), (None,)], "x int").replace(None, 5, subset=["x"]).to_arrow()
+        spark.createDataFrame([(True,), (False,), (None,)], "x boolean")
+        .replace(1, 2, subset=["x"])
+        .to_arrow()
     )
-    assert table.column("x").to_pylist() == [1, None]
+    assert table.column("x").to_pylist() == [True, False, None]
+    assert str(table.schema.field("x").type) == "bool"
 
-    with pytest.raises(TypeError, match="unhashable"):
-        spark.createDataFrame([(1,), (2,), (3,)], "x int").replace([1, 2], [3, 4], subset=["x"])
-
-    with pytest.raises(TypeError, match="unhashable"):
-        spark.createDataFrame([(1,), (2,), (3,)], "x int").replace([1, 2], 9, subset=["x"])
-
-    with pytest.raises(PySparkException, match="Cannot cast string"):
-        spark.createDataFrame([("a", 1), ("b", 2)], "s string, y int").replace("a", "b").collect()
-
-    with pytest.raises(AnalysisException, match="type_coercion"):
-        spark.createDataFrame([(True,), (False,)], "x boolean").replace(
-            1, 2, subset=["x"]
-        ).collect()
-
-    with pytest.raises(AnalysisException, match="type_coercion"):
-        spark.createDataFrame([(1,), (0,), (2,)], "x int").replace(True, 9, subset=["x"]).collect()
+    with pytest.raises(IllegalArgumentException, match="Unsupported value type"):
+        spark.createDataFrame([(1,), (0,), (2,)], "x int").replace(True, 9, subset=["x"])
 
     table = (
         spark.createDataFrame([(1,), (2,), (None,)], "x int")
         .replace(1, 2.5, subset=["x"])
         .to_arrow()
     )
-    assert table.column("x").to_pylist() == [2.5, 2.0, None]
-    assert str(table.schema.field("x").type) == "double"
+    assert table.column("x").to_pylist() == [2, 2, None]
+    assert str(table.schema.field("x").type) == "int32"
 
-    with pytest.raises(PySparkException, match="Cannot cast string"):
-        spark.createDataFrame([(1, "a"), (2, "b")], "x int, s string").replace({"a": 1}).collect()
+    with pytest.raises(PySparkValueError) as mixed_map:
+        spark.createDataFrame([(1, "a"), (2, "b")], "x int, s string").replace({"a": 1})
+    assert mixed_map.value.getCondition() == "MIXED_TYPE_REPLACEMENT"
 
-    table = spark.createDataFrame([(1,), (2,)], "x int").replace(1, 9, subset="missing").to_arrow()
+    with pytest.raises(AnalysisException, match="cannot be resolved"):
+        spark.createDataFrame([(1,), (2,)], "x int").replace(1, 9, subset="missing")
+
+    table = spark.createDataFrame([(1,), (2,)], "x int").replace("a", "b", subset=["x"]).to_arrow()
     assert table.column("x").to_pylist() == [1, 2]
+    assert str(table.schema.field("x").type) == "int32"
 
-    with pytest.raises(PySparkException, match="Cannot cast string"):
-        spark.createDataFrame([(1,), (2,)], "x int").replace("a", "b", subset=["x"]).collect()
 
-    with pytest.raises(TypeError, match="unhashable"):
-        spark.createDataFrame([(1,), (2,), (3,)], "x int").replace([1, 2], [3], subset=["x"])
+def test_replace_projection_metadata_plain_frame(spark: ReparkSession) -> None:
+    """pins: replace-linear-1/C-004 — a plain frame keeps the projected name and rebinds."""
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], "x int, s string")
+    replaced = frame.replace(1, 9, subset=["x"])
+    assert replaced.columns == ["x", "s"]
+    assert replaced.select("x").to_arrow().column("x").to_pylist() == [9, 2]
+    assert replaced.select("s").to_arrow().column("s").to_pylist() == ["a", "b"]
+
+
+def test_replace_projection_metadata_join_frame(spark: ReparkSession) -> None:
+    """pins: replace-linear-1/C-004 — a join-origin frame keeps names and rebinds by name."""
+    left = spark.createDataFrame([(1, 10), (2, 20)], "k int, x int")
+    right = spark.createDataFrame([(1, "a"), (2, "b")], "k int, s string")
+    joined = left.join(right, "k")
+    assert joined.columns == ["k", "x", "s"]
+    replaced = joined.replace(10, 99, subset=["x"])
+    assert replaced.columns == ["k", "x", "s"]
+    assert replaced.select("x").to_arrow().column("x").to_pylist() == [99, 20]
+    assert replaced.select("s").to_arrow().column("s").to_pylist() == ["a", "b"]
+    assert replaced.select("k").to_arrow().column("k").to_pylist() == [1, 2]

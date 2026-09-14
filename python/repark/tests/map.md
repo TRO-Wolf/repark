@@ -446,7 +446,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_examples_dataframe_c.py](test_examples_dataframe_c.py) — **EX-18 (2026-09-04):**
   the seven divergence pins for the DataFrame-c example batch — the `sameSemantics`
   alias arm answers handle identity where Spark answers plan equality (EX-DF-11),
-  `replace` without subset casts or raises where Spark replaces typed cells (EX-DF-12),
+  `replace` without subset now replaces typed cells per column (EX-DF-12, FIXED by
+  REPLACE-LINEAR-1 2026-09-14),
   `sample`'s stable seeded set where Spark's keyword-seed spelling drops the seed and
   the seeded sets differ (EX-DF-13), `sampleBy`'s seeded 0.5/0.5 fractions keeping three
   rows where Spark keeps two (EX-DF-14), `summary`'s bare-call refusal alongside

@@ -106,8 +106,19 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   holds the GIL and abort. Use `Table.from_batches`, not `RecordBatchReader.from_batches`,
   so tests that patch `pa.RecordBatchReader` keep tracking `from_stream`. Exact baseline
   ratchets 4485 → 4473 → 4470. pins: facade-1/C-001, C-002, C-006
-- `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`; `DataFrame.replace` stays in
-  `core.py`.
+- `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
+- `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
+  PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
+  same-type-group `MIXED_TYPE_REPLACEMENT`, subset resolution through
+  `_resolve_getitem_column_name` where a case-variant spelling resolves but never matches —
+  the JVM `contains` rule — and a missing name raises `AnalysisException`), then one searched
+  `CASE WHEN col = k THEN CAST(v AS coltype) … ELSE col END` per target column built via
+  `Column._from_when_pairs` — linear in mapping size where the old nested `when.otherwise`
+  chain was exponential. Target columns are chosen by the first key's type family
+  (numeric → numeric columns incl. decimal, str → string, bool → boolean); non-matching
+  columns pass through untouched, and non-convertible arm values refuse with
+  `IllegalArgumentException` like the JVM `convertToDouble`. `DataFrame.replace` is a
+  one-line wrapper.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
@@ -705,7 +716,8 @@ that held the comment (pins: comment-core-1/C-003).
   default catalog. SQL `SELECT *` surfaces engine field names; re-attach display
   identity so multi-name joins keep duplicate display columns positionally.
 - `replace`: Multi-name frames bind by engine/display pairs. Preserve origin for
-  multi-name select identity.
+  multi-name select identity. The CASE lives in `replace_expr.py` (flat searched CASE,
+  not a nested `when.otherwise` chain).
 - `repartition`: Spark: first position is int count, or a Column/str partition expr
   when the call is `repartition(*cols)`. A list/bool/float always raises
   `NOT_COLUMN_OR_STR`. Reject a sole-argument list instead of treating it as no
@@ -794,6 +806,7 @@ that held the comment (pins: comment-core-1/C-003).
 | `colRegex` marker and `select` expansion | [`colregex.py`](colregex.py) |
 | Grouping, pivot, and `applyInPandas` | [`joins_columns.py`](joins_columns.py) |
 | Missing-data helpers | [`actions_export.py`](actions_export.py) |
+| `DataFrame.replace` validation + CASE build | [`replace_expr.py`](replace_expr.py) |
 | Export-error mapping | [`export_errors.py`](export_errors.py) |
 | `mapInArrow` schema checks | [`udf_schema.py`](udf_schema.py) |
 | Grouped-UDF assembly | [`grouped_udf.py`](grouped_udf.py) |

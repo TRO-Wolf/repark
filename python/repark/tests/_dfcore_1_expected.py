@@ -655,6 +655,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "export_errors",
     "grouped_udf",
     "polars_cells",
+    "replace_expr",
     "rows_export",
     "sampling",
     "statistics",
@@ -666,6 +667,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
 EXPECTED_NEW_CORE_SUBMODULES: set[str] = {
     "cache_handle",
     "display",
+    "replace_expr",
     "sampling",
     "statistics",
     "udf_projection",
