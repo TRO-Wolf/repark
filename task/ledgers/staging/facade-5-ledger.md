@@ -134,7 +134,7 @@ Rule taxonomy (what reaches the formatter, from `_cell_text` /
 | 27 | duckdb × T-scal (floats/dates/decimal/binary) | `duckdb_scalars` |
 | 28 | duckdb lazy repr × 12 columns (no max_cols gap rule) | `duckdb_lazy_wide` |
 | 29 | styled show × zero columns (polars `shape: (N, 0)` / duckdb `┌┐`) | `styled_zero_cols` |
-| 30 | ASCII/eager × zero columns | `spark_zero_cols` |
+| 30 | spark doors × zero columns — ASCII `show` honest row count, vertical/HTML/eager slice-pad phantoms pinned on 1-row and 0-row frames | `spark_zero_cols`, `spark_zero_cols_empty` |
 
 ### Eager-preview scan counts the `test_dfcore_6_eager_preview.py` pins assert
 
@@ -187,6 +187,8 @@ bitten but sit past that display cap).
 | M10 | `plan_collapse.py` zero-col `shape: (N, 0)` → `(0, N)` | styled_zero_cols |
 | M11 | `plan_collapse.py` separator `"+-"` → `"x-"` | ascii_nested, ascii_nested_off, ascii_scalars, ascii_trunc2, ascii_trunc_str7, spark_zero_cols |
 | M12 | `plan_collapse.py` `"-RECORD"` → `"-REC"` | vertical_nested, vertical_trunc2, vertical_trunc5, vertical_trunc_off |
+| M13 | `display.py` vertical `table.slice(0, limit)` → `slice(0, min(limit, table.num_rows))` (slice-pad removed) | spark_zero_cols, spark_zero_cols_empty |
+| M14 | `display.py` HTML `table.slice(0, max_rows)` → `slice(0, min(max_rows, table.num_rows))` (slice-pad removed) | spark_zero_cols, spark_zero_cols_empty |
 
 Coverage: all 30 case ids red at least once (weakest links: html_* via M7
 only, eager_trunc_default / eager_trunc_off / eager_wide via M5 only,
@@ -196,6 +198,69 @@ proof: `duckdb_trunc_true/10/2` moved from `show(3)` to `show(4)` — at n=3
 the duckdb head/tail split never renders the truncatable row, so the case
 bound nothing; and infinite floats refuse `createDataFrame`, so `ascii_scalars`
 and `duckdb_scalars` take their inf/-inf row through the SQL door.
+
+## Findings — critic-logic round 1 (`/tmp/oc-worker/f-crit5/report.md`, NEEDS_REMEDIATION)
+
+**Rebase note.** The branch was rebased onto `main` at `c9b03c67` (carries
+FACADE-4 step 0 #579 and REPLACE-LINEAR-1 #577). `git diff --name-only
+30ca2ba1 c9b03c67`:
+
+```
+docs/spark-sql-iceberg-parity.md
+python/repark-parity/tests/map.md
+python/repark-parity/tests/test_cap_1_source_file_line_cap.py
+python/repark/src/repark/spark/dataframe/core.py
+python/repark/src/repark/spark/dataframe/map.md
+python/repark/src/repark/spark/dataframe/replace_expr.py
+python/repark/tests/_dfcore_1_expected.py
+python/repark/tests/map.md
+python/repark/tests/test_dfcore_1_exports.py
+python/repark/tests/test_examples_dataframe_c.py
+python/repark/tests/test_replace_linear_1.py
+scripts/check_lib_py.py
+scripts/map.md
+task/ledgers/completed/map.md
+task/ledgers/completed/replace-linear-1-ledger.md
+task/ledgers/staging/map.md
+task/ledgers/staging/replace-linear-1-ledger.md
+```
+
+`core.py` is the only file the goldens exercise. Its hunks sit at old lines
+280/331/371/385 (`_join_qualifiers` slot + `_plan_child`/`_identity_child`
+delegating display-name inheritance to `replace_expr._inherit_plan_metadata`,
+byte-for-byte the same copies plus the new `_join_qualifiers` carry), 2463
+(`replace()` body → `replace_expr._replace`), 2800/2821 (same area), 4076
+(import). `__repr__` (2277), `_repr_html_` (2281) and `show` (3645) are outside
+every hunk; no display-path body changed. Confirmed empirically: the full
+golden suite re-run under this clone's `python/repark/src` (PYTHONPATH shim +
+release native) is green byte-identical on `c9b03c67`.
+
+| Critic id | Sev | Substance | Disposition |
+|---|---|---|---|
+| L-001 | P2 | vertical `show` × zero-column unbound; `Table.slice` pads `n` phantom `-RECORD`s | REMEDIATED — `show_vertical` pinned on 1-row + 0-row frames |
+| L-002 | P2 | `_repr_html_` × zero-column unbound; `maxNumRows` phantom `<tr>` rows | REMEDIATED — `html` door pinned on both frames |
+
+```yaml
+FINDING:
+  id: F-L1
+  severity: S2
+  category: AT-10
+  clause: C-004
+  claim: Vertical show and _repr_html_ on zero-column frames were unbound while the live doors emit slice-pad phantom rows.
+  evidence: display.py:97-102 / :228-246 — table.slice(0, n) pads a 0-column Arrow table to n rows; 1-row frame prints 5 -RECORDs and 20 body <tr>; 0-row prints the same.
+  disposition: REMEDIATED — spark_zero_cols and spark_zero_cols_empty pin show_vertical and html bytes on 1-row and 0-row frames; M13/M14 red both.
+```
+
+```yaml
+FINDING:
+  id: F-L2
+  severity: S2
+  category: AT-1
+  clause: C-004
+  claim: The doors disagree on zero-column frames — ASCII show prints the real row count while vertical show, eager repr and _repr_html_ print n / maxNumRows phantom records from the Table.slice pad.
+  evidence: spark_zero_cols + spark_zero_cols_empty goldens — show: 1 and 0 rows; show_vertical: 5 RECORDs both; repr_eager: 20 ghost rows both; html: 20 ghost <tr> both.
+  disposition: OPEN — owner question for step 1: pin the phantom bytes as the byte-identical contract, or fix the slice pad first (would change bytes; not this step's call).
+```
 
 ## Step-1 target (C-007) — option (A): measured format wall
 

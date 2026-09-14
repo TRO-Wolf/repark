@@ -126,6 +126,9 @@
     }
   },
   "spark_zero_cols": {
+    "html": {
+      "rendered": "<table border='1'>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n</table>"
+    },
     "repr_eager": {
       "rendered": "++\n||\n++\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n++"
     },
@@ -134,6 +137,26 @@
     },
     "show": {
       "rendered": "+--+\n|  |\n+--+\n|  |\n+--+"
+    },
+    "show_vertical": {
+      "rendered": "-RECORD 0-\n-RECORD 1-\n-RECORD 2-\n-RECORD 3-\n-RECORD 4-"
+    }
+  },
+  "spark_zero_cols_empty": {
+    "html": {
+      "rendered": "<table border='1'>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n<tr></tr>\n</table>"
+    },
+    "repr_eager": {
+      "rendered": "++\n||\n++\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n||\n++"
+    },
+    "repr_lazy": {
+      "rendered": "DataFrame[]"
+    },
+    "show": {
+      "rendered": "+--+\n|  |\n+--+\n+--+"
+    },
+    "show_vertical": {
+      "rendered": "-RECORD 0-\n-RECORD 1-\n-RECORD 2-\n-RECORD 3-\n-RECORD 4-"
     }
   },
   "styled_zero_cols": {

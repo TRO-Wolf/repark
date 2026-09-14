@@ -175,8 +175,13 @@ def _wide12_frame(session: ReparkSession) -> Any:
 
 
 def _zero_col_frame(session: ReparkSession) -> Any:
-    """A zero-column lazy frame."""
+    """A one-row zero-column lazy frame."""
     return session.sql("SELECT 1 AS x").drop("x")
+
+
+def _zero_col_empty_frame(session: ReparkSession) -> Any:
+    """A zero-row zero-column lazy frame."""
+    return session.sql("SELECT 1 AS x WHERE 1 = 0").drop("x")
 
 
 def _case_ascii_trunc2(session: ReparkSession) -> dict[str, Any]:
@@ -426,19 +431,39 @@ def _case_styled_zero_cols(session: ReparkSession) -> dict[str, Any]:
     return results
 
 
-def _case_spark_zero_cols(session: ReparkSession) -> dict[str, Any]:
-    """Spark ``show``, lazy ``repr``, and eager ``repr`` on the zero-column frame."""
-    frame = _zero_col_frame(session)
+def _spark_zero_col_doors(session: ReparkSession, frame: Any) -> dict[str, Any]:
+    """Every spark door on one zero-column frame, eager eval on for HTML."""
     results = dict(
         [
             _door("show", lambda: _capture_show(frame, 5)),
+            _door("show_vertical", lambda: _capture_show(frame, 5, vertical=True)),
             _door("repr_lazy", lambda: repr(frame)),
         ]
     )
     results.update(
-        _under_eager(session, 20, 20, lambda: dict([_door("repr_eager", lambda: repr(frame))]))
+        _under_eager(
+            session,
+            20,
+            20,
+            lambda: dict(
+                [
+                    _door("repr_eager", lambda: repr(frame)),
+                    _door("html", lambda: frame._repr_html_()),
+                ]
+            ),
+        )
     )
     return results
+
+
+def _case_spark_zero_cols(session: ReparkSession) -> dict[str, Any]:
+    """Spark doors on the one-row zero-column frame (slice-pad rows pinned)."""
+    return _spark_zero_col_doors(session, _zero_col_frame(session))
+
+
+def _case_spark_zero_cols_empty(session: ReparkSession) -> dict[str, Any]:
+    """Spark doors on the zero-row zero-column frame (all slice-pad rows)."""
+    return _spark_zero_col_doors(session, _zero_col_empty_frame(session))
 
 
 def _put(out: dict[str, Case], case_id: str, thunk: Case) -> None:
@@ -481,6 +506,7 @@ def _all_cases() -> dict[str, Case]:
     _put(out, "duckdb_lazy_wide", _case_duckdb_lazy_wide)
     _put(out, "styled_zero_cols", _case_styled_zero_cols)
     _put(out, "spark_zero_cols", _case_spark_zero_cols)
+    _put(out, "spark_zero_cols_empty", _case_spark_zero_cols_empty)
     return out
 
 
