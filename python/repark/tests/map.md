@@ -33,6 +33,31 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_spark_table_1.py](test_ice_spark_table_1.py) — **ICE-SPARK-TABLE-1
+  (2026-09-14):** RePark writes into a table **Spark created** — the G-3 / G-4-Spark-half
+  standing requirement (inventory §8 ruling 6). Always-run: the committed
+  `fixtures/torture/data/ice_spark_table_1` Spark-written v2 CoW table (36.6 KB,
+  `truth.json` seed) is materialized at its baked-in path under a directory lock,
+  adopted via `CALL system.register_table`, hit with the production
+  `UPDATE SET * / INSERT *` MERGE twice and the weekly CALLs
+  (`expire_snapshots` / `rewrite_manifests` / `rewrite_data_files` binpack /
+  `remove_orphan_files` / `rewrite_position_delete_files`), and pinned at 35 rows on
+  four partitions with the measured CALL outputs (expire drops one manifest list,
+  manifests 3→1, binpack no-op under the min-input floor, orphan sweep empty behind
+  the 24-hour floor, zero delete files) — plus the Spark-vs-RePark metadata-shape
+  diff (Spark-only `owner` + `write.parquet.compression-codec`, Spark-only snapshot
+  summary keys vs repark's `engine.operation-id`, `vN` vs `NNNNN-uuid` file naming,
+  `version-hint.text` present only Spark-side and left stale at `3` while repark
+  commits through `v7`). Live (`REPARK_PARITY_LIVE=1`): PySpark 4.1.2 +
+  iceberg-runtime 1.11.0 on a module-private Hadoop catalog creates and seeds the
+  same table, RePark registers + MERGEs + CALLs it, and Spark reads the result back —
+  the stale-hint reread (20) vs post-`refreshTable` count (35), a second
+  `register_table` at `v7`, `EXCEPT ALL` empty both ways against repark's own answer,
+  equal per-partition counts, `.snapshots`/`.history`/`.files` each 4 rows, zero
+  delete files — and the WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted
+  table refuses the MERGE loudly (`only identity sort fields are supported`) and
+  commits no snapshot.
+  pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
   `test_replace_oracle_cells_matching` pins the already-matching cells and

@@ -104,8 +104,10 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
   table, not a Parquet+CSV pair, and Spark's UUID file names and timestamps are not
   byte-deterministic, so the determinism pins stay scoped to the file families.
   pins: torture-1/C-024, C-029
-- `data/` — the card's one committed-data exception (D-5): the ≤ 1 MB checked-in
-  `v3_dv` table instance the JVM-free cells read. See [data/map.md](data/map.md).
+- `data/` — the committed-data exceptions: the ≤ 1 MB checked-in `v3_dv` table
+  instance (D-5) the JVM-free cells read, and ICE-SPARK-TABLE-1's 36.6 KB
+  Spark-written v2 copy-on-write table the facade adoption cells read. See
+  [data/map.md](data/map.md).
 - `__main__.py` — the `generate` CLI; `--depth`/`--width` are refused for non-nested
   families; `v3_dv` is a listed family choice with its own dispatch branch and print
   line (live rows and the table root, not the parquet/csv pair).
