@@ -249,6 +249,25 @@ recorded in the census table above.
 
 Step 1 stops here; implementation is a later round.
 
+## Critic remediation — Grok Critic-3 review of PR #579 (NEEDS_REMEDIATION)
+
+Report: `/tmp/oc-worker/f-crit4/report.md` (read-only probes beside it). All
+eleven findings remediated in place on this branch; product code untouched.
+
+| Finding | Severity | Defect | Fix commit |
+|---|---|---|---|
+| L-001 | P1 | D10 collapsed `uint64` into `int` | `0df5b17b` — D10 split; D22 carries `uint64` → `bigint`/`long`; all four widths in the reader lattice |
+| L-002 | P1 | D2 (ii) `—`; Q1 misattributed the split | `0df5b17b` — `csv_smart_rungs_ntz` measured after the NTZ flip: `TimestampNTZType`; D2/Q1 rewritten (infer vs the other two) |
+| L-003 | P1 | D21 (iii) `—` though the reader surfaces null | `0df5b17b` — `pa.null()` probed: type_key `Null`, `df.schema`/`dtypes` `void` |
+| L-004 | P1 | Agree rows mixed inputs; offset-literal disagreement hidden | `0df5b17b` — 18 single-input Agree rows; D23 (offset literal `string` vs `timestamp`), D24 (38-digit `decimal(38,0)` vs `double`) added |
+| L-005 | P2 | `containsNull`/`valueContainsNull` not golden | `02f83bf7` — flags recorded on json/fromDDL answers and array/map fields; fromJson-forces-True mutation reds |
+| L-006 | P2 | inbound element/inner-struct nullability not golden | `02f83bf7` — recursive `_struct_shape`; `arrow_schema_back` snapshots F1 struct fields directly; preserve/drop mutations red |
+| L-007 | P2 | inbound `int8`/`int16` unpinned | `02f83bf7` — `pa.int8()`/`pa.int16()`/`pa.float32()`/`pa.uint16()`/`pa.uint32()` in the probe; int8/int16→IntegerType mutation reds |
+| L-008 | P2 | spy covered one name; 0-calls non-binding | `afe8745c` — six-name spy on all module bindings + `--spy-only` leg; `df.schema` = 1 `fromDDL`/`_parse_datatype_string`, nested create = 16/6/6/6, doc corrected |
+| L-009 | P2 | session-tz golden never carried `America/New_York` | `02f83bf7` — fresh NY+NTZ session after the UTC stop; records `active_session_time_zone()` = `America/New_York` + a session-zone wall clock |
+| L-010 | P3 | case count `47` vs JSON's `45` keys | `02f83bf7` — C-002 corrected to 45 (30 atomic + 13 complex + 2) |
+| L-011 | P3 | CI refusal exact-`"true"` only | `02f83bf7` — any non-empty `CI`/`GITHUB_ACTIONS` counts; `CI=1` and `CI=""` legs pinned |
+
 ## Evidence
 
 - C-001: `git diff 2bebc9da..HEAD -- python/repark/src crates/` empty (pins,
@@ -277,7 +296,10 @@ Step 1 stops here; implementation is a later round.
   `make verify` → green (fmt, clippy workspace, Rust tests, map sync).
 - Commits: `f8e33cca` ledger skeleton; `585ef87a` pins + goldens + mutation
   proof; `6f5608e4` census table + probe; `75405954` baseline doc + runner;
-  HEAD step-1 target list + evidence.
+  `fcee0a8c` step-1 target list + evidence; `7b423721` coverage attestation;
+  `0df5b17b` census remediation (L-001..L-004); `02f83bf7` pin remediation
+  (L-005..L-007, L-009..L-011); `afe8745c` spy remediation (L-008); HEAD
+  findings table.
 
 ## Coverage attestation — step 0
 
