@@ -21,7 +21,7 @@ is now the epic list from v0.6 through 3.0 (v0.7–v0.10 shifted to 1.1–1.4 wh
   native Rust query and CDC capture owned by RePark, an isolated crawler, immutable accepted specifications,
   two physical Silver tables with sequential publication; the decision register D-01…D-15, the Silver planning
   baseline (§17) and the seven-stage delivery sequence (§15). Consolidates the 2026-09-09 discovery proposal.
-  Drove the 2026-09-13 ladder change: connectors at 1.6, the medallion release at 1.7.
+  Drove the 2026-09-13 ladder change: connectors at 1.6, the medallion release at 1.8 (PySpark parity at 1.7).
 - [database-discovery-lakehouse-planning-2026-09-09.md](database-discovery-lakehouse-planning-2026-09-09.md)
   — **owner proposal (2026-09-09):** discovery, bounded profiling, evidence and decision records, a
   deterministic planner with an optional model reviewer, immutable plan acceptance, Bronze change-log

@@ -4,7 +4,7 @@
 > the earlier [database discovery proposal](database-discovery-lakehouse-planning-2026-09-09.md) in place;
 > that file stays as the record of the first cut. The roadmap placement it drove is the 2026-09-13 row of the
 > [release roadmap](release-roadmap-2026-08-29.md) Q&A log: Postgres and SQL Server connectors at 1.6, the
-> medallion release at 1.7. Four absolute links were made relative and two links to a ledger not yet on main
+> medallion release at 1.8 (1.7 for a few hours; PySpark parity took 1.7 that evening). Four absolute links were made relative and two links to a ledger not yet on main
 > became plain mentions; nothing else changed.
 
 Date: 2026-09-09  
