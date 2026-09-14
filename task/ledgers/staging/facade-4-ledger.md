@@ -235,3 +235,49 @@ Step 1 stops here; implementation is a later round.
 - Commits: `f8e33cca` ledger skeleton; `585ef87a` pins + goldens + mutation
   proof; `6f5608e4` census table + probe; `75405954` baseline doc + runner;
   HEAD step-1 target list + evidence.
+
+## Coverage attestation — step 0
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: facade-4
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every deliverable of the step-0 brief maps to a clause C-001..C-008, each PROVEN with pasted evidence; the branch diff holds no file under python/repark/src or crates.
+      artifacts: [task/ledgers/staging/facade-4-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Goldens cover the 25 public type classes plus struct shapes, decimal edges (10,2)/(38,18)/(38,0) and decimal256 above 38, timestamp tz/ntz/session-tz, intervals, char/varchar, uint and dictionary Arrow inputs.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py, python/repark/tests/facade_4_type_goldens.json]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Refusals are recorded as golden answers (fromDDL of its own NOT NULL output, interval day to second, repark_type_to_arrow of decimal256), and record mode is refused under CI.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+    - id: AT-4
+      status: N/A
+      justification: Step 0 adds tests, docs and a measurement runner only; no shared or mutable state changes.
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret or path handling; goldens are committed JSON beside the test.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The three-table census measures 8 agreements and 21 disagreements (D1-D21) including silent containsNull/valueContainsNull loss in both directions; none fixed, each an owner question for step 1.
+      artifacts: [task/ledgers/staging/facade-4-ledger.md, docs/perf/facade-4-types-baseline-2026-09-14/census_probe.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Release baseline, warmup plus 5 reps, medians under an 8 GiB scope; the dearest conversion is 134 us per call and the largest share of a 1e5 wall is 0.008 %, so no wall.
+      artifacts: [docs/perf/facade-4-types-baseline-2026-09-14.md, docs/perf/facade-4-types-baseline-2026-09-14/run_baseline.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: The F1-frozen names repark_type_to_arrow and struct_type_from_arrow are pinned by answer, and an isinstance pin asserts every answer is a public repark.spark.types class.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+    - id: AT-9
+      status: N/A
+      justification: No log-format or diagnosis-path change.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Dropping the tz from pa.timestamp in repark_type_to_arrow redded four golden cases and the restore greened them; the card's existing pins stay unedited and green.
+      artifacts: [python/repark/tests/test_facade_4_ddl_round_trip.py]
+  complete: true
+```
