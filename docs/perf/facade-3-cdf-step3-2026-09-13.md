@@ -65,9 +65,19 @@ seven interned `getattr`s (−80 %); aware `datetime` — the same seven getattr
 for the wall clock plus `utcoffset` cached by `tzinfo` object identity, armed
 only when `type(tzinfo) is datetime.timezone` (a fixed-offset tz whose offset
 cannot vary by instant; `zoneinfo` and friends still pay the per-cell call —
-−84 %). Wall-clock fields stay the source of truth, so `fold`, subclass
-`__sub__` overrides, and pandas `Timestamp` nanoseconds cannot leak through the
-subtract path for datetimes.
+−84 %).
+
+**C-027 correction (critic-logic remediation).** The routes above are armed on
+EXACT types only — `type(obj) is datetime.date` for the epoch subtract and
+`type(obj) is datetime.datetime` for the interned getattrs — because a subclass
+can override `__sub__`, any wall-clock property, or the `tzinfo` accessor, and
+the fast paths read none of those overrides. Every subclass (pandas `Timestamp`
+included) still extracts natively through the step-2 `timetuple()` items +
+`microsecond` + per-cell `utcoffset` path — byte-identical to `main` per cell —
+rather than forcing a whole-frame fallback. The `utcoffset` cache entry stores
+the `Py<PyAny>` of the tzinfo next to the offset for the life of the export
+call, so a `tzinfo` property returning a fresh `timezone(...)` per access
+cannot recycle a freed pointer address into a stale offset. Re-measure below.
 
 ## Step-3 re-measure — step-2 table vs this branch (median ms)
 
@@ -168,6 +178,38 @@ a doomed input still pays one cheap whole-list probe (pointer type-check
 ≈0.8 ms; `_Row__field_names` validation ≈19 ms; dict union+tag ≈40 ms)
 before Python's own refusal walk — the probe is what lets the export
 decline *before* any `asDict()` call or cell extraction.
+
+## C-027 re-measure — exact-type temporal gate cost (release native)
+
+Only the shapes the gate could move, against the step-3 numbers in the ledger
+(`task/ledgers/completed/facade-3-ledger.md` C-022/C-026). Same runner method,
+`systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0`, idle builders.
+
+| shape | step-3 ledger ms | post-gate ms | literal Δ | same-box A/B Δ |
+|---|---:|---:|---:|---:|
+| tuples @1e5 create | 230.00 | 245.24 | +6.6 % | +0.1 % |
+| rows @1e5 create | 248.54 | 240.0 | −3.4 % | — |
+
+Tuples: the literal +6.6 % is box drift, not the gate — the C-022 resolution
+pattern applies. The pre-C-027 binary re-measures **245.00 ms** on today's box
+(5 interleaved post-fix cells: 240.33/246.33/245.24/247.29/236.85, median
+245.24) — post-fix − pre-fix = **+0.1 %**. The ledger's 230.00 cannot be
+reproduced by *either* binary on this box state; the A/B isolates the gate's
+true cost at noise level. Rows is inside the bar outright.
+
+Micro cells (1e5 `date` / naive `datetime` / UTC-aware `datetime`): the
+original mode-specific probe is scratch instrumentation that was never
+committed, so a same-shape probe was rebuilt (`extract_cell` over the fixture —
+absolute numbers are not comparable to the mode table above, which measured the
+isolated route). Same-probe, same-box A/B, pre-gate vs post-gate, medians:
+
+| fixture | pre-gate ms | post-gate ms | Δ |
+|---|---:|---:|---:|
+| `date` | 16.11 | 16.61 | +3.1 % |
+| naive `datetime` | 39.64 | 41.12 | +3.7 % |
+| aware `datetime` (UTC) | 43.08 | 43.48 | +0.9 % |
+
+All three within +5 % — the gate is one pointer compare per temporal cell.
 
 ## Pointers
 
