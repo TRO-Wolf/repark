@@ -210,6 +210,15 @@ STATUS.md trued up for this unit alone, maps in lockstep. If the departure edit 
 STATUS.md sentence you are unsure of, leave the ledger in `staging/` and say so in the PR body;
 the owner finishes it.
 
+### Standing instructions for connector units (owner, 2026-09-13)
+
+Every orchestrator that opens a 1.6 connector unit (Postgres, SQL Server; Trino later) briefs its workers to
+**reference ConnectorX and Arrow ADBC**: ConnectorX (`sfu-db/connector-x`) for the partitioned parallel read
+design and as the benchmark bar the roadmap names; Arrow ADBC (`apache/arrow-adbc`) for the driver-level Arrow
+contract — type mapping, bulk ingest, cursor and cancellation semantics. A unit's ledger names which of the two
+shaped each design decision. The no-code-comments ruling (CLAUDE.md, 2026-08-26) applies to these units exactly
+as to every other.
+
 ## 6. Decision authority (G-2)
 
 May decide alone, logging a new `D-n` row in the card and a line in the ledger:
