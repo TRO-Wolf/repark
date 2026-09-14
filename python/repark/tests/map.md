@@ -1786,6 +1786,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   by a one-line mutation recorded in
   `task/ledgers/staging/facade-5-ledger.md`.
   pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `test_facade_4_census_pins.py` — **FACADE-4 step 1 (2026-09-14):** one
+  parametrised case per census row — all 8 Agree rows and every disagreement
+  D1–D21 — asserting the answer each conversion table gives TODAY across every
+  surface the row names: facade `_arrow_type_to_repark` / `repark_type_to_arrow`
+  / `fromDDL` / `toDDL` / `struct_type_from_arrow` (including `containsNull`,
+  `valueContainsNull` and field-nullability answers), `_csv_smart` rung +
+  `rung_to_spark_type`/`rung_to_engine_cast`/`rung_to_sql_cast`, and the reader
+  lattice (`logical_schema_fields` type_key, `df.schema`, `dtypes`, csv
+  `inferSchema`, `DESCRIBE TABLE`, NTZ session conf). These are
+  characterization pins for S1's no-answer-change contract: they are green on
+  the step-0 base and any moved surface must keep them green byte-for-byte.
+  Mutation proof on this base: `TimestampNTZType()` → `TimestampType()` reds
+  D1; `DecimalType(arrow_type.precision, arrow_type.scale)` → `DecimalType(10,
+  2)` reds D6; `field.nullable` → `True` reds D15.
+  pins: facade-4/C-009
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;

@@ -1,6 +1,6 @@
-# Unit ledger — FACADE-4 · type conversions in Rust — step 0
+# Unit ledger — FACADE-4 · type conversions in Rust — steps 0+1
 
-**Date:** 2026-09-14 · **Branch:** `perf/facade-4-s0` (C-001..C-008) · **Base:** `2bebc9da`
+**Date:** 2026-09-14 · **Branch:** `perf/facade-4-s0` (C-001..C-008), `perf/facade-4-s1` (C-009..) · **Base:** `2bebc9da`
 **Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
@@ -279,6 +279,17 @@ notes, carried to step 1 and not fixed here:
 | R2-P3-3 | P3 | Q2 still names `_csv_smart` `string` beside Arrow `binary`; the hex literal is a different input | wording fixed with the Q2 ruling |
 | R2-P3-4 | P3 | the step-1 blurb claimed zero calls on `df.schema` | fixed in this commit |
 | R2-P3-5 | P3 | inbound `valueContainsNull=False` is pinned on the Spark `MapType` JSON path, not on a raw Arrow non-null map value field | step 1 census pins add the raw Arrow case |
+
+## PROPOSITION LEDGER — FACADE-4 step 1 — 2026-09-14
+
+Step 1 is the correctness consolidation: one Rust conversion table every path
+reads, with **every surface keeping today's answer byte-for-byte** — no D-row
+is unified, no refusal class, message or DDL spelling changes. Residue rows
+name the entry points left on their Python path.
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-009 | S1-0 pins first: one parametrised characterization case per census Agree row AND per D1–D21 row, measuring the answer each table gives today (facade `_arrow_type_to_repark`/`repark_type_to_arrow`/`fromDDL`/`toDDL`/`struct_type_from_arrow`, `_csv_smart` rungs, reader `logical_schema_fields`/`df.schema`/`dtypes`/csv `inferSchema`/`DESCRIBE`, NTZ session conf). Green on the step-0 base; a scratch mutation per family (timestamp, decimal, nullability) turns a row red. | `test_facade_4_census_pins.py` green on base; three pasted reds; restore green. | **PROVEN** | 29 rows green on the s0 base. Mutations: `TimestampNTZType()`→`TimestampType()` reds D1 (`'TimestampType:timestamp' != 'TimestampNTZType:timestamp_ntz'`); `DecimalType(p,s)`→`DecimalType(10,2)` reds D6; `field.nullable`→`True` reds D15. All restored. |
 
 ## Evidence
 
