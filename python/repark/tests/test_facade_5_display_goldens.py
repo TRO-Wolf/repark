@@ -31,8 +31,7 @@ Case = Callable[[ReparkSession], dict[str, Any]]
 MIXED_SCHEMA = "id INT, name STRING, score DOUBLE, flag BOOLEAN"
 NESTED_SCHEMA = "id INT, st STRUCT<a: INT, b: STRING>, li ARRAY<INT>, m MAP<STRING, INT>"
 SCALAR_SCHEMA = (
-    "i INT, f DOUBLE, s STRING, b BOOLEAN, d DATE, t TIMESTAMP, "
-    "dc DECIMAL(38, 18), bin BINARY"
+    "i INT, f DOUBLE, s STRING, b BOOLEAN, d DATE, t TIMESTAMP, dc DECIMAL(38, 18), bin BINARY"
 )
 
 
@@ -279,33 +278,25 @@ def _case_eager_wide(session: ReparkSession) -> dict[str, Any]:
 def _case_html_escape(session: ReparkSession) -> dict[str, Any]:
     """``_repr_html_`` on names and cells carrying ``&<>"'`` characters."""
     frame = _escape_frame(session)
-    return _under_eager(
-        session, 20, 20, lambda: dict([_door("html", lambda: frame._repr_html_())])
-    )
+    return _under_eager(session, 20, 20, lambda: dict([_door("html", lambda: frame._repr_html_())]))
 
 
 def _case_html_trunc5(session: ReparkSession) -> dict[str, Any]:
     """``_repr_html_`` at conf truncate 5 on the mixed frame."""
     frame = _mixed_frame(session)
-    return _under_eager(
-        session, 20, 5, lambda: dict([_door("html", lambda: frame._repr_html_())])
-    )
+    return _under_eager(session, 20, 5, lambda: dict([_door("html", lambda: frame._repr_html_())]))
 
 
 def _case_html_trunc_off(session: ReparkSession) -> dict[str, Any]:
     """``_repr_html_`` at conf truncate 0 on the mixed frame."""
     frame = _mixed_frame(session)
-    return _under_eager(
-        session, 20, 0, lambda: dict([_door("html", lambda: frame._repr_html_())])
-    )
+    return _under_eager(session, 20, 0, lambda: dict([_door("html", lambda: frame._repr_html_())]))
 
 
 def _case_html_nested(session: ReparkSession) -> dict[str, Any]:
     """``_repr_html_`` on the nested frame."""
     frame = _nested_frame(session)
-    return _under_eager(
-        session, 20, 20, lambda: dict([_door("html", lambda: frame._repr_html_())])
-    )
+    return _under_eager(session, 20, 20, lambda: dict([_door("html", lambda: frame._repr_html_())]))
 
 
 def _case_polars_trunc_true(session: ReparkSession) -> dict[str, Any]:
@@ -428,7 +419,9 @@ def _case_styled_zero_cols(session: ReparkSession) -> dict[str, Any]:
     results: dict[str, Any] = {}
     for style in ("polars", "duckdb"):
         results.update(
-            _under_style(session, style, lambda: _styled_zero_col_doors(session, frame, style))
+            _under_style(
+                session, style, lambda bound=style: _styled_zero_col_doors(session, frame, bound)
+            )
         )
     return results
 

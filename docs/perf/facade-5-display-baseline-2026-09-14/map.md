@@ -9,8 +9,9 @@ a debug native module, builds the three fixture frames outside the timed region,
 waits for an idle box (no cargo/rustc/maturin, 1-minute load under 6) before each
 cell, and reports medians of five reps after one warmup. Each cell times the FETCH
 leg (capped rows to an Arrow table) and the FORMAT leg (the formatter over the
-pre-materialized table) separately, then cross-checks the leg-composed string
-against the real door's bytes (`door_check`).
+pre-materialized table) separately, pairs each fetch rep with its format rep into
+the wall median, then cross-checks the leg-composed string against the real
+door's bytes (`door_check`).
 
 ## Contents
 

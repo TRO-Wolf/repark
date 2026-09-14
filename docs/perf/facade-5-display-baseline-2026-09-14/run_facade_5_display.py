@@ -231,7 +231,8 @@ def fetch_styled(frame: Any, style: str, n: int, max_rows: int) -> dict[str, Any
     leg: dict[str, Any] = {"probe_table": probe_table, "style": style}
     if probe_table.num_rows < probe_limit:
         leg["total_rows"] = probe_table.num_rows
-        leg["head_table"] = probe_table.slice(0, max(n, 0) if style == "polars" else min(n, probe_table.num_rows))
+        head_n = max(n, 0) if style == "polars" else min(n, probe_table.num_rows)
+        leg["head_table"] = probe_table.slice(0, head_n)
         leg["tail_table"] = None
         leg["use_ellipsis"] = False
         return leg
@@ -251,9 +252,7 @@ def fetch_styled(frame: Any, style: str, n: int, max_rows: int) -> dict[str, Any
     return leg
 
 
-def format_styled(
-    frame: Any, leg: dict[str, Any], n: int, cap: int | None
-) -> str:
+def format_styled(frame: Any, leg: dict[str, Any], n: int, cap: int | None) -> str:
     """FORMAT leg for styled doors: cell extraction plus the box renderer."""
     from repark.spark.dataframe.display import _display_session_ints
     from repark.spark.dataframe.plan_collapse import (
@@ -447,7 +446,10 @@ def door_check(session: Any, cell: dict[str, Any], frame: Any, rendered: str) ->
     if door == "html":
         return frame._repr_html_() == rendered
     args = cell["show_args"]
-    return capture_show(frame, args["n"], truncate=args["truncate"], vertical=args.get("vertical", False)) == rendered
+    shown = capture_show(
+        frame, args["n"], truncate=args["truncate"], vertical=args.get("vertical", False)
+    )
+    return shown == rendered
 
 
 def cell_label(cell: dict[str, Any]) -> str:
@@ -513,15 +515,14 @@ def main() -> int:
             format_samples.append(format_s)
         load_end = load1()
         ok = door_check(session, cell, frame, rendered)
-        wall = [f + g for f, g in zip(fetch_samples, format_samples)]
+        wall = [f + g for f, g in zip(fetch_samples, format_samples, strict=True)]
         results.append(
             {
                 "cell": cell_label(cell),
                 "fetch_median_ms": statistics.median(fetch_samples) * 1000.0,
                 "format_median_ms": statistics.median(format_samples) * 1000.0,
                 "wall_median_ms": statistics.median(wall) * 1000.0,
-                "format_share": statistics.median(format_samples)
-                / statistics.median(wall),
+                "format_share": statistics.median(format_samples) / statistics.median(wall),
                 "fetch_samples_ms": [sample * 1000.0 for sample in fetch_samples],
                 "format_samples_ms": [sample * 1000.0 for sample in format_samples],
                 "door_check": ok,
@@ -530,9 +531,9 @@ def main() -> int:
             }
         )
         print(
-            f"{cell_label(cell):>44}  fetch {statistics.median(fetch_samples)*1000:9.3f} ms  "
-            f"format {statistics.median(format_samples)*1000:9.3f} ms  "
-            f"share {statistics.median(format_samples)/statistics.median(wall):5.1%}  "
+            f"{cell_label(cell):>44}  fetch {statistics.median(fetch_samples) * 1000:9.3f} ms  "
+            f"format {statistics.median(format_samples) * 1000:9.3f} ms  "
+            f"share {statistics.median(format_samples) / statistics.median(wall):5.1%}  "
             f"door={'ok' if ok else 'MISMATCH'}  load {load_start:.2f}->{load_end:.2f}",
             flush=True,
         )

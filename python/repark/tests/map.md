@@ -1746,7 +1746,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `REPARK_FACADE_5_RECORD_GOLDENS=1` and is refused when `CI` or
   `GITHUB_ACTIONS` is set. Each case is proven to bite by a one-line mutation
   recorded in `task/ledgers/staging/facade-5-ledger.md`.
-  pins: facade-5/C-004, C-005
+  pins: facade-5/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
