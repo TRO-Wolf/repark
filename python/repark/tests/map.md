@@ -62,6 +62,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   WRITE-ORDER-TRANSFORM-1 residual: a `bucket(4,id)` sorted table refuses the MERGE
   loudly (`only identity sort fields are supported`) and commits no snapshot.
   pins: ice-spark-table-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
+  `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
+  D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
+  path (value AND type, `containsNull` widening) — green today, answers unchanged
+  under the step-1 arm. `test_array_append_depth40_memory_linear` is the red-first
+  pin: a subprocess worker under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8) builds the
+  40-level nested chain with a per-level bound exit, bound = `max(64 MB, 2 × flat
+  40-append select delta)`; env-gated behind `REPARK_ARRAY_NULL_1_MEM=1` until the
+  step-1 `ScalarUDF` lowering lands — red on the base tree (crossed the bound at
+  level 15, 131 014 656 B delta).
+  pins: array-null-1/C-001, C-002, C-003
 - [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
   (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
   `test_replace_oracle_cells_matching` pins the already-matching cells and
