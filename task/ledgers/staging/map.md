@@ -206,7 +206,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   P3-*) and the round-2 census alignment (corrected D1–D24 pins, R2-P3
   dispositions marked).
   `risk_tier: standard`. Branch `perf/facade-4-s1`.
-  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

@@ -1,12 +1,16 @@
+use std::borrow::Cow;
 use std::ffi::CStr;
 
 use arrow::datatypes::{DataType as ArrowDataType, Schema};
 use arrow::ffi::FFI_ArrowSchema;
 use pyo3::exceptions::PyValueError;
+use pyo3::intern;
 use pyo3::prelude::*;
-use pyo3::types::{PyCapsule, PyCapsuleMethods, PyDict, PyList};
+use pyo3::types::{PyCapsule, PyCapsuleMethods, PyDict, PyList, PyString};
 
-use repark_spark::type_table::{self, SparkDataType, SparkField, TypeTableError};
+use repark_spark::type_table::{
+    self, DEFAULT_COLLATION, SparkDataType, SparkField, TypeTableError,
+};
 
 const SCHEMA_CAPSULE: &CStr = c"arrow_schema";
 
@@ -16,90 +20,93 @@ fn table_error_to_py(error: &TypeTableError) -> PyErr {
 
 fn spark_field_to_py(py: Python<'_>, field: &SparkField) -> PyResult<Py<PyAny>> {
     let dict = PyDict::new(py);
-    dict.set_item("kind", "field")?;
-    dict.set_item("name", field.name.as_str())?;
-    dict.set_item("type", spark_type_to_py(py, &field.data_type)?)?;
-    dict.set_item("nullable", field.nullable)?;
+    dict.set_item(intern!(py, "kind"), intern!(py, "field"))?;
+    dict.set_item(intern!(py, "name"), field.name.as_str())?;
+    dict.set_item(intern!(py, "type"), spark_type_to_py(py, &field.data_type)?)?;
+    dict.set_item(intern!(py, "nullable"), field.nullable)?;
     match &field.metadata {
-        Some(metadata) => dict.set_item("metadata", metadata.as_str())?,
-        None => dict.set_item("metadata", py.None())?,
+        Some(metadata) => dict.set_item(intern!(py, "metadata"), metadata.as_str())?,
+        None => dict.set_item(intern!(py, "metadata"), py.None())?,
     }
     Ok(dict.unbind().into_any())
 }
 
 fn spark_type_to_py(py: Python<'_>, data_type: &SparkDataType) -> PyResult<Py<PyAny>> {
     let dict = PyDict::new(py);
+    let kind = intern!(py, "kind");
     match data_type {
-        SparkDataType::Null => dict.set_item("kind", "null")?,
+        SparkDataType::Null => dict.set_item(kind, intern!(py, "null"))?,
         SparkDataType::SparkString { collation } => {
-            dict.set_item("kind", "string")?;
-            dict.set_item("collation", collation.as_str())?;
+            dict.set_item(kind, intern!(py, "string"))?;
+            dict.set_item(intern!(py, "collation"), collation.as_ref())?;
         }
         SparkDataType::Char { length } => {
-            dict.set_item("kind", "char")?;
-            dict.set_item("length", *length)?;
+            dict.set_item(kind, intern!(py, "char"))?;
+            dict.set_item(intern!(py, "length"), *length)?;
         }
         SparkDataType::Varchar { length } => {
-            dict.set_item("kind", "varchar")?;
-            dict.set_item("length", *length)?;
+            dict.set_item(kind, intern!(py, "varchar"))?;
+            dict.set_item(intern!(py, "length"), *length)?;
         }
-        SparkDataType::Binary => dict.set_item("kind", "binary")?,
-        SparkDataType::Boolean => dict.set_item("kind", "boolean")?,
-        SparkDataType::Date => dict.set_item("kind", "date")?,
-        SparkDataType::Timestamp => dict.set_item("kind", "timestamp")?,
-        SparkDataType::TimestampNtz => dict.set_item("kind", "timestamp_ntz")?,
+        SparkDataType::Binary => dict.set_item(kind, intern!(py, "binary"))?,
+        SparkDataType::Boolean => dict.set_item(kind, intern!(py, "boolean"))?,
+        SparkDataType::Date => dict.set_item(kind, intern!(py, "date"))?,
+        SparkDataType::Timestamp => dict.set_item(kind, intern!(py, "timestamp"))?,
+        SparkDataType::TimestampNtz => dict.set_item(kind, intern!(py, "timestamp_ntz"))?,
         SparkDataType::Time { precision } => {
-            dict.set_item("kind", "time")?;
-            dict.set_item("precision", *precision)?;
+            dict.set_item(kind, intern!(py, "time"))?;
+            dict.set_item(intern!(py, "precision"), *precision)?;
         }
         SparkDataType::Decimal { precision, scale } => {
-            dict.set_item("kind", "decimal")?;
-            dict.set_item("precision", *precision)?;
-            dict.set_item("scale", *scale)?;
+            dict.set_item(kind, intern!(py, "decimal"))?;
+            dict.set_item(intern!(py, "precision"), *precision)?;
+            dict.set_item(intern!(py, "scale"), *scale)?;
         }
-        SparkDataType::Double => dict.set_item("kind", "double")?,
-        SparkDataType::Float => dict.set_item("kind", "float")?,
-        SparkDataType::Byte => dict.set_item("kind", "byte")?,
-        SparkDataType::Integer => dict.set_item("kind", "integer")?,
-        SparkDataType::Long => dict.set_item("kind", "long")?,
-        SparkDataType::Short => dict.set_item("kind", "short")?,
-        SparkDataType::CalendarInterval => dict.set_item("kind", "calendar_interval")?,
+        SparkDataType::Double => dict.set_item(kind, intern!(py, "double"))?,
+        SparkDataType::Float => dict.set_item(kind, intern!(py, "float"))?,
+        SparkDataType::Byte => dict.set_item(kind, intern!(py, "byte"))?,
+        SparkDataType::Integer => dict.set_item(kind, intern!(py, "integer"))?,
+        SparkDataType::Long => dict.set_item(kind, intern!(py, "long"))?,
+        SparkDataType::Short => dict.set_item(kind, intern!(py, "short"))?,
+        SparkDataType::CalendarInterval => {
+            dict.set_item(kind, intern!(py, "calendar_interval"))?;
+        }
         SparkDataType::DayTimeInterval { start, end } => {
-            dict.set_item("kind", "day_time_interval")?;
-            dict.set_item("start", start.as_str())?;
-            dict.set_item("end", end.as_str())?;
+            dict.set_item(kind, intern!(py, "day_time_interval"))?;
+            dict.set_item(intern!(py, "start"), start.as_str())?;
+            dict.set_item(intern!(py, "end"), end.as_str())?;
         }
         SparkDataType::YearMonthInterval { start, end } => {
-            dict.set_item("kind", "year_month_interval")?;
-            dict.set_item("start", start.as_str())?;
-            dict.set_item("end", end.as_str())?;
+            dict.set_item(kind, intern!(py, "year_month_interval"))?;
+            dict.set_item(intern!(py, "start"), start.as_str())?;
+            dict.set_item(intern!(py, "end"), end.as_str())?;
         }
-        SparkDataType::Variant => dict.set_item("kind", "variant")?,
+        SparkDataType::Variant => dict.set_item(kind, intern!(py, "variant"))?,
         SparkDataType::Array {
             element,
             contains_null,
         } => {
-            dict.set_item("kind", "array")?;
-            dict.set_item("element", spark_type_to_py(py, element)?)?;
-            dict.set_item("contains_null", *contains_null)?;
+            dict.set_item(kind, intern!(py, "array"))?;
+            dict.set_item(intern!(py, "element"), spark_type_to_py(py, element)?)?;
+            dict.set_item(intern!(py, "contains_null"), *contains_null)?;
         }
         SparkDataType::Map {
             key,
             value,
             value_contains_null,
         } => {
-            dict.set_item("kind", "map")?;
-            dict.set_item("key", spark_type_to_py(py, key)?)?;
-            dict.set_item("value", spark_type_to_py(py, value)?)?;
-            dict.set_item("value_contains_null", *value_contains_null)?;
+            dict.set_item(kind, intern!(py, "map"))?;
+            dict.set_item(intern!(py, "key"), spark_type_to_py(py, key)?)?;
+            dict.set_item(intern!(py, "value"), spark_type_to_py(py, value)?)?;
+            dict.set_item(intern!(py, "value_contains_null"), *value_contains_null)?;
         }
         SparkDataType::Struct(fields) => {
-            dict.set_item("kind", "struct")?;
+            dict.set_item(kind, intern!(py, "struct"))?;
             let items = PyList::empty(py);
             for field in fields {
                 items.append(spark_field_to_py(py, field)?)?;
             }
-            dict.set_item("fields", items)?;
+            dict.set_item(intern!(py, "fields"), items)?;
         }
         SparkDataType::Field(field) => {
             return spark_field_to_py(py, field);
@@ -108,18 +115,25 @@ fn spark_type_to_py(py: Python<'_>, data_type: &SparkDataType) -> PyResult<Py<Py
     Ok(dict.unbind().into_any())
 }
 
-fn dict_required<'py>(dict: &Bound<'py, PyDict>, key: &str) -> PyResult<Bound<'py, PyAny>> {
+fn dict_required<'py>(
+    dict: &Bound<'py, PyDict>,
+    key: &Bound<'py, PyString>,
+) -> PyResult<Bound<'py, PyAny>> {
     dict.get_item(key)?.ok_or_else(|| {
-        PyValueError::new_err(format!("type-table descriptor is missing key {key:?}"))
+        PyValueError::new_err(format!(
+            "type-table descriptor is missing key {:?}",
+            key.to_str().unwrap_or_default()
+        ))
     })
 }
 
 fn spark_field_from_py(dict: &Bound<'_, PyDict>) -> PyResult<SparkField> {
-    let name: String = dict_required(dict, "name")?.extract()?;
-    let inner = dict_required(dict, "type")?;
+    let py = dict.py();
+    let name: String = dict_required(dict, intern!(py, "name"))?.extract()?;
+    let inner = dict_required(dict, intern!(py, "type"))?;
     let data_type = spark_type_from_py(&inner)?;
-    let nullable: bool = dict_required(dict, "nullable")?.extract()?;
-    let metadata_obj = dict_required(dict, "metadata")?;
+    let nullable: bool = dict_required(dict, intern!(py, "nullable"))?.extract()?;
+    let metadata_obj = dict_required(dict, intern!(py, "metadata"))?;
     let metadata = if metadata_obj.is_none() {
         None
     } else {
@@ -135,17 +149,27 @@ fn spark_field_from_py(dict: &Bound<'_, PyDict>) -> PyResult<SparkField> {
 
 fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
     let dict = obj.cast::<PyDict>()?;
-    let kind: String = dict_required(dict, "kind")?.extract()?;
-    Ok(match kind.as_str() {
+    let py = dict.py();
+    let kind_obj = dict_required(dict, intern!(py, "kind"))?;
+    let kind: Cow<'_, str> = kind_obj.extract()?;
+    Ok(match kind.as_ref() {
         "null" => SparkDataType::Null,
-        "string" => SparkDataType::SparkString {
-            collation: dict_required(dict, "collation")?.extract()?,
-        },
+        "string" => {
+            let collation_obj = dict_required(dict, intern!(py, "collation"))?;
+            let collation: Cow<'_, str> = collation_obj.extract()?;
+            SparkDataType::SparkString {
+                collation: if collation == DEFAULT_COLLATION {
+                    Cow::Borrowed(DEFAULT_COLLATION)
+                } else {
+                    Cow::Owned(collation.into_owned())
+                },
+            }
+        }
         "char" => SparkDataType::Char {
-            length: dict_required(dict, "length")?.extract()?,
+            length: dict_required(dict, intern!(py, "length"))?.extract()?,
         },
         "varchar" => SparkDataType::Varchar {
-            length: dict_required(dict, "length")?.extract()?,
+            length: dict_required(dict, intern!(py, "length"))?.extract()?,
         },
         "binary" => SparkDataType::Binary,
         "boolean" => SparkDataType::Boolean,
@@ -153,11 +177,11 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
         "timestamp" => SparkDataType::Timestamp,
         "timestamp_ntz" => SparkDataType::TimestampNtz,
         "time" => SparkDataType::Time {
-            precision: dict_required(dict, "precision")?.extract()?,
+            precision: dict_required(dict, intern!(py, "precision"))?.extract()?,
         },
         "decimal" => SparkDataType::Decimal {
-            precision: dict_required(dict, "precision")?.extract()?,
-            scale: dict_required(dict, "scale")?.extract()?,
+            precision: dict_required(dict, intern!(py, "precision"))?.extract()?,
+            scale: dict_required(dict, intern!(py, "scale"))?.extract()?,
         },
         "double" => SparkDataType::Double,
         "float" => SparkDataType::Float,
@@ -167,25 +191,35 @@ fn spark_type_from_py(obj: &Bound<'_, PyAny>) -> PyResult<SparkDataType> {
         "short" => SparkDataType::Short,
         "calendar_interval" => SparkDataType::CalendarInterval,
         "day_time_interval" => SparkDataType::DayTimeInterval {
-            start: dict_required(dict, "start")?.extract()?,
-            end: dict_required(dict, "end")?.extract()?,
+            start: dict_required(dict, intern!(py, "start"))?.extract()?,
+            end: dict_required(dict, intern!(py, "end"))?.extract()?,
         },
         "year_month_interval" => SparkDataType::YearMonthInterval {
-            start: dict_required(dict, "start")?.extract()?,
-            end: dict_required(dict, "end")?.extract()?,
+            start: dict_required(dict, intern!(py, "start"))?.extract()?,
+            end: dict_required(dict, intern!(py, "end"))?.extract()?,
         },
         "variant" => SparkDataType::Variant,
         "array" => SparkDataType::Array {
-            element: Box::new(spark_type_from_py(&dict_required(dict, "element")?)?),
-            contains_null: dict_required(dict, "contains_null")?.extract()?,
+            element: Box::new(spark_type_from_py(&dict_required(
+                dict,
+                intern!(py, "element"),
+            )?)?),
+            contains_null: dict_required(dict, intern!(py, "contains_null"))?.extract()?,
         },
         "map" => SparkDataType::Map {
-            key: Box::new(spark_type_from_py(&dict_required(dict, "key")?)?),
-            value: Box::new(spark_type_from_py(&dict_required(dict, "value")?)?),
-            value_contains_null: dict_required(dict, "value_contains_null")?.extract()?,
+            key: Box::new(spark_type_from_py(&dict_required(
+                dict,
+                intern!(py, "key"),
+            )?)?),
+            value: Box::new(spark_type_from_py(&dict_required(
+                dict,
+                intern!(py, "value"),
+            )?)?),
+            value_contains_null: dict_required(dict, intern!(py, "value_contains_null"))?
+                .extract()?,
         },
         "struct" => {
-            let fields_obj = dict_required(dict, "fields")?;
+            let fields_obj = dict_required(dict, intern!(py, "fields"))?;
             let fields_list = fields_obj.cast::<PyList>()?;
             let mut fields: Vec<SparkField> = Vec::with_capacity(fields_list.len());
             for item in fields_list.iter() {

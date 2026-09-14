@@ -3,6 +3,8 @@ use std::sync::{Mutex, OnceLock, PoisonError};
 
 use regex::Regex;
 
+use std::borrow::Cow;
+
 use super::{DEFAULT_COLLATION, SparkDataType, SparkField, TypeTableError};
 
 fn is_py_whitespace(character: char) -> bool {
@@ -159,7 +161,7 @@ fn regex_fullmatch<'a>(pattern: &'static str, text: &'a str) -> Option<regex::Ca
 fn atomic_type_from_name(lower: &str) -> Option<SparkDataType> {
     Some(match lower {
         "string" | "str" | "varchar" => SparkDataType::SparkString {
-            collation: DEFAULT_COLLATION.to_string(),
+            collation: Cow::Borrowed(DEFAULT_COLLATION),
         },
         "binary" => SparkDataType::Binary,
         "boolean" | "bool" => SparkDataType::Boolean,
@@ -222,7 +224,9 @@ fn parse_atomic_token(token: &str) -> Option<SparkDataType> {
         return Some(SparkDataType::Time { precision });
     }
     if let Some(captures) = regex_fullmatch(r"(?i)\Astring\s+collate\s+(\w+)\z", stripped) {
-        let collation = captures.get(1).map(|m| m.as_str().to_string())?;
+        let collation = captures
+            .get(1)
+            .map(|m| Cow::Owned(m.as_str().to_string()))?;
         return Some(SparkDataType::SparkString { collation });
     }
     if lower == "decimal" {
@@ -455,7 +459,7 @@ pub fn sql_type_from_token(sql_type: &str) -> Result<SparkDataType, TypeTableErr
             SparkDataType::Decimal { precision, scale }
         }
         _ => SparkDataType::SparkString {
-            collation: DEFAULT_COLLATION.to_string(),
+            collation: Cow::Borrowed(DEFAULT_COLLATION),
         },
     };
     Ok(data_type)

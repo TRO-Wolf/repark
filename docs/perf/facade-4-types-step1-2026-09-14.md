@@ -136,22 +136,71 @@ bars.
 
 | file | step-0 lines | step-1 lines | Δ |
 |---|---:|---:|---:|
-| `spark/types.py` | 1834 | 1833 | −1 |
+| `spark/types.py` | 1834 | 1639 | −195 |
+| `spark/_type_table.py` | — | 322 | +322 (new) |
 | `spark/_csv_smart.py` | 899 | 868 | −31 |
 | `session/timestamp_type.py` | 97 | 99 | +2 |
 | `session/create_dataframe_values.py` | 569 | 513 | −56 |
 | `session/create_dataframe_inference.py` | 737 | 711 | −26 |
 
-`types.py` net is −1 against its exact-baseline ratchet: ~280 lines of
+`types.py` net is −195 against its exact-baseline ratchet: ~280 lines of
 per-class `simpleString`/`_engine_type` overrides and the Python DDL parser
-came out; roughly the same number went back in as descriptor encode/decode
-helpers, native-call wrappers and the Python residue paths (JSON surfaces,
-unknown-subtype fallbacks, wide-decimal handling). `check_lib_py.py` records
-the new exact baseline 1833. Body-hash baselines were refreshed only for the
-two functions whose bodies moved: `_data_type_to_sql_type`
+came out; the descriptor bridge, atomic token table and token fallbacks live
+in the new `spark/_type_table.py` (the S2-21 P1 remediation extracted it).
+`check_lib_py.py` records the new exact baseline 1639. Body-hash baselines
+were refreshed only for the two functions whose bodies moved:
+`_data_type_to_sql_type`
 (`a57ec32664f64e2427a8853d70ae0316a915b024593a1562ffa3d19326d2dcf4`) and
 `_sql_type_to_arrow`
 (`55d6c07af323e4ee1bce844d0d9f92ade8baa2468088fad9f3a0856205d52fe0`).
+
+## S2-21 remediation re-measurement
+
+Re-measured after the review fixes (P1-DTYPES atomic answers Python-side,
+P2-DICT interned keys + borrowed inbound strings, P3-COLLATION borrowed
+default collation). Base is `/tmp/f-types4`'s release native, branch is this
+tree's; back to back on one box behind an idle-builder + load<3 wait.
+Recorded load (1/5/15 min): branch run started at 1.93/2.97/5.43 and ended
+1.94/2.95/5.41; base run started 1.94/2.95/5.41, ended 1.94/2.95/5.41 —
+the elevated 15-minute figure is another lane's earlier build.
+
+Surfaces — per-call µs (median of 7 × 300 calls), the +5 % bar cells:
+
+| surface | flat7 base | flat7 branch | Δ | wide50 base | wide50 branch | Δ | nested3 base | nested3 branch | Δ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `df.schema` | 8.15 | 8.05 | −1.2 % | 44.91 | 45.21 | +0.7 % | 28.48 | 15.08 | −47.1 % |
+| `dtypes` | 10.58 | 10.55 | −0.3 % | 61.09 | 62.21 | +1.8 % | 31.96 | 26.28 | −17.8 % |
+| `printSchema` | 17.18 | 17.01 | −1.0 % | 100.36 | 101.15 | +0.8 % | 43.00 | 30.55 | −29.0 % |
+
+All inside the +5 % bar; nested3 is faster than base end-to-end because
+`fromDDL` beats the old Python regex parse.
+
+Reviewer micro table — per-call µs (median of 7 × 1000 calls):
+
+| cell | flat7 base | flat7 branch | wide50 base | wide50 branch | nested3 base | nested3 branch |
+|---|---:|---:|---:|---:|---:|---:|
+| `repark_type_to_arrow` | 12.31 | 27.34 | 60.22 | 170.56 | 16.53 | 31.03 |
+| `struct_type_from_arrow` | 14.72 | 25.77 | 99.02 | 156.48 | 20.32 | 30.50 |
+| `fromDDL` | 16.37 | 11.49 | 125.36 | 69.51 | 32.60 | 13.69 |
+| `toDDL` | 3.33 | 15.12 | 24.31 | 97.38 | 6.36 | 16.69 |
+| `simpleString` | 3.00 | 3.88 | 18.48 | 21.46 | 2.69 | 8.41 |
+
+`toDDL` and the Arrow cells still pay the descriptor-tree FFI — the design
+cost of one shared table; every per-call delta stays under the 1 ms bar.
+`fromDDL` is faster than base on every schema.
+
+tracemalloc peaks over 200 calls (bytes, base → branch):
+
+| cell | flat7 | wide50 | nested3 |
+|---|---:|---:|---:|
+| `struct_type_from_arrow` | 2 032 → 2 204 | 12 294 → 34 810 | 2 513 → 2 848 |
+| `repark_type_to_arrow` | 416 → 1 976 | 1 456 → 20 912 | 560 → 5 752 |
+| `fromDDL` | 2 456 → 2 204 | 16 626 → 34 810 | 4 253 → 2 781 |
+
+The `PyDict` descriptor tree is the wire format's inherent Python-side
+allocation; interning removed the repeated key/tag strings on the Rust side
+(tracemalloc cannot see them) and the inbound `String` per node became a
+borrowed `Cow`.
 
 ## Notes for the record
 
@@ -165,6 +214,10 @@ two functions whose bodies moved: `_data_type_to_sql_type`
   ambient load from a parallel lane's build, not conversion cost. A second
   back-to-back run (the numbers above) shows +0.3 % / +0.1 % on the same
   cells.
+- Cell (c)'s branch `simpleString`/`ddl_token`/`toDDL` numbers predate the
+  S2-21 remediation — the re-measurement section above supersedes them for
+  the touched cells (atomic token answers are Python-side constants again;
+  the descriptor decode no longer rebuilds its lookup maps per node).
 - Remaining Python-side residue (by design, not by performance): JSON
   surfaces, descriptor trees containing foreign `DataType` subtypes, and
   decimals outside the Arrow FFI storage envelope. Enumerated in the ledger

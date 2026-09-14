@@ -248,8 +248,11 @@ pins: rp-4-fork-repin/C-005, C-006
   token, SQL marker, CSV rung row). Every surface keeps its step-0 answer
   byte-for-byte; no D1–D21 row is unified. Depth-bounded at 32 with a `"..."`
   fallback. Pure Rust, no PyO3; `repark-python::type_bridge` is the only consumer
-  over the FFI boundary.
-  pins: facade-4/C-010
+  over the FFI boundary. S2-21 remediation (P3-COLLATION): `SparkString.collation`
+  is `Cow<'static, str>` — the `UTF8_BINARY` default borrows the
+  `pub const DEFAULT_COLLATION` everywhere (Arrow, DDL fallback, CSV rungs) and
+  only a parsed custom collation owns.
+  pins: facade-4/C-010, C-019
 - `type_table/parse.rs` — the text→descriptor half of the table, split out at the
   file-size ceiling: DDL and SQL-token parsing (`parse_ddl`,
   `sql_type_from_token`, field lists, `decimal(p,s)` and interval spellings) with

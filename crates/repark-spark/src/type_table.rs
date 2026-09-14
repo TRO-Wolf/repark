@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::{self, Display};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ pub(crate) const SPARK_TYPE_NAME_MAX_DEPTH: usize = 32;
 
 pub(crate) const SPARK_TYPE_NAME_DEPTH_FALLBACK: &str = "...";
 
-const DEFAULT_COLLATION: &str = "UTF8_BINARY";
+pub const DEFAULT_COLLATION: &str = "UTF8_BINARY";
 
 #[derive(Debug, Clone)]
 pub enum TypeTableError {
@@ -46,7 +47,7 @@ pub struct SparkField {
 pub enum SparkDataType {
     Null,
     SparkString {
-        collation: String,
+        collation: Cow<'static, str>,
     },
     Char {
         length: i64,
@@ -210,7 +211,7 @@ pub fn spark_type_from_arrow(data_type: &ArrowDataType) -> SparkDataType {
         ArrowDataType::Boolean => SparkDataType::Boolean,
         ArrowDataType::Utf8 | ArrowDataType::LargeUtf8 | ArrowDataType::Utf8View => {
             SparkDataType::SparkString {
-                collation: DEFAULT_COLLATION.to_string(),
+                collation: Cow::Borrowed(DEFAULT_COLLATION),
             }
         }
         ArrowDataType::Binary | ArrowDataType::LargeBinary => SparkDataType::Binary,
@@ -241,7 +242,7 @@ pub fn spark_type_from_arrow(data_type: &ArrowDataType) -> SparkDataType {
                 };
             }
             SparkDataType::SparkString {
-                collation: DEFAULT_COLLATION.to_string(),
+                collation: Cow::Borrowed(DEFAULT_COLLATION),
             }
         }
         ArrowDataType::Struct(fields) => SparkDataType::Struct(
@@ -257,7 +258,7 @@ pub fn spark_type_from_arrow(data_type: &ArrowDataType) -> SparkDataType {
         ),
         ArrowDataType::Null => SparkDataType::Null,
         _ => SparkDataType::SparkString {
-            collation: DEFAULT_COLLATION.to_string(),
+            collation: Cow::Borrowed(DEFAULT_COLLATION),
         },
     }
 }
@@ -353,7 +354,7 @@ pub fn simple_string(data_type: &SparkDataType) -> String {
     match data_type {
         SparkDataType::Null => "void".to_string(),
         SparkDataType::SparkString { collation } => {
-            if collation == DEFAULT_COLLATION {
+            if collation.as_ref() == DEFAULT_COLLATION {
                 "string".to_string()
             } else {
                 format!("string collate {collation}")
@@ -545,7 +546,7 @@ pub fn csv_rung_type(
         "date" => SparkDataType::Date,
         "timestamp" => default_timestamp_type(timestamp_ntz),
         _ => SparkDataType::SparkString {
-            collation: DEFAULT_COLLATION.to_string(),
+            collation: Cow::Borrowed(DEFAULT_COLLATION),
         },
     }
 }

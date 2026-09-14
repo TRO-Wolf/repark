@@ -18,6 +18,19 @@ _AtomicRow = tuple[
     str | Callable[[Any], str] | None,
 ]
 _ATOMIC_ROWS: dict[type, _AtomicRow] | None = None
+_DESCRIPTOR_TYPES: dict[str, type] | None = None
+_DESCRIPTOR_HEADS: dict[type, str | Callable[[Any], dict[str, Any]]] | None = None
+_TYPES_MODULE: Any = None
+
+
+def _types() -> Any:
+    """The ``repark.spark.types`` module, resolved once after it finishes loading."""
+    global _TYPES_MODULE
+    if _TYPES_MODULE is None:
+        from repark.spark import types as t
+
+        _TYPES_MODULE = t
+    return _TYPES_MODULE
 
 
 def _atomic_rows() -> dict[type, _AtomicRow]:
@@ -98,23 +111,36 @@ def _atomic_rows() -> dict[type, _AtomicRow]:
 
 def _descriptor_types() -> dict[str, type]:
     """Kind→class map for the unparametrised atomic descriptor kinds."""
-    return {row[0]: cls for cls, row in _atomic_rows().items() if isinstance(row[0], str)}
+    global _DESCRIPTOR_TYPES
+    if _DESCRIPTOR_TYPES is None:
+        _DESCRIPTOR_TYPES = {
+            row[0]: cls for cls, row in _atomic_rows().items() if isinstance(row[0], str)
+        }
+    return _DESCRIPTOR_TYPES
 
 
 def _descriptor_heads() -> dict[type, str | Callable[[Any], dict[str, Any]]]:
     """Exact-type map: class → descriptor kind string or descriptor builder."""
-    return {cls: row[0] for cls, row in _atomic_rows().items()}
+    global _DESCRIPTOR_HEADS
+    if _DESCRIPTOR_HEADS is None:
+        _DESCRIPTOR_HEADS = {cls: row[0] for cls, row in _atomic_rows().items()}
+    return _DESCRIPTOR_HEADS
 
 
 def _atomic_token(data_type: Any, index: int) -> str | None:
     """Table ``simpleString``/``_engine_type`` answer; ``None`` for nested types."""
     rows = _atomic_rows()
-    for cls in type(data_type).__mro__:
-        row = rows.get(cls)
-        if row is not None:
-            answer = row[index + 1]
-            return answer if isinstance(answer, str) or answer is None else answer(data_type)
-    return None
+    cls = type(data_type)
+    row = rows.get(cls)
+    if row is None:
+        for parent in cls.__mro__[1:]:
+            row = rows.get(parent)
+            if row is not None:
+                break
+    if row is None:
+        return None
+    answer = row[index + 1]
+    return answer if isinstance(answer, str) or answer is None else answer(data_type)
 
 
 def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
@@ -122,7 +148,7 @@ def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
     head = _descriptor_heads().get(type(data_type))
     if head is not None:
         return {"kind": head} if isinstance(head, str) else head(data_type)
-    from repark.spark import types as t
+    t = _types()
 
     if isinstance(data_type, t.ArrayType):
         return {
@@ -155,7 +181,7 @@ def _datatype_to_descriptor(data_type: Any) -> dict[str, Any] | None:
 
 def _descriptor_to_datatype(descriptor: dict[str, Any]) -> Any:
     """Construct the public Spark type for a Rust type-table descriptor."""
-    from repark.spark import types as t
+    t = _types()
 
     kind = descriptor["kind"]
     atomic_class = _descriptor_types().get(kind)
@@ -245,7 +271,7 @@ def _nested_token_python(
     upper: bool = False,
 ) -> str:
     """Container-token walker for descriptor trees the table cannot see."""
-    from repark.spark import types as t
+    t = _types()
 
     if upper:
         array_name, map_name, struct_name = "ARRAY", "MAP", "STRUCT"

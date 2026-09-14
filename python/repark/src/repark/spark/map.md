@@ -33,7 +33,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (pinned in `test_facade_4_census_pins.py`); nested trees compose over them in
   Python because a per-column descriptor FFI (~15 µs for nested3's `mid`) cannot
   meet the +5 % `dtypes` bar.
-  pins: facade-4/C-010, C-012, C-016
+  P2-DICT follow-through: the descriptor decode caches its kind→class and
+  class→head maps and the `types` module handle — the first landing rebuilt a
+  19-row map per recursive node and re-imported `types` per call (~30 µs on a
+  7-node nested decode, regressing `df.schema` +50 %).
+  pins: facade-4/C-010, C-012, C-016, C-018
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
