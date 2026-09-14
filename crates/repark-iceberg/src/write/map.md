@@ -155,7 +155,7 @@ repark-core's error map.
   pins: rp-5-fork-repin/C-004
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
   pins: rp-5-fork-repin/C-004
-- `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** `CommitStateUnknownError`, the
+- `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownError`, the
   `std::error::Error` wrapper a RePark commit site stamps with the `engine.operation-id` it
   minted; `operation_id_and_summary` mints the id and the snapshot summary together;
   `commit_err` / `commit_result` wrap only `ErrorKind::CommitStateUnknown` — every other kind

@@ -14,7 +14,7 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 ## Contents
 
 - `snapshot_commit.rs` — snapshot-producing MERGE commits (`to_branch` when `MergeSpec.commit_branch` is set).
-  **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** `commit_overwrite` and `commit_row_delta_kind` mint
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `commit_overwrite` and `commit_row_delta_kind` mint
   the commit's `engine.operation-id` via `write::commit_error::operation_id_and_summary` and
   route the `tx.commit` `Err` through `commit_err`, so a `CommitStateUnknown` surfaces
   stamped for `error_map`'s wrapper downcast — after `abort.rs`'s file cleanup still ran

@@ -91,7 +91,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   `python/repark-parity/tests/test_api_freeze.py`; the rule it enforces is
   [../release.md](../release.md) "Versioning policy". Regenerate it in the same change as any
   intended additive move. pins: api-freeze/C-003
-  **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** `CommitStateUnknownException` joins the error row
+  **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownException` joins the error row
   (frozen_names 888 → 889) — the additive move D-4 names.
   pins: ice-commit-unknown-1/C-002
 

@@ -32,7 +32,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `repark.sql.catalog.*` blocks and dual-prefix conflicts; messages name keys, not secret-bearing
   values; `Iceberg(String)` — the iceberg residual (commit conflicts, invalid data, unexpected —
   U4), verbatim `{0}` whose text leads with the structured iceberg kind name;
-  `CommitStateUnknown { message, operation_id }` — **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** the
+  `CommitStateUnknown { message, operation_id }` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the
   ambiguous-commit class, carrying the attempted commit's `engine.operation-id` when a RePark
   write path minted one) + `Result<T>`. Plus
   `ErrorClass { Parse, Analysis, Unsupported, IllegalArgument, CommitStateUnknown, Base }` + `Error::exception_class()`

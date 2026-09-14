@@ -460,7 +460,7 @@ perfectly good read.
   surfaced id equals the id the transaction attempted to stamp; one `update_table` attempt),
   `crates/repark-python/src/tests.rs` (class + `operation_id` attribute),
   `python/repark/tests/test_errors.py` (hierarchy + re-export identity).
-- **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-15). The assessment's retry contract
+- **Rationale** — FIXED (ICE-COMMIT-UNKNOWN-1, 2026-09-14). The assessment's retry contract
   needs the ambiguous case distinguishable from a definite failure, and the snapshot stamp
   makes the unconfirmed commit nameable in an alert.
 

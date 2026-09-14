@@ -56,7 +56,7 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   max_total_bytes=u64::MAX)` refuses with this result's `get_array_memory_size` integer even
   though every buffer is shared.
   pins: eager-budget-1/C-005, C-007, C-008
-- `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-15):** `engine_err` classification
+- `commit_unknown.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `engine_err` classification
   pins for the ambiguous-commit path — the stamped `CommitStateUnknownError` wrapper maps to
   `Error::CommitStateUnknown` carrying the minted `operation_id`, a bare iceberg
   `CommitStateUnknown` kind maps to the same variant with `None`, and the definite kinds

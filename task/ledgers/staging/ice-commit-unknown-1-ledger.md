@@ -53,7 +53,7 @@ VERDICT: 8 clauses, 8 PROVEN, 0 OPEN, 0 REJECTED.
 
 ## Shapes — which commits carry `engine.operation-id`
 
-Verified by caller grep (2026-09-15): the six RePark commit sites that mint the stamp, and the
+Verified by caller grep (2026-09-14): the six RePark commit sites that mint the stamp, and the
 fork-owned commits that mint none.
 
 | Statement shape | Commit site | `operation_id` |

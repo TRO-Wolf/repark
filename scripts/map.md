@@ -329,7 +329,7 @@ module, which `alter.rs`'s exact ceiling required), `repark-iceberg/src/write/ap
 distribution module's sorted drivers). All three ratchet DOWN; the duplicate table in
 `test_cap_1_source_file_line_cap.py` moves with them in the same commit.
 
-ICE-COMMIT-UNKNOWN-1 (2026-09-15): `check_rust_file_size.py`
+ICE-COMMIT-UNKNOWN-1 (2026-09-14): `check_rust_file_size.py`
 `repark-core/src/session/tests/session.rs` 1412→1407 — the ambiguous-commit classification
 pins moved to the new `commit_unknown.rs` module. A ratchet DOWN; the duplicate table in
 `test_cap_1_source_file_line_cap.py` moved with it in the same commit.
