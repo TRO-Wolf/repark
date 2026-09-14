@@ -1735,6 +1735,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `IntegerType`, preserving Arrow item nullability, and dropping inner
   struct nullability each red `arrow_probe_schema_back`; restore greens.
   pins: facade-4/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `test_facade_5_display_goldens.py` + `facade_5_display_goldens.json`
+  — **FACADE-5 step 0 (2026-09-14):** byte-identical display-renderer goldens
+  for the 30 renderer x truncation-rule pairs the census found unbound — ASCII
+  sub-cap and digit-string truncation, nested/scalar cells on the ASCII,
+  vertical, eager `repr` and HTML doors, HTML escaping, polars and duckdb
+  `truncate=True/int` caps and unicode, a 50-column eager repr, a 12-column
+  duckdb lazy repr, and zero-column frames under spark, polars and duckdb —
+  recorded from the base release tree. Record mode is
+  `REPARK_FACADE_5_RECORD_GOLDENS=1` and is refused when `CI` or
+  `GITHUB_ACTIONS` is set. Each case is proven to bite by a one-line mutation
+  recorded in `task/ledgers/staging/facade-5-ledger.md`.
+  pins: facade-5/C-004, C-005
 - `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
   `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
   TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
