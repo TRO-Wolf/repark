@@ -325,23 +325,23 @@ name the entry points left on their Python path.
 
 | Finding | Severity | Defect | Fix commit | Clause |
 |---|---|---|---|---|
-| L-001 | P1 | `parse_ddl` saturated integer parameters above `i64::MAX` | this commit | C-020 |
-| L-002 | P1 | `_atomic_token` returned canonical tokens for pass-through subclasses | this commit | C-021 |
-| L-003 | P2 | `_sql_type_token_python` leaf emitted engine tokens, not SQL markers | this commit | C-022 |
-| L-004 | P2 | `python_repr` differed from Python `repr()` on control characters | this commit | C-023 |
-| L-005 | P2 | `repark_type_to_arrow` refused Arrow nesting depth ≥64 where base returned | this commit | C-024 |
+| L-001 | P1 | `parse_ddl` saturated integer parameters above `i64::MAX` | `4c8d25af` | C-020 |
+| L-002 | P1 | `_atomic_token` returned canonical tokens for pass-through subclasses | `4c8d25af` | C-021 |
+| L-003 | P2 | `_sql_type_token_python` leaf emitted engine tokens, not SQL markers | `4c8d25af` | C-022 |
+| L-004 | P2 | `python_repr` differed from Python `repr()` on control characters | `4c8d25af` | C-023 |
+| L-005 | P2 | `repark_type_to_arrow` refused Arrow nesting depth ≥64 where base returned | `4c8d25af` | C-024 |
 | L-006 | P2 | mutation proof required for the C-016/C-021 MRO contract | proof in C-025 | C-025 |
 
 ## Step-1 round-2 findings — Python reviewer (`/tmp/oc-worker/f-rev4-py/report.md`)
 
 | Finding | Severity | Defect | Fix commit | Clause |
 |---|---|---|---|---|
-| PY-P2-002 | P2 | read-side descriptor tree paid per-node `PyDict` lookups; nested `_sql_type_to_arrow` double-hopped through classes | the tagged-tuple commit (SHA below); nested kept Python — no correct native route exists | C-026 |
-| PY-P2-003 | P2 | `rung_to_engine_cast`/`rung_to_sql_cast` built a `DataType` only to re-encode | the tagged-tuple commit (SHA below) | C-027 |
-| PY-P3-001 | P3 | parameterised `jsonValue` dispatched through `simpleString` | this commit | C-028 |
-| PY-P3-002 | P3 | per-call `_native` attribute lookups; FFI-covered wide-decimal pre-walks | this commit | C-028 |
-| PY-P3-003 | P3 | perf doc cell (c) `toDDL` rows labelled a refusal series | this commit | C-014 evidence refresh |
-| PY-P3-004 | P3 | `DecimalType(76,10)` refusal built a descriptor before the bound check | this commit | C-028 |
+| PY-P2-002 | P2 | read-side descriptor tree paid per-node `PyDict` lookups; nested `_sql_type_to_arrow` double-hopped through classes | `d82c5cc6`; nested kept Python — no correct native route exists | C-026 |
+| PY-P2-003 | P2 | `rung_to_engine_cast`/`rung_to_sql_cast` built a `DataType` only to re-encode | `d82c5cc6` | C-027 |
+| PY-P3-001 | P3 | parameterised `jsonValue` dispatched through `simpleString` | `4c8d25af` | C-028 |
+| PY-P3-002 | P3 | per-call `_native` attribute lookups; FFI-covered wide-decimal pre-walks | `4c8d25af` | C-028 |
+| PY-P3-003 | P3 | perf doc cell (c) `toDDL` rows labelled a refusal series | the measurement commit | C-014 evidence refresh |
+| PY-P3-004 | P3 | `DecimalType(76,10)` refusal built a descriptor before the bound check | `4c8d25af` | C-028 |
 
 ## Rulings applied (run 14b)
 
