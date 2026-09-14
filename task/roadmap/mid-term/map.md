@@ -6,6 +6,10 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
+  expressions, beside run 13):** REPLACE-LINEAR-1 step 1 finished by Devin (flat searched CASE, Spark semantics
+  per Q-R1, 277 MB → ~5.4 MB at 16 entries) and parked as draft #577 at the 06:30 stop, with critic, reviewer and
+  preflight still owed. ARRAY-NULL-1 and ANSI-DOOR-1 not started. Owner questions Q-13b-1..4 with recommendations.
 - [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
   cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and
   never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not
