@@ -1,11 +1,16 @@
 """FACADE-4 step 0 baseline — type-conversion cost isolated per schema and per op.
 
 Cells: (a) ``repark_type_to_arrow`` per schema plus a spy count of calls per
-``createDataFrame`` / ``collect`` / ``to_arrow`` / ``show`` of a 1e5 frame;
-(b) ``struct_type_from_arrow`` round-trip; (c) DDL parse and DDL write walls;
-(d) cProfile cumulative share of conversion inside ``df.schema``,
-``createDataFrame(pandas)`` and ``spark.read.csv(inferSchema)`` at 1e5.
-Warmup + 5 reps, medians, an idle-box wait before every cell. Prints JSON.
+``createDataFrame`` / ``collect`` / ``to_arrow`` / ``show`` / ``df.schema``
+of a 1e5 frame, spying all six conversion entry points
+(``repark_type_to_arrow``, ``struct_type_from_arrow``,
+``_arrow_type_to_repark``, ``_parse_datatype_string``, ``_sql_type_to_arrow``,
+``DataType.fromDDL``); (b) ``struct_type_from_arrow`` round-trip; (c) DDL
+parse and DDL write walls; (d) cProfile cumulative share of conversion
+inside ``df.schema``, ``createDataFrame(pandas)`` and
+``spark.read.csv(inferSchema)`` at 1e5. Warmup + 5 reps, medians, an
+idle-box wait before every cell. Prints JSON. ``--spy-only`` re-runs the
+cell (a) call-count leg alone.
 """
 
 from __future__ import annotations
@@ -251,6 +256,87 @@ def _explicit_nested_schema() -> Any:
     )
 
 
+def _install_spies() -> tuple[dict[str, int], Any]:
+    """Wrap every conversion entry point with a call counter.
+
+    The five module-level functions are patched on every loaded module that
+    binds the canonical object (the facade re-exports and ``_funcs`` injects
+    them into consumer namespaces); ``DataType.fromDDL`` is patched on the
+    class so subclass calls are covered.
+    """
+    import sys
+
+    from repark.spark import types as types_module
+    from repark.spark.session import create_dataframe_inference as inference_module
+
+    canonical = {
+        "repark_type_to_arrow": types_module.repark_type_to_arrow,
+        "struct_type_from_arrow": types_module.struct_type_from_arrow,
+        "_arrow_type_to_repark": types_module._arrow_type_to_repark,
+        "_parse_datatype_string": types_module._parse_datatype_string,
+        "_sql_type_to_arrow": inference_module._sql_type_to_arrow,
+    }
+    counts: dict[str, int] = {}
+    originals: list[tuple[Any, str, Any]] = []
+    for name, target in canonical.items():
+        counts[name] = 0
+
+        def make_spy(label: str, fn: Any) -> Any:
+            def counting(*args: Any, **kwargs: Any) -> Any:
+                counts[label] += 1
+                return fn(*args, **kwargs)
+
+            return counting
+
+        spy = make_spy(name, target)
+        for module in list(sys.modules.values()):
+            if module is not None and vars(module).get(name) is target:
+                originals.append((module, name, target))
+                setattr(module, name, spy)
+    original_from_ddl = types_module.DataType.__dict__["fromDDL"]
+    counts["DataType.fromDDL"] = 0
+
+    def from_ddl_spy(cls: Any, *args: Any, **kwargs: Any) -> Any:
+        counts["DataType.fromDDL"] += 1
+        return original_from_ddl.__func__(cls, *args, **kwargs)
+
+    types_module.DataType.fromDDL = classmethod(from_ddl_spy)
+    originals.append((types_module.DataType, "fromDDL", original_from_ddl))
+
+    def restore() -> None:
+        for owner, attr, original in originals:
+            setattr(owner, attr, original)
+
+    return counts, restore
+
+
+def _spy_ops(session: Any) -> dict[str, Any]:
+    """The 1e5-row ops whose conversion call counts are measured."""
+    frame_pd = session.createDataFrame(_pandas_frame())
+    nested_rows = [([1, 2], {"k": index}, (index, "s")) for index in range(ROWS)]
+    return {
+        "createDataFrame_pandas_1e5": lambda: session.createDataFrame(_pandas_frame()),
+        "createDataFrame_nested_1e5": lambda: session.createDataFrame(
+            nested_rows, _explicit_nested_schema()
+        ),
+        "collect_1e5": lambda: frame_pd.collect(),
+        "to_arrow_1e5": lambda: frame_pd.to_arrow(),
+        "show_1e5": lambda: frame_pd.show(),
+        "df_schema": lambda: frame_pd.schema,
+    }
+
+
+def _run_spy_op(op_name: str, op: Any, reps: int) -> None:
+    """Invoke one op ``reps`` times, swallowing show() output only."""
+    if op_name == "show_1e5":
+        with contextlib.redirect_stdout(io.StringIO()):
+            for _ in range(reps):
+                op()
+    else:
+        for _ in range(reps):
+            op()
+
+
 def cell_a(session: Any, schemas: dict[str, Any]) -> dict[str, Any]:
     """Per-call cost of repark_type_to_arrow plus per-op call counts."""
     from repark.spark import types as t
@@ -259,43 +345,37 @@ def cell_a(session: Any, schemas: dict[str, Any]) -> dict[str, Any]:
         name: {"repark_type_to_arrow_us": per_call_us(lambda s=schema: t.repark_type_to_arrow(s))}
         for name, schema in schemas.items()
     }
-    spy_counts: dict[str, int] = {}
-    original = t.repark_type_to_arrow
-
-    def spy(data_type: Any) -> Any:
-        spy_counts["n"] = spy_counts.get("n", 0) + 1
-        return original(data_type)
-
-    t.repark_type_to_arrow = spy
+    counts, restore_spies = _install_spies()
     try:
-        frame_pd = session.createDataFrame(_pandas_frame())
-        nested_rows = [([1, 2], {"k": index}, (index, "s")) for index in range(ROWS)]
-        ops = {
-            "createDataFrame_pandas_1e5": lambda: session.createDataFrame(_pandas_frame()),
-            "createDataFrame_nested_1e5": lambda: session.createDataFrame(
-                nested_rows, _explicit_nested_schema()
-            ),
-            "collect_1e5": lambda: frame_pd.collect(),
-            "to_arrow_1e5": lambda: frame_pd.to_arrow(),
-            "show_1e5": lambda: frame_pd.show(),
-            "df_schema": lambda: frame_pd.schema,
-        }
-        counts = {}
+        ops = _spy_ops(session)
+        op_counts = {}
         for op_name, op in ops.items():
-            if op_name == "show_1e5":
-                spy_counts["n"] = 0
-                with contextlib.redirect_stdout(io.StringIO()):
-                    wall = timed(op, reps=3)
-            else:
-                spy_counts["n"] = 0
-                wall = timed(op, reps=3)
-            counts[op_name] = {
-                "calls_per_op": spy_counts["n"] / 4,
-                "wall_ms": wall["median_ms"],
+            for name in counts:
+                counts[name] = 0
+            _run_spy_op(op_name, op, 4)
+            op_counts[op_name] = {
+                "calls_per_op": dict(counts),
+                "calls_per_single_op": {name: counts[name] / 4 for name in counts},
             }
     finally:
-        t.repark_type_to_arrow = original
-    return {"per_schema": per_schema, "calls_per_op": counts}
+        restore_spies()
+    return {"per_schema": per_schema, "calls_per_op": op_counts}
+
+
+def cell_a_spy(session: Any) -> dict[str, Any]:
+    """Spy-only re-run of cell (a): call counts per op, no timing cells."""
+    counts, restore_spies = _install_spies()
+    try:
+        ops = _spy_ops(session)
+        out = {}
+        for op_name, op in ops.items():
+            for name in counts:
+                counts[name] = 0
+            _run_spy_op(op_name, op, 2)
+            out[op_name] = {name: counts[name] / 2 for name in counts}
+        return out
+    finally:
+        restore_spies()
 
 
 def cell_b(schemas: dict[str, Any]) -> dict[str, Any]:
@@ -380,14 +460,22 @@ def cell_d(session: Any, tmpdir: Path) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Run all cells under idle-box waits and print JSON."""
+    """Run all cells under idle-box waits and print JSON.
+
+    ``--spy-only`` runs just the cell (a) call-count leg: the full six-name
+    spy set against the 1e5 ops, with no timing cells.
+    """
+    import sys
+
     import repark._native as native
     from repark import ReparkSession
 
+    spy_only = "--spy-only" in sys.argv
     env = {
         "debug_assertions": bool(native.__debug_assertions__),
         "rows": ROWS,
         "reps": REPS,
+        "spy_only": spy_only,
     }
     results: dict[str, Any] = {"env": env, "cells": {}}
     session = (
@@ -397,17 +485,24 @@ def main() -> None:
         .getOrCreate()
     )
     try:
-        schemas = _schemas()
-        with tempfile.TemporaryDirectory(prefix="facade4-baseline-") as tmp:
-            tmpdir = Path(tmp)
-            for cell_name, thunk in (
-                ("a_repark_type_to_arrow", lambda: cell_a(session, schemas)),
-                ("b_struct_type_from_arrow", lambda: cell_b(schemas)),
-                ("c_ddl_parse_write", lambda: cell_c(schemas)),
-                ("d_end_to_end_share", lambda: cell_d(session, tmpdir)),
-            ):
-                load = wait_for_idle()
-                results["cells"][cell_name] = {"load_at_start": load, "data": thunk()}
+        if spy_only:
+            load = wait_for_idle()
+            results["cells"]["a_spy_counts"] = {
+                "load_at_start": load,
+                "data": cell_a_spy(session),
+            }
+        else:
+            schemas = _schemas()
+            with tempfile.TemporaryDirectory(prefix="facade4-baseline-") as tmp:
+                tmpdir = Path(tmp)
+                for cell_name, thunk in (
+                    ("a_repark_type_to_arrow", lambda: cell_a(session, schemas)),
+                    ("b_struct_type_from_arrow", lambda: cell_b(schemas)),
+                    ("c_ddl_parse_write", lambda: cell_c(schemas)),
+                    ("d_end_to_end_share", lambda: cell_d(session, tmpdir)),
+                ):
+                    load = wait_for_idle()
+                    results["cells"][cell_name] = {"load_at_start": load, "data": thunk()}
     finally:
         session.stop()
     print(json.dumps(results, indent=2, sort_keys=True))

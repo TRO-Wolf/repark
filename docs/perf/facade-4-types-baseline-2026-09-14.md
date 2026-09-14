@@ -50,25 +50,38 @@ Per-call cost (µs, median):
 | timestamp_variants | 7.36 |
 | interval_char_varchar | 8.72 |
 
-Calls per user op on a 1e5-row frame (spy on `types.repark_type_to_arrow`;
-ops timed at reps=3, count divided by 4 invocations):
+Calls per user op on a 1e5-row frame, re-measured with spies on all six
+conversion entry points (`repark_type_to_arrow`, `struct_type_from_arrow`,
+`_arrow_type_to_repark`, `_parse_datatype_string`, `_sql_type_to_arrow`,
+`DataType.fromDDL` — patched on every module binding them, so lazy re-imports
+and the `_funcs` injection are covered). `run_baseline.py --spy-only`
+reproduces just this leg:
 
-| op | calls per op | op wall (ms) | conversion share |
-|---|---:|---:|---:|
-| `createDataFrame(pandas)` 1e5 | 0 | 475.79 | 0 % |
-| `createDataFrame(rows, StructType)` nested 1e5 | 16 | 2,089.44 | ≈0.16 ms → 0.008 % |
-| `collect` 1e5 | 0 | 345.70 | 0 % |
-| `to_arrow` 1e5 | 0 | 0.28 | 0 % |
-| `show` 1e5 | 0 | 3.18 | 0 % |
-| `df.schema` | 0 | 0.017 | 0 % |
+| op | `repark_type_to_arrow` | `struct_type_from_arrow` | `_arrow_type_to_repark` | `_parse_datatype_string` | `_sql_type_to_arrow` | `DataType.fromDDL` |
+|---|---:|---:|---:|---:|---:|---:|
+| `createDataFrame(pandas)` 1e5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `createDataFrame(rows, StructType)` nested 1e5 | 16 | 0 | 0 | 6 | 6 | 6 |
+| `collect` 1e5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `to_arrow` 1e5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `show` 1e5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `df.schema` | 0 | 0 | 0 | 1 | 0 | 1 |
 
-`repark_type_to_arrow` is reached only by the explicit-schema
-`createDataFrame` path (`_data_type_to_sql_type` emits ARRAY/MAP/STRUCT
-markers that `_sql_type_to_arrow` routes through it — 16 calls for the
-nested schema). Every other measured op pays zero Python conversion calls:
-the pandas path converts dtypes in `_arrow_table_from_pandas`, and
-`collect`/`to_arrow`/`show`/`df.schema` read the already-materialized Arrow
-schema.
+Correction to the first run's claim: the earlier table spied only
+`repark_type_to_arrow` and reported `0` for `df.schema` — true for that one
+name but not for conversion generally. `df.schema` builds types through a
+local `arrow_type_key` if/elif and calls `DataType.fromDDL` +
+`_parse_datatype_string` once per op for the frame's timestamp column (cell
+(d) independently cProfiles that path at 0.033 ms of a 66 µs op). The
+explicit-schema `createDataFrame` path routes each nested field through
+`_sql_type_to_arrow` → `repark_type_to_arrow` (16 calls) plus 6
+`fromDDL`/`_parse_datatype_string`/`_sql_type_to_arrow` for the three nested
+fields' DDL markers. `collect`/`to_arrow`/`show` and the pandas
+`createDataFrame` path pay zero calls on all six names — the pandas path
+converts dtypes in `_arrow_table_from_pandas` and the read ops consume the
+already-materialized Arrow schema. Op walls (unchanged): pandas create
+475.79 ms, nested create 2,089.44 ms, collect 345.70 ms, to_arrow 0.28 ms,
+show 3.18 ms, df.schema 0.017 ms — the largest measured conversion spend
+per op is ≈0.16 ms on nested create (0.008 %).
 
 ## Cell (b) — `struct_type_from_arrow` round-trip per schema
 
