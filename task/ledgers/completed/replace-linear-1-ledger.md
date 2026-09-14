@@ -323,7 +323,7 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: Every clause re-derived from the live oracle rather than presumed — the full 30-cell table was re-measured on PySpark 4.1.2 and re-measured on the rewritten tree, and each of the ten ruled cells plus the three error-class cells is pinned asserting values AND arrow types AND error classes, not a representative subset.
-      artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/staging/replace-linear-1-ledger.md]
+      artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/completed/replace-linear-1-ledger.md]
     - id: AT-2
       status: ATTACKED
       evidence: The pins drive the real paths — dict/scalar/list/tuple argument shapes, the eager validation order, the key-family column filter on mixed frames, bool-key and float-key edge arms, case-variant and missing subset spellings, NaN keys, and a backtick-needed column name — never proxies like inspecting the expression tree.
@@ -344,7 +344,7 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: ATTACKED
       evidence: The unit exists because the old shape was system-breaking at depth (2^N column references, death at N=40); the before/after RSS table at N=4/8/12/16/40 plus the flat-select control is the cost measurement, and the depth-40 pin now runs ungated in the default suite under a 64 MB bound.
-      artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/staging/replace-linear-1-ledger.md]
+      artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/completed/replace-linear-1-ledger.md]
     - id: AT-8
       status: ATTACKED
       evidence: The one upstream behavior the rewrite could have silently presumed — that DataFusion would refuse cross-type comparisons instead of matching by coercion — was probed directly (int col = float lit, bool key on int col, decimal col = double lit) before the key-family filter was written; no new public name; D-4's core.py ratchet recorded at the exact new baseline 4054, re-recorded 4054 → 4044 when the `_join_qualifiers` plumbing moved into `replace_expr.py` (P2-3; the audit's first pass tried 4074 and the down-only ceiling rule rejected it — the equal-lines extraction landed it at 4044). The critic round's second presumed-cheap claim — that the collapsed type key is the column's real family — was falsified on `binary` and the filter moved to physical Arrow types.
