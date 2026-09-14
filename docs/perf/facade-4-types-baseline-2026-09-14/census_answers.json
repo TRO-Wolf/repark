@@ -1,0 +1,1127 @@
+{
+  "csv_smart_rungs": {
+    "lit_binary": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_bool": {
+      "decimal": null,
+      "engine_cast": "boolean",
+      "rung": "bool",
+      "spark_type": "BooleanType:boolean",
+      "sql_cast": "boolean"
+    },
+    "lit_char": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_date": {
+      "decimal": null,
+      "engine_cast": "date",
+      "rung": "date",
+      "spark_type": "DateType:date",
+      "sql_cast": "date"
+    },
+    "lit_decimal_10_2": {
+      "decimal": [
+        3,
+        2
+      ],
+      "engine_cast": "decimal(3,2)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(3,2)",
+      "sql_cast": "decimal(3,2)"
+    },
+    "lit_decimal_38_0": {
+      "decimal": [
+        38,
+        0
+      ],
+      "engine_cast": "decimal(38,0)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(38,0)",
+      "sql_cast": "decimal(38,0)"
+    },
+    "lit_decimal_38_18": {
+      "decimal": [
+        18,
+        18
+      ],
+      "engine_cast": "decimal(18,18)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(18,18)",
+      "sql_cast": "decimal(18,18)"
+    },
+    "lit_decimal_39_over": {
+      "decimal": null,
+      "engine_cast": "double",
+      "rung": "float64",
+      "spark_type": "DoubleType:double",
+      "sql_cast": "double"
+    },
+    "lit_decimal_comma": {
+      "decimal": [
+        3,
+        2
+      ],
+      "engine_cast": "decimal(3,2)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(3,2)",
+      "sql_cast": "decimal(3,2)"
+    },
+    "lit_float_sci": {
+      "decimal": null,
+      "engine_cast": "double",
+      "rung": "float64",
+      "spark_type": "DoubleType:double",
+      "sql_cast": "double"
+    },
+    "lit_int32": {
+      "decimal": null,
+      "engine_cast": "int",
+      "rung": "int32",
+      "spark_type": "IntegerType:int",
+      "sql_cast": "int"
+    },
+    "lit_int64": {
+      "decimal": null,
+      "engine_cast": "long",
+      "rung": "int64",
+      "spark_type": "LongType:bigint",
+      "sql_cast": "bigint"
+    },
+    "lit_interval": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_timestamp_naive": {
+      "decimal": null,
+      "engine_cast": "timestamp",
+      "rung": "timestamp",
+      "spark_type": "TimestampType:timestamp",
+      "sql_cast": "timestamp"
+    },
+    "lit_timestamp_offset": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_timestamp_tz_z": {
+      "decimal": null,
+      "engine_cast": "timestamp",
+      "rung": "timestamp",
+      "spark_type": "TimestampType:timestamp",
+      "sql_cast": "timestamp"
+    }
+  },
+  "csv_smart_rungs_ntz": {
+    "lit_binary": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_bool": {
+      "decimal": null,
+      "engine_cast": "boolean",
+      "rung": "bool",
+      "spark_type": "BooleanType:boolean",
+      "sql_cast": "boolean"
+    },
+    "lit_char": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_date": {
+      "decimal": null,
+      "engine_cast": "date",
+      "rung": "date",
+      "spark_type": "DateType:date",
+      "sql_cast": "date"
+    },
+    "lit_decimal_10_2": {
+      "decimal": [
+        3,
+        2
+      ],
+      "engine_cast": "decimal(3,2)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(3,2)",
+      "sql_cast": "decimal(3,2)"
+    },
+    "lit_decimal_38_0": {
+      "decimal": [
+        38,
+        0
+      ],
+      "engine_cast": "decimal(38,0)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(38,0)",
+      "sql_cast": "decimal(38,0)"
+    },
+    "lit_decimal_38_18": {
+      "decimal": [
+        18,
+        18
+      ],
+      "engine_cast": "decimal(18,18)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(18,18)",
+      "sql_cast": "decimal(18,18)"
+    },
+    "lit_decimal_39_over": {
+      "decimal": null,
+      "engine_cast": "double",
+      "rung": "float64",
+      "spark_type": "DoubleType:double",
+      "sql_cast": "double"
+    },
+    "lit_decimal_comma": {
+      "decimal": [
+        3,
+        2
+      ],
+      "engine_cast": "decimal(3,2)",
+      "rung": "decimal128",
+      "spark_type": "DecimalType:decimal(3,2)",
+      "sql_cast": "decimal(3,2)"
+    },
+    "lit_float_sci": {
+      "decimal": null,
+      "engine_cast": "double",
+      "rung": "float64",
+      "spark_type": "DoubleType:double",
+      "sql_cast": "double"
+    },
+    "lit_int32": {
+      "decimal": null,
+      "engine_cast": "int",
+      "rung": "int32",
+      "spark_type": "IntegerType:int",
+      "sql_cast": "int"
+    },
+    "lit_int64": {
+      "decimal": null,
+      "engine_cast": "long",
+      "rung": "int64",
+      "spark_type": "LongType:bigint",
+      "sql_cast": "bigint"
+    },
+    "lit_interval": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_timestamp_naive": {
+      "decimal": null,
+      "engine_cast": "timestamp_ntz",
+      "rung": "timestamp",
+      "spark_type": "TimestampNTZType:timestamp_ntz",
+      "sql_cast": "varchar"
+    },
+    "lit_timestamp_offset": {
+      "decimal": null,
+      "engine_cast": "string",
+      "rung": "string",
+      "spark_type": "StringType:string",
+      "sql_cast": "varchar"
+    },
+    "lit_timestamp_tz_z": {
+      "decimal": null,
+      "engine_cast": "timestamp_ntz",
+      "rung": "timestamp",
+      "spark_type": "TimestampNTZType:timestamp_ntz",
+      "sql_cast": "varchar"
+    }
+  },
+  "describe_rust_names": {
+    "describe": [
+      "Row(col_name='a_tiny', data_type='int', comment=None)",
+      "Row(col_name='a_small', data_type='int', comment=None)",
+      "Row(col_name='a_int', data_type='int', comment=None)",
+      "Row(col_name='a_big', data_type='bigint', comment=None)",
+      "Row(col_name='a_float', data_type='float', comment=None)",
+      "Row(col_name='a_double', data_type='double', comment=None)",
+      "Row(col_name='a_bin', data_type='binary', comment=None)",
+      "Row(col_name='a_dec', data_type='decimal(10,2)', comment=None)",
+      "Row(col_name='a_date', data_type='date', comment=None)",
+      "Row(col_name='a_ts', data_type='timestamp', comment=None)"
+    ],
+    "table_dtypes": [
+      [
+        "a_tiny",
+        "int"
+      ],
+      [
+        "a_small",
+        "int"
+      ],
+      [
+        "a_int",
+        "int"
+      ],
+      [
+        "a_big",
+        "bigint"
+      ],
+      [
+        "a_float",
+        "double"
+      ],
+      [
+        "a_double",
+        "double"
+      ],
+      [
+        "a_bin",
+        "string"
+      ],
+      [
+        "a_dec",
+        "decimal(10,2)"
+      ],
+      [
+        "a_date",
+        "date"
+      ],
+      [
+        "a_ts",
+        "timestamp"
+      ]
+    ],
+    "table_type_keys": [
+      [
+        "a_tiny",
+        "int",
+        true
+      ],
+      [
+        "a_small",
+        "int",
+        true
+      ],
+      [
+        "a_int",
+        "int",
+        true
+      ],
+      [
+        "a_big",
+        "long",
+        true
+      ],
+      [
+        "a_float",
+        "double",
+        true
+      ],
+      [
+        "a_double",
+        "double",
+        true
+      ],
+      [
+        "a_bin",
+        "string",
+        true
+      ],
+      [
+        "a_dec",
+        "decimal(10,2)",
+        true
+      ],
+      [
+        "a_date",
+        "date",
+        true
+      ],
+      [
+        "a_ts",
+        "timestamp",
+        true
+      ]
+    ]
+  },
+  "facade_types_py": {
+    "arrow_to_repark": {
+      "pa.binary": "BinaryType:binary",
+      "pa.bool": "BooleanType:boolean",
+      "pa.date32": "DateType:date",
+      "pa.date64": "DateType:date",
+      "pa.decimal128_10_2": "DecimalType:decimal(10,2)",
+      "pa.decimal128_38_0": "DecimalType:decimal(38,0)",
+      "pa.decimal128_38_18": "DecimalType:decimal(38,18)",
+      "pa.decimal256_76_10": "DecimalType:decimal(76,10)",
+      "pa.dictionary": "StringType:string",
+      "pa.duration_us": "StringType:string",
+      "pa.float16": "DoubleType:double",
+      "pa.float32": "FloatType:float",
+      "pa.float64": "DoubleType:double",
+      "pa.int16": "ShortType:smallint",
+      "pa.int64": "LongType:bigint",
+      "pa.int8": "ByteType:tinyint",
+      "pa.large_binary": "BinaryType:binary",
+      "pa.list_int32": "ArrayType:array<int>",
+      "pa.list_int32_nonnull": "ArrayType:array<int>",
+      "pa.map_str_int": "MapType:map<string,int>",
+      "pa.month_day_nano": "StringType:string",
+      "pa.null": "NullType:void",
+      "pa.string": "StringType:string",
+      "pa.struct_req": "StructType:struct<req:int,opt:string>",
+      "pa.time64_us": "StringType:string",
+      "pa.timestamp_s": "TimestampType:timestamp",
+      "pa.timestamp_us": "TimestampNTZType:timestamp_ntz",
+      "pa.timestamp_us_ny": "TimestampType:timestamp",
+      "pa.timestamp_us_utc": "TimestampType:timestamp",
+      "pa.uint16": "StringType:string",
+      "pa.uint32": "StringType:string",
+      "pa.uint64": "StringType:string",
+      "pa.uint8": "StringType:string"
+    },
+    "fromddl": {
+      "a INT NOT NULL": "REFUSED ValueError: cannot parse datatype: 'a INT NOT NULL'",
+      "a INT,b STRING": "StructType:struct<a:int,b:string>",
+      "array<int>": "ArrayType:array<int>",
+      "binary": "BinaryType:binary",
+      "char(8)": "CharType:char(8)",
+      "date": "DateType:date",
+      "decimal(10,2)": "DecimalType:decimal(10,2)",
+      "decimal(38,0)": "DecimalType:decimal(38,0)",
+      "decimal(38,18)": "DecimalType:decimal(38,18)",
+      "interval": "CalendarIntervalType:interval",
+      "interval day to second": "REFUSED ValueError: cannot parse datatype: 'interval day to second'",
+      "interval year to month": "REFUSED ValueError: cannot parse datatype: 'interval year to month'",
+      "map<string,int>": "MapType:map<string,int>",
+      "struct<req:int,opt:string>": "StructType:struct<req:int,opt:string>",
+      "timestamp": "TimestampType:timestamp",
+      "timestamp_ntz": "TimestampNTZType:timestamp_ntz",
+      "varchar(32)": "VarcharType:varchar(32)"
+    },
+    "repark_to_arrow": {
+      "ArrayType(int,noNull)": "list<item: int32>",
+      "BinaryType": "binary",
+      "CalendarIntervalType": "string",
+      "CharType(8)": "string",
+      "DateType": "date32[day]",
+      "DayTimeIntervalType": "string",
+      "DecimalType(10,2)": "decimal128(10, 2)",
+      "DecimalType(38,0)": "decimal128(38, 0)",
+      "DecimalType(38,18)": "decimal128(38, 18)",
+      "DecimalType(76,10)": "REFUSED ValueError: precision should be between 1 and 38",
+      "MapType(str,int,noNull)": "map<string, int32>",
+      "TimestampNTZType": "timestamp[us]",
+      "TimestampType": "timestamp[us, tz=UTC]",
+      "VarcharType(32)": "string",
+      "YearMonthIntervalType": "string"
+    },
+    "repark_to_arrow_nullability": "struct<arr: list<item: int32>, mp: map<string, int32>, st: struct<req: int32>>",
+    "struct_type_from_arrow_nullability": [
+      [
+        "req",
+        "IntegerType:int",
+        false
+      ],
+      [
+        "lst",
+        "ArrayType:array<int>",
+        true
+      ],
+      [
+        "mp",
+        "MapType:map<string,int>",
+        true
+      ],
+      [
+        "st",
+        "StructType:struct<inner:int>",
+        false
+      ]
+    ],
+    "toddl": "req INT NOT NULL,opt STRING",
+    "toddl_reparse": "REFUSED ValueError: cannot parse datatype: 'req INT NOT NULL,opt STRING'"
+  },
+  "reader_csv_infer": {
+    "csv_binary": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_bool": [
+      [
+        "c",
+        "boolean"
+      ]
+    ],
+    "csv_date": [
+      [
+        "c",
+        "date"
+      ]
+    ],
+    "csv_decimal_10_2": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_38_0": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_38_18": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_39_over": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_float_sci": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_int32": [
+      [
+        "c",
+        "bigint"
+      ]
+    ],
+    "csv_int64": [
+      [
+        "c",
+        "bigint"
+      ]
+    ],
+    "csv_interval": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_string": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_timestamp": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ],
+    "csv_timestamp_offset": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ],
+    "csv_timestamp_z": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ]
+  },
+  "reader_csv_infer_ntz": {
+    "csv_binary": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_bool": [
+      [
+        "c",
+        "boolean"
+      ]
+    ],
+    "csv_date": [
+      [
+        "c",
+        "date"
+      ]
+    ],
+    "csv_decimal_10_2": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_38_0": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_38_18": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_decimal_39_over": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_float_sci": [
+      [
+        "c",
+        "double"
+      ]
+    ],
+    "csv_int32": [
+      [
+        "c",
+        "bigint"
+      ]
+    ],
+    "csv_int64": [
+      [
+        "c",
+        "bigint"
+      ]
+    ],
+    "csv_interval": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_string": [
+      [
+        "c",
+        "string"
+      ]
+    ],
+    "csv_timestamp": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ],
+    "csv_timestamp_offset": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ],
+    "csv_timestamp_z": [
+      [
+        "c",
+        "timestamp"
+      ]
+    ]
+  },
+  "reader_lattice_rust": {
+    "binary": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "string",
+          true
+        ]
+      ]
+    },
+    "bool": {
+      "df_schema": "struct<c:boolean>",
+      "dtypes": [
+        [
+          "c",
+          "boolean"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "boolean",
+          true
+        ]
+      ]
+    },
+    "date32": {
+      "df_schema": "struct<c:date>",
+      "dtypes": [
+        [
+          "c",
+          "date"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "date",
+          true
+        ]
+      ]
+    },
+    "date64": {
+      "df_schema": "struct<c:date>",
+      "dtypes": [
+        [
+          "c",
+          "date"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "date",
+          true
+        ]
+      ]
+    },
+    "dec_10_2": {
+      "df_schema": "struct<c:decimal(10,2)>",
+      "dtypes": [
+        [
+          "c",
+          "decimal(10,2)"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "decimal(10,2)",
+          true
+        ]
+      ]
+    },
+    "dec_256": {
+      "df_schema": "struct<c:decimal(76,10)>",
+      "dtypes": [
+        [
+          "c",
+          "decimal(76,10)"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "decimal(76,10)",
+          true
+        ]
+      ]
+    },
+    "dec_38_0": {
+      "df_schema": "struct<c:decimal(38,0)>",
+      "dtypes": [
+        [
+          "c",
+          "decimal(38,0)"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "decimal(38,0)",
+          true
+        ]
+      ]
+    },
+    "dec_38_18": {
+      "df_schema": "struct<c:decimal(38,18)>",
+      "dtypes": [
+        [
+          "c",
+          "decimal(38,18)"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "decimal(38,18)",
+          true
+        ]
+      ]
+    },
+    "duration": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "Duration(Microsecond)",
+          true
+        ]
+      ]
+    },
+    "float32": {
+      "df_schema": "struct<c:double>",
+      "dtypes": [
+        [
+          "c",
+          "double"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "double",
+          true
+        ]
+      ]
+    },
+    "float64": {
+      "df_schema": "struct<c:double>",
+      "dtypes": [
+        [
+          "c",
+          "double"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "double",
+          true
+        ]
+      ]
+    },
+    "int16": {
+      "df_schema": "struct<c:int>",
+      "dtypes": [
+        [
+          "c",
+          "int"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "int",
+          true
+        ]
+      ]
+    },
+    "int64": {
+      "df_schema": "struct<c:bigint>",
+      "dtypes": [
+        [
+          "c",
+          "bigint"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "long",
+          true
+        ]
+      ]
+    },
+    "int8": {
+      "df_schema": "struct<c:int>",
+      "dtypes": [
+        [
+          "c",
+          "int"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "int",
+          true
+        ]
+      ]
+    },
+    "large_binary": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "string",
+          true
+        ]
+      ]
+    },
+    "list_nonnull": {
+      "df_schema": "struct<c:array<int>>",
+      "dtypes": [
+        [
+          "c",
+          "array<int>"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "array<int>",
+          true
+        ]
+      ]
+    },
+    "map": {
+      "df_schema": "struct<c:map<string,int>>",
+      "dtypes": [
+        [
+          "c",
+          "map<string,int>"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "map<string,int>",
+          true
+        ]
+      ]
+    },
+    "month_day_nano": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "Interval(MonthDayNano)",
+          true
+        ]
+      ]
+    },
+    "null": {
+      "df_schema": "struct<c:void>",
+      "dtypes": [
+        [
+          "c",
+          "void"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "Null",
+          true
+        ]
+      ]
+    },
+    "string": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "string",
+          true
+        ]
+      ]
+    },
+    "struct_req": {
+      "df_schema": "struct<c:struct<req:int>>",
+      "dtypes": [
+        [
+          "c",
+          "struct<req:int>"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "struct<req:int>",
+          false
+        ]
+      ]
+    },
+    "time64": {
+      "df_schema": "struct<c:string>",
+      "dtypes": [
+        [
+          "c",
+          "string"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "Time64(Microsecond)",
+          true
+        ]
+      ]
+    },
+    "ts_ntz": {
+      "df_schema": "struct<c:timestamp_ntz>",
+      "dtypes": [
+        [
+          "c",
+          "timestamp_ntz"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "timestamp_ntz",
+          true
+        ]
+      ]
+    },
+    "ts_ny": {
+      "df_schema": "struct<c:timestamp>",
+      "dtypes": [
+        [
+          "c",
+          "timestamp"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "timestamp",
+          true
+        ]
+      ]
+    },
+    "ts_s": {
+      "df_schema": "struct<c:timestamp>",
+      "dtypes": [
+        [
+          "c",
+          "timestamp"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "timestamp",
+          true
+        ]
+      ]
+    },
+    "ts_utc": {
+      "df_schema": "struct<c:timestamp>",
+      "dtypes": [
+        [
+          "c",
+          "timestamp"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "timestamp",
+          true
+        ]
+      ]
+    },
+    "uint16": {
+      "df_schema": "struct<c:int>",
+      "dtypes": [
+        [
+          "c",
+          "int"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "int",
+          true
+        ]
+      ]
+    },
+    "uint32": {
+      "df_schema": "struct<c:int>",
+      "dtypes": [
+        [
+          "c",
+          "int"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "int",
+          true
+        ]
+      ]
+    },
+    "uint64": {
+      "df_schema": "struct<c:bigint>",
+      "dtypes": [
+        [
+          "c",
+          "bigint"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "long",
+          true
+        ]
+      ]
+    },
+    "uint8": {
+      "df_schema": "struct<c:int>",
+      "dtypes": [
+        [
+          "c",
+          "int"
+        ]
+      ],
+      "type_key": [
+        [
+          "c",
+          "int",
+          true
+        ]
+      ]
+    }
+  },
+  "session_ntz_default_timestamp": "TimestampNTZType:timestamp_ntz"
+}

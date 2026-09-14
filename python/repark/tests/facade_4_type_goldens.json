@@ -1,0 +1,2519 @@
+{
+  "array_int": {
+    "arrow": "list<item: int32>",
+    "class": "ArrayType",
+    "engine_type": "array<int>",
+    "fromddl_simplestring": {
+      "class": "ArrayType",
+      "containsNull": true,
+      "element": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "simpleString": "array<int>"
+    },
+    "json": "{\"containsNull\":true,\"elementType\":\"integer\",\"type\":\"array\"}",
+    "json_roundtrip": {
+      "class": "ArrayType",
+      "containsNull": true,
+      "element": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "simpleString": "array<int>"
+    },
+    "repr": "ArrayType(IntegerType(), True)",
+    "simpleString": "array<int>",
+    "typeName": "array"
+  },
+  "array_int_no_null": {
+    "arrow": "list<item: int32>",
+    "class": "ArrayType",
+    "engine_type": "array<int>",
+    "fromddl_simplestring": {
+      "class": "ArrayType",
+      "containsNull": true,
+      "element": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "simpleString": "array<int>"
+    },
+    "json": "{\"containsNull\":false,\"elementType\":\"integer\",\"type\":\"array\"}",
+    "json_roundtrip": {
+      "class": "ArrayType",
+      "containsNull": false,
+      "element": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "simpleString": "array<int>"
+    },
+    "repr": "ArrayType(IntegerType(), False)",
+    "simpleString": "array<int>",
+    "typeName": "array"
+  },
+  "array_nested": {
+    "arrow": "list<item: map<string, list<item: int64>>>",
+    "class": "ArrayType",
+    "engine_type": "array<map<string,array<long>>>",
+    "fromddl_simplestring": {
+      "class": "ArrayType",
+      "containsNull": true,
+      "element": {
+        "class": "MapType",
+        "key": {
+          "class": "StringType",
+          "simpleString": "string"
+        },
+        "simpleString": "map<string,array<bigint>>",
+        "value": {
+          "class": "ArrayType",
+          "containsNull": true,
+          "element": {
+            "class": "LongType",
+            "simpleString": "bigint"
+          },
+          "simpleString": "array<bigint>"
+        },
+        "valueContainsNull": true
+      },
+      "simpleString": "array<map<string,array<bigint>>>"
+    },
+    "json": "{\"containsNull\":true,\"elementType\":{\"keyType\":\"string\",\"type\":\"map\",\"valueContainsNull\":true,\"valueType\":{\"containsNull\":true,\"elementType\":\"long\",\"type\":\"array\"}},\"type\":\"array\"}",
+    "json_roundtrip": {
+      "class": "ArrayType",
+      "containsNull": true,
+      "element": {
+        "class": "MapType",
+        "key": {
+          "class": "StringType",
+          "simpleString": "string"
+        },
+        "simpleString": "map<string,array<bigint>>",
+        "value": {
+          "class": "ArrayType",
+          "containsNull": true,
+          "element": {
+            "class": "LongType",
+            "simpleString": "bigint"
+          },
+          "simpleString": "array<bigint>"
+        },
+        "valueContainsNull": true
+      },
+      "simpleString": "array<map<string,array<bigint>>>"
+    },
+    "repr": "ArrayType(MapType(StringType(), ArrayType(LongType(), True), True), True)",
+    "simpleString": "array<map<string,array<bigint>>>",
+    "typeName": "array"
+  },
+  "arrow_probe_schema_back": {
+    "fields": [
+      {
+        "class": "BinaryType",
+        "name": "bin",
+        "nullable": true,
+        "simpleString": "binary"
+      },
+      {
+        "class": "BinaryType",
+        "name": "bin_large",
+        "nullable": true,
+        "simpleString": "binary"
+      },
+      {
+        "class": "StringType",
+        "name": "str_large",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "DateType",
+        "name": "date64",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "ts_ny",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "TimestampType",
+        "name": "ts_s",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "dec256",
+        "nullable": true,
+        "simpleString": "decimal(76,10)"
+      },
+      {
+        "class": "StringType",
+        "name": "u8",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "u16",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "u32",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "u64",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "ByteType",
+        "name": "i8",
+        "nullable": true,
+        "simpleString": "tinyint"
+      },
+      {
+        "class": "ShortType",
+        "name": "i16",
+        "nullable": true,
+        "simpleString": "smallint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "f16",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "FloatType",
+        "name": "f32",
+        "nullable": true,
+        "simpleString": "float"
+      },
+      {
+        "class": "NullType",
+        "name": "null_col",
+        "nullable": true,
+        "simpleString": "void"
+      },
+      {
+        "class": "StringType",
+        "name": "time64",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "dur",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "ym",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "dict",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "ArrayType",
+        "containsNull": true,
+        "element": {
+          "class": "IntegerType",
+          "simpleString": "int"
+        },
+        "name": "list_nonnull",
+        "nullable": true,
+        "simpleString": "array<int>"
+      },
+      {
+        "class": "MapType",
+        "key": {
+          "class": "StringType",
+          "simpleString": "string"
+        },
+        "name": "map_col",
+        "nullable": true,
+        "simpleString": "map<string,int>",
+        "value": {
+          "class": "IntegerType",
+          "simpleString": "int"
+        },
+        "valueContainsNull": true
+      },
+      {
+        "class": "StructType",
+        "fields": [
+          {
+            "class": "IntegerType",
+            "name": "req",
+            "nullable": false,
+            "simpleString": "int"
+          },
+          {
+            "class": "StringType",
+            "name": "opt",
+            "nullable": true,
+            "simpleString": "string"
+          }
+        ],
+        "name": "struct_col",
+        "nullable": false,
+        "simpleString": "struct<req:int,opt:string>"
+      }
+    ]
+  },
+  "binary": {
+    "arrow": "binary",
+    "class": "BinaryType",
+    "engine_type": "binary",
+    "fromddl_simplestring": {
+      "class": "BinaryType",
+      "simpleString": "binary"
+    },
+    "json": "\"binary\"",
+    "json_roundtrip": {
+      "class": "BinaryType",
+      "simpleString": "binary"
+    },
+    "repr": "BinaryType()",
+    "simpleString": "binary",
+    "typeName": "binary"
+  },
+  "boolean": {
+    "arrow": "bool",
+    "class": "BooleanType",
+    "engine_type": "boolean",
+    "fromddl_simplestring": {
+      "class": "BooleanType",
+      "simpleString": "boolean"
+    },
+    "json": "\"boolean\"",
+    "json_roundtrip": {
+      "class": "BooleanType",
+      "simpleString": "boolean"
+    },
+    "repr": "BooleanType()",
+    "simpleString": "boolean",
+    "typeName": "boolean"
+  },
+  "byte": {
+    "arrow": "int8",
+    "class": "ByteType",
+    "engine_type": "byte",
+    "fromddl_simplestring": {
+      "class": "ByteType",
+      "simpleString": "tinyint"
+    },
+    "json": "\"byte\"",
+    "json_roundtrip": {
+      "class": "ByteType",
+      "simpleString": "tinyint"
+    },
+    "repr": "ByteType()",
+    "simpleString": "tinyint",
+    "typeName": "byte"
+  },
+  "calendar_interval": {
+    "arrow": "string",
+    "class": "CalendarIntervalType",
+    "engine_type": "interval",
+    "fromddl_simplestring": {
+      "class": "CalendarIntervalType",
+      "simpleString": "interval"
+    },
+    "json": "\"interval\"",
+    "json_roundtrip": {
+      "class": "CalendarIntervalType",
+      "simpleString": "interval"
+    },
+    "repr": "CalendarIntervalType()",
+    "simpleString": "interval",
+    "typeName": "interval"
+  },
+  "char8": {
+    "arrow": "string",
+    "class": "CharType",
+    "engine_type": "string",
+    "fromddl_simplestring": {
+      "class": "CharType",
+      "simpleString": "char(8)"
+    },
+    "json": "\"char(8)\"",
+    "json_roundtrip": {
+      "class": "CharType",
+      "simpleString": "char(8)"
+    },
+    "repr": "CharType(8)",
+    "simpleString": "char(8)",
+    "typeName": "char"
+  },
+  "date": {
+    "arrow": "date32[day]",
+    "class": "DateType",
+    "engine_type": "date",
+    "fromddl_simplestring": {
+      "class": "DateType",
+      "simpleString": "date"
+    },
+    "json": "\"date\"",
+    "json_roundtrip": {
+      "class": "DateType",
+      "simpleString": "date"
+    },
+    "repr": "DateType()",
+    "simpleString": "date",
+    "typeName": "date"
+  },
+  "day_time_interval": {
+    "arrow": "string",
+    "class": "DayTimeIntervalType",
+    "engine_type": "interval day to second",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval day to second'"
+    },
+    "json": "\"interval day to second\"",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval day to second'"
+    },
+    "repr": "DayTimeIntervalType(0, 3)",
+    "simpleString": "interval day to second",
+    "typeName": "daytimeinterval"
+  },
+  "day_time_interval_day": {
+    "arrow": "string",
+    "class": "DayTimeIntervalType",
+    "engine_type": "interval day",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval day'"
+    },
+    "json": "\"interval day\"",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval day'"
+    },
+    "repr": "DayTimeIntervalType(0, 0)",
+    "simpleString": "interval day",
+    "typeName": "daytimeinterval"
+  },
+  "day_time_interval_hour_second": {
+    "arrow": "string",
+    "class": "DayTimeIntervalType",
+    "engine_type": "interval hour to second",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval hour to second'"
+    },
+    "json": "\"interval hour to second\"",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval hour to second'"
+    },
+    "repr": "DayTimeIntervalType(1, 3)",
+    "simpleString": "interval hour to second",
+    "typeName": "daytimeinterval"
+  },
+  "decimal_10_2": {
+    "arrow": "decimal128(10, 2)",
+    "class": "DecimalType",
+    "engine_type": "decimal(10,2)",
+    "fromddl_simplestring": {
+      "class": "DecimalType",
+      "simpleString": "decimal(10,2)"
+    },
+    "json": "\"decimal(10,2)\"",
+    "json_roundtrip": {
+      "class": "DecimalType",
+      "simpleString": "decimal(10,2)"
+    },
+    "repr": "DecimalType(10,2)",
+    "simpleString": "decimal(10,2)",
+    "typeName": "decimal"
+  },
+  "decimal_38_0": {
+    "arrow": "decimal128(38, 0)",
+    "class": "DecimalType",
+    "engine_type": "decimal(38,0)",
+    "fromddl_simplestring": {
+      "class": "DecimalType",
+      "simpleString": "decimal(38,0)"
+    },
+    "json": "\"decimal(38,0)\"",
+    "json_roundtrip": {
+      "class": "DecimalType",
+      "simpleString": "decimal(38,0)"
+    },
+    "repr": "DecimalType(38,0)",
+    "simpleString": "decimal(38,0)",
+    "typeName": "decimal"
+  },
+  "decimal_38_18": {
+    "arrow": "decimal128(38, 18)",
+    "class": "DecimalType",
+    "engine_type": "decimal(38,18)",
+    "fromddl_simplestring": {
+      "class": "DecimalType",
+      "simpleString": "decimal(38,18)"
+    },
+    "json": "\"decimal(38,18)\"",
+    "json_roundtrip": {
+      "class": "DecimalType",
+      "simpleString": "decimal(38,18)"
+    },
+    "repr": "DecimalType(38,18)",
+    "simpleString": "decimal(38,18)",
+    "typeName": "decimal"
+  },
+  "decimal_76_10": {
+    "arrow": {
+      "refused": "ValueError: precision should be between 1 and 38"
+    },
+    "class": "DecimalType",
+    "engine_type": "decimal(76,10)",
+    "fromddl_simplestring": {
+      "class": "DecimalType",
+      "simpleString": "decimal(76,10)"
+    },
+    "json": "\"decimal(76,10)\"",
+    "json_roundtrip": {
+      "class": "DecimalType",
+      "simpleString": "decimal(76,10)"
+    },
+    "repr": "DecimalType(76,10)",
+    "simpleString": "decimal(76,10)",
+    "typeName": "decimal"
+  },
+  "decimal_default": {
+    "arrow": "decimal128(10, 0)",
+    "class": "DecimalType",
+    "engine_type": "decimal(10,0)",
+    "fromddl_simplestring": {
+      "class": "DecimalType",
+      "simpleString": "decimal(10,0)"
+    },
+    "json": "\"decimal(10,0)\"",
+    "json_roundtrip": {
+      "class": "DecimalType",
+      "simpleString": "decimal(10,0)"
+    },
+    "repr": "DecimalType(10,0)",
+    "simpleString": "decimal(10,0)",
+    "typeName": "decimal"
+  },
+  "double": {
+    "arrow": "double",
+    "class": "DoubleType",
+    "engine_type": "double",
+    "fromddl_simplestring": {
+      "class": "DoubleType",
+      "simpleString": "double"
+    },
+    "json": "\"double\"",
+    "json_roundtrip": {
+      "class": "DoubleType",
+      "simpleString": "double"
+    },
+    "repr": "DoubleType()",
+    "simpleString": "double",
+    "typeName": "double"
+  },
+  "float": {
+    "arrow": "float",
+    "class": "FloatType",
+    "engine_type": "float",
+    "fromddl_simplestring": {
+      "class": "FloatType",
+      "simpleString": "float"
+    },
+    "json": "\"float\"",
+    "json_roundtrip": {
+      "class": "FloatType",
+      "simpleString": "float"
+    },
+    "repr": "FloatType()",
+    "simpleString": "float",
+    "typeName": "float"
+  },
+  "integer": {
+    "arrow": "int32",
+    "class": "IntegerType",
+    "engine_type": "int",
+    "fromddl_simplestring": {
+      "class": "IntegerType",
+      "simpleString": "int"
+    },
+    "json": "\"integer\"",
+    "json_roundtrip": {
+      "class": "IntegerType",
+      "simpleString": "int"
+    },
+    "repr": "IntegerType()",
+    "simpleString": "int",
+    "typeName": "integer"
+  },
+  "long": {
+    "arrow": "int64",
+    "class": "LongType",
+    "engine_type": "long",
+    "fromddl_simplestring": {
+      "class": "LongType",
+      "simpleString": "bigint"
+    },
+    "json": "\"long\"",
+    "json_roundtrip": {
+      "class": "LongType",
+      "simpleString": "bigint"
+    },
+    "repr": "LongType()",
+    "simpleString": "bigint",
+    "typeName": "long"
+  },
+  "map_str_int": {
+    "arrow": "map<string, int32>",
+    "class": "MapType",
+    "engine_type": "map<string,int>",
+    "fromddl_simplestring": {
+      "class": "MapType",
+      "key": {
+        "class": "StringType",
+        "simpleString": "string"
+      },
+      "simpleString": "map<string,int>",
+      "value": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "valueContainsNull": true
+    },
+    "json": "{\"keyType\":\"string\",\"type\":\"map\",\"valueContainsNull\":true,\"valueType\":\"integer\"}",
+    "json_roundtrip": {
+      "class": "MapType",
+      "key": {
+        "class": "StringType",
+        "simpleString": "string"
+      },
+      "simpleString": "map<string,int>",
+      "value": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "valueContainsNull": true
+    },
+    "repr": "MapType(StringType(), IntegerType(), True)",
+    "simpleString": "map<string,int>",
+    "typeName": "map"
+  },
+  "map_str_int_no_null": {
+    "arrow": "map<string, int32>",
+    "class": "MapType",
+    "engine_type": "map<string,int>",
+    "fromddl_simplestring": {
+      "class": "MapType",
+      "key": {
+        "class": "StringType",
+        "simpleString": "string"
+      },
+      "simpleString": "map<string,int>",
+      "value": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "valueContainsNull": true
+    },
+    "json": "{\"keyType\":\"string\",\"type\":\"map\",\"valueContainsNull\":false,\"valueType\":\"integer\"}",
+    "json_roundtrip": {
+      "class": "MapType",
+      "key": {
+        "class": "StringType",
+        "simpleString": "string"
+      },
+      "simpleString": "map<string,int>",
+      "value": {
+        "class": "IntegerType",
+        "simpleString": "int"
+      },
+      "valueContainsNull": false
+    },
+    "repr": "MapType(StringType(), IntegerType(), False)",
+    "simpleString": "map<string,int>",
+    "typeName": "map"
+  },
+  "null": {
+    "arrow": "null",
+    "class": "NullType",
+    "engine_type": "void",
+    "fromddl_simplestring": {
+      "class": "NullType",
+      "simpleString": "void"
+    },
+    "json": "\"void\"",
+    "json_roundtrip": {
+      "class": "NullType",
+      "simpleString": "void"
+    },
+    "repr": "NullType()",
+    "simpleString": "void",
+    "typeName": "void"
+  },
+  "session_conf_ny_ntz": {
+    "collect_wall_in_session_zone": "2024-01-01T22:04:05",
+    "default_timestamp_arrow_type": "timestamp[us]",
+    "default_timestamp_data_type": {
+      "class": "TimestampNTZType",
+      "simpleString": "timestamp_ntz"
+    },
+    "session_time_zone": "America/New_York"
+  },
+  "short": {
+    "arrow": "int16",
+    "class": "ShortType",
+    "engine_type": "short",
+    "fromddl_simplestring": {
+      "class": "ShortType",
+      "simpleString": "smallint"
+    },
+    "json": "\"short\"",
+    "json_roundtrip": {
+      "class": "ShortType",
+      "simpleString": "smallint"
+    },
+    "repr": "ShortType()",
+    "simpleString": "smallint",
+    "typeName": "short"
+  },
+  "string": {
+    "arrow": "string",
+    "class": "StringType",
+    "engine_type": "string",
+    "fromddl_simplestring": {
+      "class": "StringType",
+      "simpleString": "string"
+    },
+    "json": "\"string\"",
+    "json_roundtrip": {
+      "class": "StringType",
+      "simpleString": "string"
+    },
+    "repr": "StringType()",
+    "simpleString": "string",
+    "typeName": "string"
+  },
+  "string_collated": {
+    "arrow": "string",
+    "class": "StringType",
+    "engine_type": "string",
+    "fromddl_simplestring": {
+      "class": "StringType",
+      "simpleString": "string collate UNICODE_CI"
+    },
+    "json": "\"string collate UNICODE_CI\"",
+    "json_roundtrip": {
+      "class": "StringType",
+      "simpleString": "string collate UNICODE_CI"
+    },
+    "repr": "StringType('UNICODE_CI')",
+    "simpleString": "string collate UNICODE_CI",
+    "typeName": "string"
+  },
+  "struct_decimal_variants": {
+    "arrow": "struct<d10: decimal128(10, 2), d38: decimal128(38, 18), d38s0: decimal128(38, 0)>",
+    "arrow_schema_back": [
+      {
+        "class": "DecimalType",
+        "name": "d10",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "DecimalType",
+        "name": "d38",
+        "nullable": true,
+        "simpleString": "decimal(38,18)"
+      },
+      {
+        "class": "DecimalType",
+        "name": "d38s0",
+        "nullable": true,
+        "simpleString": "decimal(38,0)"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<d10:decimal(10,2),d38:decimal(38,18),d38s0:decimal(38,0)>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "DecimalType",
+          "name": "d10",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "DecimalType",
+          "name": "d38",
+          "nullable": true,
+          "simpleString": "decimal(38,18)"
+        },
+        {
+          "class": "DecimalType",
+          "name": "d38s0",
+          "nullable": true,
+          "simpleString": "decimal(38,0)"
+        }
+      ],
+      "simpleString": "struct<d10:decimal(10,2),d38:decimal(38,18),d38s0:decimal(38,0)>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"d10\",\"nullable\":true,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"d38\",\"nullable\":true,\"type\":\"decimal(38,18)\"},{\"metadata\":{},\"name\":\"d38s0\",\"nullable\":true,\"type\":\"decimal(38,0)\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "DecimalType",
+          "name": "d10",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "DecimalType",
+          "name": "d38",
+          "nullable": true,
+          "simpleString": "decimal(38,18)"
+        },
+        {
+          "class": "DecimalType",
+          "name": "d38s0",
+          "nullable": true,
+          "simpleString": "decimal(38,0)"
+        }
+      ],
+      "simpleString": "struct<d10:decimal(10,2),d38:decimal(38,18),d38s0:decimal(38,0)>"
+    },
+    "repr": "StructType([StructField('d10', DecimalType(10,2), True), StructField('d38', DecimalType(38,18), True), StructField('d38s0', DecimalType(38,0), True)])",
+    "simpleString": "struct<d10:decimal(10,2),d38:decimal(38,18),d38s0:decimal(38,0)>",
+    "toddl": "d10 DECIMAL(10,2),d38 DECIMAL(38,18),d38s0 DECIMAL(38,0)",
+    "toddl_roundtrip": [
+      {
+        "class": "DecimalType",
+        "name": "d10",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "DecimalType",
+        "name": "d38",
+        "nullable": true,
+        "simpleString": "decimal(38,18)"
+      },
+      {
+        "class": "DecimalType",
+        "name": "d38s0",
+        "nullable": true,
+        "simpleString": "decimal(38,0)"
+      }
+    ],
+    "typeName": "struct"
+  },
+  "struct_empty": {
+    "arrow": "struct<>",
+    "arrow_schema_back": [],
+    "class": "StructType",
+    "engine_type": "struct<>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [],
+      "simpleString": "struct<>"
+    },
+    "json": "{\"fields\":[],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [],
+      "simpleString": "struct<>"
+    },
+    "repr": "StructType([])",
+    "simpleString": "struct<>",
+    "toddl": "",
+    "toddl_roundtrip": [],
+    "typeName": "struct"
+  },
+  "struct_flat7": {
+    "arrow": "struct<i: int32, l: int64, f: double, s: string, b: bool, d: date32[day], t: timestamp[us, tz=UTC]>",
+    "arrow_schema_back": [
+      {
+        "class": "IntegerType",
+        "name": "i",
+        "nullable": true,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "l",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "f",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "s",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "b",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "d",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "t",
+        "nullable": true,
+        "simpleString": "timestamp"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<i:int,l:long,f:double,s:string,b:boolean,d:date,t:timestamp>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "i",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "l",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "f",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "s",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "b",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "d",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "t",
+          "nullable": true,
+          "simpleString": "timestamp"
+        }
+      ],
+      "simpleString": "struct<i:int,l:bigint,f:double,s:string,b:boolean,d:date,t:timestamp>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"i\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"l\",\"nullable\":true,\"type\":\"long\"},{\"metadata\":{},\"name\":\"f\",\"nullable\":true,\"type\":\"double\"},{\"metadata\":{},\"name\":\"s\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{},\"name\":\"b\",\"nullable\":true,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"d\",\"nullable\":true,\"type\":\"date\"},{\"metadata\":{},\"name\":\"t\",\"nullable\":true,\"type\":\"timestamp\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "i",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "l",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "f",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "s",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "b",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "d",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "t",
+          "nullable": true,
+          "simpleString": "timestamp"
+        }
+      ],
+      "simpleString": "struct<i:int,l:bigint,f:double,s:string,b:boolean,d:date,t:timestamp>"
+    },
+    "repr": "StructType([StructField('i', IntegerType(), True), StructField('l', LongType(), True), StructField('f', DoubleType(), True), StructField('s', StringType(), True), StructField('b', BooleanType(), True), StructField('d', DateType(), True), StructField('t', TimestampType(), True)])",
+    "simpleString": "struct<i:int,l:bigint,f:double,s:string,b:boolean,d:date,t:timestamp>",
+    "toddl": "i INT,l BIGINT,f DOUBLE,s STRING,b BOOLEAN,d DATE,t TIMESTAMP",
+    "toddl_roundtrip": [
+      {
+        "class": "IntegerType",
+        "name": "i",
+        "nullable": true,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "l",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "f",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "s",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "b",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "d",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "t",
+        "nullable": true,
+        "simpleString": "timestamp"
+      }
+    ],
+    "typeName": "struct"
+  },
+  "struct_interval_char_varchar": {
+    "arrow": "struct<ym: string, dt: string, cal: string, ch: string, vc: string>",
+    "arrow_schema_back": [
+      {
+        "class": "StringType",
+        "name": "ym",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "dt",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "cal",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "ch",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "vc",
+        "nullable": true,
+        "simpleString": "string"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:string,vc:string>",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"ym\",\"nullable\":true,\"type\":\"interval year to month\"},{\"metadata\":{},\"name\":\"dt\",\"nullable\":true,\"type\":\"interval day to second\"},{\"metadata\":{},\"name\":\"cal\",\"nullable\":true,\"type\":\"interval\"},{\"metadata\":{},\"name\":\"ch\",\"nullable\":true,\"type\":\"char(8)\"},{\"metadata\":{},\"name\":\"vc\",\"nullable\":true,\"type\":\"varchar(32)\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+    },
+    "repr": "StructType([StructField('ym', YearMonthIntervalType(0, 1), True), StructField('dt', DayTimeIntervalType(0, 3), True), StructField('cal', CalendarIntervalType(), True), StructField('ch', CharType(8), True), StructField('vc', VarcharType(32), True)])",
+    "simpleString": "struct<ym:interval year to month,dt:interval day to second,cal:interval,ch:char(8),vc:varchar(32)>",
+    "toddl": "ym INTERVAL YEAR TO MONTH,dt INTERVAL DAY TO SECOND,cal INTERVAL,ch CHAR(8),vc VARCHAR(32)",
+    "toddl_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'ym INTERVAL YEAR TO MONTH,dt INTERVAL DAY TO SECOND,cal INTERVAL,ch CHAR(8),vc VARCHAR(32)'"
+    },
+    "typeName": "struct"
+  },
+  "struct_nested3": {
+    "arrow": "struct<top: int32, mid: list<item: struct<m: map<string, struct<leaf: decimal128(10, 2)>>, arr: list<item: int64>>>>",
+    "arrow_schema_back": [
+      {
+        "class": "IntegerType",
+        "name": "top",
+        "nullable": false,
+        "simpleString": "int"
+      },
+      {
+        "class": "ArrayType",
+        "containsNull": true,
+        "element": {
+          "class": "StructType",
+          "fields": [
+            {
+              "class": "MapType",
+              "key": {
+                "class": "StringType",
+                "simpleString": "string"
+              },
+              "name": "m",
+              "nullable": true,
+              "simpleString": "map<string,struct<leaf:decimal(10,2)>>",
+              "value": {
+                "class": "StructType",
+                "fields": [
+                  {
+                    "class": "DecimalType",
+                    "name": "leaf",
+                    "nullable": true,
+                    "simpleString": "decimal(10,2)"
+                  }
+                ],
+                "simpleString": "struct<leaf:decimal(10,2)>"
+              },
+              "valueContainsNull": true
+            },
+            {
+              "class": "ArrayType",
+              "containsNull": true,
+              "element": {
+                "class": "LongType",
+                "simpleString": "bigint"
+              },
+              "name": "arr",
+              "nullable": true,
+              "simpleString": "array<bigint>"
+            }
+          ],
+          "simpleString": "struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>"
+        },
+        "name": "mid",
+        "nullable": true,
+        "simpleString": "array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<top:int,mid:array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<long>>>>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "top",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "ArrayType",
+          "containsNull": true,
+          "element": {
+            "class": "StructType",
+            "fields": [
+              {
+                "class": "MapType",
+                "key": {
+                  "class": "StringType",
+                  "simpleString": "string"
+                },
+                "name": "m",
+                "nullable": true,
+                "simpleString": "map<string,struct<leaf:decimal(10,2)>>",
+                "value": {
+                  "class": "StructType",
+                  "fields": [
+                    {
+                      "class": "DecimalType",
+                      "name": "leaf",
+                      "nullable": true,
+                      "simpleString": "decimal(10,2)"
+                    }
+                  ],
+                  "simpleString": "struct<leaf:decimal(10,2)>"
+                },
+                "valueContainsNull": true
+              },
+              {
+                "class": "ArrayType",
+                "containsNull": true,
+                "element": {
+                  "class": "LongType",
+                  "simpleString": "bigint"
+                },
+                "name": "arr",
+                "nullable": true,
+                "simpleString": "array<bigint>"
+              }
+            ],
+            "simpleString": "struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>"
+          },
+          "name": "mid",
+          "nullable": true,
+          "simpleString": "array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>"
+        }
+      ],
+      "simpleString": "struct<top:int,mid:array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"top\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"mid\",\"nullable\":true,\"type\":{\"containsNull\":true,\"elementType\":{\"fields\":[{\"metadata\":{},\"name\":\"m\",\"nullable\":true,\"type\":{\"keyType\":\"string\",\"type\":\"map\",\"valueContainsNull\":false,\"valueType\":{\"fields\":[{\"metadata\":{},\"name\":\"leaf\",\"nullable\":false,\"type\":\"decimal(10,2)\"}],\"type\":\"struct\"}}},{\"metadata\":{},\"name\":\"arr\",\"nullable\":false,\"type\":{\"containsNull\":false,\"elementType\":\"long\",\"type\":\"array\"}}],\"type\":\"struct\"},\"type\":\"array\"}}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "top",
+          "nullable": false,
+          "simpleString": "int"
+        },
+        {
+          "class": "ArrayType",
+          "containsNull": true,
+          "element": {
+            "class": "StructType",
+            "fields": [
+              {
+                "class": "MapType",
+                "key": {
+                  "class": "StringType",
+                  "simpleString": "string"
+                },
+                "name": "m",
+                "nullable": true,
+                "simpleString": "map<string,struct<leaf:decimal(10,2)>>",
+                "value": {
+                  "class": "StructType",
+                  "fields": [
+                    {
+                      "class": "DecimalType",
+                      "name": "leaf",
+                      "nullable": false,
+                      "simpleString": "decimal(10,2)"
+                    }
+                  ],
+                  "simpleString": "struct<leaf:decimal(10,2)>"
+                },
+                "valueContainsNull": false
+              },
+              {
+                "class": "ArrayType",
+                "containsNull": false,
+                "element": {
+                  "class": "LongType",
+                  "simpleString": "bigint"
+                },
+                "name": "arr",
+                "nullable": false,
+                "simpleString": "array<bigint>"
+              }
+            ],
+            "simpleString": "struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>"
+          },
+          "name": "mid",
+          "nullable": true,
+          "simpleString": "array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>"
+        }
+      ],
+      "simpleString": "struct<top:int,mid:array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>>"
+    },
+    "repr": "StructType([StructField('top', IntegerType(), False), StructField('mid', ArrayType(StructType([StructField('m', MapType(StringType(), StructType([StructField('leaf', DecimalType(10,2), False)]), False), True), StructField('arr', ArrayType(LongType(), False), False)]), True), True)])",
+    "simpleString": "struct<top:int,mid:array<struct<m:map<string,struct<leaf:decimal(10,2)>>,arr:array<bigint>>>>",
+    "toddl": "top INT NOT NULL,mid ARRAY<STRUCT<m:MAP<STRING,STRUCT<leaf:DECIMAL(10,2)>>,arr:ARRAY<BIGINT>>>",
+    "toddl_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'top INT NOT NULL,mid ARRAY<STRUCT<m:MAP<STRING,STRUCT<leaf:DECIMAL(10,2)>>,arr:ARRAY<BIGINT>>>'"
+    },
+    "typeName": "struct"
+  },
+  "struct_not_null_fields": {
+    "arrow": "struct<req: int32, opt: string, meta: string>",
+    "arrow_schema_back": [
+      {
+        "class": "IntegerType",
+        "name": "req",
+        "nullable": false,
+        "simpleString": "int"
+      },
+      {
+        "class": "StringType",
+        "name": "opt",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "StringType",
+        "name": "meta",
+        "nullable": true,
+        "simpleString": "string"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<req:int,opt:string,meta:string>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "req",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "StringType",
+          "name": "opt",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "StringType",
+          "name": "meta",
+          "nullable": true,
+          "simpleString": "string"
+        }
+      ],
+      "simpleString": "struct<req:int,opt:string,meta:string>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"req\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"opt\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{\"k\":\"v\"},\"name\":\"meta\",\"nullable\":true,\"type\":\"string\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "req",
+          "nullable": false,
+          "simpleString": "int"
+        },
+        {
+          "class": "StringType",
+          "name": "opt",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "StringType",
+          "name": "meta",
+          "nullable": true,
+          "simpleString": "string"
+        }
+      ],
+      "simpleString": "struct<req:int,opt:string,meta:string>"
+    },
+    "repr": "StructType([StructField('req', IntegerType(), False), StructField('opt', StringType(), True), StructField('meta', StringType(), True)])",
+    "simpleString": "struct<req:int,opt:string,meta:string>",
+    "toddl": "req INT NOT NULL,opt STRING,meta STRING",
+    "toddl_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'req INT NOT NULL,opt STRING,meta STRING'"
+    },
+    "typeName": "struct"
+  },
+  "struct_timestamp_variants": {
+    "arrow": "struct<ts_ltz: timestamp[us, tz=UTC], ts_ntz: timestamp[us], ts_session: timestamp[us, tz=UTC]>",
+    "arrow_schema_back": [
+      {
+        "class": "TimestampType",
+        "name": "ts_ltz",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "TimestampNTZType",
+        "name": "ts_ntz",
+        "nullable": true,
+        "simpleString": "timestamp_ntz"
+      },
+      {
+        "class": "TimestampType",
+        "name": "ts_session",
+        "nullable": true,
+        "simpleString": "timestamp"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<ts_ltz:timestamp,ts_ntz:timestamp_ntz,ts_session:timestamp>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "TimestampType",
+          "name": "ts_ltz",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "TimestampNTZType",
+          "name": "ts_ntz",
+          "nullable": true,
+          "simpleString": "timestamp_ntz"
+        },
+        {
+          "class": "TimestampType",
+          "name": "ts_session",
+          "nullable": true,
+          "simpleString": "timestamp"
+        }
+      ],
+      "simpleString": "struct<ts_ltz:timestamp,ts_ntz:timestamp_ntz,ts_session:timestamp>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"ts_ltz\",\"nullable\":true,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"ts_ntz\",\"nullable\":true,\"type\":\"timestamp_ntz\"},{\"metadata\":{},\"name\":\"ts_session\",\"nullable\":true,\"type\":\"timestamp\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "TimestampType",
+          "name": "ts_ltz",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "TimestampNTZType",
+          "name": "ts_ntz",
+          "nullable": true,
+          "simpleString": "timestamp_ntz"
+        },
+        {
+          "class": "TimestampType",
+          "name": "ts_session",
+          "nullable": true,
+          "simpleString": "timestamp"
+        }
+      ],
+      "simpleString": "struct<ts_ltz:timestamp,ts_ntz:timestamp_ntz,ts_session:timestamp>"
+    },
+    "repr": "StructType([StructField('ts_ltz', TimestampType(), True), StructField('ts_ntz', TimestampNTZType(), True), StructField('ts_session', TimestampType(), True)])",
+    "simpleString": "struct<ts_ltz:timestamp,ts_ntz:timestamp_ntz,ts_session:timestamp>",
+    "toddl": "ts_ltz TIMESTAMP,ts_ntz TIMESTAMP_NTZ,ts_session TIMESTAMP",
+    "toddl_roundtrip": [
+      {
+        "class": "TimestampType",
+        "name": "ts_ltz",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "TimestampNTZType",
+        "name": "ts_ntz",
+        "nullable": true,
+        "simpleString": "timestamp_ntz"
+      },
+      {
+        "class": "TimestampType",
+        "name": "ts_session",
+        "nullable": true,
+        "simpleString": "timestamp"
+      }
+    ],
+    "typeName": "struct"
+  },
+  "struct_wide50": {
+    "arrow": "struct<c0: int32, c1: int64, c2: double, c3: string, c4: bool, c5: date32[day], c6: timestamp[us, tz=UTC], c7: decimal128(10, 2), c8: binary, c9: float, c10: int32, c11: int64, c12: double, c13: string, c14: bool, c15: date32[day], c16: timestamp[us, tz=UTC], c17: decimal128(10, 2), c18: binary, c19: float, c20: int32, c21: int64, c22: double, c23: string, c24: bool, c25: date32[day], c26: timestamp[us, tz=UTC], c27: decimal128(10, 2), c28: binary, c29: float, c30: int32, c31: int64, c32: double, c33: string, c34: bool, c35: date32[day], c36: timestamp[us, tz=UTC], c37: decimal128(10, 2), c38: binary, c39: float, c40: int32, c41: int64, c42: double, c43: string, c44: bool, c45: date32[day], c46: timestamp[us, tz=UTC], c47: decimal128(10, 2), c48: binary, c49: float>",
+    "arrow_schema_back": [
+      {
+        "class": "IntegerType",
+        "name": "c0",
+        "nullable": false,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "c1",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "c2",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "c3",
+        "nullable": false,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "c4",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "c5",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "c6",
+        "nullable": false,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "c7",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "BinaryType",
+        "name": "c8",
+        "nullable": true,
+        "simpleString": "binary"
+      },
+      {
+        "class": "FloatType",
+        "name": "c9",
+        "nullable": false,
+        "simpleString": "float"
+      },
+      {
+        "class": "IntegerType",
+        "name": "c10",
+        "nullable": true,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "c11",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "c12",
+        "nullable": false,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "c13",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "c14",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "c15",
+        "nullable": false,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "c16",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "c17",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "BinaryType",
+        "name": "c18",
+        "nullable": false,
+        "simpleString": "binary"
+      },
+      {
+        "class": "FloatType",
+        "name": "c19",
+        "nullable": true,
+        "simpleString": "float"
+      },
+      {
+        "class": "IntegerType",
+        "name": "c20",
+        "nullable": true,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "c21",
+        "nullable": false,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "c22",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "c23",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "c24",
+        "nullable": false,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "c25",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "c26",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "c27",
+        "nullable": false,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "BinaryType",
+        "name": "c28",
+        "nullable": true,
+        "simpleString": "binary"
+      },
+      {
+        "class": "FloatType",
+        "name": "c29",
+        "nullable": true,
+        "simpleString": "float"
+      },
+      {
+        "class": "IntegerType",
+        "name": "c30",
+        "nullable": false,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "c31",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "c32",
+        "nullable": true,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "c33",
+        "nullable": false,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "c34",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "c35",
+        "nullable": true,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "c36",
+        "nullable": false,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "c37",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "BinaryType",
+        "name": "c38",
+        "nullable": true,
+        "simpleString": "binary"
+      },
+      {
+        "class": "FloatType",
+        "name": "c39",
+        "nullable": false,
+        "simpleString": "float"
+      },
+      {
+        "class": "IntegerType",
+        "name": "c40",
+        "nullable": true,
+        "simpleString": "int"
+      },
+      {
+        "class": "LongType",
+        "name": "c41",
+        "nullable": true,
+        "simpleString": "bigint"
+      },
+      {
+        "class": "DoubleType",
+        "name": "c42",
+        "nullable": false,
+        "simpleString": "double"
+      },
+      {
+        "class": "StringType",
+        "name": "c43",
+        "nullable": true,
+        "simpleString": "string"
+      },
+      {
+        "class": "BooleanType",
+        "name": "c44",
+        "nullable": true,
+        "simpleString": "boolean"
+      },
+      {
+        "class": "DateType",
+        "name": "c45",
+        "nullable": false,
+        "simpleString": "date"
+      },
+      {
+        "class": "TimestampType",
+        "name": "c46",
+        "nullable": true,
+        "simpleString": "timestamp"
+      },
+      {
+        "class": "DecimalType",
+        "name": "c47",
+        "nullable": true,
+        "simpleString": "decimal(10,2)"
+      },
+      {
+        "class": "BinaryType",
+        "name": "c48",
+        "nullable": false,
+        "simpleString": "binary"
+      },
+      {
+        "class": "FloatType",
+        "name": "c49",
+        "nullable": true,
+        "simpleString": "float"
+      }
+    ],
+    "class": "StructType",
+    "engine_type": "struct<c0:int,c1:long,c2:double,c3:string,c4:boolean,c5:date,c6:timestamp,c7:decimal(10,2),c8:binary,c9:float,c10:int,c11:long,c12:double,c13:string,c14:boolean,c15:date,c16:timestamp,c17:decimal(10,2),c18:binary,c19:float,c20:int,c21:long,c22:double,c23:string,c24:boolean,c25:date,c26:timestamp,c27:decimal(10,2),c28:binary,c29:float,c30:int,c31:long,c32:double,c33:string,c34:boolean,c35:date,c36:timestamp,c37:decimal(10,2),c38:binary,c39:float,c40:int,c41:long,c42:double,c43:string,c44:boolean,c45:date,c46:timestamp,c47:decimal(10,2),c48:binary,c49:float>",
+    "fromddl_simplestring": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "c0",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c1",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c2",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c3",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c4",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c5",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c6",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c7",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c8",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c9",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c10",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c11",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c12",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c13",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c14",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c15",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c16",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c17",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c18",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c19",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c20",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c21",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c22",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c23",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c24",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c25",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c26",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c27",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c28",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c29",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c30",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c31",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c32",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c33",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c34",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c35",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c36",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c37",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c38",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c39",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c40",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c41",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c42",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c43",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c44",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c45",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c46",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c47",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c48",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c49",
+          "nullable": true,
+          "simpleString": "float"
+        }
+      ],
+      "simpleString": "struct<c0:int,c1:bigint,c2:double,c3:string,c4:boolean,c5:date,c6:timestamp,c7:decimal(10,2),c8:binary,c9:float,c10:int,c11:bigint,c12:double,c13:string,c14:boolean,c15:date,c16:timestamp,c17:decimal(10,2),c18:binary,c19:float,c20:int,c21:bigint,c22:double,c23:string,c24:boolean,c25:date,c26:timestamp,c27:decimal(10,2),c28:binary,c29:float,c30:int,c31:bigint,c32:double,c33:string,c34:boolean,c35:date,c36:timestamp,c37:decimal(10,2),c38:binary,c39:float,c40:int,c41:bigint,c42:double,c43:string,c44:boolean,c45:date,c46:timestamp,c47:decimal(10,2),c48:binary,c49:float>"
+    },
+    "json": "{\"fields\":[{\"metadata\":{},\"name\":\"c0\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"c1\",\"nullable\":true,\"type\":\"long\"},{\"metadata\":{},\"name\":\"c2\",\"nullable\":true,\"type\":\"double\"},{\"metadata\":{},\"name\":\"c3\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"c4\",\"nullable\":true,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"c5\",\"nullable\":true,\"type\":\"date\"},{\"metadata\":{},\"name\":\"c6\",\"nullable\":false,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"c7\",\"nullable\":true,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"c8\",\"nullable\":true,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"c9\",\"nullable\":false,\"type\":\"float\"},{\"metadata\":{},\"name\":\"c10\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"c11\",\"nullable\":true,\"type\":\"long\"},{\"metadata\":{},\"name\":\"c12\",\"nullable\":false,\"type\":\"double\"},{\"metadata\":{},\"name\":\"c13\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{},\"name\":\"c14\",\"nullable\":true,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"c15\",\"nullable\":false,\"type\":\"date\"},{\"metadata\":{},\"name\":\"c16\",\"nullable\":true,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"c17\",\"nullable\":true,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"c18\",\"nullable\":false,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"c19\",\"nullable\":true,\"type\":\"float\"},{\"metadata\":{},\"name\":\"c20\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"c21\",\"nullable\":false,\"type\":\"long\"},{\"metadata\":{},\"name\":\"c22\",\"nullable\":true,\"type\":\"double\"},{\"metadata\":{},\"name\":\"c23\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{},\"name\":\"c24\",\"nullable\":false,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"c25\",\"nullable\":true,\"type\":\"date\"},{\"metadata\":{},\"name\":\"c26\",\"nullable\":true,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"c27\",\"nullable\":false,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"c28\",\"nullable\":true,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"c29\",\"nullable\":true,\"type\":\"float\"},{\"metadata\":{},\"name\":\"c30\",\"nullable\":false,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"c31\",\"nullable\":true,\"type\":\"long\"},{\"metadata\":{},\"name\":\"c32\",\"nullable\":true,\"type\":\"double\"},{\"metadata\":{},\"name\":\"c33\",\"nullable\":false,\"type\":\"string\"},{\"metadata\":{},\"name\":\"c34\",\"nullable\":true,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"c35\",\"nullable\":true,\"type\":\"date\"},{\"metadata\":{},\"name\":\"c36\",\"nullable\":false,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"c37\",\"nullable\":true,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"c38\",\"nullable\":true,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"c39\",\"nullable\":false,\"type\":\"float\"},{\"metadata\":{},\"name\":\"c40\",\"nullable\":true,\"type\":\"integer\"},{\"metadata\":{},\"name\":\"c41\",\"nullable\":true,\"type\":\"long\"},{\"metadata\":{},\"name\":\"c42\",\"nullable\":false,\"type\":\"double\"},{\"metadata\":{},\"name\":\"c43\",\"nullable\":true,\"type\":\"string\"},{\"metadata\":{},\"name\":\"c44\",\"nullable\":true,\"type\":\"boolean\"},{\"metadata\":{},\"name\":\"c45\",\"nullable\":false,\"type\":\"date\"},{\"metadata\":{},\"name\":\"c46\",\"nullable\":true,\"type\":\"timestamp\"},{\"metadata\":{},\"name\":\"c47\",\"nullable\":true,\"type\":\"decimal(10,2)\"},{\"metadata\":{},\"name\":\"c48\",\"nullable\":false,\"type\":\"binary\"},{\"metadata\":{},\"name\":\"c49\",\"nullable\":true,\"type\":\"float\"}],\"type\":\"struct\"}",
+    "json_roundtrip": {
+      "class": "StructType",
+      "fields": [
+        {
+          "class": "IntegerType",
+          "name": "c0",
+          "nullable": false,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c1",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c2",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c3",
+          "nullable": false,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c4",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c5",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c6",
+          "nullable": false,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c7",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c8",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c9",
+          "nullable": false,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c10",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c11",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c12",
+          "nullable": false,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c13",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c14",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c15",
+          "nullable": false,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c16",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c17",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c18",
+          "nullable": false,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c19",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c20",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c21",
+          "nullable": false,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c22",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c23",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c24",
+          "nullable": false,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c25",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c26",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c27",
+          "nullable": false,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c28",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c29",
+          "nullable": true,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c30",
+          "nullable": false,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c31",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c32",
+          "nullable": true,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c33",
+          "nullable": false,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c34",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c35",
+          "nullable": true,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c36",
+          "nullable": false,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c37",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c38",
+          "nullable": true,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c39",
+          "nullable": false,
+          "simpleString": "float"
+        },
+        {
+          "class": "IntegerType",
+          "name": "c40",
+          "nullable": true,
+          "simpleString": "int"
+        },
+        {
+          "class": "LongType",
+          "name": "c41",
+          "nullable": true,
+          "simpleString": "bigint"
+        },
+        {
+          "class": "DoubleType",
+          "name": "c42",
+          "nullable": false,
+          "simpleString": "double"
+        },
+        {
+          "class": "StringType",
+          "name": "c43",
+          "nullable": true,
+          "simpleString": "string"
+        },
+        {
+          "class": "BooleanType",
+          "name": "c44",
+          "nullable": true,
+          "simpleString": "boolean"
+        },
+        {
+          "class": "DateType",
+          "name": "c45",
+          "nullable": false,
+          "simpleString": "date"
+        },
+        {
+          "class": "TimestampType",
+          "name": "c46",
+          "nullable": true,
+          "simpleString": "timestamp"
+        },
+        {
+          "class": "DecimalType",
+          "name": "c47",
+          "nullable": true,
+          "simpleString": "decimal(10,2)"
+        },
+        {
+          "class": "BinaryType",
+          "name": "c48",
+          "nullable": false,
+          "simpleString": "binary"
+        },
+        {
+          "class": "FloatType",
+          "name": "c49",
+          "nullable": true,
+          "simpleString": "float"
+        }
+      ],
+      "simpleString": "struct<c0:int,c1:bigint,c2:double,c3:string,c4:boolean,c5:date,c6:timestamp,c7:decimal(10,2),c8:binary,c9:float,c10:int,c11:bigint,c12:double,c13:string,c14:boolean,c15:date,c16:timestamp,c17:decimal(10,2),c18:binary,c19:float,c20:int,c21:bigint,c22:double,c23:string,c24:boolean,c25:date,c26:timestamp,c27:decimal(10,2),c28:binary,c29:float,c30:int,c31:bigint,c32:double,c33:string,c34:boolean,c35:date,c36:timestamp,c37:decimal(10,2),c38:binary,c39:float,c40:int,c41:bigint,c42:double,c43:string,c44:boolean,c45:date,c46:timestamp,c47:decimal(10,2),c48:binary,c49:float>"
+    },
+    "repr": "StructType([StructField('c0', IntegerType(), False), StructField('c1', LongType(), True), StructField('c2', DoubleType(), True), StructField('c3', StringType(), False), StructField('c4', BooleanType(), True), StructField('c5', DateType(), True), StructField('c6', TimestampType(), False), StructField('c7', DecimalType(10,2), True), StructField('c8', BinaryType(), True), StructField('c9', FloatType(), False), StructField('c10', IntegerType(), True), StructField('c11', LongType(), True), StructField('c12', DoubleType(), False), StructField('c13', StringType(), True), StructField('c14', BooleanType(), True), StructField('c15', DateType(), False), StructField('c16', TimestampType(), True), StructField('c17', DecimalType(10,2), True), StructField('c18', BinaryType(), False), StructField('c19', FloatType(), True), StructField('c20', IntegerType(), True), StructField('c21', LongType(), False), StructField('c22', DoubleType(), True), StructField('c23', StringType(), True), StructField('c24', BooleanType(), False), StructField('c25', DateType(), True), StructField('c26', TimestampType(), True), StructField('c27', DecimalType(10,2), False), StructField('c28', BinaryType(), True), StructField('c29', FloatType(), True), StructField('c30', IntegerType(), False), StructField('c31', LongType(), True), StructField('c32', DoubleType(), True), StructField('c33', StringType(), False), StructField('c34', BooleanType(), True), StructField('c35', DateType(), True), StructField('c36', TimestampType(), False), StructField('c37', DecimalType(10,2), True), StructField('c38', BinaryType(), True), StructField('c39', FloatType(), False), StructField('c40', IntegerType(), True), StructField('c41', LongType(), True), StructField('c42', DoubleType(), False), StructField('c43', StringType(), True), StructField('c44', BooleanType(), True), StructField('c45', DateType(), False), StructField('c46', TimestampType(), True), StructField('c47', DecimalType(10,2), True), StructField('c48', BinaryType(), False), StructField('c49', FloatType(), True)])",
+    "simpleString": "struct<c0:int,c1:bigint,c2:double,c3:string,c4:boolean,c5:date,c6:timestamp,c7:decimal(10,2),c8:binary,c9:float,c10:int,c11:bigint,c12:double,c13:string,c14:boolean,c15:date,c16:timestamp,c17:decimal(10,2),c18:binary,c19:float,c20:int,c21:bigint,c22:double,c23:string,c24:boolean,c25:date,c26:timestamp,c27:decimal(10,2),c28:binary,c29:float,c30:int,c31:bigint,c32:double,c33:string,c34:boolean,c35:date,c36:timestamp,c37:decimal(10,2),c38:binary,c39:float,c40:int,c41:bigint,c42:double,c43:string,c44:boolean,c45:date,c46:timestamp,c47:decimal(10,2),c48:binary,c49:float>",
+    "toddl": "c0 INT NOT NULL,c1 BIGINT,c2 DOUBLE,c3 STRING NOT NULL,c4 BOOLEAN,c5 DATE,c6 TIMESTAMP NOT NULL,c7 DECIMAL(10,2),c8 BINARY,c9 FLOAT NOT NULL,c10 INT,c11 BIGINT,c12 DOUBLE NOT NULL,c13 STRING,c14 BOOLEAN,c15 DATE NOT NULL,c16 TIMESTAMP,c17 DECIMAL(10,2),c18 BINARY NOT NULL,c19 FLOAT,c20 INT,c21 BIGINT NOT NULL,c22 DOUBLE,c23 STRING,c24 BOOLEAN NOT NULL,c25 DATE,c26 TIMESTAMP,c27 DECIMAL(10,2) NOT NULL,c28 BINARY,c29 FLOAT,c30 INT NOT NULL,c31 BIGINT,c32 DOUBLE,c33 STRING NOT NULL,c34 BOOLEAN,c35 DATE,c36 TIMESTAMP NOT NULL,c37 DECIMAL(10,2),c38 BINARY,c39 FLOAT NOT NULL,c40 INT,c41 BIGINT,c42 DOUBLE NOT NULL,c43 STRING,c44 BOOLEAN,c45 DATE NOT NULL,c46 TIMESTAMP,c47 DECIMAL(10,2),c48 BINARY NOT NULL,c49 FLOAT",
+    "toddl_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'c0 INT NOT NULL,c1 BIGINT,c2 DOUBLE,c3 STRING NOT NULL,c4 BOOLEAN,c5 DATE,c6 TIMESTAMP NOT NULL,c7 DECIMAL(10,2),c8 BINARY,c9 FLOAT NOT NULL,c10 INT,c11 BIGINT,c12 DOUBLE NOT NULL,c13 STRING,c14 BOOLEAN,c15 DATE NOT NULL,c16 TIMESTAMP,c17 DECIMAL(10,2),c18 BINARY NOT NULL,c19 FLOAT,c20 INT,c21 BIGINT NOT NULL,c22 DOUBLE,c23 STRING,c24 BOOLEAN NOT NULL,c25 DATE,c26 TIMESTAMP,c27 DECIMAL(10,2) NOT NULL,c28 BINARY,c29 FLOAT,c30 INT NOT NULL,c31 BIGINT,c32 DOUBLE,c33 STRING NOT NULL,c34 BOOLEAN,c35 DATE,c36 TIMESTAMP NOT NULL,c37 DECIMAL(10,2),c38 BINARY,c39 FLOAT NOT NULL,c40 INT,c41 BIGINT,c42 DOUBLE NOT NULL,c43 STRING,c44 BOOLEAN,c45 DATE NOT NULL,c46 TIMESTAMP,c47 DECIMAL(10,2),c48 BINARY NOT NULL,c49 FLOAT'"
+    },
+    "typeName": "struct"
+  },
+  "time0": {
+    "arrow": "string",
+    "class": "TimeType",
+    "engine_type": "time(0)",
+    "fromddl_simplestring": {
+      "class": "TimeType",
+      "simpleString": "time(0)"
+    },
+    "json": "\"time(0)\"",
+    "json_roundtrip": {
+      "class": "TimeType",
+      "simpleString": "time(0)"
+    },
+    "repr": "TimeType(0)",
+    "simpleString": "time(0)",
+    "typeName": "time"
+  },
+  "time_default": {
+    "arrow": "string",
+    "class": "TimeType",
+    "engine_type": "time(6)",
+    "fromddl_simplestring": {
+      "class": "TimeType",
+      "simpleString": "time(6)"
+    },
+    "json": "\"time(6)\"",
+    "json_roundtrip": {
+      "class": "TimeType",
+      "simpleString": "time(6)"
+    },
+    "repr": "TimeType(6)",
+    "simpleString": "time(6)",
+    "typeName": "time"
+  },
+  "timestamp": {
+    "arrow": "timestamp[us, tz=UTC]",
+    "class": "TimestampType",
+    "engine_type": "timestamp",
+    "fromddl_simplestring": {
+      "class": "TimestampType",
+      "simpleString": "timestamp"
+    },
+    "json": "\"timestamp\"",
+    "json_roundtrip": {
+      "class": "TimestampType",
+      "simpleString": "timestamp"
+    },
+    "repr": "TimestampType()",
+    "simpleString": "timestamp",
+    "typeName": "timestamp"
+  },
+  "timestamp_ntz": {
+    "arrow": "timestamp[us]",
+    "class": "TimestampNTZType",
+    "engine_type": "timestamp_ntz",
+    "fromddl_simplestring": {
+      "class": "TimestampNTZType",
+      "simpleString": "timestamp_ntz"
+    },
+    "json": "\"timestamp_ntz\"",
+    "json_roundtrip": {
+      "class": "TimestampNTZType",
+      "simpleString": "timestamp_ntz"
+    },
+    "repr": "TimestampNTZType()",
+    "simpleString": "timestamp_ntz",
+    "typeName": "timestamp_ntz"
+  },
+  "varchar32": {
+    "arrow": "string",
+    "class": "VarcharType",
+    "engine_type": "string",
+    "fromddl_simplestring": {
+      "class": "VarcharType",
+      "simpleString": "varchar(32)"
+    },
+    "json": "\"varchar(32)\"",
+    "json_roundtrip": {
+      "class": "VarcharType",
+      "simpleString": "varchar(32)"
+    },
+    "repr": "VarcharType(32)",
+    "simpleString": "varchar(32)",
+    "typeName": "varchar"
+  },
+  "variant": {
+    "arrow": "string",
+    "class": "VariantType",
+    "engine_type": "variant",
+    "fromddl_simplestring": {
+      "class": "VariantType",
+      "simpleString": "variant"
+    },
+    "json": "\"variant\"",
+    "json_roundtrip": {
+      "class": "VariantType",
+      "simpleString": "variant"
+    },
+    "repr": "VariantType()",
+    "simpleString": "variant",
+    "typeName": "variant"
+  },
+  "year_month_interval": {
+    "arrow": "string",
+    "class": "YearMonthIntervalType",
+    "engine_type": "interval year to month",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+    },
+    "json": "\"interval year to month\"",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval year to month'"
+    },
+    "repr": "YearMonthIntervalType(0, 1)",
+    "simpleString": "interval year to month",
+    "typeName": "yearmonthinterval"
+  },
+  "year_month_interval_year": {
+    "arrow": "string",
+    "class": "YearMonthIntervalType",
+    "engine_type": "interval year",
+    "fromddl_simplestring": {
+      "refused": "ValueError: cannot parse datatype: 'interval year'"
+    },
+    "json": "\"interval year\"",
+    "json_roundtrip": {
+      "refused": "ValueError: cannot parse datatype: 'interval year'"
+    },
+    "repr": "YearMonthIntervalType(0, 0)",
+    "simpleString": "interval year",
+    "typeName": "yearmonthinterval"
+  }
+}

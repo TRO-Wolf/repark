@@ -369,6 +369,20 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   types only (subclasses ride the step-2 `timetuple()` route natively) with an
   owned-reference `utcoffset` cache, plus its re-measure.
   pins: facade-3/C-018, C-022, C-026, C-027
+- [facade-4-types-baseline-2026-09-14.md](facade-4-types-baseline-2026-09-14.md) —
+  **FACADE-4 step 0 (2026-09-14):** the type-conversion release baseline on the
+  F1 schema set (flat 7-type, 50-column wide, `struct<array<map>>` depth 3,
+  decimal (10,2)/(38,18)/(38,0), timestamp tz/ntz, interval, char/varchar) —
+  `repark_type_to_arrow` per-call µs plus a spy count of calls per
+  `createDataFrame`/`collect`/`to_arrow`/`show`/`df.schema` of a 1e5 frame,
+  `struct_type_from_arrow` round-trips, DDL parse/write walls, and the cProfile
+  share of conversion in `df.schema`, `createDataFrame(pandas)` and
+  `spark.read.csv(inferSchema)` at 1e5. Verdict: no wall — conversion is
+  0.000–0.006 % of the 1e5-row walls and every single call is ≤134 µs; step 1
+  is the correctness consolidation. Runnable method and census probe beside it
+  in
+  [facade-4-types-baseline-2026-09-14/map.md](facade-4-types-baseline-2026-09-14/map.md).
+  pins: facade-4/C-005
 - [eager-own-1-2026-09-13/](eager-own-1-2026-09-13/map.md) — **EAGER-OWN-1
   steps 0+1 (2026-09-13):** the bare-`eager()` retention before/after pair —
   ten bare `eager()` calls on the deterministic 1e6-row × 25-column TA
