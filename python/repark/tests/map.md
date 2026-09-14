@@ -1741,7 +1741,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   sub-cap and digit-string truncation, nested/scalar cells on the ASCII,
   vertical, eager `repr` and HTML doors, HTML escaping, polars and duckdb
   `truncate=True/int` caps and unicode, polars nested cells under
-  `truncate=True/10/2`, a 50-column eager repr, a 12-column
+  `truncate=True/10/2` (cap applied to the spelled composite, not inner
+  elements), a 50-column eager repr, a 12-column
   duckdb lazy repr, and zero-column frames under spark, polars and duckdb —
   recorded from the base release tree. The zero-column cases pin today's
   slice-pad bytes: vertical `show` and `_repr_html_` emit `n`/`maxNumRows`

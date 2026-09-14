@@ -135,6 +135,9 @@ Rule taxonomy (what reaches the formatter, from `_cell_text` /
 | 28 | duckdb lazy repr × 12 columns (no max_cols gap rule) | `duckdb_lazy_wide` |
 | 29 | styled show × zero columns (polars `shape: (N, 0)` / duckdb `┌┐`) | `styled_zero_cols` |
 | 30 | spark doors × zero columns — ASCII `show` honest row count, vertical/HTML/eager slice-pad phantoms pinned on 1-row and 0-row frames | `spark_zero_cols`, `spark_zero_cols_empty` |
+| 31 | polars × T-nest × `truncate=True` (str_len cap on the spelled cell) | `polars_nested_true` |
+| 32 | polars × T-nest × `truncate=10` | `polars_nested_trunc10` |
+| 33 | polars × T-nest × `truncate=2` | `polars_nested_trunc2` |
 
 ### Eager-preview scan counts the `test_dfcore_6_eager_preview.py` pins assert
 
@@ -189,10 +192,13 @@ bitten but sit past that display cap).
 | M12 | `plan_collapse.py` `"-RECORD"` → `"-REC"` | vertical_nested, vertical_trunc2, vertical_trunc5, vertical_trunc_off |
 | M13 | `display.py` vertical `table.slice(0, limit)` → `slice(0, min(limit, table.num_rows))` (slice-pad removed) | spark_zero_cols, spark_zero_cols_empty |
 | M14 | `display.py` HTML `table.slice(0, max_rows)` → `slice(0, min(max_rows, table.num_rows))` (slice-pad removed) | spark_zero_cols, spark_zero_cols_empty |
+| M15 | `polars_cells.py` struct open `"{"` → `"("` | polars_nested_true, polars_nested_trunc10, polars_nested_trunc2 |
+| M16 | `polars_cells.py` `_polars_nested_text(..., truncate_at=None)` → `truncate_at=1` | polars_nested_true, polars_nested_trunc10, polars_nested_trunc2 |
 
-Coverage: all 30 case ids red at least once (weakest links: html_* via M7
+Coverage: all 34 case ids red at least once (weakest links: html_* via M7
 only, eager_trunc_default / eager_trunc_off / eager_wide via M5 only,
-styled_zero_cols via M10, spark_zero_cols via M11 — each is still a real
+styled_zero_cols via M10, spark_zero_cols* via M11/M13/M14, polars_nested_*
+via M15/M16 — each is still a real
 door-rendered byte string, not a vacuous constant). Two case fixes during the
 proof: `duckdb_trunc_true/10/2` moved from `show(3)` to `show(4)` — at n=3
 the duckdb head/tail split never renders the truncatable row, so the case
@@ -239,6 +245,7 @@ release native) is green byte-identical on `c9b03c67`.
 |---|---|---|---|
 | L-001 | P2 | vertical `show` × zero-column unbound; `Table.slice` pads `n` phantom `-RECORD`s | REMEDIATED — `show_vertical` pinned on 1-row + 0-row frames |
 | L-002 | P2 | `_repr_html_` × zero-column unbound; `maxNumRows` phantom `<tr>` rows | REMEDIATED — `html` door pinned on both frames |
+| L-004 | P2 | polars × nested × truncate cap unbound | REMEDIATED — `polars_nested_true/trunc10/trunc2`; M15/M16 red all three |
 
 ```yaml
 FINDING:
@@ -260,6 +267,17 @@ FINDING:
   claim: The doors disagree on zero-column frames — ASCII show prints the real row count while vertical show, eager repr and _repr_html_ print n / maxNumRows phantom records from the Table.slice pad.
   evidence: spark_zero_cols + spark_zero_cols_empty goldens — show: 1 and 0 rows; show_vertical: 5 RECORDs both; repr_eager: 20 ghost rows both; html: 20 ghost <tr> both.
   disposition: OPEN — owner question for step 1: pin the phantom bytes as the byte-identical contract, or fix the slice pad first (would change bytes; not this step's call).
+```
+
+```yaml
+FINDING:
+  id: F-L4
+  severity: S2
+  category: AT-10
+  clause: C-004
+  claim: Polars nested cells under a truncate cap were unbound — _cell_text spells nested values with _polars_nested_text(truncate_at=None) then truncates the spelled composite, and no golden rendered that path.
+  evidence: polars_cells.py:134-138; the round-1 polars truncate cases all used the flat mixed frame.
+  disposition: REMEDIATED — polars_nested_true/trunc10/trunc2 pin the nested frame at all three caps; M15 (struct brace) and M16 (truncate_at=None -> truncate_at=1) red all three. The critic's suggested mutation truncate_at=truncate_at is byte-equivalent and cannot red: the outer cap truncates the composite at c, while the inner cut at c only alters composite positions >= c+1.
 ```
 
 ## Step-1 target (C-007) — option (A): measured format wall

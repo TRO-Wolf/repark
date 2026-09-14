@@ -334,6 +334,36 @@ def _case_polars_trunc2(session: ReparkSession) -> dict[str, Any]:
     )
 
 
+def _case_polars_nested_true(session: ReparkSession) -> dict[str, Any]:
+    """Polars ``show(4, truncate=True)`` on the nested frame."""
+    frame = _nested_frame(session)
+    return _under_style(
+        session,
+        "polars",
+        lambda: dict([_door("show_trunc_true", lambda: _capture_show(frame, 4, truncate=True))]),
+    )
+
+
+def _case_polars_nested_trunc10(session: ReparkSession) -> dict[str, Any]:
+    """Polars ``show(4, truncate=10)`` on the nested frame."""
+    frame = _nested_frame(session)
+    return _under_style(
+        session,
+        "polars",
+        lambda: dict([_door("show_trunc10", lambda: _capture_show(frame, 4, truncate=10))]),
+    )
+
+
+def _case_polars_nested_trunc2(session: ReparkSession) -> dict[str, Any]:
+    """Polars ``show(4, truncate=2)`` on the nested frame."""
+    frame = _nested_frame(session)
+    return _under_style(
+        session,
+        "polars",
+        lambda: dict([_door("show_trunc2", lambda: _capture_show(frame, 4, truncate=2))]),
+    )
+
+
 def _case_polars_unicode(session: ReparkSession) -> dict[str, Any]:
     """Polars ``show`` on unicode cells under the cap."""
     frame = session.createDataFrame(
@@ -498,6 +528,9 @@ def _all_cases() -> dict[str, Case]:
     _put(out, "polars_trunc10", _case_polars_trunc10)
     _put(out, "polars_trunc2", _case_polars_trunc2)
     _put(out, "polars_unicode", _case_polars_unicode)
+    _put(out, "polars_nested_true", _case_polars_nested_true)
+    _put(out, "polars_nested_trunc10", _case_polars_nested_trunc10)
+    _put(out, "polars_nested_trunc2", _case_polars_nested_trunc2)
     _put(out, "duckdb_trunc_true", _case_duckdb_trunc_true)
     _put(out, "duckdb_trunc10", _case_duckdb_trunc10)
     _put(out, "duckdb_trunc2", _case_duckdb_trunc2)
