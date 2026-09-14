@@ -280,6 +280,7 @@ class DataFrame:
         "_handles",
         "_ingest_report",
         "_inner",
+        "_join_qualifiers",
         "_layer_defined",
         "_layer_map",
         "_layer_window_key",
@@ -331,6 +332,7 @@ class DataFrame:
         self._plan_id: str = uuid.uuid4().hex[:12]
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
+        self._join_qualifiers: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
         self._origin_not_emitted: frozenset[str] = frozenset()
         self._collapse_base: DataFrame | None = None
@@ -377,6 +379,8 @@ class DataFrame:
                 list(self._engine_names) if self._engine_names is not None else None
             )
             child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
+        if self._join_qualifiers is not None:
+            child._join_qualifiers = list(self._join_qualifiers)
         return child
 
     def _identity_child(self) -> DataFrame:
@@ -391,6 +395,8 @@ class DataFrame:
                 list(self._engine_names) if self._engine_names is not None else None
             )
             child._origin_map = dict(self._origin_map) if self._origin_map is not None else None
+        if self._join_qualifiers is not None:
+            child._join_qualifiers = list(self._join_qualifiers)
         return child
 
     def _materialize_cache_if_needed(self) -> None:
@@ -2764,13 +2770,22 @@ class DataFrame:
             _reject_partition_transform(on)
             return self._join_on_condition_h1(other, on, engine_how)
         if self is other or set(self.columns) & set(other.columns):
-            left: DataFrame = self.alias(f"_repark_jl_{uuid.uuid4().hex[:12]}")
-            right: DataFrame = other.alias(f"_repark_jr_{uuid.uuid4().hex[:12]}")
+            left_name = f"_repark_jl_{uuid.uuid4().hex[:12]}"
+            right_name = f"_repark_jr_{uuid.uuid4().hex[:12]}"
+            left: DataFrame = self.alias(left_name)
+            right: DataFrame = other.alias(right_name)
+            side_names: tuple[str, str] | None = (left_name, right_name)
         else:
             left = self
             right = other
+            side_names = None
         if isinstance(on, str):
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
+            if side_names is not None:
+                split = len(left.columns)
+                child._join_qualifiers = [side_names[0]] * split + [side_names[1]] * (
+                    len(child.columns) - split
+                )
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -2785,6 +2800,11 @@ class DataFrame:
                     )
                 return left.crossJoin(right)
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
+            if side_names is not None:
+                split = len(left.columns)
+                child._join_qualifiers = [side_names[0]] * split + [side_names[1]] * (
+                    len(child.columns) - split
+                )
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )

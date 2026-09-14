@@ -115,9 +115,14 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `CASE WHEN col = k THEN CAST(v AS coltype) … ELSE col END` per target column built via
   `Column._from_when_pairs` — linear in mapping size where the old nested `when.otherwise`
   chain was exponential. Target columns are chosen by the first key's type family
-  (numeric → numeric columns incl. decimal, str → string, bool → boolean); non-matching
-  columns pass through untouched, and non-convertible arm values refuse with
-  `IllegalArgumentException` like the JVM `convertToDouble`. `DataFrame.replace` is a
+  classified from the column's physical Arrow type (numeric → numeric columns incl.
+  decimal, str → `Utf8`/`LargeUtf8`/`Utf8View` only so a `binary` column never matches,
+  bool → boolean); non-matching columns pass through untouched, and non-convertible arm
+  values refuse with `IllegalArgumentException` like the JVM `convertToDouble`.
+  Duplicate-name equi-join output binds by relation qualifier through
+  `_join_qualifiers` (captured by `join` when it auto-aliases overlapping inputs) instead
+  of re-resolving display names, so `replace(10, 99)` rewrites both `x` columns while a
+  `subset=["x"]` still raises `AMBIGUOUS_REFERENCE`. `DataFrame.replace` is a
   one-line wrapper.
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
@@ -715,9 +720,10 @@ that held the comment (pins: comment-core-1/C-003).
   the read is home-pinned — a bare one-part reference re-resolves against the live
   default catalog. SQL `SELECT *` surfaces engine field names; re-attach display
   identity so multi-name joins keep duplicate display columns positionally.
-- `replace`: Multi-name frames bind by engine/display pairs. Preserve origin for
-  multi-name select identity. The CASE lives in `replace_expr.py` (flat searched CASE,
-  not a nested `when.otherwise` chain).
+- `replace`: Multi-name frames bind by engine/display pairs — or by `_join_qualifiers`
+  when the plan carries duplicate display names. Preserve origin for multi-name select
+  identity. The CASE lives in `replace_expr.py` (flat searched CASE, not a nested
+  `when.otherwise` chain).
 - `repartition`: Spark: first position is int count, or a Column/str partition expr
   when the call is `repartition(*cols)`. A list/bool/float always raises
   `NOT_COLUMN_OR_STR`. Reject a sole-argument list instead of treating it as no

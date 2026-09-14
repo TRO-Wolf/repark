@@ -1,5 +1,11 @@
 # map — scripts/
 
+REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
+`dataframe/core.py` 4054 → 4074 (the `_join_qualifiers` slot, the join
+alias-name capture, and identity propagation so `replace` binds duplicate-name
+equi-join output by relation qualifier — P2-3). The CAP-1 parity mirror row
+moved with it.
+pins: replace-linear-1/C-004
 REPLACE-LINEAR-1 step 1 (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4089 → 4054 (the `DataFrame.replace` body — validation,
 key-family filtering, and the flat searched-CASE build — moved to the new

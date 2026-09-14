@@ -164,6 +164,73 @@ carries `origin_plan_id`/`origin_field`/`join_sql_expr`/`sql_expr` forward uncha
 from the old divergent assertions to the Spark-equal answers and the registry row is
 marked FIXED 2026-09-14 REPLACE-LINEAR-1.
 
+### Critic round (2026-09-14) — Grok critic-logic findings and ruled dispositions
+
+Grok critic report `/tmp/oc-worker/g-crit577/report.md` on the step-1 tree, release
+native. Dispositions below are the binding orchestrator rulings.
+
+- **P1-1 FIXED — string keys rewrote `binary` columns.** `replace("a", "b")` on an
+  `x binary` column produced `[b'b', b'b', b'ab']` because
+  `logical_schema_fields` collapses binary to the `string` type key. The target
+  family is now classified from the column's **physical Arrow type**
+  (`frame._analyzed_arrow_schema()`): `Utf8`/`LargeUtf8`/`Utf8View` → `str`,
+  `BooleanType` → `bool`, integer/floating/decimal → `numeric`, everything else →
+  `other` (never a target). `_NUMERIC_TYPE_KEYS` is deleted — the physical check
+  makes the collapsed-key set unnecessary, which also retires the P3-2 residue
+  (the set named widths the facade never emits). `crates/` untouched.
+  Pin: `test_replace_binary_column_not_string_family` (no subset AND `subset=["x"]`,
+  identity bytes AND arrow type `binary`).
+- **P2-1 PINNED + DISCLOSED — overflow refusal is at collect, not `.replace()`.**
+  `replace(1, 3000000000, subset=["x"])` on `x int` plans fine and refuses at
+  collect: `PySparkException … simplify_expressions … Arrow error: Cast error:
+  Can't cast value 3000000000.0 to type Int32`. Spark ANSI raises
+  `CAST_OVERFLOW`. The error-class mapping is **not** built in this unit;
+  `test_replace_overflow_collect_disclosed` pins today's refusal
+  (`pytest.raises(PySparkException)` at collect, matching `cast`). Disclosed P3
+  residue: class + timing differ from the JVM's `CAST_OVERFLOW`.
+- **P2-2 PINNED — last-wins on duplicate keys.** `dict(zip(keys, values))` already
+  keeps the last arm, so `[1, 1], [2, 3]` → `{1: 3}` → `[3, 2]` and
+  `{1: 5, 1.0: 6}` → `{1: 6}` → `[6, 2]` (Python key equality), both int32.
+  `test_replace_last_wins_duplicate_keys` asserts values AND arrow type; the
+  critic's mutation 5 (first-wins) reds the `[3, 2]` assert.
+- **P2-3 FIXED — multi-name equi-join output.** `left.alias("df1").join(
+  right.alias("df2"), "k").replace(10, 99)` raised `AMBIGUOUS_REFERENCE` because
+  `_iter_bound_columns` binds by display name. `join` now records the generated
+  `_repark_jl_*`/`_repark_jr_*` aliases into a new `_join_qualifiers` slot when it
+  auto-aliases overlapping inputs (position-aligned with the child's columns —
+  left prefix then right suffix; semi/anti keep only the left side); the slot
+  propagates through `_spawn_preserving_identity`/`_identity_child` like
+  `_display_names`. `replace_expr._iter_replace_bound_columns` binds each field
+  through its qualifier (`"rel"."x"`) when qualifiers are present and no display
+  overlay is set, so `replace(10, 99)` rewrites both `x` columns by attribute
+  identity while `subset=["x"]` still raises `AMBIGUOUS_REFERENCE` (Spark's
+  answer for a name subset on multi-name output). `core.py` ratcheted
+  4054 → 4074; the CAP-1 mirror row moved with it.
+  Pin: `test_replace_duplicate_name_join_columns` (overlay join AND
+  alias + name equi-join, no subset, `columns` unchanged).
+- **P2-4 PINNED + DISCLOSED — nested-field subset.** `replace(1, 9, ["s.x"])` on a
+  struct column refuses `AnalysisException` (`cannot be resolved`, the facade's
+  unresolved-column raise). Spark refuses with its own nested-field-unsupported
+  class — disclosed residue, class differs.
+  Pin: `test_replace_struct_subset_disclosed`.
+- **P2-5 PINNED — probe rows promoted.** `test_replace_oracle_extra_cells` pins:
+  `replace({}, subset="missing")` → `AnalysisException` (subset resolves before
+  the empty-map short-circuit — the C-001 extra-probe row); `{2: True}` on int →
+  `[1, 0, 1]` int32; `{True: None}` on bool → `[None, False]` bool and on int →
+  `[1, 2]` int32; `{1.5: 9}` on int → `[1, 2]` int32 (no-op) and on double →
+  `[9.0, 2.0, None]` double; `{1: 2}, subset="X"` → `[1, 2]` (case-variant
+  resolves, never matches); tuple `to_replace` `(1, 2), (9, 8)` → `[9, 8]` int32;
+  and `replace(1, 2)` over `b boolean, x int` → `b` unchanged `bool`, `x` →
+  `[2, 2]` int32 (the family filter must hold AND fire on the same frame).
+- **P3-1 residue — `df.na.replace` missing.** `DataFrameNaFunctions` has no
+  `replace` method; PySpark routes `df.na.replace` to the same
+  `DataFrameNaFunctions.replace`. Ledger residue only (separate card).
+- **P3-2 resolved** — see P1-1 (the collapsed-key set is gone).
+- **Q-13b-2 confirmed** — `replace(1)` with no value stays as-is (`value=None`
+  treated as a null-value mapping; PySpark refuses `ARGUMENT_REQUIRED` via its
+  `_NoValue` sentinel). Still disclosed; the orchestrator is filing a separate
+  card.
+
 ## Gates
 
 - `.venv/bin/python -m pytest python/repark/tests/test_replace_linear_1.py python/repark/tests/test_df_easy.py -q`: 21 passed.
@@ -171,6 +238,11 @@ marked FIXED 2026-09-14 REPLACE-LINEAR-1.
 - `.venv/bin/python -m pytest python/repark/tests/test_dfcore_1_exports.py -q`: 10 passed (new-submodule sets updated for `replace_expr`).
 - `make verify`: exit 0.
 - Comment fence (`git diff --cached` grep for added `//`/`#` lines): prints nothing.
+- Critic round (2026-09-14, Python-only slot — the build gates `make verify`/`preflight`/`py-test-facade` belong to the orchestrator's follow-up run):
+  - `.venv/bin/python -m pytest test_replace_linear_1.py test_df_easy.py test_examples_dataframe_c.py test_g1_stat_and_expander.py test_dfcore_1_exports.py -q -p no:cacheprovider`: 72 passed.
+  - `uvx ruff@0.15.22 check python` + `uvx ruff@0.15.22 format --check python`: clean.
+  - `./scripts/check_lib_py.sh` (681 files, `core.py` baseline 4074), `./scripts/check_python_conventions.sh` (337 files), `./scripts/check_docstring_presence.sh` (270 files): all clean.
+  - `pytest python/repark-parity/tests/test_cap_1_source_file_line_cap.py -q` (parity harness env): 23 passed — mirror row moved 4054 → 4074 with the script baseline.
 
 ## Coverage attestation
 
@@ -205,7 +277,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_replace_linear_1.py, task/ledgers/staging/replace-linear-1-ledger.md]
     - id: AT-8
       status: ATTACKED
-      evidence: The one upstream behavior the rewrite could have silently presumed — that DataFusion would refuse cross-type comparisons instead of matching by coercion — was probed directly (int col = float lit, bool key on int col, decimal col = double lit) before the key-family filter was written; no new public name; D-4's core.py ratchet recorded at the exact new baseline 4054.
+      evidence: The one upstream behavior the rewrite could have silently presumed — that DataFusion would refuse cross-type comparisons instead of matching by coercion — was probed directly (int col = float lit, bool key on int col, decimal col = double lit) before the key-family filter was written; no new public name; D-4's core.py ratchet recorded at the exact new baseline 4054, re-recorded 4054 → 4074 in the same round's both-tables update when the `_join_qualifiers` slot landed (P2-3). The critic round's second presumed-cheap claim — that the collapsed type key is the column's real family — was falsified on `binary` and the filter moved to physical Arrow types.
       artifacts: [python/repark/src/repark/spark/dataframe/replace_expr.py, scripts/check_lib_py.py]
     - id: AT-9
       status: ATTACKED

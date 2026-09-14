@@ -33,17 +33,23 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
-- [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 0
-  (2026-09-13):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
-  `test_replace_oracle_cells_matching` pins the cells repark already answers like the
-  oracle (value AND Arrow type per cell), `test_replace_divergent_cells_today` pins
-  today's answers on the nine divergent cells + the sanctioned `{1: 2, 2: 3}`
-  mapping-order cell (the D-3 HALT set). `test_replace_dict_depth40_memory_linear` is
-  the red-first 40-entry pin: a subprocess under `RLIMIT_AS = VmSize + 3 × 8 GB`
-  (S2-8), bound = 2× a flat 40-column select delta (floor 64 MB), env-gated behind
-  `REPARK_REPLACE_LINEAR_1_MEM=1` until the step-1 searched-CASE rewrite lands — red
-  on the base tree (`PanicException` in `case_when` inside the dict loop).
-  pins: replace-linear-1/C-001, C-002, C-005
+- [test_replace_linear_1.py](test_replace_linear_1.py) — **REPLACE-LINEAR-1 step 1
+  (2026-09-14):** `DataFrame.replace` oracle cells measured on live PySpark 4.1.2 —
+  `test_replace_oracle_cells_matching` pins the already-matching cells and
+  `test_replace_divergent_cells_match_spark` the ruled Q-R1 answers (value AND Arrow
+  type per cell). `test_replace_dict_depth40_memory_linear` is the 40-entry pin: a
+  subprocess under `RLIMIT_AS = VmSize + 3 × 8 GB` (S2-8), bound = 2× a flat
+  40-column select delta (floor 64 MB), running ungated since the searched-CASE
+  rewrite made the growth linear. Critic round (same day): `test_replace_oracle_extra_cells`
+  promotes the probe rows (empty-dict + missing subset, `{2: True}`/`{True: None}`/`{1.5: 9}`
+  family edges, case-variant subset, tuple `to_replace`, bool+int filter),
+  `test_replace_binary_column_not_string_family` pins P1-1 (physical Arrow family keeps
+  `binary` out of string keys), `test_replace_last_wins_duplicate_keys` pins P2-2,
+  `test_replace_overflow_collect_disclosed` pins the P2-1 collect-time cast refusal,
+  `test_replace_struct_subset_disclosed` pins P2-4, and
+  `test_replace_duplicate_name_join_columns` pins P2-3 (qualifier-bound multi-name
+  equi-join output, both `x` columns rewritten, `subset=["x"]` still AMBIGUOUS).
+  pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound

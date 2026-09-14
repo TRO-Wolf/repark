@@ -15,8 +15,6 @@ from repark.spark.column import Column
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
-_NUMERIC_TYPE_KEYS = frozenset({"byte", "short", "int", "long", "float", "double"})
-
 
 def _validate_replace_arguments(to_replace: Any, value: Any, subset: Any) -> None:
     """Eager argument checks, in PySpark ``DataFrame.replace`` order."""
@@ -144,13 +142,63 @@ def _converted_pairs(rep_dict: dict[Any, Any]) -> list[tuple[Any, Any]]:
     return pairs
 
 
-def _matches_target_group(type_key: str, group: str) -> bool:
-    """Whether a column of this logical type takes replacements from the key group."""
-    if group == "numeric":
-        return type_key in _NUMERIC_TYPE_KEYS or type_key.startswith("decimal(")
-    if group == "bool":
-        return type_key == "boolean"
-    return type_key == "string"
+def _arrow_type_family(arrow_type: Any) -> str:
+    """The JVM's target column family, keyed by the column's physical Arrow type.
+
+    ``logical_schema_fields`` collapses ``binary`` to ``string`` and narrows widths; the
+    physical type is what keeps a ``binary`` column out of a string-key replacement.
+    """
+    import pyarrow as pa
+
+    if (
+        pa.types.is_string(arrow_type)
+        or pa.types.is_large_string(arrow_type)
+        or pa.types.is_string_view(arrow_type)
+    ):
+        return "str"
+    if pa.types.is_boolean(arrow_type):
+        return "bool"
+    if (
+        pa.types.is_integer(arrow_type)
+        or pa.types.is_floating(arrow_type)
+        or pa.types.is_decimal(arrow_type)
+    ):
+        return "numeric"
+    return "other"
+
+
+def _bind_qualified_column(frame: DataFrame, display: str, qualifier: str) -> Column:
+    """Bind one field through its relation qualifier (join multi-name output)."""
+    from repark import _native
+    from repark.spark._idents import quote_ident as _quote_ident
+
+    quoted = f"{_quote_ident(qualifier)}.{_quote_ident(display)}"
+    native = _native.PyColumn.column(quoted)
+    return Column(
+        native.alias(display),
+        spark_display=display,
+        projection_name=display,
+        stable_name=True,
+        has_free_attribute=True,
+        sql_expr=quoted,
+        origin_plan_id=frame._plan_id,
+        origin_field=display,
+    )
+
+
+def _iter_replace_bound_columns(frame: DataFrame) -> list[Column]:
+    """Bound columns for replace — duplicate-name equi-join output binds by qualifier."""
+    qualifiers = frame._join_qualifiers
+    if (
+        frame._display_names is None
+        and qualifiers is not None
+        and len(qualifiers) == len(frame.columns)
+    ):
+        return [
+            _bind_qualified_column(frame, name, qualifier)
+            for name, qualifier in zip(frame.columns, qualifiers, strict=True)
+        ]
+    return frame._iter_bound_columns()
 
 
 def _replace_case(bound: Column, pairs: list[tuple[Any, Any]], type_key: str) -> Column:
@@ -183,15 +231,18 @@ def _replace(
         return frame._identity_child()
     group = _target_group(rep_dict)
     pairs = _converted_pairs(rep_dict)
-    bound_columns = frame._iter_bound_columns()
+    bound_columns = _iter_replace_bound_columns(frame)
     type_fields = frame._inner.logical_schema_fields()
+    arrow_fields = frame._analyzed_arrow_schema()
     projected: list[Column] = []
-    for bound, (_engine_name, type_key, _nullable) in zip(bound_columns, type_fields, strict=True):
+    for bound, (_engine_name, type_key, _nullable), arrow_field in zip(
+        bound_columns, type_fields, arrow_fields, strict=True
+    ):
         display = bound._projection_name or bound.spark_display_part()
         if targets is not None and display not in targets:
             projected.append(bound)
             continue
-        if not _matches_target_group(type_key, group):
+        if _arrow_type_family(arrow_field.type) != group:
             projected.append(bound)
             continue
         expression = _replace_case(bound, pairs, type_key)
