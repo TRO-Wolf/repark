@@ -40,14 +40,14 @@ recorded beside the cell.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | Provenance: release native (`__debug_assertions__` False), types4 product tree equals `main`, no JVM, memory-capped timing harness. | Header block above; `docs/perf/facade-5-display-baseline-2026-09-14.md` machine header. | **OPEN** | Verified at session start; runner re-asserts `native_is_release()` per run. |
-| C-002 | Fetch/format baseline: FETCH (capped rows to Arrow) and FORMAT (formatter over the pre-materialized table) timed separately for ASCII `show`, vertical `show`, `_repr_html_`, duckdb show, polars show, and `repr`, at n ∈ {20, 1000} × truncate on/off × {flat 7-type, 50-column wide, nested struct/array/map}, warmup + 5 reps, medians, idle box + load<6 per cell; each leg's share of the wall stated. | `docs/perf/facade-5-display-baseline-2026-09-14.md` + committed runner. | **OPEN** | Pending measurement. |
-| C-003 | Census: every renderer × truncation-rule pair names the §8 pin that binds its bytes today, and every unbound pair is a row of its own; the `test_dfcore_6_eager_preview.py` scan counts recorded. | Census section below. | **OPEN** | Pending. |
-| C-004 | Missing goldens only: every unbound pair gets a golden recorded from this base tree under `python/repark/tests/`; record mode refused under CI. | `test_facade_5_display_goldens.py` + committed JSON golden. | **OPEN** | Pending. |
-| C-005 | Mutation proof: a one-line mutation turns the new goldens red; restore leaves them green. | Scratch edit, red output, `git checkout` restore, all recorded here. | **OPEN** | Pending. |
-| C-006 | The §8 named pins stay green and unedited: `test_dfcore_4b_eager_goldens.py`, `test_dfcore_4b_show_goldens.py`, `test_df_eager_1.py`, `test_dfcore_6_eager_preview.py`, `test_display_styles.py`, `test_display_polars_default.py`. | Those files, same commit, no edits; run counts. | **OPEN** | Pending. |
-| C-007 | Step-1 target named from C-002's numbers: (A) a measured format wall and the Rust move that removes it byte-identically, or (B) "no format wall: ship the smallest byte-identical consolidation", naming which formatters move and what stays because it touches `eager.py`. | Step-1 target section. | **OPEN** | Pending. |
-| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **OPEN** | Pending. |
+| C-001 | Provenance: release native (`__debug_assertions__` False), types4 product tree equals `main`, no JVM, memory-capped timing harness. | Header block above; `docs/perf/facade-5-display-baseline-2026-09-14.md` machine header. | **PROVEN** | Release native re-asserted inside the runner (`native_is_release()`); the run carried `release_proof: true` and a 167,915,168-byte module. |
+| C-002 | Fetch/format baseline: FETCH (capped rows to Arrow) and FORMAT (formatter over the pre-materialized table) timed separately for ASCII `show`, vertical `show`, `_repr_html_`, duckdb show, polars show, and `repr`, at n ∈ {20, 1000} × truncate on/off × {flat 7-type, 50-column wide, nested struct/array/map}, warmup + 5 reps, medians, idle box + load<6 per cell; each leg's share of the wall stated. | `docs/perf/facade-5-display-baseline-2026-09-14.md` + committed runner. | **PROVEN** | 96 cells, 96/96 `door_check` byte-equal, loads 4.96–5.52. Every cell is a wall: n=20 format 0.4–3.2 ms at 14–57% share; n=1000 format 17–107 ms at 90–98% share. |
+| C-003 | Census: every renderer × truncation-rule pair names the §8 pin that binds its bytes today, and every unbound pair is a row of its own; the `test_dfcore_6_eager_preview.py` scan counts recorded. | Census section below. | **PROVEN** | Census section below: 9-rule taxonomy, bound table, 30 unbound rows, scan-count notes. |
+| C-004 | Missing goldens only: every unbound pair gets a golden recorded from this base tree under `python/repark/tests/`; record mode refused under CI. | `test_facade_5_display_goldens.py` + committed JSON golden. | **PROVEN** | 30 cases → `facade_5_display_goldens.json` recorded via `REPARK_FACADE_5_RECORD_GOLDENS=1` on the release interpreter; `test_record_mode_fails_when_ci_is_set` pins the CI refusal. |
+| C-005 | Mutation proof: a one-line mutation turns the new goldens red; restore leaves them green. | Scratch edit, red output, `git checkout` restore, all recorded here. | **PROVEN** | 12 one-line mutations M1–M12 below; every case id red ≥ once; `git status` clean on `python/repark/src/` after restore. |
+| C-006 | The §8 named pins stay green and unedited: `test_dfcore_4b_eager_goldens.py`, `test_dfcore_4b_show_goldens.py`, `test_df_eager_1.py`, `test_dfcore_6_eager_preview.py`, `test_display_styles.py`, `test_display_polars_default.py`. | Those files, same commit, no edits; run counts. | **PROVEN** | `pytest` on the six files: 99 passed; `git diff` on all six: empty. |
+| C-007 | Step-1 target named from C-002's numbers: (A) a measured format wall and the Rust move that removes it byte-identically, or (B) "no format wall: ship the smallest byte-identical consolidation", naming which formatters move and what stays because it touches `eager.py`. | Step-1 target section. | **PROVEN** | Option (A) — measured format wall; see "Step-1 target" in the baseline doc and below. |
+| C-008 | Gates: §8 pins green, the new goldens, `make verify`, `test_production_file_size.py` green; staged-diff comment scan empty. | Commands and counts in Evidence. | **OPEN** | §8 99 passed; new goldens 2 passed; file-size 11 passed; comment scan empty on every commit; `make verify` running. |
 
 ## Census — renderer × truncation rule (C-003)
 
@@ -163,6 +163,65 @@ Rule taxonomy (what reaches the formatter, from `_cell_text` /
   root-plan export on either seam), `test_preview_tail_rows_*` (skip math,
   `total ≤ fetch` short-circuit never calls `limit_with_skip`).
 
+## Mutation proofs (C-005) — each a one-line scratch edit, run, then `git checkout` restored
+
+The timing interpreter reads product code from `/tmp/f-types4`, so mutation
+runs put THIS clone's `python/repark/src` first on `PYTHONPATH` and pre-seed
+`sys.modules["repark._native"]` from the types4 release `.so` — the clone's
+Python bodies are exercised while the release native stays loaded; nothing
+under `/tmp/f-types4` is ever written. `changed=` lists the golden case ids
+the test reported red (the assert shows at most 12 ids; parenthesized ids are
+bitten but sit past that display cap).
+
+| Mut | One-line mutation (restored) | `changed=` case ids reported red |
+|---|---|---|
+| M1 | `polars_cells.py` `"..."` → `".."` (spark/duckdb ellipsis) | ascii_nested, ascii_scalars, ascii_trunc_str7, duckdb_nested, duckdb_trunc10, duckdb_trunc_true, vertical_nested, vertical_trunc5 |
+| M2 | `polars_cells.py` sub-cap `text[:truncate_at]` → `text[:truncate_at + 1]` | ascii_trunc2, duckdb_trunc2, vertical_trunc2 |
+| M3 | `polars_cells.py` else-branch `str(value)` → `str(value) + "!"` | ascii_nested, ascii_nested_off, ascii_scalars, ascii_trunc2, ascii_trunc_str7, duckdb_nested, duckdb_scalars, duckdb_trunc10, duckdb_trunc2, duckdb_trunc_true, eager_nested, eager_trunc_conf5 (+vertical_trunc_off, vertical_nested, eager_trunc_default, eager_trunc_off, eager_wide past the display cap) |
+| M4 | `polars_cells.py` duckdb `int32` → `int33` type label | duckdb_lazy_wide, duckdb_nested, duckdb_scalars, duckdb_trunc10, duckdb_trunc2, duckdb_trunc_true |
+| M5 | `plan_collapse.py` `_eager_eval_grid_row` `rjust` → `ljust` | eager_nested, eager_trunc_conf5, eager_trunc_default, eager_trunc_off, eager_wide |
+| M6 | `plan_collapse.py` `_show_grid_row` `" \| ".join` → `"\|".join` | ascii_nested, ascii_nested_off, ascii_scalars, ascii_trunc2, ascii_trunc_str7 |
+| M7 | `display.py` `"</table>"` → `"</TABLE>"` | html_escape, html_nested, html_trunc5, html_trunc_off |
+| M8 | `polars_cells.py` polars `+ "…"` → `+ "…x"` | polars_trunc10, polars_trunc2, polars_trunc_true |
+| M9 | `plan_collapse.py` `_polars_row_line` `"┆".join` → `"\|".join` | polars_trunc10, polars_trunc2, polars_trunc_true, polars_unicode |
+| M10 | `plan_collapse.py` zero-col `shape: (N, 0)` → `(0, N)` | styled_zero_cols |
+| M11 | `plan_collapse.py` separator `"+-"` → `"x-"` | ascii_nested, ascii_nested_off, ascii_scalars, ascii_trunc2, ascii_trunc_str7, spark_zero_cols |
+| M12 | `plan_collapse.py` `"-RECORD"` → `"-REC"` | vertical_nested, vertical_trunc2, vertical_trunc5, vertical_trunc_off |
+
+Coverage: all 30 case ids red at least once (weakest links: html_* via M7
+only, eager_trunc_default / eager_trunc_off / eager_wide via M5 only,
+styled_zero_cols via M10, spark_zero_cols via M11 — each is still a real
+door-rendered byte string, not a vacuous constant). Two case fixes during the
+proof: `duckdb_trunc_true/10/2` moved from `show(3)` to `show(4)` — at n=3
+the duckdb head/tail split never renders the truncatable row, so the case
+bound nothing; and infinite floats refuse `createDataFrame`, so `ascii_scalars`
+and `duckdb_scalars` take their inf/-inf row through the SQL door.
+
+## Step-1 target (C-007) — option (A): measured format wall
+
+C-002's numbers put the format leg at 90–98% of the wall at n=1000 and above
+the 20% share bar on nearly every n=20 cell. Step 1 moves the format leg to
+Rust byte-identically: `_cell_text` / `_table_to_cell_rows` / the polars
+nested + float spellers / `_arrow_pa_type_label` / `_style_type_label` /
+`_polars_column_gap` (`polars_cells.py`), then the five grid formatters and
+their row/width/rule helpers (`plan_collapse.py`), then the `_repr_html`
+body (`display.py`). The fetch leg — `limit`/`to_arrow`/`count`/
+`_preview_tail_rows`, bridge peek, eager conf reads, arg normalization, and
+anything touching `eager.py` — stays in Python. Full move list in
+`docs/perf/facade-5-display-baseline-2026-09-14.md` §Step-1 target.
+
 ## Evidence
 
-Skeleton commit; sections fill as the step lands.
+- `8c4fd8b2` — ledger skeleton + staging map link.
+- `db24a7ab` — census (taxonomy, bound table, 30 unbound rows, scan counts).
+- `ce8df001` — fetch/format baseline doc + runner + `docs/perf` maps.
+- `83a688c9` — 30 unbound-pair goldens + test + tests map.
+- Baseline runner output `/tmp/facade-5-display-baseline.json` (not
+  committed): 96 cells, all `door_check` equal, loads 4.96–5.52, run loads
+  8.42→5.18.
+- `REPARK_FACADE_5_RECORD_GOLDENS=1` record run: 2 passed, 30 cases written.
+- Mutation runs M1–M12: every run `1 failed` with the `changed=` list above;
+  `git status --short python/repark/src/` empty after each restore.
+- Gates: §8 pins `pytest` 99 passed, all six files unedited; new goldens 2
+  passed; `test_production_file_size.py` 11 passed; staged comment scan
+  empty on every commit; `make verify` running.
