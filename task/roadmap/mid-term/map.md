@@ -6,6 +6,14 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
+  expressions, beside run 13; night window 05:19–06:30, day continuation to 12:00):** REPLACE-LINEAR-1 step 1 (#577):
+  a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok
+  critic-logic (1 P1, 5 P2 remediated) and S2-21 Python reviewer (2 P2 remediated). Then ARRAY-NULL-1 and ANSI-DOOR-1,
+  with owner questions and recommendations.
+- [replace-novalue-1-card-2026-09-14.md](replace-novalue-1-card-2026-09-14.md) — **card REPLACE-NOVALUE-1 (2026-09-14,
+  run 13b under owner ruling Q-13b-2, card only):** `DataFrame.replace(to_replace)` with no `value` raises PySpark's
+  `ARGUMENT_REQUIRED` through a private sentinel default; today repark reads it as a NULL replacement.
 - [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
   cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and
   never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not
