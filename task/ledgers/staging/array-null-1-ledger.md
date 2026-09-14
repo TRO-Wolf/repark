@@ -35,7 +35,12 @@ doors carry value+type pins for every D-2 cell.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-001 | The D-2 oracle cells are measured on live PySpark 4.1.2 (one `local[1]` session, ANSI default, stopped before other work) beside repark's answers on the same explicit-schema frames through the facade AND the SQL door: answer rows AND result type (element type, `containsNull`) or error class, for NULL array, NULL element, empty array, nested arrays, int→`array<bigint>`, int→`array<double>`, string→`array<int>`, NULL element into a `containsNull=False` array, and a literal array — for both `array_append` and `array_prepend`. | The measured table under Evidence + the facade oracle pins in `python/repark/tests/test_array_null_1.py`. | PROVEN | Measured 2026-09-14, PySpark 4.1.2, `spark.sql.ansi.enabled` default, zulu-17. Spark widens `containsNull` to true in every result. Facade was cell-correct on the base tree; door then diverged on NULL-array append (`[4]` not NULL) and refused every Spark-spelled `array_prepend(a, e)` — both closed by the step-1 arm, now pinned on both doors. |
-| C-002 | A chain of 40 nested `F.array_append`/`F.array_prepend` calls plans and collects under a bounded RSS delta — bound = `max(8 MB, 2 × flat 40-append select delta)` — in a subprocess under `RLIMIT_AS = VmSize_at_apply + 3 × 8 GB`. Red on the base tree, green after the step-1 lowering, default-gated on both functions. | `test_array_append_depth40_memory_linear[append\|prepend]` red output pasted, then green with the five-run deltas below. | PROVEN | Red demonstrated 2026-09-14 on the base tree (64 MB bound crossed at level 15, 131 014 656 B delta). After the arm: five consecutive runs, deltas 1 957 888–2 035 712 B per leg vs bound 8 388 608 B — the pin is in the default suite, ungated, covering both functions. |
+| C-002 | A chain of 40 nested `F.array_append`/`F.array_prepend` calls plans and collects under a bounded RSS delta — bound = `max(2 × flat control delta, 2 × same-tree depth-4 chain delta)` (run-14b P2-1 ruling: no fixed floor) — in a subprocess under `RLIMIT_AS = VmSize_at_apply + 3 × 8 GB`. Red on the base tree, green after the step-1 lowering, default-gated on both functions. | `test_array_append_depth40_memory_linear[append\|prepend]` red output pasted, then green with the ten-run deltas below. | PROVEN | Red demonstrated 2026-09-14 on the base tree (64 MB bound crossed at level 15, 131 014 656 B delta). After the arm under the tightened P2-1 bound: ten consecutive runs, depth-40 deltas 1 986 560–1 990 656 B per leg vs bound 3 809 280 B — the pin is in the default suite, ungated, covering both functions. |
+| L-1 | Element coercion matches Spark's `findTightestCommonType` on both doors: int8→int16→int32→int64, integer/float32→float64, date↔timestamp→timestamp; identical types pass; NULL element/NullType array keep the pinned answers; nested/struct/map elements require equality; string↔non-string and any decimal mismatch refuse at planning with a message containing `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` and both type names. Existing elements are never recast to a non-widened type. | `coerce_types` on both UDFs (user-defined signature) + Rust unit tests for every widening pair and refusal family + the Python pins. | PROVEN | Implemented in `collection/array_append.rs` — `spark_common_element`/`spark_coerce_args` under `Signature::user_defined` (the `array_and_element` signature ran DF's `type_union_resolution`, which recast `array<string>`+int and refused `array<date>`+timestamp). Red-first: the L-2 pins failed 42 cells on the pre-fix tree (pasted below). |
+| L-2 | Every run-14b oracle coercion cell is pinned on both doors and both functions — value, Arrow element type, `containsNull`/field nullability, or the refusal class + message. | `test_array_element_coercion_cells` (parametrised over the oracle table × 2 functions × 2 doors) + `test_array_element_coercion_door_only_cells` (bare SQL `1.5`). | PROVEN | 62 parametrized cells green on the release native; the door's Arrow types pin actual (`int64` element literal width, `timestamp[ns]` where the door's `spark_ltz_timestamp_cast` rewrites the date column — noted in evidence). |
+| L-3 | The lowering is pinned beyond memory: `explain()` of a depth-3 chain names `array_append` once per level and contains no CASE. | `test_array_append_depth3_plan_shape`. | PROVEN | Physical plan shows `array_append(array_append(array_append(a@0, 1), 2), 3)` — three UDF calls, zero CASE. |
+| P2-1 | The depth-40 pin bound is `max(2 × flat control delta, 2 × same-tree depth-4 chain delta)` — no fixed floor — and survives ten consecutive runs. | Ten pasted runs. | PROVEN | Ten consecutive runs below; every leg under bound 3 809 280 B. |
+| P3-1 | An entirely null input array returns a null array of the result type without invoking the DataFusion kernel. | `invoke_preserved` short-circuit + `all_null_input_short_circuits_to_a_typed_null_result` (Rust) + `test_array_all_null_input_returns_typed_null` (both doors). | PROVEN | `input.null_count() == input.len()` → `ArrayData::new_null(return_field.data_type())` before the kernel call; two-row all-null column pins `[None, None]` `list<int32>` (facade) / `list<int64>` (door literal width) on both functions. |
 | C-003 | One D-1 route is correct on every C-001 cell and linear at depth 40: (a) a `ScalarUDF` calling DataFusion's `array_append`/`array_prepend` kernel then grafting the input's outer null buffer onto the result; (b) a Rust CASE referencing the child once through a plan-level alias. | Correctness on every cell (yes/no) + depth-12 and depth-40 RSS delta and plan/collect wall time per route, release native. | PROVEN | Route (a) chosen by the orchestrator's D-1 ruling and landed as `spark_array_append_udf`/`spark_array_prepend_udf` (`collection/array_append.rs`): all 18 cells correct through facade AND door; release depth-40 delta ~2.0 MB / collect ~56 ms, depth-100 delta ~2.2 MB / collect ~0.7 s — linear. Route (b) measured correct but 35–37 MB at depth 12 and alloc-abort at depth 40; DataFusion has no lateral plan-level alias (`Schema error: No field named x`). |
 | C-004 | Per D-3 the SQL door routes through the same corrected arm — `spark.sql("SELECT array_append(a, e) FROM v")` and `array_prepend(a, e)` answer identically to the facade on every cell, in Spark `(array, element)` order, without shadowing a name another caller relies on. | Door answers equal facade answers per cell, pinned; name-shadow evidence recorded. | PROVEN | Door pins landed (`test_array_*_door_oracle_cells`): all 18 cells answer like the facade, including NULL-array NULL and Spark-order `array_prepend(a, e)`; the door-parity ratchet is green with no `EXPECTED_DIVERGENCES` row. Registration after DF's defaults replaces only the two primary names — DF's `register_udf` keys on name+aliases and the shim declares none, so `list_append`, `array_push_back`, `list_push_back`, `list_prepend`, `array_push_front`, `list_push_front` keep DF's kernel. PySpark 4.1.2 exposes no `list_*` spellings, so no Spark-facing name is shadowed. The door's `array_prepend` arg order becomes Spark's `(array, element)` — the only door-semantic change, named here per the card. Residual: door `array(1,2)` literal stays `list<int64>` (DF SQL integer-literal width, identical on base) — orthogonal dialect difference, pinned as actual behavior. |
 | C-005 | Answer pins for every C-001 cell (value AND Arrow type AND element nullability, facade and door). | Pins in `python/repark/tests/` green after step 1. | PROVEN | `test_array_null_1.py` pins all nine cells per function per door: `to_pylist` values, `value_type`, and `value_field.nullable` (Spark's `containsNull=True` widening) via `to_arrow`, including nested arrays, both numeric coercions, the string-into-int refusal, the `containsNull=False`+NULL-element cell, and literal arrays. Rust unit tests pin the sliced-input null graft and the door SQL spellings. |
@@ -80,6 +85,127 @@ the NULL array (`[4]`, the card's documented `None`-null-buffer loss in
 cell (DF's signature is `(element, array)`), and door literal arrays are Int64
 (pre-existing SQL integer-literal width, present identically under the spike).
 Refusal cells match Spark's shape (both refuse) with different error classes.
+
+### Element coercion cells (run 14b oracle)
+
+Measured by the orchestrator on live PySpark 4.1.2, 2026-09-14 (`local[1]`,
+zulu-17, ANSI default) — `<pyspark-4.1.2-oracle>`; facade = `F.array_append("a",
+<lit>)`, SQL = `SELECT fn(a, <expr>) FROM t` on explicit-schema `a array<T>`
+containsNull=true frames:
+
+| cell | Spark answer |
+|---|---|
+| facade array_append array<str_num> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| sql array_append(a, 4) array<str_num> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| facade array_prepend array<str_num> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| sql array_prepend(a, 4) array<str_num> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| facade array_append array<str_alpha> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| sql array_append(a, 4) array<str_alpha> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| facade array_prepend array<str_alpha> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| sql array_prepend(a, 4) array<str_alpha> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "INT"] |
+| facade array_append array<str_num> + double1_5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "DOUBLE"] |
+| sql array_append(a, CAST(1.5 AS DOUBLE)) array<str_num> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "DOUBLE"] |
+| facade array_prepend array<str_num> + double1_5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "DOUBLE"] |
+| sql array_prepend(a, CAST(1.5 AS DOUBLE)) array<str_num> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<STRING>", "DOUBLE"] |
+| facade array_append array<int> + double1_5 | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| sql array_append(a, CAST(1.5 AS DOUBLE)) array<int> | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| facade array_prepend array<int> + double1_5 | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| sql array_prepend(a, CAST(1.5 AS DOUBLE)) array<int> | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| sql array_append(a, 1.5) array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(2,1)"] |
+| sql array_prepend(a, 1.5) array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(2,1)"] |
+| facade array_append array<int> + dec104 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(10,4)"] |
+| sql array_append(a, CAST(1.2345 AS DECIMAL(10,4))) array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(10,4)"] |
+| facade array_prepend array<int> + dec104 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(10,4)"] |
+| sql array_prepend(a, CAST(1.2345 AS DECIMAL(10,4))) array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "DECIMAL(10,4)"] |
+| facade array_append array<int> + bigint | `array<bigint>` containsNull=True value=[['1', '2', '4']] |
+| sql array_append(a, CAST(4 AS BIGINT)) array<int> | `array<bigint>` containsNull=True value=[['1', '2', '4']] |
+| facade array_prepend array<int> + bigint | `array<bigint>` containsNull=True value=[['4', '1', '2']] |
+| sql array_prepend(a, CAST(4 AS BIGINT)) array<int> | `array<bigint>` containsNull=True value=[['4', '1', '2']] |
+| facade array_append array<int> + str5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "STRING"] |
+| sql array_append(a, '5') array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "STRING"] |
+| facade array_prepend array<int> + str5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "STRING"] |
+| sql array_prepend(a, '5') array<int> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<INT>", "STRING"] |
+| facade array_append array<bigint> + double1_5 | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| sql array_append(a, CAST(1.5 AS DOUBLE)) array<bigint> | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| facade array_prepend array<bigint> + double1_5 | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| sql array_prepend(a, CAST(1.5 AS DOUBLE)) array<bigint> | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| facade array_append array<float> + double1_5 | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| sql array_append(a, CAST(1.5 AS DOUBLE)) array<float> | `array<double>` containsNull=True value=[['1.0', '2.0', '1.5']] |
+| facade array_prepend array<float> + double1_5 | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| sql array_prepend(a, CAST(1.5 AS DOUBLE)) array<float> | `array<double>` containsNull=True value=[['1.5', '1.0', '2.0']] |
+| facade array_append array<double> + int4 | `array<double>` containsNull=True value=[['1.0', '2.0', '4.0']] |
+| sql array_append(a, 4) array<double> | `array<double>` containsNull=True value=[['1.0', '2.0', '4.0']] |
+| facade array_prepend array<double> + int4 | `array<double>` containsNull=True value=[['4.0', '1.0', '2.0']] |
+| sql array_prepend(a, 4) array<double> | `array<double>` containsNull=True value=[['4.0', '1.0', '2.0']] |
+| sql array_append(a, 1.5) array<double> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DOUBLE>", "DECIMAL(2,1)"] |
+| sql array_prepend(a, 1.5) array<double> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DOUBLE>", "DECIMAL(2,1)"] |
+| facade array_append array<dec102> + dec104 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(10,4)"] |
+| sql array_append(a, CAST(1.2345 AS DECIMAL(10,4))) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(10,4)"] |
+| facade array_prepend array<dec102> + dec104 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(10,4)"] |
+| sql array_prepend(a, CAST(1.2345 AS DECIMAL(10,4))) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(10,4)"] |
+| facade array_append array<dec102> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "INT"] |
+| sql array_append(a, 4) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "INT"] |
+| facade array_prepend array<dec102> + int4 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "INT"] |
+| sql array_prepend(a, 4) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "INT"] |
+| facade array_append array<dec102> + double1_5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DOUBLE"] |
+| sql array_append(a, CAST(1.5 AS DOUBLE)) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DOUBLE"] |
+| facade array_prepend array<dec102> + double1_5 | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DOUBLE"] |
+| sql array_prepend(a, CAST(1.5 AS DOUBLE)) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DOUBLE"] |
+| sql array_append(a, 1.5) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(2,1)"] |
+| sql array_prepend(a, 1.5) array<dec102> | refuses `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` — but it's ["ARRAY<DECIMAL(10,2)>", "DECIMAL(2,1)"] |
+| facade array_append array<ts> + date | `array<timestamp>` containsNull=True value=[['2024-01-02 03:04:05', '2024-05-06 00:00:00']] |
+| sql array_append(a, DATE'2024-05-06') array<ts> | `array<timestamp>` containsNull=True value=[['2024-01-02 03:04:05', '2024-05-06 00:00:00']] |
+| facade array_prepend array<ts> + date | `array<timestamp>` containsNull=True value=[['2024-05-06 00:00:00', '2024-01-02 03:04:05']] |
+| sql array_prepend(a, DATE'2024-05-06') array<ts> | `array<timestamp>` containsNull=True value=[['2024-05-06 00:00:00', '2024-01-02 03:04:05']] |
+| facade array_append array<date> + ts | `array<timestamp>` containsNull=True value=[['2024-01-02 00:00:00', '2024-05-06 07:08:09']] |
+| sql array_append(a, TIMESTAMP'2024-05-06 07:08:09') array<date> | `array<timestamp>` containsNull=True value=[['2024-01-02 00:00:00', '2024-05-06 07:08:09']] |
+| facade array_prepend array<date> + ts | `array<timestamp>` containsNull=True value=[['2024-05-06 07:08:09', '2024-01-02 00:00:00']] |
+| sql array_prepend(a, TIMESTAMP'2024-05-06 07:08:09') array<date> | `array<timestamp>` containsNull=True value=[['2024-05-06 07:08:09', '2024-01-02 00:00:00']] |
+
+Spark's rule is `findTightestCommonType` with no string promotion and no decimal
+widening.
+
+### Spark vs repark before the L-1 fix (release native of e6311c9e)
+
+Every cell of the table above was measured on the unmodified rebased tree, both
+doors; the mismatches (the L-1/L-2 findings) were:
+
+| cell | Spark | repark before fix (facade / door identical unless noted) |
+|---|---|---|
+| array<str_num> + int | refuse `DATATYPE_MISMATCH...` | **answered** `[[1,2,4]]` `list<int32>` — DF `type_union_resolution` recast the string elements |
+| array<str_alpha> + int | refuse at planning | Arrow cast error at collect (`Cannot cast string 'a' to Int32`) |
+| array<string> + double | refuse | **answered** `[[1.0,2.0,1.5]]` `list<double>` — silent widen |
+| array<int> + double | `array<double>` | `[[1.0,2.0,1.5]]` `list<double>` — already correct |
+| array<int> + bigint | `array<bigint>` | `[[1,2,4]]` `list<int64>` — already correct |
+| array<int> + '5' | refuse w/ class | refused, generic DF coercion text (no `DATATYPE_MISMATCH` class) |
+| array<bigint>/<float>/<double> + double/int | `array<double>` | already correct |
+| array<int>/<double>/<dec102> + bare SQL `1.5` | refuse w/ class | refused, generic DF coercion text |
+| array<dec102> + dec104/int/double | refuse w/ class | refused, generic DF coercion text |
+| array<int> + dec104 | refuse w/ class | refused, generic DF coercion text |
+| array<ts> + date | `array<timestamp>` | `list<timestamp[us, tz=UTC]>` — already correct |
+| array<date> + ts | `array<timestamp>` | **refused** — generic DF coercion text |
+
+Every refusal also lacked Spark's `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES`
+class text — the class now rides inside the `DataFusionError::Plan` message and
+surfaces through the existing `AnalysisException`/`PySparkException` mapping; no
+edit to `crates/repark-core/src/error_map.rs` was needed (the pinned exception
+class is unchanged, the message carries the Spark class string and both type
+names).
+
+### L-1/L-2 red-first pin run (pre-fix tree)
+
+`array_append.rs` reverted to e6311c9e, `maturin develop` (debug), the L-2 pins
+run against it:
+
+```
+$ .venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q -k "coercion or all_null or plan_shape"
+42 failed, 29 passed, 6 deselected in 1.64s
+e.g. test_array_element_coercion_cells[str_num+int-facade-array_append]:
+    table r: list<item: int32> — r: [[[1,2,4]]]   (should refuse)
+    test_array_element_coercion_cells[int+string-facade-array_append]:
+    AssertionError: Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type
+    assert 'DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES' in "Arrow error: ..."
+```
 
 ### C-002 red-first memory pin
 
@@ -236,25 +362,101 @@ the base dies past depth 16 (2^N expression growth — the step-0 debug table
 showed ~×3/level; depth-40 cannot plan). After numbers stay ~2 MB RSS through
 depth 100.
 
-### Depth-40 memory pin — five consecutive runs (debug native, `make develop`)
+### Depth-40 memory pin — ten consecutive runs (run-14b P2-1 bound, release native)
 
-Bound = `max(8 MiB, 2 × flat 40-append control)` = 8 388 608 B each run.
+Bound = `max(2 × flat control delta, 2 × same-tree depth-4 chain delta)` —
+no fixed floor. Bound resolved to 3 809 280 B in every run (2 × depth-4 chain
+delta 1 904 640 B; 2 × flat delta 3 751 936–3 760 128 B was the smaller term).
 
-| Run | Flat control delta | Append delta | Prepend delta |
-|---:|---:|---:|---:|
-| 1 | 1 806 336 B | 2 035 712 B | 1 957 888 B |
-| 2 | 1 806 336 B | 2 027 520 B | 1 957 888 B |
-| 3 | 1 810 432 B | 2 035 712 B | 1 961 984 B |
-| 4 | 1 806 336 B | 2 031 616 B | 1 961 984 B |
-| 5 | 1 806 336 B | 2 035 712 B | 1 957 888 B |
+| Run | Flat control delta | Depth-4 chain delta | Append depth-40 delta | Prepend depth-40 delta |
+|---:|---:|---:|---:|---:|
+| 1 | 1 880 064 B | 1 904 640 B | 1 990 656 B | 1 986 560 B |
+| 2 | 1 871 872 B | 1 904 640 B | 1 986 560 B | 1 986 560 B |
+| 3 | 1 875 968 B | 1 904 640 B | 1 990 656 B | 1 986 560 B |
+| 4 | 1 871 872 B | 1 904 640 B | 1 990 656 B | 1 990 656 B |
+| 5 | 1 875 968 B | 1 904 640 B | 1 986 560 B | 1 986 560 B |
+| 6 | 1 875 968 B | 1 904 640 B | 1 990 656 B | 1 986 560 B |
+| 7 | 1 875 968 B | 1 904 640 B | 1 990 656 B | 1 990 656 B |
+| 8 | 1 875 968 B | 1 904 640 B | 1 986 560 B | 1 990 656 B |
+| 9 | 1 875 968 B | 1 904 640 B | 1 990 656 B | 1 990 656 B |
+| 10 | 1 875 968 B | 1 904 640 B | 1 990 656 B | 1 990 656 B |
+
+(Step-1 five-run record, superseded bound `max(8 MiB, 2 × flat control)`:
+append 2 027 520–2 035 712 B, prepend 1 957 888–1 961 984 B, flat
+1 806 336–1 810 432 B.)
+
+### L-3 plan-shape pin
+
+`frame.select(F.array_append(F.array_append(F.array_append(F.col("a"),
+F.lit(1)), F.lit(2)), F.lit(3)).alias("r"))._explain_text()` on the release
+native:
+
+```
+== Physical Plan ==
+ProjectionExec: expr=[array_append(array_append(array_append(a@0, 1), 2), 3) as r]
+  DataSourceExec: partitions=1, partition_sizes=[1]
+```
+
+`array_append` appears exactly 3 times (once per level); `CASE` appears zero
+times — pinned by `test_array_append_depth3_plan_shape`.
+
+### P3-1 all-null short-circuit
+
+`invoke_preserved` checks `input.null_count() == input.len()` before calling
+the kernel and answers `ArrayData::new_null(return_field.data_type(),
+input.len())` — an all-null input (including a `DataType::Null` scalar arg,
+which materializes as an all-null `NullArray`) returns a typed null array
+without invoking the kernel. Pinned by Rust test
+`all_null_input_short_circuits_to_a_typed_null_result` and by
+`test_array_all_null_input_returns_typed_null` over both functions × both
+doors (facade `list<int32>`; door `list<int64>` — the door's integer literal
+is Int64, the same pre-existing literal-width difference as the literal-array
+cell).
+
+### Rulings applied (run 14b)
+
+- Q-13b-5 (owner via orchestrator): match Spark on element coercion in this unit, measured first — applied (L-1 fix, L-2 pins).
+- Q-13b-6: order ARRAY-NULL-1 follow-up → gates → merge → ANSI-DOOR-1 step 0 — applied.
+- Q-13b-7: critics receive oracle answers as fixtures; the actor/orchestrator measures — applied (oracle measured by the orchestrator, table above).
+- Q-13b-8: Grok S2-21 reviewer units run at 64 G with in-process RLIMIT_AS caps — applied.
+
+### Findings (run 14b)
+
+| Finding | Disposition |
+|---|---|
+| L-1 element coercion diverged from Spark | FIXED — `coerce_types` + user-defined signature in `array_append.rs`; fbdef3f5 |
+| L-2 oracle cells unpinned | FIXED — parametrized pins, both doors × both functions; fbdef3f5 |
+| L-3 lowering pinned only by memory | FIXED — `test_array_append_depth3_plan_shape`; fbdef3f5 |
+| L-4 DF-only aliases (`list_append`, `array_push_back`, `list_prepend`, `array_push_front`, …) keep DF's null-dropping kernel | RESIDUE — no Spark spelling exposes them; recorded |
+| P2-1 8 MiB floor was 4× the linear delta | FIXED — bound is now `max(2 × flat, 2 × depth-4 chain)` = 3 809 280 B; ten consecutive runs pasted |
+| P3-1 all-null input paid the kernel call | FIXED — `null_count == len` short-circuit in `invoke_preserved`; pinned on both doors |
+| P3-2 1-row collect-wall growth 12→40 is analyzer planning (~O(d²)); on 1e5 rows execution is linear in depth (2.56 → 2.72 ms per level) | RESIDUE — recorded with numbers below; not fixed |
 
 ### Residue
 
-Collect wall grows ~12× from depth 12 to depth 40 on the landed arm (append
-4.6 ms → 56.1 ms; prepend 4.4 ms → 56.9 ms) and ~12× again to depth 100
-(~0.68–0.71 s) — per-level analyzer/physical-plan overhead, roughly quadratic in
-wall while RSS stays flat (~2.0 MB at 40, ~2.2 MB at 100). Bounded in absolute
-terms; recorded, not fixed, per the brief.
+- Collect wall grows ~12× from depth 12 to depth 40 on the landed arm (append
+  4.6 ms → 56.1 ms; prepend 4.4 ms → 56.9 ms) and ~12× again to depth 100
+  (~0.68–0.71 s) — per-level analyzer/physical-plan overhead, roughly quadratic
+  in wall while RSS stays flat (~2.0 MB at 40, ~2.2 MB at 100). The S2-21
+  reviewer measured execution itself as linear in depth on 1e5 rows (2.56 →
+  2.72 ms per level) — the growth is planning, not execution (P3-2, recorded,
+  not fixed).
+- L-4: the DF-only alias spellings (`list_append`, `array_push_back`,
+  `list_push_back`, `list_prepend`, `array_push_front`, `list_push_front`) keep
+  DataFusion's null-dropping kernel — the shim declares no aliases and no
+  PySpark 4.1.2 surface exposes them.
+- Refusals raise repark's existing `AnalysisException`/`PySparkException`
+  classes (unchanged, as pinned for the string-into-`array<int>` cell); the
+  Spark error class rides inside the message text
+  (`DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` + both type names). No
+  dedicated Python exception subclass maps the Spark class — error class via
+  error_map (parked: file owned by run 14).
+- The SQL door rewrites `a array<date>` through `spark_ltz_timestamp_cast` to
+  `list<timestamp[ns]>` before the UDF sees it, so `array<date>` + `ts` on the
+  door answers `list<timestamp[ns]>` while the facade answers
+  `list<timestamp[us, tz=UTC]>` — both are Spark `array<timestamp>`; the
+  per-door Arrow types are pinned as actual. Same family: the door's integer
+  literal is `int64` (bare `4`/`9`), a pre-existing literal-width difference.
 
 ## Gates
 
@@ -274,6 +476,17 @@ Step 1 (the landed arm, 2026-09-14):
 - `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_functions_e.py`, `test_functions_split_identity.py`; all green.
 - `make verify` → green.
 
+Run 14b (L-1/L-2/P2-1/P3-1/L-3, on e6311c9e + this round's changes):
+
+- `cargo test -p repark-functions` → green (456 tests incl. the `coerce_types` widening/refusal/NULL/nested and all-null short-circuit tests).
+- `cargo test -p repark-python door_parity` → green (4 tests; no `EXPECTED_DIVERGENCES` row added).
+- `cd python/repark && maturin develop --release` → rebuilt with the coercion + short-circuit changes.
+- `.venv/bin/python -m pytest python/repark/tests/test_array_null_1.py -q -p no:cacheprovider` → green, 77 tests.
+- `grep -rln "array_append\|array_prepend" python/repark/tests` → `test_array_null_1.py`, `test_functions_e.py`, `test_functions_split_identity.py`; `pytest` on all three → green (77 + 12).
+- Depth-40 memory pin × 10 consecutive runs → green, deltas in the P2-1 table.
+- `make verify` → green.
+- Comment scan `git diff --cached -- '*.rs' '*.py' '*.toml' '*.sh' '*.yml' | grep -P '^\+\s*(//|#(?!\[|!\[| noqa))'` → printed nothing before each commit.
+
 ## Coverage attestation
 
 ```yaml
@@ -287,11 +500,11 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/array-null-1-ledger.md, task/ledgers/staging/array-null-1-spikes/before_after.py]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), and a sliced input whose NullBuffer carries a non-zero offset; chain depths 1..100 measured.
+      evidence: Boundary cells exercised on both doors — NULL array, NULL element, empty array, nested array<int> element, int into array<bigint>, int into array<double>, string into array<int>, NULL element into a containsNull=False array, literal array, CAST(NULL AS ARRAY<INT>), a two-row all-null input column, and a sliced input whose NullBuffer carries a non-zero offset; the run-14b coercion oracle covers every widening pair (int ladder, →double, date↔timestamp both directions), every refusal family (string↔numeric, decimal vs anything/different precision, boolean, unequal nested) on both functions × both doors; chain depths 1..100 measured.
       artifacts: [python/repark/tests/test_array_null_1.py, crates/repark-functions/src/collection/array_append.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: String-into-array<int> refuses on both doors (pinned); a non-array first argument plan-errors; a DataType::Null input yields an all-null result rather than panicking; the memory worker exits rc 2 at the bound crossing instead of aborting — the base-tree red was the bound exit at level 15.
+      evidence: Every off-ladder pair refuses at planning on both doors with `DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES` naming both types (string↔numeric, all decimal mismatches, unequal nested); a non-array first argument plan-errors; a DataType::Null input yields an all-null result and an all-null array column short-circuits before the kernel; the memory worker exits rc 2 at the bound crossing instead of aborting — the base-tree red was the bound exit at level 15.
       artifacts: [python/repark/tests/test_array_null_1.py, crates/repark-functions/src/collection/array_append.rs]
     - id: AT-4
       status: ATTACKED
@@ -306,7 +519,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_array_null_1.py, crates/repark-python/src/column/door_parity_tests.rs]
     - id: AT-7
       status: ATTACKED
-      evidence: The unit is the AT-7 fix — the exponential facade rewrite is replaced by one native call per level; the depth-40 pin runs in the default suite (measured 1 957 888–2 035 712 B vs the 8 388 608 B bound across five consecutive runs) and the release before/after table shows 577 MB→2.0 MB at depth 16/40; the residual collect-wall growth (~12×, 12→40) is recorded with numbers, not assumed away.
+      evidence: The unit is the AT-7 fix — the exponential facade rewrite is replaced by one native call per level; the depth-40 pin runs in the default suite under the tightened P2-1 bound (ten consecutive runs, 1 986 560–1 990 656 B vs bound 3 809 280 B) and the release before/after table shows 577 MB→2.0 MB at depth 16/40; the residual collect-wall growth (~12×, 12→40, analyzer planning per P3-2) is recorded with numbers, not assumed away.
       artifacts: [python/repark/tests/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
     - id: AT-8
       status: ATTACKED
@@ -317,6 +530,6 @@ COVERAGE_ATTESTATION:
       justification: No log-format or diagnosis-path change; refusal paths raise the same typed exception family as the kernels they delegate to (AnalysisException at planning, PySparkException at collect).
     - id: AT-10
       status: ATTACKED
-      evidence: Red-first held — the depth-40 pin crossed its bound at level 15 on the base tree (131 014 656 B) and the door pins would have failed on base (NULL array → [4]; Spark-spelled prepend refused outright); the bound-exit branch has a named input (the base tree at level 15), so no dead branch ships.
+      evidence: Red-first held — the depth-40 pin crossed its bound at level 15 on the base tree (131 014 656 B), the door pins would have failed on base (NULL array → [4]; Spark-spelled prepend refused outright), and the run-14b L-2 pins ran red on the pre-fix tree (42 failed cells: silent recasts of array<string>+int/double, generic refusal text, date+ts refusal); the bound-exit branch has a named input (the base tree at level 15), so no dead branch ships.
       artifacts: [python/repark/tests/test_array_null_1.py, task/ledgers/staging/array-null-1-ledger.md]
 ```
