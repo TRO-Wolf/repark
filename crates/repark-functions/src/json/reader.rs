@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt::Write;
 
+use crate::java_double::java_double_text;
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum JsonValue<'a> {
     Null,
@@ -316,69 +318,6 @@ pub(crate) fn json_number_text(raw: &str) -> String {
         return "0".to_string();
     }
     raw.to_string()
-}
-
-pub(crate) fn java_double_text(value: f64) -> String {
-    if value.is_nan() {
-        return "NaN".to_string();
-    }
-    if value.is_infinite() {
-        return if value.is_sign_negative() {
-            "-Infinity".to_string()
-        } else {
-            "Infinity".to_string()
-        };
-    }
-    java_decimal_text(&format!("{value:e}"))
-}
-
-pub(crate) fn java_float_text(value: f32) -> String {
-    if value.is_nan() {
-        return "NaN".to_string();
-    }
-    if value.is_infinite() {
-        return if value.is_sign_negative() {
-            "-Infinity".to_string()
-        } else {
-            "Infinity".to_string()
-        };
-    }
-    java_decimal_text(&format!("{value:e}"))
-}
-
-fn java_decimal_text(shortest: &str) -> String {
-    let (sign, body) = match shortest.strip_prefix('-') {
-        Some(rest) => ("-", rest),
-        None => ("", shortest),
-    };
-    let Some((mantissa, exponent_text)) = body.split_once('e') else {
-        return shortest.to_string();
-    };
-    let Ok(exponent) = exponent_text.parse::<i32>() else {
-        return shortest.to_string();
-    };
-    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
-    if (-3..=6).contains(&exponent) {
-        format!("{sign}{}", plain_decimal(&digits, exponent))
-    } else {
-        let head = &digits[..1];
-        let tail = if digits.len() > 1 { &digits[1..] } else { "0" };
-        format!("{sign}{head}.{tail}E{exponent}")
-    }
-}
-
-fn plain_decimal(digits: &str, exponent: i32) -> String {
-    if exponent < 0 {
-        let zeros = "0".repeat(usize::try_from(-exponent - 1).unwrap_or(0));
-        return format!("0.{zeros}{digits}");
-    }
-    let point = usize::try_from(exponent + 1).unwrap_or(0);
-    if point >= digits.len() {
-        let zeros = "0".repeat(point - digits.len());
-        format!("{digits}{zeros}.0")
-    } else {
-        format!("{}.{}", &digits[..point], &digits[point..])
-    }
 }
 
 pub(crate) fn write_compact(value: &JsonValue<'_>, out: &mut String) {

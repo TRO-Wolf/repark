@@ -14,7 +14,8 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-use super::reader::{java_double_text, java_float_text, write_escaped};
+use super::reader::write_escaped;
+use crate::java_double::{java_double_text, java_float_text};
 use crate::session_time_zone::session_time_zone_from_options;
 use crate::timestamp_cast::parse_session_zone;
 

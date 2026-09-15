@@ -629,9 +629,16 @@ def test_regexp_count_start_anchor_skips_mid_surrogate(spark: ReparkSession) -> 
 
 
 def test_sql_door_double_infinity_stringify_is_named_divergence(spark: ReparkSession) -> None:
-    """Named residual: Spark ``'Infinity'`` (octet 8); Arrow ``'inf'`` (octet 3)."""
-    table = _table(spark.sql("SELECT octet_length(CAST('Infinity' AS DOUBLE)) AS o"))
-    assert table.column("o").to_pylist() == [3]
+    """Spark ``'Infinity'`` (octet 8); Java-shaped double formatting (BL-7 FIXED)."""
+    table = _table(
+        spark.sql(
+            "SELECT CAST(CAST('Infinity' AS DOUBLE) AS STRING) AS s, "
+            "octet_length(CAST('Infinity' AS DOUBLE)) AS o"
+        )
+    )
+    assert table.column("s").to_pylist() == ["Infinity"]
+    assert table.schema.field("s").type == pa.string()
+    assert table.column("o").to_pylist() == [8]
     assert table.schema.field("o").type == pa.int32()
 
 

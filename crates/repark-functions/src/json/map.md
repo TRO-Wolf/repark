@@ -20,8 +20,9 @@ round-trip destroys.
   inside a string, and an unterminated escape are all malformed; `NaN` / `Infinity` /
   `-Infinity` literals parse to `JsonValue::NonFinite` and render as JSON strings; `-0` renders
   `0`; the `\uXXXX` escape is upper-case. `json_number_text` keeps an integer token verbatim and re-renders anything
-  with `.`/`e` through `java_double_text`; `java_double_text` reproduces `Double.toString` —
-  plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn` outside it, always one digit after the point.
+  with `.`/`e` through the shared `java_double_text` ([`../java_double.rs`](../java_double.rs));
+  that module reproduces `Double.toString` — plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn`
+  outside it, always one digit after the point.
   pins: fnp-9-collections-json/C-002
 - `path.rs` — the `get_json_object` path grammar and evaluator. Supported steps: `$`, `.name`,
   `['name']`, `[index]`, `[*]`. **Round 2 (2026-09-06, critic finding F3):** the evaluator is

@@ -29,6 +29,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
   stringify. Ledger: `task/fn-gt1-ledger.md`.
+  **JAVA-DOUBLE-STR-1 (2026-09-15):** `FLOAT`/`DOUBLE` inputs keep their type
+  through coercion and count the shared Java-formatter bytes (registry BL-7).
+  pins: java-double-str-1/C-006
+  **Round 2 (2026-09-15):** lengths come from the stack formatter's byte count,
+  with no `StringArray` built. pins: java-double-str-1/C-016
 - `spark_log.rs` — **SEM-1 (2026-08-31):** Spark-door `log`. Owner ruling 2026-08-31
   fixes RE-1 and LOG-1 to Spark. One-arg is the natural log;
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
@@ -87,6 +92,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   the later narrowers re-stale. Unary and fully-referenced bodies pass through
   untouched, so the Column door's plans are byte-identical.
   pins: fnp-8/C-004
+  **JAVA-DOUBLE-STR-1 round 2 (2026-09-15):** the shared pre-coercion insertion point
+  seats one more rule one slot later — `SparkFloatStringify`, which must see `LIKE`
+  and `CASE` before `TypeCoercion` errors on (or mis-unifies) float/string mixes.
+  pins: java-double-str-1/C-013
   **FNP-8 repair (2026-09-07):** `HigherOrderPreparation` runs only before the first default
   type-coercion pass. It narrows direct constructor literals for indexed `transform`, narrows a
   direct `aggregate`/`reduce` initial literal and its lambda-body literals, and derives direct
@@ -524,6 +533,27 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
+- `java_double.rs` — **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of
+  Java float spellings — `java_double_text` / `java_float_text` (moved from
+  `json/reader.rs`; `reader.rs`, `decode.rs` and `to_json.rs` import from here,
+  so no second formatter exists) plus the Spark-door `CAST(<FLOAT|DOUBLE> AS
+  <string>)` rewrite. `SparkFloatToStringCast` (registered in
+  `analyzer_rules()` right after `SparkExprSemantics`) turns the cast into the
+  embedded `__repark_float_to_string__` UDF, so SQL, `selectExpr`, `F.expr` and
+  `col.cast` all answer Java text typed `Utf8`; the native ANSI door never
+  installs the rule and keeps Arrow text. Shortest-`e` rendering with Java
+  thresholds (plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn` outside, one
+  digit after the point); `Double.MIN_VALUE` (±bit pattern 1) spells
+  `4.9E-324` and `Float.MIN_VALUE` spells `1.4E-45` where Rust shortest prints
+  shorter (oracle BL7-16 / JD-cast-13, J10-float-min). Round 2 formats into
+  caller stack buffers (`with_java_double_text` / `with_java_float_text`, len
+  helpers for the length kernels) so no per-value `String` is allocated; the
+  rule is now `SparkFloatStringify` with `TRY_CAST`, `LIKE`, `CASE`,
+  `format_string` `%s`-only and `array_join` arms plus bad-literal folding to
+  `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in
+  the shared insertion) and post-coercion (in `analyzer_rules()`); both seats
+  are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
+  pins: java-double-str-1/C-003, C-004, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts
   from the end, the window clips (never errors), negative len → `''`, NULL args → NULL.
@@ -533,6 +563,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Q5/Q80/Q84 SQL `concat` on the Arrow path. Unit pins:
   `concat_register_all_overwrites_datafusion_spark` (name overwrite);
   `concat_array_any_null_propagates_per_row` (Apply null-mask path).
+  **JAVA-DOUBLE-STR-1 (2026-09-15):** `FLOAT`/`DOUBLE` args keep their type
+  through coercion and stringify inside the kernel with the shared Java
+  formatter (registry BL-7); every other non-string arg still coerces to `Utf8`.
+  pins: java-double-str-1/C-005
+  **Round 2 (2026-09-15):** the owned `__repark_array_join__` shim (built only by
+  the float-stringify rule for float-element lists) joins through the same
+  stack formatter; string and other leaves mirror the upstream kernel.
+  pins: java-double-str-1/C-010
 - `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a

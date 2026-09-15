@@ -858,13 +858,13 @@ def test_sequence_descending_answers_empty() -> None:
 
 
 def test_to_json_double_text_diverges_on_the_jdk_legacy_spellings() -> None:
-    """JDK 17 Double.toString is not the shortest repr (FNP10-JAVA-DOUBLE-TEXT-1)."""
+    """JDK legacy spellings: two still diverge; min-subnormals converged (JAVA-DOUBLE-STR-1)."""
     spark = _session()
     cases = {
-        "CAST('4.9E-324' AS DOUBLE)": '{"d":5.0E-324}',
+        "CAST('4.9E-324' AS DOUBLE)": '{"d":4.9E-324}',
         "CAST('8.41E21' AS DOUBLE)": '{"d":8.41E21}',
         "CAST('1.0E23' AS DOUBLE)": '{"d":1.0E23}',
-        "CAST('1.4E-45' AS FLOAT)": '{"d":1.0E-45}',
+        "CAST('1.4E-45' AS FLOAT)": '{"d":1.4E-45}',
     }
     for expression, want in cases.items():
         rendered = spark.sql(f"SELECT to_json(named_struct('d', {expression})) AS r").collect()
