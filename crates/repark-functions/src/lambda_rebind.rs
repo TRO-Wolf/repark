@@ -36,6 +36,10 @@ pub fn analyzer_rules_with_higher_order_preparation(
         );
     };
     rules.insert(position, Arc::new(HigherOrderPreparation));
+    rules.insert(
+        position + 1,
+        Arc::new(crate::java_double::SparkFloatStringify),
+    );
     Ok(rules)
 }
 

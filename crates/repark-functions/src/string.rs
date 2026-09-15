@@ -3,10 +3,15 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, AsArray, Int64Array, StringBuilder};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, GenericListArray, Int64Array, OffsetSizeTrait, StringArray,
+    StringBuilder, as_fixed_size_list_array, as_large_list_array, as_list_array,
+};
 use datafusion::arrow::buffer::NullBuffer;
-use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
+use datafusion::arrow::compute::{can_cast_types, cast};
+use datafusion::arrow::datatypes::{
+    DataType, Field, FieldRef, Float32Type, Float64Type, Int64Type,
+};
 use datafusion::common::{DataFusionError, Result, ScalarValue, internal_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
@@ -43,6 +48,285 @@ pub fn substring_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn concat_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkConcat::new()))
+}
+
+pub(crate) fn spark_array_join_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkArrayJoin::new()))
+}
+
+#[derive(Debug)]
+struct SparkArrayJoin {
+    signature: Signature,
+}
+
+impl SparkArrayJoin {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkArrayJoin {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkArrayJoin {}
+
+impl Hash for SparkArrayJoin {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkArrayJoin {
+    crate::shim_udf_boilerplate!("__repark_array_join__");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let nullable = args.arg_fields.iter().any(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(self.name(), DataType::Utf8, nullable)))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        Ok(arg_types.to_vec())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        if arrays.len() < 2 || arrays.len() > 3 {
+            return Err(DataFusionError::Plan(format!(
+                "'{}' expects 2 or 3 arguments",
+                self.name()
+            )));
+        }
+        let delimiters = string_option_column(&arrays[1], self.name())?;
+        let null_strings = if arrays.len() == 3 {
+            string_option_column(&arrays[2], self.name())?
+        } else {
+            vec![None; arrays[0].len()]
+        };
+        let joined = match arrays[0].data_type() {
+            DataType::List(_) => join_list_rows(
+                as_list_array(arrays[0].as_ref()),
+                &delimiters,
+                &null_strings,
+            )?,
+            DataType::LargeList(_) => join_list_rows(
+                as_large_list_array(arrays[0].as_ref()),
+                &delimiters,
+                &null_strings,
+            )?,
+            other => {
+                return Err(DataFusionError::Plan(format!(
+                    "'{}' expects a list array, got {other}",
+                    self.name()
+                )));
+            }
+        };
+        Ok(ColumnarValue::Array(Arc::new(joined)))
+    }
+}
+
+fn string_option_column(values: &ArrayRef, name: &str) -> Result<Vec<Option<String>>> {
+    match values.data_type() {
+        DataType::Utf8 => Ok(values
+            .as_string::<i32>()
+            .iter()
+            .map(|item| item.map(str::to_owned))
+            .collect()),
+        DataType::Utf8View => Ok(values
+            .as_string_view()
+            .iter()
+            .map(|item| item.map(str::to_owned))
+            .collect()),
+        DataType::LargeUtf8 => Ok(values
+            .as_string::<i64>()
+            .iter()
+            .map(|item| item.map(str::to_owned))
+            .collect()),
+        DataType::Null => Ok(vec![None; values.len()]),
+        other => Err(DataFusionError::Plan(format!(
+            "'{name}' expects a string delimiter, got {other}"
+        ))),
+    }
+}
+
+fn join_list_rows<O: OffsetSizeTrait>(
+    list: &GenericListArray<O>,
+    delimiters: &[Option<String>],
+    null_strings: &[Option<String>],
+) -> Result<StringArray> {
+    let mut builder = StringBuilder::with_capacity(list.len(), list.len() * 8);
+    let mut row = String::new();
+    for index in 0..list.len() {
+        let delimiter = delimiters.get(index).and_then(|item| item.as_deref());
+        let (Some(delimiter), false) = (delimiter, list.is_null(index)) else {
+            builder.append_null();
+            continue;
+        };
+        row.clear();
+        let mut first = true;
+        join_array_value(
+            &mut row,
+            &list.value(index),
+            delimiter,
+            null_strings.get(index).and_then(|item| item.as_deref()),
+            &mut first,
+        )?;
+        builder.append_value(&row);
+    }
+    Ok(builder.finish())
+}
+
+fn join_array_value(
+    row: &mut String,
+    values: &ArrayRef,
+    delimiter: &str,
+    null_string: Option<&str>,
+    first: &mut bool,
+) -> Result<()> {
+    match values.data_type() {
+        DataType::List(_) => {
+            let nested = as_list_array(values.as_ref());
+            for index in 0..nested.len() {
+                if nested.is_null(index) {
+                    write_null_element(row, delimiter, null_string, first);
+                } else {
+                    join_array_value(row, &nested.value(index), delimiter, null_string, first)?;
+                }
+            }
+            Ok(())
+        }
+        DataType::LargeList(_) => {
+            let nested = as_large_list_array(values.as_ref());
+            for index in 0..nested.len() {
+                if nested.is_null(index) {
+                    write_null_element(row, delimiter, null_string, first);
+                } else {
+                    join_array_value(row, &nested.value(index), delimiter, null_string, first)?;
+                }
+            }
+            Ok(())
+        }
+        DataType::FixedSizeList(_, _) => {
+            let nested = as_fixed_size_list_array(values.as_ref());
+            for index in 0..nested.len() {
+                if nested.is_null(index) {
+                    write_null_element(row, delimiter, null_string, first);
+                } else {
+                    join_array_value(row, &nested.value(index), delimiter, null_string, first)?;
+                }
+            }
+            Ok(())
+        }
+        DataType::Dictionary(_, value_type) => {
+            let unkeyed = cast(values.as_ref(), value_type)?;
+            join_array_value(row, &unkeyed, delimiter, null_string, first)
+        }
+        DataType::Null => Ok(()),
+        DataType::Float64 => {
+            let primitive = values.as_primitive::<Float64Type>();
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    write_null_element(row, delimiter, null_string, first);
+                } else {
+                    write_element(row, delimiter, first, |row| {
+                        crate::java_double::with_java_double_text(primitive.value(index), |text| {
+                            row.push_str(text);
+                        });
+                    });
+                }
+            }
+            Ok(())
+        }
+        DataType::Float32 => {
+            let primitive = values.as_primitive::<Float32Type>();
+            for index in 0..primitive.len() {
+                if primitive.is_null(index) {
+                    write_null_element(row, delimiter, null_string, first);
+                } else {
+                    write_element(row, delimiter, first, |row| {
+                        crate::java_double::with_java_float_text(primitive.value(index), |text| {
+                            row.push_str(text);
+                        });
+                    });
+                }
+            }
+            Ok(())
+        }
+        DataType::Utf8 => {
+            for item in values.as_string::<i32>() {
+                write_option_element(row, delimiter, null_string, first, item);
+            }
+            Ok(())
+        }
+        DataType::LargeUtf8 => {
+            for item in values.as_string::<i64>() {
+                write_option_element(row, delimiter, null_string, first, item);
+            }
+            Ok(())
+        }
+        DataType::Utf8View => {
+            for item in values.as_string_view() {
+                write_option_element(row, delimiter, null_string, first, item);
+            }
+            Ok(())
+        }
+        other => {
+            if can_cast_types(other, &DataType::Utf8) {
+                let rendered = cast(values.as_ref(), &DataType::Utf8)?;
+                join_array_value(row, &rendered, delimiter, null_string, first)
+            } else {
+                Err(DataFusionError::Plan(format!(
+                    "unsupported data type in array_join: {other}"
+                )))
+            }
+        }
+    }
+}
+
+fn write_element(
+    row: &mut String,
+    delimiter: &str,
+    first: &mut bool,
+    text: impl FnOnce(&mut String),
+) {
+    if *first {
+        *first = false;
+    } else {
+        row.push_str(delimiter);
+    }
+    text(row);
+}
+
+fn write_null_element(
+    row: &mut String,
+    delimiter: &str,
+    null_string: Option<&str>,
+    first: &mut bool,
+) {
+    if let Some(replacement) = null_string {
+        write_element(row, delimiter, first, |row| row.push_str(replacement));
+    }
+}
+
+fn write_option_element(
+    row: &mut String,
+    delimiter: &str,
+    null_string: Option<&str>,
+    first: &mut bool,
+    item: Option<&str>,
+) {
+    match item {
+        Some(text) => write_element(row, delimiter, first, |row| row.push_str(text)),
+        None => write_null_element(row, delimiter, null_string, first),
+    }
 }
 
 /// `SparkConcat` — zero arguments return `''`, NULL propagates, and output is always `Utf8`.
@@ -89,7 +373,13 @@ impl ScalarUDFImpl for SparkConcat {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        Ok(vec![DataType::Utf8; arg_types.len()])
+        Ok(arg_types
+            .iter()
+            .map(|data_type| match data_type {
+                DataType::Float32 | DataType::Float64 => data_type.clone(),
+                _ => DataType::Utf8,
+            })
+            .collect())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -164,15 +454,39 @@ fn cast_columnar_value_to_utf8(value: &ColumnarValue) -> Result<ColumnarValue> {
             if array.data_type() == &DataType::Utf8 {
                 return Ok(ColumnarValue::Array(Arc::clone(array)));
             }
-            let casted = cast(array.as_ref(), &DataType::Utf8)?;
-            Ok(ColumnarValue::Array(casted))
+            match array.data_type() {
+                DataType::Float64 => Ok(ColumnarValue::Array(Arc::new(
+                    crate::java_double::java_double_strings(array.as_primitive::<Float64Type>()),
+                ))),
+                DataType::Float32 => Ok(ColumnarValue::Array(Arc::new(
+                    crate::java_double::java_float_strings(array.as_primitive::<Float32Type>()),
+                ))),
+                _ => {
+                    let casted = cast(array.as_ref(), &DataType::Utf8)?;
+                    Ok(ColumnarValue::Array(casted))
+                }
+            }
         }
         ColumnarValue::Scalar(scalar) => {
             if matches!(scalar, ScalarValue::Utf8(_)) {
                 return Ok(ColumnarValue::Scalar(scalar.clone()));
             }
-            let casted = scalar.cast_to(&DataType::Utf8)?;
-            Ok(ColumnarValue::Scalar(casted))
+            match scalar {
+                ScalarValue::Float64(value) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(
+                    value
+                        .as_ref()
+                        .map(|item| crate::java_double::java_double_text(*item)),
+                ))),
+                ScalarValue::Float32(value) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(
+                    value
+                        .as_ref()
+                        .map(|item| crate::java_double::java_float_text(*item)),
+                ))),
+                _ => {
+                    let casted = scalar.cast_to(&DataType::Utf8)?;
+                    Ok(ColumnarValue::Scalar(casted))
+                }
+            }
         }
     }
 }

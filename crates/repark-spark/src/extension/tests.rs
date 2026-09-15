@@ -17,7 +17,7 @@ use repark_functions::timestamp_type::{
 use super::SparkExtension;
 
 #[test]
-fn analyzer_configuration_inserts_only_hof_preparation_before_type_coercion() {
+fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion() {
     let original = Analyzer::new().rules;
     let original_names: Vec<String> = original
         .iter()
@@ -34,12 +34,13 @@ fn analyzer_configuration_inserts_only_hof_preparation_before_type_coercion() {
         .iter()
         .position(|name| name == "higher_order_preparation")
         .expect("HOF preparation is installed");
-    assert_eq!(configured_names[position + 1], "type_coercion");
-    let without_preparation: Vec<String> = configured_names
+    assert_eq!(configured_names[position + 1], "spark_float_stringify");
+    assert_eq!(configured_names[position + 2], "type_coercion");
+    let without_insertions: Vec<String> = configured_names
         .into_iter()
-        .filter(|name| name != "higher_order_preparation")
+        .filter(|name| name != "higher_order_preparation" && name != "spark_float_stringify")
         .collect();
-    assert_eq!(without_preparation, original_names);
+    assert_eq!(without_insertions, original_names);
 }
 
 #[test]
