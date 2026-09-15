@@ -475,12 +475,6 @@ def test_create_table_array_and_not_null(spark: ReparkSession) -> None:
     assert columns["id"].nullable is False
 
 
-def test_create_table_array_element_not_null_refuses_loudly(spark: ReparkSession) -> None:
-    """Round-8 L-006: ``ARRAY<INT NOT NULL>`` is a loud parse refusal, not a table."""
-    with pytest.raises(ParseException):
-        spark.sql("CREATE TABLE cta_nn (a ARRAY<INT NOT NULL>) USING iceberg").to_arrow()
-
-
 def test_create_table_map_struct_refuse_loudly(spark: ReparkSession) -> None:
     """C-009/L-004: map/struct schema keeps the engine's loud refusal."""
     map_schema = StructType([StructField("m", MapType(StringType(), IntegerType()))])

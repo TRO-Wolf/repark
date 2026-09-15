@@ -5426,3 +5426,4 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   null-propagation `basis` key (decimal/int/bigint/double; no float — see above).
   pins: decimal-cache-1/C-005, C-007, C-012
 - **FNP-4B remediation (2026-09-15):** added comment lines removed from `_live_parity.py`, `test_columns.py`, `test_errors.py` (ruling 2026-08-26); `_live_parity.py` ceiling 1763 → 1753 after ruff format.
+- **FNP-4B R-16c-13 (2026-09-15, orchestrator):** `test_create_table_array_element_not_null_refuses_loudly` (L-006, oracle Q17-18: Spark also refuses `ARRAY<INT NOT NULL>`) moves from run 16b's `test_catalog_surface_1.py` into `test_fnp_4b_spark_dialect.py`, inside this unit's fence. pins: fnp-4b/C-032
