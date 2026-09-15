@@ -1766,6 +1766,25 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
   `spark.read.jdbc`.
 
+### IO-JDBC-FORMAT-1 — `spark.read.format("jdbc")` routes every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches on the URL — **BACKLOG 2026-09-15**
+
+- **repark** — `spark.read.format("jdbc").option("url", …).load()` is an alias of
+  `format("postgres")` for any URL: a `jdbc:mysql://`, `jdbc:sqlserver://` or
+  `jdbc:postgres://` URL reaches the PostgreSQL option checks (`dbtable` / `query`
+  required, range-bag rules) and then the PostgreSQL connector, while
+  `spark.read.jdbc(url, …)` refuses the same URLs at the call with `NOT_IMPLEMENTED`
+  `{"feature": "jdbc"}` (IO-JDBC-1).
+- **Apache Spark** — both spellings resolve the driver through the JVM `DriverManager` from
+  the URL; a URL without a suitable driver fails `java.sql.SQLException: No suitable driver`.
+  *(oracle: the IO-JDBC-1 cells `jdbc_read_no_driver`, `reader_jdbc_props`, PySpark 4.1.2,
+  run 15b; the `format("jdbc")` spelling shares Spark's `JDBCOptions` path — Spark source
+  knowledge, not a separate cell.)*
+- **Pin** — `python/repark/tests/test_io_jdbc_format_alias.py::test_format_jdbc_non_postgres_url_reaches_the_postgres_option_checks`
+  (codifies today's answer; it reds when the alias applies the URL dispatch).
+- **Rationale** — BACKLOG, owner ruling Q-15B-4 (2026-09-15, report 15b): the alias takes
+  the same URL dispatch as `spark.read.jdbc` in the 1.6 connector work; recorded as a row
+  until then (run 16c).
+
 ---
 
 ## 6. How a row is added, mirrored and retired
