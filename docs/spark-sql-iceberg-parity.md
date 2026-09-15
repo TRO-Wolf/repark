@@ -4999,6 +4999,21 @@ Shared roster pin for every heading:
   Spark adds without difficulty. **A fix does the day arithmetic at day width**, not at
   microsecond width.
 
+### TYPES-GEO-DDL-1 — `DataType.fromDDL` refuses `geometry(n)` / `geography(n)`; the Python type objects and the JSON door answer — **BACKLOG 2026-09-14**
+
+- **repark** — `GeometryType(4326)`, `GeographyType(4326)` and their JSON round trips answer as PySpark 4.1.2 does, but
+  `DataType.fromDDL("g geometry(4326)")`, `fromDDL("geography(4326)")`, `fromDDL("geometry(any)")` and the bare
+  `geometry` / `geography` tokens raise `ValueError: cannot parse datatype`. Since FACADE-4 step 1 every DDL token parses in
+  the Rust type table (`crates/repark-spark/src/type_table/parse.rs`, `parse_atomic_token`), which has no spatial arm.
+- **Apache Spark** — `_parse_datatype_string("g geometry(4326)")` answers
+  `StructType([StructField('g', GeometryType(4326), True)])`. *(oracle: recorded, PySpark 4.1.2, 2026-09-14, cell
+  `types.geo_ddl`; the bare-token and `any` forms are UNMEASURED — Spark's DDL parser runs in the JVM.)*
+- **Pin** — `python/repark/tests/test_types_bases_1.py::test_geometry_ddl_door_blocked`,
+  `python/repark/tests/test_types_bases_1.py::test_spatial_ddl_door_blocked`
+- **Rationale** — BACKLOG, filed by TYPES-BASES-1 (run 15b). The fix is a spatial arm in the Rust type table carrying
+  the same SRID → CRS table as `types_bases.py`; the run's Rust fence did not include `repark-spark` tonight. Spatial
+  column use stays `V3-GEO-1`. The pins codify today's refusal and red when the arm lands.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

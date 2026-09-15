@@ -49,3 +49,59 @@ charter); `TimeType.needConversion` (pre-existing Spark miss, R-1 blocks it);
 
 
 VERDICT: 6 clauses, 6 PROVEN, 0 OPEN, 0 REJECTED.
+
+## Orchestrator rulings (run 15b, G-2)
+
+- R-5 (2026-09-14): after the rebase onto FACADE-4 step 1 (#582) spatial DDL parses only in the Rust type table in
+  `crates/repark-spark`, outside this run's Rust fence (repark-core plan code and repark-python bindings). The unit ships
+  with that door refusing, pinned, and registry row `TYPES-GEO-DDL-1` (BACKLOG); owner question in the run-15b report.
+- R-6 (2026-09-14): the S2-21 perf reviewers do not run on this unit — type objects and a class hierarchy, no data path.
+- R-7 (2026-09-14): Grok critic-logic round 1 found 2 P1 (`_merge_type` mixed SRID, UDT template methods) and 2 P2, fixed in
+  the Devin round that also rebased onto #582; the same critic session re-checked the head: all FIXED, residual L-101 (the
+  registry row — added by the orchestrator) and L-102 P3: a `StructField` holding a user `UserDefinedType` is unhashable
+  (`StructField.__hash__` hashes the dataType; Spark hashes `str(self)`); no repark path hashes fields — noted, not fixed.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: types-bases-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the twenty-eight recorded PySpark 4.1.2 types cells; the isinstance matrix is pinned pair by pair both ways from the fixture, not from the implementation.
+      artifacts: [python/repark/tests/test_types_bases_1.py, python/repark/tests/facade_types_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Every concrete type against every base; TimeType under AnyTimeType; Char/Varchar atomic not string; Null and CalendarInterval not atomic; SRID edge values (False, True, float, string, lowercase any); JSON algorithm refusal; mixed-SRID merges nested in struct, array and map; a working UDT subclass and the bare base.
+      artifacts: [python/repark/tests/test_types_bases_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Pure Python type objects; no Rust, no unwrap, no I/O.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state, threads or async.
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, network or credential surface; UDT jsonValue pickles the user's own class exactly as PySpark does.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 NEEDS_REMEDIATION (2 P1, 2 P2, 1 P3), all fixed with red-first evidence; the same critic session re-checked the rebased head and marked every finding FIXED.
+      artifacts: [task/ledgers/completed/types-bases-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite (6356 passed) and parity suite (757 passed) on the release native module built at FACADE-4 step 1; ruff 0.15.22, check_lib_py, ledger lifecycle and grammar, docs links, owner ruling, example coverage (both new examples executed); comment-ban grep zero hits; size baselines moved down only.
+      artifacts: [docs/examples/types/abstract_bases.py, docs/examples/types/spatial_and_udt.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/types.py DataType, the abstract bases, the spatial types and UserDefinedType (1882-2004), geo_utils.py's SRID table, and _merge_type's spatial arms; FACADE-4's _type_table.py routing was diffed byte for byte against main after the rebase.
+      artifacts: [python/repark/src/repark/spark/types_bases.py, python/repark/src/repark/spark/types.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes and texts (ST_INVALID_SRID_VALUE, ST_INVALID_ALGORITHM_VALUE, CANNOT_PARSE_DATATYPE, NOT_IMPLEMENTED); the two declared or deferred doors have registry rows (TYPES-UDT-1 DECLARED, TYPES-GEO-DDL-1 BACKLOG) and V3-GEO-1 gained the reader-schema pin.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - the first-SRID merge reds the mixed-SRID pins, a refusing UDT toInternal reds the PointUDT table, removing a base from a concrete type's bases reds its matrix row.
+      artifacts: [python/repark/tests/test_types_bases_1.py]
+  complete: true
+```
+
