@@ -165,10 +165,13 @@ def test_expr_syntax_error_raises_parse_exception(spark: ReparkSession) -> None:
 
 
 def test_expr_unresolved_column_raises_analysis_exception(spark: ReparkSession) -> None:
-    # A column-referencing expr has no schema to bind to (F.expr plans against an empty schema);
-    # PySpark raises AnalysisException here, and repark now matches (was ValueError pre-WG-3).
+    # A column-referencing expr defers binding (FNP-4B): construction succeeds, and use
+    # against a frame without the column raises AnalysisException (was ValueError pre-WG-3,
+    # eager AnalysisException pre-FNP-4B).
+    deferred = F.expr("a + 1")
+    df = spark.sql("SELECT 1 AS keep")
     with pytest.raises(AnalysisException):
-        F.expr("a + 1")
+        df.withColumn("s", deferred).to_arrow()
 
 
 # Entry point: DataFrame ops

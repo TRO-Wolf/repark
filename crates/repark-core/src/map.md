@@ -286,7 +286,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: dynflatten-listnull-1/C-002, C-006
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
-  — shared needles).
+  — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote
+  character (embedded backticks double). pins: fnp-4b/C-002
 - `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
   `refuse_contradictory_namespace_location` predicate (and its message helper)
   used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`

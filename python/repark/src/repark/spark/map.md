@@ -21,6 +21,8 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   explicit fallback to string.
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
   escaping. Callers must use these helpers for embedded user names and values.
+  **FNP-4B (2026-09-15):** identifier quoting is backticks (both doors read them as
+  identifiers; the Spark door reads double quotes as strings).
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
   integer knobs (`checked_integral`); numpy `__index__` types run, bool/float/str fail
   with `AnalysisException` / `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` carrying Spark's

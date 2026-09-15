@@ -336,9 +336,9 @@ def expr(sql: str) -> Column:
     """A column from a SQL expression string (PySpark ``functions.expr``).
 
     The string is parsed eagerly, so DataFusion built-in functions and literals resolve
-    (``expr("make_date(2020, 1, 1)")``, ``expr("1 + 1")``). An expression that references a *column*
-    raises here — the DataFrame-bound ``expr`` path that binds column references to the frame
-    arrives with the date-function group (the transform that needs it lands there, not here).
+    (``expr("make_date(2020, 1, 1)")``, ``expr("1 + 1")``). A *column* reference skips eager
+    analysis instead and binds against the consumer frame at ``select`` / ``filter`` time
+    (same case folding as SQL-string predicates).
 
     Projection display matches live PySpark 4.1.2 for bare arithmetic fragments: ``1 + 1`` is
     shown as ``(1 + 1)`` (analyzer paren). Already-parenthesized or non-infix SQL is left as given.

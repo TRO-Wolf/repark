@@ -192,6 +192,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
   bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
+  **FNP-4B (2026-09-15):** the `test_sqp_1_string_literals.py` hash re-baselined for the BL-9/BL-12
+  FIXED flips (the old pins documented this red→green).
   H3-SPILL-1 (2026-09-05): the literal-helper inventory gains
   `bench/spill/cell_worker.py` `sql_string_literal` 1 — the spill harness escapes its own
   warehouse path into `CREATE NAMESPACE … LOCATION`, so it uses the helper rather than a
@@ -200,6 +202,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   table name and any string override into the `CALL … run_maintenance(…)` text through the helper
   rather than an f-string, so the one place a caller's value reaches SQL stays inside the audited
   set. pins: h3-spill-1/C-001, maint-policy-1/C-030
+- `test_cap_1_source_file_line_cap.py` — **FNP-4B (2026-09-15):** the three Rust rows
+1068 → 1065 / 1052 → 1040 / 1084 → 1082 and the `_live_parity.py` row 1778 → 1763 in
+both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b/C-009, C-010
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **REPLACE-LINEAR-1 step 1 critic round (2026-09-14):** `dataframe/core.py` row 4054 → 4044 with the script baseline (the `_join_qualifiers` slot plus minimal call sites for P2-3 multi-name equi-join `replace`; the join-side aliasing, qualifier assignment, and plan-metadata propagation all live in `dataframe/replace_expr.py`). pins: replace-linear-1/C-004
 - `test_cap_1_source_file_line_cap.py` — **REPLACE-LINEAR-1 step 1 (2026-09-14):** `dataframe/core.py` row 4089 → 4054 with the script baseline (the `DataFrame.replace` body moved to `dataframe/replace_expr.py`). pins: replace-linear-1/C-002

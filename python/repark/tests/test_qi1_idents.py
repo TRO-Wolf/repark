@@ -32,32 +32,33 @@ from repark.spark._idents import (
 
 
 def test_always_quote_class_doubles_embedded_quotes() -> None:
-    """Session / dataframe / column / ML class: always double-quote."""
-    assert quote_ident("plain") == '"plain"'
-    assert quote_ident('na"me') == '"na""me"'
-    assert quote_ident("") == '""'
-    assert quote_ident("order") == '"order"'
+    """Session / dataframe / column / ML class: always backtick-quote (FNP-4B)."""
+    assert quote_ident("plain") == "`plain`"
+    assert quote_ident("na`me") == "`na``me`"
+    assert quote_ident('na"me') == '`na"me`'
+    assert quote_ident("") == "``"
+    assert quote_ident("order") == "`order`"
 
 
 def test_quote_if_needed_class_leaves_plain_bare() -> None:
     """Catalog / assign-target class: plain bare stays unquoted."""
     assert quote_ident_if_needed("plain") == "plain"
     assert quote_ident_if_needed("order") == "order"  # bare reserved word stays bare
-    assert quote_ident_if_needed("a b") == '"a b"'
-    assert quote_ident_if_needed('na"me') == '"na""me"'
-    assert quote_ident_if_needed("a.b") == '"a.b"'
+    assert quote_ident_if_needed("a b") == "`a b`"
+    assert quote_ident_if_needed("na`me") == "`na``me`"
+    assert quote_ident_if_needed("a.b") == "`a.b`"
 
 
 def test_quote_column_sql_expr_quotes_per_segment() -> None:
-    assert quote_column_sql_expr("x") == '"x"'
-    assert quote_column_sql_expr("source.name") == '"source"."name"'
-    assert quote_column_sql_expr('a"b.c"d') == '"a""b"."c""d"'
+    assert quote_column_sql_expr("x") == "`x`"
+    assert quote_column_sql_expr("source.name") == "`source`.`name`"
+    assert quote_column_sql_expr("a`b.c`d") == "`a``b`.`c``d`"
 
 
 def test_quote_multipart_catalog_vs_always() -> None:
     assert quote_multipart(["cat", "db", "t"], always=False) == "cat.db.t"
-    assert quote_multipart(["cat", "my-db", "t"], always=False) == 'cat."my-db".t'
-    assert quote_multipart(["cat", "db", "t"], always=True) == '"cat"."db"."t"'
+    assert quote_multipart(["cat", "my-db", "t"], always=False) == "cat.`my-db`.t"
+    assert quote_multipart(["cat", "db", "t"], always=True) == "`cat`.`db`.`t`"
 
 
 # Injection-probe battery (Spark dialect) — every SSOT surface
@@ -67,18 +68,24 @@ def test_quote_multipart_catalog_vs_always() -> None:
 def test_injection_probe_is_single_token_via_ssot(probe: str) -> None:
     quoted = assert_spark_injection_probe_is_single_token(probe)
     # Independent oracle — undouble-only false-passes under-escape.
-    expected = '"' + probe.replace('"', '""') + '"'
+    expected = "`" + probe.replace("`", "``") + "`"
     assert quoted == expected
-    assert '"' not in quoted[1:-1].replace('""', "")
+    assert "`" not in quoted[1:-1].replace("``", "")
+
+
+def test_injection_probe_with_embedded_backtick_doubles() -> None:
+    """A backtick inside a name doubles and stays one token (FNP-4B)."""
+    assert quote_ident("a`b") == "`a``b`"
+    assert assert_spark_injection_probe_is_single_token("a`b") == "`a``b`"
 
 
 def test_injection_under_escape_oracle_would_reject() -> None:
     """Mutation-proof: forget-doubling is not a single token (C1-SEC-001)."""
-    probe = 'id"; evil'
-    under = '"' + probe + '"'
-    correct = '"' + probe.replace('"', '""') + '"'
+    probe = "id`; evil"
+    under = "`" + probe + "`"
+    correct = "`" + probe.replace("`", "``") + "`"
     assert under != correct
-    assert '"' in under[1:-1].replace('""', "")
+    assert "`" in under[1:-1].replace("``", "")
 
 
 def test_probe_tables_lockstep_frozen_with_rust_ssot() -> None:
@@ -127,7 +134,7 @@ def test_functions_column_sql_expr_uses_ssot() -> None:
     from repark.spark import functions as functions_mod
 
     assert functions_mod._quote_column_sql_expr is quote_column_sql_expr
-    assert functions_mod._quote_column_sql_expr("s.x") == '"s"."x"'
+    assert functions_mod._quote_column_sql_expr("s.x") == "`s`.`x`"
 
 
 def test_merge_assign_target_is_quote_if_needed() -> None:
@@ -135,7 +142,7 @@ def test_merge_assign_target_is_quote_if_needed() -> None:
 
     assert merge_mod._quote_assign_target is quote_ident_if_needed
     assert merge_mod._quote_assign_target("id") == "id"
-    assert merge_mod._quote_assign_target("a b") == '"a b"'
+    assert merge_mod._quote_assign_target("a b") == "`a b`"
 
 
 # Path-escape — lockstep with Rust probes table
@@ -182,5 +189,5 @@ def test_polars_join_quote_uses_ssot_for_bare() -> None:
 
     # Mirror the nested helper contract without spinning a full join.
     assert is_plain_ident("id")
-    assert ssot("id") == '"id"'
+    assert ssot("id") == "`id`"
     assert not is_plain_ident("a b")

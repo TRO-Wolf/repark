@@ -149,6 +149,22 @@ pins: rp-4-fork-repin/C-005, C-006
   maps the passthrough parser's reachable `SQL` and `Diagnostic(SQL)` errors from canonical text to
   original source. Planning, execution, shared, and collection errors remain unchanged; a boundary
   pin holds this contract. Secondary rewrites stop mapping only when their SQL bytes change.
+  **FNP-4B (2026-09-15):** the Databricks-lexer canonicalizer — Spark escapes in double-quoted
+  STRING literals (escape-free ones keep their quotes, see the keep-double rule below),
+  `D/F/S/Y/L/BD` numeric suffixes as CASTs, `* EXCLUDE` → `* EXCEPT`, struct
+  call-base field access, the out-of-range `\U` Java artifact, and the `escapedStringLiterals`
+  verbatim mode (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
+  `escaped_string_literals_from_config_map` / `with_escaped_string_literals_config` /
+  `escaped_verbatim_from_options`); `pub` so the binding's `filter_sql` path reuses it.
+  pins: fnp-4b/C-001, C-004, C-005, C-006
+- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** the three secondary token rewrites split out of
+  `spark_literals.rs` for the 1000-line ceiling (909 + 281): numeric suffixes, `* EXCLUDE` →
+  `* EXCEPT`, and call-base struct field access. Shares `LiteralRegion` / `requote_generic`.
+  `byte_offset` resolves exclusive span ends at the input end (struct access as the last
+  fragment text). Keep-double rule (same unit): a lone double-quoted literal without
+  backslashes is never rewritten, so quoted identifiers/aliases keep their positions for the
+  downstream dialect; only Spark escapes rewrite, re-quoted double (single only when the
+  value holds `"`). pins: fnp-4b/C-001, C-004, C-010, BL-9 (follow-up: exponent literals behave as D-suffixed, DOUBLE; the verbatim fast-path gate opens on digit+e/E)
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

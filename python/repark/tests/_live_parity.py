@@ -1485,14 +1485,14 @@ def _collision_frame(engine: Engine) -> Any:
 
 
 def _disc_filter_case_collision_bypasses_repark(engine: Engine) -> None:
-    # Two accepted spellings never reach the SQL-string rewriter, so neither refuses: the Column
-    # form resolves exact-case-first, and an explicitly double-quoted ident is a protected span
-    # DataFusion then resolves case-SENSITIVELY. `id` is 1 and `ID` is 2, so `> 1` discriminates.
+    # The Column form never reaches the SQL-string rewriter and still resolves
+    # exact-case-first (ID-2 remainder). A double-quoted span reads as a STRING literal
+    # since FNP-4B, so comparing it to a number is loud (BL-1 raise-vs-raise precedent).
     src = _collision_frame(engine)
     assert engine.arrow_of(src.filter(src["ID"] > 1)).num_rows == 1, "Column form binds `ID`"
     assert engine.arrow_of(src.filter(src["id"] > 1)).num_rows == 0, "Column form binds `id`"
-    assert engine.arrow_of(src.filter('"ID" > 1')).num_rows == 1, 'quoted "ID" binds `ID`'
-    assert engine.arrow_of(src.filter('"id" > 1')).num_rows == 0, 'quoted "id" binds `id`'
+    _expect_raises(lambda: engine.arrow_of(src.filter('"ID" > 1')), needle="ID")
+    _expect_raises(lambda: engine.arrow_of(src.filter('"id" > 1')), needle="id")
 
 
 def _disc_filter_case_collision_bypasses_spark(engine: Engine) -> None:
@@ -1504,17 +1504,9 @@ def _disc_filter_case_collision_bypasses_spark(engine: Engine) -> None:
     _expect_raises(lambda: engine.arrow_of(src.filter('"ID" > 1')))
 
 
-def _disc_filter_backtick_identifier_repark(engine: Engine) -> None:
-    # Backticks are not a protected span: the token inside them is rewritten and DataFusion
-    # re-quotes it, so it resolves to nothing (No field named """x""").
-    src = engine.session.createDataFrame([(1, 2)], ["x", "b"])
-    _expect_raises(lambda: engine.arrow_of(src.filter("`x` > 0")))
-
-
-def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
-    # Spark's own quoting spelling: it just filters.
-    src = engine.session.createDataFrame([(1, 2)], ["x", "b"])
-    assert engine.arrow_of(src.filter("`x` > 0")).num_rows == 1, "Spark honours backtick idents"
+# `filter_backtick_identifier` converged under FNP-4B (BL-2 FIXED 2026-09-15): both
+# engines filter on the backticked name, pinned JVM-free by
+# test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_a_protected_span.
 
 
 # Disclosure names must match the registry `- `live-mirror: <name>`` bullets exactly.
@@ -1705,21 +1697,14 @@ DISCLOSURES: list[Disclosure] = [
         _disc_filter_case_collision_bypasses_repark,
         _disc_filter_case_collision_bypasses_spark,
         "repark's case-collision refusal covers the bare SQL-string form only: the Column form "
-        "(df[ID]) resolves exact-case-first and an explicitly double-quoted ident resolves "
-        "case-sensitively in DataFusion, both returning rows; Spark 4.1.2 raises "
-        "AMBIGUOUS_REFERENCE for the Column form and reads a double-quoted span as a string "
-        "literal (CAST_INVALID_INPUT under ANSI). Audit G2 — disclosed, not fixed.",
+        "(df[ID]) resolves exact-case-first and still returns rows; an explicitly double-quoted "
+        "span reads as a string literal since FNP-4B and comparing it to a number is loud on "
+        "both doors (BL-1 raise-vs-raise precedent). Spark 4.1.2 raises AMBIGUOUS_REFERENCE "
+        "for the Column form and CAST_INVALID_INPUT for the quoted form under ANSI. Audit G2 "
+        "plus FNP-4B — the Column-form remainder is disclosed, not fixed.",
     ),
-    Disclosure(
-        "filter_backtick_identifier",
-        _disc_filter_backtick_identifier_repark,
-        _disc_filter_backtick_identifier_spark,
-        "backtick-quoted identifiers are not a protected span in repark's filter-predicate "
-        "rewriter, so a backticked ident is rewritten and then re-quoted by DataFusion into a "
-        "triple-double-quoted field name that resolves to nothing; Spark filters normally. "
-        "PRE-EXISTING (not an audit-G2 regression); the fix and its pin belong in a follow-up "
-        "unit.",
-    ),
+    # `filter_backtick_identifier` retired under FNP-4B (BL-2 FIXED 2026-09-15) —
+    # converged, so it no longer belongs in the divergence roster.
     Disclosure(
         "sum_catastrophic_cancellation_fixture",
         _disc_sum_catastrophic_cancellation_repark,

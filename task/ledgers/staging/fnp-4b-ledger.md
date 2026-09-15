@@ -101,3 +101,153 @@ Base-tree check (change stashed, native rebuilt): `test_cache_persist.py::test_d
 - Struct: `named_struct('a', 1)` → `struct<a: int32>`; `.a` on the call result refuses in the
   DataFusion planner while `['a']` and column-form `t.a` work (FNP4B-sql-struct-lit needs a
   call-base field-access rewrite).
+
+## Step-2 implementation (2026-09-15)
+
+D-2: `quote_ident_spark` (Rust) and `_idents.quote_ident` (Python) emit backticks, embedded
+backtick doubled; `repark-core` segment unescaping generalized to the quote char. Backtick
+admissibility proven live on both doors (`SELECT 1 AS \`x\``, `SELECT t.\`id\` …` green native
+AND Spark; escaped backticks parse). Per the brief's admissibility rule every
+expectation below was updated to backticks only after that probe.
+
+MERGE internal-SQL generators routed through `quote_ident`: `match_discovery_sql`,
+`matched_work_sql`, the path-semijoin ON clause, the `insert_sql` sentinel alias, and
+`mor_work_sql`. This fixed 8 of 9 `test_merge_into.py` failures (the ninth was the render-shape
+expectation itself); suite is 12/12. The remaining hardcoded `\"` (`dv_close.rs:926`) is
+test-only on a Generic context and still parses — left.
+
+D-1+D-2 lands the BL-9 fix the registry measured as blocked: the Spark door now lexes `"…"`
+as string literals, so the cross-door G3-E8 quoted-target row (byte-identity between doors) moved to
+backticks, which are identifiers on both doors; `cross_door.rs` is 23/23. SQP-1 pins flipped:
+double-quoted asserts STRING, out-of-range `\U` asserts the `??`/2 Java artifact (renamed
+`..._is_two_replacements`), BL-10 default pin unchanged (still guards `false`), `true`
+carrier pinned in `test_fnp_4b_literals.py` (the BL-10 pin keeps its name and assertions;
+only its docstring now points at the carrier pins). New pins: `test_fnp_4b_spark_dialect.py` (20),
+`test_fnp_4b_literals.py` (34), `spark_dialect.rs` (C-001/C-004/C-005/C-006).
+
+Live re-measure (project instruction required the parity skill over the card's no-JVM note;
+read-only SELECT statements, banner PySpark 4.1.2): BL9-0 `abc`/String, BL9-1 `a"b`, BL9-2 length 3/Int,
+BL9-3 `it's`, BL9-5 `ab`, BL9-6 true/Boolean, BL12 `??`/2, SUF-D 2.5/Double, SUF-L 1/Long,
+ESC-true `\d` verbatim + `'\''` length 2, ESC-false `d` — every flipped pin matches the oracle.
+Bite-proof: the old BACKLOG pins passed pre-fix and assert values mutually exclusive with the
+new pins (identifier-raise vs STRING rows; `?`/1 vs `??`/2); D-1-alone probes recorded
+`length("a\nb")` → 4 and `SELECT 1L` → `No field named "1l"` pre-fix.
+
+Frozen-record coupling honored: `spark_literals.rs` module-doc strings (`The rules (Spark 4.1.2`,
+`<pyspark-4.1.2-oracle>`, `backslash KEPT`, `one astral char`) intact; registry keeps the
+`### BL-9/10/11` headers and all three old pin-name strings; only the
+`test_sqp_1_string_literals.py` sha256 in `test_pr_245_revalidation_record.py` re-baselines
+(old pin docstring: "reds when the FNP-4b fix lands" — it landed).
+
+Size-gate fallout (same unit, mechanical): `spark_literals.rs` hit 1182 lines against the 1000
+default, so the three secondary rewrites (suffixes, `* EXCEPT`, struct field access) moved to a
+new `spark_rewrites.rs` (281 lines; `spark_literals.rs` back to 909, public surface unchanged).
+Fixed engine-internal names (`_file`, `_pos`, `path`, the NMBS sentinel) are now BARE, not
+backticked — bare proven green on both doors, and quoting fixed names cost +7 lines against the
+`merge/mod.rs` exact baseline; user-controlled names still quote via `quote_ident`. The
+`filter_sql` canonicalize block moved to `expr_build::parse_canonical_predicate` for the
+`dataframe.rs` baseline. Ratchets down (sanctioned): `merge/tests/merge.rs` 1068→1065,
+`dataframe.rs` 1084→1082; `merge/mod.rs` and `cross_door.rs` held exact; both size gates green.
+
+## Step-2 continued (2026-09-15): keep-double, struct-at-EOF, F.expr binding
+
+Keep-double redesign (root-caused by 38 `repark-spark` lib failures: the token-level rewrite
+turned identifier-position `"Tgt"`/`"Src"` into strings). A lone double-quoted literal WITHOUT
+backslashes is never rewritten now, so quoted aliases/qualifiers keep their positions for the
+downstream dialect (step-1 behavior); only Spark escapes rewrite, re-quoted double (single
+only when the value holds `"`, e.g. BL9-1 `a"b`). Verbatim doubles never rewrite (Databricks
+keeps backslashes verbatim, identical to Spark-true). 37 of 38 healed; the last was
+`call/run_maintenance.rs` internal `SUM("file_size_in_bytes")` (production SQL, now bare) plus
+the `quote_ident` path-quoters in `call/` (now backticks). Lib suite 958/0.
+
+Struct-at-EOF bug: `byte_offset` could not resolve an exclusive span end sitting exactly at
+the input end (`nth` needs the char to exist), so struct access as the last fragment text
+(`F.expr("named_struct('a', 1).a")`) silently skipped its region. Fixed with a one-past-end
+fallback; unit pin `fragment_struct_call_base_field_access_rewrites_to_subscript` added.
+Oracle (live 4.1.2): Spark rejects `[{x: 10}]` brace literals with PARSE_SYNTAX_ERROR, so the
+explode fixture's move to `ARRAY[named_struct(...)]` is Spark-faithful (repark refuses loud,
+same class).
+
+F.expr binding (`plan_expr_column` + `parse_unresolved_expr`): eager analysis first (literals
+keep eager types); an unresolved-column failure — `Diagnostic`-wrapped included — falls back
+to error-driven discovery of referenced names on a normalization-off context, returning the
+unresolved tree for the consumer to bind under the `Column` exact-case contract. Case is
+preserved because normalization is off in the fallback phase only (eager keeps it for function
+lookup). Uppercase-function-with-columns stays loud (lookup needs normalization), same class
+as before. The two committed eager-raise pins (`test_columns`, `test_errors`) were rewritten
+to the deferred contract — construction succeeds, use against a column-less frame raises
+`AnalysisException` — since no implementation can satisfy both the old raise-at-call pins and
+the C-003 bind-at-select pins; the card's owner shape rule (Python API must answer Spark)
+decides, and Spark defers. All three residual pins green.
+
+Verdicts: C-001..C-006 implemented, green pending the full gates; C-007/C-008 OPEN until
+`cargo test --workspace` and the facade suite report.
+
+## Step-2 triage HALT (2026-09-15, build lane, no commit)
+
+Full facade suite (parity-live excluded): 66 failed, 6025 passed, 39 skipped
+(`/tmp/suite_full.txt` in the clone; Rust workspace status UNVERIFIED this round).
+Failure census: `test_udf` WHERE/group-by 17 (two shapes: 14 ×
+`ParseException ... found: __repark_sql_udf_out_2 at Column 3`, N ×
+`UnsupportedOperationException ... surrounding statement shape`);
+`test_select_global_agg` 12 + `test_e1_errorclass` 1 + `test_df_batch2` 1 +
+`test_facade_2_column_display_goldens` 2 + `test_writer_v2` 1, all display-golden
+shaped (`sum("x")` → ``sum(`x`)``, `"x"" AS y` → backtick form); `test_eager_own_1`
+19 + `test_cache_persist` 3 (`__repark_cache_*` views leak); `test_fnp8*` 3,
+`test_facade_polish` 1, `test_case_insensitive_conform` 1, `test_ml_boost_oracle` 2,
+`test_examples_functions_a` 1, `test_fnp_8_sql_door` 1, `test_e2_readwriter` 1,
+`test_compat_smoke` 1 (4 failed inside the subprocess).
+Root-caused (probe, not yet fixed): the UDF WHERE residual emits backticked
+`` `__repark_sql_udf_out_N` `` and `DataFrame._quote_filter_sql_identifiers`
+re-quotes the span contents (backticks unprotected) into ``` ``...`` ```, which the
+engine reads as one escaped-backtick identifier. Base-tree comparison NOT run, so
+regression-vs-pre-existing is unproven for every other file.
+Questions for the owner: (1) display canonical form — accept backticks and update
+the goldens, or keep double-quote display; (2) UDF residual fix direction —
+protect backtick spans in the filter quoter (recommended) or emit bare residuals;
+(3) whether the cache/eager leaks reproduce on the base tree.
+
+## Follow-up round (2026-09-15, run 15c rulings G-2 + A-1/A-2/A-3)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
+|---|---|---|---|---|
+| C-009 | A-1/BL-2: backtick spans protected in `_quote_filter_sql_identifiers`; the flipped pin asserts the Spark answer on both entry points. | flipped pin red→green; `filter` + `where` suites green | **PROVEN** | Red→green below; `test_filter_predicate_rewrite.py` 36/36. |
+| C-010 | A-2: exponent literals are DOUBLE (plain decimals stay DECIMAL) on the SQL door and `F.expr`; values through `collect()`. | JD-exp pins green both doors; `d_suffix_is_double` unbroken | **PROVEN** | Red→green below; `test_fnp_4b_literals.py` green. |
+
+A-1: two one-line changes in `DataFrame._quote_filter_sql_identifiers` (the only
+`dataframe/core.py` hunk, net-zero lines, ceiling 4044 held): the subpiece split
+also captures `` `(?:[^`]|``)*` `` spans and the passthrough guard accepts a
+leading backtick. Quoting already routes through `_idents.quote_ident`. First
+flip attempt used only the `` `my col` `` shape and passed WITHOUT the hunk
+(`my`/`col` name no column, so nothing re-quoted) — caught by the stash check,
+fixed by adding the `` `x` ``-on-a-frame-with-`x` half, which fails pre-fix
+(doubled backticks) and passes post-fix (2 failed → 2 passed, both entry
+points). Disclosure `filter_backtick_identifier` retired from `_live_parity.py`
+(convergence note kept, cast_date precedent); exact set 10→9; `_live_parity.py`
+baseline 1778→1763 in both tables; BL-2 FIXED. UDF WHERE ParseException shape
+healed by the same hunk (`test_udf.py` 87/87 with the keyword moves below).
+
+A-2: exponent branch in `plan_suffix_regions` (the D-4 pass, so SQL door and
+`F.expr` share it): a whole `Token::Number` that parses as `f64` and holds
+`e`/`E` rewrites to `CAST('<digits>' AS DOUBLE)`, consuming an adjacent
+recognized suffix word with its own target (`1e200D` still DOUBLE — the
+`d_suffix_is_double` regression this first caused, then healed). The fast-path
+gate `sql_may_have_numeric_suffix` missed exponents (`1.0E6` has no
+digit+suffix-letter pair), so exponent-only statements never reached the pass —
+gate now also opens on digit+`e`/`E`. Red: `Decimal precision 325 exceeds ...`
+on `4.9E-324`. Pins: `spark_dialect.rs::exponent_literal_is_double` (types AND
+values incl. `decimal(2,1)` for `1.5`, plus `CAST(1.0E6 AS DOUBLE)`),
+`test_fnp_4b_literals.py` SQL-door + `F.expr` pins (collect only, per
+JAVA-DOUBLE-STR-1). Rewrite-text unit pin in `spark_literals.rs`.
+
+A-3: `_RUST_BASELINES` mirror ratcheted to the script's numbers
+(1065/1040/1082); the same run exposed the `_PYTHON_BASELINES` mirror
+(`_live_parity.py` 1778→1763) and the `test_explode_rewrite.py` +2 overrun from
+the Step-2 fixture move, fixed line-neutral (single-line `sql(...)`, 98 chars).
+Cap test 23/23; both size gates clean.
+
+UDF keyword residuals (5): `"from"`/`"and"`/`"or"`/`"when"`/`"date"` in UDF
+WHERE now read as string literals per BL-9 (intended D-1 consequence; live Spark agrees
+double-quoted is a string literal — re-measured for BL-9 2026-09-15). Tests
+moved to the Spark-faithful backticked spelling; the `when` bare-form
+refusal half is untouched. No implementation change.

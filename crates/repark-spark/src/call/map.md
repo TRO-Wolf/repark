@@ -75,6 +75,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `skipped`, never `planned`.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012
   pins: orphan-s3tables-1/C-003
+  **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
+  fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps
@@ -144,6 +146,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
   pins: ap-3/C-001, C-006
   pins: ap-1-close-1/C-001, C-002
+  **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
+  fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
 - `plan_partitioning_bytes.rs` — **AP-1 step 2 (2026-09-11):** the `byte_ratio` measurement
   behind the step-2 byte model. For every live data file's `file_path` it opens the table's
   own `FileIO`, takes the file size from `metadata()`, and range-reads only the parquet tail

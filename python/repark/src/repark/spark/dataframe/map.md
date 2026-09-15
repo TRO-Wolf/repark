@@ -705,7 +705,8 @@ that held the comment (pins: comment-core-1/C-003).
   rewrite uses `origin_plan_id` and `origin_field`, not this fragment.
 - `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and
   null literals. Protect single-quoted SQL string literals, then double-quoted idents
-  inside the rest.
+  inside the rest. **FNP-4B (2026-09-15):** backtick-quoted spans are protected exactly
+  like double-quoted spans (BL-2 FIXED); schema-bound idents quote with backticks.
 - `_rebind_stable_name_column`: Origin pins a specific side/engine field — skip
   bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the
   bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved

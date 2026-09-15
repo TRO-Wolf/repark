@@ -44,6 +44,9 @@ impl SessionExtension for SparkExtension {
             repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
         let config = apply_spark_float_as_decimal(config);
         let config = apply_spark_parser_dialect(config);
+        let verbatim =
+            crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
+        let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

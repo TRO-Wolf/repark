@@ -1,5 +1,10 @@
 # map — scripts/
 
+FNP-4B (2026-09-15): `check_rust_file_size.py` `merge/tests/merge.rs` 1068 → 1065,
+`column/mod.rs` 1052 → 1040, `dataframe.rs` 1084 → 1082; `check_lib_py.py`
+`_live_parity.py` 1778 → 1763 (backtick-disclosure retire). The CAP-1 mirror rows
+moved with them.
+pins: fnp-4b/C-009, C-010
 REPLACE-LINEAR-1 step 1 critic round (2026-09-14): `check_lib_py.py`
 `dataframe/core.py` 4054 → 4044 (the `_join_qualifiers` slot plus minimal call
 sites so `replace` binds duplicate-name equi-join output by relation qualifier

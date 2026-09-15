@@ -49,7 +49,9 @@ TABLE, and the DML passthrough. The unit battery is under `src/tests/` (navigati
   `SparkDialect` (adapts to `repark_core::SqlDialect`), `SparkExtension` (installs the function
   registry + analyzer rules + cardinality config + `parse_float_as_decimal=true`, and composes `repark_ta::TaExtension`), the
   Spark-ism normalizers + the `spark_ast` passthrough. **U5:** `SparkExtension::configure`
-  installs `spark.sql.ansi.enabled` (default TRUE).
+  installs `spark.sql.ansi.enabled` (default TRUE). **FNP-4B (2026-09-15):** `configure` also
+  wires the Databricks session parser dialect and the `escapedStringLiterals` build-conf carrier
+  (default `false`); the router canonicalizes every statement once at the front door.
 - **Does not own:** the shared Iceberg machinery (repark-iceberg); the function / analyzer
   implementations (repark-functions); TA kernels (repark-ta); the ANSI door (no door↔door edge).
 - **Public inputs:** a `SessionContext` + `CatalogRegistry` + Spark-dialect SQL text; via the seams, a

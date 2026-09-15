@@ -73,7 +73,8 @@ holds behavior observed from outside the crate.
   no Spark-only `<=>`), and
   `cross_door_g3e8_refusals_render_identically` (the permanent v1 valve: mixed AND/OR, nested,
   scalar, ANY/ALL, UPDATE NOT IN; IN / NOT IN / EXISTS /
-  correlated IN / UPDATE IN execute) plus executed columns
+  correlated IN / UPDATE IN execute; the quoted-target input uses backticks since FNP-4B —
+  double quotes are strings on the Spark door) plus executed columns
   `cross_door_g3e8_not_in_delete_executes_identically`,
   `cross_door_g3e8_exists_delete_executes_identically`,
   `cross_door_g3e8_correlated_in_delete_executes_identically`,

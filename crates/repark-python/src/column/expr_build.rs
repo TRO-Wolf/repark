@@ -1,11 +1,15 @@
 //! Expression-construction helpers for [`super::PyColumn`].
 
-use datafusion::arrow::datatypes::{DataType, TimeUnit};
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::{DFSchema, SchemaError, TableReference};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
-use datafusion::logical_expr::expr::{Alias, NullTreatment, WindowFunction};
+use datafusion::logical_expr::expr::{Alias, Cast, NullTreatment, WindowFunction};
 use datafusion::logical_expr::{
     Case, Expr, ExprFunctionExt, Operator, WindowFunctionDefinition, binary_expr, lit,
 };
@@ -28,6 +32,116 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
     })
 }
 
+/// Parse a free-SQL filter predicate through the Spark-door lexer, mapping downstream
+/// locations back to the caller's text. The output is Generic-plannable by construction.
+pub(crate) fn parse_canonical_predicate(
+    frame: &datafusion::prelude::DataFrame,
+    predicate: &str,
+) -> datafusion::error::Result<Expr> {
+    let canonical = repark_spark::spark_literals::canonicalize(predicate)?;
+    frame.parse_sql_expr(canonical.as_ref()).map_err(|error| {
+        repark_spark::spark_literals::translate_downstream_error(
+            predicate,
+            canonical.as_ref(),
+            error,
+        )
+    })
+}
+
+/// Plan `SELECT (<expr>)` for `F.expr`, returning the projection expression.
+///
+/// Literals and builtins analyze eagerly (post-analysis types included). A column the empty
+/// schema cannot resolve falls back to [`parse_unresolved_expr`] so the consumer frame binds
+/// it with its own case folding; any other failure stays loud at this call.
+pub(crate) async fn plan_expr_column(
+    context: &SessionContext,
+    select_sql: &str,
+    canonical: &str,
+) -> PyResult<Expr> {
+    let plan = match context.sql(select_sql).await {
+        Ok(frame) => {
+            match repark_functions::analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            {
+                Ok(analyzed) => analyzed,
+                Err(error) => {
+                    if missing_column(&error).is_some() {
+                        return parse_unresolved_expr(canonical)
+                            .map_err(crate::datafusion_to_py_err);
+                    }
+                    return Err(crate::datafusion_to_py_err(error));
+                }
+            }
+        }
+        Err(error) => {
+            if missing_column(&error).is_some() {
+                return parse_unresolved_expr(canonical).map_err(crate::datafusion_to_py_err);
+            }
+            return Err(crate::datafusion_to_py_err(error));
+        }
+    };
+    let expr = strip_outer_alias(extract_projection_expr(&plan)?);
+    Ok(
+        match plan
+            .schema()
+            .fields()
+            .first()
+            .map(|field| field.data_type().clone())
+        {
+            Some(DataType::Utf8View) => Expr::Cast(Cast::new(Box::new(expr), DataType::Utf8)),
+            _ => expr,
+        },
+    )
+}
+
+/// The missing `(qualifier, name)` when `error` is an unresolved-column failure, else `None`.
+fn missing_column(
+    error: &datafusion::error::DataFusionError,
+) -> Option<(Option<TableReference>, String)> {
+    match error {
+        datafusion::error::DataFusionError::SchemaError(inner, _) => match inner.as_ref() {
+            SchemaError::FieldNotFound { field, .. } => {
+                Some((field.relation.clone(), field.name.clone()))
+            }
+            _ => None,
+        },
+        datafusion::error::DataFusionError::Diagnostic(_, inner) => missing_column(inner),
+        _ => None,
+    }
+}
+
+/// Parse `canonical` with a discovered dummy schema: each unresolved-column failure names one
+/// more column, so the loop converges on exactly the referenced names (lambdas bind internally
+/// and never surface). Dummy `Utf8` types never reach the tree — conversion is name-based and
+/// the consumer re-analyzes. Normalization stays off so the user's spelling (`ID`, not `id`)
+/// reaches the consumer, matching the `Column` exact-case contract. Caps at 64 columns; stalls
+/// stay loud. Uppercase function names with columns stay loud: lookup needs normalization.
+fn parse_unresolved_expr(canonical: &str) -> datafusion::error::Result<Expr> {
+    let context = sql_context(canonical, false)?;
+    repark_functions::register_all(&context);
+    let mut qualified: Vec<(Option<TableReference>, Arc<Field>)> = Vec::new();
+    loop {
+        let schema =
+            DFSchema::new_with_metadata(qualified.clone(), HashMap::new()).map_err(|error| {
+                datafusion::error::DataFusionError::Plan(format!(
+                    "F.expr discovered-column schema failed: {error}"
+                ))
+            })?;
+        match context.state().create_logical_expr(canonical, &schema) {
+            Ok(expr) => return Ok(expr),
+            Err(error) => {
+                let Some((relation, name)) = missing_column(&error) else {
+                    return Err(error);
+                };
+                let next = (relation, Arc::new(Field::new(name, DataType::Utf8, true)));
+                if qualified.len() >= 64 || qualified.contains(&next) {
+                    return Err(error);
+                }
+                qualified.push(next);
+            }
+        }
+    }
+}
+
 /// Drop one outer alias so a standalone expression can be re-aliased by the facade.
 pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     match expr {
@@ -36,10 +150,14 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
     }
 }
 
-pub(super) fn sql_context(sql: &str) -> datafusion::error::Result<SessionContext> {
+pub(super) fn sql_context(
+    sql: &str,
+    normalize_idents: bool,
+) -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect =
-        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Generic);
+        repark_spark::dialect_for_executing_parse(sql, datafusion::config::Dialect::Databricks);
+    config.options_mut().sql_parser.enable_ident_normalization = normalize_idents;
     let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
         datafusion::optimizer::Analyzer::new().rules,
     )?;

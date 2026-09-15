@@ -1,9 +1,9 @@
 //! Shared Spark/DataFusion identifier quoting and path-escape needles (CQ-006/007).
 
-/// Double-quote a SQL identifier for the Spark / DataFusion dialect.
+/// Backtick-quote a SQL identifier for the Spark / DataFusion dialect.
 #[must_use]
 pub fn quote_ident_spark(name: &str) -> String {
-    format!("\"{}\"", name.replace('"', "\"\""))
+    format!("`{}`", name.replace('`', "``"))
 }
 
 /// Kind of path-escape reject for an identifier segment (shared needle table).
@@ -58,28 +58,29 @@ pub mod probes {
 mod tests {
     use super::*;
 
-    /// Spark `quote_ident`: plain + embedded quote + injection payloads stay single tokens.
+    /// Spark `quote_ident`: plain + embedded backtick + injection payloads stay single tokens.
     #[test]
     fn quote_ident_spark_doubles_embedded_quotes() {
-        assert_eq!(quote_ident_spark("plain"), "\"plain\"");
-        assert_eq!(quote_ident_spark("na\"me"), "\"na\"\"me\"");
+        assert_eq!(quote_ident_spark("plain"), "`plain`");
+        assert_eq!(quote_ident_spark("na`me"), "`na``me`");
+        assert_eq!(quote_ident_spark("na\"me"), "`na\"me`");
         assert_eq!(
             quote_ident_spark(r#"id"; DROP TABLE x; --"#),
-            "\"id\"\"; DROP TABLE x; --\""
+            "`id\"; DROP TABLE x; --`"
         );
     }
 
-    /// Injection probes: quoted form starts/ends with `"` and round-trips the payload.
+    /// Injection probes: quoted form starts/ends with a backtick and round-trips the payload.
     #[test]
     fn spark_injection_probes_are_single_quoted_tokens() {
         for probe in probes::SPARK_INJECTION_PROBES {
             let quoted = quote_ident_spark(probe);
             // Independent oracle: undouble round-trip alone false-passes under-escape.
-            let expected = format!("\"{}\"", probe.replace('"', "\"\""));
+            let expected = format!("`{}`", probe.replace('`', "``"));
             assert_eq!(quoted, expected, "under-quote residual for {probe:?}");
             let inner = &quoted[1..quoted.len() - 1];
             assert!(
-                !inner.replace("\"\"", "").contains('"'),
+                !inner.replace("``", "").contains('`'),
                 "unpaired quote inside token for {probe:?}: {quoted}"
             );
         }

@@ -107,8 +107,14 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   UDAF call. pins: perf-approxpct-1/C-002
   **FNP-8 (2026-09-06):** `sql_context` builds the `PyColumn.sql` throwaway
   context with `repark_spark::dialect_for_executing_parse`, so column-free `F.expr` with
-  `x -> y` parses as a lambda. `mod.rs` stays at its exact 1052 baseline — the call site
+  `x -> y` parses as a lambda. `mod.rs` stays at its exact baseline — the call site
   is a one-line swap. pins: fnp-8/C-004
+  **FNP-4B (2026-09-15):** `plan_expr_column` analyzes eagerly, then falls back on an
+  unresolved-column failure (`Diagnostic`-wrapped included) to `parse_unresolved_expr`,
+  which discovers referenced names through typed errors on a normalization-off context and
+  returns the unresolved tree for the consumer frame to bind (exact-case `Column`
+  contract). `PyColumn.sql` canonicalizes fragments first (struct-at-EOF included).
+  pins: fnp-4b/C-003
   **FNP-8 repair (2026-09-07):** the throwaway context builds its standard analyzer vector with
   the same pre-coercion HOF preparation as a normal Spark session. pins: fnp-8/C-003, C-004
   **FNP-8-REVIEW (2026-09-07):** the nested-HOF refusal names the Column door as the

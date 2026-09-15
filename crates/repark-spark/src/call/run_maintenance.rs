@@ -189,7 +189,7 @@ fn apply_inline(base: &TablePolicy, inline: &InlineOverrides) -> Result<TablePol
 }
 
 fn quote_ident(part: &str) -> String {
-    format!("\"{}\"", part.replace('"', "\"\""))
+    format!("`{}`", part.replace('`', "``"))
 }
 
 fn metadata_path(catalog_name: &str, ident: &TableIdent, suffix: &str) -> String {
@@ -216,9 +216,8 @@ async fn sum_metadata_bytes(
     let predicate = filter
         .map(|clause| format!(" WHERE {clause}"))
         .unwrap_or_default();
-    let sql = format!(
-        r#"SELECT COALESCE(SUM("file_size_in_bytes"), 0) AS "bytes" FROM {path}{predicate}"#
-    );
+    let sql =
+        format!(r#"SELECT COALESCE(SUM(file_size_in_bytes), 0) AS bytes FROM {path}{predicate}"#);
     let frame = Box::pin(crate::router::execute(ctx, catalogs, &sql)).await?;
     let batches = frame.collect().await?;
     let mut total: i64 = 0;

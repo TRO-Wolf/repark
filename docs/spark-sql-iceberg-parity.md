@@ -1465,19 +1465,18 @@ the pin rather than obeying it.
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
-- **repark** — backticks are not a protected span in the SQL-string filter rewriter, so the token
-  inside them is rewritten and then re-quoted by DataFusion into a triple-double-quoted field name
-  that resolves to nothing: a backticked identifier in a filter string fails with
-  `No field named """x"""`.
+- **repark** — FIXED 2026-09-15 (**FNP-4B**): a backtick-quoted span in the SQL-string
+  filter rewriter passes through untouched, exactly like a double-quoted span, and schema-bound
+  identifiers quote with backticks — `filter("`my col` > 2")` filters on the spaced column.
+  The retired live-mirror `filter_backtick_identifier` converged, so the divergence roster no
+  longer carries it; convergence is pinned JVM-free (no live leg needed).
 - **Apache Spark** — backticks are its own quoting spelling; the predicate simply filters.
-  *(oracle: live.)*
-- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_not_a_protected_span`
-- `live-mirror: filter_backtick_identifier`
-- **Rationale** — BACKLOG, intent to FIX. Pre-existing rather than introduced (the rewriter never
-  handled backticks), and unrelated to the case-collision work that surfaced it — which is why it
-  is a backlog row and not part of
-  [ID-2](#id-2--the-case-collision-refusal-covers-the-sql-string-form-only).
-  The fix is to treat a backticked span the way a double-quoted span is already treated.
+  *(oracle: `<pyspark-4.1.2-oracle>` — cell `FNP4B-filter-bt`; brief-oracle agreement
+  re-confirmed 2026-09-15.)*
+- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_backtick_quoted_identifier_is_a_protected_span`
+- **Rationale** — FIXED. The fix treats a backticked span the way a double-quoted span was
+  already treated, exactly as this row prescribed; the old disclosed-hole pin flipped red→green
+  with the fix.
 
 ### BL-3 — `MERGE` cardinality check fires on a lone unconditional `DELETE`
 
@@ -4091,31 +4090,33 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### BL-9 — a double-quoted string literal is an identifier on the SQL door
 
-- **repark** — the Spark SQL door reads `"abc"` as a double-quoted **identifier**, so
-  `spark.sql('SELECT "abc"')` fails with `No field named abc`, and `"a\"b"` never becomes the
-  string `a"b`. SQP-1 canonicalises **single**-quoted literals only; double-quoted text is left
-  exactly as written.
+- **repark** — FIXED 2026-09-15 (**FNP-4B**): the Spark door wires `Dialect::Databricks`, so
+  `"abc"` lexes as a STRING literal with Spark escapes — `SELECT "abc"` is `abc`,
+  `length("a\nb")` is 3, `"it\'s"` is `it's`. The ANSI door still reads `"…"` as identifiers,
+  and engine-internal SQL quotes identifiers with backticks, which both doors read as
+  identifiers — the two conditions this row's rationale measured as blocking.
 - **Apache Spark** — `"abc"` is a STRING literal (`spark.sql.ansi.doubleQuotedIdentifiers` is off
   by default): `SELECT "abc"` is `abc`, `length("a\nb")` is 3, `"it\'s"` is `it's`.
-  *(oracle: `<pyspark-4.1.2-oracle>` — E17 / E18 / U16.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_an_identifier`
-- **Rationale** — BACKLOG, intent to FIX with **FNP-4b**. The fix is to wire the Spark parser
-  dialect so `"…"` lexes as a STRING, which cannot land until repark's own internally-generated
-  SQL stops quoting identifiers with ANSI double quotes (`extension.rs::apply_spark_parser_dialect`
-  is measured-blocked on exactly this). Not this unit's — SQP-1 touches the single-quoted lexer at
-  the front door, and a double-quoted change belongs to the write path that owns the internal SQL.
+  *(oracle: `<pyspark-4.1.2-oracle>` — E17 / E18 / U16; re-measured live 2026-09-15, banner 4.1.2.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_a_string`
+  (supersedes `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_an_identifier`);
+  door pins `python/repark/tests/test_fnp_4b_spark_dialect.py` (BL9-*, FNP4B-*).
+- **Rationale** — FIXED. The wire landed with the backtick internal-SQL move in the same unit,
+  exactly the order this row prescribed; the old BACKLOG pin flipped red→green with the fix.
 
 ### BL-10 — `spark.sql.parser.escapedStringLiterals=true` has no carrier
 
-- **repark** — there is no builder or runtime carrier for the flag, so every session processes
-  escapes (the `false` behavior SQP-1 implements): `spark.sql("SELECT '\\d'")` is `d`, always.
+- **repark** — FIXED 2026-09-15 (**FNP-4B**): the flag rides the session build conf (the way
+  `spark.sql.ansi.enabled` is read), default `false`, `notabool` refused loud; `true` keeps
+  backslashes verbatim (`'\d'` is `\d`, `'\''` is `\'`). There is still no runtime `SET`
+  for it (the SET door belongs to B-TZ-5).
 - **Apache Spark** — with `escapedStringLiterals=true`, the lexer keeps the backslash verbatim:
   `'\d'` is `\d` (length 2) and `'\''` is `\'`. The default is `false`, which SQP-1 matches.
-  *(oracle: `<pyspark-4.1.2-oracle>` — E20 / E21.)*
+  *(oracle: `<pyspark-4.1.2-oracle>` — E20 / E21; re-measured live 2026-09-15, banner 4.1.2.)*
 - **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_escaped_string_literals_flag_has_no_carrier`
-- **Rationale** — BACKLOG. The default (`false`) is the migrated-job default and the only measured
-  contract SQP-1 was scoped to; the `true` legacy mode needs a config carrier and a second lexer
-  path. Recorded so the carrier lands with its behavior rather than as a silent surprise.
+  (default-`false` door); `true`-carrier pins in `python/repark/tests/test_fnp_4b_literals.py`
+- **Rationale** — FIXED. The carrier landed with its behavior (both modes pinned) rather than as
+  a silent surprise, exactly as this row required; the only remainder is runtime `SET`.
 
 ### BL-11 — numeric → `BINARY` under `spark.sql.ansi.enabled=false` refuses rather than encodes
 
@@ -4132,22 +4133,19 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### BL-12 — an out-of-range `\U` escape becomes one `?` where Spark emits a 2-char Java artifact
 
-- **repark** — a `\UXXXXXXXX` escape whose value is not a Unicode scalar (past `U+10FFFF`) becomes
-  a single `?` (`UNREPRESENTABLE`, U+003F): `spark.sql("SELECT '\U00110000'")` is one character and
-  `length('\U00110000')` = 1. The single home of the rule is `push_code_point` in
-  `crates/repark-spark/src/spark_literals.rs`; SQP-1 chose `?` so the result stays sane and
-  single-homed rather than reproducing a Java `char[]` artifact. The in-scope valid-scalar `\U`
+- **repark** — FIXED 2026-09-15 (**FNP-4B**): a `\UXXXXXXXX` escape past `U+10FFFF` reproduces
+  Spark's Java artifact — `spark.sql("SELECT '\U00110000'")` is `??` (two characters) and
+  `length('\U00110000')` = 2. The single home of the rule stays `push_code_point` in
+  `crates/repark-spark/src/spark_literals.rs`. The in-scope valid-scalar `\U`
   (U5) and the lone-surrogate → `?` case (`hex('\ud83d')` = `3F`) already match Spark.
 - **Apache Spark** — Spark keeps the raw code units and its Java UTF-8 encoder replaces each
   unpaired/oversized unit with `?`, so an out-of-range `\U` yields **two** characters:
   `length('\U00110000')` = 2 and `hex('\U00110000')` = `3F3F` (and `hex('\UFFFFFFFF')` = `ED9EBF3F`,
-  a longer artifact). *(oracle: `<pyspark-4.1.2-oracle>`.)*
-- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_one_replacement`
-- **Rationale** — BACKLOG, cosmetic-artifact direction. An out-of-range `\U` is a malformed escape
-  a migrated job effectively never writes; both engines produce a replacement, and repark's single
-  `?` is a saner, single-homed choice than a 2-char Java artifact. Recorded so the exact artifact
-  lands with its own pin if a job ever depends on it. This is the single home of the divergence
-  the `spark_literals` module doc previously only mentioned.
+  a longer artifact). *(oracle: `<pyspark-4.1.2-oracle>`; re-measured live 2026-09-15, banner 4.1.2.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_two_replacements`
+  (renamed from `test_out_of_range_unicode_escape_is_one_replacement`, flipped with the fix)
+- **Rationale** — FIXED. A migrated job now depends on the exact artifact byte-for-byte; the old
+  single-`?` pin flipped red→green with the fix.
 
 ### BL-13 — `try_avg(INTERVAL)` refuses pending FNP-11
 
