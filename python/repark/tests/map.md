@@ -4728,6 +4728,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **DOOR-CONVERGE-2 (2026-09-15):** the descending-`sequence` pin now expects the
   converged behavior (count-down, illegal-step raise) — registry DC2-SEQUENCE-1
   supersedes FNP9-SEQUENCE-1.
+  **JAVA-DOUBLE-FD-1 (2026-09-15):** the `to_json` JDK-spelling pin now expects the
+  converged longhand cells (`8.409999999999999E21`, `9.999999999999999E22`) —
+  registry FNP10-JAVA-DOUBLE-TEXT-1 is FIXED.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
   pins: door-converge-2/C-003
 
@@ -5307,6 +5310,25 @@ through `core` or the package. pins: eager-budget-1/C-010
   (`LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes raising `CAST_INVALID_INPUT`),
   and the JAVA-DOUBLE-FD-1 backlog pins — value AND type throughout.
   pins: java-double-str-1/C-009, C-010, C-011, C-012, C-013, C-014
+  **JAVA-DOUBLE-FD-1 close-out (2026-09-15):** the backlog pins flipped to equality —
+  longhand cells answer FloatingDecimal text, `%f` answers HALF_UP `0.13`.
+- [test_java_double_fd_1.py](test_java_double_fd_1.py) — **JAVA-DOUBLE-FD-1
+  (2026-09-15):** JDK-longhand DOUBLE/FLOAT text, Java `Formatter` HALF_UP
+  `%.Nf`, and Java-suffixed STRING-to-DOUBLE/FLOAT casts, measured against
+  `fixtures-batch10.json` cells `J10-fd-*` / `J10-format-string-f` and the run-16a
+  `deg_inf_spark_oracle.json` `DEGI-cast-*` cells (PySpark 4.1.2). SQL CAST and
+  `F.col` casts pin value AND Arrow type on both ANSI settings. The C-004
+  before/after perf pair is recorded in the unit ledger's clause evidence.
+  pins: java-double-fd-1/C-003, C-004, C-005, C-006
+  **Close-out (2026-09-15):** all 10 pins green on both doors with ANSI on and
+  off; the file is ruff-format clean.
+  **Round 2 (2026-09-15):** Q19 reviewer cells — NaN takes no sign prefix,
+  `%F` refuses, `#` forces the point, suffix casts over real columns.
+  L-004/L-001/L-002 landed with their Q19 cells pinned on both doors.
+  L-003: the six column pin functions cover the eight Q19 cells on both doors
+  with value, Arrow type and nullability. The suffix pin is test_q19_suffix_col_ok
+  after a lint rename.
+  pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording
