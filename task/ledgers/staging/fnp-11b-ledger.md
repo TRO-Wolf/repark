@@ -72,6 +72,10 @@ oracle; edits to `dataframe/**`, `column.py`, `session/**`, `catalog.py`,
 - D-10 BL-14 is a planner seam if the interval unit is lost before the kernel:
   HALT is not required — pin the Python door where reachable, leave BL-14 OPEN
   with the exact seam named for run 16c, and continue.
+- D-11 (run 16a orchestrator, 2026-09-15): step 2 answers the `unix_timestamp` format
+  argument, so the EX-28 refusal pin `test_examples_functions_b.py::test_unix_timestamp_format_refuses`
+  went red; the pin is retired and registry row `EX-FN-21` flips to FIXED now (ahead of the
+  step-7 flip in C-008) with the unit's oracle cells as its pin.
 
 ## PROPOSITION LEDGER — FNP-11B — 2026-09-15
 

@@ -156,7 +156,7 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [dates_more.py](dates_more.py) — `F.add_months` from month ends both directions,
   `F.make_interval` shifting a date and a timestamp (the string-cast arm diverges,
   EX-FN-19), `F.unix_timestamp` / `F.to_unix_timestamp` on the default pattern
-  (the format argument is EX-FN-21), and `F.try_to_time` matching Spark's
+  (the format argument is EX-FN-21, FIXED 2026-09-15 by FNP-11B), and `F.try_to_time` matching Spark's
   `UNSUPPORTED_TIME_TYPE`. `F.months_between` (EX-FN-11), `F.make_timestamp`
   (EX-FN-10) and `F.try_to_timestamp` (EX-FN-20) stay on the backlog.
   pins: ex-25-functions-a/C-004
