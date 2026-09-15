@@ -16,6 +16,7 @@ mod ml;
 mod plan_introspect;
 mod session;
 mod session_sources;
+mod text_io;
 mod type_bridge;
 
 use datafusion::error::DataFusionError;
@@ -134,6 +135,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     ml::register(module)?;
     plan_introspect::register(module)?;
     session_sources::register(module)?;
+    text_io::register(module)?;
     type_bridge::register(module)?;
     Ok(())
 }

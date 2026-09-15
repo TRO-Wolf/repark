@@ -315,6 +315,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: nullability-2/C-006
   pins: csv-infer-perf-1/C-002, C-005
   pins: torture-1/C-018, C-020
+- `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan and writer. The scan
+  is a `TableProvider` over sorted local files (hidden `_`/`.` sidecars skipped; globs,
+  remote paths, and missing paths refuse loud) serving one nullable `value` Utf8 column
+  through `StreamingTableExec` with one partition: universal `\n`/`\r\n`/`\r` splitting
+  (or one custom `lineSep`) with one trailing terminator dropped, `wholetext` one row per
+  file, chunked reads with separator hold-back so batches stream without buffering a file
+  (wholetext excepted), invalid UTF-8 failing loud. The writer checks one string column
+  first (Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text naming the first offender),
+  then collects into `part-*.txt` (NULL rows write empty lines, every row terminated;
+  an empty frame still writes one empty part). `ReparkSession::read_text` lives here as
+  an inherent impl so `session.rs` keeps its size; Rust tests cover the split arms, the
+  error text, and the round trip.
+  pins: io-text-1/C-001, C-002
 - `spark_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** Spark-style nullability
   derivation. `relax_schema_to_nullable` marks every field nullable over
   struct/list/map (map keys stay required — Arrow forbids nullable map keys); the walk

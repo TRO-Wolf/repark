@@ -1840,6 +1840,42 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   in 1.6. The PostgreSQL read path keeps its `format('postgres')` spelling beside
   `spark.read.jdbc`.
 
+### IO-TEXT-GZIP-1 — text writes refuse compression; Spark writes `.txt.gz`
+
+- **repark** — `DataFrameWriter.text(path, compression=...)` (and
+  `format("text").save` with a `compression` option) answers only `none` / `uncompressed`
+  (plain `part-*.txt`). Any other codec raises `AnalysisException`
+  (`DataFrameWriter.text option 'compression' is not supported yet`). A compressor needs a
+  new dependency and `Cargo.toml` is frozen for this unit, so loud refusal is the honest
+  shape, never silent plain bytes behind a gzip request.
+- **Apache Spark** — `compression="gzip"` writes `part-*.txt.gz` files. *(oracle: live
+  PySpark 4.1.2, local[2], UTC, 2026-09-14, run 15b `facade_reader_writer_oracle.json`
+  `text_compression` cell.)*
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_compression_gzip_refused`
+- **Rationale** — DECLARED, 2026-09-14 (io-text-1). Revisit when the workspace vendors a
+  compressor; the pin then flips to Spark's `.txt.gz` listing.
+
+### IO-TEXT-SQL-1 — `SELECT * FROM text.\`<path>\`` refuses; the planner owns that door
+
+- **repark** — `spark.sql("SELECT * FROM text.`<path>`")` raises `AnalysisException`
+  (`table 'datafusion.text.<path>' not found`). The path-format table route belongs to the
+  SQL planner lane, so this unit pins today's refusal instead of teaching it.
+- **Apache Spark** — answers the file's lines as `struct<value:string>`.
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_sql_door_pins_today_refusal`
+- **Rationale** — DECLARED, 2026-09-14 (io-text-1). The pin reds the day the planner
+  routes `text.` paths, and the row retires with it.
+
+### IO-TEXT-PART-1 — `partitionBy` text writes refuse; Spark lays out hive dirs
+
+- **repark** — `df.write.partitionBy(...).text(path)` raises `AnalysisException`
+  (`DataFrameWriter.text with partitionBy(...) is not supported yet`). Partitioned text
+  layout is a future seed; refusing beats writing an unpartitioned dir behind a
+  partitioning request.
+- **Apache Spark** — writes `key=value/` leaf dirs with `part-*` files inside.
+- **Pin** — `python/repark/tests/test_io_text_1.py::test_text_partitionby_refused`
+- **Rationale** — DECLARED, 2026-09-14 (io-text-1). Revisit with the partitioned layout;
+  the pin then flips to the leaf listing.
+
 ---
 
 ## 6. How a row is added, mirrored and retired

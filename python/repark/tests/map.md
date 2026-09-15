@@ -1863,6 +1863,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `DUPLICATED_ARTIFACT` arm, `render`'s `type`-check-first order, and `tvf.json_tuple`'s
   string-literal-Column field conversion (R-4/R-5/R-6).
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- `test_io_text_1.py` + `facade_reader_writer_oracle.json` — **IO-TEXT-1 (2026-09-14):**
+  the `text` reader/writer card against the run-15b live-PySpark-4.1.2 fixture copied
+  unchanged. Reads pin the universal-newline split with one trailing terminator dropped,
+  `lineSep`, `wholetext`, path lists, directories, `struct<value:string>`, and
+  `format("text").load`; engine file-scope options fail loud. Writes pin the round trip
+  with null-as-empty, Spark's `UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE` text on the first
+  non-string column, `part-*.txt` bytes, `lineSep` joins, save modes, and
+  `format("text").save`. The gzip refusal (IO-TEXT-GZIP-1), the `text.` SQL-door refusal
+  (IO-TEXT-SQL-1), the `partitionBy` refusal (IO-TEXT-PART-1), and the glob/remote
+  refusals pin today's answers. The fixture row and registry rows are the docs half,
+  and the neighboring reader/writer suites stay green around it.
+  pins: io-text-1/C-001, C-002, C-003, C-004
 - `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
   octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
   octo C2: eqNullSafe(None), between inclusive/inverted;
