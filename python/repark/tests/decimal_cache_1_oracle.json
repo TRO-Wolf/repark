@@ -298,5 +298,27 @@
   "sql_type": "decimal(12,2)",
   "sql_value": "882.80",
   "cache_value": "882.80"
+ },
+ {
+  "input": "decimal(38,10)",
+  "op": "-p",
+  "facade_type": "decimal(38,10)",
+  "facade_value": "-176.5600000000",
+  "sql": "-price",
+  "sql_type": "decimal(38,10)",
+  "sql_value": "-176.5600000000",
+  "cache_value": "-176.5600000000",
+  "basis": "Spark UnaryMinus keeps the child type"
+ },
+ {
+  "input": "decimal(10,2)",
+  "op": "-p",
+  "facade_type": "decimal(10,2)",
+  "facade_value": "-176.56",
+  "sql": "-price",
+  "sql_type": "decimal(10,2)",
+  "sql_value": "-176.56",
+  "cache_value": "-176.56",
+  "basis": "Spark UnaryMinus keeps the child type"
  }
 ]

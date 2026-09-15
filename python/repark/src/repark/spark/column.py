@@ -396,9 +396,9 @@ class Column:
     def __neg__(self) -> Column:
         """Unary minus (PySpark ``Column.__neg__`` → ``-col``).
 
-        Value via ``lit(0) - self`` (existing binary ``sub``; no native unary-minus API).
-        Display name is the live-recorded PySpark form ``negative(x)`` (not ``(- x)`` /
-        ``(0 - x)``). The native expression is **aliased** to that display string so
+        Value via a native unary-minus expression, so decimal inputs keep their type.
+        Display name is the live-recorded PySpark form ``negative(x)`` (not ``(- x)``).
+        The native expression is **aliased** to that display string so
         ``df.select(-df.x).columns == ['negative(x)']`` and nested forms compose
         (``-(-x)`` → ``negative(negative(x))``, ``F.sum(-df.x)`` → ``sum(negative(x))``).
         """

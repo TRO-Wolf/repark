@@ -1,6 +1,6 @@
 """DECIMAL-CACHE-1 pins: every oracle decimal cell on both doors and every action.
 
-pins: decimal-cache-1/C-005
+pins: decimal-cache-1/C-005, C-007
 """
 
 from __future__ import annotations
@@ -57,6 +57,8 @@ def _facade_expression(operation: str) -> Any:
         return F.col("price") - 1
     if operation == "*col":
         return F.col("price") * F.col("price")
+    if operation == "-p":
+        return -F.col("price")
     return F.col("price") * F.lit(5).cast("decimal(1,0)")
 
 

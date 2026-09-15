@@ -154,6 +154,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **FACADE-2 step 2b (2026-09-12):** `alias` keeps `sql_expr` as a Python passthrough
   (`self.sql_expr_part()` — reuse, not assembly) instead of round-tripping the string
   through Rust; the native `alias` returns `(PyColumn, spark_display)`. pins: facade-2/C-013
+  **DECIMAL-CACHE-1 remediation (2026-09-15):** `__neg__` documents the native
+  unary-minus expression (decimal inputs keep their type, Spark `UnaryMinus` parity);
+  the expression itself lives in `display.rs`. pins: decimal-cache-1/C-007
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,

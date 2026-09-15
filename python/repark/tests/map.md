@@ -5279,9 +5279,16 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
   `.cache().collect()`, `.persist().collect()` and `collect()` — values as `Decimal`
   strings, types via `df.schema[...]` — plus the original report shape
   (`withColumns({"new_price": F.col("price") * 5}).eager()` on `DECIMAL(38,10)`).
-  pins: decimal-cache-1/C-005, C-006
+  **Remediation (2026-09-15):** two unary-minus cells (`-p` on `(10,2)` / `(38,10)`,
+  basis "Spark UnaryMinus keeps the child type") on both doors, and `.cache().collect()`
+  is asserted against the cell `cache_value` while the other actions assert their own
+  value fields.
+  pins: decimal-cache-1/C-005, C-006, C-007
 - [decimal_cache_1_oracle.json](decimal_cache_1_oracle.json) — **DECIMAL-CACHE-1 (2026-09-15):**
   the 30 live-PySpark oracle cells (six input types under `* 5`, `+ 1`, `- 1`, `* price`,
-  `* CAST(5 AS DECIMAL(1,0))`) driving `test_decimal_cache_1.py`; recorded evidence, never
-  hand-edited.
-  pins: decimal-cache-1/C-005
+  `* CAST(5 AS DECIMAL(1,0))`) driving `test_decimal_cache_1.py`; those 30 are recorded
+  evidence, never hand-edited.
+  **Remediation (2026-09-15):** two appended `-p` cells carrying a `basis` key (Spark
+  `UnaryMinus` keeps the child type; values are the negated input row, cross-checked
+  against the SQL door which the logic critic verified against live Spark).
+  pins: decimal-cache-1/C-005, C-007
