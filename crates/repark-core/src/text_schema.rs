@@ -35,6 +35,39 @@ pub(crate) fn text_schema_error() -> Error {
 }
 
 #[allow(clippy::missing_errors_doc)]
+fn overlay_partition_row(
+    final_fields: &[Field],
+    final_types: &[DataType],
+    displays: &[Option<String>],
+    current: &[PartitionValue],
+    current_raw: &[Option<String>],
+    zone: Tz,
+) -> Result<Vec<PartitionValue>> {
+    let mut row = Vec::with_capacity(final_fields.len());
+    for (index, field) in final_fields.iter().enumerate() {
+        let Some(display) = displays[index].as_deref() else {
+            let kept = current.get(index).cloned().unwrap_or(PartitionValue::Null);
+            row.push(kept);
+            continue;
+        };
+        let raw = current_raw.get(index).and_then(|slot| slot.as_ref());
+        let Some(text) = raw else {
+            row.push(PartitionValue::Null);
+            continue;
+        };
+        let Some(typed) = cast_raw_partition_value(text, &final_types[index], zone) else {
+            return Err(Error::Iceberg(invalid_partition_message(
+                text,
+                display,
+                field.name(),
+            )));
+        };
+        row.push(typed);
+    }
+    Ok(row)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub(crate) fn apply_user_text_schema(
     files: Vec<PathBuf>,
     partitions: DiscoveredPartitions,
@@ -111,27 +144,14 @@ pub(crate) fn apply_user_text_schema(
         let current = partitions.values.get(file).unwrap_or(&empty_values);
         let empty_raw: Vec<Option<String>> = Vec::new();
         let current_raw = partitions.raw.get(file).unwrap_or(&empty_raw);
-        let mut row = Vec::with_capacity(final_fields.len());
-        for (index, field) in final_fields.iter().enumerate() {
-            let Some(display) = displays[index].as_deref() else {
-                let kept = current.get(index).cloned().unwrap_or(PartitionValue::Null);
-                row.push(kept);
-                continue;
-            };
-            let raw = current_raw.get(index).and_then(|slot| slot.as_ref());
-            let Some(text) = raw else {
-                row.push(PartitionValue::Null);
-                continue;
-            };
-            let Some(typed) = cast_raw_partition_value(text, &final_types[index], zone) else {
-                return Err(Error::Iceberg(invalid_partition_message(
-                    text,
-                    display,
-                    field.name(),
-                )));
-            };
-            row.push(typed);
-        }
+        let row = overlay_partition_row(
+            &final_fields,
+            &final_types,
+            &displays,
+            current,
+            current_raw,
+            zone,
+        )?;
         final_values.insert(file.clone(), row);
     }
     for file in partitions.values.keys() {

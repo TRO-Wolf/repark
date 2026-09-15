@@ -81,7 +81,7 @@ pub(crate) async fn append_remaining_sorted(
     for batch in &ordered {
         for row in 0..batch.num_rows() {
             let key = render_partition_key(
-                &batch,
+                batch,
                 row,
                 tail.partition_at,
                 tail.partition_columns,
@@ -117,7 +117,7 @@ pub(crate) async fn append_remaining_sorted(
             })?;
             write_partition_body_row(
                 writer,
-                &batch,
+                batch,
                 tail.body_at,
                 tail.body_type,
                 row,
@@ -142,7 +142,7 @@ mod tests {
         crate::ReparkSession::builder().build().unwrap()
     }
 
-    async fn leaf_stats(target: &Path) -> (usize, usize, usize) {
+    fn leaf_stats(target: &Path) -> (usize, usize, usize) {
         let mut leaves = 0usize;
         let mut files = 0usize;
         let mut rows = 0usize;
@@ -191,7 +191,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(leaf_stats(&target).await, (300, 300, 1200));
+        assert_eq!(leaf_stats(&target), (300, 300, 1200));
         for key in [0, 256, 299] {
             let body =
                 std::fs::read_to_string(target.join(format!("k=k{key}")).join("part-00000.txt"))
@@ -228,6 +228,6 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(leaf_stats(&target).await, (256, 256, 512));
+        assert_eq!(leaf_stats(&target), (256, 256, 512));
     }
 }

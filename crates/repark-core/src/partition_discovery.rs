@@ -445,6 +445,35 @@ pub(crate) fn invalid_partition_message(raw: &str, display: &str, column: &str) 
     )
 }
 
+fn conflicting_names_message(
+    lists: &[Vec<String>],
+    dir_by_list: &HashMap<Vec<String>, PathBuf>,
+) -> String {
+    let mut message = String::from(
+        "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n",
+    );
+    for (index, keys) in lists.iter().enumerate() {
+        let _ = writeln!(
+            message,
+            "\tPartition column name list #{index}: {}",
+            keys.join(", ")
+        );
+    }
+    message.push_str(
+        "\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n",
+    );
+    for (index, keys) in lists.iter().enumerate() {
+        if index > 0 {
+            message.push('\n');
+        }
+        if let Some(dir) = dir_by_list.get(keys) {
+            let _ = write!(message, "\tfile:{}", dir.display());
+        }
+    }
+    message.push_str(" SQLSTATE: KD009");
+    message
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn discover_partitions(
     root: &Path,
@@ -487,27 +516,10 @@ pub(crate) fn discover_partitions(
                 .cmp(&right.len())
                 .then(left.join(", ").cmp(&right.join(", ")))
         });
-        let mut message = String::from(
-            "[CONFLICTING_PARTITION_COLUMN_NAMES] Conflicting partition column names detected:\n\n",
-        );
-        for (index, keys) in seen_lists.iter().enumerate() {
-            let _ = writeln!(
-                message,
-                "\tPartition column name list #{index}: {}",
-                keys.join(", ")
-            );
-        }
-        message.push_str(
-            "\nFor partitioned table directories, data files should only live in leaf directories.\nAnd directories at the same level should have the same partition column name.\nPlease check the following directories for unexpected files or inconsistent partition column names:\n\n",
-        );
-        for (index, keys) in seen_lists.iter().enumerate() {
-            if index > 0 {
-                message.push('\n');
-            }
-            let _ = write!(message, "\tfile:{}", dir_by_list[keys].display());
-        }
-        message.push_str(" SQLSTATE: KD009");
-        return Err(Error::Iceberg(message));
+        return Err(Error::Iceberg(conflicting_names_message(
+            &seen_lists,
+            &dir_by_list,
+        )));
     }
     let mut fields = Vec::with_capacity(names.len());
     let mut types: HashMap<String, DataType> = HashMap::new();

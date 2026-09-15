@@ -78,7 +78,7 @@ def test_text_probe5_date_schema_date(spark: ReparkSession, tmp_path: Path) -> N
 
 
 def test_text_probe5_date_schema_timestamp(spark: ReparkSession, tmp_path: Path) -> None:
-    """cell text_probe5_date_schema_timestamp — date-only value is midnight session zone. pins: io-text-1/X-1"""
+    """cell text_probe5_date_schema_timestamp — date-only is midnight zone. pins: io-text-1/X-1"""
     import datetime
     import re
     import time
@@ -177,15 +177,11 @@ def test_text_probe5_escaped_schema_string(spark: ReparkSession, tmp_path: Path)
     )
 
 
-def test_text_probe5_default_partition_schema_int(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
-    """cell text_probe5_default_partition_schema_int — default marker stays NULL. pins: io-text-1/X-1"""
+def test_text_probe5_default_partition_schema_int(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe5_default_partition_schema_int — default stays NULL. pins: io-text-1/X-1"""
     root = tmp_path / "knull"
     (root / "k=__HIVE_DEFAULT_PARTITION__").mkdir(parents=True)
-    (root / "k=__HIVE_DEFAULT_PARTITION__" / "part-00000.txt").write_text(
-        "nul\n", encoding="utf-8"
-    )
+    (root / "k=__HIVE_DEFAULT_PARTITION__" / "part-00000.txt").write_text("nul\n", encoding="utf-8")
     _result_pin(
         spark.read.schema("value string, k int").text(str(root)),
         "text_probe5_default_partition_schema_int",
@@ -237,10 +233,8 @@ def test_text_probe5_nonleaf_data_file(spark: ReparkSession, tmp_path: Path) -> 
     assert raised.value.getSqlState() == expected["sqlstate"]
 
 
-def test_text_probe5_nonleaf_success_marker_only(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
-    """cell text_probe5_nonleaf_success_marker_only — markers never count as data. pins: io-text-1/X-3"""
+def test_text_probe5_nonleaf_success_marker_only(spark: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe5_nonleaf_success_marker_only — markers are not data. pins: io-text-1/X-3"""
     root = tmp_path / "nonleaf_success"
     (root / "k=x" / "n=1").mkdir(parents=True)
     (root / "k=x" / "_SUCCESS").write_text("", encoding="utf-8")
