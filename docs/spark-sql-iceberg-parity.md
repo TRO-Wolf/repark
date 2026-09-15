@@ -1959,10 +1959,9 @@ the pin rather than obeying it.
   type name, and SQLSTATE. ANSI-off keeps no separate path: the kernel always takes
   the ANSI-on shape, and the `*-nonansi` fixture cells (NULL skip, `'1.5'` truncates
   to 1) are not re-pinned — the door has no runtime ANSI-off switch
-  (SET-ANSI-RUNTIME-1). `concat(BINARY, BINARY)` types STRING on the SQL door where
-  Spark answers BINARY (measured 2026-09-15); owner: DOOR-CONVERGE-2 (run 16c) —
-  pinned by `test_concat_binary_types_string_expected_divergence`, which reds when
-  `concat` converges.
+  (SET-ANSI-RUNTIME-1). `concat(BINARY, BINARY)` answers BINARY on the SQL door as Spark does
+  (measured 2026-09-15; converged by DOOR-CONVERGE-2 #622, oracle Q12-13) —
+  pinned by `test_concat_binary_types_binary_converged_door_converge_2`.
 
 ### FNP8-NULLABILITY — higher-order result metadata retains inherited nullable fields
 

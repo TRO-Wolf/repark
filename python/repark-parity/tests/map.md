@@ -802,3 +802,4 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).
 - **FNP-11A (2026-09-15, on 440b2773):** the CAP-1 table mirrors the `functions_expr.py` ratchet to 2235 lines.
+- `test_cap_1_source_file_line_cap.py` — **DOOR-CONVERGE-2 (#622, 2026-09-15):** the `crates/repark-python/src/column/mod.rs` mirror row 1052 → 1036 matches the script baseline (ratchet down). The `analyzer.rs` row 1142 → 1150 is the one-time grant R-1 (Q-15c-4).

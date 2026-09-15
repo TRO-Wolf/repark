@@ -334,12 +334,12 @@ def test_construct_agg_answers_numeric_trimmed_and_null(
     assert count_cell(spark, sql) == want
 
 
-def test_concat_binary_types_string_expected_divergence(spark: ReparkSession) -> None:
-    """pins: fnp-6d-followup-1/C-007; expected divergence DOOR-CONVERGE-2."""
+def test_concat_binary_types_binary_converged_door_converge_2(spark: ReparkSession) -> None:
+    """pins: fnp-6d-followup-1/C-007; door-converge-2/C-001 converged BINARY (Q12-13)."""
     table = spark.sql(
         "SELECT concat(bitmap_construct_agg(0), X'01') b FROM VALUES (1) AS t(x)"
     ).toArrow()
-    assert table.schema.field("b").type == pa.string()
+    assert table.schema.field("b").type == pa.binary()
 
 
 @pytest.fixture
