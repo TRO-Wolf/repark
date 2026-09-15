@@ -1865,16 +1865,6 @@ def log1p(col: Column | str) -> Column:
     return _scalar("log1p", col)
 
 
-def degrees(col: Column | str) -> Column:
-    """Radians to degrees (PySpark ``functions.degrees``)."""
-    return _as_column_arg(col, as_lit=False) * lit(180) / pi()
-
-
-def radians(col: Column | str) -> Column:
-    """Degrees to radians (PySpark ``functions.radians``)."""
-    return _as_column_arg(col, as_lit=False) * pi() / lit(180)
-
-
 def nvl2(col1: Column | str, col2: Column | str, col3: Column | str) -> Column:
     """If ``col1`` is not null return ``col2`` else ``col3`` (PySpark ``functions.nvl2``)."""
     return when(~isnull(col1), _as_column_arg(col2, as_lit=False)).otherwise(

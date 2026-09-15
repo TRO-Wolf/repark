@@ -122,8 +122,15 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `when(c < 0, 0 - c).otherwise(c)` rewrite embedded its child 3× per level, so nested
   `F.abs` chains were exponential in native memory and aborted the process at depth ~14
   (run 9 OBS-R9-6 / INC-R9-1). pins: abs-expr-1/C-002, C-003
-- `functions_agg.py` — aggregate-function re-exports.
-- `functions_bitwise.py` — bitwise scalar wrappers.
+- `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
+  `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
+  exact `FutureWarning` on every call; it reaches `functions.py` through this module's
+  `install_into` (functions.py sits at its baseline, so new names install instead of
+  importing). pins: fnp-alias-1/C-001, C-003
+- `functions_bitwise.py` — bitwise scalar wrappers. **FNP-ALIAS-1 (2026-09-15):**
+  `shiftLeft`/`shiftRight`/`shiftRightUnsigned` are the deprecated camelCase aliases of the
+  Spark-equal snake_case kernels and warn Spark's exact `FutureWarning` on every call; they
+  reach `functions.py` through this module's `install_into`. pins: fnp-alias-1/C-001, C-003
 - `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
   (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
   pins: fnp-9-collections-json/C-006
@@ -148,6 +155,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
   embedded exactly once (linear). pins: abs-expr-1/C-002, C-004
+  **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move to `functions_math.py` (this file sat
+  exactly on its ceiling; the baseline ratchets 2247 → 2237 in `check_lib_py.py` and the CAP-1
+  mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its
+  import blocks, the tail gains a third module-handle line for the new `install_into` modules,
+  paid by one narration comment line.
 - `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
   `select_with_stack_if_present`. Installed last onto `functions.py`. pins: perf-unpivot-1/C-004
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
@@ -221,7 +233,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   pins: fnp-8/C-003
 - `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
   pins: fnp-7-try-inversions/C-013, C-016
-- `functions_math.py` — mathematical and trigonometric wrappers.
+- `functions_math.py` — mathematical and trigonometric wrappers. **FNP-ALIAS-1 (2026-09-15):**
+  `degrees`/`radians` move here from `functions_expr.py` (functions_expr sat exactly on its
+  ceiling) and stop composing `(x * 180) / pi()`. The engine's `degrees` scalar has no
+  `call_scalar` dispatch arm and Rust is fenced, so the wrapper is one multiply by the
+  precomputed double `180.0/pi` (Rust `f64::to_degrees`'s exact form) — measured bit-equal to
+  the SQL-door kernel and to live PySpark 4.1.2 on every oracle cell, including INT input
+  (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's
+  `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the
+  deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py`
+  through this module's `install_into`. pins: fnp-alias-1/C-001, C-002, C-003, C-004
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the

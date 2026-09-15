@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import math
+import warnings
+from typing import Any
+
 from repark.spark.column import Column
-from repark.spark.functions import _as_column_arg, _scalar
+from repark.spark.functions import _as_column_arg, _scalar, lit
 
 
 def bin(col: Column | str) -> Column:
@@ -145,3 +149,59 @@ def width_bucket(
     ``F.width_bucket(F.lit(5.0), F.lit(0.0), F.lit(10.0), 5)`` is ``3``.
     """
     return _scalar("width_bucket", v, min, max, numBucket)
+
+
+_DEGREES_PER_RADIAN: float = 180.0 / math.pi
+_RADIANS_PER_DEGREE: float = math.pi / 180.0
+
+
+def _rescaled(display_name: str, col: Column | str, factor: float) -> Column:
+    """Multiply the column by a precomputed factor under Spark's ``NAME(x)`` display."""
+    column = _as_column_arg(col, as_lit=False)
+    result = column * lit(factor)
+    display = f"{display_name}({column.spark_wrap_display_part()})"
+    return Column(
+        result._inner,
+        spark_display=display,
+        projection_name=display,
+        sql_expr=result.sql_expr_part(),
+        stable_name=False,
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable and not column._is_aggregate,
+        has_free_attribute=column._has_free_attribute,
+        has_ungroupable=column._has_ungroupable,
+        partition_transform=column._partition_transform,
+    )
+
+
+def degrees(col: Column | str) -> Column:
+    """Radians to degrees (PySpark ``functions.degrees``)."""
+    return _rescaled("DEGREES", col, _DEGREES_PER_RADIAN)
+
+
+def radians(col: Column | str) -> Column:
+    """Degrees to radians (PySpark ``functions.radians``)."""
+    return _rescaled("RADIANS", col, _RADIANS_PER_DEGREE)
+
+
+def toDegrees(col: Column | str) -> Column:  # noqa: N802
+    """Radians to degrees (PySpark ``functions.toDegrees``; deprecated alias of ``degrees``)."""
+    warnings.warn("Deprecated in 2.1, use degrees instead.", FutureWarning, stacklevel=2)
+    return degrees(col)
+
+
+def toRadians(col: Column | str) -> Column:  # noqa: N802
+    """Degrees to radians (PySpark ``functions.toRadians``; deprecated alias of ``radians``)."""
+    warnings.warn("Deprecated in 2.1, use radians instead.", FutureWarning, stacklevel=2)
+    return radians(col)
+
+
+INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians")
+
+
+def install_into(namespace: dict[str, Any], exported: list[str]) -> None:
+    """Copy this module's deprecated aliases onto the canonical functions module."""
+    for name in INSTALL_NAMES:
+        namespace[name] = globals()[name]
+        if name not in exported:
+            exported.append(name)

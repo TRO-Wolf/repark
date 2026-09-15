@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import warnings
+from typing import Any
+
 from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg, _scalar, _thread_origin, lit
 
@@ -215,3 +218,36 @@ def bitmap_count(col: Column | str) -> Column:
     ``F.bitmap_count(F.unhex(F.lit('FF')))`` is ``8``.
     """
     return _scalar("bitmap_count", col)
+
+
+INSTALL_NAMES: tuple[str, ...] = ("shiftLeft", "shiftRight", "shiftRightUnsigned")
+
+
+def shiftLeft(col: Column | str, numBits: int) -> Column:  # noqa: N802, N803
+    """Signed left shift (PySpark ``functions.shiftLeft``; deprecated alias of ``shiftleft``)."""
+    warnings.warn("Deprecated in 3.2, use shiftleft instead.", FutureWarning, stacklevel=2)
+    return shiftleft(col, numBits)
+
+
+def shiftRight(col: Column | str, numBits: int) -> Column:  # noqa: N802, N803
+    """Signed right shift (PySpark ``functions.shiftRight``; deprecated alias of ``shiftright``)."""
+    warnings.warn("Deprecated in 3.2, use shiftright instead.", FutureWarning, stacklevel=2)
+    return shiftright(col, numBits)
+
+
+def shiftRightUnsigned(col: Column | str, numBits: int) -> Column:  # noqa: N802, N803
+    """Unsigned right shift (PySpark ``functions.shiftRightUnsigned``; deprecated)."""
+    warnings.warn(
+        "Deprecated in 3.2, use shiftrightunsigned instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return shiftrightunsigned(col, numBits)
+
+
+def install_into(namespace: dict[str, Any], exported: list[str]) -> None:
+    """Copy this module's deprecated aliases onto the canonical functions module."""
+    for name in INSTALL_NAMES:
+        namespace[name] = globals()[name]
+        if name not in exported:
+            exported.append(name)

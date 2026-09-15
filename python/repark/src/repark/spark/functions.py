@@ -1156,9 +1156,6 @@ column = col
 """PySpark ``functions.column`` — ``builtin.py`` defines it as a bare alias of ``col``."""
 
 
-# Scalar wrappers over engine calls and Column methods.
-
-
 def _as_column_arg(argument: Column | str | int | float | bool | None, *, as_lit: bool) -> Column:
     """Coerce a function argument: column name → col, or force lit when ``as_lit``."""
     if isinstance(argument, Column):
@@ -1359,7 +1356,6 @@ from repark.spark.functions_expr import (  # noqa: E402
     datediff,
     dayname,
     decode,
-    degrees,
     desc,
     desc_nulls_first,
     desc_nulls_last,
@@ -1448,7 +1444,6 @@ from repark.spark.functions_expr import (  # noqa: E402
     power,
     printf,
     quote,
-    radians,
     raise_error,
     rand,
     randn,
@@ -1541,8 +1536,10 @@ from repark.spark.functions_lambda import (  # noqa: E402
 )
 from repark.spark.functions_math import (  # noqa: E402
     bin,
+    degrees,
     factorial,
     hex,
+    radians,
     rint,
     unhex,
     width_bucket,
@@ -1957,6 +1954,7 @@ __all__ = [
     "zeroifnull",
 ]
 # fmt: off
-from repark.spark import functions_declared as _fd, functions_json as _fj  # noqa: E402, I001
-from repark.spark import functions_lambda as _fl, functions_stack as _fk, functions_try as _ft  # noqa: E402
-_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk)]
+from repark.spark import functions_agg as _fa, functions_bitwise as _fb, functions_declared as _fd  # noqa: E402, I001
+from repark.spark import functions_json as _fj, functions_lambda as _fl  # noqa: E402
+from repark.spark import functions_math as _fm, functions_stack as _fk, functions_try as _ft  # noqa: E402
+_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk, _fa, _fb, _fm)]
