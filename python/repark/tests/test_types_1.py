@@ -235,10 +235,10 @@ def test_narrowed_literal_against_decimal_matches_on_the_sql_door() -> None:
 
 
 def test_facade_decimal_plus_literal_skips_min_precision() -> None:
-    """pins: types-1/C-001 — facade decimal + lit(1) answers (13,2) (TY-10: Spark (11,2))."""
+    """pins: types-1/C-001, decimal-cache-1/C-002 — facade + lit(1) is (11,2) like Spark."""
     frame = _seed(_session())
     facade = frame.select((F.col("b").cast("decimal(10,2)") + F.lit(1)).alias("r"))
-    assert _frame_type(facade) == ("decimal128(13, 2)", True)
+    assert _frame_type(facade) == ("decimal128(11, 2)", True)
     assert facade.collect()[0][0] == Decimal("11.00")
 
 

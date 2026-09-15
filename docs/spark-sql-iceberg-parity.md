@@ -912,18 +912,19 @@ them, and the document is ordered by surface, never by date.
 
 ### TY-10 — facade `decimal + lit(1)` skips literal min-precision
 
-- **repark** — `F.col("b").cast("decimal(10,2)") + F.lit(1)` answers `decimal128(13, 2)`,
-  the typed-INT width, while the SQL door's `CAST(b AS DECIMAL(10, 2)) + 1` answers
-  `decimal128(11, 2)`. The facade literal never presents the bare-literal shape the
-  min-precision arm matches, so the typed arm fires instead. Predates TYPES-1 (facade
-  literals were `Int32` before narrowing); TYPES-1 left the facade shape alone.
+- **repark** — **FIXED 2026-09-15 (DECIMAL-CACHE-1).** `F.col("b").cast("decimal(10,2)") +
+  F.lit(1)` answers `decimal128(11, 2)` with `11.00`, like the SQL door and like Spark:
+  `SparkDecimalPrecision` is now also seated before DataFusion's default `type_coercion`,
+  so it sees the bare `Int32` literal before coercion pre-wraps it as `DECIMAL(10,0)`
+  (which the late seat cannot tell apart from an explicit user cast). Was `decimal128(13,
+  2)` (the typed-INT width).
 - **Apache Spark** — answers `decimal128(11, 2)` on both doors with the same values.
   *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1 round-4 probe on the shared
   int/bigint/string seed.)*
-- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`.
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Min-precision matching is
-  decimal-precision territory; widening the arm to facade literal shapes is its own unit.
-  pins: types-1/C-001
+- **Pin** — `python/repark/tests/test_types_1.py::test_facade_decimal_plus_literal_skips_min_precision`
+  (name kept; now asserts the Spark type).
+- **Rationale** — FIXED. The widening unit TY-10 named was DECIMAL-CACHE-1 (C-002).
+  pins: types-1/C-001, decimal-cache-1/C-002
 
 ### TZ-2 — the session-timezone default is `UTC`
 
@@ -2744,6 +2745,41 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. CUTOVER-SCHEMA-1 (2026-09-04) converged the int-operand cells
   through the decimal-cast rule; this unit measured the genuinely-non-null-operand
   remainder on the live oracle and implemented the ANSI-gated rule.
+
+### DEC-10 — decimal arithmetic that overflows 38 digits refuses `.eager()` / `.cache()` / `.persist()`
+
+- **repark** — **FIXED 2026-09-15 (DECIMAL-CACHE-1).** Every oracle cell below answers
+  Spark's type and value on the facade (`withColumns`), the SQL door (`spark.sql`), and
+  through `.eager()`, `.cache().collect()`, `.persist().collect()` and `collect()`.
+  Two halves: (a) the cache view pinned the *unanalyzed* frame schema (DataFusion's
+  default multiply, e.g. `decimal(38,10)`) under the analyzed physical batches, so
+  `MemTable::try_new` refused with `Mismatch between schema and batches` while
+  `collect()` succeeded — `register_collected_memtable` now analyzes the plan with the
+  session's own rules first, then conforms each batch to the analyzed schema
+  (same-type pass-through, `cast_with_options` with `safe: false`; an uncastable column
+  refuses with `Error::Analysis` naming both fields); (b) facade `price * 5` analyzed to
+  `decimal(38,6)` (the `DECIMAL(10,0)`-literal answer) because DataFusion's default
+  `TypeCoercion` pre-wraps the bare `Int32` literal before the Spark rule sees it —
+  `SparkDecimalPrecision` is now also seated pre-coercion, so the bare literal
+  min-precisions to `DECIMAL(1,0)` and the answer is `decimal(38,8)` like Spark.
+- **Apache Spark** — 4.1.2 answers per cell (ANSI on): `decimal(38,10)` under `* 5` →
+  `decimal(38,8)` `882.80000000`, under `+ 1` → `decimal(38,9)` `177.560000000`, under
+  `- 1` → `decimal(38,9)` `175.560000000`, under `* price` → `decimal(38,6)`
+  `31173.433600`, under `* CAST(5 AS DECIMAL(1,0))` → `decimal(38,8)` `882.80000000`;
+  `decimal(38,6)` inputs keep `(38,6)` in every shape; `decimal(30,10)` under `* 5` →
+  `(32,10)`, under `+ 1` → `(31,10)`; `decimal(28,6)` under `* 5` → `(30,6)`, under
+  `+ 1` → `(29,6)`; `decimal(20,10)` under `* 5` → `(22,10)`, under `* price` →
+  `(38,17)`; `decimal(10,2)` under `* 5` → `(12,2)`, under `* price` → `(21,4)` —
+  on the facade, the SQL door and through `.cache()`. *(oracle: recorded — live PySpark
+  4.1.2, committed beside the pin as
+  `python/repark/tests/decimal_cache_1_oracle.json`.)*
+- **Pin** — `python/repark/tests/test_decimal_cache_1.py` (every cell on both doors
+  through every materializing action, values as `Decimal` strings, types via
+  `df.schema[...]`); Rust `cache_conform_tests` (drifted conform, refusal message,
+  arity guard) and the `decimal_precision.rs` prod-assembly pins (logical == physical
+  per cell).
+- **Rationale** — FIXED.
+  pins: decimal-cache-1/C-002, C-003, C-004, C-005, C-006
 
 > **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
 > re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are

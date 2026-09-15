@@ -140,10 +140,11 @@ pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
     bool_decimal::install_bool_decimal_cast(ctx);
 }
 
-/// Return analyzer rules: decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
+/// Return analyzer rules: null-decimal negation, decimal precision, decimal rewrite, semantics, safety, then LTZ casts.
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
+        Arc::new(decimal_precision::SparkNegateNullDecimal),
         Arc::new(spark_result_types::SparkIntegerLiteral),
         Arc::new(lambda_rebind::LambdaRebind),
         Arc::new(decimal_precision::SparkDecimalPrecision),

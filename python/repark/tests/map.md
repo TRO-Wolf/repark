@@ -5341,3 +5341,31 @@ FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 - **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `test_fnp_6d_followup_1.py::test_concat_binary_types_string_expected_divergence` is renamed `test_concat_binary_types_binary_converged_door_converge_2` and flipped to `pa.binary()`, because `concat(BINARY, BINARY)` now converges on Spark's BINARY (oracle Q12-13). Run 16a filed the pin to go red on this convergence (ruling R-16c-11). pins: door-converge-2/C-001
 - `test_fnp_bitmap_facade_1.py` — **run 16a rebuild (2026-09-15):** `ruff format` normalizes the whitespace left by the cherry-pick conflict resolution onto #623; no pin changed. pins: fnp-bitmap-facade-1/C-011
+- [test_decimal_cache_1.py](test_decimal_cache_1.py) — **DECIMAL-CACHE-1 (2026-09-15):** every
+  oracle decimal-arithmetic cell (`decimal_cache_1_oracle.json`, copied verbatim from
+  `/tmp/oc-worker/qd-decimal/oracle-decimal-cells.json`, live PySpark 4.1.2) on the facade
+  (`withColumns`) and the SQL door (`spark.sql`), each through `.eager()`,
+  `.cache().collect()`, `.persist().collect()` and `collect()` — values as `Decimal`
+  strings, types via `df.schema[...]` — plus the original report shape
+  (`withColumns({"new_price": F.col("price") * 5}).eager()` on `DECIMAL(38,10)`).
+  **Remediation (2026-09-15):** two unary-minus cells (`-p` on `(10,2)` / `(38,10)`,
+  basis "Spark UnaryMinus keeps the child type") on both doors, and `.cache().collect()`
+  is asserted against the cell `cache_value` while the other actions assert their own
+  value fields — the split keeps the pin sensitive to a cached-vs-collected divergence
+  the old single-value assert could not see.
+  **Round 2 (2026-09-15):** four null-scalar cells (`-null-dec/int/bigint/double`, basis
+  "Spark UnaryMinus null-propagation") on both doors through every action, plus
+  `test_neg_null_column_rows_stay_null` (all-null columns stay null with the child type
+  on both doors, collect and eager). Float is absent: nulls propagate as `None` but the
+  width label follows the registered LOGICAL-WIDTH-1 `float`→`double` divergence.
+  pins: decimal-cache-1/C-005, C-006, C-007, C-012
+- [decimal_cache_1_oracle.json](decimal_cache_1_oracle.json) — **DECIMAL-CACHE-1 (2026-09-15):**
+  the 30 live-PySpark oracle cells (six input types under `* 5`, `+ 1`, `- 1`, `* price`,
+  `* CAST(5 AS DECIMAL(1,0))`) driving `test_decimal_cache_1.py`; those 30 are recorded
+  evidence, never hand-edited.
+  **Remediation (2026-09-15):** two appended `-p` cells carrying a `basis` key (Spark
+  `UnaryMinus` keeps the child type; values are the negated input row, cross-checked
+  against the SQL door which the logic critic verified against live Spark).
+  **Round 2 (2026-09-15):** four appended null-scalar cells carrying the
+  null-propagation `basis` key (decimal/int/bigint/double; no float — see above).
+  pins: decimal-cache-1/C-005, C-007, C-012

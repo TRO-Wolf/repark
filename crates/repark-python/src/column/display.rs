@@ -328,7 +328,8 @@ impl PyColumnParts {
     ) -> PyResult<RenderedParts> {
         fenced!("ColumnParts.unary_neg", {
             let display = wrap_negative_display(child_display);
-            let aliased = PyColumn::from_expr((lit(0_i32) - inner.expr()).alias(&display));
+            let negated = Expr::Negative(Box::new(inner.expr().clone()));
+            let aliased = PyColumn::from_expr(negated.alias(&display));
             Ok((aliased, display, wrap_negative_sql(child_sql), None))
         })
     }

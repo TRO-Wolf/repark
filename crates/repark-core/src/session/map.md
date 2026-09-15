@@ -49,6 +49,25 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   once the limit is crossed the loop stops retaining batches but keeps pulling to finish
   the count, then refuses with `main`'s byte-identical message.
   pins: eager-budget-1/C-005, C-007, C-008
+  **DECIMAL-CACHE-1 (2026-09-15):** `register_collected_memtable` analyzes the plan with
+  the session's own rules before pinning the schema (facade-built plans carry the
+  unanalyzed DataFusion-default type, e.g. `(38,10)`, while the executed batches carry the
+  analyzed Spark type — pinning the former refused every materializing action). The
+  analyzed plan is then optimized and executed directly (one analyzer pass per
+  materialize; no second analyze inside execution). Collected batches then conform to the
+  analyzed schema (`conform_batches_to_schema`: identical schemas return the batch
+  untouched; otherwise each plan field resolves its column by name — a missing name or a
+  duplicate name refuses with `Error::Analysis` naming the field, extra batch columns
+  project away — then same-type pass-through or `cast_with_options` with `safe: false`
+  (a failing cast refuses naming both types plus the cast error), nulls under a
+  non-nullable plan field refuse, and any residual rebuild failure is `Error::Analysis`).
+  Inline `cache_conform_tests` pin the drifted conform, the refusal messages, and the
+  reorder/missing/duplicate/superset/overflow/null cases; the untouched-batch fast path
+  is behavior-identical by construction (same columns, same schema `Arc`) and is held by
+  the unchanged end-to-end cache suites.
+  pins: decimal-cache-1/C-003, C-004, C-008, C-009, C-010, C-011
+  (The analyze-then-conform pipeline is shared with the plain-`temp_view` path, which
+  funnels through the same `register_collected_memtable`.)
 - `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
   `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
   tables, downcasts each provider to `MemTable`, clones each partition's batch list under a

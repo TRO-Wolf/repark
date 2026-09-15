@@ -47,6 +47,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split
   across files — while their `Expr` construction stays in `display/construct.rs`.
   pins: facade-2/C-014, C-016, C-017, C-019, C-020
+  **DECIMAL-CACHE-1 remediation (2026-09-15):** `unary_neg` emits `Expr::Negative`
+  of the child instead of `lit(0_i32) - child`, so facade `-decimal(p,s)` keeps the
+  child type like Spark's `UnaryMinus` (the old encoding drifted through the
+  pre-coercion seat to `(11,2)` / `(38,9)`); display and SQL fragments unchanged.
+  pins: decimal-cache-1/C-007
 - [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the
   Group-1 typed constructors that replace `_native.PyColumn.sql` call sites:
   `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display`

@@ -2,6 +2,7 @@
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
@@ -327,12 +328,110 @@ fn bounded_scale(value: i32, precision: i32) -> i8 {
     i8::try_from(clamped).unwrap_or(0)
 }
 
+#[derive(Debug, Default)]
+pub struct SparkNegateNullDecimal;
+
+impl AnalyzerRule for SparkNegateNullDecimal {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(rewrite_negate_null_plan)
+            .data()
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "spark_negate_null_decimal"
+    }
+}
+
+fn rewrite_negate_null_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let name_preserver = NamePreserver::new(&plan);
+    let transformed = plan.map_expressions(|expr| {
+        let saved_name = name_preserver.save(&expr);
+        let rewritten = expr.transform_down(|node| Ok(rewrite_negative_null(node)))?;
+        Ok(rewritten.update_data(|node| saved_name.restore(node)))
+    })?;
+    if transformed.transformed {
+        transformed.map_data(LogicalPlan::recompute_schema)
+    } else {
+        Ok(transformed)
+    }
+}
+
+fn rewrite_negative_null(expr: Expr) -> Transformed<Expr> {
+    let Expr::Negative(inner) = &expr else {
+        return Transformed::no(expr);
+    };
+    let Some((null, meta)) = null_decimal_operand(inner) else {
+        return Transformed::no(expr);
+    };
+    Transformed::yes(Expr::Literal(null, meta))
+}
+
+fn null_decimal_operand(expr: &Expr) -> Option<(ScalarValue, Option<FieldMetadata>)> {
+    match expr {
+        Expr::Negative(inner) => null_decimal_operand(inner),
+        Expr::Cast(cast) => cast_null_decimal(&cast.expr, cast.field.data_type()),
+        Expr::TryCast(cast) => cast_null_decimal(&cast.expr, cast.field.data_type()),
+        Expr::Literal(scalar, meta) if scalar.is_null() && is_decimal_scalar(scalar) => {
+            Some((scalar.clone(), meta.clone()))
+        }
+        _ => None,
+    }
+}
+
+fn cast_null_decimal(
+    inner: &Expr,
+    target: &DataType,
+) -> Option<(ScalarValue, Option<FieldMetadata>)> {
+    if !is_decimal_data_type(target) {
+        return None;
+    }
+    match inner {
+        Expr::Literal(scalar, _) if scalar.is_null() => {
+            Some((ScalarValue::try_from(target).ok()?, None))
+        }
+        nested => {
+            null_decimal_operand(nested)?;
+            ScalarValue::try_from(target)
+                .ok()
+                .map(|scalar| (scalar, None))
+        }
+    }
+}
+
+fn is_decimal_scalar(scalar: &ScalarValue) -> bool {
+    matches!(
+        scalar,
+        ScalarValue::Decimal32(..)
+            | ScalarValue::Decimal64(..)
+            | ScalarValue::Decimal128(..)
+            | ScalarValue::Decimal256(..)
+    )
+}
+
+fn is_decimal_data_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Decimal32(..)
+            | DataType::Decimal64(..)
+            | DataType::Decimal128(..)
+            | DataType::Decimal256(..)
+    )
+}
+
+#[cfg(test)]
+mod negate_null_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use datafusion::arrow::array::{Array, Decimal128Array};
+    use datafusion::arrow::datatypes::{Field, Schema};
     use datafusion::arrow::record_batch::RecordBatch;
+    use datafusion::datasource::MemTable;
     use datafusion::prelude::SessionContext;
 
     use crate::analyze_eagerly;
@@ -632,6 +731,238 @@ mod tests {
             once.schema().field(0).data_type(),
             twice.schema().field(0).data_type()
         );
+    }
+
+    fn price_memtable_schema() -> Arc<Schema> {
+        Arc::new(Schema::new(vec![Field::new(
+            "price",
+            DataType::Decimal128(38, 10),
+            true,
+        )]))
+    }
+
+    fn price_memtable_ctx() -> SessionContext {
+        let context = ctx();
+        register_price_fixture(&context);
+        context
+    }
+
+    fn register_price_fixture(context: &SessionContext) {
+        let array = Decimal128Array::from(vec![Some(1_765_600_000_000_i128)])
+            .with_precision_and_scale(38, 10)
+            .expect("price fixture keeps (38,10)");
+        let batch = RecordBatch::try_new(price_memtable_schema(), vec![Arc::new(array)])
+            .expect("price fixture batch");
+        let table =
+            MemTable::try_new(price_memtable_schema(), vec![vec![batch]]).expect("price memtable");
+        context
+            .register_table("v", Arc::new(table))
+            .expect("register price fixture");
+    }
+
+    fn prod_like_price_ctx() -> SessionContext {
+        let prepared = crate::lambda_rebind::analyzer_rules_with_higher_order_preparation(
+            datafusion::optimizer::Analyzer::new().rules,
+        )
+        .expect("prod-like assembly keeps a type_coercion seat");
+        let mut rules = prepared;
+        rules.extend(crate::analyzer_rules());
+        let config =
+            crate::ansi::with_spark_ansi_config(datafusion::prelude::SessionConfig::new(), true);
+        let state = datafusion::execution::SessionStateBuilder::new()
+            .with_config(config)
+            .with_default_features()
+            .with_analyzer_rules(rules)
+            .build();
+        let context = SessionContext::new_with_state(state);
+        crate::decimal_spark::register_spark_decimal_planner(&context);
+        register_price_fixture(&context);
+        context
+    }
+
+    fn assert_logical_matches_physical(logical: &Field, physical: &Field) {
+        assert_eq!(logical.name(), physical.name());
+        assert_eq!(logical.data_type(), physical.data_type());
+        assert_eq!(logical.is_nullable(), physical.is_nullable());
+        assert_eq!(logical.metadata(), physical.metadata());
+    }
+
+    async fn facade_cell(
+        context: &SessionContext,
+        operator: Operator,
+        operand: Expr,
+    ) -> (Field, Field, Option<i128>) {
+        let frame = context
+            .table("v")
+            .await
+            .expect("read price fixture")
+            .select(vec![
+                datafusion::logical_expr::binary_expr(
+                    datafusion::logical_expr::col("price"),
+                    operator,
+                    operand,
+                )
+                .alias("n"),
+            ])
+            .expect("project facade probe");
+        let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            .expect("analyze facade probe");
+        let logical = analyzed.schema().as_arrow().field(0).clone();
+        let batches = frame.collect().await.expect("collect facade probe");
+        assert_eq!(batches.len(), 1, "one batch for one row");
+        let physical = batches[0].schema().field(0).clone();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("decimal128 output");
+        (logical, physical, array.is_valid(0).then(|| array.value(0)))
+    }
+
+    async fn sql_cell(context: &SessionContext, sql: &str) -> (Field, Field, Option<i128>) {
+        let frame = context.sql(sql).await.expect("plan sql probe");
+        let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+            .expect("analyze sql probe");
+        let logical = analyzed.schema().as_arrow().field(0).clone();
+        let batches = frame.collect().await.expect("collect sql probe");
+        assert_eq!(batches.len(), 1, "one batch for {sql}");
+        let physical = batches[0].schema().field(0).clone();
+        let array = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Decimal128Array>()
+            .expect("decimal128 output");
+        (logical, physical, array.is_valid(0).then(|| array.value(0)))
+    }
+
+    #[tokio::test]
+    async fn facade_int32_times_decimal_reaches_spark_min_precision() {
+        let context = prod_like_price_ctx();
+        let operand = Expr::Literal(ScalarValue::Int32(Some(5)), None);
+        let (logical, physical, value) = facade_cell(&context, Operator::Multiply, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
+    }
+
+    #[tokio::test]
+    async fn facade_int32_plus_decimal_matches_oracle() {
+        let context = prod_like_price_ctx();
+        let operand = Expr::Literal(ScalarValue::Int32(Some(1)), None);
+        let (logical, physical, value) = facade_cell(&context, Operator::Plus, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 9));
+        assert_eq!(value, Some(177_560_000_000));
+    }
+
+    #[tokio::test]
+    async fn facade_col_times_col_still_clamps() {
+        let context = prod_like_price_ctx();
+        let operand = datafusion::logical_expr::col("price");
+        let (logical, physical, value) = facade_cell(&context, Operator::Multiply, operand).await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 6));
+        assert_eq!(value, Some(31_173_433_600));
+    }
+
+    #[tokio::test]
+    async fn sql_int64_times_decimal_still_min_precision_with_early_rule() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(&context, "SELECT price * 5 AS n FROM v").await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
+    }
+
+    #[tokio::test]
+    async fn explicit_cast_keeps_declared_precision_with_early_rule() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(
+            &context,
+            "SELECT CAST(5 AS DECIMAL(10,0)) * price AS n FROM v",
+        )
+        .await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 6));
+        assert_eq!(value, Some(882_800_000));
+    }
+
+    #[tokio::test]
+    async fn explicit_min_precision_cast_times_decimal_matches_oracle() {
+        let context = prod_like_price_ctx();
+        let (logical, physical, value) = sql_cell(
+            &context,
+            "SELECT price * CAST(5 AS DECIMAL(1,0)) AS n FROM v",
+        )
+        .await;
+        assert_logical_matches_physical(&logical, &physical);
+        assert_eq!(logical.data_type(), &DataType::Decimal128(38, 8));
+        assert_eq!(value, Some(88_280_000_000));
+    }
+
+    #[tokio::test]
+    async fn measure_cache_seam_logical_vs_physical_decimal_field() {
+        let context = price_memtable_ctx();
+        for sql in [
+            "SELECT price * 5 AS n FROM v",
+            "SELECT price + 1 AS n FROM v",
+            "SELECT price * price AS n FROM v",
+        ] {
+            let frame = context.sql(sql).await.expect("plan decimal probe");
+            let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+                .expect("analyze decimal probe");
+            let logical = analyzed.schema().as_arrow().field(0).clone();
+            let batches = frame.collect().await.expect("collect decimal probe");
+            let physical = batches[0].schema().field(0).clone();
+            eprintln!("{sql}\nlogical {logical:?}\nphysical {physical:?}");
+        }
+        for (label, operator, literal) in [
+            (
+                "facade * Int32(5)",
+                Operator::Multiply,
+                Expr::Literal(ScalarValue::Int32(Some(5)), None),
+            ),
+            (
+                "facade * Int64(5)",
+                Operator::Multiply,
+                Expr::Literal(ScalarValue::Int64(Some(5)), None),
+            ),
+            (
+                "facade + Int32(1)",
+                Operator::Plus,
+                Expr::Literal(ScalarValue::Int32(Some(1)), None),
+            ),
+        ] {
+            let frame = context
+                .table("v")
+                .await
+                .expect("read price fixture")
+                .select(vec![
+                    datafusion::logical_expr::binary_expr(
+                        datafusion::logical_expr::col("price"),
+                        operator,
+                        literal,
+                    )
+                    .alias("n"),
+                ])
+                .expect("project facade probe");
+            let unanalyzed = frame.schema().as_arrow().field(0).clone();
+            let analyzed = analyze_eagerly(&context.state(), frame.logical_plan().clone())
+                .expect("analyze facade probe");
+            let logical = analyzed.schema().as_arrow().field(0).clone();
+            let outcome = frame.collect().await;
+            match outcome {
+                Ok(batches) => {
+                    let physical = batches[0].schema().field(0).clone();
+                    eprintln!(
+                        "{label}\nunanalyzed {unanalyzed:?}\nlogical {logical:?}\nphysical {physical:?}"
+                    );
+                }
+                Err(error) => {
+                    eprintln!("{label}\nlogical {logical:?}\ncollect refused: {error}");
+                }
+            }
+        }
     }
 
     #[tokio::test]
