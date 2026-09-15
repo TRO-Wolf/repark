@@ -1,21 +1,31 @@
 """IO-TEXT-1 round 5 — probe5 oracle pins for the X-1/X-2/X-3 follow-up —
-plus round 6 probe6 pins for the Y-2 overlay types.
+plus round 6 probe6 pins for the Y-2 overlay types, plus round 7 probe7
+pins for the Z-1 session-zone wall clocks.
 
 Oracle cells live in ``facade_reader_writer_oracle.json`` as
 ``text_probe5_<cell>`` (live PySpark 4.1.2, recorded 2026-09-15, script
-``probe_iotext5.py`` beside the probe JSON) and ``text_probe6_<cell>``
+``probe_iotext5.py`` beside the probe JSON), ``text_probe6_<cell>``
 (live PySpark 4.1.2, recorded 2026-09-15, script ``probe_iotext6.py``
-beside the probe JSON). Result cells pin columns plus
-schema simpleString plus Row reprs; the two layout cells pin the
-``CONFLICTING_PARTITION_COLUMN_NAMES`` refusal before any row is read; the
-timestamp cell pins midnight in the session zone with an instant cross-check
-against the oracle wall. The X-4 fallback pins live at the end of this file;
-the Y-2 overlay pins follow them: boolean results, the four refusals
-(boolean bad, smallint over `1.50`, timestamp_ntz, array), with the
-float/smallint/tinyint/binary result pins held out until the shared
-schema-display layer reports exact keys (ledger R-38).
+beside the probe JSON), and ``text_probe7_<cell>`` (live PySpark 4.1.2
+in a ``spark.sql.session.timeZone=America/New_York`` session, recorded
+2026-09-15, script ``probe_iotext7.py`` beside the probe JSON). Result
+cells pin columns plus schema simpleString plus Row reprs; the two layout
+cells pin the ``CONFLICTING_PARTITION_COLUMN_NAMES`` refusal before any
+row is read; the timestamp cell pins midnight in the session zone with an
+instant cross-check against the oracle wall. The X-4 fallback pins live at
+the end of this file; the Y-2 overlay pins follow them: boolean results,
+the four refusals (boolean bad, smallint over `1.50`, timestamp_ntz,
+array), and the float/smallint/tinyint/binary result pins through the
+shared schema-display divergence (ledger R-39). The Z-1 pins close this
+file: ``timestamp_ntz`` overlay reads the raw directory text as a
+zone-free wall clock under a New York session while ``timestamp`` keeps
+the session-zone wall, and inference follows Spark's order (integral,
+fractional, date, timestamp, string) with the space wall inferring
+``timestamp``. Timestamp pins compare ``rows_as_string`` (the engine
+``CAST(k AS STRING)`` in the session zone) wherever the Python repr
+depends on the machine zone.
 
-pins: io-text-1/X-1, X-2, X-3, Y-2
+pins: io-text-1/X-1, X-2, X-3, Y-2, Z-1
 """
 
 from __future__ import annotations
@@ -418,3 +428,117 @@ def test_text_partition_fallback_holds_one_part_per_leaf(
         number = leaf.name.split("=", 1)[1][1:]
         assert sorted(lines) == sorted(f"r{round}-k{number}" for round in range(4))
     assert total == 1200
+
+
+@pytest.fixture
+def spark_ny() -> Any:
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-io-text-2-ny")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .getOrCreate()
+    )
+    yield session
+    session.stop()
+    _reset_active_session_for_tests()
+
+
+def _string_pin(frame: Any, cell: str) -> None:
+    """Pin columns, schema, and the session-zone string render of ``k``."""
+    expected = _cell(cell)["result"]
+    assert frame.columns == expected["columns"]
+    assert frame.schema.simpleString() == expected["schema"]
+    rendered = frame.selectExpr("value", "cast(k as string) as k").collect()
+    assert sorted(repr(tuple(row)) for row in rendered) == sorted(expected["rows_as_string"])
+
+
+def _write_kdate(tmp_path: Path) -> Path:
+    """Lay out a k=2024-01-02 leaf for the probe7 date pins."""
+    root = tmp_path / "kdate"
+    (root / "k=2024-01-02").mkdir(parents=True)
+    (root / "k=2024-01-02" / "part-00000.txt").write_text("d\n", encoding="utf-8")
+    return root
+
+
+def _write_kts_escaped(tmp_path: Path) -> Path:
+    """Lay out an escaped k=2024-01-02 03:04:05 leaf for the probe7 pins."""
+    root = tmp_path / "kts_escaped"
+    (root / "k=2024-01-02 03%3A04%3A05").mkdir(parents=True)
+    (root / "k=2024-01-02 03%3A04%3A05" / "part-00000.txt").write_text("e\n", encoding="utf-8")
+    return root
+
+
+def _write_kts_raw(tmp_path: Path) -> Path:
+    """Lay out a k=2024-01-02T03:04:05 leaf for the probe7 ISO pins."""
+    root = tmp_path / "kts_raw"
+    (root / "k=2024-01-02T03:04:05").mkdir(parents=True)
+    (root / "k=2024-01-02T03:04:05" / "part-00000.txt").write_text("r\n", encoding="utf-8")
+    return root
+
+
+def test_text_probe7_date_ntz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_date_ntz — date-only is naive midnight. pins: io-text-1/Z-1"""
+    _result_pin(
+        spark_ny.read.schema("value string, k timestamp_ntz").text(str(_write_kdate(tmp_path))),
+        "text_probe7_ny_date_ntz",
+    )
+
+
+def test_text_probe7_ts_escaped_ntz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_escaped_ntz — wall clock never shifts. pins: io-text-1/Z-1"""
+    _result_pin(
+        spark_ny.read.schema("value string, k timestamp_ntz").text(
+            str(_write_kts_escaped(tmp_path))
+        ),
+        "text_probe7_ny_ts_escaped_ntz",
+    )
+
+
+def test_text_probe7_ts_iso_ntz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_iso_ntz — the T wall never shifts. pins: io-text-1/Z-1"""
+    _result_pin(
+        spark_ny.read.schema("value string, k timestamp_ntz").text(str(_write_kts_raw(tmp_path))),
+        "text_probe7_ny_ts_iso_ntz",
+    )
+
+
+def test_text_probe7_date_ltz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_date_ltz — zoned date stays the session wall. pins: io-text-1/Z-1"""
+    _string_pin(
+        spark_ny.read.schema("value string, k timestamp").text(str(_write_kdate(tmp_path))),
+        "text_probe7_ny_date_ltz",
+    )
+
+
+def test_text_probe7_ts_escaped_ltz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_escaped_ltz — zoned wall is session-local. pins: io-text-1/Z-1"""
+    _string_pin(
+        spark_ny.read.schema("value string, k timestamp").text(str(_write_kts_escaped(tmp_path))),
+        "text_probe7_ny_ts_escaped_ltz",
+    )
+
+
+def test_text_probe7_ts_iso_ltz(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_iso_ltz — zoned T wall is session-local. pins: io-text-1/Z-1"""
+    _string_pin(
+        spark_ny.read.schema("value string, k timestamp").text(str(_write_kts_raw(tmp_path))),
+        "text_probe7_ny_ts_iso_ltz",
+    )
+
+
+def test_text_probe7_date_inferred(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_date_inferred — date still infers date. pins: io-text-1/Z-1"""
+    _result_pin(spark_ny.read.text(str(_write_kdate(tmp_path))), "text_probe7_ny_date_inferred")
+
+
+def test_text_probe7_ts_escaped_inferred(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_escaped_inferred — space wall infers timestamp. pins: io-text-1/Z-1"""
+    _string_pin(
+        spark_ny.read.text(str(_write_kts_escaped(tmp_path))),
+        "text_probe7_ny_ts_escaped_inferred",
+    )
+
+
+def test_text_probe7_ts_iso_inferred(spark_ny: ReparkSession, tmp_path: Path) -> None:
+    """cell text_probe7_ny_ts_iso_inferred — T wall stays string. pins: io-text-1/Z-1"""
+    _result_pin(spark_ny.read.text(str(_write_kts_raw(tmp_path))), "text_probe7_ny_ts_iso_inferred")

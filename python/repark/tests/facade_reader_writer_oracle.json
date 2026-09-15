@@ -1366,6 +1366,141 @@
     "schema": "struct<value:string,k:tinyint>"
    }
   },
+  "text_probe7_ny_date_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.date(2024, 1, 2))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02')"
+    ],
+    "schema": "struct<value:string,k:date>"
+   }
+  },
+  "text_probe7_ny_date_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 2, 0, 0))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02 00:00:00')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_date_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('d', datetime.datetime(2024, 1, 2, 0, 0))"
+    ],
+    "rows_as_string": [
+     "('d', '2024-01-02 00:00:00')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_escaped_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('e', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('e', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
+  "text_probe7_ny_ts_iso_inferred": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', '2024-01-02T03:04:05')"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02T03:04:05')"
+    ],
+    "schema": "struct<value:string,k:string>"
+   }
+  },
+  "text_probe7_ny_ts_iso_ltz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp>"
+   }
+  },
+  "text_probe7_ny_ts_iso_ntz": {
+   "result": {
+    "columns": [
+     "value",
+     "k"
+    ],
+    "rows": [
+     "('r', datetime.datetime(2024, 1, 2, 3, 4, 5))"
+    ],
+    "rows_as_string": [
+     "('r', '2024-01-02 03:04:05')"
+    ],
+    "schema": "struct<value:string,k:timestamp_ntz>"
+   }
+  },
   "text_read_dir_glob": {
    "result": {
     "kind": "int",
