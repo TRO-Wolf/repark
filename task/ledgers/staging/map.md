@@ -1416,3 +1416,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  C-009, C-010, C-011, C-012, C-013, C-014
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [fnp-math-1-ledger.md](fnp-math-1-ledger.md) —
+  **FNP-MATH-1 step 1 (2026-09-15, run 16a), in flight:** ledger, fixture and
+  red-first pins for the math/formatting/masking/crypto card — `bround`, `conv`,
+  `mask`, `collate`, `collation`, `sentences`, `hash`, `format_number`,
+  `aes_encrypt` / `aes_decrypt` / `try_aes_decrypt`, the facade half of `split`
+  (D-8, Q12-41…Q12-55), the BL-6 facade half (`bin` / `rint` BOOLEAN refusal,
+  3-argument `like` escape, D-9), plus `locate` / `array_join` cells held
+  conditionally (D-6). No product code, no cargo, no dependency edits; AES crates
+  approved under D-7 land in a later build step. 227 failed / 16 passed on base.
+  `risk_tier: standard`. Branch `feat/fnp-math-1`.
+  pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
