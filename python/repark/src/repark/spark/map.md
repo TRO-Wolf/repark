@@ -239,7 +239,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `PolarsFrame.eager()` wraps the Spark `eager()`; `collect()` is untouched
   (pins: df-eager-1/C-006).
 - `row.py` — Spark-compatible Row construction, indexing, equality, nested conversion,
-  display, and pickling.
+  display, and pickling. ROW-TUPLE-1 step 1 (2026-09-14): `count` / `index` delegate to
+  the stored values tuple (factory rows: the field-name tuple), answering the recorded
+  `row.*` oracle cells; `index_missing` keeps Spark's bare-`ValueError` message. Critic
+  round 1 (R-3): both signatures positional-only like CPython's `tuple` — keyword calls
+  raise `TypeError`.
+  pins: row-tuple-1/C-001, C-002, C-004
 - `storage.py` — StorageLevel flags and the facade cache contract. Disk, off-heap,
   and replication flags are recorded; actual persistence is engine-owned.
 - `ta.py` — TA-Lib technical-analysis/window helpers and `with_indicators`. ML

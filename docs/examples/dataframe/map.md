@@ -99,6 +99,8 @@ one-liner.
 - [grouped_pivot.py](grouped_pivot.py) — `GroupedData.pivot` (explicit values, discovery,
   multi-aggregate naming) and `applyInPandas` / `apply_in_pandas` (the per-group pandas
   bridge).
+- [row_tuple.py](row_tuple.py) — `Row.count` / `Row.index`: the tuple protocol on a collected
+  Row, including `index`'s start argument and its `ValueError` text (ROW-TUPLE-1).
 - [row_dicts.py](row_dicts.py) — `Row.asDict` / `Row.as_dict` (flat, and recursive over a
   struct field), and the repark extensions `Row.from_mapping` and `Row.from_ordered_fields`
   (duplicate field names kept). No Spark analog for the two builders (`hasattr` measured
