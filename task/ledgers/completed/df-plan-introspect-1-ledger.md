@@ -279,6 +279,34 @@ over 11 samples. Round 3 measured 0.0055s/0.0110s on a quieter box; same class.
 
 VERDICT (whole ledger, 2026-09-15 round 4 + R-19): 14 clauses, 14 PROVEN, 0 OPEN, 0 REJECTED.
 
+## Departure — run 16b orchestrator, 2026-09-15
+
+**Reviews this run (Grok 4.6, read-only clones, fresh release natives).** Round-3 logic re-check NEEDS_REMEDIATION ($0.60; L-201 P1
+qualifier strip false equality, L-202..L-205 P2) → round 4. Round-3 S2-21 Rust perf PASS ($0.64; P2-3 inputFiles re-list → R-17, P2-1
+withColumn tower → R-18 residue). Round-4 logic re-check **PASS** ($0.70; L-201/L-203/L-204/L-205 FIXED, L-202 CLOSED by R-19). Round-4
+S2-21 Rust perf **PASS** ($0.51; depth-200 hash 6 ms, sameSemantics 12 ms, 200-term AND 17 ms, inputFiles memo hit 27 µs vs 251 ms miss).
+
+**Orchestrator rulings (run 16b ledger ids R-16b-3, -12, -13, -18, -19, -22).** Live PySpark probes before every ruling
+(planintro_l102, planintro_cast, planintro_r4 batches; 32 cells). The queued DF-RUST-3 launch was stopped so round 4 kept the build clone
+(order item 2 before 3). Round 3 and round 4 commits each lacked their Authored-By trailer; the orchestrator added them (message only).
+Round 3 committed Rust edited after its last release build; the orchestrator rebuilt before gates and reviewers.
+
+**Residue (recorded, not fixed).**
+- L-301 (P3, round-4 logic re-check): `a + b` vs `b + a`, `a * b` vs `b * a` and swapped bitwise AND/OR/XOR hash unequal; Spark's
+  `CommutativeExpression` reorders them. Results match; Spark's own docstring allows false negatives.
+- R-18 (P2-1, S2-21): the chained-`withColumn` tower stays super-linear (50/100/200: 20/103/521 ms) because every call analyzes and walks
+  the whole tower; building a depth-200 tower takes ~7 s, about 13x the hash.
+- P3-4 per-operand `Vec<u8>` sort and P3-5 relation table built twice per call (needed for R-13 and R-12); P3-1 URI clone.
+
+**Rebases.** Onto #605–#609 (lib.rs, core.py import, EX-0, maps), onto #610/#612 (core.py import gains `replace_expr`; core.py ceiling
+4014 → 4015 in both tables, still under main's 4027), and onto #606/#621/#623 at bee2cde3 (EX-0 1052 → 1054). Rebased checks on a rebuilt
+release native: EX-0 + CAP-1 49 passed, check_lib_py clean, ruff check/format clean, unit + neighbour pins 98 passed, comment ban 0.
+Full gates on the round-4 head before the last rebase: make verify rc 0, parity 757 passed, facade 7151 passed / 0 failed.
+
+**Rust-first roll-call.** Python-only: argument checks (NOT_DATAFRAME), the per-handle memo dictionary around the native `input_files`,
+and the cache-view lineage gathering passed to the native hash (session-token bookkeeping the engine does not own). Every walk, hash,
+canonicalization and comparison is Rust.
+
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: df-plan-introspect-1
