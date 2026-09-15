@@ -114,6 +114,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branches `feat/cfg-2-step1`, `feat/cfg-2-step2`.
   pins: cfg-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+- [column-parity-1-ledger.md](column-parity-1-ledger.md) —
+  **COLUMN-PARITY-1 step 1 (2026-09-14), in flight:** the seven-name `Column`
+  surface — `isin`, `isNaN`, `astype`, `name`, `outer`, `withField`, `dropFields` —
+  driven by the `facade_column_oracle.json` cells; `withField`/`dropFields` resolve as
+  deferred select-boundary columns against `logical_schema_fields()` and rebuild the
+  struct through `getField` + `make_struct` + `when(isNotNull)`; two DECLARED rows
+  (COL-DROPFIELDS-TYPE-1, COL-ISIN-TUPLE-1) and five BACKLOG rows (SQL-IN-1,
+  SQL-ISNAN-1, COL-WITHFIELD-EMPTY-1, COL-NAME-MULTI-1, COL-DOTTED-FIELD-1).
+  `risk_tier: standard`. Branch `feat/column-parity-1`.
+  pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [comment-core-1-ledger.md](comment-core-1-ledger.md) —
   **COMMENT-CORE-1 (2026-09-13), in flight:** remove the 341 full-line comments and 6
   trailing comments from `python/repark/src/repark/spark/dataframe/core.py`; keep the

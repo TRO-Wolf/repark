@@ -21,7 +21,9 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark import column_fields as _column_fields
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
+from repark.spark._idents import sql_string_literal as _sql_string_literal
 
 if TYPE_CHECKING:
     from repark.spark.types import DataType
@@ -46,6 +48,7 @@ class Column:
 
     __slots__ = (
         "_agg_name",
+        "_alias_metadata",
         "_g2_range_order_names",
         "_generator",
         "_generator_cast",
@@ -58,6 +61,7 @@ class Column:
         "_join_sql_expr",
         "_origin_field",
         "_origin_plan_id",
+        "_outer",
         "_partition_transform",
         "_projection_name",
         "_sort_ascending",
@@ -95,6 +99,8 @@ class Column:
         join_sql_expr: str | None = None,
         g2_range_order_names: list[str] | None = None,
         window_spec: WindowSpec | None = None,
+        alias_metadata: dict[str, Any] | None = None,
+        outer: bool = False,
     ) -> None:
         """Wrap a native ``PyColumn`` (a Rust pyclass, hence untyped), carrying sort markers.
 
@@ -203,6 +209,8 @@ class Column:
         # Simple ORDER BY column names for value-offset RANGE numeric-type check at select.
         self._g2_range_order_names = list(g2_range_order_names) if g2_range_order_names else None
         self._window_spec = window_spec
+        self._alias_metadata = dict(alias_metadata) if alias_metadata else None
+        self._outer = bool(outer)
 
     def sql_expr_part(self) -> str:
         """SQL fragment for embedding this column into a generated SQL statement."""
@@ -505,47 +513,6 @@ class Column:
         left = self._to_column(other)
         left._reject_nested_generator("power")
         return spark_pow(left, self)
-
-    def between(
-        self,
-        lowerBound: Column | Scalar,  # noqa: N803 — PySpark arg name
-        upperBound: Column | Scalar,  # noqa: N803 — PySpark arg name
-    ) -> Column:
-        """``lowerBound <= self <= upperBound`` (PySpark ``Column.between``)."""
-        self._reject_nested_generator("between")
-        lower = self._to_column(lowerBound)
-        upper = self._to_column(upperBound)
-        lower._reject_nested_generator("between")
-        upper._reject_nested_generator("between")
-        return (self >= lower) & (self <= upper)
-
-    def eqNullSafe(self, other: Column | Scalar) -> Column:  # noqa: N802 — PySpark camelCase
-        """Null-safe equality (``IS NOT DISTINCT FROM``; PySpark ``Column.eqNullSafe``)."""
-        self._reject_nested_generator("eqNullSafe")
-        right = self._to_column(other)
-        right._reject_nested_generator("eqNullSafe")
-        parts = _native.PyColumnParts.eq_null_safe(
-            self._inner,
-            right._inner,
-            (self.spark_wrap_display_part(), self.sql_expr_part(), self.join_sql_part()),
-            (right.spark_wrap_display_part(), right.sql_expr_part(), right.join_sql_part()),
-        )
-        is_aggregate = self._is_aggregate or right._is_aggregate
-        is_foldable = self._is_foldable and right._is_foldable and not is_aggregate
-        has_free_attribute = self._has_free_attribute or right._has_free_attribute
-        has_ungroupable = self._has_ungroupable or right._has_ungroupable
-        return Column(
-            parts[0],
-            spark_display=parts[1],
-            sql_expr=parts[2],
-            join_sql_expr=parts[3],
-            stable_name=False,
-            is_aggregate=is_aggregate,
-            is_foldable=is_foldable,
-            has_free_attribute=has_free_attribute,
-            has_ungroupable=has_ungroupable,
-            partition_transform=self._partition_transform or right._partition_transform,
-        )
 
     def contains(self, other: Column | Scalar) -> Column:
         """Substring containment (PySpark ``Column.contains``)."""
@@ -936,8 +903,8 @@ class Column:
         the SELECT boundary.
 
         E1: accepts ``*alias`` and optional ``metadata=``. Multi-name + ``metadata`` raises
-        ``ONLY_ALLOWED_FOR_SINGLE_COLUMN`` (Apache ``test_alias_negative``). Schema metadata
-        is accepted and ignored on the engine path (no StructField metadata plumbing yet).
+        ``ONLY_ALLOWED_FOR_SINGLE_COLUMN`` (Apache ``test_alias_negative``). Single-name
+        metadata is retained for the projected ``StructField`` at ``DataFrame.select``.
         Multi-name without metadata uses the first name (generator multi-output residual).
         """
         if not alias:
@@ -950,7 +917,6 @@ class Column:
                 errorClass="ONLY_ALLOWED_FOR_SINGLE_COLUMN",
                 messageParameters={"arg_name": "metadata"},
             )
-        _ = metadata
         name = alias[0]
         parts = _native.PyColumnParts.alias(
             self._inner,
@@ -976,6 +942,8 @@ class Column:
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
+            alias_metadata=metadata,
+            outer=self._outer,
         )
 
     def __iter__(self) -> None:
@@ -1041,6 +1009,9 @@ class Column:
                 parts[0],
                 spark_display=parts[1],
                 sql_expr=parts[2],
+                join_sql_expr=_native.PyColumnParts.field_join_sql(
+                    self.sql_expr_part(), _sql_string_literal(key)
+                ),
                 projection_name=parts[1],
                 has_free_attribute=self._has_free_attribute,
                 is_foldable=self._is_foldable and not self._is_aggregate,
@@ -1330,6 +1301,7 @@ class Column:
             origin_plan_id=self._origin_plan_id,
             origin_field=self._origin_field,
             join_sql_expr=self._join_sql_expr,
+            **_column_fields.carried_select_attrs(self),
         )
 
     def asc(self) -> Column:
@@ -1399,7 +1371,19 @@ class Column:
             join_sql_expr=self._join_sql_expr,
             g2_range_order_names=self._g2_range_order_names,
             window_spec=self._window_spec,
+            alias_metadata=self._alias_metadata,
+            outer=self._outer,
         )
+
+    between = _column_fields.between
+    eqNullSafe = _column_fields.eq_null_safe  # noqa: N815 — PySpark camelCase alias
+    isin = _column_fields.isin
+    isNaN = _column_fields.is_nan  # noqa: N815 — PySpark camelCase alias
+    astype = _column_fields.astype
+    name = _column_fields.name
+    outer = _column_fields.outer
+    withField = _column_fields.with_field  # noqa: N815 — PySpark camelCase alias
+    dropFields = _column_fields.drop_fields  # noqa: N815 — PySpark camelCase alias
 
 
 def _engine_type_from_cast_arg(data_type: Any) -> str:

@@ -119,6 +119,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   overlay records each view's registration object for staleness checks; the file
   stays on its exact baseline (4044 → 4043, ratcheted down).
   pins: catalog-surface-1/C-009
+  COLUMN-PARITY-1 step 1 (2026-09-14): `DataFrame` gains `_field_metadata`:
+  `Column.name(..., metadata=…)` stores it and `schema` overlays it on the projected
+  `StructField`. `__str__` moved to `column_fields` for baseline headroom and the
+  module binds here for the metadata helpers.
+  **Critic round (2026-09-14, R-4):** the select/filter struct-edit resolve hooks are
+  deleted — `withField` / `dropFields` are native `update_fields` expressions, so no
+  boundary rewrite runs. pins: column-parity-1/C-002, C-004, C-005, C-008
 - `actions_export.py` owns `DataFrameNaFunctions.fill` and `drop`.
 - `replace_expr.py` owns the `DataFrame.replace` body (REPLACE-LINEAR-1 step 1, 2026-09-14):
   PySpark 4.1.2-shaped eager validation (argument classes, equal list lengths,
@@ -155,8 +162,8 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `transform`/`transform_keys`/`transform_values`,
   `NULLABLE_COLUMN_OR_FIELD` / `INVALID_COLUMN_OR_FIELD_DATA_TYPE` in Spark's
   exact text, `NOT_STRUCT` for a non-schema argument per registry DF-TO-1),
-  `withMetadata` (metadata rides `alias(..., metadata=)` — the engine drops
-  field metadata today, backlog DF-METADATA-1 — `NOT_DICT` on a non-dict,
+  `withMetadata` (`alias(name, metadata=)` — the stamped frame, a replace and a cache keep the dict; plan transforms still drop it, backlog DF-METADATA-1 —
+  `NOT_DICT` on a non-dict,
   `UNRESOLVED_COLUMN.WITH_SUGGESTION` attached `_integral`-style on a miss),
   `registerTempTable` (FutureWarning + `create_or_replace_temp_view`
   delegation), `checkpoint` / `localCheckpoint` (in-memory materialization,
@@ -168,6 +175,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
   pins: df-surface-a-1/C-001, C-002, C-003, C-004, C-005
+  **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
 - `rows_export.py` owns Arrow-to-`Row` materialization for `collect` / `take` / `head` /
   `toLocalIterator`. Two converters live here: `rows_from_arrow_table_python` is the unchanged
   pure-Python path and stays the correctness oracle, and `rows_from_arrow_table` adds the
@@ -511,6 +519,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   control flow (`_format_polars_show`, `_display_type_labels_from_arrow`) and
   re-exports the spelling helpers; the spellings themselves live in
   `polars_cells.py`. pins: display-polars-1/C-005
+  COLUMN-PARITY-1 step 1 (2026-09-14): `_collapse_identity_projection_alias` propagates
+  the carried struct-edit/metadata attrs through `column_fields.carried_select_attrs`
+  and skips pending columns unchanged; the pending-check folds into the existing
+  early-return guard to hold the exact baseline. pins: column-parity-1/C-004
 - `polars_cells.py` owns every polars/duckdb cell and dtype spelling used by
   the show doors: `null` / lowercase bools / mixed-mode floats
   (shortest-expansion rules measured probe by probe against polars 1.43.2 —

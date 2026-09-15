@@ -33,6 +33,10 @@ see [../map.md](../map.md).
 - [accessor_namespaces.py](accessor_namespaces.py) — repark extensions `str` /
   `dt` (Polars-style namespaces, no PySpark analog) beside the PySpark-spelled
   twins `F.upper` / `F.trim` / `F.year`, measured Spark-equal.
+- [struct_fields.py](struct_fields.py) — **COLUMN-PARITY-1 (2026-09-14):**
+  `withField` / `dropFields` struct edits (NULL parent stays NULL), `isin`,
+  `isNaN`, `astype`, `name` with `metadata=`, and `outer` — all live-oracle
+  spellings asserted beside their answers.
 
 The six engine-plumbing names (`for_select`, `join_sql_part`, `spark_display_part`,
 `spark_wrap_display_part`, `sql_expr_part`, `sql_expr_without_alias`) are not PySpark

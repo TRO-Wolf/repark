@@ -145,6 +145,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `UnpivotExec`, `apply_stack`, the labeled describe door `apply_labeled_stack` /
   `StackLabels`, marker `stack` UDF, Spark-door `StackRewrite`.
   pins: perf-unpivot-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `update_fields.rs` (+ [update_fields/](update_fields/map.md)) — **COLUMN-PARITY-1
+  (2026-09-14, critic round):** Spark `UpdateFields` as the `update_fields` scalar UDF
+  plus `update_fields_call` / `register_update_fields`, registered on the session in
+  `session/df_guards.rs`. Sequential edit application at plan and exec time with
+  parent-validity masking so NULL structs stay NULL through field extraction.
+  Re-check round 2 (2026-09-15): the mask ANDs validity bitmaps onto shared value
+  buffers; `spark_sql_type` is shared `pub(crate)` for the `isnan` refusal below.
+  pins: column-parity-1/C-008, C-009
+- `isnan.rs` (+ [isnan/](isnan/map.md)) — **COLUMN-PARITY-1 (2026-09-14, critic round):**
+  the `repark_isnan` scalar UDF plus `repark_isnan_call` / `register_repark_isnan`,
+  registered on the session in `session/df_guards.rs`. Float/string test the DOUBLE
+  value (strict cast, malformed errors). Re-check round 2 (2026-09-15): struct, array
+  and map refuse at plan time with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`; all
+  other non-float types answer false.
+  pins: column-parity-1/C-008, C-009
 - `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in

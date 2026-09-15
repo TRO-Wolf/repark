@@ -1570,7 +1570,7 @@
     "sql_expr_without_alias": "(\"x\" IS NOT DISTINCT FROM 0)"
   },
   "g2_getfield__a": {
-    "join_sql": "(\"st\").\"a\"",
+    "join_sql": "(\"st\")['a']",
     "projection_name": "st['a']",
     "select_columns": [
       "st['a']"
@@ -1580,7 +1580,7 @@
     "sql_expr_without_alias": "(\"st\").\"a\""
   },
   "g2_getfield__b": {
-    "join_sql": "(\"st\").\"b\"",
+    "join_sql": "(\"st\")['b']",
     "projection_name": "st['b']",
     "select_columns": [
       "st['b']"
@@ -1620,7 +1620,7 @@
     "sql_expr_without_alias": "(\"arr\")[\"x\"]"
   },
   "g2_getitem__map": {
-    "join_sql": "(\"m\").\"k\"",
+    "join_sql": "(\"m\")['k']",
     "projection_name": "m['k']",
     "select_columns": [
       "m['k']"
@@ -1630,7 +1630,7 @@
     "sql_expr_without_alias": "(\"m\").\"k\""
   },
   "g2_getitem__map_ab": {
-    "join_sql": "(\"m\").\"ab\"",
+    "join_sql": "(\"m\")['ab']",
     "projection_name": "m['ab']",
     "select_columns": [
       "m['ab']"
@@ -1650,7 +1650,7 @@
     "sql_expr_without_alias": "(\"m\")[\"s\"]"
   },
   "g2_getitem__struct": {
-    "join_sql": "(\"st\").\"a\"",
+    "join_sql": "(\"st\")['a']",
     "projection_name": "st['a']",
     "select_columns": [
       "st['a']"
@@ -1660,7 +1660,7 @@
     "sql_expr_without_alias": "(\"st\").\"a\""
   },
   "g2_getitem__struct_b": {
-    "join_sql": "(\"st\").\"b\"",
+    "join_sql": "(\"st\")['b']",
     "projection_name": "st['b']",
     "select_columns": [
       "st['b']"
@@ -1680,7 +1680,7 @@
     "sql_expr_without_alias": "(\"arr\")[0]"
   },
   "g2_getitem_method__map": {
-    "join_sql": "(\"m\").\"k\"",
+    "join_sql": "(\"m\")['k']",
     "projection_name": "m['k']",
     "select_columns": [
       "m['k']"
@@ -1750,7 +1750,7 @@
     "sql_expr_without_alias": "(FALSE OR \"flag\")"
   },
   "g2_nesting__op_cast_alias_getitem": {
-    "join_sql": "(CAST((\"st\").\"a\" AS DOUBLE) + 1)",
+    "join_sql": "(CAST((\"st\")['a'] AS DOUBLE) + 1)",
     "projection_name": "(CAST(inner AS DOUBLE) + 1)",
     "select_columns": [
       "(CAST(inner AS DOUBLE) + 1)"

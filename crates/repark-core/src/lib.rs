@@ -9,6 +9,7 @@ mod dynamic_flatten;
 mod error_map;
 mod extension;
 mod idents;
+mod isnan;
 mod lineage_columns;
 mod named_sources;
 mod namespace_create;
@@ -26,6 +27,7 @@ mod spark_nullable;
 mod stack;
 mod temp_view;
 mod time_travel;
+mod update_fields;
 
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use session::ReparkSession as Session;
@@ -85,10 +87,12 @@ pub use datafusion::prelude::DataFrame;
 
 // --- Plan-rewrite kernels (no DataFrame newtype).
 pub use dynamic_flatten::{DynamicFlattenOptions, dynamic_flatten};
+pub use isnan::{register_repark_isnan, repark_isnan_call, repark_isnan_udf};
 pub use stack::{
     StackLabels, StackQueryPlanner, StackRewrite, apply_labeled_stack, apply_stack, register_stack,
     stack_udf,
 };
+pub use update_fields::{register_update_fields, update_fields_call, update_fields_udf};
 
 #[must_use]
 pub fn built_with_debug_assertions() -> bool {

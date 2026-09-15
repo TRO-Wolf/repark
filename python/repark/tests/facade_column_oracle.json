@@ -1,0 +1,1763 @@
+{
+ "cells": {
+  "astype_bad": {
+   "error": {
+    "condition": "NOT_DATATYPE_OR_STR",
+    "message": "[NOT_DATATYPE_OR_STR] Argument `dataType` should be a DataType or str, got int.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "dataType",
+     "arg_type": "int"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "astype_str": {
+   "result": {
+    "columns": [
+     "i",
+     "i"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(i='1', i=1)",
+     "Row(i='2', i=2)",
+     "Row(i=None, i=None)"
+    ],
+    "schema": "struct<i:string,i:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "i",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "i",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_all": {
+   "error": {
+    "condition": "DATATYPE_MISMATCH.CANNOT_DROP_ALL_FIELDS",
+    "message": "[DATATYPE_MISMATCH.CANNOT_DROP_ALL_FIELDS] Cannot resolve \"update_fields(st, dropfield(), dropfield())\" due to data type mismatch: Cannot drop all fields in struct. SQLSTATE: 42K09;\n'Project [update_fields(st#169, dropfield(a), dropfield(b)) AS r#170]\n+- LogicalRDD [i#166, d#167, s#168, st#169], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "sqlExpr": "\"update_fields(st, dropfield(), dropfield())\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "dropfields_case": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(b='x'))",
+     "Row(r=None)",
+     "Row(r=Row(b=None))"
+    ],
+    "schema": "struct<r:struct<b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_missing": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, b='x'))",
+     "Row(r=None)",
+     "Row(r=Row(a=3, b=None))"
+    ],
+    "schema": "struct<r:struct<a:int,b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_name": {
+   "result": {
+    "columns": [
+     "update_fields(st, dropfield())"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(update_fields(st, dropfield())=Row(a=1))",
+     "Row(update_fields(st, dropfield())=None)",
+     "Row(update_fields(st, dropfield())=Row(a=3))"
+    ],
+    "schema": "struct<update_fields(st, dropfield()):struct<a:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "update_fields(st, dropfield())",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_nested": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(inner=Row(y=3)))",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:struct<inner:struct<y:int>>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "inner",
+          "nullable": true,
+          "type": {
+           "fields": [
+            {
+             "metadata": {},
+             "name": "y",
+             "nullable": true,
+             "type": "integer"
+            }
+           ],
+           "type": "struct"
+          }
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_non_struct": {
+   "error": {
+    "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"update_fields(i, dropfield())\" due to data type mismatch: The first parameter requires the \"STRUCT\" type, however \"i\" has the type \"INT\". SQLSTATE: 42K09;\n'Project [update_fields(i#178, dropfield(a)) AS r#182]\n+- LogicalRDD [i#178, d#179, s#180, st#181], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "inputSql": "\"i\"",
+     "inputType": "\"INT\"",
+     "paramIndex": "first",
+     "requiredType": "\"STRUCT\"",
+     "sqlExpr": "\"update_fields(i, dropfield())\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "dropfields_none": {
+   "error": {
+    "condition": null,
+    "message": "tail of empty list",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "UnsupportedOperationException",
+     "CapturedException",
+     "UnsupportedOperationException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "UnsupportedOperationException"
+   }
+  },
+  "dropfields_nonexistent_nested": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, inner=Row(x=2, y=3)))",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:struct<a:int,inner:struct<x:int,y:int>>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "inner",
+          "nullable": true,
+          "type": {
+           "fields": [
+            {
+             "metadata": {},
+             "name": "x",
+             "nullable": true,
+             "type": "integer"
+            },
+            {
+             "metadata": {},
+             "name": "y",
+             "nullable": true,
+             "type": "integer"
+            }
+           ],
+           "type": "struct"
+          }
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "dropfields_not_str": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o1160.dropFields.\n: java.lang.ClassCastException: class java.lang.Integer cannot be cast to class java.lang.String (java.lang.Integer and java.lang.String are in module java.base of loader 'bootstrap')\n\tat org.apache.spark.sql.Column.$anonfun$dropFields$1(Column.scala:977)\n\tat org.apache.spark.sql.Column$.$anonfun$apply$1(Column.scala:37)\n\tat org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(origin.scala:107)\n\tat org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(origin.scala:147)\n\tat org.apache.spark.sql.Column$.apply(Column.scala:37)\n\tat org.apache.spark.sql.Column.dropFields(Column.scala:977)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:569)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)\n\tat py4j.Gateway.invoke(Gateway.java:282)\n\tat py4j",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "dropfields_one": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1))",
+     "Row(r=None)",
+     "Row(r=Row(a=3))"
+    ],
+    "schema": "struct<r:struct<a:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "getfield_after_withfield": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=9)",
+     "Row(r=None)",
+     "Row(r=9)"
+    ],
+    "schema": "struct<r:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_columns": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=True)",
+     "Row(r=True)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_double_nan": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=False)",
+     "Row(r=True)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_empty": {
+   "result": {
+    "columns": [
+     "(i IN ())"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row((i IN ())=False)",
+     "Row((i IN ())=False)",
+     "Row((i IN ())=False)"
+    ],
+    "schema": "struct<(i IN ()):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "(i IN ())",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_empty_varargs": {
+   "result": {
+    "columns": [
+     "(i IN ())"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row((i IN ())=False)",
+     "Row((i IN ())=False)",
+     "Row((i IN ())=False)"
+    ],
+    "schema": "struct<(i IN ()):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "(i IN ())",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_filter": {
+   "result": {
+    "columns": [
+     "i",
+     "d",
+     "s",
+     "st"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(i=1, d=1.0, s='a', st=Row(a=1, b='x'))",
+     "Row(i=None, d=None, s='c', st=Row(a=3, b=None))"
+    ],
+    "schema": "struct<i:int,d:double,s:string,st:struct<a:int,b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "i",
+       "nullable": true,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "d",
+       "nullable": true,
+       "type": "double"
+      },
+      {
+       "metadata": {},
+       "name": "s",
+       "nullable": true,
+       "type": "string"
+      },
+      {
+       "metadata": {},
+       "name": "st",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_int_vs_string": {
+   "error": {
+    "condition": "CAST_INVALID_INPUT",
+    "message": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== DataFrame ==\n\"isin\" was called from\n<string>:12\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "CapturedException",
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "ansiConfig": "\"spark.sql.ansi.enabled\"",
+     "expression": "'x'",
+     "sourceType": "\"STRING\"",
+     "targetType": "\"BIGINT\""
+    },
+    "raises": "NumberFormatException"
+   }
+  },
+  "isin_list": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=True)",
+     "Row(r=False)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_list_of_columns": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=True)",
+     "Row(r=True)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_mixed_col_scalar": {
+   "result": {
+    "columns": [
+     "(i IN (2, 1))"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row((i IN (2, 1))=True)",
+     "Row((i IN (2, 1))=True)",
+     "Row((i IN (2, 1))=None)"
+    ],
+    "schema": "struct<(i IN (2, 1)):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "(i IN (2, 1))",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_set": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=True)",
+     "Row(r=True)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_string_vs_int": {
+   "error": {
+    "condition": "CAST_INVALID_INPUT",
+    "message": "[CAST_INVALID_INPUT] The value 'c' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== DataFrame ==\n\"isin\" was called from\n<string>:11\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "CapturedException",
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "ansiConfig": "\"spark.sql.ansi.enabled\"",
+     "expression": "'c'",
+     "sourceType": "\"STRING\"",
+     "targetType": "\"BIGINT\""
+    },
+    "raises": "NumberFormatException"
+   }
+  },
+  "isin_tuple": {
+   "error": {
+    "condition": "UNSUPPORTED_FEATURE.LITERAL_TYPE",
+    "message": "[UNSUPPORTED_FEATURE.LITERAL_TYPE] The feature is not supported: Literal for '[1, 2]' of class java.util.ArrayList. SQLSTATE: 0A000",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "SparkRuntimeException",
+     "CapturedException",
+     "SparkRuntimeException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "type": "class java.util.ArrayList",
+     "value": "[1, 2]"
+    },
+    "raises": "SparkRuntimeException"
+   }
+  },
+  "isin_varargs_name": {
+   "result": {
+    "columns": [
+     "(i IN (1, 2))"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row((i IN (1, 2))=True)",
+     "Row((i IN (1, 2))=True)",
+     "Row((i IN (1, 2))=None)"
+    ],
+    "schema": "struct<(i IN (1, 2)):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "(i IN (1, 2))",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isin_with_none": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=True)",
+     "Row(r=None)",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isnan_decimal": {
+   "result": {
+    "columns": [
+     "isnan(x)"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(isnan(x)=False)"
+    ],
+    "schema": "struct<isnan(x):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "isnan(x)",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isnan_float": {
+   "result": {
+    "columns": [
+     "isnan(f)"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(isnan(f)=True)",
+     "Row(isnan(f)=False)",
+     "Row(isnan(f)=False)"
+    ],
+    "schema": "struct<isnan(f):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "isnan(f)",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isnan_names": {
+   "result": {
+    "columns": [
+     "isnan(d)",
+     "isnan(i)"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(isnan(d)=False, isnan(i)=False)",
+     "Row(isnan(d)=True, isnan(i)=False)",
+     "Row(isnan(d)=False, isnan(i)=False)"
+    ],
+    "schema": "struct<isnan(d):boolean,isnan(i):boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "isnan(d)",
+       "nullable": false,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "isnan(i)",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isnan_sql_string": {
+   "result": {
+    "columns": [
+     "a"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=True)"
+    ],
+    "schema": "struct<a:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "isnan_string": {
+   "error": {
+    "condition": "CAST_INVALID_INPUT",
+    "message": "[CAST_INVALID_INPUT] The value 'c' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== DataFrame ==\n\"isNaN\" was called from\n<string>:19\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "CapturedException",
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "ansiConfig": "\"spark.sql.ansi.enabled\"",
+     "expression": "'c'",
+     "sourceType": "\"STRING\"",
+     "targetType": "\"DOUBLE\""
+    },
+    "raises": "NumberFormatException"
+   }
+  },
+  "name_alias": {
+   "result": {
+    "columns": [
+     "x"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(x=1)",
+     "Row(x=2)",
+     "Row(x=None)"
+    ],
+    "schema": "struct<x:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "x",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "name_metadata": {
+   "result": {
+    "items": {
+     "m": {
+      "kind": "int",
+      "value": 1
+     }
+    },
+    "kind": "dict"
+   }
+  },
+  "name_multi": {
+   "result": {
+    "columns": [
+     "k",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(k=1, v=2)",
+     "Row(k=1, v=2)",
+     "Row(k=1, v=2)"
+    ],
+    "schema": "struct<k:int,v:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "k",
+       "nullable": false,
+       "type": "integer"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": false,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "outer_in_exists": {
+   "result": {
+    "columns": [
+     "id"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0)",
+     "Row(id=1)"
+    ],
+    "schema": "struct<id:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "outer_in_scalar": {
+   "result": {
+    "columns": [
+     "id",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=0, n=0)",
+     "Row(id=1, n=0)",
+     "Row(id=2, n=0)"
+    ],
+    "schema": "struct<id:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": false,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "outer_plain_select": {
+   "result": {
+    "columns": [
+     "i"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(i=1)",
+     "Row(i=2)",
+     "Row(i=None)"
+    ],
+    "schema": "struct<i:int>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "i",
+       "nullable": true,
+       "type": "integer"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "outer_repr": {
+   "result": {
+    "kind": "Column",
+    "repr": "Column<'lazy(i)'>"
+   }
+  },
+  "sql_in": {
+   "error": {
+    "condition": "CAST_INVALID_INPUT",
+    "message": "[CAST_INVALID_INPUT] The value 'a' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 75) ==\n...in (1, null) c, 2 in (2) d, 'a' in ('a', 1) e\n                                   ^^^^^^^^^^^\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "CapturedException",
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "ansiConfig": "\"spark.sql.ansi.enabled\"",
+     "expression": "'a'",
+     "sourceType": "\"STRING\"",
+     "targetType": "\"BIGINT\""
+    },
+    "raises": "NumberFormatException"
+   }
+  },
+  "sql_in_mixed": {
+   "error": {
+    "condition": "CAST_INVALID_INPUT",
+    "message": "[CAST_INVALID_INPUT] The value 'a' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 12) ==\nselect 'a' in ('a', 1) e\n           ^^^^^^^^^^^\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "CapturedException",
+     "NumberFormatException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "ansiConfig": "\"spark.sql.ansi.enabled\"",
+     "expression": "'a'",
+     "sourceType": "\"STRING\"",
+     "targetType": "\"BIGINT\""
+    },
+    "raises": "NumberFormatException"
+   }
+  },
+  "sql_in_null": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=True, b=None, c=None, d=True)"
+    ],
+    "schema": "struct<a:boolean,b:boolean,c:boolean,d:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": true,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": true,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "c",
+       "nullable": true,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "d",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "sql_isnan": {
+   "result": {
+    "columns": [
+     "a",
+     "b",
+     "c"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(a=True, b=False, c=False)"
+    ],
+    "schema": "struct<a:boolean,b:boolean,c:boolean>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "a",
+       "nullable": false,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "b",
+       "nullable": false,
+       "type": "boolean"
+      },
+      {
+       "metadata": {},
+       "name": "c",
+       "nullable": false,
+       "type": "boolean"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_add": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, b='x', c=9))",
+     "Row(r=None)",
+     "Row(r=Row(a=3, b=None, c=9))"
+    ],
+    "schema": "struct<r:struct<a:int,b:string,c:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         },
+         {
+          "metadata": {},
+          "name": "c",
+          "nullable": false,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_case": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(A=5, b='x'))",
+     "Row(r=None)",
+     "Row(r=Row(A=5, b=None))"
+    ],
+    "schema": "struct<r:struct<A:int,b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "A",
+          "nullable": false,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_col_not_column": {
+   "error": {
+    "condition": "NOT_COLUMN",
+    "message": "[NOT_COLUMN] Argument `col` should be a Column, got int.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "col",
+     "arg_type": "int"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "withfield_dup_fields": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=3, a=3))"
+    ],
+    "schema": "struct<r:struct<a:int,a:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": false,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": false,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": false,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_empty_name": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, b='x', =3))",
+     "Row(r=None)",
+     "Row(r=Row(a=3, b=None, =3))"
+    ],
+    "schema": "struct<r:struct<a:int,b:string,:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         },
+         {
+          "metadata": {},
+          "name": "",
+          "nullable": false,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_missing_parent": {
+   "error": {
+    "condition": "FIELD_NOT_FOUND",
+    "message": "[FIELD_NOT_FOUND] No such struct field `nope` in `a`, `inner`. SQLSTATE: 42704",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "fieldName": "`nope`",
+     "fields": "`a`, `inner`"
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "withfield_name": {
+   "result": {
+    "columns": [
+     "update_fields(st, WithField(9))"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(update_fields(st, WithField(9))=Row(a=1, b='x', c=9))",
+     "Row(update_fields(st, WithField(9))=None)",
+     "Row(update_fields(st, WithField(9))=Row(a=3, b=None, c=9))"
+    ],
+    "schema": "struct<update_fields(st, WithField(9)):struct<a:int,b:string,c:int>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "update_fields(st, WithField(9))",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         },
+         {
+          "metadata": {},
+          "name": "c",
+          "nullable": false,
+          "type": "integer"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_name_not_str": {
+   "error": {
+    "condition": "NOT_STR",
+    "message": "[NOT_STR] Argument `fieldName` should be a str, got int.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "arg_name": "fieldName",
+     "arg_type": "int"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "withfield_nested": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, inner=Row(x=2, y=3, z=7)))",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:struct<a:int,inner:struct<x:int,y:int,z:int>>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "inner",
+          "nullable": true,
+          "type": {
+           "fields": [
+            {
+             "metadata": {},
+             "name": "x",
+             "nullable": true,
+             "type": "integer"
+            },
+            {
+             "metadata": {},
+             "name": "y",
+             "nullable": true,
+             "type": "integer"
+            },
+            {
+             "metadata": {},
+             "name": "z",
+             "nullable": false,
+             "type": "integer"
+            }
+           ],
+           "type": "struct"
+          }
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_nested_replace": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, inner=Row(x=1, y=3)))",
+     "Row(r=None)"
+    ],
+    "schema": "struct<r:struct<a:int,inner:struct<x:int,y:int>>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "inner",
+          "nullable": true,
+          "type": {
+           "fields": [
+            {
+             "metadata": {},
+             "name": "x",
+             "nullable": true,
+             "type": "integer"
+            },
+            {
+             "metadata": {},
+             "name": "y",
+             "nullable": true,
+             "type": "integer"
+            }
+           ],
+           "type": "struct"
+          }
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_non_struct": {
+   "error": {
+    "condition": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"update_fields(i, WithField(1))\" due to data type mismatch: The first parameter requires the \"STRUCT\" type, however \"i\" has the type \"INT\". SQLSTATE: 42K09;\n'Project [update_fields(i#144, WithField(a, 1)) AS r#148]\n+- LogicalRDD [i#144, d#145, s#146, st#147], false\n",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "AnalysisException",
+     "CapturedException",
+     "AnalysisException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "inputSql": "\"i\"",
+     "inputType": "\"INT\"",
+     "paramIndex": "first",
+     "requiredType": "\"STRUCT\"",
+     "sqlExpr": "\"update_fields(i, WithField(1))\""
+    },
+    "raises": "AnalysisException"
+   }
+  },
+  "withfield_on_null_parent_nested": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=1, inner=None))"
+    ],
+    "schema": "struct<r:struct<a:int,inner:struct<x:int,y:int>>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "integer"
+         },
+         {
+          "metadata": {},
+          "name": "inner",
+          "nullable": true,
+          "type": {
+           "fields": [
+            {
+             "metadata": {},
+             "name": "x",
+             "nullable": true,
+             "type": "integer"
+            },
+            {
+             "metadata": {},
+             "name": "y",
+             "nullable": false,
+             "type": "integer"
+            }
+           ],
+           "type": "struct"
+          }
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_replace": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a=None, b='x'))",
+     "Row(r=None)",
+     "Row(r=Row(a=None, b=None))"
+    ],
+    "schema": "struct<r:struct<a:void,b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": true,
+          "type": "void"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "withfield_replace_type": {
+   "result": {
+    "columns": [
+     "r"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(r=Row(a='z', b='x'))",
+     "Row(r=None)",
+     "Row(r=Row(a='z', b=None))"
+    ],
+    "schema": "struct<r:struct<a:string,b:string>>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "r",
+       "nullable": true,
+       "type": {
+        "fields": [
+         {
+          "metadata": {},
+          "name": "a",
+          "nullable": false,
+          "type": "string"
+         },
+         {
+          "metadata": {},
+          "name": "b",
+          "nullable": true,
+          "type": "string"
+         }
+        ],
+        "type": "struct"
+       }
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}
