@@ -2870,23 +2870,70 @@ the pin rather than obeying it.
 
 ### COMPLEX-ELEM-NULL-1 — constructor element nullability does not propagate the child flag
 
-- **repark** — `ARRAY(1, 2)` **FIXED 2026-09-16 (DOOR-CONVERGE-1):** answers
-  `list<element: int32 not null>` — the array constructors (`array`/`make_array`,
-  child names `element`/`item` kept distinct) declare Spark's `containsNull = any
-  constructor arg nullable` and retag the physical list to match. `STRUCT(1 AS a)`
-  still answers `struct<a: int32>` with a **nullable** element; `MAP('a', 1)` still
-  answers `map<string, int32>` with a **nullable** value field. (Top-level flags are
-  Spark-equal since 2026-09-06, CAST-NULL-1.)
+- **repark** — `STRUCT(1 AS a)` answers `struct<a: int32>` with a **nullable**
+  element; `MAP('a', 1)` answers `map<string, int32>` with a **nullable** value
+  field; `ARRAY(1, 2)` answers `list<element: int32>` with a **nullable** element.
+  (Top-level flags are Spark-equal since 2026-09-06, CAST-NULL-1.)
 - **Apache Spark** — the same constructors answer `struct<a: int32 not null>`,
   `MapType(StringType(), IntegerType(), False)`, and `list<element: int32 not null>`:
   elements are non-null exactly when their children are. Values match.
   *(oracle: live PySpark 4.1.2, UTC, 2026-09-06.)*
 - **Pin** —
   `python/repark/tests/test_nullability_2.py::test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1`
-  (array arm now green; still red-pins the STRUCT/MAP arms).
-- **Rationale** — PARTIALLY FIXED. The array arm is converged (DOOR-CONVERGE-1,
-  2026-09-16); the struct/map arms need the same type-rebuilding constructor shims.
-  Filed 2026-09-06 (NULLABILITY-2 round 2).
+  (red when fixed).
+- **Rationale** — BACKLOG. Element propagation needs type-rebuilding constructor
+  shims; the top-level rule (CAST-NULL-1) marks only the top field. Filed 2026-09-06
+  (NULLABILITY-2 round 2). The array arm and the registry-wide promise retag were
+  built and then un-built in DOOR-CONVERGE-1 under ruling R-10 — the probe measured
+  the constructor fix never reaching the SQL door — and moved to DOOR-CONVERGE-2
+  (fixtures-batch7). The N7-11 `array_append` nullability delta in that probe was
+  traced to main advancing past the branch base (`fix(array-null-1)`, `44ca3aea`,
+  repark-owned `array_append`/`array_prepend`), not to the retag. The same
+  literal-constructor flag surfaces through `array_contains` result nullability —
+  see ARRAY-LITERAL-CONTAINSNULL-1.
+
+### ELEMENT-AT-ALIAS-1 — alias re-registration can clobber a dedicated binding
+
+- **repark** — `element_at(array(10,20,30), 2)` answers `20` and
+  `element_at(col_array, 3)` answers the third element on both doors: `element_at`
+  resolves to repark's dedicated binding, not `map_extract`'s alias. (DOOR-CONVERGE-1
+  round 2 found that re-registering UDFs under their aliases — the registry-wide
+  promise retag, since reverted under ruling R-10 — could let `map_extract`'s
+  `element_at` alias overwrite the dedicated `element_at` binding, order-dependent.)
+- **Apache Spark** — `element_at` serves arrays and maps through one resolution.
+- **Pin** —
+  `python/repark/tests/test_door_converge_1.py::test_element_at_alias_1_resolves_the_dedicated_binding`
+  (codifies today's answer; turns red if a registration change re-clobbers).
+- **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-1 round 3, ruling R-10).
+  No live divergence today; the hazard resurfaces with DOOR-CONVERGE-2's
+  registry-wide work, which must rebind each function under its exact registry key
+  without propagating aliases.
+
+### ARRAY-LITERAL-CONTAINSNULL-1 — literal array constructors declare a nullable element
+
+- **repark** — `array_contains(array(1,2), CAST(2 AS DOUBLE))` and
+  `array_contains(array(), 1)` report a **nullable** result on both doors;
+  `array_contains(array(1,2), 1)` reports `nullable=True` (batch-7 N7-31).
+  Values match Spark everywhere.
+- **Apache Spark** — the same calls are non-null: `ArrayContains.nullable` reads
+  `left.nullable || right.nullable || left.containsNull`, and the literal
+  constructor's `containsNull` is `children.exists(_.nullable)` — false for
+  `array(1,2)` and `array()` (cells C6-ac-double-hit, C6-ac-empty-untyped, N7-31).
+  *(oracle: live PySpark 4.1.2, UTC.)*
+- **Pin** —
+  `python/repark/tests/test_door_converge_1.py::test_l002_array_contains_coerces_to_tightest_common_type`
+  and `test_l004_array_contains_empty_untyped_array_answers_false`
+  (the literal-haystack legs assert today's `nullable=True`; they red when the
+  constructor fix lands and must be flipped to Spark's non-null).
+- **Rationale** — BACKLOG, filed 2026-09-15 (DOOR-CONVERGE-1 round 4, ruling
+  R-13), owner DOOR-CONVERGE-2. On the analyzed plan that produces the exported
+  schema (`analyze_eagerly`), `array(1,2)` is still a `ScalarFunction` whose
+  element field is DataFusion's unconditionally-nullable declaration, so
+  consumers cannot distinguish a literal constructor from a nullable-element
+  column; the folded literal only appears on the optimized plan. The fix is the
+  constructor `containsNull` work moved out of DOOR-CONVERGE-1 under R-10 — the
+  array arm of COMPLEX-ELEM-NULL-1 — carried through the analyzer/schema path
+  (or an equivalent analyzer rewrite), measured against `fixtures-batch7.json`.
 
 ### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
 

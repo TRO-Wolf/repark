@@ -34,7 +34,7 @@ lexer divergence owned by another unit.
 | C-006 | `approx_count_distinct` and `regr_count` derive NON-null `bigint` on both doors, also over empty input (cells BL18-sql, BL18-api, BL18-sql-empty). | `test_c006_count_aggregates_non_null_bigint_on_both_doors` green + `test_types_1.py` nullability pair trued up. | PROVEN | Red (base tree): `assert (DataType(int64), True) == (DataType(int64), False)` — both UDAFs derive nullable today. |
 | C-007 | `ascii` answers the codepoint (`ascii('é')`=233, `'€x'`=8364, `''`=0) and `length`/`character_length` of BINARY counts bytes (`X'C3A9'` → 2) on both doors (cells DIV-ascii-0..3, DIV-length-0..3, DIV-api-ascii, DIV-api-length-bin). | `test_c007_ascii_codepoint_and_binary_length_on_both_doors` green. | PROVEN | Red (base tree): facade `F.length` on `X'C3A9'` answers `1` (DF-core char path), Spark `2` bytes. |
 | C-008 | `bin(true)` / `rint(true)` refuse with `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]` in the message on the SQL door (cells BL6-sql-0..1). Facade half (`F.bin`/`F.rint` cast first, in `functions*.py`) is outside the fence — listed in `out_of_scope_observed`. | `test_c008_bin_rint_refuse_boolean_on_the_sql_door` green. | PROVEN | Red (base tree): `bin(true)` raises `Internal error: Function 'bin' failed to match any signature ... requires Int64, but received Boolean`; `rint(true)` raises `expects Numeric but received Boolean` — internal signature errors, not Spark's class. |
-| C-009 | No regression: the full facade suite, the Rust test set for `repark-functions`/`repark-python`, lint, fmt, and the parity-harness suite stay green; `EXPECTED_DIVERGENCES` ratchets 22 → 14 and every remaining row is still real. | `cargo test -p repark-functions -p repark-python`, `cargo clippy ... -D warnings`, `cargo fmt --all --check`, `pytest python/repark/tests -q`, `pytest python/repark-parity/tests -q` all green. | PROVEN | — |
+| C-009 | No regression: the full facade suite, the Rust test set for `repark-functions`/`repark-python`, lint, fmt, and the parity-harness suite stay green; `EXPECTED_DIVERGENCES` ratchets 22 → 14 and every remaining row is still real. | `cargo test -p repark-functions -p repark-python`, `cargo clippy ... -D warnings`, `cargo fmt --all --check`, `pytest python/repark/tests -q`, `pytest python/repark-parity/tests -q` all green. | PROVEN | Every listed gate green on the post-R-13 tree — facade suite 6135 passed, 0 failed (the C-011/C-013 nullability legs now pin the recorded divergence per R-13). |
 
 ## Evidence
 
@@ -125,9 +125,9 @@ moved.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
 | C-010 | `unbase64` refuses malformed endings with `java.util.Base64` MIME-decoder text on both doors: alphabet after padding (`'QQ==QQ'` → `incorrect ending byte at 5`, `'U3Bhcms=QQ'` → `… at 9`), wrong 4-byte ending unit (`'QQ='`, `'=QQ'`), lone quantum (`'Q'` → `Last unit does not have enough valid bits`); still answers `'QR'` → `b'A'`, `'QQQ'` → `b'A\x04'`, skips interior space (cells C6-unb64-*, C6-api-unb64). | `test_l001_unbase64_strict_endings_on_both_doors` green. | PROVEN | Red (base tree): the lenient decoder stopped at the first pad and answered `b'A'` for `'QQ==QQ'` — silent truncation, no error. |
-| C-011 | `array_contains` coerces element and needle to their tightest common type: `array_contains(array(1,2), CAST(3 AS DOUBLE)/CAST(2 AS DOUBLE))` → `False` NULLABLE, `CAST(2 AS DOUBLE)` → `True` non-null, out-of-range BIGINT needle → `False` non-null, decimal and nested arrays still `True` (cells C6-ac-double-needle/hit, C6-ac-bigint-out/in, C6-api-ac-double/bigint, C6-ac-decimal, C6-ac-nested). | `test_l002_array_contains_coerces_to_tightest_common_type` green. | PROVEN | Red (base tree): `coerce_types` narrowed the needle to the element type — `3.0/2.0` cast DOUBLE→INT (1) answered `True` where Spark's DOUBLE comparison answers `False`. |
+| C-011 | `array_contains` coerces element and needle to their tightest common type: `array_contains(array(1,2), CAST(3 AS DOUBLE)/CAST(2 AS DOUBLE))` → `False` NULLABLE, `CAST(2 AS DOUBLE)` → `True` non-null, out-of-range BIGINT needle → `False` non-null, decimal and nested arrays still `True` (cells C6-ac-double-needle/hit, C6-ac-bigint-out/in, C6-api-ac-double/bigint, C6-ac-decimal, C6-ac-nested). | `test_l002_array_contains_coerces_to_tightest_common_type` green. | PROVEN (R-13: nullability legs handed off) | Widening and every value leg PROVEN on both doors. The literal-haystack nullability sub-claim (Spark non-null) is handed to DOOR-CONVERGE-2 under R-13: it rides on the array constructor's declared `containsNull`, which DataFusion marks unconditionally nullable — recorded divergence ARRAY-LITERAL-CONTAINSNULL-1; the pin asserts today's `nullable=True` and flips back when the ctor fix lands. |
 | C-012 | STRING needle vs `array<int>` and INT needle vs `array<string>` refuse `[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES]` on both doors, ANSI on and off (cells C6-ac-string-needle, C6-ac-int-in-strings, C6-api-ac-string, C6-ac-string-off). | `test_l003_array_contains_diff_types_refuses_on_both_doors` + `_when_ansi_off` green. | PROVEN | Red (base tree): the needle was cast into the element type — `'x'`→NULL int — and the call answered NULL instead of refusing. |
-| C-013 | `array_contains(array(), 1)` → `False` non-null on both doors; the `NULL_TYPE` refusal fires only for an untyped NULL needle (cell C6-ac-empty-untyped). | `test_l004_array_contains_empty_untyped_array_answers_false` green. | PROVEN | Red (base tree): `array()`'s `Null` element coerced the needle to `Null`, which tripped the `NULL_TYPE` refusal — the call raised instead of answering `False`. |
+| C-013 | `array_contains(array(), 1)` → `False` non-null on both doors; the `NULL_TYPE` refusal fires only for an untyped NULL needle (cell C6-ac-empty-untyped). | `test_l004_array_contains_empty_untyped_array_answers_false` green. | PROVEN (R-13: nullability leg handed off) | Value `False` and the `NULL_TYPE` scope PROVEN on both doors. The non-null sub-claim is handed to DOOR-CONVERGE-2 under R-13 — `array()`'s element field is DF's unconditionally-nullable `item`, so `containsNull` reads true where Spark's empty constructor declares `containsNull=false`; recorded divergence ARRAY-LITERAL-CONTAINSNULL-1, pin asserts today's `nullable=True`. |
 | C-014 | ANSI-off `abs` wraps signed minima with width kept: every signed minimum returns itself, `abs(CAST(-5 AS TINYINT))` → `5` tinyint; the facade column case stays nullable because its input column is (cells C6-abs-off-*, C6-api-abs-off-tiny). | `test_l007_abs_wraps_signed_minima_when_ansi_off` green (builder-configured `spark.sql.ansi.enabled=false` session). | PROVEN | Green on the fixed tree; the pin locks the existing wrap arm so a future ANSI-off regression goes red. |
 
 ### Round-2 perf lines (S2-21 method, best of 3, same session, release build)
@@ -158,18 +158,105 @@ instead of `format!` per row.
   the SET-ANSI-RUNTIME-1 residue owned by unit sql-set-door-1 — recorded here only.
 - The array-constructor work (`array`/`make_array` Spark `containsNull`, one kernel per
   spelling, `element` vs `item` child-field names) and the registry-wide `promise_retag`
-  alignment of planned vs physical Arrow fields ride in the same commit; the flipped
-  recorded answers (`test_types_1`, `test_nullability_2`, `fnp8` dispositions) match the
-  oracle's embedded `list<element: int32 not null>` schema.
+  alignment of planned vs physical Arrow fields rode in the round-2 commit and were
+  reverted in round 3 under ruling R-10 — see "Handed to DOOR-CONVERGE-2" below; the
+  re-recorded answers (`test_types_1`, `test_nullability_2`, `fnp8` dispositions)
+  returned to their pre-round-2 forms.
 
-## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-16
+## RULING R-10 — DOOR-CONVERGE-1 round 3 (orchestrator audit of 99e61a94, run 15c) — 2026-09-15
 
-- C-001..C-008, C-010..C-014 PROVEN: every clause's both-door pin is green on the rebuilt
-  release native module (`16 passed` for `test_door_converge_1.py`); the measured
-  divergences in the red-first runs are each closed by a registered Spark kernel the
-  facade and the SQL door share (`door_parity_tests` keeps the divergence table at 14).
-- C-009 PROVEN: facade suite `pytest python/repark/tests -q` green, `cargo test -p
-  repark-functions -p repark-python` green, clippy/fmt/size gates green.
+Ruling R-10 (G-2, AGENTS.md "fixes stay narrow" — a semantic-adjacent rewrite is a
+separate change, never a passenger on a fix): the registry-wide
+`crates/repark-functions/src/promise_retag.rs` wrapper and the
+`crates/repark-functions/src/collection/make_array.rs` `containsNull` change were
+removed from this branch, together with every edit that existed only because of
+them — the `lib.rs` registration hook, the `function_dispatch.rs` facade wrap, the
+eight re-recorded `fnp8_repark_dispositions.json` entries, the `test_nullability_2`
+/`test_types_1` element-nullability expectations, and the registry note marking
+COMPLEX-ELEM-NULL-1's array arm FIXED. All of it moves to DOOR-CONVERGE-2, measured
+against `fixtures-batch7.json` with its own review.
+
+### Handed to DOOR-CONVERGE-2 — batch-7 probe evidence
+
+`contains_null_probe.py` over batch-7 cells through `spark.sql`,
+`probe-branch.txt` (round-2 tree) vs `probe-mainlike.txt` (main-like):
+
+- `SELECT array(1, 2)` still reports `containsNull=True` on this branch where Spark
+  answers False — the round-2 constructor fix never reached the SQL door.
+- `array_append(array(1,2), 3)` reported `nullable=True` on the branch where the
+  main-like probe and Spark are non-null (N7-11). Post-revert measurement shows
+  the retag did not cause it: the branch still answers `nullable=True`, and the
+  answer is unchanged from this branch's true base `acbb6a8e`, where
+  `array_append` is DataFusion's builtin (default field always nullable). The
+  non-null main-like answer comes from `fix(array-null-1)` (`44ca3aea`,
+  repark-owned `array_append`/`array_prepend` with arg-nullability propagation),
+  which landed on main after this branch's base — a base-version delta, not a
+  regression this branch introduced. Verified against a sibling build of the
+  newer main (`/tmp/pc-bitmap` at `f6312c7b`): `nullable=False`,
+  `IntegerType` elements.
+- `array_contains(array(1,2), 1)` (N7-31) returned to main's answer: `nullable=True`
+  where Spark is non-null — the same ctor divergence surfacing through
+  `array_contains` (the residual red pins below).
+- Twenty other batch-7 divergences are identical on main and this branch —
+  pre-existing DOOR-CONVERGE-2 work.
+- Under R-13 (round 4): C-011's and C-013's literal-haystack nullability
+  sub-claims move here — `array_contains` over a literal `array(…)`/`array()`
+  haystack must answer Spark's non-null once the constructor declares
+  `containsNull` from its children (cells C6-ac-double-hit, C6-ac-empty-untyped,
+  N7-31; registry ARRAY-LITERAL-CONTAINSNULL-1). Value legs stay PROVEN in this
+  unit.
+
+Post-revert probe, release build, last line: `equal 10 different 23`. The single
+line delta against `probe-mainlike.txt` is N7-11, accounted for above — the
+main-like baseline carries `array-null-1` (`44ca3aea`), which this branch's base
+predates; the branch's own answer is unchanged by the R-10 revert.
+
+### Residual reds under R-10 — disposition under RULING R-13 (round 4)
+
+Two this-unit pin legs asserted the oracle's non-null answer that only the removed
+constructor work can reach:
+
+- `test_l002` literal-haystack legs — `CAST(2 AS DOUBLE)` hit, BIGINT out/in-range,
+  decimal, nested — answer `nullable=True` where Spark pins non-null.
+- `test_l004` (`array_contains(array(), 1)`) — answers `False` NULLABLE where Spark
+  pins `False` non-null.
+
+Root cause: `array_contains` computes `left.nullable || right.nullable ||
+containsNull(element)`; the declared element `containsNull` comes from the array
+constructor, which DataFusion marks unconditionally nullable. On the analyzed plan
+— the schema repark exports (`analyze_eagerly`) — `array(1,2)` is still a
+`ScalarFunction`, indistinguishable from a nullable-element column at field level;
+the kernel-local alternative (inspecting `scalar_arguments` for a folded literal
+haystack) was implemented and reverted because it never fires on the analyzed
+schema.
+
+Ruling R-13 (round 4) disposed the legs: value legs and column-haystack legs keep
+asserting Spark's answer (green); the literal-haystack nullability legs now pin
+today's `nullable=True` as the recorded divergence ARRAY-LITERAL-CONTAINSNULL-1
+(§7 registry, owner DOOR-CONVERGE-2), and flip back to non-null when the
+constructor fix lands. C-011's and C-013's nullability sub-claims moved to
+"Handed to DOOR-CONVERGE-2"; their value sub-claims stay PROVEN.
+
+The round-3 audit's N7-11 claim is withdrawn: `probe-mainlike.txt` was measured
+on a native built from a newer main that includes `fix(array-null-1)`
+(`44ca3aea`, repark-owned `array_append`/`array_prepend`); this branch's base
+`acbb6a8e` predates it, so the `array_append` nullability delta is a base-version
+difference, not a retag regression.
+
+The `element_at` → `map_extract` alias clobber needs no fix on this branch (it was
+an artifact of the removed re-registration sweep); the hazard and today's answer
+are pinned as ELEMENT-AT-ALIAS-1 (BACKLOG, §7 registry).
+
+## COVERAGE_ATTESTATION — DOOR-CONVERGE-1 — 2026-09-15 (round 4, R-13)
+
+- C-001..C-009, C-010, C-012, C-014 PROVEN: every clause's both-door pin is green on the
+  rebuilt release native module; the measured divergences in the red-first runs are each
+  closed by a registered Spark kernel the facade and the SQL door share
+  (`door_parity_tests` keeps the divergence table at 14).
+- C-011, C-013 PROVEN under ruling R-13: value and column-haystack legs assert Spark's
+  answer green; the literal-haystack nullability sub-claims moved to
+  "Handed to DOOR-CONVERGE-2" — the pins assert today's `nullable=True` as recorded
+  divergence ARRAY-LITERAL-CONTAINSNULL-1 and red when the constructor fix lands.
 
 ```
 COVERAGE_ATTESTATION:
@@ -177,8 +264,8 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every clause walked against its fixture cell, not a paraphrase — C6-unb64-* error texts, C6-ac-* nullability and values, C6-abs-off-* widths; the array ctor's element-vs-item child naming and containsNull match Spark's CreateArray semantics, verified against the oracle's embedded schema in the fnp8 cells.
-      artifacts: [python/repark/tests/test_door_converge_1.py, fixtures-batch6.json]
+      evidence: Every clause walked against its fixture cell, not a paraphrase — C6-unb64-* error texts, C6-ac-* nullability and values, C6-abs-off-* widths; the round-3 batch-7 probe (probe-branch.txt vs probe-mainlike.txt) measured which divergences the round-2 scope widening caused and which predate it.
+      artifacts: [python/repark/tests/test_door_converge_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-2
       status: ATTACKED
       evidence: Boundary inputs exercised — 'QQ=='/'QQ='/'=QQ'/'Q'/'QR'/'QQQ'/'!!' unbase64 endings, empty untyped array, out-of-range and in-range BIGINT needles, decimal and nested-array needles, signed minima of all four widths, ANSI on and off legs.
@@ -195,23 +282,23 @@ COVERAGE_ATTESTATION:
       justification: No auth, injection, secret, or deserialization surface — in-process Arrow kernels over typed input.
     - id: AT-6
       status: ATTACKED
-      evidence: The promise_retag sweep aligns every registered scalar UDF's planned return field with its physical Arrow output (list element name/nullability, outer nullability); recorded-answer dispositions flipped only where the oracle's embedded schema proved the new shape (list<element: int32 not null>).
-      artifacts: [crates/repark-functions/src/promise_retag.rs, python/repark/tests/fnp8_repark_dispositions.json]
+      evidence: The R-10 revert was verified subtraction-only where it touched shared surface — git-checkout restores of collection.rs/lib.rs/function_dispatch.rs/fnp8 dispositions/test_nullability_2/test_types_1 to the 1a7302d8 forms, both new modules deleted, no retained fix disturbed; the batch-7 probe re-measured post-revert (equal 10 different 23) and its single delta vs probe-mainlike.txt is N7-11, traced to main advancing past the branch base (array-null-1, 44ca3aea), not to this branch's edits.
+      artifacts: [python/repark/tests/fnp8_repark_dispositions.json, python/repark/tests/test_nullability_2.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-7
       status: ATTACKED
       evidence: P1-1/P1-2 measured before/after on 1M rows — base64 1.039s -> 0.813s and unbase64 1.139s -> 0.833s at 900B payloads, within ~1.2x of DataFusion's encode/decode; per-row String/Vec/table allocations removed (StringBuilder, static table, batch buffer with reused null bitmap).
       artifacts: [crates/repark-functions/src/spark_base64.rs, crates/repark-functions/src/spark_math.rs, crates/repark-functions/src/collection/size.rs]
     - id: AT-8
       status: ATTACKED
-      evidence: DataFusion contracts honored — the wrapper invokes the inner ScalarUDFImpl directly so DF's own promise assertion is never bypassed against the corrected field; element_at's alias key binds only to repark's kernel (alias-clobber order dependence removed by per-key named wrapping); schema_name reproduces datafusion-sql's verbose alias text for alias-resolved calls.
-      artifacts: [crates/repark-functions/src/promise_retag.rs, crates/repark-functions/src/lib.rs]
+      evidence: The element_at -> map_extract alias-clobber hazard was isolated to the removed re-registration sweep — post-revert element_at resolves to repark's dedicated binding on both doors (pin codifies it); the hazard is filed as ELEMENT-AT-ALIAS-1 BACKLOG for DOOR-CONVERGE-2's registry work.
+      artifacts: [python/repark/tests/test_door_converge_1.py, docs/spark-sql-iceberg-parity.md]
     - id: AT-9
       status: ATTACKED
       evidence: Every refusal carries Spark's error class and Java's message text in the exception, so the failure is diagnosable from the error alone; no logging changes.
       artifacts: [python/repark/tests/test_door_converge_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Pins-first held — the four round-2 reds failed on the base tree with the predicted behavior (silent truncation, needle-to-element narrowing, cast-instead-of-refuse, NULL_TYPE refusal on the empty array); every new branch has a naming input: pad-then-alphabet, truncated pad, lone quantum, untyped-empty vs NULL needle, ANSI on vs off.
+      evidence: Pins-first held — the four round-2 reds failed on the base tree with the predicted behavior (silent truncation, needle-to-element narrowing, cast-instead-of-refuse, NULL_TYPE refusal on the empty array); the round-3 residual reds were reproduced post-revert before being flagged, never silently greened.
       artifacts: [python/repark/tests/test_door_converge_1.py, crates/repark-python/src/column/door_parity_tests.rs]
   complete: true
 ```

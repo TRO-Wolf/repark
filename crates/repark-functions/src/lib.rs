@@ -28,7 +28,6 @@ mod java_regex;
 pub mod json;
 pub mod lambda_rebind;
 pub mod percentile_approx;
-pub mod promise_retag;
 pub mod quantile_summaries;
 pub mod random;
 pub mod session_time_zone;
@@ -133,7 +132,6 @@ pub fn register_all(ctx: &SessionContext) {
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
-    promise_retag::retag_registered_udfs(ctx);
 }
 
 pub fn install_shared_analyzer_rules(ctx: &SessionContext) {

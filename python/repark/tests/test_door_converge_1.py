@@ -213,33 +213,39 @@ def test_c005_array_contains_three_valued_on_both_doors(spark: ReparkSession) ->
 
 
 def test_l002_array_contains_coerces_to_tightest_common_type(spark: ReparkSession) -> None:
-    """Oracle C6-ac-*: needle and element widen together, never needle down."""
+    """Oracle C6-ac-*: needle and element widen together, never needle down.
+
+    Spark answers these literal-haystack legs non-null (cell C6-ac-double-hit,
+    batch-7 N7-31); RePark reports nullable=True because the array constructor's
+    declared containsNull is DataFusion's unconditionally-nullable element —
+    recorded divergence ARRAY-LITERAL-CONTAINSNULL-1, owner DOOR-CONVERGE-2.
+    """
     assert _sql_field(
         spark,
         "SELECT array_contains(array(1,2), CAST(3 AS DOUBLE)/CAST(2 AS DOUBLE)) AS v",
     ) == (pyarrow.bool_(), True, [False])
     assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(2 AS DOUBLE)) AS v") == (
         pyarrow.bool_(),
-        False,
+        True,
         [True],
     )
     assert _sql_field(
         spark,
         "SELECT array_contains(array(1,2), CAST(2147483648 AS BIGINT)) AS v",
-    ) == (pyarrow.bool_(), False, [False])
+    ) == (pyarrow.bool_(), True, [False])
     assert _sql_field(spark, "SELECT array_contains(array(1,2), CAST(1 AS BIGINT)) AS v") == (
         pyarrow.bool_(),
-        False,
+        True,
         [True],
     )
     assert _sql_field(spark, "SELECT array_contains(array(1.5, 2.5), 2.5) AS v") == (
         pyarrow.bool_(),
-        False,
+        True,
         [True],
     )
     assert _sql_field(spark, "SELECT array_contains(array(array(1), array(2)), array(2)) AS v") == (
         pyarrow.bool_(),
-        False,
+        True,
         [True],
     )
     frame = spark.createDataFrame([([1, 2],)], "a array<int>")
@@ -254,10 +260,14 @@ def test_l002_array_contains_coerces_to_tightest_common_type(spark: ReparkSessio
 def test_l004_array_contains_empty_untyped_array_answers_false(
     spark: ReparkSession,
 ) -> None:
-    """Oracle C6-ac-empty-untyped: array() + int needle is False non-null."""
+    """Oracle C6-ac-empty-untyped: array() + int needle is False non-null.
+
+    Spark answers non-null (cell C6-ac-empty-untyped); RePark reports
+    nullable=True for the same ARRAY-LITERAL-CONTAINSNULL-1 reason as test_l002.
+    """
     assert _sql_field(spark, "SELECT array_contains(array(), 1) AS v") == (
         pyarrow.bool_(),
-        False,
+        True,
         [False],
     )
 
@@ -390,3 +400,15 @@ def test_l007_abs_wraps_signed_minima_when_ansi_off() -> None:
         assert table.column("v").to_pylist() == [-128]
     finally:
         ansi_off.stop()
+
+
+def test_element_at_alias_1_resolves_the_dedicated_binding(spark: ReparkSession) -> None:
+    """ELEMENT-AT-ALIAS-1: element_at keeps array indexing, not map_extract."""
+    assert _sql_field(spark, "SELECT element_at(array(10,20,30), 2) AS v") == (
+        pyarrow.int32(),
+        True,
+        [20],
+    )
+    frame = spark.createDataFrame([([10, 20, 30],)], "a array<int>")
+    table = frame.select(F.element_at("a", 3).alias("v")).to_arrow()
+    assert table.column("v").to_pylist() == [30]

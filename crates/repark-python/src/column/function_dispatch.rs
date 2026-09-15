@@ -30,20 +30,11 @@ mod dispatch_spark;
 use super::expr_build::reciprocal_trig_or_inf;
 
 /// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
-#[allow(clippy::needless_pass_by_value)] // owned Vec is the pre-extract table shape
+#[expect(
+    clippy::too_many_lines,
+    reason = "large match table of expr_fn bindings"
+)]
 pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
-    dispatch_scalar_expr(name, exprs).map(|expr| match expr {
-        Expr::ScalarFunction(func) => Expr::ScalarFunction(ScalarFunction::new_udf(
-            repark_functions::promise_retag::promise_retagged(func.func),
-            func.args,
-        )),
-        other => other,
-    })
-}
-
-#[allow(clippy::too_many_lines)] // large match table of expr_fn bindings
-#[allow(clippy::needless_pass_by_value)] // owned Vec is the pre-extract table shape
-fn dispatch_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
     use datafusion::functions::expr_fn;
     use datafusion::functions_nested::expr_fn as nested_fn;
     let need = |n: usize| -> PyResult<()> {
@@ -513,10 +504,7 @@ fn dispatch_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             datafusion::functions::core::get_field().call(exprs.clone())
         }
-        "array" | "make_array" => Expr::ScalarFunction(ScalarFunction::new_udf(
-            repark_functions::collection::make_array_udf(),
-            exprs.clone(),
-        )),
+        "array" | "make_array" => nested_fn::make_array(exprs.clone()),
         "next_day" => {
             need(2)?;
             repark_functions::expr_fn::next_day(exprs[0].clone(), exprs[1].clone())

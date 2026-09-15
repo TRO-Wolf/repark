@@ -104,12 +104,6 @@ needed.
   direction, ANSI on and off), adopts the needle type for an untyped empty array, and
   reads the element field's nullability into the result (`Spark`'s
   `left || right || containsNull` rule). pins: door-converge-1/C-011, C-012, C-013
-- `make_array.rs` — **DOOR-CONVERGE-1 round 2 (2026-09-16):** the two Spark array
-  constructors, wrapped so the declared list field carries Spark's `containsNull`
-  (`any constructor arg nullable`) and a non-null outer field. `array` wraps
-  `datafusion_spark::function::array::array()` (child field `element`); `make_array`
-  wraps DataFusion's `make_array_udf()` (child field `item`) — Spark keeps the two
-  names distinct. pins: door-converge-1/C-013
 
 ## I want to...
 

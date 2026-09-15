@@ -36,6 +36,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (non-null `bigint`), `ascii`/`length`/`character_length` (facade lands on the
   datafusion-spark kernels), and the BL-6 SQL-door half (`bin`/`rint` BOOLEAN refusal).
   `EXPECTED_DIVERGENCES` ratchets 22 → 14; registry rows BL-16/BL-17/BL-18 go FIXED.
+  Round 3 (2026-09-15, ruling R-10): the registry-wide `promise_retag` wrapper and the
+  `make_array` `containsNull` change were un-built and handed to DOOR-CONVERGE-2 —
+  the batch-7 probe showed the ctor fix never reached the SQL door; the probe's
+  `array_append` (N7-11) delta was re-attributed to main advancing past the branch
+  base (`array-null-1`, `44ca3aea`), not the retag, and the audit claim withdrawn.
+  ELEMENT-AT-ALIAS-1 files the alias-clobber hazard as backlog. Round 4 (ruling
+  R-13): C-011/C-013's literal-haystack nullability legs pin today's `nullable=True`
+  as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1 (owner DOOR-CONVERGE-2);
+  all clauses PROVEN.
   `risk_tier: standard`. Branch `feat/door-kernel-converge-1`.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
