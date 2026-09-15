@@ -5317,8 +5317,9 @@ through `core` or the package. pins: eager-budget-1/C-010
   `%.Nf`, and Java-suffixed STRING-to-DOUBLE/FLOAT casts, measured against
   `fixtures-batch10.json` cells `J10-fd-*` / `J10-format-string-f` and the run-16a
   `deg_inf_spark_oracle.json` `DEGI-cast-*` cells (PySpark 4.1.2). SQL CAST and
-  `F.col` casts pin value AND Arrow type on both ANSI settings.
-  pins: java-double-fd-1/C-003, C-005, C-006
+  `F.col` casts pin value AND Arrow type on both ANSI settings. The C-004
+  before/after perf pair is recorded in the unit ledger's clause evidence.
+  pins: java-double-fd-1/C-003, C-004, C-005, C-006
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording

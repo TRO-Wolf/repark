@@ -34,6 +34,7 @@ HALF_UP shim.
   doubles + 100 seeded random rows; 579 non-shortest floats + 100 seeded random
   rows) so CI holds the claim without the fixture file.
 - `tests_corpus.rs` — the corpus byte-equality test and the in-tree table test.
+  pins: java-double-fd-1/C-001, C-002
 
 Port-lint posture (2026-09-15): `dtoa.rs`/`bigint.rs` mirror Java `int`/`long`
 wraparound arithmetic, so their `as` casts carry per-function `allow` attributes

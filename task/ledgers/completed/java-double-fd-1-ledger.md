@@ -96,3 +96,48 @@ After-perf (release native, `/tmp/fd-perf.py`, best of 3, two runs): SQL-door
 branch's own `java_double/` port files (132 pedantic errors the C-001/C-002 commits
 left behind; hooks do not run clippy) — cleaned in this unit with behavior held by
 the corpus byte-equality test, which still asserts all 39,427 rows.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: java-double-fd-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against its recorded oracle cell, not a paraphrase — J10-fd-8.41E21, J10-fd-more and J10-format-string-f from fixtures-batch10, the DEGI cast cells from the run-16a oracle, and the 29,451 + 9,976-row JDK 17 corpus byte-equal through java_double_text. Both doors pinned for value AND type wherever the clause names them.
+      artifacts: [python/repark/tests/test_java_double_fd_1.py, python/repark/tests/test_java_double_str_1.py, crates/repark-functions/src/java_double/tests_corpus.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries exercised — NaN, infinities, negative zero, min subnormals and max finite (corpus extremes), empty/blank/hex/suffixed/padded cast text, %.0f precision, width/flags/grouping/parens specifiers, float32 widening, exact ties (0.125) versus near ties (2.675), subnormal and 1e21-scale fixed expansion.
+      artifacts: [crates/repark-functions/src/java_double/format_float.rs, python/repark/tests/test_java_double_fd_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Failure paths pin Spark's contract — CAST_INVALID_INPUT with ANSI on and NULL with ANSI off for hex and garbage, TryCast folding the same shapes without ever erroring, malformed or multi-verb formats falling through to the upstream kernel untouched, the shim UDF refusing non-literal formats loudly.
+      artifacts: [python/repark/tests/test_java_double_fd_1.py, crates/repark-functions/src/java_double.rs]
+    - id: AT-4
+      status: N/A
+      justification: Pure row functions with no shared mutable state — the POW5 table is a read-only LazyLock, all digit buffers are per-call locals, the analyzer rule only rewrites plan nodes.
+    - id: AT-5
+      status: N/A
+      justification: No auth, injection, secret, or deserialization surface — in-process Arrow kernels over typed input; format strings are plan-time literals selected by the rule, never executed; float text parsing cannot escape the value domain.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Shared-surface edits verified behavior-preserving — the clippy cleanup of dtoa.rs/bigint.rs re-ran the full 39,427-row corpus byte-equal with zero mismatches; the shared formatter's to_json consumer converged and its pin flipped to equality in the same change; the CAST path shares the fix by construction.
+      artifacts: [crates/repark-functions/src/java_double/tests_corpus.rs, python/repark/tests/test_fnp_9_collections_json.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: C-004 measured before/after on the release native (5M rand() doubles, best of 3, two after-runs): SQL-door 0.082s to 0.035s, facade 0.049s to 0.031s, same-box Arrow baseline 0.496s. Unbounded %f precision attempts the format exactly as Java and upstream do (D-6); the shim allocates one String per row, matching the upstream kernel it replaces.
+      artifacts: [task/ledgers/completed/java-double-fd-1-ledger.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Upstream contracts honored, not presumed — the shim reuses datafusion-spark's sign/width/grouping/padding structure with only digit generation swapped; the rule fires solely on literal single-verb float-arg calls (name dispatch on format_string/printf); UDF type mismatches fail planning instead of coercing silently.
+      artifacts: [crates/repark-functions/src/java_double/format_float.rs, crates/repark-functions/src/java_double.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal stays diagnosable from the error alone — CAST_INVALID_INPUT keeps Spark's class for bad literals on both doors, the hex cells pin the class and the null, no logging paths changed.
+      artifacts: [python/repark/tests/test_java_double_fd_1.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins-first held — the fd-1 pins ran 4 passed/6 failed with only the C-006 slice in the tree (Column.cast halves and HALF_UP red) and the corpus test ran 1,209 mismatches red-first; the new unit tests caught three real defects during this session (the 2^48 implicit-bit literal, the %.0f trailing dot, the mask top-word truncation) before any pin ran green. Every new branch has a nameable flipping input: single versus multi-verb, float versus string arg, %e/%g untouched, guard digit above versus below 5, positive versus negative binary exponent, zero versus nonzero precision.
+      artifacts: [crates/repark-functions/src/java_double/format_float.rs, crates/repark-functions/src/java_double.rs, python/repark/tests/test_java_double_fd_1.py]
+  complete: true
+```
