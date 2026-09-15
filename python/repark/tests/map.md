@@ -628,6 +628,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-29-class-remainder/C-002, C-003
   pins: df-describe-str-1/C-001, C-002, C-003
   pins: df-colregex-1/C-002, C-003, C-006
+- [test_fnp_alias_1.py](test_fnp_alias_1.py) + `fnp_alias_1_spark_oracle.json` —
+  **FNP-ALIAS-1 (2026-09-15):** the PySpark alias names over existing kernels, oracle-driven.
+  The fixture is the orchestrator's live PySpark 4.1.2 recording (2026-09-14, 98 cells, 14
+  signatures); pins replay the Python-door ANSI cells (column name, type, rows — nullability
+  pinned except the VALUES group key, run 15c's work, and the `approx_count_distinct` result,
+  BL-18), the deprecated-alias `FutureWarning` messages, parameter names/defaults vs the
+  recorded signatures, and the SQL-door degrees/radians values (SQL-door names are run 15c's).
+  `sum_distinct`/`sumDistinct` stay on the deferred census this round: a DISTINCT sum needs a
+  native distinct-aggregate builder (`count_aggregate` is count-specific; `aggregate` has no
+  distinct modifier) and Rust is fenced out of this unit — see the unit ledger's ruling question.
+  **crit-logic-1 L-001 (2026-09-15):** the semi/anti right-ref raise (all four rescaled names),
+  the left-ref control, and the two-sided `degrees` ON-join pin; the `_rescaled` rewrap threads
+  join origin like `bitwise_not`. **L-002 (same round):** the SQL-door negative-count shift
+  cells replay on the Python door (values and types; names stay D-2's) and the Column-`numBits`
+  shape pins Java's `& 31` masking on INT.
+  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
@@ -1133,13 +1149,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   declared-absent names append. pins: fnp-15-16/C-016
   (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
   (freeze 253 + 9 collection additions) + every name resolves.
-  (2026-08-15): `__all__` before==after pin. **FN-F moved the pin** to 263
+  (2026-08-15): **FN-F moved the pin** to 263
   names (253 FN-A+FN-B + 10 session/bitwise additions) + every name resolves.
   (2026-08-15): **FN-W moved the pin** 291→296 (5 window additions:
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
   (2026-08-17): **FN-GT1 moved the pin** 296→315 (18 leftover thin-wires +
   `getbit` alias of `bit_get`).
   (2026-08-17): **FN-GT2 moved the pin** 315→333 (18 datetime/collections/url/bitmap).
+  **FNP-ALIAS-1 (2026-09-15): the pin moves 453 → 459** (six install_into alias
+  names after the stack segment: approxCountDistinct, the three camelCase shifts,
+  toDegrees, toRadians). pins: fnp-alias-1/C-001
 - [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
   THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
   ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse +
@@ -1211,6 +1230,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   aliases/shims through `ReparkSession` Arrow `to_arrow()` (value AND type).
   Alias names resolve + one behavior case vs canonical. `count_if` pins
   true-only counting; `bool_and`/`bool_or` pin vs `min`/`max` on booleans.
+  **FNP-ALIAS-1 (2026-09-15):** `approxCountDistinct` ships and leaves the
+  deferred census; `sum_distinct`/`sumDistinct` stay (native DISTINCT-aggregate
+  builder needed, Rust fenced — unit ledger ruling question).
 - [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
@@ -1222,8 +1244,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_functions_f.py](test_functions_f.py) — FN-F (2026-08-15): try / session /
   bitwise wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `uuid` pins type + uniqueness; `version` is the repark string. FN-GT1 later
-  shipped ``bit_count`` / ``getbit`` / snake-case shifts; camelCase shift
-  aliases and charter try_* stay absent.
+  shipped ``bit_count`` / ``getbit`` / snake-case shifts; charter try_* stay absent.
+  **FNP-ALIAS-1 (2026-09-15):** the camelCase shift aliases ship
+  (`functions_bitwise.py` install), so the three leave this census; behavior and
+  warnings are pinned in `test_fnp_alias_1.py`. pins: fnp-alias-1/C-001, C-003
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.

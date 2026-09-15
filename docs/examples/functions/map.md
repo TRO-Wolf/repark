@@ -179,6 +179,7 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
   absent from PySpark 4.1.2 — left the inventory under `INVENTORY_EXCLUSIONS` (EX-31,
   ruling S2-22).
   pins: ex-30-functions-remainder/C-003
+- [deprecated_aliases.py](deprecated_aliases.py) — FNP-ALIAS-1 (2026-09-15): the six deprecated PySpark alias names (`approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees`, `toRadians`) answer their modern siblings' rows and warn Spark's exact `FutureWarning` text. pins: fnp-alias-1/C-001, C-003
 ## Pointers
 
 - Up: [../map.md](../map.md)

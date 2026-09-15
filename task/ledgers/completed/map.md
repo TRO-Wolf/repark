@@ -394,6 +394,13 @@ else. The next pickup's `make ledger-archive` files everything here under
   Branch `feat/fnp-9-collections-json`.
   pins: fnp-9-collections-json/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009
+- [fnp-alias-1-ledger.md](fnp-alias-1-ledger.md) —
+  **FNP-ALIAS-1 (2026-09-15), in flight:** six PySpark alias names over existing kernels
+  (`approxCountDistinct`, the camelCase shifts, `toDegrees`/
+  `toRadians`) and the facade `degrees`/`radians` fix, oracle-driven against live PySpark 4.1.2
+  (recorded 2026-09-14). `sum_distinct`/`sumDistinct` moved to FNP-AGG-1 (ruling D-6); the delivered six names, their warning messages, and the
+  degrees/radians fix are pinned. `risk_tier: standard`. Branch `feat/fnp-alias-1`.
+  pins: fnp-alias-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [h3-spill-1-ledger.md](h3-spill-1-ledger.md) — Round 3: C-004 counts 22 pins.
   **H3-SPILL-1 (2026-09-05), in flight:** the Never-OOM truth table. 180 cells (18 operators ×
   5 pool sizes × 2 scales), each a fresh subprocess on a release module under a resident-memory

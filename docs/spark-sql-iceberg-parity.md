@@ -2181,6 +2181,31 @@ the pin rather than obeying it.
 - **Rationale** — FIXED. History: a month-end source in a short month clamped
   to the target month's last day.
 
+### FNP-ALIAS-DEGREES-1 — facade `degrees` / `radians` composed the formula — **FIXED 2026-09-15 (FNP-ALIAS-1)**
+
+- **repark** — **FIXED 2026-09-15 (FNP-ALIAS-1).** `F.degrees(col)` and
+  `F.radians(col)` answer Spark's values bit-exactly as a DOUBLE column named
+  `DEGREES(deg)` / `RADIANS(deg)`: one multiply by the precomputed double
+  `180.0/pi` (`pi/180`), the `dayname`-style rewrap. INT input answers (the
+  DOUBLE literal coerces before the multiply, so no `[ARITHMETIC_OVERFLOW]`):
+  over `i` = `[-8, 7, NULL, 2147483647]` the answer is
+  `[-458.3662361046586, 401.07045659157626, NULL, 123041749546.46191]`. The
+  deprecated `toDegrees` / `toRadians` spellings alias them and warn Spark's
+  exact `FutureWarning` on every call.
+- **Apache Spark** — `degrees(rad)` is a DOUBLE column named `DEGREES(rad)`;
+  INT input answers the same doubles. *(oracle: live PySpark 4.1.2, 2026-09-14.)*
+- **Pin** — `python/repark/tests/test_fnp_alias_1.py`
+  (`fnp_alias_1_spark_oracle.json` cells; SQL-door value pin included)
+- **Rationale** — FIXED. History: the facade composed `(x * 180) / pi()` — the
+  display name was `((deg * 180) / pi())`, the two-step arithmetic drifted in
+  the last digit (`179.99984796050427` vs Spark's `179.9998479605043`), and INT
+  input raised `[ARITHMETIC_OVERFLOW]` under ANSI. The card's named route —
+  calling the engine's `degrees` scalar — has no `call_scalar` dispatch arm and
+  Rust was fenced out of the unit, so the wrapper reproduces the kernel's
+  single-multiply form in plan composition; measured bit-equal to the SQL-door
+  kernel and to Spark on every oracle cell. The SQL door itself is unchanged
+  (its values were already Spark-equal; its column naming is run 15c's work).
+
 ### FN-ELT-1 — `elt` out of range answers NULL; Spark raises INVALID_ARRAY_INDEX — **FIXED 2026-09-04 (FN-FIX-2)**
 
 - **repark** — **FIXED 2026-09-04 (FN-FIX-2).** `F.elt(F.lit(3), F.lit('a'), F.lit('b'))`

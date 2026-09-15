@@ -150,10 +150,6 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
 @pytest.mark.parametrize(
     "name",
     [
-        # camelCase bitwise spellings: PySpark's deprecated aliases of the snake_case originals.
-        "shiftLeft",
-        "shiftRight",
-        "shiftRightUnsigned",
         # Numeric FORMAT-string conversions. DataFusion's to_char is a false friend — its own doc
         # says numeric formatting is unsupported — so these need real kernels (FNP-12).
         # try_* inversions of to_number / to_binary shipped in FNP-7; the raising names stay here.

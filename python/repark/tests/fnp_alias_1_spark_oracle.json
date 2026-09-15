@@ -1,0 +1,2919 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('v')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('v')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct(col('b'))",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct(col('b'))",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT i)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('i')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     -1
+    ],
+    [
+     2,
+     2147483647
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT i)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('i')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     -1
+    ],
+    [
+     2,
+     2147483647
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sumDistinct('v')",
+   "name": "sumDistinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sumDistinct('v')",
+   "name": "sumDistinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sumDistinct('b')",
+   "name": "sumDistinct",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sumDistinct('b')",
+   "name": "sumDistinct",
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('v').alias('x')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "x",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.sum_distinct('v').alias('x')",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, sum(DISTINCT v), sum(DISTINCT b) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3,
+     10
+    ],
+    [
+     2,
+     3,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "sum(DISTINCT v)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "sum(DISTINCT b)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, sum(DISTINCT v), sum(DISTINCT b) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     1,
+     3,
+     10
+    ],
+    [
+     2,
+     3,
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "sum(DISTINCT deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT sum(DISTINCT deg) FROM FRAME",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     225.0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "sum(DISTINCT deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT sum(DISTINCT deg) FROM FRAME",
+   "name": "sum_distinct",
+   "rows": [
+    [
+     225.0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT sum_distinct(v) FROM FRAME",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `sum_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "sum_distinct"
+  },
+  {
+   "ansi": false,
+   "door": "sql",
+   "error_condition": "UNRESOLVED_ROUTINE",
+   "error_type": "AnalysisException",
+   "expr": "SELECT sum_distinct(v) FROM FRAME",
+   "message": "[UNRESOLVED_ROUTINE] Cannot resolve routine `sum_distinct` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+   "name": "sum_distinct"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct('s')",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct('s')",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(v)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct('v', 0.1)",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(v)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct('v', 0.1)",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(b)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct(col('b'), rsd=0.05)",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(b)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approxCountDistinct(col('b'), rsd=0.05)",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approx_count_distinct('s')",
+   "name": "approx_count_distinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.approx_count_distinct('s')",
+   "name": "approx_count_distinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, approx_count_distinct(s) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": false,
+     "type": "int"
+    },
+    {
+     "name": "approx_count_distinct(s)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, approx_count_distinct(s) FROM FRAME GROUP BY g ORDER BY g",
+   "name": "approxCountDistinct",
+   "rows": [
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft('i', 1)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft('i', 1)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft(col('b'), 3)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     80
+    ],
+    [
+     80
+    ],
+    [
+     null
+    ],
+    [
+     -8
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft(col('b'), 3)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     80
+    ],
+    [
+     80
+    ],
+    [
+     null
+    ],
+    [
+     -8
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft('i', 33)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftLeft('i', 33)",
+   "name": "shiftLeft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight('i', 1)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight('i', 1)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight(col('b'), 3)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight(col('b'), 3)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight('i', 33)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRight('i', 33)",
+   "name": "shiftRight",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned('i', 1)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned('i', 1)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned(col('b'), 3)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     2305843009213693951
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned(col('b'), 3)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     2305843009213693951
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned('i', 33)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftRightUnsigned('i', 33)",
+   "name": "shiftRightUnsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft('i', 1)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft('i', 1)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft(col('b'), 3)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     80
+    ],
+    [
+     80
+    ],
+    [
+     null
+    ],
+    [
+     -8
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft(col('b'), 3)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     80
+    ],
+    [
+     80
+    ],
+    [
+     null
+    ],
+    [
+     -8
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft('i', 33)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftleft('i', 33)",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16
+    ],
+    [
+     14
+    ],
+    [
+     null
+    ],
+    [
+     -2
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright('i', 1)",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright('i', 1)",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright(col('b'), 3)",
+   "name": "shiftright",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright(col('b'), 3)",
+   "name": "shiftright",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     -1
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright('i', 33)",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftright('i', 33)",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned('i', 1)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned('i', 1)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned(col('b'), 3)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     2305843009213693951
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned(col('b'), 3)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     null
+    ],
+    [
+     2305843009213693951
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned('i', 33)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "python",
+   "expr": "F.shiftrightunsigned('i', 33)",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644
+    ],
+    [
+     3
+    ],
+    [
+     null
+    ],
+    [
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftleft(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftleft(i, 1), shiftleft(b, 3), shiftleft(i, 33), shiftleft(i, -1) FROM FRAME",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16,
+     80,
+     -16,
+     0
+    ],
+    [
+     14,
+     80,
+     14,
+     -2147483648
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     -2,
+     -8,
+     -2,
+     -2147483648
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftleft(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftleft(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftleft(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftleft(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftleft(i, 1), shiftleft(b, 3), shiftleft(i, 33), shiftleft(i, -1) FROM FRAME",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16,
+     80,
+     -16,
+     0
+    ],
+    [
+     14,
+     80,
+     14,
+     -2147483648
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     -2,
+     -8,
+     -2,
+     -2147483648
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftright(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftright(i, 1), shiftright(b, 3), shiftright(i, 33), shiftright(i, -1) FROM FRAME",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4,
+     1,
+     -4,
+     -1
+    ],
+    [
+     3,
+     1,
+     3,
+     0
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     1073741823,
+     -1,
+     1073741823,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftright(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftright(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftright(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftright(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftright(i, 1), shiftright(b, 3), shiftright(i, 33), shiftright(i, -1) FROM FRAME",
+   "name": "shiftright",
+   "rows": [
+    [
+     -4,
+     1,
+     -4,
+     -1
+    ],
+    [
+     3,
+     1,
+     3,
+     0
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     1073741823,
+     -1,
+     1073741823,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftrightunsigned(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftrightunsigned(i, 1), shiftrightunsigned(b, 3), shiftrightunsigned(i, 33), shiftrightunsigned(i, -1) FROM FRAME",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644,
+     1,
+     2147483644,
+     1
+    ],
+    [
+     3,
+     1,
+     3,
+     0
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     1073741823,
+     2305843009213693951,
+     1073741823,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "shiftrightunsigned(i, 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftrightunsigned(b, 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "shiftrightunsigned(i, 33)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "shiftrightunsigned(i, -1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT shiftrightunsigned(i, 1), shiftrightunsigned(b, 3), shiftrightunsigned(i, 33), shiftrightunsigned(i, -1) FROM FRAME",
+   "name": "shiftrightunsigned",
+   "rows": [
+    [
+     2147483644,
+     1,
+     2147483644,
+     1
+    ],
+    [
+     3,
+     1,
+     3,
+     0
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     1073741823,
+     2305843009213693951,
+     1073741823,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "(i << 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "(b >> 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "(i >>> 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT i << 1, b >> 3, i >>> 1 FROM FRAME",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16,
+     1,
+     2147483644
+    ],
+    [
+     14,
+     1,
+     3
+    ],
+    [
+     null,
+     null,
+     null
+    ],
+    [
+     -2,
+     -1,
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "(i << 1)",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "(b >> 3)",
+     "nullable": true,
+     "type": "bigint"
+    },
+    {
+     "name": "(i >>> 1)",
+     "nullable": true,
+     "type": "int"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT i << 1, b >> 3, i >>> 1 FROM FRAME",
+   "name": "shiftleft",
+   "rows": [
+    [
+     -16,
+     1,
+     2147483644
+    ],
+    [
+     14,
+     1,
+     3
+    ],
+    [
+     null,
+     null,
+     null
+    ],
+    [
+     -2,
+     -1,
+     1073741823
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees('deg')",
+   "name": "toDegrees",
+   "rows": [
+    [
+     10313.240312354817
+    ],
+    [
+     5156.620156177409
+    ],
+    [
+     null
+    ],
+    [
+     -2578.3100780887044
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees('deg')",
+   "name": "toDegrees",
+   "rows": [
+    [
+     10313.240312354817
+    ],
+    [
+     5156.620156177409
+    ],
+    [
+     null
+    ],
+    [
+     -2578.3100780887044
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees(col('rad'))",
+   "name": "toDegrees",
+   "rows": [
+    [
+     179.9998479605043
+    ],
+    [
+     57.29577951308232
+    ],
+    [
+     null
+    ],
+    [
+     -28.64788975654116
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees(col('rad'))",
+   "name": "toDegrees",
+   "rows": [
+    [
+     179.9998479605043
+    ],
+    [
+     57.29577951308232
+    ],
+    [
+     null
+    ],
+    [
+     -28.64788975654116
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees('i')",
+   "name": "toDegrees",
+   "rows": [
+    [
+     -458.3662361046586
+    ],
+    [
+     401.07045659157626
+    ],
+    [
+     null
+    ],
+    [
+     123041749546.46191
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toDegrees('i')",
+   "name": "toDegrees",
+   "rows": [
+    [
+     -458.3662361046586
+    ],
+    [
+     401.07045659157626
+    ],
+    [
+     null
+    ],
+    [
+     123041749546.46191
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians('deg')",
+   "name": "toRadians",
+   "rows": [
+    [
+     3.141592653589793
+    ],
+    [
+     1.5707963267948966
+    ],
+    [
+     null
+    ],
+    [
+     -0.7853981633974483
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians('deg')",
+   "name": "toRadians",
+   "rows": [
+    [
+     3.141592653589793
+    ],
+    [
+     1.5707963267948966
+    ],
+    [
+     null
+    ],
+    [
+     -0.7853981633974483
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians(col('rad'))",
+   "name": "toRadians",
+   "rows": [
+    [
+     0.05483108924772866
+    ],
+    [
+     0.017453292519943295
+    ],
+    [
+     null
+    ],
+    [
+     -0.008726646259971648
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians(col('rad'))",
+   "name": "toRadians",
+   "rows": [
+    [
+     0.05483108924772866
+    ],
+    [
+     0.017453292519943295
+    ],
+    [
+     null
+    ],
+    [
+     -0.008726646259971648
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians('i')",
+   "name": "toRadians",
+   "rows": [
+    [
+     -0.13962634015954636
+    ],
+    [
+     0.12217304763960307
+    ],
+    [
+     null
+    ],
+    [
+     37480660.27288565
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.toRadians('i')",
+   "name": "toRadians",
+   "rows": [
+    [
+     -0.13962634015954636
+    ],
+    [
+     0.12217304763960307
+    ],
+    [
+     null
+    ],
+    [
+     37480660.27288565
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees('deg')",
+   "name": "degrees",
+   "rows": [
+    [
+     10313.240312354817
+    ],
+    [
+     5156.620156177409
+    ],
+    [
+     null
+    ],
+    [
+     -2578.3100780887044
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees('deg')",
+   "name": "degrees",
+   "rows": [
+    [
+     10313.240312354817
+    ],
+    [
+     5156.620156177409
+    ],
+    [
+     null
+    ],
+    [
+     -2578.3100780887044
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees(col('rad'))",
+   "name": "degrees",
+   "rows": [
+    [
+     179.9998479605043
+    ],
+    [
+     57.29577951308232
+    ],
+    [
+     null
+    ],
+    [
+     -28.64788975654116
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees(col('rad'))",
+   "name": "degrees",
+   "rows": [
+    [
+     179.9998479605043
+    ],
+    [
+     57.29577951308232
+    ],
+    [
+     null
+    ],
+    [
+     -28.64788975654116
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees('i')",
+   "name": "degrees",
+   "rows": [
+    [
+     -458.3662361046586
+    ],
+    [
+     401.07045659157626
+    ],
+    [
+     null
+    ],
+    [
+     123041749546.46191
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.degrees('i')",
+   "name": "degrees",
+   "rows": [
+    [
+     -458.3662361046586
+    ],
+    [
+     401.07045659157626
+    ],
+    [
+     null
+    ],
+    [
+     123041749546.46191
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians('deg')",
+   "name": "radians",
+   "rows": [
+    [
+     3.141592653589793
+    ],
+    [
+     1.5707963267948966
+    ],
+    [
+     null
+    ],
+    [
+     -0.7853981633974483
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians('deg')",
+   "name": "radians",
+   "rows": [
+    [
+     3.141592653589793
+    ],
+    [
+     1.5707963267948966
+    ],
+    [
+     null
+    ],
+    [
+     -0.7853981633974483
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians(col('rad'))",
+   "name": "radians",
+   "rows": [
+    [
+     0.05483108924772866
+    ],
+    [
+     0.017453292519943295
+    ],
+    [
+     null
+    ],
+    [
+     -0.008726646259971648
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(rad)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians(col('rad'))",
+   "name": "radians",
+   "rows": [
+    [
+     0.05483108924772866
+    ],
+    [
+     0.017453292519943295
+    ],
+    [
+     null
+    ],
+    [
+     -0.008726646259971648
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians('i')",
+   "name": "radians",
+   "rows": [
+    [
+     -0.13962634015954636
+    ],
+    [
+     0.12217304763960307
+    ],
+    [
+     null
+    ],
+    [
+     37480660.27288565
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "python",
+   "expr": "F.radians('i')",
+   "name": "radians",
+   "rows": [
+    [
+     -0.13962634015954636
+    ],
+    [
+     0.12217304763960307
+    ],
+    [
+     null
+    ],
+    [
+     37480660.27288565
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT degrees(rad), radians(deg), degrees(i), radians(i) FROM FRAME",
+   "name": "degrees",
+   "rows": [
+    [
+     179.9998479605043,
+     3.141592653589793,
+     -458.3662361046586,
+     -0.13962634015954636
+    ],
+    [
+     57.29577951308232,
+     1.5707963267948966,
+     401.07045659157626,
+     0.12217304763960307
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     -28.64788975654116,
+     -0.7853981633974483,
+     123041749546.46191,
+     37480660.27288565
+    ]
+   ]
+  },
+  {
+   "ansi": false,
+   "columns": [
+    {
+     "name": "DEGREES(rad)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "RADIANS(deg)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "DEGREES(i)",
+     "nullable": true,
+     "type": "double"
+    },
+    {
+     "name": "RADIANS(i)",
+     "nullable": true,
+     "type": "double"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT degrees(rad), radians(deg), degrees(i), radians(i) FROM FRAME",
+   "name": "degrees",
+   "rows": [
+    [
+     179.9998479605043,
+     3.141592653589793,
+     -458.3662361046586,
+     -0.13962634015954636
+    ],
+    [
+     57.29577951308232,
+     1.5707963267948966,
+     401.07045659157626,
+     0.12217304763960307
+    ],
+    [
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     -28.64788975654116,
+     -0.7853981633974483,
+     123041749546.46191,
+     37480660.27288565
+    ]
+   ]
+  }
+ ],
+ "docstring_mentions_deprecated": {
+  "approxCountDistinct": true,
+  "approx_count_distinct": false,
+  "degrees": false,
+  "radians": false,
+  "shiftLeft": true,
+  "shiftRight": true,
+  "shiftRightUnsigned": true,
+  "shiftleft": false,
+  "shiftright": false,
+  "shiftrightunsigned": false,
+  "sumDistinct": true,
+  "sum_distinct": false,
+  "toDegrees": true,
+  "toRadians": true
+ },
+ "signatures": {
+  "approxCountDistinct": "(col: 'ColumnOrName', rsd: Optional[float] = None) -> pyspark.sql.column.Column",
+  "approx_count_distinct": "(col: 'ColumnOrName', rsd: Optional[float] = None) -> pyspark.sql.column.Column",
+  "degrees": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "radians": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "shiftLeft": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftRight": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftRightUnsigned": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftleft": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftright": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "shiftrightunsigned": "(col: 'ColumnOrName', numBits: int) -> pyspark.sql.column.Column",
+  "sumDistinct": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "sum_distinct": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "toDegrees": "(col: 'ColumnOrName') -> pyspark.sql.column.Column",
+  "toRadians": "(col: 'ColumnOrName') -> pyspark.sql.column.Column"
+ },
+ "spark_version": "4.1.2"
+}

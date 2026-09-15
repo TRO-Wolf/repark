@@ -232,6 +232,7 @@ functions	F.acos
 functions	F.acosh
 functions	F.add_months
 functions	F.aggregate
+functions	F.approxCountDistinct
 functions	F.approx_count_distinct
 functions	F.approx_percentile
 functions	F.array
@@ -554,6 +555,9 @@ functions	F.session_user
 functions	F.sha
 functions	F.sha1
 functions	F.sha2
+functions	F.shiftLeft
+functions	F.shiftRight
+functions	F.shiftRightUnsigned
 functions	F.shiftleft
 functions	F.shiftright
 functions	F.shiftrightunsigned
@@ -602,6 +606,8 @@ functions	F.theta_union_agg
 functions	F.timestamp_micros
 functions	F.timestamp_millis
 functions	F.timestamp_seconds
+functions	F.toDegrees
+functions	F.toRadians
 functions	F.to_csv
 functions	F.to_date
 functions	F.to_json
