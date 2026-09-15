@@ -4739,5 +4739,6 @@ pins: fnp-8-review/C-009, C-010
 
 EAGER-BUDGET-1 declared export delta (2026-09-13): `dataframe/core.py` imports only `_resolve_cache_budgets` from
 `eager.py`, so the frozen `core` and package surfaces in `_dfcore_1_expected.py` lose `_CACHE_MAX_BYTES_KEY`,
+  **DF-SURFACE-A-1 rebase (2026-09-14):** the frozen DataFrame dir lists `withMetadata` before `withWatermark` (sorted) after the rebase over DF-STREAM-BATCH-1 merged both name sets.
 `_cache_conf_lookup` and `_resolve_cache_max_bytes` and gain `_resolve_cache_budgets`. No other module read those names
 through `core` or the package. pins: eager-budget-1/C-010
