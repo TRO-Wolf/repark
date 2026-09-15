@@ -156,25 +156,95 @@ fn needs_spark_display(name: &str) -> bool {
 }
 
 fn scalar_dump_name(name: &str) -> bool {
-    name.contains("Int64(")
-        || name.contains("Int32(")
-        || name.contains("Int16(")
-        || name.contains("Int8(")
-        || name.contains("UInt64(")
-        || name.contains("UInt32(")
-        || name.contains("UInt16(")
-        || name.contains("UInt8(")
-        || name.contains("Float64(")
-        || name.contains("Float32(")
-        || name.contains("Decimal128(")
-        || name.contains("Decimal256(")
-        || name.contains("Utf8(\"")
-        || name.contains("LargeUtf8(\"")
-        || name.contains("Utf8View(\"")
-        || name.contains("Boolean(")
-        || name.contains("Some(")
-        || name.contains("(- ")
+    is_single_dump(name)
 }
+
+fn is_single_dump(name: &str) -> bool {
+    if let Some(inner) = name
+        .strip_prefix("(- ")
+        .and_then(|rest| rest.strip_suffix(')'))
+    {
+        return is_single_dump(inner) || is_bare_number(inner);
+    }
+    let rest = name.strip_prefix('-').unwrap_or(name);
+    let rest = strip_table_qualifier(rest);
+    DUMP_PREFIXES
+        .iter()
+        .any(|prefix| is_balanced_dump(rest, prefix))
+}
+
+fn strip_table_qualifier(name: &str) -> &str {
+    let Some(paren) = name.find('(') else {
+        return name;
+    };
+    let cut = name[..paren].rfind('.').map_or(0, |dot| dot + 1);
+    &name[cut..]
+}
+
+fn is_bare_number(text: &str) -> bool {
+    let (mantissa, exponent) = match text.bytes().position(|byte| byte == b'e' || byte == b'E') {
+        Some(index) => {
+            let (mantissa, exponent) = text.split_at(index);
+            (mantissa, Some(&exponent[1..]))
+        }
+        None => (text, None),
+    };
+    if let Some(exponent) = exponent {
+        let exponent = exponent
+            .strip_prefix('+')
+            .or_else(|| exponent.strip_prefix('-'))
+            .unwrap_or(exponent);
+        if !is_digit_run(exponent) {
+            return false;
+        }
+    }
+    match mantissa.split_once('.') {
+        Some((int_part, frac_part)) => is_digit_run(int_part) && is_digit_run(frac_part),
+        None => is_digit_run(mantissa),
+    }
+}
+
+fn is_digit_run(text: &str) -> bool {
+    !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+fn is_balanced_dump(name: &str, prefix: &str) -> bool {
+    let Some(rest) = name.strip_prefix(prefix) else {
+        return false;
+    };
+    let mut depth = 0usize;
+    for (index, byte) in rest.bytes().enumerate() {
+        if byte == b'(' {
+            depth += 1;
+        } else if byte == b')' {
+            if depth == 0 {
+                return index + 1 == rest.len();
+            }
+            depth -= 1;
+        }
+    }
+    false
+}
+
+const DUMP_PREFIXES: [&str; 17] = [
+    "Int64(",
+    "Int32(",
+    "Int16(",
+    "Int8(",
+    "UInt64(",
+    "UInt32(",
+    "UInt16(",
+    "UInt8(",
+    "Float64(",
+    "Float32(",
+    "Decimal128(",
+    "Decimal256(",
+    "Utf8(\"",
+    "LargeUtf8(\"",
+    "Utf8View(\"",
+    "Boolean(",
+    "Some(",
+];
 
 fn spark_display(expr: &Expr) -> String {
     clean_spark_display(&spark_display_inner(expr))

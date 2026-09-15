@@ -189,8 +189,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **Round 8 (2026-09-15):** `SuffixLiteral` schema/display names come from the
   value text (Java double/float text, scale-exact decimals), so nested columns never
   carry the marker; the fold covers numeric targets except `Int64` (whose CAST anchor
-  must survive re-analysis); the root display fires on scalar-dump names and names
-  unfolded integer `CAST`s from the literal inner. Inner renames are out of scope:
+  must survive re-analysis); the root display fires on single-root scalar-dump
+  names only (balanced `Int64(1)`, table-qualified `t.Int64(1)`, negated
+  `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
+  keep their plan names) and names unfolded integer `CAST`s from the literal
+  inner. Inner renames are out of scope:
   analysis runs twice and outer references would go stale.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the

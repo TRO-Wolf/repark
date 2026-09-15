@@ -658,3 +658,25 @@ facade cases; `numeric_suffix_guard_skips_bare_decimals` holds the fire/skip
 contract so a future guard widening shows up as a test, not silent slowness.
 P3-1 (lowercase allocs), P3-2 (the remaining per-expr clone in the root display
 loop), P3-3 (`starts_with` regex compiles) recorded, not implemented.
+
+Slice F — facade-green narrowing (round-8 close-out): the first full facade
+run (7735 passed, 5 failed) showed the round-8 `scalar_dump_name` needle
+over-firing. Root cause, measured, not guessed: `SparkBitGet` declares
+`aliases: ["getbit"]`, so DataFusion names the projection from the SQL text
+(`getbit(Int64(6),Int64(1))`); the substring needle fired on the argument
+dumps and the generic `ScalarFunction` fallback re-rendered the canonical
+`bit_get(6,1)`. Same over-fire hit the HOF pins (argument dumps) and the two
+`f-y10-1-int-overflow/C-002` pins (`Int64(1) + Int64(1)`, `x + Int64(1)`).
+The `(1 + 1)` / `(x + 1)` renames are no pin's requirement (the committed
+FACADE-2 `(1 + 1)` goldens and the `test_select_naming.py` matrix alias
+facade-side and never touch the needle), and C-002 deliberately pins its
+names, so all five restore with zero pin updates — the Spark-correct
+`(x + 1)` spelling is a future unit's oracle-backed claim, not a passenger
+here. Fix (`crates/repark-spark/src/spark_typed.rs`): the needle fires on
+single-root dumps only — balanced `Int64(1)`, table-qualified `t.Int64(1)`
+(the `SELECT * FROM (SELECT 1D) t` case renames the outer qualified column
+via `strip_arrow_constructors`), negated `(- 0.0)` bare numbers; composites
+keep their plan names. Evidence: 5/5 restored, 119 targeted green, full
+facade 7745 passed / 0 failed (release native), `make verify`, map-sync,
+ruff, file-size gate all green. Pins: none added, none changed (this slice
+is a pure narrowing; the round-8 pins stand unedited).

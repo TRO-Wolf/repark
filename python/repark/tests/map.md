@@ -4630,7 +4630,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Round 7 (2026-09-15):** the `F.expr` backtick pin carries a strict xfail for
   16a per R-16c-10. **Round 8 (2026-09-15):** nested suffix columns carry no
   `__repark_` marker (columns, Arrow names, `explain()`); unaliased suffix names
-  render from value text on `spark.sql` / `selectExpr` / `F.expr`.
+  render from value text on `spark.sql` / `selectExpr` / `F.expr`, explicit
+  aliases stay.
   pins: fnp-4b/C-001, C-003, C-014, C-015, C-029
 - `test_fnp_4b_hof_display.py` — **FNP-4B round 6 (2026-09-15):** Q3 red pin for run
   16a — selectExpr higher-order display must hide the `__repark_hof_array_field__`

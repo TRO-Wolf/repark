@@ -236,6 +236,9 @@ def test_unaliased_suffix_names_come_from_value_text(spark: ReparkSession) -> No
     for sql, name in cases:
         table = _table(spark.sql(sql))
         assert table.schema.names == [name], sql
+    for sql in ["SELECT 1.5BD AS x", "SELECT 1D AS x", "SELECT -128Y AS x"]:
+        table = _table(spark.sql(sql))
+        assert table.schema.names == ["x"], sql
     table = _table(spark.range(1).selectExpr("1.5BD"))
     assert table.schema.names == ["1.5"]
     table = _table(spark.range(1).select(F.expr("1.5BD")))
