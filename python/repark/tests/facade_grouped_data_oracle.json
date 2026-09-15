@@ -1,0 +1,581 @@
+{
+ "cells": {
+  "applyInArrow": {
+   "result": {
+    "columns": [
+     "id",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, v=1.0)",
+     "Row(id=1, v=2.0)",
+     "Row(id=2, v=3.0)"
+    ],
+    "schema": "struct<id:bigint,v:double>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": true,
+       "type": "double"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "applyInArrow_bad_schema_result": {
+   "error": {
+    "condition": null,
+    "message": "\n  An exception was thrown from the Python worker. Please see the stack trace below.\nTraceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3377, in process\n    serializer.dump_stream(out_iter, outfile)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 333, in dump_stream\n    super(ArrowStreamGroupUDFSerializer, self).dump_stream(batch_iter, stream)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 187, in dump_stream\n    return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 121, in dump_stream\n    for batch in iterator:\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pys",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "PythonException",
+     "CapturedException",
+     "PythonException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "PythonException"
+   }
+  },
+  "applyInArrow_ddl_struct": {
+   "result": {
+    "columns": [
+     "id",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, v=1.0)",
+     "Row(id=1, v=2.0)",
+     "Row(id=2, v=3.0)"
+    ],
+    "schema": "struct<id:bigint,v:double>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": true,
+       "type": "double"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "applyInArrow_expr_group": {
+   "result": {
+    "columns": [
+     "k",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(k=0, n=1)",
+     "Row(k=1, n=2)"
+    ],
+    "schema": "struct<k:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "k",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "applyInArrow_extra_col": {
+   "error": {
+    "condition": null,
+    "message": "\n  An exception was thrown from the Python worker. Please see the stack trace below.\nTraceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3377, in process\n    serializer.dump_stream(out_iter, outfile)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 333, in dump_stream\n    super(ArrowStreamGroupUDFSerializer, self).dump_stream(batch_iter, stream)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 187, in dump_stream\n    return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 121, in dump_stream\n    for batch in iterator:\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pys",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "PythonException",
+     "CapturedException",
+     "PythonException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "PythonException"
+   }
+  },
+  "applyInArrow_iter": {
+   "error": {
+    "condition": null,
+    "message": "\n  An exception was thrown from the Python worker. Please see the stack trace below.\nTraceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3377, in process\n    serializer.dump_stream(out_iter, outfile)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 333, in dump_stream\n    super(ArrowStreamGroupUDFSerializer, self).dump_stream(batch_iter, stream)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 187, in dump_stream\n    return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 121, in dump_stream\n    for batch in iterator:\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pys",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "PythonException",
+     "CapturedException",
+     "PythonException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "PythonException"
+   }
+  },
+  "applyInArrow_key": {
+   "result": {
+    "columns": [
+     "id",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, n=2)",
+     "Row(id=2, n=1)"
+    ],
+    "schema": "struct<id:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "applyInArrow_missing_col": {
+   "error": {
+    "condition": null,
+    "message": "\n  An exception was thrown from the Python worker. Please see the stack trace below.\nTraceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3377, in process\n    serializer.dump_stream(out_iter, outfile)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 333, in dump_stream\n    super(ArrowStreamGroupUDFSerializer, self).dump_stream(batch_iter, stream)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 187, in dump_stream\n    return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 121, in dump_stream\n    for batch in iterator:\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pys",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "PythonException",
+     "CapturedException",
+     "PythonException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "PythonException"
+   }
+  },
+  "applyInArrow_not_callable": {
+   "error": {
+    "condition": null,
+    "message": "cannot access local variable 'eval_type' where it is not associated with a value",
+    "module": "builtins",
+    "mro": [
+     "UnboundLocalError",
+     "NameError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "UnboundLocalError"
+   },
+   "warnings": [
+    "UserWarning: Cannot infer the eval type from type hints. "
+   ]
+  },
+  "applyInArrow_returns_not_table": {
+   "error": {
+    "condition": null,
+    "message": "\n  An exception was thrown from the Python worker. Please see the stack trace below.\nTraceback (most recent call last):\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3386, in main\n    process()\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/worker.py\", line 3377, in process\n    serializer.dump_stream(out_iter, outfile)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 333, in dump_stream\n    super(ArrowStreamGroupUDFSerializer, self).dump_stream(batch_iter, stream)\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 187, in dump_stream\n    return super(ArrowStreamUDFSerializer, self).dump_stream(wrap_and_init_stream(), stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pyspark/python/lib/pyspark.zip/pyspark/sql/pandas/serializers.py\", line 121, in dump_stream\n    for batch in iterator:\n  File \"/tmp/sparkenv/lib/python3.12/site-packages/pys",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "PythonException",
+     "CapturedException",
+     "PythonException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "PythonException"
+   }
+  },
+  "applyInPandasWithState_batch": {
+   "error": {
+    "condition": "_LEGACY_ERROR_TEMP_3176",
+    "message": "applyInPandasWithState is unsupported in batch query. Use applyInPandas instead.",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "UnsupportedOperationException",
+     "CapturedException",
+     "UnsupportedOperationException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {},
+    "raises": "UnsupportedOperationException"
+   }
+  },
+  "applyInPandas_exists": {
+   "result": {
+    "columns": [
+     "id",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, v=-0.5)",
+     "Row(id=1, v=0.5)",
+     "Row(id=2, v=0.0)"
+    ],
+    "schema": "struct<id:bigint,v:double>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": true,
+       "type": "double"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "apply_pandas_udf": {
+   "result": {
+    "columns": [
+     "id",
+     "v"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, v=-0.5)",
+     "Row(id=1, v=0.5)",
+     "Row(id=2, v=0.0)"
+    ],
+    "schema": "struct<id:bigint,v:double>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "v",
+       "nullable": true,
+       "type": "double"
+      }
+     ],
+     "type": "struct"
+    }
+   },
+   "warnings": [
+    "UserWarning: It is preferred to use 'applyInPandas' over this API. This API will be deprecated in the future releases. See SPARK-28264 for more details."
+   ]
+  },
+  "apply_plain_function": {
+   "error": {
+    "condition": "INVALID_UDF_EVAL_TYPE",
+    "message": "[INVALID_UDF_EVAL_TYPE] Eval type for UDF must be SQL_GROUPED_MAP_PANDAS_UDF.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "eval_type": "SQL_GROUPED_MAP_PANDAS_UDF"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "apply_scalar_pandas_udf": {
+   "error": {
+    "condition": "INVALID_UDF_EVAL_TYPE",
+    "message": "[INVALID_UDF_EVAL_TYPE] Eval type for UDF must be SQL_GROUPED_MAP_PANDAS_UDF.",
+    "module": "pyspark.errors.exceptions.base",
+    "mro": [
+     "PySparkTypeError",
+     "PySparkException",
+     "TypeError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": {
+     "eval_type": "SQL_GROUPED_MAP_PANDAS_UDF"
+    },
+    "raises": "PySparkTypeError"
+   }
+  },
+  "cogroup_applyInArrow": {
+   "result": {
+    "columns": [
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(n=2)",
+     "Row(n=4)"
+    ],
+    "schema": "struct<n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "cogroup_applyInArrow_key": {
+   "result": {
+    "columns": [
+     "id",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, n=4)",
+     "Row(id=2, n=2)"
+    ],
+    "schema": "struct<id:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "cogroup_applyInPandas": {
+   "result": {
+    "columns": [
+     "id",
+     "nl",
+     "nr"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, nl=2, nr=1)",
+     "Row(id=2, nl=1, nr=1)"
+    ],
+    "schema": "struct<id:bigint,nl:bigint,nr:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "nl",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "nr",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "cogroup_applyInPandas_key": {
+   "result": {
+    "columns": [
+     "id",
+     "n"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(id=1, n=4)",
+     "Row(id=2, n=2)"
+    ],
+    "schema": "struct<id:bigint,n:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "id",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "n",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "cogroup_key_count_mismatch": {
+   "error": {
+    "condition": null,
+    "message": "requirement failed: Cogroup keys must have same size: 1 != 2",
+    "module": "pyspark.errors.exceptions.captured",
+    "mro": [
+     "IllegalArgumentException",
+     "CapturedException",
+     "IllegalArgumentException",
+     "PySparkException",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "IllegalArgumentException"
+   }
+  },
+  "cogroup_not_grouped": {
+   "result": {
+    "kind": "PandasCogroupedOps",
+    "module": "pyspark.sql.pandas.group_ops",
+    "repr": "<pyspark.sql.pandas.group_ops.PandasCogroupedOps object at 0x79f6768f2f30>"
+   }
+  },
+  "cogroup_one_side_empty": {
+   "result": {
+    "columns": [
+     "nl",
+     "nr"
+    ],
+    "kind": "DataFrame",
+    "rows": [
+     "Row(nl=1, nr=0)",
+     "Row(nl=2, nr=2)"
+    ],
+    "schema": "struct<nl:bigint,nr:bigint>",
+    "schema_json": {
+     "fields": [
+      {
+       "metadata": {},
+       "name": "nl",
+       "nullable": true,
+       "type": "long"
+      },
+      {
+       "metadata": {},
+       "name": "nr",
+       "nullable": true,
+       "type": "long"
+      }
+     ],
+     "type": "struct"
+    }
+   }
+  },
+  "cogroup_type": {
+   "result": {
+    "kind": "str",
+    "value": "PandasCogroupedOps"
+   }
+  },
+  "transformWithStateInPandas_batch": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o1607.collectToPython.\n: org.apache.spark.SparkException: [CANNOT_LOAD_STATE_STORE.UNCATEGORIZED] An error occurred during loading state.  SQLSTATE: 58030\n\tat org.apache.spark.sql.errors.QueryExecutionErrors$.cannotLoadStore(QueryExecutionErrors.scala:2807)\n\tat org.apache.spark.sql.execution.streaming.state.StateStoreErrors$.cannotLoadStore(StateStoreErrors.scala:265)\n\tat org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider.loadStateStore(RocksDBStateStoreProvider.scala:764)\n\tat org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider.getStore(RocksDBStateStoreProvider.scala:780)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.initNewStateStoreAndProcessData(TransformWithStateInPySparkExec.scala:284)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.$anonfun$doExecute$2(TransformWithStateInPySparkExec.scala:207)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.$anonfun$doExecute$2$adapted(TransformWithStateInPySparkExec.scala:206)\n\tat org.apache.spark.rdd.RDD.$anonfun$mapPartitionsWithIndex$2(RDD.scala:918)\n\tat ",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  },
+  "transformWithState_batch": {
+   "error": {
+    "condition": null,
+    "message": "An error occurred while calling o1646.collectToPython.\n: org.apache.spark.SparkException: [CANNOT_LOAD_STATE_STORE.UNCATEGORIZED] An error occurred during loading state.  SQLSTATE: 58030\n\tat org.apache.spark.sql.errors.QueryExecutionErrors$.cannotLoadStore(QueryExecutionErrors.scala:2807)\n\tat org.apache.spark.sql.execution.streaming.state.StateStoreErrors$.cannotLoadStore(StateStoreErrors.scala:265)\n\tat org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider.loadStateStore(RocksDBStateStoreProvider.scala:764)\n\tat org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider.getStore(RocksDBStateStoreProvider.scala:780)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.initNewStateStoreAndProcessData(TransformWithStateInPySparkExec.scala:284)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.$anonfun$doExecute$2(TransformWithStateInPySparkExec.scala:207)\n\tat org.apache.spark.sql.execution.python.streaming.TransformWithStateInPySparkExec.$anonfun$doExecute$2$adapted(TransformWithStateInPySparkExec.scala:206)\n\tat org.apache.spark.rdd.RDD.$anonfun$mapPartitionsWithIndex$2(RDD.scala:918)\n\tat ",
+    "module": "py4j.protocol",
+    "mro": [
+     "Py4JJavaError",
+     "Py4JError",
+     "Exception",
+     "BaseException",
+     "object"
+    ],
+    "params": null,
+    "raises": "Py4JJavaError"
+   }
+  }
+ },
+ "oracle": "PySpark 4.1.2 classic, local[2], spark.sql.session.timeZone=UTC, recorded 2026-09-14 (run 15b); probe at /tmp/oc-worker/run15b/oracle/cells.py + cells2.py"
+}

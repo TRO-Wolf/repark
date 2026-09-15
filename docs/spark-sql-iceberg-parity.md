@@ -1477,6 +1477,57 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `NOT_A_PARTITIONED_TABLE` is a Hive-directory concept — a table whose partitions live as
   directories a metastore must re-discover. An unpartitioned Iceberg table has no
   recoverable directory structure, so the no-op is the truthful answer.
+### GROUPED-ARROW-1 — `applyInArrow` raises the inner error class where Spark wraps it in `PythonException`
+- **repark** — `GroupedData.applyInArrow` validates a returned Arrow table/batch against the
+  declared schema in the facade (Spark's own `verify_arrow_*` order: `pa.Table` shape, then
+  name set, then per-name types) and raises the inner class directly —
+  `PySparkTypeError` `UDF_RETURN_TYPE`, `PySparkRuntimeError`
+  `RESULT_COLUMN_NAMES_MISMATCH` / `RESULT_COLUMN_TYPES_MISMATCH`. A non-callable `func`
+  raises `PySparkTypeError` `NOT_CALLABLE` `{"arg_name": "func", "arg_type": …}` at the call.
+- **Apache Spark** — the same checks run in the Python worker and surface as
+  `PythonException` with the inner error class in the embedded traceback; a non-callable
+  `func` crashes the driver with `UnboundLocalError` after a "Cannot infer the eval type"
+  `UserWarning`. *(oracle: recorded — cells `applyInArrow_bad_schema_result`,
+  `applyInArrow_missing_col`, `applyInArrow_extra_col`, `applyInArrow_returns_not_table`,
+  `applyInArrow_iter`, `applyInArrow_not_callable`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_result_validation_errors`,
+  `…::test_apply_in_arrow_not_callable`.
+- **Rationale** — DECLARED 2026-09-14. repark has no worker/driver split to wrap across, so
+  the inner Spark error class is the honest answer — the card names it explicitly over the
+  recorded `PythonException` wrapper and the `UnboundLocalError` driver crash.
+### GROUPED-COGROUP-1 — `cogroup` refuses an ungrouped side where Spark accepts silently
+- **repark** — `GroupedData.cogroup(other)` requires `other` to be a `GroupedData` and
+  raises `PySparkTypeError` `NOT_EXPECTED_TYPE` `{"arg_name": "other",
+  "expected_type": "GroupedData", "arg_type": …}` at the call otherwise.
+- **Apache Spark** — accepts `cogroup(<a DataFrame>)` silently and returns
+  `PandasCogroupedOps`; the failure lands later inside the JVM apply call.
+  *(oracle: recorded — cell `cogroup_not_grouped`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_cogroup_type_and_ungrouped_side`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-1). Spark's silent acceptance is a
+  deferred-crash shape the facade does not reproduce; the eager refusal names the argument,
+  the expected type, and the actual type at the point of the mistake.
+### GROUPED-DECL-transformWithState — `GroupedData.transformWithState` is a declared `NOT_IMPLEMENTED` refusal
+- **repark** — raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED` and
+  `{"feature": "transformWithState"}`, str `[NOT_IMPLEMENTED] transformWithState is not
+  implemented.`
+- **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
+  with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
+  *(oracle: recorded — cell `transformWithState_batch`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
+  Streaming state stores repark does not have; every repark frame is batch, so the refusal
+  is the parity answer.
+### GROUPED-DECL-transformWithStateInPandas — `GroupedData.transformWithStateInPandas` is a declared `NOT_IMPLEMENTED` refusal
+- **repark** — raises `PySparkNotImplementedError` with errorClass `NOT_IMPLEMENTED` and
+  `{"feature": "transformWithStateInPandas"}`, str
+  `[NOT_IMPLEMENTED] transformWithStateInPandas is not implemented.`
+- **Apache Spark** — on a batch frame the call reaches the streaming state store and fails
+  with `CANNOT_LOAD_STATE_STORE.UNCATEGORIZED` (SQLSTATE 58030) from inside the JVM.
+  *(oracle: recorded — cell `transformWithStateInPandas_batch`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_state_api_refusals`.
+- **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
+  Streaming state stores repark does not have; every repark frame is batch, so the refusal
+  is the parity answer.
 
 ### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
@@ -7932,6 +7983,20 @@ field NAME.
   needs the input Arrow type at the adapter, which only the bridge schema knows
   (`dataframe/**`, owned by another orchestrator).
   pins: fnp-misc-1/L-007
+### GROUPED-EXPRKEY-1 — expression group keys refuse on the grouped map UDFs
+- **repark** — `groupBy(<expression>)` followed by `applyInPandas`, `applyInArrow`, or a
+  cogrouped apply raises `AnalysisException` naming the simple-column-name requirement;
+  the boundary scan needs concrete streamed key columns. `groupBy(<name>)` works.
+- **Apache Spark** — `groupBy(F.col("id") % 2).applyInArrow(...)` answers the grouped
+  result, and the keyed callback receives the expression's value.
+  *(oracle: recorded — cell `applyInArrow_expr_group` answers
+  `Row(k=0, n=1), Row(k=1, n=2)`.)*
+  `python/repark/tests/test_grouped_surface_1.py::test_apply_in_arrow_expression_group_key_refusal`.
+- **Rationale** — BACKLOG, filed 2026-09-14 (GROUPED-SURFACE-1). The refusal predates this
+  unit on `applyInPandas` and the new doors keep it; fixing it means projecting expression
+  keys into the streamed frame first (the workaround the message names — project, then
+  group by the resulting name).
+  pins: grouped-surface-1/C-003
 
 ## 8. Drop-in disclosure rationale
 

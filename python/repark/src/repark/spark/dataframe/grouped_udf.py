@@ -93,13 +93,57 @@ def _validate_apply_in_pandas_result_columns(
     )
 
 
-def _iter_apply_in_pandas_group_tables(
+def _apply_in_pandas_scalar_key_compare(left: Any, right: Any) -> int:
+    """Total order for one group-key cell matching the engine's ascending sort."""
+    import math
+
+    if left is None and right is None:
+        return 0
+    if left is None:
+        return -1
+    if right is None:
+        return 1
+    left_nan = isinstance(left, float) and math.isnan(left)
+    right_nan = isinstance(right, float) and math.isnan(right)
+    if left_nan or right_nan:
+        if left_nan and right_nan:
+            return 0
+        return 1 if left_nan else -1
+    try:
+        if left < right:
+            return -1
+        if left > right:
+            return 1
+        return 0
+    except TypeError:
+        left_tag = type(left).__name__
+        right_tag = type(right).__name__
+        if left_tag != right_tag:
+            return -1 if left_tag < right_tag else 1
+        left_text = str(left)
+        right_text = str(right)
+        if left_text == right_text:
+            return 0
+        return -1 if left_text < right_text else 1
+
+
+def _apply_in_pandas_keys_compare(left: tuple[Any, ...], right: tuple[Any, ...]) -> int:
+    """Lexicographic key-tuple compare used by the cogroup merge walk."""
+    for left_cell, right_cell in zip(left, right, strict=False):
+        order = _apply_in_pandas_scalar_key_compare(left_cell, right_cell)
+        if order != 0:
+            return order
+    return (len(left) > len(right)) - (len(left) < len(right))
+
+
+def _iter_apply_in_pandas_keyed_groups(
     input_batches: Iterator[Any],
     key_names: list[str],
-) -> Iterator[Any]:
-    """Yield one table per contiguous key group from a sorted batch stream.
+) -> Iterator[tuple[tuple[Any, ...], list[Any]]]:
+    """Yield ``(key, segments)`` per contiguous key group from a sorted batch stream.
 
     The current group and one input batch remain buffered. Empty keys form one global group.
+    Segments are batch slices, so a group split across batch edges stays O(group) here.
     """
     pending_segments: list[Any] = []
     current_key: Any = _APPLY_IN_PANDAS_KEY_MISSING
@@ -107,7 +151,7 @@ def _iter_apply_in_pandas_group_tables(
     if not key_names:
         segments = [batch for batch in input_batches if batch.num_rows > 0]
         if segments:
-            yield _apply_in_pandas_table_from_segments(segments)
+            yield ((), segments)
         return
 
     for batch in input_batches:
@@ -116,7 +160,7 @@ def _iter_apply_in_pandas_group_tables(
         missing = [name for name in key_names if name not in batch.schema.names]
         if missing:
             raise PySparkException(
-                "applyInPandas group key column(s) missing from streamed batch: "
+                "grouped map UDF group key column(s) missing from streamed batch: "
                 f"{missing}; batch fields={list(batch.schema.names)}"
             )
         run_start = 0
@@ -134,7 +178,7 @@ def _iter_apply_in_pandas_group_tables(
             elif _apply_in_pandas_keys_equal(current_key, run_key):
                 pending_segments.append(segment)
             else:
-                yield _apply_in_pandas_table_from_segments(pending_segments)
+                yield (current_key, pending_segments)
                 current_key = run_key
                 pending_segments = [segment]
             if row_index < row_count:
@@ -142,4 +186,16 @@ def _iter_apply_in_pandas_group_tables(
                 run_key = next_key
 
     if pending_segments:
-        yield _apply_in_pandas_table_from_segments(pending_segments)
+        yield (current_key, pending_segments)
+
+
+def _iter_apply_in_pandas_group_tables(
+    input_batches: Iterator[Any],
+    key_names: list[str],
+) -> Iterator[Any]:
+    """Yield one table per contiguous key group from a sorted batch stream.
+
+    The current group and one input batch remain buffered. Empty keys form one global group.
+    """
+    for _key, segments in _iter_apply_in_pandas_keyed_groups(input_batches, key_names):
+        yield _apply_in_pandas_table_from_segments(segments)
