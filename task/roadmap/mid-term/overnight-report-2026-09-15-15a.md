@@ -27,7 +27,7 @@ Every one of the 37 has a card with live oracle cells:
 - FNP-AGG-1 covers aggregates, including sum_distinct.
 - FNP-GEN-1 covers generators and CSV/XML.
 - FNP-MATH-1 covers math, strings and crypto.
-- FNP-WIN-1 covers window, window_time and session_window; it opened tonight as a draft lane.
+- FNP-WIN-1 covers window, window_time and session_window; it opened tonight as draft #618.
 
 ## 2. Oracles recorded (live PySpark 4.1.2, this box)
 
@@ -55,7 +55,7 @@ Run 15c measured the literal first; my recorder had forced the conf.
 | #594 | FNP-MISC-1 | call_function, call_udf, arrow_udf, arrow_udtf, bucket(Column) | Muse Spark 1.3 contributor ×3 | Grok critic-logic $0.55 (2 P1, 6 P2); S2-21 Python perf $0.48 (1 P1, 2 P2); Grok verification critic $0.82 (all closed; 1 new P2, remediated) | facade green (stale-native filter, ruled); parity 757; CI caught two by-name misclassifications, fixed before merge | **merged 440b2773** 04:43, tree-equal |
 | #606 | FNP-11A | 11 new temporal names, plus make_timestamp / months_between and SQL timestampadd / timestampdiff / 3-arg dateadd / datediff, all Rust kernels | Devin SWE-2 ×2 (0 edits, stopped); Muse Spark ×4 (R1 ran to its step limit and was resumed; R2 remediation; R3 fixes) | Grok critic-logic $0.86 NEEDS_REMEDIATION (4 P1, 6 P2, 1 P3), all remediated or pinned as Spark behaviour; S2-21 Python perf $0.75 (no P1); S2-21 Rust perf interim (P1 per-row cast, remediated: make_timestamp 1476 → 53 nanoseconds per row) | on main after #609, release native built from 6fa5719a: `make verify` 0, facade 7276, parity 757, example execution, comment ban 0 | **ready**, queued after 15b's #610 (conflict with main: EX-0 count only) |
 | #613 (draft) | FNP-BITMAP-FACADE-1 | bitmap_construct_agg, bitmap_or_agg, bitmap_and_agg | GLM 5.3 Flash ×2 (native built by the orchestrator); remediation carried over | Grok critic-logic NEEDS_REMEDIATION (P1 L-001: `bitmap_or_agg` / `bitmap_and_agg` fold non-BINARY input as UTF-8 bytes where Spark refuses; P2 L-002..L-005: a `call_function` pin compared to itself, construct fail-open on invalid STRING/FLOAT, unused oracle cells, DataFusion-qualified unaliased names), all back to the actor in the next run | facade and parity green on the rebased head; see the PR for the Rust leg | draft at 4aa22173; stays draft until the remediation round lands |
-| (lane) | FNP-WIN-1 | window (step 1–2 of 4) | Muse Spark 1.3 contributor, running | — | — | carries over |
+| #618 (draft) | FNP-WIN-1 | window, window_time, session_window (step 1 of 4 committed) | Muse Spark 1.3 contributor ×1, stopped at 06:55 for the run deadline | — | — | draft carry-over. Step 1 is committed (ledger, oracle fixture, red pins). The step-2 `window` Rust rewrite in progress is saved as a patch plus an untracked-files archive (three new Rust files) beside the build clone, and the build clone's worktree still holds it for the next session. |
 
 ## 4. Rulings taken (G-2)
 
@@ -106,6 +106,10 @@ Run 15c measured the literal first; my recorder had forced the conf.
 1. **DEGREES-RUST-1**: move facade `degrees` / `radians` onto the engine kernel through a `call_scalar` arm, per the Rust-first instruction. *Recommendation:* yes, as a small card in the next Rust lane. The values are already pinned bit-exact.
 2. **Merge queue across orchestrators.** Tonight's queue was a hold-and-ping agreement between sessions, and a ready PR waited 2–3 hours for its slot. *Recommendation:* turn on GitHub's merge queue for concurrent runs, or make "announce merging #N / hold until #N landed" a runbook rule.
 3. **Widen `make_timestamp` to Spark's signature (EX-FN-28).** PySpark 4.1.2 makes every parameter optional for the `(date=, time=)` form. *Recommendation:* yes, in a freeze-update PR. It only widens the signature.
-4. **#606 and FNP-BITMAP-FACADE-1 merges after 07:15.** Both are green and queued behind run 15b's PRs. *Recommendation:* the next session merges #606 at its slot, rebased with an EX-0 recount only, then the bitmap facade PR.
+4. **Carry-overs after 07:15.**
+   - #606 is green and ready at 6fa5719a. The queue (#608 → #605 → #610) could not reach it before the run ended, and 15b confirmed the handoff. It needs an EX-0 recount rebase only.
+   - #613 needs its critic remediation. The P1 is shared with run 15c's FNP-6D-FOLLOWUP-1.
+   - #618 resumes at step 2.
+   *Recommendation:* the next functions session merges #606 first, then remediates #613 in the build clone (rebasing over 15c's kernel fix if that lands first), then resumes #618.
 5. **Split-identity uniqueness pin.** `test_functions_split_identity.py` checks slices of `__all__` but not uniqueness, so a duplicate install passed it. *Recommendation:* add `len(set(__all__)) == len(__all__)` there in the next functions PR.
 6. **One build clone is the bottleneck.** Every remaining family needs Rust kernels, so the functions slice can land at most two Rust units per night. *Recommendation:* allow a second build clone per orchestrator when disk is above 250 G free (tonight it stayed between 287 and 349 G), with lane-private cargo targets.
