@@ -353,6 +353,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   its 1778 baseline line-neutral (the `catalog` kwarg pays for itself by compressing the
   docstring, and `spark_session_conf` restores never-set keys via `conf.unset`).
   pins: nightly-live-1/C-003
+  **DF-SURFACE-B-1 rebase (2026-09-15):** `dataframe/core.py` row → 4034 with the script baseline after the rebase over DF-SURFACE-A-1 (#600) merged both import lines.
 - `test_live_v3_docs.py` — **LIVE-v3-M (2026-09-02; tree pins):** the live v3 legs are documented
   as **measured green** — registry `S3T-V3-1` is FIXED by measurement and carries run
   33635288918, its link, base `8c4bc55`, the `6 passed in 122.13s` line, the accepted branch and
