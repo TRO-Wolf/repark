@@ -148,6 +148,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `array_contains` nullability is the residual that rides on them.
   **DOOR-CONVERGE-2 (2026-09-15):** `reverse`, `sequence` and `split` join
   `SCALAR_NAMES` (the C-006 ratchet); `concat` stays out — variadic, no fixed arity.
+  `generate_series` joins `EXPECTED_DIVERGENCES` instead (table 14 → 15): the facade
+  keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
+  native spelling for its table-function callers — C-003's reroute exposed the split,
+  overwriting the door would break `FROM generate_series` users.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014; pins: door-converge-2/C-006
   **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core
