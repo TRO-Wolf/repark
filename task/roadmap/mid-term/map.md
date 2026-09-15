@@ -229,3 +229,4 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Pointers
 - Up: [../map.md](../map.md)
+- [overnight-report-2026-09-15-15a.md](overnight-report-2026-09-15-15a.md) — run 15a (1.5 Spark-parity campaign, THE FUNCTIONS): census slice before/after, per-PR table with reviewer verdicts and costs, rulings, owner questions.
