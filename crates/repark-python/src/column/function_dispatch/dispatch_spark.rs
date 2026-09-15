@@ -58,6 +58,10 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::length(exprs[0].clone())
         }
+        "reverse" => {
+            need(1)?;
+            repark_functions::expr_fn::reverse(exprs[0].clone())
+        }
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar({other}) has no door-converged kernel"

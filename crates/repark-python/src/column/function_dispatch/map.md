@@ -26,6 +26,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
   for the same kernel `register_all` installs on the SQL door — one kernel per name on
   both doors.
   pins: door-converge-1/C-001..C-008
+  **DOOR-CONVERGE-2 (2026-09-15):** `reverse` joins the converged arms (the facade's old
+  DataFusion-core lowering answered strings only).
+  pins: door-converge-2/C-002
 
 ## Pointers
 

@@ -589,6 +589,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   array → NULL row, `DATA_DIFF_TYPES` on a non-array sibling); any-`Binary` args stay
   `Binary`; everything else keeps the `Utf8` path. The facade `PyColumn::concat` embeds the
   same UDF, so both doors resolve one kernel. pins: door-converge-2/C-001
+- `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
+  (overwrites the string-only DataFusion kernel): arrays reverse element order with the
+  element type, `containsNull` and nullability kept; strings reverse by character; untyped
+  `NULL` answers a NULL `STRING`; any other type refuses
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`. The facade arm moved to `dispatch_spark.rs`,
+  so both doors resolve this kernel. pins: door-converge-2/C-002
 - `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a

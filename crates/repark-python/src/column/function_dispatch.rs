@@ -329,8 +329,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             repark_functions::expr_fn::from_unixtime(exprs.clone())
         }
         "reverse" => {
-            need(1)?;
-            expr_fn::reverse(exprs[0].clone())
+            return dispatch_spark::call_scalar_expr(name, exprs);
         }
         "repeat" => {
             need(2)?;
