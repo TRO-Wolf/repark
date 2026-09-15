@@ -84,8 +84,7 @@ pub struct SparkProjectionDisplay;
 
 impl AnalyzerRule for SparkProjectionDisplay {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_projection_display)
-            .data()
+        rewrite_projection_display(plan)
     }
 
     fn name(&self) -> &'static str {
@@ -93,21 +92,24 @@ impl AnalyzerRule for SparkProjectionDisplay {
     }
 }
 
-fn rewrite_projection_display(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
     let LogicalPlan::Projection(mut projection) = plan else {
-        return Ok(Transformed::no(plan));
+        return Ok(plan);
     };
     let mut changed = false;
     for expr in &mut projection.expr {
         let current = expr.clone();
-        let (inner, name) = match current {
-            Expr::Alias(alias) => (*alias.expr, alias.name),
+        let (inner, name, explicit) = match current {
+            Expr::Alias(alias) => {
+                let explicit = !alias.name.contains("__repark_");
+                (*alias.expr, alias.name, explicit)
+            }
             other => {
                 let name = other.schema_name().to_string();
-                (other, name)
+                (other, name, false)
             }
         };
-        if !needs_spark_display(&name) {
+        if explicit || !needs_spark_display(&name) {
             continue;
         }
         let display = spark_display(&inner);
@@ -118,14 +120,13 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<Transformed<LogicalPl
         changed = true;
     }
     if changed {
-        let plan = LogicalPlan::Projection(projection)
+        LogicalPlan::Projection(projection)
             .recompute_schema()
             .map_err(|error| {
                 DataFusionError::Plan(format!("spark projection display schema: {error}"))
-            })?;
-        Ok(Transformed::yes(plan))
+            })
     } else {
-        Ok(Transformed::no(LogicalPlan::Projection(projection)))
+        Ok(LogicalPlan::Projection(projection))
     }
 }
 
@@ -139,11 +140,10 @@ fn integer_arith_op(name: &str) -> Option<&'static str> {
 }
 
 fn needs_spark_display(name: &str) -> bool {
-    name.contains("Int64(")
-        || name.contains("Int32(")
-        || name.contains("Utf8(")
-        || name.contains("__repark_spark_")
-        || name.contains("__repark_selx_")
+    name.contains("__repark_selx_")
+        || name.contains(SUFFIX_LITERAL_NAME)
+        || name.contains("named_struct(")
+        || name.contains("get_field(")
         || name.contains('`')
 }
 
