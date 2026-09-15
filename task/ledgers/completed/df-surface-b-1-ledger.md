@@ -62,4 +62,53 @@ VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
 | Clause | Proposition | Proof | Verdict | Evidence |
 |---|---|---|---|---|
 | C-008 | Plan-only work never fills an Observation: `explain()`, `explain(True)` and `createOrReplaceTempView` leave `get` raising; `tail(0)` and a parquet write fill it. | `test_observe_explain_and_temp_view_do_not_fill`. | **PROVEN** | Red on 8dc64ae1 (1 failed: `explain()` filled the Observation), green after with the unit, frozen-surface and hygiene pins and every explain / temp_view / tail / writer / cte pin in the facade suite. pins: df-surface-b-1/C-008 |
+- R-7 (2026-09-15): no further critic round — the re-check's P1 and P2 were fixed red-first by the orchestrator and are held by
+  `test_observe_explain_and_temp_view_do_not_fill` plus 245 explain, temp-view, tail, writer and CTE pins in the facade suite.
+- R-8 (2026-09-15): the S2-21 perf reviewers do not run on this unit — foreach/foreachPartition stream the existing iterators and
+  observe adds one aggregation per Observation by contract (DF-OBSERVE-1); no new data path.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: df-surface-b-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the card and the recorded PySpark 4.1.2 foreach, observe and observation cells; freqItems is split out to a Rust unit and listed as moved.
+      artifacts: [python/repark/tests/test_df_surface_b_1.py, python/repark/tests/facade_dataframe_surface_oracle.json]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Every row-producing action and descendant (take, head, first, isEmpty, show in both styles, tail(0), filter, union, limit, select, drop, mapInArrow take, writes), plan-only work (explain, createOrReplaceTempView), two threads, literal and mixed metrics, non-Column exprs, reuse, an empty name, get before an action.
+      artifacts: [python/repark/tests/test_df_surface_b_1.py]
+    - id: AT-3
+      status: N/A
+      justification: Python facade plumbing; no Rust, no unwrap.
+    - id: AT-4
+      status: ATTACKED
+      evidence: One attachment per Observation with a lock and an in-progress flag; a thread-local suppression for plan-only work; the concurrency pin passed 15 of 15 standalone runs.
+      artifacts: [python/repark/src/repark/spark/dataframe/surface_b.py]
+    - id: AT-5
+      status: N/A
+      justification: No authn/authz, deserialization, path, credential or network surface; foreach runs the user's own callable on the driver.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Grok critic-logic round 1 (3 P1, 4 P2) led to ruling R-5 and a Devin round; the re-check found every finding fixed plus L-101 (P1) and L-102 (P2), fixed red-first by the orchestrator (R-6).
+      artifacts: [task/ledgers/completed/df-surface-b-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: Full facade suite (6583 passed on a fresh native before the re-check fix) and the parity suite; after the fix the unit, frozen-surface, hygiene and 245 related pins; ruff 0.15.22, check_lib_py with core.py at 4034, ledger grammar, example coverage; comment-ban grep zero hits.
+      artifacts: [docs/examples/dataframe/foreach_observe.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Spark's contracts were read, not assumed - pyspark/sql/observation.py, classic dataframe.py foreach, foreachPartition and observe argument checks (1135-1169), and the CollectMetrics plan position behind the descendant rule.
+      artifacts: [python/repark/src/repark/spark/observation.py, python/repark/src/repark/spark/dataframe/surface_b.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Refusals carry Spark's classes and texts (NOT_CALLABLE, CANNOT_BE_EMPTY, REUSE_OBSERVATION, NOT_LIST_OF_COLUMN, VALUE_NOT_NON_EMPTY_STR, INVALID_OBSERVED_METRICS, NO_OBSERVE_BEFORE_GET); the declared differences are DF-FOREACH-1 and DF-OBSERVE-1 with pins.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Mutation guards run - aggregating the action frame reds the take and descendant pins, a global depth counter reds the concurrency pin, removing the suppression reds the explain pin, the spy pin counts exactly one aggregation.
+      artifacts: [python/repark/tests/test_df_surface_b_1.py]
+  complete: true
+```
 
