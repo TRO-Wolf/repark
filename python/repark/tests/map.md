@@ -216,6 +216,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_replace_duplicate_name_join_columns` pins P2-3 (qualifier-bound multi-name
   equi-join output, both `x` columns rewritten, `subset=["x"]` still AMBIGUOUS).
   pins: replace-linear-1/C-001, C-002, C-003, C-004, C-005
+- [test_door_converge_1.py](test_door_converge_1.py) — **DOOR-CONVERGE-1 (2026-09-15):**
+  both-door oracle pins for the eight clause names — `base64`/`unbase64` (padding,
+  76-char CRLF chunking, lenient decode of `'!!'`/unpadded), `hypot` (rescaled
+  `f64::hypot`, inf-over-NaN, NULL propagation), `abs` (ANSI `[ARITHMETIC_OVERFLOW]` on
+  every signed minimum, width kept), `size`/`cardinality` (NULL-in NULL-int out),
+  `array_contains` (three-valued NULL + `DATATYPE_MISMATCH.NULL_TYPE` needle),
+  `approx_count_distinct`/`regr_count` (non-null `bigint`, empty → 0),
+  `ascii`/`length`/`character_length` (codepoint + binary bytes), and the BL-6
+  SQL-door refusal class. pins: door-converge-1/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008
 - [test_abs_expr_1.py](test_abs_expr_1.py) — **ABS-EXPR-1 (2026-09-13):** `F.abs` /
   `F.cbrt` / `F.nullif` are one native `call_scalar` each — the depth-40 memory pin
   runs each chain in a subprocess under `RLIMIT_AS` (12 GB) with a per-level bound
