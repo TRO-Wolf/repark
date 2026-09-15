@@ -9,7 +9,6 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
-/// [`ScalarUDF`] behind [`java_format_float_udf`].
 #[derive(Debug)]
 struct JavaFormatFloat {
     signature: Signature,
@@ -37,7 +36,6 @@ impl Hash for JavaFormatFloat {
     }
 }
 
-/// Java `Formatter` `%f`/`%F` over one float, `HALF_UP`; the format arrives as arg 0.
 impl ScalarUDFImpl for JavaFormatFloat {
     crate::shim_udf_boilerplate!("__repark_format_float__");
 
@@ -115,7 +113,6 @@ impl ScalarUDFImpl for JavaFormatFloat {
     }
 }
 
-/// Build the `%f`/`%F` shim UDF the analyzer rule rewrites single-verb calls into.
 pub(crate) fn java_format_float_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(JavaFormatFloat::new()))
 }
@@ -143,7 +140,6 @@ fn render_scalar(spec: &FloatFormat, scalar: &ScalarValue) -> Result<String> {
     }
 }
 
-/// One parsed `%[flags][width][.precision]f|F` conversion covering the whole format.
 pub(crate) struct FloatFormat {
     flags: u8,
     width: usize,
@@ -164,7 +160,6 @@ impl FloatFormat {
     }
 }
 
-/// Parse a whole format string holding exactly one float conversion; else `None`.
 pub(crate) fn parse_float_format(format: &str) -> Option<FloatFormat> {
     let body = format.strip_prefix('%')?;
     let bytes = body.as_bytes();
@@ -221,7 +216,6 @@ pub(crate) fn parse_float_format(format: &str) -> Option<FloatFormat> {
     Some(spec)
 }
 
-/// Render one finite or non-finite float through a parsed `%f`/`%F` conversion.
 pub(crate) fn format_float_value(spec: &FloatFormat, value: f64) -> String {
     let mut prefix = String::new();
     let mut suffix = String::new();
@@ -287,7 +281,6 @@ fn insert_grouping(fixed: &mut String) {
     *fixed = grouped;
 }
 
-/// Fixed-point decimal of a finite non-negative float, rounded `HALF_UP`.
 #[allow(clippy::cast_possible_truncation)]
 fn half_up_fixed(abs: f64, precision: usize) -> String {
     debug_assert!(abs.is_finite() && !abs.is_sign_negative());
@@ -408,7 +401,6 @@ fn multiply_small(limbs: &mut Vec<u64>, factor: u64) {
     }
 }
 
-/// Value of the limbs shifted right, used only for single decimal digits below 10.
 fn shifted_value(limbs: &[u64], shift: u32) -> u64 {
     let word = (shift / 64) as usize;
     let bits = shift % 64;
@@ -433,7 +425,6 @@ fn mask_bits(limbs: &mut Vec<u64>, bits: u32) {
     }
 }
 
-/// Decimal text of limbs, destroying them; limbs must hold a non-negative integer.
 fn decimal_text(limbs: &mut Vec<u64>) -> String {
     while limbs.len() > 1 && limbs.last() == Some(&0) {
         limbs.pop();
