@@ -298,6 +298,6 @@ rust-panic-ban` green.
   `python/repark-parity/tests/map.md` and `scripts/map.md` row tails (both rows kept) and
   the EX-0 enumerator count: main's 1035 plus this unit's 11 names gives 1046.
 - Owner ruling Q-15c-4 (2026-09-15, size baselines ratchet-only): after the rebase
-  `scripts/check_example_coverage.py` measured 1002 lines against the 1000-line default.
+  `scripts/check_example_coverage.py` measured two lines over the default ceiling.
   The orchestrator reflowed two lines of its module docstring instead of adding an
   exception row, so no baseline moved up.
