@@ -32,17 +32,21 @@ N7-22 reverse). Cells spelled `2.5D`/`1L` are re-pinned with `CAST` per the card
 | Q-15c-6 | owner 2026-09-15 | No global retag wrapper; per-function fixes, one oracle pin each. |
 | Q-15c-7 | owner 2026-09-15 | concat/reverse on arrays and sequence/split on the SQL door are P1 and go first. |
 | R-13 | DOOR-CONVERGE-1 round 4 | Literal-haystack nullability legs pin today's `nullable=True` as recorded divergence ARRAY-LITERAL-CONTAINSNULL-1 until the array-constructor fix lands. |
+| Q-15c-4 | owner 2026-09-15 (via run-16c G-2) | Size baselines stay ratchet-only; a one-time +N is granted in the PR that needs it, never a standing allowance. |
+| R-1 | DOOR-CONVERGE-2 G-2 Q1 | analyzer.rs +8 one-time grant, Q-15c-4, reason: array_concat→concat analyzer arm for Q12-16 outer nullability. Ceiling 1142→1150. |
+| G-2 Q2 | orchestrator 2026-09-15 | The 15 clippy-1.96 errors land as an addendum commit in this unit; `make rust-clippy` must exit 0, no `#[allow]`. |
+| G-2 Q3 | orchestrator 2026-09-15 | Sequence illegal-step follows the oracle: Spark's `IllegalArgumentException` class with the `requirement failed: Illegal sequence boundaries: …` text, using the existing error-mapping route if one exists. |
 
 ## PROPOSITION LEDGER — DOOR-CONVERGE-2 round 1 — 2026-09-15
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `concat` over arrays answers Spark on the SQL door (cells Q12-0…Q12-10, Q12-16 `||` over arrays); string/binary controls Q12-11…Q12-15 do not regress. Element type widens to the common type (Q12-3 bigint, Q12-4 `decimal(11,1)`), `containsNull` is the OR of the inputs (Q12-1, Q12-7), result nullable iff any input nullable, any NULL array → NULL (Q12-2), nested arrays keep inner nullability (Q12-8), empty `array()` joins (Q12-9), array mixed with string refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES` (Q12-10). BINARY stays BINARY (Q12-13). | `test_door_converge_2.py` Q12-0…Q12-16 legs green on both doors. | OPEN | Kernel done 2026-09-15: one `concat` UDF with string/binary/array arms (`collection/concat_array.rs` helpers, `PyColumn::concat` embeds the same UDF); Rust pins green (`concat_array::*`, `string::tests::concat_binary_stays_binary`). Python pins pending the native rebuild. `||` left on DataFusion's `array_concat` rewrite (values already right; element leg cites ARRAY-LITERAL-CONTAINSNULL-1). Mixed string/binary resolves `Binary` (Spark's any-binary-wins `dataType`). Follow-up 2026-09-15: the array arm first widened inside `coerce_types`, which froze `decimal(21,1)` for `concat(array(1), array(decimal))` — the provisional-`Int64` sandwich one level down (`array(1)` is `List<Int64>` at the built-in pass). Same cure as C-003: coerce validates but never casts, widths resolve post-narrowing, the kernel casts internally; widen lands on Spark's `decimal(11,1)`. |
-| C-002 | `reverse` over arrays answers Spark on the SQL door (Q12-17…Q12-25): element order reversed, element type and `containsNull` and nullability kept, NULL array → NULL, `reverse('abc')` still `'cba'`, untyped `reverse(NULL)` is a NULL STRING. | Q12-17…Q12-25 legs green on both doors. | OPEN | Kernel done 2026-09-15: `spark_reverse.rs` overwrites the string-only kernel (array arm keeps type/nullability, `NULL` → NULL `STRING`, other types refuse `UNEXPECTED_INPUT_TYPE`); facade arm moved to `dispatch_spark.rs`. Rust pins green. Python pins pending the native rebuild. |
-| C-003 | `sequence` is registered on the SQL door (Q12-26…Q12-40): integer widths kept (int, bigint, tinyint), descending default step, explicit step, dates with default 1-day step and INTERVAL MONTH step, timestamps with INTERVAL HOUR, NULL bound or step → NULL with `containsNull=false`, zero or wrong-sign step raises (closest RePark error mapping recorded), DECIMAL bound refuses `DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES`. The existing expansion ceiling (`refuse_literal_expansion`) must still fire. | Q12-26…Q12-40 legs green on both doors. | OPEN | Kernel done 2026-09-15: `spark_sequence.rs` (int/date/timestamp arms, Spark's `Illegal sequence boundaries` text on a base-`PySparkException` `Execution` mapping — the `IllegalArgumentException` taxonomy leaf stays config-only, no `error_map` change; `SEQUENCE_WRONG_INPUT_TYPES` refusal; facade arm in `dispatch_spark.rs` with the ceiling kept). Rust pins green. Python pins pending the native rebuild. Headline find: DF's built-in `type_coercion` runs before `spark_integer_literal`, so a widening coerce shields provisional literals — `coerce_types` validates but never casts, widths resolve post-narrowing. |
-| C-004 | `split` is registered on the SQL door (Q12-41…Q12-55): Java-regex pattern (`'.'` splits every char → four empty strings Q12-51), `limit` > 0 caps the pieces with the remainder in the last, `limit` ≤ 0 keeps trailing empties (Q12-44/45; Spark 4 keeps them for 0 too — read the cell), empty pattern splits per character (Q12-47), `split('', ',')` → `['']`, NULL string / pattern / limit → NULL, `containsNull=false`, numeric first argument cast to string (Q12-55). | Q12-41…Q12-55 legs green on both doors. | OPEN | Kernel done 2026-09-15: `spark_split.rs` (shared Java-regex compile + stepping, limit semantics per the brief, `containsNull=false`); Rust arm in `dispatch_spark.rs`. Rust pins green. Python pins pending the native rebuild. Facade `F.split` raises in `functions_expr.py` (outside the fence) — P2 hand-off to run 16a, that sub-cell stays OPEN per the brief. |
-| C-005 | Each of C-001…C-004 pinned on the Python API as well (`F.concat`, `F.reverse`, `F.sequence`, `F.split` over a `createDataFrame` with the same columns) for value, Arrow type and nullability via `to_arrow`/`collect`. A facade cell whose fix lives in `functions*.py` is recorded as a P2 hand-off to run 16a and marked OPEN. | Facade legs green or handed off with the reason named. | OPEN | `F.split` raises `UnsupportedOperationException` in `functions_expr.py` (outside the fence) — likely P2 hand-off; confirmed in the red-first run. |
-| C-006 | Registry rows in `docs/spark-sql-iceberg-parity.md` (inside the section that already holds the DOOR-CONVERGE rows; append, do not reorder) disposition FIXED with the pin names; any of these four names in `EXPECTED_DIVERGENCES` removed when the kernels converge. | Registry diff + `door_parity_tests` green. | OPEN | None of concat/reverse/sequence/split is in `EXPECTED_DIVERGENCES` or `SCALAR_NAMES` today — the ratchet half is the `dispatch_spark.rs` door-converged set. |
+| C-001 | `concat` over arrays answers Spark on the SQL door (cells Q12-0…Q12-10, Q12-16 `||` over arrays); string/binary controls Q12-11…Q12-15 do not regress. Element type widens to the common type (Q12-3 bigint, Q12-4 `decimal(11,1)`), `containsNull` is the OR of the inputs (Q12-1, Q12-7), result nullable iff any input nullable, any NULL array → NULL (Q12-2), nested arrays keep inner nullability (Q12-8), empty `array()` joins (Q12-9), array mixed with string refuses `DATATYPE_MISMATCH.DATA_DIFF_TYPES` (Q12-10). BINARY stays BINARY (Q12-13). | `test_door_converge_2.py` Q12-0…Q12-16 legs green on both doors. | PROVEN | 2026-09-15: one `concat` UDF with string/binary/array arms (`collection/concat_array.rs` helpers, `PyColumn::concat` embeds the same UDF); coerce validates but never casts (widths resolve post-narrowing, kernel casts internally — cures the `decimal(21,1)` freeze). `||` over equal lists reaches the same kernel through a narrow `analyzer.rs` rewrite (`array_concat(...)` → `concat(...)` when every argument is list-shaped or NULL, mirroring the existing `substr` arm; DataFusion's nested planner bakes its own UDF into the `||` rewrite, so only the analyzer sees the name). Mixed string/binary resolves `Binary` (Spark's any-binary-wins `dataType`). Rust pins green (`concat_array::*`, `string::tests::concat_binary_stays_binary`); Python pins green (`test_door_converge_2.py` 62 passed). |
+| C-002 | `reverse` over arrays answers Spark on the SQL door (Q12-17…Q12-25): element order reversed, element type and `containsNull` and nullability kept, NULL array → NULL, `reverse('abc')` still `'cba'`, untyped `reverse(NULL)` is a NULL STRING. | Q12-17…Q12-25 legs green on both doors. | PROVEN | 2026-09-15: `spark_reverse.rs` overwrites the string-only kernel (array arm keeps type/nullability, `NULL` → NULL `STRING`, other types refuse `UNEXPECTED_INPUT_TYPE`); facade arm moved to `dispatch_spark.rs`. Rust pins green; Python pins green (`test_door_converge_2.py` 62 passed). |
+| C-003 | `sequence` is registered on the SQL door (Q12-26…Q12-40): integer widths kept (int, bigint, tinyint), descending default step, explicit step, dates with default 1-day step and INTERVAL MONTH step, timestamps with INTERVAL HOUR, NULL bound or step → NULL with `containsNull=false`, zero or wrong-sign step raises (closest RePark error mapping recorded), DECIMAL bound refuses `DATATYPE_MISMATCH.SEQUENCE_WRONG_INPUT_TYPES`. The existing expansion ceiling (`refuse_literal_expansion`) must still fire. | Q12-26…Q12-40 legs green on both doors. | PROVEN | 2026-09-15: `spark_sequence.rs` (int/date/timestamp arms; `SEQUENCE_WRONG_INPUT_TYPES` refusal; facade arm in `dispatch_spark.rs` with the ceiling kept). Headline find: DF's built-in `type_coercion` runs before `spark_integer_literal`, so a widening coerce shields provisional literals — `coerce_types` validates but never casts, widths resolve post-narrowing. G-2 Q3 verdict after probing (fallback per the ruling): the oracle class stays OPEN as a C-003 error sub-cell. Red-first run narrowed the pins to `IllegalArgumentException` and produced 4 failures proving every materialization path (`to_arrow`, `to_arrow_batches`, `collect`) crosses Arrow IPC as `ArrowInvalid: External error: Execution error: …` and remaps in `dataframe/export_errors.py::_export_engine_error` (run 16b's fence) — no Rust route can reach it, and the existing `Error::Config` route would prefix the text. The Rust half was built then reverted to avoid a plan/execute class split; the complete fix is one marker match in `export_errors.py` (P2 hand-off to run 16b below). Pins keep base `PySparkException` with the exact text (`test_facade_sequence_illegal_step_text` pins the text on the facade door). Rust pins green; Python pins green (`test_door_converge_2.py`; FNP9-SEQUENCE-1 rewritten to countdown/raise). |
+| C-004 | `split` is registered on the SQL door (Q12-41…Q12-55): Java-regex pattern (`'.'` splits every char → four empty strings Q12-51), `limit` > 0 caps the pieces with the remainder in the last, `limit` ≤ 0 keeps trailing empties (Q12-44/45; Spark 4 keeps them for 0 too — read the cell), empty pattern splits per character (Q12-47), `split('', ',')` → `['']`, NULL string / pattern / limit → NULL, `containsNull=false`, numeric first argument cast to string (Q12-55). | Q12-41…Q12-55 legs green on both doors. | PROVEN | 2026-09-15: `spark_split.rs` (shared Java-regex compile + stepping with a `find_at` resume so overlapping matches advance one char — cures Q12-50/51; limit semantics per the brief, `containsNull=false`); facade arm in `dispatch_spark.rs`. Rust pins green; SQL-door Python legs green (`test_door_converge_2.py` 62 passed). Facade `F.split` raises in `functions_expr.py` (outside the fence) — P2 hand-off to run 16a, tracked by `test_facade_split_refusal_handoff_16a`. |
+| C-005 | Each of C-001…C-004 pinned on the Python API as well (`F.concat`, `F.reverse`, `F.sequence`, `F.split` over a `createDataFrame` with the same columns) for value, Arrow type and nullability via `to_arrow`/`collect`. A facade cell whose fix lives in `functions*.py` is recorded as a P2 hand-off to run 16a and marked OPEN. | Facade legs green or handed off with the reason named. | PROVEN | 2026-09-15: `F.concat` over arrays, `F.reverse` over arrays/strings, and `F.sequence` literal/column-stop legs all green (`test_facade_concat_arrays`, `test_facade_reverse_arrays`, `test_facade_reverse_string`, `test_facade_sequence_column_stop`, `test_facade_sequence_literals` — value, Arrow type and nullability in one assertion row each). The `F.split` Python arm raises `UnsupportedOperationException` in `functions_expr.py`, outside this unit's fence — P2 hand-off to run 16a, guarded by `test_facade_split_refusal_handoff_16a` (red-when-wired: fails once run 16a wires the arm). N7-22 `reverse` parity intact (`test_n7_22_reverse_string_pair_still_passes`). |
+| C-006 | Registry rows in `docs/spark-sql-iceberg-parity.md` (inside the section that already holds the DOOR-CONVERGE rows; append, do not reorder) disposition FIXED with the pin names; any of these four names in `EXPECTED_DIVERGENCES` removed when the kernels converge. | Registry diff + `door_parity_tests` green. | PROVEN | 2026-09-15: DC2-CONCAT-1 / DC2-REVERSE-1 / DC2-SEQUENCE-1 / DC2-SPLIT-1 appended after BL-18 (FIXED, pin names cited); FNP9-SEQUENCE-1 marked SUPERSEDED with a pointer. None of the four names was in `EXPECTED_DIVERGENCES`; `reverse`/`sequence`/`split` joined the `SCALAR_NAMES` ceiling in `door_parity_tests.rs` (ratchet holds). `door_parity_tests` green. |
 
 ## Evidence
 
@@ -81,6 +85,78 @@ TBD.
 
 TBD.
 
+### Gate record (2026-09-15, G-2 rulings applied)
+
+- `scripts/check_rust_file_size.py`: `analyzer.rs` 1142 → 1150 granted one-time (R-1,
+  Q-15c-4); script and `test_cap_1_source_file_line_cap.py` mirror both updated.
+- `make rust-clippy` (1.96.0): the 15 unit-file errors fixed in-unit (stride/end renames,
+  arm merges, `matches!`, method refs, `invoke_*` split, `sequence_expr` split) plus 3
+  follow-ons in the touched dispatch files (merged converged-name arms); gate green.
+- G-2 Q3 red-first evidence (pins narrowed to `IllegalArgumentException`, 4 failures):
+  `test_sql_error_cell[Q12-31]` / `[Q12-32]` → `ArrowInvalid: External error:
+  Execution error: requirement failed: …`; `test_facade_sequence_illegal_step` /
+  FNP9 sequence pin → `repark.errors.PySparkException: Execution error: requirement
+  failed: …` via `dataframe/core.py:3841 _export_engine_error`. Verdict: class mapping
+  lives in run 16b's `export_errors.py`; sub-cell OPEN, hand-off recorded.
+
 ### P2 hand-offs to run 16a
 
-TBD.
+- `F.split` (Python side): `functions_expr.py` raises `UnsupportedOperationException`
+  before any engine arm runs; wiring the Python `F.split` to the converged
+  `repark_functions::spark_split::SparkSplit` kernel (3-arg `limit`, Java regex,
+  Spark limit semantics) belongs to run 16a. Guard:
+  `test_facade_split_refusal_handoff_16a` (red-when-wired). SQL-door `split`
+  (`spark.sql("SELECT split(...)")`) is converged in this unit.
+
+### P2 hand-offs to run 16b
+
+- Sequence illegal-step class (`IllegalArgumentException`, G-2 Q3): every materialization
+  path remaps mid-stream failures in `dataframe/export_errors.py::_export_engine_error`
+  to base `PySparkException`. Matching the `Illegal sequence boundaries` marker there and
+  raising `IllegalArgumentException` with the exact text completes the oracle class on both
+  doors; `test_facade_sequence_illegal_step_text` pins the text so the class change flips
+  loudly. C-003's error sub-cell stays OPEN until then.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: door-converge-2
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against its fixture cell, not a paraphrase — Q12-0…Q12-55 value, Arrow type and nullability legs on both doors plus N7-16/N7-17/N7-18/N7-22 facade legs; literal-input nullability divergences pin today's nullable=True per R-13/ARRAY-LITERAL-CONTAINSNULL-1.
+      artifacts: [python/repark/tests/test_door_converge_2.py, docs/spark-sql-iceberg-parity.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary inputs exercised — NULL arrays, empty array(), mixed int/bigint/decimal widths, zero and wrong-sign steps, zero/negative split limits, empty pattern and empty input, numeric split input, decimal sequence bounds, tinyint stops.
+      artifacts: [python/repark/tests/test_door_converge_2.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Failure paths pin Spark's classes and texts — DATATYPE_MISMATCH.DATA_DIFF_TYPES on array/string concat mix, SEQUENCE_WRONG_INPUT_TYPES on decimal bounds, UNEXPECTED_INPUT_TYPE on non-array reverse, the exact Illegal sequence boundaries text on both doors, the run-16a split refusal guard.
+      artifacts: [python/repark/tests/test_door_converge_2.py]
+    - id: AT-4
+      status: N/A
+      justification: Kernels are pure row functions; no shared mutable state, no locks, no ordering assumptions. Patterns compile per call, nothing cached across rows.
+    - id: AT-5
+      status: N/A
+      justification: No auth, injection, secret, or deserialization surface — in-process Arrow kernels over typed input; split patterns are data, never executed.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Shared-surface edits verified behavior-preserving — the three dispatch arms merged by pure deletion (same body, diff reviewed, suites green); the G-2 Q3 Rust error-mapping half reverted subtraction-only with repark-common and repark-core byte-identical post-revert (git status clean for both crates).
+      artifacts: [crates/repark-python/src/column/function_dispatch.rs, task/ledgers/staging/door-converge-2-ledger.md]
+    - id: AT-7
+      status: N/A
+      justification: The unit makes no performance claim and ships no benchmark — kernels reuse Arrow builders (MutableArrayData, peripheral builders) with no per-row allocation added; measurement belongs to a perf unit.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Rewrite scoping hazards closed — the array_concat analyzer arm fires only when every argument is list-shaped or NULL, so string/binary concat and the Q12-11…Q12-15 controls never reach it; the merged dispatch arm routes identically to the three it replaces.
+      artifacts: [python/repark/tests/test_door_converge_2.py, crates/repark-functions/src/analyzer.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every refusal carries Spark's error class and text in the exception, diagnosable from the error alone — DATATYPE_MISMATCH classes, the exact boundaries text surviving Arrow export on the facade door; no logging changes.
+      artifacts: [python/repark/tests/test_door_converge_2.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins-first held — Q12 legs failed on the base tree with the predicted wrong answers before each kernel; the G-2 Q3 class narrowing produced its predicted 4 failures (pasted above) and the pins kept the exact text instead of greening the wrong class; the FNP9 rewrite went red-then-green.
+      artifacts: [python/repark/tests/test_door_converge_2.py, python/repark/tests/test_fnp_9_collections_json.py]
+  complete: true
+```
