@@ -189,12 +189,10 @@ fn spark_display_inner(expr: &Expr) -> String {
             .args
             .first()
             .map_or_else(|| expr.schema_name().to_string(), spark_display),
-        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME => {
-            function.args.first().map_or_else(
-                || expr.schema_name().to_string(),
-                spark_display,
-            )
-        }
+        Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME => function
+            .args
+            .first()
+            .map_or_else(|| expr.schema_name().to_string(), spark_display),
         other => other.schema_name().to_string(),
     }
 }
@@ -398,19 +396,12 @@ impl ScalarUDFImpl for SuffixLiteral {
         let first = args.arg_fields.first().ok_or_else(|| {
             DataFusionError::Plan(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
         })?;
-        Ok(Field::new(
-            SUFFIX_LITERAL_NAME,
-            first.data_type().clone(),
-            true,
-        )
-        .into())
+        Ok(Field::new(SUFFIX_LITERAL_NAME, first.data_type().clone(), true).into())
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         args.args.first().cloned().ok_or_else(|| {
-            DataFusionError::Execution(format!(
-                "'{SUFFIX_LITERAL_NAME}' expects one argument"
-            ))
+            DataFusionError::Execution(format!("'{SUFFIX_LITERAL_NAME}' expects one argument"))
         })
     }
 }
