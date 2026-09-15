@@ -630,7 +630,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   helpers for the length kernels) so no per-value `String` is allocated; the
   rule is now `SparkFloatStringify` with `TRY_CAST`, `LIKE`, `CASE`,
   `format_string` `%s`-only and single-verb `%f` arms, `array_join`, suffixed-literal
-  folding and one-level projection propagation, plus bad-literal folding to
+  folding and one-level projection propagation, non-literal STRING to FLOAT/DOUBLE
+  casts routed to the column parse kernel, plus bad-literal folding to
   `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in
   the shared insertion) and post-coercion (in `analyzer_rules()`); both seats
   are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.

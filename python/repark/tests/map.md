@@ -5325,6 +5325,8 @@ through `core` or the package. pins: eager-budget-1/C-010
   **Round 2 (2026-09-15):** Q19 reviewer cells — NaN takes no sign prefix,
   `%F` refuses, `#` forces the point, suffix casts over real columns.
   L-004/L-001/L-002 landed with their Q19 cells pinned on both doors.
+  L-003: the six column pin functions cover the eight Q19 cells on both doors
+  with value, Arrow type and nullability.
 FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
 
 - [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording
