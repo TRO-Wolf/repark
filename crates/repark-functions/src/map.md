@@ -55,7 +55,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (the shared `bitmap_agg::spark_type_name`). The kernel keeps the bit-exact
   single multiply, casts STRING itself like `abs` does (`CAST_INVALID_INPUT` under
   ANSI read from `args.config_options`, NULL under ANSI-off), and always answers
-  nullable Float64. pins: fnp-bitmap-facade-1/C-012, C-013, C-014
+  nullable Float64. **Run 16a round 4:** one trailing Java float suffix (`d`/`D`/`f`
+  /`F`) is accepted when the remainder is a decimal floating literal that already
+  parses — `'1d'`, `'1.5F'`, `'1e2d'` answer; suffixes after `Infinity`/lowercase
+  names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
+  SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
+  C-017, C-018
 - `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
   `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via

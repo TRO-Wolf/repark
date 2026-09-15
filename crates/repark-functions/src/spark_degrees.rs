@@ -246,7 +246,7 @@ fn convert_strings(
             continue;
         }
         let raw = values.value(row);
-        if let Ok(parsed) = raw.trim().parse::<f64>() {
+        if let Some(parsed) = parse_spark_double(raw.trim()) {
             out.push(Some(parsed * factor));
         } else if ansi {
             return Err(malformed_double_cast(raw));
@@ -255,6 +255,30 @@ fn convert_strings(
         }
     }
     Ok(Arc::new(Float64Array::from(out)))
+}
+
+fn parse_spark_double(text: &str) -> Option<f64> {
+    if let Ok(parsed) = text.parse::<f64>() {
+        return Some(parsed);
+    }
+    let stripped = strip_float_suffix(text)?;
+    if stripped.is_empty() || !is_decimal_float(stripped) {
+        return None;
+    }
+    stripped.parse::<f64>().ok()
+}
+
+fn strip_float_suffix(text: &str) -> Option<&str> {
+    let bytes = text.as_bytes();
+    if matches!(bytes.last(), Some(b'd' | b'D' | b'f' | b'F')) {
+        return text.get(..text.len() - 1);
+    }
+    None
+}
+
+fn is_decimal_float(text: &str) -> bool {
+    text.bytes()
+        .all(|byte| byte.is_ascii_digit() || matches!(byte, b'+' | b'-' | b'.' | b'e' | b'E'))
 }
 
 #[cfg(test)]
@@ -424,6 +448,44 @@ mod tests {
                 assert_eq!(value.to_bits(), 0x0);
             }
             other => panic!("expected positive zero, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn degrees_accepts_java_float_suffixes_and_keeps_hex_refused() {
+        let ctx = ctx();
+        assert_eq!(
+            one(&ctx, "SELECT degrees('1d')").await,
+            ScalarValue::Float64(Some(57.295_779_513_082_32))
+        );
+        assert_eq!(
+            one(&ctx, "SELECT degrees('1.5F')").await,
+            ScalarValue::Float64(Some(85.943_669_269_623_48))
+        );
+        assert_eq!(
+            one(&ctx, "SELECT radians('1e2d')").await,
+            ScalarValue::Float64(Some(1.745_329_251_994_329_5))
+        );
+        assert_eq!(
+            one(&ctx, "SELECT degrees(' 1f ')").await,
+            ScalarValue::Float64(Some(57.295_779_513_082_32))
+        );
+        let legacy = ctx_ansi_off();
+        assert_eq!(
+            one(&legacy, "SELECT degrees('1d')").await,
+            ScalarValue::Float64(Some(57.295_779_513_082_32))
+        );
+        assert_eq!(
+            one(&legacy, "SELECT degrees('0x10')").await,
+            ScalarValue::Float64(None)
+        );
+        for literal in ["'Infinityd'", "'infd'", "'0x10'", "'1dd'", "'1_0f'"] {
+            let message = error_text(&ctx, &format!("SELECT degrees({literal})")).await;
+            assert!(
+                message.contains("[CAST_INVALID_INPUT]"),
+                "{literal}: {message}"
+            );
+            assert!(message.contains("SQLSTATE: 22018"), "{literal}: {message}");
         }
     }
 
