@@ -337,6 +337,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the battery moves verbatim to [`text_scan/`](text_scan/map.md).
   **Round 5 (2026-09-15, X-5):** the per-file partition values ride one `Arc`
   into every scan partition and `execute` instead of a clone per partition.
+  **Round 7 (2026-09-15, Z-1):** `expand_text_paths` takes the session zone
+  so inferred timestamps parse session-local.
 - `text_glob.rs` — **IO-TEXT-1 follow-up (2026-09-15):** hand-written Hadoop glob
   matcher (`*?[]{}`, no `/` crossing, char-aware, brace nesting capped, no new
   dependency) with matcher unit tests. **Round 3 (2026-09-15, U-5/U-6):** each
@@ -377,7 +379,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   timestamp_ntz (no zone), and `array<primitive>` (always refuses as
   `INVALID_PARTITION_VALUE` with Spark's uppercase display); map/struct stay
   unsupported-type refusals.
-  pins: io-text-1/U-3, W-1, W-3, X-1, X-2, X-3, Y-2
+  **Round 7 (2026-09-15, Z-1):** inference gains the timestamp step after
+  date (exactly `yyyy-MM-dd HH:mm:ss` infers session-zone `timestamp`; the
+  `T` and fractional walls stay `string`); `discover_partitions` takes the
+  session zone for the inferred values; `cast_raw_partition_value` splits
+  the timestamp arm (zoned keeps X-1, `None` parses the naive wall); the
+  X-1 wall grammar lives in `partition_timestamp.rs` with both parsers on
+  it. New code and tests stay in the new module; this file keeps its
+  ceiling with wiring only.
+  pins: io-text-1/U-3, W-1, W-3, X-1, X-2, X-3, Y-2, Z-1
+- `partition_timestamp.rs` — **IO-TEXT-1 round 7 (2026-09-15, Z-1):** the
+  zone-free wall clock beside discovery (split from `partition_discovery.rs`
+  at the 1000-line ceiling): `parse_wall_naive` carries the shared wall
+  grammar (date-only, space/`T`, optional fraction),
+  `parse_timestamp_ntz_micros` stamps the naive wall, and
+  `looks_like_timestamp` admits exactly the space wall with no fraction for
+  inference. Unit tests pin naive midnight/walls/refusals, the unchanged
+  zoned walls, and discovery types and values under New York.
+  pins: io-text-1/Z-1
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key

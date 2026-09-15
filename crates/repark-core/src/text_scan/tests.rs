@@ -322,7 +322,7 @@ fn text_grouping_caps_partitions() {
 
 #[test]
 fn text_expand_paths_missing_reports_not_found() {
-    let error = expand_text_paths("/no/such/repark-text-path", None).unwrap_err();
+    let error = expand_text_paths("/no/such/repark-text-path", None, "UTC").unwrap_err();
     assert!(error.to_string().starts_with("[PATH_NOT_FOUND]"));
     assert!(error.to_string().contains("SQLSTATE: 42K03"));
 }

@@ -10,10 +10,13 @@ use arrow::array::{
     StringArray, StringBuilder, TimestampMicrosecondArray, new_null_array,
 };
 use arrow::datatypes::{DataType, Field, TimeUnit};
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, TimeZone as _};
+use chrono::{DateTime, NaiveDate, TimeZone as _};
 use datafusion::error::DataFusionError;
 
 use crate::Error;
+use crate::partition_timestamp::{
+    looks_like_timestamp, parse_timestamp_ntz_micros, parse_wall_naive,
+};
 
 const HIVE_DEFAULT_PARTITION: &str = "__HIVE_DEFAULT_PARTITION__";
 
@@ -95,7 +98,7 @@ fn looks_like_date(text: &str) -> bool {
     text.len() == 10 && NaiveDate::parse_from_str(text, "%Y-%m-%d").is_ok()
 }
 
-fn infer_partition_type(candidates: &[&str]) -> DataType {
+fn infer_partition_type(candidates: &[&str], session_zone: &str) -> DataType {
     if candidates.iter().all(|text| text.parse::<i32>().is_ok()) {
         DataType::Int32
     } else if candidates.iter().all(|text| text.parse::<i64>().is_ok()) {
@@ -104,12 +107,14 @@ fn infer_partition_type(candidates: &[&str]) -> DataType {
         DataType::Float64
     } else if candidates.iter().all(|text| looks_like_date(text)) {
         DataType::Date32
+    } else if candidates.iter().all(|text| looks_like_timestamp(text)) {
+        DataType::Timestamp(TimeUnit::Microsecond, Some(session_zone.into()))
     } else {
         DataType::Utf8
     }
 }
 
-fn parse_partition_value(text: &str, data_type: &DataType) -> PartitionValue {
+fn parse_partition_value(text: &str, data_type: &DataType, zone: Tz) -> PartitionValue {
     match data_type {
         DataType::Int32 => text
             .parse::<i32>()
@@ -120,6 +125,8 @@ fn parse_partition_value(text: &str, data_type: &DataType) -> PartitionValue {
         DataType::Float64 => text
             .parse::<f64>()
             .map_or(PartitionValue::Null, PartitionValue::Float64),
+        DataType::Timestamp(TimeUnit::Microsecond, _) => parse_timestamp_micros_zone(text, zone)
+            .map_or(PartitionValue::Null, PartitionValue::TimestampMicros),
         DataType::Date32 => NaiveDate::parse_from_str(text, "%Y-%m-%d")
             .ok()
             .and_then(|date| {
@@ -200,29 +207,7 @@ fn zoned_wall_micros(zoned: DateTime<Tz>) -> Option<i64> {
 }
 
 pub(crate) fn parse_timestamp_micros_zone(raw: &str, zone: Tz) -> Option<i64> {
-    if let Ok(date) = NaiveDate::parse_from_str(raw, "%Y-%m-%d") {
-        let midnight = date.and_hms_opt(0, 0, 0)?;
-        let zoned = zone.from_local_datetime(&midnight).single()?;
-        return zoned_wall_micros(zoned);
-    }
-    let (date_text, time_text) = raw.split_once(' ').or_else(|| raw.split_once('T'))?;
-    let date = NaiveDate::parse_from_str(date_text, "%Y-%m-%d").ok()?;
-    let (clock, fraction) = match time_text.split_once('.') {
-        Some((clock, fraction)) => (clock, Some(fraction)),
-        None => (time_text, None),
-    };
-    let time = NaiveTime::parse_from_str(clock, "%H:%M:%S").ok()?;
-    let nanos: i64 = match fraction {
-        None => 0,
-        Some(text) => {
-            if text.is_empty() || text.len() > 9 || !text.bytes().all(|byte| byte.is_ascii_digit())
-            {
-                return None;
-            }
-            format!("{text:0<9}").parse().ok()?
-        }
-    };
-    let wall = NaiveDateTime::new(date, time).checked_add_signed(TimeDelta::nanoseconds(nanos))?;
+    let wall = parse_wall_naive(raw)?;
     let zoned = zone.from_local_datetime(&wall).single()?;
     zoned_wall_micros(zoned)
 }
@@ -511,8 +496,11 @@ pub(crate) fn cast_raw_partition_value(
             .map(PartitionValue::Date32),
         DataType::Decimal128(precision, scale) => parse_decimal_scaled(raw, *precision, *scale)
             .map(|scaled| PartitionValue::Decimal128(scaled, *scale)),
-        DataType::Timestamp(TimeUnit::Microsecond, _) => {
+        DataType::Timestamp(TimeUnit::Microsecond, Some(_)) => {
             parse_timestamp_micros_zone(raw, zone).map(PartitionValue::TimestampMicros)
+        }
+        DataType::Timestamp(TimeUnit::Microsecond, None) => {
+            parse_timestamp_ntz_micros(raw).map(PartitionValue::TimestampMicros)
         }
         _ => Some(PartitionValue::Text(raw.to_string())),
     }
@@ -557,6 +545,7 @@ fn conflicting_names_message(
 pub(crate) fn discover_partitions(
     root: &Path,
     files: &[PathBuf],
+    session_zone: &str,
 ) -> Result<DiscoveredPartitions, Error> {
     let mut seen_lists: Vec<Vec<String>> = Vec::new();
     let mut dir_by_list: HashMap<Vec<String>, PathBuf> = HashMap::new();
@@ -600,6 +589,11 @@ pub(crate) fn discover_partitions(
             &dir_by_list,
         )));
     }
+    let zone: Tz = session_zone.parse().map_err(|error| {
+        Error::Analysis(format!(
+            "text read cannot parse session time zone {session_zone:?}: {error}"
+        ))
+    })?;
     let mut fields = Vec::with_capacity(names.len());
     let mut types: HashMap<String, DataType> = HashMap::new();
     for name in &names {
@@ -613,7 +607,7 @@ pub(crate) fn discover_partitions(
         let data_type = if candidates.is_empty() {
             DataType::Utf8
         } else {
-            infer_partition_type(&candidates)
+            infer_partition_type(&candidates, session_zone)
         };
         fields.push(Field::new(name, data_type.clone(), true));
         types.insert(name.clone(), data_type);
@@ -629,7 +623,7 @@ pub(crate) fn discover_partitions(
             let text = seen.get(name).cloned().flatten();
             let value = match text.as_ref() {
                 None => PartitionValue::Null,
-                Some(text) => parse_partition_value(text, &types[name]),
+                Some(text) => parse_partition_value(text, &types[name], zone),
             };
             row.push(value);
             raw_row.push(text);
@@ -677,7 +671,7 @@ mod tests {
             leaf(&root, &["d=2024-01-02", "t=a"], "part-00000.txt"),
             leaf(&root, &["d=2024-01-03", "t=b"], "part-00000.txt"),
         ];
-        let discovered = discover_partitions(&root, &files).unwrap();
+        let discovered = discover_partitions(&root, &files, "UTC").unwrap();
         assert_eq!(
             discovered
                 .fields
@@ -710,7 +704,7 @@ mod tests {
             leaf(&root, &["k=7", "n=2.50", "b=false"], "part-00001.txt"),
             leaf(&root, &["k=9", "n=1.50", "b=true"], "part-00000.txt"),
         ];
-        let discovered = discover_partitions(&root, &files).unwrap();
+        let discovered = discover_partitions(&root, &files, "UTC").unwrap();
         assert_eq!(discovered.values[&files[0]][0], PartitionValue::Null);
         assert_eq!(discovered.values[&files[1]][0], PartitionValue::Int32(7));
         let names: Vec<String> = discovered
@@ -736,7 +730,7 @@ mod tests {
     fn partition_discovery_ignores_leaf_paths_without_base() {
         let root = PathBuf::from("/root/k=x");
         let files = vec![leaf(&root, &[], "part-00000.txt")];
-        let discovered = discover_partitions(&root, &files).unwrap();
+        let discovered = discover_partitions(&root, &files, "UTC").unwrap();
         assert!(discovered.fields.is_empty());
         assert_eq!(discovered.values[&files[0]], Vec::new());
     }
@@ -748,7 +742,7 @@ mod tests {
             leaf(&root, &["k=3000000000"], "part-00000.txt"),
             leaf(&root, &["k=9"], "part-00001.txt"),
         ];
-        let discovered = discover_partitions(&root, &files).unwrap();
+        let discovered = discover_partitions(&root, &files, "UTC").unwrap();
         assert_eq!(discovered.fields[0].data_type(), &DataType::Int64);
         assert_eq!(
             discovered.values[&files[0]][0],
@@ -763,7 +757,7 @@ mod tests {
             leaf(&root, &["k=x"], "part-00000.txt"),
             leaf(&root, &["n=y"], "part-00000.txt"),
         ];
-        let error = discover_partitions(&root, &files).unwrap_err();
+        let error = discover_partitions(&root, &files, "UTC").unwrap_err();
         let text = error.to_string();
         assert!(text.starts_with("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
         assert!(text.contains("Partition column name list #0: k"));
@@ -778,7 +772,7 @@ mod tests {
             leaf(&root, &["k=x", "n=1"], "part-00000.txt"),
             leaf(&root, &["k=y"], "part-00000.txt"),
         ];
-        let error = discover_partitions(&root, &files).unwrap_err();
+        let error = discover_partitions(&root, &files, "UTC").unwrap_err();
         let text = error.to_string();
         assert!(text.starts_with("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
         assert!(text.contains("Partition column name list #0: k"));
@@ -793,7 +787,7 @@ mod tests {
             leaf(&root, &["k=x"], "part-00000.txt"),
             leaf(&root, &["k=x", "n=1"], "part-00000.txt"),
         ];
-        let error = discover_partitions(&root, &files).unwrap_err();
+        let error = discover_partitions(&root, &files, "UTC").unwrap_err();
         let text = error.to_string();
         assert!(text.starts_with("[CONFLICTING_PARTITION_COLUMN_NAMES]"));
         assert!(text.contains("Partition column name list #0: k"));

@@ -105,6 +105,7 @@ fn keep_partitioned_only(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
 pub(crate) fn expand_text_paths(
     path: &str,
     base_path: Option<&str>,
+    session_zone: &str,
 ) -> Result<(Vec<PathBuf>, DiscoveredPartitions)> {
     if is_remote_path(path) {
         return Err(Error::Analysis(format!(
@@ -119,7 +120,7 @@ pub(crate) fn expand_text_paths(
         if let Some(base) = base_path {
             let root = Path::new(base);
             let kept = keep_partitioned_only(root, files);
-            let partitions = discover_partitions(root, &kept)?;
+            let partitions = discover_partitions(root, &kept, session_zone)?;
             return Ok((kept, partitions));
         }
         return Ok((files, DiscoveredPartitions::default()));
@@ -135,11 +136,11 @@ pub(crate) fn expand_text_paths(
         if let Some(base) = base_path {
             let root = Path::new(base);
             let kept = keep_partitioned_only(root, files);
-            let partitions = discover_partitions(root, &kept)?;
+            let partitions = discover_partitions(root, &kept, session_zone)?;
             return Ok((kept, partitions));
         }
         let kept = keep_partitioned_only(fs_path, files);
-        let partitions = discover_partitions(fs_path, &kept)?;
+        let partitions = discover_partitions(fs_path, &kept, session_zone)?;
         return Ok((kept, partitions));
     }
     Err(missing_text_path(path))
@@ -649,8 +650,8 @@ impl crate::ReparkSession {
                 "text lineSep must be a non-empty string".to_string(),
             ));
         }
-        let (files, partitions) = expand_text_paths(path, base_path)?;
         let zone = self.session_time_zone().id();
+        let (files, partitions) = expand_text_paths(path, base_path, zone)?;
         let (schema, fields, values) =
             apply_user_text_schema(files.clone(), partitions, user_schema, zone)?;
         let provider = Arc::new(TextTableProvider {

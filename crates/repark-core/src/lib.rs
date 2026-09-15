@@ -15,6 +15,7 @@ mod named_sources;
 mod namespace_create;
 mod object_store_s3;
 mod partition_discovery;
+mod partition_timestamp;
 mod pool_refusals;
 mod pre_execute;
 mod read_options;
