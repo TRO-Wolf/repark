@@ -1528,6 +1528,27 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14 (ruling R-2), unreachable: the name needs Structured
   Streaming state stores repark does not have; every repark frame is batch, so the refusal
   is the parity answer.
+### COL-DROPFIELDS-TYPE-1 — `Column.dropFields` refuses a non-string name Python-side
+- **repark** — `col("st").dropFields(1)` raises `PySparkTypeError` with errorClass `NOT_STR`
+  and `{"arg_name": "fieldNames", "arg_type": "int"}` at call time.
+- **Apache Spark** — `st.dropFields(1)` leaks a Py4J `ClassCastException`
+  (`java.lang.ClassCastException: class java.lang.Integer cannot be cast to class
+  java.lang.String`) through `py4j.Py4JException` on classic. *(oracle: live PySpark
+  4.1.2, 2026-09-14, `dropfields_not_str`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_dropfields_not_str`
+- **Rationale** — DECLARED, card COLUMN-PARITY-1 ruling R-3 (2026-09-14). Both engines
+  refuse the call; repark refuses with the facade's typed argument error instead of a
+  leaked JVM cast, the same class family every other `NOT_STR` facade argument uses.
+### COL-ISIN-TUPLE-1 — `Column.isin` refuses a tuple literal Python-side
+- **repark** — `col("i").isin((1, 2))` raises `PySparkRuntimeError` with errorClass
+  `UNSUPPORTED_FEATURE.LITERAL_TYPE` at call time.
+- **Apache Spark** — the same call raises `SparkRuntimeException` with condition
+  `UNSUPPORTED_FEATURE.LITERAL_TYPE` and a `class java.util.ArrayList` literal message.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_tuple`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_tuple`
+- **Rationale** — DECLARED, card COLUMN-PARITY-1 (2026-09-14). Same refusal, same
+  errorClass string; the Python exception class is the facade's `PySparkRuntimeError`
+  (repark's closest answer to `SparkRuntimeException`), not a JVM-bound wrapper.
 
 ### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
@@ -7852,32 +7873,29 @@ field NAME.
   to decide the footer, and the eager doors ran a bridged UDF over every
   row twice. Cells: `docs/perf/eager-preview-baseline.md`.
 
-### DF-METADATA-1 — `withMetadata` / `to` field metadata drops at every position
+### DF-METADATA-1 — `withMetadata` / `to` field metadata drops after a plan transform — **BACKLOG 2026-09-14, narrowed 2026-09-15**
 
-- **repark** — `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` answers
-  `{}`, and the same loss holds on every position measured: the stamped frame,
-  `filter`, `select`, `withColumn`, `join`, `union`, `cache`/eager
-  materialization, a parquet write/read round trip, and both `to()` arms
-  (source-keep and non-empty target override). `Column.alias(name, metadata=)`
-  accepts the dict and the engine ignores it — there is no StructField
-  metadata plumbing on the native path (`logical_schema_fields` carries
-  name/type/nullable only; `PyColumnParts.alias` takes no metadata).
-- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict
-  survives plan transforms; `to()` keeps a source field's metadata unless the
-  target field carries non-empty metadata (`dataframe.py` 2431-2432).
-  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces`
-  / `withMetadata_order`, 2026-09-14; the transform-survival positions are
-  documented in Spark's `withMetadata` semantics, not live-measured.)*
+- **repark** — the stamped frame answers Spark: `df.withMetadata("a", {"k": "v"}).schema["a"].metadata` is `{"k": "v"}`, a second
+  `withMetadata` replaces the dict, a cached frame keeps it, and `to()` with a non-empty target field metadata carries the target's
+  dict (narrowed 2026-09-15: COLUMN-PARITY-1 made `alias(name, metadata=)` surface on `schema`). The dict still drops at every plan
+  transform measured: `filter`, `select`, `withColumn`, `join`, `union`, a parquet write/read round trip, and `to()`'s source-keep
+  arm (a target field without metadata does not inherit the source field's dict). The native path carries name/type/nullable only
+  through `logical_schema_fields`; the facade overlay keeps the dict on the frame that stamped it.
+- **Apache Spark** — `withMetadata` is a Dataset plan node and the dict survives plan transforms; `to()` keeps a source field's
+  metadata unless the target field carries non-empty metadata (`dataframe.py` 2431-2432).
+  *(oracle: live PySpark 4.1.2, cells `withMetadata` / `withMetadata_replaces` / `withMetadata_order`, 2026-09-14; the
+  transform-survival positions are documented in Spark's `withMetadata` semantics, not live-measured.)*
 - **Pin** —
-  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_at_stamp_df_metadata_1`,
-  `...::test_with_metadata_dropped_across_positions_df_metadata_1`,
-  `...::test_to_metadata_arms_drop_df_metadata_1` (each codifies today's `{}`).
-- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1,
-  ruling R-7). The fix is engine-side field-metadata plumbing; the facade
-  already routes every stamp through `alias(metadata=)` so the dict flows the
-  moment the native path accepts it.
+  `python/repark/tests/test_df_surface_a_1.py::test_with_metadata_dropped_across_positions_df_metadata_1`,
+  `python/repark/tests/test_df_surface_a_1.py::test_to_metadata_arms_df_metadata_1` (the lossy positions codify today's `{}`;
+  the Spark-matching positions are pinned by `test_with_metadata_stamp_and_replace_answer_spark` and the cache / target-override
+  assertions).
+- **Rationale** — BACKLOG, filed 2026-09-14 (DF-SURFACE-A-1 critic round 1, ruling R-7), narrowed 2026-09-15 by COLUMN-PARITY-1
+  when the stamp, replace, cache and target-override pins went red on purpose. The rest is engine-side field-metadata plumbing
+  through plan transforms.
   pins: df-surface-a-1/C-008
 ### FNP-MISC-1-COMP-1 — `arrow_udf(...)` mid-expression composition refuses
+### SQL-IN-1 — a mixed-type `IN` list refuses with a different error class
 
 - **repark** — `UnsupportedOperationException`: `pandas_udf result cannot be used in
   arithmetic (+) in repark v1 (facade projection-rewrite bridge only; not a Column
@@ -7997,6 +8015,130 @@ field NAME.
   keys into the streamed frame first (the workaround the message names — project, then
   group by the resulting name).
   pins: grouped-surface-1/C-003
+### SQL-IN-1 — a mixed-type `IN` list refuses the string member
+- **repark** — `spark.sql("SELECT * FROM t WHERE s IN ('a', 1)")` raises a
+  DataFusion/Arrow cast error at analysis (`Casting Int64 to Utf8` family): the `IN`
+  list refuses to unify `Utf8` and `Int64` members.
+- **Apache Spark** — `s IN ('a', 1)` coerces the literal list and answers per-row
+  booleans (ANSI `IN` semantics, `NULL` propagated). *(oracle: live PySpark 4.1.2,
+  2026-09-14, `sql_in_mixed`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_sql_in_mixed`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The SQL-door
+  literal-list coercion belongs to the SQL parser/planner surface, which this unit is
+  fenced out of (run 15c owns it tonight); the pin codifies today's refusal so the fix
+  reds it on purpose.
+### SQL-IN-1 — a mixed-type `IN` list refuses with a different error class
+- **repark** — `spark.sql("select 'a' in ('a', 1) e")` raises a DataFusion/Arrow cast
+  error (`Cannot cast string 'a' ...` family): the `IN` list refuses to unify `Utf8`
+  and `Int64` members.
+- **Apache Spark** — the same query also errors, with `CAST_INVALID_INPUT` /
+  `NumberFormatException` (`The value 'a' of the type "STRING" cannot be cast to
+  "BIGINT"`). *(oracle: live PySpark 4.1.2, 2026-09-14, `sql_in_mixed`.)*
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1, corrected
+  2026-09-14 by unit column-parity-1 (critic L-006): both engines refuse this cell,
+  so the row is an error-class divergence (repark's `Cannot cast` vs Spark's
+  `CAST_INVALID_INPUT`), not a success divergence. The pin asserts today's class and
+  message; a Spark-aligned `CAST_INVALID_INPUT` fix reds it on purpose.
+### SQL-ISNAN-1 — `isnan` on a SQL string literal refuses Utf8
+- **repark** — `spark.sql("SELECT isnan('a')")` raises an analysis/execution error
+  because `isnan` receives a `Utf8` argument; the SQL-door `isnan` does not coerce the
+  argument through DOUBLE.
+- **Apache Spark** — `SELECT isnan('a')` casts the string to DOUBLE and raises
+  `CAST_INVALID_INPUT` at collect for a malformed value. *(oracle: live PySpark
+  4.1.2, 2026-09-14, `isnan_sql_string`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isnan_sql_string`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The DataFrame-door
+  `Column.isNaN` / `F.isnan` coerce through `CAST(x AS DOUBLE)` and match Spark; the
+  SQL-door kernel needs the same implicit cast, which lives in the SQL planner surface
+  this unit is fenced out of.
+### COL-WITHFIELD-EMPTY-1 — `withField("", v)` names the field `col{index}`
+- **repark** — `st.withField("", lit(3))` appends a field named `col2` (the
+  `col{index}` placeholder the native `named_struct` binding substitutes for an empty
+  field name): `struct<a:int,b:string,col2:int>`.
+- **Apache Spark** — `st.withField("", lit(3))` appends a field literally named `""`:
+  `struct<a:int,b:string,:int>`. *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `withfield_empty_name`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_empty_name`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. DataFusion's
+  `named_struct` requires every field-name literal to be a non-empty constant string,
+  so an empty name cannot reach the engine unchanged; the `col{index}` substitution is
+  the engine's own convention for nameless fields and keeps the update usable.
+### COL-NAME-MULTI-1 — `Column.name("x", "y")` refuses instead of naming generator outputs
+- **repark** — `F.explode(col("arr")).name("a", "b")` raises `AnalysisException`
+  (`CANNOT_GENERATE_MULTIPLE_NAMES` family) at call time.
+- **Apache Spark** — `explode(arr).name("a", "b")` aliases the two generator output
+  columns (`a` for key/pos, `b` for value/col). *(oracle: live PySpark 4.1.2,
+  2026-09-14, `name_multi`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_name_multi`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Multi-name
+  aliasing names generator outputs, which belongs to the generator select-path; the
+  pin codifies today's refusal so the fix reds it on purpose.
+  and `::test_withfield_empty_name_chain_appends_placeholders` (the chain keeps the
+  sequential rule: the second `""` never matches the `col2` placeholder, so it appends `col3`).
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. The `update_fields`
+  engine expression requires addressable field names, so an empty name cannot reach
+  the kernel unchanged; the `col{index}` substitution is the engine's own convention
+  for nameless fields and keeps the update usable.
+### COL-NAME-MULTI-1 — `Column.name("k", "v")` keeps the first name
+- **repark** — `F.explode("arr").name("k", "v")` keeps the first name: one column
+  `k` with the exploded rows (`struct<k:int>`, `[{k: 1}, {k: 2}]`).
+- **Apache Spark** — `explode(map).name("k", "v")` aliases the two generator output
+  columns (`Row(k=1, v=2)` per input row). *(oracle: live PySpark 4.1.2, 2026-09-14,
+  `name_multi`.)*
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1, corrected
+  2026-09-14 by unit column-parity-1 (critic L-005): the old pin ran
+  `explode` of a map, which fails in unnest before `name` runs, so a real
+  multi-name fix would not red it. The pin now runs `explode` of an array (which
+  works today) and asserts today's first-name-wins answer exactly, so honoring the
+  second name reds it on purpose. The map-explode oracle cell stays Spark's answer
+  for the generator surface.
+### COL-DOTTED-FIELD-1 — `col("st.a")` does not resolve a dotted nested field
+- **repark** — `col("st.a")` resolves as one top-level identifier and raises
+  `AnalysisException` (`No field named st.a`) at select; nested access spells
+  `col("st").getField("a")`.
+- **Apache Spark** — `col("st.a")` binds the nested field `a` inside struct `st`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `withfield_nested_replace` exercises the
+  same failure as the replacement value.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_withfield_nested_replace`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit COLUMN-PARITY-1. Dotted-name
+  resolution lives in column-name binding, outside this unit's fence; `withField`
+  itself walks dotted `fieldName` paths inside the `update_fields` engine expression
+  and is unaffected.
+
+### COL-ISIN-1 — DataFrame-door `isin` ANSI cast failure message
+
+- **repark** — `s.isin(1)` / `i.isin("1", "x")` fail at collect with a DataFusion/Arrow
+  cast error (`Cannot cast ...` family) on the malformed member.
+- **Apache Spark** — the same calls fail with `CAST_INVALID_INPUT` /
+  `NumberFormatException` (`The value 'c' of the type "STRING" cannot be cast to
+  "BIGINT"`). *(oracle: live PySpark 4.1.2, 2026-09-14, `isin_string_vs_int`,
+  `isin_int_vs_string`.)*
+- **Pin** — `python/repark/tests/test_column_parity_1.py::test_isin_string_vs_int`
+  and `::test_isin_int_vs_string`
+- **Rationale** — BACKLOG, filed 2026-09-14 by unit column-parity-1 (critic L-008).
+  Both engines refuse the malformed ANSI coercion; only the error class and message
+  diverge. The pins assert today's class and message; a Spark-aligned
+  `CAST_INVALID_INPUT` fix reds them on purpose.
+
+### COL-GROUPKEY-NAME-1 — unaliased `groupBy(<expression>)` names the key with the engine expression string
+
+- **repark** — `df.groupBy(F.col("i") + 1).count()` names the key
+  `datafusion.public.__repark_cdf_<session-uuid>.i + Int32(1)` (the uuid varies per
+  session); `frame.groupBy(F.col("st").withField("c", F.lit(9)).getField("c")).count()`
+  names it `update_fields(st,Utf8("with"),Utf8("c"),Int32(9))[c]` (a
+  table-qualified `st` appears on some plan shapes). The groups and counts are correct
+  in both shapes; only the key name diverges.
+- **Apache Spark** — the display form is the target (`(a + 1)`,
+  `update_fields(st, WithField(9))[c]` — the facade `select` spelling, per the
+  round-2 ruling; UNMEASURED live this round).
+- **Pin** —
+  `python/repark/tests/test_column_parity_1.py::test_groupby_unaliased_arith_key_uses_engine_name`
+  and `::test_groupby_withfield_key_uses_engine_name` (each asserts today's engine
+  string shape plus the grouped values, so a display-form fix reds them on purpose).
+- **Rationale** — BACKLOG, filed 2026-09-15 by unit column-parity-1 (critic re-check
+  L-102). `GroupedData.agg` plans the key through the native expression without the
+  facade `projection_name`; `select` of the same expression already uses the facade
+  display.
 
 ## 8. Drop-in disclosure rationale
 

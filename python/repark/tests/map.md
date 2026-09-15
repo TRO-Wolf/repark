@@ -102,6 +102,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `clusterBy_*` / `v2_clusterBy_*` cells this unit pins plus the `text_*` / `xml_*` /
   `orc_*` / `jdbc_*` / `na_replace_*` cells owned by other runs of the same oracle
   recording.
+  **COLUMN-PARITY-1 (2026-09-15):** with `alias(name, metadata=)` surfacing on `schema`, the stamp, replace, cache and `to()` target-override positions answer Spark and are re-pinned; DF-METADATA-1 narrows to the transform positions and `to()` source-keep. pins: df-surface-a-1/C-008
 - [test_row_tuple_1.py](test_row_tuple_1.py) — **ROW-TUPLE-1 step 1 (2026-09-14):** `Row.count`
   / `Row.index` answer the nine `row.*` cells of the committed run-15b oracle
   ([facade_row_oracle.json](facade_row_oracle.json), live PySpark 4.1.2) — value counts
@@ -3308,6 +3309,32 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rows (C2-Q-003), `select` columns `negative(x)`, `str`/`repr` `Column<'negative(x)'>`,
   `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
   `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
+- `test_column_parity_1.py` + `facade_column_oracle.json` — **COLUMN-PARITY-1 step 1**
+  (2026-09-14): the `Column` surface pins driven by the recorded PySpark 4.1.2 oracle
+  fixture (`col.*` cells) — `isin` (list/set flattening, tuple refusal
+  `UNSUPPORTED_FEATURE.LITERAL_TYPE`, NULL/NaN/empty-list semantics, Column operands,
+  ANSI cast refusal on type-mismatched members COL-ISIN-1, `(i IN (1, 2))` naming, one
+  native `IN`-list with a 10 000-literal pin), `isNaN` (engine `repark_isnan` dispatch:
+  float NaN mask, string strict-DOUBLE coercion, date/timestamp/boolean false),
+  `astype` (name preservation, `NOT_DATATYPE_OR_STR`), `name` (alias + `metadata=` on
+  the projected StructField, later alias without metadata drops it, multi-name
+  first-name-wins pin COL-NAME-MULTI-1), `outer` (`lazy(...)` marker + plain-select
+  passthrough), `withField` / `dropFields` (native `update_fields` engine expression:
+  add/replace/case/dup/nested/null-parent cells, sequential chains, filter / `when` /
+  `orderBy` / `groupBy` / join / nested-value composition, `NOT_STR` / `NOT_COLUMN` /
+  `FIELD_NOT_FOUND` / `DATATYPE_MISMATCH.*` error shapes, `update_fields(...)` naming,
+  `getField` after edit, `caseSensitive` conf no-effect pin), and the four SQL-door
+  cells (`IN` NULL + mixed-type error-class backlog SQL-IN-1, `isnan` numeric + string
+  backlog SQL-ISNAN-1, no-spelling refusal pins). Re-check round 2 (2026-09-15):
+  struct/array `isNaN` plan refusal, unaliased `groupBy` engine-key names (backlog
+  COL-GROUPKEY-NAME-1), empty-name `withField` chain (COL-WITHFIELD-EMPTY-1).
+  pins: column-parity-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009
+- `test_column_parity_1_critic.py` — **COLUMN-PARITY-1 critic round** (2026-09-14,
+  R-4): the 13 L-001..L-010 + wide-`isin` pins in their own module (the oracle file
+  stays under its line ceiling) — sequential `withField`/`dropFields` chains,
+  filter / `when` / `orderBy` / `groupBy` / join / nested-value composition, `isNaN`
+  on date/timestamp/boolean, metadata drop on re-alias, `caseSensitive` no-effect,
+  10 000-literal `isin`. pins: column-parity-1/C-008
 - `test_columns.py` — **U2:** `SELECT 7.0 AS a` is DECIMAL(2,1); Column `/` stays float64
   3.5 (`test_division_is_float`); **R-2 A7:** SQL `SELECT 7.0 / 2.0` is decimal128(8,6)
   (`test_sql_float_literal_division_is_decimal`). The Column / expression surface (WG1): the seven `types` objects → engine
