@@ -1166,7 +1166,6 @@ class ReparkSession:
     interruptAll = _session_surface.interrupt_all  # noqa: N815 — PySpark camelCase
     interruptTag = _session_surface.interrupt_tag  # noqa: N815 — PySpark camelCase
     interruptOperation = _session_surface.interrupt_operation  # noqa: N815 — PySpark camelCase
-
     client = property(_session_surface.session_client)
     copyFromLocalToFs = _session_surface.copy_from_local_to_fs  # noqa: N815
     registerProgressHandler = _session_surface.register_progress_handler  # noqa: N815
@@ -1443,12 +1442,7 @@ class ReparkSession:
         """Test-support only: Catalog-API drop without DF provider re-register (OOB drop)."""
         self._ensure_alive().testing_oob_drop_table(catalog_name, namespace, table)
 
-    def create_namespace(
-        self,
-        catalog: str,
-        namespace: str,
-        location: str | None = None,
-    ) -> None:
+    def create_namespace(self, catalog: str, namespace: str, location: str | None = None) -> None:
         """Create a namespace in a registered catalog, optionally with a ``location`` property.
 
         SQL ``CREATE NAMESPACE … LOCATION`` / ``WITH DBPROPERTIES`` can also set properties
