@@ -415,8 +415,8 @@ is the orchestrator's job.
 | C-023 | Round-5 slice 3: `-9223372036854775808L` folds the unary minus into the BIGINT region and answers `i64::MIN` non-null. | new pin red→green | **PROVEN** | `other_suffixes_keep_spark_types` LONG_MIN half; map pins `src/map.md`, `tests/map.md`. |
 | C-024 | Q1: the MERGE `t."_file"` emitter is found by one instrumented run and switched to backtick quoting, with a minimal MERGE-path pin. | pin red→green; v3 DV/merge/overwrite cascade re-checked | **PROVEN** | Instrumented run (Q1 findings below) shows no emitter; `merge_dialect.rs` pin green; `test_merge_into.py` 12/12; full facade carries no v3 DV/merge/overwrite failure. |
 | C-025 | Q2/R-16b-21: one-line `_ddl_type` grant plus the angle-bracket array → Iceberg list mapping in this unit's Rust fence, with the 16b conditions met. | Rust pin red→green; facade array pin green; `listColumns` answers `array<int>` / `array<array<string>>` with `id` non-nullable; map/struct refusal re-measured unchanged | **PROVEN** | Grant line `catalog_surface.py:568` (only touch in that file); `create_table.rs` nested mapping + `maps_angle_bracket_array_to_nullable_element_list`; both catalog pins green; map pin `src/map.md`. |
-| C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; strict-xfail hand-off per R-16c-10 | **HANDED-OFF** | Semantic packing on the selectExpr door (Q3 findings); `test_fnp_4b_hof_display.py` carries the strict xfail for 16a; 16a flips it on the fix. |
-| C-029 | F.expr backtick display (`F.expr('`my col` * 2')` must show `(my col * 2)`) is a P2 hand-off to run 16a: the display is set from the raw fragment in fenced `functions.py::expr`. | strict-xfail hand-off per R-16c-10; SQL door + selectExpr twins green | **HANDED-OFF** | `test_fnp_4b_spark_dialect.py` pin carries the strict xfail for 16a; prescription in the round-6 progress section; 16a flips it on the fix. |
+| C-026 | Q3: the `__repark_hof_array_field__` leak is diagnosed to display vs semantic cause before any fix. | leak origin named; strict-xfail hand-off per R-16c-10 | **OPEN** (HANDED-OFF to 16a — strict xfail is the evidence; 16a flips it) | Semantic packing on the selectExpr door (Q3 findings); `test_fnp_4b_hof_display.py` carries the strict xfail for 16a. |
+| C-029 | F.expr backtick display (`F.expr('`my col` * 2')` must show `(my col * 2)`) is a P2 hand-off to run 16a: the display is set from the raw fragment in fenced `functions.py::expr`. | strict-xfail hand-off per R-16c-10; SQL door + selectExpr twins green | **OPEN** (HANDED-OFF to 16a — strict xfail is the evidence; 16a flips it) | `test_fnp_4b_spark_dialect.py` pin carries the strict xfail for 16a; prescription in the round-6 progress section. |
 
 ## Round 6 Q1 findings (2026-09-15, actor muse-spark-1.3-contributor)
 
@@ -535,7 +535,11 @@ unchanged, registry row and pins untouched.
 COVERAGE_ATTESTATION (round 7 extension, 2026-09-15):
   pr_unit: fnp-4b
   complete: true
-  note: every clause C-001..C-026 plus C-029 is PROVEN or HANDED-OFF; zero OPEN.
+  note: every clause C-001..C-026 plus C-029 is PROVEN or OPEN-as-handed-off;
+  the only OPEN rows are C-026/C-029, whose strict xfails 16a flips. The ledger
+  grammar knows no HANDED-OFF verdict, so the hand-off rides in the verdict
+  cell beside OPEN — a grammar extension for first-class HANDED-OFF is
+  orchestrator follow-up, not this unit.
   round7:
     - C-025 PROVEN by Rust red-first pin + facade array pin + unchanged loud
       map/struct refusal (artifacts: crates/repark-spark/src/create_table.rs,
