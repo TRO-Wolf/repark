@@ -174,7 +174,7 @@ fn schema_from_column_defs(
 ) -> Result<Schema> {
     let mut fields = Vec::with_capacity(columns.len());
     let mut next_id = 1i32;
-    for column in columns.iter() {
+    for column in columns {
         let field_id = alloc_field_id(&mut next_id)?;
         let iceberg_type =
             sql_type_to_iceberg_nested(&column.data_type, timestamp_type, &mut next_id)?;

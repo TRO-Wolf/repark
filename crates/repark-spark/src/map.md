@@ -193,8 +193,9 @@ pins: rp-4-fork-repin/C-005, C-006
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
-  list with nullable `element` fields and table-unique ids (R-16b-21 grant);
-  bare/square-bracket forms still refuse. pins: fnp-4b/C-025
+  list with nullable `element` fields and table-unique ids from a checked
+  allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
+  pins: fnp-4b/C-025
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the
