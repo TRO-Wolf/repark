@@ -288,6 +288,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` (A11-callfn-char-length).
   `risk_tier: standard`. Branch `feat/door-kernel-converge-1`.
   pins: door-converge-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [door-converge-2-ledger.md](door-converge-2-ledger.md) —
+  **DOOR-CONVERGE-2 (2026-09-15), closed:** one-kernel convergence for the four P1
+  SQL-door wrong answers — `concat` over arrays, `reverse` over arrays, `sequence`
+  and `split` — each pinned on both doors for value, Arrow type and nullability.
+  Round 3 remediated the review findings (month steps from the start, STRING+BINARY
+  concat, Java-regex quoting/refusals + BACKLOG row, nested reverse pin, runtime
+  `maxArrayElements` cap, P2-1…P2-4 perf with before/after evidence); all clauses
+  PROVEN, `make verify` green.
+  `risk_tier: standard`. Branch `feat/door-kernel-converge-2`.
+  pins: door-converge-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [dynflatten-listnull-1-ledger.md](dynflatten-listnull-1-ledger.md) —
   **DYNFLATTEN-LISTNULL-1 (2026-09-06), in flight:** Spark's parquet reader infers
   `optional int32 element (Null)` as `array<int>`; repark kept `List(Null)` and
