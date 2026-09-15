@@ -163,6 +163,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: ex-31-inventory-plumbing/C-001, C-005
   **FNP-ALIAS-1 (2026-09-15):** 955 → 961 as `approxCountDistinct`, `shiftLeft`, `shiftRight`, `shiftRightUnsigned`, `toDegrees` and `toRadians` join the functions family (walked through `functions_agg.py` / `functions_bitwise.py` / `functions_math.py`, covered by `docs/examples/functions/deprecated_aliases.py`, so the backlog baseline is unchanged). pins: fnp-alias-1/C-001
   **FNP-MISC-1 (2026-09-15):** 1006 → 1010 as `call_function`, `call_udf`, `arrow_udf` and `arrow_udtf` join the functions family (walked through `functions_byname.py` / `functions_arrow_udf.py`, covered by `docs/examples/functions/by_name_and_arrow_udfs.py`, so the backlog baseline is unchanged). pins: fnp-misc-1/C-001
+  **FNP-11A (2026-09-15):** 1010 → 1021 as the eleven temporal names installed by `functions_temporal.py` join the walked functions family (covered by `docs/examples/functions/temporal_constructors.py`, so the backlog baseline is unchanged). pins: fnp-11a/C-001
 - `test_plan_1_northstar_fnp_sequence.py` — **PLAN-1 (2026-08-28; tree pins):** the guarded
   North Star sequence, F-17's measured shared-Puffin closure request, the live slate, the
   per-unit FNP remaining order (FNP-7a/7b delivered 2026-08-31; remaining FNP-9/10 → FNP-8
@@ -244,6 +245,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `spark/column.py` `_sql_string_literal` 1 — struct field access renders its join-ON
   bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **FNP-11A (2026-09-15):** the `functions_expr.py` row ratchets 1010 → 1021 with the script baseline (the destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature, D-10). pins: fnp-11a/C-001
 - `test_cap_1_source_file_line_cap.py` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `repark-core/src/session/tests/session.rs` row 1412 → 1407 in both tables (the ambiguous-commit classification pins moved to `session/tests/commit_unknown.rs`). pins: ice-commit-unknown-1/C-001
 - `test_cap_1_source_file_line_cap.py` — **IO-DECLARED-1 (2026-09-14):** `dataframe/writer_readwriter.py` mirror row 1111 → 1110 with the script baseline and the `session/reader.py` row retires (1022 → 954, under the default; the orc/xml/jdbc refusals bind from `io_declared.py`); `test_ex_0_example_coverage.py` pins the 955 → 961 raw walk and `EXCEPTIONS_BASELINE` 2 → 1 (`DataFrameReader.jdbc` now covered). pins: io-declared-1/C-005, C-006
 - `test_cap_1_source_file_line_cap.py` — **DF-SURFACE-A-1 critic round 1 (2026-09-14):** `dataframe/core.py` row 4041 → 4035 with the script baseline (rulings R-5/R-6 removed the `inputFiles`/`semanticHash` bindings and the `_schema_override` slot). pins: df-surface-a-1/C-008
@@ -789,3 +791,4 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).
+- **FNP-11A (2026-09-15, on 440b2773):** the CAP-1 table mirrors the `functions_expr.py` ratchet to 2235 lines.

@@ -105,8 +105,7 @@ def test_make_interval_and_dt(spark: ReparkSession) -> None:
 def test_make_interval_str_is_column_name(spark: ReparkSession) -> None:
     """W2: ``str`` parts are column names (``F.make_interval("y")`` uses column ``y``).
 
-    The pin is the column-name direction, not the display spelling: repark shows
-    ``'24 mons'`` where Spark 4.1.2 stringifies the same span as ``'2 years'``.
+    The string cast spells the units out as Spark 4.1.2 does (``'2 years'``, EX-FN-19 FIXED).
     """
     frame = spark.createDataFrame([(2,)], ["y"])
     table = _table(frame.select(F.make_interval("y").alias("i")))
@@ -115,7 +114,7 @@ def test_make_interval_str_is_column_name(spark: ReparkSession) -> None:
     assert (interval.months, interval.days, interval.nanoseconds) == (24, 0, 0)
     assert table.schema.field("i").type == pa.month_day_nano_interval()
     as_string = _table(frame.select(F.make_interval("y").cast("string").alias("s")))
-    assert as_string.column("s").to_pylist() == ["24 mons"]
+    assert as_string.column("s").to_pylist() == ["2 years"]
 
 
 def test_unix_micros_and_date_diff(spark: ReparkSession) -> None:

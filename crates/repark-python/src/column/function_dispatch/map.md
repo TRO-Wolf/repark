@@ -30,3 +30,9 @@ unit — so a new family gets a child module and the parent's default arm falls 
 ## Pointers
 
 - Up: [../map.md](../map.md)
+
+- `dispatch_json.rs` also hosts the FNP-11A temporal `call_scalar` arms
+  (`make_timestamp` family, `make_ym_interval`, `try_make_interval`, `months_between`,
+  `convert_timezone`, `localtimestamp`, `timestampadd`, `timestampdiff`, `datediff`): the parent
+  `function_dispatch.rs` is at its 1000-line ceiling, so no arm lands there.
+  pins: fnp-11a/C-002, C-003, C-019

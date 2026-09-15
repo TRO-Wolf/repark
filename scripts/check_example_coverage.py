@@ -3,12 +3,10 @@
 
 SSOT for the v0.7 example-drift gate. Prose points here and never restates the
 baselines. Walks facade sources by AST so ``make ci`` stays native-build-free.
-``F.*`` is the union of ``functions.py`` ``__all__``, the installer export
-tables that ``install_into`` appends at import, and public defs on that
-canonical module.
-When ``repark._native`` imports, every example script is executed and every
-module door's live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is
-cross-checked against the walk.
+``F.*`` is the union of ``functions.py`` ``__all__``, the installer export tables
+that ``install_into`` appends at import, and public defs on that module. When
+``repark._native`` imports, every example script runs and every module door's
+live ``__all__`` (``F``, ``ta``, ``types``, ``ml``) is checked against the walk.
 
 Closed set after EX-1 (roadmap colon list, session, and the seven class
 surfaces the owner ruled into v0.7 on 2026-08-31): ``F.*``, DataFrame /
@@ -84,6 +82,7 @@ FUNCTIONS_INSTALLER_SOURCES: tuple[str, ...] = (
     "python/repark/src/repark/spark/functions_math.py",
     "python/repark/src/repark/spark/functions_byname.py",
     "python/repark/src/repark/spark/functions_arrow_udf.py",
+    "python/repark/src/repark/spark/functions_temporal.py",
 )
 FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
     {
@@ -98,6 +97,7 @@ FUNCTION_EXPORT_BINDINGS: frozenset[str] = frozenset(
         "INSTALL_NAMES",
         "BYNAME_NAMES",
         "ARROW_EXPORTS",
+        "FNP11A_EXPORTS",
     }
 )
 FUNCTION_EXPORT_DICT_KEYS: frozenset[str] = frozenset({"FNP15_MESSAGES"})

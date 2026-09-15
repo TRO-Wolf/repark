@@ -20,13 +20,6 @@ from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
 _FN_D_DEFERRED: tuple[str, ...] = (
-    "convert_timezone",
-    "localtimestamp",
-    "make_timestamp_ltz",
-    "make_timestamp_ntz",
-    "make_ym_interval",
-    "timestamp_add",
-    "timestamp_diff",
     "to_timestamp_ltz",
     "to_timestamp_ntz",
 )

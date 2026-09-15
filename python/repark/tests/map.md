@@ -4,6 +4,8 @@ CC-2 closing-critic remediation: review-round label narration swept from prose; 
 accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_acceptance.py`.
 
+**FNP-11A D-10 (2026-09-15, orchestrator):** `test_fnp11a_temporal.py` adds `test_make_timestamp_keeps_its_frozen_signature` and the EX-FN-28 residual pin `test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`, and its cell filter skips the facade `make_timestamp(date=…)` cells; `test_functions_d.py` drops the seven implemented temporal names from its deferred census (`to_timestamp_ltz` / `to_timestamp_ntz` stay for FNP-11B); `test_fn_batch3.py` drops the `make_timestamp` stub refusal; `test_functions_split_identity.py` counts `FNP11A_EXPORTS` after the stack names; `test_functions_gt2.py` pins Spark's `'2 years'` interval string (EX-FN-19 FIXED). pins: fnp-11a/C-001, C-002
+
 ## Purpose
 
 Facade tests for the `repark` wheel — they require the compiled native module and exercise the
@@ -5084,3 +5086,35 @@ through `core` or the package. pins: eager-budget-1/C-010
   (`LIKE`, `VARCHAR`/`CHAR`, `CASE`/`coalesce` mixes raising `CAST_INVALID_INPUT`),
   and the JAVA-DOUBLE-FD-1 backlog pins — value AND type throughout.
   pins: java-double-str-1/C-009, C-010, C-011, C-012, C-013, C-014
+FNP-11A (2026-09-15): the temporal-constructor oracle and its two-door pins.
+
+- [fnp11_spark_oracle.json](fnp11_spark_oracle.json) — live PySpark 4.1.2 recording
+  (2026-09-14, orchestrator-run): 846 cells over the shared frame plus the TIME frame,
+  both ANSI settings, UTC and America/New_York, with `inspect.signature` for the
+  facade names. Pins read only the `spark_default` cells. LTZ fixture walls are
+  driver-local (America/New_York, D-8); interval answers ride `rows_as_string` (D-5).
+  pins: fnp-11a/C-002, C-003, C-004, C-005
+- [fnp11a_r2_spark_oracle.json](fnp11a_r2_spark_oracle.json) — live PySpark 4.1.2
+  recording (2026-09-15, orchestrator-run, run 15a): 112 cells settling the
+  round-2 review findings L-001..L-011, both ANSI settings, UTC and
+  America/New_York. SQL cells use Spark spellings (bare units, TIMESTAMP_NTZ
+  literals, typeof); the R2 pins translate them to engine spellings.
+  pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [test_fnp11a_r2.py](test_fnp11a_r2.py) — round-2 finding pins over the run-15a
+  oracle: finding coverage (L-001..L-011) plus the zero-arg asymmetry and
+  shortest-call-shape pins; the cached session stops on teardown.
+  pins: fnp-11a/C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+- [test_fnp11a_temporal.py](test_fnp11a_temporal.py) — one parametrized test per door
+  over the card's thirteen names: facade-signature parity (C-001), Python-door and
+  SQL-door oracle equality (C-002/C-003), Spark error conditions and message prefixes
+  on both ANSI settings (C-004), and try_* NULL semantics (C-005). String units
+  match in any case and NTZ pairs ignore the session zone (C-003). The 45 `tm`-column
+  cells are out of scope (D-9) and the two NTZ-literal SQL cells are blocked on the
+  run-15c parser (D-4, pinned on the Python door instead). Literal-only cells skip
+  the nullability assert (EX-FN-24, Spark folds them); bare `localtimestamp` is
+  excluded (EX-FN-25); naive-literal zone and bare-unit refusal carry explicit pins
+  (EX-FN-26, EX-FN-27).
+  pins: fnp-11a/C-001, C-002, C-003, C-004, C-005, C-007
+- **FNP-11A (2026-09-15):** `fnp11a_r2_spark_oracle.json` is excluded from the typos gate in `.typos.toml`: it records verbatim live-PySpark 4.1.2 messages, one of them truncated mid-word by the recorder, and recorded evidence is never hand-edited.
+- **FNP-11A R3 intake (2026-09-15):** `test_fnp11a_temporal.py` now runs every SQL-door `timestamp_add` / `timestamp_diff` oracle cell (L-005) with the bare unit keyword quoted (`BARE_UNIT_CALL`), since bare keywords stay EX-FN-27 and `test_bare_timestampadd_unit_refuses` keeps that pinned. Only the `TIMESTAMP_NTZ'…'` literal cell stays in `D4_BLOCKED_SQL` (the SQL parser has no such type). `test_timestampdiff_ntz_pair_answers_days` runs that pair's end value through `make_timestamp_ntz` instead of diffing a column with itself (L-006).
+- **FNP-11A (2026-09-15):** `test_functions_split_identity.py` pins the eleven-name FNP-11A tail after `ARROW_EXPORTS`. `test_catalog_surface_1.py::test_list_functions_shape` (unique names) and `test_fnp_misc_1.py::test_fnp_misc_1_byname_allowlist_covers_facade` caught the duplicate install and are green again.

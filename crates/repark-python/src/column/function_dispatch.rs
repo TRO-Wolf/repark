@@ -807,7 +807,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             repark_functions::expr_fn::map_from_arrays(exprs[0].clone(), exprs[1].clone())
         }
-        "date_diff" | "datediff" => {
+        "date_diff" => {
             need(2)?;
             repark_functions::expr_fn::date_diff(exprs[0].clone(), exprs[1].clone())
         }

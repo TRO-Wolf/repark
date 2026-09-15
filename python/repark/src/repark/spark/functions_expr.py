@@ -600,11 +600,10 @@ def datediff(end: Column | str, start: Column | str) -> Column:
 
 
 def months_between(date1: Column | str, date2: Column | str, roundOff: bool = True) -> Column:  # noqa: N803
-    """Unsupported: engine has no ``months_between``."""
+    """Month distance between two dates (PySpark ``functions.months_between``)."""
+    from repark.spark.functions_temporal import months_between as impl_between
 
-    raise UnsupportedOperationException(
-        "functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+    return impl_between(date1, date2, roundOff)
 
 
 def unix_timestamp(timestamp: Column | str | None = None, format: str | None = None) -> Column:
@@ -1160,19 +1159,18 @@ def from_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
 
 
 def make_timestamp(
-    years: Column | int,
-    months: Column | int,
-    days: Column | int,
-    hours: Column | int,
-    mins: Column | int,
-    secs: Column | float | int,
-    timezone: str | None = None,
+    years: Column | str | int,
+    months: Column | str | int,
+    days: Column | str | int,
+    hours: Column | str | int,
+    mins: Column | str | int,
+    secs: Column | str | float,
+    timezone: Column | str | None = None,
 ) -> Column:
-    """Unsupported because ``make_timestamp`` is not wired; use ``make_date`` and SQL."""
+    """Build a timestamp (PySpark ``functions.make_timestamp``)."""
+    from repark.spark import functions_temporal as temporal
 
-    raise UnsupportedOperationException(
-        "functions.make_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+    return temporal.make_timestamp(years, months, days, hours, mins, secs, timezone)
 
 
 # Aggregate, statistic, hash, and identifier wrappers.

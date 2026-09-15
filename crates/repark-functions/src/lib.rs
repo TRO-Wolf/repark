@@ -49,6 +49,7 @@ pub mod spark_result_types;
 pub mod spark_split_part;
 pub mod spark_year_pad;
 pub mod string;
+pub mod temporal_ctor;
 pub mod timestamp_cast;
 pub mod timestamp_type;
 pub mod try_invert;
@@ -128,6 +129,7 @@ pub fn register_all(ctx: &SessionContext) {
     }
     validate::register(ctx);
     try_invert::register(ctx);
+    temporal_ctor::register(ctx);
     higher_order::register(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
@@ -153,6 +155,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());
+    rules.push(temporal_ctor::interval_string_cast_rule());
     rules.push(Arc::new(TypeCoercion::new()));
     rules.push(Arc::new(lambda_rebind::LambdaRebind));
     rules

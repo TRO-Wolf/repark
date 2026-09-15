@@ -1,5 +1,7 @@
 # map — python/repark/src/repark/spark
 
+**FNP-11A D-10 (2026-09-15, orchestrator):** `functions_temporal.py` and the destubbed forwarder in `functions_expr.py` keep `make_timestamp`'s frozen 1.0 signature — `years`, `months`, `days`, `hours`, `mins`, `secs` required, `timezone` optional — so the API freeze register stays untouched; the new names (`try_make_timestamp`, `make_timestamp_ltz` / `_ntz` and their `try_` forms) keep PySpark 4.1.2's all-optional signatures. The Python `(date, time)` keyword form of `make_timestamp` is registry row EX-FN-28; the SQL door answers `make_timestamp(DATE, TIME)`. pins: fnp-11a/C-001, C-002
+
 ## Purpose
 
 This package is the PySpark-compatible facade over the Rust engine. It owns public
@@ -322,6 +324,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `**_thread_origin(column)` — so a right-parent column after semi/anti raises
   `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON
   clause binds each side. pins: fnp-alias-1/C-001, C-002, C-003, C-004
+- `functions_temporal.py` — FNP-11A temporal wrappers installed onto `functions.py`
+  `__all__`; `make_timestamp` and `months_between` delegate through `functions_expr.py`.
+  Interval builders print only the parts the call gave (`try_make_interval()`
+  prints one zero); `months_between` prints `roundOff` only when false.
+  pins: fnp-11a/C-001, C-015
+- `functions_math.py` — mathematical and trigonometric wrappers.
 - `functions_session.py` — session-bound function helpers.
 - `functions_udf.py` — Python UDF and pandas UDF markers, validation, and return-type
   contracts. Execution uses the DataFrame Arrow bridge. DFCORE-2 (2026-09-07): the
@@ -458,3 +466,4 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - Design: [../../../../../docs/design/python-facade.md](../../../../../docs/design/python-facade.md)
 - **FNP-MISC-1 (2026-09-15, on #597):** `functions_byname.py` classifies #597's camel-case aliases against PySpark 4.1.2 `call_function`: `shiftLeft` / `shiftRight` / `shiftRightUnsigned` resolve through Spark's case-insensitive builtin lookup (facade-only routine rows), while `approxCountDistinct` / `toDegrees` / `toRadians` raise `UNRESOLVED_ROUTINE` (non-routine rows).
 - **FNP-MISC-1 (2026-09-15, on ARRAY-NULL-1):** `array_append` / `array_prepend` leave `FACADE_ONLY_ROUTINE_NAMES`: since ARRAY-NULL-1 the engine resolves both names itself, so `call_function` reaches them through `_scalar` like any builtin.
+- **FNP-11A (2026-09-15, on 440b2773):** `FNP11A_EXPORTS` lists the eleven names new to `__all__`. `make_timestamp` and `months_between` were already exported through the `functions_expr.py` forwarders, and re-installing them duplicated both names in `__all__` and in `catalog.listFunctions()`. `functions_byname.py` follows the measured PySpark 4.1.2 `call_function` answers: `make_timestamp` / `months_between` resolve in the engine, while `timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`.

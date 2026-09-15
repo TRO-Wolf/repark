@@ -536,6 +536,14 @@ pub fn date_diff(end: Expr, start: Expr) -> Expr {
     spark_datetime::date_diff(end, start)
 }
 
+#[must_use]
+pub fn datediff(end: Expr, start: Expr) -> Expr {
+    call(
+        crate::temporal_ctor::date_alias::datediff_udf(),
+        vec![end, start],
+    )
+}
+
 /// Spark `element_at(container, key)` — 1-based array / map-by-key (repark shim).
 #[must_use]
 pub fn element_at(container: Expr, key: Expr) -> Expr {
@@ -744,4 +752,75 @@ pub fn map_concat(args: Vec<Expr>) -> Expr {
 #[must_use]
 pub fn create_map(args: Vec<Expr>) -> Expr {
     call(crate::collection::create_map_udf(), args)
+}
+
+#[must_use]
+pub fn make_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_udf(false), args)
+}
+
+#[must_use]
+pub fn try_make_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_udf(true), args)
+}
+
+#[must_use]
+pub fn make_timestamp_ltz(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_ltz_udf(false), args)
+}
+
+#[must_use]
+pub fn try_make_timestamp_ltz(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_ltz_udf(true), args)
+}
+
+#[must_use]
+pub fn make_timestamp_ntz(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_ntz_udf(false), args)
+}
+
+#[must_use]
+pub fn try_make_timestamp_ntz(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::make_timestamp_ntz_udf(true), args)
+}
+
+#[must_use]
+pub fn make_ym_interval(args: Vec<Expr>) -> Expr {
+    call(
+        crate::temporal_ctor::intervals::make_ym_interval_udf(),
+        args,
+    )
+}
+
+#[must_use]
+pub fn try_make_interval(args: Vec<Expr>) -> Expr {
+    call(
+        crate::temporal_ctor::intervals::try_make_interval_udf(),
+        args,
+    )
+}
+
+#[must_use]
+pub fn months_between(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::arith::months_between_udf(), args)
+}
+
+#[must_use]
+pub fn convert_timezone(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::arith::convert_timezone_udf(), args)
+}
+
+#[must_use]
+pub fn localtimestamp() -> Expr {
+    call(crate::temporal_ctor::arith::localtimestamp_udf(), vec![])
+}
+
+#[must_use]
+pub fn timestampadd(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::adddiff::timestampadd_udf(), args)
+}
+
+#[must_use]
+pub fn timestampdiff(args: Vec<Expr>) -> Expr {
+    call(crate::temporal_ctor::adddiff::timestampdiff_udf(), args)
 }
