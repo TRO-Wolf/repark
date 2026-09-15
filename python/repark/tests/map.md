@@ -5060,3 +5060,14 @@ through `core` or the package. pins: eager-budget-1/C-010
   SQLSTATE suffixes (N-5), and a long SELECT is not intercepted (P1).
   pins: sql-set-door-1/C-001, C-002, C-003, C-004, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - **FNP-MISC-1 (2026-09-15):** `test_fnp_misc_1.py::test_fnp_misc_1_call_function_on_camel_case_aliases_matches_spark` pins `call_function` on #597's six camel-case aliases to the measured Spark 4.1.2 answers (pins: fnp-misc-1/F-4).
+
+- [test_java_double_str_1.py](test_java_double_str_1.py) — **JAVA-DOUBLE-STR-1
+  (2026-09-15):** Spark-door DOUBLE/FLOAT stringify answers Java
+  `Double.toString` / `Float.toString` (registry BL-7 FIXED), measured against
+  `fixtures-batch1.json` cells `BL7-*` and `fixtures-batch4.json` cells `JD-*`
+  (PySpark 4.1.2, no JVM this round). SQL CAST, `concat` coercion (SQL +
+  facade), `col.cast("string")`, `selectExpr`, and the owned `bit_length` /
+  `octet_length` kernels pin value AND Arrow type; the native `repark.sql()`
+  guard keeps Arrow text (ADR-0002). Pin inputs are `CAST(<text> AS
+  DOUBLE|FLOAT)` or DataFrame columns, never bare exponent literals (FNP-4B).
+  pins: java-double-str-1/C-001, C-002, C-004, C-005, C-006
