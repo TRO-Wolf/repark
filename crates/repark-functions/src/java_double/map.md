@@ -13,7 +13,12 @@ analyzer rule) and re-exports the digit engine below, so `json/`, `string.rs`,
   the repo. Corroborated by the corpus test in `tests_corpus.rs` over the recorded
   JDK 17.0.15 fixture (env `REPARK_JDK17_TOSTRING_CORPUS`, skipped when unset) and
   the in-tree tables beside it.
-- `tables_doubles.rs`, `tables_floats.rs` — in-tree corpus tables (non-shortest
-  doubles / floats plus seeded random rows) so CI holds the claim without the
-  fixture file.
+- `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic (`5^p5·2^p2`
+  construction, normalizing shift, quotient-remainder digit iteration, compare and
+  compare-against-sum), little-endian `u32` limbs, no `unsafe`. The quotient
+  estimate is top-one-over-top-one with a decrement correction; the disparate-size
+  throw is a correct general division instead.
+- `tables_doubles.rs`, `tables_floats.rs` — in-tree corpus tables (82 non-shortest
+  doubles + 100 seeded random rows; 579 non-shortest floats + 100 seeded random
+  rows) so CI holds the claim without the fixture file.
 - `tests_corpus.rs` — the corpus byte-equality test and the in-tree table test.

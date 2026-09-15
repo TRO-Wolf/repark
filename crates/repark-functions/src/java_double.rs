@@ -1,3 +1,4 @@
+mod bigint;
 mod dtoa;
 #[cfg(test)]
 mod tables_doubles;
@@ -6,9 +7,10 @@ mod tables_floats;
 #[cfg(test)]
 mod tests_corpus;
 
-pub(crate) use dtoa::{
-    java_double_strings, java_double_text, java_double_text_len, java_float_strings,
-    java_float_text, java_float_text_len, with_java_double_text, with_java_float_text,
+pub(crate) use dtoa::{java_double_strings, java_float_strings, with_java_double_text};
+pub use dtoa::{
+    java_double_text, java_double_text_len, java_float_text, java_float_text_len,
+    with_java_float_text,
 };
 
 use std::hash::{Hash, Hasher};

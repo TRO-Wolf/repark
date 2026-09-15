@@ -604,9 +604,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
-- `java_double.rs` + `java_double/` — **JAVA-DOUBLE-FD-1 red (2026-09-15):**
-  `tests_corpus.rs` (JDK 17 corpus byte-equality over `REPARK_JDK17_TOSTRING_CORPUS`,
-  in-tree table test) plus starter `tables_doubles.rs` / `tables_floats.rs`.
+- `java_double.rs` + `java_double/` — **JAVA-DOUBLE-FD-1 port (2026-09-15):**
+  `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
+  `FDBigInteger`), `tests_corpus.rs` (byte-equality over
+  `REPARK_JDK17_TOSTRING_CORPUS`, green on all 39,427 rows) with full
+  `tables_doubles.rs` (82 non-shortest + 100 random) / `tables_floats.rs`
+  (579 non-shortest + 100 random).
   **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of
   Java float spellings — `java_double_text` / `java_float_text` (moved from
   `json/reader.rs`; `reader.rs`, `decode.rs` and `to_json.rs` import from here,
